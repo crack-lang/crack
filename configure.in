@@ -1,0 +1,25 @@
+
+AC_INIT(crack, 0.1)
+AM_INIT_AUTOMAKE(crack, 0.1)
+AC_CONFIG_SRCDIR([parser/Token.h])
+
+# include cppunit
+AM_PATH_CPPUNIT(1.12.0)
+
+# required for C++ programs...
+AC_PROG_CXX
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_HEADER_STDBOOL
+AC_C_CONST
+
+# automake advised me to add this...
+AC_CONFIG_FILES([Makefile])
+
+# ... and also this (when I switched to a library)
+AC_PROG_RANLIB
+
+# external packages that we need
+AM_PATH_SPUGPP(,,AC_MSG_ERROR(crack needs spug++))
+
+AC_OUTPUT
