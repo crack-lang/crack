@@ -35,7 +35,7 @@ class Token {
       Type getType() const { return type; }
 
       /** returns the token raw data */
-      const char *getData() const { return data.c_str(); }
+      const std::string &getData() const { return data; }
 
       /** Returns the source location for the token */
       const Location &getLocation() const { return loc; }

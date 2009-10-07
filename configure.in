@@ -21,5 +21,6 @@ AC_PROG_RANLIB
 
 # external packages that we need
 AM_PATH_SPUGPP(,,AC_MSG_ERROR(crack needs spug++))
+AM_PATH_LLVM
 
 AC_OUTPUT
