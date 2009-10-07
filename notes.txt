@@ -1,0 +1,301 @@
+
+    ---------------------
+    #!/usr/bin/crack
+    stdout `hello world`;
+    
+    ---------------------
+    #!/usr/bin/crack
+    # Shell-style comments work
+    // so do ansi-C++ style
+    /* so do old-skool C style */
+    
+    stdout.write("double-quoted strings - these are strings of _bytes_, "
+                 "they just happen to be ascii characters.  Constant string "
+                 "concatenation works like in C."
+                 );
+    stdout.write('Single-quoted strings are just like double-quoted strings '
+                 'except for "which quote\'s" need to be escaped.'
+                 );
+    
+    # a verbose, java style variable initialization ("new" is implicit)
+    String var1 = String();
+    
+    # Same as var1 - default constructor is implicit
+    String var2;
+    
+    # yet another way to define a variable, ":=" defines and initializes.  '' 
+    # is equivalent to "String()"
+    var3 := '';
+    
+    # var4 will be null - like in C or java.
+    String var4 = null;
+    
+    # reassign it to reference var1;
+    var4 = var1;
+    
+    # the expression evalutes to true
+    if (var1 == var2 && var2 == var3 && var3 == var4)
+        stdout.write('"==" compares by value.');
+    
+    # the identity check also works (constant strings are cached, String() 
+    # returns an instance from the cache.
+    if (var1 is var2 && var2 is var3 && var3 is var4)
+        stdout.write('"is" compares identity.');
+    
+    # the back-tick is a string formatting operator.  When used on a stream 
+    # (OutStream) object, this:
+    stdout `this is $var2`;
+    
+    # will do the same thing as this:
+    stdout.format('this is ');
+    stdout.format(var2);
+    
+    # when used in an expression context, this produces a string.
+    String formatted = `this is $var1`;
+    
+    # which is equivalent to this: (assuming that we end up with return value 
+    # chaining)
+    String formatted = StringOutStream().format('this is ').format(var1);
+    
+    # low-level types - these are like the corresponding low-level types in 
+    # java and are copied by value.
+    int x = 100;
+    bool a = true;
+    float f = 1.5;
+    
+    # Their high-level counterparts with all of the advantages and 
+    # disadvantages of full objects. (autoboxing is supported)
+    Int y = x;
+    Bool b = a;
+    Float g = f + x;  # integer gets promoted to float in this expression
+    
+    
+    /**
+     * A function definition.  Doxygen style docstrings are supported as 
+     * first-class language elements.
+     * @param text some text that will be printed to standard output.
+     * @return the text that was printed.
+     */
+    String myFunc(String text = 'default value') {
+        stdout.write(text);
+        return text;
+    }
+    
+    ## Another type of docstring. ('///' is also supported)
+    void myOtherFunc() {
+        stdout `less interesting\n`;
+    }
+    
+    # functions are objects
+
+    typedef String Callback(String val);
+    void useCallback(Callback cb) {
+        cb('something worth writing');
+    }
+    
+    useCallback(myFunc);
+    
+    # so are "bound methods" - which are a nice substitute for currying
+    
+    struct Masala {
+        int count;
+        void run(String text) {
+            for (i in range(count))
+                stdout.write(text);
+        }
+    }
+
+    useCallback(Masala(100).run);
+    
+    ---------------------
+    #!/usr/bin/crack
+    import storage;
+    
+    // "struct" is a class with an implicit constructor with optional 
+    // arguments for each instance variable.
+    struct Note : storage.StorableObject {
+        String title;
+        String desc;
+    };
+    
+    // Create an instance of "Note" with title and desc arguments and invoke 
+    // the store() method to store it.
+    Note('todo: build crack',
+         "Here's an example note that we're putting into our database."
+         "I haven't figured out how best to do multi-line strings as of yet."
+         ).store();
+    
+    // Define a "note2" variable, initialize with keyword arguments.
+    Note note2 = { title = 'todo: Add special note classes for todos',
+                   desc = 'so we can diferentiate them programmatically.'
+                  };
+    note2.store();
+
+    struct ToDo : Note {
+        bool done = false;
+    };
+
+    // Create a new todo, expand note2 into the argument list and augment with 
+    // "done."  Define and initialize with the ":=" operator.
+    note3 := ToDo(*note2, done = true);
+    note2.delete();
+    note3.store();
+
+Basic Dogma:
+    
+    1) Use the existing wiring.
+    2) Common patterns should be syntactically simple and terse.
+    3) Everything should be fast.  Development cycles should be fast, the 
+        runtime code should be fast.
+    4) Facilitate meta-abstractions. (this follows from 2)
+
+Resulting rules:
+    1) Use C/C++/Java syntax except where it's broken.
+    2) compiles should be single-pass.  Code generation should be at the time 
+        of compile, with code generation steps occuring after every statement.
+    3) Documentation is a first-class citizen.
+    4) Rich augmentation of language structures through annotations.
+
+
+Curly brackets are magical - they're semantics are dependent on their context.
+So in initialization context:
+    
+    class Foo {
+        int a; 
+        int b; 
+        Foo(int a, int b) : a(a), b(b) {}
+    } // need semicolon here?
+    Foo f = { a = 100, b = 200}; // equivalent to f := Foo(a = 100, b = 200);
+
+In other expression contexts, they are lambdas:
+    
+    tree.traverse({ _.apply() });
+
+After keywords, they have meaning defined by the keyword:
+
+if (expr) { statements ... }
+do { statements ... }
+struct { x = 100, y = 10 } // anonymous structure (like a named tuple)
+
+After types, they are equivalent to instantiation:
+    
+    Foo { a = 100, b = 200 } // equivalent to Foo(a = 100, b = 200), but also 
+                             // supports composite construction
+    
+Lambdas:
+
+    Lambdas should be expressible with minimal syntax,  but flexible enough to 
+    specialize.  so we can do:
+    
+        list.collect(lambda (Int sum, int item) { sum += item },
+                     0  // initial value for first arg
+                     );
+    
+    or:
+    
+        class List<Object T> {
+            ...
+            List<T> filter(bool filterFunc(T item)) {
+                List<T> result;
+                for (item in this) {
+                    if (filterFunc(item))
+                        result.append(item);
+                }
+            }
+            ...
+        }
+            
+    
+        List<Foo> list;
+        list.filter({ item.a > 100 }); // implicit lambda, implicit use of 
+                                       // "item" parameter, implicit return.
+        list.filter(lambda(Foo x) { return x.a > 100; });  // equivalent 
+                                                           // longer form
+
+    Alternately, for single argument functions:
+        
+        list.filter({ _.a > 100 }); // can use _ or item, not both.
+
+Formatting:
+    
+    The back-tick character works like a string with built-in formatting.  
+    When used in an expression context, it evaluates to a string:
+    
+        x := `my name is $name`;
+        
+    When used immediately after an OutStream, it formats its contents to the 
+    stream:
+        
+        stdout `my name is $name`;
+    
+    The above is equivalent to the following operations:
+
+        stdout.format('my name is ');
+        stdout.format(name);
+    
+    OutStream.format() is defined for all of the primitive types.  For Object, 
+    it is implemented as:
+        
+        * format(Object obj) { obj.writeTo(this); }
+    
+    So you can override the writeTo() method for objects, and you can override 
+    and overload the format() method for OutStream derivatives, giving you a 
+    very flexible way to do special formatting.
+        
+
+Access control:
+    
+    Access control is specified via naming conventions.  Symbols beginning 
+    with a double underscore ('__') are private to the context where they are 
+    defined.  Symbols beginning with a single underscore ('_') are "protected" 
+    in a sense similar to java's "package protected" - they can be accessed 
+    from derived classes and from within the same module.
+    
+    How does all of this work for nested modules and module scoped stuff?  
+
+Modules:
+    
+    By default, every source file is a "module".  Every directory full of 
+    source files is a "package" which is really just a module that can't 
+    happen to have anything other than nested modules in it.
+    
+    A source file module can include nested modules by use of the "module" 
+    keyword:
+    
+        module nested {
+        
+            void _privateFunction() { ... }
+                
+            void foo() { ... }
+        
+        } // the "nested" module
+        
+        nested.foo();
+
+    Nested modules have the useful property of being compiled and executed 
+    while the source code module is still being compiled.  This lets you 
+    define annotations in a nested module that can be used to annotate code in 
+    the enclosing module.
+
+    Just like any other symbols, nested modules can be accessed internally 
+    subject to the access control rules - so nested modules whose names begin 
+    with an underscore are private.
+    
+    It is possible to define anonymous modules.  Like other nested modules, 
+    these are compiled and executed prior to the completion of the compile of 
+    the outer module, but all symbols implicitly imported into the outer 
+    namespace:
+    
+        module {
+            void annotation(Function func) { ... }
+        }
+        
+        // we can use the annotation defined in the anonymous module with no 
+        // qualification.
+        @annotation void annotatedFunction() { ... }
+    
+    Note that anonymous modules are not like anonymous namespaces in C++ - 
+    symbols in anonymous modules are externally accessible as if they were 
+    part of the outer module.
+
+
