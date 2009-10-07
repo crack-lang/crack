@@ -10,6 +10,7 @@ namespace llvm {
     class BasicBlock;
     class Value;
     class Function;
+    class ExecutionEngine;
 };
 
 namespace builder {
@@ -22,6 +23,7 @@ class LLVMBuilder : public Builder {
         llvm::BasicBlock *block;
         
         llvm::Value *lastValue;
+        llvm::ExecutionEngine *execEng;
 
     public:
         LLVMBuilder();

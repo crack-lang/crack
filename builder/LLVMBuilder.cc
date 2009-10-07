@@ -4,6 +4,7 @@
 // LLVM includes
 #include <stddef.h>
 #include <stdlib.h>
+#include "llvm/LinkAllPasses.h"
 #include "llvm/Module.h"
 #include "llvm/Function.h"
 #include "llvm/PassManager.h"
@@ -12,6 +13,7 @@
 #include "llvm/Assembly/PrintModulePass.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetData.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include <model/ArgDef.h>
@@ -116,7 +118,27 @@ void LLVMBuilder::createModule(const char *name) {
 void LLVMBuilder::closeModule() {
     assert(module);
     IRBuilder<> builder(block);
-    builder.CreateRet(lastValue);    
+    builder.CreateRet(lastValue);
+    
+    // create the execution engine
+    execEng = llvm::ExecutionEngine::create(module);
+
+    // optimize
+    llvm::PassManager passMan;
+
+    // Set up the optimizer pipeline.  Start with registering info about how 
+    // the target lays out data structures.
+    passMan.add(new llvm::TargetData(*execEng->getTargetData()));
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    passMan.add(llvm::createInstructionCombiningPass());
+    // Reassociate expressions.
+    passMan.add(llvm::createReassociatePass());
+    // Eliminate Common SubExpressions.
+    passMan.add(llvm::createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    passMan.add(llvm::createCFGSimplificationPass());
+    
+    passMan.run(*module);
 }    
 
 model::StrConstPtr LLVMBuilder::createStrConst(const std::string &val) {
@@ -171,7 +193,6 @@ void LLVMBuilder::run() {
 //    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
 //    passMan.run(*module);
     
-    llvm::ExecutionEngine *execEng = llvm::ExecutionEngine::create(module);
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     fptr();
 }
