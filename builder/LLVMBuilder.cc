@@ -20,8 +20,11 @@
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
+#include <model/IntConst.h>
 #include <model/StrConst.h>
 #include <model/TypeDef.h>
+#include <model/VarDef.h>
+#include <model/VarRef.h>
 
 
 using namespace builder;
@@ -45,9 +48,20 @@ namespace {
     
     class BTypeDef : public model::TypeDef {
         public:
-            llvm::Type *rep;
-            BTypeDef(const char *name, llvm::Type *rep) :
+            const llvm::Type *rep;
+            BTypeDef(const char *name, const llvm::Type *rep) :
                 model::TypeDef(name),
+                rep(rep) {
+            }
+    };
+    
+    SPUG_RCPTR(BVarDef);
+
+    class BVarDef : public VarDef {
+        public:
+            llvm::Value *rep;
+            BVarDef(const TypeDefPtr type, const string &name, Value *rep) :
+                VarDef(type, name),
                 rep(rep) {
             }
     };
@@ -61,6 +75,15 @@ namespace {
             BStrConst(const std::string &val) :
                 StrConst(val),
                 rep(0) {
+            }
+    };
+    
+    class BIntConst : public model::IntConst {
+        public:
+            llvm::Value *rep;
+            BIntConst(long val) :
+                IntConst(val),
+                rep(llvm::ConstantInt::get(llvm::Type::Int32Ty, val)) {
             }
     };
 
@@ -105,6 +128,62 @@ void LLVMBuilder::emitStrConst(model::Context &context,
     lastValue = bval->rep;
 }
 
+void LLVMBuilder::emitIntConst(model::Context &context, const IntConst &val) {
+    lastValue = dynamic_cast<const BIntConst &>(val).rep;
+}
+
+Value *emitGEP(IRBuilder<> &builder, Value *obj) {
+    Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
+    Value *gepArgs[] = { zero, zero };
+    return builder.CreateGEP(obj, zero);
+}
+    
+VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
+                                  const string &name,
+                                  const ExprPtr &initializer
+                                  ) {
+    // do initializion
+    if (initializer)
+        initializer->emit(context);
+    else
+        type->defaultInitializer->emit(context);
+    
+    // XXX create a local, global, class or instance variable depending on the 
+    // context type.
+    BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
+//    Value *var = new GlobalVariable(tp->rep,
+//                                    false, // isConstant
+//                                    GlobalValue::InternalLinkage, // linkage tp
+//                                    0, // initializer
+//                                    name,
+//                                    module
+//                                    );
+    
+    // allocate the variable and assign it
+    IRBuilder<> builder(block);
+    // XXX experimenting with Load
+    Value *var = builder.CreateAlloca(tp->rep, 0);
+//    Value *tmp = builder.CreateLoad(emitGEP(builder, lastValue));
+    Value *tmp = lastValue;
+    
+    // XXX experimenting with GEP
+    // Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
+    // Value *gepArgs[] = { zero, zero };
+    // builder.CreateGEP(var, gepArgs, gepArgs + 2 )
+
+    lastValue = builder.CreateStore(tmp, var);
+    
+    return new BVarDef(type, name, var);
+}
+ 
+void LLVMBuilder::emitVarRef(model::Context &context,
+                             const model::VarRef &var
+                             ) {
+    IRBuilder<> builder(block);
+    BVarDefPtr def = BVarDefPtr::dcast(var.def);
+    lastValue = builder.CreateLoad(def->rep);
+}
+                                
 void LLVMBuilder::createModule(const char *name) {
     assert(!module);
     module = new llvm::Module(name);
@@ -129,6 +208,8 @@ void LLVMBuilder::closeModule() {
     // Set up the optimizer pipeline.  Start with registering info about how 
     // the target lays out data structures.
     passMan.add(new llvm::TargetData(*execEng->getTargetData()));
+    // Promote allocas to registers.
+    passMan.add(createPromoteMemoryToRegisterPass());
     // Do simple "peephole" optimizations and bit-twiddling optzns.
     passMan.add(llvm::createInstructionCombiningPass());
     // Reassociate expressions.
@@ -144,6 +225,10 @@ void LLVMBuilder::closeModule() {
 model::StrConstPtr LLVMBuilder::createStrConst(const std::string &val) {
     return new BStrConst(val);
 }
+
+IntConstPtr createIntConst(long val) {
+    return new BIntConst(val);
+}
                        
 model::FuncCallPtr LLVMBuilder::createFuncCall(const string &funcName) {
     return new FuncCall(funcName);
@@ -153,6 +238,10 @@ model::FuncDefPtr LLVMBuilder::createFuncDef(const char *name) {
     return new BFuncDef(name, 0);
 }
 
+VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
+    return new VarRef(varDef);
+}
+
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     Context::GlobalData *gd = context.globalData;
@@ -160,7 +249,13 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     llvm::Type *llvmBytePtrType = 
         llvm::PointerType::getUnqual(llvm::IntegerType::get(8));
     gd->byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
+    gd->byteptrType->defaultInitializer = createStrConst("");
     context.addDef(gd->byteptrType);
+    
+    const llvm::Type *llvmInt32Type = llvm::IntegerType::get(32);
+    gd->int32Type = new BTypeDef("int32", llvmInt32Type);
+    gd->int32Type->defaultInitializer = createIntConst(0);
+    context.addDef(gd->int32Type);
     
     // create "int print(String)"
     vector<const llvm::Type *> args(1);
@@ -196,6 +291,3 @@ void LLVMBuilder::run() {
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     fptr();
 }
-
-
-

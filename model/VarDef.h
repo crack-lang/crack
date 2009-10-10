@@ -2,14 +2,20 @@
 #ifndef _model_VarDef_h_
 #define _model_VarDef_h_
 
-#include <string>
+#include "Def.h"
 
 namespace model {
 
+SPUG_RCPTR(TypeDef);
+
+SPUG_RCPTR(VarDef);
+
+// XXX I don't think there's any kind of definition that is not a "VarDef" - 
+// we should probably collapse this logic into Def.
 class VarDef : public Def {
     public:
-        std::string name;
-        VarDef(const char *name) : name(name) {}
+        TypeDefPtr type;
+        VarDef(const TypeDefPtr &type, const std::string &name);
 };
 
 } // namespace model

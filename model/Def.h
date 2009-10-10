@@ -4,6 +4,7 @@
 
 #include <string>
 #include <spug/RCBase.h>
+#include <spug/RCPtr.h>
 
 namespace model {
 
@@ -14,7 +15,7 @@ class Def : public spug::RCBase {
     public:
         std::string name;
         
-        Def(const char *name) : name(name) {}
+        Def(const std::string &name) : name(name) {}
 };
 
 } // namespace model

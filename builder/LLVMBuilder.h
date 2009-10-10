@@ -37,12 +37,26 @@ class LLVMBuilder : public Builder {
                                   const model::StrConstPtr &strConst
                                   );
         
+        virtual void emitIntConst(model::Context &context,
+                                  const model::IntConst &val);
+
+        virtual model::VarDefPtr emitVarDef(model::Context &container,
+                                            const model::TypeDefPtr &type,
+                                            const std::string &name,
+                                            const model::ExprPtr &initializer
+                                            );
+
+        virtual void emitVarRef(model::Context &context,
+                                const model::VarRef &var
+                                );
+        
         // for definitions, we're going to just let the builder be a factory 
         // so that it can tie whatever special information it wants to the 
         // definition.
         
         virtual model::FuncCallPtr createFuncCall(const std::string &funcName);
         virtual model::FuncDefPtr createFuncDef(const char *name);
+        virtual model::VarRefPtr createVarRef(const model::VarDefPtr &varDef);
 
         virtual void createModule(const char *name);
         virtual void closeModule();

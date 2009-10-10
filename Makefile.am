@@ -8,7 +8,11 @@ libcrack_a_SOURCES = \
     parser/Parser.cc \
     model/Context.cc \
     model/FuncCall.cc \
-    model/StrConst.cc
+    model/IntConst.cc \
+    model/StrConst.cc \
+    model/TypeDef.cc \
+    model/VarDef.cc \
+    model/VarRef.cc
 
 bin_PROGRAMS = crack
 

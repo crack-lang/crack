@@ -3,11 +3,15 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <spug/StringFmt.h>
 #include "model/Context.h"
 #include "model/Def.h"
 #include "model/FuncCall.h"
 #include "model/Expr.h"
 #include "model/StrConst.h"
+#include "model/TypeDef.h"
+#include "model/VarDef.h"
+#include "model/VarRef.h"
 #include "builder/Builder.h"
 #include "ParseError.h"
 
@@ -39,7 +43,46 @@ void Parser::parseBlock(bool nested) {
          
          // if the identifier is a type, check to see if the next identifier 
          // is another identifier.
-//         if (context.lookUp(tok.
+         DefPtr def = context->lookUp(tok.getData());
+         if (def && dynamic_cast<TypeDef *>(def.obj)) {
+            TypeDefPtr typeDef = TypeDefPtr::dcast(def);
+            Token tok2 = toker.getToken();
+            // XXX if it's '<', make sure the type is a generic and parse 
+            // nested types.
+            
+            if (tok2.isIdent()) {
+               string varName = tok2.getData();
+               // make sure we're not hiding anything else
+               if (context->lookUp(varName))
+                  warn(tok2,
+                       SPUG_FSTR("Variable " << varName << " redefined." )
+                       );
+
+               // this could be a variable or a function
+               Token tok3 = toker.getToken();
+               if (tok3.isSemi()) {
+                  // it's a variable.  Emit a variable definition and store it 
+                  // in the context.
+                  VarDefPtr varDef = 
+                     typeDef->emitVarDef(*context, varName, 0);
+                  context->addDef(DefPtr::ucast(varDef));
+                  continue;
+               } else if (tok3.isAssign()) {
+                  // XXX need initializers
+                  assert(false);
+               } else if (tok3.isLParen()) {
+                  // XXX need function definitions/declarations
+                  assert(false);
+               } else {
+                  unexpected(tok3,
+                             "expected variable initializer or function "
+                             "definition."
+                             );
+               }
+            } else {
+               unexpected(tok2, "expected variable definition");
+            }
+         }
          
          // if the next token(s) are '=' or ':=' then this is an assignment
          
@@ -50,7 +93,7 @@ void Parser::parseBlock(bool nested) {
       }
 
       // parse an expression (if there is no expression, that's ok)
-      ExprPtr expr = parseExpression();
+      ExprPtr expr = parseExpression(nested ? "; " : ";}");
       if (expr)
          // if there is an expression, emit it.
          expr->emit(*context);
@@ -75,7 +118,6 @@ void Parser::parseBlock(bool nested) {
 	    unexpected(tok, "expected semicolon or end-of-file");
 	 }
       }
-
    }
 }
 
@@ -86,7 +128,7 @@ bool Parser::isBinaryOperator(const Token &tok) {
       return false;
 }
 
-ExprPtr Parser::parseExpression() {
+ExprPtr Parser::parseExpression(const char *terminators) {
 
    // check for a method
    Token tok = toker.getToken();
@@ -102,7 +144,7 @@ ExprPtr Parser::parseExpression() {
          // XXX write me
 
 	 // parse an expression
-	 if (!parseExpression()) {
+	 if (!parseExpression(terminators)) {
 	    tok1 = toker.getToken();
 	    error(tok1, "expression expected");
 	 }
@@ -113,7 +155,17 @@ ExprPtr Parser::parseExpression() {
 	 parseMethodArgs(funcCall->args);
 	 return ExprPtr::ucast(funcCall);
       } else {
-         error(tok1, "expected left paren or assignment operator.");
+         // for anything else, it's a variable
+         toker.putBack(tok1);
+         DefPtr def = context->lookUp(tok.getData());
+         if (!def)
+            error(tok,
+                  SPUG_FSTR("Undefined variable: " << tok.getData()).c_str());
+
+         // XXX def could be a generic class and generic classes require 
+         // special magic to allow us to parse the <>'s
+         VarDefPtr varDef = VarDefPtr::dcast(def);
+         return ExprPtr::ucast(context->builder.createVarRef(varDef));
       }
 
       // close off the method no matter how we started it
@@ -172,7 +224,7 @@ void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
      
    while (true) {
       // try to parse an expression, if we failed we're done
-      ExprPtr arg = parseExpression();
+      ExprPtr arg = parseExpression(",)");
       if (!arg)
 	 break;
       args.push_back(arg);
@@ -200,7 +252,7 @@ void Parser::parseVarDef(const Token &ident) {
       // get a type identifier
       tok = toker.getToken();
       if (tok.isAssign()) {
-         parseExpression();
+         parseExpression(";,");
          break;
       } else if (!tok.isIdent()) {
 	 unexpected(tok, "expected identifier");
@@ -210,7 +262,7 @@ void Parser::parseVarDef(const Token &ident) {
       // if it is a '.', parse a nested type.
       tok = toker.getToken();
       if (tok.isAssign()) {
-         parseExpression();
+         parseExpression(";,");
          break;
       } else if (!tok.isDot()) {
 	 toker.putBack(tok);
@@ -232,3 +284,7 @@ void Parser::error(const Token &tok, const char *msg) {
    throw ParseError(text.str().c_str());
 }
 
+void Parser::warn(const Token &tok, const std::string & msg) {
+   Location loc = tok.getLocation();
+   cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << msg << endl;
+}

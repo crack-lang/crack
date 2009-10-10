@@ -1,0 +1,7 @@
+// variable definitions
+byteptr str;
+int32 val;
+
+print('empty brackets: [');
+print(str);
+print(']');

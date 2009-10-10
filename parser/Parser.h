@@ -35,7 +35,14 @@ class Parser {
 
       /** returns true if the token is a binary operator. */
       static bool isBinaryOperator(const Token &tok);
-      model::ExprPtr parseExpression();
+      
+      /**
+       * @param terminators a list of termination symbols that are appropriate 
+       *   for the expression (example ",)" for a parameter expression) .  A 
+       *   space (ascii 32) indicates that the end-of-stream token is a
+       *   terminator.
+       */
+      model::ExprPtr parseExpression(const char *terminators);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
       void parseVarDef(const Token &tok);
 
@@ -52,6 +59,9 @@ class Parser {
        * message text.
        */
       static void error(const Token &tok, const char *msg);
+      
+      /** Writes a warning message to standard error. */
+      static void warn(const Token &tok, const std::string & msg);
 };
 
 } // namespace parser
