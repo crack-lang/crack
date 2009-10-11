@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <spug/StringFmt.h>
 #include "model/Context.h"
-#include "model/Def.h"
 #include "model/FuncCall.h"
 #include "model/Expr.h"
 #include "model/StrConst.h"
@@ -43,7 +42,7 @@ void Parser::parseBlock(bool nested) {
          
          // if the identifier is a type, check to see if the next identifier 
          // is another identifier.
-         DefPtr def = context->lookUp(tok.getData());
+         VarDefPtr def = context->lookUp(tok.getData());
          if (def && dynamic_cast<TypeDef *>(def.obj)) {
             TypeDefPtr typeDef = TypeDefPtr::dcast(def);
             Token tok2 = toker.getToken();
@@ -65,7 +64,7 @@ void Parser::parseBlock(bool nested) {
                   // in the context.
                   VarDefPtr varDef = 
                      typeDef->emitVarDef(*context, varName, 0);
-                  context->addDef(DefPtr::ucast(varDef));
+                  context->addDef(VarDefPtr::ucast(varDef));
                   continue;
                } else if (tok3.isAssign()) {
                   // XXX need initializers
@@ -157,7 +156,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
       } else {
          // for anything else, it's a variable
          toker.putBack(tok1);
-         DefPtr def = context->lookUp(tok.getData());
+         VarDefPtr def = context->lookUp(tok.getData());
          if (!def)
             error(tok,
                   SPUG_FSTR("Undefined variable: " << tok.getData()).c_str());

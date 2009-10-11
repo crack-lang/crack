@@ -2,11 +2,7 @@
 #ifndef _model_FuncDef_h_
 #define _model_FuncDef_h_
 
-#include "Def.h"
-
-namespace builder {
-    class Func;
-}
+#include "VarDef.h"
 
 namespace model {
 
@@ -14,13 +10,14 @@ SPUG_RCPTR(ArgDef);
 
 SPUG_RCPTR(FuncDef);
 
-// XXX why isn't it just VarDef?
-class FuncDef : public Def {
+class FuncDef : public VarDef {
     public:
         std::vector<ArgDefPtr> args;
 
         FuncDef(const char *name, size_t argCount) :
-            Def(name),
+            // XXX need function types, but they'll probably be assigned after 
+            // the fact.
+            VarDef(0, name),
             args(argCount) {
         }
 };

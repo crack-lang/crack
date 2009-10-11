@@ -4,7 +4,7 @@
 
 #include <spug/RCPtr.h>
 
-#include "Def.h"
+#include "VarDef.h"
 
 namespace model {
 
@@ -13,7 +13,7 @@ SPUG_RCPTR(Expr);
 SPUG_RCPTR(VarDef);
 
 // a type.
-class TypeDef : public Def {
+class TypeDef : public VarDef {
     public:
         
         // the type's context - contains all of the method/attribute 
@@ -25,7 +25,8 @@ class TypeDef : public Def {
         // initialization without the whole "oper new" business)
         ExprPtr defaultInitializer;
         
-        TypeDef(const char *name) : Def(name) {}
+        // XXX need a metatype
+        TypeDef(const char *name) : VarDef(0, name) {}
         
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,

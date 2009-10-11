@@ -12,7 +12,7 @@ namespace builder {
 
 namespace model {
 
-SPUG_RCPTR(Def);
+SPUG_RCPTR(VarDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
 
@@ -24,8 +24,8 @@ SPUG_RCPTR(Context);
 class Context : public spug::RCBase {
     
     private:
-        typedef std::map<std::string, DefPtr> DefMap;
-        DefMap defs;
+        typedef std::map<std::string, VarDefPtr> VarDefMap;
+        VarDefMap defs;
 
         typedef std::map<std::string, StrConstPtr> StrConstTable;
     public:
@@ -51,9 +51,9 @@ class Context : public spug::RCBase {
     
         Context(builder::Builder &builder, Scope scope);
 
-        DefPtr lookUp(const std::string &varName);
+        VarDefPtr lookUp(const std::string &varName);
         void createModule(const char *name);
-        void addDef(const DefPtr &def);
+        void addDef(const VarDefPtr &def);
         
         /** Get or create a string constsnt. */
         StrConstPtr getStrConst(const std::string &value);

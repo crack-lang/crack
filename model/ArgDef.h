@@ -2,7 +2,7 @@
 #ifndef _model_ArgDef_h_
 #define _model_ArgDef_h_
 
-#include "Def.h"
+#include "VarDef.h"
 
 namespace model {
 
@@ -10,12 +10,10 @@ SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(ArgDef);
 
-class ArgDef : public Def {
+class ArgDef : public VarDef {
     public:
-        TypeDefPtr type;
-        ArgDef(const char *name, const TypeDefPtr &type) :
-            Def(name), 
-            type(type) {
+        ArgDef(const TypeDefPtr &type, const std::string &name) :
+            VarDef(type, name) {
         }
 };
 

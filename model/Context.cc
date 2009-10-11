@@ -2,7 +2,7 @@
 #include "Context.h"
 
 #include <builder/Builder.h>
-#include "Def.h"
+#include "VarDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"
 
@@ -19,8 +19,8 @@ void Context::createModule(const char *name) {
     builder.createModule(name);
 }
 
-DefPtr Context::lookUp(const std::string &varName) {
-    DefMap::iterator iter = defs.find(varName);
+VarDefPtr Context::lookUp(const std::string &varName) {
+    VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end())
         return iter->second;
     else if (parent)
@@ -29,8 +29,10 @@ DefPtr Context::lookUp(const std::string &varName) {
         return 0;
 }
 
-void Context::addDef(const DefPtr &def) {
+void Context::addDef(const VarDefPtr &def) {
+    assert(!def->context);
     defs[def->name] = def;
+    def->context = this;
 }
 
 StrConstPtr Context::getStrConst(const std::string &value) {

@@ -8,6 +8,7 @@
 using namespace model;
 
 VarDef::VarDef(const TypeDefPtr &type, const std::string &name) :
-    Def(name),
-    type(type) {
+    type(type),
+    name(name),
+    context(0) {
 }

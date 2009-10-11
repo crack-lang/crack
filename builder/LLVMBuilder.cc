@@ -149,9 +149,8 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     else
         type->defaultInitializer->emit(context);
     
-    // XXX create a local, global, class or instance variable depending on the 
-    // context type.
-    // XXX use InternalLinkage for variables starting with _
+    // XXX use InternalLinkage for variables starting with _ (I think that 
+    // might work)
     BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
     
     Value *var = 0;
@@ -294,8 +293,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     BFuncDefPtr funcDef = new BFuncDef("print", 1);
     funcDef->rep = printFunc;
-    funcDef->args[0] = new ArgDef("text", gd->byteptrType);
-    context.addDef(DefPtr::ucast(funcDef));
+    funcDef->args[0] = new ArgDef(gd->byteptrType, "text");
+    context.addDef(VarDefPtr::ucast(funcDef));
 }
 
 void LLVMBuilder::kludge(model::Context &context) {
