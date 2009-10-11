@@ -298,4 +298,15 @@ Modules:
     symbols in anonymous modules are externally accessible as if they were 
     part of the outer module.
 
+Generics:
+    
+    Currently thinking of replacing the syntax for specifying generics so it 
+    doesn't clash with the use of the <> operators.  The bracket should work:
+    
+        Array[Foo] getAllFoos() { ... }
+    
+    For typecasts, we can use the '*' operator:
+    
+        foos := Array[Foo] * getObjectArray();
+
 
