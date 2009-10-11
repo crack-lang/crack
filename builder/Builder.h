@@ -38,12 +38,16 @@ class Builder {
         /**
          * Emits a variable definition and returns a new VarDef object for the 
          * variable.
+         * @param staticScope true if the "static" keyword was applied to the 
+         *        definition.
          */
-        virtual model::VarDefPtr emitVarDef(model::Context &container,
-                                            const model::TypeDefPtr &type,
-                                            const std::string &name,
-                                            const model::ExprPtr &initializer
-                                            ) = 0;
+        virtual model::VarDefPtr emitVarDef(
+            model::Context &container,
+            const model::TypeDefPtr &type,
+            const std::string &name,
+            const model::ExprPtr &initializer = 0,
+            bool staticScope = false
+        ) = 0;
     
         virtual void emitVarRef(model::Context &context,
                                 const model::VarRef &var

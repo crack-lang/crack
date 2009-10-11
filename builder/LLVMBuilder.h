@@ -43,7 +43,8 @@ class LLVMBuilder : public Builder {
         virtual model::VarDefPtr emitVarDef(model::Context &container,
                                             const model::TypeDefPtr &type,
                                             const std::string &name,
-                                            const model::ExprPtr &initializer
+                                            const model::ExprPtr &initializer,
+                                            bool staticScope
                                             );
 
         virtual void emitVarRef(model::Context &context,

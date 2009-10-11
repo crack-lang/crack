@@ -140,7 +140,8 @@ Value *emitGEP(IRBuilder<> &builder, Value *obj) {
     
 VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
                                   const string &name,
-                                  const ExprPtr &initializer
+                                  const ExprPtr &initializer,
+                                  bool staticScope
                                   ) {
     // do initializion
     if (initializer)
@@ -150,29 +151,50 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     
     // XXX create a local, global, class or instance variable depending on the 
     // context type.
+    // XXX use InternalLinkage for variables starting with _
     BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
-//    Value *var = new GlobalVariable(tp->rep,
-//                                    false, // isConstant
-//                                    GlobalValue::InternalLinkage, // linkage tp
-//                                    0, // initializer
-//                                    name,
-//                                    module
-//                                    );
+    
+    Value *var = 0;
+    IRBuilder<> builder(block);
+    switch (context.scope) {
+
+        case Context::instance:
+            // class statics share the same context as instance variables: 
+            // they are distinguished from instance variables by their 
+            // declaration and are equivalent to module scoped globals in the 
+            // way they are emitted, so if the staticScope flag is set we want 
+            // to fall through to module scope
+            if (!staticScope) {
+                assert(false && "XXX write instance variable emitter.");
+                break;
+            }
+                
+        case Context::module:
+            var = new GlobalVariable(tp->rep,
+                                    false, // isConstant
+                                    GlobalValue::ExternalLinkage, // linkage tp
+                                    
+                                    // initializer - this needs to be provided 
+                                    // or the global will be treated as an 
+                                    // extern.
+                                    Constant::getNullValue(tp->rep),
+                                    name,
+                                    module
+                                    );
+            break;
+
+        case Context::local:
+            var = builder.CreateAlloca(tp->rep, 0);
+            break;
+        
+        default:
+            assert(false && "invalid context value!");
+    }
     
     // allocate the variable and assign it
-    IRBuilder<> builder(block);
-    // XXX experimenting with Load
-    Value *var = builder.CreateAlloca(tp->rep, 0);
-//    Value *tmp = builder.CreateLoad(emitGEP(builder, lastValue));
-    Value *tmp = lastValue;
+    lastValue = builder.CreateStore(lastValue, var);
     
-    // XXX experimenting with GEP
-    // Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
-    // Value *gepArgs[] = { zero, zero };
-    // builder.CreateGEP(var, gepArgs, gepArgs + 2 )
-
-    lastValue = builder.CreateStore(tmp, var);
-    
+    // create the definition object.
     return new BVarDef(type, name, var);
 }
  
@@ -200,7 +222,7 @@ void LLVMBuilder::closeModule() {
     builder.CreateRet(lastValue);
     
     // create the execution engine
-    execEng = llvm::ExecutionEngine::create(module);
+    execEng = llvm::ExecutionEngine::create(module );
 
     // optimize
     llvm::PassManager passMan;

@@ -8,9 +8,10 @@
 
 using namespace model;
 
-Context::Context(builder::Builder &builder) :
+Context::Context(builder::Builder &builder, Context::Scope scope) :
     builder(builder),
     parent(0),
+    scope(scope),
     globalData(new GlobalData()) {
 }
 

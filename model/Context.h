@@ -29,9 +29,18 @@ class Context : public spug::RCBase {
 
         typedef std::map<std::string, StrConstPtr> StrConstTable;
     public:
+
+        // context scope - this is used to control how variables defined in 
+        // the scope are stored.
+        enum Scope {
+            module,
+            instance,
+            local
+        };
         
         ContextPtr parent;
         builder::Builder &builder;
+        Scope scope;
 
         struct GlobalData {
             StrConstTable strConstTable;
@@ -40,7 +49,7 @@ class Context : public spug::RCBase {
                        int32Type;
         } *globalData;
     
-        Context(builder::Builder &builder);
+        Context(builder::Builder &builder, Scope scope);
 
         DefPtr lookUp(const std::string &varName);
         void createModule(const char *name);

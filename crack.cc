@@ -17,7 +17,8 @@ int main(int argc, const char **argv) {
     
     // create the builder and top-level context
     builder::LLVMBuilder builder;
-    model::ContextPtr ctx = new model::Context(builder);
+    model::ContextPtr ctx =
+        new model::Context(builder, model::Context::module);
     
     // create the main module, register all of the basic stuff
     ctx->createModule("main");
