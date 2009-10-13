@@ -13,6 +13,7 @@
 namespace model {
    SPUG_RCPTR(Context);
    SPUG_RCPTR(Expr);
+   SPUG_RCPTR(TypeDef);
 };
 
 namespace parser {
@@ -44,7 +45,12 @@ class Parser {
        */
       model::ExprPtr parseExpression(const char *terminators);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
-      void parseVarDef(const Token &tok);
+
+      /** Parse a definition. Returns false if there was no definition. 
+       * @param type the parsed type.
+       */
+      bool parseDef(const model::TypeDefPtr &type);
+
 
    public:
       Parser(Toker &toker, const model::ContextPtr &context) : 

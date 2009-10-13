@@ -39,87 +39,32 @@ void Parser::parseBlock(bool nested) {
       // peek at the next token
       tok = toker.getToken();
 
+      ExprPtr expr;
       if (tok.isIdent()) {
          
-         // if the identifier is a type, check to see if the next identifier 
-         // is another identifier.
+         // if the identifier is a type, try to parse a definition
          VarDefPtr def = context->lookUp(tok.getData());
-         if (def && dynamic_cast<TypeDef *>(def.obj)) {
-            TypeDefPtr typeDef = TypeDefPtr::dcast(def);
-            Token tok2 = toker.getToken();
-            // XXX if it's '<', make sure the type is a generic and parse 
-            // nested types.
-            
-            if (tok2.isIdent()) {
-               string varName = tok2.getData();
-               // make sure we're not hiding anything else
-               if (context->lookUp(varName))
-                  warn(tok2,
-                       SPUG_FSTR("Variable " << varName << " redefined." )
-                       );
-
-               // this could be a variable or a function
-               Token tok3 = toker.getToken();
-               if (tok3.isSemi()) {
-                  // it's a variable.  Emit a variable definition and store it 
-                  // in the context.
-                  VarDefPtr varDef = 
-                     typeDef->emitVarDef(*context, varName, 0);
-                  context->addDef(varDef);
-                  continue;
-               } else if (tok3.isAssign()) {
-                  ExprPtr initializer;
-
-                  // check for a curly brace, indicating construction args.
-                  Token tok4 = toker.getToken();
-                  if (tok4.isLCurly()) {
-                     // XXX need to deal with construction args
-                     assert(false);
-                  } else {
-                     toker.putBack(tok4);
-                     initializer = parseExpression(";,");
-                     
-                     // XXX if this is a comma, we need to go back and parse 
-                     // another definition for the type.
-                     tok4 = toker.getToken();
-                     assert(tok4.isSemi());
-                  }
-
-                  // make sure the initializer matches the declared type.
-                  if (!typeDef->matches(*initializer->type))
-                     error(tok4, "Incorrect type for initializer.");
-                     
-                  VarDefPtr varDef = typeDef->emitVarDef(*context, varName,
-                                                         initializer
-                                                         );
-                  context->addDef(varDef);
-                  continue;
-               } else if (tok3.isLParen()) {
-                  // XXX need function definitions/declarations
-                  assert(false);
-               } else {
-                  unexpected(tok3,
-                             "expected variable initializer or function "
-                             "definition."
-                             );
-               }
-            } else {
-               unexpected(tok2, "expected variable definition");
-            }
+         if (def && dynamic_cast<TypeDef *>(def.obj) &&
+             parseDef(TypeDefPtr::dcast(def))
+             ) {
+            continue;
+         } else if (!def) {
+            // unknown identifier
+            // XXX if the next token(s) are '=' or ':=' then this is an 
+            // assignment
+            assert(false);
+         } else {
+            toker.putBack(tok);
+            expr = parseExpression(nested ? "; " : ";}");
          }
-         
-         // if the next token(s) are '=' or ':=' then this is an assignment
-         
-         toker.putBack(tok);
 
       } else {
 	 toker.putBack(tok);
+	 expr = parseExpression(nested ? "; " : ";}");
       }
 
-      // parse an expression (if there is no expression, that's ok)
-      ExprPtr expr = parseExpression(nested ? "; " : ";}");
+      // if we got an expression, emit it.
       if (expr)
-         // if there is an expression, emit it.
          expr->emit(*context);
 
       // check for a semicolon
@@ -270,33 +215,74 @@ void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
    }
 }
 
-void Parser::parseVarDef(const Token &ident) {
-   Token tok;
+// type var = initializer, var2 ;
+//     ^                         ^
+// type function() { }
+//     ^              ^
+bool Parser::parseDef(const TypeDefPtr &type) {
+   Token tok2 = toker.getToken();
+   // XXX if it's '<', make sure the type is a generic and parse 
+   // nested types.
+   
+   if (tok2.isIdent()) {
+      string varName = tok2.getData();
+      // make sure we're not hiding anything else
+      if (context->lookUp(varName))
+         warn(tok2,
+              SPUG_FSTR("Variable " << varName << " redefined." )
+              );
 
-   while (true) {
+      // this could be a variable or a function
+      Token tok3 = toker.getToken();
+      if (tok3.isSemi()) {
+         // it's a variable.  Emit a variable definition and store it 
+         // in the context.
+         VarDefPtr varDef = 
+            type->emitVarDef(*context, varName, 0);
+         context->addDef(varDef);
+         return true;
+      } else if (tok3.isAssign()) {
+         ExprPtr initializer;
 
-      // get a type identifier
-      tok = toker.getToken();
-      if (tok.isAssign()) {
-         parseExpression(";,");
-         break;
-      } else if (!tok.isIdent()) {
-	 unexpected(tok, "expected identifier");
+         // check for a curly brace, indicating construction args.
+         Token tok4 = toker.getToken();
+         if (tok4.isLCurly()) {
+            // XXX need to deal with construction args
+            assert(false);
+         } else {
+            toker.putBack(tok4);
+            initializer = parseExpression(";,");
+            
+            // XXX if this is a comma, we need to go back and parse 
+            // another definition for the type.
+            tok4 = toker.getToken();
+            assert(tok4.isSemi());
+         }
+
+         // make sure the initializer matches the declared type.
+         if (!type->matches(*initializer->type))
+            error(tok4, "Incorrect type for initializer.");
+            
+         VarDefPtr varDef = type->emitVarDef(*context, varName,
+                                                initializer
+                                                );
+         context->addDef(varDef);
+         return true;
+      } else if (tok3.isLParen()) {
+         // XXX need function definitions/declarations
+         assert(false);
+      } else {
+         unexpected(tok3,
+                    "expected variable initializer or function "
+                    "definition."
+                    );
       }
-
-      // get the next token, if it is an '=', parse an assignment expression, 
-      // if it is a '.', parse a nested type.
-      tok = toker.getToken();
-      if (tok.isAssign()) {
-         parseExpression(";,");
-         break;
-      } else if (!tok.isDot()) {
-	 toker.putBack(tok);
-	 break;
-      }
+   } else {
+      unexpected(tok2, "expected variable definition");
    }
-
-} 
+   
+   return false;
+}
 
 void Parser::parse() {
    // outer parser just parses an un-nested block
