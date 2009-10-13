@@ -16,7 +16,7 @@ class IntConst : public Expr {
     public:
         long val;
 
-        IntConst(long val) : val(val) {}
+        IntConst(const TypeDefPtr &type, long val);
         
         virtual void emit(Context &context);
 };

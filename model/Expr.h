@@ -8,12 +8,17 @@
 namespace model {
 
 class Context;
+SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(Expr);
 
 // Base class for everything representing an expression.
 class Expr : public spug::RCBase {
     public:
+        TypeDefPtr type;
+        
+        Expr(const TypeDefPtr &type) : type(type) {}
+
         /** Emit the expression in the given context. */
         virtual void emit(Context &context) = 0;
 };

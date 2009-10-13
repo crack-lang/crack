@@ -16,7 +16,7 @@ class FuncCall : public Expr {
         typedef std::vector<ExprPtr> ExprVector;
         ExprVector args;
 
-        FuncCall(const std::string &name) : name(name) {}
+        FuncCall(const TypeDefPtr &type, const std::string &name);
         virtual void emit(Context &context);
 };
 

@@ -12,3 +12,9 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
                                ) {
     return container.builder.emitVarDef(container, this, name, initializer);
 }
+
+bool TypeDef::matches(const TypeDef &other) {
+    // XXX need to deal with derived classes and possibly equivalent types 
+    // with a different identity.
+    return &other == this;
+}    

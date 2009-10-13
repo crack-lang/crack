@@ -11,6 +11,7 @@ namespace model {
     class IntConst;
     SPUG_RCPTR(FuncCall);
     SPUG_RCPTR(FuncDef);
+    SPUG_RCPTR(IntConst);
     SPUG_RCPTR(StrConst);
     SPUG_RCPTR(TypeDef);
     SPUG_RCPTR(VarDef);
@@ -60,7 +61,10 @@ class Builder {
             createVarRef(const model::VarDefPtr &varDef) = 0;
         virtual void createModule(const char *name) = 0;
         virtual void closeModule() = 0;
-        virtual model::StrConstPtr createStrConst(const std::string &val) = 0;
+        virtual model::StrConstPtr createStrConst(model::Context &context,
+                                                  const std::string &val) = 0;
+        virtual model::IntConstPtr createIntConst(model::Context &context,
+                                                  long val) = 0;
         
         virtual void registerPrimFuncs(model::Context &context) = 0;
         

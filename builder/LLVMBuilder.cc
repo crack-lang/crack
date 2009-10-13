@@ -72,8 +72,8 @@ namespace {
         public:
             // XXX need more specific type?
             llvm::Value *rep;
-            BStrConst(const std::string &val) :
-                StrConst(val),
+            BStrConst(const TypeDefPtr &type, const std::string &val) :
+                StrConst(type, val),
                 rep(0) {
             }
     };
@@ -81,8 +81,8 @@ namespace {
     class BIntConst : public model::IntConst {
         public:
             llvm::Value *rep;
-            BIntConst(long val) :
-                IntConst(val),
+            BIntConst(const TypeDefPtr &type, long val) :
+                IntConst(type, val),
                 rep(llvm::ConstantInt::get(llvm::Type::Int32Ty, val)) {
             }
     };
@@ -243,16 +243,21 @@ void LLVMBuilder::closeModule() {
     passMan.run(*module);
 }    
 
-model::StrConstPtr LLVMBuilder::createStrConst(const std::string &val) {
-    return new BStrConst(val);
+model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
+                                               const std::string &val) {
+    return new BStrConst(context.globalData->byteptrType, val);
 }
 
-IntConstPtr createIntConst(long val) {
-    return new BIntConst(val);
+IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val) {
+    // XXX probably need to consider the simplest type that the constant can 
+    // fit into (compatibility rules will allow us to coerce it into another 
+    // type)
+    return new BIntConst(context.globalData->int32Type, val);
 }
                        
 model::FuncCallPtr LLVMBuilder::createFuncCall(const string &funcName) {
-    return new FuncCall(funcName);
+    // XXX need a function type.
+    return new FuncCall(0, funcName);
 }
     
 model::FuncDefPtr LLVMBuilder::createFuncDef(const char *name) {
@@ -270,12 +275,12 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     llvm::Type *llvmBytePtrType = 
         llvm::PointerType::getUnqual(llvm::IntegerType::get(8));
     gd->byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
-    gd->byteptrType->defaultInitializer = createStrConst("");
+    gd->byteptrType->defaultInitializer = createStrConst(context, "");
     context.addDef(gd->byteptrType);
     
     const llvm::Type *llvmInt32Type = llvm::IntegerType::get(32);
     gd->int32Type = new BTypeDef("int32", llvmInt32Type);
-    gd->int32Type->defaultInitializer = createIntConst(0);
+    gd->int32Type->defaultInitializer = createIntConst(context, 0);
     context.addDef(gd->int32Type);
     
     // create "int print(String)"
@@ -295,12 +300,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     funcDef->rep = printFunc;
     funcDef->args[0] = new ArgDef(gd->byteptrType, "text");
     context.addDef(VarDefPtr::ucast(funcDef));
-}
-
-void LLVMBuilder::kludge(model::Context &context) {
-    model::FuncCall::ExprVector args(1);
-    args[0] = new StrConst("hello world");
-    emitFuncCall(context, context.lookUp("print"), args);
 }
 
 void LLVMBuilder::run() {

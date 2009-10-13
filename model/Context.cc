@@ -41,7 +41,7 @@ StrConstPtr Context::getStrConst(const std::string &value) {
         return iter->second;
     } else {
         // create a new one
-        StrConstPtr strConst = builder.createStrConst(value);
+        StrConstPtr strConst = builder.createStrConst(*this, value);
         globalData->strConstTable[value] = strConst;
         return strConst;
     }

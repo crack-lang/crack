@@ -3,7 +3,7 @@
 #include "parser/Parser.h"
 #include "parser/Toker.h"
 #include "model/Context.h"
-#include <model/Def.h>
+#include "model/TypeDef.h"
 #include <builder/LLVMBuilder.h>
 #include <iostream>
 #include <fstream>
@@ -31,12 +31,13 @@ int main(int argc, const char **argv) {
     
     try {
         parser.parse();
+
+        // close it and run
+        ctx->builder.closeModule();
+        builder.run();
     } catch (const parser::ParseError &ex) {
         std::cerr << ex << std::endl;
     }
 
-    // close it and run
-    ctx->builder.closeModule();
-    builder.run();
 }
 

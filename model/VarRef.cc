@@ -3,11 +3,15 @@
 
 #include "builder/Builder.h"
 #include "Context.h"
+#include "TypeDef.h"
 #include "VarDef.h"
 
 using namespace model;
 
-VarRef::VarRef(const VarDefPtr &def) : def(def) {}
+VarRef::VarRef(const VarDefPtr &def) :
+    Expr(def->type),
+    def(def) {
+}
 
 void VarRef::emit(Context &context) {
     context.builder.emitVarRef(context, *this);

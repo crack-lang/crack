@@ -61,12 +61,14 @@ class LLVMBuilder : public Builder {
 
         virtual void createModule(const char *name);
         virtual void closeModule();
-        virtual model::StrConstPtr createStrConst(const std::string &val);
+        virtual model::StrConstPtr createStrConst(model::Context &context,
+                                                  const std::string &val);
+        virtual model::IntConstPtr createIntConst(model::Context &context,
+                                                  long val);
         virtual void registerPrimFuncs(model::Context &context);
         
         virtual void run();
         
-        void kludge(model::Context &context);
 };
 
 } // namespace builder

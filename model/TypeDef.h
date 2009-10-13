@@ -32,6 +32,12 @@ class TypeDef : public VarDef {
         VarDefPtr emitVarDef(Context &container, const std::string &name,
                              const ExprPtr &initializer
                              );
+        
+        /** 
+         * Returns true if "other" satisfies the type - in other words, if 
+         * "other" either equals "this" or is a subclass of "this".
+         */
+        bool matches(const TypeDef &other);
 };
 
 } // namespace model

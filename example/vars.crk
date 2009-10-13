@@ -1,7 +1,11 @@
 // variable definitions
 byteptr str;
-int32 val;
+byteptr prettyString = 'a pretty string';
+int32 val = 100;
 
 print('empty brackets: [');
 print(str);
-print(']');
+print(']\n');
+print('pretty string: [');
+print(prettyString);
+print(']\n');

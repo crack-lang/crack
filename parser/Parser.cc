@@ -7,6 +7,7 @@
 #include "model/Context.h"
 #include "model/FuncCall.h"
 #include "model/Expr.h"
+#include "model/IntConst.h"
 #include "model/StrConst.h"
 #include "model/TypeDef.h"
 #include "model/VarDef.h"
@@ -64,11 +65,35 @@ void Parser::parseBlock(bool nested) {
                   // in the context.
                   VarDefPtr varDef = 
                      typeDef->emitVarDef(*context, varName, 0);
-                  context->addDef(VarDefPtr::ucast(varDef));
+                  context->addDef(varDef);
                   continue;
                } else if (tok3.isAssign()) {
-                  // XXX need initializers
-                  assert(false);
+                  ExprPtr initializer;
+
+                  // check for a curly brace, indicating construction args.
+                  Token tok4 = toker.getToken();
+                  if (tok4.isLCurly()) {
+                     // XXX need to deal with construction args
+                     assert(false);
+                  } else {
+                     toker.putBack(tok4);
+                     initializer = parseExpression(";,");
+                     
+                     // XXX if this is a comma, we need to go back and parse 
+                     // another definition for the type.
+                     tok4 = toker.getToken();
+                     assert(tok4.isSemi());
+                  }
+
+                  // make sure the initializer matches the declared type.
+                  if (!typeDef->matches(*initializer->type))
+                     error(tok4, "Incorrect type for initializer.");
+                     
+                  VarDefPtr varDef = typeDef->emitVarDef(*context, varName,
+                                                         initializer
+                                                         );
+                  context->addDef(varDef);
+                  continue;
                } else if (tok3.isLParen()) {
                   // XXX need function definitions/declarations
                   assert(false);
@@ -173,7 +198,9 @@ ExprPtr Parser::parseExpression(const char *terminators) {
    } else if (tok.isString()) {
       return context->getStrConst(tok.getData());
    } else if (tok.isInteger()) {
-      assert(false);
+      return context->builder.createIntConst(*context, 
+                                             atoi(tok.getData().c_str())
+                                             );
    } else if (tok.isLCurly()) {
       assert(false);
    } else {

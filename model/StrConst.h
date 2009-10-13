@@ -11,7 +11,7 @@ class StrConst : public Expr {
     public:
         std::string val;
         
-        StrConst(const std::string &val) : val(val) {}
+        StrConst(const TypeDefPtr &type, const std::string &val);
         
         virtual void emit(Context &context);
 };
