@@ -44,12 +44,15 @@ class Context : public spug::RCBase {
 
         struct GlobalData {
             StrConstTable strConstTable;
-            TypeDefPtr byteptrType,
+            TypeDefPtr boolType,
+                       byteptrType,
                        intType,
                        int32Type;
         } *globalData;
     
-        Context(builder::Builder &builder, Scope scope);
+        Context(builder::Builder &builder, Scope scope,
+                Context *parentContext = 0
+                );
 
         VarDefPtr lookUp(const std::string &varName);
         void createModule(const char *name);

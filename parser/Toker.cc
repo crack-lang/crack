@@ -17,18 +17,22 @@ Location::Location(const char *name, int lineNumber) :
     lineNumber(lineNumber) {
 }
 
-Token::Token() :
-   type(Token::end) {
-}
-Token::Token(Type type, const char *data, const Location &loc) :
-    type(type),
-    data(data),
-    loc(loc) {
-}
-
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src) {
     locationMap.setName(sourceName, lineNumber);
+}
+
+Token Toker::fixIdent(const string &data, const Location &loc) {
+    if (data == "if")
+        return Token(Token::ifKw, data, loc);
+    else if (data == "else")
+        return Token(Token::elseKw, data, loc);
+    else if (data == "while")
+        return Token(Token::whileKw, data, loc);
+    else
+        return Token(Token::ident, data, 
+                     locationMap.getLocation()
+                     );
 }
 
 Token Toker::readToken() {
@@ -108,9 +112,9 @@ Token Toker::readToken() {
                 // if we got a non-alphanumeric, non-underscore we're done
                 if (!isalnum(ch) && ch != '_') {
                     src.putback(ch);
-                    return Token(Token::ident, buf.str().c_str(), 
-                                 locationMap.getLocation()
-                                 );
+                    return fixIdent(buf.str().c_str(), 
+                                    locationMap.getLocation()
+                                    );
                 }
     
                 buf << ch;

@@ -11,9 +11,9 @@ class Token {
    public:
 
       // the token types
-      typedef enum { ident, string, semi, comma, colon, dot, assign, lparen, 
-		     rparen, lcurly, rcurly, oper, integer, plus, minus, 
-		     asterisk, slash, end
+      typedef enum { ifKw, elseKw, whileKw, ident, string, semi, comma, 
+                     colon, dot, assign, lparen, rparen, lcurly, rcurly, 
+                     oper, integer, plus, minus, asterisk, slash, end
 		    } Type;
 
    private:
@@ -29,7 +29,7 @@ class Token {
 
       Token();
 
-      Token(Type type, const char *data, const Location &loc);
+      Token(Type type, const std::string &data, const Location &loc);
 
       /** returns the token type */
       Type getType() const { return type; }
@@ -48,6 +48,9 @@ class Token {
       /** Methods to check the token type */
       /** @{ */
 
+      bool isIf() const { return type == ifKw; }
+      bool isElse() const { return type == elseKw; }
+      bool isWhile() const { return type == whileKw; }
       bool isIdent() const { return type == ident; }
       bool isString() const { return type == string; }
       bool isSemi() const { return type == semi; }

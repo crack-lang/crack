@@ -11,12 +11,12 @@
 #include "llvm/CallingConv.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include <model/ArgDef.h>
+#include <model/Branchpoint.h>
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
@@ -46,6 +46,8 @@ namespace {
             }
     };
     
+    SPUG_RCPTR(BTypeDef)
+
     class BTypeDef : public model::TypeDef {
         public:
             const llvm::Type *rep;
@@ -86,6 +88,15 @@ namespace {
                 rep(llvm::ConstantInt::get(llvm::Type::Int32Ty, val)) {
             }
     };
+    
+    SPUG_RCPTR(BBranchpoint);
+
+    class BBranchpoint : public model::Branchpoint {
+        public:
+            BasicBlock *block;
+            
+            BBranchpoint(BasicBlock *block) : block(block) {}
+    };
 
 } // anon namespace
 
@@ -97,7 +108,7 @@ LLVMBuilder::LLVMBuilder() :
 }
 
 void LLVMBuilder::emitFuncCall(model::Context &context,
-                               const model::FuncDefPtr &func, 
+                               const model::FuncDefPtr &funcDef, 
                                const model::FuncCall::ExprVector &args) {
                     
     // get the LLVM arg list from the argument expressions
@@ -108,10 +119,8 @@ void LLVMBuilder::emitFuncCall(model::Context &context,
         valueArgs.push_back(lastValue);
     }
     
-            
-    IRBuilder<> builder(block);
     lastValue =
-        builder.CreateCall(BFuncDefPtr::dcast(func)->rep, valueArgs.begin(),
+        builder.CreateCall(BFuncDefPtr::dcast(funcDef)->rep, valueArgs.begin(),
                            valueArgs.end(),
                            "tmp"
                            );
@@ -122,7 +131,6 @@ void LLVMBuilder::emitStrConst(model::Context &context,
     BStrConstPtr bval = BStrConstPtr::dcast(val);
     // if the global string hasn't been defined yet, create it
     if (!bval->rep) {
-        IRBuilder<> builder(block);
         bval->rep = builder.CreateGlobalStringPtr(val->val.c_str());
     }
     lastValue = bval->rep;
@@ -130,6 +138,58 @@ void LLVMBuilder::emitStrConst(model::Context &context,
 
 void LLVMBuilder::emitIntConst(model::Context &context, const IntConst &val) {
     lastValue = dynamic_cast<const BIntConst &>(val).rep;
+}
+
+BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
+                                   const model::ExprPtr &cond) {
+    // stash the current block and the "false condition" block in the result 
+    // branchpoint and create a new block for the condition
+    BBranchpointPtr result = new BBranchpoint(BasicBlock::Create("cond_false",
+                                                                 func
+                                                                 )
+                                              );
+    block = BasicBlock::Create("cond_true", func);
+
+    cond->emit(context);
+    // XXX I think we need a "conditional" type so we don't have to convert 
+    // everything to a boolean and then check for non-zero.
+    BTypeDefPtr boolType =
+        BTypeDefPtr::dcast(context.globalData->boolType);
+    Value *comparison =
+        builder.CreateICmpNE(lastValue, Constant::getNullValue(boolType->rep));
+    builder.CreateCondBr(comparison, block, result->block);
+    
+    // repoint to the new ("if true") block
+    builder.SetInsertPoint(block);
+    return BranchpointPtr::ucast(result);
+}
+
+BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
+                                     const model::BranchpointPtr &pos) {
+    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+
+    // create a block to come after the else and jump to it from the current 
+    // "if true" block.
+    BasicBlock *falseBlock = bpos->block;
+    bpos->block = BasicBlock::Create("cond_end", func);
+    builder.CreateBr(bpos->block);
+    
+    // new block is the "false" condition
+    block = falseBlock;
+    builder.SetInsertPoint(block);
+    return pos;
+}
+        
+void LLVMBuilder::emitEndIf(model::Context &context,
+                            const model::BranchpointPtr &pos) {
+    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+
+    // branch from the current block to the next block
+    builder.CreateBr(bpos->block);
+
+    // new block is the next block
+    block = BBranchpointPtr::dcast(pos)->block;
+    builder.SetInsertPoint(block);
 }
 
 Value *emitGEP(IRBuilder<> &builder, Value *obj) {
@@ -154,7 +214,6 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
     
     Value *var = 0;
-    IRBuilder<> builder(block);
     switch (context.scope) {
 
         case Context::instance:
@@ -200,7 +259,6 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
 void LLVMBuilder::emitVarRef(model::Context &context,
                              const model::VarRef &var
                              ) {
-    IRBuilder<> builder(block);
     BVarDefPtr def = BVarDefPtr::dcast(var.def);
     lastValue = builder.CreateLoad(def->rep);
 }
@@ -209,16 +267,17 @@ void LLVMBuilder::createModule(const char *name) {
     assert(!module);
     module = new llvm::Module(name);
     llvm::Constant *c =
-        module->getOrInsertFunction("__main__", llvm::IntegerType::get(32), NULL);
+        module->getOrInsertFunction("__main__", llvm::Type::VoidTy, NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
     block = BasicBlock::Create("__main__", func);
+    builder.SetInsertPoint(block);
 }
 
 void LLVMBuilder::closeModule() {
     assert(module);
-    IRBuilder<> builder(block);
-    builder.CreateRet(lastValue);
+    builder.CreateRetVoid();
+    llvm::verifyModule(*module, llvm::PrintMessageAction);
     
     // create the execution engine
     execEng = llvm::ExecutionEngine::create(module );
@@ -283,6 +342,9 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->int32Type->defaultInitializer = createIntConst(context, 0);
     context.addDef(gd->int32Type);
     
+    // XXX using bool = int32 for now
+    gd->boolType = gd->int32Type;
+    
     // create "int print(String)"
     vector<const llvm::Type *> args(1);
     args[0] = llvmBytePtrType;
@@ -304,7 +366,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
 void LLVMBuilder::run() {
 //    PassManager passMan;
-    llvm::verifyModule(*module, llvm::PrintMessageAction);
 //    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
 //    passMan.run(*module);
     

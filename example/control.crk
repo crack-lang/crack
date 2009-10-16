@@ -1,0 +1,23 @@
+int32 true = 1;
+int32 false = 0;
+
+if (true) print("simple if works!\n");
+if (false)
+    print('failed on simple else');
+else
+    print ('simple else works\n');
+
+if (true) {
+    print('complex if works\n');
+} else {
+    print('complex if failed\n');
+}
+
+if (false) {
+    print('complex else failed\n');
+} else {
+    print('complex else works\n');
+}
+
+
+

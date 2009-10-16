@@ -8,11 +8,13 @@
 
 using namespace model;
 
-Context::Context(builder::Builder &builder, Context::Scope scope) :
+Context::Context(builder::Builder &builder, Context::Scope scope,
+                 Context *parentContext
+                 ) :
     builder(builder),
-    parent(0),
+    parent(parentContext),
     scope(scope),
-    globalData(new GlobalData()) {
+    globalData(parentContext ? parentContext->globalData : new GlobalData()) {
 }
 
 void Context::createModule(const char *name) {

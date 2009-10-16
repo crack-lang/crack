@@ -23,6 +23,11 @@ class Toker {
       // tracks the location
       LocationMap locationMap;
 
+      // "fixes identifiers" by converting them to keywords if appropriate - 
+      // if the identifier in 'raw' is a keyword, returns a keyword token, 
+      // otherwise just returns the identifier token.
+      Token fixIdent(const std::string &raw, const Location &loc);
+
       // reads the next token directly from the source stream
       Token readToken();
 

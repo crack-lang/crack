@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <spug/StringFmt.h>
+#include "model/Branchpoint.h"
 #include "model/Context.h"
 #include "model/FuncCall.h"
 #include "model/Expr.h"
@@ -38,6 +39,17 @@ void Parser::parseBlock(bool nested) {
 
       // peek at the next token
       tok = toker.getToken();
+      
+      // check for statements
+      if (tok.isIf()) {
+         parseIfStmt();
+         continue;
+      } else if (tok.isWhile()) {
+         parseWhileStmt();
+         continue;
+      } else if (tok.isElse()) {
+         unexpected(tok, "'else' with no matching 'if'");
+      }
 
       ExprPtr expr;
       if (tok.isIdent()) {
@@ -282,6 +294,66 @@ bool Parser::parseDef(const TypeDefPtr &type) {
    }
    
    return false;
+}
+
+void Parser::parseIfClause() {
+   Token tok = toker.getToken();
+   if (tok.isLCurly()) {
+      parseBlock(true);
+   } else {
+      toker.putBack(tok);
+      ExprPtr expr = parseExpression("; ");
+      if (!expr)
+         unexpected(tok, "expected expression.");
+      expr->emit(*context);
+      tok = toker.getToken();
+      // XXX need to accept end of stream or '}', depending on the context
+      if (!tok.isSemi())
+         unexpected(tok, "expected semicolon.");
+   }
+}
+   
+// clause := expr ;   (';' can be replaced with EOF)
+//        |  { block }
+// if ( expr ) clause
+//   ^               ^
+// if ( expr ) clause else clause
+//   ^                           ^
+void Parser::parseIfStmt() {
+   Token tok = toker.getToken();
+   if (!tok.isLParen())
+      unexpected(tok, "expected left paren after if");
+   
+   ExprPtr cond = parseExpression(")");
+   if (!context->globalData->boolType->matches(*cond->type))
+      error(tok, "Condition is not boolean.");
+   
+   tok = toker.getToken();
+   if (!tok.isRParen())
+      unexpected(tok, "expected closing paren");
+   
+   BranchpointPtr pos = context->builder.emitIf(*context, cond);
+
+   parseIfClause();
+
+   // check for the "else"
+   tok = toker.getToken();
+   if (tok.isElse()) {
+      pos = context->builder.emitElse(*context, pos);
+      parseIfClause();
+      context->builder.emitEndIf(*context, pos);
+   } else {
+      toker.putBack(tok);
+      context->builder.emitEndIf(*context, pos);
+   }
+}
+
+// while ( expr ) stmt ; (';' can be replaced with EOF)
+//      ^               ^
+// while ( expr ) { ... }
+//      ^                ^
+void Parser::parseWhileStmt() {
+   assert(false);
 }
 
 void Parser::parse() {

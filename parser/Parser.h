@@ -50,6 +50,12 @@ class Parser {
        * @param type the parsed type.
        */
       bool parseDef(const model::TypeDefPtr &type);
+      
+      // statements
+      
+      void parseIfClause();
+      void parseIfStmt();
+      void parseWhileStmt();
 
 
    public:

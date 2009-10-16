@@ -4,6 +4,8 @@
 
 #include "Builder.h"
 
+#include <llvm/Support/IRBuilder.h>
+
 namespace llvm {
     class Module;
     class Function;
@@ -21,6 +23,7 @@ class LLVMBuilder : public Builder {
         llvm::Module *module;
         llvm::Function *func;
         llvm::BasicBlock *block;
+        llvm::IRBuilder<> builder;
         
         llvm::Value *lastValue;
         llvm::ExecutionEngine *execEng;
@@ -39,6 +42,16 @@ class LLVMBuilder : public Builder {
         
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val);
+
+        virtual model::BranchpointPtr emitIf(model::Context &context,
+                                             const model::ExprPtr &cond);
+        
+        virtual model::BranchpointPtr
+            emitElse(model::Context &context,
+                     const model::BranchpointPtr &pos);
+        
+        virtual void emitEndIf(model::Context &context,
+                               const model::BranchpointPtr &pos);
 
         virtual model::VarDefPtr emitVarDef(model::Context &container,
                                             const model::TypeDefPtr &type,

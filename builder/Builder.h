@@ -7,6 +7,7 @@
 #include "model/FuncCall.h" // for FuncCall::ExprVector
 
 namespace model {
+    SPUG_RCPTR(Branchpoint);
     class Context;
     class IntConst;
     SPUG_RCPTR(FuncCall);
@@ -35,6 +36,30 @@ class Builder {
 
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val) = 0;
+        
+        /**
+         * Emit the beginning of an "if" statement, returns a Branchpoint that 
+         * must be passed to the subsequent emitElse() or emitEndIf().
+         */
+        virtual model::BranchpointPtr emitIf(model::Context &context,
+                                             const model::ExprPtr &cond) = 0;
+        
+        /**
+         * Emits an "else" statement.
+         * @params pos the branchpoint returned from the original emitIf().
+         * @returns a branchpoint to be passed to the subsequent emitEndIf().
+         */
+        virtual model::BranchpointPtr
+            emitElse(model::Context &context,
+                     const model::BranchpointPtr &pos) = 0;
+        
+        /**
+         * Closes off an "if" statement emitted by emitIf().
+         * @param pos a branchpoint returned from the last emitIf() or 
+         *  emitElse().
+         */
+        virtual void emitEndIf(model::Context &context,
+                               const model::BranchpointPtr &pos) = 0;
 
         /**
          * Emits a variable definition and returns a new VarDef object for the 

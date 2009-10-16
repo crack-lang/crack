@@ -8,7 +8,7 @@ Token::Token() :
    type(Token::end) {
 }
 
-Token::Token(Type type, const char *data, const Location &loc) :
+Token::Token(Type type, const std::string &data, const Location &loc) :
     type(type),
     data(data),
     loc(loc) {
