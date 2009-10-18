@@ -60,6 +60,22 @@ class Builder {
          */
         virtual void emitEndIf(model::Context &context,
                                const model::BranchpointPtr &pos) = 0;
+        
+        /**
+         * Emits a "while" statement.
+         * @param cond the conditional expression.
+         * @returns a Branchpoint to be passed into the emitEndWhile()
+         */
+        virtual model::BranchpointPtr
+            emitWhile(model::Context &context, const model::ExprPtr &cond) = 0;
+
+        /**
+         * Emits the end of the "while" statement.
+         * @param pos the branchpoint object returned from the emitWhile().
+         */        
+        virtual model::BranchpointPtr
+            emitEndWhile(model::Context &context,
+                         const model::BranchpointPtr &pos) = 0;
 
         /**
          * Emits a variable definition and returns a new VarDef object for the 

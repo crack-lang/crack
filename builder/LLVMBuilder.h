@@ -53,6 +53,13 @@ class LLVMBuilder : public Builder {
         virtual void emitEndIf(model::Context &context,
                                const model::BranchpointPtr &pos);
 
+        virtual model::BranchpointPtr
+            emitWhile(model::Context &context, const model::ExprPtr &cond);
+
+        virtual model::BranchpointPtr
+            emitEndWhile(model::Context &context,
+                         const model::BranchpointPtr &pos);
+
         virtual model::VarDefPtr emitVarDef(model::Context &container,
                                             const model::TypeDefPtr &type,
                                             const std::string &name,

@@ -148,7 +148,7 @@ BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
                                                                  func
                                                                  )
                                               );
-    block = BasicBlock::Create("cond_true", func);
+    BasicBlock *trueBlock = BasicBlock::Create("cond_true", func);
 
     cond->emit(context);
     // XXX I think we need a "conditional" type so we don't have to convert 
@@ -157,10 +157,10 @@ BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
         BTypeDefPtr::dcast(context.globalData->boolType);
     Value *comparison =
         builder.CreateICmpNE(lastValue, Constant::getNullValue(boolType->rep));
-    builder.CreateCondBr(comparison, block, result->block);
+    builder.CreateCondBr(comparison, trueBlock, result->block);
     
     // repoint to the new ("if true") block
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(block = trueBlock);
     return BranchpointPtr::ucast(result);
 }
 
@@ -190,6 +190,39 @@ void LLVMBuilder::emitEndIf(model::Context &context,
     // new block is the next block
     block = BBranchpointPtr::dcast(pos)->block;
     builder.SetInsertPoint(block);
+}
+
+BranchpointPtr LLVMBuilder::emitWhile(Context &context, const ExprPtr &cond) {
+    BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create("while_end", 
+                                                               func
+                                                               )
+                                            );
+
+    BasicBlock *whileBody = BasicBlock::Create("while_body", func);
+
+    // XXX see notes above on a conditional type.
+    cond->emit(context);
+    BTypeDefPtr boolType =
+        BTypeDefPtr::dcast(context.globalData->boolType);
+    Value *comparison =
+        builder.CreateICmpNE(lastValue, Constant::getNullValue(boolType->rep));
+    builder.CreateCondBr(comparison, whileBody, bpos->block);
+
+    // begin generating code in the while body    
+    builder.SetInsertPoint(block = whileBody);
+
+    return bpos;
+}
+
+BranchpointPtr LLVMBuilder::emitEndWhile(Context &context,
+                                         const BranchpointPtr &pos) {
+    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+
+    // emit the branch back to the beginning of the block
+    builder.CreateBr(block);
+
+    // new code goes to the following block
+    builder.SetInsertPoint(block = bpos->block);
 }
 
 Value *emitGEP(IRBuilder<> &builder, Value *obj) {

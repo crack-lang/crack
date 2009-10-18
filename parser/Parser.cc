@@ -353,7 +353,18 @@ void Parser::parseIfStmt() {
 // while ( expr ) { ... }
 //      ^                ^
 void Parser::parseWhileStmt() {
-   assert(false);
+   Token tok = toker.getToken();
+   if (!tok.isLParen())
+      unexpected(tok, "expected left paren after while");
+   
+   ExprPtr expr = parseExpression(")");
+   tok = toker.getToken();
+   if (!tok.isRParen())
+      unexpected(tok, "expected right paren after conditional expression");
+   
+   BranchpointPtr pos = context->builder.emitWhile(*context, expr);
+   parseIfClause();
+   context->builder.emitEndWhile(*context, pos);
 }
 
 void Parser::parse() {
