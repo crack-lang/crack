@@ -53,6 +53,19 @@ class Context : public spug::RCBase {
         Context(builder::Builder &builder, Scope scope,
                 Context *parentContext = 0
                 );
+        
+        /**
+         * Create a new subcontext with a different scope from the parent 
+         * context.
+         */
+        ContextPtr createSubContext(Scope newScope);
+
+        /**
+         * Create a new subcontext in the same scope.
+         */
+        ContextPtr createSubContext() {
+            return createSubContext(scope);
+        }
 
         VarDefPtr lookUp(const std::string &varName);
         void createModule(const char *name);

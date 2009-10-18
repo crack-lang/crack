@@ -56,6 +56,10 @@ class Parser {
       void parseIfClause();
       void parseIfStmt();
       void parseWhileStmt();
+      
+      // context stack manipulation
+      void pushContext(const model::ContextPtr &newContext);
+      void popContext();
 
 
    public:

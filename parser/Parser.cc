@@ -299,7 +299,9 @@ bool Parser::parseDef(const TypeDefPtr &type) {
 void Parser::parseIfClause() {
    Token tok = toker.getToken();
    if (tok.isLCurly()) {
+      pushContext(context->createSubContext());
       parseBlock(true);
+      popContext();
    } else {
       toker.putBack(tok);
       ExprPtr expr = parseExpression("; ");
@@ -365,6 +367,15 @@ void Parser::parseWhileStmt() {
    BranchpointPtr pos = context->builder.emitWhile(*context, expr);
    parseIfClause();
    context->builder.emitEndWhile(*context, pos);
+}
+
+void Parser::pushContext(const model::ContextPtr &newContext) {
+   context = newContext;
+}
+
+void Parser::popContext() {
+   assert(context->parent);
+   context = context->parent;
 }
 
 void Parser::parse() {

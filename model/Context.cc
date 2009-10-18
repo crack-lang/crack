@@ -17,6 +17,10 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     globalData(parentContext ? parentContext->globalData : new GlobalData()) {
 }
 
+ContextPtr Context::createSubContext(Scope newScope) {
+    return new Context(builder, newScope, this);
+}
+
 void Context::createModule(const char *name) {
     builder.createModule(name);
 }
