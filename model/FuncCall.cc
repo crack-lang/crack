@@ -2,6 +2,7 @@
 #include "FuncCall.h"
 
 #include "builder/Builder.h"
+#include "BuilderVarDefData.h"
 #include "ArgDef.h"
 #include "Context.h"
 #include "FuncDef.h"

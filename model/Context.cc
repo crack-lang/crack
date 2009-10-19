@@ -1,7 +1,9 @@
 
 #include "Context.h"
 
-#include <builder/Builder.h>
+#include "model/BuilderContextData.h"
+#include "model/BuilderVarDefData.h"
+#include "builder/Builder.h"
 #include "VarDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"

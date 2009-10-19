@@ -4,8 +4,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <spug/StringFmt.h>
+#include "model/ArgDef.h"
 #include "model/Branchpoint.h"
+#include "model/BuilderVarDefData.h"
 #include "model/Context.h"
+#include "model/FuncDef.h"
 #include "model/FuncCall.h"
 #include "model/Expr.h"
 #include "model/IntConst.h"
@@ -227,6 +230,61 @@ void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
    }
 }
 
+TypeDefPtr Parser::parseTypeSpec() {
+   Token tok = toker.getToken();
+   if (!tok.isIdent())
+      unexpected(tok, "type identifier expected");
+   
+   VarDefPtr def = context->lookUp(tok.getData());
+   TypeDef *typeDef = dynamic_cast<TypeDef *>(def.obj);
+   if (!typeDef)
+      error(tok, SPUG_FSTR(tok.getData() << " is not a type.").c_str());
+   
+   // XXX need to deal with compound types
+   
+   return typeDef;
+}
+
+// type funcName ( type argName, ... ) {
+//                ^                   ^
+void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
+
+   // load the next token so we can check for the immediate closing paren of 
+   // an empty argument list.
+   Token tok = toker.getToken();
+      
+   while (true) {
+
+      // check for a right paren indicating the end of the arg list.
+      if (tok.isRParen())
+         break;
+      
+      // parse the next argument type
+      toker.putBack(tok);
+      TypeDefPtr argType = parseTypeSpec();
+      
+      tok = toker.getToken();
+      if (!tok.isIdent())
+         error(tok, "identifier (argument name) expected.");
+      
+      // make sure we're not redefining an existing variable
+      std::string varName = tok.getData();
+      if (context->lookUp(varName))
+         warn(tok, SPUG_FSTR("Variable " << varName << " redefined."));
+
+      // XXX need to check for a default variable assignment
+      
+      ArgDefPtr argDef = context->builder.createArgDef(argType, varName);
+      args.push_back(argDef);
+      context->addDef(VarDefPtr::ucast(argDef));
+      
+      // check for a comma
+      tok = toker.getToken();
+      if (!tok.isComma() && !tok.isRParen())
+         unexpected(tok, "expected ',' or ')' after argument definition");
+   }
+}
+
 // type var = initializer, var2 ;
 //     ^                         ^
 // type function() { }
@@ -281,8 +339,28 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          context->addDef(varDef);
          return true;
       } else if (tok3.isLParen()) {
-         // XXX need function definitions/declarations
-         assert(false);
+         // push a new context, arg defs will be stored in the new context.
+         pushContext(context->createSubContext(Context::local));
+
+         // parse the arguments
+         vector<ArgDefPtr> argDefs;
+         parseArgDefs(argDefs);
+         
+         tok3 = toker.getToken();
+         if (!tok3.isLCurly())
+            unexpected(tok3, "expected '{' in function definition");
+         
+         // parse the body
+         FuncDefPtr funcDef =
+            context->builder.emitBeginFunc(*context, varName, type, argDefs);
+         parseBlock(true);
+         context->builder.emitEndFunc(*context, funcDef);
+         popContext();
+         
+         // store the new definition in the context.
+         context->addDef(VarDefPtr::ucast(funcDef));
+         
+         return true;
       } else {
          unexpected(tok3,
                     "expected variable initializer or function "

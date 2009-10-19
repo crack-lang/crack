@@ -11,6 +11,7 @@
 #include "Toker.h"
 
 namespace model {
+   SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(Context);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(TypeDef);
@@ -45,6 +46,9 @@ class Parser {
        */
       model::ExprPtr parseExpression(const char *terminators);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
+
+      model::TypeDefPtr parseTypeSpec();
+      void parseArgDefs(std::vector<model::ArgDefPtr> &args);
 
       /** Parse a definition. Returns false if there was no definition. 
        * @param type the parsed type.

@@ -2,6 +2,7 @@
 #include "TypeDef.h"
 
 #include "builder/Builder.h"
+#include "BuilderVarDefData.h"
 #include "Context.h"
 #include "VarDef.h"
 

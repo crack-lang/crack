@@ -12,6 +12,7 @@ namespace builder {
 
 namespace model {
 
+SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(VarDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
@@ -40,6 +41,7 @@ class Context : public spug::RCBase {
         
         ContextPtr parent;
         builder::Builder &builder;
+        BuilderContextDataPtr builderData;
         Scope scope;
 
         struct GlobalData {

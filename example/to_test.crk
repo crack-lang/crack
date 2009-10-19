@@ -1,0 +1,17 @@
+
+# overriden definitions in the same context should be an error
+int32 a;
+int32 a;
+
+# overridden definitions should issue a warning
+int32 x;
+if (1) { int32 x; }
+
+# duplicate function names in the same context should issue an error
+void func() {}
+void func() {}
+
+# duplicate function names in different contexts should issue a warning
+void func() {
+    void func() {}
+}

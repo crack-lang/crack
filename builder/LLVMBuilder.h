@@ -60,6 +60,15 @@ class LLVMBuilder : public Builder {
             emitEndWhile(model::Context &context,
                          const model::BranchpointPtr &pos);
 
+        virtual model::FuncDefPtr
+            emitBeginFunc(model::Context &context,
+                          const std::string &name,
+                          const model::TypeDefPtr &returnType,
+                          const std::vector<model::ArgDefPtr> &args);
+        
+        virtual void emitEndFunc(model::Context &context,
+                                 const model::FuncDefPtr &funcDef);
+
         virtual model::VarDefPtr emitVarDef(model::Context &container,
                                             const model::TypeDefPtr &type,
                                             const std::string &name,
@@ -76,6 +85,9 @@ class LLVMBuilder : public Builder {
         // definition.
         
         virtual model::FuncCallPtr createFuncCall(const std::string &funcName);
+        virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
+                                              const std::string &name
+                                              );
         virtual model::FuncDefPtr createFuncDef(const char *name);
         virtual model::VarRefPtr createVarRef(const model::VarDefPtr &varDef);
 

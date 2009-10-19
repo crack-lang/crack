@@ -7,18 +7,20 @@
 
 namespace model {
 
+SPUG_RCPTR(BuilderVarDefData);
 class Context;
 SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(VarDef);
 
-// XXX I don't think there's any kind of definition that is not a "VarDef" - 
-// we should probably collapse this logic into Def.
+// Variable definition.  All names in a context (including functions and 
+// types) are derived from VarDef's.
 class VarDef : public spug::RCBase {
     public:
         Context *context;
         TypeDefPtr type;
         std::string name;
+        BuilderVarDefDataPtr builderData;
 
         VarDef(const TypeDefPtr &type, const std::string &name);
 };

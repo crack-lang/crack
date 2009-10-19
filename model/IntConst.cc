@@ -2,6 +2,7 @@
 #include "IntConst.h"
 
 #include "builder/Builder.h"
+#include "BuilderVarDefData.h"
 #include "Context.h"
 #include "TypeDef.h"
 

@@ -7,6 +7,7 @@
 #include "model/FuncCall.h" // for FuncCall::ExprVector
 
 namespace model {
+    SPUG_RCPTR(ArgDef);
     SPUG_RCPTR(Branchpoint);
     class Context;
     class IntConst;
@@ -78,6 +79,22 @@ class Builder {
                          const model::BranchpointPtr &pos) = 0;
 
         /**
+         * Start a new function definition.
+         * @param args the function argument list.
+         */
+        virtual model::FuncDefPtr
+            emitBeginFunc(model::Context &context,
+                          const std::string &name,
+                          const model::TypeDefPtr &returnType,
+                          const std::vector<model::ArgDefPtr> &args) = 0;
+        
+        /**
+         * Emit the end of a function definition.
+         */
+        virtual void emitEndFunc(model::Context &context,
+                                 const model::FuncDefPtr &funcDef) = 0;
+
+        /**
          * Emits a variable definition and returns a new VarDef object for the 
          * variable.
          * @param staticScope true if the "static" keyword was applied to the 
@@ -96,6 +113,9 @@ class Builder {
                                 ) = 0;
 
         virtual model::FuncDefPtr createFuncDef(const char *name) = 0;
+        virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
+                                              const std::string &name
+                                              ) = 0;
         virtual model::FuncCallPtr 
             createFuncCall(const std::string &funcName) = 0;
         virtual model::VarRefPtr

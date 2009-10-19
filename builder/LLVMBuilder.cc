@@ -17,6 +17,8 @@
 
 #include <model/ArgDef.h>
 #include <model/Branchpoint.h>
+#include <model/BuilderContextData.h>
+#include <model/BuilderVarDefData.h>
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
@@ -57,17 +59,6 @@ namespace {
             }
     };
     
-    SPUG_RCPTR(BVarDef);
-
-    class BVarDef : public VarDef {
-        public:
-            llvm::Value *rep;
-            BVarDef(const TypeDefPtr type, const string &name, Value *rep) :
-                VarDef(type, name),
-                rep(rep) {
-            }
-    };
-    
     SPUG_RCPTR(BStrConst);
 
     class BStrConst : public model::StrConst {
@@ -96,6 +87,21 @@ namespace {
             BasicBlock *block;
             
             BBranchpoint(BasicBlock *block) : block(block) {}
+    };
+
+    class BBuilderContextData : public BuilderContextData {
+        public:
+            Function *func;
+            BasicBlock *block;
+    };
+    
+    SPUG_RCPTR(BBuilderVarDefData);
+
+    class BBuilderVarDefData : public BuilderVarDefData {
+        public:
+            Value *rep;
+            
+            BBuilderVarDefData(Value *rep) : rep(rep) {}
     };
 
 } // anon namespace
@@ -225,6 +231,72 @@ BranchpointPtr LLVMBuilder::emitEndWhile(Context &context,
     builder.SetInsertPoint(block = bpos->block);
 }
 
+FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
+                                      const string &name,
+                                      const TypeDefPtr &returnType,
+                                      const vector<ArgDefPtr> &args) {
+    
+    // store the current function and block in the context
+    BBuilderContextData *contextData;
+    context.builderData = contextData = new BBuilderContextData();
+    contextData->func = func;
+    contextData->block = block;
+
+    // construct the LLVM argument list
+    vector<const llvm::Type *> llvmArgs(args.size());
+    int i = 0;
+    for (vector<ArgDefPtr>::const_iterator iter = args.begin();
+         iter != args.end();
+         ++iter, ++i) {
+        std::cerr << "adding arg " << i << endl;
+        BTypeDefPtr::dcast((*iter)->type)->rep->dump();
+        llvmArgs[i] = BTypeDefPtr::dcast((*iter)->type)->rep;
+    }
+    std::cerr << "done adding args" << endl;
+
+    BTypeDefPtr bRetType = BTypeDefPtr::dcast(returnType);
+    // XXX use the real return type as soon as we have a "return" statement.
+    FunctionType *funcType = FunctionType::get(llvm::Type::VoidTy, // bRetType->rep,
+                                               llvmArgs,
+                                               false
+                                               );
+    llvm::Constant *c = module->getOrInsertFunction(name, funcType);
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    block = BasicBlock::Create(name, func);
+    builder.SetInsertPoint(block);
+    
+    // back-fill builder data and set arg names
+    Function::arg_iterator llvmArg = func->arg_begin();
+    vector<ArgDefPtr>::const_iterator crackArg = args.begin();
+    for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
+        llvmArg->setName((*crackArg)->name);
+        (*crackArg)->builderData = new BBuilderVarDefData(llvmArg);
+    }
+
+    BFuncDefPtr funcDef = new BFuncDef(name.c_str(), args.size());
+    funcDef->rep = func;
+    funcDef->args = args;
+
+    std::cerr << "done with func def" << endl;
+    return funcDef;
+}    
+
+void LLVMBuilder::emitEndFunc(model::Context &context,
+                              const FuncDefPtr &funcDef) {
+    // XXX if the function returns void, we may need to emit a return void if 
+    // the user code hasn't
+
+    // XXX remove once there are real returns.
+    builder.CreateRetVoid();
+    
+    // restore the block and function
+    BBuilderContextData *contextData =
+        dynamic_cast<BBuilderContextData *>(context.builderData.obj);
+    func = contextData->func;
+    block = contextData->block;
+}
+
 Value *emitGEP(IRBuilder<> &builder, Value *obj) {
     Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
     Value *gepArgs[] = { zero, zero };
@@ -286,14 +358,17 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     lastValue = builder.CreateStore(lastValue, var);
     
     // create the definition object.
-    return new BVarDef(type, name, var);
+    VarDefPtr varDef = new VarDef(type, name);
+    varDef->builderData = new BBuilderVarDefData(var);
+    return varDef;
 }
  
 void LLVMBuilder::emitVarRef(model::Context &context,
                              const model::VarRef &var
                              ) {
-    BVarDefPtr def = BVarDefPtr::dcast(var.def);
-    lastValue = builder.CreateLoad(def->rep);
+    BBuilderVarDefDataPtr builderData =
+        BBuilderVarDefDataPtr::dcast(var.def->builderData);
+    lastValue = builder.CreateLoad(builderData->rep);
 }
                                 
 void LLVMBuilder::createModule(const char *name) {
@@ -356,6 +431,15 @@ model::FuncDefPtr LLVMBuilder::createFuncDef(const char *name) {
     return new BFuncDef(name, 0);
 }
 
+ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
+                                    const string &name
+                                    ) {
+    // we don't create BBuilderVarDefData for these yet - we will back-fill 
+    // the builder data when we create the function object.
+    ArgDefPtr argDef = new ArgDef(type, name);
+    return argDef;
+}
+
 VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
     return new VarRef(varDef);
 }
@@ -387,7 +471,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                );
     llvm::Function *printFunc = llvm::Function::Create(funcType,
                                                        Function::ExternalLinkage,
-                                                       "printf",
+                                                       "puts",
                                                        module
                                                        );
     
