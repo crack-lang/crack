@@ -108,10 +108,6 @@ class Builder {
             bool staticScope = false
         ) = 0;
     
-        virtual void emitVarRef(model::Context &context,
-                                const model::VarRef &var
-                                ) = 0;
-
         virtual model::FuncDefPtr createFuncDef(const char *name) = 0;
         virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
                                               const std::string &name

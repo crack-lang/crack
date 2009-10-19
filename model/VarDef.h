@@ -7,7 +7,7 @@
 
 namespace model {
 
-SPUG_RCPTR(BuilderVarDefData);
+SPUG_RCPTR(VarDefImpl);
 class Context;
 SPUG_RCPTR(TypeDef);
 
@@ -20,7 +20,7 @@ class VarDef : public spug::RCBase {
         Context *context;
         TypeDefPtr type;
         std::string name;
-        BuilderVarDefDataPtr builderData;
+        VarDefImplPtr impl;
 
         VarDef(const TypeDefPtr &type, const std::string &name);
 };

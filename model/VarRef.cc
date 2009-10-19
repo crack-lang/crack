@@ -2,7 +2,7 @@
 #include "VarRef.h"
 
 #include "builder/Builder.h"
-#include "BuilderVarDefData.h"
+#include "VarDefImpl.h"
 #include "Context.h"
 #include "TypeDef.h"
 #include "VarDef.h"
@@ -15,6 +15,6 @@ VarRef::VarRef(const VarDefPtr &def) :
 }
 
 void VarRef::emit(Context &context) {
-    context.builder.emitVarRef(context, *this);
+    assert(def->impl);
+    def->impl->emitRef(context);
 }
-

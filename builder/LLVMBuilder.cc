@@ -18,7 +18,7 @@
 #include <model/ArgDef.h>
 #include <model/Branchpoint.h>
 #include <model/BuilderContextData.h>
-#include <model/BuilderVarDefData.h>
+#include <model/VarDefImpl.h>
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
@@ -95,13 +95,31 @@ namespace {
             BasicBlock *block;
     };
     
-    SPUG_RCPTR(BBuilderVarDefData);
-
-    class BBuilderVarDefData : public BuilderVarDefData {
+    // generates references for 
+    class BMemVarDefImpl : public VarDefImpl {
         public:
             Value *rep;
             
-            BBuilderVarDefData(Value *rep) : rep(rep) {}
+            BMemVarDefImpl(Value *rep) : rep(rep) {}
+            
+            virtual void emitRef(Context &context) {
+                LLVMBuilder &b =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                b.emitMemVarRef(context, rep);
+            }
+    };
+    
+    class BArgVarDefImpl : public VarDefImpl {
+        public:
+            Value *rep;
+            
+            BArgVarDefImpl(Value *rep) : rep(rep) {}
+
+            virtual void emitRef(Context &context) {
+                LLVMBuilder &b =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                b.emitArgVarRef(context, rep);
+            }
     };
 
 } // anon namespace
@@ -127,8 +145,7 @@ void LLVMBuilder::emitFuncCall(model::Context &context,
     
     lastValue =
         builder.CreateCall(BFuncDefPtr::dcast(funcDef)->rep, valueArgs.begin(),
-                           valueArgs.end(),
-                           "tmp"
+                           valueArgs.end()
                            );
 }
 
@@ -231,6 +248,12 @@ BranchpointPtr LLVMBuilder::emitEndWhile(Context &context,
     builder.SetInsertPoint(block = bpos->block);
 }
 
+Value *emitGEP(IRBuilder<> &builder, Value *obj) {
+    Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
+    Value *gepArgs[] = { zero, zero };
+    return builder.CreateGEP(obj, zero);
+}
+    
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       const string &name,
                                       const TypeDefPtr &returnType,
@@ -248,11 +271,8 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     for (vector<ArgDefPtr>::const_iterator iter = args.begin();
          iter != args.end();
          ++iter, ++i) {
-        std::cerr << "adding arg " << i << endl;
-        BTypeDefPtr::dcast((*iter)->type)->rep->dump();
         llvmArgs[i] = BTypeDefPtr::dcast((*iter)->type)->rep;
     }
-    std::cerr << "done adding args" << endl;
 
     BTypeDefPtr bRetType = BTypeDefPtr::dcast(returnType);
     // XXX use the real return type as soon as we have a "return" statement.
@@ -271,14 +291,16 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     vector<ArgDefPtr>::const_iterator crackArg = args.begin();
     for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
         llvmArg->setName((*crackArg)->name);
-        (*crackArg)->builderData = new BBuilderVarDefData(llvmArg);
+
+        // need the address of the value here because it is going to be used 
+        // in a "load" context.
+        (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
     }
 
     BFuncDefPtr funcDef = new BFuncDef(name.c_str(), args.size());
     funcDef->rep = func;
     funcDef->args = args;
 
-    std::cerr << "done with func def" << endl;
     return funcDef;
 }    
 
@@ -294,15 +316,9 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     BBuilderContextData *contextData =
         dynamic_cast<BBuilderContextData *>(context.builderData.obj);
     func = contextData->func;
-    block = contextData->block;
+    builder.SetInsertPoint(block = contextData->block);
 }
 
-Value *emitGEP(IRBuilder<> &builder, Value *obj) {
-    Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
-    Value *gepArgs[] = { zero, zero };
-    return builder.CreateGEP(obj, zero);
-}
-    
 VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
                                   const string &name,
                                   const ExprPtr &initializer,
@@ -359,18 +375,10 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     
     // create the definition object.
     VarDefPtr varDef = new VarDef(type, name);
-    varDef->builderData = new BBuilderVarDefData(var);
+    varDef->impl = new BMemVarDefImpl(var);
     return varDef;
 }
  
-void LLVMBuilder::emitVarRef(model::Context &context,
-                             const model::VarRef &var
-                             ) {
-    BBuilderVarDefDataPtr builderData =
-        BBuilderVarDefDataPtr::dcast(var.def->builderData);
-    lastValue = builder.CreateLoad(builderData->rep);
-}
-                                
 void LLVMBuilder::createModule(const char *name) {
     assert(!module);
     module = new llvm::Module(name);
@@ -488,4 +496,12 @@ void LLVMBuilder::run() {
     
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     fptr();
+}
+
+void LLVMBuilder::emitMemVarRef(Context &context, Value *val) {
+    lastValue = builder.CreateLoad(val);
+}
+    
+void LLVMBuilder::emitArgVarRef(Context &context, Value *val) {
+    lastValue = val;
 }

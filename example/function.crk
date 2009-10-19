@@ -3,4 +3,4 @@ int32 foo(byteptr data) {
     print(data);
 }
 
-foo("this is a test");
+foo("passed a value to a function");

@@ -1,7 +1,7 @@
 
 #include "VarDef.h"
 
-#include "BuilderVarDefData.h"
+#include "VarDefImpl.h"
 #include "Context.h"
 #include "Expr.h"
 #include "TypeDef.h"

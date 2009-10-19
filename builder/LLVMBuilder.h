@@ -76,10 +76,6 @@ class LLVMBuilder : public Builder {
                                             bool staticScope
                                             );
 
-        virtual void emitVarRef(model::Context &context,
-                                const model::VarRef &var
-                                );
-        
         // for definitions, we're going to just let the builder be a factory 
         // so that it can tie whatever special information it wants to the 
         // definition.
@@ -101,6 +97,10 @@ class LLVMBuilder : public Builder {
         
         virtual void run();
         
+        // internal functions used by our VarDefImpl to generate the 
+        // appropriate variable references.
+        void emitMemVarRef(model::Context &context, llvm::Value *val);
+        void emitArgVarRef(model::Context &context, llvm::Value *val);
 };
 
 } // namespace builder

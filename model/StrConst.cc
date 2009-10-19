@@ -2,7 +2,7 @@
 #include "StrConst.h"
 
 #include "builder/Builder.h"
-#include "BuilderVarDefData.h"
+#include "VarDefImpl.h"
 #include "Context.h"
 #include "TypeDef.h"
 

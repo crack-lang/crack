@@ -6,7 +6,7 @@
 #include <spug/StringFmt.h>
 #include "model/ArgDef.h"
 #include "model/Branchpoint.h"
-#include "model/BuilderVarDefData.h"
+#include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/FuncDef.h"
 #include "model/FuncCall.h"
