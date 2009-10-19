@@ -15,3 +15,8 @@ void func() {}
 void func() {
     void func() {}
 }
+
+# assignment to a function argument should be legal.
+void func(int32 a) {
+    a = 100;
+}
