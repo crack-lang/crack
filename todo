@@ -1,6 +1,3 @@
 
--   in optimized mode, example/while.crk triggers a SIGSEGV (looks like 
-    parseExpression() is parsing an integer and then somehow returning the 
-    null expression from the end anyway)
 -   function arguments are currently SSA values, which means this won't work:
     type func(int a) { a = 100; }

@@ -56,9 +56,8 @@ class LLVMBuilder : public Builder {
         virtual model::BranchpointPtr
             emitWhile(model::Context &context, const model::ExprPtr &cond);
 
-        virtual model::BranchpointPtr
-            emitEndWhile(model::Context &context,
-                         const model::BranchpointPtr &pos);
+        virtual void emitEndWhile(model::Context &context,
+                                  const model::BranchpointPtr &pos);
 
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,

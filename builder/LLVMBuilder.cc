@@ -237,8 +237,7 @@ BranchpointPtr LLVMBuilder::emitWhile(Context &context, const ExprPtr &cond) {
     return bpos;
 }
 
-BranchpointPtr LLVMBuilder::emitEndWhile(Context &context,
-                                         const BranchpointPtr &pos) {
+void LLVMBuilder::emitEndWhile(Context &context, const BranchpointPtr &pos) {
     BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
 
     // emit the branch back to the beginning of the block

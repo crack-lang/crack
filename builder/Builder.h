@@ -74,9 +74,8 @@ class Builder {
          * Emits the end of the "while" statement.
          * @param pos the branchpoint object returned from the emitWhile().
          */        
-        virtual model::BranchpointPtr
-            emitEndWhile(model::Context &context,
-                         const model::BranchpointPtr &pos) = 0;
+        virtual void emitEndWhile(model::Context &context,
+                                  const model::BranchpointPtr &pos) = 0;
 
         /**
          * Start a new function definition.
