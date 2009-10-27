@@ -29,11 +29,23 @@ class Parser {
       void unexpected(const Token &tok, const char *userMsg = 0);
 
       /**
+       * Parse a single statement.
+       * @param defsAllowed true if a definition may be provided instead of a 
+       *    statement.  Statements in block contexts may be definitions, 
+       *    simple statements in conditionals must not be.
+       * @returns true if the statement is terminal (always returns or raises 
+       *    an exception).
+       */
+      bool parseStatement(bool defsAllowed);
+
+      /**
        * Parse a block - a sequence of statements in the same execution
        * context.  A block is "nested" if it is inside the implicit file scope
        * block and wrapped in curly brackets.
+       * @returns true if the statement is terminal (always returns or raises 
+       *    an exception).
        */
-      void parseBlock(bool nested);
+      bool parseBlock(bool nested);
 
       /** returns true if the token is a binary operator. */
       static bool isBinaryOperator(const Token &tok);
@@ -57,9 +69,10 @@ class Parser {
       
       // statements
       
-      void parseIfClause();
-      void parseIfStmt();
-      void parseWhileStmt();
+      bool parseIfClause();
+      bool parseIfStmt();
+      bool parseWhileStmt();
+      void parseReturnStmt();
       
       // context stack manipulation
       void pushContext(const model::ContextPtr &newContext);

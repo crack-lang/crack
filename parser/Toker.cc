@@ -29,6 +29,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::elseKw, data, loc);
     else if (data == "while")
         return Token(Token::whileKw, data, loc);
+    else if (data == "return")
+        return Token(Token::returnKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

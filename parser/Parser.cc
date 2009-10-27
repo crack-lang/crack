@@ -35,73 +35,101 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
    error(tok, msg.str().c_str());
 }
 
-void Parser::parseBlock(bool nested) {
+bool Parser::parseStatement(bool defsAllowed) {
+   // peek at the next token
+   Token tok = toker.getToken();
+
+   // check for statements
+   if (tok.isIf()) {
+      return parseIfStmt();
+   } else if (tok.isWhile()) {
+      return parseWhileStmt();
+   } else if (tok.isElse()) {
+      unexpected(tok, "'else' with no matching 'if'");
+   } else if (tok.isReturn()) {
+      parseReturnStmt();
+      return true;
+   }
+
+   ExprPtr expr;
+   if (tok.isIdent()) {
+      
+      // if the identifier is a type, try to parse a definition
+      VarDefPtr def = context->lookUp(tok.getData());
+      if (def && dynamic_cast<TypeDef *>(def.obj) &&
+          parseDef(TypeDefPtr::dcast(def))
+          ) {
+         if (!defsAllowed)
+            error(tok, "definition is not allowed in this context");
+         return false;
+      } else if (!def) {
+         // unknown identifier
+         // XXX if the next token(s) are '=' or ':=' then this is an 
+         // assignment
+         assert(false);
+      } else {
+         toker.putBack(tok);
+         expr = parseExpression("; }");
+      }
+
+   } else {
+      toker.putBack(tok);
+      expr = parseExpression("; }");
+   }
+
+   // if we got an expression, emit it.
+   if (expr)
+      expr->emit(*context);
+
+   // consume a semicolon, put back a block terminator
+   tok = toker.getToken();
+   if (tok.isEnd() || tok.isRCurly())
+      toker.putBack(tok);
+   else if (!tok.isSemi())
+      unexpected(tok, "expected semicolon or a block terminator");
+
+   return false;
+}
+
+bool Parser::parseBlock(bool nested) {
    Token tok;
+
+   // this gets set to true if we encounter a "terminal statement" which is a 
+   // statement that will always return or throw an exception.
+   bool gotTerminalStatement = false;
+   // keeps track of whether we've emitted a warning about stuff after a 
+   // terminal statement.
+   bool gotStuffAfterTerminalStatement = false;
 
    while (true) {
 
       // peek at the next token
       tok = toker.getToken();
-      
-      // check for statements
-      if (tok.isIf()) {
-         parseIfStmt();
-         continue;
-      } else if (tok.isWhile()) {
-         parseWhileStmt();
-         continue;
-      } else if (tok.isElse()) {
-         unexpected(tok, "'else' with no matching 'if'");
-      }
-
-      ExprPtr expr;
-      if (tok.isIdent()) {
-         
-         // if the identifier is a type, try to parse a definition
-         VarDefPtr def = context->lookUp(tok.getData());
-         if (def && dynamic_cast<TypeDef *>(def.obj) &&
-             parseDef(TypeDefPtr::dcast(def))
-             ) {
-            continue;
-         } else if (!def) {
-            // unknown identifier
-            // XXX if the next token(s) are '=' or ':=' then this is an 
-            // assignment
-            assert(false);
-         } else {
-            toker.putBack(tok);
-            expr = parseExpression(nested ? "; " : ";}");
-         }
-
-      } else {
-	 toker.putBack(tok);
-	 expr = parseExpression(nested ? "; " : ";}");
-      }
-
-      // if we got an expression, emit it.
-      if (expr)
-         expr->emit(*context);
-
-      // check for a semicolon
-      tok = toker.getToken();
-      if (tok.isSemi()) {
-	 continue;
 
       // check for a different block terminator depending on whether we are
       // nested or not.
-      } else if (nested) {
-	 if (tok.isRCurly()) {
-	    return;
-	 } else {
-	    unexpected(tok, "expected semicolon or closing curly-bracket");
-	 }
-      } else {
-	 if (tok.isEnd()) {
-	    return;
-	 } else {
-	    unexpected(tok, "expected semicolon or end-of-file");
-	 }
+      if (tok.isRCurly()) {
+         if (nested)
+            return gotTerminalStatement;
+         else
+            unexpected(tok, "expected statement or closing brace.");
+      } else if (tok.isEnd()) {
+         if (!nested)
+            return gotTerminalStatement;
+	 else
+	    unexpected(tok, "expected statement or end-of-file");
       }
+      
+      toker.putBack(tok);
+      
+      // if we already got a terminal statement, anything else is just dead 
+      // code - warn them about the first thing.
+      if (gotTerminalStatement && !gotStuffAfterTerminalStatement) {
+         warn(tok, "unreachable code");
+         gotStuffAfterTerminalStatement = true;
+      }
+
+      gotTerminalStatement = parseStatement(true);
    }
 }
 
@@ -374,22 +402,16 @@ bool Parser::parseDef(const TypeDefPtr &type) {
    return false;
 }
 
-void Parser::parseIfClause() {
+bool Parser::parseIfClause() {
    Token tok = toker.getToken();
    if (tok.isLCurly()) {
       pushContext(context->createSubContext());
-      parseBlock(true);
+      bool terminal = parseBlock(true);
       popContext();
+      return terminal;
    } else {
       toker.putBack(tok);
-      ExprPtr expr = parseExpression("; ");
-      if (!expr)
-         unexpected(tok, "expected expression.");
-      expr->emit(*context);
-      tok = toker.getToken();
-      // XXX need to accept end of stream or '}', depending on the context
-      if (!tok.isSemi())
-         unexpected(tok, "expected semicolon.");
+      return parseStatement(false);
    }
 }
    
@@ -399,7 +421,7 @@ void Parser::parseIfClause() {
 //   ^               ^
 // if ( expr ) clause else clause
 //   ^                           ^
-void Parser::parseIfStmt() {
+bool Parser::parseIfStmt() {
    Token tok = toker.getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
@@ -414,25 +436,29 @@ void Parser::parseIfStmt() {
    
    BranchpointPtr pos = context->builder.emitIf(*context, cond);
 
-   parseIfClause();
+   bool terminalIf = parseIfClause();
+   bool terminalElse = false;
 
    // check for the "else"
    tok = toker.getToken();
    if (tok.isElse()) {
       pos = context->builder.emitElse(*context, pos);
-      parseIfClause();
+      terminalElse = parseIfClause();
       context->builder.emitEndIf(*context, pos);
    } else {
       toker.putBack(tok);
       context->builder.emitEndIf(*context, pos);
    }
+
+   // the if is terminal if both conditions are terminal   
+   return terminalIf && terminalElse;
 }
 
 // while ( expr ) stmt ; (';' can be replaced with EOF)
 //      ^               ^
 // while ( expr ) { ... }
 //      ^                ^
-void Parser::parseWhileStmt() {
+bool Parser::parseWhileStmt() {
    Token tok = toker.getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
@@ -443,8 +469,19 @@ void Parser::parseWhileStmt() {
       unexpected(tok, "expected right paren after conditional expression");
    
    BranchpointPtr pos = context->builder.emitWhile(*context, expr);
-   parseIfClause();
+   bool terminal = parseIfClause();
    context->builder.emitEndWhile(*context, pos);
+   return terminal;
+}
+
+void Parser::parseReturnStmt() {
+   // XXX need to deal with expressions
+   Token tok = toker.getToken();
+   
+   if (tok.isEnd() || tok.isRCurly())
+      toker.putBack(tok);
+   else if (!tok.isSemi())
+      unexpected(tok, "expected semicolon or block terminator");
 }
 
 void Parser::pushContext(const model::ContextPtr &newContext) {
