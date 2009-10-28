@@ -92,6 +92,13 @@ class Builder {
          */
         virtual void emitEndFunc(model::Context &context,
                                  const model::FuncDefPtr &funcDef) = 0;
+        
+        /**
+         * Emit a return statement.
+         * @params expr an expression or null if we are returning void.
+         */
+        virtual void emitReturn(model::Context &context,
+                                const model::ExprPtr &expr) = 0;
 
         /**
          * Emits a variable definition and returns a new VarDef object for the 

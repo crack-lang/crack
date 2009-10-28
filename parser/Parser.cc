@@ -129,7 +129,7 @@ bool Parser::parseBlock(bool nested) {
          gotStuffAfterTerminalStatement = true;
       }
 
-      gotTerminalStatement = parseStatement(true);
+      gotTerminalStatement |= parseStatement(true);
    }
 }
 
@@ -236,26 +236,29 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 //      ^         ^
 void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
      
+   Token tok;
    while (true) {
+      // XXX should be verifying arg types against signature
+
       // try to parse an expression, if we failed we're done
       ExprPtr arg = parseExpression(",)");
-      if (!arg)
-	 break;
+      if (!arg) {
+         tok = toker.getToken();
+         break;
+      }
       args.push_back(arg);
 
       // comma signals another argument
-      Token tok = toker.getToken();
-      if (tok.isComma())
-	 continue;
-
-      // check for a right paren or semicolon, depending on if we got opening 
-      // parens
-      if (!tok.isRParen()) {
-	 unexpected(tok, "expected closing paren or comma in argument list");
-      } else {
+      tok = toker.getToken();
+      if (!tok.isComma())
 	 break;
-      }
+
    }
+
+   // check for a right paren or semicolon, depending on if we got opening 
+   // parens
+   if (!tok.isRParen())
+      unexpected(tok, "expected closing paren or comma in argument list");
 }
 
 TypeDefPtr Parser::parseTypeSpec() {
@@ -281,12 +284,8 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
    // an empty argument list.
    Token tok = toker.getToken();
       
-   while (true) {
+   while (!tok.isRParen()) {
 
-      // check for a right paren indicating the end of the arg list.
-      if (tok.isRParen())
-         break;
-      
       // parse the next argument type
       toker.putBack(tok);
       TypeDefPtr argType = parseTypeSpec();
@@ -296,6 +295,9 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
          error(tok, "identifier (argument name) expected.");
       
       // make sure we're not redefining an existing variable
+      // XXX complain extra loud if the variable is defined in the current 
+      // context (and make sure that the current context is the function 
+      // context)
       std::string varName = tok.getData();
       if (context->lookUp(varName))
          warn(tok, SPUG_FSTR("Variable " << varName << " redefined."));
@@ -308,7 +310,9 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
       
       // check for a comma
       tok = toker.getToken();
-      if (!tok.isComma() && !tok.isRParen())
+      if (tok.isComma())
+         tok = toker.getToken();
+      else if (!tok.isRParen())
          unexpected(tok, "expected ',' or ')' after argument definition");
    }
 }
@@ -362,13 +366,16 @@ bool Parser::parseDef(const TypeDefPtr &type) {
             error(tok4, "Incorrect type for initializer.");
             
          VarDefPtr varDef = type->emitVarDef(*context, varName,
-                                                initializer
-                                                );
+                                             initializer
+                                             );
          context->addDef(varDef);
          return true;
       } else if (tok3.isLParen()) {
+         // function definition
+
          // push a new context, arg defs will be stored in the new context.
          pushContext(context->createSubContext(Context::local));
+         context->returnType = type;
 
          // parse the arguments
          vector<ArgDefPtr> argDefs;
@@ -381,7 +388,18 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          // parse the body
          FuncDefPtr funcDef =
             context->builder.emitBeginFunc(*context, varName, type, argDefs);
-         parseBlock(true);
+         bool terminal = parseBlock(true);
+         
+         // if the block doesn't always terminate, either give an error or 
+         // return void if the function return type is void
+         if (!terminal)
+            if (context->globalData->voidType->matches(*context->returnType))
+               context->builder.emitReturn(*context, 0);
+            else
+               // XXX we don't have the closing curly brace location, 
+               // currently reporting the error on the top brace
+               error(tok3, "missing return statement for non-void function.");
+
          context->builder.emitEndFunc(*context, funcDef);
          popContext();
          
@@ -475,9 +493,26 @@ bool Parser::parseWhileStmt() {
 }
 
 void Parser::parseReturnStmt() {
-   // XXX need to deal with expressions
-   Token tok = toker.getToken();
+   // parse the return expression, make sure that it matches the return type.
+   Token tok = toker.getToken(); toker.putBack(tok);
+   ExprPtr expr = parseExpression("; }");
+   if (expr && !context->returnType->matches(*expr->type))
+      error(tok,
+            SPUG_FSTR("Invalid return type " << expr->type->name <<
+                      " for function returning " << context->returnType->name
+                      ).c_str()
+            );
+   else if (!expr && 
+            !context->globalData->voidType->matches(*context->returnType))
+      error(tok,
+            SPUG_FSTR("Missing return value for function returning " <<
+                      context->returnType->name
+                      ).c_str()
+            );
    
+   context->builder.emitReturn(*context, expr);
+
+   tok = toker.getToken();   
    if (tok.isEnd() || tok.isRCurly())
       toker.putBack(tok);
    else if (!tok.isSemi())

@@ -20,3 +20,26 @@ void func() {
 void func(int32 a) {
     a = 100;
 }
+
+# void variable definitions should error
+void a;
+
+# does this really make any sense?  It's currently legal.
+void returnsVoid() {}
+void returnsOther() { return returnsVoid(); }
+
+
+# these are tests that I've done at some point with interesting results and 
+# should be added to the general test suite
+
+# Tests that local vars in a loop (LLVM allocas) do not overrun the stack.
+# Blocks in a function caused problems because of the order of deletion of 
+# ref-counted pointers.
+void foo() {
+    while (1) {
+        byteptr str = 'test';
+        print(str);
+    }
+}
+foo();
+

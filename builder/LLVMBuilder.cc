@@ -274,8 +274,8 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     }
 
     BTypeDefPtr bRetType = BTypeDefPtr::dcast(returnType);
-    // XXX use the real return type as soon as we have a "return" statement.
-    FunctionType *funcType = FunctionType::get(llvm::Type::VoidTy, // bRetType->rep,
+    const Type *rawRetType = bRetType->rep ? bRetType->rep : Type::VoidTy;
+    FunctionType *funcType = FunctionType::get(rawRetType,
                                                llvmArgs,
                                                false
                                                );
@@ -305,17 +305,22 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
                               const FuncDefPtr &funcDef) {
-    // XXX if the function returns void, we may need to emit a return void if 
-    // the user code hasn't
-
-    // XXX remove once there are real returns.
-    builder.CreateRetVoid();
-    
     // restore the block and function
     BBuilderContextData *contextData =
         dynamic_cast<BBuilderContextData *>(context.builderData.obj);
     func = contextData->func;
     builder.SetInsertPoint(block = contextData->block);
+}
+
+void LLVMBuilder::emitReturn(model::Context &context,
+                             const model::ExprPtr &expr) {
+    
+    if (expr) {
+        expr->emit(context);
+        builder.CreateRet(lastValue);
+    } else {
+        builder.CreateRetVoid();
+    }
 }
 
 VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
@@ -454,7 +459,12 @@ VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     Context::GlobalData *gd = context.globalData;
+
     // create the basic types
+    
+    gd->voidType = new BTypeDef("void", 0);
+    context.addDef(gd->voidType);
+    
     llvm::Type *llvmBytePtrType = 
         llvm::PointerType::getUnqual(llvm::IntegerType::get(8));
     gd->byteptrType = new BTypeDef("byteptr", llvmBytePtrType);

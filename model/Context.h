@@ -43,10 +43,12 @@ class Context : public spug::RCBase {
         builder::Builder &builder;
         BuilderContextDataPtr builderData;
         Scope scope;
+        TypeDefPtr returnType;
 
         struct GlobalData {
             StrConstTable strConstTable;
-            TypeDefPtr boolType,
+            TypeDefPtr voidType,
+                       boolType,
                        byteptrType,
                        intType,
                        int32Type;

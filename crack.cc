@@ -20,6 +20,7 @@ int main(int argc, const char **argv) {
     builder::LLVMBuilder builder;
     model::ContextPtr ctx =
         new model::Context(builder, model::Context::module);
+    ctx->returnType = ctx->globalData->voidType;
     
     // create the main module, register all of the basic stuff
     ctx->createModule("main");

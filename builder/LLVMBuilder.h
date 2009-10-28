@@ -68,6 +68,9 @@ class LLVMBuilder : public Builder {
         virtual void emitEndFunc(model::Context &context,
                                  const model::FuncDefPtr &funcDef);
 
+        virtual void emitReturn(model::Context &context,
+                                const model::ExprPtr &expr);
+
         virtual model::VarDefPtr emitVarDef(model::Context &container,
                                             const model::TypeDefPtr &type,
                                             const std::string &name,

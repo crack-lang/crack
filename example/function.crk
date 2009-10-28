@@ -1,6 +1,21 @@
 
-int32 foo(byteptr data) {
+void foo(byteptr data) {
     print(data);
 }
 
+void returnsVoid(int32 a, byteptr str) {
+    print(str);
+    return;
+//    print(data);
+}
+
 foo("passed a value to a function");
+returnsVoid(100, "function that implicitly returns void called");
+
+byteptr getString() {
+    return "string value returned from a function.";
+}
+#byteptr val = getString();
+
+print(getString());
+
