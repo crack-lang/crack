@@ -1,12 +1,12 @@
 
 void foo(byteptr data) {
-    print(data);
+    puts(data);
 }
 
 void returnsVoid(int32 a, byteptr str) {
-    print(str);
+    puts(str);
     return;
-//    print(data);
+//    puts(data);
 }
 
 foo("passed a value to a function");
@@ -17,5 +17,5 @@ byteptr getString() {
 }
 #byteptr val = getString();
 
-print(getString());
+puts(getString());
 

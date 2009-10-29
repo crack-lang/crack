@@ -43,11 +43,12 @@ namespace {
     class BFuncDef : public model::FuncDef {
         public:
             llvm::Function *rep;
-            BFuncDef(const char *name, size_t argCount) :
+            BFuncDef(const string &name, size_t argCount) :
                 model::FuncDef(name, argCount) {
             }
+            
     };
-    
+        
     SPUG_RCPTR(BTypeDef)
 
     class BTypeDef : public model::TypeDef {
@@ -120,6 +121,84 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitArgVarRef(context, rep);
             }
+    };
+
+    class FuncBuilder {
+        public:
+            Context &context;
+            BTypeDefPtr returnType;
+            BFuncDefPtr funcDef;
+            int argIndex;
+            Function::LinkageTypes linkage;
+
+            FuncBuilder(Context &context, const BTypeDefPtr &returnType,
+                        const string &name,
+                        size_t argCount,
+                        Function::LinkageTypes linkage = 
+                            Function::ExternalLinkage
+                        ) :
+                context(context),
+                returnType(returnType),
+                funcDef(new BFuncDef(name, argCount)),
+                linkage(linkage),
+                argIndex(0) {
+            }
+            
+            void finish(bool storeDef = true) {
+                size_t argCount = funcDef->args.size();
+                assert(argIndex == argCount);
+                vector<const Type *> llvmArgs(argCount);
+                
+                // create an array of LLVM arguments
+                int i = 0;
+                for (vector<ArgDefPtr>::iterator iter = 
+                        funcDef->args.begin();
+                     iter != funcDef->args.end();
+                     ++iter, ++i)
+                    llvmArgs[i] = BTypeDefPtr::dcast((*iter)->type)->rep;
+
+                // register the function with LLVM
+                const Type *rawRetType =
+                    returnType->rep ? returnType->rep : Type::VoidTy;
+                FunctionType *funcType =
+                    FunctionType::get(rawRetType, llvmArgs, false);
+                LLVMBuilder &builder = 
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                Function *func = Function::Create(funcType,
+                                                  linkage,
+                                                  funcDef->name,
+                                                  builder.module
+                                                  );
+                func->setCallingConv(llvm::CallingConv::C);
+
+                // back-fill builder data and set arg names
+                Function::arg_iterator llvmArg = func->arg_begin();
+                vector<ArgDefPtr>::const_iterator crackArg =
+                    funcDef->args.begin();
+                for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
+                    llvmArg->setName((*crackArg)->name);
+            
+                    // need the address of the value here because it is going 
+                    // to be used in a "load" context.
+                    (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
+                }
+                
+                funcDef->rep = func;
+                if (storeDef)
+                    context.addDef(VarDefPtr::ucast(funcDef));
+            }
+
+            void addArg(const char *name, const TypeDefPtr &type) {
+                assert(argIndex <= funcDef->args.size());
+                funcDef->args[argIndex++] = new ArgDef(type, name);
+            }
+            
+            void setArgs(const vector<ArgDefPtr> &args) {
+                assert(argIndex == 0 && args.size() == funcDef->args.size());
+                argIndex = args.size();
+                funcDef->args = args;
+            }
+                
     };
 
 } // anon namespace
@@ -264,43 +343,16 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     contextData->func = func;
     contextData->block = block;
 
-    // construct the LLVM argument list
-    vector<const llvm::Type *> llvmArgs(args.size());
-    int i = 0;
-    for (vector<ArgDefPtr>::const_iterator iter = args.begin();
-         iter != args.end();
-         ++iter, ++i) {
-        llvmArgs[i] = BTypeDefPtr::dcast((*iter)->type)->rep;
-    }
+    // create the function
+    FuncBuilder f(context, returnType, name, args.size());
+    f.setArgs(args);
+    f.finish(false);
 
-    BTypeDefPtr bRetType = BTypeDefPtr::dcast(returnType);
-    const Type *rawRetType = bRetType->rep ? bRetType->rep : Type::VoidTy;
-    FunctionType *funcType = FunctionType::get(rawRetType,
-                                               llvmArgs,
-                                               false
-                                               );
-    llvm::Constant *c = module->getOrInsertFunction(name, funcType);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
+    func = f.funcDef->rep;
     block = BasicBlock::Create(name, func);
     builder.SetInsertPoint(block);
     
-    // back-fill builder data and set arg names
-    Function::arg_iterator llvmArg = func->arg_begin();
-    vector<ArgDefPtr>::const_iterator crackArg = args.begin();
-    for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
-        llvmArg->setName((*crackArg)->name);
-
-        // need the address of the value here because it is going to be used 
-        // in a "load" context.
-        (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
-    }
-
-    BFuncDefPtr funcDef = new BFuncDef(name.c_str(), args.size());
-    funcDef->rep = func;
-    funcDef->args = args;
-
-    return funcDef;
+    return f.funcDef;
 }    
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
@@ -479,23 +531,21 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // XXX using bool = int32 for now
     gd->boolType = gd->int32Type;
     
-    // create "int print(String)"
-    vector<const llvm::Type *> args(1);
-    args[0] = llvmBytePtrType;
-    FunctionType *funcType = FunctionType::get(llvm::IntegerType::get(32),
-                                               args,
-                                               false
-                                               );
-    llvm::Function *printFunc = llvm::Function::Create(funcType,
-                                                       Function::ExternalLinkage,
-                                                       "puts",
-                                                       module
-                                                       );
+    // create "int puts(String)"
+    {
+        FuncBuilder f(context, gd->int32Type, "puts", 1);
+        f.addArg("text", gd->byteptrType);
+        f.finish();
+    }
     
-    BFuncDefPtr funcDef = new BFuncDef("print", 1);
-    funcDef->rep = printFunc;
-    funcDef->args[0] = new ArgDef(gd->byteptrType, "text");
-    context.addDef(VarDefPtr::ucast(funcDef));
+    // create "int write(int, String, int)"
+    {
+        FuncBuilder f(context, gd->int32Type, "write", 3);
+        f.addArg("fd", gd->int32Type);
+        f.addArg("buf", gd->byteptrType);
+        f.addArg("n", gd->int32Type);
+        f.finish();
+    }
 }
 
 void LLVMBuilder::run() {

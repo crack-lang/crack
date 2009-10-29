@@ -38,7 +38,7 @@ void returnsOther() { return returnsVoid(); }
 void foo() {
     while (1) {
         byteptr str = 'test';
-        print(str);
+        puts(str);
     }
 }
 foo();

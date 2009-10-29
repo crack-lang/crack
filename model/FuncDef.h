@@ -14,7 +14,7 @@ class FuncDef : public VarDef {
     public:
         std::vector<ArgDefPtr> args;
 
-        FuncDef(const char *name, size_t argCount) :
+        FuncDef(const std::string &name, size_t argCount) :
             // XXX need function types, but they'll probably be assigned after 
             // the fact.
             VarDef(0, name),

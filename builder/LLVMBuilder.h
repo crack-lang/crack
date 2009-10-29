@@ -20,7 +20,6 @@ namespace builder {
 class LLVMBuilder : public Builder {
     private:
 
-        llvm::Module *module;
         llvm::Function *func;
         llvm::BasicBlock *block;
         llvm::IRBuilder<> builder;
@@ -29,6 +28,9 @@ class LLVMBuilder : public Builder {
         llvm::ExecutionEngine *execEng;
 
     public:
+        // making this public to give <anon>::FunctionBuilder access.
+        llvm::Module *module;
+
         LLVMBuilder();
 
         virtual void emitFuncCall(model::Context &context, 

@@ -3,9 +3,9 @@ byteptr str;
 byteptr prettyString = 'a pretty string';
 int32 val = 100;
 
-print('empty brackets: [');
-print(str);
-print(']\n');
-print('pretty string: [');
-print(prettyString);
-print(']\n');
+puts('empty brackets: [');
+puts(str);
+puts(']\n');
+puts('pretty string: [');
+puts(prettyString);
+puts(']\n');
