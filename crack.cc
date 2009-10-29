@@ -9,13 +9,10 @@
 #include <iostream>
 #include <fstream>
 
-int main(int argc, const char **argv) {
-    if (argc < 2) {
-        std::cerr << "Usage:" << std::endl;
-        std::cerr << "  crack <script>" << std::endl;
-        return 1;
-    }
-    
+using namespace std;
+
+void compileAndRun(istream &src, const char *name) {
+
     // create the builder and top-level context
     builder::LLVMBuilder builder;
     model::ContextPtr ctx =
@@ -26,9 +23,7 @@ int main(int argc, const char **argv) {
     ctx->createModule("main");
     ctx->builder.registerPrimFuncs(*ctx);
 
-    // parse the main module
-    std::ifstream src(argv[1]);
-    parser::Toker toker(src, argv[1]);
+    parser::Toker toker(src, name);
     parser::Parser parser(toker, ctx);
     
     try {
@@ -38,8 +33,22 @@ int main(int argc, const char **argv) {
         ctx->builder.closeModule();
         builder.run();
     } catch (const parser::ParseError &ex) {
-        std::cerr << ex << std::endl;
+        cerr << ex << endl;
     }
-
 }
 
+int main(int argc, const char **argv) {
+    if (argc < 2) {
+        cerr << "Usage:" << endl;
+        cerr << "  crack <script>" << endl;
+        return 1;
+    }
+    
+    // parse the main module
+    if (!strcmp(argv[1], "-")) {
+        compileAndRun(cin, "<stdin>");
+    } else {
+        ifstream src(argv[1]);
+        compileAndRun(src, argv[1]);
+    }
+}
