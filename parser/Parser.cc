@@ -32,7 +32,7 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
    if (userMsg)
       msg << ", " << userMsg;
 
-   error(tok, msg.str().c_str());
+   error(tok, msg.str());
 }
 
 bool Parser::parseStatement(bool defsAllowed) {
@@ -156,7 +156,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
             error(tok1,
                   SPUG_FSTR("attempted to assign undefined variable " <<
                             tok.getData()
-                            ).c_str()
+                            )
                   );
          
          // XXX need to verify that it's not a constant (or at least not a 
@@ -178,7 +178,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
                             expr->type->name <<
                             " to a variable of type " <<
                             var->type->name
-                            ).c_str()
+                            )
                   );
          
          var->emitAssignment(*context, expr);
@@ -195,7 +195,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
          VarDefPtr def = context->lookUp(tok.getData());
          if (!def)
             error(tok,
-                  SPUG_FSTR("Undefined variable: " << tok.getData()).c_str());
+                  SPUG_FSTR("Undefined variable: " << tok.getData()));
 
          // XXX def could be a generic class and generic classes require 
          // special magic to allow us to parse the <>'s
@@ -292,7 +292,7 @@ TypeDefPtr Parser::parseTypeSpec() {
    VarDefPtr def = context->lookUp(tok.getData());
    TypeDef *typeDef = dynamic_cast<TypeDef *>(def.obj);
    if (!typeDef)
-      error(tok, SPUG_FSTR(tok.getData() << " is not a type.").c_str());
+      error(tok, SPUG_FSTR(tok.getData() << " is not a type."));
    
    // XXX need to deal with compound types
    
@@ -523,14 +523,14 @@ void Parser::parseReturnStmt() {
       error(tok,
             SPUG_FSTR("Invalid return type " << expr->type->name <<
                       " for function returning " << context->returnType->name
-                      ).c_str()
+                      )
             );
    else if (!expr && 
             !context->globalData->voidType->matches(*context->returnType))
       error(tok,
             SPUG_FSTR("Missing return value for function returning " <<
                       context->returnType->name
-                      ).c_str()
+                      )
             );
    
    context->builder.emitReturn(*context, expr);
@@ -556,7 +556,7 @@ void Parser::parse() {
    parseBlock(false);
 }
 
-void Parser::error(const Token &tok, const char *msg) {
+void Parser::error(const Token &tok, const std::string &msg) {
    Location loc = tok.getLocation();
    stringstream text;
    text << loc.getName() << ':' << loc.getLineNumber() << ": " << msg;

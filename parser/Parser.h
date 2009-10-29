@@ -91,7 +91,7 @@ class Parser {
        * throws a ParseError, properly formatted with the location and
        * message text.
        */
-      static void error(const Token &tok, const char *msg);
+      static void error(const Token &tok, const std::string &msg);
       
       /** Writes a warning message to standard error. */
       static void warn(const Token &tok, const std::string & msg);

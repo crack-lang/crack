@@ -1,3 +1,5 @@
 
 -   function arguments are currently SSA values, which means this won't work:
     type func(int a) { a = 100; }
+-   nested compilation so I can write lots of unit tests
+-   simple operations (integer arithmetic)
