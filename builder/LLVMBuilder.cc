@@ -85,9 +85,9 @@ namespace {
 
     class BBranchpoint : public model::Branchpoint {
         public:
-            BasicBlock *block;
+            BasicBlock *block, *block2;
             
-            BBranchpoint(BasicBlock *block) : block(block) {}
+            BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
 
     class BBuilderContextData : public BuilderContextData {
@@ -108,6 +108,14 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitMemVarRef(context, rep);
             }
+            
+            virtual void 
+            emitAssignment(Context &context, const ExprPtr &expr) {
+                LLVMBuilder &b =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                expr->emit(context);
+                b.builder.CreateStore(b.lastValue, rep);
+            }
     };
     
     class BArgVarDefImpl : public VarDefImpl {
@@ -120,6 +128,15 @@ namespace {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitArgVarRef(context, rep);
+            }
+            
+            virtual void 
+            emitAssignment(Context &context, const ExprPtr &expr) {
+                // XXX implement argument assignment
+                assert(false && "can't assign arguments yet");
+                LLVMBuilder &b =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+//                b.emitArgVarAssgn(context, rep);
             }
     };
 
@@ -290,17 +307,21 @@ void LLVMBuilder::emitEndIf(model::Context &context,
     builder.CreateBr(bpos->block);
 
     // new block is the next block
-    block = BBranchpointPtr::dcast(pos)->block;
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(block = bpos->block);
 }
 
-BranchpointPtr LLVMBuilder::emitWhile(Context &context, const ExprPtr &cond) {
+BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 
+                                           const ExprPtr &cond) {
     BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create("while_end", 
                                                                func
                                                                )
                                             );
 
+    BasicBlock *whileCond = bpos->block2 =
+        BasicBlock::Create("while_cond", func);
     BasicBlock *whileBody = BasicBlock::Create("while_body", func);
+    builder.CreateBr(whileCond);
+    builder.SetInsertPoint(block = whileCond);
 
     // XXX see notes above on a conditional type.
     cond->emit(context);
@@ -319,8 +340,8 @@ BranchpointPtr LLVMBuilder::emitWhile(Context &context, const ExprPtr &cond) {
 void LLVMBuilder::emitEndWhile(Context &context, const BranchpointPtr &pos) {
     BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
 
-    // emit the branch back to the beginning of the block
-    builder.CreateBr(block);
+    // emit the branch back to conditional expression in the block
+    builder.CreateBr(bpos->block2);
 
     // new code goes to the following block
     builder.SetInsertPoint(block = bpos->block);
@@ -560,7 +581,7 @@ void LLVMBuilder::run() {
 void LLVMBuilder::emitMemVarRef(Context &context, Value *val) {
     lastValue = builder.CreateLoad(val);
 }
-    
+
 void LLVMBuilder::emitArgVarRef(Context &context, Value *val) {
     lastValue = val;
 }

@@ -7,8 +7,9 @@
 
 namespace model {
 
-SPUG_RCPTR(VarDefImpl);
 class Context;
+SPUG_RCPTR(Expr);
+SPUG_RCPTR(VarDefImpl);
 SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(VarDef);
@@ -23,6 +24,8 @@ class VarDef : public spug::RCBase {
         VarDefImplPtr impl;
 
         VarDef(const TypeDefPtr &type, const std::string &name);
+        
+        void emitAssignment(Context &context, const ExprPtr &expr);
 };
 
 } // namespace model

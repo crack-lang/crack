@@ -22,14 +22,16 @@ class LLVMBuilder : public Builder {
 
         llvm::Function *func;
         llvm::BasicBlock *block;
-        llvm::IRBuilder<> builder;
         
-        llvm::Value *lastValue;
         llvm::ExecutionEngine *execEng;
 
     public:
-        // making this public to give <anon>::FunctionBuilder access.
+        // currently experimenting with making these public to give objects in 
+        // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
+        // seems to be cutting down on the amount of code necessary to do this.
         llvm::Module *module;
+        llvm::IRBuilder<> builder;
+        llvm::Value *lastValue;
 
         LLVMBuilder();
 
@@ -55,8 +57,9 @@ class LLVMBuilder : public Builder {
         virtual void emitEndIf(model::Context &context,
                                const model::BranchpointPtr &pos);
 
-        virtual model::BranchpointPtr
-            emitWhile(model::Context &context, const model::ExprPtr &cond);
+        virtual model::BranchpointPtr 
+            emitBeginWhile(model::Context &context, 
+                           const model::ExprPtr &cond);
 
         virtual void emitEndWhile(model::Context &context,
                                   const model::BranchpointPtr &pos);

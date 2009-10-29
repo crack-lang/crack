@@ -67,8 +67,9 @@ class Builder {
          * @param cond the conditional expression.
          * @returns a Branchpoint to be passed into the emitEndWhile()
          */
-        virtual model::BranchpointPtr
-            emitWhile(model::Context &context, const model::ExprPtr &cond) = 0;
+        virtual model::BranchpointPtr 
+            emitBeginWhile(model::Context &context, 
+                           const model::ExprPtr &cond) = 0;
 
         /**
          * Emits the end of the "while" statement.

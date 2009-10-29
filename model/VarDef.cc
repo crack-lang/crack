@@ -13,3 +13,8 @@ VarDef::VarDef(const TypeDefPtr &type, const std::string &name) :
     name(name),
     context(0) {
 }
+
+void VarDef::emitAssignment(Context &context, const ExprPtr &expr) {
+    impl->emitAssignment(context, expr);
+}
+

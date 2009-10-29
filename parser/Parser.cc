@@ -150,16 +150,39 @@ ExprPtr Parser::parseExpression(const char *terminators) {
       Token tok1 = toker.getToken();
       if (tok1.isAssign()) {
 
-	 // start the method with an augmented name XXX this business of
-	 // passing a modified token is a hack.  Should really pass in the
-	 // method name as a separate variable from the start token.
-         // XXX write me
+         // look up the variable
+         VarDefPtr var = context->lookUp(tok.getData());
+         if (!var)
+            error(tok1,
+                  SPUG_FSTR("attempted to assign undefined variable " <<
+                            tok.getData()
+                            ).c_str()
+                  );
+         
+         // XXX need to verify that it's not a constant (or at least not a 
+         // function)
+
+	 // start the method with an augmented name
 
 	 // parse an expression
-	 if (!parseExpression(terminators)) {
+	 ExprPtr expr = parseExpression(terminators);
+	 if (!expr) {
 	    tok1 = toker.getToken();
 	    error(tok1, "expression expected");
 	 }
+
+         // make sure the types are compatible	 
+         if (!var->type->matches(*expr->type))
+            error(tok,
+                  SPUG_FSTR("Cannot assign a value of type " <<
+                            expr->type->name <<
+                            " to a variable of type " <<
+                            var->type->name
+                            ).c_str()
+                  );
+         
+         var->emitAssignment(*context, expr);
+
       } else if (tok1.isLParen()) {
          // method invocation
 	 FuncCallPtr funcCall =
@@ -486,7 +509,7 @@ bool Parser::parseWhileStmt() {
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
-   BranchpointPtr pos = context->builder.emitWhile(*context, expr);
+   BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr);
    bool terminal = parseIfClause();
    context->builder.emitEndWhile(*context, pos);
    return terminal;
