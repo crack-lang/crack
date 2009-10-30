@@ -1,0 +1,28 @@
+#!/bin/bash
+
+function test_output {
+    text="$1"
+    script="$2"
+    expected="$3"
+    
+    echo -n "$text..."
+    if [ "$(echo $script | ./crack - 2>&1)" = "$expected" ]; then
+        echo ok
+    else
+        echo FAILED
+    fi
+}
+        
+
+test_output "hello world" 'puts("hello world")' 'hello world'
+test_output "semicolon terminated" 'puts("hello world");' 'hello world'
+test_output "variable assignment" 'byteptr d = "abcd"; puts(d);' 'abcd'
+test_output "simple if" 'if (1) puts("abcd");' 'abcd'
+test_output "block if" 'if (1) { puts("abcd"); }' 'abcd'
+test_output "simple if/else" 'if (1) puts("abcd"); else puts("efgh");' 'abcd'
+test_output "simple negative if/else" \
+    'if (0) puts("abcd"); else puts("efgh");' 'efgh'
+test_output 'block if/else' \
+    'if (1) { puts("abcd"); } else { puts("efgh"); }' 'abcd'
+test_output 'negative block if/else' \
+    'if (0) { puts("abcd"); } else { puts("efgh"); }' 'efgh'
