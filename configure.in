@@ -19,6 +19,9 @@ AC_CONFIG_FILES([Makefile])
 # ... and also this (when I switched to a library)
 AC_PROG_RANLIB
 
+# for my shared libs
+AC_PROG_LIBTOOL
+
 # external packages that we need
 AM_PATH_SPUGPP(,,AC_MSG_ERROR(crack needs spug++))
 AM_PATH_LLVM

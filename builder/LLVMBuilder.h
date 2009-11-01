@@ -87,7 +87,8 @@ class LLVMBuilder : public Builder {
         // so that it can tie whatever special information it wants to the 
         // definition.
         
-        virtual model::FuncCallPtr createFuncCall(const std::string &funcName);
+        virtual model::FuncCallPtr
+            createFuncCall(const model::FuncDefPtr &func);
         virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
                                               const std::string &name
                                               );

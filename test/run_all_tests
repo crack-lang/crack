@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rc=0
+
 function test_output {
     text="$1"
     script="$2"
@@ -10,6 +12,7 @@ function test_output {
         echo ok
     else
         echo FAILED
+        rc=1
     fi
 }
         
@@ -26,3 +29,9 @@ test_output 'block if/else' \
     'if (1) { puts("abcd"); } else { puts("efgh"); }' 'abcd'
 test_output 'negative block if/else' \
     'if (0) { puts("abcd"); } else { puts("efgh"); }' 'efgh'
+test_output 'function with no args' \
+    'void func() { puts("abcd"); } func()' "abcd"
+test_output 'simple addition' \
+    'printint(1 + 2)' '3'
+
+exit $rc

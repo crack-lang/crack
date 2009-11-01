@@ -1,6 +1,8 @@
 
 #include "LLVMBuilder.h"
 
+#include <dlfcn.h>
+
 // LLVM includes
 #include <stddef.h>
 #include <stdlib.h>
@@ -217,6 +219,46 @@ namespace {
             }
                 
     };
+    
+    // primitive operations
+
+    SPUG_RCPTR(BinOpDef);
+
+    class BinOpDef : public FuncDef {
+        public:
+            BinOpDef(const TypeDefPtr &tp,
+                     const string &name) :
+                FuncDef(name, 2) {
+
+                args[0] = new ArgDef(tp, "lhs");
+                args[1] = new ArgDef(tp, "rhs");
+                type = tp;
+            }
+            
+            virtual void emitCall(Context &context, 
+                                  const ExprPtr &lhs,
+                                  const ExprPtr &rhs
+                                  ) = 0;
+    };
+
+    class PlusDef : public BinOpDef {
+        public:
+            PlusDef(const TypeDefPtr &type) : BinOpDef(type, "oper +") {}
+            
+            virtual void emitCall(Context &context, 
+                                  const ExprPtr &lhs,
+                                  const ExprPtr &rhs
+                                  ) {
+                LLVMBuilder &builder = 
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                
+                lhs->emit(context);
+                Value *lhsVal = builder.lastValue;
+                rhs->emit(context);
+                builder.lastValue =
+                    builder.builder.CreateAdd(lhsVal, builder.lastValue);
+            }
+    };
 
 } // anon namespace
 
@@ -230,6 +272,14 @@ LLVMBuilder::LLVMBuilder() :
 void LLVMBuilder::emitFuncCall(model::Context &context,
                                const model::FuncDefPtr &funcDef, 
                                const model::FuncCall::ExprVector &args) {
+
+    // see if this is s special function
+    BinOpDef *binOp = dynamic_cast<BinOpDef *>(funcDef.obj);
+    if (binOp) {
+        assert(args.size() == 2);
+        binOp->emitCall(context, args[0], args[1]);
+        return;
+    }
                     
     // get the LLVM arg list from the argument expressions
     vector<Value*> valueArgs;
@@ -507,9 +557,8 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val) {
     return new BIntConst(context.globalData->int32Type, val);
 }
                        
-model::FuncCallPtr LLVMBuilder::createFuncCall(const string &funcName) {
-    // XXX need a function type.
-    return new FuncCall(0, funcName);
+model::FuncCallPtr LLVMBuilder::createFuncCall(const FuncDefPtr &func) {
+    return new FuncCall(func);
 }
     
 model::FuncDefPtr LLVMBuilder::createFuncDef(const char *name) {
@@ -527,6 +576,10 @@ ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
 
 VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
     return new VarRef(varDef);
+}
+
+extern "C" void printint(int val) {
+    std::cout << val << flush;
 }
 
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
@@ -567,6 +620,17 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         f.addArg("n", gd->int32Type);
         f.finish();
     }
+    
+    // create "void printint(int32)"
+    {
+        FuncBuilder f(context, gd->voidType, "printint", 1);
+        f.addArg("val", gd->int32Type);
+        f.finish();
+    }
+    
+    // create "oper +(int32, int32)"
+    BinOpDefPtr plusOp = new PlusDef(gd->int32Type);
+    context.addDef(plusOp);
 }
 
 void LLVMBuilder::run() {

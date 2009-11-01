@@ -88,6 +88,10 @@ Token Toker::readToken() {
                     return Token(Token::minus, "-", locationMap.getLocation());
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
+                } else if (ch == '%') {
+                    return Token(Token::percent, "%", 
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '/') {
                     state = st_slash;
                 } else if (ch == '"' || ch == '\'') {

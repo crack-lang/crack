@@ -3,6 +3,7 @@
 #define _model_Context_h_
 
 #include <map>
+#include <vector>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 
@@ -13,9 +14,12 @@ namespace builder {
 namespace model {
 
 SPUG_RCPTR(BuilderContextData);
-SPUG_RCPTR(VarDef);
+SPUG_RCPTR(Expr);
+SPUG_RCPTR(FuncDef);
+SPUG_RCPTR(OverloadDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
+SPUG_RCPTR(VarDef);
 
 SPUG_RCPTR(Context);
 
@@ -71,7 +75,20 @@ class Context : public spug::RCBase {
             return createSubContext(scope);
         }
 
+        /**
+         * Returns the Overload Definition for the given name for the current 
+         * context.  This will return null if:
+         *   1) there are no functions named varName
+         *   2) the local context contains a non-func variable named varName.
+         */
+        OverloadDefPtr aggregateOverloads(const std::string &varName);
+
         VarDefPtr lookUp(const std::string &varName);
+        
+        /** Looks up a function matching the given expression list. */
+        FuncDefPtr lookUp(const std::string &varName,
+                          const std::vector<ExprPtr> &vals
+                          );
         void createModule(const char *name);
         void addDef(const VarDefPtr &def);
         

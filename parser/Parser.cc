@@ -134,13 +134,16 @@ bool Parser::parseBlock(bool nested) {
 }
 
 bool Parser::isBinaryOperator(const Token &tok) {
-   if (tok.isPlus())
+   if (tok.isPlus() || tok.isMinus() || tok.isAsterisk() || tok.isSlash() || 
+       tok.isPercent())
       return true;
    else
       return false;
 }
 
 ExprPtr Parser::parseExpression(const char *terminators) {
+
+   ExprPtr expr;
 
    // check for a method
    Token tok = toker.getToken();
@@ -185,10 +188,11 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 
       } else if (tok1.isLParen()) {
          // method invocation
-	 FuncCallPtr funcCall =
-            context->builder.createFuncCall(tok.getData());
+         // XXX needs to handle overloaded functions.
+         FuncDefPtr func = FuncDefPtr::dcast(context->lookUp(tok.getData()));
+	 FuncCallPtr funcCall = context->builder.createFuncCall(func);
 	 parseMethodArgs(funcCall->args);
-	 return ExprPtr::ucast(funcCall);
+         expr = ExprPtr::ucast(funcCall);
       } else {
          // for anything else, it's a variable
          toker.putBack(tok1);
@@ -200,26 +204,23 @@ ExprPtr Parser::parseExpression(const char *terminators) {
          // XXX def could be a generic class and generic classes require 
          // special magic to allow us to parse the <>'s
          VarDefPtr varDef = VarDefPtr::dcast(def);
-         return ExprPtr::ucast(context->builder.createVarRef(varDef));
+         expr = ExprPtr::ucast(context->builder.createVarRef(varDef));
       }
 
       // close off the method no matter how we started it
       tok1 = toker.getToken();
       toker.putBack(tok1);
    } else if (tok.isString()) {
-      return context->getStrConst(tok.getData());
+      expr = context->getStrConst(tok.getData());
    } else if (tok.isInteger()) {
-      return context->builder.createIntConst(*context, 
+      expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
                                              );
    } else if (tok.isLCurly()) {
       assert(false);
    } else {
-      // not an expression
-      toker.putBack(tok);
-      return 0;
-   }      // get the next token - if it is a dot, get a nested type
-
+      unexpected(tok, "expected an expression");
+   }
 
    // parse any following secondary expressions...
    tok = toker.getToken();
@@ -231,14 +232,29 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 	    error(tok, "identifier expected");
 
 	 // process the method XXX need to add the "self" expression
-	 FuncCallPtr funcCall = 
-            context->builder.createFuncCall(tok.getData());
+	 FuncDefPtr func = FuncDefPtr::dcast(context->lookUp(tok.getData()));
+	 FuncCallPtr funcCall = context->builder.createFuncCall(func);
 	 parseMethodArgs(funcCall->args);
 
       } else if (isBinaryOperator(tok)) {
-         assert(false); // XXX lookup the binary expression and create a 
-                        // function call
-	 //return parseExpression();
+         // parse the right-hand-side expression
+         ExprPtr rhs = parseExpression(terminators);
+         
+         FuncCall::ExprVector exprs(2);
+         exprs[0] = expr;
+         exprs[1] = rhs;
+         char name[7] = { 'o', 'p', 'e', 'r', ' ', tok.getData()[0] };
+         FuncDefPtr func = context->lookUp(name, exprs);
+         if (!func)
+            error(tok,
+                  SPUG_FSTR("Operator " << expr->type->name << " " <<
+                            tok.getData() << " " << rhs->type->name <<
+                            " undefined."
+                            )
+                  );
+         FuncCallPtr funcCall = context->builder.createFuncCall(func);
+         funcCall->args = exprs;
+         expr = ExprPtr::ucast(funcCall);
       } else {
 	 // next token is not part of the expression
 	 break;
@@ -249,39 +265,30 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 
    }
    toker.putBack(tok);
-
-   // Failed to parse an expression XXX need to deal with binary expressions 
-   // correctly.
-   return ExprPtr(0);
+   return expr;
 }
 
 // func( arg, arg)
 //      ^         ^
 void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
      
-   Token tok;
+   Token tok = toker.getToken();
    while (true) {
+      if (tok.isRParen())
+         return;
+         
       // XXX should be verifying arg types against signature
 
-      // try to parse an expression, if we failed we're done
+      // get the next argument value
+      toker.putBack(tok);
       ExprPtr arg = parseExpression(",)");
-      if (!arg) {
-         tok = toker.getToken();
-         break;
-      }
       args.push_back(arg);
 
       // comma signals another argument
       tok = toker.getToken();
       if (!tok.isComma())
 	 break;
-
    }
-
-   // check for a right paren or semicolon, depending on if we got opening 
-   // parens
-   if (!tok.isRParen())
-      unexpected(tok, "expected closing paren or comma in argument list");
 }
 
 TypeDefPtr Parser::parseTypeSpec() {
@@ -517,9 +524,17 @@ bool Parser::parseWhileStmt() {
 
 void Parser::parseReturnStmt() {
    // parse the return expression, make sure that it matches the return type.
-   Token tok = toker.getToken(); toker.putBack(tok);
+   Token tok = toker.getToken();
+   if (tok.isSemi()) {
+      return;
+   } else if (tok.isEnd() || tok.isRCurly()) {
+      toker.putBack(tok);
+      return;
+   }
+
+   toker.putBack(tok);
    ExprPtr expr = parseExpression("; }");
-   if (expr && !context->returnType->matches(*expr->type))
+   if (!context->returnType->matches(*expr->type))
       error(tok,
             SPUG_FSTR("Invalid return type " << expr->type->name <<
                       " for function returning " << context->returnType->name

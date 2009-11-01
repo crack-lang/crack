@@ -10,13 +10,12 @@
 
 using namespace model;
 
-FuncCall::FuncCall(const TypeDefPtr &type, const std::string &name) :
-    Expr(type),
-    name(name) {
+FuncCall::FuncCall(const FuncDefPtr &funcDef) :
+    Expr(funcDef->type),
+    func(funcDef) {
 }
 
 void FuncCall::emit(Context &context) {
-    FuncDefPtr func = FuncDefPtr::dcast(context.lookUp(name));
     context.builder.emitFuncCall(context, func, args);
 }
 

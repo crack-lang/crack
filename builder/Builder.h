@@ -120,7 +120,7 @@ class Builder {
                                               const std::string &name
                                               ) = 0;
         virtual model::FuncCallPtr 
-            createFuncCall(const std::string &funcName) = 0;
+            createFuncCall(const model::FuncDefPtr &func) = 0;
         virtual model::VarRefPtr
             createVarRef(const model::VarDefPtr &varDef) = 0;
         virtual void createModule(const char *name) = 0;

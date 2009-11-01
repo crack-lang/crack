@@ -1,5 +1,6 @@
 #!/bin/sh
 
+if [ ! -e ltmain.sh ]; then libtoolize; done
 aclocal -I m4 -I /usr/local/share/aclocal
 autoconf
 automake --add-missing

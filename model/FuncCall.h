@@ -8,15 +8,17 @@
 
 namespace model {
 
+SPUG_RCPTR(FuncDef);
+
 SPUG_RCPTR(FuncCall);
 
 class FuncCall : public Expr {
     public:
-        std::string name;
+        FuncDefPtr func;
         typedef std::vector<ExprPtr> ExprVector;
         ExprVector args;
 
-        FuncCall(const TypeDefPtr &type, const std::string &name);
+        FuncCall(const FuncDefPtr &funcDef);
         virtual void emit(Context &context);
 };
 
