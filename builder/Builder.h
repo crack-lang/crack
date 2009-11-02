@@ -133,6 +133,9 @@ class Builder {
         virtual void registerPrimFuncs(model::Context &context) = 0;
         
         virtual void run() = 0;
+        
+        /// Dump the compiled op-codes to standard output.
+        virtual void dump() = 0;
 };
 
 } // namespace builder

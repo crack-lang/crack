@@ -104,6 +104,7 @@ class LLVMBuilder : public Builder {
         virtual void registerPrimFuncs(model::Context &context);
         
         virtual void run();
+        virtual void dump();
         
         // internal functions used by our VarDefImpl to generate the 
         // appropriate variable references.

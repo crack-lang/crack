@@ -241,24 +241,34 @@ namespace {
                                   ) = 0;
     };
 
-    class PlusDef : public BinOpDef {
-        public:
-            PlusDef(const TypeDefPtr &type) : BinOpDef(type, "oper +") {}
-            
-            virtual void emitCall(Context &context, 
-                                  const ExprPtr &lhs,
-                                  const ExprPtr &rhs
-                                  ) {
-                LLVMBuilder &builder = 
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                
-                lhs->emit(context);
-                Value *lhsVal = builder.lastValue;
-                rhs->emit(context);
-                builder.lastValue =
-                    builder.builder.CreateAdd(lhsVal, builder.lastValue);
-            }
+#define BINOP(opCode, op)                                                   \
+    class opCode##OpDef : public BinOpDef {                                   \
+        public:                                                             \
+            opCode##OpDef(const TypeDefPtr &type) :                           \
+                BinOpDef(type, "oper " op) {                                \
+            }                                                               \
+                                                                            \
+            virtual void emitCall(Context &context,                         \
+                                  const ExprPtr &lhs,                       \
+                                  const ExprPtr &rhs                        \
+                                  ) {                                       \
+                LLVMBuilder &builder =                                      \
+                    dynamic_cast<LLVMBuilder &>(context.builder);           \
+                                                                            \
+                lhs->emit(context);                                         \
+                Value *lhsVal = builder.lastValue;                          \
+                rhs->emit(context);                                         \
+                builder.lastValue =                                         \
+                    builder.builder.Create##opCode(lhsVal,                  \
+                                                   builder.lastValue        \
+                                                   );                       \
+            }                                                               \
     };
+
+    BINOP(Add, "+");
+    BINOP(Sub, "-");
+    BINOP(Mul, "*");
+    BINOP(SDiv, "/");
 
 } // anon namespace
 
@@ -523,7 +533,7 @@ void LLVMBuilder::closeModule() {
     llvm::verifyModule(*module, llvm::PrintMessageAction);
     
     // create the execution engine
-    execEng = llvm::ExecutionEngine::create(module );
+    execEng = llvm::ExecutionEngine::create(module);
 
     // optimize
     llvm::PassManager passMan;
@@ -628,18 +638,22 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         f.finish();
     }
     
-    // create "oper +(int32, int32)"
-    BinOpDefPtr plusOp = new PlusDef(gd->int32Type);
-    context.addDef(plusOp);
+    // create integer operations
+    context.addDef(new AddOpDef(gd->int32Type));
+    context.addDef(new SubOpDef(gd->int32Type));
+    context.addDef(new MulOpDef(gd->int32Type));
+    context.addDef(new SDivOpDef(gd->int32Type));
 }
 
 void LLVMBuilder::run() {
-//    PassManager passMan;
-//    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
-//    passMan.run(*module);
-    
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     fptr();
+}
+
+void LLVMBuilder::dump() {
+    PassManager passMan;
+    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+    passMan.run(*module);
 }
 
 void LLVMBuilder::emitMemVarRef(Context &context, Value *val) {

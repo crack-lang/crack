@@ -11,6 +11,8 @@
 
 using namespace std;
 
+bool dump = false;
+
 void compileAndRun(istream &src, const char *name) {
 
     // create the builder and top-level context
@@ -31,7 +33,10 @@ void compileAndRun(istream &src, const char *name) {
 
         // close it and run
         ctx->builder.closeModule();
-        builder.run();
+        if (dump)
+            builder.dump();
+        else
+            builder.run();
     } catch (const parser::ParseError &ex) {
         cerr << ex << endl;
     }
@@ -45,10 +50,17 @@ int main(int argc, const char **argv) {
     }
     
     // parse the main module
-    if (!strcmp(argv[1], "-")) {
-        compileAndRun(cin, "<stdin>");
-    } else {
-        ifstream src(argv[1]);
-        compileAndRun(src, argv[1]);
+    const char **arg = &argv[1];
+    while (true) {
+        if (!strcmp(*arg, "-")) {
+            compileAndRun(cin, "<stdin>");
+        } else if (!strcmp(*arg, "-d")) {
+            dump = true;
+        } else {
+            ifstream src(*arg);
+            compileAndRun(src, argv[1]);
+            break;
+        }
+        ++arg;
     }
 }
