@@ -51,9 +51,10 @@ int main(int argc, const char **argv) {
     
     // parse the main module
     const char **arg = &argv[1];
-    while (true) {
+    while (*arg) {
         if (!strcmp(*arg, "-")) {
             compileAndRun(cin, "<stdin>");
+            break;
         } else if (!strcmp(*arg, "-d")) {
             dump = true;
         } else {
