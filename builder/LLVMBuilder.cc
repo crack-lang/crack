@@ -156,11 +156,12 @@ namespace {
                         Function::LinkageTypes linkage = 
                             Function::ExternalLinkage
                         ) :
-                context(context),
-                returnType(returnType),
-                funcDef(new BFuncDef(name, argCount)),
-                linkage(linkage),
-                argIndex(0) {
+                    context(context),
+                    returnType(returnType),
+                    funcDef(new BFuncDef(name, argCount)),
+                    linkage(linkage),
+                    argIndex(0) {
+                funcDef->type = returnType;
             }
             
             void finish(bool storeDef = true) {

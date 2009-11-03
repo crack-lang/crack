@@ -523,28 +523,40 @@ bool Parser::parseWhileStmt() {
 }
 
 void Parser::parseReturnStmt() {
-   // parse the return expression, make sure that it matches the return type.
+   // check for a return with no expression
    Token tok = toker.getToken();
+   bool returnVoid = false;
    if (tok.isSemi()) {
-      return;
+      returnVoid = true;
    } else if (tok.isEnd() || tok.isRCurly()) {
       toker.putBack(tok);
+      returnVoid = true;
+   }
+   if (returnVoid) {
+      if (!context->returnType->matches(*context->globalData->voidType))
+         error(tok,
+               SPUG_FSTR("Missing return expression for function "
+                          "returning " << context->returnType->name
+                         )
+               );
+      context->builder.emitReturn(*context, 0);
       return;
    }
 
+   // parse the return expression, make sure that it matches the return type.
    toker.putBack(tok);
    ExprPtr expr = parseExpression("; }");
    if (!context->returnType->matches(*expr->type))
       error(tok,
             SPUG_FSTR("Invalid return type " << expr->type->name <<
-                      " for function returning " << context->returnType->name
+                       " for function returning " << context->returnType->name
                       )
             );
    else if (!expr && 
             !context->globalData->voidType->matches(*context->returnType))
       error(tok,
             SPUG_FSTR("Missing return value for function returning " <<
-                      context->returnType->name
+                       context->returnType->name
                       )
             );
    

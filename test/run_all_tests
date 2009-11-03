@@ -36,6 +36,16 @@ test_output 'simple addition' \
 test_output 'pass 2 args, return 1' \
     'int32 f(int32 a, byteptr b) { return a; } printint(f(10, "xx"))' \
     '10'
+test_output 'void func with explicit return' \
+    'void f() { return; } f(); puts("abcd");' 'abcd'
+test_output 'returning void from non-void func' \
+    'int32 f() { return; }' \
+    'ParseError: <stdin>:1: Missing return expression for function returning'\
+' int32'
+test_output 'invalid return types' \
+    'void f() {} int32 g() { return f(); }' \
+    'ParseError: <stdin>:1: Invalid return type void for function returning '\
+'int32'
     
 
 exit $rc
