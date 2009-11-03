@@ -286,8 +286,8 @@ void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
 
       // comma signals another argument
       tok = toker.getToken();
-      if (!tok.isComma())
-	 break;
+      if (tok.isComma())
+         tok = toker.getToken();
    }
 }
 

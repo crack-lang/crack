@@ -33,5 +33,9 @@ test_output 'function with no args' \
     'void func() { puts("abcd"); } func()' "abcd"
 test_output 'simple addition' \
     'printint(1 + 2)' '3'
+test_output 'pass 2 args, return 1' \
+    'int32 f(int32 a, byteptr b) { return a; } printint(f(10, "xx"))' \
+    '10'
+    
 
 exit $rc
