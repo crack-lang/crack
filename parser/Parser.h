@@ -73,11 +73,14 @@ class Parser {
       bool parseIfStmt();
       bool parseWhileStmt();
       void parseReturnStmt();
+      model::TypeDefPtr parseClassDef();
       
       // context stack manipulation
       void pushContext(const model::ContextPtr &newContext);
       void popContext();
 
+      // error checking functions
+      void checkForExistingDef(const Token &tok);
 
    public:
       Parser(Toker &toker, const model::ContextPtr &context) : 

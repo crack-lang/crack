@@ -46,6 +46,14 @@ test_output 'invalid return types' \
     'void f() {} int32 g() { return f(); }' \
     'ParseError: <stdin>:1: Invalid return type void for function returning '\
 'int32'
-    
+
+test_output 'simple class definition' 'class Foo {};' ''
+test_output 'class with base class' 'class Foo : int32 {};' ''
+test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
+test_output 'bad class definition' 'class Foo xxx;' \
+    'ParseError: <stdin>:1: token xxx was not expected at this time, '\
+'expected colon or opening brace.'
+test_output 'class with nested def' 'class Foo { int32 val; }' ''
+test_output 'nested classes' 'class Foo { class Bar {}; }' ''
 
 exit $rc

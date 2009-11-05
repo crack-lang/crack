@@ -11,8 +11,8 @@ class Token {
    public:
 
       // the token types
-      typedef enum { ifKw, elseKw, whileKw, returnKw, ident, string, semi, 
-                     comma, colon, dot, assign, lparen, rparen, lcurly, 
+      typedef enum { ifKw, elseKw, whileKw, returnKw, classKw, ident, string, 
+                     semi, comma, colon, dot, assign, lparen, rparen, lcurly, 
                      rcurly, oper, integer, plus, minus, asterisk, slash, 
                      percent, end
 		    } Type;
@@ -53,6 +53,7 @@ class Token {
       bool isElse() const { return type == elseKw; }
       bool isWhile() const { return type == whileKw; }
       bool isReturn() const { return type == returnKw; }
+      bool isClass() const { return type == classKw; }
       bool isIdent() const { return type == ident; }
       bool isString() const { return type == string; }
       bool isSemi() const { return type == semi; }

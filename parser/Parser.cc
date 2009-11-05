@@ -49,6 +49,21 @@ bool Parser::parseStatement(bool defsAllowed) {
    } else if (tok.isReturn()) {
       parseReturnStmt();
       return true;
+   } else if (tok.isClass()) {
+      if (!defsAllowed)
+         error(tok, "class definitions are not allowed in this context");
+      parseClassDef();
+      
+      // check for a semicolon or another terminator, if it's something else 
+      // parse some variable definitions.
+      tok = toker.getToken();
+      if (tok.isSemi()) {
+         return false;
+      } else {
+         toker.putBack(tok);
+         if (tok.isRCurly() || tok.isEnd())
+            return false;
+      }
    }
 
    ExprPtr expr;
@@ -569,6 +584,68 @@ void Parser::parseReturnStmt() {
       unexpected(tok, "expected semicolon or block terminator");
 }
 
+// class name : base, base { ... }
+//      ^                         ^
+TypeDefPtr Parser::parseClassDef() {
+   Token tok = toker.getToken();
+   if (!tok.isIdent())
+      unexpected(tok, "Expected class name");
+   string className = tok.getData();
+   
+   // check for an existing definition of the symbol
+   checkForExistingDef(tok);
+   
+   tok = toker.getToken();
+   if (tok.isColon())
+      // parse base classes
+      while (true) {
+         TypeDefPtr baseClass = parseTypeSpec();
+         
+         tok = toker.getToken();
+         if (tok.isLCurly())
+            break;
+         else if (!tok.isComma())
+            unexpected(tok, "expected comma or opening brace");
+      }
+   else if (!tok.isLCurly())
+      unexpected(tok, "expected colon or opening brace.");
+
+   // parse the class body   
+   pushContext(context->createSubContext(Context::instance));
+   while (true) {
+      
+      // check for a closing brace or a nested class definition
+      tok = toker.getToken();
+      if (tok.isRCurly()) {
+         break;
+      } else if (tok.isClass()) {
+         TypeDefPtr newType = parseClassDef();
+         tok = toker.getToken();
+         if (tok.isRCurly()) {
+            break;
+         } else if (tok.isSemi()) {
+            continue;
+         } else {
+            toker.putBack(tok);
+            parseDef(newType);
+         }
+      }
+      
+      // parse some other kind of definition
+      toker.putBack(tok);
+      TypeDefPtr type = parseTypeSpec();
+      parseDef(type);
+   }
+
+   ContextPtr classContext = context;
+   popContext();
+   
+   // create a new type def
+   TypeDefPtr type = new TypeDef(className.c_str());
+   type->context = classContext;
+   return type;
+}
+   
 void Parser::pushContext(const model::ContextPtr &newContext) {
    context = newContext;
 }
@@ -581,6 +658,25 @@ void Parser::popContext() {
 void Parser::parse() {
    // outer parser just parses an un-nested block
    parseBlock(false);
+}
+
+void Parser::checkForExistingDef(const Token &tok) {
+   VarDefPtr existing = context->lookUp(tok.getData());
+   if (existing)
+      // redefinition in the same context is an error, redefinition in a 
+      // nested context is merely a warning.
+      if (existing->context == context)
+         error(tok, 
+               SPUG_FSTR("Symbol " << tok.getData() <<
+                          "is already defined in this context."
+                         )
+               );
+      else
+         warn(tok,
+              SPUG_FSTR("Symbol " << tok.getData() << 
+                         "hides another definition in an enclosing context."
+                        )
+              );
 }
 
 void Parser::error(const Token &tok, const std::string &msg) {
