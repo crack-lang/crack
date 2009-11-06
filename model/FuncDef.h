@@ -24,6 +24,8 @@ class FuncDef : public VarDef {
          * arguments.
          */
         bool matches(const std::vector<ExprPtr> &vals);
+        
+        virtual bool hasInstSlot();
 };
 
 } // namespace model

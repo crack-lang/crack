@@ -56,7 +56,7 @@ namespace {
     class BTypeDef : public model::TypeDef {
         public:
             const llvm::Type *rep;
-            BTypeDef(const char *name, const llvm::Type *rep) :
+            BTypeDef(const string &name, const llvm::Type *rep) :
                 model::TypeDef(name),
                 rep(rep) {
             }
@@ -96,6 +96,14 @@ namespace {
         public:
             Function *func;
             BasicBlock *block;
+            unsigned fieldCount;
+            BTypeDefPtr type;
+            
+            BBuilderContextData() :
+                func(0),
+                block(0),
+                fieldCount(0) {
+            }
     };
     
     // generates references for 
@@ -117,6 +125,48 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 expr->emit(context);
                 b.builder.CreateStore(b.lastValue, rep);
+            }
+    };
+    
+    SPUG_RCPTR(BInstVarDefImpl);
+
+    // Impl object for instance variables.
+    class BInstVarDefImpl : public VarDefImpl {
+        public:
+            unsigned index;
+
+            BInstVarDefImpl(unsigned index) : index(index) {}
+            virtual void emitRef(Context &context) {
+                VarDefPtr thisVar = context.lookUp("this");
+                assert(thisVar);
+
+                // XXX we can probably cache these values in the 
+                // ContextBuilderData for thisVar->context.
+                thisVar->impl->emitRef(context);
+                LLVMBuilder &bbuilder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                Value *body = bbuilder.builder.CreateLoad(bbuilder.lastValue);
+                bbuilder.lastValue =
+                    bbuilder.builder.CreateExtractValue(bbuilder.lastValue,
+                                                        index
+                                                        );
+            }
+            
+            virtual void emitAssignment(Context &context,
+                                        const ExprPtr &expr) {
+                VarDefPtr thisVar = context.lookUp("this");
+                assert(thisVar);
+
+                LLVMBuilder &bbuilder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                
+                // XXX again, may want to cache the "load %this"
+                thisVar->impl->emitRef(context);
+                Value *body = bbuilder.builder.CreateLoad(bbuilder.lastValue);
+                expr->emit(context);
+                bbuilder.builder.CreateInsertValue(body, bbuilder.lastValue,
+                                                   index
+                                                   );
             }
     };
     
@@ -446,6 +496,50 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     builder.SetInsertPoint(block = contextData->block);
 }
 
+model::TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
+                                              const string &name,
+                                              const vector<TypeDefPtr> bases) {
+    assert(!context.builderData);
+    BBuilderContextData *bdata;
+    context.builderData = bdata = new BBuilderContextData();
+    bdata->type = new BTypeDef(name, 0);
+}
+
+void LLVMBuilder::emitEndClass(Context &context) {
+    // build a vector of the instance variables
+    vector<const Type *> members;
+    for (Context::VarDefMap::iterator iter = context.beginDefs();
+         iter != context.endDefs();
+         ++iter
+         ) {
+        // see if the variable needs an instance slot
+        if (iter->second->hasInstSlot()) {
+            BInstVarDefImplPtr impl = 
+                BInstVarDefImplPtr::dcast(iter->second->impl);
+            
+            // resize the set of members if the new guy doesn't fit
+            if (impl->index >= members.size())
+                members.resize(impl->index + 1, 0);
+            
+            // get the underlying type object, add it to the vector
+            BTypeDefPtr typeDef = BTypeDefPtr::dcast(iter->second->type);
+            members[impl->index] = typeDef->rep;
+        }
+    }
+    
+    // verify that all of the members have been assigned
+    for (vector<const Type *>::iterator iter = members.begin();
+         iter != members.end();
+         ++iter
+         )
+        assert(*iter);
+    
+    // reassociate the object type with the actual type
+    BBuilderContextData *bdata =
+        dynamic_cast<BBuilderContextData *>(context.builderData.obj);
+    bdata->type->rep = PointerType::getUnqual(StructType::get(members));
+}
+
 void LLVMBuilder::emitReturn(model::Context &context,
                              const model::ExprPtr &expr) {
     
@@ -482,8 +576,18 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
             // way they are emitted, so if the staticScope flag is set we want 
             // to fall through to module scope
             if (!staticScope) {
-                assert(false && "XXX write instance variable emitter.");
-                break;
+                // first, we need to determine the index of the new field.
+                BBuilderContextData *bdata =
+                    dynamic_cast<BBuilderContextData *>(
+                        context.builderData.obj
+                    );
+                unsigned idx = bdata->fieldCount++;
+                
+                // instance variables are unlike the other stored types - we 
+                // use a different kind of implementation object.
+                VarDefPtr varDef = new VarDef(type, name);
+                varDef->impl = new BInstVarDefImpl(idx);
+                return varDef;
             }
                 
         case Context::module:
@@ -603,7 +707,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(gd->voidType);
     
     llvm::Type *llvmBytePtrType = 
-        llvm::PointerType::getUnqual(llvm::IntegerType::get(8));
+        PointerType::getUnqual(llvm::IntegerType::get(8));
     gd->byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
     gd->byteptrType->defaultInitializer = createStrConst(context, "");
     context.addDef(gd->byteptrType);

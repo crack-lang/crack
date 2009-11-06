@@ -26,7 +26,7 @@ class TypeDef : public VarDef {
         ExprPtr defaultInitializer;
         
         // XXX need a metatype
-        TypeDef(const char *name) : VarDef(0, name) {}
+        TypeDef(const std::string &name) : VarDef(0, name) {}
         
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,

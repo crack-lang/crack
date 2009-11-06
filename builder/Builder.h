@@ -95,6 +95,21 @@ class Builder {
                                  const model::FuncDefPtr &funcDef) = 0;
         
         /**
+         * Emit the beginning of a class definition.
+         * The context should be the context of the new class.
+         */
+        virtual model::TypeDefPtr
+            emitBeginClass(model::Context &context,
+                           const std::string &name,
+                           const std::vector<model::TypeDefPtr> bases) = 0;
+
+        /**
+         * Emit the end of a class definitiion.
+         * The context should be the context of the class.
+         */
+        virtual void emitEndClass(model::Context &context) = 0;
+
+        /**
          * Emit a return statement.
          * @params expr an expression or null if we are returning void.
          */

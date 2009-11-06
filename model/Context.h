@@ -28,8 +28,10 @@ SPUG_RCPTR(Context);
  */
 class Context : public spug::RCBase {
     
-    private:
+    public:
         typedef std::map<std::string, VarDefPtr> VarDefMap;
+    
+    private:
         VarDefMap defs;
 
         typedef std::map<std::string, StrConstPtr> StrConstTable;
@@ -91,6 +93,12 @@ class Context : public spug::RCBase {
                           );
         void createModule(const char *name);
         void addDef(const VarDefPtr &def);
+        
+        /** Funcs to iterate over the set of definitions. */
+        /// @{
+        VarDefMap::iterator beginDefs() { return defs.begin(); }
+        VarDefMap::iterator endDefs() { return defs.end(); }
+        /// @}
         
         /** Get or create a string constsnt. */
         StrConstPtr getStrConst(const std::string &value);

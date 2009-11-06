@@ -594,10 +594,11 @@ TypeDefPtr Parser::parseClassDef() {
    
    // check for an existing definition of the symbol
    checkForExistingDef(tok);
-   
+
+   // parse base class list   
+   vector<TypeDefPtr> bases;
    tok = toker.getToken();
    if (tok.isColon())
-      // parse base classes
       while (true) {
          TypeDefPtr baseClass = parseTypeSpec();
          
@@ -610,8 +611,11 @@ TypeDefPtr Parser::parseClassDef() {
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
 
-   // parse the class body   
    pushContext(context->createSubContext(Context::instance));
+   TypeDefPtr type =
+      context->builder.emitBeginClass(*context, className, bases);
+
+   // parse the class body   
    while (true) {
       
       // check for a closing brace or a nested class definition
@@ -637,12 +641,10 @@ TypeDefPtr Parser::parseClassDef() {
       parseDef(type);
    }
 
-   ContextPtr classContext = context;
+   type->context = context;
+   context->builder.emitEndClass(*context);
    popContext();
    
-   // create a new type def
-   TypeDefPtr type = new TypeDef(className.c_str());
-   type->context = classContext;
    return type;
 }
    

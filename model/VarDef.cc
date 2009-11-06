@@ -18,3 +18,6 @@ void VarDef::emitAssignment(Context &context, const ExprPtr &expr) {
     impl->emitAssignment(context, expr);
 }
 
+bool VarDef::hasInstSlot() {
+    return true;
+}
