@@ -55,5 +55,8 @@ test_output 'bad class definition' 'class Foo xxx;' \
 'expected colon or opening brace.'
 test_output 'class with nested def' 'class Foo { int32 val; }' ''
 test_output 'nested classes' 'class Foo { class Bar {}; }' ''
+test_output 'bad type for member function' \
+    'class Foo { xxx f() {} };' \
+    'ParseError: <stdin>:1: xxx is not a type.'
 
 exit $rc

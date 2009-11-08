@@ -496,13 +496,14 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     builder.SetInsertPoint(block = contextData->block);
 }
 
-model::TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
-                                              const string &name,
-                                              const vector<TypeDefPtr> bases) {
+TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
+                                       const string &name,
+                                       const vector<TypeDefPtr> bases) {
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
     bdata->type = new BTypeDef(name, 0);
+    return TypeDefPtr::ucast(bdata->type);
 }
 
 void LLVMBuilder::emitEndClass(Context &context) {
