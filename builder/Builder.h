@@ -28,6 +28,7 @@ class Builder {
     public:
         virtual void emitFuncCall(model::Context &context,
                                   const model::FuncDefPtr &func,
+                                  const model::ExprPtr &receiver,
                                   const model::FuncCall::ExprVector &args
                                   ) = 0;
         

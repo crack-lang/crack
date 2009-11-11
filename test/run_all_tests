@@ -58,5 +58,13 @@ test_output 'nested classes' 'class Foo { class Bar {}; }' ''
 test_output 'bad type for member function' \
     'class Foo { xxx f() {} };' \
     'ParseError: <stdin>:1: xxx is not a type.'
+test_output 'the "define" (":=") operator' \
+    'x := 1234; printint(x)' \
+    '1234'
+test_output 'basic methods' \
+    'class Foo { void p(byteptr data) { puts(data); } }; Foo f; f.p("abcd");' \
+    'abcd'
+    
+
 
 exit $rc

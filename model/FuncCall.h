@@ -17,6 +17,10 @@ class FuncCall : public Expr {
         FuncDefPtr func;
         typedef std::vector<ExprPtr> ExprVector;
         ExprVector args;
+        
+        // if FuncCall is a method, this is the receiver (the "this"), 
+        // otherwise it will be null
+        ExprPtr receiver;
 
         FuncCall(const FuncDefPtr &funcDef);
         virtual void emit(Context &context);

@@ -16,7 +16,7 @@ FuncCall::FuncCall(const FuncDefPtr &funcDef) :
 }
 
 void FuncCall::emit(Context &context) {
-    context.builder.emitFuncCall(context, func, args);
+    context.builder.emitFuncCall(context, func, receiver, args);
 }
 
     

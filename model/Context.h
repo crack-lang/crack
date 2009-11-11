@@ -49,6 +49,9 @@ class Context : public spug::RCBase {
         builder::Builder &builder;
         BuilderContextDataPtr builderData;
         Scope scope;
+        
+        // this is the return type for a function context, and the class type 
+        // for a class context.
         TypeDefPtr returnType;
 
         struct GlobalData {

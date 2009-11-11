@@ -78,10 +78,22 @@ bool Parser::parseStatement(bool defsAllowed) {
             error(tok, "definition is not allowed in this context");
          return false;
       } else if (!def) {
-         // unknown identifier
-         // XXX if the next token(s) are '=' or ':=' then this is an 
-         // assignment
-         assert(false);
+         // XXX think I want to move this into expression, it's just as valid 
+         // for an existing identifier (in a parent context) as for a 
+         // non-existing one.
+         // unknown identifier. if the next token(s) is ':=' (the "define" 
+         // operator) then this is an assignment
+         Token tok2 = toker.getToken();
+         if (tok2.isDefine()) {
+            if (!defsAllowed)
+               error(tok, "definition is not allowed in this context.");
+            expr = parseExpression("; }");
+            VarDefPtr varDef =
+               expr->type->emitVarDef(*context, tok.getData(), expr);
+            context->addDef(varDef);
+         } else {
+            error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
+         }
       } else {
          toker.putBack(tok);
          expr = parseExpression("; }");
@@ -246,10 +258,41 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 	 if (!tok.isIdent())
 	    error(tok, "identifier expected");
 
-	 // process the method XXX need to add the "self" expression
-	 FuncDefPtr func = FuncDefPtr::dcast(context->lookUp(tok.getData()));
+         // check for a paren
+         Token tok2 = toker.getToken();
+         if (!tok2.isLParen()) {
+            // this is a field reference
+            toker.putBack(tok2);
+            VarDefPtr varDef = expr->type->context->lookUp(tok.getData());
+            if (!varDef)
+               error(tok,
+                     SPUG_FSTR("Undefined attribute: " << tok.getData())
+                     );
+            
+            // XXX need to check for an assignment
+            expr = context->builder.createVarRef(varDef);
+            continue;
+         }
+
+	 // process the method XXX need to handle overloaded functions better
+	 
+         // parse the arg list
+         FuncCall::ExprVector args;
+         parseMethodArgs(args);
+         
+         // lookup the method from the receiver's type context
+         FuncDefPtr func = expr->type->context->lookUp(tok.getData(), args);
+         if (!func)
+            error(tok,
+                  SPUG_FSTR("No method exists matching " << tok.getData() <<
+                             " with these aregument types."
+                            )
+                  );
+	 
 	 FuncCallPtr funcCall = context->builder.createFuncCall(func);
-	 parseMethodArgs(funcCall->args);
+	 funcCall->args = args;
+	 funcCall->receiver = expr;
+	 expr = ExprPtr::ucast(funcCall);
 
       } else if (isBinaryOperator(tok)) {
          // parse the right-hand-side expression
@@ -421,6 +464,15 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          // push a new context, arg defs will be stored in the new context.
          pushContext(context->createSubContext(Context::local));
          context->returnType = type;
+         
+         // if this is a method, add the "this" variable
+         if (context->parent->scope == Context::instance) {
+            ArgDefPtr argDef =
+               context->builder.createArgDef(context->parent->returnType,
+                                             "this"
+                                             );
+            context->addDef(argDef);
+         }
 
          // parse the arguments
          vector<ArgDefPtr> argDefs;
@@ -612,7 +664,7 @@ TypeDefPtr Parser::parseClassDef() {
       unexpected(tok, "expected colon or opening brace.");
 
    pushContext(context->createSubContext(Context::instance));
-   TypeDefPtr type =
+   TypeDefPtr type = context->returnType =
       context->builder.emitBeginClass(*context, className, bases);
 
    // parse the class body   
@@ -644,6 +696,9 @@ TypeDefPtr Parser::parseClassDef() {
    type->context = context;
    context->builder.emitEndClass(*context);
    popContext();
+   
+   // store the class definition in the parent context
+   context->addDef(type);
    
    return type;
 }

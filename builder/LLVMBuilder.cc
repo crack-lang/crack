@@ -55,7 +55,7 @@ namespace {
 
     class BTypeDef : public model::TypeDef {
         public:
-            const llvm::Type *rep;
+            const Type *rep;
             BTypeDef(const string &name, const llvm::Type *rep) :
                 model::TypeDef(name),
                 rep(rep) {
@@ -145,6 +145,7 @@ namespace {
                 thisVar->impl->emitRef(context);
                 LLVMBuilder &bbuilder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
+                bbuilder.lastValue->dump();
                 Value *body = bbuilder.builder.CreateLoad(bbuilder.lastValue);
                 bbuilder.lastValue =
                     bbuilder.builder.CreateExtractValue(bbuilder.lastValue,
@@ -196,6 +197,7 @@ namespace {
         public:
             Context &context;
             BTypeDefPtr returnType;
+            BTypeDefPtr receiverType;
             BFuncDefPtr funcDef;
             int argIndex;
             Function::LinkageTypes linkage;
@@ -217,10 +219,14 @@ namespace {
             void finish(bool storeDef = true) {
                 size_t argCount = funcDef->args.size();
                 assert(argIndex == argCount);
-                vector<const Type *> llvmArgs(argCount);
+                vector<const Type *> llvmArgs(argCount + 
+                                               (receiverType ? 1 : 0)
+                                              );
                 
-                // create an array of LLVM arguments
+                // create the array of LLVM arguments
                 int i = 0;
+                if (receiverType)
+                    llvmArgs[i++] = receiverType->rep;
                 for (vector<ArgDefPtr>::iterator iter = 
                         funcDef->args.begin();
                      iter != funcDef->args.end();
@@ -245,6 +251,18 @@ namespace {
                 Function::arg_iterator llvmArg = func->arg_begin();
                 vector<ArgDefPtr>::const_iterator crackArg =
                     funcDef->args.begin();
+                if (receiverType) {
+                    llvmArg->setName("this");
+                    
+                    // add the implementation to the "this" var
+                    VarDefPtr thisDef = context.lookUp("this");
+                    assert(thisDef &&
+                            "missing 'this' variable in the context of a "
+                            "function with a receiver"
+                           );
+                    thisDef->impl = new BArgVarDefImpl(llvmArg);
+                    ++llvmArg;
+                }
                 for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
                     llvmArg->setName((*crackArg)->name);
             
@@ -268,7 +286,28 @@ namespace {
                 argIndex = args.size();
                 funcDef->args = args;
             }
+            
+            void setReceiverType(const BTypeDefPtr &type) {
+                receiverType = type;
+            }
                 
+    };
+
+    // weird stuff
+    
+    class MallocExpr : public Expr {
+        public:
+            MallocExpr(const TypeDefPtr &type) : Expr(type) {}
+            
+            void emit(Context &context) {
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                BTypeDef *btype = dynamic_cast<BTypeDef *>(type.obj);
+                PointerType *tp =
+                    cast<PointerType>(const_cast<Type *>(btype->rep));
+                builder.lastValue =
+                    builder.builder.CreateMalloc(tp->getElementType());
+            }
     };
     
     // primitive operations
@@ -330,9 +369,10 @@ LLVMBuilder::LLVMBuilder() :
     lastValue(0) {
 }
 
-void LLVMBuilder::emitFuncCall(model::Context &context,
-                               const model::FuncDefPtr &funcDef, 
-                               const model::FuncCall::ExprVector &args) {
+void LLVMBuilder::emitFuncCall(Context &context,
+                               const FuncDefPtr &funcDef, 
+                               const ExprPtr &receiver,
+                               const FuncCall::ExprVector &args) {
 
     // see if this is s special function
     BinOpDef *binOp = dynamic_cast<BinOpDef *>(funcDef.obj);
@@ -342,8 +382,16 @@ void LLVMBuilder::emitFuncCall(model::Context &context,
         return;
     }
                     
-    // get the LLVM arg list from the argument expressions
+    // get the LLVM arg list from the receiver and the argument expressions
     vector<Value*> valueArgs;
+    
+    // if there's a receiver, use it as the first argument.
+    if (receiver) {
+        receiver->emit(context);
+        valueArgs.push_back(lastValue);
+    }
+    
+    // emit the arguments
     for (ExprVector::const_iterator iter = args.begin(); iter < args.end(); 
          ++iter) {
         (*iter)->emit(context);
@@ -478,6 +526,16 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     // create the function
     FuncBuilder f(context, returnType, name, args.size());
     f.setArgs(args);
+    
+    // see if this is a method - assuming that methods are nested exactly one 
+    // level within the class, which may not be valid.
+    if (context.parent && context.parent->scope == Context::instance) {
+        BuilderContextData *contextData0 = context.parent->builderData.obj;
+        BBuilderContextData *contextData = 
+            dynamic_cast<BBuilderContextData *>(contextData0);
+        f.setReceiverType(contextData->type);
+    }
+
     f.finish(false);
 
     func = f.funcDef->rep;
@@ -502,7 +560,8 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
-    bdata->type = new BTypeDef(name, 0);
+    bdata->type = new BTypeDef(name, OpaqueType::get());
+    bdata->type->defaultInitializer = new MallocExpr(bdata->type);
     return TypeDefPtr::ucast(bdata->type);
 }
 
@@ -535,10 +594,14 @@ void LLVMBuilder::emitEndClass(Context &context) {
          )
         assert(*iter);
     
-    // reassociate the object type with the actual type
+    // refine the type to the actual type of the structure.
     BBuilderContextData *bdata =
         dynamic_cast<BBuilderContextData *>(context.builderData.obj);
-    bdata->type->rep = PointerType::getUnqual(StructType::get(members));
+    DerivedType *curType = 
+        cast<DerivedType>(const_cast<Type *>(bdata->type->rep));
+    Type *newType = PointerType::getUnqual(StructType::get(members));
+    curType->refineAbstractTypeTo(newType);
+    bdata->type->rep = newType;
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,

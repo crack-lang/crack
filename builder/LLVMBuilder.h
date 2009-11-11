@@ -37,6 +37,7 @@ class LLVMBuilder : public Builder {
 
         virtual void emitFuncCall(model::Context &context, 
                                   const model::FuncDefPtr &func,
+                                  const model::ExprPtr &receiver,
                                   const model::FuncCall::ExprVector &args
                                   );
         

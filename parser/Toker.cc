@@ -45,6 +45,7 @@ Token Toker::readToken() {
         st_none, 
         st_ident, 
         st_slash,
+        st_colon,
         st_comment, 
         st_string, 
         st_escapeChar,
@@ -100,7 +101,7 @@ Token Toker::readToken() {
                     terminator = ch;
                     state = st_string;
                 } else if (ch == ':') {
-                    return Token(Token::colon, ":", locationMap.getLocation());
+                    state = st_colon;
                 } else if (ch == '.') {
                     return Token(Token::dot, ".", locationMap.getLocation());
                 } else if (isdigit(ch)) {
@@ -136,7 +137,17 @@ Token Toker::readToken() {
                     return Token(Token::slash, "/", locationMap.getLocation());
                 }
                 break;
-   
+            
+            case st_colon:
+                if (ch == '=') {
+                    return Token(Token::define, ":=", 
+                                 locationMap.getLocation()
+                                 );
+                } else {
+                    return Token(Token::colon, ":", locationMap.getLocation());
+                }
+                break;
+
             case st_comment:
    
                 // newline character takes us out of the comment state
