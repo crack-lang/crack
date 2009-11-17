@@ -21,7 +21,6 @@ class LLVMBuilder : public Builder {
     private:
 
         llvm::Function *func;
-        llvm::BasicBlock *block;
         
         llvm::ExecutionEngine *execEng;
 
@@ -32,6 +31,7 @@ class LLVMBuilder : public Builder {
         llvm::Module *module;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
+        llvm::BasicBlock *block;
 
         LLVMBuilder();
 

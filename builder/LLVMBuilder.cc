@@ -1,4 +1,4 @@
-
+                
 #include "LLVMBuilder.h"
 
 #include <dlfcn.h>
@@ -113,14 +113,16 @@ namespace {
             
             BMemVarDefImpl(Value *rep) : rep(rep) {}
             
-            virtual void emitRef(Context &context) {
+            virtual void emitRef(Context &context, const VarDefPtr &var) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitMemVarRef(context, rep);
             }
             
             virtual void 
-            emitAssignment(Context &context, const ExprPtr &expr) {
+            emitAssignment(Context &context, const VarDefPtr &var,
+                           const ExprPtr &expr
+                           ) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 expr->emit(context);
@@ -130,44 +132,133 @@ namespace {
     
     SPUG_RCPTR(BInstVarDefImpl);
 
-    // Impl object for instance variables.
+    // Impl object for instance variables.  These are only created for 
+    // instance variables in the context of the class definition - for 
+    // instance variable references outside of the class we need to have 
+    // another type.
+    // the public "emit" interface just emits placeholders - we can't emit the 
+    // real types because the class instance structure doesn't exist until 
+    // the end of the class body is parsed.  The real work is done by 
+    // resolveAllRefs(), which goes through and fixes all of the fake 
+    // instructions.
     class BInstVarDefImpl : public VarDefImpl {
+        private:
+            Value *emitThisPtr(LLVMBuilder &bb, Context &context) {
+                VarDefPtr thisVar = context.lookUp("this");
+                assert(thisVar);
+                thisVar->impl->emitRef(context, thisVar);
+                return bb.lastValue;
+            }
+
+            // emit the "this" variable and return its value
+            Value *emitThis(LLVMBuilder &bb, Context &context) {
+                VarDefPtr thisVar = context.lookUp("this");
+                assert(thisVar);
+
+                // keep track of the "this" var
+                // XXX cache this in the function context?
+                thisVar->impl->emitRef(context, thisVar);
+                bb.lastValue = bb.builder.CreateLoad(bb.lastValue);
+                return bb.lastValue;
+            }
+
         public:
             unsigned index;
 
-            BInstVarDefImpl(unsigned index) : index(index) {}
-            virtual void emitRef(Context &context) {
-                VarDefPtr thisVar = context.lookUp("this");
-                assert(thisVar);
+            struct TempVal {
+                Value *placeholder;
+                Value *thisVal;
+                
+                // for an assignment, this is the rvalue being assigned.  For 
+                // a reference this must be null.
+                Value *value;
+                
+                BasicBlock *block;
+                BasicBlock::iterator pos;
+                
+                TempVal(LLVMBuilder &bb, Value *placeholder, Value *thisVal,
+                        Value *value = 0
+                        ) :
+                    placeholder(placeholder),
+                    thisVal(thisVal),
+                    value(value),
+                    block(bb.block),
+                    pos(bb.block->end()) {
 
-                // XXX we can probably cache these values in the 
-                // ContextBuilderData for thisVar->context.
-                thisVar->impl->emitRef(context);
-                LLVMBuilder &bbuilder =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                bbuilder.lastValue->dump();
-                Value *body = bbuilder.builder.CreateLoad(bbuilder.lastValue);
-                bbuilder.lastValue =
-                    bbuilder.builder.CreateExtractValue(bbuilder.lastValue,
-                                                        index
-                                                        );
+                    // back-up the iterator so it points to the last 
+                    // instruction in the block
+                    --pos;
+                }
+            };
+            vector<TempVal> vals;
+
+            BInstVarDefImpl(unsigned index) : index(index) {}
+            virtual void emitRef(Context &context,
+                                 const VarDefPtr &var
+                                 ) {
+                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
+                Value *thisRef = emitThis(bb, context);
+
+                // create a bogus last value of the correct type                
+                BTypeDef *typeDef = dynamic_cast<BTypeDef *>(var->type.obj);
+                bb.lastValue = new Value(typeDef->rep, Value::ConstantExprVal);
+                                         //Constant::getNullValue(typeDef->rep);
+                
+                // store the value for later reconciliation
+                TempVal tempVal(bb, bb.lastValue, thisRef);
+                vals.push_back(tempVal);
             }
             
             virtual void emitAssignment(Context &context,
-                                        const ExprPtr &expr) {
-                VarDefPtr thisVar = context.lookUp("this");
-                assert(thisVar);
+                                        const VarDefPtr &var,
+                                        const ExprPtr &expr
+                                        ) {
+                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
+                Value *thisVal = emitThisPtr(bb, context);
 
-                LLVMBuilder &bbuilder =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                
-                // XXX again, may want to cache the "load %this"
-                thisVar->impl->emitRef(context);
-                Value *body = bbuilder.builder.CreateLoad(bbuilder.lastValue);
+                // emit the expression and store the value
                 expr->emit(context);
-                bbuilder.builder.CreateInsertValue(body, bbuilder.lastValue,
-                                                   index
-                                                   );
+                Value *value = bb.lastValue;
+
+                // store a load just so we can be sure that we have a 
+                // placeholder
+                bb.builder.CreateLoad(thisVal);                
+                vals.push_back(TempVal(bb, 0, thisVal, value));
+            }
+
+            void resolveAllRefs(Context &context) {
+                
+                LLVMBuilder &bb =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                IRBuilder<> builder;
+                BasicBlock *lastBlock = 0;
+                for (vector<TempVal>::iterator iter = vals.begin();
+                     iter != vals.end();
+                     ++iter
+                     ) {
+
+                    // replace the original value with the code to load the 
+                    // instance and extract or insert the variable value
+                    Value *v;
+                    if (iter->value) {
+                        builder.SetInsertPoint(iter->block, iter->pos);
+                        v = builder.CreateStructGEP(iter->thisVal, index);
+                        builder.CreateStore(iter->value, v);
+
+                        // remove the placeholder instruction that we left 
+                        // there
+                        iter->pos->eraseFromParent();
+                        lastBlock = iter->block;
+                        
+                    } else {
+                        builder.SetInsertPoint(iter->block, ++iter->pos);
+                        v = builder.CreateExtractValue(iter->thisVal, 
+                                                       index
+                                                       );
+                        iter->placeholder->replaceAllUsesWith(v);
+                        delete iter->placeholder;
+                    }
+                }
             }
     };
     
@@ -177,14 +268,18 @@ namespace {
             
             BArgVarDefImpl(Value *rep) : rep(rep) {}
 
-            virtual void emitRef(Context &context) {
+            virtual void emitRef(Context &context,
+                                 const VarDefPtr &var
+                                 ) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitArgVarRef(context, rep);
             }
             
             virtual void 
-            emitAssignment(Context &context, const ExprPtr &expr) {
+            emitAssignment(Context &context, const VarDefPtr &var,
+                           const ExprPtr &expr
+                           ) {
                 // XXX implement argument assignment
                 assert(false && "can't assign arguments yet");
                 LLVMBuilder &b =
@@ -560,7 +655,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
-    bdata->type = new BTypeDef(name, OpaqueType::get());
+    bdata->type = new BTypeDef(name, PointerType::getUnqual(OpaqueType::get()));
     bdata->type->defaultInitializer = new MallocExpr(bdata->type);
     return TypeDefPtr::ucast(bdata->type);
 }
@@ -568,6 +663,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
 void LLVMBuilder::emitEndClass(Context &context) {
     // build a vector of the instance variables
     vector<const Type *> members;
+    vector<BInstVarDefImplPtr> instVarImpls;
     for (Context::VarDefMap::iterator iter = context.beginDefs();
          iter != context.endDefs();
          ++iter
@@ -576,6 +672,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
         if (iter->second->hasInstSlot()) {
             BInstVarDefImplPtr impl = 
                 BInstVarDefImplPtr::dcast(iter->second->impl);
+            instVarImpls.push_back(impl);
             
             // resize the set of members if the new guy doesn't fit
             if (impl->index >= members.size())
@@ -597,11 +694,22 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // refine the type to the actual type of the structure.
     BBuilderContextData *bdata =
         dynamic_cast<BBuilderContextData *>(context.builderData.obj);
+        
+    PointerType *ptrType =
+        cast<PointerType>(const_cast<Type *>(bdata->type->rep));
     DerivedType *curType = 
-        cast<DerivedType>(const_cast<Type *>(bdata->type->rep));
-    Type *newType = PointerType::getUnqual(StructType::get(members));
+        cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
+    Type *newType = StructType::get(members);
     curType->refineAbstractTypeTo(newType);
-    bdata->type->rep = newType;
+
+    // do another pass through the members to convert the fake values we used 
+    // before to real references to the instance variable
+    for (vector<BInstVarDefImplPtr>::iterator iter = instVarImpls.begin();
+         iter != instVarImpls.end();
+         ++iter
+         ) {
+        (*iter)->resolveAllRefs(context);
+    }
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,

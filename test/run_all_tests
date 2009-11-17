@@ -64,7 +64,12 @@ test_output 'the "define" (":=") operator' \
 test_output 'basic methods' \
     'class Foo { void p(byteptr data) { puts(data); } }; Foo f; f.p("abcd");' \
     'abcd'
-    
 
+test_output 'instance variables' \
+    'class Foo {
+        int32 val; void set() {val = 100;} int32 get() {return val;}
+    };
+    Foo x; x.set(); printint(x.get());' \
+    '100'
 
 exit $rc

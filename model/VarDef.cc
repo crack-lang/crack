@@ -15,7 +15,7 @@ VarDef::VarDef(const TypeDefPtr &type, const std::string &name) :
 }
 
 void VarDef::emitAssignment(Context &context, const ExprPtr &expr) {
-    impl->emitAssignment(context, expr);
+    impl->emitAssignment(context, this, expr);
 }
 
 bool VarDef::hasInstSlot() {
