@@ -88,7 +88,7 @@ bool Parser::parseStatement(bool defsAllowed) {
          if (tok2.isDefine()) {
             if (!defsAllowed)
                error(tok, "definition is not allowed in this context.");
-            expr = parseExpression("; }");
+            expr = parseExpression();
             VarDefPtr varDef =
                expr->type->emitVarDef(*context, tok.getData(), expr);
             context->addDef(varDef);
@@ -97,12 +97,12 @@ bool Parser::parseStatement(bool defsAllowed) {
          }
       } else {
          toker.putBack(tok);
-         expr = parseExpression("; }");
+         expr = parseExpression();
       }
 
    } else {
       toker.putBack(tok);
-      expr = parseExpression("; }");
+      expr = parseExpression();
    }
 
    // if we got an expression, emit it.
@@ -169,7 +169,7 @@ bool Parser::isBinaryOperator(const Token &tok) {
       return false;
 }
 
-ExprPtr Parser::emitThisRef(const Token &ident) {
+ExprPtr Parser::makeThisRef(const Token &ident) {
    VarDefPtr thisVar = context->lookUp("this");
    if (!thisVar)
       error(ident,
@@ -181,90 +181,91 @@ ExprPtr Parser::emitThisRef(const Token &ident) {
    return ExprPtr::ucast(context->builder.createVarRef(thisVar));
 }
 
-ExprPtr Parser::parseExpression(const char *terminators) {
+ExprPtr Parser::parsePostIdent(const ExprPtr &container, const Token &ident) {
+   Context &varContext = container ? *container->type->context : *context;
+   // is it an assignment?
+   Token tok1 = toker.getToken();
+   if (tok1.isAssign()) {
+
+      // look up the variable
+      VarDefPtr var = varContext.lookUp(ident.getData());
+      if (!var)
+         error(tok1,
+               SPUG_FSTR("attempted to assign undefined variable " <<
+                          ident.getData()
+                         )
+               );
+      
+      // XXX need to verify that it's not a constant (or at least not a 
+      // function)
+
+      // parse an expression
+      ExprPtr val = parseExpression();
+      if (!val) {
+         tok1 = toker.getToken();
+         error(tok1, "expression expected");
+      }
+
+      // if this is an instance variable, emit a field assignment.  
+      // Otherwise emit a normal variable assignment.
+      if (var->context->scope == Context::instance) {
+         // if there's no container, try to use an implicit "this"
+         ExprPtr receiver = container ? container : makeThisRef(ident);
+         return AssignExpr::create(ident, receiver, var, val);
+      } else {
+         return AssignExpr::create(ident, var, val);
+      }
+
+   } else if (tok1.isLParen()) {
+      // function/method invocation
+      
+      // parse the arg list
+      FuncCall::ExprVector args;
+      parseMethodArgs(args);
+      
+      // lookup the method from the variable context's type context
+      // XXX needs to handle callable objects.
+      FuncDefPtr func = varContext.lookUp(ident.getData(), args);
+      if (!func)
+         error(ident,
+               SPUG_FSTR("No method exists matching " << ident.getData() <<
+                          " with these aregument types."
+                         )
+               );
+
+      FuncCallPtr funcCall = context->builder.createFuncCall(func);
+      funcCall->args = args;
+      funcCall->receiver = container;
+      return ExprPtr::ucast(funcCall);
+   } else {
+      // for anything else, it's a variable reference
+      toker.putBack(tok1);
+      VarDefPtr var = varContext.lookUp(ident.getData());
+      if (!var)
+         error(ident,
+               SPUG_FSTR("Undefined variable: " << ident.getData()));
+
+      // if the definition is for an instance variable, emit an implicit 
+      // "this" dereference.  Otherwise just emit the variable
+      if (var->context->scope == Context::instance) {
+         // if there's no container, try to use an implicit "this"
+         ExprPtr receiver = container ? container : makeThisRef(ident);
+         return context->builder.createFieldRef(receiver, var);
+      } else {
+         return ExprPtr::ucast(context->builder.createVarRef(var));
+      }
+   }
+
+}
+
+ExprPtr Parser::parseExpression() {
 
    ExprPtr expr;
 
    // check for a method
    Token tok = toker.getToken();
    if (tok.isIdent()) {
-
-      // is it an assignment?
-      Token tok1 = toker.getToken();
-      if (tok1.isAssign()) {
-
-         // look up the variable
-         VarDefPtr var = context->lookUp(tok.getData());
-         if (!var)
-            error(tok1,
-                  SPUG_FSTR("attempted to assign undefined variable " <<
-                             tok.getData()
-                            )
-                  );
-         
-         // XXX need to verify that it's not a constant (or at least not a 
-         // function)
-
-	 // start the method with an augmented name
-
-	 // parse an expression
-	 expr = parseExpression(terminators);
-	 if (!expr) {
-	    tok1 = toker.getToken();
-	    error(tok1, "expression expected");
-	 }
-
-         // make sure the types are compatible	 
-         if (!var->type->matches(*expr->type))
-            error(tok,
-                  SPUG_FSTR("Cannot assign a value of type " <<
-                            expr->type->name <<
-                            " to a variable of type " <<
-                            var->type->name
-                            )
-                  );
-         
-         // if this is an instance variable, emit a field assignment.  
-         // Otherwise emit a normal variable assignment.
-         if (var->context->scope == Context::instance) {
-            ExprPtr thisRef = emitThisRef(tok);
-            expr = AssignExpr::create(tok, thisRef, var, expr);
-         } else {
-            expr = AssignExpr::create(tok, var, expr);
-         }
-
-      } else if (tok1.isLParen()) {
-         // method invocation
-         // XXX needs to handle overloaded functions.
-         FuncDefPtr func = FuncDefPtr::dcast(context->lookUp(tok.getData()));
-	 FuncCallPtr funcCall = context->builder.createFuncCall(func);
-	 parseMethodArgs(funcCall->args);
-         expr = ExprPtr::ucast(funcCall);
-      } else {
-         // for anything else, it's a variable
-         toker.putBack(tok1);
-         VarDefPtr def = context->lookUp(tok.getData());
-         if (!def)
-            error(tok,
-                  SPUG_FSTR("Undefined variable: " << tok.getData()));
-
-         // XXX def could be a generic class and generic classes require 
-         // special magic to allow us to parse the <>'s
-         VarDefPtr varDef = VarDefPtr::dcast(def);
-
-         // if the definition is for an instance variable, emit an implicit 
-         // "this" dereference.  Otherwise just emit the variable
-         if (varDef->context->scope == Context::instance) {
-            expr = emitThisRef(tok);
-            expr = context->builder.createFieldRef(expr, varDef);
-         } else {
-            expr = ExprPtr::ucast(context->builder.createVarRef(varDef));
-         }
-      }
-
-      // close off the method no matter how we started it
-      tok1 = toker.getToken();
-      toker.putBack(tok1);
+      expr = parsePostIdent(0, tok);
    } else if (tok.isString()) {
       expr = context->getStrConst(tok.getData());
    } else if (tok.isInteger()) {
@@ -286,45 +287,10 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 	 if (!tok.isIdent())
 	    error(tok, "identifier expected");
 
-         // check for a paren
-         Token tok2 = toker.getToken();
-         if (!tok2.isLParen()) {
-            // this is a field reference
-            toker.putBack(tok2);
-            VarDefPtr varDef = expr->type->context->lookUp(tok.getData());
-            if (!varDef)
-               error(tok,
-                     SPUG_FSTR("Undefined attribute: " << tok.getData())
-                     );
-            
-            // XXX need to check for an assignment
-            expr = context->builder.createFieldRef(expr, varDef);
-            continue;
-         }
-
-	 // process the method XXX need to handle overloaded functions better
-	 
-         // parse the arg list
-         FuncCall::ExprVector args;
-         parseMethodArgs(args);
-         
-         // lookup the method from the receiver's type context
-         FuncDefPtr func = expr->type->context->lookUp(tok.getData(), args);
-         if (!func)
-            error(tok,
-                  SPUG_FSTR("No method exists matching " << tok.getData() <<
-                             " with these aregument types."
-                            )
-                  );
-	 
-	 FuncCallPtr funcCall = context->builder.createFuncCall(func);
-	 funcCall->args = args;
-	 funcCall->receiver = expr;
-	 expr = ExprPtr::ucast(funcCall);
-
+         expr = parsePostIdent(expr, tok);
       } else if (isBinaryOperator(tok)) {
          // parse the right-hand-side expression
-         ExprPtr rhs = parseExpression(terminators);
+         ExprPtr rhs = parseExpression();
          
          FuncCall::ExprVector exprs(2);
          exprs[0] = expr;
@@ -367,7 +333,7 @@ void Parser::parseMethodArgs(FuncCall::ExprVector &args) {
 
       // get the next argument value
       toker.putBack(tok);
-      ExprPtr arg = parseExpression(",)");
+      ExprPtr arg = parseExpression();
       args.push_back(arg);
 
       // comma signals another argument
@@ -469,7 +435,7 @@ bool Parser::parseDef(const TypeDefPtr &type) {
             assert(false);
          } else {
             toker.putBack(tok4);
-            initializer = parseExpression(";,");
+            initializer = parseExpression();
             
             // XXX if this is a comma, we need to go back and parse 
             // another definition for the type.
@@ -569,7 +535,7 @@ bool Parser::parseIfStmt() {
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
    
-   ExprPtr cond = parseExpression(")");
+   ExprPtr cond = parseExpression();
    if (!context->globalData->boolType->matches(*cond->type))
       error(tok, "Condition is not boolean.");
    
@@ -606,7 +572,7 @@ bool Parser::parseWhileStmt() {
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
    
-   ExprPtr expr = parseExpression(")");
+   ExprPtr expr = parseExpression();
    tok = toker.getToken();
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
@@ -640,7 +606,7 @@ void Parser::parseReturnStmt() {
 
    // parse the return expression, make sure that it matches the return type.
    toker.putBack(tok);
-   ExprPtr expr = parseExpression("; }");
+   ExprPtr expr = parseExpression();
    if (!context->returnType->matches(*expr->type))
       error(tok,
             SPUG_FSTR("Invalid return type " << expr->type->name <<

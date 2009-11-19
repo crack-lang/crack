@@ -50,8 +50,20 @@ class Parser {
       /** returns true if the token is a binary operator. */
       static bool isBinaryOperator(const Token &tok);
       
-      /** Emit a reference to the "this" variable. */
-      model::ExprPtr emitThisRef(const Token &ident);
+      /** Create a reference to the "this" variable, error if there is none. */
+      model::ExprPtr makeThisRef(const Token &ident);
+
+      /**
+       * Parse the kinds of things that can come after an identifier.
+       *
+       * @param container the aggregate that the identifier is scoped to, as 
+       *   in "container.ident"  This can be null, in which case the 
+       *   identifier is scoped to the local context.
+       * @param ident The identifier's token.
+       */
+      model::ExprPtr parsePostIdent(const model::ExprPtr &container,
+                                    const Token &ident
+                                    );
 
       /**
        * @param terminators a list of termination symbols that are appropriate 
@@ -59,7 +71,7 @@ class Parser {
        *   space (ascii 32) indicates that the end-of-stream token is a
        *   terminator.
        */
-      model::ExprPtr parseExpression(const char *terminators);
+      model::ExprPtr parseExpression();
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
 
       model::TypeDefPtr parseTypeSpec();
