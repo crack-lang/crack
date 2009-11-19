@@ -3,3 +3,6 @@
     type func(int a) { a = 100; }
 -   nested compilation so I can write lots of unit tests
 -   simple operations (integer arithmetic)
+-   as it stands, VarRef uses VarDef.impl to emit reference/assign for 
+    different variable scopes.  This doesn't work for field variables, where 
+    we need to use a different type of VarRef.

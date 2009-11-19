@@ -50,6 +50,9 @@ class Parser {
       /** returns true if the token is a binary operator. */
       static bool isBinaryOperator(const Token &tok);
       
+      /** Emit a reference to the "this" variable. */
+      model::ExprPtr emitThisRef(const Token &ident);
+
       /**
        * @param terminators a list of termination symbols that are appropriate 
        *   for the expression (example ",)" for a parameter expression) .  A 

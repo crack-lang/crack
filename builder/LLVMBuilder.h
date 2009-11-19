@@ -102,6 +102,15 @@ class LLVMBuilder : public Builder {
                                               );
         virtual model::FuncDefPtr createFuncDef(const char *name);
         virtual model::VarRefPtr createVarRef(const model::VarDefPtr &varDef);
+        virtual model::VarRefPtr
+            createFieldRef(const model::ExprPtr &aggregate,
+                           const model::VarDefPtr &varDef
+                           );
+        virtual void emitFieldAssign(model::Context &context,
+                                     const model::ExprPtr &aggregate,
+                                     const model::VarDefPtr &varDef,
+                                     const model::ExprPtr &val
+                                     );
 
         virtual void createModule(const char *name);
         virtual void closeModule();

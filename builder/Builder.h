@@ -139,6 +139,28 @@ class Builder {
             createFuncCall(const model::FuncDefPtr &func) = 0;
         virtual model::VarRefPtr
             createVarRef(const model::VarDefPtr &varDef) = 0;
+        
+        /**
+         * Create a field references - field references obtain the value of a 
+         * class instance variable, so the type of the returned expression 
+         * will be the same as the type of the varDef.
+         */
+        virtual model::VarRefPtr
+            createFieldRef(const model::ExprPtr &aggregate,
+                           const model::VarDefPtr &varDef
+                           ) = 0;
+        
+        /**
+         * Create a field assignment.
+         * @param aggregate the aggregate containing the field.
+         * @param varDef the field variable definition.
+         * @param val the value to assign to the variable.
+         */
+        virtual void emitFieldAssign(model::Context &context,
+                                     const model::ExprPtr &aggregate,
+                                     const model::VarDefPtr &varDef,
+                                     const model::ExprPtr &val
+                                     ) = 0;
         virtual void createModule(const char *name) = 0;
         virtual void closeModule() = 0;
         virtual model::StrConstPtr createStrConst(model::Context &context,

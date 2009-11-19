@@ -92,12 +92,101 @@ namespace {
             BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
 
+    SPUG_RCPTR(IncompleteInstVar);
+    
+    /**
+     * Abstract base for classes that store information on references to 
+     * incomplete instance variables (instance variables that were referenced 
+     * or assigned prior to the completion of the class)
+     */
+    class IncompleteInstVar : public spug::RCBase {
+        protected:
+            // position where we need to do the insert
+            BasicBlock *block;
+            BasicBlock::iterator pos;
+            
+            // the variable index
+            unsigned index;
+            
+            // should be a pointer to the aggregate
+            Value *aggregate;
+            
+            // For a reference, this is the placeholder value which needs to 
+            // be replaced and delete.  For an assignment, this is the R-value 
+            // that we are assigning.
+            Value *val;
+
+        public:
+            IncompleteInstVar(BasicBlock *block, BasicBlock::iterator pos,
+                              unsigned index,
+                              Value *aggregate,
+                              Value *val
+                              ) :
+                block(block),
+                pos(pos),
+                index(index),
+                aggregate(aggregate),
+                val(val) {
+            }
+
+            void fix() {
+                IRBuilder<> builder(block, pos);
+                builder.SetInsertPoint(block, pos);
+                Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
+                insertInstructions(builder, fieldPtr);
+                pos->eraseFromParent();
+            }
+
+            virtual void insertInstructions(IRBuilder<> &builder,
+                                            Value *fieldPtr
+                                            ) = 0;
+    };
+    
+    /** an incomplete reference to an instance variable. */
+    class IncompleteInstVarRef : public IncompleteInstVar {
+        public:
+
+            IncompleteInstVarRef(BasicBlock *block, BasicBlock::iterator pos,
+                                 unsigned index,
+                                 Value *aggregate,
+                                 Value *placeholder
+                                 ) :
+                IncompleteInstVar(block, pos, index, aggregate, placeholder) {
+            }
+            
+            virtual void insertInstructions(IRBuilder<> &builder, 
+                                            Value *fieldPtr
+                                            ) {
+                val->replaceAllUsesWith(builder.CreateLoad(fieldPtr));
+                delete val;
+            }
+    };
+    
+    class IncompleteInstVarAssign : public IncompleteInstVar {
+        public:
+            IncompleteInstVarAssign(BasicBlock *block,
+                                    BasicBlock::iterator pos,
+                                    unsigned index,
+                                    Value *aggregate,
+                                    Value *val
+                                    ) :
+                IncompleteInstVar(block, pos, index, aggregate, val) {
+            }
+
+            virtual void insertInstructions(IRBuilder<> &builder,
+                                            Value *fieldPtr
+                                            ) {
+                builder.CreateStore(val, fieldPtr);
+            };
+    };
+
     class BBuilderContextData : public BuilderContextData {
         public:
             Function *func;
             BasicBlock *block;
             unsigned fieldCount;
             BTypeDefPtr type;
+            vector<IncompleteInstVarPtr> incompleteInstVars;
             
             BBuilderContextData() :
                 func(0),
@@ -132,136 +221,87 @@ namespace {
     
     SPUG_RCPTR(BInstVarDefImpl);
 
-    // Impl object for instance variables.  These are only created for 
-    // instance variables in the context of the class definition - for 
-    // instance variable references outside of the class we need to have 
-    // another type.
-    // the public "emit" interface just emits placeholders - we can't emit the 
-    // real types because the class instance structure doesn't exist until 
-    // the end of the class body is parsed.  The real work is done by 
-    // resolveAllRefs(), which goes through and fixes all of the fake 
-    // instructions.
+    // Impl object for instance variables.  These should never be used to emit 
+    // instance variables, so when used they just raise an assertion error.
     class BInstVarDefImpl : public VarDefImpl {
-        private:
-            Value *emitThisPtr(LLVMBuilder &bb, Context &context) {
-                VarDefPtr thisVar = context.lookUp("this");
-                assert(thisVar);
-                thisVar->impl->emitRef(context, thisVar);
-                return bb.lastValue;
-            }
-
-            // emit the "this" variable and return its value
-            Value *emitThis(LLVMBuilder &bb, Context &context) {
-                VarDefPtr thisVar = context.lookUp("this");
-                assert(thisVar);
-
-                // keep track of the "this" var
-                // XXX cache this in the function context?
-                thisVar->impl->emitRef(context, thisVar);
-                bb.lastValue = bb.builder.CreateLoad(bb.lastValue);
-                return bb.lastValue;
-            }
-
         public:
             unsigned index;
-
-            struct TempVal {
-                Value *placeholder;
-                Value *thisVal;
-                
-                // for an assignment, this is the rvalue being assigned.  For 
-                // a reference this must be null.
-                Value *value;
-                
-                BasicBlock *block;
-                BasicBlock::iterator pos;
-                
-                TempVal(LLVMBuilder &bb, Value *placeholder, Value *thisVal,
-                        Value *value = 0
-                        ) :
-                    placeholder(placeholder),
-                    thisVal(thisVal),
-                    value(value),
-                    block(bb.block),
-                    pos(bb.block->end()) {
-
-                    // back-up the iterator so it points to the last 
-                    // instruction in the block
-                    --pos;
-                }
-            };
-            vector<TempVal> vals;
-
             BInstVarDefImpl(unsigned index) : index(index) {}
             virtual void emitRef(Context &context,
                                  const VarDefPtr &var
                                  ) {
-                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
-                Value *thisRef = emitThis(bb, context);
-
-                // create a bogus last value of the correct type                
-                BTypeDef *typeDef = dynamic_cast<BTypeDef *>(var->type.obj);
-                bb.lastValue = new Value(typeDef->rep, Value::ConstantExprVal);
-                                         //Constant::getNullValue(typeDef->rep);
-                
-                // store the value for later reconciliation
-                TempVal tempVal(bb, bb.lastValue, thisRef);
-                vals.push_back(tempVal);
+                assert(false && 
+                       "attempting to emit a direct reference to a instance "
+                       "variable."
+                       );
             }
             
             virtual void emitAssignment(Context &context,
                                         const VarDefPtr &var,
                                         const ExprPtr &expr
                                         ) {
-                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
-                Value *thisVal = emitThisPtr(bb, context);
-
-                // emit the expression and store the value
-                expr->emit(context);
-                Value *value = bb.lastValue;
-
-                // store a load just so we can be sure that we have a 
-                // placeholder
-                bb.builder.CreateLoad(thisVal);                
-                vals.push_back(TempVal(bb, 0, thisVal, value));
-            }
-
-            void resolveAllRefs(Context &context) {
-                
-                LLVMBuilder &bb =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                IRBuilder<> builder;
-                BasicBlock *lastBlock = 0;
-                for (vector<TempVal>::iterator iter = vals.begin();
-                     iter != vals.end();
-                     ++iter
-                     ) {
-
-                    // replace the original value with the code to load the 
-                    // instance and extract or insert the variable value
-                    Value *v;
-                    if (iter->value) {
-                        builder.SetInsertPoint(iter->block, iter->pos);
-                        v = builder.CreateStructGEP(iter->thisVal, index);
-                        builder.CreateStore(iter->value, v);
-
-                        // remove the placeholder instruction that we left 
-                        // there
-                        iter->pos->eraseFromParent();
-                        lastBlock = iter->block;
-                        
-                    } else {
-                        builder.SetInsertPoint(iter->block, ++iter->pos);
-                        v = builder.CreateExtractValue(iter->thisVal, 
-                                                       index
-                                                       );
-                        iter->placeholder->replaceAllUsesWith(v);
-                        delete iter->placeholder;
-                    }
-                }
+                assert(false && 
+                       "attempting to assign a direct reference to a instance "
+                       "variable."
+                       );
             }
     };
     
+    class BFieldRef : public VarRef {
+        public:
+            ExprPtr aggregate;
+            BFieldRef(const ExprPtr &aggregate, const VarDefPtr &varDef) :
+                aggregate(aggregate),
+                VarRef(varDef) {
+            }
+
+            void emit(Context &context) {
+                aggregate->emit(context);
+
+                unsigned index =
+                    dynamic_cast<BInstVarDefImpl *>(def->impl.obj)->index;
+                
+                // if the variable is from a complete context, we can emit it. 
+                //  Otherwise, we need to store a placeholder.
+                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
+                if (def->context->complete) {
+                    Value *fieldPtr = 
+                        bb.builder.CreateStructGEP(bb.lastValue, index);
+                    bb.lastValue = bb.builder.CreateLoad(fieldPtr);
+                } else {
+                    // create a fixup object for the reference
+                    
+                    // stash the aggregate.
+                    Value *aggregate = bb.lastValue;
+
+                    // we have to emit a fake instruction to serve as a 
+                    // placeholder in the block because in some cases, 
+                    // emitting the aggregate won't generate an instruction.
+                    bb.builder.CreateLoad(bb.lastValue);
+                    BasicBlock::iterator lastInst = bb.block->end();
+                    --lastInst;
+
+                    BTypeDef *typeDef = 
+                        dynamic_cast<BTypeDef *>(def->type.obj);
+                    bb.lastValue =
+                        new Value(typeDef->rep, Value::ConstantExprVal);
+                    IncompleteInstVarPtr fixup =
+                        new IncompleteInstVarRef(bb.block, lastInst, index,
+                                                 aggregate,
+                                                 bb.lastValue
+                                                 );
+                    
+                    // store it in our fixup list for the instance variable's 
+                    // containing class
+                    BBuilderContextData *bdata =
+                        dynamic_cast<BBuilderContextData *>(
+                            def->context->builderData.obj
+                        );
+                    bdata->incompleteInstVars.push_back(fixup);
+                }
+            }
+    };                            
+
     class BArgVarDefImpl : public VarDefImpl {
         public:
             Value *rep;
@@ -702,14 +742,15 @@ void LLVMBuilder::emitEndClass(Context &context) {
     Type *newType = StructType::get(members);
     curType->refineAbstractTypeTo(newType);
 
-    // do another pass through the members to convert the fake values we used 
-    // before to real references to the instance variable
-    for (vector<BInstVarDefImplPtr>::iterator iter = instVarImpls.begin();
-         iter != instVarImpls.end();
+    // fix all instance variable uses that were created before the structure 
+    // was defined.
+    for (vector<IncompleteInstVarPtr>::iterator iter = 
+            bdata->incompleteInstVars.begin();
+         iter != bdata->incompleteInstVars.end();
          ++iter
-         ) {
-        (*iter)->resolveAllRefs(context);
-    }
+         )
+        (*iter)->fix();
+    bdata->incompleteInstVars.clear();
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -863,6 +904,51 @@ ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
 
 VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
     return new VarRef(varDef);
+}
+
+VarRefPtr LLVMBuilder::createFieldRef(const ExprPtr &aggregate,
+                                      const VarDefPtr &varDef
+                                      ) {
+    return new BFieldRef(aggregate, varDef);
+}
+
+void LLVMBuilder::emitFieldAssign(Context &context,
+                                  const ExprPtr &aggregate,
+                                  const VarDefPtr &varDef,
+                                  const ExprPtr &val
+                                  ) {
+    aggregate->emit(context);
+    Value *aggregateRep = lastValue;
+    
+    // emit the value last, lastValue after this needs to be the expression so 
+    // we can chain assignments.
+    val->emit(context);
+
+    unsigned index = dynamic_cast<BInstVarDefImpl *>(varDef->impl.obj)->index;
+    Context *varContext = varDef->context;
+    
+    // if the variable is part of a complete context, just do the store.  
+    // Otherwise create a fixup.
+    if (varContext->complete) {
+        Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
+        builder.CreateStore(lastValue, fieldRef);
+    } else {
+        // store a load just so we can be sure that we have a 
+        // placeholder and get it's position.
+        builder.CreateLoad(aggregateRep);
+        BasicBlock::iterator pos = block->end();
+        --pos;
+
+        BBuilderContextData *bdata =
+            dynamic_cast<BBuilderContextData *>(varContext->builderData.obj);
+        
+        IncompleteInstVarPtr fixup =
+            new IncompleteInstVarAssign(block, pos, index,
+                                        aggregateRep,
+                                        lastValue
+                                        );
+        bdata->incompleteInstVars.push_back(fixup);
+    }
 }
 
 extern "C" void printint(int val) {

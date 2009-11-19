@@ -18,6 +18,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     builder(builder),
     parent(parentContext),
     scope(scope),
+    complete(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     globalData(parentContext ? parentContext->globalData : new GlobalData()) {
 }

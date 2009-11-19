@@ -50,6 +50,11 @@ class Context : public spug::RCBase {
         BuilderContextDataPtr builderData;
         Scope scope;
         
+        // true if the context has been completely defined (so that we can 
+        // determine whether to emit references or placeholders for instance 
+        // variable references and assignments)
+        bool complete;
+        
         // this is the return type for a function context, and the class type 
         // for a class context.
         TypeDefPtr returnType;

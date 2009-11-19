@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <spug/StringFmt.h>
 #include "model/ArgDef.h"
+#include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
@@ -168,6 +169,18 @@ bool Parser::isBinaryOperator(const Token &tok) {
       return false;
 }
 
+ExprPtr Parser::emitThisRef(const Token &ident) {
+   VarDefPtr thisVar = context->lookUp("this");
+   if (!thisVar)
+      error(ident,
+            SPUG_FSTR("instance member " << ident.getData() <<
+                       " may not be used in a static context."
+                      )
+            );
+                      
+   return ExprPtr::ucast(context->builder.createVarRef(thisVar));
+}
+
 ExprPtr Parser::parseExpression(const char *terminators) {
 
    ExprPtr expr;
@@ -185,7 +198,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
          if (!var)
             error(tok1,
                   SPUG_FSTR("attempted to assign undefined variable " <<
-                            tok.getData()
+                             tok.getData()
                             )
                   );
          
@@ -195,7 +208,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
 	 // start the method with an augmented name
 
 	 // parse an expression
-	 ExprPtr expr = parseExpression(terminators);
+	 expr = parseExpression(terminators);
 	 if (!expr) {
 	    tok1 = toker.getToken();
 	    error(tok1, "expression expected");
@@ -211,7 +224,14 @@ ExprPtr Parser::parseExpression(const char *terminators) {
                             )
                   );
          
-         var->emitAssignment(*context, expr);
+         // if this is an instance variable, emit a field assignment.  
+         // Otherwise emit a normal variable assignment.
+         if (var->context->scope == Context::instance) {
+            ExprPtr thisRef = emitThisRef(tok);
+            expr = AssignExpr::create(tok, thisRef, var, expr);
+         } else {
+            expr = AssignExpr::create(tok, var, expr);
+         }
 
       } else if (tok1.isLParen()) {
          // method invocation
@@ -231,7 +251,15 @@ ExprPtr Parser::parseExpression(const char *terminators) {
          // XXX def could be a generic class and generic classes require 
          // special magic to allow us to parse the <>'s
          VarDefPtr varDef = VarDefPtr::dcast(def);
-         expr = ExprPtr::ucast(context->builder.createVarRef(varDef));
+
+         // if the definition is for an instance variable, emit an implicit 
+         // "this" dereference.  Otherwise just emit the variable
+         if (varDef->context->scope == Context::instance) {
+            expr = emitThisRef(tok);
+            expr = context->builder.createFieldRef(expr, varDef);
+         } else {
+            expr = ExprPtr::ucast(context->builder.createVarRef(varDef));
+         }
       }
 
       // close off the method no matter how we started it
@@ -270,7 +298,7 @@ ExprPtr Parser::parseExpression(const char *terminators) {
                      );
             
             // XXX need to check for an assignment
-            expr = context->builder.createVarRef(varDef);
+            expr = context->builder.createFieldRef(expr, varDef);
             continue;
          }
 
@@ -694,6 +722,7 @@ TypeDefPtr Parser::parseClassDef() {
    }
 
    type->context = context;
+   context->complete = true;
    context->builder.emitEndClass(*context);
    popContext();
    
