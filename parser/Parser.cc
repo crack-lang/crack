@@ -229,13 +229,20 @@ ExprPtr Parser::parsePostIdent(const ExprPtr &container, const Token &ident) {
       if (!func)
          error(ident,
                SPUG_FSTR("No method exists matching " << ident.getData() <<
-                          " with these aregument types."
+                          " with these argument types."
                          )
                );
 
+      // if the definition is for an instance variable, emit an implicit 
+      // "this" dereference.  Otherwise just emit the variable
+      ExprPtr receiver;
+      if (func->context->scope == Context::instance)
+         // if there's no container, try to use an implicit "this"
+         receiver = container ? container : makeThisRef(ident);
+
       FuncCallPtr funcCall = context->builder.createFuncCall(func);
       funcCall->args = args;
-      funcCall->receiver = container;
+      funcCall->receiver = receiver;
       return ExprPtr::ucast(funcCall);
    } else {
       // for anything else, it's a variable reference
@@ -660,6 +667,7 @@ TypeDefPtr Parser::parseClassDef() {
    pushContext(context->createSubContext(Context::instance));
    TypeDefPtr type = context->returnType =
       context->builder.emitBeginClass(*context, className, bases);
+   type->context = context;
 
    // parse the class body   
    while (true) {
@@ -687,7 +695,6 @@ TypeDefPtr Parser::parseClassDef() {
       parseDef(type);
    }
 
-   type->context = context;
    context->complete = true;
    context->builder.emitEndClass(*context);
    popContext();

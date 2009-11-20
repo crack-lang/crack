@@ -43,3 +43,7 @@ void foo() {
 }
 foo();
 
+void global() { }
+class Foo {
+    void f() { this.global(); }  // should error
+};

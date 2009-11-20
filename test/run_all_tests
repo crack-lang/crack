@@ -69,7 +69,29 @@ test_output 'instance variables' \
     'class Foo {
         int32 val; void set() {val = 100;} int32 get() {return val;}
     };
-    Foo x; x.set(); printint(x.get());' \
-    '100'
+    Foo x; x.set(); printint(x.get());
+    x.val = 200; printint(x.val);' \
+    '100200'
+
+test_output 'implicit this' \
+    'class Foo { int32 a; void g() { printint(a); }
+                 void f() { a = 100; g(); } 
+                 };
+     Foo foo; foo.f();' \
+     '100'
+
+test_output 'explicit this' \
+    'class Foo {
+        int32 a;
+        void g() { printint(this.a); }
+        void f() { this.a = 100; this.g(); }
+     };
+     Foo foo; foo.f();' \
+     '100'
+
+test_output 'bad func names' \
+    'class Foo { void f() { this.g(); }};' \
+    'ParseError: <stdin>:1: No method exists matching g with these argument '\
+'types.'
 
 exit $rc
