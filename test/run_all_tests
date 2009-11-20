@@ -94,4 +94,10 @@ test_output 'bad func names' \
     'ParseError: <stdin>:1: No method exists matching g with these argument '\
 'types.'
 
+test_output 'using a classname with its definition' \
+    'class C { void out() { puts("abcd"); } 
+               C self() { return this; } }; C c; c.self().out();' \
+    'abcd'
+            
+
 exit $rc

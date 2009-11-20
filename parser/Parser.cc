@@ -664,10 +664,16 @@ TypeDefPtr Parser::parseClassDef() {
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
 
+   // stash the parent context, create a new subcontext for the class body
+   Context &parentContext = *context;
    pushContext(context->createSubContext(Context::instance));
+
+   // emit the beginning of the class, hook it up to the current context and 
+   // store a reference to it in the parent context.
    TypeDefPtr type = context->returnType =
       context->builder.emitBeginClass(*context, className, bases);
    type->context = context;
+   parentContext.addDef(type);
 
    // parse the class body   
    while (true) {
@@ -698,9 +704,6 @@ TypeDefPtr Parser::parseClassDef() {
    context->complete = true;
    context->builder.emitEndClass(*context);
    popContext();
-   
-   // store the class definition in the parent context
-   context->addDef(type);
    
    return type;
 }
