@@ -81,9 +81,11 @@ VarDefPtr Context::lookUp(const std::string &varName) {
 }
 
 FuncDefPtr Context::lookUp(const std::string &varName,
-                               const vector<ExprPtr> &args
-                               ) {
+                           const vector<ExprPtr> &args
+                           ) {
     OverloadDefPtr overload = aggregateOverloads(varName);
+    if (!overload)
+        return 0;
     return overload->getMatch(args);
 }
 
