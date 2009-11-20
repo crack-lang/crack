@@ -66,7 +66,7 @@ Token Toker::readToken() {
             case st_none:
                 if (isspace(ch)) {
                    ;
-                } else if (isalpha(ch)) {
+                } else if (isalpha(ch) || ch == '_') {
                     buf << ch;
                     state = st_ident;
                 } else if (ch == '#') {
