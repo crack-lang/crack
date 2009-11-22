@@ -462,14 +462,17 @@ bool Parser::parseDef(const TypeDefPtr &type) {
       } else if (tok3.isLParen()) {
          // function definition
 
+         // if this is a class context, we're defining a method.
+         bool isMethod = context->scope == Context::instance;
+
          // push a new context, arg defs will be stored in the new context.
          pushContext(context->createSubContext(Context::local));
          context->returnType = type;
          
          // if this is a method, add the "this" variable
-         if (context->parent->scope == Context::instance) {
+         if (isMethod) {
             ArgDefPtr argDef =
-               context->builder.createArgDef(context->parent->returnType,
+               context->builder.createArgDef(context->parents[0]->returnType,
                                              "this"
                                              );
             context->addDef(argDef);
@@ -484,8 +487,11 @@ bool Parser::parseDef(const TypeDefPtr &type) {
             unexpected(tok3, "expected '{' in function definition");
          
          // parse the body
+         FuncDef::Flags flags = isMethod ? FuncDef::method : FuncDef::noFlags;
          FuncDefPtr funcDef =
-            context->builder.emitBeginFunc(*context, varName, type, argDefs);
+            context->builder.emitBeginFunc(*context, flags, varName, type,
+                                           argDefs
+                                           );
          bool terminal = parseBlock(true);
          
          // if the block doesn't always terminate, either give an error or 
@@ -713,8 +719,8 @@ void Parser::pushContext(const model::ContextPtr &newContext) {
 }
 
 void Parser::popContext() {
-   assert(context->parent);
-   context = context->parent;
+   assert(context->parents.size());
+   context = context->parents[0];
 }
 
 void Parser::parse() {

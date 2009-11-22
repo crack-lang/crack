@@ -67,6 +67,7 @@ class LLVMBuilder : public Builder {
 
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
+                          model::FuncDef::Flags flags,
                           const std::string &name,
                           const model::TypeDefPtr &returnType,
                           const std::vector<model::ArgDefPtr> &args);
@@ -100,7 +101,6 @@ class LLVMBuilder : public Builder {
         virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
                                               const std::string &name
                                               );
-        virtual model::FuncDefPtr createFuncDef(const char *name);
         virtual model::VarRefPtr createVarRef(const model::VarDefPtr &varDef);
         virtual model::VarRefPtr
             createFieldRef(const model::ExprPtr &aggregate,

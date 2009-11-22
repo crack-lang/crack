@@ -45,7 +45,9 @@ class Context : public spug::RCBase {
             local
         };
         
-        ContextPtr parent;
+        typedef std::vector<ContextPtr> ContextVec;
+        ContextVec parents;
+
         builder::Builder &builder;
         BuilderContextDataPtr builderData;
         Scope scope;

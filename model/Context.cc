@@ -16,11 +16,13 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext
                  ) :
     builder(builder),
-    parent(parentContext),
     scope(scope),
     complete(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     globalData(parentContext ? parentContext->globalData : new GlobalData()) {
+    
+    if (parentContext)
+        parents.push_back(parentContext);
 }
 
 ContextPtr Context::createSubContext(Scope newScope) {
@@ -35,6 +37,16 @@ namespace {
     inline void allocOverload(OverloadDefPtr &overload, const string &name) {
         if (!overload)
             overload = new OverloadDef(name);
+    }
+    
+    inline void mergeOverloads(OverloadDef::FuncVec &aggregator,
+                               const OverloadDef::FuncVec &newSubset
+                               ) {
+        for (OverloadDef::FuncVec::const_iterator iter = newSubset.begin();
+             iter != newSubset.end();
+             ++iter
+             )
+             aggregator.push_back(*iter);
     }
 }
 
@@ -55,8 +67,19 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
     }
 
     OverloadDefPtr overloads;
-    if (parent)
-        overloads = parent->aggregateOverloads(varName);
+    if (parents.size())
+        for (ContextVec::iterator iter = parents.begin();
+             iter != parents.end();
+             ++iter
+             ) {
+            // XXX somebody somewhere needs to check for collisions
+            if (overloads)
+                mergeOverloads(overloads->funcs, 
+                               (*iter)->aggregateOverloads(varName)->funcs
+                               );
+            else
+                overloads = (*iter)->aggregateOverloads(varName);
+        }
 
     // if we got a local override, add it to the overloads
     if (func) {
@@ -74,10 +97,17 @@ VarDefPtr Context::lookUp(const std::string &varName) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end())
         return iter->second;
-    else if (parent)
-        return parent->lookUp(varName);
-    else
-        return 0;
+    else if (parents.size())
+        for (ContextVec::iterator parent_iter = parents.begin();
+             parent_iter != parents.end();
+             ++parent_iter
+             ) {
+            VarDefPtr def = (*parent_iter)->lookUp(varName);
+            if (def)
+                return def;
+        }
+
+    return 0;
 }
 
 FuncDefPtr Context::lookUp(const std::string &varName,
@@ -106,4 +136,3 @@ StrConstPtr Context::getStrConst(const std::string &value) {
         return strConst;
     }
 }
-

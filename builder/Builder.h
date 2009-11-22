@@ -5,6 +5,7 @@
 #include <spug/RCPtr.h>
 
 #include "model/FuncCall.h" // for FuncCall::ExprVector
+#include "model/FuncDef.h" // for FuncDef::Flags
 
 namespace model {
     SPUG_RCPTR(ArgDef);
@@ -12,7 +13,6 @@ namespace model {
     class Context;
     class IntConst;
     SPUG_RCPTR(FuncCall);
-    SPUG_RCPTR(FuncDef);
     SPUG_RCPTR(IntConst);
     SPUG_RCPTR(StrConst);
     SPUG_RCPTR(TypeDef);
@@ -85,6 +85,7 @@ class Builder {
          */
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
+                          model::FuncDef::Flags flags,
                           const std::string &name,
                           const model::TypeDefPtr &returnType,
                           const std::vector<model::ArgDefPtr> &args) = 0;
@@ -131,7 +132,6 @@ class Builder {
             bool staticScope = false
         ) = 0;
     
-        virtual model::FuncDefPtr createFuncDef(const char *name) = 0;
         virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
                                               const std::string &name
                                               ) = 0;

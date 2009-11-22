@@ -45,8 +45,10 @@ namespace {
     class BFuncDef : public model::FuncDef {
         public:
             llvm::Function *rep;
-            BFuncDef(const string &name, size_t argCount) :
-                model::FuncDef(name, argCount) {
+            BFuncDef(FuncDef::Flags flags, const string &name,
+                     size_t argCount
+                     ) :
+                model::FuncDef(flags, name, argCount) {
             }
             
     };
@@ -337,7 +339,8 @@ namespace {
             int argIndex;
             Function::LinkageTypes linkage;
 
-            FuncBuilder(Context &context, const BTypeDefPtr &returnType,
+            FuncBuilder(Context &context, FuncDef::Flags flags,
+                        const BTypeDefPtr &returnType,
                         const string &name,
                         size_t argCount,
                         Function::LinkageTypes linkage = 
@@ -345,7 +348,7 @@ namespace {
                         ) :
                     context(context),
                     returnType(returnType),
-                    funcDef(new BFuncDef(name, argCount)),
+                    funcDef(new BFuncDef(flags, name, argCount)),
                     linkage(linkage),
                     argIndex(0) {
                 funcDef->type = returnType;
@@ -453,7 +456,7 @@ namespace {
         public:
             BinOpDef(const TypeDefPtr &tp,
                      const string &name) :
-                FuncDef(name, 2) {
+                FuncDef(FuncDef::noFlags, name, 2) {
 
                 args[0] = new ArgDef(tp, "lhs");
                 args[1] = new ArgDef(tp, "rhs");
@@ -648,6 +651,7 @@ Value *emitGEP(IRBuilder<> &builder, Value *obj) {
 }
     
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
+                                      FuncDef::Flags flags,
                                       const string &name,
                                       const TypeDefPtr &returnType,
                                       const vector<ArgDefPtr> &args) {
@@ -659,13 +663,13 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     contextData->block = block;
 
     // create the function
-    FuncBuilder f(context, returnType, name, args.size());
+    FuncBuilder f(context, flags, returnType, name, args.size());
     f.setArgs(args);
     
     // see if this is a method - assuming that methods are nested exactly one 
     // level within the class, which may not be valid.
-    if (context.parent && context.parent->scope == Context::instance) {
-        BuilderContextData *contextData0 = context.parent->builderData.obj;
+    if (flags & FuncDef::method) {
+        BuilderContextData *contextData0 = context.parents[0]->builderData.obj;
         BBuilderContextData *contextData = 
             dynamic_cast<BBuilderContextData *>(contextData0);
         f.setReceiverType(contextData->type);
@@ -888,10 +892,6 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val) {
 model::FuncCallPtr LLVMBuilder::createFuncCall(const FuncDefPtr &func) {
     return new FuncCall(func);
 }
-    
-model::FuncDefPtr LLVMBuilder::createFuncDef(const char *name) {
-    return new BFuncDef(name, 0);
-}
 
 ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
                                     const string &name
@@ -980,14 +980,14 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     // create "int puts(String)"
     {
-        FuncBuilder f(context, gd->int32Type, "puts", 1);
+        FuncBuilder f(context, FuncDef::noFlags, gd->int32Type, "puts", 1);
         f.addArg("text", gd->byteptrType);
         f.finish();
     }
     
     // create "int write(int, String, int)"
     {
-        FuncBuilder f(context, gd->int32Type, "write", 3);
+        FuncBuilder f(context, FuncDef::noFlags, gd->int32Type, "write", 3);
         f.addArg("fd", gd->int32Type);
         f.addArg("buf", gd->byteptrType);
         f.addArg("n", gd->int32Type);
@@ -996,7 +996,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     // create "void printint(int32)"
     {
-        FuncBuilder f(context, gd->voidType, "printint", 1);
+        FuncBuilder f(context, FuncDef::noFlags, gd->voidType, "printint", 1);
         f.addArg("val", gd->int32Type);
         f.finish();
     }

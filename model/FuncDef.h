@@ -14,10 +14,15 @@ SPUG_RCPTR(FuncDef);
 
 class FuncDef : public VarDef {
     public:
+        enum Flags {
+            noFlags =0,  // so we can specify this
+            method = 1,  // function is a method (has a receiver)
+        } flags;
+        
         typedef std::vector<ArgDefPtr> ArgVec;
         ArgVec args;
 
-        FuncDef(const std::string &name, size_t argCount);
+        FuncDef(Flags flags, const std::string &name, size_t argCount);
         
         /**
          * Returns true if 'args' matches the types of the functions 
