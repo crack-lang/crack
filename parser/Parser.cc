@@ -24,6 +24,10 @@ using namespace std;
 using namespace parser;
 using namespace model;
 
+void Parser::addDef(const VarDefPtr &varDef) {
+   context->getDefContext()->addDef(varDef);
+}
+
 void Parser::unexpected(const Token &tok, const char *userMsg) {
    Location loc = tok.getLocation();
    stringstream msg;
@@ -91,7 +95,7 @@ bool Parser::parseStatement(bool defsAllowed) {
             expr = parseExpression();
             VarDefPtr varDef =
                expr->type->emitVarDef(*context, tok.getData(), expr);
-            context->addDef(varDef);
+            addDef(varDef);
          } else {
             error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
          }
@@ -395,7 +399,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
       
       ArgDefPtr argDef = context->builder.createArgDef(argType, varName);
       args.push_back(argDef);
-      context->addDef(VarDefPtr::ucast(argDef));
+      addDef(VarDefPtr::ucast(argDef));
       
       // check for a comma
       tok = toker.getToken();
@@ -428,9 +432,8 @@ bool Parser::parseDef(const TypeDefPtr &type) {
       if (tok3.isSemi()) {
          // it's a variable.  Emit a variable definition and store it 
          // in the context.
-         VarDefPtr varDef = 
-            type->emitVarDef(*context, varName, 0);
-         context->addDef(varDef);
+         VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
+         addDef(varDef);
          return true;
       } else if (tok3.isAssign()) {
          ExprPtr initializer;
@@ -457,25 +460,27 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          VarDefPtr varDef = type->emitVarDef(*context, varName,
                                              initializer
                                              );
-         context->addDef(varDef);
+         addDef(varDef);
          return true;
       } else if (tok3.isLParen()) {
          // function definition
 
          // if this is a class context, we're defining a method.
-         bool isMethod = context->scope == Context::instance;
+         ContextPtr classCtx = context->getClassContext();
+         bool isMethod = classCtx ? true : false;
 
          // push a new context, arg defs will be stored in the new context.
-         pushContext(context->createSubContext(Context::local));
+         ContextStackFrame cstack(*this,
+                                  context->createSubContext(Context::local)
+                                  );
          context->returnType = type;
          
          // if this is a method, add the "this" variable
          if (isMethod) {
+            assert(classCtx && "method not in class context.");
             ArgDefPtr argDef =
-               context->builder.createArgDef(context->parents[0]->returnType,
-                                             "this"
-                                             );
-            context->addDef(argDef);
+               context->builder.createArgDef(classCtx->returnType, "this");
+            addDef(argDef);
          }
 
          // parse the arguments
@@ -505,10 +510,10 @@ bool Parser::parseDef(const TypeDefPtr &type) {
                error(tok3, "missing return statement for non-void function.");
 
          context->builder.emitEndFunc(*context, funcDef);
-         popContext();
+         cstack.restore();
          
          // store the new definition in the context.
-         context->addDef(VarDefPtr::ucast(funcDef));
+         addDef(VarDefPtr::ucast(funcDef));
          
          return true;
       } else {
@@ -527,9 +532,9 @@ bool Parser::parseDef(const TypeDefPtr &type) {
 bool Parser::parseIfClause() {
    Token tok = toker.getToken();
    if (tok.isLCurly()) {
-      pushContext(context->createSubContext());
+      ContextStackFrame cstack(*this, context->createSubContext());
       bool terminal = parseBlock(true);
-      popContext();
+      cstack.restore();
       return terminal;
    } else {
       toker.putBack(tok);
@@ -660,6 +665,7 @@ TypeDefPtr Parser::parseClassDef() {
    if (tok.isColon())
       while (true) {
          TypeDefPtr baseClass = parseTypeSpec();
+         bases.push_back(baseClass);
          
          tok = toker.getToken();
          if (tok.isLCurly())
@@ -670,16 +676,35 @@ TypeDefPtr Parser::parseClassDef() {
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
 
-   // stash the parent context, create a new subcontext for the class body
-   Context &parentContext = *context;
-   pushContext(context->createSubContext(Context::instance));
+   // create a class context, and a lexical context which delegates to both 
+   // the class context and the parent context.
+   ContextPtr classContext = new Context(context->builder, 
+                                         Context::instance,
+                                         context->globalData
+                                         );
+   ContextPtr lexicalContext = new Context(context->builder, 
+                                           Context::composite,
+                                           context->globalData
+                                           );
+   lexicalContext->parents.push_back(classContext);
+   lexicalContext->parents.push_back(context);
 
-   // emit the beginning of the class, hook it up to the current context and 
+   // store the base classes as the parent contexts of the class context
+   for (vector<TypeDefPtr>::iterator iter = bases.begin();
+        iter != bases.end();\
+        ++iter
+        )
+       classContext->parents.push_back((*iter)->context);
+
+   // push the context
+   ContextStackFrame cstack(*this, lexicalContext);
+   
+   // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
-   TypeDefPtr type = context->returnType =
-      context->builder.emitBeginClass(*context, className, bases);
-   type->context = context;
-   parentContext.addDef(type);
+   TypeDefPtr type = classContext->returnType =
+      context->builder.emitBeginClass(*classContext, className, bases);
+   type->context = classContext;
+   cstack.parent().getDefContext()->addDef(type);
 
    // parse the class body   
    while (true) {
@@ -707,22 +732,13 @@ TypeDefPtr Parser::parseClassDef() {
       parseDef(type);
    }
 
-   context->complete = true;
-   context->builder.emitEndClass(*context);
-   popContext();
+   classContext->complete = true;
+   classContext->builder.emitEndClass(*classContext);
+   cstack.restore();
    
    return type;
 }
    
-void Parser::pushContext(const model::ContextPtr &newContext) {
-   context = newContext;
-}
-
-void Parser::popContext() {
-   assert(context->parents.size());
-   context = context->parents[0];
-}
-
 void Parser::parse() {
    // outer parser just parses an un-nested block
    parseBlock(false);

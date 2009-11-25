@@ -42,7 +42,8 @@ class Context : public spug::RCBase {
         enum Scope {
             module,
             instance,
-            local
+            local,
+            composite  // scope is just a composition of parent scopes
         };
         
         typedef std::vector<ContextPtr> ContextVec;
@@ -58,7 +59,8 @@ class Context : public spug::RCBase {
         bool complete;
         
         // this is the return type for a function context, and the class type 
-        // for a class context.
+        // for a class context.  XXX there is a reference cycle between the 
+        // class and its context.
         TypeDefPtr returnType;
 
         struct GlobalData {
@@ -71,7 +73,11 @@ class Context : public spug::RCBase {
         } *globalData;
     
         Context(builder::Builder &builder, Scope scope,
-                Context *parentContext = 0
+                Context *parentContext
+                );
+        
+        Context(builder::Builder &builder, Scope scope,
+                GlobalData *globalData
                 );
         
         /**
@@ -86,6 +92,19 @@ class Context : public spug::RCBase {
         ContextPtr createSubContext() {
             return createSubContext(scope);
         }
+        
+        /**
+         * Returns the depth-first closest enclosing class context, null if 
+         * there is none.  (class contexts are contexts with scope = instance)
+         */
+        ContextPtr getClassContext();
+        
+        /**
+         * Returns the depth-first closest enclosing definition context, 
+         * raises an exception if there is none.
+         * Definition contexts are non-composite contexts.
+         */
+        ContextPtr getDefContext();
 
         /**
          * Returns the Overload Definition for the given name for the current 

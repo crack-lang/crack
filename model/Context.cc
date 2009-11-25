@@ -25,8 +25,46 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
         parents.push_back(parentContext);
 }
 
+Context::Context(builder::Builder &builder, Context::Scope scope,
+                 Context::GlobalData *globalData
+                 ) :
+    builder(builder),
+    scope(scope),
+    complete(false),
+    returnType(TypeDefPtr(0)),
+    globalData(globalData) {
+}
+
 ContextPtr Context::createSubContext(Scope newScope) {
     return new Context(builder, newScope, this);
+}
+
+ContextPtr Context::getClassContext() {
+    if (scope == instance)
+        return this;
+
+    ContextPtr result;
+    for (ContextVec::iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         )
+        if (result = (*iter)->getClassContext()) break;
+    
+    return result;
+}
+
+ContextPtr Context::getDefContext() {
+    if (scope != composite)
+        return this;
+    
+    ContextPtr result;
+    for (ContextVec::iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         )
+        if (result = (*iter)->getDefContext()) break;
+    
+    return result;
 }
 
 void Context::createModule(const char *name) {
@@ -45,8 +83,8 @@ namespace {
         for (OverloadDef::FuncVec::const_iterator iter = newSubset.begin();
              iter != newSubset.end();
              ++iter
-             )
-             aggregator.push_back(*iter);
+             ) 
+            aggregator.push_back(*iter);
     }
 }
 
@@ -73,12 +111,15 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
              ++iter
              ) {
             // XXX somebody somewhere needs to check for collisions
-            if (overloads)
-                mergeOverloads(overloads->funcs, 
-                               (*iter)->aggregateOverloads(varName)->funcs
-                               );
-            else
-                overloads = (*iter)->aggregateOverloads(varName);
+            
+            // collect or merge the overloads of the new parent.
+            OverloadDefPtr parentOverloads =
+                (*iter)->aggregateOverloads(varName);
+            if (parentOverloads)
+                if (overloads)
+                    mergeOverloads(overloads->funcs, parentOverloads->funcs);
+                else
+                    overloads = parentOverloads;
         }
 
     // if we got a local override, add it to the overloads
@@ -121,6 +162,7 @@ FuncDefPtr Context::lookUp(const std::string &varName,
 
 void Context::addDef(const VarDefPtr &def) {
     assert(!def->context);
+    assert(scope != composite && "defining a variable in a composite scope.");
     defs[def->name] = def;
     def->context = this;
 }

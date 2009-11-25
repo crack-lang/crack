@@ -666,10 +666,11 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     FuncBuilder f(context, flags, returnType, name, args.size());
     f.setArgs(args);
     
-    // see if this is a method - assuming that methods are nested exactly one 
-    // level within the class, which may not be valid.
+    // see if this is a method, if so store the class type as the receiver type
     if (flags & FuncDef::method) {
-        BuilderContextData *contextData0 = context.parents[0]->builderData.obj;
+        ContextPtr classCtx = context.getClassContext();
+        assert(classCtx && "method is not nested in a class context.");
+        BuilderContextData *contextData0 = classCtx->builderData.obj;
         BBuilderContextData *contextData = 
             dynamic_cast<BBuilderContextData *>(contextData0);
         f.setReceiverType(contextData->type);
@@ -781,10 +782,15 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     
     // XXX use InternalLinkage for variables starting with _ (I think that 
     // might work)
+
+    // reveal our type object
     BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
     
+    // get the defintion context
+    ContextPtr defCtx = context.getDefContext();
+    
     Value *var = 0;
-    switch (context.scope) {
+    switch (defCtx->scope) {
 
         case Context::instance:
             // class statics share the same context as instance variables: 
@@ -796,7 +802,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
                 // first, we need to determine the index of the new field.
                 BBuilderContextData *bdata =
                     dynamic_cast<BBuilderContextData *>(
-                        context.builderData.obj
+                        defCtx->builderData.obj
                     );
                 unsigned idx = bdata->fieldCount++;
                 
@@ -806,7 +812,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
                 varDef->impl = new BInstVarDefImpl(idx);
                 return varDef;
             }
-                
+
         case Context::module:
             var = new GlobalVariable(tp->rep,
                                     false, // isConstant

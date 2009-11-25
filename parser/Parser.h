@@ -15,6 +15,7 @@ namespace model {
    SPUG_RCPTR(Context);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(TypeDef);
+   SPUG_RCPTR(VarDef);
 };
 
 namespace parser {
@@ -24,8 +25,57 @@ class Parser {
    private:
 
       Toker &toker;
-      model::ContextPtr context;
       
+      // the module context, and the current context.
+      model::ContextPtr moduleCtx, context;
+      
+      /**
+       * This class essentially lets us manage the context stack with the 
+       * program's stack.  We push the context by creating an instance, and 
+       * pop it by calling restore() or falling through to the destructor.
+       */
+      friend class ContextStackFrame;
+      class ContextStackFrame {
+         private:
+            bool restored;
+            Parser &parser;
+            model::ContextPtr context;
+
+         public:
+            ContextStackFrame(Parser &parser,
+                              const model::ContextPtr &context
+                              ) :
+               restored(false),
+               parser(parser),
+               context(parser.context) {
+               
+               parser.context = context;
+            }
+            
+            ~ContextStackFrame() {
+               if (!restored)
+                  restore();
+            }
+            
+            void restore() {
+               assert(!restored);
+               parser.context = context;
+               restored = true;
+            }
+            
+            model::Context &parent() {
+               assert(!restored);
+               return *context;
+            }
+      };
+      
+      /**
+       * Add a new definition to the current context or nearest definition 
+       * context.
+       */
+      void addDef(const model::VarDefPtr &context);
+      
+      /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
 
       /**
@@ -90,17 +140,14 @@ class Parser {
       void parseReturnStmt();
       model::TypeDefPtr parseClassDef();
       
-      // context stack manipulation
-      void pushContext(const model::ContextPtr &newContext);
-      void popContext();
-
       // error checking functions
       void checkForExistingDef(const Token &tok);
 
    public:
       Parser(Toker &toker, const model::ContextPtr &context) : 
 	 toker(toker),
-	 context(context) {
+	 moduleCtx(context),
+         context(context) {
       }
 
       void parse();

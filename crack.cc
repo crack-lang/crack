@@ -18,7 +18,9 @@ void compileAndRun(istream &src, const char *name) {
     // create the builder and top-level context
     builder::LLVMBuilder builder;
     model::ContextPtr ctx =
-        new model::Context(builder, model::Context::module);
+        new model::Context(builder, model::Context::module,
+                           (model::Context*)0
+                           );
     ctx->returnType = ctx->globalData->voidType;
     
     // create the main module, register all of the basic stuff
