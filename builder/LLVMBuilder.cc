@@ -195,6 +195,10 @@ namespace {
                 block(0),
                 fieldCount(0) {
             }
+            
+            void addBaseClass(const BTypeDefPtr &base) {
+                ++fieldCount;
+            }
     };
     
     // generates references for 
@@ -259,6 +263,9 @@ namespace {
 
             void emit(Context &context) {
                 aggregate->emit(context);
+
+                // narrow to the ancestor type where there variable is defined.
+                aggregate->type->emitNarrower(*def->context->returnType);
 
                 unsigned index =
                     dynamic_cast<BInstVarDefImpl *>(def->impl.obj)->index;
@@ -696,28 +703,45 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
 
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
-                                       const vector<TypeDefPtr> bases) {
+                                       const vector<TypeDefPtr> &bases) {
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
+    
+    // process the base classes
+    for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
+         iter != bases.end();
+         ++iter
+         )
+        bdata->addBaseClass(BTypeDefPtr::dcast(*iter));
+    
     bdata->type = new BTypeDef(name, PointerType::getUnqual(OpaqueType::get()));
     bdata->type->defaultInitializer = new MallocExpr(bdata->type);
     return TypeDefPtr::ucast(bdata->type);
 }
 
 void LLVMBuilder::emitEndClass(Context &context) {
-    // build a vector of the instance variables
+    // build a vector of the base classes and instance variables
     vector<const Type *> members;
-    vector<BInstVarDefImplPtr> instVarImpls;
-    for (Context::VarDefMap::iterator iter = context.beginDefs();
-         iter != context.endDefs();
-         ++iter
+    
+    // first the base classes
+    for (Context::ContextVec::iterator baseIter = context.parents.begin();
+         baseIter != context.parents.end();
+         ++baseIter
          ) {
+        BTypeDef *typeDef =
+            dynamic_cast<BTypeDef *>((*baseIter)->returnType.obj);
+        members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
+    }
+    
+    for (Context::VarDefMap::iterator iter = context.beginDefs();
+        iter != context.endDefs();
+        ++iter
+        ) {
         // see if the variable needs an instance slot
         if (iter->second->hasInstSlot()) {
             BInstVarDefImplPtr impl = 
                 BInstVarDefImplPtr::dcast(iter->second->impl);
-            instVarImpls.push_back(impl);
             
             // resize the set of members if the new guy doesn't fit
             if (impl->index >= members.size())
@@ -924,6 +948,10 @@ void LLVMBuilder::emitFieldAssign(Context &context,
                                   const ExprPtr &val
                                   ) {
     aggregate->emit(context);
+
+    // narrow to the field type.
+    Context *varContext = varDef->context;
+    aggregate->type->emitNarrower(*varContext->returnType);
     Value *aggregateRep = lastValue;
     
     // emit the value last, lastValue after this needs to be the expression so 
@@ -931,8 +959,6 @@ void LLVMBuilder::emitFieldAssign(Context &context,
     val->emit(context);
 
     unsigned index = dynamic_cast<BInstVarDefImpl *>(varDef->impl.obj)->index;
-    Context *varContext = varDef->context;
-    
     // if the variable is part of a complete context, just do the store.  
     // Otherwise create a fixup.
     if (varContext->complete) {
@@ -955,6 +981,10 @@ void LLVMBuilder::emitFieldAssign(Context &context,
                                         );
         bdata->incompleteInstVars.push_back(fixup);
     }
+}
+
+void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {
+    lastValue = builder.CreateStructGEP(lastValue, index);
 }
 
 extern "C" void printint(int val) {

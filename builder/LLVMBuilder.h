@@ -78,7 +78,7 @@ class LLVMBuilder : public Builder {
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
                            const std::string &name,
-                           const std::vector<model::TypeDefPtr> bases);
+                           const std::vector<model::TypeDefPtr> &bases);
 
         virtual void emitEndClass(model::Context &context);
 
@@ -112,6 +112,10 @@ class LLVMBuilder : public Builder {
                                      const model::ExprPtr &val
                                      );
 
+        virtual void emitNarrower(model::TypeDef &curType,
+                                  model::TypeDef &parent,
+                                  int index
+                                  );
         virtual void createModule(const char *name);
         virtual void closeModule();
         virtual model::StrConstPtr createStrConst(model::Context &context,

@@ -38,6 +38,24 @@ class TypeDef : public VarDef {
          * "other" either equals "this" or is a subclass of "this".
          */
         bool matches(const TypeDef &other);
+
+        /**
+         * Emit code to "narrow" the type context to the specified 
+         * target type (which must be a base class of this type).
+         * 
+         * This can be used by a Builder to force the generation of special 
+         * code to refocus a field or method reference to a specific ancestor 
+         * class.
+         * 
+         * The base implementation recursively calls itself if the expression 
+         * type's context is not "target", then calls Builder::emitNarrower() 
+         * to narrow down from the specific type.  It may be overriden to 
+         * provide functionality better suited to the Builder.
+         * 
+         * @return true if target is a base type.
+         */
+        virtual bool emitNarrower(TypeDef &target);
+
 };
 
 } // namespace model
