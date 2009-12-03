@@ -20,7 +20,7 @@ class Expr : public spug::RCBase {
         Expr(const TypeDefPtr &type) : type(type) {}
 
         /** Emit the expression in the given context. */
-        virtual void emit(Context &context) = 0;
+        virtual void emit(Context &context) = 0;        
 };
 
 } // namespace model

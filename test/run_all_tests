@@ -102,6 +102,13 @@ test_output 'using a classname with its definition' \
 test_output 'external references of base inst vars' \
     'class A { int32 v; }; class B : A {}; B b; b.v = 100; printint(b.v);' \
     '100'
+
+test_output 'internal references of base class inst vars' \
+    'class A { int32 val; };
+    class B : A { void init() { val = 100; } int32 f() { return val; } };
+    B b; b.init(); printint(b.f());' \
+    100
+
             
 
 exit $rc
