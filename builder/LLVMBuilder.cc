@@ -40,33 +40,6 @@ typedef model::FuncCall::ExprVector ExprVector;
 
 namespace {
 
-    /**
-     * This is a special instruction that serves as a placeholder for 
-     * operations where we dereference incomplete types.  These get stored in 
-     * a block and subsequently replaced with a reference to the actual type.
-     */    
-    class PlaceholderInstruction : public Instruction {
-        public:
-            PlaceholderInstruction(const Type *type, BasicBlock *parent) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, parent) {
-            }
-
-            PlaceholderInstruction(const Type *type, 
-                                   Instruction *insertBefore = 0
-                                   ) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, insertBefore) {
-            }
-            
-            virtual Instruction *clone() const {
-                return new PlaceholderInstruction(getType());
-            }
-            
-            void *operator new(size_t s) {
-                return User::operator new(s, 0);
-            }
-            
-        };
-
     SPUG_RCPTR(BFuncDef);
 
     class BFuncDef : public model::FuncDef {
@@ -121,108 +94,149 @@ namespace {
             BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
 
-    SPUG_RCPTR(IncompleteInstVar);
-    
     /**
-     * Abstract base for classes that store information on references to 
-     * incomplete instance variables (instance variables that were referenced 
-     * or assigned prior to the completion of the class)
-     */
-    class IncompleteInstVar : public spug::RCBase {
+     * This is a special instruction that serves as a placeholder for 
+     * operations where we dereference incomplete types.  These get stored in 
+     * a block and subsequently replaced with a reference to the actual type.
+     */    
+    class PlaceholderInstruction : public Instruction {
         protected:
-            // position where we need to do the insert
-            BasicBlock *block;
-            BasicBlock::iterator pos;
-            
-            // the variable index
-            unsigned index;
-            
-            // should be a pointer to the aggregate
             Value *aggregate;
-            
-            // For a reference, this is the placeholder value which needs to 
-            // be replaced.  For an assignment, this is the R-value that we 
-            // are assigning.
-            Value *val;
+            unsigned index;
 
         public:
-            IncompleteInstVar(BasicBlock *block, BasicBlock::iterator pos,
-                              unsigned index,
-                              Value *aggregate,
-                              Value *val
-                              ) :
-                block(block),
-                pos(pos),
-                index(index),
+            PlaceholderInstruction(const Type *type, Value *aggregate,
+                                   unsigned index,
+                                   BasicBlock *parent
+                                   ) :
+                Instruction(type, OtherOpsEnd + 1, 0, 0, parent),
                 aggregate(aggregate),
-                val(val) {
+                index(index) {
             }
 
+            PlaceholderInstruction(const Type *type, 
+                                   Value *aggregate,
+                                   unsigned index,
+                                   Instruction *insertBefore = 0
+                                   ) :
+                Instruction(type, OtherOpsEnd + 1, 0, 0, insertBefore),
+                aggregate(aggregate),
+                index(index) {
+            }
+            
+            void *operator new(size_t s) {
+                return User::operator new(s, 0);
+            }
+
+            /** Replace the placeholder with a real instruction. */
             void fix() {
-                IRBuilder<> builder(block, pos);
-                builder.SetInsertPoint(block, pos);
+                IRBuilder<> builder(getParent(), this);
                 Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
                 insertInstructions(builder, fieldPtr);
-                pos->eraseFromParent();
+                this->eraseFromParent();
+                // ADD NO CODE AFTER SELF-DELETION.
             }
-
+            
             virtual void insertInstructions(IRBuilder<> &builder,
                                             Value *fieldPtr
                                             ) = 0;
     };
-    
+
     /** an incomplete reference to an instance variable. */
-    class IncompleteInstVarRef : public IncompleteInstVar {
+    class IncompleteInstVarRef : public PlaceholderInstruction {
         public:
 
-            IncompleteInstVarRef(BasicBlock *block, BasicBlock::iterator pos,
+            IncompleteInstVarRef(const Type *type, Value *aggregate,
                                  unsigned index,
-                                 Value *aggregate,
-                                 Value *placeholder
+                                 BasicBlock *parent
                                  ) :
-                IncompleteInstVar(block, pos, index, aggregate, placeholder) {
+                PlaceholderInstruction(type, aggregate, index, parent) {
+            }
+            
+            IncompleteInstVarRef(const Type *type, Value *aggregate,
+                                 unsigned index,
+                                 Instruction *insertBefore = 0
+                                 ) :
+                PlaceholderInstruction(type, aggregate, index, insertBefore) {
+            }
+
+            Instruction *clone() const {
+                return new IncompleteInstVarRef(getType(), aggregate, index);
             }
             
             virtual void insertInstructions(IRBuilder<> &builder, 
                                             Value *fieldPtr
                                             ) {
-                val->replaceAllUsesWith(builder.CreateLoad(fieldPtr));
+                replaceAllUsesWith(builder.CreateLoad(fieldPtr));
             }
     };
     
-    class IncompleteInstVarAssign : public IncompleteInstVar {
+    class IncompleteInstVarAssign : public PlaceholderInstruction {
+        private:
+            Value *rval;
+
         public:
-            IncompleteInstVarAssign(BasicBlock *block,
-                                    BasicBlock::iterator pos,
+
+            IncompleteInstVarAssign(const Type *type, Value *aggregate,
                                     unsigned index,
-                                    Value *aggregate,
-                                    Value *val
+                                    Value *rval,
+                                    BasicBlock *parent
                                     ) :
-                IncompleteInstVar(block, pos, index, aggregate, val) {
+                PlaceholderInstruction(type, aggregate, index, parent),
+                rval(rval) {
+            }
+            
+            IncompleteInstVarAssign(const Type *type, Value *aggregate,
+                                    unsigned index,
+                                    Value *rval,
+                                    Instruction *insertBefore = 0
+                                    ) :
+                PlaceholderInstruction(type, aggregate, index, insertBefore),
+                rval(rval) {
             }
 
+            Instruction *clone() const {
+                return new IncompleteInstVarAssign(getType(), aggregate, index, 
+                                                   rval
+                                                   );
+            }
+            
             virtual void insertInstructions(IRBuilder<> &builder,
                                             Value *fieldPtr
                                             ) {
-                builder.CreateStore(val, fieldPtr);
+                builder.CreateStore(rval, fieldPtr);
             };
     };
 
-    class IncompleteNarrower : public IncompleteInstVar {
+    /**
+     * A placeholder for a "narrower" - a GEP instruction that provides
+     * pointer to a base class from a derived class.
+     */
+    class IncompleteNarrower : public PlaceholderInstruction {
         public:
-            IncompleteNarrower(BasicBlock *block,
-                               BasicBlock::iterator pos,
+            IncompleteNarrower(const Type *type, Value *aggregate,
                                unsigned index,
-                               Value *aggregate,
-                               Value *val
+                               BasicBlock *parent
                                ) :
-                IncompleteInstVar(block, pos, index, aggregate, val) {
+                PlaceholderInstruction(type, aggregate, index, parent) {
             }
+            
+            IncompleteNarrower(const Type *type, Value *aggregate,
+                               unsigned index,
+                               Instruction *insertBefore = 0
+                               ) :
+                PlaceholderInstruction(type, aggregate, index, insertBefore) {
+            }
+
+            Instruction *clone() const {
+                return new IncompleteNarrower(getType(), aggregate, index);
+            }
+            
 
             virtual void insertInstructions(IRBuilder<> &builder,
                                             Value *fieldPtr
                                             ) {
-                val->replaceAllUsesWith(fieldPtr);
+                replaceAllUsesWith(fieldPtr);
             };
     };
 
@@ -232,7 +246,7 @@ namespace {
             BasicBlock *block;
             unsigned fieldCount;
             BTypeDefPtr type;
-            vector<IncompleteInstVarPtr> incompleteInstVars;
+            vector<PlaceholderInstruction *> placeholders;
             
             BBuilderContextData() :
                 func(0),
@@ -305,22 +319,6 @@ namespace {
                 VarRef(varDef) {
             }
 
-            static Value *emitRefPlaceholder(IRBuilder<> &builder,
-                                             Value *aggregate,
-                                             BTypeDef &typeDef,
-                                             BasicBlock::iterator &lastInst
-                                             ) {
-                // emit a placeholder instruction
-                Instruction *inst =
-                    new PlaceholderInstruction(typeDef.rep, 
-                                               builder.GetInsertBlock()
-                                               );
-                lastInst = builder.GetInsertBlock()->end();
-                --lastInst;
-                return inst;
-            }
-                
-
             void emit(Context &context) {
                 aggregate->emit(context);
 
@@ -344,25 +342,20 @@ namespace {
 
                     // stash the aggregate, emit a placeholder for the 
                     // reference
-                    BasicBlock::iterator lastInst;
                     Value *aggregate = bb.lastValue;
-                    bb.lastValue = emitRefPlaceholder(bb.builder, bb.lastValue,
-                                                      *typeDef,
-                                                      lastInst
-                                                      );
-    
-                    // store en entry in our fixup list for the instance 
-                    // variable's containing class
-                    IncompleteInstVarPtr fixup =
-                        new IncompleteInstVarRef(bb.block, lastInst, index,
-                                                 aggregate,
-                                                 bb.lastValue
+                    PlaceholderInstruction *placeholder =
+                        new IncompleteInstVarRef(typeDef->rep, aggregate,
+                                                 index,
+                                                 bb.block
                                                  );
+                    bb.lastValue = placeholder;
+
+                    // store the placeholder
                     BBuilderContextData *bdata =
                         dynamic_cast<BBuilderContextData *>(
                             def->context->builderData.obj
                         );
-                    bdata->incompleteInstVars.push_back(fixup);
+                    bdata->placeholders.push_back(placeholder);
                 }
             }
     };                            
@@ -829,13 +822,13 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // fix all instance variable uses that were created before the structure 
     // was defined.
-    for (vector<IncompleteInstVarPtr>::iterator iter = 
-            bdata->incompleteInstVars.begin();
-         iter != bdata->incompleteInstVars.end();
+    for (vector<PlaceholderInstruction *>::iterator iter = 
+            bdata->placeholders.begin();
+         iter != bdata->placeholders.end();
          ++iter
          )
         (*iter)->fix();
-    bdata->incompleteInstVars.clear();
+    bdata->placeholders.clear();
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -1021,21 +1014,19 @@ void LLVMBuilder::emitFieldAssign(Context &context,
         Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
         builder.CreateStore(lastValue, fieldRef);
     } else {
-        // store a load just so we can be sure that we have a 
-        // placeholder and get it's position.
-        builder.CreateLoad(aggregateRep);
-        BasicBlock::iterator pos = block->end();
-        --pos;
+        // create a placeholder instruction
+        PlaceholderInstruction *placeholder =
+            new IncompleteInstVarAssign(aggregateRep->getType(),
+                                        aggregateRep,
+                                        index,
+                                        lastValue,
+                                        block
+                                        );
 
+        // store it
         BBuilderContextData *bdata =
             dynamic_cast<BBuilderContextData *>(varContext->builderData.obj);
-        
-        IncompleteInstVarPtr fixup =
-            new IncompleteInstVarAssign(block, pos, index,
-                                        aggregateRep,
-                                        lastValue
-                                        );
-        bdata->incompleteInstVars.push_back(fixup);
+        bdata->placeholders.push_back(placeholder);
     }
 }
 
@@ -1044,21 +1035,17 @@ void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {
     if (ctx->complete) {
         lastValue = builder.CreateStructGEP(lastValue, index);
     } else {
-        BasicBlock::iterator lastInst;
+        // create a placeholder instruction
         Value *aggregate = lastValue;
         BTypeDef &bparent = dynamic_cast<BTypeDef &>(parent);
-        lastValue = BFieldRef::emitRefPlaceholder(builder, lastValue, bparent, 
-                                                  lastInst
-                                                  );
+        PlaceholderInstruction *placeholder =
+            new IncompleteNarrower(bparent.rep, aggregate, index, block);
+        lastValue = placeholder;
 
-        IncompleteInstVarPtr fixup =
-            new IncompleteNarrower(block, lastInst, index, aggregate,
-                                   lastValue
-                                   );
-
+        // store it
         BBuilderContextData *bdata =
             dynamic_cast<BBuilderContextData *>(ctx->builderData.obj);
-        bdata->incompleteInstVars.push_back(fixup);
+        bdata->placeholders.push_back(placeholder);
     }
 }
 
