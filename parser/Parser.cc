@@ -569,12 +569,12 @@ bool Parser::parseIfStmt() {
    // check for the "else"
    tok = toker.getToken();
    if (tok.isElse()) {
-      pos = context->builder.emitElse(*context, pos);
+      pos = context->builder.emitElse(*context, pos, terminalIf);
       terminalElse = parseIfClause();
-      context->builder.emitEndIf(*context, pos);
+      context->builder.emitEndIf(*context, pos, terminalElse);
    } else {
       toker.putBack(tok);
-      context->builder.emitEndIf(*context, pos);
+      context->builder.emitEndIf(*context, pos, terminalIf);
    }
 
    // the if is terminal if both conditions are terminal   

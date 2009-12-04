@@ -614,13 +614,12 @@ void LLVMBuilder::emitIntConst(model::Context &context, const IntConst &val) {
 
 BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
                                    const model::ExprPtr &cond) {
-    // stash the current block and the "false condition" block in the result 
-    // branchpoint and create a new block for the condition
+    // create blocks for the true and false conditions
+    BasicBlock *trueBlock = BasicBlock::Create("cond_true", func);
     BBranchpointPtr result = new BBranchpoint(BasicBlock::Create("cond_false",
                                                                  func
                                                                  )
                                               );
-    BasicBlock *trueBlock = BasicBlock::Create("cond_true", func);
 
     cond->emit(context);
     // XXX I think we need a "conditional" type so we don't have to convert 
@@ -637,27 +636,32 @@ BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
 }
 
 BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
-                                     const model::BranchpointPtr &pos) {
+                                     const model::BranchpointPtr &pos,
+                                     bool terminal
+                                     ) {
     BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
 
     // create a block to come after the else and jump to it from the current 
     // "if true" block.
     BasicBlock *falseBlock = bpos->block;
     bpos->block = BasicBlock::Create("cond_end", func);
-    builder.CreateBr(bpos->block);
+    if (!terminal)
+        builder.CreateBr(bpos->block);
     
     // new block is the "false" condition
-    block = falseBlock;
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(block = falseBlock);
     return pos;
 }
         
 void LLVMBuilder::emitEndIf(model::Context &context,
-                            const model::BranchpointPtr &pos) {
+                            const model::BranchpointPtr &pos,
+                            bool terminal
+                            ) {
     BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
 
     // branch from the current block to the next block
-    builder.CreateBr(bpos->block);
+    if (!terminal)
+        builder.CreateBr(bpos->block);
 
     // new block is the next block
     builder.SetInsertPoint(block = bpos->block);
@@ -743,6 +747,11 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
                               const FuncDefPtr &funcDef) {
+    // in certain conditions, (multiple terminating branches) we can end up 
+    // with an empty block.  If so, remove.
+    if (block->begin() == block->end())
+        block->eraseFromParent();
+
     // restore the block and function
     BBuilderContextData *contextData =
         dynamic_cast<BBuilderContextData *>(context.builderData.obj);

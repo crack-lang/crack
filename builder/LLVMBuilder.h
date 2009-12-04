@@ -53,10 +53,14 @@ class LLVMBuilder : public Builder {
         
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
-                     const model::BranchpointPtr &pos);
+                     const model::BranchpointPtr &pos,
+                     bool terminal
+                     );
         
         virtual void emitEndIf(model::Context &context,
-                               const model::BranchpointPtr &pos);
+                               const model::BranchpointPtr &pos,
+                               bool terminal
+                               );
 
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 

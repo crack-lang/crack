@@ -49,19 +49,25 @@ class Builder {
         /**
          * Emits an "else" statement.
          * @params pos the branchpoint returned from the original emitIf().
+         * @param terminal true if the "if" clause was terminal.
          * @returns a branchpoint to be passed to the subsequent emitEndIf().
          */
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
-                     const model::BranchpointPtr &pos) = 0;
+                     const model::BranchpointPtr &pos,
+                     bool terminal
+                     ) = 0;
         
         /**
          * Closes off an "if" statement emitted by emitIf().
          * @param pos a branchpoint returned from the last emitIf() or 
          *  emitElse().
+         * @param terminal true if the last clause (if or else) was terminal.
          */
         virtual void emitEndIf(model::Context &context,
-                               const model::BranchpointPtr &pos) = 0;
+                               const model::BranchpointPtr &pos,
+                               bool terminal
+                               ) = 0;
         
         /**
          * Emits a "while" statement.

@@ -310,3 +310,34 @@ Generics:
         foos := Array[Foo] * getObjectArray();
 
 
+Cleanups:
+    When we leave a context, we need to run "oper deref" on all variables 
+    within that context that define this method:
+    
+        while (cond) {
+            Complex obj;
+            ...
+            
+            // obj.oper deref() needs to happen here
+        }
+    
+    We can't just always emit this code at the end because of terminal statements
+    
+    void func() {
+        Complex obj1;
+        while (cond) {
+            Complex obj2;
+            
+            if (cond2)
+                // cleanup obj2, then obj1
+                return;
+            
+            // obj2.oper deref()
+        }
+        // obj1.oper deref()
+    }
+
+Design principals:
+    In cases where we can provide useful information from the Parser or keep 
+    track of it in the Builder, it's better to provide it in the Parser.  
+    Example is the "terminal" argument of emitElse/emitEndIf.
