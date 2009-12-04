@@ -47,3 +47,7 @@ void global() { }
 class Foo {
     void f() { this.global(); }  // should error
 };
+
+# currently fails because we generate unreachable code after the else but 
+# don't give it a return statement.  Need to stop generating unreachable code.
+int32 foo(int32 x) { if (x) return 1; else return 0; puts("test"); }
