@@ -52,6 +52,8 @@ bool Parser::parseStatement(bool defsAllowed) {
    } else if (tok.isElse()) {
       unexpected(tok, "'else' with no matching 'if'");
    } else if (tok.isReturn()) {
+      if (context->scope == Context::module)
+         error(tok, "Return statement not allowed in module scope");
       parseReturnStmt();
       return true;
    } else if (tok.isClass()) {

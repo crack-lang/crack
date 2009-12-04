@@ -50,6 +50,9 @@ test_output 'invalid return types' \
     'void f() {} int32 g() { return f(); }' \
     'ParseError: <stdin>:1: Invalid return type void for function returning '\
 'int32'
+test_output 'return in module scope' \
+    'return' \
+    'ParseError: <stdin>:2: Return statement not allowed in module scope' \
 
 test_output 'simple class definition' 'class Foo {};' ''
 test_output 'class with base class' 'class Foo : int32 {};' ''
