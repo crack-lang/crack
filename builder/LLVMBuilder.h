@@ -36,48 +36,48 @@ class LLVMBuilder : public Builder {
         LLVMBuilder();
 
         virtual void emitFuncCall(model::Context &context, 
-                                  const model::FuncDefPtr &func,
-                                  const model::ExprPtr &receiver,
+                                  model::FuncDef *func,
+                                  model::Expr *receiver,
                                   const model::FuncCall::ExprVector &args
                                   );
         
         virtual void emitStrConst(model::Context &context,
-                                  const model::StrConstPtr &strConst
+                                  model::StrConst *strConst
                                   );
         
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val);
 
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             const model::ExprPtr &cond);
+                                             model::Expr *cond);
         
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
-                     const model::BranchpointPtr &pos,
+                     model::Branchpoint *pos,
                      bool terminal
                      );
         
         virtual void emitEndIf(model::Context &context,
-                               const model::BranchpointPtr &pos,
+                               model::Branchpoint *pos,
                                bool terminal
                                );
 
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
-                           const model::ExprPtr &cond);
+                           model::Expr *cond);
 
         virtual void emitEndWhile(model::Context &context,
-                                  const model::BranchpointPtr &pos);
+                                  model::Branchpoint *pos);
 
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,
                           const std::string &name,
-                          const model::TypeDefPtr &returnType,
+                          model::TypeDef *returnType,
                           const std::vector<model::ArgDefPtr> &args);
         
         virtual void emitEndFunc(model::Context &context,
-                                 const model::FuncDefPtr &funcDef);
+                                 model::FuncDef *funcDef);
 
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
@@ -87,12 +87,12 @@ class LLVMBuilder : public Builder {
         virtual void emitEndClass(model::Context &context);
 
         virtual void emitReturn(model::Context &context,
-                                const model::ExprPtr &expr);
+                                model::Expr *expr);
 
         virtual model::VarDefPtr emitVarDef(model::Context &container,
-                                            const model::TypeDefPtr &type,
+                                            model::TypeDef *type,
                                             const std::string &name,
-                                            const model::ExprPtr &initializer,
+                                            model::Expr *initializer,
                                             bool staticScope
                                             );
 
@@ -101,19 +101,19 @@ class LLVMBuilder : public Builder {
         // definition.
         
         virtual model::FuncCallPtr
-            createFuncCall(const model::FuncDefPtr &func);
-        virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
+            createFuncCall(model::FuncDef *func);
+        virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               );
-        virtual model::VarRefPtr createVarRef(const model::VarDefPtr &varDef);
+        virtual model::VarRefPtr createVarRef(model::VarDef *varDef);
         virtual model::VarRefPtr
-            createFieldRef(const model::ExprPtr &aggregate,
-                           const model::VarDefPtr &varDef
+            createFieldRef(model::Expr *aggregate,
+                           model::VarDef *varDef
                            );
         virtual void emitFieldAssign(model::Context &context,
-                                     const model::ExprPtr &aggregate,
-                                     const model::VarDefPtr &varDef,
-                                     const model::ExprPtr &val
+                                     model::Expr *aggregate,
+                                     model::VarDef *varDef,
+                                     model::Expr *val
                                      );
 
         virtual void emitNarrower(model::TypeDef &curType,

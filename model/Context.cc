@@ -95,12 +95,12 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
     FuncDef *func = 0;
     if (var) {
         // if it's already an overload, we're done
-        OverloadDef *overload = dynamic_cast<OverloadDef *>(var.obj);
+        OverloadDef *overload = OverloadDefPtr::rcast(var);
         if (overload)
             return overload;
         
         // make sure it's at least a function
-        func = dynamic_cast<FuncDef *>(var.obj);
+        func = FuncDefPtr::rcast(var);
         if (!func)
             return 0;
     }
@@ -161,7 +161,7 @@ FuncDefPtr Context::lookUp(const std::string &varName,
     return overload->getMatch(args);
 }
 
-void Context::addDef(const VarDefPtr &def) {
+void Context::addDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");
     defs[def->name] = def;
@@ -185,13 +185,13 @@ void Context::emitCleanups(Context::Depth depth) {
          iter != defs.end();
          ++iter
          ) {
-        VarDef *def = iter->second.obj;
+        VarDef *def = iter->second.get();
         VarDefPtr release;
         if (def->type && def->type->context && 
             (release = def->type->context->lookUp("release"))
             ) {
             // Create a release expression for the variable and emit it.
-            FuncCallPtr releaseExpr = new FuncCall(FuncDefPtr::dcast(release));
+            FuncCallPtr releaseExpr = new FuncCall(FuncDefPtr::rcast(release));
             releaseExpr->receiver = new VarRef(def);
             releaseExpr->emit(*this);
         }

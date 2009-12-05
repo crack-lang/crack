@@ -70,7 +70,7 @@ namespace {
         public:
             // XXX need more specific type?
             llvm::Value *rep;
-            BStrConst(const TypeDefPtr &type, const std::string &val) :
+            BStrConst(TypeDef *type, const std::string &val) :
                 StrConst(type, val),
                 rep(0) {
             }
@@ -79,7 +79,7 @@ namespace {
     class BIntConst : public model::IntConst {
         public:
             llvm::Value *rep;
-            BIntConst(const TypeDefPtr &type, long val) :
+            BIntConst(TypeDef *type, long val) :
                 IntConst(type, val),
                 rep(llvm::ConstantInt::get(llvm::Type::Int32Ty, val)) {
             }
@@ -240,6 +240,8 @@ namespace {
             };
     };
 
+    SPUG_RCPTR(BBuilderContextData);
+
     class BBuilderContextData : public BuilderContextData {
         public:
             Function *func;
@@ -266,15 +268,15 @@ namespace {
             
             BMemVarDefImpl(Value *rep) : rep(rep) {}
             
-            virtual void emitRef(Context &context, const VarDefPtr &var) {
+            virtual void emitRef(Context &context, VarDef *var) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitMemVarRef(context, rep);
             }
             
             virtual void 
-            emitAssignment(Context &context, const VarDefPtr &var,
-                           const ExprPtr &expr
+            emitAssignment(Context &context, VarDef *var,
+                           Expr *expr
                            ) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
@@ -292,7 +294,7 @@ namespace {
             unsigned index;
             BInstVarDefImpl(unsigned index) : index(index) {}
             virtual void emitRef(Context &context,
-                                 const VarDefPtr &var
+                                 VarDef *var
                                  ) {
                 assert(false && 
                        "attempting to emit a direct reference to a instance "
@@ -301,8 +303,8 @@ namespace {
             }
             
             virtual void emitAssignment(Context &context,
-                                        const VarDefPtr &var,
-                                        const ExprPtr &expr
+                                        VarDef *var,
+                                        Expr *expr
                                         ) {
                 assert(false && 
                        "attempting to assign a direct reference to a instance "
@@ -314,7 +316,7 @@ namespace {
     class BFieldRef : public VarRef {
         public:
             ExprPtr aggregate;
-            BFieldRef(const ExprPtr &aggregate, const VarDefPtr &varDef) :
+            BFieldRef(Expr *aggregate, VarDef *varDef) :
                 aggregate(aggregate),
                 VarRef(varDef) {
             }
@@ -325,8 +327,7 @@ namespace {
                 // narrow to the ancestor type where there variable is defined.
                 aggregate->type->emitNarrower(*def->context->returnType);
 
-                unsigned index =
-                    dynamic_cast<BInstVarDefImpl *>(def->impl.obj)->index;
+                unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
                 
                 // if the variable is from a complete context, we can emit it. 
                 //  Otherwise, we need to store a placeholder.
@@ -338,7 +339,7 @@ namespace {
                 } else {
                     // create a fixup object for the reference
                     BTypeDef *typeDef = 
-                        dynamic_cast<BTypeDef *>(def->type.obj);
+                        BTypeDefPtr::rcast(def->type);
 
                     // stash the aggregate, emit a placeholder for the 
                     // reference
@@ -352,8 +353,8 @@ namespace {
 
                     // store the placeholder
                     BBuilderContextData *bdata =
-                        dynamic_cast<BBuilderContextData *>(
-                            def->context->builderData.obj
+                        BBuilderContextDataPtr::rcast(
+                            def->context->builderData
                         );
                     bdata->placeholders.push_back(placeholder);
                 }
@@ -367,7 +368,7 @@ namespace {
             BArgVarDefImpl(Value *rep) : rep(rep) {}
 
             virtual void emitRef(Context &context,
-                                 const VarDefPtr &var
+                                 VarDef *var
                                  ) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
@@ -375,8 +376,8 @@ namespace {
             }
             
             virtual void 
-            emitAssignment(Context &context, const VarDefPtr &var,
-                           const ExprPtr &expr
+            emitAssignment(Context &context, VarDef *var,
+                           Expr *expr
                            ) {
                 // XXX implement argument assignment
                 assert(false && "can't assign arguments yet");
@@ -396,7 +397,7 @@ namespace {
             Function::LinkageTypes linkage;
 
             FuncBuilder(Context &context, FuncDef::Flags flags,
-                        const BTypeDefPtr &returnType,
+                        BTypeDef *returnType,
                         const string &name,
                         size_t argCount,
                         Function::LinkageTypes linkage = 
@@ -425,7 +426,7 @@ namespace {
                         funcDef->args.begin();
                      iter != funcDef->args.end();
                      ++iter, ++i)
-                    llvmArgs[i] = BTypeDefPtr::dcast((*iter)->type)->rep;
+                    llvmArgs[i] = BTypeDefPtr::rcast((*iter)->type)->rep;
 
                 // register the function with LLVM
                 const Type *rawRetType =
@@ -467,10 +468,10 @@ namespace {
                 
                 funcDef->rep = func;
                 if (storeDef)
-                    context.addDef(VarDefPtr::ucast(funcDef));
+                    context.addDef(funcDef.get());
             }
 
-            void addArg(const char *name, const TypeDefPtr &type) {
+            void addArg(const char *name, TypeDef *type) {
                 assert(argIndex <= funcDef->args.size());
                 funcDef->args[argIndex++] = new ArgDef(type, name);
             }
@@ -481,7 +482,7 @@ namespace {
                 funcDef->args = args;
             }
             
-            void setReceiverType(const BTypeDefPtr &type) {
+            void setReceiverType(BTypeDef *type) {
                 receiverType = type;
             }
                 
@@ -491,12 +492,12 @@ namespace {
     
     class MallocExpr : public Expr {
         public:
-            MallocExpr(const TypeDefPtr &type) : Expr(type) {}
+            MallocExpr(TypeDef *type) : Expr(type) {}
             
             void emit(Context &context) {
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
-                BTypeDef *btype = dynamic_cast<BTypeDef *>(type.obj);
+                BTypeDef *btype = BTypeDefPtr::rcast(type);
                 PointerType *tp =
                     cast<PointerType>(const_cast<Type *>(btype->rep));
                 builder.lastValue =
@@ -510,7 +511,7 @@ namespace {
 
     class BinOpDef : public FuncDef {
         public:
-            BinOpDef(const TypeDefPtr &tp,
+            BinOpDef(TypeDef *tp,
                      const string &name) :
                 FuncDef(FuncDef::noFlags, name, 2) {
 
@@ -520,21 +521,21 @@ namespace {
             }
             
             virtual void emitCall(Context &context, 
-                                  const ExprPtr &lhs,
-                                  const ExprPtr &rhs
+                                  Expr *lhs,
+                                  Expr *rhs
                                   ) = 0;
     };
 
 #define BINOP(opCode, op)                                                   \
     class opCode##OpDef : public BinOpDef {                                   \
         public:                                                             \
-            opCode##OpDef(const TypeDefPtr &type) :                           \
+            opCode##OpDef(TypeDef *type) :                           \
                 BinOpDef(type, "oper " op) {                                \
             }                                                               \
                                                                             \
             virtual void emitCall(Context &context,                         \
-                                  const ExprPtr &lhs,                       \
-                                  const ExprPtr &rhs                        \
+                                  Expr *lhs,                       \
+                                  Expr *rhs                        \
                                   ) {                                       \
                 LLVMBuilder &builder =                                      \
                     dynamic_cast<LLVMBuilder &>(context.builder);           \
@@ -564,15 +565,15 @@ LLVMBuilder::LLVMBuilder() :
 }
 
 void LLVMBuilder::emitFuncCall(Context &context,
-                               const FuncDefPtr &funcDef, 
-                               const ExprPtr &receiver,
+                               FuncDef *funcDef, 
+                               Expr *receiver,
                                const FuncCall::ExprVector &args) {
 
     // see if this is s special function
-    BinOpDef *binOp = dynamic_cast<BinOpDef *>(funcDef.obj);
+    BinOpDef *binOp = BinOpDefPtr::cast(funcDef);
     if (binOp) {
         assert(args.size() == 2);
-        binOp->emitCall(context, args[0], args[1]);
+        binOp->emitCall(context, args[0].get(), args[1].get());
         return;
     }
                     
@@ -593,14 +594,13 @@ void LLVMBuilder::emitFuncCall(Context &context,
     }
     
     lastValue =
-        builder.CreateCall(BFuncDefPtr::dcast(funcDef)->rep, valueArgs.begin(),
+        builder.CreateCall(BFuncDefPtr::cast(funcDef)->rep, valueArgs.begin(),
                            valueArgs.end()
                            );
 }
 
-void LLVMBuilder::emitStrConst(model::Context &context, 
-                               const StrConstPtr &val) {
-    BStrConstPtr bval = BStrConstPtr::dcast(val);
+void LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
+    BStrConst *bval = BStrConstPtr::cast(val);
     // if the global string hasn't been defined yet, create it
     if (!bval->rep) {
         bval->rep = builder.CreateGlobalStringPtr(val->val.c_str());
@@ -608,12 +608,11 @@ void LLVMBuilder::emitStrConst(model::Context &context,
     lastValue = bval->rep;
 }
 
-void LLVMBuilder::emitIntConst(model::Context &context, const IntConst &val) {
+void LLVMBuilder::emitIntConst(Context &context, const IntConst &val) {
     lastValue = dynamic_cast<const BIntConst &>(val).rep;
 }
 
-BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
-                                   const model::ExprPtr &cond) {
+BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
     // create blocks for the true and false conditions
     BasicBlock *trueBlock = BasicBlock::Create("cond_true", func);
     BBranchpointPtr result = new BBranchpoint(BasicBlock::Create("cond_false",
@@ -624,22 +623,22 @@ BranchpointPtr LLVMBuilder::emitIf(model::Context &context,
     cond->emit(context);
     // XXX I think we need a "conditional" type so we don't have to convert 
     // everything to a boolean and then check for non-zero.
-    BTypeDefPtr boolType =
-        BTypeDefPtr::dcast(context.globalData->boolType);
+    BTypeDef *boolType =
+        BTypeDefPtr::rcast(context.globalData->boolType);
     Value *comparison =
         builder.CreateICmpNE(lastValue, Constant::getNullValue(boolType->rep));
     builder.CreateCondBr(comparison, trueBlock, result->block);
     
     // repoint to the new ("if true") block
     builder.SetInsertPoint(block = trueBlock);
-    return BranchpointPtr::ucast(result);
+    return result;
 }
 
 BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
-                                     const model::BranchpointPtr &pos,
+                                     model::Branchpoint *pos,
                                      bool terminal
                                      ) {
-    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+    BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // create a block to come after the else and jump to it from the current 
     // "if true" block.
@@ -653,11 +652,11 @@ BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
     return pos;
 }
         
-void LLVMBuilder::emitEndIf(model::Context &context,
-                            const model::BranchpointPtr &pos,
+void LLVMBuilder::emitEndIf(Context &context,
+                            Branchpoint *pos,
                             bool terminal
                             ) {
-    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+    BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // branch from the current block to the next block
     if (!terminal)
@@ -668,7 +667,7 @@ void LLVMBuilder::emitEndIf(model::Context &context,
 }
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 
-                                           const ExprPtr &cond) {
+                                           Expr *cond) {
     BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create("while_end", 
                                                                func
                                                                )
@@ -682,8 +681,8 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
 
     // XXX see notes above on a conditional type.
     cond->emit(context);
-    BTypeDefPtr boolType =
-        BTypeDefPtr::dcast(context.globalData->boolType);
+    BTypeDef *boolType =
+        BTypeDefPtr::rcast(context.globalData->boolType);
     Value *comparison =
         builder.CreateICmpNE(lastValue, Constant::getNullValue(boolType->rep));
     builder.CreateCondBr(comparison, whileBody, bpos->block);
@@ -694,8 +693,8 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     return bpos;
 }
 
-void LLVMBuilder::emitEndWhile(Context &context, const BranchpointPtr &pos) {
-    BBranchpointPtr bpos = BBranchpointPtr::dcast(pos);
+void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos) {
+    BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // emit the branch back to conditional expression in the block
     builder.CreateBr(bpos->block2);
@@ -713,7 +712,7 @@ Value *emitGEP(IRBuilder<> &builder, Value *obj) {
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef::Flags flags,
                                       const string &name,
-                                      const TypeDefPtr &returnType,
+                                      TypeDef *returnType,
                                       const vector<ArgDefPtr> &args) {
     
     // store the current function and block in the context
@@ -723,17 +722,18 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     contextData->block = block;
 
     // create the function
-    FuncBuilder f(context, flags, returnType, name, args.size());
+    FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name, 
+                  args.size()
+                  );
     f.setArgs(args);
     
     // see if this is a method, if so store the class type as the receiver type
     if (flags & FuncDef::method) {
         ContextPtr classCtx = context.getClassContext();
         assert(classCtx && "method is not nested in a class context.");
-        BuilderContextData *contextData0 = classCtx->builderData.obj;
         BBuilderContextData *contextData = 
-            dynamic_cast<BBuilderContextData *>(contextData0);
-        f.setReceiverType(contextData->type);
+            BBuilderContextDataPtr::rcast(classCtx->builderData);
+        f.setReceiverType(contextData->type.get());
     }
 
     f.finish(false);
@@ -746,7 +746,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 }    
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
-                              const FuncDefPtr &funcDef) {
+                              FuncDef *funcDef) {
     // in certain conditions, (multiple terminating branches) we can end up 
     // with an empty block.  If so, remove.
     if (block->begin() == block->end())
@@ -754,7 +754,7 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
 
     // restore the block and function
     BBuilderContextData *contextData =
-        dynamic_cast<BBuilderContextData *>(context.builderData.obj);
+        BBuilderContextDataPtr::rcast(context.builderData);
     func = contextData->func;
     builder.SetInsertPoint(block = contextData->block);
 }
@@ -771,11 +771,11 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
          iter != bases.end();
          ++iter
          )
-        bdata->addBaseClass(BTypeDefPtr::dcast(*iter));
+        bdata->addBaseClass(BTypeDefPtr::rcast(*iter));
     
     bdata->type = new BTypeDef(name, PointerType::getUnqual(OpaqueType::get()));
-    bdata->type->defaultInitializer = new MallocExpr(bdata->type);
-    return TypeDefPtr::ucast(bdata->type);
+    bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
+    return bdata->type.get();
 }
 
 void LLVMBuilder::emitEndClass(Context &context) {
@@ -787,8 +787,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
          baseIter != context.parents.end();
          ++baseIter
          ) {
-        BTypeDef *typeDef =
-            dynamic_cast<BTypeDef *>((*baseIter)->returnType.obj);
+        BTypeDef *typeDef = BTypeDefPtr::rcast((*baseIter)->returnType);
         members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
     }
     
@@ -798,15 +797,15 @@ void LLVMBuilder::emitEndClass(Context &context) {
         ) {
         // see if the variable needs an instance slot
         if (iter->second->hasInstSlot()) {
-            BInstVarDefImplPtr impl = 
-                BInstVarDefImplPtr::dcast(iter->second->impl);
+            BInstVarDefImpl *impl = 
+                BInstVarDefImplPtr::rcast(iter->second->impl);
             
             // resize the set of members if the new guy doesn't fit
             if (impl->index >= members.size())
                 members.resize(impl->index + 1, 0);
             
             // get the underlying type object, add it to the vector
-            BTypeDefPtr typeDef = BTypeDefPtr::dcast(iter->second->type);
+            BTypeDef *typeDef = BTypeDefPtr::rcast(iter->second->type);
             members[impl->index] = typeDef->rep;
         }
     }
@@ -820,7 +819,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
     
     // refine the type to the actual type of the structure.
     BBuilderContextData *bdata =
-        dynamic_cast<BBuilderContextData *>(context.builderData.obj);
+        BBuilderContextDataPtr::rcast(context.builderData);
         
     PointerType *ptrType =
         cast<PointerType>(const_cast<Type *>(bdata->type->rep));
@@ -841,7 +840,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
-                             const model::ExprPtr &expr) {
+                             model::Expr *expr) {
     
     if (expr) {
         expr->emit(context);
@@ -851,9 +850,9 @@ void LLVMBuilder::emitReturn(model::Context &context,
     }
 }
 
-VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
+VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                   const string &name,
-                                  const ExprPtr &initializer,
+                                  Expr *initializer,
                                   bool staticScope
                                   ) {
     // do initializion
@@ -866,7 +865,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
     // might work)
 
     // reveal our type object
-    BTypeDef *tp = dynamic_cast<BTypeDef *>(type.obj);
+    BTypeDef *tp = BTypeDefPtr::cast(type);
     
     // get the defintion context
     ContextPtr defCtx = context.getDefContext();
@@ -883,8 +882,8 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, const TypeDefPtr &type,
             if (!staticScope) {
                 // first, we need to determine the index of the new field.
                 BBuilderContextData *bdata =
-                    dynamic_cast<BBuilderContextData *>(
-                        defCtx->builderData.obj
+                    BBuilderContextDataPtr::rcast(
+                        defCtx->builderData
                     );
                 unsigned idx = bdata->fieldCount++;
                 
@@ -967,21 +966,21 @@ void LLVMBuilder::closeModule() {
 
 model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
                                                const std::string &val) {
-    return new BStrConst(context.globalData->byteptrType, val);
+    return new BStrConst(context.globalData->byteptrType.get(), val);
 }
 
 IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val) {
     // XXX probably need to consider the simplest type that the constant can 
     // fit into (compatibility rules will allow us to coerce it into another 
     // type)
-    return new BIntConst(context.globalData->int32Type, val);
+    return new BIntConst(context.globalData->int32Type.get(), val);
 }
                        
-model::FuncCallPtr LLVMBuilder::createFuncCall(const FuncDefPtr &func) {
+model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func) {
     return new FuncCall(func);
 }
 
-ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
+ArgDefPtr LLVMBuilder::createArgDef(TypeDef *type,
                                     const string &name
                                     ) {
     // we don't create BBuilderVarDefData for these yet - we will back-fill 
@@ -990,20 +989,20 @@ ArgDefPtr LLVMBuilder::createArgDef(const TypeDefPtr &type,
     return argDef;
 }
 
-VarRefPtr LLVMBuilder::createVarRef(const VarDefPtr &varDef) {
+VarRefPtr LLVMBuilder::createVarRef(VarDef *varDef) {
     return new VarRef(varDef);
 }
 
-VarRefPtr LLVMBuilder::createFieldRef(const ExprPtr &aggregate,
-                                      const VarDefPtr &varDef
+VarRefPtr LLVMBuilder::createFieldRef(Expr *aggregate,
+                                      VarDef *varDef
                                       ) {
     return new BFieldRef(aggregate, varDef);
 }
 
 void LLVMBuilder::emitFieldAssign(Context &context,
-                                  const ExprPtr &aggregate,
-                                  const VarDefPtr &varDef,
-                                  const ExprPtr &val
+                                  Expr *aggregate,
+                                  VarDef *varDef,
+                                  Expr *val
                                   ) {
     aggregate->emit(context);
 
@@ -1016,7 +1015,7 @@ void LLVMBuilder::emitFieldAssign(Context &context,
     // we can chain assignments.
     val->emit(context);
 
-    unsigned index = dynamic_cast<BInstVarDefImpl *>(varDef->impl.obj)->index;
+    unsigned index = BInstVarDefImplPtr::rcast(varDef->impl)->index;
     // if the variable is part of a complete context, just do the store.  
     // Otherwise create a fixup.
     if (varContext->complete) {
@@ -1034,13 +1033,13 @@ void LLVMBuilder::emitFieldAssign(Context &context,
 
         // store it
         BBuilderContextData *bdata =
-            dynamic_cast<BBuilderContextData *>(varContext->builderData.obj);
+            BBuilderContextDataPtr::rcast(varContext->builderData);
         bdata->placeholders.push_back(placeholder);
     }
 }
 
 void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {
-    Context *ctx = curType.context.obj;
+    Context *ctx = curType.context.get();
     if (ctx->complete) {
         lastValue = builder.CreateStructGEP(lastValue, index);
     } else {
@@ -1053,7 +1052,7 @@ void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {
 
         // store it
         BBuilderContextData *bdata =
-            dynamic_cast<BBuilderContextData *>(ctx->builderData.obj);
+            BBuilderContextDataPtr::rcast(ctx->builderData);
         bdata->placeholders.push_back(placeholder);
     }
 }
@@ -1068,51 +1067,58 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // create the basic types
     
-    gd->voidType = new BTypeDef("void", 0);
-    context.addDef(gd->voidType);
+    BTypeDef *voidType;
+    gd->voidType = voidType = new BTypeDef("void", 0);
+    context.addDef(voidType);
     
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(llvm::IntegerType::get(8));
-    gd->byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
+    BTypeDef *byteptrType;
+    gd->byteptrType = byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
     gd->byteptrType->defaultInitializer = createStrConst(context, "");
-    context.addDef(gd->byteptrType);
+    context.addDef(byteptrType);
     
     const llvm::Type *llvmInt32Type = llvm::IntegerType::get(32);
-    gd->int32Type = new BTypeDef("int32", llvmInt32Type);
+    BTypeDef *int32Type;
+    gd->int32Type = int32Type = new BTypeDef("int32", llvmInt32Type);
     gd->int32Type->defaultInitializer = createIntConst(context, 0);
-    context.addDef(gd->int32Type);
+    context.addDef(int32Type);
     
     // XXX using bool = int32 for now
-    gd->boolType = gd->int32Type;
+    gd->boolType = int32Type;
     
     // create "int puts(String)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, gd->int32Type, "puts", 1);
-        f.addArg("text", gd->byteptrType);
+        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
+                      1
+                      );
+        f.addArg("text", byteptrType);
         f.finish();
     }
     
     // create "int write(int, String, int)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, gd->int32Type, "write", 3);
-        f.addArg("fd", gd->int32Type);
-        f.addArg("buf", gd->byteptrType);
-        f.addArg("n", gd->int32Type);
+        FuncBuilder f(context, FuncDef::noFlags, int32Type, "write",
+                      3
+                      );
+        f.addArg("fd", int32Type);
+        f.addArg("buf", byteptrType);
+        f.addArg("n", gd->int32Type.get());
         f.finish();
     }
     
     // create "void printint(int32)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, gd->voidType, "printint", 1);
-        f.addArg("val", gd->int32Type);
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
+        f.addArg("val", gd->int32Type.get());
         f.finish();
     }
     
     // create integer operations
-    context.addDef(new AddOpDef(gd->int32Type));
-    context.addDef(new SubOpDef(gd->int32Type));
-    context.addDef(new MulOpDef(gd->int32Type));
-    context.addDef(new SDivOpDef(gd->int32Type));
+    context.addDef(new AddOpDef(gd->int32Type.get()));
+    context.addDef(new SubOpDef(gd->int32Type.get()));
+    context.addDef(new MulOpDef(gd->int32Type.get()));
+    context.addDef(new SDivOpDef(gd->int32Type.get()));
 }
 
 void LLVMBuilder::run() {

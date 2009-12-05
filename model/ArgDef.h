@@ -12,7 +12,7 @@ SPUG_RCPTR(ArgDef);
 
 class ArgDef : public VarDef {
     public:
-        ArgDef(const TypeDefPtr &type, const std::string &name) :
+        ArgDef(TypeDef *type, const std::string &name) :
             VarDef(type, name) {
         }
 };

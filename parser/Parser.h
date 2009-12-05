@@ -43,7 +43,7 @@ class Parser {
 
          public:
             ContextStackFrame(Parser &parser,
-                              const model::ContextPtr &context
+                              model::Context *context
                               ) :
                restored(false),
                parser(parser),
@@ -73,7 +73,7 @@ class Parser {
        * Add a new definition to the current context or nearest definition 
        * context.
        */
-      void addDef(const model::VarDefPtr &context);
+      void addDef(model::VarDef *context);
       
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
@@ -111,7 +111,7 @@ class Parser {
        *   identifier is scoped to the local context.
        * @param ident The identifier's token.
        */
-      model::ExprPtr parsePostIdent(const model::ExprPtr &container,
+      model::ExprPtr parsePostIdent(model::Expr *container,
                                     const Token &ident
                                     );
 
@@ -130,7 +130,7 @@ class Parser {
       /** Parse a definition. Returns false if there was no definition. 
        * @param type the parsed type.
        */
-      bool parseDef(const model::TypeDefPtr &type);
+      bool parseDef(model::TypeDef *type);
       
       // statements
       
@@ -144,7 +144,7 @@ class Parser {
       void checkForExistingDef(const Token &tok);
 
    public:
-      Parser(Toker &toker, const model::ContextPtr &context) : 
+      Parser(Toker &toker, model::Context *context) : 
 	 toker(toker),
 	 moduleCtx(context),
          context(context) {

@@ -8,13 +8,13 @@
 
 using namespace model;
 
-VarDef::VarDef(const TypeDefPtr &type, const std::string &name) :
+VarDef::VarDef(TypeDef *type, const std::string &name) :
     type(type),
     name(name),
     context(0) {
 }
 
-void VarDef::emitAssignment(Context &context, const ExprPtr &expr) {
+void VarDef::emitAssignment(Context &context, Expr *expr) {
     impl->emitAssignment(context, this, expr);
 }
 

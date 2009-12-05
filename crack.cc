@@ -28,7 +28,7 @@ void compileAndRun(istream &src, const char *name) {
     ctx->builder.registerPrimFuncs(*ctx);
 
     parser::Toker toker(src, name);
-    parser::Parser parser(toker, ctx);
+    parser::Parser parser(toker, ctx.get());
     
     try {
         parser.parse();

@@ -27,13 +27,13 @@ namespace builder {
 class Builder {
     public:
         virtual void emitFuncCall(model::Context &context,
-                                  const model::FuncDefPtr &func,
-                                  const model::ExprPtr &receiver,
+                                  model::FuncDef *func,
+                                  model::Expr *receiver,
                                   const model::FuncCall::ExprVector &args
                                   ) = 0;
         
         virtual void emitStrConst(model::Context &context,
-                                  const model::StrConstPtr &strConst
+                                  model::StrConst *strConst
                                   ) = 0;
 
         virtual void emitIntConst(model::Context &context,
@@ -44,7 +44,7 @@ class Builder {
          * must be passed to the subsequent emitElse() or emitEndIf().
          */
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             const model::ExprPtr &cond) = 0;
+                                             model::Expr *cond) = 0;
         
         /**
          * Emits an "else" statement.
@@ -54,7 +54,7 @@ class Builder {
          */
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
-                     const model::BranchpointPtr &pos,
+                     model::Branchpoint *pos,
                      bool terminal
                      ) = 0;
         
@@ -65,7 +65,7 @@ class Builder {
          * @param terminal true if the last clause (if or else) was terminal.
          */
         virtual void emitEndIf(model::Context &context,
-                               const model::BranchpointPtr &pos,
+                               model::Branchpoint *pos,
                                bool terminal
                                ) = 0;
         
@@ -76,14 +76,14 @@ class Builder {
          */
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
-                           const model::ExprPtr &cond) = 0;
+                           model::Expr *cond) = 0;
 
         /**
          * Emits the end of the "while" statement.
          * @param pos the branchpoint object returned from the emitWhile().
          */        
         virtual void emitEndWhile(model::Context &context,
-                                  const model::BranchpointPtr &pos) = 0;
+                                  model::Branchpoint *pos) = 0;
 
         /**
          * Start a new function definition.
@@ -93,14 +93,14 @@ class Builder {
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,
                           const std::string &name,
-                          const model::TypeDefPtr &returnType,
+                          model::TypeDef *returnType,
                           const std::vector<model::ArgDefPtr> &args) = 0;
         
         /**
          * Emit the end of a function definition.
          */
         virtual void emitEndFunc(model::Context &context,
-                                 const model::FuncDefPtr &funcDef) = 0;
+                                 model::FuncDef *funcDef) = 0;
         
         /**
          * Emit the beginning of a class definition.
@@ -122,7 +122,7 @@ class Builder {
          * @params expr an expression or null if we are returning void.
          */
         virtual void emitReturn(model::Context &context,
-                                const model::ExprPtr &expr) = 0;
+                                model::Expr *expr) = 0;
 
         /**
          * Emits a variable definition and returns a new VarDef object for the 
@@ -132,19 +132,19 @@ class Builder {
          */
         virtual model::VarDefPtr emitVarDef(
             model::Context &container,
-            const model::TypeDefPtr &type,
+            model::TypeDef *type,
             const std::string &name,
-            const model::ExprPtr &initializer = 0,
+            model::Expr *initializer = 0,
             bool staticScope = false
         ) = 0;
     
-        virtual model::ArgDefPtr createArgDef(const model::TypeDefPtr &type,
+        virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               ) = 0;
         virtual model::FuncCallPtr 
-            createFuncCall(const model::FuncDefPtr &func) = 0;
+            createFuncCall(model::FuncDef *func) = 0;
         virtual model::VarRefPtr
-            createVarRef(const model::VarDefPtr &varDef) = 0;
+            createVarRef(model::VarDef *varDef) = 0;
         
         /**
          * Create a field references - field references obtain the value of a 
@@ -152,8 +152,8 @@ class Builder {
          * will be the same as the type of the varDef.
          */
         virtual model::VarRefPtr
-            createFieldRef(const model::ExprPtr &aggregate,
-                           const model::VarDefPtr &varDef
+            createFieldRef(model::Expr *aggregate,
+                           model::VarDef *varDef
                            ) = 0;
         
         /**
@@ -163,9 +163,9 @@ class Builder {
          * @param val the value to assign to the variable.
          */
         virtual void emitFieldAssign(model::Context &context,
-                                     const model::ExprPtr &aggregate,
-                                     const model::VarDefPtr &varDef,
-                                     const model::ExprPtr &val
+                                     model::Expr *aggregate,
+                                     model::VarDef *varDef,
+                                     model::Expr *val
                                      ) = 0;
 
         /**

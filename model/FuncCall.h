@@ -22,7 +22,7 @@ class FuncCall : public Expr {
         // otherwise it will be null
         ExprPtr receiver;
 
-        FuncCall(const FuncDefPtr &funcDef);
+        FuncCall(FuncDef *funcDef);
         virtual void emit(Context &context);
 };
 

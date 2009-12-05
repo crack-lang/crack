@@ -9,7 +9,7 @@
 using namespace model;
 
 VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
-                               const ExprPtr &initializer
+                               Expr *initializer
                                ) {
     return container.builder.emitVarDef(container, this, name, initializer);
 }

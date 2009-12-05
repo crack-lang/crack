@@ -16,5 +16,5 @@ VarRef::VarRef(const VarDefPtr &def) :
 
 void VarRef::emit(Context &context) {
     assert(def->impl);
-    def->impl->emitRef(context, def);
+    def->impl->emitRef(context, def.get());
 }

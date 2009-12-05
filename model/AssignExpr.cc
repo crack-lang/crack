@@ -41,7 +41,9 @@ AssignExprPtr AssignExpr::create(const Token &varName,
 
 void AssignExpr::emit(Context &context) {
     if (aggregate)
-        context.builder.emitFieldAssign(context, aggregate, var, value);
+        context.builder.emitFieldAssign(context, aggregate.get(), var.get(), 
+                                        value.get()
+                                        );
     else
-        var->emitAssignment(context, value);
+        var->emitAssignment(context, value.get());
 }

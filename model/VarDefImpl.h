@@ -20,11 +20,10 @@ class VarDefImpl : public spug::RCBase {
     public:
         VarDefImpl() {}
         
-        virtual void emitRef(Context &context, const VarDefPtr &var) = 0;
+        virtual void emitRef(Context &context, VarDef *var) = 0;
         
-        virtual void emitAssignment(Context &context, 
-                                    const VarDefPtr &var,
-                                    const ExprPtr &expr
+        virtual void emitAssignment(Context &context, VarDef *var,
+                                    Expr *expr
                                     ) = 0;
 };
 

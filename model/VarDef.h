@@ -23,9 +23,9 @@ class VarDef : public spug::RCBase {
         std::string name;
         VarDefImplPtr impl;
 
-        VarDef(const TypeDefPtr &type, const std::string &name);
+        VarDef(TypeDef *type, const std::string &name);
         
-        void emitAssignment(Context &context, const ExprPtr &expr);
+        void emitAssignment(Context &context, Expr *expr);
         
         /**
          * Returns true if the definition type requires a slot in the instance 

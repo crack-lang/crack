@@ -24,7 +24,7 @@ using namespace std;
 using namespace parser;
 using namespace model;
 
-void Parser::addDef(const VarDefPtr &varDef) {
+void Parser::addDef(VarDef *varDef) {
    context->getDefContext()->addDef(varDef);
 }
 
@@ -78,9 +78,8 @@ bool Parser::parseStatement(bool defsAllowed) {
       
       // if the identifier is a type, try to parse a definition
       VarDefPtr def = context->lookUp(tok.getData());
-      if (def && dynamic_cast<TypeDef *>(def.obj) &&
-          parseDef(TypeDefPtr::dcast(def))
-          ) {
+      TypeDef *typeDef = TypeDefPtr::rcast(def);
+      if (typeDef && parseDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
          return false;
@@ -96,8 +95,8 @@ bool Parser::parseStatement(bool defsAllowed) {
                error(tok, "definition is not allowed in this context.");
             expr = parseExpression();
             VarDefPtr varDef =
-               expr->type->emitVarDef(*context, tok.getData(), expr);
-            addDef(varDef);
+               expr->type->emitVarDef(*context, tok.getData(), expr.get());
+            addDef(varDef.get());
          } else {
             error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
          }
@@ -127,13 +126,13 @@ bool Parser::parseStatement(bool defsAllowed) {
 
 namespace {
    // emit cleanups for the block unless there was a terminal statement
-   inline bool emitCleanups(const ContextPtr &context,
+   inline bool emitCleanups(Context &context,
                             bool gotTerminalStatement
                             ) {
       if (gotTerminalStatement)
          return true;
       
-      context->emitCleanups(Context::block);
+      context.emitCleanups(Context::block);
       return false;
    }
 }
@@ -157,12 +156,12 @@ bool Parser::parseBlock(bool nested) {
       // nested or not.
       if (tok.isRCurly()) {
          if (nested)
-            return emitCleanups(context, gotTerminalStatement);
+            return emitCleanups(*context, gotTerminalStatement);
          else
             unexpected(tok, "expected statement or closing brace.");
       } else if (tok.isEnd()) {
          if (!nested)
-            return emitCleanups(context, gotTerminalStatement);
+            return emitCleanups(*context, gotTerminalStatement);
 	 else
 	    unexpected(tok, "expected statement or end-of-file");
       }
@@ -197,10 +196,10 @@ ExprPtr Parser::makeThisRef(const Token &ident) {
                       )
             );
                       
-   return ExprPtr::ucast(context->builder.createVarRef(thisVar));
+   return context->builder.createVarRef(thisVar.get());
 }
 
-ExprPtr Parser::parsePostIdent(const ExprPtr &container, const Token &ident) {
+ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    Context &varContext = container ? *container->type->context : *context;
    // is it an assignment?
    Token tok1 = toker.getToken();
@@ -259,10 +258,10 @@ ExprPtr Parser::parsePostIdent(const ExprPtr &container, const Token &ident) {
          // if there's no container, try to use an implicit "this"
          receiver = container ? container : makeThisRef(ident);
 
-      FuncCallPtr funcCall = context->builder.createFuncCall(func);
+      FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
       funcCall->args = args;
       funcCall->receiver = receiver;
-      return ExprPtr::ucast(funcCall);
+      return funcCall;
    } else {
       // for anything else, it's a variable reference
       toker.putBack(tok1);
@@ -276,9 +275,9 @@ ExprPtr Parser::parsePostIdent(const ExprPtr &container, const Token &ident) {
       if (var->context->scope == Context::instance) {
          // if there's no container, try to use an implicit "this"
          ExprPtr receiver = container ? container : makeThisRef(ident);
-         return context->builder.createFieldRef(receiver, var);
+         return context->builder.createFieldRef(receiver.get(), var.get());
       } else {
-         return ExprPtr::ucast(context->builder.createVarRef(var));
+         return context->builder.createVarRef(var.get());
       }
    }
 
@@ -313,7 +312,7 @@ ExprPtr Parser::parseExpression() {
 	 if (!tok.isIdent())
 	    error(tok, "identifier expected");
 
-         expr = parsePostIdent(expr, tok);
+         expr = parsePostIdent(expr.get(), tok);
       } else if (isBinaryOperator(tok)) {
          // parse the right-hand-side expression
          ExprPtr rhs = parseExpression();
@@ -330,9 +329,9 @@ ExprPtr Parser::parseExpression() {
                             " undefined."
                             )
                   );
-         FuncCallPtr funcCall = context->builder.createFuncCall(func);
+         FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
          funcCall->args = exprs;
-         expr = ExprPtr::ucast(funcCall);
+         expr = funcCall;
       } else {
 	 // next token is not part of the expression
 	 break;
@@ -375,7 +374,7 @@ TypeDefPtr Parser::parseTypeSpec() {
       unexpected(tok, "type identifier expected");
    
    VarDefPtr def = context->lookUp(tok.getData());
-   TypeDef *typeDef = dynamic_cast<TypeDef *>(def.obj);
+   TypeDef *typeDef = TypeDefPtr::rcast(def);
    if (!typeDef)
       error(tok, SPUG_FSTR(tok.getData() << " is not a type."));
    
@@ -412,9 +411,9 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
 
       // XXX need to check for a default variable assignment
       
-      ArgDefPtr argDef = context->builder.createArgDef(argType, varName);
+      ArgDefPtr argDef = context->builder.createArgDef(argType.get(), varName);
       args.push_back(argDef);
-      addDef(VarDefPtr::ucast(argDef));
+      addDef(argDef.get());
       
       // check for a comma
       tok = toker.getToken();
@@ -429,7 +428,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
 //     ^                         ^
 // type function() { }
 //     ^              ^
-bool Parser::parseDef(const TypeDefPtr &type) {
+bool Parser::parseDef(TypeDef *type) {
    Token tok2 = toker.getToken();
    // XXX if it's '<', make sure the type is a generic and parse 
    // nested types.
@@ -448,7 +447,7 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          // it's a variable.  Emit a variable definition and store it 
          // in the context.
          VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
-         addDef(varDef);
+         addDef(varDef.get());
          return true;
       } else if (tok3.isAssign()) {
          ExprPtr initializer;
@@ -473,9 +472,9 @@ bool Parser::parseDef(const TypeDefPtr &type) {
             error(tok4, "Incorrect type for initializer.");
             
          VarDefPtr varDef = type->emitVarDef(*context, varName,
-                                             initializer
+                                             initializer.get()
                                              );
-         addDef(varDef);
+         addDef(varDef.get());
          return true;
       } else if (tok3.isLParen()) {
          // function definition
@@ -485,17 +484,18 @@ bool Parser::parseDef(const TypeDefPtr &type) {
          bool isMethod = classCtx ? true : false;
 
          // push a new context, arg defs will be stored in the new context.
-         ContextStackFrame cstack(*this,
-                                  context->createSubContext(Context::local)
-                                  );
+         ContextPtr subCtx = context->createSubContext(Context::local);
+         ContextStackFrame cstack(*this, subCtx.get());
          context->returnType = type;
          
          // if this is a method, add the "this" variable
          if (isMethod) {
             assert(classCtx && "method not in class context.");
             ArgDefPtr argDef =
-               context->builder.createArgDef(classCtx->returnType, "this");
-            addDef(argDef);
+               context->builder.createArgDef(classCtx->returnType.get(), 
+                                             "this"
+                                             );
+            addDef(argDef.get());
          }
 
          // parse the arguments
@@ -524,11 +524,11 @@ bool Parser::parseDef(const TypeDefPtr &type) {
                // currently reporting the error on the top brace
                error(tok3, "missing return statement for non-void function.");
 
-         context->builder.emitEndFunc(*context, funcDef);
+         context->builder.emitEndFunc(*context, funcDef.get());
          cstack.restore();
          
          // store the new definition in the context.
-         addDef(VarDefPtr::ucast(funcDef));
+         addDef(funcDef.get());
          
          return true;
       } else {
@@ -547,7 +547,7 @@ bool Parser::parseDef(const TypeDefPtr &type) {
 bool Parser::parseIfClause() {
    Token tok = toker.getToken();
    if (tok.isLCurly()) {
-      ContextStackFrame cstack(*this, context->createSubContext());
+      ContextStackFrame cstack(*this, context->createSubContext().get());
       bool terminal = parseBlock(true);
       cstack.restore();
       return terminal;
@@ -576,7 +576,7 @@ bool Parser::parseIfStmt() {
    if (!tok.isRParen())
       unexpected(tok, "expected closing paren");
    
-   BranchpointPtr pos = context->builder.emitIf(*context, cond);
+   BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
 
    bool terminalIf = parseIfClause();
    bool terminalElse = false;
@@ -584,12 +584,12 @@ bool Parser::parseIfStmt() {
    // check for the "else"
    tok = toker.getToken();
    if (tok.isElse()) {
-      pos = context->builder.emitElse(*context, pos, terminalIf);
+      pos = context->builder.emitElse(*context, pos.get(), terminalIf);
       terminalElse = parseIfClause();
-      context->builder.emitEndIf(*context, pos, terminalElse);
+      context->builder.emitEndIf(*context, pos.get(), terminalElse);
    } else {
       toker.putBack(tok);
-      context->builder.emitEndIf(*context, pos, terminalIf);
+      context->builder.emitEndIf(*context, pos.get(), terminalIf);
    }
 
    // the if is terminal if both conditions are terminal   
@@ -610,9 +610,9 @@ bool Parser::parseWhileStmt() {
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
-   BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr);
+   BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr.get());
    bool terminal = parseIfClause();
-   context->builder.emitEndWhile(*context, pos);
+   context->builder.emitEndWhile(*context, pos.get());
    return terminal;
 }
 
@@ -657,7 +657,7 @@ void Parser::parseReturnStmt() {
    
    // emit all of the cleanups for the function and the return
    context->emitCleanups(Context::function);
-   context->builder.emitReturn(*context, expr);
+   context->builder.emitReturn(*context, expr.get());
 
    tok = toker.getToken();   
    if (tok.isEnd() || tok.isRCurly())
@@ -715,14 +715,14 @@ TypeDefPtr Parser::parseClassDef() {
        classContext->parents.push_back((*iter)->context);
 
    // push the context
-   ContextStackFrame cstack(*this, lexicalContext);
+   ContextStackFrame cstack(*this, lexicalContext.get());
    
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
    TypeDefPtr type = classContext->returnType =
       context->builder.emitBeginClass(*classContext, className, bases);
    type->context = classContext;
-   cstack.parent().getDefContext()->addDef(type);
+   cstack.parent().getDefContext()->addDef(type.get());
 
    // parse the class body   
    while (true) {
@@ -740,14 +740,14 @@ TypeDefPtr Parser::parseClassDef() {
             continue;
          } else {
             toker.putBack(tok);
-            parseDef(newType);
+            parseDef(newType.get());
          }
       }
       
       // parse some other kind of definition
       toker.putBack(tok);
       TypeDefPtr type = parseTypeSpec();
-      parseDef(type);
+      parseDef(type.get());
    }
 
    classContext->complete = true;

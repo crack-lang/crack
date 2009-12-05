@@ -127,7 +127,7 @@ class Context : public spug::RCBase {
                           const std::vector<ExprPtr> &vals
                           );
         void createModule(const char *name);
-        void addDef(const VarDefPtr &def);
+        void addDef(VarDef *def);
         
         /** Funcs to iterate over the set of definitions. */
         /// @{

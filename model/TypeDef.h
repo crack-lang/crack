@@ -12,6 +12,8 @@ SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(VarDef);
 
+SPUG_RCPTR(TypeDef);
+
 // a type.
 class TypeDef : public VarDef {
     public:
@@ -30,7 +32,7 @@ class TypeDef : public VarDef {
         
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,
-                             const ExprPtr &initializer
+                             Expr *initializer
                              );
         
         /** 
