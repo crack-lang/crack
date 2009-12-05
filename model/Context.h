@@ -46,6 +46,12 @@ class Context : public spug::RCBase {
             composite  // scope is just a composition of parent scopes
         };
         
+        // indicates the depth to recurse to when generating cleanup code.
+        enum Depth {
+            block, // do not recurse - just this context.
+            function // recurse all the way to the function context
+        };
+        
         typedef std::vector<ContextPtr> ContextVec;
         ContextVec parents;
 
@@ -131,6 +137,12 @@ class Context : public spug::RCBase {
         
         /** Get or create a string constsnt. */
         StrConstPtr getStrConst(const std::string &value);
+        
+        /** 
+         * Emit all of the cleanup code for given local scope.
+         * @param depth how deep in the context stack to clean.
+         */
+        void emitCleanups(Depth depth);
         
 };
 

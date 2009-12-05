@@ -125,6 +125,19 @@ bool Parser::parseStatement(bool defsAllowed) {
    return false;
 }
 
+namespace {
+   // emit cleanups for the block unless there was a terminal statement
+   inline bool emitCleanups(const ContextPtr &context,
+                            bool gotTerminalStatement
+                            ) {
+      if (gotTerminalStatement)
+         return true;
+      
+      context->emitCleanups(Context::block);
+      return false;
+   }
+}
+
 bool Parser::parseBlock(bool nested) {
    Token tok;
 
@@ -144,12 +157,12 @@ bool Parser::parseBlock(bool nested) {
       // nested or not.
       if (tok.isRCurly()) {
          if (nested)
-            return gotTerminalStatement;
+            return emitCleanups(context, gotTerminalStatement);
          else
             unexpected(tok, "expected statement or closing brace.");
       } else if (tok.isEnd()) {
          if (!nested)
-            return gotTerminalStatement;
+            return emitCleanups(context, gotTerminalStatement);
 	 else
 	    unexpected(tok, "expected statement or end-of-file");
       }
@@ -620,6 +633,7 @@ void Parser::parseReturnStmt() {
                           "returning " << context->returnType->name
                          )
                );
+      context->emitCleanups(Context::function);
       context->builder.emitReturn(*context, 0);
       return;
    }
@@ -641,6 +655,8 @@ void Parser::parseReturnStmt() {
                       )
             );
    
+   // emit all of the cleanups for the function and the return
+   context->emitCleanups(Context::function);
    context->builder.emitReturn(*context, expr);
 
    tok = toker.getToken();   

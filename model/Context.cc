@@ -1,13 +1,14 @@
 
 #include "Context.h"
 
-#include "model/BuilderContextData.h"
-#include "model/OverloadDef.h"
-#include "model/VarDefImpl.h"
 #include "builder/Builder.h"
-#include "VarDef.h"
+#include "BuilderContextData.h"
+#include "OverloadDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"
+#include "VarDef.h"
+#include "VarDefImpl.h"
+#include "VarRef.h"
 
 using namespace model;
 using namespace std;
@@ -177,4 +178,31 @@ StrConstPtr Context::getStrConst(const std::string &value) {
         globalData->strConstTable[value] = strConst;
         return strConst;
     }
+}
+
+void Context::emitCleanups(Context::Depth depth) {
+    for (VarDefMap::iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         ) {
+        VarDef *def = iter->second.obj;
+        VarDefPtr release;
+        if (def->type && def->type->context && 
+            (release = def->type->context->lookUp("release"))
+            ) {
+            // Create a release expression for the variable and emit it.
+            FuncCallPtr releaseExpr = new FuncCall(FuncDefPtr::dcast(release));
+            releaseExpr->receiver = new VarRef(def);
+            releaseExpr->emit(*this);
+        }
+    }
+    
+    // do cleanups on the parent contexts
+    if (depth != block)
+        for (ContextVec::iterator iter = parents.begin();
+             iter != parents.end();
+             ++iter
+             )
+            if ((*iter)->scope == local)
+                (*iter)->emitCleanups(depth);
 }

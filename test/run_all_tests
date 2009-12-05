@@ -116,4 +116,29 @@ test_output 'internal references of base class inst vars' \
     B b; b.init(); printint(b.f());' \
     100
 
+c='class A { int32 s; void i(int32 s0) {s=s0} 
+             void release() {printint(s)} };'
+
+test_output 'simple scope release' \
+    "$c void func() { A a; a.i(2); printint(1)} func()" \
+    12
+
+test_output 'release on return void' \
+    "$c void func() { A a; a.i(2); printint(1); return } func()" \
+    12
+
+test_output 'release on return expr' \
+    "$c int32 func() { A a; a.i(2); printint(1); return 0} func()" \
+    12
+
+f="void func(int32 val) { A a; a.i(5); printint(1); 
+                          if (val) { A b; b.i(4); printint(2); return; }
+                          printint(3); }"
+test_output 'premature return in nested context' \
+    "$c $f func(1)" \
+    1245
+test_output 'premature return in nested context' \
+    "$c $f func(0)" \
+    135
+
 exit $rc
