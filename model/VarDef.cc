@@ -14,6 +14,8 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
     context(0) {
 }
 
+VarDef::~VarDef() {}
+
 void VarDef::emitAssignment(Context &context, Expr *expr) {
     impl->emitAssignment(context, this, expr);
 }

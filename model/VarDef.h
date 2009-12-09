@@ -24,6 +24,7 @@ class VarDef : public spug::RCBase {
         VarDefImplPtr impl;
 
         VarDef(TypeDef *type, const std::string &name);
+        virtual ~VarDef();
         
         void emitAssignment(Context &context, Expr *expr);
         
