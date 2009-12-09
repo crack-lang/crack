@@ -120,7 +120,7 @@ class Context : public spug::RCBase {
          */
         OverloadDefPtr aggregateOverloads(const std::string &varName);
 
-        VarDefPtr lookUp(const std::string &varName);
+        VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         
         /** Looks up a function matching the given expression list. */
         FuncDefPtr lookUp(const std::string &varName,

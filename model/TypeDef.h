@@ -10,6 +10,7 @@ namespace model {
 
 SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
+SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(VarDef);
 
 SPUG_RCPTR(TypeDef);
@@ -30,6 +31,12 @@ class TypeDef : public VarDef {
         // XXX need a metatype
         TypeDef(const std::string &name) : VarDef(0, name) {}
         
+        /**
+         * Overrides VarDef::hasInstSlot() to return false (nested classes 
+         * don't need an instance slot).
+         */
+        virtual bool hasInstSlot();
+        
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,
                              Expr *initializer
@@ -40,7 +47,7 @@ class TypeDef : public VarDef {
          * "other" either equals "this" or is a subclass of "this".
          */
         bool matches(const TypeDef &other);
-
+        
         /**
          * Emit code to "narrow" the type context to the specified 
          * target type (which must be a base class of this type).
@@ -57,6 +64,21 @@ class TypeDef : public VarDef {
          * @return true if target is a base type.
          */
         virtual bool emitNarrower(TypeDef &target);
+
+        /**
+         * Create the default initializer.
+         */
+        FuncDefPtr createDefaultInit();
+
+        /**
+         * Create a "new" function to wrap the specified "init" function.
+         */
+        void createNewFunc(FuncDef *initFunc);
+
+        /**
+         * Fill in everything that's missing from the class.
+         */
+        void rectify();
 
 };
 

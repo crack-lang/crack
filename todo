@@ -1,8 +1,14 @@
 
+-   Reference counted objects
+    -   Object base class
+    -   implicit call to "bind()" before return and on assignment of a 
+        variable value
+    -   implicit call to "release()" for all intermediate objects
+    
+-   cleanup:
+    -   need to be able to define "oper" funcs.  Make "release", "init" and 
+        "bind" oper funcs.
 -   function arguments are currently SSA values, which means this won't work:
     type func(int a) { a = 100; }
--   nested compilation so I can write lots of unit tests
--   simple operations (integer arithmetic)
--   as it stands, VarRef uses VarDef.impl to emit reference/assign for 
-    different variable scopes.  This doesn't work for field variables, where 
-    we need to use a different type of VarRef.
+-   nested compilation so I can write lots of unit tests (shell scripted unit 
+    tests are working just fine)

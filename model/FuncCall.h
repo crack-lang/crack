@@ -15,8 +15,8 @@ SPUG_RCPTR(FuncCall);
 class FuncCall : public Expr {
     public:
         FuncDefPtr func;
-        typedef std::vector<ExprPtr> ExprVector;
-        ExprVector args;
+        typedef std::vector<ExprPtr> ExprVec;
+        ExprVec args;
         
         // if FuncCall is a method, this is the receiver (the "this"), 
         // otherwise it will be null

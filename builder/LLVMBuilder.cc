@@ -24,6 +24,7 @@
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
+#include <model/InstVarDef.h>
 #include <model/IntConst.h>
 #include <model/StrConst.h>
 #include <model/TypeDef.h>
@@ -36,7 +37,7 @@ using namespace builder;
 using namespace std;
 using namespace llvm;
 using namespace model;
-typedef model::FuncCall::ExprVector ExprVector;
+typedef model::FuncCall::ExprVec ExprVec;
 
 namespace {
 
@@ -567,7 +568,7 @@ LLVMBuilder::LLVMBuilder() :
 void LLVMBuilder::emitFuncCall(Context &context,
                                FuncDef *funcDef, 
                                Expr *receiver,
-                               const FuncCall::ExprVector &args) {
+                               const FuncCall::ExprVec &args) {
 
     // see if this is s special function
     BinOpDef *binOp = BinOpDefPtr::cast(funcDef);
@@ -587,7 +588,7 @@ void LLVMBuilder::emitFuncCall(Context &context,
     }
     
     // emit the arguments
-    for (ExprVector::const_iterator iter = args.begin(); iter < args.end(); 
+    for (ExprVec::const_iterator iter = args.begin(); iter < args.end(); 
          ++iter) {
         (*iter)->emit(context);
         valueArgs.push_back(lastValue);
@@ -610,6 +611,16 @@ void LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
 
 void LLVMBuilder::emitIntConst(Context &context, const IntConst &val) {
     lastValue = dynamic_cast<const BIntConst &>(val).rep;
+}
+
+void LLVMBuilder::emitAlloc(Context &context, TypeDef *type) {
+    // XXX need to be able to do this for an incomplete class when we 
+    // allow user defined oper new.
+    BTypeDef *btype = BTypeDefPtr::cast(type);
+    assert(btype && "bad TypeDef");
+    PointerType *tp =
+        cast<PointerType>(const_cast<Type *>(btype->rep));
+    lastValue = builder.CreateMalloc(tp->getElementType());
 }
 
 BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
@@ -855,12 +866,6 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                   Expr *initializer,
                                   bool staticScope
                                   ) {
-    // do initializion
-    if (initializer)
-        initializer->emit(context);
-    else
-        type->defaultInitializer->emit(context);
-    
     // XXX use InternalLinkage for variables starting with _ (I think that 
     // might work)
 
@@ -869,6 +874,14 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     
     // get the defintion context
     ContextPtr defCtx = context.getDefContext();
+    
+    // do initialization (unless we're in instance scope - instance variables 
+    // get initialized in the constructors)
+    if (defCtx->scope != Context::instance)
+        if (initializer)
+            initializer->emit(context);
+        else
+            type->defaultInitializer->emit(context);
     
     Value *var = 0;
     switch (defCtx->scope) {
@@ -888,8 +901,13 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                 unsigned idx = bdata->fieldCount++;
                 
                 // instance variables are unlike the other stored types - we 
-                // use a different kind of implementation object.
-                VarDefPtr varDef = new VarDef(type, name);
+                // use the InstVarDef class to preserve the initializer and a 
+                // different kind of implementation object.
+                VarDefPtr varDef =
+                    new InstVarDef(type, name, 
+                                   initializer ? initializer :
+                                                 type->defaultInitializer.get()
+                                   );
                 varDef->impl = new BInstVarDefImpl(idx);
                 return varDef;
             }

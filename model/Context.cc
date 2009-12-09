@@ -78,14 +78,14 @@ namespace {
             overload = new OverloadDef(name);
     }
     
-    inline void mergeOverloads(OverloadDef::FuncVec &aggregator,
-                               const OverloadDef::FuncVec &newSubset
+    inline void mergeOverloads(OverloadDef::FuncList &aggregator,
+                               const OverloadDef::FuncList &newSubset
                                ) {
-        for (OverloadDef::FuncVec::const_iterator iter = newSubset.begin();
+        for (OverloadDef::FuncList::const_iterator iter = newSubset.begin();
              iter != newSubset.end();
              ++iter
              ) 
-            aggregator.push_back(*iter);
+            aggregator.push_front(*iter);
     }
 }
 
@@ -127,7 +127,10 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
     if (func) {
         // make sure we've got one
         allocOverload(overloads, varName);
-        overloads->funcs.push_back(func);
+        
+        // add it to the front of the list so that it will resolve before any 
+        // parents with the same signature
+        overloads->funcs.push_front(func);
     }
     
     // this could be overloads or null
@@ -135,11 +138,11 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
 }
         
 
-VarDefPtr Context::lookUp(const std::string &varName) {
+VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end())
         return iter->second;
-    else if (parents.size())
+    else if (recurse && parents.size())
         for (ContextVec::iterator parent_iter = parents.begin();
              parent_iter != parents.end();
              ++parent_iter

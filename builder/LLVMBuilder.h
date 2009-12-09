@@ -38,7 +38,7 @@ class LLVMBuilder : public Builder {
         virtual void emitFuncCall(model::Context &context, 
                                   model::FuncDef *func,
                                   model::Expr *receiver,
-                                  const model::FuncCall::ExprVector &args
+                                  const model::FuncCall::ExprVec &args
                                   );
         
         virtual void emitStrConst(model::Context &context,
@@ -47,6 +47,8 @@ class LLVMBuilder : public Builder {
         
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val);
+
+        virtual void emitAlloc(model::Context &context, model::TypeDef *type);
 
         virtual model::BranchpointPtr emitIf(model::Context &context,
                                              model::Expr *cond);

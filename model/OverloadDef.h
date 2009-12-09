@@ -2,6 +2,8 @@
 #ifndef _model_OverloadDef_h_
 #define _model_OverloadDef_h_
 
+#include <list>
+
 #include "FuncDef.h"
 
 namespace model {
@@ -14,8 +16,8 @@ SPUG_RCPTR(OverloadDef);
 /** An overloaded function. */
 class OverloadDef : public VarDef {
     public:
-        typedef std::vector<FuncDefPtr> FuncVec;
-        FuncVec funcs;
+        typedef std::list<FuncDefPtr> FuncList;
+        FuncList funcs;
 
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 

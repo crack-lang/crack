@@ -4,7 +4,7 @@
 
 #include <spug/RCPtr.h>
 
-#include "model/FuncCall.h" // for FuncCall::ExprVector
+#include "model/FuncCall.h" // for FuncCall::ExprVec
 #include "model/FuncDef.h" // for FuncDef::Flags
 
 namespace model {
@@ -29,7 +29,7 @@ class Builder {
         virtual void emitFuncCall(model::Context &context,
                                   model::FuncDef *func,
                                   model::Expr *receiver,
-                                  const model::FuncCall::ExprVector &args
+                                  const model::FuncCall::ExprVec &args
                                   ) = 0;
         
         virtual void emitStrConst(model::Context &context,
@@ -38,6 +38,13 @@ class Builder {
 
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val) = 0;
+        
+        /**
+         * Emit an allocator for the specified type.
+         */
+        virtual void emitAlloc(model::Context &context,
+                               model::TypeDef *type
+                               ) = 0;
         
         /**
          * Emit the beginning of an "if" statement, returns a Branchpoint that 

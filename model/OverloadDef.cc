@@ -10,7 +10,7 @@ using namespace std;
 using namespace model;
 
 FuncDefPtr OverloadDef::getMatch(const vector<ExprPtr> &args) {
-    for (FuncVec::iterator iter = funcs.begin();
+    for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
         if ((*iter)->matches(args))

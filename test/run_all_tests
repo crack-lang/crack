@@ -137,8 +137,18 @@ f="void func(int32 val) { A a; a.i(5); printint(1);
 test_output 'premature return in nested context' \
     "$c $f func(1)" \
     1245
-test_output 'premature return in nested context' \
+
+test_output 'premature return bypassing nested context' \
     "$c $f func(0)" \
     135
+
+test_output 'explicit default constructor' \
+    'class A { int32 val; void init() { val = 100; } };
+     A a; printint(a.val);' \
+    100
+
+test_output 'implicit default constructor' \
+    'class A { int32 val; }; A a; printint(a.val);' \
+    0
 
 exit $rc
