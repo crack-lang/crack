@@ -15,7 +15,7 @@ class VarRef : public Expr {
     public:
         // the definition of the variable we're referencing
         VarDefPtr def;
-        VarRef(const VarDefPtr &def);
+        VarRef(VarDef *def);
         
         virtual void emit(Context &context);
 };

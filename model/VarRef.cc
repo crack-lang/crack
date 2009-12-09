@@ -9,7 +9,7 @@
 
 using namespace model;
 
-VarRef::VarRef(const VarDefPtr &def) :
+VarRef::VarRef(VarDef *def) :
     Expr(def->type),
     def(def) {
 }
