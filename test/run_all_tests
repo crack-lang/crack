@@ -168,6 +168,8 @@ test_output 'integer comparison operators' \
      if (0 <= 1) printint(1); else printint(0);' \
      111111111111
 
-
+test_output 'implicit conversion from int to bool in condition' \
+    'if (1) puts("yes"); if (0) puts("no");' \
+    yes
 
 exit $rc
