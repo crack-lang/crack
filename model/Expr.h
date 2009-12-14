@@ -21,6 +21,14 @@ class Expr : public spug::RCBase {
 
         /** Emit the expression in the given context. */
         virtual void emit(Context &context) = 0;        
+        
+        /**
+         * Emit the expression for use in a conditional context.
+         * This defaults to calling Builder::emitTest().  Builder-derived 
+         * classes should override in cases where there is a more appropriate 
+         * path.
+         */
+        virtual void emitCond(Context &context);
 };
 
 } // namespace model

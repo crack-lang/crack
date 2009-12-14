@@ -14,7 +14,7 @@ class Token {
       typedef enum { ifKw, elseKw, whileKw, returnKw, classKw, ident, string, 
                      semi, comma, colon, define, dot, assign, lparen, rparen, 
                      lcurly, rcurly, oper, integer, plus, minus, asterisk, 
-                     slash, percent, end
+                     slash, percent, bang, gt, lt, eq, ne, ge, le, end
 		    } Type;
 
    private:
@@ -72,7 +72,33 @@ class Token {
       bool isAsterisk() const { return type == asterisk; }
       bool isSlash() const { return type == slash; }
       bool isPercent() const { return type == percent; }
+      bool isNot() const { return type == bang; }
+      bool isGT() const { return type == gt; }
+      bool isLT() const { return type == lt; }
+      bool isEQ() const { return type == eq; }
+      bool isNE() const { return type == ne; }
+      bool isGE() const { return type == ge; }
+      bool isLE() const { return type == ne; }
       bool isEnd() const { return type == end; }
+      
+      bool isBinOp() const {
+         switch (type) {
+            case plus:
+            case minus:
+            case asterisk:
+            case slash:
+            case percent:
+            case eq:
+            case ne:
+            case lt:
+            case gt:
+            case le:
+            case ge:
+               return true;
+            default:
+               return false;
+         }
+      }
 
       /** @} */
 

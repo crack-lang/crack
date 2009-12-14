@@ -50,6 +50,10 @@ class LLVMBuilder : public Builder {
 
         virtual void emitAlloc(model::Context &context, model::TypeDef *type);
 
+        virtual void emitTest(model::Context &context,
+                              model::Expr *expr
+                              );
+
         virtual model::BranchpointPtr emitIf(model::Context &context,
                                              model::Expr *cond);
         

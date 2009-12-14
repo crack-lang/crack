@@ -179,14 +179,6 @@ bool Parser::parseBlock(bool nested) {
    }
 }
 
-bool Parser::isBinaryOperator(const Token &tok) {
-   if (tok.isPlus() || tok.isMinus() || tok.isAsterisk() || tok.isSlash() || 
-       tok.isPercent())
-      return true;
-   else
-      return false;
-}
-
 ExprPtr Parser::makeThisRef(const Token &ident) {
    VarDefPtr thisVar = context->lookUp("this");
    if (!thisVar)
@@ -314,14 +306,14 @@ ExprPtr Parser::parseExpression() {
 	    error(tok, "identifier expected");
 
          expr = parsePostIdent(expr.get(), tok);
-      } else if (isBinaryOperator(tok)) {
+      } else if (tok.isBinOp()) {
          // parse the right-hand-side expression
          ExprPtr rhs = parseExpression();
          
          FuncCall::ExprVec exprs(2);
          exprs[0] = expr;
          exprs[1] = rhs;
-         char name[7] = { 'o', 'p', 'e', 'r', ' ', tok.getData()[0] };
+         std::string name = "oper " + tok.getData();
          FuncDefPtr func = context->lookUp(name, exprs);
          if (!func)
             error(tok,
@@ -566,8 +558,20 @@ bool Parser::parseIfStmt() {
       unexpected(tok, "expected left paren after if");
    
    ExprPtr cond = parseExpression();
-   if (!context->globalData->boolType->matches(*cond->type))
-      error(tok, "Condition is not boolean.");
+   if (!context->globalData->boolType->matches(*cond->type)) {
+      
+      // try to convert to a bool
+      FuncCall::ExprVec args;
+      FuncDefPtr converter = cond->type->context->lookUp("toBool", args);
+      if (converter) {
+         FuncCallPtr convCall = 
+            context->builder.createFuncCall(converter.get());
+         convCall->receiver = cond;
+         cond = convCall.get();
+      } else {
+         error(tok, "Condition is not boolean.");
+      }
+   }
    
    tok = toker.getToken();
    if (!tok.isRParen())

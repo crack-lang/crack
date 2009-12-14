@@ -47,6 +47,14 @@ class Builder {
                                ) = 0;
         
         /**
+         * Emit a test for non-zero.  This is the default for emitting 
+         * conditionals expressions.
+         */
+        virtual void emitTest(model::Context &context,
+                              model::Expr *expr
+                              ) = 0;
+
+        /**
          * Emit the beginning of an "if" statement, returns a Branchpoint that 
          * must be passed to the subsequent emitElse() or emitEndIf().
          */

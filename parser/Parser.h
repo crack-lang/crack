@@ -97,9 +97,6 @@ class Parser {
        */
       bool parseBlock(bool nested);
 
-      /** returns true if the token is a binary operator. */
-      static bool isBinaryOperator(const Token &tok);
-      
       /** Create a reference to the "this" variable, error if there is none. */
       model::ExprPtr makeThisRef(const Token &ident);
 

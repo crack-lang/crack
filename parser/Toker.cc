@@ -45,12 +45,17 @@ Token Toker::readToken() {
         st_none, 
         st_ident, 
         st_slash,
-        st_colon,
+        st_digram,
         st_comment, 
         st_string, 
         st_escapeChar,
         st_integer
     } state = st_none;
+    
+    // information on the last character for digrams
+    char ch1;
+    Token::Type t1, t2;
+
     stringstream buf;
  
     while (true) {
@@ -76,7 +81,17 @@ Token Toker::readToken() {
                 } else if (ch == ',') {
                     return Token(Token::comma, ",", locationMap.getLocation());
                 } else if (ch == '=') {
-                    return Token(Token::assign, "=", locationMap.getLocation());
+                    ch1 = ch; t1 = Token::assign; t2 =Token::eq;
+                    state = st_digram;
+                } else if (ch == '!') {
+                    ch1 = ch; t1 = Token::bang; t2 =Token::ne;
+                    state = st_digram;
+                } else if (ch == '>') {
+                    ch1 = ch; t1 = Token::gt; t2 =Token::ge;
+                    state = st_digram;
+                } else if (ch == '<') {
+                    ch1 = ch; t1 = Token::lt; t2 =Token::le;
+                    state = st_digram;
                 } else if (ch == '(') {
                     return Token(Token::lparen, "(", locationMap.getLocation());
                 } else if (ch == ')') {
@@ -101,7 +116,8 @@ Token Toker::readToken() {
                     terminator = ch;
                     state = st_string;
                 } else if (ch == ':') {
-                    state = st_colon;
+                    ch1 = ch; t1 = Token::colon; t2 = Token::define;
+                    state = st_digram;
                 } else if (ch == '.') {
                     return Token(Token::dot, ".", locationMap.getLocation());
                 } else if (isdigit(ch)) {
@@ -115,6 +131,18 @@ Token Toker::readToken() {
                                       );
                 }
                 break;
+            
+            case st_digram:
+                if (ch == '=') {
+                    char all[3] = {ch1, ch, 0};
+                    return Token(t2, all, locationMap.getLocation());
+                } else {
+                    char all[2] = {ch1, 0};
+                    src.putback(ch);
+                    return Token(t1, all, locationMap.getLocation());
+                }
+            
+
    
             case st_ident:
    
@@ -138,16 +166,6 @@ Token Toker::readToken() {
                 }
                 break;
             
-            case st_colon:
-                if (ch == '=') {
-                    return Token(Token::define, ":=", 
-                                 locationMap.getLocation()
-                                 );
-                } else {
-                    return Token(Token::colon, ":", locationMap.getLocation());
-                }
-                break;
-
             case st_comment:
    
                 // newline character takes us out of the comment state

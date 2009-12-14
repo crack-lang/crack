@@ -9,6 +9,7 @@ libcrack_la_SOURCES = \
     model/AllocExpr.cc \
     model/AssignExpr.cc \
     model/Context.cc \
+    model/Expr.cc \
     model/FuncCall.cc \
     model/FuncDef.cc \
     model/IntConst.cc \

@@ -55,8 +55,10 @@ test_output 'return in module scope' \
     'ParseError: <stdin>:2: Return statement not allowed in module scope' \
 
 test_output 'simple class definition' 'class Foo {};' ''
-test_output 'class with base class' 'class Foo : int32 {};' ''
-test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
+test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
+# this was shabby to begin with, restore this and more tests when we get real 
+# multiple inheritence working.
+#test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
 test_output 'bad class definition' 'class Foo xxx;' \
     'ParseError: <stdin>:1: token xxx was not expected at this time, '\
 'expected colon or opening brace.'
@@ -150,5 +152,22 @@ test_output 'explicit default constructor' \
 test_output 'implicit default constructor' \
     'class A { int32 val; }; A a; printint(a.val);' \
     0
+
+test_output 'integer comparison operators' \
+    'if (0 == 0) printint(1); else printint(0);
+     if (1 == 0) printint(0); else printint(1);
+     if (0 != 0) printint(0); else printint(1);
+     if (0 != 1) printint(1); else printint(0);
+     if (1 > 0) printint(1); else printint(0);
+     if (1 > 1) printint(0); else printint(1);
+     if (0 < 1) printint(1); else printint(0);
+     if (1 < 1) printint(0); else printint(1);
+     if (1 >= 0) printint(1); else printint(0);
+     if (1 >= 1) printint(1); else printint(0);
+     if (1 >= 2) printint(0); else printint(1);
+     if (0 <= 1) printint(1); else printint(0);' \
+     111111111111
+
+
 
 exit $rc
