@@ -6,16 +6,19 @@
 // LLVM includes
 #include <stddef.h>
 #include <stdlib.h>
-#include "llvm/LinkAllPasses.h"
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/PassManager.h"
-#include "llvm/CallingConv.h"
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetData.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include <llvm/LinkAllPasses.h>
+#include <llvm/Module.h>
+#include <llvm/Function.h>
+#include <llvm/ModuleProvider.h>
+#include <llvm/PassManager.h>
+#include <llvm/CallingConv.h>
+#include <llvm/Analysis/Verifier.h>
+#include <llvm/Assembly/PrintModulePass.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetData.h>
+#include <llvm/Target/TargetSelect.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
 #include <model/ArgDef.h>
 #include <model/Branchpoint.h>
@@ -82,7 +85,10 @@ namespace {
             llvm::Value *rep;
             BIntConst(BTypeDef *type, long val) :
                 IntConst(type, val),
-                rep(llvm::ConstantInt::get(type->rep, val)) {
+                rep(ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
+                                     val
+                                     )
+                    ) {
             }
     };
     
@@ -161,7 +167,7 @@ namespace {
                 PlaceholderInstruction(type, aggregate, index, insertBefore) {
             }
 
-            Instruction *clone() const {
+            Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteInstVarRef(getType(), aggregate, index);
             }
             
@@ -196,7 +202,7 @@ namespace {
                 rval(rval) {
             }
 
-            Instruction *clone() const {
+            Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteInstVarAssign(getType(), aggregate, index, 
                                                    rval
                                                    );
@@ -229,7 +235,7 @@ namespace {
                 PlaceholderInstruction(type, aggregate, index, insertBefore) {
             }
 
-            Instruction *clone() const {
+            Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteNarrower(getType(), aggregate, index);
             }
             
@@ -431,7 +437,8 @@ namespace {
 
                 // register the function with LLVM
                 const Type *rawRetType =
-                    returnType->rep ? returnType->rep : Type::VoidTy;
+                    returnType->rep ? returnType->rep : 
+                                      Type::getVoidTy(getGlobalContext());
                 FunctionType *funcType =
                     FunctionType::get(rawRetType, llvmArgs, false);
                 LLVMBuilder &builder = 
@@ -676,9 +683,12 @@ namespace {
 
 LLVMBuilder::LLVMBuilder() :
     module(0),
+    builder(getGlobalContext()),
     func(0),
     block(0),
     lastValue(0) {
+
+    InitializeNativeTarget();
 }
 
 void LLVMBuilder::emitFuncCall(Context &context,
@@ -750,8 +760,10 @@ void LLVMBuilder::emitTest(Context &context, Expr *expr) {
 
 BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
     // create blocks for the true and false conditions
-    BasicBlock *trueBlock = BasicBlock::Create("cond_true", func);
-    BBranchpointPtr result = new BBranchpoint(BasicBlock::Create("cond_false",
+    LLVMContext &lctx = getGlobalContext();
+    BasicBlock *trueBlock = BasicBlock::Create(lctx, "cond_true", func);
+    BBranchpointPtr result = new BBranchpoint(BasicBlock::Create(lctx,
+                                                                 "cond_false",
                                                                  func
                                                                  )
                                               );
@@ -773,7 +785,7 @@ BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
     // create a block to come after the else and jump to it from the current 
     // "if true" block.
     BasicBlock *falseBlock = bpos->block;
-    bpos->block = BasicBlock::Create("cond_end", func);
+    bpos->block = BasicBlock::Create(getGlobalContext(), "cond_end", func);
     if (!terminal)
         builder.CreateBr(bpos->block);
     
@@ -798,14 +810,16 @@ void LLVMBuilder::emitEndIf(Context &context,
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 
                                            Expr *cond) {
-    BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create("while_end", 
+    LLVMContext &lctx = getGlobalContext();
+    BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create(lctx,
+                                                               "while_end", 
                                                                func
                                                                )
                                             );
 
     BasicBlock *whileCond = bpos->block2 =
-        BasicBlock::Create("while_cond", func);
-    BasicBlock *whileBody = BasicBlock::Create("while_body", func);
+        BasicBlock::Create(lctx, "while_cond", func);
+    BasicBlock *whileBody = BasicBlock::Create(lctx, "while_body", func);
     builder.CreateBr(whileCond);
     builder.SetInsertPoint(block = whileCond);
 
@@ -829,12 +843,6 @@ void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos) {
     builder.SetInsertPoint(block = bpos->block);
 }
 
-Value *emitGEP(IRBuilder<> &builder, Value *obj) {
-    Value *zero = llvm::ConstantInt::get(llvm::Type::Int32Ty, 0);
-    Value *gepArgs[] = { zero, zero };
-    return builder.CreateGEP(obj, zero);
-}
-    
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef::Flags flags,
                                       const string &name,
@@ -865,7 +873,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     f.finish(false);
 
     func = f.funcDef->rep;
-    block = BasicBlock::Create(name, func);
+    block = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(block);
     
     return f.funcDef;
@@ -898,8 +906,9 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
          ++iter
          )
         bdata->addBaseClass(BTypeDefPtr::rcast(*iter));
-    
-    bdata->type = new BTypeDef(name, PointerType::getUnqual(OpaqueType::get()));
+
+    OpaqueType *opaque = OpaqueType::get(getGlobalContext());
+    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque));
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
     return bdata->type.get();
 }
@@ -951,7 +960,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
         cast<PointerType>(const_cast<Type *>(bdata->type->rep));
     DerivedType *curType = 
         cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
-    Type *newType = StructType::get(members);
+    Type *newType = StructType::get(getGlobalContext(), members);
     curType->refineAbstractTypeTo(newType);
 
     // fix all instance variable uses that were created before the structure 
@@ -1027,19 +1036,19 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                 return varDef;
             }
 
-        case Context::module:
-            var = new GlobalVariable(tp->rep,
-                                    false, // isConstant
-                                    GlobalValue::ExternalLinkage, // linkage tp
-                                    
-                                    // initializer - this needs to be provided 
-                                    // or the global will be treated as an 
-                                    // extern.
-                                    Constant::getNullValue(tp->rep),
-                                    name,
-                                    module
-                                    );
+        case Context::module: {
+            GlobalValue *gval;
+            var = new GlobalVariable(*module, tp->rep, false, // isConstant
+                                     GlobalValue::ExternalLinkage, // linkage tp
+                                     
+                                     // initializer - this needs to be provided 
+                                     // or the global will be treated as an 
+                                     // extern.
+                                     Constant::getNullValue(tp->rep),
+                                     name
+                                     );
             break;
+        }
 
         case Context::local:
             var = builder.CreateAlloca(tp->rep, 0);
@@ -1060,22 +1069,24 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
  
 void LLVMBuilder::createModule(const char *name) {
     assert(!module);
-    module = new llvm::Module(name);
+    LLVMContext &lctx = getGlobalContext();
+    module = new llvm::Module(name, lctx);
     llvm::Constant *c =
-        module->getOrInsertFunction("__main__", llvm::Type::VoidTy, NULL);
+        module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create("__main__", func);
+    block = BasicBlock::Create(lctx, "__main__", func);
     builder.SetInsertPoint(block);
 }
 
 void LLVMBuilder::closeModule() {
     assert(module);
     builder.CreateRetVoid();
-    llvm::verifyModule(*module, llvm::PrintMessageAction);
+    verifyModule(*module, llvm::PrintMessageAction);
     
     // create the execution engine
-    execEng = llvm::ExecutionEngine::create(module);
+    execEng = ExecutionEngine::create(module);
+    assert(execEng && "execution engine is undefined");
 
     // optimize
     llvm::PassManager passMan;
@@ -1207,6 +1218,7 @@ extern "C" void printint(int val) {
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     Context::GlobalData *gd = context.globalData;
+    LLVMContext &lctx = getGlobalContext();
 
     // create the basic types
     
@@ -1215,19 +1227,19 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(voidType);
     
     llvm::Type *llvmBytePtrType = 
-        PointerType::getUnqual(llvm::IntegerType::get(8));
+        PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
     gd->byteptrType = byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
     gd->byteptrType->defaultInitializer = createStrConst(context, "");
     context.addDef(byteptrType);
     
-    const Type *llvmBoolType = IntegerType::get(1);
+    const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
     gd->boolType = boolType = new BTypeDef("bool", llvmBoolType);
     gd->boolType->defaultInitializer = new BIntConst(boolType, 0);
     context.addDef(boolType);
     
-    const llvm::Type *llvmInt32Type = llvm::IntegerType::get(32);
+    const llvm::Type *llvmInt32Type = Type::getInt32Ty(lctx);
     BTypeDef *int32Type;
     gd->int32Type = int32Type = new BTypeDef("int32", llvmInt32Type);
     gd->int32Type->defaultInitializer = createIntConst(context, 0);
