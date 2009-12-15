@@ -529,11 +529,6 @@ namespace {
                 type = resultType;
             }
             
-            virtual void emitCall(Context &context, 
-                                  Expr *lhs,
-                                  Expr *rhs
-                                  ) = 0;
-            
             virtual FuncCallPtr createFuncCall() = 0;
     };
 
@@ -547,12 +542,8 @@ namespace {
                 args[0] = new ArgDef(argType, "lhs");
                 args[1] = new ArgDef(argType, "rhs");
             }
-            
-            virtual FuncCallPtr createFuncCall() {
-                // XXX it would be cleaner and more consistent to create 
-                // special FuncCall objects for all of the binary operators.
-                return new FuncCall(this);
-            }
+
+            virtual FuncCallPtr createFuncCall() = 0;
     };
     
     /** Unary operator base class. */
@@ -560,13 +551,6 @@ namespace {
         public:
             UnOpDef(TypeDef *resultType, const string &name) :
                 OpDef(resultType, FuncDef::method, name, 0) {
-            }
-
-            virtual void emitCall(Context &context,
-                                  Expr *lhs,
-                                  Expr *rhs
-                                  ) {
-                assert(false && "shouldn't be calling emitCall for a unary op");
             }
     };
     
@@ -601,41 +585,13 @@ namespace {
     };
 
 #define BINOP(opCode, op)                                                   \
-    class opCode##OpDef : public BinOpDef {                                 \
+    class opCode##OpCall : public FuncCall {                                \
         public:                                                             \
-            opCode##OpDef(TypeDef *type) :                                  \
-                BinOpDef(type, type, "oper " op) {                          \
-            }                                                               \
-                                                                            \
-            virtual void emitCall(Context &context,                         \
-                                  Expr *lhs,                                \
-                                  Expr *rhs                                 \
-                                  ) {                                       \
-                LLVMBuilder &builder =                                      \
-                    dynamic_cast<LLVMBuilder &>(context.builder);           \
-                                                                            \
-                lhs->emit(context);                                         \
-                Value *lhsVal = builder.lastValue;                          \
-                rhs->emit(context);                                         \
-                builder.lastValue =                                         \
-                    builder.builder.Create##opCode(lhsVal,                  \
-                                                   builder.lastValue        \
-                                                   );                       \
-            }                                                               \
-    };
-
-#define CMPOP(opCode, op)                                                   \
-    class opCode##CmpCall : public FuncCall {                               \
-        public:                                                             \
-            opCode##CmpCall(FuncDef *def) :                                 \
+            opCode##OpCall(FuncDef *def) :                                  \
                 FuncCall(def) {                                             \
             }                                                               \
                                                                             \
             virtual void emit(Context &context) {                           \
-                emitCond(context);                                          \
-            }                                                               \
-                                                                            \
-            virtual void emitCond(Context &context) {                       \
                 LLVMBuilder &builder =                                      \
                     dynamic_cast<LLVMBuilder &>(context.builder);           \
                                                                             \
@@ -649,21 +605,16 @@ namespace {
             }                                                               \
     };                                                                      \
                                                                             \
-    class opCode##CmpDef : public BinOpDef {                                \
+    class opCode##OpDef : public BinOpDef {                                 \
         public:                                                             \
-            opCode##CmpDef(TypeDef *type, TypeDef *boolType) :              \
-                BinOpDef(type, boolType, "oper " op) {                      \
-            }                                                               \
-                                                                            \
-            virtual void emitCall(Context &context,                         \
-                                  Expr *lhs,                                \
-                                  Expr *rhs                                 \
-                                  ) {                                       \
-                assert(false && "shouldn't be calling emitCall for a cmp"); \
+            opCode##OpDef(TypeDef *argType, TypeDef *resultType = 0) :      \
+                BinOpDef(argType, resultType ? resultType : argType,        \
+                         "oper " op                                         \
+                         ) {                                                \
             }                                                               \
                                                                             \
             virtual FuncCallPtr createFuncCall() {                          \
-                return new opCode##CmpCall(this);                           \
+                return new opCode##OpCall(this);                            \
             }                                                               \
     };
 
@@ -672,12 +623,12 @@ namespace {
     BINOP(Mul, "*");
     BINOP(SDiv, "/");
 
-    CMPOP(ICmpEQ, "==");
-    CMPOP(ICmpNE, "!=");
-    CMPOP(ICmpSGT, ">");
-    CMPOP(ICmpSLT, "<");
-    CMPOP(ICmpSGE, ">=");
-    CMPOP(ICmpSLE, "<=");
+    BINOP(ICmpEQ, "==");
+    BINOP(ICmpNE, "!=");
+    BINOP(ICmpSGT, ">");
+    BINOP(ICmpSLT, "<");
+    BINOP(ICmpSGE, ">=");
+    BINOP(ICmpSLE, "<=");
 
 } // anon namespace
 
@@ -695,14 +646,6 @@ void LLVMBuilder::emitFuncCall(Context &context,
                                FuncDef *funcDef, 
                                Expr *receiver,
                                const FuncCall::ExprVec &args) {
-
-    // see if this is s special function
-    OpDef *specialOp = OpDefPtr::cast(funcDef);
-    if (specialOp) {
-        assert(args.size() == 2);
-        specialOp->emitCall(context, args[0].get(), args[1].get());
-        return;
-    }
 
     // get the LLVM arg list from the receiver and the argument expressions
     vector<Value*> valueArgs;
@@ -1280,12 +1223,12 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SubOpDef(int32Type));
     context.addDef(new MulOpDef(int32Type));
     context.addDef(new SDivOpDef(int32Type));
-    context.addDef(new ICmpEQCmpDef(int32Type, boolType));
-    context.addDef(new ICmpNECmpDef(int32Type, boolType));
-    context.addDef(new ICmpSGTCmpDef(int32Type, boolType));
-    context.addDef(new ICmpSLTCmpDef(int32Type, boolType));
-    context.addDef(new ICmpSGECmpDef(int32Type, boolType));
-    context.addDef(new ICmpSLECmpDef(int32Type, boolType));
+    context.addDef(new ICmpEQOpDef(int32Type, boolType));
+    context.addDef(new ICmpNEOpDef(int32Type, boolType));
+    context.addDef(new ICmpSGTOpDef(int32Type, boolType));
+    context.addDef(new ICmpSLTOpDef(int32Type, boolType));
+    context.addDef(new ICmpSGEOpDef(int32Type, boolType));
+    context.addDef(new ICmpSLEOpDef(int32Type, boolType));
 }
 
 void LLVMBuilder::run() {
