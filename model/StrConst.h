@@ -1,6 +1,6 @@
 
-#ifndef _parser_StrConst_h_
-#define _parser_StrConst_h_
+#ifndef _model_StrConst_h_
+#define _model_StrConst_h_
 
 #include "Context.h"
 #include "Expr.h"

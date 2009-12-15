@@ -1,7 +1,7 @@
 
 
-#ifndef _parser_IntConst_h_
-#define _parser_IntConst_h_
+#ifndef _model_IntConst_h_
+#define _model_IntConst_h_
 
 #include "Context.h"
 #include "Expr.h"
