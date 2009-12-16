@@ -783,14 +783,6 @@ void Parser::checkForExistingDef(const Token &tok) {
                !classContext->returnType || !existingContext->returnType ||
                !existingContext->returnType->matches(*classContext->returnType)
                ) {
-         if (!classContext)
-            std::cerr << "not in a class context" << std::endl;
-         else if (!classContext->returnType)
-            std::cerr << "class context has no type!" << std::endl;
-         else
-            std::cerr << classContext->returnType->name
-               << " is not derived from " 
-               << existingContext->returnType->name << std::endl;
          warn(tok,
               SPUG_FSTR("Symbol " << tok.getData() << 
                          " hides another definition in an enclosing context."

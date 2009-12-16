@@ -172,4 +172,9 @@ test_output 'implicit conversion from int to bool in condition' \
     'if (1) puts("yes"); if (0) puts("no");' \
     yes
 
+# this was causing seg-faults at one point
+test_output 'Override of variable in global scope' \
+    'int32 a; class X { void b(int32 a) {} };' \
+    '<stdin>:1: Symbol a hides another definition in an enclosing context.'
+
 exit $rc
