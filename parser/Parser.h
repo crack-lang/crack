@@ -138,7 +138,8 @@ class Parser {
       model::TypeDefPtr parseClassDef();
       
       // error checking functions
-      void checkForExistingDef(const Token &tok);
+      model::VarDefPtr checkForExistingDef(const Token &tok,
+                                           bool overloadOk = false);
 
    public:
       Parser(Toker &toker, model::Context *context) : 

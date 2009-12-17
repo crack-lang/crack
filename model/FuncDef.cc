@@ -36,6 +36,24 @@ bool FuncDef::matches(const vector<ExprPtr> &vals) {
     return true;
 }
 
+bool FuncDef::matches(const ArgVec &other_args) {
+    ArgVec::iterator arg;
+    ArgVec::const_iterator other_arg;
+    for (arg = args.begin(), other_arg = other_args.begin();
+         arg != args.end() && other_arg != other_args.end();
+         ++arg, ++other_arg
+         ) {
+        if (!(*arg)->type->matches(*(*other_arg)->type))
+            return false;
+    }
+
+    // make sure that we checked everything in both lists   
+    if (arg != args.end() || other_arg != other_args.end())
+        return false;
+    
+    return true;
+}
+
 bool FuncDef::hasInstSlot() {
     return false;
 }

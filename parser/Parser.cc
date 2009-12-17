@@ -15,6 +15,7 @@
 #include "model/IntConst.h"
 #include "model/StrConst.h"
 #include "model/TypeDef.h"
+#include "model/OverloadDef.h"
 #include "model/VarDef.h"
 #include "model/VarRef.h"
 #include "builder/Builder.h"
@@ -427,19 +428,24 @@ bool Parser::parseDef(TypeDef *type) {
    
    if (tok2.isIdent()) {
       string varName = tok2.getData();
-      // make sure we're not hiding anything else
-      checkForExistingDef(tok2);
 
       // this could be a variable or a function
       Token tok3 = toker.getToken();
       if (tok3.isSemi()) {
-         // it's a variable.  Emit a variable definition and store it 
-         // in the context.
+         // it's a variable.
+
+         // make sure we're not hiding anything else
+         checkForExistingDef(tok2);
+         
+         // Emit a variable definition and store it in the context.
          VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
          addDef(varDef.get());
          return true;
       } else if (tok3.isAssign()) {
          ExprPtr initializer;
+
+         // make sure we're not hiding anything else
+         checkForExistingDef(tok2);
 
          // check for a curly brace, indicating construction args.
          Token tok4 = toker.getToken();
@@ -468,6 +474,9 @@ bool Parser::parseDef(TypeDef *type) {
       } else if (tok3.isLParen()) {
          // function definition
 
+         // check for an existing, non-function definition.
+         VarDefPtr existingDef = checkForExistingDef(tok2, true);
+
          // if this is a class context, we're defining a method.
          ContextPtr classCtx = context->getClassContext();
          bool isMethod = classCtx ? true : false;
@@ -494,6 +503,27 @@ bool Parser::parseDef(TypeDef *type) {
          tok3 = toker.getToken();
          if (!tok3.isLCurly())
             unexpected(tok3, "expected '{' in function definition");
+         
+         // XXX need to consolidate FuncDef and OverloadDef
+         // we now need to verify that the new definition doesn't hide an 
+         // existing definition.
+         FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
+         if (existingFuncDef && existingFuncDef->matches(argDefs) &&
+             context->getDefContext() == existingDef->context) {
+            error(tok2,
+                  SPUG_FSTR("Definition of " << tok2.getData() <<
+                             " hides previous overload."
+                            )
+                  );
+         }
+         OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
+         if (existingOvldDef && existingOvldDef->matches(argDefs)) {
+            error(tok2,
+                  SPUG_FSTR("Definition of " << tok2.getData() <<
+                             " hides previous overload."
+                            )
+                  );
+         }
          
          // parse the body
          FuncDef::Flags flags = isMethod ? FuncDef::method : FuncDef::noFlags;
@@ -764,11 +794,19 @@ void Parser::parse() {
    parseBlock(false);
 }
 
-void Parser::checkForExistingDef(const Token &tok) {
+VarDefPtr Parser::checkForExistingDef(const Token &tok, bool overloadOk) {
    ContextPtr classContext;
    VarDefPtr existing = context->lookUp(tok.getData());
    if (existing) {
       Context *existingContext = existing->context;
+
+      // if it's ok to overload, make sure that the existing definition is a 
+      // function or an overload def.
+      if (overloadOk && (FuncDefPtr::rcast(existing) || 
+                         OverloadDefPtr::rcast(existing)
+                         )
+          )
+         return existing;
 
       // redefinition in the same context is an error
       if (existingContext == context)
@@ -790,6 +828,8 @@ void Parser::checkForExistingDef(const Token &tok) {
               );
       }
    }
+   
+   return 0;
 }
 
 void Parser::error(const Token &tok, const std::string &msg) {

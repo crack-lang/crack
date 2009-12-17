@@ -19,6 +19,16 @@ FuncDefPtr OverloadDef::getMatch(const vector<ExprPtr> &args) {
     return 0;
 }
 
+bool OverloadDef::matches(const FuncDef::ArgVec &args) {
+    for (FuncList::iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter)
+        if ((*iter)->matches(args))
+            return true;
+    
+    return false;
+}
+
 bool OverloadDef::hasInstSlot() {
     return false;
 }

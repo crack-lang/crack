@@ -167,7 +167,21 @@ FuncDefPtr Context::lookUp(const std::string &varName,
 void Context::addDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");
-    defs[def->name] = def;
+    
+    // if there is an existing definition in this context, and the existing 
+    // defintion and the new definition are both functions, create an overload 
+    // aggregate.
+    VarDefMap::iterator iter = defs.find(def->name);
+    FuncDef *funcDef;
+    if (iter != defs.end() && (funcDef = FuncDefPtr::cast(def)) && 
+        FuncDefPtr::rcast(iter->second)
+        ) {
+        OverloadDef *overloads;
+        defs[def->name] = overloads = aggregateOverloads(def->name).get();
+        overloads->funcs.push_front(funcDef);
+    } else {
+        defs[def->name] = def;
+    }
     def->context = this;
 }
 

@@ -30,6 +30,11 @@ class FuncDef : public VarDef {
          */
         bool matches(const std::vector<ExprPtr> &vals);
         
+        /**
+         * Returns true if the arg list matches the functions args.
+         */
+        bool matches(const ArgVec &args);
+        
         virtual bool hasInstSlot();
 };
 
