@@ -6,6 +6,8 @@
     -   implicit call to "release()" for all intermediate objects
     
 -   cleanup:
+    -   combine FuncDef and OverloadDef into a base class with a virtual 
+        matches() for arg list defs.
     -   need to be able to define "oper" funcs.  Make "release", "init" and 
         "bind" oper funcs.
 -   function arguments are currently SSA values, which means this won't work:
