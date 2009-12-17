@@ -174,7 +174,9 @@ void Context::addDef(VarDef *def) {
     VarDefMap::iterator iter = defs.find(def->name);
     FuncDef *funcDef;
     if (iter != defs.end() && (funcDef = FuncDefPtr::cast(def)) && 
-        FuncDefPtr::rcast(iter->second)
+        (FuncDefPtr::rcast(iter->second) || 
+         OverloadDefPtr::rcast(iter->second)
+         )
         ) {
         OverloadDef *overloads;
         defs[def->name] = overloads = aggregateOverloads(def->name).get();

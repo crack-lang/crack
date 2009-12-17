@@ -186,7 +186,9 @@ test_output 'method overloads' \
 test_output 'function overloads' \
     'void f(int32 v) {printint(v);}
      void f(byteptr v) {puts(v);}
-     f(100); f("test");' \
-     100test
+     void f(bool b) {if (b) puts("true"); else puts("false")}
+     f(100); f("test"); f(1 == 0);' \
+     '100test
+false'
 
 exit $rc
