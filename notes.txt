@@ -341,3 +341,27 @@ Design principals:
     In cases where we can provide useful information from the Parser or keep 
     track of it in the Builder, it's better to provide it in the Parser.  
     Example is the "terminal" argument of emitElse/emitEndIf.
+
+    In retrospect, the expression types tend to be terminal (we don't derive 
+    from them) so it would have been better to let the Builder create derived 
+    classes that implement emit().  Definitions (VarDef, FuncDef...), OTOH, 
+    are derived from in ways orthogonal to the Builder's implementation 
+    details, so it makes sense to use a Bridge paradigm.
+
+Reference counting rules:
+    In general, expressions returning an Object provide a new reference, 
+    expressions using Objects borrow the references of the caller.
+    
+    However, for certain kinds of expressions (field references, for example) 
+    it doesn't make sense to increment the reference count and then decrement 
+    in the cleanup.  So we introduce the notion of "productive" expressions: 
+    an expression is productive if it returns a new reference.  It is 
+    non-productive if it borrows an existing reference (and as such, requires 
+    no cleanup).
+    
+    This is obviously the case for all sorts of variable references.  It 
+    should also be something that we can apply via an annotation to function 
+    definitions, indicating that the function does not return a new reference.
+    If this is done, the compiler must verify that the function only returns 
+    non-productive expressions.  If the function is a method, this must also 
+    be verified for all derived functions.
