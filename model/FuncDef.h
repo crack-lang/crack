@@ -28,7 +28,9 @@ class FuncDef : public VarDef {
          * Returns true if 'args' matches the types of the functions 
          * arguments.
          */
-        bool matches(const std::vector<ExprPtr> &vals);
+        bool matches(Context &context, const std::vector<ExprPtr> &vals,
+                     std::vector<ExprPtr> &newVals
+                     );
         
         /**
          * Returns true if the arg list matches the functions args.

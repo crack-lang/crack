@@ -21,8 +21,7 @@ SPUG_RCPTR(AssignExpr);
  */
 class AssignExpr : public Expr {
     private:
-        AssignExpr(const ExprPtr &aggregate, const VarDefPtr &var, 
-                   const ExprPtr &value);
+        AssignExpr(Expr *aggregate, VarDef *var, Expr *value);
 
     public:
         ExprPtr aggregate, value;
@@ -36,9 +35,9 @@ class AssignExpr : public Expr {
          * @param value the value to be assigned to the variable.
          */
         static AssignExprPtr create(const parser::Token &varName,
-                                    const ExprPtr &aggregate,
-                                    const VarDefPtr &var, 
-                                    const ExprPtr &value
+                                    Expr *aggregate,
+                                    VarDef *var, 
+                                    Expr *value
                                     );
 
         /**
@@ -51,8 +50,8 @@ class AssignExpr : public Expr {
          * @param value the value to be assigned to the variable.
          */
         static AssignExprPtr create(const parser::Token &tok,
-                                    const VarDefPtr &var, 
-                                    const ExprPtr &value
+                                    VarDef *var, 
+                                    Expr *value
                                     ) {
             return create(tok, 0, var, value);
         }

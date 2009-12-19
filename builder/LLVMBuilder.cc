@@ -682,6 +682,13 @@ void LLVMBuilder::emitIntConst(Context &context, const IntConst &val) {
     lastValue = dynamic_cast<const BIntConst &>(val).rep;
 }
 
+void LLVMBuilder::emitNull(Context &context,
+                           const TypeDef &type
+                           ) {
+    const BTypeDef &btype = dynamic_cast<const BTypeDef &>(type);
+    lastValue = Constant::getNullValue(btype.rep);
+}
+
 void LLVMBuilder::emitAlloc(Context &context, TypeDef *type) {
     // XXX need to be able to do this for an incomplete class when we 
     // allow user defined oper new.
@@ -1173,13 +1180,17 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
     gd->byteptrType = byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
-    gd->byteptrType->defaultInitializer = createStrConst(context, "");
+    byteptrType->defaultInitializer = createStrConst(context, "");
+    byteptrType->context = new Context(*this, Context::instance, gd);
+    byteptrType->context->returnType = byteptrType;
     context.addDef(byteptrType);
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
     gd->boolType = boolType = new BTypeDef("bool", llvmBoolType);
     gd->boolType->defaultInitializer = new BIntConst(boolType, 0);
+    boolType->context = new Context(*this, Context::instance, gd);
+    boolType->context->returnType = boolType;
     context.addDef(boolType);
     
     const llvm::Type *llvmInt32Type = Type::getInt32Ty(lctx);

@@ -122,9 +122,15 @@ class Context : public spug::RCBase {
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         
-        /** Looks up a function matching the given expression list. */
+        /**
+         * Looks up a function matching the given expression list.
+         * 
+         * @param varName the function name
+         * @param vals list of parameter expressions.  These will be converted 
+         *  to conversion expressions of the correct type for a match.
+         */
         FuncDefPtr lookUp(const std::string &varName,
-                          const std::vector<ExprPtr> &vals
+                          std::vector<ExprPtr> &vals
                           );
         void createModule(const char *name);
         void addDef(VarDef *def);

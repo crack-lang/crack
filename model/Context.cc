@@ -156,12 +156,12 @@ VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
 }
 
 FuncDefPtr Context::lookUp(const std::string &varName,
-                           const vector<ExprPtr> &args
+                           vector<ExprPtr> &args
                            ) {
     OverloadDefPtr overload = aggregateOverloads(varName);
     if (!overload)
         return 0;
-    return overload->getMatch(args);
+    return overload->getMatch(*this, args);
 }
 
 void Context::addDef(VarDef *def) {

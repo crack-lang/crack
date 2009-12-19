@@ -51,3 +51,12 @@ class Foo {
 # currently fails because we generate unreachable code after the else but 
 # don't give it a return statement.  Need to stop generating unreachable code.
 int32 foo(int32 x) { if (x) return 1; else return 0; puts("test"); }
+
+# this snippet will currently print "true" instead of 100, because implicit 
+# conversion means f(bool) hides f(int32).  The overloader should reorder the 
+# methods so the least general is called first.  I'm not sure what it should 
+# do for f(bool, int32) vs f(int32, bool).  It should probably not do
+# reordering and just not attempt conversions unless exact matches fail.
+void f(int32 v) {printint(v);}
+void f(bool b) {if (b) puts("true"); else puts("false")}
+f(100);

@@ -18,14 +18,18 @@ FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
     args(argCount) {
 }
 
-bool FuncDef::matches(const vector<ExprPtr> &vals) {
+bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals, 
+                      vector<ExprPtr> &newVals
+                      ) {
     ArgVec::iterator arg;
     vector<ExprPtr>::const_iterator val;
-    for (arg = args.begin(), val = vals.begin();
+    int i;
+    for (arg = args.begin(), val = vals.begin(), i = 0;
          arg != args.end() && val != vals.end();
-         ++arg, ++val
+         ++arg, ++val, ++i
          ) {
-        if (!(*arg)->type->matches(*(*val)->type))
+        newVals[i] = (*val)->convert(context, *(*arg)->type);
+        if (!newVals[i])
             return false;
     }
 

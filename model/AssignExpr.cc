@@ -12,19 +12,17 @@
 using namespace model;
 using namespace parser;
 
-AssignExpr::AssignExpr(const ExprPtr &aggregate, const VarDefPtr &var, 
-                       const ExprPtr &value
-                       ) :
-    Expr(value->type),
+AssignExpr::AssignExpr(Expr *aggregate, VarDef *var, Expr *value) :
+    Expr(value->type.get()),
     aggregate(aggregate),
     var(var),
     value(value) {
 }
 
 AssignExprPtr AssignExpr::create(const Token &varName,
-                                 const ExprPtr &aggregate,
-                                 const VarDefPtr &var, 
-                                 const ExprPtr &value
+                                 Expr *aggregate,
+                                 VarDef *var, 
+                                 Expr *value
                                  ) {
     // check the types
     if (!var->type->matches(*value->type))

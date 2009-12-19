@@ -46,7 +46,7 @@ class TypeDef : public VarDef {
          * Returns true if "other" satisfies the type - in other words, if 
          * "other" either equals "this" or is a subclass of "this".
          */
-        bool matches(const TypeDef &other);
+        bool matches(const TypeDef &other) const;
         
         /**
          * Emit code to "narrow" the type context to the specified 
@@ -74,6 +74,12 @@ class TypeDef : public VarDef {
          * Create a "new" function to wrap the specified "init" function.
          */
         void createNewFunc(FuncDef *initFunc);
+        
+        /**
+         * Return a function to convert to the specified type, if such a 
+         * function exists.
+         */
+        virtual FuncDefPtr getConverter(const TypeDef &other);
 
         /**
          * Fill in everything that's missing from the class.

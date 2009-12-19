@@ -38,6 +38,13 @@ class Builder {
 
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val) = 0;
+
+        /**
+         * Emits a null of the specified type.
+         */        
+        virtual void emitNull(model::Context &context,
+                              const model::TypeDef &type
+                              ) = 0;
         
         /**
          * Emit an allocator for the specified type.

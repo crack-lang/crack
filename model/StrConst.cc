@@ -8,7 +8,7 @@
 
 using namespace model;
 
-StrConst::StrConst(const TypeDefPtr &type, const std::string &val) :
+StrConst::StrConst(TypeDef *type, const std::string &val) :
     Expr(type),
     val(val) {
 }

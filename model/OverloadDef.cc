@@ -9,12 +9,15 @@
 using namespace std;
 using namespace model;
 
-FuncDefPtr OverloadDef::getMatch(const vector<ExprPtr> &args) {
+FuncDefPtr OverloadDef::getMatch(Context &context, vector<ExprPtr> &args) {
+    vector<ExprPtr> newArgs(args.size());
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
-        if ((*iter)->matches(args))
+        if ((*iter)->matches(context, args, newArgs)) {
+            args = newArgs;
             return *iter;
+        }
     
     return 0;
 }

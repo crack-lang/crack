@@ -221,9 +221,11 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       if (var->context->scope == Context::instance) {
          // if there's no container, try to use an implicit "this"
          ExprPtr receiver = container ? container : makeThisRef(ident);
-         return AssignExpr::create(ident, receiver, var, val);
+         return AssignExpr::create(ident, receiver.get(), var.get(), 
+                                   val.get()
+                                   );
       } else {
-         return AssignExpr::create(ident, var, val);
+         return AssignExpr::create(ident, var.get(), val.get());
       }
 
    } else if (tok1.isLParen()) {
@@ -463,7 +465,8 @@ bool Parser::parseDef(TypeDef *type) {
          }
 
          // make sure the initializer matches the declared type.
-         if (!type->matches(*initializer->type))
+         initializer = initializer->convert(*context, *type);
+         if (!initializer)
             error(tok4, "Incorrect type for initializer.");
             
          VarDefPtr varDef = type->emitVarDef(*context, varName,
@@ -587,21 +590,11 @@ bool Parser::parseIfStmt() {
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
    
-   ExprPtr cond = parseExpression();
-   if (!context->globalData->boolType->matches(*cond->type)) {
-      
-      // try to convert to a bool
-      FuncCall::ExprVec args;
-      FuncDefPtr converter = cond->type->context->lookUp("toBool", args);
-      if (converter) {
-         FuncCallPtr convCall = 
-            context->builder.createFuncCall(converter.get());
-         convCall->receiver = cond;
-         cond = convCall.get();
-      } else {
-         error(tok, "Condition is not boolean.");
-      }
-   }
+   ExprPtr cond = parseExpression()->convert(*context,
+                                             *context->globalData->boolType
+                                             );
+   if (!cond)
+      error(tok, "Condition is not boolean.");
    
    tok = toker.getToken();
    if (!tok.isRParen())
@@ -671,10 +664,11 @@ void Parser::parseReturnStmt() {
 
    // parse the return expression, make sure that it matches the return type.
    toker.putBack(tok);
-   ExprPtr expr = parseExpression();
-   if (!context->returnType->matches(*expr->type))
+   ExprPtr orgExpr = parseExpression();
+   ExprPtr expr = orgExpr->convert(*context, *context->returnType);
+   if (!expr)
       error(tok,
-            SPUG_FSTR("Invalid return type " << expr->type->name <<
+            SPUG_FSTR("Invalid return type " << orgExpr->type->name <<
                        " for function returning " << context->returnType->name
                       )
             );

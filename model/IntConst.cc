@@ -8,7 +8,7 @@
 
 using namespace model;
 
-IntConst::IntConst(const TypeDefPtr &type, long val) :
+IntConst::IntConst(TypeDef *type, long val) :
     Expr(type),
     val(val) {
 }

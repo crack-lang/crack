@@ -10,7 +10,7 @@
 using namespace model;
 
 VarRef::VarRef(VarDef *def) :
-    Expr(def->type),
+    Expr(def->type.get()),
     def(def) {
 }
 

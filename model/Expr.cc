@@ -10,3 +10,22 @@ using namespace model;
 void Expr::emitCond(Context &context) {
     context.builder.emitTest(context, this);
 }
+
+ExprPtr Expr::convert(Context &context, const TypeDef &newType) {
+    
+    // see if we're already of the right type
+    if (newType.matches(*type))
+        return this;
+
+    // see if there's a converter    
+    FuncDefPtr converter = type->getConverter(newType);
+    if (converter) {
+         FuncCallPtr convCall =
+            context.builder.createFuncCall(converter.get());
+         convCall->receiver = this;
+         return convCall;
+    }
+    
+    // can't convert
+    return 0;
+}

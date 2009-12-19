@@ -48,6 +48,10 @@ class LLVMBuilder : public Builder {
         virtual void emitIntConst(model::Context &context,
                                   const model::IntConst &val);
 
+        virtual void emitNull(model::Context &context,
+                              const model::TypeDef &type
+                              );
+
         virtual void emitAlloc(model::Context &context, model::TypeDef *type);
 
         virtual void emitTest(model::Context &context,

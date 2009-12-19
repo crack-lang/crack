@@ -27,7 +27,7 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
     return container.builder.emitVarDef(container, this, name, initializer);
 }
 
-bool TypeDef::matches(const TypeDef &other) {
+bool TypeDef::matches(const TypeDef &other) const {
     if (&other == this)
         return true;
     else if (!other.context)
@@ -202,5 +202,17 @@ void TypeDef::rectify() {
     } else {
         // create a default constructor and wrap it in a new function.
         createNewFunc(createDefaultInit().get());
+    }
+}
+
+FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
+    // XXX since we don't have a generic conversion framework in place yet, 
+    // just do this for bool.  What we want to do here is look up "oper 
+    // canonical-type-name"
+    if (other.name == "bool") {
+      FuncCall::ExprVec args;
+      return context->lookUp("toBool", args);
+    } else {
+        return 0;
     }
 }

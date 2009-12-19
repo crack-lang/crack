@@ -183,10 +183,11 @@ test_output 'method overloads' \
      A a; a.f(100); a.f("test");' \
     100test
 
+# see to_test.crk: this only works when we define f(bool) before f(int32)
 test_output 'function overloads' \
-    'void f(int32 v) {printint(v);}
+    'void f(bool b) {if (b) puts("true"); else puts("false")}
+     void f(int32 v) {printint(v);}
      void f(byteptr v) {puts(v);}
-     void f(bool b) {if (b) puts("true"); else puts("false")}
      f(100); f("test"); f(1 == 0);' \
      '100test
 false'

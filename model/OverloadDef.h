@@ -25,8 +25,11 @@ class OverloadDef : public VarDef {
             VarDef(0, name) {
         }
         
-        /** Returns the overload matching the given args. */
-        FuncDefPtr getMatch(const std::vector<ExprPtr> &args);
+        /**
+         * Returns the overload matching the given args. This will modify 
+         * "args" if there are conversions to be applied.
+         */
+        FuncDefPtr getMatch(Context &context, std::vector<ExprPtr> &args);
         
         /** 
          * Returns true if the overload includeds a signature for the 

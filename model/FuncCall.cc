@@ -11,12 +11,10 @@
 using namespace model;
 
 FuncCall::FuncCall(FuncDef *funcDef) :
-    Expr(funcDef->type),
+    Expr(funcDef->type.get()),
     func(funcDef) {
 }
 
 void FuncCall::emit(Context &context) {
     context.builder.emitFuncCall(context, func.get(), receiver.get(), args);
 }
-
-    

@@ -1,7 +1,7 @@
 
 #ifndef _model_StrConst_h_
 #define _model_StrConst_h_
-
+    
 #include "Context.h"
 #include "Expr.h"
 
@@ -11,7 +11,7 @@ class StrConst : public Expr {
     public:
         std::string val;
         
-        StrConst(const TypeDefPtr &type, const std::string &val);
+        StrConst(TypeDef *type, const std::string &val);
         
         virtual void emit(Context &context);
 };
