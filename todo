@@ -14,3 +14,30 @@
     type func(int a) { a = 100; }
 -   nested compilation so I can write lots of unit tests (shell scripted unit 
     tests are working just fine)
+
+
+Roadmap
+-------
+
+for 0.1:
+-   parenthesized expressions
+-   operator precedence
+-   the "!" operator
+-   modules
+-   extern declarations of C functions
+-   virtual functions
+-   expression level cleanups of temporary objects
+-   productive/non-productive expressions
+-   composition of constructors/destructors
+-   the "oper" keyword
+-   "Foo x = {1, 2}" construction syntax.
+-   the '`' operator
+
+for 1.0:
+-   doxen
+-   first class functions
+-   keyword arguments
+-   sequence construction 
+-   type inference
+
+
