@@ -34,7 +34,8 @@ class AssignExpr : public Expr {
          * @param var the variable
          * @param value the value to be assigned to the variable.
          */
-        static AssignExprPtr create(const parser::Token &varName,
+        static AssignExprPtr create(Context &context,
+                                    const parser::Token &varName,
                                     Expr *aggregate,
                                     VarDef *var, 
                                     Expr *value
@@ -49,11 +50,12 @@ class AssignExpr : public Expr {
          * @param var the variable
          * @param value the value to be assigned to the variable.
          */
-        static AssignExprPtr create(const parser::Token &tok,
+        static AssignExprPtr create(Context &context,
+                                    const parser::Token &tok,
                                     VarDef *var, 
                                     Expr *value
                                     ) {
-            return create(tok, 0, var, value);
+            return create(context, tok, 0, var, value);
         }
 
         /** Emit the expression in the given context. */

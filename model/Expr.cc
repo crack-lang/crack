@@ -7,18 +7,22 @@
 
 using namespace model;
 
+Expr::Expr(TypeDef *type) : type(type) {}
+
+Expr::~Expr() {}
+
 void Expr::emitCond(Context &context) {
     context.builder.emitTest(context, this);
 }
 
-ExprPtr Expr::convert(Context &context, const TypeDef &newType) {
+ExprPtr Expr::convert(Context &context, TypeDef *newType) {
     
     // see if we're already of the right type
-    if (newType.matches(*type))
+    if (newType->matches(*type))
         return this;
 
     // see if there's a converter    
-    FuncDefPtr converter = type->getConverter(newType);
+    FuncDefPtr converter = type->getConverter(*newType);
     if (converter) {
          FuncCallPtr convCall =
             context.builder.createFuncCall(converter.get());

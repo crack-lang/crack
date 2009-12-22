@@ -17,7 +17,9 @@ class Expr : public spug::RCBase {
     public:
         TypeDefPtr type;
         
-        Expr(TypeDef *type) : type(type) {}
+        Expr(TypeDef *type);
+        
+        ~Expr();
 
         /** Emit the expression in the given context. */
         virtual void emit(Context &context) = 0;        
@@ -34,7 +36,7 @@ class Expr : public spug::RCBase {
          * Returns an expression that converts the expression to the specified 
          * type, null if it cannot be converted.
          */
-        virtual ExprPtr convert(Context &context, const TypeDef &type);
+        virtual ExprPtr convert(Context &context, TypeDef *type);
 };
 
 } // namespace model

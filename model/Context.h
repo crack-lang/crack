@@ -72,6 +72,7 @@ class Context : public spug::RCBase {
         struct GlobalData {
             StrConstTable strConstTable;
             TypeDefPtr voidType,
+                       voidPtrType,
                        boolType,
                        byteptrType,
                        intType,
@@ -85,6 +86,8 @@ class Context : public spug::RCBase {
         Context(builder::Builder &builder, Scope scope,
                 GlobalData *globalData
                 );
+        
+        ~Context();
         
         /**
          * Create a new subcontext with a different scope from the parent 

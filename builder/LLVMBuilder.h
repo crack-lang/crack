@@ -10,6 +10,7 @@ namespace llvm {
     class Module;
     class Function;
     class BasicBlock;
+    class Type;
     class Value;
     class Function;
     class ExecutionEngine;
@@ -29,6 +30,7 @@ class LLVMBuilder : public Builder {
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
         // seems to be cutting down on the amount of code necessary to do this.
         llvm::Module *module;
+        llvm::Type *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *block;

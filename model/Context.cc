@@ -36,6 +36,8 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     globalData(globalData) {
 }
 
+Context::~Context() {}
+
 ContextPtr Context::createSubContext(Scope newScope) {
     return new Context(builder, newScope, this);
 }

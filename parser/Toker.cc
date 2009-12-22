@@ -33,6 +33,10 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::returnKw, data, loc);
     else if (data == "class")
         return Token(Token::classKw, data, loc);
+    else if (data == "null")
+        return Token(Token::nullKw, data, loc);
+    else if (data == "is")
+        return Token(Token::isKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

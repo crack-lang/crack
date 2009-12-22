@@ -13,6 +13,7 @@ libcrack_la_SOURCES = \
     model/FuncCall.cc \
     model/FuncDef.cc \
     model/IntConst.cc \
+    model/NullConst.cc \
     model/OverloadDef.cc \
     model/StrConst.cc \
     model/TypeDef.cc \

@@ -583,11 +583,39 @@ namespace {
                 return new BoolOpCall(this);
             }
     };
+    
+    /** Operator to convert any pointer type to void. */
+    class VoidPtrOpCall : public FuncCall {
+        public:
+            VoidPtrOpCall(FuncDef *def) : FuncCall(def) {}
+            virtual void emit(Context &context) {
+                // emit the receiver
+                receiver->emit(context);
+                
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                builder.lastValue =
+                    builder.builder.CreateBitCast(builder.lastValue,
+                                                  builder.llvmVoidPtrType
+                                                  );
+            }
+    };
 
-#define BINOP(opCode, op)                                                   \
-    class opCode##OpCall : public FuncCall {                                \
+    class VoidPtrOpDef : public UnOpDef {
+        public:
+            VoidPtrOpDef(TypeDef *resultType) :
+                UnOpDef(resultType, "oper to voidptr") {
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new VoidPtrOpCall(this);
+            }
+    };
+    
+#define QUAL_BINOP(prefix, opCode, op)                                      \
+    class prefix##OpCall : public FuncCall {                                \
         public:                                                             \
-            opCode##OpCall(FuncDef *def) :                                  \
+            prefix##OpCall(FuncDef *def) :                                  \
                 FuncCall(def) {                                             \
             }                                                               \
                                                                             \
@@ -605,18 +633,20 @@ namespace {
             }                                                               \
     };                                                                      \
                                                                             \
-    class opCode##OpDef : public BinOpDef {                                 \
+    class prefix##OpDef : public BinOpDef {                                 \
         public:                                                             \
-            opCode##OpDef(TypeDef *argType, TypeDef *resultType = 0) :      \
+            prefix##OpDef(TypeDef *argType, TypeDef *resultType = 0) :      \
                 BinOpDef(argType, resultType ? resultType : argType,        \
                          "oper " op                                         \
                          ) {                                                \
             }                                                               \
                                                                             \
             virtual FuncCallPtr createFuncCall() {                          \
-                return new opCode##OpCall(this);                            \
+                return new prefix##OpCall(this);                            \
             }                                                               \
     };
+
+#define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
     BINOP(Add, "+");
     BINOP(Sub, "-");
@@ -629,6 +659,8 @@ namespace {
     BINOP(ICmpSLT, "<");
     BINOP(ICmpSGE, ">=");
     BINOP(ICmpSLE, "<=");
+    
+    QUAL_BINOP(Is, ICmpEQ, "is");
 
 } // anon namespace
 
@@ -856,10 +888,13 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
          ++iter
          )
         bdata->addBaseClass(BTypeDefPtr::rcast(*iter));
-
+    
     OpaqueType *opaque = OpaqueType::get(getGlobalContext());
     bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque));
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
+    
+    // create function to convert to voidptr
+    context.addDef(new VoidPtrOpDef(bdata->type.get()));
     return bdata->type.get();
 }
 
@@ -1176,6 +1211,12 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->voidType = voidType = new BTypeDef("void", 0);
     context.addDef(voidType);
     
+    BTypeDef *voidPtrType;
+    llvmVoidPtrType = 
+        PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
+    gd->voidPtrType = voidPtrType = new BTypeDef("voidptr", llvmVoidPtrType);
+    context.addDef(voidPtrType);
+    
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
@@ -1240,6 +1281,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int32Type, boolType));
     context.addDef(new ICmpSGEOpDef(int32Type, boolType));
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
+    
+    // pointer equality check (to allow checking for None)
+    context.addDef(new IsOpDef(voidPtrType, boolType));
+    context.addDef(new IsOpDef(byteptrType, boolType));
 }
 
 void LLVMBuilder::run() {

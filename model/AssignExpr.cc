@@ -19,13 +19,15 @@ AssignExpr::AssignExpr(Expr *aggregate, VarDef *var, Expr *value) :
     value(value) {
 }
 
-AssignExprPtr AssignExpr::create(const Token &varName,
+AssignExprPtr AssignExpr::create(Context &context,
+                                 const Token &varName,
                                  Expr *aggregate,
                                  VarDef *var, 
                                  Expr *value
                                  ) {
     // check the types
-    if (!var->type->matches(*value->type))
+    ExprPtr converted = value->convert(context, var->type.get());
+    if (!converted)
         Parser::error(varName,
                       SPUG_FSTR("Assigning variable " << var->name <<
                                  " of type " << var->type->name <<
@@ -33,8 +35,9 @@ AssignExprPtr AssignExpr::create(const Token &varName,
                                  value->type->name
                                 )
                       );
-    
-    return new AssignExpr(aggregate, var, value);
+
+    // XXX should let the builder do this    
+    return new AssignExpr(aggregate, var, converted.get());
 }
 
 void AssignExpr::emit(Context &context) {

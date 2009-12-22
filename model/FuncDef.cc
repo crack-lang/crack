@@ -28,7 +28,7 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
          arg != args.end() && val != vals.end();
          ++arg, ++val, ++i
          ) {
-        newVals[i] = (*val)->convert(context, *(*arg)->type);
+        newVals[i] = (*val)->convert(context, (*arg)->type.get());
         if (!newVals[i])
             return false;
     }

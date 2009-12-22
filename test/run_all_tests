@@ -192,4 +192,31 @@ test_output 'function overloads' \
      '100test
 false'
 
+test_output 'conversion of null during initialization' \
+    'int32 i = null; byteptr b = null; class A {}; A a = null; puts("ok");' \
+    ok
+
+test_output 'conversion of null during params and returns' \
+    'class A {}; int32 func(int32 i, byteptr b, A a) { return null; }
+     func(null, null, null); puts("ok");' \
+    ok
+
+test_output 'conversion of null during assignment' \
+    'int32 i; byteptr b; class A {}; A a; i = null; b = null; a = null;
+     puts("ok");' \
+    ok
+
+test_output 'tests against null' \
+    'class A {}; 
+    if (0 == null) printint(1);
+    byteptr b = null;
+    if (b is null) printint(2);
+    A a = null;
+    A c;
+    if (a is null) printint(3);
+    if (c is null) puts("fail"); else printint(4);' \
+    1234
+    
+
+
 exit $rc
