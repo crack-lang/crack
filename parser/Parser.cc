@@ -286,14 +286,25 @@ ExprPtr Parser::parseExpression() {
 
    // check for null
    Token tok = toker.getToken();
-   if (tok.isNull())
-      return new NullConst(context->globalData->voidPtrType.get());
+   if (tok.isNull()) {
+      expr = new NullConst(context->globalData->voidPtrType.get());
+   
+   // check for a nested parenthesized expression
+   } else if (tok.isLParen()) {
+      expr = parseExpression();
+      tok = toker.getToken();
+      if (!tok.isRParen())
+         unexpected(tok, "expected a right paren");
 
    // check for a method
-   if (tok.isIdent()) {
+   } else if (tok.isIdent()) {
       expr = parsePostIdent(0, tok);
+   
+   // for a string constant
    } else if (tok.isString()) {
       expr = context->getStrConst(tok.getData());
+   
+   // for an integer constant
    } else if (tok.isInteger()) {
       expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
