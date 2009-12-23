@@ -5,6 +5,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <map>
 #include <iostream>
 #include <spug/Exception.h>
 
@@ -69,12 +70,20 @@ class Parser {
             }
       };
       
+      typedef std::map<std::string, unsigned> OpPrecMap;
+      OpPrecMap opPrecMap;
+      
       /**
        * Add a new definition to the current context or nearest definition 
        * context.
        */
       void addDef(model::VarDef *context);
       
+      /**
+       * Returns the precedence of the specified operator.
+       */
+      unsigned getPrecedence(const std::string &op);
+
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
 
@@ -113,12 +122,15 @@ class Parser {
                                     );
 
       /**
-       * @param terminators a list of termination symbols that are appropriate 
-       *   for the expression (example ",)" for a parameter expression) .  A 
-       *   space (ascii 32) indicates that the end-of-stream token is a
-       *   terminator.
+       * Parse an expression.
+       * 
+       * @param precedence The function will not parse an operator of lower 
+       *    precedence than this parameter.  So if we're parsing the right 
+       *    side of 'x * y', and the precedence of '*' is 10, and we encounter 
+       *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing 
+       *    after the 'a'.
        */
-      model::ExprPtr parseExpression();
+      model::ExprPtr parseExpression(unsigned precedence = 0);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
 
       model::TypeDefPtr parseTypeSpec();
@@ -142,11 +154,7 @@ class Parser {
                                            bool overloadOk = false);
 
    public:
-      Parser(Toker &toker, model::Context *context) : 
-	 toker(toker),
-	 moduleCtx(context),
-         context(context) {
-      }
+      Parser(Toker &toker, model::Context *context);
 
       void parse();
 

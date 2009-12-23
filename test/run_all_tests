@@ -8,7 +8,8 @@ function test_output {
     expected="$3"
     
     echo -n "$text..."
-    if [ "$(echo $script | ./crack - 2>&1)" = "$expected" ]; then
+    result="$(echo "$script" | ./crack - 2>&1)"
+    if [ "$result" = "$expected" ]; then
         echo ok
     else
         echo FAILED
@@ -217,6 +218,9 @@ test_output 'tests against null' \
     if (c is null) puts("fail"); else printint(4);' \
     1234
     
-
+test_output 'precedence and parens' \
+    'printint(4 / 2 * 2);
+     printint(4 / (2 * 2));' \
+     41
 
 exit $rc

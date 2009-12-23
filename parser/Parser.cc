@@ -30,6 +30,12 @@ void Parser::addDef(VarDef *varDef) {
    context->getDefContext()->addDef(varDef);
 }
 
+unsigned Parser::getPrecedence(const string &op) {
+   OpPrecMap::iterator iter = opPrecMap.find(op);
+   assert(iter != opPrecMap.end() && "got operator with no precedence");
+   return iter->second;
+}
+
 void Parser::unexpected(const Token &tok, const char *userMsg) {
    Location loc = tok.getLocation();
    stringstream msg;
@@ -280,7 +286,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 
 }
 
-ExprPtr Parser::parseExpression() {
+ExprPtr Parser::parseExpression(unsigned precedence) {
 
    ExprPtr expr;
 
@@ -326,8 +332,14 @@ ExprPtr Parser::parseExpression() {
 
          expr = parsePostIdent(expr.get(), tok);
       } else if (tok.isBinOp()) {
+         // get the precedence of the new operator, if it's lower than the 
+         // or the same as that of the current operator, quit.
+         unsigned newPrec = getPrecedence(tok.getData());
+         if (newPrec <= precedence)
+            break;
+
          // parse the right-hand-side expression
-         ExprPtr rhs = parseExpression();
+         ExprPtr rhs = parseExpression(newPrec);
          
          FuncCall::ExprVec exprs(2);
          exprs[0] = expr;
@@ -797,7 +809,33 @@ TypeDefPtr Parser::parseClassDef() {
    
    return type;
 }
+
+Parser::Parser(Toker &toker, model::Context *context) : 
+   toker(toker),
+   moduleCtx(context),
+   context(context) {
    
+   // build the precedence table
+   struct { const char *op; unsigned prec; } map[] = {
+      {"*", 3},
+      {"/", 3},
+      {"%", 3},
+      {"+", 2},
+      {"-", 2},
+      {"==", 1},
+      {"!=", 1},
+      {"<", 1},
+      {">", 1},
+      {"<=", 1},
+      {">=", 1},
+      {"is", 1},
+      {0, 0}
+   };
+   
+   for (int i = 0; map[i].op; ++i)
+      opPrecMap[map[i].op] = map[i].prec;
+}   
+
 void Parser::parse() {
    // outer parser just parses an un-nested block
    parseBlock(false);
