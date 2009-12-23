@@ -20,8 +20,6 @@ Roadmap
 -------
 
 for 0.1:
--   parenthesized expressions
--   operator precedence
 -   the "!" operator
 -   modules
 -   extern declarations of C functions
@@ -32,6 +30,8 @@ for 0.1:
 -   the "oper" keyword
 -   "Foo x = {1, 2}" construction syntax.
 -   the '`' operator
+-   break & continue
+-   short circuit logic operators
 
 for 1.0:
 -   doxen
@@ -39,5 +39,6 @@ for 1.0:
 -   keyword arguments
 -   sequence construction 
 -   type inference
+-   for/in loops
 
 
