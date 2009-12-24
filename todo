@@ -34,7 +34,7 @@ for 0.1:
 -   short circuit logic operators
 
 for 1.0:
--   doxen
+-   doc-comments
 -   first class functions
 -   keyword arguments
 -   sequence construction 
