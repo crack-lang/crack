@@ -18,3 +18,15 @@ FuncCall::FuncCall(FuncDef *funcDef) :
 void FuncCall::emit(Context &context) {
     context.builder.emitFuncCall(context, func.get(), receiver.get(), args);
 }
+
+void FuncCall::writeTo(std::ostream &out) const {
+    if (receiver)
+        out << "(" << *receiver << ").";
+    out << "call \"" << func->name << "\"(";
+    for (ExprVec::const_iterator iter = args.begin();
+         iter != args.end();
+         ++iter
+         )
+        out << **iter << ", ";
+    out << ")";
+}

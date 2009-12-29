@@ -37,7 +37,17 @@ class Expr : public spug::RCBase {
          * type, null if it cannot be converted.
          */
         virtual ExprPtr convert(Context &context, TypeDef *type);
+        
+        /**
+         * Write a representation of the expression to the stream.
+         */
+        virtual void writeTo(std::ostream &out) const = 0;
 };
+
+inline std::ostream &operator <<(std::ostream &out, const Expr &expr) {
+    expr.writeTo(out);
+    return out;
+}
 
 } // namespace model
 

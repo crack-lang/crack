@@ -16,3 +16,7 @@ IntConst::IntConst(TypeDef *type, long val) :
 void IntConst::emit(Context &context) { 
     context.builder.emitIntConst(context, *this);
 }
+
+void IntConst::writeTo(std::ostream &out) const {
+    out << val;
+}

@@ -19,6 +19,7 @@ class IntConst : public Expr {
         IntConst(TypeDef *type, long val);
         
         virtual void emit(Context &context);
+        virtual void writeTo(std::ostream &out) const;        
 };
 
 } // namespace parser

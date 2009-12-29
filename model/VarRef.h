@@ -18,6 +18,7 @@ class VarRef : public Expr {
         VarRef(VarDef *def);
         
         virtual void emit(Context &context);
+        virtual void writeTo(std::ostream &out) const;
 };
 
 } // namespace model

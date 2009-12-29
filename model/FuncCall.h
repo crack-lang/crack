@@ -24,6 +24,7 @@ class FuncCall : public Expr {
 
         FuncCall(FuncDef *funcDef);
         virtual void emit(Context &context);
+        virtual void writeTo(std::ostream &out) const;
 };
 
 

@@ -511,6 +511,10 @@ namespace {
                 builder.lastValue =
                     builder.builder.CreateMalloc(tp->getElementType());
             }
+            
+            virtual void writeTo(ostream &out) const {
+                out << "malloc(" << type->name << ')';
+            }
     };
     
     // primitive operations

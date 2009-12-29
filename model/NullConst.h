@@ -18,6 +18,7 @@ class NullConst : public Expr {
         virtual void emit(Context &context);
         
         virtual ExprPtr convert(Context &context, TypeDef *newType);
+        virtual void writeTo(std::ostream &out) const;        
 };
 
 } // namespace parser

@@ -8,6 +8,7 @@
 #include "VarDef.h"
 
 using namespace model;
+using namespace std;
 
 VarRef::VarRef(VarDef *def) :
     Expr(def->type.get()),
@@ -17,4 +18,8 @@ VarRef::VarRef(VarDef *def) :
 void VarRef::emit(Context &context) {
     assert(def->impl);
     def->impl->emitRef(context, def.get());
+}
+
+void VarRef::writeTo(ostream &out) const {
+    out << "ref(" << def->name << ')';
 }

@@ -14,6 +14,7 @@ class AllocExpr : public Expr {
     public:
         AllocExpr(TypeDef *type) : Expr(type) {}
         virtual void emit(Context &context);
+        virtual void writeTo(std::ostream &out) const;
 };
 
 

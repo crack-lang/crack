@@ -11,6 +11,7 @@
 
 using namespace model;
 using namespace parser;
+using namespace std;
 
 AssignExpr::AssignExpr(Expr *aggregate, VarDef *var, Expr *value) :
     Expr(value->type.get()),
@@ -47,4 +48,9 @@ void AssignExpr::emit(Context &context) {
                                         );
     else
         var->emitAssignment(context, value.get());
+}
+
+void AssignExpr::writeTo(std::ostream &out) const {
+    out << var->name << " = ";
+    value->writeTo(out);
 }

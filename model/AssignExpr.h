@@ -60,6 +60,8 @@ class AssignExpr : public Expr {
 
         /** Emit the expression in the given context. */
         virtual void emit(Context &context);
+        
+        virtual void writeTo(std::ostream &out) const;
 };
 
 } // namespace model
