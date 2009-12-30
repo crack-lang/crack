@@ -6,6 +6,7 @@
 #include "ArgDef.h"
 #include "Context.h"
 #include "FuncDef.h"
+#include "ResultExpr.h"
 #include "TypeDef.h"
 
 using namespace model;
@@ -15,8 +16,8 @@ FuncCall::FuncCall(FuncDef *funcDef) :
     func(funcDef) {
 }
 
-void FuncCall::emit(Context &context) {
-    context.builder.emitFuncCall(context, func.get(), receiver.get(), args);
+ResultExprPtr FuncCall::emit(Context &context) {
+    return context.builder.emitFuncCall(context, this);
 }
 
 void FuncCall::writeTo(std::ostream &out) const {

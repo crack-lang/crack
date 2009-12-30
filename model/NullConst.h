@@ -15,7 +15,7 @@ class NullConst : public Expr {
     public:
         NullConst(TypeDef *type) : Expr(type) {}
         
-        virtual void emit(Context &context);
+        virtual ResultExprPtr emit(Context &context);
         
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;        

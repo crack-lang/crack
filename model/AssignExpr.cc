@@ -5,6 +5,7 @@
 #include "builder/Builder.h"
 #include "parser/Parser.h"
 #include "Context.h"
+#include "ResultExpr.h"
 #include "TypeDef.h"
 #include "VarDef.h"
 #include "VarDefImpl.h"
@@ -41,13 +42,15 @@ AssignExprPtr AssignExpr::create(Context &context,
     return new AssignExpr(aggregate, var, converted.get());
 }
 
-void AssignExpr::emit(Context &context) {
+ResultExprPtr AssignExpr::emit(Context &context) {
     if (aggregate)
-        context.builder.emitFieldAssign(context, aggregate.get(), var.get(), 
-                                        value.get()
-                                        );
+        return context.builder.emitFieldAssign(context, this);
     else
-        var->emitAssignment(context, value.get());
+        return var->emitAssignment(context, value.get());
+}
+
+bool AssignExpr::isProductive() const {
+    return false;
 }
 
 void AssignExpr::writeTo(std::ostream &out) const {

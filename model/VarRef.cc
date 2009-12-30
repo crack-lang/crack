@@ -4,6 +4,7 @@
 #include "builder/Builder.h"
 #include "VarDefImpl.h"
 #include "Context.h"
+#include "ResultExpr.h"
 #include "TypeDef.h"
 #include "VarDef.h"
 
@@ -15,9 +16,13 @@ VarRef::VarRef(VarDef *def) :
     def(def) {
 }
 
-void VarRef::emit(Context &context) {
+ResultExprPtr VarRef::emit(Context &context) {
     assert(def->impl);
-    def->impl->emitRef(context, def.get());
+    return def->impl->emitRef(context, this);
+}
+
+bool VarRef::isProductive() const {
+    return false;
 }
 
 void VarRef::writeTo(ostream &out) const {

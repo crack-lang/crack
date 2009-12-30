@@ -20,12 +20,11 @@ SPUG_RCPTR(AssignExpr);
  * An assignment expression.
  */
 class AssignExpr : public Expr {
-    private:
-        AssignExpr(Expr *aggregate, VarDef *var, Expr *value);
-
     public:
         ExprPtr aggregate, value;
         VarDefPtr var;
+
+        AssignExpr(Expr *aggregate, VarDef *var, Expr *value);
 
         /**
          * Create a new AssignExpr, check for errors.
@@ -59,8 +58,10 @@ class AssignExpr : public Expr {
         }
 
         /** Emit the expression in the given context. */
-        virtual void emit(Context &context);
-        
+        virtual ResultExprPtr emit(Context &context);
+
+        // overrides Expr, assignments are non-productive.        
+        virtual bool isProductive() const;
         virtual void writeTo(std::ostream &out) const;
 };
 

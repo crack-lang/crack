@@ -28,9 +28,15 @@ class TypeDef : public VarDef {
         // initialization without the whole "oper new" business)
         ExprPtr defaultInitializer;
         
-        // XXX need a metatype
-        TypeDef(const std::string &name) : VarDef(0, name) {}
+        // if true, the type is a pointer type (points to a structure)
+        bool pointer;
         
+        // XXX need a metatype
+        TypeDef(const std::string &name, bool pointer = false) :
+            VarDef(0, name),
+            pointer(pointer) {
+        }
+       
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).

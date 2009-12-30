@@ -4,6 +4,7 @@
 #include "builder/Builder.h"
 #include "VarDefImpl.h"
 #include "Context.h"
+#include "ResultExpr.h"
 #include "TypeDef.h"
 
 using namespace model;
@@ -14,8 +15,8 @@ StrConst::StrConst(TypeDef *type, const std::string &val) :
     val(val) {
 }
 
-void StrConst::emit(Context &context) { 
-    context.builder.emitStrConst(context, this);
+ResultExprPtr StrConst::emit(Context &context) { 
+    return context.builder.emitStrConst(context, this);
 }
 
 void StrConst::writeTo(ostream &out) const {

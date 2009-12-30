@@ -10,6 +10,7 @@ namespace model {
 class Context;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(VarDefImpl);
+SPUG_RCPTR(ResultExpr);
 SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(VarDef);
@@ -26,7 +27,7 @@ class VarDef : public spug::RCBase {
         VarDef(TypeDef *type, const std::string &name);
         virtual ~VarDef();
         
-        void emitAssignment(Context &context, Expr *expr);
+        ResultExprPtr emitAssignment(Context &context, Expr *expr);
         
         /**
          * Returns true if the definition type requires a slot in the instance 

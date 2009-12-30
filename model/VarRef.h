@@ -17,7 +17,10 @@ class VarRef : public Expr {
         VarDefPtr def;
         VarRef(VarDef *def);
         
-        virtual void emit(Context &context);
+        virtual ResultExprPtr emit(Context &context);
+        
+        // variable references are non-productive, so we override.
+        virtual bool isProductive() const;
         virtual void writeTo(std::ostream &out) const;
 };
 

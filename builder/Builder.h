@@ -8,12 +8,15 @@
 #include "model/FuncDef.h" // for FuncDef::Flags
 
 namespace model {
+    class AllocExpr;
+    class AssignExpr;
     SPUG_RCPTR(ArgDef);
+    SPUG_RCPTR(CleanupFrame);
     SPUG_RCPTR(Branchpoint);
     class Context;
-    class IntConst;
     SPUG_RCPTR(FuncCall);
     SPUG_RCPTR(IntConst);
+    class NullConst;
     SPUG_RCPTR(StrConst);
     SPUG_RCPTR(TypeDef);
     SPUG_RCPTR(VarDef);
@@ -26,32 +29,32 @@ namespace builder {
 /** Abstract base class for builders.  Builders generate code. */
 class Builder {
     public:
-        virtual void emitFuncCall(model::Context &context,
-                                  model::FuncDef *func,
-                                  model::Expr *receiver,
-                                  const model::FuncCall::ExprVec &args
-                                  ) = 0;
+        virtual model::ResultExprPtr emitFuncCall(
+            model::Context &context,
+            model::FuncCall *funcCall
+        ) = 0;
         
-        virtual void emitStrConst(model::Context &context,
-                                  model::StrConst *strConst
-                                  ) = 0;
+        virtual model::ResultExprPtr emitStrConst(model::Context &context,
+                                                  model::StrConst *strConst
+                                                  ) = 0;
 
-        virtual void emitIntConst(model::Context &context,
-                                  const model::IntConst &val) = 0;
+        virtual model::ResultExprPtr emitIntConst(model::Context &context,
+                                                  model::IntConst *val
+                                                  ) = 0;
 
         /**
          * Emits a null of the specified type.
          */        
-        virtual void emitNull(model::Context &context,
-                              const model::TypeDef &type
-                              ) = 0;
+        virtual model::ResultExprPtr emitNull(model::Context &context,
+                                              model::NullConst *nullExpr
+                                              ) = 0;
         
         /**
          * Emit an allocator for the specified type.
          */
-        virtual void emitAlloc(model::Context &context,
-                               model::TypeDef *type
-                               ) = 0;
+        virtual model::ResultExprPtr emitAlloc(model::Context &context,
+                                               model::AllocExpr *allocExpr
+                                               ) = 0;
         
         /**
          * Emit a test for non-zero.  This is the default for emitting 
@@ -184,11 +187,9 @@ class Builder {
          * @param varDef the field variable definition.
          * @param val the value to assign to the variable.
          */
-        virtual void emitFieldAssign(model::Context &context,
-                                     model::Expr *aggregate,
-                                     model::VarDef *varDef,
-                                     model::Expr *val
-                                     ) = 0;
+        virtual model::ResultExprPtr emitFieldAssign(model::Context &context,
+                                                     model::AssignExpr *assign
+                                                     ) = 0;
 
         /**
          * Emit code to narrow an instance of curType to parent.
@@ -206,6 +207,20 @@ class Builder {
 
         virtual void createModule(const char *name) = 0;
         virtual void closeModule() = 0;
+        
+        /**
+         * Create a new cleanup frame.
+         */
+        virtual model::CleanupFramePtr
+            createCleanupFrame(model::Context &context) = 0;
+        
+        /**
+         * Close all of the cleanup frames.
+         * This is a signal to the builder to emit all of the cleanup code
+         * for the context.
+         */
+        virtual void closeAllCleanups(model::Context &context) = 0;
+        
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val) = 0;
         virtual model::IntConstPtr createIntConst(model::Context &context,

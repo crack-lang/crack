@@ -5,11 +5,13 @@
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
 #include "AllocExpr.h"
+#include "AssignExpr.h"
 #include "ArgDef.h"
 #include "Context.h"
 #include "FuncDef.h"
 #include "InstVarDef.h"
 #include "OverloadDef.h"
+#include "ResultExpr.h"
 #include "VarDef.h"
 #include "VarDefImpl.h"
 #include "VarRef.h"
@@ -116,10 +118,11 @@ FuncDefPtr TypeDef::createDefaultInit() {
                                          )
                                 );
 
-            context->builder.emitFieldAssign(*funcContext, thisRef.get(),
-                                             ivar,
-                                             ivar->initializer.get()
-                                             );
+            AssignExprPtr assign = new AssignExpr(thisRef.get(),
+                                                  ivar,
+                                                  ivar->initializer.get()
+                                                  );
+            context->builder.emitFieldAssign(*funcContext, assign.get());
         }
     
     context->builder.emitReturn(*funcContext, 0);

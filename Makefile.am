@@ -8,6 +8,7 @@ libcrack_la_SOURCES = \
     parser/Parser.cc \
     model/AllocExpr.cc \
     model/AssignExpr.cc \
+    model/CleanupFrame.cc \
     model/Context.cc \
     model/Expr.cc \
     model/FuncCall.cc \
@@ -15,6 +16,7 @@ libcrack_la_SOURCES = \
     model/IntConst.cc \
     model/NullConst.cc \
     model/OverloadDef.cc \
+    model/ResultExpr.cc \
     model/StrConst.cc \
     model/TypeDef.cc \
     model/VarDef.cc \

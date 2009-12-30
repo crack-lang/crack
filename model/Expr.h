@@ -9,6 +9,7 @@ namespace model {
 
 class Context;
 SPUG_RCPTR(TypeDef);
+SPUG_RCPTR(ResultExpr);
 
 SPUG_RCPTR(Expr);
 
@@ -21,9 +22,14 @@ class Expr : public spug::RCBase {
         
         ~Expr();
 
-        /** Emit the expression in the given context. */
-        virtual void emit(Context &context) = 0;        
-        
+        /**
+         * Emit the expression in the given context.
+         * 
+         * Returns a result expression to be used for object lifecycle
+         * management.
+         */
+        virtual ResultExprPtr emit(Context &context) = 0;
+
         /**
          * Emit the expression for use in a conditional context.
          * This defaults to calling Builder::emitTest().  Builder-derived 
@@ -37,6 +43,9 @@ class Expr : public spug::RCBase {
          * type, null if it cannot be converted.
          */
         virtual ExprPtr convert(Context &context, TypeDef *type);
+
+        /** Returns true if the expression is productive (see /notes.txt). */
+        virtual bool isProductive() const;
         
         /**
          * Write a representation of the expression to the stream.

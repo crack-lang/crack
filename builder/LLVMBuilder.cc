@@ -20,15 +20,20 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
+#include <model/AllocExpr.h>
+#include <model/AssignExpr.h>
 #include <model/ArgDef.h>
 #include <model/Branchpoint.h>
 #include <model/BuilderContextData.h>
+#include <model/CleanupFrame.h>
 #include <model/VarDefImpl.h>
 #include <model/Context.h>
 #include <model/FuncDef.h>
 #include <model/FuncCall.h>
 #include <model/InstVarDef.h>
 #include <model/IntConst.h>
+#include <model/NullConst.h>
+#include <model/ResultExpr.h>
 #include <model/StrConst.h>
 #include <model/TypeDef.h>
 #include <model/VarDef.h>
@@ -62,8 +67,10 @@ namespace {
     class BTypeDef : public model::TypeDef {
         public:
             const Type *rep;
-            BTypeDef(const string &name, const llvm::Type *rep) :
-                model::TypeDef(name),
+            BTypeDef(const string &name, const llvm::Type *rep,
+                     bool pointer = false
+                     ) :
+                model::TypeDef(name, pointer),
                 rep(rep) {
             }
     };
@@ -268,6 +275,47 @@ namespace {
             }
     };
     
+    /**
+     * Implements a ResultExpr that tracks the result by storing the Value.
+     */
+    class BResultExpr : public ResultExpr {
+        public:
+            Value *value;
+
+            BResultExpr(Expr *sourceExpr, Value *value) :
+                ResultExpr(sourceExpr),
+                value(value) {
+            }
+            
+            ResultExprPtr emit(Context &context) {
+                dynamic_cast<LLVMBuilder &>(context.builder).lastValue = 
+                    value;
+                return this;
+            }
+    };
+    
+    SPUG_RCPTR(BCleanupFrame)
+
+    class BCleanupFrame : public CleanupFrame {
+        public:
+            vector<ExprPtr> cleanups;
+    
+            BCleanupFrame(Context *context) : CleanupFrame(context) {}
+            
+            virtual void addCleanup(Expr *cleanup) {
+                cleanups.insert(cleanups.begin(), cleanup);
+            }
+            
+            virtual void close() {
+                context->emittingCleanups = true;
+                for (vector<ExprPtr>::iterator iter = cleanups.begin();
+                     iter != cleanups.end();
+                     ++iter)
+                    (*iter)->emit(*context);
+                context->emittingCleanups = false;
+            }
+    };            
+    
     // generates references for 
     class BMemVarDefImpl : public VarDefImpl {
         public:
@@ -275,20 +323,24 @@ namespace {
             
             BMemVarDefImpl(Value *rep) : rep(rep) {}
             
-            virtual void emitRef(Context &context, VarDef *var) {
+            virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitMemVarRef(context, rep);
+                return new BResultExpr(var, b.lastValue);
             }
             
-            virtual void 
-            emitAssignment(Context &context, VarDef *var,
-                           Expr *expr
-                           ) {
+            virtual ResultExprPtr
+            emitAssignment(Context &context, AssignExpr *assign) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
-                expr->emit(context);
-                b.builder.CreateStore(b.lastValue, rep);
+                ResultExprPtr result = assign->value->emit(context);
+                Value *exprVal = b.lastValue;
+                b.builder.CreateStore(exprVal, rep);
+                result->handleAssignment(context);
+                b.lastValue = exprVal;
+                
+                return new BResultExpr(assign, exprVal);
             }
     };
     
@@ -300,19 +352,18 @@ namespace {
         public:
             unsigned index;
             BInstVarDefImpl(unsigned index) : index(index) {}
-            virtual void emitRef(Context &context,
-                                 VarDef *var
-                                 ) {
+            virtual ResultExprPtr emitRef(Context &context,
+                                          VarRef *var
+                                          ) { 
                 assert(false && 
                        "attempting to emit a direct reference to a instance "
                        "variable."
                        );
             }
             
-            virtual void emitAssignment(Context &context,
-                                        VarDef *var,
-                                        Expr *expr
-                                        ) {
+            virtual ResultExprPtr emitAssignment(Context &context,
+                                                 AssignExpr *assign
+                                                 ) {
                 assert(false && 
                        "attempting to assign a direct reference to a instance "
                        "variable."
@@ -328,8 +379,8 @@ namespace {
                 VarRef(varDef) {
             }
 
-            void emit(Context &context) {
-                aggregate->emit(context);
+            ResultExprPtr emit(Context &context) {
+                ResultExprPtr aggregateResult = aggregate->emit(context);
 
                 // narrow to the ancestor type where there variable is defined.
                 aggregate->type->emitNarrower(*def->context->returnType);
@@ -365,8 +416,13 @@ namespace {
                         );
                     bdata->placeholders.push_back(placeholder);
                 }
+                
+                // release the aggregate
+                aggregateResult->handleTransient(context);
+                
+                return new BResultExpr(this, bb.lastValue);
             }
-    };                            
+    };
 
     class BArgVarDefImpl : public VarDefImpl {
         public:
@@ -374,18 +430,18 @@ namespace {
             
             BArgVarDefImpl(Value *rep) : rep(rep) {}
 
-            virtual void emitRef(Context &context,
-                                 VarDef *var
-                                 ) {
+            virtual ResultExprPtr emitRef(Context &context,
+                                          VarRef *var
+                                          ) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 b.emitArgVarRef(context, rep);
+                
+                return new BResultExpr(var, b.lastValue);
             }
             
-            virtual void 
-            emitAssignment(Context &context, VarDef *var,
-                           Expr *expr
-                           ) {
+            virtual ResultExprPtr
+            emitAssignment(Context &context, AssignExpr *assign) {
                 // XXX implement argument assignment
                 assert(false && "can't assign arguments yet");
                 LLVMBuilder &b =
@@ -502,7 +558,7 @@ namespace {
         public:
             MallocExpr(TypeDef *type) : Expr(type) {}
             
-            void emit(Context &context) {
+            ResultExprPtr emit(Context &context) {
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 BTypeDef *btype = BTypeDefPtr::rcast(type);
@@ -510,6 +566,8 @@ namespace {
                     cast<PointerType>(const_cast<Type *>(btype->rep));
                 builder.lastValue =
                     builder.builder.CreateMalloc(tp->getElementType());
+
+                return new BResultExpr(this, builder.lastValue);
             }
             
             virtual void writeTo(ostream &out) const {
@@ -563,9 +621,9 @@ namespace {
         public:
             BoolOpCall(FuncDef *def) : FuncCall(def) {}
             
-            virtual void emit(Context &context) {
+            virtual ResultExprPtr emit(Context &context) {
                 // emit the receiver
-                receiver->emit(context);
+                receiver->emit(context)->handleTransient(context);
 
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
@@ -574,6 +632,8 @@ namespace {
                         builder.lastValue,
                         Constant::getNullValue(builder.lastValue->getType())
                     );
+                
+                return new BResultExpr(this, builder.lastValue);
             }
     };
     
@@ -592,9 +652,9 @@ namespace {
     class VoidPtrOpCall : public FuncCall {
         public:
             VoidPtrOpCall(FuncDef *def) : FuncCall(def) {}
-            virtual void emit(Context &context) {
+            virtual ResultExprPtr emit(Context &context) {
                 // emit the receiver
-                receiver->emit(context);
+                receiver->emit(context)->handleTransient(context);
                 
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
@@ -602,6 +662,8 @@ namespace {
                     builder.builder.CreateBitCast(builder.lastValue,
                                                   builder.llvmVoidPtrType
                                                   );
+                
+                return new BResultExpr(this, builder.lastValue);
             }
     };
 
@@ -623,17 +685,19 @@ namespace {
                 FuncCall(def) {                                             \
             }                                                               \
                                                                             \
-            virtual void emit(Context &context) {                           \
+            virtual ResultExprPtr emit(Context &context) {                  \
                 LLVMBuilder &builder =                                      \
                     dynamic_cast<LLVMBuilder &>(context.builder);           \
                                                                             \
-                args[0]->emit(context);                                     \
+                args[0]->emit(context)->handleTransient(context);           \
                 Value *lhs = builder.lastValue;                             \
-                args[1]->emit(context);                                     \
+                args[1]->emit(context)->handleTransient(context);           \
                 builder.lastValue =                                         \
                     builder.builder.Create##opCode(lhs,                     \
                                                    builder.lastValue        \
                                                    );                       \
+                                                                            \
+                return new BResultExpr(this, builder.lastValue);            \
             }                                                               \
     };                                                                      \
                                                                             \
@@ -668,6 +732,21 @@ namespace {
 
 } // anon namespace
 
+void LLVMBuilder::emitFunctionCleanups(Context &context) {
+    
+    // close all cleanups in this context.
+    closeAllCleanups(context);
+    
+    // recurse up through the parents.
+    if (!context.toplevel)
+        for (Context::ContextVec::iterator parent = context.parents.begin();
+            parent != context.parents.end();
+            ++parent
+            )
+            if ((*parent)->scope == Context::local)
+                emitFunctionCleanups(**parent);
+}
+
 LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
@@ -678,61 +757,65 @@ LLVMBuilder::LLVMBuilder() :
     InitializeNativeTarget();
 }
 
-void LLVMBuilder::emitFuncCall(Context &context,
-                               FuncDef *funcDef, 
-                               Expr *receiver,
-                               const FuncCall::ExprVec &args) {
+ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
 
     // get the LLVM arg list from the receiver and the argument expressions
     vector<Value*> valueArgs;
     
     // if there's a receiver, use it as the first argument.
-    if (receiver) {
-        receiver->emit(context);
+    if (funcCall->receiver) {
+        funcCall->receiver->emit(context)->handleTransient(context);
         valueArgs.push_back(lastValue);
     }
     
     // emit the arguments
+    FuncCall::ExprVec &args = funcCall->args;
     for (ExprVec::const_iterator iter = args.begin(); iter < args.end(); 
-         ++iter) {
-        (*iter)->emit(context);
+         ++iter
+         ) {
+        (*iter)->emit(context)->handleTransient(context);
         valueArgs.push_back(lastValue);
     }
     
+    BFuncDef *funcDef = BFuncDefPtr::arcast(funcCall->func);
     lastValue =
-        builder.CreateCall(BFuncDefPtr::cast(funcDef)->rep, valueArgs.begin(),
-                           valueArgs.end()
-                           );
+        builder.CreateCall(funcDef->rep, valueArgs.begin(), valueArgs.end());
+    return new BResultExpr(funcCall, lastValue);
 }
 
-void LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
+ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
     BStrConst *bval = BStrConstPtr::cast(val);
     // if the global string hasn't been defined yet, create it
     if (!bval->rep) {
         bval->rep = builder.CreateGlobalStringPtr(val->val.c_str());
     }
     lastValue = bval->rep;
+    return new BResultExpr(val, lastValue);
 }
 
-void LLVMBuilder::emitIntConst(Context &context, const IntConst &val) {
-    lastValue = dynamic_cast<const BIntConst &>(val).rep;
+ResultExprPtr LLVMBuilder::emitIntConst(Context &context, IntConst *val) {
+    lastValue = dynamic_cast<const BIntConst *>(val)->rep;
+    return new BResultExpr(val, lastValue);
 }
 
-void LLVMBuilder::emitNull(Context &context,
-                           const TypeDef &type
-                           ) {
-    const BTypeDef &btype = dynamic_cast<const BTypeDef &>(type);
-    lastValue = Constant::getNullValue(btype.rep);
+ResultExprPtr LLVMBuilder::emitNull(Context &context,
+                                    NullConst *nullExpr
+                                    ) {
+    BTypeDef *btype = BTypeDefPtr::arcast(nullExpr->type);
+    lastValue = Constant::getNullValue(btype->rep);
+    
+    return new BResultExpr(nullExpr, lastValue);
 }
 
-void LLVMBuilder::emitAlloc(Context &context, TypeDef *type) {
+ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
     // XXX need to be able to do this for an incomplete class when we 
     // allow user defined oper new.
-    BTypeDef *btype = BTypeDefPtr::cast(type);
-    assert(btype && "bad TypeDef");
+    BTypeDef *btype = BTypeDefPtr::arcast(allocExpr->type);
     PointerType *tp =
         cast<PointerType>(const_cast<Type *>(btype->rep));
     lastValue = builder.CreateMalloc(tp->getElementType());
+    
+    return new BResultExpr(allocExpr, lastValue);
 }
 
 void LLVMBuilder::emitTest(Context &context, Expr *expr) {
@@ -894,7 +977,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
         bdata->addBaseClass(BTypeDefPtr::rcast(*iter));
     
     OpaqueType *opaque = OpaqueType::get(getGlobalContext());
-    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque));
+    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque), true);
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
     
     // create function to convert to voidptr
@@ -966,10 +1049,20 @@ void LLVMBuilder::emitEndClass(Context &context) {
 void LLVMBuilder::emitReturn(model::Context &context,
                              model::Expr *expr) {
     
+    // XXX need to emit all cleanups up to the function level.
     if (expr) {
-        expr->emit(context);
-        builder.CreateRet(lastValue);
+        ResultExprPtr resultExpr = expr->emit(context);
+        Value *retVal = lastValue;
+        
+        // XXX there's an opportunity for an optimization here, if we return a 
+        // local variable, we should omit the cleanup of that local variable 
+        // and the bind of the assignment.
+        resultExpr->handleAssignment(context);
+        emitFunctionCleanups(context);
+
+        builder.CreateRet(retVal);
     } else {
+        emitFunctionCleanups(context);
         builder.CreateRetVoid();
     }
 }
@@ -992,9 +1085,9 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     // get initialized in the constructors)
     if (defCtx->scope != Context::instance)
         if (initializer)
-            initializer->emit(context);
+            initializer->emit(context)->handleAssignment(context);
         else
-            type->defaultInitializer->emit(context);
+            type->defaultInitializer->emit(context)->handleAssignment(context);
     
     Value *var = 0;
     switch (defCtx->scope) {
@@ -1097,6 +1190,18 @@ void LLVMBuilder::closeModule() {
     passMan.run(*module);
 }    
 
+CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
+    return new BCleanupFrame(&context);
+}
+
+void LLVMBuilder::closeAllCleanups(model::Context &context) {
+    BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
+    while (frame) {
+        frame->close();
+        frame = BCleanupFramePtr::rcast(frame->parent);
+    }
+}
+
 model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
                                                const std::string &val) {
     return new BStrConst(context.globalData->byteptrType.get(), val);
@@ -1142,23 +1247,26 @@ VarRefPtr LLVMBuilder::createFieldRef(Expr *aggregate,
     return new BFieldRef(aggregate, varDef);
 }
 
-void LLVMBuilder::emitFieldAssign(Context &context,
-                                  Expr *aggregate,
-                                  VarDef *varDef,
-                                  Expr *val
-                                  ) {
-    aggregate->emit(context);
+ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
+                                           AssignExpr *assign
+                                           ) {
+    assign->aggregate->emit(context);
 
     // narrow to the field type.
-    Context *varContext = varDef->context;
-    aggregate->type->emitNarrower(*varContext->returnType);
+    Context *varContext = assign->var->context;
+    assign->aggregate->type->emitNarrower(*varContext->returnType);
     Value *aggregateRep = lastValue;
     
     // emit the value last, lastValue after this needs to be the expression so 
     // we can chain assignments.
-    val->emit(context);
+    ResultExprPtr resultExpr = assign->value->emit(context);
 
-    unsigned index = BInstVarDefImplPtr::rcast(varDef->impl)->index;
+    // record the result as being bound to a variable.
+    Value *temp = lastValue;
+    resultExpr->handleAssignment(context);
+    lastValue = temp;
+
+    unsigned index = BInstVarDefImplPtr::rcast(assign->var->impl)->index;
     // if the variable is part of a complete context, just do the store.  
     // Otherwise create a fixup.
     if (varContext->complete) {
@@ -1179,6 +1287,8 @@ void LLVMBuilder::emitFieldAssign(Context &context,
             BBuilderContextDataPtr::rcast(varContext->builderData);
         bdata->placeholders.push_back(placeholder);
     }
+
+    return new BResultExpr(assign, lastValue);
 }
 
 void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {

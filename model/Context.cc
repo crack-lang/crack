@@ -3,6 +3,7 @@
 
 #include "builder/Builder.h"
 #include "BuilderContextData.h"
+#include "CleanupFrame.h"
 #include "OverloadDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"
@@ -19,8 +20,11 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     builder(builder),
     scope(scope),
     complete(false),
+    toplevel(false),
+    emittingCleanups(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
-    globalData(parentContext ? parentContext->globalData : new GlobalData()) {
+    globalData(parentContext ? parentContext->globalData : new GlobalData()),
+    cleanupFrame(builder.createCleanupFrame(*this)) {
     
     if (parentContext)
         parents.push_back(parentContext);
@@ -32,8 +36,11 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     builder(builder),
     scope(scope),
     complete(false),
+    toplevel(false),
+    emittingCleanups(false),
     returnType(TypeDefPtr(0)),
-    globalData(globalData) {
+    globalData(globalData),
+    cleanupFrame(builder.createCleanupFrame(*this)) {
 }
 
 Context::~Context() {}
@@ -201,29 +208,15 @@ StrConstPtr Context::getStrConst(const std::string &value) {
     }
 }
 
-void Context::emitCleanups(Context::Depth depth) {
-    for (VarDefMap::iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         ) {
-        VarDef *def = iter->second.get();
-        VarDefPtr release;
-        if (def->type && def->type->context && 
-            (release = def->type->context->lookUp("release"))
-            ) {
-            // Create a release expression for the variable and emit it.
-            FuncCallPtr releaseExpr = new FuncCall(FuncDefPtr::rcast(release));
-            releaseExpr->receiver = new VarRef(def);
-            releaseExpr->emit(*this);
-        }
-    }
-    
-    // do cleanups on the parent contexts
-    if (depth != block)
-        for (ContextVec::iterator iter = parents.begin();
-             iter != parents.end();
-             ++iter
-             )
-            if ((*iter)->scope == local)
-                (*iter)->emitCleanups(depth);
+CleanupFramePtr Context::createCleanupFrame() {
+    CleanupFramePtr frame = builder.createCleanupFrame(*this);
+    frame->parent = cleanupFrame;
+    cleanupFrame = frame;
+    return frame;
+}
+
+void Context::closeCleanupFrame() {
+    CleanupFramePtr frame = cleanupFrame;
+    cleanupFrame = frame->parent;
+    frame->close();
 }

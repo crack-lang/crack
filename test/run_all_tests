@@ -119,31 +119,39 @@ test_output 'internal references of base class inst vars' \
     B b; b.init(); printint(b.f());' \
     100
 
-c='class A { int32 s; void i(int32 s0) {s=s0} 
-             void release() {printint(s)} };'
+c='class A { int32 s; void i(int32 s0) {s=s0}
+             void bind() {printint(s); puts("b");}
+             void release() {printint(s); puts("r");} };'
 
 test_output 'simple scope release' \
     "$c void func() { A a; a.i(2); printint(1)} func()" \
-    12
+    '0b
+12r'
 
 test_output 'release on return void' \
     "$c void func() { A a; a.i(2); printint(1); return } func()" \
-    12
+    '0b
+12r'
 
 test_output 'release on return expr' \
     "$c int32 func() { A a; a.i(2); printint(1); return 0} func()" \
-    12
+    '0b
+12r'
 
 f="void func(int32 val) { A a; a.i(5); printint(1); 
                           if (val) { A b; b.i(4); printint(2); return; }
                           printint(3); }"
 test_output 'premature return in nested context' \
     "$c $f func(1)" \
-    1245
+    '0b
+10b
+24r
+5r'
 
 test_output 'premature return bypassing nested context' \
     "$c $f func(0)" \
-    135
+    '0b
+135r'
 
 test_output 'explicit default constructor' \
     'class A { int32 val; void init() { val = 100; } };

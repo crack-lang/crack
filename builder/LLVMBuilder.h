@@ -24,6 +24,10 @@ class LLVMBuilder : public Builder {
         llvm::Function *func;
         
         llvm::ExecutionEngine *execEng;
+        
+        // emit all cleanups for context and all parent contextts up to the 
+        // level of the function
+        void emitFunctionCleanups(model::Context &context);
 
     public:
         // currently experimenting with making these public to give objects in 
@@ -37,24 +41,26 @@ class LLVMBuilder : public Builder {
 
         LLVMBuilder();
 
-        virtual void emitFuncCall(model::Context &context, 
-                                  model::FuncDef *func,
-                                  model::Expr *receiver,
-                                  const model::FuncCall::ExprVec &args
-                                  );
+        virtual model::ResultExprPtr emitFuncCall(
+            model::Context &context, 
+            model::FuncCall *funcCall
+        );
         
-        virtual void emitStrConst(model::Context &context,
-                                  model::StrConst *strConst
-                                  );
-        
-        virtual void emitIntConst(model::Context &context,
-                                  const model::IntConst &val);
+        virtual model::ResultExprPtr emitStrConst(model::Context &context,
+                                                  model::StrConst *strConst
+                                                  );
 
-        virtual void emitNull(model::Context &context,
-                              const model::TypeDef &type
-                              );
+        virtual model::ResultExprPtr emitIntConst(model::Context &context,
+                                                  model::IntConst *val
+                                                  );
 
-        virtual void emitAlloc(model::Context &context, model::TypeDef *type);
+        virtual model::ResultExprPtr emitNull(model::Context &context,
+                                              model::NullConst *nullExpr
+                                              );
+
+        virtual model::ResultExprPtr emitAlloc(model::Context &context, 
+                                               model::AllocExpr *allocExpr
+                                               );
 
         virtual void emitTest(model::Context &context,
                               model::Expr *expr
@@ -122,11 +128,9 @@ class LLVMBuilder : public Builder {
             createFieldRef(model::Expr *aggregate,
                            model::VarDef *varDef
                            );
-        virtual void emitFieldAssign(model::Context &context,
-                                     model::Expr *aggregate,
-                                     model::VarDef *varDef,
-                                     model::Expr *val
-                                     );
+        virtual model::ResultExprPtr emitFieldAssign(model::Context &context,
+                                                     model::AssignExpr *assign
+                                                     );
 
         virtual void emitNarrower(model::TypeDef &curType,
                                   model::TypeDef &parent,
@@ -134,6 +138,9 @@ class LLVMBuilder : public Builder {
                                   );
         virtual void createModule(const char *name);
         virtual void closeModule();
+        virtual model::CleanupFramePtr
+            createCleanupFrame(model::Context &context);
+        virtual void closeAllCleanups(model::Context &context);
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val);
         virtual model::IntConstPtr createIntConst(model::Context &context,

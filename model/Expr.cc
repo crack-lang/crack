@@ -33,3 +33,8 @@ ExprPtr Expr::convert(Context &context, TypeDef *newType) {
     // can't convert
     return 0;
 }
+
+bool Expr::isProductive() const {
+    // by default, all expresssions returning pointer types are productive
+    return type->pointer;
+}

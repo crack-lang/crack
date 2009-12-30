@@ -7,6 +7,7 @@
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
+#include "model/CleanupFrame.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/FuncDef.h"
@@ -14,6 +15,7 @@
 #include "model/Expr.h"
 #include "model/IntConst.h"
 #include "model/NullConst.h"
+#include "model/ResultExpr.h"
 #include "model/StrConst.h"
 #include "model/TypeDef.h"
 #include "model/OverloadDef.h"
@@ -105,6 +107,10 @@ bool Parser::parseStatement(bool defsAllowed) {
             VarDefPtr varDef =
                expr->type->emitVarDef(*context, tok.getData(), expr.get());
             addDef(varDef.get());
+            context->cleanupFrame->addCleanup(varDef.get());
+            
+            // trick the expression processing into not happening
+            expr = 0;
          } else {
             error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
          }
@@ -119,8 +125,11 @@ bool Parser::parseStatement(bool defsAllowed) {
    }
 
    // if we got an expression, emit it.
-   if (expr)
-      expr->emit(*context);
+   if (expr) {
+      context->createCleanupFrame();
+      expr->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+   }
 
    // consume a semicolon, put back a block terminator
    tok = toker.getToken();
@@ -130,19 +139,6 @@ bool Parser::parseStatement(bool defsAllowed) {
       unexpected(tok, "expected semicolon or a block terminator");
 
    return false;
-}
-
-namespace {
-   // emit cleanups for the block unless there was a terminal statement
-   inline bool emitCleanups(Context &context,
-                            bool gotTerminalStatement
-                            ) {
-      if (gotTerminalStatement)
-         return true;
-      
-      context.emitCleanups(Context::block);
-      return false;
-   }
 }
 
 bool Parser::parseBlock(bool nested) {
@@ -162,16 +158,21 @@ bool Parser::parseBlock(bool nested) {
 
       // check for a different block terminator depending on whether we are
       // nested or not.
+      bool gotBlockTerminator = false;
       if (tok.isRCurly()) {
-         if (nested)
-            return emitCleanups(*context, gotTerminalStatement);
-         else
-            unexpected(tok, "expected statement or closing brace.");
-      } else if (tok.isEnd()) {
          if (!nested)
-            return emitCleanups(*context, gotTerminalStatement);
-	 else
+            unexpected(tok, "expected statement or closing brace.");
+         gotBlockTerminator = true;
+      } else if (tok.isEnd()) {
+         if (nested)
 	    unexpected(tok, "expected statement or end-of-file");
+	 gotBlockTerminator = true;
+      }
+      
+      if (gotBlockTerminator) {
+         if (!gotTerminalStatement)
+            context->builder.closeAllCleanups(*context);
+         return gotTerminalStatement;
       }
       
       toker.putBack(tok);
@@ -470,6 +471,7 @@ bool Parser::parseDef(TypeDef *type) {
          // Emit a variable definition and store it in the context.
          VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
          addDef(varDef.get());
+         context->cleanupFrame->addCleanup(varDef.get());
          return true;
       } else if (tok3.isAssign()) {
          ExprPtr initializer;
@@ -501,6 +503,7 @@ bool Parser::parseDef(TypeDef *type) {
                                              initializer.get()
                                              );
          addDef(varDef.get());
+         context->cleanupFrame->addCleanup(varDef.get());
          return true;
       } else if (tok3.isLParen()) {
          // function definition
@@ -516,6 +519,7 @@ bool Parser::parseDef(TypeDef *type) {
          ContextPtr subCtx = context->createSubContext(Context::local);
          ContextStackFrame cstack(*this, subCtx.get());
          context->returnType = type;
+         context->toplevel = true;
          
          // if this is a method, add the "this" variable
          if (isMethod) {
@@ -567,12 +571,16 @@ bool Parser::parseDef(TypeDef *type) {
          // if the block doesn't always terminate, either give an error or 
          // return void if the function return type is void
          if (!terminal)
-            if (context->globalData->voidType->matches(*context->returnType))
+            if (context->globalData->voidType->matches(*context->returnType)) {
+               // remove the cleanup stack - we have already done cleanups at 
+               // the block level.
+               context->cleanupFrame = 0;
                context->builder.emitReturn(*context, 0);
-            else
+            } else {
                // XXX we don't have the closing curly brace location, 
                // currently reporting the error on the top brace
                error(tok3, "missing return statement for non-void function.");
+            }
 
          context->builder.emitEndFunc(*context, funcDef.get());
          cstack.restore();
@@ -684,7 +692,6 @@ void Parser::parseReturnStmt() {
                           "returning " << context->returnType->name
                          )
                );
-      context->emitCleanups(Context::function);
       context->builder.emitReturn(*context, 0);
       return;
    }
@@ -707,8 +714,7 @@ void Parser::parseReturnStmt() {
                       )
             );
    
-   // emit all of the cleanups for the function and the return
-   context->emitCleanups(Context::function);
+   // emit the return statement
    context->builder.emitReturn(*context, expr.get());
 
    tok = toker.getToken();   

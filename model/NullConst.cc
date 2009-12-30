@@ -3,12 +3,13 @@
 
 #include "builder/Builder.h"
 #include "Context.h"
+#include "ResultExpr.h"
 
 using namespace model;
 using namespace std;
 
-void NullConst::emit(Context &context) {
-    context.builder.emitNull(context, *type);
+ResultExprPtr NullConst::emit(Context &context) {
+    return context.builder.emitNull(context, this);
 }
 
 ExprPtr NullConst::convert(Context &context, TypeDef *newType) {

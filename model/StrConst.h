@@ -13,7 +13,7 @@ class StrConst : public Expr {
         
         StrConst(TypeDef *type, const std::string &val);
         
-        virtual void emit(Context &context);
+        virtual ResultExprPtr emit(Context &context);
         virtual void writeTo(std::ostream &out) const;
 };
 

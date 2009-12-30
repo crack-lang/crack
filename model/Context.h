@@ -14,6 +14,7 @@ namespace builder {
 namespace model {
 
 SPUG_RCPTR(BuilderContextData);
+SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(OverloadDef);
@@ -46,12 +47,6 @@ class Context : public spug::RCBase {
             composite  // scope is just a composition of parent scopes
         };
         
-        // indicates the depth to recurse to when generating cleanup code.
-        enum Depth {
-            block, // do not recurse - just this context.
-            function // recurse all the way to the function context
-        };
-        
         typedef std::vector<ContextPtr> ContextVec;
         ContextVec parents;
 
@@ -64,10 +59,21 @@ class Context : public spug::RCBase {
         // variable references and assignments)
         bool complete;
         
+        // true if the context is the outermost context of a function.
+        bool toplevel;
+        
+        // true if we are currently in the process of emitting cleanups - 
+        // prevents us from trying to add cleanups on the expressions that we 
+        // are cleaning up.
+        bool emittingCleanups;
+        
         // this is the return type for a function context, and the class type 
         // for a class context.  XXX there is a reference cycle between the 
         // class and its context.
         TypeDefPtr returnType;
+        
+        // the current cleanup frame.
+        CleanupFramePtr cleanupFrame;
 
         struct GlobalData {
             StrConstTable strConstTable;
@@ -146,13 +152,21 @@ class Context : public spug::RCBase {
         
         /** Get or create a string constsnt. */
         StrConstPtr getStrConst(const std::string &value);
-        
-        /** 
-         * Emit all of the cleanup code for given local scope.
-         * @param depth how deep in the context stack to clean.
+
+        /**
+         * Create a new cleanup frame.  Cleanup frames group all 
+         * cleanups that are emitted until the frame is closed with 
+         * closeCleanupFrame().  Code emitted within a cleanup frame must 
+         * call all of the cleanups whenever exiting from the scope of the 
+         * frame, no matter how it exits.
          */
-        void emitCleanups(Depth depth);
+        CleanupFramePtr createCleanupFrame();
         
+        /**
+         * Closes the current cleanup frame, emitting all cleaup code if 
+         * appropriate.
+         */
+        void closeCleanupFrame();
 };
 
 }; // namespace model

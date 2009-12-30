@@ -1,9 +1,11 @@
 
 #include "VarDef.h"
 
+#include "AssignExpr.h"
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "Expr.h"
+#include "ResultExpr.h"
 #include "TypeDef.h"
 
 using namespace model;
@@ -16,8 +18,9 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
 
 VarDef::~VarDef() {}
 
-void VarDef::emitAssignment(Context &context, Expr *expr) {
-    impl->emitAssignment(context, this, expr);
+ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
+    AssignExprPtr assign = new AssignExpr(0, this, expr);
+    return impl->emitAssignment(context, assign.get());
 }
 
 bool VarDef::hasInstSlot() {
