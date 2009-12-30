@@ -23,20 +23,20 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
 }
 
 Token Toker::fixIdent(const string &data, const Location &loc) {
-    if (data == "if")
-        return Token(Token::ifKw, data, loc);
+    if (data == "class")
+        return Token(Token::classKw, data, loc);
     else if (data == "else")
         return Token(Token::elseKw, data, loc);
-    else if (data == "while")
-        return Token(Token::whileKw, data, loc);
-    else if (data == "return")
-        return Token(Token::returnKw, data, loc);
-    else if (data == "class")
-        return Token(Token::classKw, data, loc);
-    else if (data == "null")
-        return Token(Token::nullKw, data, loc);
+    else if (data == "if")
+        return Token(Token::ifKw, data, loc);
     else if (data == "is")
         return Token(Token::isKw, data, loc);
+    else if (data == "null")
+        return Token(Token::nullKw, data, loc);
+    else if (data == "return")
+        return Token(Token::returnKw, data, loc);
+    else if (data == "while")
+        return Token(Token::whileKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

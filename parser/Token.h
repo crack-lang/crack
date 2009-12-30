@@ -11,11 +11,11 @@ class Token {
    public:
 
       // the token types
-      typedef enum { ifKw, elseKw, whileKw, returnKw, classKw, nullKw, isKw,
-                     ident, string, semi, comma, colon, define, dot, assign, 
-                     lparen, rparen, lcurly, rcurly, oper, integer, plus, 
-                     minus, asterisk, slash, percent, bang, gt, lt, eq, ne, 
-                     ge, le, end
+      typedef enum { classKw, elseKw, ifKw, importKw, isKw, nullKw, returnKw, 
+                     whileKw, assign, asterisk, bang, colon, comma, define, 
+                     dot, end, eq, ge, gt, ident, integer, lcurly, le, lparen, 
+                     lt, minus, ne, oper, percent, plus, rcurly, rparen, semi,
+                     slash, string
 		    } Type;
 
    private:
