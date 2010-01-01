@@ -136,7 +136,8 @@ class Parser {
       model::TypeDefPtr parseTypeSpec();
       void parseArgDefs(std::vector<model::ArgDefPtr> &args);
 
-      /** Parse a definition. Returns false if there was no definition. 
+      /**
+       * Parse a definition. Returns false if there was no definition. 
        * @param type the parsed type.
        */
       bool parseDef(model::TypeDef *type);
@@ -147,6 +148,7 @@ class Parser {
       bool parseIfStmt();
       bool parseWhileStmt();
       void parseReturnStmt();
+      void parseImportStmt();
       model::TypeDefPtr parseClassDef();
       
       // error checking functions

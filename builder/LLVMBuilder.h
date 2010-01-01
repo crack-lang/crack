@@ -2,6 +2,8 @@
 #ifndef _builder_LLVMBUilder_h_
 #define _builder_LLVMBUilder_h_
 
+#include <map>
+
 #include "Builder.h"
 
 #include <llvm/Support/IRBuilder.h>
@@ -28,6 +30,9 @@ class LLVMBuilder : public Builder {
         // emit all cleanups for context and all parent contextts up to the 
         // level of the function
         void emitFunctionCleanups(model::Context &context);
+        
+        // stores primitive function pointers
+        std::map<llvm::Function *, void *> primFuncs;
 
     public:
         // currently experimenting with making these public to give objects in 
@@ -97,6 +102,15 @@ class LLVMBuilder : public Builder {
         virtual void emitEndFunc(model::Context &context,
                                  model::FuncDef *funcDef);
 
+        virtual model::FuncDefPtr
+            createExternFunc(model::Context &context,
+                             model::FuncDef::Flags flags,
+                             const std::string &name,
+                             model::TypeDef *returnType,
+                             const std::vector<model::ArgDefPtr> &args,
+                             void *cfunc
+                             );
+
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
                            const std::string &name,
@@ -146,6 +160,10 @@ class LLVMBuilder : public Builder {
         virtual model::IntConstPtr createIntConst(model::Context &context,
                                                   long val);
         virtual void registerPrimFuncs(model::Context &context);
+        virtual void loadSharedLibrary(const std::string &name,
+                                       const std::vector<std::string> &symbols,
+                                       model::Context &context
+                                       );
         
         virtual void run();
         virtual void dump();

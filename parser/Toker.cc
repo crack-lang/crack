@@ -29,6 +29,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::elseKw, data, loc);
     else if (data == "if")
         return Token(Token::ifKw, data, loc);
+    else if (data == "import")
+        return Token(Token::importKw, data, loc);
     else if (data == "is")
         return Token(Token::isKw, data, loc);
     else if (data == "null")

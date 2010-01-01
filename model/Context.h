@@ -144,6 +144,13 @@ class Context : public spug::RCBase {
         void createModule(const char *name);
         void addDef(VarDef *def);
         
+        /**
+         * Replace an existing defintion with the new definition.
+         * This is only used to replace a StubDef with an external function 
+         * definition.
+         */
+        void replaceDef(VarDef *def);
+        
         /** Funcs to iterate over the set of definitions. */
         /// @{
         VarDefMap::iterator beginDefs() { return defs.begin(); }

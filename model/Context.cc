@@ -196,6 +196,13 @@ void Context::addDef(VarDef *def) {
     def->context = this;
 }
 
+void Context::replaceDef(VarDef *def) {
+    assert(!def->context);
+    assert(scope != composite && "defining a variable in a composite scope.");
+    def->context = this;
+    defs[def->name] = def;
+}
+
 StrConstPtr Context::getStrConst(const std::string &value) {
     StrConstTable::iterator iter = globalData->strConstTable.find(value);
     if (iter != globalData->strConstTable.end()) {

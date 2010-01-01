@@ -20,6 +20,8 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
+#include <spug/Exception.h>
+
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
 #include <model/ArgDef.h>
@@ -35,6 +37,7 @@
 #include <model/NullConst.h>
 #include <model/ResultExpr.h>
 #include <model/StrConst.h>
+#include <model/StubDef.h>
 #include <model/TypeDef.h>
 #include <model/VarDef.h>
 #include <model/VarRef.h>
@@ -500,10 +503,10 @@ namespace {
                 LLVMBuilder &builder = 
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 Function *func = Function::Create(funcType,
-                                                  linkage,
-                                                  funcDef->name,
-                                                  builder.module
-                                                  );
+                                        linkage,
+                                        funcDef->name,
+                                        builder.module
+                                        );
                 func->setCallingConv(llvm::CallingConv::C);
 
                 // back-fill builder data and set arg names
@@ -962,6 +965,23 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     builder.SetInsertPoint(block = contextData->block);
 }
 
+FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
+                                         FuncDef::Flags flags,
+                                         const string &name,
+                                         TypeDef *returnType,
+                                         const vector<ArgDefPtr> &args,
+                                         void *cfunc
+                                         ) {
+    FuncBuilder f(context, FuncDef::noFlags, BTypeDefPtr::cast(returnType),
+                  name,
+                  args.size()
+                  );
+    f.setArgs(args);
+    f.finish(false);
+    primFuncs[f.funcDef->rep] = cfunc;
+    return f.funcDef;
+}
+
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases) {
@@ -1169,6 +1189,13 @@ void LLVMBuilder::closeModule() {
     // create the execution engine
     execEng = ExecutionEngine::create(module);
     assert(execEng && "execution engine is undefined");
+    
+    // store primitive functions
+    for (map<Function *, void *>::iterator iter = primFuncs.begin();
+         iter != primFuncs.end();
+         ++iter
+         )
+        execEng->addGlobalMapping(iter->first, iter->second);
 
     // optimize
     llvm::PassManager passMan;
@@ -1399,6 +1426,30 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));
+}
+
+void LLVMBuilder::loadSharedLibrary(const string &name,
+                                    const vector<string> &symbols,
+                                    Context &context
+                                    ) {
+    // leak the handle so the library stays mapped for the life of the process.
+    void *handle = dlopen(name.c_str(), RTLD_LAZY);
+    if (!handle)
+        throw spug::Exception(dlerror());
+    for (vector<string>::const_iterator iter = symbols.begin();
+         iter != symbols.end();
+         ++iter
+         ) {
+        void *sym = dlsym(handle, iter->c_str());
+        if (!sym)
+            throw spug::Exception(dlerror());
+
+        // store a stub for the symbol        
+        context.addDef(new StubDef(context.globalData->voidType.get(), *iter,
+                                   sym
+                                   )
+                       );
+    }
 }
 
 void LLVMBuilder::run() {

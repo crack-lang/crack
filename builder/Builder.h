@@ -128,6 +128,18 @@ class Builder {
                                  model::FuncDef *funcDef) = 0;
         
         /**
+         * Create an external primitive function reference.
+         */
+        virtual model::FuncDefPtr
+            createExternFunc(model::Context &context,
+                             model::FuncDef::Flags flags,
+                             const std::string &name,
+                             model::TypeDef *returnType,
+                             const std::vector<model::ArgDefPtr> &args,
+                             void *cfunc
+                             ) = 0;
+        
+        /**
          * Emit the beginning of a class definition.
          * The context should be the context of the new class.
          */
@@ -227,6 +239,15 @@ class Builder {
                                                   long val) = 0;
         
         virtual void registerPrimFuncs(model::Context &context) = 0;
+
+        /**
+         * Load the named shared library, store the addresses for the symbols 
+         * as StubDef's in 'context'.
+         */
+        virtual void loadSharedLibrary(const std::string &name,
+                                       const std::vector<std::string> &symbols,
+                                       model::Context &context
+                                       ) = 0;
         
         virtual void run() = 0;
         

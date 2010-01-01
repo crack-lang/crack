@@ -231,4 +231,10 @@ test_output 'precedence and parens' \
      printint(4 / (2 * 2));' \
      41
 
+# this is a crappy test because it's very system dependent
+test_output 'shared library imports' \
+    'import "libc.so.6" strlen; int32 strlen(byteptr data);
+     printint(strlen("four"));' \
+     4
+
 exit $rc

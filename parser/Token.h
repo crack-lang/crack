@@ -51,6 +51,7 @@ class Token {
       /** @{ */
 
       bool isIf() const { return type == ifKw; }
+      bool isImport() const { return type == importKw; }
       bool isElse() const { return type == elseKw; }
       bool isWhile() const { return type == whileKw; }
       bool isReturn() const { return type == returnKw; }

@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
@@ -17,6 +18,7 @@
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
 #include "model/StrConst.h"
+#include "model/StubDef.h"
 #include "model/TypeDef.h"
 #include "model/OverloadDef.h"
 #include "model/VarDef.h"
@@ -66,6 +68,9 @@ bool Parser::parseStatement(bool defsAllowed) {
          error(tok, "Return statement not allowed in module scope");
       parseReturnStmt();
       return true;
+   } else if (tok.isImport()) {
+      parseImportStmt();
+      return false;
    } else if (tok.isClass()) {
       if (!defsAllowed)
          error(tok, "class definitions are not allowed in this context");
@@ -536,8 +541,25 @@ bool Parser::parseDef(TypeDef *type) {
          parseArgDefs(argDefs);
          
          tok3 = toker.getToken();
-         if (!tok3.isLCurly())
+         if (tok3.isSemi()) {
+            // abstract or forward declaration - see if we've got a stub 
+            // definition
+            StubDef *stub;
+            if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
+               FuncDefPtr funcDef =
+                  context->builder.createExternFunc(*context, FuncDef::noFlags,
+                                                    varName,
+                                                    type,
+                                                    argDefs,
+                                                    stub->address
+                                                    );
+               cstack.restore();
+               addDef(funcDef.get());
+               return true;
+            }
+         } else if (!tok3.isLCurly()) {
             unexpected(tok3, "expected '{' in function definition");
+         }
          
          // XXX need to consolidate FuncDef and OverloadDef
          // we now need to verify that the new definition doesn't hide an 
@@ -724,6 +746,41 @@ void Parser::parseReturnStmt() {
       unexpected(tok, "expected semicolon or block terminator");
 }
 
+// import module-and-defs ;
+//       ^               ^
+void Parser::parseImportStmt() {
+   Token tok = toker.getToken();
+   if (!tok.isString())
+      unexpected(tok, "expected string constant");
+   
+   string name = tok.getData();
+   
+   // parse all following symbols
+   vector<string> syms;
+   while (true) {
+      tok = toker.getToken();
+      if (tok.isIdent()) {
+         syms.push_back(tok.getData());
+         tok = toker.getToken();
+         if (tok.isSemi()) {
+            break;
+         } else if (!tok.isComma()) {
+            unexpected(tok, "expected comma or semicolon");
+         }
+      } else if (tok.isSemi()) {
+         break;
+      } else {
+         unexpected(tok, "expected identifier or semicolon");
+      }
+   }
+   
+   try {
+      context->builder.loadSharedLibrary(name, syms, *context);
+   } catch (const spug::Exception &ex) {
+      error(tok, ex.getMessage());
+   }
+}
+
 // class name : base, base { ... }
 //      ^                         ^
 TypeDefPtr Parser::parseClassDef() {
@@ -854,9 +911,10 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, bool overloadOk) {
       Context *existingContext = existing->context;
 
       // if it's ok to overload, make sure that the existing definition is a 
-      // function or an overload def.
+      // function or an overload def or a stub.
       if (overloadOk && (FuncDefPtr::rcast(existing) || 
-                         OverloadDefPtr::rcast(existing)
+                         OverloadDefPtr::rcast(existing) ||
+                         StubDefPtr::rcast(existing)
                          )
           )
          return existing;
