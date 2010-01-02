@@ -135,7 +135,7 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
     ContextPtr funcContext = context->createSubContext(Context::local);
     
     // copy the original arg list
-    FuncDef::ArgVec args(initFunc->args.size());
+    FuncDef::ArgVec args;
     for (FuncDef::ArgVec::iterator iter = initFunc->args.begin();
          iter != initFunc->args.end();
          ++iter

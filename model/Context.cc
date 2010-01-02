@@ -98,9 +98,15 @@ namespace {
     }
 }
 
-OverloadDefPtr Context::aggregateOverloads(const std::string &varName) {
-    // see if this is defined locally
-    VarDefPtr var = lookUp(varName);
+OverloadDefPtr Context::aggregateOverloads(const std::string &varName,
+                                           VarDef *resolvedVar
+                                           ) {
+    // do a symbol lookup if the caller hasn't done one for us
+    VarDefPtr var = resolvedVar;
+    if (!resolvedVar)
+        var = lookUp(varName);
+
+    // see if we've got a function definition
     FuncDef *func = 0;
     if (var) {
         // if it's already an overload, we're done
@@ -167,7 +173,19 @@ VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
 FuncDefPtr Context::lookUp(const std::string &varName,
                            vector<ExprPtr> &args
                            ) {
-    OverloadDefPtr overload = aggregateOverloads(varName);
+    // do a lookup, if nothing was found no further action is necessary.
+    VarDefPtr var = lookUp(varName);
+    if (!var)
+        return 0;
+
+    // if "var" is a class definition, convert this to a lookup of the "oper 
+    // new" function on the class.
+    TypeDef *typeDef = TypeDefPtr::rcast(var);
+    if (typeDef)
+        return typeDef->context->lookUp("oper new", args);
+
+    // otherwise, do the overload aggregation
+    OverloadDefPtr overload = aggregateOverloads(varName, var.get());
     if (!overload)
         return 0;
     return overload->getMatch(*this, args);

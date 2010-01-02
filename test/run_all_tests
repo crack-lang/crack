@@ -237,4 +237,9 @@ test_output 'shared library imports' \
      printint(strlen("four"));' \
      4
 
+test_output 'temporary object construction' \
+    'class A { int32 val; void init(int32 val0) { val = val0; } };
+     printint(A(100).val)' \
+    100
+
 exit $rc

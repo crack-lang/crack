@@ -126,8 +126,14 @@ class Context : public spug::RCBase {
          * context.  This will return null if:
          *   1) there are no functions named varName
          *   2) the local context contains a non-func variable named varName.
+         * @param varName the function name
+         * @param resolvedVar if the caller has already done a lookUp on the 
+         *  def, they should pass it in here to save the function from having 
+         *  to do its own lookup.
          */
-        OverloadDefPtr aggregateOverloads(const std::string &varName);
+        OverloadDefPtr aggregateOverloads(const std::string &varName,
+                                          VarDef *resolvedVar = 0
+                                          );
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         

@@ -263,7 +263,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       // if the definition is for an instance variable, emit an implicit 
       // "this" dereference.  Otherwise just emit the variable
       ExprPtr receiver;
-      if (func->context->scope == Context::instance)
+      if (func->flags & FuncDef::method)
          // if there's no container, try to use an implicit "this"
          receiver = container ? container : makeThisRef(ident);
 
