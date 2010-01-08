@@ -14,13 +14,15 @@ libcrack_la_SOURCES = \
     model/FuncCall.cc \
     model/FuncDef.cc \
     model/IntConst.cc \
+    model/ModuleDef.cc \
     model/NullConst.cc \
     model/OverloadDef.cc \
     model/ResultExpr.cc \
     model/StrConst.cc \
     model/TypeDef.cc \
     model/VarDef.cc \
-    model/VarRef.cc
+    model/VarRef.cc \
+    Crack.cc
 
 bin_PROGRAMS = crack
 

@@ -750,6 +750,21 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
                 emitFunctionCleanups(**parent);
 }
 
+ExecutionEngine *LLVMBuilder::bindModule(ModuleProvider *mp) {
+    if (execEng) {
+        execEng->addModuleProvider(mp);
+    } else {
+        if (rootBuilder) 
+            execEng = rootBuilder->bindModule(mp);
+        else
+            execEng = ExecutionEngine::create(mp);
+    }
+    
+    return execEng;
+}
+        
+        
+
 LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
@@ -758,6 +773,13 @@ LLVMBuilder::LLVMBuilder() :
     lastValue(0) {
 
     InitializeNativeTarget();
+}
+
+BuilderPtr LLVMBuilder::createChildBuilder() {
+    LLVMBuilderPtr result = new LLVMBuilder();
+    result->rootBuilder = rootBuilder ? rootBuilder : this;
+    result->llvmVoidPtrType = llvmVoidPtrType;
+    return result;
 }
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
@@ -1169,7 +1191,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     return varDef;
 }
  
-void LLVMBuilder::createModule(const char *name) {
+void LLVMBuilder::createModule(Context &context, const std::string &name) {
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
@@ -1179,6 +1201,42 @@ void LLVMBuilder::createModule(const char *name) {
     func->setCallingConv(llvm::CallingConv::C);
     block = BasicBlock::Create(lctx, "__main__", func);
     builder.SetInsertPoint(block);
+
+    // all of the "extern" primitive functions have to be created in each of 
+    // the modules - we can not directly reference across modules.
+    
+    BTypeDef *int32Type = BTypeDefPtr::arcast(context.globalData->int32Type);
+    BTypeDef *voidType = BTypeDefPtr::arcast(context.globalData->int32Type);
+    BTypeDef *byteptrType = BTypeDefPtr::arcast(context.globalData->byteptrType);
+
+    // create "int puts(String)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
+                      1
+                      );
+        f.addArg("text", byteptrType);
+        f.finish();
+    }
+    
+    // create "int write(int, String, int)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, int32Type, "write",
+                      3
+                      );
+        f.addArg("fd", int32Type);
+        f.addArg("buf", byteptrType);
+        f.addArg("n", int32Type);
+        f.finish();
+    }
+    
+    // create "void printint(int32)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
+        f.addArg("val", int32Type);
+        f.finish();
+    }
+    
+
 }
 
 void LLVMBuilder::closeModule() {
@@ -1186,9 +1244,8 @@ void LLVMBuilder::closeModule() {
     builder.CreateRetVoid();
     verifyModule(*module, llvm::PrintMessageAction);
     
-    // create the execution engine
-    execEng = ExecutionEngine::create(module);
-    assert(execEng && "execution engine is undefined");
+    // bind the module to the execution engine
+    bindModule(new ExistingModuleProvider(module));
     
     // store primitive functions
     for (map<Function *, void *>::iterator iter = primFuncs.begin();
@@ -1384,33 +1441,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     int32Type->context->addDef(new BoolOpDef(boolType, "toBool"));
     context.addDef(int32Type);
 
-    // create "int puts(String)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
-                      1
-                      );
-        f.addArg("text", byteptrType);
-        f.finish();
-    }
-    
-    // create "int write(int, String, int)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "write",
-                      3
-                      );
-        f.addArg("fd", int32Type);
-        f.addArg("buf", byteptrType);
-        f.addArg("n", gd->int32Type.get());
-        f.finish();
-    }
-    
-    // create "void printint(int32)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
-        f.addArg("val", gd->int32Type.get());
-        f.finish();
-    }
-    
     // create integer operations
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));

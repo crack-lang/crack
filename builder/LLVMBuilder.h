@@ -10,6 +10,7 @@
 
 namespace llvm {
     class Module;
+    class ModuleProvider;
     class Function;
     class BasicBlock;
     class Type;
@@ -19,6 +20,8 @@ namespace llvm {
 };
 
 namespace builder {
+
+SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
     private:
@@ -34,6 +37,10 @@ class LLVMBuilder : public Builder {
         // stores primitive function pointers
         std::map<llvm::Function *, void *> primFuncs;
 
+        LLVMBuilderPtr rootBuilder;
+        
+        llvm::ExecutionEngine *bindModule(llvm::ModuleProvider *mp);
+
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -43,8 +50,10 @@ class LLVMBuilder : public Builder {
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *block;
-
+        
         LLVMBuilder();
+
+        virtual BuilderPtr createChildBuilder();
 
         virtual model::ResultExprPtr emitFuncCall(
             model::Context &context, 
@@ -150,7 +159,8 @@ class LLVMBuilder : public Builder {
                                   model::TypeDef &parent,
                                   int index
                                   );
-        virtual void createModule(const char *name);
+        virtual void createModule(model::Context &context,
+                                  const std::string &name);
         virtual void closeModule();
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);

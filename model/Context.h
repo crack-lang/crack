@@ -147,8 +147,15 @@ class Context : public spug::RCBase {
         FuncDefPtr lookUp(const std::string &varName,
                           std::vector<ExprPtr> &vals
                           );
-        void createModule(const char *name);
+        void createModule(const std::string &name);
         void addDef(VarDef *def);
+        
+        /**
+         * Adds a definition to the context, but does not make the definition's 
+         * context the context.  This is used for importing symbols into a 
+         * module context.
+         */
+        void addAlias(VarDef *def);
         
         /**
          * Replace an existing defintion with the new definition.

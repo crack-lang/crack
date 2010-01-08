@@ -77,8 +77,8 @@ ContextPtr Context::getDefContext() {
     return result;
 }
 
-void Context::createModule(const char *name) {
-    builder.createModule(name);
+void Context::createModule(const string &name) {
+    builder.createModule(*this, name);
 }
 
 namespace {
@@ -212,6 +212,12 @@ void Context::addDef(VarDef *def) {
         defs[def->name] = def;
     }
     def->context = this;
+}
+
+void Context::addAlias(VarDef *def) {
+    // make sure that the symbol is already bound to a context.
+    assert(def->context);
+    defs[def->name] = def;
 }
 
 void Context::replaceDef(VarDef *def) {

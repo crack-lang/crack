@@ -15,6 +15,7 @@
 #include "model/FuncCall.h"
 #include "model/Expr.h"
 #include "model/IntConst.h"
+#include "model/ModuleDef.h"
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
 #include "model/StrConst.h"
@@ -24,6 +25,7 @@
 #include "model/VarDef.h"
 #include "model/VarRef.h"
 #include "builder/Builder.h"
+#include "Crack.h"
 #include "ParseError.h"
 
 using namespace std;
@@ -413,6 +415,22 @@ TypeDefPtr Parser::parseTypeSpec() {
    return typeDef;
 }
 
+void Parser::parseModuleName(vector<string> &moduleName) {
+   Token tok = toker.getToken();
+   while (true) {
+      moduleName.push_back(tok.getData());
+      tok = toker.getToken();
+      if (!tok.isDot()) {
+         toker.putBack(tok);
+         return;
+      }
+      
+      tok = toker.getToken();
+      if (!tok.isIdent())
+         unexpected(tok, "identifier expected");
+   }
+}
+
 // type funcName ( type argName, ... ) {
 //                ^                   ^
 void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
@@ -749,9 +767,19 @@ void Parser::parseReturnStmt() {
 // import module-and-defs ;
 //       ^               ^
 void Parser::parseImportStmt() {
+   ModuleDefPtr mod;
+   string canonicalName;
    Token tok = toker.getToken();
-   if (!tok.isString())
+   if (tok.isIdent()) {
+      toker.putBack(tok);
+      vector<string> moduleName;
+      parseModuleName(moduleName);
+      mod = Crack::loadModule(moduleName, canonicalName);
+      if (!mod)
+         error(tok, SPUG_FSTR("unable to find module " << canonicalName));
+   } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
+   }
    
    string name = tok.getData();
    
@@ -773,11 +801,34 @@ void Parser::parseImportStmt() {
          unexpected(tok, "expected identifier or semicolon");
       }
    }
-   
-   try {
-      context->builder.loadSharedLibrary(name, syms, *context);
-   } catch (const spug::Exception &ex) {
-      error(tok, ex.getMessage());
+
+   if (!mod) {
+      try {
+         context->builder.loadSharedLibrary(name, syms, *context);
+      } catch (const spug::Exception &ex) {
+         error(tok, ex.getMessage());
+      }
+   } else {
+      // alias all of the names in the new module
+      for (vector<string>::iterator iter = syms.begin();
+           iter != syms.end();
+           ++iter
+           ) {
+         // make sure we don't already have it
+         if (context->lookUp(*iter))
+            error(tok, SPUG_FSTR("imported name " << *iter << 
+                                  " hides existing definition."
+                                 )
+                  );
+         VarDefPtr symVal = mod->lookUp(*iter);
+         if (!symVal)
+            error(tok, SPUG_FSTR("name " << *iter << 
+                                  " is not defined in module " << 
+                                  canonicalName
+                                 )
+                  );
+         context->addAlias(symVal.get());
+      }
    }
 }
 

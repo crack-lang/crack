@@ -134,6 +134,7 @@ class Parser {
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
 
       model::TypeDefPtr parseTypeSpec();
+      void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args);
 
       /**

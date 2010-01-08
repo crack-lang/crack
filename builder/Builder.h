@@ -26,9 +26,18 @@ namespace model {
 
 namespace builder {
 
+SPUG_RCPTR(Builder);
+
 /** Abstract base class for builders.  Builders generate code. */
-class Builder {
+class Builder : public spug::RCBase {
     public:
+        /**
+         * This gets called on the "root builder" everytime a new module gets 
+         * loaded and the new builder .  Derived classes may either create a 
+         * new Builder instance or return the existing one.
+         */
+        virtual BuilderPtr createChildBuilder() = 0;
+
         virtual model::ResultExprPtr emitFuncCall(
             model::Context &context,
             model::FuncCall *funcCall
@@ -217,7 +226,8 @@ class Builder {
                                   int index
                                   ) = 0;
 
-        virtual void createModule(const char *name) = 0;
+        virtual void createModule(model::Context &context,
+                                  const std::string &name) = 0;
         virtual void closeModule() = 0;
         
         /**

@@ -242,4 +242,9 @@ test_output 'temporary object construction' \
      printint(A(100).val)' \
     100
 
+test_output 'execution of imports' \
+    'import test.testmod func; puts("main")' \
+    'testmod
+main'
+
 exit $rc

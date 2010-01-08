@@ -1,13 +1,14 @@
 
+#include <iostream>
+#include <fstream>
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/TypeDef.h"
-#include <builder/LLVMBuilder.h>
-#include <iostream>
-#include <fstream>
+#include "builder/LLVMBuilder.h"
+#include "Crack.h"
 
 using namespace std;
 
@@ -55,13 +56,15 @@ int main(int argc, const char **argv) {
     const char **arg = &argv[1];
     while (*arg) {
         if (!strcmp(*arg, "-")) {
-            compileAndRun(cin, "<stdin>");
+            Crack::getInstance().runScript(cin, "<stdin>");
+//            compileAndRun(cin, "<stdin>");
             break;
         } else if (!strcmp(*arg, "-d")) {
-            dump = true;
+            Crack::getInstance().dump = true;
         } else {
             ifstream src(*arg);
-            compileAndRun(src, argv[1]);
+//            compileAndRun(src, argv[1]);
+            Crack::getInstance().runScript(src, argv[1]);
             break;
         }
         ++arg;
