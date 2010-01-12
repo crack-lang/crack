@@ -492,6 +492,10 @@ bool Parser::parseDef(TypeDef *type) {
          // make sure we're not hiding anything else
          checkForExistingDef(tok2);
          
+         // make sure we've got a default initializer
+         if (!type->defaultInitializer)
+            error(tok2, "no default constructor");
+         
          // Emit a variable definition and store it in the context.
          VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
          addDef(varDef.get());

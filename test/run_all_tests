@@ -258,4 +258,8 @@ in test func
 imported var
 local inst of imported class'
 
+test_output 'error messsage on default init with no default constructor' \
+    'class Obj { void init(int32 v) {} }; Obj o;' \
+    'ParseError: <stdin>:1: no default constructor'
+
 exit $rc
