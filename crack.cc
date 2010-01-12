@@ -64,7 +64,7 @@ int main(int argc, const char **argv) {
         } else {
             ifstream src(*arg);
 //            compileAndRun(src, argv[1]);
-            Crack::getInstance().runScript(src, argv[1]);
+            Crack::getInstance().runScript(src, *arg);
             break;
         }
         ++arg;

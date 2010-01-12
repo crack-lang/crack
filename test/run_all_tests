@@ -247,4 +247,15 @@ test_output 'execution of imports' \
     'testmod
 main'
 
+test_output 'full import functionality' \
+    'import test.testmod func, A, aImportVar;
+     func();
+     aImportVar.dump();
+     (A("local inst of imported class").dump());
+     ' \
+     'testmod
+in test func
+imported var
+local inst of imported class'
+
 exit $rc

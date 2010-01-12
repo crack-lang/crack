@@ -259,6 +259,17 @@ class Builder : public spug::RCBase {
                                        model::Context &context
                                        ) = 0;
         
+        /**
+         * This is called for every symbol that is imported into a module.  
+         * Implementations should do whatever processing is necessary, 
+         * including possibly replacing the variable definition with a 
+         * suitable aliasing object and returning it.  The returned value will 
+         * be added to the new module context ('context') using addAlias().
+         */
+        virtual model::VarDefPtr createImport(model::Context &context, 
+                                              model::VarDef *varDef
+                                              ) = 0;
+        
         virtual void run() = 0;
         
         /// Dump the compiled op-codes to standard output.

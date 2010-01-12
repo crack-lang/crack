@@ -56,11 +56,23 @@ namespace {
 
     class BFuncDef : public model::FuncDef {
         public:
+            // this holds the function object for the last module to request 
+            // it.
             llvm::Function *rep;
+
             BFuncDef(FuncDef::Flags flags, const string &name,
                      size_t argCount
                      ) :
                 model::FuncDef(flags, name, argCount) {
+            }
+            
+            /**
+             * Returns the module-specific Function object for the function.
+             */
+            Function *getRep(LLVMBuilder &builder) {
+                if (rep->getParent() != builder.module)
+                    rep = builder.getModFunc(this);
+                return rep;
             }
             
     };
@@ -319,17 +331,15 @@ namespace {
             }
     };            
     
-    // generates references for 
+    // generates references for memory variables (globals and instance vars)
+    SPUG_RCPTR(BMemVarDefImpl);
     class BMemVarDefImpl : public VarDefImpl {
         public:
-            Value *rep;
-            
-            BMemVarDefImpl(Value *rep) : rep(rep) {}
-            
+
             virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
-                b.emitMemVarRef(context, rep);
+                b.emitMemVarRef(context, getRep(b));
                 return new BResultExpr(var, b.lastValue);
             }
             
@@ -339,13 +349,40 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 ResultExprPtr result = assign->value->emit(context);
                 Value *exprVal = b.lastValue;
-                b.builder.CreateStore(exprVal, rep);
+                b.builder.CreateStore(exprVal, getRep(b));
                 result->handleAssignment(context);
                 b.lastValue = exprVal;
                 
                 return new BResultExpr(assign, exprVal);
             }
+            
+            virtual Value *getRep(LLVMBuilder &builder) = 0;
     };
+    
+    class BHeapVarDefImpl : public BMemVarDefImpl {
+        public:
+            Value *rep;
+
+            BHeapVarDefImpl(Value *rep) : rep(rep) {}
+            
+            virtual Value *getRep(LLVMBuilder &builder) {
+                return rep;
+            }
+    };
+    
+    SPUG_RCPTR(BGlobalVarDefImpl);
+    class BGlobalVarDefImpl : public BMemVarDefImpl {
+        public:
+            GlobalVariable *rep;
+
+            BGlobalVarDefImpl(GlobalVariable *rep) : rep(rep) {}
+
+            virtual Value *getRep(LLVMBuilder &builder) {
+                if (rep->getParent() != builder.module)
+                    rep = builder.getModVar(this);
+                return rep;
+            }
+    };                        
     
     SPUG_RCPTR(BInstVarDefImpl);
 
@@ -503,10 +540,10 @@ namespace {
                 LLVMBuilder &builder = 
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 Function *func = Function::Create(funcType,
-                                        linkage,
-                                        funcDef->name,
-                                        builder.module
-                                        );
+                                                  linkage,
+                                                  funcDef->name,
+                                                  builder.module
+                                                  );
                 func->setCallingConv(llvm::CallingConv::C);
 
                 // back-fill builder data and set arg names
@@ -532,6 +569,9 @@ namespace {
                     // to be used in a "load" context.
                     (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
                 }
+                
+                // store the LLVM function in the table for the module
+                builder.setModFunc(funcDef.get(), func);
                 
                 funcDef->rep = func;
                 if (storeDef)
@@ -763,12 +803,62 @@ ExecutionEngine *LLVMBuilder::bindModule(ModuleProvider *mp) {
     return execEng;
 }
         
+Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
+    ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
+    if (iter == moduleFuncs.end()) {
+        // not found, create a new one and map it to the existing function 
+        // pointer
+        BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
+        Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
+                                          Function::ExternalLinkage,
+                                          bfuncDef->name,
+                                          module
+                                          );
+        execEng->addGlobalMapping(func, 
+                                  execEng->getPointerToFunction(bfuncDef->rep)
+                                  );
         
+        // cache it in the map
+        moduleFuncs[bfuncDef] = func;
+        return func;
+    } else {
+        return iter->second;
+    }
+}
+
+GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
+    ModVarMap::iterator iter = moduleVars.find(varDefImpl);
+    if (iter == moduleVars.end()) {
+        BGlobalVarDefImpl *bvar = BGlobalVarDefImplPtr::acast(varDefImpl);
+
+        // extract the raw type
+        const Type *type = bvar->rep->getType()->getElementType();
+
+        GlobalVariable *global =
+            new GlobalVariable(*module, type, false,
+                               GlobalValue::ExternalLinkage,
+                               0, // initializer: null for externs
+                               bvar->rep->getName()
+                               );
+
+
+        // do the global mapping
+        execEng->addGlobalMapping(global, 
+                                  execEng->getPointerToGlobal(bvar->rep)
+                                  );
+        moduleVars[varDefImpl] = global;
+        return global;
+    } else {
+        return iter->second;
+    }
+}
+
 
 LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
     func(0),
+    execEng(0),
     block(0),
     lastValue(0) {
 
@@ -804,7 +894,9 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
     
     BFuncDef *funcDef = BFuncDefPtr::arcast(funcCall->func);
     lastValue =
-        builder.CreateCall(funcDef->rep, valueArgs.begin(), valueArgs.end());
+        builder.CreateCall(funcDef->getRep(*this), valueArgs.begin(), 
+                           valueArgs.end()
+                           );
     return new BResultExpr(funcCall, lastValue);
 }
 
@@ -1132,6 +1224,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
             type->defaultInitializer->emit(context)->handleAssignment(context);
     
     Value *var = 0;
+    BMemVarDefImplPtr varDefImpl;
     switch (defCtx->scope) {
 
         case Context::instance:
@@ -1161,21 +1254,24 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
             }
 
         case Context::module: {
-            GlobalValue *gval;
-            var = new GlobalVariable(*module, tp->rep, false, // isConstant
-                                     GlobalValue::ExternalLinkage, // linkage tp
-                                     
-                                     // initializer - this needs to be provided 
-                                     // or the global will be treated as an 
-                                     // extern.
-                                     Constant::getNullValue(tp->rep),
-                                     name
-                                     );
+            GlobalVariable *gvar;
+            var = gvar =
+                new GlobalVariable(*module, tp->rep, false, // isConstant
+                                   GlobalValue::ExternalLinkage,
+                                   
+                                   // initializer - this needs to be 
+                                   // provided or the global will be 
+                                   // treated as an extern.
+                                   Constant::getNullValue(tp->rep),
+                                   name
+                                   );
+            varDefImpl = new BGlobalVarDefImpl(gvar);
             break;
         }
 
         case Context::local:
             var = builder.CreateAlloca(tp->rep, 0);
+            varDefImpl = new BHeapVarDefImpl(var);
             break;
         
         default:
@@ -1187,7 +1283,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     
     // create the definition object.
     VarDefPtr varDef = new VarDef(type, name);
-    varDef->impl = new BMemVarDefImpl(var);
+    varDef->impl = varDefImpl;
     return varDef;
 }
  
@@ -1236,7 +1332,8 @@ void LLVMBuilder::createModule(Context &context, const std::string &name) {
         f.finish();
     }
     
-
+    // bind the module to the execution engine
+    bindModule(new ExistingModuleProvider(module));
 }
 
 void LLVMBuilder::closeModule() {
@@ -1480,6 +1577,10 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
                                    )
                        );
     }
+}
+
+VarDefPtr LLVMBuilder::createImport(Context &context, VarDef *varDef) {
+    return varDef;
 }
 
 void LLVMBuilder::run() {

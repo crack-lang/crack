@@ -60,3 +60,7 @@ int32 foo(int32 x) { if (x) return 1; else return 0; puts("test"); }
 void f(int32 v) {printint(v);}
 void f(bool b) {if (b) puts("true"); else puts("false")}
 f(100);
+
+# this currently doesn't work because 'A' gets treated like a definition
+class A { };
+A();

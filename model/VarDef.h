@@ -33,7 +33,12 @@ class VarDef : public spug::RCBase {
          * Returns true if the definition type requires a slot in the instance 
          * variable.
          */
-        virtual bool hasInstSlot();        
+        virtual bool hasInstSlot();
+
+        /**
+         * Returns the fully qualified name of the definition.
+         */        
+        std::string getFullName() const { return name; }
 };
 
 } // namespace model

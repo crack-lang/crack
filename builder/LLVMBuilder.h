@@ -36,6 +36,16 @@ class LLVMBuilder : public Builder {
         
         // stores primitive function pointers
         std::map<llvm::Function *, void *> primFuncs;
+        
+        // keeps track of the Function object for the FuncDef in the builder's 
+        // module.
+        typedef std::map<model::FuncDef *, llvm::Function *> ModFuncMap;
+        ModFuncMap moduleFuncs;
+        
+        // keeps track of the GlobalVariable object for the VarDef in the 
+        // builder's module.
+        typedef std::map<model::VarDefImpl *, llvm::GlobalVariable *> ModVarMap;
+        ModVarMap moduleVars;
 
         LLVMBuilderPtr rootBuilder;
         
@@ -50,6 +60,18 @@ class LLVMBuilder : public Builder {
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *block;
+
+        void setModFunc(model::FuncDef *funcDef, llvm::Function *func) {
+            moduleFuncs[funcDef] = func;
+        }
+
+        llvm::Function *getModFunc(model::FuncDef *funcDef);
+
+        void setModVar(model::VarDefImpl *varDef, llvm::GlobalVariable *var) {
+            moduleVars[varDef] = var;
+        }
+
+        llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef);
         
         LLVMBuilder();
 
@@ -174,6 +196,9 @@ class LLVMBuilder : public Builder {
                                        const std::vector<std::string> &symbols,
                                        model::Context &context
                                        );
+        virtual model::VarDefPtr createImport(model::Context &context, 
+                                              model::VarDef *varDef
+                                              );
         
         virtual void run();
         virtual void dump();
