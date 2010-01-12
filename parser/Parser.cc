@@ -27,6 +27,7 @@
 #include "builder/Builder.h"
 #include "Crack.h"
 #include "ParseError.h"
+#include <cstdlib>
 
 using namespace std;
 using namespace parser;
