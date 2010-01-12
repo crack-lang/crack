@@ -266,4 +266,11 @@ test_output 'bool construction' \
     'bool b; if (b) puts("fail"); else puts("pass")' \
     pass
 
+test_output 'type narrowing of receivers and args' \
+    'class A { void foo(A more) { puts("did bar"); } };
+     class B : A { void bar() { foo(this); } };
+    (B().bar());' \
+    'did bar'
+
+
 exit $rc

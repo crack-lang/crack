@@ -877,15 +877,18 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
     // if there's a receiver, use it as the first argument.
     if (funcCall->receiver) {
         funcCall->receiver->emit(context)->handleTransient(context);
+        funcCall->receiver->type->emitNarrower(*funcCall->func->context->returnType);
         valueArgs.push_back(lastValue);
     }
     
     // emit the arguments
-    FuncCall::ExprVec &args = funcCall->args;
-    for (ExprVec::const_iterator iter = args.begin(); iter < args.end(); 
-         ++iter
+    FuncCall::ExprVec &vals = funcCall->args;
+    FuncDef::ArgVec::iterator argIter = funcCall->func->args.begin();
+    for (ExprVec::const_iterator valIter = vals.begin(); valIter < vals.end(); 
+         ++valIter, ++argIter
          ) {
-        (*iter)->emit(context)->handleTransient(context);
+        (*valIter)->emit(context)->handleTransient(context);
+        (*valIter)->type->emitNarrower(*(*argIter)->type);
         valueArgs.push_back(lastValue);
     }
     
