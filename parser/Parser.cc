@@ -827,10 +827,8 @@ void Parser::parseImportStmt() {
                                   canonicalName
                                  )
                   );
-         context->addAlias(context->builder.createImport(*context, 
-                                                         symVal.get()
-                                                         ).get()
-                           );
+         context->builder.registerImport(*context, symVal.get());
+         context->addAlias(symVal.get());
       }
    }
 }

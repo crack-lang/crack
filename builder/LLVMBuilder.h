@@ -196,9 +196,9 @@ class LLVMBuilder : public Builder {
                                        const std::vector<std::string> &symbols,
                                        model::Context &context
                                        );
-        virtual model::VarDefPtr createImport(model::Context &context, 
-                                              model::VarDef *varDef
-                                              );
+        virtual void registerImport(model::Context &context, 
+                                    model::VarDef *varDef
+                                    );
         
         virtual void run();
         virtual void dump();

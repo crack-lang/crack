@@ -261,14 +261,11 @@ class Builder : public spug::RCBase {
         
         /**
          * This is called for every symbol that is imported into a module.  
-         * Implementations should do whatever processing is necessary, 
-         * including possibly replacing the variable definition with a 
-         * suitable aliasing object and returning it.  The returned value will 
-         * be added to the new module context ('context') using addAlias().
+         * Implementations should do whatever processing is necessary.
          */
-        virtual model::VarDefPtr createImport(model::Context &context, 
-                                              model::VarDef *varDef
-                                              ) = 0;
+        virtual void registerImport(model::Context &context, 
+                                    model::VarDef *varDef
+                                    ) = 0;
         
         virtual void run() = 0;
         

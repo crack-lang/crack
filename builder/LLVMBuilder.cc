@@ -1579,8 +1579,8 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
     }
 }
 
-VarDefPtr LLVMBuilder::createImport(Context &context, VarDef *varDef) {
-    return varDef;
+void LLVMBuilder::registerImport(Context &context, VarDef *varDef) {
+    // no-op for LLVM builder.
 }
 
 void LLVMBuilder::run() {
