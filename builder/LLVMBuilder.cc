@@ -107,10 +107,7 @@ namespace {
             llvm::Value *rep;
             BIntConst(BTypeDef *type, long val) :
                 IntConst(type, val),
-                rep(ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
-                                     val
-                                     )
-                    ) {
+                rep(ConstantInt::get(type->rep, val)) {
             }
     };
     

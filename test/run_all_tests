@@ -262,4 +262,8 @@ test_output 'error messsage on default init with no default constructor' \
     'class Obj { void init(int32 v) {} }; Obj o;' \
     'ParseError: <stdin>:1: no default constructor'
 
+test_output 'bool construction' \
+    'bool b; if (b) puts("fail"); else puts("pass")' \
+    pass
+
 exit $rc
