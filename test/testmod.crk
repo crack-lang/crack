@@ -1,0 +1,24 @@
+# test module
+
+puts('testmod');
+
+# a function to import
+void func() {
+    puts('in test func');
+}
+
+# a class to import
+class A {
+    byteptr data;
+
+    void init(byteptr data0) {
+        data = data0;
+    }
+    
+    void dump() {
+        puts(data);
+    }
+};
+
+# a variable for us to import
+A aImportVar = A('imported var');
