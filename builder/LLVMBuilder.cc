@@ -1159,15 +1159,22 @@ void LLVMBuilder::emitEndClass(Context &context) {
         assert(*iter);
     
     // refine the type to the actual type of the structure.
+    
+    // extract the opaque type out of the pointer type.
     BBuilderContextData *bdata =
         BBuilderContextDataPtr::rcast(context.builderData);
-        
     PointerType *ptrType =
         cast<PointerType>(const_cast<Type *>(bdata->type->rep));
     DerivedType *curType = 
         cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
+    
+    // create the actual type
     Type *newType = StructType::get(getGlobalContext(), members);
+    
+    // refine the type and store the new pointer type (the existing pointer 
+    // to opaque type may not end up getting changed)
     curType->refineAbstractTypeTo(newType);
+    bdata->type->rep = PointerType::getUnqual(newType);
 
     // fix all instance variable uses that were created before the structure 
     // was defined.

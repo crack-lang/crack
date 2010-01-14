@@ -288,4 +288,8 @@ test_output 'recursive methods' \
      printint(A().sum(10));' \
      55
 
+test_output 'multiple types with the same underlying structure' \
+    'class A {}; class B {}; B b; puts("ok");' \
+    ok
+
 exit $rc
