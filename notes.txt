@@ -33,7 +33,7 @@
     # reassign it to reference var1;
     var4 = var1;
     
-    # the expression evalutes to true
+    # the expression evaluates to true
     if (var1 == var2 && var2 == var3 && var3 == var4)
         stdout.write('"==" compares by value.');
     
@@ -126,8 +126,10 @@
          ).store();
     
     // Define a "note2" variable, initialize with keyword arguments.
-    Note note2 = { title = 'todo: Add special note classes for todos',
-                   desc = 'so we can diferentiate them programmatically.'
+    // note that we use "arg:" instead of "arg =" for keyword args so as not 
+    // to conflict with assignment as an expression.
+    Note note2 = { title: 'todo: Add special note classes for todos',
+                   desc: 'so we can diferentiate them programmatically.'
                   };
     note2.store();
 
@@ -193,10 +195,10 @@ Lambdas:
     
     or:
     
-        class List<Object T> {
+        class List[T : Object] {
             ...
-            List<T> filter(bool filterFunc(T item)) {
-                List<T> result;
+            List[T] filter(bool filterFunc(T item)) {
+                List[T] result;
                 for (item in this) {
                     if (filterFunc(item))
                         result.append(item);
@@ -206,7 +208,7 @@ Lambdas:
         }
             
     
-        List<Foo> list;
+        List[Foo] list;
         list.filter({ item.a > 100 }); // implicit lambda, implicit use of 
                                        // "item" parameter, implicit return.
         list.filter(lambda(Foo x) { return x.a > 100; });  // equivalent 
@@ -236,7 +238,7 @@ Formatting:
     OutStream.format() is defined for all of the primitive types.  For Object, 
     it is implemented as:
         
-        * format(Object obj) { obj.writeTo(this); }
+        void format(Object obj) { obj.writeTo(this); }
     
     So you can override the writeTo() method for objects, and you can override 
     and overload the format() method for OutStream derivatives, giving you a 
@@ -256,8 +258,10 @@ Access control:
 Modules:
     
     By default, every source file is a "module".  Every directory full of 
-    source files is a "package" which is really just a module that can't 
-    happen to have anything other than nested modules in it.
+    source files is a "package" which is really just a module.  Packages can 
+    have other things in them besides nested modules if there is also a source 
+    file of the same name: e.g. if "foo.crk" is a file and "foo/" is a 
+    directory.
     
     A source file module can include nested modules by use of the "module" 
     keyword:
@@ -311,14 +315,14 @@ Generics:
 
 
 Cleanups:
-    When we leave a context, we need to run "oper deref" on all variables 
+    When we leave a context, we need to run "oper release" on all variables 
     within that context that define this method:
     
         while (cond) {
             Complex obj;
             ...
             
-            // obj.oper deref() needs to happen here
+            // obj.oper release() needs to happen here
         }
     
     We can't just always emit this code at the end because of terminal statements
