@@ -611,6 +611,13 @@ bool Parser::parseDef(TypeDef *type) {
             context->builder.emitBeginFunc(*context, flags, varName, type,
                                            argDefs
                                            );
+
+         // store the new definition in the parent context.
+         {
+            ContextStackFrame cstack(*this, context->parents[0].get());
+            addDef(funcDef.get());
+         }
+         
          bool terminal = parseBlock(true);
          
          // if the block doesn't always terminate, either give an error or 
@@ -630,8 +637,6 @@ bool Parser::parseDef(TypeDef *type) {
          context->builder.emitEndFunc(*context, funcDef.get());
          cstack.restore();
          
-         // store the new definition in the context.
-         addDef(funcDef.get());
          
          return true;
       } else {

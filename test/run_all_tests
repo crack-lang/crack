@@ -272,5 +272,20 @@ test_output 'type narrowing of receivers and args' \
     (B().bar());' \
     'did bar'
 
+test_output 'recursive functions' \
+    'int32 sum(int32 top) { 
+        if (top > 0) return top + sum(top - 1); else return 0;
+     }
+     printint(sum(10));' \
+     55
+
+test_output 'recursive methods' \
+    'class A {
+        int32 sum(int32 top) { 
+            if (top > 0) return top + sum(top - 1); else return 0;
+        }
+     };
+     printint(A().sum(10));' \
+     55
 
 exit $rc
