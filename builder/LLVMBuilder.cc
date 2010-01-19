@@ -59,11 +59,16 @@ namespace {
             // this holds the function object for the last module to request 
             // it.
             llvm::Function *rep;
+            
+            // for a virtual function, this holds the vtable slot.
+            unsigned vtableSlot;
 
             BFuncDef(FuncDef::Flags flags, const string &name,
                      size_t argCount
                      ) :
-                model::FuncDef(flags, name, argCount) {
+                model::FuncDef(flags, name, argCount),
+                rep(0),
+                vtableSlot(0) {
             }
             
             /**
@@ -82,11 +87,54 @@ namespace {
     class BTypeDef : public model::TypeDef {
         public:
             const Type *rep;
+            unsigned nextVTableSlot;
+            const StructType *vtableType;
+            Constant *vtable;
+
             BTypeDef(const string &name, const llvm::Type *rep,
-                     bool pointer = false
+                     bool pointer = false,
+                     unsigned nextVTableSlot = 0
                      ) :
                 model::TypeDef(name, pointer),
-                rep(rep) {
+                rep(rep),
+                nextVTableSlot(nextVTableSlot),
+                vtable(0) {
+            }
+
+            void populateVTable(vector<const Type *> &vtableTypes,
+                                vector<Constant *> &vtableVals
+                                ) {
+                // populate the beginning of the vtable from the first base 
+                // class with a vtable
+                // XXX this needs to change for virtual base classes
+                for (Context::ContextVec::iterator baseIter = 
+                        context->parents.begin();
+                     baseIter != context->parents.end();
+                     ++baseIter
+                     ) {
+                    BTypeDef *typeDef =
+                        BTypeDefPtr::arcast((*baseIter)->returnType);
+                    if (typeDef->hasVTable) {
+                        typeDef->populateVTable(vtableTypes, vtableVals);
+                        break;
+                    }
+                }
+                
+                // find all of the virtual functions
+                for (Context::VarDefMap::iterator varIter =
+                        context->beginDefs();
+                     varIter != context->endDefs();
+                     ++varIter
+                     ) {
+                    BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
+                    if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
+                        vtableTypes.resize(funcDef->vtableSlot + 1, 0);
+                        vtableTypes[funcDef->vtableSlot] =
+                            funcDef->rep->getType();
+                        vtableVals.resize(funcDef->vtableSlot + 1, 0);
+                        vtableVals[funcDef->vtableSlot] = funcDef->rep;
+                    }
+                }
             }
     };
     
@@ -345,6 +393,7 @@ namespace {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 ResultExprPtr result = assign->value->emit(context);
+                assign->value->type->emitNarrower(*assign->var->type);
                 Value *exprVal = b.lastValue;
                 b.builder.CreateStore(exprVal, getRep(b));
                 result->handleAssignment(context);
@@ -799,7 +848,7 @@ ExecutionEngine *LLVMBuilder::bindModule(ModuleProvider *mp) {
     
     return execEng;
 }
-        
+
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
@@ -1033,7 +1082,9 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef::Flags flags,
                                       const string &name,
                                       TypeDef *returnType,
-                                      const vector<ArgDefPtr> &args) {
+                                      const vector<ArgDefPtr> &args,
+                                      FuncDef *override
+                                      ) {
     
     // store the current function and block in the context
     BBuilderContextData *contextData;
@@ -1048,16 +1099,24 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     f.setArgs(args);
     
     // see if this is a method, if so store the class type as the receiver type
+    unsigned vtableSlot = 0;
     if (flags & FuncDef::method) {
         ContextPtr classCtx = context.getClassContext();
         assert(classCtx && "method is not nested in a class context.");
         BBuilderContextData *contextData = 
             BBuilderContextDataPtr::rcast(classCtx->builderData);
-        f.setReceiverType(contextData->type.get());
+        BTypeDef *classType = contextData->type.get();
+        f.setReceiverType(classType);
+        
+        // if this is virtual and not an override, we need to create a new 
+        // vtable slot for it.
+        if ((flags & FuncDef::virtualized) && !override)
+            vtableSlot = classType->nextVTableSlot++;
     }
 
     f.finish(false);
 
+    f.funcDef->vtableSlot = vtableSlot;
     func = f.funcDef->rep;
     block = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(block);
@@ -1103,22 +1162,30 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
     
-    // process the base classes
+    // process the base classes, get the first base class with a vtable
+    BTypeDef *baseWithVTable = 0;
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
          iter != bases.end();
          ++iter
-         )
-        bdata->addBaseClass(BTypeDefPtr::rcast(*iter));
+         ) {
+        BTypeDef *base = BTypeDefPtr::rcast(*iter);
+        bdata->addBaseClass(base);
+        if (!baseWithVTable && base->hasVTable)
+            baseWithVTable = base;
+    }
     
     OpaqueType *opaque = OpaqueType::get(getGlobalContext());
-    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque), true);
+    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque), true,
+                               baseWithVTable ? 
+                                baseWithVTable->nextVTableSlot : 0
+                               );
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
     
     // create function to convert to voidptr
     context.addDef(new VoidPtrOpDef(bdata->type.get()));
     return bdata->type.get();
 }
-
+        
 void LLVMBuilder::emitEndClass(Context &context) {
     // build a vector of the base classes and instance variables
     vector<const Type *> members;
@@ -1128,7 +1195,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
          baseIter != context.parents.end();
          ++baseIter
          ) {
-        BTypeDef *typeDef = BTypeDefPtr::rcast((*baseIter)->returnType);
+        BTypeDef *typeDef = BTypeDefPtr::arcast((*baseIter)->returnType);
         members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
     }
     
@@ -1136,6 +1203,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
         iter != context.endDefs();
         ++iter
         ) {
+        BFuncDef *funcDef;
+
         // see if the variable needs an instance slot
         if (iter->second->hasInstSlot()) {
             BInstVarDefImpl *impl = 
@@ -1185,6 +1254,18 @@ void LLVMBuilder::emitEndClass(Context &context) {
          )
         (*iter)->fix();
     bdata->placeholders.clear();
+    
+    // construct the vtable if necessary
+    if (bdata->type->hasVTable) {
+        vector<const Type *> vtableTypes;
+        vector<Constant *> vtableVals;
+        bdata->type->populateVTable(vtableTypes, vtableVals);
+        
+        const StructType *vtableType;
+        bdata->type->vtableType = vtableType =
+            StructType::get(getGlobalContext(), vtableTypes);
+        bdata->type->vtable = ConstantStruct::get(vtableType, vtableVals);
+    }
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -1224,11 +1305,15 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     
     // do initialization (unless we're in instance scope - instance variables 
     // get initialized in the constructors)
-    if (defCtx->scope != Context::instance)
-        if (initializer)
+    if (defCtx->scope != Context::instance) {
+        if (initializer) {
             initializer->emit(context)->handleAssignment(context);
-        else
+            initializer->type->emitNarrower(*type);
+        } else {
+            // assuming that we don't need to narrow a default initializer.
             type->defaultInitializer->emit(context)->handleAssignment(context);
+        }
+    }
     
     Value *var = 0;
     BMemVarDefImplPtr varDefImpl;
@@ -1545,6 +1630,22 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     int32Type->context->addDef(new BoolOpDef(boolType, "toBool"));
     context.addDef(int32Type);
 
+    // create an empty structure type and its pointer for vtable_base 
+    // Actual type is {}** (another layer of pointer indirection) because 
+    // classes need to be pointer types.
+    vector<const Type *> members;
+    Type *vtableType = StructType::get(getGlobalContext(), members);
+    Type *vtablePtrType = PointerType::getUnqual(vtableType);
+    BTypeDef *vtableBaseType;
+    gd->vtableBaseType = vtableBaseType =
+        new BTypeDef("vtable_base", PointerType::getUnqual(vtablePtrType), 
+                     true
+                     );
+    vtableBaseType->hasVTable = true;
+    vtableBaseType->context = new Context(*this, Context::instance, gd);
+    vtableBaseType->context->returnType = vtableBaseType;
+    context.addDef(vtableBaseType);
+    
     // create integer operations
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));

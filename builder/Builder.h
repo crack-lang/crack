@@ -110,25 +110,31 @@ class Builder : public spug::RCBase {
          */
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
-                           model::Expr *cond) = 0;
+                           model::Expr *cond
+                           ) = 0;
 
         /**
          * Emits the end of the "while" statement.
          * @param pos the branchpoint object returned from the emitWhile().
          */        
         virtual void emitEndWhile(model::Context &context,
-                                  model::Branchpoint *pos) = 0;
+                                  model::Branchpoint *pos
+                                  ) = 0;
 
         /**
          * Start a new function definition.
          * @param args the function argument list.
+         * @param override the virtual base function that we are overriding, 
+         *  null if this is not an override.
          */
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,
                           const std::string &name,
                           model::TypeDef *returnType,
-                          const std::vector<model::ArgDefPtr> &args) = 0;
+                          const std::vector<model::ArgDefPtr> &args,
+                          model::FuncDef *override
+                          ) = 0;
         
         /**
          * Emit the end of a function definition.

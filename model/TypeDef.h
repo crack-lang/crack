@@ -31,18 +31,28 @@ class TypeDef : public VarDef {
         // if true, the type is a pointer type (points to a structure)
         bool pointer;
         
+        // if true, the type has a vtable (and is derived from vtable_base)
+        bool hasVTable;
+        
         // XXX need a metatype
         TypeDef(const std::string &name, bool pointer = false) :
             VarDef(0, name),
-            pointer(pointer) {
+            pointer(pointer),
+            hasVTable(false) {
         }
-       
+
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).
          */
         virtual bool hasInstSlot();
         
+        /**
+         * Returns true if the function name is the name of a method that is 
+         * implicitly final (non-virtual).
+         */
+        static bool isImplicitFinal(const std::string &name);
+
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,
                              Expr *initializer

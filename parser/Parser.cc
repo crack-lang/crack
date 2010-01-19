@@ -583,21 +583,35 @@ bool Parser::parseDef(TypeDef *type) {
          } else if (!tok3.isLCurly()) {
             unexpected(tok3, "expected '{' in function definition");
          }
-         
+
+         bool isVirtual = isMethod && classCtx->returnType->hasVTable && 
+                          !TypeDef::isImplicitFinal(varName);
+
+         // If we're overriding/implementing a previously declared virtual 
+         // function, we'll store it here.
+         FuncDefPtr override;
+
          // XXX need to consolidate FuncDef and OverloadDef
          // we now need to verify that the new definition doesn't hide an 
          // existing definition.
          FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
          if (existingFuncDef && existingFuncDef->matches(argDefs) &&
-             context->getDefContext() == existingDef->context) {
-            error(tok2,
-                  SPUG_FSTR("Definition of " << tok2.getData() <<
-                             " hides previous overload."
-                            )
-                  );
+             context->getDefContext() == existingDef->context
+             ) {
+            if (isVirtual)
+               override = existingFuncDef;
+            else
+               error(tok2,
+                     SPUG_FSTR("Definition of " << tok2.getData() <<
+                                " hides previous overload."
+                               )
+                     );
          }
          OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-         if (existingOvldDef && existingOvldDef->matches(argDefs)) {
+         if (existingOvldDef && 
+             (override = existingOvldDef->getSigMatch(argDefs)) &&
+             !isVirtual
+             ) {
             error(tok2,
                   SPUG_FSTR("Definition of " << tok2.getData() <<
                              " hides previous overload."
@@ -606,10 +620,13 @@ bool Parser::parseDef(TypeDef *type) {
          }
          
          // parse the body
-         FuncDef::Flags flags = isMethod ? FuncDef::method : FuncDef::noFlags;
+         FuncDef::Flags flags =
+            (isMethod ? FuncDef::method : FuncDef::noFlags) |
+            (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
          FuncDefPtr funcDef =
             context->builder.emitBeginFunc(*context, flags, varName, type,
-                                           argDefs
+                                           argDefs,
+                                           override.get()
                                            );
 
          // store the new definition in the parent context.
@@ -884,12 +901,17 @@ TypeDefPtr Parser::parseClassDef() {
    lexicalContext->parents.push_back(classContext);
    lexicalContext->parents.push_back(context);
 
-   // store the base classes as the parent contexts of the class context
+   // store the base classes as the parent contexts of the class context.  
+   // Track whether there's a vtable while we're at it.
+   bool gotVTable = false;
    for (vector<TypeDefPtr>::iterator iter = bases.begin();
         iter != bases.end();\
         ++iter
-        )
-       classContext->parents.push_back((*iter)->context);
+        ) {
+      classContext->parents.push_back((*iter)->context);
+      if ((*iter)->hasVTable)
+         gotVTable = true;
+   }
 
    // push the context
    ContextStackFrame cstack(*this, lexicalContext.get());
@@ -899,6 +921,7 @@ TypeDefPtr Parser::parseClassDef() {
    TypeDefPtr type = classContext->returnType =
       context->builder.emitBeginClass(*classContext, className, bases);
    type->context = classContext;
+   type->hasVTable = gotVTable;
    cstack.parent().getDefContext()->addDef(type.get());
 
    // parse the class body   

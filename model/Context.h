@@ -82,7 +82,8 @@ class Context : public spug::RCBase {
                        boolType,
                        byteptrType,
                        intType,
-                       int32Type;
+                       int32Type,
+                       vtableBaseType;
         } *globalData;
     
         Context(builder::Builder &builder, Scope scope,

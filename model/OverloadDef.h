@@ -29,13 +29,21 @@ class OverloadDef : public VarDef {
          * Returns the overload matching the given args. This will modify 
          * "args" if there are conversions to be applied.
          */
-        FuncDefPtr getMatch(Context &context, std::vector<ExprPtr> &args);
+        FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args);
+        
+        /**
+         * Returns the overload with the matching signature if there is one, 
+         * NULL if not.
+         */
+        FuncDef *getSigMatch(const FuncDef::ArgVec &args);
         
         /** 
          * Returns true if the overload includeds a signature for the 
          * specified argument list.
          */
-        bool matches(const FuncDef::ArgVec &args);
+        bool matches(const FuncDef::ArgVec &args) {
+            return getSigMatch(args) ? true : false;
+        }
         
         bool hasInstSlot();
 };

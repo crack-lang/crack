@@ -23,6 +23,13 @@ bool TypeDef::hasInstSlot() {
     return false;
 }
 
+bool TypeDef::isImplicitFinal(const std::string &name) {
+    return name == "init" ||
+           name == "bind" ||
+           name == "release" ||
+           name == "toBool";
+}
+
 VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
                                Expr *initializer
                                ) {
@@ -94,7 +101,8 @@ FuncDefPtr TypeDef::createDefaultInit() {
                                                         FuncDef::method,
                                                         "init",
                                                         voidType,
-                                                        args
+                                                        args,
+                                                        0
                                                         );
 
     // XXX do initialization for the base classes.
@@ -152,7 +160,8 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
                                                         FuncDef::noFlags,
                                                         "oper new",
                                                         this,
-                                                        args
+                                                        args,
+                                                        0
                                                         );
     // create "Type this = alloc(Type);"
     ExprPtr allocExpr = new AllocExpr(this);

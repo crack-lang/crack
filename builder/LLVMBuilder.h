@@ -128,7 +128,9 @@ class LLVMBuilder : public Builder {
                           model::FuncDef::Flags flags,
                           const std::string &name,
                           model::TypeDef *returnType,
-                          const std::vector<model::ArgDefPtr> &args);
+                          const std::vector<model::ArgDefPtr> &args,
+                          model::FuncDef *override
+                          );
         
         virtual void emitEndFunc(model::Context &context,
                                  model::FuncDef *funcDef);

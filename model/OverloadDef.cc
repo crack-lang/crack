@@ -9,27 +9,27 @@
 using namespace std;
 using namespace model;
 
-FuncDefPtr OverloadDef::getMatch(Context &context, vector<ExprPtr> &args) {
+FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args) {
     vector<ExprPtr> newArgs(args.size());
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
         if ((*iter)->matches(context, args, newArgs)) {
             args = newArgs;
-            return *iter;
+            return iter->get();
         }
     
     return 0;
 }
 
-bool OverloadDef::matches(const FuncDef::ArgVec &args) {
+FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
         if ((*iter)->matches(args))
-            return true;
+            return iter->get();
     
-    return false;
+    return 0;
 }
 
 bool OverloadDef::hasInstSlot() {

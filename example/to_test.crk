@@ -64,3 +64,8 @@ f(100);
 # this currently doesn't work because 'A' gets treated like a definition
 class A { };
 A();
+
+# should not be able to derive a class from an incomplete class
+class A {
+    class B : A {}
+};

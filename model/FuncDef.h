@@ -17,6 +17,7 @@ class FuncDef : public VarDef {
         enum Flags {
             noFlags =0,  // so we can specify this
             method = 1,  // function is a method (has a receiver)
+            virtualized = 2, // function is virtual
         } flags;
         
         typedef std::vector<ArgDefPtr> ArgVec;
@@ -39,6 +40,12 @@ class FuncDef : public VarDef {
         
         virtual bool hasInstSlot();
 };
+
+inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
+    return static_cast<FuncDef::Flags>(static_cast<int>(a) | 
+                                       static_cast<int>(b));
+}
+        
 
 } // namespace model
 
