@@ -277,6 +277,12 @@ class Builder : public spug::RCBase {
         
         /// Dump the compiled op-codes to standard output.
         virtual void dump() = 0;
+
+        // XXX hack to emit all vtable initializers until we get constructor 
+        // composition.
+        virtual void emitVTableInit(model::Context &context,
+                                    model::TypeDef *typeDef
+                                    ) = 0;
 };
 
 } // namespace builder

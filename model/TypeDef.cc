@@ -171,6 +171,13 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
                                                     false
                                                     );
     VarRefPtr thisRef = new VarRef(thisVar.get());
+    
+    // initialize all vtable_base pointers. XXX hack.  Replace this with code 
+    // in vtable_base.oper init() once we get proper constructor composition
+    if (hasVTable) {
+        thisRef->emit(*funcContext);
+        context->builder.emitVTableInit(*funcContext, this);
+    }
 
     // create "this.init(*args);"
     FuncCallPtr initFuncCall = new FuncCall(initFunc);

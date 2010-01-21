@@ -209,6 +209,12 @@ class LLVMBuilder : public Builder {
         // appropriate variable references.
         void emitMemVarRef(model::Context &context, llvm::Value *val);
         void emitArgVarRef(model::Context &context, llvm::Value *val);
+        
+        // XXX hack to emit all vtable initializers until we get constructor 
+        // composition.
+        virtual void emitVTableInit(model::Context &context,
+                                    model::TypeDef *typeDef
+                                    );
 };
 
 } // namespace builder

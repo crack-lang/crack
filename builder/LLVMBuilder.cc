@@ -88,7 +88,7 @@ namespace {
         public:
             const Type *rep;
             unsigned nextVTableSlot;
-            const StructType *vtableType;
+            const PointerType *vtableType;
             Constant *vtable;
 
             BTypeDef(const string &name, const llvm::Type *rep,
@@ -174,28 +174,15 @@ namespace {
      * a block and subsequently replaced with a reference to the actual type.
      */    
     class PlaceholderInstruction : public Instruction {
-        protected:
-            Value *aggregate;
-            unsigned index;
-
         public:
-            PlaceholderInstruction(const Type *type, Value *aggregate,
-                                   unsigned index,
-                                   BasicBlock *parent
-                                   ) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, parent),
-                aggregate(aggregate),
-                index(index) {
+            PlaceholderInstruction(const Type *type, BasicBlock *parent) :
+                Instruction(type, OtherOpsEnd + 1, 0, 0, parent) {
             }
 
-            PlaceholderInstruction(const Type *type, 
-                                   Value *aggregate,
-                                   unsigned index,
+            PlaceholderInstruction(const Type *type,
                                    Instruction *insertBefore = 0
                                    ) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, insertBefore),
-                aggregate(aggregate),
-                index(index) {
+                Instruction(type, OtherOpsEnd + 1, 0, 0, insertBefore) {
             }
             
             void *operator new(size_t s) {
@@ -205,47 +192,83 @@ namespace {
             /** Replace the placeholder with a real instruction. */
             void fix() {
                 IRBuilder<> builder(getParent(), this);
-                Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
-                insertInstructions(builder, fieldPtr);
+                insertInstructions(builder);
                 this->eraseFromParent();
                 // ADD NO CODE AFTER SELF-DELETION.
             }
             
-            virtual void insertInstructions(IRBuilder<> &builder,
-                                            Value *fieldPtr
-                                            ) = 0;
+            virtual void insertInstructions(IRBuilder<> &builder) = 0;
+    };
+    
+    /**
+     * A placeholder instruction for operations involving structure fields.
+     */
+    class FieldInstructionPlaceholder : public PlaceholderInstruction {
+        protected:
+            Value *aggregate;
+            unsigned index;
+
+        public:
+            FieldInstructionPlaceholder(const Type *type, Value *aggregate,
+                                        unsigned index,
+                                        BasicBlock *parent
+                                        ) :
+                PlaceholderInstruction(type, parent),
+                aggregate(aggregate),
+                index(index) {
+            }
+
+            FieldInstructionPlaceholder(const Type *type, 
+                                        Value *aggregate,
+                                        unsigned index,
+                                        Instruction *insertBefore = 0
+                                        ) :
+                PlaceholderInstruction(type, insertBefore),
+                aggregate(aggregate),
+                index(index) {
+            }
+            
+            /** Replace the placeholder with a real instruction. */
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
+                insertFieldInstructions(builder, fieldPtr);
+            }
+            
+            virtual void insertFieldInstructions(IRBuilder<> &builder,
+                                                 Value *fieldPtr
+                                                 ) = 0;
     };
 
     /** an incomplete reference to an instance variable. */
-    class IncompleteInstVarRef : public PlaceholderInstruction {
+    class IncompleteInstVarRef : public FieldInstructionPlaceholder {
         public:
 
             IncompleteInstVarRef(const Type *type, Value *aggregate,
                                  unsigned index,
                                  BasicBlock *parent
                                  ) :
-                PlaceholderInstruction(type, aggregate, index, parent) {
+                FieldInstructionPlaceholder(type, aggregate, index, parent) {
             }
             
             IncompleteInstVarRef(const Type *type, Value *aggregate,
                                  unsigned index,
                                  Instruction *insertBefore = 0
                                  ) :
-                PlaceholderInstruction(type, aggregate, index, insertBefore) {
+                FieldInstructionPlaceholder(type, aggregate, index, insertBefore) {
             }
 
-            Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteInstVarRef(getType(), aggregate, index);
             }
             
-            virtual void insertInstructions(IRBuilder<> &builder, 
-                                            Value *fieldPtr
-                                            ) {
+            virtual void insertFieldInstructions(IRBuilder<> &builder, 
+                                                 Value *fieldPtr
+                                                 ) {
                 replaceAllUsesWith(builder.CreateLoad(fieldPtr));
             }
     };
     
-    class IncompleteInstVarAssign : public PlaceholderInstruction {
+    class IncompleteInstVarAssign : public FieldInstructionPlaceholder {
         private:
             Value *rval;
 
@@ -256,7 +279,7 @@ namespace {
                                     Value *rval,
                                     BasicBlock *parent
                                     ) :
-                PlaceholderInstruction(type, aggregate, index, parent),
+                FieldInstructionPlaceholder(type, aggregate, index, parent),
                 rval(rval) {
             }
             
@@ -265,19 +288,19 @@ namespace {
                                     Value *rval,
                                     Instruction *insertBefore = 0
                                     ) :
-                PlaceholderInstruction(type, aggregate, index, insertBefore),
+                FieldInstructionPlaceholder(type, aggregate, index, insertBefore),
                 rval(rval) {
             }
 
-            Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteInstVarAssign(getType(), aggregate, index, 
                                                    rval
                                                    );
             }
             
-            virtual void insertInstructions(IRBuilder<> &builder,
-                                            Value *fieldPtr
-                                            ) {
+            virtual void insertFieldInstructions(IRBuilder<> &builder,
+                                                 Value *fieldPtr
+                                                 ) {
                 builder.CreateStore(rval, fieldPtr);
             };
     };
@@ -286,33 +309,105 @@ namespace {
      * A placeholder for a "narrower" - a GEP instruction that provides
      * pointer to a base class from a derived class.
      */
-    class IncompleteNarrower : public PlaceholderInstruction {
+    class IncompleteNarrower : public FieldInstructionPlaceholder {
         public:
             IncompleteNarrower(const Type *type, Value *aggregate,
                                unsigned index,
                                BasicBlock *parent
                                ) :
-                PlaceholderInstruction(type, aggregate, index, parent) {
+                FieldInstructionPlaceholder(type, aggregate, index, parent) {
             }
             
             IncompleteNarrower(const Type *type, Value *aggregate,
                                unsigned index,
                                Instruction *insertBefore = 0
                                ) :
-                PlaceholderInstruction(type, aggregate, index, insertBefore) {
+                FieldInstructionPlaceholder(type, aggregate, index, insertBefore) {
             }
 
-            Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone(LLVMContext &lctx) const {
                 return new IncompleteNarrower(getType(), aggregate, index);
             }
             
 
-            virtual void insertInstructions(IRBuilder<> &builder,
-                                            Value *fieldPtr
-                                            ) {
+            virtual void insertFieldInstructions(IRBuilder<> &builder,
+                                                 Value *fieldPtr
+                                                 ) {
                 replaceAllUsesWith(fieldPtr);
             };
     };
+    
+    class IncompleteVTableInit : public PlaceholderInstruction {
+        public:
+            // we can make these raw pointers, the type _must_ be in existence 
+            // during the lifetime of this object.
+            BTypeDef *aggregateType;
+            BTypeDef *vtableBaseType;
+            Value *aggregate;
+
+            IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
+                                 BTypeDef *vtableBaseType,
+                                 BasicBlock *parent
+                                 ) :
+                PlaceholderInstruction(aggregateType->rep, parent),
+                aggregate(aggregate),
+                aggregateType(aggregateType),
+                vtableBaseType(vtableBaseType) {
+            }
+            
+            IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
+                                 BTypeDef *vtableBaseType,
+                                 Instruction *insertBefore = 0
+                                 ) :
+                PlaceholderInstruction(aggregateType->rep, insertBefore),
+                aggregateType(aggregateType),
+                vtableBaseType(vtableBaseType) {
+            }
+            
+            virtual Instruction *clone(LLVMContext &lctx) const {
+                return new IncompleteVTableInit(aggregateType, aggregate, 
+                                                vtableBaseType
+                                                );
+            }
+
+            void emitVTableInit(IRBuilder<> &builder, BTypeDef *btype,
+                                Value *inst
+                                ) {
+                if (btype == vtableBaseType) {
+                    
+                    // convert the instance pointer to the address of a 
+                    // vtable pointer.
+                    Value *vtableFieldRef =
+                        builder.CreateBitCast(inst, aggregateType->vtableType);
+            
+                    // store the vtable pointer in the field.
+                    builder.CreateStore(aggregateType->vtable, vtableFieldRef);
+                } else {
+                    // recurse through all parents with vtables
+                    Context::ContextVec &parents = btype->context->parents;
+                    int i = 0;
+                    for (Context::ContextVec::iterator ctxIter = 
+                            parents.begin();
+                         ctxIter != parents.end();
+                         ++ctxIter, ++i
+                         ) {
+                        BTypeDef *base = 
+                            BTypeDefPtr::arcast((*ctxIter)->returnType);
+                        if (base->hasVTable) {
+                            Value *baseInst =
+                                builder.CreateStructGEP(inst, i);
+                            emitVTableInit(builder, base, baseInst);
+                        }
+                    }
+                }
+            }
+                        
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                emitVTableInit(builder, aggregateType, aggregate);
+            }
+    };
+            
+                
 
     SPUG_RCPTR(BBuilderContextData);
 
@@ -1245,27 +1340,42 @@ void LLVMBuilder::emitEndClass(Context &context) {
     curType->refineAbstractTypeTo(newType);
     bdata->type->rep = PointerType::getUnqual(newType);
 
-    // fix all instance variable uses that were created before the structure 
-    // was defined.
-    for (vector<PlaceholderInstruction *>::iterator iter = 
-            bdata->placeholders.begin();
-         iter != bdata->placeholders.end();
-         ++iter
-         )
-        (*iter)->fix();
-    bdata->placeholders.clear();
-    
     // construct the vtable if necessary
     if (bdata->type->hasVTable) {
         vector<const Type *> vtableTypes;
         vector<Constant *> vtableVals;
         bdata->type->populateVTable(vtableTypes, vtableVals);
         
-        const StructType *vtableType;
-        bdata->type->vtableType = vtableType =
+        // create a constant structure that actually is the vtable
+        const StructType *vtableStructType =
             StructType::get(getGlobalContext(), vtableTypes);
-        bdata->type->vtable = ConstantStruct::get(vtableType, vtableVals);
+        bdata->type->vtable =
+            new GlobalVariable(*module, vtableStructType, true, // isConstant
+                               GlobalValue::ExternalLinkage,
+                               
+                               // initializer - this needs to be 
+                               // provided or the global will be 
+                               // treated as an extern.
+                               ConstantStruct::get(vtableStructType, 
+                                                   vtableVals
+                                                   ),
+                               ".vtable." + bdata->type->name
+                               );
+        
+        // for pragmatic reasons, the "vtable type" is a pointer to a pointer 
+        // to the vtable struct type.
+        bdata->type->vtableType =
+            PointerType::getUnqual(PointerType::getUnqual(vtableStructType));
     }
+
+    // fix-up all of the placeholder instructions
+    for (vector<PlaceholderInstruction *>::iterator iter = 
+            bdata->placeholders.begin();
+         iter != bdata->placeholders.end();
+         ++iter
+         )
+        (*iter)->fix();
+    bdata->placeholders.clear();    
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -1710,3 +1820,14 @@ void LLVMBuilder::emitArgVarRef(Context &context, Value *val) {
     lastValue = val;
 }
 
+void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
+    BTypeDef *btype = BTypeDefPtr::cast(typeDef);
+    BTypeDef *vtableBaseType = 
+        BTypeDefPtr::arcast(context.globalData->vtableBaseType);
+    PlaceholderInstruction *vtableInit =
+        new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
+    // store it
+    BBuilderContextData *bdata =
+        BBuilderContextDataPtr::rcast(context.getClassContext()->builderData);
+    bdata->placeholders.push_back(vtableInit);
+}
