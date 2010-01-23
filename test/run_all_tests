@@ -292,4 +292,19 @@ test_output 'multiple types with the same underlying structure' \
     'class A {}; class B {}; B b; puts("ok");' \
     ok
 
+test_output 'virtual methods' \
+    'class A : VTableBase { void f() { puts("fail"); } };
+     class B : A { void f() { puts("ok"); } };
+     A a = B();
+     a.f();' \
+     ok
+
+test_output 'incomplete virtual methods' \
+    'class A : VTableBase { void f() { puts("fail"); }
+                            void g() { f(); } };
+     class B : A { void f() { puts("ok"); } };
+     A a = B();
+     a.g();' \
+     ok
+
 exit $rc

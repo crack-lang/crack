@@ -598,14 +598,13 @@ bool Parser::parseDef(TypeDef *type) {
          if (existingFuncDef && existingFuncDef->matches(argDefs) &&
              context->getDefContext() == existingDef->context
              ) {
-            if (isVirtual)
-               override = existingFuncDef;
-            else
-               error(tok2,
-                     SPUG_FSTR("Definition of " << tok2.getData() <<
-                                " hides previous overload."
-                               )
-                     );
+            error(tok2,
+                  SPUG_FSTR("Definition of " << tok2.getData() <<
+                             " hides previous overload."
+                            )
+                  );
+         } else if (existingFuncDef && isVirtual) {
+            override = existingFuncDef;
          }
          OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
          if (existingOvldDef && 
