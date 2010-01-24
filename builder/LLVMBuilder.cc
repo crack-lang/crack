@@ -1911,6 +1911,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
     gd->voidPtrType = voidPtrType = new BTypeDef("voidptr", llvmVoidPtrType);
+    voidPtrType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidPtrType);
     
     llvm::Type *llvmBytePtrType = 
@@ -1920,6 +1921,9 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     byteptrType->defaultInitializer = createStrConst(context, "");
     byteptrType->context = new Context(*this, Context::instance, gd);
     byteptrType->context->returnType = byteptrType;
+    byteptrType->context->addDef(
+        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+    );
     context.addDef(byteptrType);
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);

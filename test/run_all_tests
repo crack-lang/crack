@@ -314,6 +314,9 @@ test_output 'voidptr cast of class with release' \
      class A { void release() { printint(2); } };
      func(A());' \
      12
-     
+
+test_output 'conversion from byteptr -> voidptr' \
+    'voidptr v = "test string"; puts("ok")' \
+    ok
 
 exit $rc
