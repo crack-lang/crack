@@ -59,11 +59,11 @@ bool TypeDef::matches(const TypeDef &other) const {
 }    
 
 bool TypeDef::emitNarrower(TypeDef &target) {
-    assert(context);
-    
     // if the types are the same, we're done.
     if (this == &target)
         return true;
+    
+    assert(context);
     
     // look through the parents
     int i = 0;

@@ -307,4 +307,13 @@ test_output 'incomplete virtual methods' \
      a.g();' \
      ok
 
+# voidptr conversion was returning a ResultExpr of the original type, which 
+# caused problems.
+test_output 'voidptr cast of class with release' \
+    'void func(voidptr val) {printint(1);}
+     class A { void release() { printint(2); } };
+     func(A());' \
+     12
+     
+
 exit $rc

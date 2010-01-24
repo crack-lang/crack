@@ -1027,14 +1027,14 @@ namespace {
             virtual ResultExprPtr emit(Context &context) {
                 // emit the receiver
                 receiver->emit(context)->handleTransient(context);
-                
+
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 builder.lastValue =
                     builder.builder.CreateBitCast(builder.lastValue,
                                                   builder.llvmVoidPtrType
                                                   );
-                
+
                 return new BResultExpr(this, builder.lastValue);
             }
     };
@@ -1476,7 +1476,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
     
     // create function to convert to voidptr
-    context.addDef(new VoidPtrOpDef(bdata->type.get()));
+    context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
     return bdata->type.get();
 }
         
