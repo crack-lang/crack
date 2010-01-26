@@ -38,7 +38,7 @@
         stdout.write('"==" compares by value.');
     
     # the identity check also works (constant strings are cached, String() 
-    # returns an instance from the cache.
+    # returns an instance from the cache.  You can negate it with "a !is b".
     if (var1 is var2 && var2 is var3 && var3 is var4)
         stdout.write('"is" compares identity.');
     
@@ -57,7 +57,7 @@
     # chaining)
     String formatted = StringOutStream().format('this is ').format(var1);
     
-    # low-level types - these are like the corresponding low-level types in 
+    # primitive types - these are like the corresponding primitive types in 
     # java and are copied by value.
     int x = 100;
     bool a = true;
@@ -69,7 +69,6 @@
     Bool b = a;
     Float g = f + x;  # integer gets promoted to float in this expression
     
-    
     /**
      * A function definition.  Doxygen style docstrings are supported as 
      * first-class language elements.
@@ -80,6 +79,11 @@
         stdout.write(text);
         return text;
     }
+    
+    # keyword arguments are supported.  We use a colon to indicate keyword 
+    # args instead of an equal sign to avoid ambiguity with the assignment 
+    # operator ("text: str = 'some non default text'" would be valid)
+    myFunc(text: 'some non default text');
     
     ## Another type of docstring. ('///' is also supported)
     void myOtherFunc() {
@@ -97,6 +101,7 @@
     
     # so are "bound methods" - which are a nice substitute for currying
     
+    # Not sure about "struct", see notes below
     struct Masala {
         int count;
         void run(String text) {
@@ -112,7 +117,9 @@
     import storage;
     
     // "struct" is a class with an implicit constructor with optional 
-    // arguments for each instance variable.
+    // arguments for each instance variable.  The 'struct' keyword may end up 
+    // being omitted in favor of the more general annotations mechanism 
+    // (e.g. "@attr_constructor class Note : storage.StorableObject { ..."
     struct Note : storage.StorableObject {
         String title;
         String desc;
@@ -149,7 +156,6 @@ Basic Dogma:
     2) Common patterns should be syntactically simple and terse.
     3) Everything should be fast.  Development cycles should be fast, the 
         runtime code should be fast.
-    4) Facilitate meta-abstractions. (this follows from 2)
 
 Resulting rules:
     1) Use C/C++/Java syntax except where it's broken.
@@ -167,7 +173,7 @@ So in initialization context:
         int b; 
         Foo(int a, int b) : a(a), b(b) {}
     } // need semicolon here?
-    Foo f = { a = 100, b = 200}; // equivalent to f := Foo(a = 100, b = 200);
+    Foo f = { a: 100, b: 200}; // equivalent to f := Foo(a: 100, b: 200);
 
 In other expression contexts, they are lambdas:
     
@@ -179,11 +185,6 @@ if (expr) { statements ... }
 do { statements ... }
 struct { x = 100, y = 10 } // anonymous structure (like a named tuple)
 
-After types, they are equivalent to instantiation:
-    
-    Foo { a = 100, b = 200 } // equivalent to Foo(a = 100, b = 200), but also 
-                             // supports composite construction
-    
 Lambdas:
 
     Lambdas should be expressible with minimal syntax,  but flexible enough to 
@@ -312,7 +313,9 @@ Generics:
     For typecasts, we can use the '*' operator:
     
         foos := Array[Foo] * getObjectArray();
-
+    
+    Although something like "cast" might be a better idea:
+        foos := Array[Foo].cast(getObjectArray());
 
 Cleanups:
     When we leave a context, we need to run "oper release" on all variables 
