@@ -169,11 +169,11 @@ bool Parser::parseBlock(bool nested) {
       bool gotBlockTerminator = false;
       if (tok.isRCurly()) {
          if (!nested)
-            unexpected(tok, "expected statement or closing brace.");
+            unexpected(tok, "expected statement or end-of-file.");
          gotBlockTerminator = true;
       } else if (tok.isEnd()) {
          if (nested)
-	    unexpected(tok, "expected statement or end-of-file");
+	    unexpected(tok, "expected statement or closing brace.");
 	 gotBlockTerminator = true;
       }
       
@@ -579,6 +579,10 @@ bool Parser::parseDef(TypeDef *type) {
                cstack.restore();
                addDef(funcDef.get());
                return true;
+            } else {
+               // XXX forward declaration
+               error(tok3, 
+                     "abstract/forward declarations are not supported yet");
             }
          } else if (!tok3.isLCurly()) {
             unexpected(tok3, "expected '{' in function definition");
