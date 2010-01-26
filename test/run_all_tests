@@ -319,4 +319,12 @@ test_output 'conversion from byteptr -> voidptr' \
     'voidptr v = "test string"; puts("ok")' \
     ok
 
+# this test works because a call to the bind() operation gets generated from 
+# within the generated "new" operator.
+test_output 'instance narrowing works more than one level' \
+    'class A { void bind() {} };
+     class B : A {};
+     class C : B {}; puts("ok");'  \
+     ok
+
 exit $rc

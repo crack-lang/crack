@@ -52,6 +52,11 @@ class TypeDef : public VarDef {
          * implicitly final (non-virtual).
          */
         static bool isImplicitFinal(const std::string &name);
+        
+        /**
+         * Returns true if the type is derived from "other."
+         */
+        bool isDerivedFrom(const TypeDef *other) const;
 
         /** Emit a variable definition for the type. */
         VarDefPtr emitVarDef(Context &container, const std::string &name,
@@ -64,23 +69,6 @@ class TypeDef : public VarDef {
          */
         bool matches(const TypeDef &other) const;
         
-        /**
-         * Emit code to "narrow" the type context to the specified 
-         * target type (which must be a base class of this type).
-         * 
-         * This can be used by a Builder to force the generation of special 
-         * code to refocus a field or method reference to a specific ancestor 
-         * class.
-         * 
-         * The base implementation recursively calls itself if the expression 
-         * type's context is not "target", then calls Builder::emitNarrower() 
-         * to narrow down from the specific type.  It may be overriden to 
-         * provide functionality better suited to the Builder.
-         * 
-         * @return true if target is a base type.
-         */
-        virtual bool emitNarrower(TypeDef &target);
-
         /**
          * Create the default initializer.
          */

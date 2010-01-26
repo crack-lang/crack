@@ -61,6 +61,8 @@ class LLVMBuilder : public Builder {
         llvm::Value *lastValue;
         llvm::BasicBlock *block;
 
+        void narrow(model::TypeDef *curType, model::TypeDef *ancestor);
+
         void setModFunc(model::FuncDef *funcDef, llvm::Function *func) {
             moduleFuncs[funcDef] = func;
         }
@@ -179,10 +181,6 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
-        virtual void emitNarrower(model::TypeDef &curType,
-                                  model::TypeDef &parent,
-                                  int index
-                                  );
         virtual void createModule(model::Context &context,
                                   const std::string &name);
         virtual void closeModule();

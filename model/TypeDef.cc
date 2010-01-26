@@ -30,6 +30,20 @@ bool TypeDef::isImplicitFinal(const std::string &name) {
            name == "toBool";
 }
 
+bool TypeDef::isDerivedFrom(const TypeDef *other) const {
+    if (this == other)
+        return true;
+
+    Context::ContextVec &parents = context->parents;
+    for (Context::ContextVec::iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         )
+        if ((*iter)->returnType->isDerivedFrom(other))
+            return true;
+    return false;
+}
+
 VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
                                Expr *initializer
                                ) {
@@ -57,35 +71,6 @@ bool TypeDef::matches(const TypeDef &other) const {
     
     return false;
 }    
-
-bool TypeDef::emitNarrower(TypeDef &target) {
-    // if the types are the same, we're done.
-    if (this == &target)
-        return true;
-    
-    assert(context);
-    
-    // look through the parents
-    int i = 0;
-    for (Context::ContextVec::iterator iter = context->parents.begin();
-         iter != context->parents.end();
-         ++iter, ++i
-         ) {
-        assert((*iter)->returnType && 
-               "Parent context is not bound to a type."
-               );
-        TypeDef &baseType = *(*iter)->returnType;
-        if (baseType.emitNarrower(target)) {
-            // have the builder actually emit tha narrower code to obtain an 
-            // expression of the base type from this type.
-            context->builder.emitNarrower(*this, baseType, i);
-            return true;
-        }
-    }
-
-    // the target type was not found in our ancestry.
-    return false;
-}
 
 FuncDefPtr TypeDef::createDefaultInit() {
     ContextPtr funcContext = context->createSubContext(Context::local);

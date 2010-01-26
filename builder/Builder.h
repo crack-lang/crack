@@ -218,20 +218,6 @@ class Builder : public spug::RCBase {
                                                      model::AssignExpr *assign
                                                      ) = 0;
 
-        /**
-         * Emit code to narrow an instance of curType to parent.
-         * You only need to implement a working version of this if your 
-         * builder calls TypeDef::emitNarrower().
-         * @param curType the type that you currently have.
-         * @param parent the type that you want to end up with.
-         * @param index the base class index (the index of 'parent' within the 
-         *  base classes of 'curType')
-         */
-        virtual void emitNarrower(model::TypeDef &curType,
-                                  model::TypeDef &parent,
-                                  int index
-                                  ) = 0;
-
         virtual void createModule(model::Context &context,
                                   const std::string &name) = 0;
         virtual void closeModule() = 0;

@@ -339,32 +339,70 @@ namespace {
      * A placeholder for a "narrower" - a GEP instruction that provides
      * pointer to a base class from a derived class.
      */
-    class IncompleteNarrower : public FieldInstructionPlaceholder {
+    class IncompleteNarrower : public PlaceholderInstruction {
+        private:
+            Value *aggregate;
+            BTypeDef *startType, *ancestor;
+
         public:
-            IncompleteNarrower(const Type *type, Value *aggregate,
-                               unsigned index,
+            IncompleteNarrower(Value *aggregate,
+                               BTypeDef *startType,
+                               BTypeDef *ancestor,
                                BasicBlock *parent
                                ) :
-                FieldInstructionPlaceholder(type, aggregate, index, parent) {
+                PlaceholderInstruction(ancestor->rep, parent),
+                aggregate(aggregate),
+                startType(startType),
+                ancestor(ancestor) {
             }
             
-            IncompleteNarrower(const Type *type, Value *aggregate,
-                               unsigned index,
+            IncompleteNarrower(Value *aggregate,
+                               BTypeDef *startType,
+                               BTypeDef *ancestor,
                                Instruction *insertBefore = 0
                                ) :
-                FieldInstructionPlaceholder(type, aggregate, index, insertBefore) {
+                PlaceholderInstruction(ancestor->rep, insertBefore),
+                aggregate(aggregate),
+                startType(startType),
+                ancestor(ancestor) {
             }
 
             virtual Instruction *clone(LLVMContext &lctx) const {
-                return new IncompleteNarrower(getType(), aggregate, index);
+                return new IncompleteNarrower(aggregate, startType, ancestor);
             }
             
+            /**
+             * Emits the GEP instructions to narrow 'inst' from 'type' to 
+             * 'ancestor'.  Returns the resulting end-value.
+             */
+            static Value *emitGEP(IRBuilder<> &builder, BTypeDef *type, 
+                                  BTypeDef *ancestor,
+                                  Value *inst
+                                  ) {
+                if (type == ancestor)
+                    return inst;
 
-            virtual void insertFieldInstructions(IRBuilder<> &builder,
-                                                 Value *fieldPtr
-                                                 ) {
-                replaceAllUsesWith(fieldPtr);
-            };
+                int i = 0;
+                for (Context::ContextVec::iterator iter = 
+                        type->context->parents.begin();
+                     iter != type->context->parents.end();
+                     ++iter, ++i
+                     )
+                    if ((*iter)->returnType->isDerivedFrom(ancestor)) {
+                        inst = builder.CreateStructGEP(inst, i);
+                        BTypeDef *base = 
+                            BTypeDefPtr::arcast((*iter)->returnType);
+                        return emitGEP(builder, base, ancestor, inst);
+                    }
+                assert(false && "narrowing to non-ancestor!");
+            }
+            
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                replaceAllUsesWith(emitGEP(builder, startType, ancestor,
+                                           aggregate
+                                           )
+                                   );
+            }
     };
     
     class IncompleteVTableInit : public PlaceholderInstruction {
@@ -676,7 +714,7 @@ namespace {
                 LLVMBuilder &b =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 ResultExprPtr result = assign->value->emit(context);
-                assign->value->type->emitNarrower(*assign->var->type);
+                b.narrow(assign->value->type.get(), assign->var->type.get());
                 Value *exprVal = b.lastValue;
                 b.builder.CreateStore(exprVal, getRep(b));
                 result->handleAssignment(context);
@@ -750,15 +788,17 @@ namespace {
 
             ResultExprPtr emit(Context &context) {
                 ResultExprPtr aggregateResult = aggregate->emit(context);
+                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
 
                 // narrow to the ancestor type where there variable is defined.
-                aggregate->type->emitNarrower(*def->context->returnType);
+                bb.narrow(aggregate->type.get(),
+                          def->context->returnType.get()
+                          );
 
                 unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
                 
                 // if the variable is from a complete context, we can emit it. 
                 //  Otherwise, we need to store a placeholder.
-                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
                 if (def->context->complete) {
                     Value *fieldPtr = 
                         bb.builder.CreateStructGEP(bb.lastValue, index);
@@ -1132,6 +1172,31 @@ ExecutionEngine *LLVMBuilder::bindModule(ModuleProvider *mp) {
     return execEng;
 }
 
+void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
+    // quick short-circuit to deal with the trivial case
+    if (curType == ancestor)
+        return;
+
+    Context *ctx = curType->context.get();
+    BTypeDef *bcurType = BTypeDefPtr::acast(curType);
+    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
+    if (ctx->complete) {
+        lastValue = IncompleteNarrower::emitGEP(builder, bcurType, bancestor,
+                                                lastValue
+                                                );
+    } else {
+        // create a placeholder instruction
+        PlaceholderInstruction *placeholder =
+            new IncompleteNarrower(lastValue, bcurType, bancestor,
+                                   block);
+        lastValue = placeholder;
+
+        // store it
+        BBuilderContextData *bdata =
+            BBuilderContextDataPtr::rcast(ctx->builderData);
+        bdata->placeholders.push_back(placeholder);
+    }
+}
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
@@ -1210,7 +1275,9 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
     Value *receiver;
     if (funcCall->receiver) {
         funcCall->receiver->emit(context)->handleTransient(context);
-        funcCall->receiver->type->emitNarrower(*funcCall->func->context->returnType);
+        narrow(funcCall->receiver->type.get(), 
+               funcCall->func->context->returnType.get()
+               );
         valueArgs.push_back(lastValue);
         receiver = lastValue;
     }
@@ -1222,7 +1289,7 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
          ++valIter, ++argIter
          ) {
         (*valIter)->emit(context)->handleTransient(context);
-        (*valIter)->type->emitNarrower(*(*argIter)->type);
+        narrow((*valIter)->type.get(), (*argIter)->type.get());
         valueArgs.push_back(lastValue);
     }
     
@@ -1617,7 +1684,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     if (defCtx->scope != Context::instance) {
         if (initializer) {
             initializer->emit(context)->handleAssignment(context);
-            initializer->type->emitNarrower(*type);
+            narrow(initializer->type.get(), type);
         } else {
             // assuming that we don't need to narrow a default initializer.
             type->defaultInitializer->emit(context)->handleAssignment(context);
@@ -1836,7 +1903,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 
     // narrow to the field type.
     Context *varContext = assign->var->context;
-    assign->aggregate->type->emitNarrower(*varContext->returnType);
+    narrow(assign->aggregate->type.get(), varContext->returnType.get());
     Value *aggregateRep = lastValue;
     
     // emit the value last, lastValue after this needs to be the expression so 
@@ -1871,25 +1938,6 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     }
 
     return new BResultExpr(assign, lastValue);
-}
-
-void LLVMBuilder::emitNarrower(TypeDef &curType, TypeDef &parent, int index) {
-    Context *ctx = curType.context.get();
-    if (ctx->complete) {
-        lastValue = builder.CreateStructGEP(lastValue, index);
-    } else {
-        // create a placeholder instruction
-        Value *aggregate = lastValue;
-        BTypeDef &bparent = dynamic_cast<BTypeDef &>(parent);
-        PlaceholderInstruction *placeholder =
-            new IncompleteNarrower(bparent.rep, aggregate, index, block);
-        lastValue = placeholder;
-
-        // store it
-        BBuilderContextData *bdata =
-            BBuilderContextDataPtr::rcast(ctx->builderData);
-        bdata->placeholders.push_back(placeholder);
-    }
 }
 
 extern "C" void printint(int val) {
