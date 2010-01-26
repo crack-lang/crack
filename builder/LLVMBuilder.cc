@@ -556,6 +556,7 @@ namespace {
                 Value *result = builder.CreateCall(funcPtr, args.begin(), 
                                                    args.end()
                                                    );
+                return result;
             }
         
             IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
