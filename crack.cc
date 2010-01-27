@@ -14,37 +14,6 @@ using namespace std;
 
 bool dump = false;
 
-void compileAndRun(istream &src, const char *name) {
-
-    // create the builder and top-level context
-    builder::LLVMBuilder builder;
-    model::ContextPtr ctx =
-        new model::Context(builder, model::Context::module,
-                           (model::Context*)0
-                           );
-    ctx->returnType = ctx->globalData->voidType;
-    
-    // create the main module, register all of the basic stuff
-    ctx->createModule("main");
-    ctx->builder.registerPrimFuncs(*ctx);
-
-    parser::Toker toker(src, name);
-    parser::Parser parser(toker, ctx.get());
-    
-    try {
-        parser.parse();
-
-        // close it and run
-        ctx->builder.closeModule();
-        if (dump)
-            builder.dump();
-        else
-            builder.run();
-    } catch (const parser::ParseError &ex) {
-        cerr << ex << endl;
-    }
-}
-
 int main(int argc, const char **argv) {
     if (argc < 2) {
         cerr << "Usage:" << endl;
@@ -57,13 +26,11 @@ int main(int argc, const char **argv) {
     while (*arg) {
         if (!strcmp(*arg, "-")) {
             Crack::getInstance().runScript(cin, "<stdin>");
-//            compileAndRun(cin, "<stdin>");
             break;
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
         } else {
             ifstream src(*arg);
-//            compileAndRun(src, argv[1]);
             Crack::getInstance().runScript(src, *arg);
             break;
         }
