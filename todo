@@ -21,17 +21,13 @@ Roadmap
 
 for 0.1:
 -   the "!" operator
--   modules
--   extern declarations of C functions
--   virtual functions
--   expression level cleanups of temporary objects
--   productive/non-productive expressions
 -   composition of constructors/destructors
 -   the "oper" keyword
 -   "Foo x = {1, 2}" construction syntax.
 -   the '`' operator
 -   break & continue
 -   short circuit logic operators
+-   floating point types
 
 for 1.0:
 -   doc-comments
@@ -40,5 +36,5 @@ for 1.0:
 -   sequence construction 
 -   type inference
 -   for/in loops
-
+-   exceptions
 
