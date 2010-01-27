@@ -1028,6 +1028,41 @@ namespace {
                 OpDef(resultType, FuncDef::method, name, 0) {
             }
     };
+
+#define UNOP(pfx, opCode) \
+    class pfx##OpCall : public FuncCall {                                   \
+        public:                                                             \
+            pfx##OpCall(FuncDef *def) : FuncCall(def) {}                    \
+                                                                            \
+            virtual ResultExprPtr emit(Context &context) {                  \
+                receiver->emit(context)->handleTransient(context);          \
+                                                                            \
+                LLVMBuilder &builder =                                      \
+                    dynamic_cast<LLVMBuilder &>(context.builder);           \
+                builder.lastValue =                                         \
+                    builder.builder.Create##opCode(                         \
+                        builder.lastValue,                                  \
+                        BTypeDefPtr::arcast(func->type)->rep                \
+                    );                                                      \
+                                                                            \
+                return new BResultExpr(this, builder.lastValue);            \
+            }                                                               \
+    };                                                                      \
+                                                                            \
+    class pfx##OpDef : public UnOpDef {                                     \
+        public:                                                             \
+            pfx##OpDef(TypeDef *resultType, const string &name) :           \
+                UnOpDef(resultType, name) {                                 \
+            }                                                               \
+                                                                            \
+            virtual FuncCallPtr createFuncCall() {                          \
+                return new pfx##OpCall(this);                               \
+            }                                                               \
+    };
+
+    UNOP(Trunc, Trunc);
+    UNOP(SExt, SExt);
+    UNOP(ZExt, ZExt);
     
     /** Operator to convert simple types to booleans. */
     class BoolOpCall : public FuncCall {
@@ -1133,6 +1168,7 @@ namespace {
     BINOP(Sub, "-");
     BINOP(Mul, "*");
     BINOP(SDiv, "/");
+    BINOP(UDiv, "/");
 
     BINOP(ICmpEQ, "==");
     BINOP(ICmpNE, "!=");
@@ -1140,6 +1176,10 @@ namespace {
     BINOP(ICmpSLT, "<");
     BINOP(ICmpSGE, ">=");
     BINOP(ICmpSLE, "<=");
+    BINOP(ICmpUGT, ">");
+    BINOP(ICmpULT, "<");
+    BINOP(ICmpUGE, ">=");
+    BINOP(ICmpULE, "<=");
     
     QUAL_BINOP(Is, ICmpEQ, "is");
 
@@ -1857,11 +1897,14 @@ model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
     return new BStrConst(context.globalData->byteptrType.get(), val);
 }
 
-IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val) {
+IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
+                                        TypeDef *typeDef
+                                        ) {
     // XXX probably need to consider the simplest type that the constant can 
     // fit into (compatibility rules will allow us to coerce it into another 
     // type)
-    return new BIntConst(BTypeDefPtr::arcast(context.globalData->int32Type), 
+    return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
+                          BTypeDefPtr::arcast(context.globalData->int32Type),
                          val
                          );
 }
@@ -1945,6 +1988,30 @@ extern "C" void printint(int val) {
     std::cout << val << flush;
 }
 
+namespace {
+    BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
+                             const char *name
+                             ) {
+        BTypeDefPtr btype = new BTypeDef(name, llvmType);
+        btype->defaultInitializer =
+            context.builder.createIntConst(context, 0, btype.get());
+        btype->context =
+            new Context(context.builder, Context::instance, 
+                        context.globalData
+                        );
+        btype->context->returnType = btype;
+        btype->context->addDef(new BoolOpDef(context.globalData->boolType.get(), 
+                                             "toBool"
+                                             )
+                               );
+        
+        // if you remove this, for the love of god, change the return type so 
+        // we don't leak the pointer.
+        context.addDef(btype.get());
+        return btype.get();
+    }
+}
+
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     Context::GlobalData *gd = context.globalData;
@@ -1954,6 +2021,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     BTypeDef *voidType;
     gd->voidType = voidType = new BTypeDef("void", Type::getVoidTy(lctx));
+    voidType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidType);
     
     BTypeDef *voidPtrType;
@@ -1983,14 +2051,36 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     boolType->context->returnType = boolType;
     context.addDef(boolType);
     
-    const llvm::Type *llvmInt32Type = Type::getInt32Ty(lctx);
-    BTypeDef *int32Type;
-    gd->int32Type = int32Type = new BTypeDef("int32", llvmInt32Type);
-    gd->int32Type->defaultInitializer = createIntConst(context, 0);
-    int32Type->context = new Context(*this, Context::instance, gd);
-    int32Type->context->returnType = int32Type;
-    int32Type->context->addDef(new BoolOpDef(boolType, "toBool"));
-    context.addDef(int32Type);
+    BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
+                                            "int32"
+                                            );
+    gd->int32Type = int32Type;
+
+    BTypeDef *int64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
+                                            "int64"
+                                            );
+    gd->int64Type = int64Type;
+    
+    BTypeDef *uint32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
+                                            "uint32"
+                                            );
+    gd->uint32Type = uint32Type;
+
+    BTypeDef *uint64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
+                                            "uint64"
+                                            );
+    gd->uint64Type = uint64Type;
+    
+    // XXX bad assumptions about sizeof
+    if (sizeof(int) == 4) {
+        context.addAlias("int", int32Type);
+        context.addAlias("uint", uint32Type);
+    } else {
+        assert(sizeof(int) == 8);
+        context.addAlias("int", int64Type);
+        context.addAlias("uint", uint64Type);
+    }
+        
 
     // create an empty structure type and its pointer for VTableBase 
     // Actual type is {}** (another layer of pointer indirection) because 
@@ -2019,6 +2109,53 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int32Type, boolType));
     context.addDef(new ICmpSGEOpDef(int32Type, boolType));
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
+
+    context.addDef(new AddOpDef(int64Type));
+    context.addDef(new SubOpDef(int64Type));
+    context.addDef(new MulOpDef(int64Type));
+    context.addDef(new SDivOpDef(int64Type));
+    context.addDef(new ICmpEQOpDef(int64Type, boolType));
+    context.addDef(new ICmpNEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
+
+    context.addDef(new AddOpDef(uint32Type));
+    context.addDef(new SubOpDef(uint32Type));
+    context.addDef(new MulOpDef(uint32Type));
+    context.addDef(new UDivOpDef(uint32Type));
+    context.addDef(new ICmpEQOpDef(uint32Type, boolType));
+    context.addDef(new ICmpNEOpDef(uint32Type, boolType));
+    context.addDef(new ICmpUGTOpDef(uint32Type, boolType));
+    context.addDef(new ICmpULTOpDef(uint32Type, boolType));
+    context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
+    context.addDef(new ICmpULEOpDef(uint32Type, boolType));
+
+    context.addDef(new AddOpDef(uint64Type));
+    context.addDef(new SubOpDef(uint64Type));
+    context.addDef(new MulOpDef(uint64Type));
+    context.addDef(new UDivOpDef(uint64Type));
+    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
+    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
+    
+    // conversions
+    int64Type->context->addDef(new TruncOpDef(uint64Type, "oper to uint64"));
+    int64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
+    int64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
+    uint64Type->context->addDef(new TruncOpDef(int64Type, "oper to int64"));
+    uint64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
+    uint64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
+    int32Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
+    int32Type->context->addDef(new SExtOpDef(int64Type, "oper to int64"));
+    int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    uint32Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
+    uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
     
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidPtrType, boolType));

@@ -19,6 +19,7 @@ class IntConst : public Expr {
         IntConst(TypeDef *type, long val);
         
         virtual ResultExprPtr emit(Context &context);
+        virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;        
 };
 

@@ -220,6 +220,12 @@ void Context::addAlias(VarDef *def) {
     defs[def->name] = def;
 }
 
+void Context::addAlias(const string &name, VarDef *def) {
+    // make sure that the symbol is already bound to a context.
+    assert(def->context);
+    defs[name] = def;
+}
+
 void Context::replaceDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");

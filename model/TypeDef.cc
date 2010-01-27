@@ -210,16 +210,15 @@ void TypeDef::rectify() {
 }
 
 FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
-    // XXX since we don't have a generic conversion framework in place yet, 
-    // just do this for bool and voidptr.  What we want to do here is look up 
-    // "oper to canonical-type-name"
+    // XXX This is a half-assed general solution to the problem, we should 
+    // really be using the canonical name of the type (and omitting the 
+    // special case for bool).
     if (other.name == "bool") {
         FuncCall::ExprVec args;
         return context->lookUp("toBool", args);
-    } else if (other.name == "voidptr") {
-        FuncCall::ExprVec args;
-        return context->lookUp("oper to voidptr", args);        
     } else {
+        FuncCall::ExprVec args;
+        return context->lookUp("oper to " + other.name);
         return 0;
     }
 }

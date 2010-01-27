@@ -327,4 +327,10 @@ test_output 'instance narrowing works more than one level' \
      class C : B {}; puts("ok");'  \
      ok
 
+test_output 'various integer types and conversions' \
+    'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
+     i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
+     u64; u32 = u64; i64 = u64; puts("ok");' \
+    ok
+
 exit $rc

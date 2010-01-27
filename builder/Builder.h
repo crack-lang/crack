@@ -238,7 +238,9 @@ class Builder : public spug::RCBase {
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val) = 0;
         virtual model::IntConstPtr createIntConst(model::Context &context,
-                                                  long val) = 0;
+                                                  long val,
+                                                  model::TypeDef *type = 0
+                                                  ) = 0;
         
         virtual void registerPrimFuncs(model::Context &context) = 0;
 

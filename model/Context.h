@@ -83,6 +83,9 @@ class Context : public spug::RCBase {
                        byteptrType,
                        intType,
                        int32Type,
+                       int64Type,
+                       uint32Type,
+                       uint64Type,
                        vtableBaseType;
         } *globalData;
     
@@ -157,6 +160,7 @@ class Context : public spug::RCBase {
          * module context.
          */
         void addAlias(VarDef *def);
+        void addAlias(const std::string &name, VarDef *def);
         
         /**
          * Replace an existing defintion with the new definition.

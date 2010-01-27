@@ -190,7 +190,10 @@ class LLVMBuilder : public Builder {
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val);
         virtual model::IntConstPtr createIntConst(model::Context &context,
-                                                  long val);
+                                                  long val,
+                                                  model::TypeDef *type = 0
+                                                  );
+
         virtual void registerPrimFuncs(model::Context &context);
         virtual void loadSharedLibrary(const std::string &name,
                                        const std::vector<std::string> &symbols,
