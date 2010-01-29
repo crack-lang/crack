@@ -5,6 +5,7 @@
 #include <fstream>
 #include "model/Context.h"
 #include "model/ModuleDef.h"
+#include "model/TypeDef.h"
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -23,6 +24,17 @@ Crack &Crack::getInstance() {
         theInstance = new Crack();
     
     return *theInstance;
+}
+
+void Crack::addToSourceLibPath(const string &path) {
+    size_t pos = 0;
+    size_t i = path.find(':');
+    while (i != -1) {
+        sourceLibPath.push_back(path.substr(pos, i - pos));
+        pos = i + 1;
+        i = path.find('.', pos);
+    }
+    sourceLibPath.push_back(path.substr(pos));
 }
 
 Crack::Crack() : 
@@ -176,10 +188,68 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     return modDef;
 }    
 
+namespace {
+    // extract a class from a module and verify that it is a class - returns 
+    // null on failure.
+    TypeDef *extractClass(ModuleDef *mod, const char *name) {
+        VarDefPtr var = mod->moduleContext->lookUp(name);
+        TypeDef *type;
+        if (var && (type = TypeDefPtr::rcast(var))) {
+            return type;
+        } else {
+            cerr << name << " class not found in module crack.lang" << endl;
+            return 0;
+        }
+    }
+}
+
+bool Crack::loadBootstrapModules(Context &context) {
+    try {
+        StringVec crackLangName(2);
+        crackLangName[0] = "crack";
+        crackLangName[1] = "lang";
+        string name = "crack.lang";
+        ModuleDefPtr mod = loadModule(crackLangName, name);
+        
+        if (!mod) {
+            cerr << "Bootstrapping module crack.lang not found." << endl;
+            return false;
+        }
+
+        // extract the basic types from the module context
+        context.globalData->objectType = extractClass(mod.get(), "Object");
+        context.addAlias(context.globalData->objectType.get());
+        context.globalData->stringType = extractClass(mod.get(), "String");
+        context.addAlias(context.globalData->stringType.get());
+        
+        // extract some constants
+        VarDefPtr v = mod->moduleContext->lookUp("true");
+        if (v)
+            context.addAlias(v.get());
+        v = mod->moduleContext->lookUp("false");
+        if (v)
+            context.addAlias(v.get());
+        
+        return context.globalData->objectType && 
+               context.globalData->stringType;
+    } catch (const ParseError &ex) {
+        cerr << ex << endl;
+        return false;
+    }
+        
+    
+    return true;
+}
+
 int Crack::runScript(std::istream &src, const std::string &name) {
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get());
+
+    // load the bootstrapping modules - library files that are essential to 
+    // the language, like the definitions of the Object and String classes.
+    if (!loadBootstrapModules(*context))
+        return 1;
 
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 
@@ -189,12 +259,13 @@ int Crack::runScript(std::istream &src, const std::string &name) {
         parseModule(modDef.get(), name, src);
     } catch (const ParseError &ex) {
         cerr << ex << endl;
+        return 1;
     }
 }
 
 ModuleDefPtr Crack::loadModule(const vector<string> &moduleName,
-                              string &canonicalName
-                              ) {
+                               string &canonicalName
+                               ) {
     return getInstance().loadModule(moduleName.begin(), 
                                     moduleName.end(), 
                                     canonicalName

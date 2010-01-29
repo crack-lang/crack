@@ -8,7 +8,7 @@ function test_output {
     expected="$3"
     
     echo -n "$text..."
-    result="$(echo "$script" | ./crack - 2>&1)"
+    result="$(echo "$script" | ./crack -l .:lib - 2>&1)"
     if [ "$result" = "$expected" ]; then
         echo ok
     else

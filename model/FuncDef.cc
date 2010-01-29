@@ -46,10 +46,9 @@ bool FuncDef::matches(const ArgVec &other_args) {
     for (arg = args.begin(), other_arg = other_args.begin();
          arg != args.end() && other_arg != other_args.end();
          ++arg, ++other_arg
-         ) {
+         )
         if (!(*arg)->type->matches(*(*other_arg)->type))
             return false;
-    }
 
     // make sure that we checked everything in both lists   
     if (arg != args.end() || other_arg != other_args.end())
@@ -58,6 +57,23 @@ bool FuncDef::matches(const ArgVec &other_args) {
     return true;
 }
 
+bool FuncDef::isOverridable() const {
+    return flags & virtualized || name == "init";
+}
+
 bool FuncDef::hasInstSlot() {
     return false;
+}
+
+void FuncDef::dump(ostream &out) {
+    out << name << '(';
+    bool first = true;
+    for (ArgVec::iterator iter = args.begin(); iter != args.end(); ++iter) {
+        if (!first)
+            out << ", ";
+        else
+            first = false;
+        out << (*iter)->type->name << ' ' << (*iter)->name;
+    }
+    out << ")\n";
 }

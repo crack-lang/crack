@@ -599,27 +599,29 @@ bool Parser::parseDef(TypeDef *type) {
          // we now need to verify that the new definition doesn't hide an 
          // existing definition.
          FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
-         if (existingFuncDef && existingFuncDef->matches(argDefs) &&
-             context->getDefContext() == existingDef->context
-             ) {
-            error(tok2,
-                  SPUG_FSTR("Definition of " << tok2.getData() <<
-                             " hides previous overload."
-                            )
-                  );
-         } else if (existingFuncDef && isVirtual) {
-            override = existingFuncDef;
-         }
-         OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-         if (existingOvldDef && 
-             (override = existingOvldDef->getSigMatch(argDefs)) &&
-             !isVirtual
-             ) {
-            error(tok2,
-                  SPUG_FSTR("Definition of " << tok2.getData() <<
-                             " hides previous overload."
-                            )
-                  );
+         if (existingFuncDef && existingFuncDef->matches(argDefs)) {
+            if (!(context->getDefContext() == existingDef->context) ||
+                !existingFuncDef->isOverridable()
+                )
+               override = existingFuncDef;
+            else
+               error(tok2,
+                     SPUG_FSTR("Definition of " << tok2.getData() <<
+                              " hides previous overload."
+                              )
+                     );
+         } else {
+            OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
+            if (existingOvldDef && 
+               (override = existingOvldDef->getSigMatch(argDefs)) &&
+               !override->isOverridable()
+               ) {
+               error(tok2,
+                     SPUG_FSTR("Definition of " << tok2.getData() <<
+                              " hides previous overload."
+                              )
+                     );
+            }
          }
          
          // parse the body
@@ -890,6 +892,11 @@ TypeDefPtr Parser::parseClassDef() {
       }
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
+   
+   // if no base classes were specified, and Object has been defined, make 
+   // Object the implicit base class.
+   if (!bases.size() && context->globalData->objectType)
+      bases.push_back(context->globalData->objectType);
 
    // create a class context, and a lexical context which delegates to both 
    // the class context and the parent context.

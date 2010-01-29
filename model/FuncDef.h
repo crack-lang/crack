@@ -38,7 +38,14 @@ class FuncDef : public VarDef {
          */
         bool matches(const ArgVec &args);
         
+        /**
+         * Returns true if the function can be overriden.
+         */
+        bool isOverridable() const;
+        
         virtual bool hasInstSlot();
+        
+        virtual void dump(std::ostream &out);
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {

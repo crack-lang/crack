@@ -86,7 +86,12 @@ class Context : public spug::RCBase {
                        int64Type,
                        uint32Type,
                        uint64Type,
-                       vtableBaseType;
+                       vtableBaseType,
+                       objectType,
+                       stringType;
+            
+            // just make sure the bootstrapped types are null
+            GlobalData();
         } *globalData;
     
         Context(builder::Builder &builder, Scope scope,

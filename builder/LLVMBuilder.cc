@@ -35,6 +35,7 @@
 #include <model/InstVarDef.h>
 #include <model/IntConst.h>
 #include <model/NullConst.h>
+#include <model/OverloadDef.h>
 #include <model/ResultExpr.h>
 #include <model/StrConst.h>
 #include <model/StubDef.h>
@@ -110,6 +111,17 @@ namespace {
                 vtable(0) {
             }
 
+            static void addToVTable(vector<const Type *> &vtableTypes,
+                                    vector<Constant *> &vtableVals,
+                                    BFuncDef *funcDef
+                                    ) {
+                accomodate(vtableTypes, funcDef->vtableSlot);
+                vtableTypes[funcDef->vtableSlot] =
+                    funcDef->rep->getType();
+                accomodate(vtableVals, funcDef->vtableSlot);
+                vtableVals[funcDef->vtableSlot] = funcDef->rep;
+            }
+
             void populateVTable(vector<const Type *> &vtableTypes,
                                 vector<Constant *> &vtableVals
                                 ) {
@@ -137,11 +149,25 @@ namespace {
                      ) {
                     BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
                     if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
-                        accomodate(vtableTypes, funcDef->vtableSlot);
-                        vtableTypes[funcDef->vtableSlot] =
-                            funcDef->rep->getType();
-                        accomodate(vtableVals, funcDef->vtableSlot);
-                        vtableVals[funcDef->vtableSlot] = funcDef->rep;
+                        addToVTable(vtableTypes, vtableVals, funcDef);
+                        continue;
+                    }
+                    
+                    // check for an overload
+                    OverloadDef *overload =
+                        OverloadDefPtr::rcast(varIter->second);
+                    if (overload) {
+                        for (OverloadDef::FuncList::iterator fiter =
+                                overload->funcs.begin();
+                             fiter != overload->funcs.end();
+                             ++fiter
+                             ) {
+                            BFuncDef *f = BFuncDefPtr::arcast(*fiter);
+                            if ((*fiter)->flags & FuncDef::virtualized)
+                                addToVTable(vtableTypes, vtableVals,
+                                            BFuncDefPtr::arcast(*fiter)
+                                            );
+                        }
                     }
                 }
             }

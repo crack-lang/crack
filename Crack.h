@@ -106,6 +106,12 @@ class Crack {
         static Crack &getInstance();
 
         /**
+         * Adds the given path to the source library path - 'path' is a 
+         * colon separated list of directories.
+         */
+        void addToSourceLibPath(const std::string &path);
+
+        /**
          * Parse the specified module out of the input stream.  Raises all 
          * ParseError's that occur.
          */
@@ -123,6 +129,11 @@ class Crack {
                        StringVecIter moduleNameEnd,
                        std::string &canonicalName
                        );
+
+        /**
+         * Load the executor's bootstrapping modules (crack.lang).
+         */
+        bool loadBootstrapModules(model::Context &context);
 
         /**
          * Run the specified script.  Catches all parse exceptions, returns 

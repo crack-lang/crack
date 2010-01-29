@@ -14,6 +14,8 @@
 using namespace model;
 using namespace std;
 
+Context::GlobalData::GlobalData() : objectType(0), stringType(0) {}
+
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext
                  ) :

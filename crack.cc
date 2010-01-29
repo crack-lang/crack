@@ -29,6 +29,9 @@ int main(int argc, const char **argv) {
             break;
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
+        } else if (!strcmp(*arg, "-l")) {
+            ++arg;
+            Crack::getInstance().addToSourceLibPath(*arg);
         } else {
             ifstream src(*arg);
             Crack::getInstance().runScript(src, *arg);
