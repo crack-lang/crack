@@ -31,8 +31,8 @@ int main(int argc, const char **argv) {
             Crack::getInstance().dump = true;
         } else if (!strcmp(*arg, "-n")) {
             Crack::getInstance().noBootstrap = true;
-        } else if (!strcmp(*arg, "-i")) {
-            Crack::getInstance().useGlobalLibs = true;
+        } else if (!strcmp(*arg, "-g")) {
+            Crack::getInstance().useGlobalLibs = false;
         } else if (!strcmp(*arg, "-l")) {
             ++arg;
             Crack::getInstance().addToSourceLibPath(*arg);
