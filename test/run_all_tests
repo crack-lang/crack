@@ -343,4 +343,8 @@ test_output 'matching preceeds conversion' \
      int32 i; uint32 u; f(i); f(u); uint64 u64; f(u64);' \
     121
 
+test_output 'narrowing during return' \
+    'String s() { return "val"; } print(s());' \
+    val
+
 exit $rc

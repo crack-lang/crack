@@ -1713,10 +1713,10 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
 void LLVMBuilder::emitReturn(model::Context &context,
                              model::Expr *expr) {
-    
-    // XXX need to emit all cleanups up to the function level.
+
     if (expr) {
         ResultExprPtr resultExpr = expr->emit(context);
+        narrow(expr->type.get(), context.returnType.get());
         Value *retVal = lastValue;
         
         // XXX there's an opportunity for an optimization here, if we return a 
