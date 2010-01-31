@@ -1,4 +1,6 @@
 # test module
+# this is for execution with bootstrapping disabled (byteptr's are expected 
+# rather than Strings)
 
 puts('testmod');
 

@@ -2101,10 +2101,12 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     if (sizeof(int) == 4) {
         context.addAlias("int", int32Type);
         context.addAlias("uint", uint32Type);
+        gd->uintType = uint32Type;
     } else {
         assert(sizeof(int) == 8);
         context.addAlias("int", int64Type);
         context.addAlias("uint", uint64Type);
+        gd->uintType = uint64Type;
     }
         
 

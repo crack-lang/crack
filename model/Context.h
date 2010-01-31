@@ -86,9 +86,11 @@ class Context : public spug::RCBase {
                        int64Type,
                        uint32Type,
                        uint64Type,
+                       uintType,
                        vtableBaseType,
                        objectType,
-                       stringType;
+                       stringType,
+                       staticStringType;
             
             // just make sure the bootstrapped types are null
             GlobalData();
@@ -180,8 +182,12 @@ class Context : public spug::RCBase {
         VarDefMap::iterator endDefs() { return defs.end(); }
         /// @}
         
-        /** Get or create a string constsnt. */
-        StrConstPtr getStrConst(const std::string &value);
+        /** 
+         * Get or create a string constant.  This can be either a
+         * "StaticString(StrConst, uint size)" expression if StaticString is 
+         * defined, or a simple StrConst if it is not.
+         */
+        ExprPtr getStrConst(const std::string &value);
 
         /**
          * Create a new cleanup frame.  Cleanup frames group all 

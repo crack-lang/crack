@@ -8,7 +8,7 @@ function test_output {
     expected="$3"
     
     echo -n "$text..."
-    result="$(echo "$script" | ./crack -l .:lib - 2>&1)"
+    result="$(echo "$script" | ./crack $opts - 2>&1)"
     if [ "$result" = "$expected" ]; then
         echo ok
     else
@@ -16,7 +16,9 @@ function test_output {
         rc=1
     fi
 }
-        
+
+# start with no bootstrapping
+opts='-n'   
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -258,16 +260,19 @@ in test func
 imported var
 local inst of imported class'
 
+# switch to full bootstrapping mode now that importing works
+opts='-l .:lib'
+
 test_output 'error messsage on default init with no default constructor' \
     'class Obj { void init(int32 v) {} }; Obj o;' \
     'ParseError: <stdin>:1: no default constructor'
 
 test_output 'bool construction' \
-    'bool b; if (b) puts("fail"); else puts("pass")' \
+    'bool b; if (b) print("fail"); else print("pass")' \
     pass
 
 test_output 'type narrowing of receivers and args' \
-    'class A { void foo(A more) { puts("did bar"); } };
+    'class A { void foo(A more) { print("did bar"); } };
      class B : A { void bar() { foo(this); } };
     (B().bar());' \
     'did bar'
@@ -289,20 +294,20 @@ test_output 'recursive methods' \
      55
 
 test_output 'multiple types with the same underlying structure' \
-    'class A {}; class B {}; B b; puts("ok");' \
+    'class A {}; class B {}; B b; print("ok");' \
     ok
 
 test_output 'virtual methods' \
-    'class A : VTableBase { void f() { puts("fail"); } };
-     class B : A { void f() { puts("ok"); } };
+    'class A : VTableBase { void f() { print("fail"); } };
+     class B : A { void f() { print("ok"); } };
      A a = B();
      a.f();' \
      ok
 
 test_output 'incomplete virtual methods' \
-    'class A : VTableBase { void f() { puts("fail"); }
+    'class A : VTableBase { void f() { print("fail"); }
                             void g() { f(); } };
-     class B : A { void f() { puts("ok"); } };
+     class B : A { void f() { print("ok"); } };
      A a = B();
      a.g();' \
      ok
@@ -316,7 +321,7 @@ test_output 'voidptr cast of class with release' \
      12
 
 test_output 'conversion from byteptr -> voidptr' \
-    'voidptr v = "test string"; puts("ok")' \
+    'voidptr v = "test string".buffer; print("ok")' \
     ok
 
 # this test works because a call to the bind() operation gets generated from 
@@ -324,13 +329,13 @@ test_output 'conversion from byteptr -> voidptr' \
 test_output 'instance narrowing works more than one level' \
     'class A { void bind() {} };
      class B : A {};
-     class C : B {}; puts("ok");'  \
+     class C : B {}; print("ok");'  \
      ok
 
 test_output 'various integer types and conversions' \
     'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
      i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
-     u64; u32 = u64; i64 = u64; puts("ok");' \
+     u64; u32 = u64; i64 = u64; print("ok");' \
     ok
 
 exit $rc

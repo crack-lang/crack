@@ -58,6 +58,12 @@ class Crack {
         // if true, do not execute anything, but rather dump modules.
         bool dump;
         
+        // if true, don not load the bootstrapping modules before running a 
+        // script.  This changes some of the language semantics: constant 
+        // strings become byteptr's and classes without explicit ancestors
+        // will not be derived from object.
+        bool noBootstrap;
+        
 //        ~Crack();
         
         /**
@@ -133,7 +139,7 @@ class Crack {
         /**
          * Load the executor's bootstrapping modules (crack.lang).
          */
-        bool loadBootstrapModules(model::Context &context);
+        bool loadBootstrapModules();
 
         /**
          * Run the specified script.  Catches all parse exceptions, returns 

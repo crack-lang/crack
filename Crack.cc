@@ -40,7 +40,8 @@ void Crack::addToSourceLibPath(const string &path) {
 Crack::Crack() : 
     sourceLibPath(1), 
     rootBuilder(new LLVMBuilder()), 
-    dump(false) {
+    dump(false),
+    noBootstrap(false) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0);
 
@@ -203,7 +204,7 @@ namespace {
     }
 }
 
-bool Crack::loadBootstrapModules(Context &context) {
+bool Crack::loadBootstrapModules() {
     try {
         StringVec crackLangName(2);
         crackLangName[0] = "crack";
@@ -217,21 +218,27 @@ bool Crack::loadBootstrapModules(Context &context) {
         }
 
         // extract the basic types from the module context
-        context.globalData->objectType = extractClass(mod.get(), "Object");
-        context.addAlias(context.globalData->objectType.get());
-        context.globalData->stringType = extractClass(mod.get(), "String");
-        context.addAlias(context.globalData->stringType.get());
+        rootContext->globalData->objectType = extractClass(mod.get(), "Object");
+        rootContext->addAlias(rootContext->globalData->objectType.get());
+        rootContext->globalData->stringType = extractClass(mod.get(), "String");
+        rootContext->addAlias(rootContext->globalData->stringType.get());
+        rootContext->globalData->staticStringType = 
+            extractClass(mod.get(), "StaticString");
+        rootContext->addAlias(rootContext->globalData->staticStringType.get());
         
         // extract some constants
         VarDefPtr v = mod->moduleContext->lookUp("true");
         if (v)
-            context.addAlias(v.get());
+            rootContext->addAlias(v.get());
         v = mod->moduleContext->lookUp("false");
         if (v)
-            context.addAlias(v.get());
+            rootContext->addAlias(v.get());
+        v = mod->moduleContext->lookUp("print");
+        if (v)
+            rootContext->addAlias(v.get());
         
-        return context.globalData->objectType && 
-               context.globalData->stringType;
+        return rootContext->globalData->objectType && 
+               rootContext->globalData->stringType;
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return false;
@@ -248,7 +255,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
 
     // load the bootstrapping modules - library files that are essential to 
     // the language, like the definitions of the Object and String classes.
-    if (!loadBootstrapModules(*context))
+    if (!noBootstrap && !loadBootstrapModules())
         return 1;
 
     // XXX using the name as the canonical name which is not right, need to 

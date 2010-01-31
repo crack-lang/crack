@@ -21,6 +21,9 @@ ResultExprPtr IntConst::emit(Context &context) {
 }
 
 ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
+    if (newType == this->type)
+        return this;
+
     if (newType == context.globalData->int64Type)
         ; // nothing we can do about this right now
     else if (newType == context.globalData->uint64Type) {

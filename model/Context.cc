@@ -4,6 +4,7 @@
 #include "builder/Builder.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
+#include "IntConst.h"
 #include "OverloadDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"
@@ -14,7 +15,9 @@
 using namespace model;
 using namespace std;
 
-Context::GlobalData::GlobalData() : objectType(0), stringType(0) {}
+Context::GlobalData::GlobalData() : 
+    objectType(0), stringType(0), staticStringType(0) {
+}
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext
@@ -235,16 +238,35 @@ void Context::replaceDef(VarDef *def) {
     defs[def->name] = def;
 }
 
-StrConstPtr Context::getStrConst(const std::string &value) {
+ExprPtr Context::getStrConst(const std::string &value) {
+    
+    // look up the raw string constant
+    StrConstPtr strConst;
     StrConstTable::iterator iter = globalData->strConstTable.find(value);
     if (iter != globalData->strConstTable.end()) {
-        return iter->second;
+        strConst = iter->second;
     } else {
         // create a new one
-        StrConstPtr strConst = builder.createStrConst(*this, value);
+        strConst = builder.createStrConst(*this, value);
         globalData->strConstTable[value] = strConst;
-        return strConst;
     }
+    
+    // if we don't have a StaticString type yet, we're done.
+    if (!globalData->staticStringType)
+        return strConst;
+    
+    // create the "new" expression for the string.
+    vector<ExprPtr> args;
+    args.push_back(strConst);
+    args.push_back(builder.createIntConst(*this, value.size(),
+                                          globalData->uintType.get()
+                                          )
+                   );
+    FuncDefPtr newFunc =
+        globalData->staticStringType->context->lookUp("oper new", args);
+    FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
+    funcCall->args = args;
+    return funcCall;    
 }
 
 CleanupFramePtr Context::createCleanupFrame() {
