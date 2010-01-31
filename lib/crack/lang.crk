@@ -1,0 +1,85 @@
+#!/usr/bin/crack
+
+import "libc.so.6" free, strlen, strdup, malloc, memcpy;
+
+byteptr malloc(uint size);
+byteptr memcpy(byteptr dest, byteptr src, uint size);
+void free(voidptr mem);
+uint strlen(byteptr buf);
+byteptr strdup(byteptr buf);
+
+bool true = (1 == 1);
+bool false = (1 == 0);
+
+## The Object base class.  Object provides the basic reference counting 
+## mechanism, and most user classes should be derived from it.
+class Object : VTableBase {
+    uint refCount;
+
+    void init() {
+        refCount = 0;
+    }
+
+    # delete virtual function
+    void del() {}
+
+    void bind() {
+        refCount = refCount + 1;
+    }
+    
+    void release() {
+        if (this is null)
+            return;
+
+        refCount = refCount - 1;
+        if (refCount == 0) {
+            del();
+            free(this);
+        }
+    }
+};
+
+## The string class.  Strings are byte buffers with sizes.
+class String : Object {
+
+    // buffer and size.
+    uint size;    
+    byteptr buffer;
+
+    void String_init(byteptr buffer0, uint size0, bool copy) {
+        init();
+        size = size0;
+        if (copy) {
+            buffer = malloc(size0);
+            memcpy(buffer, buffer0, size0);
+        } else {
+            buffer = buffer0;
+        }
+    }
+        
+    void init(byteptr buffer0) {
+        String_init(buffer0, strlen(buffer0), true);
+    }
+    
+    void init() {
+        String_init('', 0, false);
+    }
+    
+    void del() {
+        free(buffer);
+    }
+};
+
+class StaticString : String {
+
+    void init(byteptr data, uint size) {
+        String_init(data, size, false);
+    }
+    
+    # overrides string delete so we don't try to delete a static buffer.
+    void del() {}
+};
+
+void print(String val) {
+    puts(val.buffer);
+}
