@@ -99,7 +99,7 @@ namespace {
              iter != newSubset.end();
              ++iter
              ) 
-            aggregator.push_front(*iter);
+            aggregator.push_back(*iter);
     }
 }
 
@@ -136,11 +136,10 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName,
             // collect or merge the overloads of the new parent.
             OverloadDefPtr parentOverloads =
                 (*iter)->aggregateOverloads(varName);
-            if (parentOverloads)
-                if (overloads)
-                    mergeOverloads(overloads->funcs, parentOverloads->funcs);
-                else
-                    overloads = parentOverloads;
+            if (parentOverloads) {
+                allocOverload(overloads, varName);
+                overloads->merge(*parentOverloads);
+            }
         }
 
     // if we got a local override, add it to the overloads
@@ -150,7 +149,7 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName,
         
         // add it to the front of the list so that it will resolve before any 
         // parents with the same signature
-        overloads->funcs.push_front(func);
+        overloads->addFunc(func);
     }
     
     // this could be overloads or null
@@ -212,7 +211,7 @@ void Context::addDef(VarDef *def) {
         ) {
         OverloadDef *overloads;
         defs[def->name] = overloads = aggregateOverloads(def->name).get();
-        overloads->funcs.push_front(funcDef);
+        overloads->addFunc(funcDef);
     } else {
         defs[def->name] = def;
     }

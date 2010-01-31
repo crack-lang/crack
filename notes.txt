@@ -303,6 +303,16 @@ Modules:
     symbols in anonymous modules are externally accessible as if they were 
     part of the outer module.
 
+Function Resolution Order:
+
+    The rules for function resolution and argument matching are as follows:
+    
+    1) Check the current context for a function matching the arguments.  
+        Functions are checked in the order in which they are defined.
+    2) If none is found, check the parent contexts from left to right 
+        depth-first recursively.
+    3) If no match is found, repeat from step 1 attempting to convert arguments
+
 Generics:
     
     Currently thinking of replacing the syntax for specifying generics so it 

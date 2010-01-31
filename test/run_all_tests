@@ -338,4 +338,9 @@ test_output 'various integer types and conversions' \
      u64; u32 = u64; i64 = u64; print("ok");' \
     ok
 
+test_output 'matching preceeds conversion' \
+    'void f(int32 i) { printint(1); } void f(uint32 u) { printint(2); }
+     int32 i; uint32 u; f(i); f(u); uint64 u64; f(u64);' \
+    121
+
 exit $rc

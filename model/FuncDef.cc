@@ -19,7 +19,8 @@ FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
 }
 
 bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals, 
-                      vector<ExprPtr> &newVals
+                      vector<ExprPtr> &newVals,
+                      bool convert
                       ) {
     ArgVec::iterator arg;
     vector<ExprPtr>::const_iterator val;
@@ -28,9 +29,14 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
          arg != args.end() && val != vals.end();
          ++arg, ++val, ++i
          ) {
-        newVals[i] = (*val)->convert(context, (*arg)->type.get());
-        if (!newVals[i])
-            return false;
+        if (convert) {
+            newVals[i] = (*val)->convert(context, (*arg)->type.get());
+            if (!newVals[i])
+                return false;
+        } else {
+            if (!(*arg)->type->matches(*(*val)->type))
+                return false;
+        }
     }
 
     // make sure that we checked everything in both lists   

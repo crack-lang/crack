@@ -28,9 +28,15 @@ class FuncDef : public VarDef {
         /**
          * Returns true if 'args' matches the types of the functions 
          * arguments.
+         * 
+         * @param newValues the set of converted values.  This is only 
+         *        constructed if 'convert' is true.
+         * @param convert if true, attempt to construct the value if it does 
+         *        not exist.
          */
         bool matches(Context &context, const std::vector<ExprPtr> &vals,
-                     std::vector<ExprPtr> &newVals
+                     std::vector<ExprPtr> &newVals,
+                     bool convert
                      );
         
         /**
