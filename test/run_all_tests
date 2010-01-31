@@ -18,7 +18,7 @@ function test_output {
 }
 
 # start with no bootstrapping
-opts='-n'   
+opts='-i -n'   
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -261,7 +261,7 @@ imported var
 local inst of imported class'
 
 # switch to full bootstrapping mode now that importing works
-opts='-l .:lib'
+opts='-i -l .:lib'
 
 test_output 'error messsage on default init with no default constructor' \
     'class Obj { void init(int32 v) {} }; Obj o;' \

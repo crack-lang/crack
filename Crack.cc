@@ -40,8 +40,10 @@ void Crack::addToSourceLibPath(const string &path) {
 Crack::Crack() : 
     sourceLibPath(1), 
     rootBuilder(new LLVMBuilder()), 
+    initialized(false),
     dump(false),
-    noBootstrap(false) {
+    noBootstrap(false),
+    useGlobalLibs(true) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0);
 
@@ -50,6 +52,24 @@ Crack::Crack() :
     
     // search for source files in the current directory
     sourceLibPath[0] = ".";
+}
+
+bool Crack::init() {
+    if (!initialized) {
+        // finalize the search path
+        if (useGlobalLibs)
+            sourceLibPath.push_back(CRACKLIB);
+
+        // load the bootstrapping modules - library files that are essential 
+        // to the language, like the definitions of the Object and String 
+        // classes.
+        if (!noBootstrap && !loadBootstrapModules())
+            return false;
+
+        initialized = true;
+    }
+    
+    return true;
 }
 
 //Crack::~Crack() {}
@@ -249,14 +269,14 @@ bool Crack::loadBootstrapModules() {
 }
 
 int Crack::runScript(std::istream &src, const std::string &name) {
+    // finalize all initialization
+    if (!init())
+        return 1;
+
+    // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get());
-
-    // load the bootstrapping modules - library files that are essential to 
-    // the language, like the definitions of the Object and String classes.
-    if (!noBootstrap && !loadBootstrapModules())
-        return 1;
 
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 

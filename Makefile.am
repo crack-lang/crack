@@ -30,6 +30,14 @@ crack_SOURCES = crack.cc
 crack_LDADD = libcrack.la $(LDFLAGS) @LLVM_LDFLAGS@ @LLVM_LIBS@
 AM_CXXFLAGS = @LLVM_CXXFLAGS@
 
+# install under prefix/lib instead of libdir so it's not platform dependent.
+cracklib = ${prefix}/lib/crack-${VERSION}
+AM_CPPFLAGS = -DCRACKLIB=\"${cracklib}\"
+
 INCLUDES =  @SPUGPP_CXXFLAGS@
 
 TESTS = test/run_all_tests
+
+install-cracklib:
+	$(INSTALL) -d $(cracklib)/crack
+	$(INSTALL) lib/crack/lang.crk $(cracklib)/crack

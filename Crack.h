@@ -12,7 +12,7 @@ namespace model {
 }
 
 namespace builder {
-    class Builder;
+    SPUG_RCPTR(Builder);
 }
 
 /**
@@ -28,14 +28,19 @@ class Crack {
         model::ContextPtr rootContext;
 
         // the toplevel builder        
-        builder::Builder *rootBuilder;
+        builder::BuilderPtr rootBuilder;
         
         // mapping from the canonical name of the module to the module 
         // definition.
         typedef std::map<std::string, model::ModuleDefPtr> ModuleMap;
         ModuleMap moduleCache;
+        
+        // keeps init() from doing its setup stuff twice.
+        bool initialized;
 
         Crack();
+        
+        bool init();
 
     public:
         typedef std::vector<std::string> StringVec;
@@ -63,6 +68,10 @@ class Crack {
         // strings become byteptr's and classes without explicit ancestors
         // will not be derived from object.
         bool noBootstrap;
+        
+        // if true, add the global installed libary path to the library search 
+        // path prior to running anything.
+        bool useGlobalLibs;
         
 //        ~Crack();
         
