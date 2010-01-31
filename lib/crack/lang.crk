@@ -37,6 +37,17 @@ class Object : VTableBase {
             free(this);
         }
     }
+    
+    bool isTrue() {
+        return true;
+    }
+    
+    bool toBool() {
+        if (this is null)
+            return false;
+        else
+            return isTrue();
+    }
 };
 
 ## The string class.  Strings are byte buffers with sizes.
