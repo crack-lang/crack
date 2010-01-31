@@ -219,6 +219,5 @@ FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
     } else {
         FuncCall::ExprVec args;
         return context->lookUp("oper to " + other.name);
-        return 0;
     }
 }
