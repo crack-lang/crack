@@ -77,7 +77,7 @@ Token Toker::readToken() {
             case st_none:
                 if (isspace(ch)) {
                    ;
-                } else if (isalpha(ch) || ch == '_') {
+                } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
                 } else if (ch == '#') {
@@ -153,7 +153,7 @@ Token Toker::readToken() {
             case st_ident:
    
                 // if we got a non-alphanumeric, non-underscore we're done
-                if (!isalnum(ch) && ch != '_') {
+                if (!isalnum(ch) && ch != '_' && ch > 0) {
                     src.putback(ch);
                     return fixIdent(buf.str().c_str(), 
                                     locationMap.getLocation()
