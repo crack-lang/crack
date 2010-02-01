@@ -324,6 +324,16 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
                                              );
+   // for the unary "!" operator
+   } else if (tok.isBang()) {
+      FuncCall::ExprVec args(1);
+      args[0] = parseExpression(getPrecedence(tok.getData()));
+      FuncDefPtr funcDef = context->lookUp("oper !", args);
+      if (!funcDef)
+         error(tok, "No ! operator exists for this type.");
+      FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+      funcCall->args = args;
+      expr = funcCall;
    } else if (tok.isLCurly()) {
       assert(false);
    } else {
@@ -975,6 +985,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
    
    // build the precedence table
    struct { const char *op; unsigned prec; } map[] = {
+      {"!", 4},
       {"*", 3},
       {"/", 3},
       {"%", 3},

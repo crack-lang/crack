@@ -1055,10 +1055,10 @@ namespace {
             }
     };
 
-#define UNOP(pfx, opCode) \
-    class pfx##OpCall : public FuncCall {                                   \
+#define UNOP(opCode) \
+    class opCode##OpCall : public FuncCall {                                \
         public:                                                             \
-            pfx##OpCall(FuncDef *def) : FuncCall(def) {}                    \
+            opCode##OpCall(FuncDef *def) : FuncCall(def) {}                 \
                                                                             \
             virtual ResultExprPtr emit(Context &context) {                  \
                 receiver->emit(context)->handleTransient(context);          \
@@ -1075,20 +1075,53 @@ namespace {
             }                                                               \
     };                                                                      \
                                                                             \
-    class pfx##OpDef : public UnOpDef {                                     \
+    class opCode##OpDef : public UnOpDef {                                  \
         public:                                                             \
-            pfx##OpDef(TypeDef *resultType, const string &name) :           \
+            opCode##OpDef(TypeDef *resultType, const string &name) :        \
                 UnOpDef(resultType, name) {                                 \
             }                                                               \
                                                                             \
             virtual FuncCallPtr createFuncCall() {                          \
-                return new pfx##OpCall(this);                               \
+                return new opCode##OpCall(this);                            \
             }                                                               \
     };
 
-    UNOP(Trunc, Trunc);
-    UNOP(SExt, SExt);
-    UNOP(ZExt, ZExt);
+    UNOP(Trunc);
+    UNOP(SExt);
+    UNOP(ZExt);
+
+    class NegateOpCall : public FuncCall {
+        public:
+            NegateOpCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                args[0]->emit(context)->handleTransient(context);
+                
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                builder.lastValue =
+                    builder.builder.CreateXor(
+                        builder.lastValue,
+                        ConstantInt::get(BTypeDefPtr::arcast(func->type)->rep,
+                                         1
+                                         )
+                    );
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+
+    class NegateOpDef : public OpDef {
+        public:
+            NegateOpDef(BTypeDef *resultType, const std::string &name) :
+                OpDef(resultType, FuncDef::noFlags, name, 1) {
+                args[0] = new ArgDef(resultType, "operand");
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new NegateOpCall(this);
+            }
+    };
     
     /** Operator to convert simple types to booleans. */
     class BoolOpCall : public FuncCall {
@@ -2188,6 +2221,9 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));
+    
+    // boolean negate
+    context.addDef(new NegateOpDef(boolType, "oper !"));
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

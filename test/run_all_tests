@@ -347,4 +347,6 @@ test_output 'narrowing during return' \
     'String s() { return "val"; } print(s());' \
     val
 
+test_output 'not operator' 'if (!false) print("ok");' 'ok'
+
 exit $rc

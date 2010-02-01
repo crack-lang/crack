@@ -73,6 +73,7 @@ class Token {
       bool isPlus() const { return type == plus; }
       bool isMinus() const { return type == minus; }
       bool isAsterisk() const { return type == asterisk; }
+      bool isBang() const { return type == bang; }
       bool isSlash() const { return type == slash; }
       bool isPercent() const { return type == percent; }
       bool isNot() const { return type == bang; }
