@@ -173,6 +173,8 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
          )
         if (canonicalName.size())
             canonicalName += "." + *iter;
+        else
+            canonicalName = *iter;
 
     // check to see if we have it in the cache
     ModuleMap::iterator iter = moduleCache.find(canonicalName);
@@ -184,7 +186,10 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     ++rend;
     if (rend != StringVec::const_reverse_iterator(moduleNameBegin)) {
         StringVecIter last(rend.base());
-        ModuleDefPtr parent = loadModule(moduleNameBegin, last, canonicalName);
+        string parentCanonicalName;
+        ModuleDefPtr parent = loadModule(moduleNameBegin, last, 
+                                         parentCanonicalName
+                                         );
     }
     
     // try to find the module on the source path

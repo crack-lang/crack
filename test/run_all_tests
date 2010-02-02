@@ -353,4 +353,9 @@ test_output 'narrowing during return' \
 
 test_output 'not operator' 'if (!false) print("ok");' 'ok'
 
+test_output 'multiple module loads' \
+    'import test.testmod2 func; func();' \
+    'testmod2
+in testmod2.func()'
+
 exit $rc
