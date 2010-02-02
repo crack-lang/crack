@@ -1,0 +1,5 @@
+## Another test module - this one works with bootstrapping.
+
+void func() { print('in testmod2.func()'); }
+
+print('testmod2');
