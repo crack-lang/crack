@@ -54,3 +54,11 @@ void OverloadDef::merge(OverloadDef &parent) {
 bool OverloadDef::hasInstSlot() {
     return false;
 }
+
+void OverloadDef::dump(ostream &out, const string &prefix) const {
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        (*iter)->dump(out, prefix);
+}

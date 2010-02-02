@@ -16,6 +16,7 @@
 #include "VarDefImpl.h"
 #include "VarRef.h"
 
+using namespace std;
 using namespace model;
 using namespace spug;
 
@@ -220,4 +221,15 @@ FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
         FuncCall::ExprVec args;
         return context->lookUp("oper to " + other.name);
     }
+}
+
+void TypeDef::dump(ostream &out, const string &prefix) const {
+    out << prefix << "class " << getFullName() << " {" << endl;
+    string childPrefix = prefix + "  ";
+    for (Context::VarDefMap::iterator iter = context->beginDefs();
+         iter != context->endDefs();
+         ++iter
+         )
+        iter->second->dump(out, childPrefix);
+    out << prefix << "}" << endl;
 }

@@ -89,6 +89,9 @@ class TypeDef : public VarDef {
          * Fill in everything that's missing from the class.
          */
         void rectify();
+        
+        virtual
+        void dump(std::ostream &out, const std::string &prefix = "") const;
 
 };
 

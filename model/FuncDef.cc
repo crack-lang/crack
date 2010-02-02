@@ -71,10 +71,12 @@ bool FuncDef::hasInstSlot() {
     return false;
 }
 
-void FuncDef::dump(ostream &out) {
-    out << name << '(';
+void FuncDef::dump(ostream &out, const string &prefix) const {
+    out << prefix << type->getFullName() << " " << name << '(';
     bool first = true;
-    for (ArgVec::iterator iter = args.begin(); iter != args.end(); ++iter) {
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
+         ++iter
+         ) {
         if (!first)
             out << ", ";
         else

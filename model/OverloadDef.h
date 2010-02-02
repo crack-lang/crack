@@ -86,6 +86,9 @@ class OverloadDef : public VarDef {
         void merge(OverloadDef &parent);
         
         bool hasInstSlot();
+
+        virtual
+        void dump(std::ostream &out, const std::string &prefix = "") const;
 };
 
 } // namespace model

@@ -39,7 +39,15 @@ class VarDef : public spug::RCBase {
          * Returns the fully qualified name of the definition.
          */        
         std::string getFullName() const { return name; }
+        
+        virtual
+        void dump(std::ostream &out, const std::string &prefix = "") const;
 };
+
+inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {
+    def.dump(out);
+    return out;
+}
 
 } // namespace model
 

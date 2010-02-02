@@ -8,6 +8,7 @@
 #include "ResultExpr.h"
 #include "TypeDef.h"
 
+using namespace std;
 using namespace model;
 
 VarDef::VarDef(TypeDef *type, const std::string &name) :
@@ -25,4 +26,8 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 
 bool VarDef::hasInstSlot() {
     return true;
+}
+
+void VarDef::dump(ostream &out, const string &prefix) const {
+    out << prefix << type->getFullName() << " " << name << endl;
 }

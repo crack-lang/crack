@@ -51,7 +51,8 @@ class FuncDef : public VarDef {
         
         virtual bool hasInstSlot();
         
-        virtual void dump(std::ostream &out);
+        virtual
+        void dump(std::ostream &out, const std::string &prefix = "") const;
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
