@@ -263,6 +263,10 @@ local inst of imported class'
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
+test_output 'correct caching of crack.lang' \
+    'import crack.lang; print("ok");' \
+    ok
+
 test_output 'error messsage on default init with no default constructor' \
     'class Obj { void init(int32 v) {} }; Obj o;' \
     'ParseError: <stdin>:1: no default constructor'

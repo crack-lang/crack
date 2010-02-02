@@ -229,7 +229,7 @@ bool Crack::loadBootstrapModules() {
         StringVec crackLangName(2);
         crackLangName[0] = "crack";
         crackLangName[1] = "lang";
-        string name = "crack.lang";
+        string name;
         ModuleDefPtr mod = loadModule(crackLangName, name);
         
         if (!mod) {
