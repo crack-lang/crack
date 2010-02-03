@@ -1228,6 +1228,8 @@ namespace {
     BINOP(Mul, "*");
     BINOP(SDiv, "/");
     BINOP(UDiv, "/");
+    BINOP(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+    BINOP(URem, "%");  // the sign is that of the dividend, not divisor.
 
     BINOP(ICmpEQ, "==");
     BINOP(ICmpNE, "!=");
@@ -2164,6 +2166,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SubOpDef(int32Type));
     context.addDef(new MulOpDef(int32Type));
     context.addDef(new SDivOpDef(int32Type));
+    context.addDef(new SRemOpDef(int32Type));
     context.addDef(new ICmpEQOpDef(int32Type, boolType));
     context.addDef(new ICmpNEOpDef(int32Type, boolType));
     context.addDef(new ICmpSGTOpDef(int32Type, boolType));
@@ -2175,6 +2178,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SubOpDef(int64Type));
     context.addDef(new MulOpDef(int64Type));
     context.addDef(new SDivOpDef(int64Type));
+    context.addDef(new SRemOpDef(int64Type));
     context.addDef(new ICmpEQOpDef(int64Type, boolType));
     context.addDef(new ICmpNEOpDef(int64Type, boolType));
     context.addDef(new ICmpSGTOpDef(int64Type, boolType));
@@ -2186,6 +2190,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SubOpDef(uint32Type));
     context.addDef(new MulOpDef(uint32Type));
     context.addDef(new UDivOpDef(uint32Type));
+    context.addDef(new URemOpDef(uint32Type));
     context.addDef(new ICmpEQOpDef(uint32Type, boolType));
     context.addDef(new ICmpNEOpDef(uint32Type, boolType));
     context.addDef(new ICmpUGTOpDef(uint32Type, boolType));
@@ -2197,6 +2202,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SubOpDef(uint64Type));
     context.addDef(new MulOpDef(uint64Type));
     context.addDef(new UDivOpDef(uint64Type));
+    context.addDef(new URemOpDef(uint64Type));
     context.addDef(new ICmpEQOpDef(uint64Type, boolType));
     context.addDef(new ICmpNEOpDef(uint64Type, boolType));
     context.addDef(new ICmpUGTOpDef(uint64Type, boolType));

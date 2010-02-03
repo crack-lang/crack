@@ -358,4 +358,8 @@ test_output 'multiple module loads' \
     'testmod2
 in testmod2.func()'
 
+test_output 'remainder operator' \
+    'printint((0-1) % 2);' \
+    '-1'
+
 exit $rc
