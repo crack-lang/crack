@@ -350,6 +350,49 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
 	    error(tok, "identifier expected");
 
          expr = parsePostIdent(expr.get(), tok);
+      } else if (tok.isLBracket()) {
+         // the array indexing operators
+         FuncCall::ExprVec args(1);
+         args[0] = parseExpression();
+         
+         // parse the right bracket
+         Token tok2 = toker.getToken();
+         if (!tok2.isRBracket())
+            unexpected(tok2, "expected right bracket.");
+         
+         // check for an assignment operator
+         tok2 = toker.getToken();
+         FuncCallPtr funcCall;
+         if (tok2.isAssign()) {
+            // this is "a[i] = v"
+            args.push_back(parseExpression());
+            FuncDefPtr funcDef = expr->type->context->lookUp("oper []=", args);
+            if (!funcDef)
+               error(tok, 
+                     SPUG_FSTR("'oper []=' not defined for " <<
+                               expr->type->name << " with these arguments."
+                               )
+                     );
+            funcCall = context->builder.createFuncCall(funcDef.get());
+            funcCall->receiver = expr;
+            funcCall->args = args;
+         } else {
+            // this is "a[i]"
+            toker.putBack(tok2);
+            FuncDefPtr funcDef = expr->type->context->lookUp("oper []", args);
+            if (!funcDef)
+               error(tok, 
+                     SPUG_FSTR("'oper []' not defined for " <<
+                               expr->type->name  << " with these arguments."
+                               )
+                     );
+            funcCall = context->builder.createFuncCall(funcDef.get());
+            funcCall->receiver = expr;
+            funcCall->args = args;
+         }
+         
+         expr = funcCall;
+         
       } else if (tok.isBinOp()) {
          // get the precedence of the new operator, if it's lower than the 
          // or the same as that of the current operator, quit.

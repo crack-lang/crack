@@ -1123,6 +1123,62 @@ namespace {
             }
     };
     
+    template<class T>
+    class GeneralOpDef : public OpDef {
+        public:
+            GeneralOpDef(TypeDef *resultType, FuncDef::Flags flags,
+                         const string &name,
+                         size_t argCount
+                         ) :
+                OpDef(resultType, flags, name, argCount) {
+                
+                type = resultType;
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new T(this);
+            }
+    };
+    
+    class ArrayGetItemCall : public FuncCall {
+        public:
+            ArrayGetItemCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                receiver->emit(context)->handleTransient(context);
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                Value *r = builder.lastValue;
+                args[0]->emit(context)->handleTransient(context);
+                Value *addr = builder.builder.CreateGEP(r, builder.lastValue);
+                builder.lastValue = builder.builder.CreateLoad(addr);
+
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
+    class ArraySetItemCall : public FuncCall {
+        public:
+            ArraySetItemCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                receiver->emit(context)->handleTransient(context);
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                Value *r = builder.lastValue;
+                args[0]->emit(context)->handleTransient(context);
+                Value *i = builder.lastValue;
+                args[1]->emit(context)->handleTransient(context);
+                Value *addr = builder.builder.CreateGEP(r, i);
+                builder.lastValue =
+                    builder.builder.CreateStore(builder.lastValue, addr);
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
     /** Operator to convert simple types to booleans. */
     class BoolOpCall : public FuncCall {
         public:
@@ -2112,6 +2168,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     boolType->context->returnType = boolType;
     context.addDef(boolType);
     
+    BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
+                                           "byte"
+                                           );
+
     BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "int32"
                                             );
@@ -2162,6 +2222,18 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(vtableBaseType);
     
     // create integer operations
+    context.addDef(new AddOpDef(byteType));
+    context.addDef(new SubOpDef(byteType));
+    context.addDef(new MulOpDef(byteType));
+    context.addDef(new SDivOpDef(byteType));
+    context.addDef(new SRemOpDef(byteType));
+    context.addDef(new ICmpEQOpDef(byteType, boolType));
+    context.addDef(new ICmpNEOpDef(byteType, boolType));
+    context.addDef(new ICmpSGTOpDef(byteType, boolType));
+    context.addDef(new ICmpSLTOpDef(byteType, boolType));
+    context.addDef(new ICmpSGEOpDef(byteType, boolType));
+    context.addDef(new ICmpSLEOpDef(byteType, boolType));
+
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
     context.addDef(new MulOpDef(int32Type));
@@ -2211,15 +2283,23 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
     
     // conversions
+    byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
+    byteType->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
+    byteType->context->addDef(new ZExtOpDef(uint32Type, "oper to uint32"));
+    byteType->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     int64Type->context->addDef(new TruncOpDef(uint64Type, "oper to uint64"));
     int64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
     int64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
+    int64Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
     uint64Type->context->addDef(new TruncOpDef(int64Type, "oper to int64"));
     uint64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
     uint64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
+    uint64Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
+    int32Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
     int32Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
     int32Type->context->addDef(new SExtOpDef(int64Type, "oper to int64"));
     int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    uint32Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
     uint32Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
     uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
@@ -2230,6 +2310,25 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     // boolean negate
     context.addDef(new NegateOpDef(boolType, "oper !"));
+    
+    // byteptr array indexing
+
+    FuncDefPtr arrayGetItem = 
+        new GeneralOpDef<ArrayGetItemCall>(byteType, FuncDef::method, 
+                                           "oper []",
+                                           1
+                                           );
+    arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+    byteptrType->context->addDef(arrayGetItem.get());
+
+    FuncDefPtr arraySetItem = 
+        new GeneralOpDef<ArraySetItemCall>(byteType, FuncDef::method, 
+                                           "oper []=",
+                                           2
+                                           );
+    arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+    arraySetItem->args[1] = new ArgDef(byteType, "value");
+    byteptrType->context->addDef(arraySetItem.get());
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

@@ -260,6 +260,13 @@ in test func
 imported var
 local inst of imported class'
 
+# this test will break if/when we make global constants readonly.
+test_output 'byteptr array access' \
+    'byteptr b = "test"; b[0] = 110; b[2] = 120;
+     puts(b); printint(b[0]); printint(b[2]);' \
+    'next
+110120'
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
@@ -339,7 +346,7 @@ test_output 'instance narrowing works more than one level' \
 test_output 'various integer types and conversions' \
     'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
      i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
-     u64; u32 = u64; i64 = u64; print("ok");' \
+     u64; u32 = u64; i64 = u64; byte b = u64; u64 = b; print("ok");' \
     ok
 
 test_output 'matching preceeds conversion' \

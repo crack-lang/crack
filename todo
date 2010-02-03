@@ -1,13 +1,11 @@
 
--   Reference counted objects
-    -   Object base class
-    -   implicit call to "bind()" before return and on assignment of a 
-        variable value
-    -   implicit call to "release()" for all intermediate objects
-    
+- convert string constants to StaticString.
+- functions to stream definitions and expressions.
+- copyrights
 -   cleanup:
     -   combine FuncDef and OverloadDef into a base class with a virtual 
-        matches() for arg list defs.
+        matches() for arg list defs, or just make FuncDef a smaller thing and 
+        always use OverloadDef
     -   need to be able to define "oper" funcs.  Make "release", "init" and 
         "bind" oper funcs.
 -   function arguments are currently SSA values, which means this won't work:
@@ -20,7 +18,7 @@ Roadmap
 -------
 
 for 0.1:
--   the "!" operator
+-   allow utf-8 chars for strings and identifiers.
 -   composition of constructors/destructors
 -   the "oper" keyword
 -   "Foo x = {1, 2}" construction syntax.
@@ -28,6 +26,11 @@ for 0.1:
 -   break & continue
 -   short circuit logic operators
 -   floating point types
+-   Should be able to do instance construction in a statement context without 
+    it being misinterpreted as a defitition
+-   empty statements should work: if (false) ;
+-   global variables should not get cleaned up until the end of the program.
+-   multiple inheritence shouldn't cause bad errors (it need not work)
 
 for 1.0:
 -   doc-comments

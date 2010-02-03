@@ -13,9 +13,9 @@ class Token {
       // the token types
       typedef enum { classKw, elseKw, ifKw, importKw, isKw, nullKw, returnKw, 
                      whileKw, assign, asterisk, bang, colon, comma, define, 
-                     dot, end, eq, ge, gt, ident, integer, lcurly, le, lparen, 
-                     lt, minus, ne, oper, percent, plus, rcurly, rparen, semi,
-                     slash, string
+                     dot, end, eq, ge, gt, ident, integer, lbracket, lcurly, 
+                     le, lparen, lt, minus, ne, oper, percent, plus, 
+                     rbracket, rcurly, rparen, semi, slash, string
 		    } Type;
 
    private:
@@ -69,6 +69,8 @@ class Token {
       bool isRParen() const { return type == rparen; }
       bool isLCurly() const { return type == lcurly; }
       bool isRCurly() const { return type == rcurly; }
+      bool isLBracket() const { return type == lbracket; }
+      bool isRBracket() const { return type == rbracket; }
       bool isInteger() const { return type == integer; }
       bool isPlus() const { return type == plus; }
       bool isMinus() const { return type == minus; }

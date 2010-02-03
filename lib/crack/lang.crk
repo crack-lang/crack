@@ -1,12 +1,13 @@
 #!/usr/bin/crack
 
-import "libc.so.6" free, strlen, strdup, malloc, memcpy;
+import "libc.so.6" free, strlen, strdup, malloc, memcpy, abort;
 
 byteptr malloc(uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
 void free(voidptr mem);
 uint strlen(byteptr buf);
 byteptr strdup(byteptr buf);
+void abort();
 
 bool true = (1 == 1);
 bool false = (1 == 0);
@@ -79,6 +80,10 @@ class String : Object {
     void del() {
         free(buffer);
     }
+    
+    bool isTrue() {
+        return size;
+    }
 };
 
 class StaticString : String {
@@ -93,4 +98,9 @@ class StaticString : String {
 
 void print(String val) {
     puts(val.buffer);
+}
+
+void die(String message) {
+    print(message);
+    abort();
 }

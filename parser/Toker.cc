@@ -106,6 +106,14 @@ Token Toker::readToken() {
                     return Token(Token::lcurly, "{", locationMap.getLocation());
                 } else if (ch == '}') {
                     return Token(Token::rcurly, "}", locationMap.getLocation());
+                } else if (ch == '[') {
+                    return Token(Token::lbracket, "[", 
+                                 locationMap.getLocation()
+                                 );
+                } else if (ch == ']') {
+                    return Token(Token::rbracket, "]",
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '+') {
                     return Token(Token::plus, "+", locationMap.getLocation());
                 } else if (ch == '-') {
