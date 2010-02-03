@@ -267,6 +267,10 @@ test_output 'byteptr array access' \
     'next
 110120'
 
+test_output 'byteptr array offsets' \
+    'puts("not ok" + 4)' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

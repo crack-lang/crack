@@ -1179,6 +1179,26 @@ namespace {
             }
     };
     
+    // implements pointer arithmetic
+    class ArrayOffsetCall : public FuncCall {
+        public:
+            ArrayOffsetCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                args[0]->emit(context)->handleTransient(context);
+                Value *base = builder.lastValue;
+
+                args[1]->emit(context)->handleTransient(context);
+                builder.lastValue =
+                    builder.builder.CreateGEP(base, builder.lastValue);
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
     /** Operator to convert simple types to booleans. */
     class BoolOpCall : public FuncCall {
         public:
@@ -2197,11 +2217,13 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.addAlias("int", int32Type);
         context.addAlias("uint", uint32Type);
         gd->uintType = uint32Type;
+        gd->intType = int32Type;
     } else {
         assert(sizeof(int) == 8);
         context.addAlias("int", int64Type);
         context.addAlias("uint", uint64Type);
         gd->uintType = uint64Type;
+        gd->intType = int64Type;
     }
         
 
@@ -2329,6 +2351,15 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
     arraySetItem->args[1] = new ArgDef(byteType, "value");
     byteptrType->context->addDef(arraySetItem.get());
+    
+    FuncDefPtr arrayOffset =
+        new GeneralOpDef<ArrayOffsetCall>(byteptrType, FuncDef::noFlags, 
+                                          "oper +",
+                                          2
+                                          );
+    arrayOffset->args[0] = new ArgDef(byteptrType, "base");
+    arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
+    context.addDef(arrayOffset.get());
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,
