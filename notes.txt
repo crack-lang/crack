@@ -382,3 +382,18 @@ Reference counting rules:
     If this is done, the compiler must verify that the function only returns 
     non-productive expressions.  If the function is a method, this must also 
     be verified for all derived functions.
+
+Ugliness:
+
+    -   There should be a Def base class instead of deriving everything from 
+        VarDef.  Def should have a name and a "parent" Namespace but no type. 
+        Then we can get rid of VarDefImpl and just have the builder 
+        specialize VarDef.
+
+    -   Context is bad:
+        -   there's a dichotomy between "compile context" and "the symbol 
+            table" Make these "Context" and "Namespace"
+        -   the symbol table wants to be part of ModuleDef/ClassDef/FuncDef so
+            there's probably a NamespaceDef base class
+        -   Namespace should make use of polymorphism to deal better with 
+            funny resolution stuff.
