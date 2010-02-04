@@ -383,6 +383,13 @@ Reference counting rules:
     non-productive expressions.  If the function is a method, this must also 
     be verified for all derived functions.
 
+Constructors:
+    -   A class will inherit the constructors of its first base class if:
+        -   it has no constructors of its own
+        -   it either has no instance variables or all instance variables have 
+            default constructors.
+        -   all other base classes have a default constructor.
+
 Ugliness:
 
     -   There should be a Def base class instead of deriving everything from 
