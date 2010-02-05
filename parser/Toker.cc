@@ -53,6 +53,8 @@ Token Toker::readToken() {
         st_slash,
         st_digram,
         st_comment, 
+        st_ccomment,
+        st_ccomment2,
         st_string, 
         st_escapeChar,
         st_integer
@@ -174,6 +176,8 @@ Token Toker::readToken() {
             case st_slash:
                 if (ch == '/') {
                     state = st_comment;
+                } else if (ch == '*') {
+                    state = st_ccomment;
                 } else {
                     src.putback(ch);
                     return Token(Token::slash, "/", locationMap.getLocation());
@@ -185,6 +189,16 @@ Token Toker::readToken() {
                 // newline character takes us out of the comment state
                 if (ch == '\n')
                    state = st_none;
+                break;
+            
+            case st_ccomment:
+                if (ch == '*')
+                    state = st_ccomment2;
+                break;
+            
+            case st_ccomment2:
+                if (ch == '/')
+                    state = st_none;
                 break;
    
             case st_string:

@@ -390,4 +390,8 @@ test_output 'IO classes' \
      ' \
      'string-100100-1524157875019052115241578750190521'
 
+test_output 'C Comments' \
+    '/* comment text */print("ok");' \
+    ok
+
 exit $rc
