@@ -174,7 +174,8 @@ VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
     return 0;
 }
 
-FuncDefPtr Context::lookUp(const std::string &varName,
+FuncDefPtr Context::lookUp(Context &context,
+                           const std::string &varName,
                            vector<ExprPtr> &args
                            ) {
     // do a lookup, if nothing was found no further action is necessary.
@@ -186,13 +187,13 @@ FuncDefPtr Context::lookUp(const std::string &varName,
     // new" function on the class.
     TypeDef *typeDef = TypeDefPtr::rcast(var);
     if (typeDef)
-        return typeDef->context->lookUp("oper new", args);
+        return typeDef->context->lookUp(context, "oper new", args);
 
     // otherwise, do the overload aggregation
     OverloadDefPtr overload = aggregateOverloads(varName, var.get());
     if (!overload)
         return 0;
-    return overload->getMatch(*this, args);
+    return overload->getMatch(context, args);
 }
 
 void Context::addDef(VarDef *def) {
@@ -262,7 +263,7 @@ ExprPtr Context::getStrConst(const std::string &value) {
                                           )
                    );
     FuncDefPtr newFunc =
-        globalData->staticStringType->context->lookUp("oper new", args);
+        globalData->staticStringType->context->lookUp(*this, "oper new", args);
     FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
     funcCall->args = args;
     return funcCall;    

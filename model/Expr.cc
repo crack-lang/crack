@@ -21,13 +21,13 @@ ExprPtr Expr::convert(Context &context, TypeDef *newType) {
     if (newType->matches(*type))
         return this;
 
-    // see if there's a converter    
+    // see if there's a converter
     FuncDefPtr converter = type->getConverter(*newType);
     if (converter) {
-         FuncCallPtr convCall =
-            context.builder.createFuncCall(converter.get());
-         convCall->receiver = this;
-         return convCall;
+        FuncCallPtr convCall =
+           context.builder.createFuncCall(converter.get());
+        convCall->receiver = this;
+        return convCall;
     }
     
     // can't convert

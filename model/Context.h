@@ -151,11 +151,14 @@ class Context : public spug::RCBase {
         /**
          * Looks up a function matching the given expression list.
          * 
+         * @param context the current context (distinct from the lookup 
+         *  context)
          * @param varName the function name
          * @param vals list of parameter expressions.  These will be converted 
          *  to conversion expressions of the correct type for a match.
          */
-        FuncDefPtr lookUp(const std::string &varName,
+        FuncDefPtr lookUp(Context &context,
+                          const std::string &varName,
                           std::vector<ExprPtr> &vals
                           );
         void createModule(const std::string &name);

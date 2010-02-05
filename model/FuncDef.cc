@@ -39,7 +39,7 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
         }
     }
 
-    // make sure that we checked everything in both lists   
+    // make sure that we checked everything in both lists
     if (arg != args.end() || val != vals.end())
         return false;
     

@@ -255,7 +255,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       
       // lookup the method from the variable context's type context
       // XXX needs to handle callable objects.
-      FuncDefPtr func = varContext.lookUp(ident.getData(), args);
+      FuncDefPtr func = varContext.lookUp(*context, ident.getData(), args);
       if (!func)
          error(ident,
                SPUG_FSTR("No method exists matching " << ident.getData() <<
@@ -328,7 +328,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    } else if (tok.isBang()) {
       FuncCall::ExprVec args(1);
       args[0] = parseExpression(getPrecedence(tok.getData()));
-      FuncDefPtr funcDef = context->lookUp("oper !", args);
+      FuncDefPtr funcDef = context->lookUp(*context, "oper !", args);
       if (!funcDef)
          error(tok, "No ! operator exists for this type.");
       FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
@@ -366,7 +366,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          if (tok2.isAssign()) {
             // this is "a[i] = v"
             args.push_back(parseExpression());
-            FuncDefPtr funcDef = expr->type->context->lookUp("oper []=", args);
+            FuncDefPtr funcDef =
+               expr->type->context->lookUp(*context, "oper []=", args);
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []=' not defined for " <<
@@ -379,7 +380,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          } else {
             // this is "a[i]"
             toker.putBack(tok2);
-            FuncDefPtr funcDef = expr->type->context->lookUp("oper []", args);
+            FuncDefPtr funcDef =
+               expr->type->context->lookUp(*context, "oper []", args);
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []' not defined for " <<
@@ -407,7 +409,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          exprs[0] = expr;
          exprs[1] = rhs;
          std::string name = "oper " + tok.getData();
-         FuncDefPtr func = context->lookUp(name, exprs);
+         FuncDefPtr func = context->lookUp(*context, name, exprs);
          if (!func)
             error(tok,
                   SPUG_FSTR("Operator " << expr->type->name << " " <<

@@ -36,14 +36,13 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
             throw ParseError("Constant out of range of int32");
     } else if (newType == context.globalData->uint32Type) {
         if (val < 0 || val > (1LL << 32 - 1)) {
-            std::cerr << "value = " << val << " " << (1L << 32 - 1) << std::endl;
             throw ParseError("Constant out of range of uint32");
         }
     } else {
         // delegate all other conversions to the type
         return Expr::convert(context, newType);
     }
-        
+
     return context.builder.createIntConst(context, val, newType);
 }
 

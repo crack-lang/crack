@@ -215,10 +215,8 @@ FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
     // really be using the canonical name of the type (and omitting the 
     // special case for bool).
     if (other.name == "bool") {
-        FuncCall::ExprVec args;
-        return context->lookUp("toBool", args);
+        return context->lookUp("toBool");
     } else {
-        FuncCall::ExprVec args;
         return context->lookUp("oper to " + other.name);
     }
 }
