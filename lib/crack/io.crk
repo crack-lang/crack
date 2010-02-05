@@ -1,0 +1,167 @@
+# Copyright 2009, Google Inc.
+# Basic input/output classes.
+
+import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, XWriter;
+
+import "libc.so.6" strlen, write, malloc, free, sprintf, read;
+
+uint strlen(byteptr string);
+uint write(int fd, byteptr buf, uint len);
+uint read(int fd, byteptr buf, uint size);
+byteptr malloc(int32 size);
+void free(byteptr mem);
+byteptr sprintf(byteptr buf, byteptr fmt, int32 val);
+
+## Writer interface, for all objects that support "write()"
+## needs to use Object as a vir
+class Writer // : Object, XWriter */ 
+{
+    void Writer_init() {
+        # object init
+        init();
+    }
+
+    ## Low level write method.  This is the only thing you need to implement.
+    void write(byteptr b, uint size) {
+        die('write(byteptr b, uint size) called');
+    }
+
+    void write(Buffer b) {
+        write(b.buffer, b.size);
+    }
+    
+    ## Flush any buffers and write through to the final consumer.
+    void flush() {}
+};
+
+class Reader {
+    void Reader_init() {
+        # object init
+        init();
+    }
+
+    String read(uint size) {
+        die('Reader.read() called');
+        return '';
+    }
+
+    uint read(WriteBuffer buf) {
+        die('Reader.read() called');
+        return 0;
+    }
+};
+
+## Writer for a file descriptor.
+class FDWriter : Writer {
+    int fd;
+
+    void init(int fd0) {
+        Writer_init();
+        fd = fd0;
+    }
+
+    void write(byteptr buf, uint size) {
+        write(fd, buf, size);
+    }
+};
+
+## Reader to read from a file descriptor.
+class FDReader {
+    int32 fd;
+    
+    ## Read up to 'size' bytes from the file descriptor into the buffer.
+    uint read(uint size, byteptr buffer) {
+        return read(fd, buffer, size);
+    }
+};
+
+## Format val into buf.  The number will be formatted into the _end_ of the 
+## buffer.
+## Returns the start index of the number.
+uint _format(uint64 val,  ## value to format
+             byteptr buf, ## buffer to format into.  This must be large enough 
+                          ## to hold the string representation of the number.
+             uint size    ## size of the buffer
+             ) {
+    uint i = size;
+    uint64 v = val;
+    while (v) {
+        i = i - 1;
+        digit := v % 10;
+        v = v / 10;
+        buf[i] = 48 + digit;
+    }
+    return i;
+}
+
+## Format an integer into the buffer.  "buf" must be at least 21 characters.
+## Returns the index to the beginning of the number.
+uint _format(int64 val, byteptr buf, uint size) {
+    uint i;   
+    if (val < 0) {
+        # negate the value, format the absolute value then add the sign to the 
+        # beginning
+        uint64 raw = 0 - val;
+        i = _format(raw, buf, size) - 1;
+        buf[i] = 45; # 45 == '-'
+    } else {
+        uint64 raw = val;
+        i = _format(raw, buf, size);
+    }
+    return i;
+}
+
+## Formatter base class - got a format() method for anything.
+class Formatter : Writer {
+    
+    Writer __rep;
+
+    void init(Writer rep) {
+        init();
+        __rep = rep;
+    }
+    
+    void write(Buffer data) {
+        __rep.write(data);
+    }
+    
+    void format(String data) {
+        __rep.write(data);
+    }
+    
+    void format(int32 val) {
+        buffer := ManagedBuffer(11);
+        
+        # have to convert so it will match the later _format method.
+        int64 v = val;
+        start := _format(v, buffer.buffer, buffer.size);
+        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+
+    void format(uint32 val) {
+        buffer := ManagedBuffer(10);
+        
+        # _format(uint32) comes first so we don't have to type convert
+        start := _format(val, buffer.buffer, buffer.size);
+        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+
+    void format(int64 val) {
+        buffer := ManagedBuffer(21);
+        start := _format(val, buffer.buffer, buffer.size);
+        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+
+    void format(uint64 val) {
+        buffer := ManagedBuffer(20);
+        start := _format(val, buffer.buffer, buffer.size);
+        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+    
+#    void format(Object obj) {
+#        obj.writeTo(this);
+#    }
+
+};
+
+cout := FDWriter(1);

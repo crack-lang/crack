@@ -12,6 +12,13 @@ void abort();
 bool true = (1 == 1);
 bool false = (1 == 0);
 
+class XWriter : VTableBase {
+    void write(byteptr buf, uint size) {
+        puts("XWriter.write() called.");
+        abort();
+    }
+};
+
 ## The Object base class.  Object provides the basic reference counting 
 ## mechanism, and most user classes should be derived from it.
 class Object : VTableBase {
@@ -49,36 +56,29 @@ class Object : VTableBase {
         else
             return isTrue();
     }
+    
+    void writeTo(XWriter writer) {
+        writer.write("<Object>", 8);
+    }
 };
 
-## The string class.  Strings are byte buffers with sizes.
-class String : Object {
+## The buffer base class containing a bytebuf and size.
+class Buffer : Object {
 
     // buffer and size.
     uint size;    
     byteptr buffer;
 
-    void String_init(byteptr buffer0, uint size0, bool copy) {
+    ## Initializer.
+    void Buffer_init(byteptr buffer0, uint size0) {
+        # do Object.init()
         init();
+        buffer = buffer0;
         size = size0;
-        if (copy) {
-            buffer = malloc(size0);
-            memcpy(buffer, buffer0, size0);
-        } else {
-            buffer = buffer0;
-        }
-    }
-        
-    void init(byteptr buffer0) {
-        String_init(buffer0, strlen(buffer0), true);
     }
     
-    void init() {
-        String_init('', 0, false);
-    }
-    
-    void del() {
-        free(buffer);
+    void init(byteptr buffer0, uint size0) {
+        Buffer_init(buffer0, size0);
     }
     
     bool isTrue() {
@@ -86,14 +86,50 @@ class String : Object {
     }
 };
 
+## The string class.  Strings are immutable _Buffy's.
+class String : Buffer {
+
+    ## Initialize from a buffer
+    void init(Buffer buf) {
+        byteptr b = malloc(buf.size);
+        memcpy(b, buf.buffer, buf.size);
+        init(b, buf.size);
+    }
+
+    ## Create an empty string.
+    void init() {
+        init(malloc(0), 0);
+    }
+    
+    void del() {
+        free(buffer);
+    }
+    
+};
+
 class StaticString : String {
 
     void init(byteptr data, uint size) {
-        String_init(data, size, false);
+        Buffer_init(data, size);
     }
     
     # overrides string delete so we don't try to delete a static buffer.
     void del() {}
+};
+
+## A writable buffer.  You can assume that it is safe to write to one of these.
+class WriteBuffer : Buffer {};
+
+## A managed buffer.  Deletes the bytebuf when it goes out of scope.
+class ManagedBuffer : WriteBuffer {
+
+    void init(uint size) {
+        init(malloc(size), size);
+    }
+
+    void del() {
+        free(buffer);
+    }
 };
 
 void print(String val) {

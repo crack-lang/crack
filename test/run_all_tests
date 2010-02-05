@@ -373,4 +373,21 @@ test_output 'remainder operator' \
     'printint((0-1) % 2);' \
     '-1'
 
+test_output 'IO classes' \
+    'import crack.io FDWriter, Formatter, Writer;
+     f := Formatter(FDWriter(1));
+     f.format("string");
+     int32 i32 = 0-100;
+     f.format(i32);
+     uint32 u32 = 100;
+     f.format(u32);
+     int64 i64 = 123456789;
+     i64 = i64 * (0-123456789);
+     f.format(i64);
+     uint64 u64 = 123456789;
+     u64 = u64 * u64;
+     f.format(u64);
+     ' \
+     'string-100100-1524157875019052115241578750190521'
+
 exit $rc
