@@ -31,6 +31,7 @@ for 0.1:
 -   empty statements should work: if (false) ;
 -   global variables should not get cleaned up until the end of the program.
 -   multiple inheritence shouldn't cause bad errors (it need not work)
+-   numeric negation: "int j = -i;"
 
 for 1.0:
 -   doc-comments
