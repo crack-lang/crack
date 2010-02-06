@@ -1,0 +1,5 @@
+#!/bin/sh
+# Script to launch gdb for crack.
+
+LIBS=$(dirname $0)/.libs
+LD_LIBRARY_PATH=$LIBS gdb $LIBS/crack "$@"
