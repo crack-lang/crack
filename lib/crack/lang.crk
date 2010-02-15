@@ -19,6 +19,9 @@ class XWriter : VTableBase {
     }
 };
 
+## Base class for things that you don't want derived from object or VTableBase.
+class FreeBase {};
+
 ## The Object base class.  Object provides the basic reference counting 
 ## mechanism, and most user classes should be derived from it.
 class Object : VTableBase {
@@ -94,6 +97,13 @@ class String : Buffer {
         byteptr b = malloc(buf.size);
         memcpy(b, buf.buffer, buf.size);
         init(b, buf.size);
+    }
+    
+    ## Initialize from a null-terminated c-string
+    void init(byteptr cString) {
+        size = strlen(cString);
+        buffer = malloc(size + 1);
+        memcpy(buffer, cString, size);
     }
 
     ## Create an empty string.
