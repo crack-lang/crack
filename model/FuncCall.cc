@@ -12,8 +12,11 @@
 using namespace model;
 
 FuncCall::FuncCall(FuncDef *funcDef) :
-    Expr(funcDef->type.get()),
+    Expr(funcDef->returnType.get()),
     func(funcDef) {
+    if (!funcDef->returnType)
+        std::cerr << "bad func def: " << funcDef->name << std::endl;
+    assert(funcDef->returnType);
 }
 
 ResultExprPtr FuncCall::emit(Context &context) {

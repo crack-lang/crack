@@ -22,6 +22,7 @@ class FuncDef : public VarDef {
         
         typedef std::vector<ArgDefPtr> ArgVec;
         ArgVec args;
+        TypeDefPtr returnType;
 
         FuncDef(Flags flags, const std::string &name, size_t argCount);
         

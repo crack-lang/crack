@@ -394,4 +394,8 @@ test_output 'C Comments' \
     '/* comment text */print("ok");' \
     ok
 
+test_output 'functions as values' \
+    'void func() {} voidptr v = func; if (func is v) print("ok");' \
+    ok
+
 exit $rc

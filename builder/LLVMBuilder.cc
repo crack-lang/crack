@@ -591,9 +591,10 @@ namespace {
                                   const vector<Value *> &args,
                                   BasicBlock *parent
                                   ) :
-                PlaceholderInstruction(BTypeDefPtr::arcast(funcDef->type)->rep, 
-                                       parent
-                                       ),
+                PlaceholderInstruction(
+                    BTypeDefPtr::arcast(funcDef->returnType)->rep, 
+                    parent
+                ),
                 vtableBaseType(vtableBaseType),
                 funcDef(funcDef),
                 receiverType(receiverType),
@@ -607,9 +608,10 @@ namespace {
                                   const vector<Value *> &args,
                                   Instruction *insertBefore = 0
                                   ) :
-                PlaceholderInstruction(BTypeDefPtr::arcast(funcDef->type)->rep, 
-                                       insertBefore
-                                       ),
+                PlaceholderInstruction(
+                    BTypeDefPtr::arcast(funcDef->returnType)->rep, 
+                    insertBefore
+                ),
                 vtableBaseType(vtableBaseType),
                 funcDef(funcDef),
                 receiverType(receiverType),
@@ -776,7 +778,28 @@ namespace {
                     rep = builder.getModVar(this);
                 return rep;
             }
-    };                        
+    };
+    
+    class BConstDefImpl : public VarDefImpl {
+        public:
+            Constant *rep;
+            
+            BConstDefImpl(Constant *rep) : rep(rep) {}
+
+            virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
+                LLVMBuilder &b =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                b.lastValue = rep;
+                return new BResultExpr(var, b.lastValue);
+            }
+            
+            virtual ResultExprPtr
+            emitAssignment(Context &context, AssignExpr *assign) {
+                assert(false && "assignment to a constant");
+                return 0;
+            }
+            
+    };
     
     SPUG_RCPTR(BInstVarDefImpl);
 
@@ -907,7 +930,7 @@ namespace {
                     funcDef(new BFuncDef(flags, name, argCount)),
                     linkage(linkage),
                     argIndex(0) {
-                funcDef->type = returnType;
+                funcDef->returnType = returnType;
             }
             
             void finish(bool storeDef = true) {
@@ -931,11 +954,11 @@ namespace {
                 const Type *rawRetType =
                     returnType->rep ? returnType->rep : 
                                       Type::getVoidTy(getGlobalContext());
-                FunctionType *funcType =
+                FunctionType *llvmFuncType =
                     FunctionType::get(rawRetType, llvmArgs, false);
                 LLVMBuilder &builder = 
                     dynamic_cast<LLVMBuilder &>(context.builder);
-                Function *func = Function::Create(funcType,
+                Function *func = Function::Create(llvmFuncType,
                                                   linkage,
                                                   funcDef->name,
                                                   builder.module
@@ -968,6 +991,18 @@ namespace {
                 
                 // store the LLVM function in the table for the module
                 builder.setModFunc(funcDef.get(), func);
+
+                // get or create the type registered for the function                
+                BTypeDef *crkFuncType = 
+                    BTypeDefPtr::acast(builder.getFuncType(context,
+                                                           llvmFuncType
+                                                           )
+                                       );
+                funcDef->type = crkFuncType;
+                
+                // create an implementation object to return the function 
+                // pointer
+                funcDef->impl = new BConstDefImpl(func);
                 
                 funcDef->rep = func;
                 if (storeDef)
@@ -1027,7 +1062,8 @@ namespace {
                   ) :
                 FuncDef(flags, name, argCount) {
                 
-                type = resultType;
+                // XXX we don't have a function type for these
+                returnType = resultType;
             }
             
             virtual FuncCallPtr createFuncCall() = 0;
@@ -1068,7 +1104,7 @@ namespace {
                 builder.lastValue =                                         \
                     builder.builder.Create##opCode(                         \
                         builder.lastValue,                                  \
-                        BTypeDefPtr::arcast(func->type)->rep                \
+                        BTypeDefPtr::arcast(func->returnType)->rep          \
                     );                                                      \
                                                                             \
                 return new BResultExpr(this, builder.lastValue);            \
@@ -1102,9 +1138,10 @@ namespace {
                 builder.lastValue =
                     builder.builder.CreateXor(
                         builder.lastValue,
-                        ConstantInt::get(BTypeDefPtr::arcast(func->type)->rep,
-                                         1
-                                         )
+                        ConstantInt::get(
+                            BTypeDefPtr::arcast(func->returnType)->rep,
+                            1
+                            )
                     );
                 
                 return new BResultExpr(this, builder.lastValue);
@@ -1425,6 +1462,31 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
     }
 }
 
+TypeDef *LLVMBuilder::getFuncType(Context &context,
+                                  const llvm::Type *llvmFuncType
+                                  ) {
+
+    // see if we've already got it
+    FuncTypeMap::const_iterator iter = funcTypes.find(llvmFuncType);
+    if (iter != funcTypes.end())
+        return TypeDefPtr::rcast(iter->second);
+
+    // nope.  create a new type object and store it
+    BTypeDefPtr crkFuncType = new BTypeDef("", llvmFuncType);
+    funcTypes[llvmFuncType] = crkFuncType;
+    
+    // Give it a context and an "oper to voidptr" method.
+    crkFuncType->context =
+        new Context(context.builder, Context::instance,
+                    context.globalData
+                    );
+    crkFuncType->context->addDef(
+        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+    );
+    
+    return crkFuncType.get();
+}
+        
 
 LLVMBuilder::LLVMBuilder() :
     module(0),
