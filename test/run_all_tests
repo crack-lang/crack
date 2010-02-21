@@ -314,6 +314,10 @@ test_output 'chaining placeholders' \
      Foo f; f.b = 100; f.foo(); printint(f.a);' \
     100
 
+test_output 'vtable init of top-level base classes' \
+    'class A : VTableBase { void a() { puts("ok" ); } }; (A().a());' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

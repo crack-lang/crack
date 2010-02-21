@@ -753,11 +753,27 @@ namespace {
             void emitVTableInit(IRBuilder<> &builder, BTypeDef *btype,
                                 Value *inst
                                 ) {
-                // recurse through all parents with vtables
+
+                // if btype has a registered vtable, startClass gets 
+                // incremented so that we don't emit a parent vtable that
+                // overwrites it.
+                int startClass = 0;
+
+                // check for the vtable of the current class
+                map<BTypeDef *, Constant *>::iterator firstVTableIter =
+                    aggregateType->vtables.find(btype);
+                if (firstVTableIter != aggregateType->vtables.end()) {
+                    emitInitOfFirstVTable(builder, btype, inst,
+                                          firstVTableIter->second
+                                          );
+                    startClass = 1;
+                }
+
+                // recurse through all other parents with vtables
                 Context::ContextVec &parents = btype->context->parents;
                 int i = 0;
                 for (Context::ContextVec::iterator ctxIter = 
-                        parents.begin();
+                        parents.begin() + startClass;
                      ctxIter != parents.end();
                      ++ctxIter, ++i
                      ) {
