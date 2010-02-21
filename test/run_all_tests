@@ -318,6 +318,25 @@ test_output 'vtable init of top-level base classes' \
     'class A : VTableBase { void a() { puts("ok" ); } }; (A().a());' \
     ok
 
+test_output 'overload lookups respect definition order' \
+    'class A {}; class B : A {}; class C : B {}; class D : C {};
+     class X : A {
+         void f(D d) { puts("D"); }
+         void f(C c) { puts("C"); }
+         void f(B b) { puts("B"); }
+         void f(A a) { puts("A"); }
+     };
+
+     (X().f(A()));
+     (X().f(B()));
+     (X().f(C()));
+     (X().f(D()));' \
+     'A
+B
+C
+D'
+
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
