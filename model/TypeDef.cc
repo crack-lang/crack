@@ -221,6 +221,32 @@ FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
     }
 }
 
+bool TypeDef::getPathToAncestor(const TypeDef &ancestor, 
+                                TypeDef::AncestorPath &path,
+                                unsigned depth
+                                ) {
+    if (this == &ancestor) {
+        path.resize(depth);
+        return true;
+    }
+        
+    int i = 0;
+    Context::ContextVec &parents = context->parents;
+    for (Context::ContextVec::iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter, ++i
+         ) {
+        TypeDef *base = (*iter)->returnType.get();
+        if (base->getPathToAncestor(ancestor, path, depth + 1)) {
+            path[depth].index = i;
+            path[depth].ancestor = base;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;
     string childPrefix = prefix + "  ";

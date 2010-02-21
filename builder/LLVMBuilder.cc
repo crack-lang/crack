@@ -51,6 +51,45 @@ using namespace llvm;
 using namespace model;
 typedef model::FuncCall::ExprVec ExprVec;
 
+// for reasons I don't understand, we have to specialize the OperandTraits 
+// templates in the llvm namespace.
+namespace {
+    class IncompleteInstVarRef;
+    class IncompleteInstVarAssign;
+    class IncompleteNarrower;
+    class IncompleteVTableInit;
+    class IncompleteSpecialize;
+    class IncompleteVirtualFunc;
+};
+
+namespace llvm {
+    template<>
+    struct OperandTraits<IncompleteInstVarRef> :
+        FixedNumOperandTraits<1> {
+    };
+    template<>
+    struct OperandTraits<IncompleteInstVarAssign> :
+        FixedNumOperandTraits<2> {
+    };
+    template<>
+    struct OperandTraits<IncompleteNarrower> :
+        FixedNumOperandTraits<1> {
+    };
+    template<>
+    struct OperandTraits<IncompleteVTableInit> :
+        FixedNumOperandTraits<1> {
+    };
+    template<>
+    struct OperandTraits<IncompleteSpecialize> :
+        FixedNumOperandTraits<1> {
+    };
+    template<>
+    struct OperandTraits<IncompleteVirtualFunc> :
+        VariadicOperandTraits<1> {
+    };
+}
+
+
 namespace {
 
     // utility function to resize a vector to accomodate a new element, but 
@@ -61,6 +100,8 @@ namespace {
             vec.resize(index + 1, 0);
     }
 
+    
+    SPUG_RCPTR(BTypeDef);
 
     SPUG_RCPTR(BFuncDef);
 
@@ -70,8 +111,14 @@ namespace {
             // it.
             llvm::Function *rep;
             
-            // for a virtual function, this holds the vtable slot.
+            // for a virtual function, these are the path to the base class 
+            // where the vtable is defined and the vtable slot position.
+            TypeDef::AncestorPath pathToFirstDeclaration;
             unsigned vtableSlot;
+            
+            // for a virtual function, this holds the ancestor class that owns 
+            // the vtable pointer
+            BTypeDefPtr vtableBase;
 
             BFuncDef(FuncDef::Flags flags, const string &name,
                      size_t argCount
@@ -90,16 +137,114 @@ namespace {
                 return rep;
             }
             
+            /**
+             * Returns the "receiver type."  For a non-virtual function, this 
+             * is simply the type that the function was declared in.  For a 
+             * virtual function, it is the type of the base class in which the 
+             * function was first declared.
+             */
+            BTypeDef *getReceiverType() const {
+                TypeDef *result;
+                if (pathToFirstDeclaration.size())
+                    result = pathToFirstDeclaration.back().ancestor.get();
+                else
+                    result = context->returnType.get();
+                return BTypeDefPtr::acast(result);
+            }
+            
+            /**
+             * Returns the "this" type of the function.  This is always either 
+             * the receiver type or a specialization of it.
+             */
+            BTypeDef *getThisType() const {
+                return BTypeDefPtr::arcast(context->returnType);
+            }
+            
     };
-        
-    SPUG_RCPTR(BTypeDef)
+    
+    SPUG_RCPTR(VTableInfo);
+    
+    // stores information on a single VTable
+    class VTableInfo : public spug::RCBase {
+        private:
+            // give an error if we try to copy this
+            VTableInfo(const VTableInfo &other);
 
+        public:
+            // the vtable variable name
+            string name;
+            
+            // the vtable entries
+            vector<Constant *> entries;
+            
+            VTableInfo(const string &name) : name(name) {}
+    };
+
+    // encapsulates all of the vtables for a new type
+    class VTableBuilder {
+        private:
+            typedef map<BTypeDef *, VTableInfoPtr> VTableMap;
+            VTableMap vtables;
+            
+            // keep track of the first VTable in the type
+            VTableInfo *firstVTable;
+
+        public:
+            // add a new function entry to the appropriate VTable
+            void add(BFuncDef *func) {
+                
+                // find the ancestor whose vtable this function needs to go 
+                // into
+                BTypeDef *ancestor;
+                TypeDef::AncestorPath &path = func->pathToFirstDeclaration;
+                if (path.size())
+                    ancestor = BTypeDefPtr::arcast(path.back().ancestor);
+                else
+                    ancestor = BTypeDefPtr::arcast(func->context->returnType);
+                
+                // lookup the vtable
+                VTableMap::iterator iter = vtables.find(ancestor);
+
+                // if we didn't find a vtable in the ancestors, append the 
+                // fucntion to the first vtable
+                VTableInfo *targetVTable;
+                if (iter == vtables.end()) {
+                    assert(firstVTable && "no first vtable");
+                    targetVTable = firstVTable;
+                } else {
+                    targetVTable = iter->second.get();
+                }
+                
+                // insert the function
+                vector<Constant *> &entries = targetVTable->entries;
+                accomodate(entries, func->vtableSlot);
+                entries[func->vtableSlot] = func->rep;
+            }
+            
+            // create a new VTable
+            void createVTable(BTypeDef *type, const std::string &name, 
+                              bool first
+                              ) {
+                assert(vtables.find(type) == vtables.end());
+                VTableInfo *info;
+                vtables[type] = info = new VTableInfo(name);
+                if (first)
+                    firstVTable = info;
+            }
+
+            // emit all of the VTable globals            
+            void emit(Module *module, BTypeDef *type);
+    };
+
+    // (RCPTR defined above)    
     class BTypeDef : public model::TypeDef {
         public:
             const Type *rep;
             unsigned nextVTableSlot;
-            const PointerType *vtableType;
-            Constant *vtable;
+
+            // mapping from base types to their vtables.            
+            map<BTypeDef *, Constant *> vtables;
+            const Type *firstVTableType;
 
             BTypeDef(const string &name, const llvm::Type *rep,
                      bool pointer = false,
@@ -108,70 +253,137 @@ namespace {
                 model::TypeDef(name, pointer),
                 rep(rep),
                 nextVTableSlot(nextVTableSlot),
-                vtable(0) {
+                firstVTableType(0) {
             }
 
-            static void addToVTable(vector<const Type *> &vtableTypes,
-                                    vector<Constant *> &vtableVals,
-                                    BFuncDef *funcDef
-                                    ) {
-                accomodate(vtableTypes, funcDef->vtableSlot);
-                vtableTypes[funcDef->vtableSlot] =
-                    funcDef->rep->getType();
-                accomodate(vtableVals, funcDef->vtableSlot);
-                vtableVals[funcDef->vtableSlot] = funcDef->rep;
-            }
-
-            void populateVTable(vector<const Type *> &vtableTypes,
-                                vector<Constant *> &vtableVals
-                                ) {
-                // populate the beginning of the vtable from the first base 
-                // class with a vtable
-                // XXX this needs to change for virtual base classes
-                for (Context::ContextVec::iterator baseIter = 
-                        context->parents.begin();
-                     baseIter != context->parents.end();
-                     ++baseIter
-                     ) {
-                    BTypeDef *typeDef =
-                        BTypeDefPtr::arcast((*baseIter)->returnType);
-                    if (typeDef->hasVTable) {
-                        typeDef->populateVTable(vtableTypes, vtableVals);
-                        break;
-                    }
+        // add all of my virtual functions to 'vtb'
+        void extendVTables(VTableBuilder &vtb) {
+            // find all of the virtual functions
+            for (Context::VarDefMap::iterator varIter = context->beginDefs();
+                 varIter != context->endDefs();
+                 ++varIter
+                 ) {
+                    
+                BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
+                if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
+                    vtb.add(funcDef);
+                    continue;
                 }
                 
-                // find all of the virtual functions
-                for (Context::VarDefMap::iterator varIter =
-                        context->beginDefs();
-                     varIter != context->endDefs();
-                     ++varIter
-                     ) {
-                    BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
-                    if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
-                        addToVTable(vtableTypes, vtableVals, funcDef);
-                        continue;
-                    }
-                    
-                    // check for an overload
-                    OverloadDef *overload =
-                        OverloadDefPtr::rcast(varIter->second);
-                    if (overload) {
-                        for (OverloadDef::FuncList::iterator fiter =
-                                overload->funcs.begin();
-                             fiter != overload->funcs.end();
-                             ++fiter
-                             ) {
-                            BFuncDef *f = BFuncDefPtr::arcast(*fiter);
-                            if ((*fiter)->flags & FuncDef::virtualized)
-                                addToVTable(vtableTypes, vtableVals,
-                                            BFuncDefPtr::arcast(*fiter)
-                                            );
-                        }
+                // check for an overload (if it's not an overload, assume that 
+                // it's not a function)
+                OverloadDef *overload =
+                    OverloadDefPtr::rcast(varIter->second);
+                if (overload) {
+                    for (OverloadDef::FuncList::iterator fiter =
+                            overload->funcs.begin();
+                         fiter != overload->funcs.end();
+                         ++fiter
+                         ) {
+                        BFuncDef *f = BFuncDefPtr::arcast(*fiter);
+                        if ((*fiter)->flags & FuncDef::virtualized)
+                            vtb.add(f);
                     }
                 }
             }
+        }
+
+        /**
+         * Create all of the vtables for 'type'.
+         * 
+         * @param vtb the vtable builder
+         * @param name the name stem for the VTable global variables.
+         * @param vtableBaseType the global vtable base type.
+         * @param firstVTable if true, we have not yet discovered the first 
+         *  vtable in the class schema.
+         */
+        void createAllVTables(VTableBuilder &vtb, const string &name,
+                              BTypeDef *vtableBaseType,
+                              bool firstVTable = true
+                              ) {
+            for (Context::ContextVec::iterator baseIter = 
+                    context->parents.begin();
+                 baseIter != context->parents.end();
+                 ++baseIter
+                 ) {
+                BTypeDef *base = BTypeDefPtr::arcast((*baseIter)->returnType);
+                
+                // if the base class is VTableBase, we've hit bottom - 
+                // construct the initial vtable and store the first vtable 
+                // type if this is it.
+                if (base == vtableBaseType) {
+                    vtb.createVTable(this, name, firstVTable);
+
+                // otherwise, if the base has a vtable, create all of its 
+                // vtables
+                } else if (base->hasVTable) {
+                    if (firstVTable)
+                        base->createAllVTables(vtb, name, vtableBaseType,
+                                               firstVTable
+                                               );
+                    else
+                        base->createAllVTables(vtb,
+                                               name + ':' + base->getFullName(),
+                                               vtableBaseType,
+                                               firstVTable
+                                               );
+                }
+
+                firstVTable = false;
+            }
+            
+            // add my functions to their vtables
+            extendVTables(vtb);
+        }
     };
+
+    // have to define this after BTypeDef because it uses BTypeDef.
+    void VTableBuilder::emit(Module *module, BTypeDef *type) {
+        for (VTableMap::iterator iter = vtables.begin();
+             iter != vtables.end();
+             ++iter
+             ) {
+            // populate the types array
+            vector<Constant *> &entries = iter->second->entries;
+            vector<const Type *> vtableTypes(entries.size());
+            int i = 0;
+            for (vector<Constant *>::iterator entryIter =
+                    entries.begin();
+                entryIter != entries.end();
+                ++entryIter, ++i
+                )
+                vtableTypes[i] = (*entryIter)->getType();
+
+            // create a constant structure that actually is the vtable
+            const StructType *vtableStructType =
+                StructType::get(getGlobalContext(), vtableTypes);
+            type->vtables[iter->first] =
+                new GlobalVariable(*module, vtableStructType,
+                                   true, // isConstant
+                                   GlobalValue::ExternalLinkage,
+                                   
+                                   // initializer - this needs to be 
+                                   // provided or the global will be 
+                                   // treated as an extern.
+                                   ConstantStruct::get(
+                                       vtableStructType, 
+                                       iter->second->entries
+                                   ),
+                                   iter->second->name
+                                   );
+            
+            // store the first VTable pointer (a pointer-to-pointer to the 
+            // struct type, actually, because that is what we need to cast our 
+            // VTableBase instances to)
+            if (iter->second == firstVTable)
+                type->firstVTableType = 
+                    PointerType::getUnqual(
+                        PointerType::getUnqual(vtableStructType)
+                    );
+        }
+
+        assert(type->firstVTableType);
+    }
     
     SPUG_RCPTR(BStrConst);
 
@@ -210,20 +422,23 @@ namespace {
      */    
     class PlaceholderInstruction : public Instruction {
         public:
-            PlaceholderInstruction(const Type *type, BasicBlock *parent) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, parent) {
+            PlaceholderInstruction(const Type *type, BasicBlock *parent,
+                                   Use *ops = 0, 
+                                   unsigned opCount = 0
+                                   ) :
+                Instruction(type, OtherOpsEnd + 1, ops, opCount, parent) {
             }
 
             PlaceholderInstruction(const Type *type,
-                                   Instruction *insertBefore = 0
+                                   Instruction *insertBefore = 0,
+                                   Use *ops = 0,
+                                   unsigned opCount = 0
                                    ) :
-                Instruction(type, OtherOpsEnd + 1, 0, 0, insertBefore) {
+                Instruction(type, OtherOpsEnd + 1, ops, opCount, 
+                            insertBefore
+                            ) {
             }
             
-            void *operator new(size_t s) {
-                return User::operator new(s, 0);
-            }
-
             /** Replace the placeholder with a real instruction. */
             void fix() {
                 IRBuilder<> builder(getParent(), this);
@@ -244,99 +459,98 @@ namespace {
             unsigned fieldCount;
             BTypeDefPtr type;
             vector<PlaceholderInstruction *> placeholders;
+            bool complete;
             
             BBuilderContextData() :
                 func(0),
                 block(0),
-                fieldCount(0) {
+                fieldCount(0),
+                complete(false) {
             }
             
             void addBaseClass(const BTypeDefPtr &base) {
                 ++fieldCount;
             }
+            
+            void addPlaceholder(PlaceholderInstruction *inst) {
+                assert(!complete && "Adding placeholder to a completed class");
+                placeholders.push_back(inst);
+            }
     };
-        
-    /**
-     * A placeholder instruction for operations involving structure fields.
-     */
-    class FieldInstructionPlaceholder : public PlaceholderInstruction {
-        protected:
-            Value *aggregate;
+    
+    /** an incomplete reference to an instance variable. */
+    class IncompleteInstVarRef : public PlaceholderInstruction {
+        private:
             unsigned index;
 
         public:
-            FieldInstructionPlaceholder(const Type *type, Value *aggregate,
-                                        unsigned index,
-                                        BasicBlock *parent
-                                        ) :
-                PlaceholderInstruction(type, parent),
-                aggregate(aggregate),
-                index(index) {
+            // allocate space for 1 operand
+            void *operator new(size_t s) {
+                return User::operator new(s, 1);
             }
-
-            FieldInstructionPlaceholder(const Type *type, 
-                                        Value *aggregate,
-                                        unsigned index,
-                                        Instruction *insertBefore = 0
-                                        ) :
-                PlaceholderInstruction(type, insertBefore),
-                aggregate(aggregate),
-                index(index) {
-            }
-            
-            /** Replace the placeholder with a real instruction. */
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
-                insertFieldInstructions(builder, fieldPtr);
-            }
-            
-            virtual void insertFieldInstructions(IRBuilder<> &builder,
-                                                 Value *fieldPtr
-                                                 ) = 0;
-    };
-
-    /** an incomplete reference to an instance variable. */
-    class IncompleteInstVarRef : public FieldInstructionPlaceholder {
-        public:
 
             IncompleteInstVarRef(const Type *type, Value *aggregate,
                                  unsigned index,
                                  BasicBlock *parent
                                  ) :
-                FieldInstructionPlaceholder(type, aggregate, index, parent) {
+                PlaceholderInstruction(
+                    type,
+                    parent,
+                    OperandTraits<IncompleteInstVarRef>::op_begin(this),
+                    OperandTraits<IncompleteInstVarRef>::operands(this)
+                ),
+                index(index) {
+                Op<0>() = aggregate;
             }
             
             IncompleteInstVarRef(const Type *type, Value *aggregate,
                                  unsigned index,
                                  Instruction *insertBefore = 0
                                  ) :
-                FieldInstructionPlaceholder(type, aggregate, index, insertBefore) {
+                PlaceholderInstruction(
+                    type,
+                    insertBefore,
+                    OperandTraits<IncompleteInstVarRef>::op_begin(this),
+                    OperandTraits<IncompleteInstVarRef>::operands(this)
+                ),
+                index(index) {
+                Op<0>() = aggregate;
             }
 
             virtual Instruction *clone(LLVMContext &lctx) const {
-                return new IncompleteInstVarRef(getType(), aggregate, index);
+                return new IncompleteInstVarRef(getType(), Op<0>(), index);
             }
             
-            virtual void insertFieldInstructions(IRBuilder<> &builder, 
-                                                 Value *fieldPtr
-                                                 ) {
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
                 replaceAllUsesWith(builder.CreateLoad(fieldPtr));
             }
     };
-    
-    class IncompleteInstVarAssign : public FieldInstructionPlaceholder {
+
+    class IncompleteInstVarAssign : public PlaceholderInstruction {
         private:
-            Value *rval;
+            unsigned index;
 
         public:
+            // allocate space for 2 operands
+            void *operator new(size_t s) {
+                return User::operator new(s, 2);
+            }
 
             IncompleteInstVarAssign(const Type *type, Value *aggregate,
                                     unsigned index,
                                     Value *rval,
                                     BasicBlock *parent
                                     ) :
-                FieldInstructionPlaceholder(type, aggregate, index, parent),
-                rval(rval) {
+                PlaceholderInstruction(
+                    type,
+                    parent,
+                    OperandTraits<IncompleteInstVarAssign>::op_begin(this),
+                    OperandTraits<IncompleteInstVarAssign>::operands(this)
+                ),
+                index(index) {
+                Op<0>() = aggregate;
+                Op<1>() = rval;
             }
             
             IncompleteInstVarAssign(const Type *type, Value *aggregate,
@@ -344,21 +558,27 @@ namespace {
                                     Value *rval,
                                     Instruction *insertBefore = 0
                                     ) :
-                FieldInstructionPlaceholder(type, aggregate, index, insertBefore),
-                rval(rval) {
+                PlaceholderInstruction(
+                    type,
+                    insertBefore,
+                    OperandTraits<IncompleteInstVarAssign>::op_begin(this),
+                    OperandTraits<IncompleteInstVarAssign>::operands(this)
+                ),
+                index(index) {
+                Op<0>() = aggregate;
+                Op<1>() = rval;
             }
 
             virtual Instruction *clone(LLVMContext &lctx) const {
-                return new IncompleteInstVarAssign(getType(), aggregate, index, 
-                                                   rval
+                return new IncompleteInstVarAssign(getType(), Op<0>(), index, 
+                                                   Op<1>()
                                                    );
             }
             
-            virtual void insertFieldInstructions(IRBuilder<> &builder,
-                                                 Value *fieldPtr
-                                                 ) {
-                builder.CreateStore(rval, fieldPtr);
-            };
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
+                builder.CreateStore(Op<1>(), fieldPtr);
+            }
     };
 
     /**
@@ -367,19 +587,28 @@ namespace {
      */
     class IncompleteNarrower : public PlaceholderInstruction {
         private:
-            Value *aggregate;
             BTypeDef *startType, *ancestor;
 
         public:
+            // allocate space for 1 operand
+            void *operator new(size_t s) {
+                return User::operator new(s, 1);
+            }
+
             IncompleteNarrower(Value *aggregate,
                                BTypeDef *startType,
                                BTypeDef *ancestor,
                                BasicBlock *parent
                                ) :
-                PlaceholderInstruction(ancestor->rep, parent),
-                aggregate(aggregate),
+                PlaceholderInstruction(
+                    ancestor->rep,
+                    parent,
+                    OperandTraits<IncompleteNarrower>::op_begin(this),
+                    OperandTraits<IncompleteNarrower>::operands(this)
+                ),
                 startType(startType),
                 ancestor(ancestor) {
+                Op<0>() = aggregate;
             }
             
             IncompleteNarrower(Value *aggregate,
@@ -387,14 +616,19 @@ namespace {
                                BTypeDef *ancestor,
                                Instruction *insertBefore = 0
                                ) :
-                PlaceholderInstruction(ancestor->rep, insertBefore),
-                aggregate(aggregate),
+                PlaceholderInstruction(
+                    ancestor->rep,
+                    insertBefore,
+                    OperandTraits<IncompleteNarrower>::op_begin(this),
+                    OperandTraits<IncompleteNarrower>::operands(this)
+                ),
                 startType(startType),
                 ancestor(ancestor) {
+                Op<0>() = aggregate;
             }
 
             virtual Instruction *clone(LLVMContext &lctx) const {
-                return new IncompleteNarrower(aggregate, startType, ancestor);
+                return new IncompleteNarrower(Op<0>(), startType, ancestor);
             }
             
             /**
@@ -425,93 +659,183 @@ namespace {
             
             virtual void insertInstructions(IRBuilder<> &builder) {
                 replaceAllUsesWith(emitGEP(builder, startType, ancestor,
-                                           aggregate
+                                           Op<0>()
                                            )
                                    );
             }
     };
-    
+
     class IncompleteVTableInit : public PlaceholderInstruction {
         public:
+            // allocate space for 1 operand
+            void *operator new(size_t s) {
+                return User::operator new(s, 1);
+            }
+
             // we can make these raw pointers, the type _must_ be in existence 
             // during the lifetime of this object.
             BTypeDef *aggregateType;
             BTypeDef *vtableBaseType;
-            Value *aggregate;
 
             IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
                                  BTypeDef *vtableBaseType,
                                  BasicBlock *parent
                                  ) :
-                PlaceholderInstruction(aggregateType->rep, parent),
-                aggregate(aggregate),
+                PlaceholderInstruction(
+                    aggregateType->rep,
+                    parent,
+                    OperandTraits<IncompleteVTableInit>::op_begin(this),
+                    OperandTraits<IncompleteVTableInit>::operands(this)
+                ),
                 aggregateType(aggregateType),
                 vtableBaseType(vtableBaseType) {
+                Op<0>() = aggregate;
             }
             
             IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
                                  BTypeDef *vtableBaseType,
                                  Instruction *insertBefore = 0
                                  ) :
-                PlaceholderInstruction(aggregateType->rep, insertBefore),
+                PlaceholderInstruction(
+                    aggregateType->rep,
+                    insertBefore,
+                    OperandTraits<IncompleteVTableInit>::op_begin(this),
+                    OperandTraits<IncompleteVTableInit>::operands(this)
+                ),
                 aggregateType(aggregateType),
                 vtableBaseType(vtableBaseType) {
+                Op<0>() = aggregate;
             }
             
             virtual Instruction *clone(LLVMContext &lctx) const {
-                return new IncompleteVTableInit(aggregateType, aggregate, 
+                return new IncompleteVTableInit(aggregateType, Op<0>(), 
                                                 vtableBaseType
                                                 );
             }
 
+            // emit the code to initialize the first VTable in btype.
+            void emitInitOfFirstVTable(IRBuilder<> &builder, 
+                                       BTypeDef *btype,
+                                       Value *inst,
+                                       Constant *vtable
+                                       ) {
+                
+                Context::ContextVec &parents = btype->context->parents;
+                int i = 0;
+                for (Context::ContextVec::iterator ctxIter = 
+                        parents.begin();
+                     ctxIter != parents.end();
+                     ++ctxIter, ++i
+                     ) {
+                    BTypeDef *base = 
+                        BTypeDefPtr::arcast((*ctxIter)->returnType);
+                    if (base == vtableBaseType) {
+                        inst = builder.CreateStructGEP(inst, i);
+
+                        // convert the vtable to {}*
+                        const PointerType *emptyStructPtrType =
+                            cast<PointerType>(vtableBaseType->rep);
+                        const Type *emptyStructType = 
+                            emptyStructPtrType->getElementType();
+                        Value *castVTable =
+                            builder.CreateBitCast(vtable, emptyStructType);
+                
+                        // store the vtable pointer in the field.
+                        builder.CreateStore(castVTable, inst);
+                        return;
+                    }
+                }
+                
+                assert(false && "no vtable base class");
+            }
+
+            // emit the code to initialize all vtables in an object.
             void emitVTableInit(IRBuilder<> &builder, BTypeDef *btype,
                                 Value *inst
                                 ) {
-                if (btype == vtableBaseType) {
+
+                // if btype has a registered vtable, startClass gets 
+                // incremented so that we don't emit a parent vtable that
+                // overwrites it.
+                int startClass = 0;
+
+                // check for the vtable of the current class
+                map<BTypeDef *, Constant *>::iterator firstVTableIter =
+                    aggregateType->vtables.find(btype);
+                if (firstVTableIter != aggregateType->vtables.end()) {
+                    emitInitOfFirstVTable(builder, btype, inst,
+                                          firstVTableIter->second
+                                          );
+                    startClass = 1;
+                }
+
+                // recurse through all other parents with vtables
+                Context::ContextVec &parents = btype->context->parents;
+                int i = 0;
+                for (Context::ContextVec::iterator ctxIter = 
+                        parents.begin() + startClass;
+                     ctxIter != parents.end();
+                     ++ctxIter, ++i
+                     ) {
+                    BTypeDef *base = 
+                        BTypeDefPtr::arcast((*ctxIter)->returnType);
                     
-                    // convert the instance pointer to the address of a 
-                    // vtable pointer.
-                    Value *vtableFieldRef =
-                        builder.CreateBitCast(inst, aggregateType->vtableType);
-            
-                    // store the vtable pointer in the field.
-                    builder.CreateStore(aggregateType->vtable, vtableFieldRef);
-                } else {
-                    // recurse through all parents with vtables
-                    Context::ContextVec &parents = btype->context->parents;
-                    int i = 0;
-                    for (Context::ContextVec::iterator ctxIter = 
-                            parents.begin();
-                         ctxIter != parents.end();
-                         ++ctxIter, ++i
-                         ) {
-                        BTypeDef *base = 
-                            BTypeDefPtr::arcast((*ctxIter)->returnType);
-                        if (base->hasVTable) {
-                            Value *baseInst =
-                                builder.CreateStructGEP(inst, i);
-                            emitVTableInit(builder, base, baseInst);
-                        }
+                    // see if this class has a vtable in the aggregate type
+                    map<BTypeDef *, Constant *>::iterator vtableIter =
+                        aggregateType->vtables.find(base);
+                    if (vtableIter != aggregateType->vtables.end()) {
+                        Value *baseInst =
+                            builder.CreateStructGEP(inst, i);
+                        emitInitOfFirstVTable(builder, base, baseInst,
+                                              vtableIter->second
+                                              );
+                    } else if (base->hasVTable) {
+                        Value *baseInst =
+                            builder.CreateStructGEP(inst, i);
+                        emitVTableInit(builder, base, baseInst);
                     }
                 }
             }
                         
             virtual void insertInstructions(IRBuilder<> &builder) {
-                emitVTableInit(builder, aggregateType, aggregate);
+                emitVTableInit(builder, aggregateType, Op<0>());
             }
     };
+
+    Value *narrowToAncestor(IRBuilder<> &builder, Value *receiver,
+                            const TypeDef::AncestorPath &path
+                            ) {
+        for (TypeDef::AncestorPath::const_iterator iter = path.begin();
+             iter != path.end();
+             ++iter
+             )
+            receiver =
+                builder.CreateStructGEP(receiver, iter->index);
+        
+        return receiver;
+    }
+
     
     class IncompleteVirtualFunc : public PlaceholderInstruction {
         private:
             BTypeDef *vtableBaseType;
             BFuncDef *funcDef;
-            BTypeDef *receiverType;
-            Value *receiver;
-            vector<Value *> args;
 
+            /**
+             * Returns the first vtable pointer in the instance layout, casted 
+             * to finalVTableType.
+             * 
+             * @param builder the builder in which to generate the GEPs
+             * @param vtableBaseType the type object for the global VTableBase 
+             *        class
+             * @param finalVTableType the type that we need to cast the 
+             *        VTable to.
+             * @param curType the current type of 'inst'
+             * @param inst the instance that we are retrieving the vtable for.
+             */
             static Value *getVTableReference(IRBuilder<> &builder,
                                              BTypeDef *vtableBaseType,
-                                             BTypeDef *aggregateType,
+                                             const Type *finalVTableType,
                                              BTypeDef *curType,
                                              Value *inst
                                              ) {
@@ -526,9 +850,7 @@ namespace {
                     
                     // convert the instance pointer to the address of a 
                     // vtable pointer.
-                    return builder.CreateBitCast(inst, 
-                                                 aggregateType->vtableType
-                                                 );
+                    return builder.CreateBitCast(inst, finalVTableType);
             
                 } else {
                     // recurse through all parents with vtables
@@ -546,7 +868,7 @@ namespace {
                                 builder.CreateStructGEP(inst, i);
                             Value *vtable = 
                                 getVTableReference(builder, vtableBaseType,
-                                                   aggregateType,
+                                                   finalVTableType,
                                                    base,
                                                    baseInst
                                                    );
@@ -563,14 +885,18 @@ namespace {
             static Value *innerEmitCall(IRBuilder<> &builder,
                                         BTypeDef *vtableBaseType,
                                         BFuncDef *funcDef, 
-                                        BTypeDef *receiverType,
                                         Value *receiver,
                                         const vector<Value *> &args
                                         ) {
-                Value *vtable = 
+                
+                BTypeDef *receiverType = funcDef->getReceiverType();
+                assert(receiver->getType() == receiverType->rep);
+
+                // get the underlying vtable
+                Value *vtable =
                     getVTableReference(builder, vtableBaseType,
-                                       receiverType, 
-                                       receiverType, 
+                                       receiverType->firstVTableType,
+                                       receiverType,
                                        receiver
                                        );
                 assert(vtable && "virtual function receiver has no vtable");
@@ -584,57 +910,85 @@ namespace {
                                                    );
                 return result;
             }
+
+            void init(Value *receiver, const vector<Value *> &args) {
+                // fill in all of the operands
+                assert(NumOperands == args.size() + 1);
+                OperandList[0] = receiver;
+                for (int i = 0; i < args.size(); ++i)
+                    OperandList[i + 1] = args[i];
+            }
         
             IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
-                                  BTypeDef *receiverType,
                                   Value *receiver,
                                   const vector<Value *> &args,
                                   BasicBlock *parent
                                   ) :
                 PlaceholderInstruction(
                     BTypeDefPtr::arcast(funcDef->returnType)->rep, 
-                    parent
+                    parent,
+                    OperandTraits<IncompleteVirtualFunc>::op_end(this) - 
+                     (args.size() + 1),
+                    args.size() + 1
                 ),
                 vtableBaseType(vtableBaseType),
-                funcDef(funcDef),
-                receiverType(receiverType),
-                receiver(receiver),
-                args(args) {
+                funcDef(funcDef) {
+
+                init(receiver, args);
             }
                                     
             IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
-                                  BTypeDef *receiverType,
                                   Value *receiver,
                                   const vector<Value *> &args,
                                   Instruction *insertBefore = 0
                                   ) :
                 PlaceholderInstruction(
                     BTypeDefPtr::arcast(funcDef->returnType)->rep, 
-                    insertBefore
+                    insertBefore,
+                    OperandTraits<IncompleteVirtualFunc>::op_end(this) - 
+                     (args.size() + 1),
+                    args.size() + 1
                 ),
                 vtableBaseType(vtableBaseType),
-                funcDef(funcDef),
-                receiverType(receiverType),
-                receiver(receiver),
-                args(args) {
+                funcDef(funcDef) {
+                
+                init(receiver, args);
+            }
+        
+            IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
+                                  Use *operands,
+                                  unsigned numOperands
+                                  ) :
+                PlaceholderInstruction(
+                    BTypeDefPtr::arcast(funcDef->returnType)->rep,
+                    static_cast<Instruction *>(0),
+                    operands,
+                    numOperands
+                ),
+                vtableBaseType(vtableBaseType),
+                funcDef(funcDef) {
+                
+                for (int i = 0; i < numOperands; ++i)
+                    OperandList[i] = operands[i];
             }
         
         public:
 
-
             virtual Instruction *clone(LLVMContext &context) const {
-                return new IncompleteVirtualFunc(vtableBaseType, funcDef,
-                                                 receiverType, 
-                                                 receiver,
-                                                 args
-                                                 );
+                return new(NumOperands) IncompleteVirtualFunc(vtableBaseType,
+                                                              funcDef,
+                                                              OperandList,
+                                                              NumOperands
+                                                              );
             }
 
             virtual void insertInstructions(IRBuilder<> &builder) {
+                vector<Value *> args(NumOperands - 1);
+                for (int i = 1; i < NumOperands; ++i)
+                    args[i - 1] = OperandList[i];
                 Value *callInst =
                     innerEmitCall(builder, vtableBaseType, funcDef, 
-                                  receiverType, 
-                                  receiver, 
+                                  OperandList[0],
                                   args
                                   );
                 replaceAllUsesWith(callInst);
@@ -651,26 +1005,22 @@ namespace {
                 BTypeDef *vtableBaseType =
                     BTypeDefPtr::arcast(context.globalData->vtableBaseType);
                 Context *classCtx = funcDef->context->getClassContext().get();
-                BTypeDef *receiverType =
-                    BTypeDefPtr::arcast(classCtx->returnType);
 
                 // if this is for a complete class, go ahead and emit the code.  
                 // Otherwise just emit a placeholder.
                 if (classCtx->complete) {
                     Value *val = innerEmitCall(llvmBuilder.builder, 
-                                         vtableBaseType,
-                                         funcDef, 
-                                         receiverType, 
-                                         receiver,
-                                         args
-                                         );
+                                               vtableBaseType,
+                                               funcDef, 
+                                               receiver,
+                                               args
+                                               );
                     return val;
                 } else {
                     PlaceholderInstruction *placeholder =
-                        new IncompleteVirtualFunc(
+                        new(args.size() + 1) IncompleteVirtualFunc(
                             vtableBaseType,
                             funcDef,
-                            receiverType,
                             receiver,
                             args,
                             llvmBuilder.block
@@ -679,12 +1029,18 @@ namespace {
                         BBuilderContextDataPtr::rcast(
                             classCtx->builderData
                         );
-                    bdata->placeholders.push_back(placeholder);
+                    bdata->addPlaceholder(placeholder);
                     return placeholder;
                 }
             }
     };
-
+    
+    const Type *llvmIntType = 0;
+    
+    /**
+     * Instruction that does an un-GEP - widens from a base class to a 
+     * derived class.
+     */
     /**
      * Implements a ResultExpr that tracks the result by storing the Value.
      */
@@ -873,7 +1229,7 @@ namespace {
                         BBuilderContextDataPtr::rcast(
                             def->context->builderData
                         );
-                    bdata->placeholders.push_back(placeholder);
+                    bdata->addPlaceholder(placeholder);
                 }
                 
                 // release the aggregate
@@ -882,6 +1238,8 @@ namespace {
                 return new BResultExpr(this, bb.lastValue);
             }
     };
+
+    SPUG_RCPTR(BArgVarDefImpl);
 
     class BArgVarDefImpl : public VarDefImpl {
         public:
@@ -909,6 +1267,79 @@ namespace {
             }
     };
 
+    class IncompleteSpecialize : public PlaceholderInstruction {
+        private:
+            Value *value;
+            BFuncDefPtr funcDef;
+
+        public:
+            // allocate space for 1 operand
+            void *operator new(size_t s) {
+                return User::operator new(s, 1);
+            }
+
+            virtual Instruction *clone(LLVMContext &context) const {
+                return new IncompleteSpecialize(getType(), value, 
+                                                funcDef.get()
+                                                );
+            }
+            
+            /**
+             * funcDef: the function that specialization is being called in.
+             */
+            IncompleteSpecialize(const Type *type, Value *value, 
+                                 BFuncDef *funcDef,
+                                 Instruction *insertBefore = 0
+                                 ) :
+                PlaceholderInstruction(
+                    type,
+                    insertBefore,
+                    OperandTraits<IncompleteSpecialize>::op_begin(this),
+                    OperandTraits<IncompleteSpecialize>::operands(this)
+                ),
+                value(value),
+                funcDef(funcDef) {
+                Op<0>() = value;
+            }
+            
+            IncompleteSpecialize(const Type *type, Value *value, 
+                                 BFuncDef *funcDef,
+                                 BasicBlock *parent
+                                 ) :
+                PlaceholderInstruction(
+                    type,
+                    parent,
+                    OperandTraits<IncompleteSpecialize>::op_begin(this),
+                    OperandTraits<IncompleteSpecialize>::operands(this)
+                ),
+                value(value),
+                funcDef(funcDef) {
+                Op<0>() = value;
+            }
+            
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                // XXX won't work for virtual base classes
+                
+                // create a constant offset from the start of the derived 
+                // class to the start of the base class
+                Value *offset =
+                    narrowToAncestor(builder, 
+                                     Constant::getNullValue(getType()),
+                                     funcDef->pathToFirstDeclaration
+                                     );
+
+                // convert to an integer and subtract from the pointer to the 
+                // base class.
+                assert(llvmIntType && "integer type has not been initialized");
+                offset = builder.CreatePtrToInt(offset, llvmIntType);
+                value = builder.CreatePtrToInt(value, llvmIntType);
+                Value *derived = builder.CreateSub(value, offset);
+                Value *specialized = 
+                    builder.CreateIntToPtr(derived, getType());
+                replaceAllUsesWith(specialized);
+            }
+    };
+    
     class FuncBuilder {
         public:
             Context &context;
@@ -917,6 +1348,9 @@ namespace {
             BFuncDefPtr funcDef;
             int argIndex;
             Function::LinkageTypes linkage;
+            
+            // the receiver variable
+            VarDefPtr receiver;
 
             FuncBuilder(Context &context, FuncDef::Flags flags,
                         BTypeDef *returnType,
@@ -973,12 +1407,12 @@ namespace {
                     llvmArg->setName("this");
                     
                     // add the implementation to the "this" var
-                    VarDefPtr thisDef = context.lookUp("this");
-                    assert(thisDef &&
+                    receiver = context.lookUp("this");
+                    assert(receiver &&
                             "missing 'this' variable in the context of a "
                             "function with a receiver"
                            );
-                    thisDef->impl = new BArgVarDefImpl(llvmArg);
+                    receiver->impl = new BArgVarDefImpl(llvmArg);
                     ++llvmArg;
                 }
                 for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
@@ -1409,7 +1843,7 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         // store it
         BBuilderContextData *bdata =
             BBuilderContextDataPtr::rcast(ctx->builderData);
-        bdata->placeholders.push_back(placeholder);
+        bdata->addPlaceholder(placeholder);
     }
 }
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
@@ -1508,18 +1942,21 @@ BuilderPtr LLVMBuilder::createChildBuilder() {
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
 
+    BFuncDef *func = BFuncDefPtr::arcast(funcCall->func);
+
     // get the LLVM arg list from the receiver and the argument expressions
     vector<Value*> valueArgs;
     
     // if there's a receiver, use it as the first argument.
     Value *receiver;
+    BFuncDef *funcDef = BFuncDefPtr::arcast(funcCall->func);
     if (funcCall->receiver) {
         funcCall->receiver->emit(context)->handleTransient(context);
-        narrow(funcCall->receiver->type.get(), 
-               funcCall->func->context->returnType.get()
-               );
-        valueArgs.push_back(lastValue);
+        narrow(funcCall->receiver->type.get(), funcDef->getReceiverType());
         receiver = lastValue;
+        valueArgs.push_back(receiver);
+    } else {
+        receiver = 0;
     }
     
     // emit the arguments
@@ -1533,7 +1970,6 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
     
-    BFuncDef *funcDef = BFuncDefPtr::arcast(funcCall->func);
     if (funcDef->flags & FuncDef::virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
@@ -1695,24 +2131,50 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                   args.size()
                   );
     f.setArgs(args);
+    BFuncDef *funcDef = f.funcDef.get();
     
     // see if this is a method, if so store the class type as the receiver type
     unsigned vtableSlot = 0;
+    BTypeDef *classType = 0;
+    BBuilderContextData *classContextData;
     if (flags & FuncDef::method) {
         ContextPtr classCtx = context.getClassContext();
         assert(classCtx && "method is not nested in a class context.");
-        BBuilderContextData *contextData = 
-            BBuilderContextDataPtr::rcast(classCtx->builderData);
-        BTypeDef *classType = contextData->type.get();
-        f.setReceiverType(classType);
+        classContextData = BBuilderContextDataPtr::rcast(classCtx->builderData);
+        classType = classContextData->type.get();
 
         // create the vtable slot for a virtual function
         if (flags & FuncDef::virtualized)
             // use the original's slot if this is an override.
-            if (override)
-                vtableSlot = BFuncDefPtr::cast(override)->vtableSlot;
-            else
+            if (override) {
+                
+                // find the path to the override's class
+                BTypeDef *overrideClass =
+                    BTypeDefPtr::arcast(override->context->returnType);
+                classType->getPathToAncestor(*overrideClass, 
+                                             funcDef->pathToFirstDeclaration
+                                             );
+                
+                // augment it with the path from the override to its first 
+                // declaration.
+                BFuncDef *boverride = BFuncDefPtr::acast(override);
+                f.funcDef->pathToFirstDeclaration.insert(
+                    funcDef->pathToFirstDeclaration.end(),
+                    boverride->pathToFirstDeclaration.begin(),
+                    boverride->pathToFirstDeclaration.end()
+                );
+
+                // the type of the receiver is that of its first declaration                
+                BTypeDef *receiverClass = boverride->getReceiverType();
+                f.setReceiverType(receiverClass);
+                
+                vtableSlot = boverride->vtableSlot;
+            } else {
                 vtableSlot = classType->nextVTableSlot++;
+                f.setReceiverType(classType);
+            }
+        else
+            f.setReceiverType(classType);
     }
 
     f.finish(false);
@@ -1721,6 +2183,21 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     func = f.funcDef->rep;
     block = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(block);
+    
+    if (flags & FuncDef::virtualized) {
+        // emit code to convert from the first declaration base class 
+        // instance to the method's class instance.
+        Value *inst = 
+            dynamic_cast<BArgVarDefImpl *>(f.receiver->impl.get())->rep;
+        PlaceholderInstruction *placeholder =
+            new IncompleteSpecialize(classType->rep, inst, funcDef, block);
+        classContextData->addPlaceholder(placeholder);
+
+        // lookup the "this" variable, and replace its rep
+        VarDefPtr thisVar = context.lookUp("this");
+        BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
+        thisImpl->rep = placeholder;
+    }
     
     return f.funcDef;
 }    
@@ -1848,30 +2325,13 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // construct the vtable if necessary
     if (bdata->type->hasVTable) {
-        vector<const Type *> vtableTypes;
-        vector<Constant *> vtableVals;
-        bdata->type->populateVTable(vtableTypes, vtableVals);
-        
-        // create a constant structure that actually is the vtable
-        const StructType *vtableStructType =
-            StructType::get(getGlobalContext(), vtableTypes);
-        bdata->type->vtable =
-            new GlobalVariable(*module, vtableStructType, true, // isConstant
-                               GlobalValue::ExternalLinkage,
-                               
-                               // initializer - this needs to be 
-                               // provided or the global will be 
-                               // treated as an extern.
-                               ConstantStruct::get(vtableStructType, 
-                                                   vtableVals
-                                                   ),
-                               ".vtable." + bdata->type->name
-                               );
-        
-        // for pragmatic reasons, the "vtable type" is a pointer to a pointer 
-        // to the vtable struct type.
-        bdata->type->vtableType =
-            PointerType::getUnqual(PointerType::getUnqual(vtableStructType));
+        VTableBuilder vtableBuilder;
+        bdata->type->createAllVTables(
+            vtableBuilder, 
+            ".vtable." + bdata->type->name,
+            BTypeDefPtr::arcast(context.globalData->vtableBaseType)
+        );
+        vtableBuilder.emit(module, bdata->type.get());
     }
 
     // fix-up all of the placeholder instructions
@@ -1881,7 +2341,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
          ++iter
          )
         (*iter)->fix();
-    bdata->placeholders.clear();    
+    bdata->placeholders.clear();
+    bdata->complete = true;
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -2177,7 +2638,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
         // store it
         BBuilderContextData *bdata =
             BBuilderContextDataPtr::rcast(varContext->builderData);
-        bdata->placeholders.push_back(placeholder);
+        bdata->addPlaceholder(placeholder);
     }
 
     return new BResultExpr(assign, lastValue);
@@ -2280,12 +2741,14 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.addAlias("uint", uint32Type);
         gd->uintType = uint32Type;
         gd->intType = int32Type;
+        llvmIntType = int32Type->rep;
     } else {
         assert(sizeof(int) == 8);
         context.addAlias("int", int64Type);
         context.addAlias("uint", uint64Type);
         gd->uintType = uint64Type;
         gd->intType = int64Type;
+        llvmIntType = int64Type->rep;
     }
         
 
@@ -2480,5 +2943,5 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     // store it
     BBuilderContextData *bdata =
         BBuilderContextDataPtr::rcast(context.getClassContext()->builderData);
-    bdata->placeholders.push_back(vtableInit);
+    bdata->addPlaceholder(vtableInit);
 }

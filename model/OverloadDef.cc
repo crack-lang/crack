@@ -36,7 +36,8 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
 }
 
 void OverloadDef::addFunc(FuncDef *func) {
-    funcs.insert(startOfParents++, func);
+    startOfParents = funcs.insert(startOfParents, func);
+    startOfParents++;
 }
 
 void OverloadDef::merge(OverloadDef &parent) {

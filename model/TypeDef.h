@@ -2,6 +2,7 @@
 #ifndef _model_TypeDef_h
 #define _model_TypeDef_h
 
+#include <vector>
 #include <spug/RCPtr.h>
 
 #include "VarDef.h"
@@ -89,6 +90,21 @@ class TypeDef : public VarDef {
          * Fill in everything that's missing from the class.
          */
         void rectify();
+        
+        struct AncestorReference {
+            unsigned index;
+            TypeDefPtr ancestor;
+        };
+        
+        typedef std::vector<AncestorReference> AncestorPath;
+        
+        /**
+         * Finds the path to the specified ancesetor.
+         * Returns true if the ancestor was found, false if not.
+         */
+        bool getPathToAncestor(const TypeDef &ancestor, AncestorPath &path,
+                               unsigned depth = 0
+                               );
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
