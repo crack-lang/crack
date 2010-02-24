@@ -206,7 +206,7 @@ namespace {
                 VTableMap::iterator iter = vtables.find(ancestor);
 
                 // if we didn't find a vtable in the ancestors, append the 
-                // fucntion to the first vtable
+                // function to the first vtable
                 VTableInfo *targetVTable;
                 if (iter == vtables.end()) {
                     assert(firstVTable && "no first vtable");
@@ -271,20 +271,20 @@ namespace {
                 }
                 
                 // check for an overload (if it's not an overload, assume that 
-                // it's not a function)
+                // it's not a function).  Iterate over all of the overloads up 
+                // until the first parent class - the parent classes have 
+                // already had their shot at extendVTables, and we don't want 
+                // their overloads to clobber ours.
                 OverloadDef *overload =
                     OverloadDefPtr::rcast(varIter->second);
-                if (overload) {
+                if (overload)
                     for (OverloadDef::FuncList::iterator fiter =
                             overload->funcs.begin();
-                         fiter != overload->funcs.end();
+                         fiter != overload->startOfParents;
                          ++fiter
-                         ) {
-                        BFuncDef *f = BFuncDefPtr::arcast(*fiter);
+                         )
                         if ((*fiter)->flags & FuncDef::virtualized)
-                            vtb.add(f);
-                    }
-                }
+                            vtb.add(BFuncDefPtr::arcast(*fiter));
             }
         }
 
@@ -1825,6 +1825,8 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
     if (curType == ancestor)
         return;
+    
+    assert(curType->isDerivedFrom(ancestor));
 
     Context *ctx = curType->context.get();
     BTypeDef *bcurType = BTypeDefPtr::acast(curType);
@@ -2119,13 +2121,12 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       const vector<ArgDefPtr> &args,
                                       FuncDef *override
                                       ) {
-    
     // store the current function and block in the context
     BBuilderContextData *contextData;
     context.builderData = contextData = new BBuilderContextData();
     contextData->func = func;
     contextData->block = block;
-
+    
     // create the function
     FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name, 
                   args.size()
@@ -2769,17 +2770,29 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(vtableBaseType);
     
     // create integer operations
-    context.addDef(new AddOpDef(byteType));
-    context.addDef(new SubOpDef(byteType));
-    context.addDef(new MulOpDef(byteType));
-    context.addDef(new SDivOpDef(byteType));
-    context.addDef(new SRemOpDef(byteType));
-    context.addDef(new ICmpEQOpDef(byteType, boolType));
-    context.addDef(new ICmpNEOpDef(byteType, boolType));
-    context.addDef(new ICmpSGTOpDef(byteType, boolType));
-    context.addDef(new ICmpSLTOpDef(byteType, boolType));
-    context.addDef(new ICmpSGEOpDef(byteType, boolType));
-    context.addDef(new ICmpSLEOpDef(byteType, boolType));
+    context.addDef(new AddOpDef(int64Type));
+    context.addDef(new SubOpDef(int64Type));
+    context.addDef(new MulOpDef(int64Type));
+    context.addDef(new SDivOpDef(int64Type));
+    context.addDef(new SRemOpDef(int64Type));
+    context.addDef(new ICmpEQOpDef(int64Type, boolType));
+    context.addDef(new ICmpNEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
+
+    context.addDef(new AddOpDef(uint64Type));
+    context.addDef(new SubOpDef(uint64Type));
+    context.addDef(new MulOpDef(uint64Type));
+    context.addDef(new UDivOpDef(uint64Type));
+    context.addDef(new URemOpDef(uint64Type));
+    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
+    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -2793,18 +2806,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSGEOpDef(int32Type, boolType));
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
 
-    context.addDef(new AddOpDef(int64Type));
-    context.addDef(new SubOpDef(int64Type));
-    context.addDef(new MulOpDef(int64Type));
-    context.addDef(new SDivOpDef(int64Type));
-    context.addDef(new SRemOpDef(int64Type));
-    context.addDef(new ICmpEQOpDef(int64Type, boolType));
-    context.addDef(new ICmpNEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
-
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
     context.addDef(new MulOpDef(uint32Type));
@@ -2817,17 +2818,17 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
 
-    context.addDef(new AddOpDef(uint64Type));
-    context.addDef(new SubOpDef(uint64Type));
-    context.addDef(new MulOpDef(uint64Type));
-    context.addDef(new UDivOpDef(uint64Type));
-    context.addDef(new URemOpDef(uint64Type));
-    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
+    context.addDef(new AddOpDef(byteType));
+    context.addDef(new SubOpDef(byteType));
+    context.addDef(new MulOpDef(byteType));
+    context.addDef(new SDivOpDef(byteType));
+    context.addDef(new SRemOpDef(byteType));
+    context.addDef(new ICmpEQOpDef(byteType, boolType));
+    context.addDef(new ICmpNEOpDef(byteType, boolType));
+    context.addDef(new ICmpSGTOpDef(byteType, boolType));
+    context.addDef(new ICmpSLTOpDef(byteType, boolType));
+    context.addDef(new ICmpSGEOpDef(byteType, boolType));
+    context.addDef(new ICmpSLEOpDef(byteType, boolType));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
