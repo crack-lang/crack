@@ -1,7 +1,10 @@
 
-- convert string constants to StaticString.
-- functions to stream definitions and expressions.
 - copyrights
+- fix numeric conversion.
+- composite constructors/destructors
+-   fix cleanups during assignment (a = b does b.bind() but not a.release())
+-   I think that if we do "int32 op byte", it will get converted to "int64 op 
+    int64", which is less than optimal.
 -   cleanup:
     -   combine FuncDef and OverloadDef into a base class with a virtual 
         matches() for arg list defs, or just make FuncDef a smaller thing and 
@@ -18,7 +21,7 @@ Roadmap
 -------
 
 for 0.1:
--   allow utf-8 chars for strings and identifiers.
+-   allow utf-8 chars for strings and identifiers.  DONE
 -   composition of constructors/destructors
 -   the "oper" keyword
 -   "Foo x = {1, 2}" construction syntax.
@@ -30,15 +33,20 @@ for 0.1:
     it being misinterpreted as a defitition
 -   empty statements should work: if (false) ;
 -   global variables should not get cleaned up until the end of the program.
--   multiple inheritence shouldn't cause bad errors (it need not work)
+-   multiple inheritence shouldn't cause bad errors (it need not work) DONE 
+    (it now works).
 -   numeric negation: "int j = -i;"
 
 for 1.0:
 -   doc-comments
--   first class functions
+-   first class functions (including overload selection: func[Type1, Type2])
 -   keyword arguments
 -   sequence construction 
 -   type inference
 -   for/in loops
 -   exceptions
+-   minor features
+    -   warn the user when an overload hides an earlier overload (foo(String) 
+        following foo(Object), for example).
+
 

@@ -82,3 +82,6 @@ class A {
 
 a := A();
 a = A();
+
+# this breaks (not sure what we're doing in the parser)
+class Foo {} print('test');

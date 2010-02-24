@@ -312,6 +312,10 @@ Function Resolution Order:
     2) If none is found, check the parent contexts from left to right 
         depth-first recursively.
     3) If no match is found, repeat from step 1 attempting to convert arguments
+    
+    This doesn't apply to constructors - constructors resolution is not 
+    delegated.  Constructor inheritence works by generating constructors given 
+    the set of constructors and instance variables of the base classes.
 
 Generics:
     
