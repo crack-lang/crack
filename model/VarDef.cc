@@ -31,3 +31,7 @@ bool VarDef::hasInstSlot() {
 void VarDef::dump(ostream &out, const string &prefix) const {
     out << prefix << type->getFullName() << " " << name << endl;
 }
+
+void VarDef::dump() {
+    dump(std::cerr, "");
+}
