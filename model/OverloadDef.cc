@@ -9,6 +9,11 @@
 using namespace std;
 using namespace model;
 
+void OverloadDef::setImpl(FuncDef *func) {
+    type = func->type;
+    impl = func->impl;
+}
+
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
                                bool convert
                                ) {
@@ -36,6 +41,7 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
 }
 
 void OverloadDef::addFunc(FuncDef *func) {
+    if (funcs.empty()) setImpl(func);
     startOfParents = funcs.insert(startOfParents, func);
     startOfParents++;
 }
@@ -44,8 +50,10 @@ void OverloadDef::merge(OverloadDef &parent) {
     for (FuncList::iterator iter = parent.funcs.begin();
          iter != parent.funcs.end();
          ++iter
-         )
+         ) {
+        if (funcs.empty()) setImpl(iter->get());
         funcs.push_back(*iter);
+    }
     
     // make sure we didn't dislodge the parent pointer
     if (startOfParents == funcs.end())

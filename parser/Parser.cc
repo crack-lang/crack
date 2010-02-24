@@ -631,6 +631,7 @@ bool Parser::parseDef(TypeDef *type) {
                                                     argDefs,
                                                     stub->address
                                                     );
+               stub->context->removeDef(stub);
                cstack.restore();
                addDef(funcDef.get());
                return true;
@@ -677,6 +678,7 @@ bool Parser::parseDef(TypeDef *type) {
                               )
                      );
             }
+
          }
          
          // parse the body

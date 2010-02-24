@@ -72,7 +72,13 @@ bool FuncDef::hasInstSlot() {
 }
 
 void FuncDef::dump(ostream &out, const string &prefix) const {
-    out << prefix << returnType->getFullName() << " " << name << '(';
+    string parent;
+    if (context && context->returnType)
+        parent = context->returnType->name + ".";
+    else
+        parent = "";
+
+    out << prefix << returnType->getFullName() << " " << parent << name << '(';
     bool first = true;
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
          ++iter

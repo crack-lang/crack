@@ -13,9 +13,8 @@ void free(byteptr mem);
 byteptr sprintf(byteptr buf, byteptr fmt, int32 val);
 
 ## Writer interface, for all objects that support "write()"
-## needs to use Object as a vir
-class Writer // : Object, XWriter */ 
-{
+## needs to use Object as a virtual base class.
+class Writer : Object, XWriter {
     void Writer_init() {
         # object init
         init();
@@ -23,7 +22,7 @@ class Writer // : Object, XWriter */
 
     ## Low level write method.  This is the only thing you need to implement.
     void write(byteptr b, uint size) {
-        die('write(byteptr b, uint size) called');
+        die('Writer.write(byteptr b, uint size) called');
     }
 
     void write(Buffer b) {
@@ -125,6 +124,10 @@ class Formatter : Writer {
         __rep.write(data);
     }
     
+    void write(byteptr data, uint size) {
+        __rep.write(data, size);
+    }
+    
     void format(String data) {
         __rep.write(data);
     }
@@ -158,9 +161,9 @@ class Formatter : Writer {
         __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
     }
     
-#    void format(Object obj) {
-#        obj.writeTo(this);
-#    }
+    void format(Object obj) {
+        obj.writeTo(this);
+    }
 
 };
 

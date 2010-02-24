@@ -336,6 +336,21 @@ B
 C
 D'
 
+# this test works because a call to the bind() operation gets generated from 
+# within the generated "new" operator and bind() gets called with an instance.
+test_output 'instance narrowing works more than one level' \
+    'class A { byteptr t; void init() { t = "ok"; } void bind() { puts(t); } };
+     class B : A {};
+     class C : B {}; C c;'  \
+     ok
+
+# voidptr conversion was returning a ResultExpr of the original type, which 
+# caused problems.
+test_output 'voidptr cast of class with release' \
+    'void func(voidptr val) {printint(1);}
+     class A { void release() { printint(2); } };
+     func(A());' \
+     12
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -393,25 +408,9 @@ test_output 'incomplete virtual methods' \
      a.g();' \
      ok
 
-# voidptr conversion was returning a ResultExpr of the original type, which 
-# caused problems.
-test_output 'voidptr cast of class with release' \
-    'void func(voidptr val) {printint(1);}
-     class A { void release() { printint(2); } };
-     func(A());' \
-     12
-
 test_output 'conversion from byteptr -> voidptr' \
     'voidptr v = "test string".buffer; print("ok")' \
     ok
-
-# this test works because a call to the bind() operation gets generated from 
-# within the generated "new" operator.
-test_output 'instance narrowing works more than one level' \
-    'class A { void bind() {} };
-     class B : A {};
-     class C : B {}; print("ok");'  \
-     ok
 
 test_output 'various integer types and conversions' \
     'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
@@ -439,22 +438,24 @@ test_output 'remainder operator' \
     'printint((0-1) % 2);' \
     '-1'
 
-#test_output 'IO classes' \
-#    'import crack.io FDWriter, Formatter, Writer;
-#     f := Formatter(FDWriter(1));
-#     f.format("string");
-#     int32 i32 = 0-100;
-#     f.format(i32);
-#     uint32 u32 = 100;
-#     f.format(u32);
-#     int64 i64 = 123456789;
-#     i64 = i64 * (0-123456789);
-#     f.format(i64);
-#     uint64 u64 = 123456789;
-#     u64 = u64 * u64;
-#     f.format(u64);
-#     ' \
-#     'string-100100-1524157875019052115241578750190521'
+test_output 'IO classes' \
+    'import crack.io FDWriter, Formatter, Writer;
+     f := Formatter(FDWriter(1));
+     f.format("string");
+     int32 i32 = 0-100;
+     f.format(i32);
+     uint32 u32 = 100;
+     f.format(u32);
+     int64 i64 = 123456789;
+     i64 = i64 * (0-123456789);
+     f.format(i64);
+     uint64 u64 = 123456789;
+     u64 = u64 * u64;
+     f.format(u64);
+     Object o;
+     f.format(o);
+     ' \
+     'string-100100-1524157875019052115241578750190521<Object>'
 
 test_output 'C Comments' \
     '/* comment text */print("ok");' \

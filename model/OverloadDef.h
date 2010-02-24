@@ -15,6 +15,14 @@ SPUG_RCPTR(OverloadDef);
 
 /** An overloaded function. */
 class OverloadDef : public VarDef {
+    private:
+        /**
+         * Sets the impl and the type object from the function.  To be called 
+         * for the first function added as a hack to keep function-as-objects 
+         * working.
+         */
+        void setImpl(FuncDef *func);
+
     public:
         typedef std::list<FuncDefPtr> FuncList;
         FuncList funcs;

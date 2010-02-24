@@ -134,17 +134,14 @@ class Context : public spug::RCBase {
 
         /**
          * Returns the Overload Definition for the given name for the current 
-         * context.  This will return null if:
-         *   1) there are no functions named varName
-         *   2) the local context contains a non-func variable named varName.
-         * @param varName the function name
-         * @param resolvedVar if the caller has already done a lookUp on the 
-         *  def, they should pass it in here to save the function from having 
-         *  to do its own lookup.
+         * context.
+         * 
+         * @param varName the overload name.
+         * @param alwaysCreate if true, create the overload even if no 
+         *  definitions are found for it in the parent classes.
          */
-        OverloadDefPtr aggregateOverloads(const std::string &varName,
-                                          VarDef *resolvedVar = 0
-                                          );
+        OverloadDefPtr getOverload(const std::string &varName,
+                                   bool alwaysCreate = true);
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         
@@ -161,8 +158,21 @@ class Context : public spug::RCBase {
                           const std::string &varName,
                           std::vector<ExprPtr> &vals
                           );
+        
+        /**
+         * Look up a function with no arguments.  This is provided as a 
+         * convenience, as in this case we don't need to pass the call context.
+         */
+        FuncDefPtr lookUpNoArgs(const std::string &varName);
+        
         void createModule(const std::string &name);
         void addDef(VarDef *def);
+        
+        /** 
+         * Remove a definition.  Intended for use with stubs - "def" must not 
+         * be an OverloadDef. 
+         */
+        void removeDef(VarDef *def);
         
         /**
          * Adds a definition to the context, but does not make the definition's 

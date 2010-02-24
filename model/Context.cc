@@ -4,6 +4,7 @@
 #include "builder/Builder.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
+#include "ArgDef.h"
 #include "IntConst.h"
 #include "OverloadDef.h"
 #include "StrConst.h"
@@ -103,29 +104,19 @@ namespace {
     }
 }
 
-OverloadDefPtr Context::aggregateOverloads(const std::string &varName,
-                                           VarDef *resolvedVar
-                                           ) {
-    // do a symbol lookup if the caller hasn't done one for us
-    VarDefPtr var = resolvedVar;
-    if (!resolvedVar)
-        var = lookUp(varName);
+OverloadDefPtr Context::getOverload(const std::string &varName, 
+                                    bool alwaysCreate
+                                    ) {
+    // see if the name exists in the current context
+    OverloadDefPtr overloads = lookUp(varName, false);
+    if (overloads)
+        return overloads;
 
-    // see if we've got a function definition
-    FuncDef *func = 0;
-    if (var) {
-        // if it's already an overload, we're done
-        OverloadDef *overload = OverloadDefPtr::rcast(var);
-        if (overload)
-            return overload;
-        
-        // make sure it's at least a function
-        func = FuncDefPtr::rcast(var);
-        if (!func)
-            return 0;
-    }
-
-    OverloadDefPtr overloads;
+    // if we have to always create one of these, do so now.
+    if (alwaysCreate)
+        overloads = new OverloadDef(varName);
+    
+    // merge in the overloads from the parents
     if (parents.size())
         for (ContextVec::iterator iter = parents.begin();
              iter != parents.end();
@@ -133,43 +124,51 @@ OverloadDefPtr Context::aggregateOverloads(const std::string &varName,
              ) {
             // XXX somebody somewhere needs to check for collisions
             
-            // collect or merge the overloads of the new parent.
-            OverloadDefPtr parentOverloads =
-                (*iter)->aggregateOverloads(varName);
+            // get the parent overloads if there are any
+            OverloadDefPtr parentOverloads = 
+                (*iter)->getOverload(varName, false);
+            
+            // merge the parent overloads with this one (creating this one if 
+            // necessary)
             if (parentOverloads) {
-                allocOverload(overloads, varName);
+                if (!overloads)
+                    overloads = new OverloadDef(varName);
                 overloads->merge(*parentOverloads);
             }
         }
 
-    // if we got a local override, add it to the overloads
-    if (func) {
-        // make sure we've got one
-        allocOverload(overloads, varName);
-        
-        // add it to the front of the list so that it will resolve before any 
-        // parents with the same signature
-        overloads->addFunc(func);
+    if (overloads) {
+        defs[varName] = overloads;
+        overloads->context = this;
     }
-    
-    // this could be overloads or null
+
     return overloads;
 }
         
 
 VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
-    if (iter != defs.end())
+    if (iter != defs.end()) {
         return iter->second;
-    else if (recurse && parents.size())
+    } else if (recurse && parents.size()) {
+        
+        // try to find the definition in the parents
+        VarDefPtr def;
         for (ContextVec::iterator parent_iter = parents.begin();
              parent_iter != parents.end();
              ++parent_iter
-             ) {
-            VarDefPtr def = (*parent_iter)->lookUp(varName);
-            if (def)
-                return def;
-        }
+             )
+            if (def = (*parent_iter)->lookUp(varName))
+                break;
+        
+        // if we got an overload, we need to create an overload in this 
+        // context.
+        OverloadDef *overload = OverloadDefPtr::rcast(def);
+        if (overload)
+            return getOverload(varName);
+        else
+            return def;
+    }
 
     return 0;
 }
@@ -189,34 +188,44 @@ FuncDefPtr Context::lookUp(Context &context,
     if (typeDef)
         return typeDef->context->lookUp(context, "oper new", args);
 
-    // otherwise, do the overload aggregation
-    OverloadDefPtr overload = aggregateOverloads(varName, var.get());
+    // if this is an overload, get the function from it.
+    OverloadDefPtr overload = OverloadDefPtr::rcast(var);
     if (!overload)
         return 0;
     return overload->getMatch(context, args);
 }
 
+FuncDefPtr Context::lookUpNoArgs(const std::string &name) {
+    OverloadDefPtr overload = getOverload(name);
+    if (!overload)
+        return 0;
+
+    // we can just check for a signature match here - cheaper and easier.
+    FuncDef::ArgVec args;
+    return overload->getSigMatch(args);
+}
+
 void Context::addDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");
-    
-    // if there is an existing definition in this context, and the existing 
-    // defintion and the new definition are both functions, create an overload 
-    // aggregate.
-    VarDefMap::iterator iter = defs.find(def->name);
+
+    // if this is a function, create an overload definition
     FuncDef *funcDef;
-    if (iter != defs.end() && (funcDef = FuncDefPtr::cast(def)) && 
-        (FuncDefPtr::rcast(iter->second) || 
-         OverloadDefPtr::rcast(iter->second)
-         )
-        ) {
-        OverloadDef *overloads;
-        defs[def->name] = overloads = aggregateOverloads(def->name).get();
+    if (funcDef = FuncDefPtr::cast(def)) {
+        OverloadDefPtr overloads = getOverload(def->name);
         overloads->addFunc(funcDef);
     } else {
+        // not an overload.  Just add it.
         defs[def->name] = def;
     }
     def->context = this;
+}
+
+void Context::removeDef(VarDef *def) {
+    assert(!OverloadDefPtr::cast(def));
+    VarDefMap::iterator iter = defs.find(def->name);
+    assert(iter != defs.end());
+    defs.erase(iter);
 }
 
 void Context::addAlias(VarDef *def) {

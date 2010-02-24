@@ -87,6 +87,10 @@ class Buffer : Object {
     bool isTrue() {
         return size;
     }
+    
+    void writeTo(XWriter writer) {
+        writer.write(buffer, size);
+    }
 };
 
 ## The string class.  Strings are immutable _Buffy's.
