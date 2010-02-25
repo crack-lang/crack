@@ -1,4 +1,4 @@
-
+// Copyright 2009 Google Inc.
 
 #ifndef _model_IntConst_h_
 #define _model_IntConst_h_

@@ -1,4 +1,5 @@
 ## Another test module - this one works with bootstrapping.
+## Copyright 2010 Google Inc.
 
 void func() { print('in testmod2.func()'); }
 

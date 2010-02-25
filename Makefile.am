@@ -1,3 +1,5 @@
+# Copyright 2003 Michael A. Muller
+# Portions Copyright 2009 Google Inc.
 
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = \

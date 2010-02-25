@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef _model_AllocExpr_h_
 #define _model_AllocExpr_h_

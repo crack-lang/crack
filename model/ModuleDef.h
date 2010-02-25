@@ -1,3 +1,4 @@
+// Copyright 2010 Google Inc.
 
 #ifndef _model_ModuleDef_h_
 #define _model_ModuleDef_h_

@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef _builder_LLVMBUilder_h_
 #define _builder_LLVMBUilder_h_

@@ -1,3 +1,5 @@
+# Copyright 2003 Michael A. Muller
+# Portions Copyright 2010 Google Inc
 
 AC_INIT(crack, 0.1)
 AM_INIT_AUTOMAKE(crack, 0.1)

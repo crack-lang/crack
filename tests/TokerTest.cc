@@ -1,3 +1,4 @@
+// Copyright 2003 Michael A. Muller
 
 #include <sstream>
 #include <cppunit/CompilerOutputter.h>

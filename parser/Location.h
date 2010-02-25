@@ -1,3 +1,4 @@
+// Copyright 2003 Michael A. Muller
 
 #ifndef LOCATION_H
 #define LOCATION_H

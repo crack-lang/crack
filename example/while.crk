@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 while (1) {
     puts("stuck in a loop!\n");

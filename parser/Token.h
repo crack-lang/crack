@@ -1,3 +1,5 @@
+// Copyright 2003 Michael A. Muller
+// Copyright 2009 Google Inc.
 
 #ifndef TOKEN_H
 #define TOKEN_H

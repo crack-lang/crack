@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef _builder_Builder_h_
 #define _builder_Builder_h_

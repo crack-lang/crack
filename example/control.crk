@@ -1,3 +1,5 @@
+// Copyright 2009 Google Inc.
+
 int32 true = 1;
 int32 false = 0;
 
