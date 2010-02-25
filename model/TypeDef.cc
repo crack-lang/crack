@@ -4,6 +4,7 @@
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
+#include "parser/ParseError.h"  // need to move error handling into Context
 #include "AllocExpr.h"
 #include "AssignExpr.h"
 #include "ArgDef.h"
@@ -19,6 +20,7 @@
 using namespace std;
 using namespace model;
 using namespace spug;
+using parser::ParseError;
 
 bool TypeDef::hasInstSlot() {
     return false;
@@ -91,7 +93,35 @@ FuncDefPtr TypeDef::createDefaultInit() {
                                                         0
                                                         );
 
-    // XXX do initialization for the base classes.
+    // do initialization for the base classes.
+    for (Context::ContextVec::iterator ibase = context->parents.begin();
+         ibase != context->parents.end();
+         ++ibase
+         ) {
+
+        // if the base class contains no constructors at all, either it's a 
+        // special class or it has no need for constructors, so ignore it.
+        OverloadDefPtr overloads = (*ibase)->lookUp("init");
+        if (!overloads)
+            continue;
+
+        // we must get a default initializer and it must be specific to the 
+        // base class (not inherited from an ancestor of the base class)
+        FuncDef::ArgVec args;
+        FuncDefPtr baseInit = overloads->getSigMatch(args);
+        if (!baseInit || baseInit->context != ibase->get())
+            // XXX make this a parser error
+            throw ParseError(SPUG_FSTR("Cannot create a default constructor "
+                                        "because base class " << 
+                                        (*ibase)->returnType->name <<
+                                        " has no default constructor."
+                                       )
+                             );
+
+        FuncCallPtr funcCall = context->builder.createFuncCall(baseInit.get());
+        funcCall->receiver = thisRef;
+        funcCall->emit(*context);
+    }
 
     // generate constructors for all of the instance variables
     for (Context::VarDefMap::iterator iter = context->beginDefs();
@@ -105,12 +135,12 @@ FuncDefPtr TypeDef::createDefaultInit() {
             // initializer.
             // XXX make this a parser error
             if (!ivar->initializer)
-                throw Exception(SPUG_FSTR("no initializer for variable " << 
-                                          ivar->name << 
-                                          " while creating default "
-                                          "constructor."
-                                         )
-                                );
+                throw ParseError(SPUG_FSTR("no initializer for variable " << 
+                                           ivar->name << 
+                                           " while creating default "
+                                           "constructor."
+                                          )
+                                 );
 
             AssignExprPtr assign = new AssignExpr(thisRef.get(),
                                                   ivar,
@@ -195,19 +225,25 @@ void TypeDef::rectify() {
     VarDefPtr initMethods = context->lookUp("init", false);
     OverloadDef *overloads = OverloadDefPtr::rcast(initMethods);
     FuncDef *funcDef;
+    bool gotInit = false;
     if (overloads) {
         // multiple init funcs: create new functions for all of them.
         for (OverloadDef::FuncList::iterator iter = overloads->funcs.begin();
-             iter != overloads->funcs.end();
+             iter != overloads->startOfParents;
              ++iter
-             )
+             ) {
             createNewFunc(iter->get());
+            gotInit = true;
+        }
     } else if (funcDef = FuncDefPtr::rcast(initMethods)) {
-        createNewFunc(funcDef);
-    } else {
-        // create a default constructor and wrap it in a new function.
-        createNewFunc(createDefaultInit().get());
+        // all functions should now be wrapped in overloads
+        assert(false && "got plain func def for init");
     }
+    
+    // if there are no init functions specific to this class, create a 
+    // default constructor and wrap it in a new function.
+    if (!gotInit)
+        createNewFunc(createDefaultInit().get());
 }
 
 FuncDefPtr TypeDef::getConverter(const TypeDef &other) {

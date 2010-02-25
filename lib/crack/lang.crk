@@ -132,7 +132,13 @@ class StaticString : String {
 };
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
-class WriteBuffer : Buffer {};
+class WriteBuffer : Buffer {
+    
+    ## constructor inheritence would be nice
+    void init(byteptr buffer, uint size) {
+        Buffer_init(buffer, size);
+    }
+};
 
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
