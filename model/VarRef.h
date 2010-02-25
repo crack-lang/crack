@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef _model_VarRef_h_
 #define _model_VarRef_h_

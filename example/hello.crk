@@ -1,3 +1,4 @@
 // first ever crack program!
+// Copyright 2009 Google Inc.
 
 puts('hello world!\n');

@@ -1,3 +1,4 @@
+// Copyright 2010 Google Inc.
 
 #ifndef _model_StubDef_h
 #define _model_StubDef_h

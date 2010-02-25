@@ -1,4 +1,10 @@
 
+The Definitive Crack Language Reference File
+============================================
+
+Copyright 2009 Google Inc.
+
+
     ---------------------
     #!/usr/bin/crack
     stdout `hello world`;

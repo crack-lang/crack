@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef PARSER_H
 #define PARSER_H

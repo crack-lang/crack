@@ -1,3 +1,4 @@
+// Copyright 2003 Michael A. Muller
 
 #include "ParseError.h"
 #include "Token.h"

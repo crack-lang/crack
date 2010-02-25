@@ -1,3 +1,4 @@
+// Copyright 2010 Google Inc.
 
 #include "Crack.h"
 

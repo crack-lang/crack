@@ -1,3 +1,4 @@
+// Copyright 2010 Google Inc.
 
 #ifndef _Crack_h_
 #define _Crack_h_

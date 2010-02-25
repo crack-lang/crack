@@ -1,3 +1,4 @@
+// Copyright 2003 Michael A. Muller
 
 #ifndef PARSEERROR_H
 #define PARSEERROR_H

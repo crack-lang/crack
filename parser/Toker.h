@@ -1,3 +1,5 @@
+// Copyright 2003 Michael A. Muller
+// Portions Copyright 2009 Google Inc.
 
 #ifndef TOKER_H
 #define TOKER_H

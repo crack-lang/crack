@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #ifndef _model_ResultExpr_h_
 #define _model_ResultExpr_h_

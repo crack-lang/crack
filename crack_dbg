@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright 2010 Google Inc.
 # Script to launch gdb for crack.
 
 LIBS=$(dirname $0)/.libs

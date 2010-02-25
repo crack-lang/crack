@@ -1,6 +1,7 @@
 # test module
 # this is for execution with bootstrapping disabled (byteptr's are expected 
 # rather than Strings)
+# Copyright 2010 Google Inc.
 
 puts('testmod');
 

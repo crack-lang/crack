@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 #include "AssignExpr.h"
 

@@ -1,4 +1,5 @@
 // variable definitions
+// Copyright 2009 Google Inc.
 byteptr str;
 byteptr prettyString = 'a pretty string';
 int32 val = 100;

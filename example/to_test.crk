@@ -1,3 +1,4 @@
+// Copyright 2009 Google Inc.
 
 # overriden definitions in the same context should be an error
 int32 a;

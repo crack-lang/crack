@@ -1,4 +1,5 @@
 #!/usr/bin/crack
+# Copyright 2010 Google Inc.
 
 import "libc.so.6" free, strlen, strdup, malloc, memcpy, abort;
 
