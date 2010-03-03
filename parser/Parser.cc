@@ -209,6 +209,24 @@ ExprPtr Parser::makeThisRef(const Token &ident) {
    return context->builder.createVarRef(thisVar.get());
 }
 
+ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
+   Context &varContext = container ? *container->type->context : *context;
+   VarDefPtr var = varContext.lookUp(ident.getData());
+   if (!var)
+      error(ident,
+            SPUG_FSTR("Undefined variable: " << ident.getData()));
+
+   // if the definition is for an instance variable, emit an implicit 
+   // "this" dereference.  Otherwise just emit the variable
+   if (var->context->scope == Context::instance) {
+      // if there's no container, try to use an implicit "this"
+      ExprPtr receiver = container ? container : makeThisRef(ident);
+      return context->builder.createFieldRef(receiver.get(), var.get());
+   } else {
+      return context->builder.createVarRef(var.get());
+   }
+}
+
 ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    Context &varContext = container ? *container->type->context : *context;
    // is it an assignment?
@@ -278,23 +296,70 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    } else {
       // for anything else, it's a variable reference
       toker.putBack(tok1);
-      VarDefPtr var = varContext.lookUp(ident.getData());
-      if (!var)
-         error(ident,
-               SPUG_FSTR("Undefined variable: " << ident.getData()));
-
-      // if the definition is for an instance variable, emit an implicit 
-      // "this" dereference.  Otherwise just emit the variable
-      if (var->context->scope == Context::instance) {
-         // if there's no container, try to use an implicit "this"
-         ExprPtr receiver = container ? container : makeThisRef(ident);
-         return context->builder.createFieldRef(receiver.get(), var.get());
-      } else {
-         return context->builder.createVarRef(var.get());
-      }
+      return createVarRef(container, ident);
    }
 
 }
+
+// ` ... `
+//  ^
+ExprPtr Parser::parseIString(Expr *expr) {
+   // emit the expression, all subsequent invocations will use the result
+   ResultExprPtr result = expr->emit(*context);
+   context->createCleanupFrame();
+   result->handleTransient(*context);
+   
+   // put the whole thing in an "if"
+   TypeDef *boolType = context->globalData->boolType.get();
+   ExprPtr cond = result->convert(*context, boolType);
+   BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
+   
+   // parse all of the subtokens
+   Token tok;
+   while (!(tok = toker.getToken()).isIstrEnd()) {
+      ExprPtr arg;
+      if (tok.isString()) {
+         arg = context->getStrConst(tok.getData());
+      } else if (tok.isIdent()) {
+         // get a variable definition
+         arg = createVarRef(0, tok);
+         toker.continueIString();
+      } else if (tok.isLParen()) {
+         arg = parseExpression();
+         tok = toker.getToken();
+         if (!tok.isRParen())
+            unexpected(tok, "expected a right paren");
+         toker.continueIString();
+      } else {
+         unexpected(tok, 
+                    "expected an identifer or a parenthesized expression "
+                     "after the $ in an interpolated string"
+                    );
+      }
+
+      // look up a format method for the argument
+      FuncCall::ExprVec args(1);
+      args[0] = arg;
+      FuncDefPtr func = expr->type->context->lookUp(*context, "format", args);
+      if (!func)
+         error(tok, 
+               SPUG_FSTR("No format method exists for objects of type " <<
+                         arg->type->getFullName()
+                         )
+               );
+      
+      FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      funcCall->args = args;
+      funcCall->receiver = result;
+      funcCall->emit(*context);
+   }
+   
+   context->closeCleanupFrame();
+   context->builder.emitEndIf(*context, pos.get(), false);
+   
+   return result;
+}
+   
 
 ExprPtr Parser::parseExpression(unsigned precedence) {
 
@@ -319,6 +384,13 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    // for a string constant
    } else if (tok.isString()) {
       expr = context->getStrConst(tok.getData());
+   
+   // for an interpolated string
+   } else if (tok.isIstrBegin()) {
+      assert(false && "istring expressions not yet implemented");
+      // XXX we need to create a StringFormatter and pass it to parseIString() 
+      // as the formatter.
+//      expr = parseIString(formatter);
    
    // for an integer constant
    } else if (tok.isInteger()) {
@@ -421,6 +493,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
          funcCall->args = exprs;
          expr = funcCall;
+      } else if (tok.isIstrBegin()) {
+         expr = parseIString(expr.get());
       } else {
 	 // next token is not part of the expression
 	 break;

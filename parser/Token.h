@@ -17,7 +17,8 @@ class Token {
                      whileKw, assign, asterisk, bang, colon, comma, define, 
                      dot, end, eq, ge, gt, ident, integer, lbracket, lcurly, 
                      le, lparen, lt, minus, ne, oper, percent, plus, 
-                     rbracket, rcurly, rparen, semi, slash, string
+                     rbracket, rcurly, rparen, semi, slash, string,
+                     istrBegin, istrEnd
 		    } Type;
 
    private:
@@ -61,6 +62,8 @@ class Token {
       bool isNull() const { return type == nullKw; }
       bool isIdent() const { return type == ident; }
       bool isString() const { return type == string; }
+      bool isIstrBegin() const { return type == istrBegin; }
+      bool isIstrEnd() const { return type == istrEnd; }
       bool isSemi() const { return type == semi; }
       bool isComma() const { return type == comma; }
       bool isColon() const { return type == colon; }

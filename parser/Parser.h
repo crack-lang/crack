@@ -110,6 +110,12 @@ class Parser {
       /** Create a reference to the "this" variable, error if there is none. */
       model::ExprPtr makeThisRef(const Token &ident);
 
+      /** 
+       * Create a variable reference expression, complete with an implicit
+       * "this" if necessary.
+       */
+      model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident);
+
       /**
        * Parse the kinds of things that can come after an identifier.
        *
@@ -121,6 +127,13 @@ class Parser {
       model::ExprPtr parsePostIdent(model::Expr *container,
                                     const Token &ident
                                     );
+
+      /**
+       * Parse an interpolated string.
+       * 
+       * @param expr the receiver of the interpolated string operation.
+       */
+      model::ExprPtr parseIString(model::Expr *expr);
 
       /**
        * Parse an expression.

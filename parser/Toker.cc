@@ -20,7 +20,8 @@ Location::Location(const char *name, int lineNumber) :
 }
 
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
-    src(src) {
+    src(src),
+    state(st_none) {
     locationMap.setName(sourceName, lineNumber);
 }
 
@@ -49,24 +50,17 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
 
 Token Toker::readToken() {
     char ch, terminator;
-    enum { 
-        st_none, 
-        st_ident, 
-        st_slash,
-        st_digram,
-        st_comment, 
-        st_ccomment,
-        st_ccomment2,
-        st_string, 
-        st_escapeChar,
-        st_integer
-    } state = st_none;
     
     // information on the last character for digrams
     char ch1;
     Token::Type t1, t2;
 
     stringstream buf;
+
+    // we should only be able to enter this in one of two states.    
+    assert((state == st_none || state == st_istr) && 
+           "readToken(): tokenizer in invalid state"
+           );
  
     while (true) {
         // read the next character from the stream
@@ -141,6 +135,11 @@ Token Toker::readToken() {
                 } else if (isdigit(ch)) {
                     buf << ch;
                     state = st_integer;
+                } else if (ch == '`') {
+                    state = st_istr;
+                    return Token(Token::istrBegin, "`", 
+                                 locationMap.getLocation()
+                                 );
                 } else {
                     ParseError::abort(Token(Token::dot, "", 
                                             locationMap.getLocation()
@@ -153,10 +152,12 @@ Token Toker::readToken() {
             case st_digram:
                 if (ch == '=') {
                     char all[3] = {ch1, ch, 0};
+                    state = st_none;
                     return Token(t2, all, locationMap.getLocation());
                 } else {
                     char all[2] = {ch1, 0};
                     src.putback(ch);
+                    state = st_none;
                     return Token(t1, all, locationMap.getLocation());
                 }
             
@@ -167,6 +168,7 @@ Token Toker::readToken() {
                 // if we got a non-alphanumeric, non-underscore we're done
                 if (!isalnum(ch) && ch != '_' && ch > 0) {
                     src.putback(ch);
+                    state = st_none;
                     return fixIdent(buf.str().c_str(), 
                                     locationMap.getLocation()
                                     );
@@ -182,6 +184,7 @@ Token Toker::readToken() {
                     state = st_ccomment;
                 } else {
                     src.putback(ch);
+                    state = st_none;
                     return Token(Token::slash, "/", locationMap.getLocation());
                 }
                 break;
@@ -207,18 +210,20 @@ Token Toker::readToken() {
    
                 // check for the terminator
                 if (ch == terminator) {
+                    state = st_none;
                     return Token(Token::string, buf.str().c_str(),
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '\\') {
-                    state = st_escapeChar;
+                    state = st_strEscapeChar;
                 } else {
                     buf << ch;
                 }
     
                 break;
    
-            case st_escapeChar:
+            case st_strEscapeChar:
+            case st_istrEscapeChar:
    
                 switch (ch) {
                     case 't':
@@ -239,7 +244,7 @@ Token Toker::readToken() {
                     default:
                         buf << ch;
                 }
-                state = st_string;
+                state = (state == st_strEscapeChar) ? st_string : st_istr;
                 break;
 
             case st_integer:
@@ -247,11 +252,41 @@ Token Toker::readToken() {
                     buf << ch;
                 else {
                     src.putback(ch);
+                    state = st_none;
                     return Token(Token::integer, buf.str().c_str(),
                                  locationMap.getLocation()
                                  );
                 }
     
+                break;
+            
+            case st_istr:
+                if (ch == '`') {
+                    if (buf.tellp()) {
+                        // if we've accumulated some raw data since the last 
+                        // token was returned, return it as a string now and 
+                        // putback the '`' so we can do the istrEnd the next 
+                        // time.
+                        src.putback(ch);
+                        return Token(Token::string, buf.str().c_str(),
+                                     locationMap.getLocation()
+                                     );
+                    } else {
+                        state = st_none;
+                        return Token(Token::istrEnd, "`",
+                                    locationMap.getLocation()
+                                    );
+                    }
+                } else if (ch == '$') {
+                    state = st_none;
+                    return Token(Token::string, buf.str().c_str(),
+                                 locationMap.getLocation()
+                                 );
+                } else if (ch == '\\') {
+                    state = st_istrEscapeChar;
+                } else {
+                    buf << ch;
+                }
                 break;
             
             default:
@@ -261,7 +296,7 @@ Token Toker::readToken() {
  
     // if we got here, we got to the end of the stream, make sure it was
     // expected
-    if (state == st_none)
+    if (state == st_none || state == st_comment)
         return Token(Token::end, "", locationMap.getLocation());
     else if (state == st_ident)
         // it's ok for identifiers to be up against the end of the stream
@@ -284,3 +319,4 @@ Token Toker::getToken() {
         return readToken();
     }
 }
+    

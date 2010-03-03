@@ -466,4 +466,24 @@ test_output 'functions as values' \
     'void func() {} voidptr v = func; if (func is v) print("ok");' \
     ok
 
+test_output 'interpolation operator' \
+    'import crack.io FDWriter, Formatter;
+
+    class F : Formatter {
+        bool enabled;
+        void init(int fd) { init(FDWriter(fd)); enabled = true; }
+        bool isTrue() { return enabled; }
+    };
+    out := F(1);
+    moreData := "more data";
+    out `sum = $(1 + 2)
+more data = $moreData
+dollar sign: \$
+`;
+    out.enabled = false;
+    out `should not see this`;' \
+    'sum = 3
+more data = more data
+dollar sign: $'
+
 exit $rc
