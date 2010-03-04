@@ -120,16 +120,12 @@ class Formatter : Writer {
         __rep = rep;
     }
     
-    void write(Buffer data) {
-        __rep.write(data);
-    }
-    
     void write(byteptr data, uint size) {
         __rep.write(data, size);
     }
     
     void format(String data) {
-        __rep.write(data);
+        write(data);
     }
     
     void format(int32 val) {
@@ -138,7 +134,7 @@ class Formatter : Writer {
         # have to convert so it will match the later _format method.
         int64 v = val;
         start := _format(v, buffer.buffer, buffer.size);
-        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+        write(Buffer(buffer.buffer + start, buffer.size - start));
     }
 
     void format(uint32 val) {
@@ -146,19 +142,19 @@ class Formatter : Writer {
         
         # _format(uint32) comes first so we don't have to type convert
         start := _format(val, buffer.buffer, buffer.size);
-        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+        write(Buffer(buffer.buffer + start, buffer.size - start));
     }
 
     void format(int64 val) {
         buffer := ManagedBuffer(21);
         start := _format(val, buffer.buffer, buffer.size);
-        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+        write(Buffer(buffer.buffer + start, buffer.size - start));
     }
 
     void format(uint64 val) {
         buffer := ManagedBuffer(20);
         start := _format(val, buffer.buffer, buffer.size);
-        __rep.write(Buffer(buffer.buffer + start, buffer.size - start));
+        write(Buffer(buffer.buffer + start, buffer.size - start));
     }
     
     void format(Object obj) {
