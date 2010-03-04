@@ -1990,7 +1990,24 @@ ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
     BStrConst *bval = BStrConstPtr::cast(val);
     // if the global string hasn't been defined yet, create it
     if (!bval->rep) {
-        bval->rep = builder.CreateGlobalStringPtr(val->val.c_str());
+        // we have to do this the hard way because strings may contain 
+        // embedded nulls (IRBuilder.CreateGlobalStringPtr expects a 
+        // null-terminated string)
+        LLVMContext &llvmContext = getGlobalContext();
+        Constant *llvmVal =
+            ConstantArray::get(llvmContext, val->val, true);
+        GlobalVariable *gvar = new GlobalVariable(*module,
+                                                  llvmVal->getType(),
+                                                  true, // is constant
+                                                  GlobalValue::InternalLinkage,
+                                                  llvmVal,
+                                                  "",
+                                                  0,
+                                                  false);
+        
+        Value *zero = ConstantInt::get(Type::getInt32Ty(llvmContext), 0);
+        Value *args[] = { zero, zero };
+        bval->rep = builder.CreateInBoundsGEP(gvar, args, args + 2);
     }
     lastValue = bval->rep;
     return new BResultExpr(val, lastValue);

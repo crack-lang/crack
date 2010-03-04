@@ -353,6 +353,16 @@ test_output 'voidptr cast of class with release' \
      func(A());' \
      12
 
+test_output 'hex and octal code escapes' \
+    'puts("\141\x61"); b := "\0\01\001";
+     if (b[0] == 0) puts("ok");
+     if (b[1] == 1) puts("ok");
+     if (b[2] == 1) puts("ok");' \
+    'aa
+ok
+ok
+ok'
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

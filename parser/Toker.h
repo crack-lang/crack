@@ -46,6 +46,10 @@ class Toker {
          st_string, 
          st_strEscapeChar,
          st_istrEscapeChar,
+         st_strOctal,
+         st_istrOctal,
+         st_strHex,
+         st_istrHex,
          st_integer,
          st_istr
       } state;

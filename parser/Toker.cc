@@ -54,6 +54,10 @@ Token Toker::readToken() {
     // information on the last character for digrams
     char ch1;
     Token::Type t1, t2;
+    
+    // for parsing octal and hex character code escape sequences.
+    char codeChar;
+    int codeLen;
 
     stringstream buf;
 
@@ -169,9 +173,7 @@ Token Toker::readToken() {
                 if (!isalnum(ch) && ch != '_' && ch > 0) {
                     src.putback(ch);
                     state = st_none;
-                    return fixIdent(buf.str().c_str(), 
-                                    locationMap.getLocation()
-                                    );
+                    return fixIdent(buf.str(), locationMap.getLocation());
                 }
     
                 buf << ch;
@@ -211,7 +213,7 @@ Token Toker::readToken() {
                 // check for the terminator
                 if (ch == terminator) {
                     state = st_none;
-                    return Token(Token::string, buf.str().c_str(),
+                    return Token(Token::string, buf.str(), 
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '\\') {
@@ -241,10 +243,70 @@ Token Toker::readToken() {
                     case 'b':
                         buf << '\b';
                         break;
+                    case 'x':
+                        state = (state == st_strEscapeChar) ?
+                                    st_strHex :
+                                    st_istrHex;
+                        codeChar = codeLen = 0;
+                        break;
                     default:
-                        buf << ch;
+                        if (isdigit(ch) && ch < '8') {
+                            codeChar = ch - '0';
+                            codeLen = 1;
+                            state = (state == st_strEscapeChar) ?
+                                        st_strOctal :
+                                        st_istrOctal;
+                        } else {
+                            buf << ch;
+                        }
                 }
-                state = (state == st_strEscapeChar) ? st_string : st_istr;
+                
+                // if we haven't moved on to one of the character code states, 
+                // return to the normal string processing state
+                if (state == st_strEscapeChar)
+                    state = st_string;
+                else if (state == st_istrEscapeChar)
+                    state = st_istr;
+                break;
+            
+            case st_strOctal:
+            case st_istrOctal:
+                
+                if (isdigit(ch) && ch < '8' && codeLen < 3) {
+                    codeChar = (codeChar << 3) | (ch - '0');
+                    ++codeLen;
+                } else {
+                    buf << codeChar;
+                    src.putback(ch);
+                    state = (state == st_strOctal) ? st_string : st_istr;
+                }
+                break;
+            
+            case st_strHex:
+            case st_istrHex:
+                
+                if (isdigit(ch)) {
+                    ch = ch - '0';
+                } else if (ch >= 'a' && ch <= 'f') {
+                    ch = ch - 'a' + 10;
+                } else if (ch >= 'A' && ch <= 'F') {
+                    ch = ch - 'A' + 10;
+                } else {
+                    ParseError::abort(Token(Token::string, buf.str(),
+                                            locationMap.getLocation()
+                                            ),
+                                      "invalid hex code escape sequence (must "
+                                       "be two hex digits)"
+                                      );
+                }
+
+                codeChar = (codeChar << 4) | ch;
+                ++codeLen;
+                
+                if (codeLen == 2) {
+                    buf << codeChar;
+                    state = (state == st_strHex) ? st_string : st_istr;
+                }
                 break;
 
             case st_integer:
@@ -253,7 +315,7 @@ Token Toker::readToken() {
                 else {
                     src.putback(ch);
                     state = st_none;
-                    return Token(Token::integer, buf.str().c_str(),
+                    return Token(Token::integer, buf.str(),
                                  locationMap.getLocation()
                                  );
                 }
@@ -268,7 +330,7 @@ Token Toker::readToken() {
                         // putback the '`' so we can do the istrEnd the next 
                         // time.
                         src.putback(ch);
-                        return Token(Token::string, buf.str().c_str(),
+                        return Token(Token::string, buf.str(),
                                      locationMap.getLocation()
                                      );
                     } else {
@@ -279,7 +341,7 @@ Token Toker::readToken() {
                     }
                 } else if (ch == '$') {
                     state = st_none;
-                    return Token(Token::string, buf.str().c_str(),
+                    return Token(Token::string, buf.str(),
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '\\') {
@@ -300,9 +362,7 @@ Token Toker::readToken() {
         return Token(Token::end, "", locationMap.getLocation());
     else if (state == st_ident)
         // it's ok for identifiers to be up against the end of the stream
-        return Token(Token::ident, buf.str().c_str(),
-                     locationMap.getLocation()
-                     );
+        return Token(Token::ident, buf.str(), locationMap.getLocation());
     else
         ParseError::abort(Token(Token::end, "", locationMap.getLocation()),
                           "End of stream in the middle of a token"
@@ -319,4 +379,3 @@ Token Toker::getToken() {
         return readToken();
     }
 }
-    
