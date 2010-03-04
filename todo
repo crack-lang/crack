@@ -4,12 +4,12 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
-- copyrights
-- fix numeric conversion.
-- composite constructors/destructors
+-   fix numeric conversion.
+-   composite constructors/destructors
 -   fix cleanups during assignment (a = b does b.bind() but not a.release())
 -   I think that if we do "int32 op byte", it will get converted to "int64 op 
     int64", which is less than optimal.
+-   string interpolation expressions: s := `some string $val`;
 -   cleanup:
     -   combine FuncDef and OverloadDef into a base class with a virtual 
         matches() for arg list defs, or just make FuncDef a smaller thing and 
@@ -26,6 +26,7 @@ Roadmap
 -------
 
 for 0.1:
+-   explicit base class method invocation syntax (void foo() {Super.foo();})
 -   allow utf-8 chars for strings and identifiers.  DONE
 -   composition of constructors/destructors
 -   the "oper" keyword

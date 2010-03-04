@@ -86,3 +86,7 @@ a = A();
 
 # this breaks (not sure what we're doing in the parser)
 class Foo {} print('test');
+
+# assignment to functions
+void f() {}
+f = 100;
