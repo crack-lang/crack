@@ -1057,7 +1057,7 @@ namespace {
             ResultExprPtr emit(Context &context) {
                 dynamic_cast<LLVMBuilder &>(context.builder).lastValue = 
                     value;
-                return this;
+                return new BResultExpr(this, value);
             }
     };
     
@@ -2035,6 +2035,29 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
         cast<PointerType>(const_cast<Type *>(btype->rep));
     lastValue = builder.CreateMalloc(tp->getElementType());
     
+    // XXX mega-hack, clear the contents of the allocated memory (this is to 
+    // get around the temporary lack of automatic member initialization)
+    
+    // calculate the size of the structure
+    assert(llvmIntType && "integer type has not been initialized");
+    Value *startPos = builder.CreatePtrToInt(lastValue, llvmIntType);
+    Value *endPos = 
+        builder.CreatePtrToInt(
+            builder.CreateConstGEP1_32(lastValue, 1),
+            llvmIntType
+            );
+    Value *size = builder.CreateSub(endPos, startPos);
+    
+    // construct a call to the "memclear" function
+    Function *memclearFunc = module->getFunction("__memclear");
+    assert(memclearFunc && "__memclear function has not been defined");
+    BTypeDef *voidPtrType =
+        BTypeDefPtr::arcast(context.globalData->voidPtrType);
+    vector<Value *> memclearArgs(2);
+    memclearArgs[0] = builder.CreateBitCast(lastValue, voidPtrType->rep);
+    memclearArgs[1] = size;
+    builder.CreateCall(memclearFunc, memclearArgs.begin(), memclearArgs.end());
+    
     return new BResultExpr(allocExpr, lastValue);
 }
 
@@ -2490,8 +2513,12 @@ void LLVMBuilder::createModule(Context &context, const std::string &name) {
     // the modules - we can not directly reference across modules.
     
     BTypeDef *int32Type = BTypeDefPtr::arcast(context.globalData->int32Type);
+    BTypeDef *intType = BTypeDefPtr::arcast(context.globalData->intType);
     BTypeDef *voidType = BTypeDefPtr::arcast(context.globalData->int32Type);
-    BTypeDef *byteptrType = BTypeDefPtr::arcast(context.globalData->byteptrType);
+    BTypeDef *byteptrType = 
+        BTypeDefPtr::arcast(context.globalData->byteptrType);
+    BTypeDef *voidptrType = 
+        BTypeDefPtr::arcast(context.globalData->voidPtrType);
 
     // create "int puts(String)"
     {
@@ -2517,6 +2544,14 @@ void LLVMBuilder::createModule(Context &context, const std::string &name) {
     {
         FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
         f.addArg("val", int32Type);
+        f.finish();
+    }
+    
+    // create "void __memclear(voidptr p, uint size)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "__memclear", 2);
+        f.addArg("p", voidptrType);
+        f.addArg("size", intType);
         f.finish();
     }
     
@@ -2620,13 +2655,14 @@ VarRefPtr LLVMBuilder::createFieldRef(Expr *aggregate,
 }
 
 ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
+                                           Expr *aggregate,
                                            AssignExpr *assign
                                            ) {
-    assign->aggregate->emit(context);
+    aggregate->emit(context);
 
     // narrow to the field type.
     Context *varContext = assign->var->context;
-    narrow(assign->aggregate->type.get(), varContext->returnType.get());
+    narrow(aggregate->type.get(), varContext->returnType.get());
     Value *aggregateRep = lastValue;
     
     // emit the value last, lastValue after this needs to be the expression so 
@@ -2665,6 +2701,10 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 
 extern "C" void printint(int val) {
     std::cout << val << flush;
+}
+
+extern "C" void __memclear(void *p, size_t size) {
+    memset(p, 0, size);
 }
 
 namespace {

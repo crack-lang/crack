@@ -212,10 +212,10 @@ class Builder : public spug::RCBase {
         /**
          * Create a field assignment.
          * @param aggregate the aggregate containing the field.
-         * @param varDef the field variable definition.
-         * @param val the value to assign to the variable.
+         * @param assign the assignment expression.
          */
         virtual model::ResultExprPtr emitFieldAssign(model::Context &context,
+                                                     model::Expr *aggregate,
                                                      model::AssignExpr *assign
                                                      ) = 0;
 

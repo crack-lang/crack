@@ -188,6 +188,7 @@ class LLVMBuilder : public Builder {
                            model::VarDef *varDef
                            );
         virtual model::ResultExprPtr emitFieldAssign(model::Context &context,
+                                                     model::Expr *aggregate,
                                                      model::AssignExpr *assign
                                                      );
 

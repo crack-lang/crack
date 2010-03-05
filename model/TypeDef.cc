@@ -147,7 +147,9 @@ FuncDefPtr TypeDef::createDefaultInit() {
                                                   ivar,
                                                   ivar->initializer.get()
                                                   );
-            context->builder.emitFieldAssign(*funcContext, assign.get());
+            context->builder.emitFieldAssign(*funcContext, thisRef.get(),
+                                             assign.get()
+                                             );
         }
     
     context->builder.emitReturn(*funcContext, 0);

@@ -52,7 +52,11 @@ void ResultExpr::handleTransient(Context &context) {
 }
 
 bool ResultExpr::isProductive() const {
-    return sourceExpr->isProductive();
+    // result expressions are always non-productive, since they always 
+    // reference the result of an existing expression.  This means that the 
+    // ResultExpression returned from ResultExpression::emit() will treat a 
+    // re-used result as a non-productive expression, which is what we want.
+    return false;
 }
 
 void ResultExpr::writeTo(std::ostream &out) const {

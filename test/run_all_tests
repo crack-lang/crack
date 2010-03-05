@@ -496,4 +496,17 @@ dollar sign: \$
 more data = more data
 dollar sign: $'
 
+test_output 'assignment releases old value' \
+    'class A { String val;
+        void init(String val0) { init(); val = val0; }
+        void del() { print(val); }
+     };
+     
+     a := A("first");
+     a = A("second");
+     ' \
+     'first
+second'
+
+
 exit $rc
