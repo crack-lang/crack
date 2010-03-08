@@ -52,23 +52,23 @@ ResultExprPtr AssignExpr::emit(Context &context) {
         releaseCall = context.builder.createFuncCall(func.get());
 
     if (aggregate) {
-        
+
         ExprPtr agg = aggregate;
         if (releaseCall) {
-            
+
             // emit the aggregate, store the ResultExpr for use when we emit 
             // the field assignment.
             ResultExprPtr aggResult;
             agg = aggResult = aggregate->emit(context);
             aggResult->handleTransient(context);
-            
+
             // emit the release call on the result
             VarRefPtr varRef = 
                 context.builder.createFieldRef(aggregate.get(), var.get());
             releaseCall->receiver = varRef;
             releaseCall->emit(context);
         }
-                                                     
+
         return context.builder.emitFieldAssign(context, agg.get(), this);
     } else {
         if (releaseCall) {
