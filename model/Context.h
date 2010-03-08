@@ -18,6 +18,7 @@ SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
+SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(OverloadDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
@@ -166,7 +167,7 @@ class Context : public spug::RCBase {
          */
         FuncDefPtr lookUpNoArgs(const std::string &varName);
         
-        void createModule(const std::string &name);
+        ModuleDefPtr createModule(const std::string &name);
         void addDef(VarDef *def);
         
         /** 

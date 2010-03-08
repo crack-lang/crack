@@ -192,9 +192,12 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
-        virtual void createModule(model::Context &context,
-                                  const std::string &name);
-        virtual void closeModule();
+        virtual model::ModuleDefPtr createModule(model::Context &context,
+                                                 const std::string &name
+                                                 );
+        virtual void closeModule(model::Context &context,
+                                 model::ModuleDef *module
+                                 );
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);

@@ -12,6 +12,7 @@ namespace model {
     class AllocExpr;
     class AssignExpr;
     SPUG_RCPTR(ArgDef);
+    SPUG_RCPTR(ModuleDef);
     SPUG_RCPTR(CleanupFrame);
     SPUG_RCPTR(Branchpoint);
     class Context;
@@ -219,9 +220,12 @@ class Builder : public spug::RCBase {
                                                      model::AssignExpr *assign
                                                      ) = 0;
 
-        virtual void createModule(model::Context &context,
-                                  const std::string &name) = 0;
-        virtual void closeModule() = 0;
+        virtual model::ModuleDefPtr createModule(model::Context &context,
+                                                 const std::string &name
+                                                 ) = 0;
+        virtual void closeModule(model::Context &context,
+                                 model::ModuleDef *modDef
+                                 ) = 0;
         
         /**
          * Create a new cleanup frame.

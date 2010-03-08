@@ -1,0 +1,8 @@
+## test module for checking order of module cleanups.  Imports testmod3
+## Copyright 2010 Google Inc.
+
+import test.testmod3 A;
+
+a := A('testmod4 destroyed');
+
+print('in testmod4');

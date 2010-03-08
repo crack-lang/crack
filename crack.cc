@@ -45,4 +45,6 @@ int main(int argc, const char **argv) {
         }
         ++arg;
     }
+    
+    Crack::getInstance().callModuleDestructors();
 }

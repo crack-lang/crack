@@ -35,6 +35,7 @@
 #include <model/FuncCall.h>
 #include <model/InstVarDef.h>
 #include <model/IntConst.h>
+#include <model/ModuleDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/ResultExpr.h>
@@ -336,6 +337,25 @@ namespace {
             // add my functions to their vtables
             extendVTables(vtb);
         }
+    };
+    
+    SPUG_RCPTR(BModuleDef);
+    
+    class BModuleDef : public ModuleDef {
+        
+        public:
+            // primitive cleanup function
+            void (*cleanup)();
+            
+            BModuleDef(const string &canonicalName, Context *context) :
+                ModuleDef(canonicalName, context),
+                cleanup(0) {
+            }
+            
+            void callDestructor() {
+                if (cleanup)
+                    cleanup();
+            }
     };
 
     // have to define this after BTypeDef because it uses BTypeDef.
@@ -2498,7 +2518,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     return varDef;
 }
  
-void LLVMBuilder::createModule(Context &context, const std::string &name) {
+ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
@@ -2557,11 +2577,29 @@ void LLVMBuilder::createModule(Context &context, const std::string &name) {
     
     // bind the module to the execution engine
     bindModule(new ExistingModuleProvider(module));
+    
+    return new BModuleDef(name, &context);
 }
 
-void LLVMBuilder::closeModule() {
+void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
     builder.CreateRetVoid();
+    
+    // emit the cleanup function
+    Function *mainFunc = func;
+    LLVMContext &lctx = getGlobalContext();
+    llvm::Constant *c =
+        module->getOrInsertFunction("__del__", Type::getVoidTy(lctx), NULL);
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    block = BasicBlock::Create(lctx, "__del__", func);
+    builder.SetInsertPoint(block);
+    closeAllCleanups(context);
+    builder.CreateRetVoid();
+    
+    // restore the main function
+    func = mainFunc;
+    
     verifyModule(*module, llvm::PrintMessageAction);
     
     // bind the module to the execution engine
@@ -2592,6 +2630,11 @@ void LLVMBuilder::closeModule() {
     passMan.add(llvm::createCFGSimplificationPass());
     
     passMan.run(*module);
+    
+    BModuleDefPtr::cast(moduleDef)->cleanup = 
+        reinterpret_cast<void (*)()>(
+            execEng->getPointerToFunction(module->getFunction("__del__"))
+        );
 }    
 
 CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {

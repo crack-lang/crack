@@ -31,14 +31,14 @@ class ModuleDef : public VarDef {
         VarDefPtr lookUp(const std::string &name);
         
         /**
-         * Create the module in the builder.
-         */
-        void create() const;
-        
-        /**
          * Close the module, executing it.
          */
-        void close() const;
+        void close();
+        
+        /**
+         * Call the module destructor - cleans up all global variables.
+         */
+        virtual void callDestructor() = 0;
         
         virtual bool hasInstSlot();
 };

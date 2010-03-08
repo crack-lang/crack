@@ -7,6 +7,7 @@
 #include "CleanupFrame.h"
 #include "ArgDef.h"
 #include "IntConst.h"
+#include "ModuleDef.h"
 #include "OverloadDef.h"
 #include "StrConst.h"
 #include "TypeDef.h"
@@ -84,8 +85,8 @@ ContextPtr Context::getDefContext() {
     return result;
 }
 
-void Context::createModule(const string &name) {
-    builder.createModule(*this, name);
+ModuleDefPtr Context::createModule(const string &name) {
+    return builder.createModule(*this, name);
 }
 
 namespace {

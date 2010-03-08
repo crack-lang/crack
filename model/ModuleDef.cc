@@ -20,10 +20,6 @@ bool ModuleDef::hasInstSlot() {
     return false;
 }
 
-void ModuleDef::create() const {
-    moduleContext->createModule(name);
-}
-
-void ModuleDef::close() const {
-    moduleContext->builder.closeModule();
+void ModuleDef::close() {
+    moduleContext->builder.closeModule(*moduleContext, this);
 }

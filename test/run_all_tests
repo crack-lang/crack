@@ -508,5 +508,10 @@ test_output 'assignment releases old value' \
      'first
 second'
 
+test_output 'module destruction order' \
+    'import test.testmod4;' \
+    'in testmod4
+testmod4 destroyed
+testmod3 deleted'
 
 exit $rc

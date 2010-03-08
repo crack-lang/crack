@@ -35,7 +35,10 @@ class Crack {
         // definition.
         typedef std::map<std::string, model::ModuleDefPtr> ModuleMap;
         ModuleMap moduleCache;
-        
+
+        // list of all modules in the order that they were loaded.
+        std::vector<model::ModuleDefPtr> loadedModules;
+
         // keeps init() from doing its setup stuff twice.
         bool initialized;
 
@@ -169,6 +172,13 @@ class Crack {
             loadModule(const std::vector<std::string> &moduleName,
                        std::string &canonicalName
                        );
+        
+        /**
+         * Call the module destructors for all loaded modules in the reverse 
+         * order that they were loaded.  This should be done before
+         * terminating.
+         */
+        void callModuleDestructors();
 };
 
 #endif

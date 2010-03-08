@@ -113,8 +113,10 @@ bool Parser::parseStatement(bool defsAllowed) {
             if (!defsAllowed)
                error(tok, "definition is not allowed in this context.");
             expr = parseExpression();
+            context->createCleanupFrame();
             VarDefPtr varDef =
                expr->type->emitVarDef(*context, tok.getData(), expr.get());
+            context->closeCleanupFrame();
             addDef(varDef.get());
             context->cleanupFrame->addCleanup(varDef.get());
             
@@ -179,7 +181,10 @@ bool Parser::parseBlock(bool nested) {
       }
       
       if (gotBlockTerminator) {
-         if (!gotTerminalStatement)
+         // generate all of the cleanups, but not if we already did this (got 
+         // a terminal statement) or we're at the top-level module (in which 
+         // case we'll want to generate cleanups in a static cleanup function)
+         if (!gotTerminalStatement && nested)
             context->builder.closeAllCleanups(*context);
          return gotTerminalStatement;
       }
@@ -626,8 +631,11 @@ bool Parser::parseDef(TypeDef *type) {
          if (!type->defaultInitializer)
             error(tok2, "no default constructor");
          
-         // Emit a variable definition and store it in the context.
+         // Emit a variable definition and store it in the context (in a 
+         // cleanup frame so transient initializers get destroyed here)
+         context->createCleanupFrame();
          VarDefPtr varDef = type->emitVarDef(*context, varName, 0);
+         context->closeCleanupFrame();
          addDef(varDef.get());
          context->cleanupFrame->addCleanup(varDef.get());
          return true;
@@ -656,10 +664,12 @@ bool Parser::parseDef(TypeDef *type) {
          initializer = initializer->convert(*context, type);
          if (!initializer)
             error(tok4, "Incorrect type for initializer.");
-            
+         
+         context->createCleanupFrame();
          VarDefPtr varDef = type->emitVarDef(*context, varName,
                                              initializer.get()
                                              );
+         context->closeCleanupFrame();
          addDef(varDef.get());
          context->cleanupFrame->addCleanup(varDef.get());
          return true;

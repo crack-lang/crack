@@ -152,7 +152,6 @@ void Crack::parseModule(ModuleDef *module,
                         const std::string &path,
                         istream &src
                         ) {
-    module->create();
     Toker toker(src, path.c_str());
     Parser parser(toker, module->moduleContext.get());
     parser.parse();
@@ -205,12 +204,13 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get());
-    ModuleDefPtr modDef = new ModuleDef(canonicalName, context.get());
+    ModuleDefPtr modDef = context->createModule(canonicalName);
     if (!modPath.isDir) {
         ifstream src(modPath.path.c_str());
         parseModule(modDef.get(), modPath.path, src);
     }
-    
+
+    loadedModules.push_back(modDef);
     moduleCache[canonicalName] = modDef;
     return modDef;
 }    
@@ -287,9 +287,10 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 
     // "foo.crk" -> foo, "anything weird" -> "__main__" or something.
-    ModuleDefPtr modDef = new ModuleDef(name, context.get());
+    ModuleDefPtr modDef = context->createModule(name);
     try {
         parseModule(modDef.get(), name, src);
+        loadedModules.push_back(modDef);
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return 1;
@@ -303,4 +304,16 @@ ModuleDefPtr Crack::loadModule(const vector<string> &moduleName,
                                     moduleName.end(), 
                                     canonicalName
                                     );
+}
+
+void Crack::callModuleDestructors() {
+    // if we're in dump mode, nothing got run and nothing needs cleanup.
+    if (dump) return;
+
+    // run through all of the destructors backwards.
+    for (vector<ModuleDefPtr>::reverse_iterator ri = loadedModules.rbegin();
+         ri != loadedModules.rend();
+         ++ri
+         )
+        (*ri)->callDestructor();
 }
