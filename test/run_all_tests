@@ -7,15 +7,18 @@ function test_output {
     text="$1"
     script="$2"
     expected="$3"
+    stdin="$4"
     
     echo -n "$text..."
-    result="$(echo "$script" | ./crack $opts - 2>&1)"
+    echo "$script" >run_all_tests.tmp
+    result="$(echo $stdin | ./crack $opts run_all_tests.tmp 2>&1)"
     if [ "$result" = "$expected" ]; then
         echo ok
     else
         echo FAILED
         rc=1
     fi
+    rm run_all_tests.tmp
 }
 
 # start with no bootstrapping
@@ -48,15 +51,15 @@ test_output 'void func with explicit return' \
     'void f() { return; } f(); puts("abcd");' 'abcd'
 test_output 'returning void from non-void func' \
     'int32 f() { return; }' \
-    'ParseError: <stdin>:1: Missing return expression for function returning'\
+    'ParseError: run_all_tests.tmp:1: Missing return expression for function returning'\
 ' int32'
 test_output 'invalid return types' \
     'void f() {} int32 g() { return f(); }' \
-    'ParseError: <stdin>:1: Invalid return type void for function returning '\
+    'ParseError: run_all_tests.tmp:1: Invalid return type void for function returning '\
 'int32'
 test_output 'return in module scope' \
     'return' \
-    'ParseError: <stdin>:2: Return statement not allowed in module scope' \
+    'ParseError: run_all_tests.tmp:2: Return statement not allowed in module scope' \
 
 test_output 'simple class definition' 'class Foo {};' ''
 test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
@@ -64,13 +67,13 @@ test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
 # multiple inheritence working.
 #test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
 test_output 'bad class definition' 'class Foo xxx;' \
-    'ParseError: <stdin>:1: token xxx was not expected at this time, '\
+    'ParseError: run_all_tests.tmp:1: token xxx was not expected at this time, '\
 'expected colon or opening brace.'
 test_output 'class with nested def' 'class Foo { int32 val; }' ''
 test_output 'nested classes' 'class Foo { class Bar {}; }' ''
 test_output 'bad type for member function' \
     'class Foo { xxx f() {} };' \
-    'ParseError: <stdin>:1: xxx is not a type.'
+    'ParseError: run_all_tests.tmp:1: xxx is not a type.'
 test_output 'the "define" (":=") operator' \
     'x := 1234; printint(x)' \
     '1234'
@@ -104,7 +107,7 @@ test_output 'explicit this' \
 
 test_output 'bad func names' \
     'class Foo { void f() { this.g(); }};' \
-    'ParseError: <stdin>:1: No method exists matching g with these argument '\
+    'ParseError: run_all_tests.tmp:1: No method exists matching g with these argument '\
 'types.'
 
 test_output 'using a classname with its definition' \
@@ -187,7 +190,7 @@ test_output 'implicit conversion from int to bool in condition' \
 # this was causing seg-faults at one point
 test_output 'Override of variable in global scope' \
     'int32 a; class X { void b(int32 a) {} };' \
-    '<stdin>:1: Symbol a hides another definition in an enclosing context.'
+    'run_all_tests.tmp:1: Symbol a hides another definition in an enclosing context.'
 
 test_output 'method overloads' \
     'class A { void f(int32 v) { printint(v); }
@@ -372,7 +375,7 @@ test_output 'correct caching of crack.lang' \
 
 test_output 'error messsage on default init with no default constructor' \
     'class Obj { void init(int32 v) {} }; Obj o;' \
-    'ParseError: <stdin>:1: no default constructor'
+    'ParseError: run_all_tests.tmp:1: no default constructor'
 
 test_output 'bool construction' \
     'bool b; if (b) print("fail"); else print("pass")' \
@@ -513,5 +516,16 @@ test_output 'module destruction order' \
     'in testmod4
 testmod4 destroyed
 testmod3 deleted'
+
+test_output 'cout & cerr' \
+    'import crack.io cout, cerr; cout `cout`; cerr `cerr`;' \
+    'coutcerr'
+
+test_output 'cin' \
+    'import crack.io cin, cout;
+     data := cin.read(1024);
+     cout `got $data`;' \
+     'got test data' \
+     'test data'
 
 exit $rc

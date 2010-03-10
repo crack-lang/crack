@@ -3,14 +3,13 @@
 
 import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, XWriter;
 
-import "libc.so.6" strlen, write, malloc, free, sprintf, read;
+import "libc.so.6" strlen, write, malloc, free, read;
 
 uint strlen(byteptr string);
 uint write(int fd, byteptr buf, uint len);
 uint read(int fd, byteptr buf, uint size);
 byteptr malloc(int32 size);
 void free(byteptr mem);
-byteptr sprintf(byteptr buf, byteptr fmt, int32 val);
 
 ## Writer interface, for all objects that support "write()"
 ## needs to use Object as a virtual base class.
@@ -33,23 +32,6 @@ class Writer : Object, XWriter {
     void flush() {}
 };
 
-class Reader {
-    void Reader_init() {
-        # object init
-        init();
-    }
-
-    String read(uint size) {
-        die('Reader.read() called');
-        return '';
-    }
-
-    uint read(WriteBuffer buf) {
-        die('Reader.read() called');
-        return 0;
-    }
-};
-
 ## Writer for a file descriptor.
 class FDWriter : Writer {
     int fd;
@@ -64,13 +46,45 @@ class FDWriter : Writer {
     }
 };
 
+class Reader {
+    
+    uint read(WriteBuffer buffer) {
+        die('Reader.read(uint,byteptr) called');
+        return 0;
+    }
+    
+    String read(uint size) {
+        b := ManagedBuffer(size);
+        
+        # have to qualify with this because of an overloading bug.
+        s := this.read(b);
+        
+        # if the amount read is most of the buffer, just take ownership of the 
+        # buffer.
+        if (s >= size * 3 / 4) {
+            b.size = s;
+            return String(b, true);
+        } else {
+            # otherwise copy.
+            b.size = s;
+            return String(b);
+        }
+    }
+};
+
 ## Reader to read from a file descriptor.
-class FDReader {
-    int32 fd;
+class FDReader : Reader {
+    int fd;
+    
+    void init(int fd0) {
+        # object init
+        init();
+        fd = fd0;
+    }
     
     ## Read up to 'size' bytes from the file descriptor into the buffer.
-    uint read(uint size, byteptr buffer) {
-        return read(fd, buffer, size);
+    uint read(WriteBuffer buf) {
+        return read(fd, buf.buffer, buf.size);
     }
 };
 
@@ -163,4 +177,7 @@ class Formatter : Writer {
 
 };
 
-cout := FDWriter(1);
+cout := Formatter(FDWriter(1));
+cerr := Formatter(FDWriter(2));
+cin := FDReader(0);
+

@@ -94,6 +94,36 @@ class Buffer : Object {
     }
 };
 
+## A writable buffer.  You can assume that it is safe to write to one of these.
+class WriteBuffer : Buffer {
+    
+    ## constructor inheritence would be nice
+    void init(byteptr buffer, uint size) {
+        Buffer_init(buffer, size);
+    }
+};
+
+## A managed buffer.  Deletes the bytebuf when it goes out of scope.
+class ManagedBuffer : WriteBuffer {
+
+    void init(uint size) {
+        init(malloc(size), size);
+    }
+    
+    ## Orphan's the byte buffer, returning it for use by the caller.  The 
+    ## caller is responsible for freeing it.
+    byteptr orphan() {
+        temp := buffer;
+        buffer = null;
+        return temp;
+    }
+
+    void del() {
+        if (!(buffer is null))
+            free(buffer);
+    }
+};
+
 ## The string class.  Strings are immutable _Buffy's.
 class String : Buffer {
 
@@ -102,6 +132,13 @@ class String : Buffer {
         byteptr b = malloc(buf.size);
         memcpy(b, buf.buffer, buf.size);
         init(b, buf.size);
+    }
+
+    ## Initialize from a WriteBuffer and take ownership (takeOwnership is 
+    ## actually ignored).
+    void init(ManagedBuffer buf, bool takeOwnership) {
+        size = buf.size;
+        buffer = buf.orphan();
     }
     
     ## Initialize from a null-terminated c-string
@@ -130,27 +167,6 @@ class StaticString : String {
     
     # overrides string delete so we don't try to delete a static buffer.
     void del() {}
-};
-
-## A writable buffer.  You can assume that it is safe to write to one of these.
-class WriteBuffer : Buffer {
-    
-    ## constructor inheritence would be nice
-    void init(byteptr buffer, uint size) {
-        Buffer_init(buffer, size);
-    }
-};
-
-## A managed buffer.  Deletes the bytebuf when it goes out of scope.
-class ManagedBuffer : WriteBuffer {
-
-    void init(uint size) {
-        init(malloc(size), size);
-    }
-
-    void del() {
-        free(buffer);
-    }
 };
 
 void print(String val) {
