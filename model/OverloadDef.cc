@@ -28,6 +28,18 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
             return iter->get();
         }
     
+    for (ParentVec::iterator parent = parents.begin();
+         par != parents.end();
+         ++par
+         ) {
+        FuncDef *result = parent->getMatch(context, args, convert);
+        if (result) {
+            if (convert)
+                args = newArgs;
+            return result;
+        }
+    }
+    
     return 0;
 }
 
@@ -37,6 +49,8 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
          ++iter)
         if ((*iter)->matches(args))
             return iter->get();
+    
+    xxx finish adding parents to the rest of these
     
     return 0;
 }
