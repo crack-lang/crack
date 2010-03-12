@@ -56,6 +56,12 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
    error(tok, msg.str());
 }
 
+void Parser::expectToken(Token::Type type, const char *error) {
+   Token tok = toker.getToken();
+   if (tok.getType() != type)
+      unexpected(tok, error);
+}
+
 bool Parser::parseStatement(bool defsAllowed) {
    // peek at the next token
    Token tok = toker.getToken();
@@ -607,6 +613,137 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
    }
 }
 
+void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
+                          const string &name,
+                          bool initializers
+                          ) {
+   // check for an existing, non-function definition.
+   VarDefPtr existingDef = checkForExistingDef(nameTok, true);
+
+   // if this is a class context, we're defining a method.
+   ContextPtr classCtx = context->getClassContext();
+   bool isMethod = classCtx ? true : false;
+
+   // push a new context, arg defs will be stored in the new context.
+   ContextPtr subCtx = context->createSubContext(Context::local);
+   ContextStackFrame cstack(*this, subCtx.get());
+   context->returnType = returnType;
+   context->toplevel = true;
+   
+   // if this is a method, add the "this" variable
+   if (isMethod) {
+      assert(classCtx && "method not in class context.");
+      ArgDefPtr argDef =
+         context->builder.createArgDef(classCtx->returnType.get(), 
+                                       "this"
+                                       );
+      addDef(argDef.get());
+   }
+
+   // parse the arguments
+   vector<ArgDefPtr> argDefs;
+   parseArgDefs(argDefs);
+   
+   Token tok3 = toker.getToken();
+   if (tok3.isSemi()) {
+      // abstract or forward declaration - see if we've got a stub 
+      // definition
+      StubDef *stub;
+      if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
+         FuncDefPtr funcDef =
+            context->builder.createExternFunc(*context, FuncDef::noFlags,
+                                              name,
+                                              returnType,
+                                              argDefs,
+                                              stub->address
+                                              );
+         stub->context->removeDef(stub);
+         cstack.restore();
+         addDef(funcDef.get());
+         return;
+      } else {
+         // XXX forward declaration
+         error(tok3, 
+               "abstract/forward declarations are not supported yet");
+      }
+   } else if (!tok3.isLCurly()) {
+      unexpected(tok3, "expected '{' in function definition");
+   }
+
+   bool isVirtual = isMethod && classCtx->returnType->hasVTable && 
+                    !TypeDef::isImplicitFinal(name);
+
+   // If we're overriding/implementing a previously declared virtual 
+   // function, we'll store it here.
+   FuncDefPtr override;
+
+   // XXX need to consolidate FuncDef and OverloadDef
+   // we now need to verify that the new definition doesn't hide an 
+   // existing definition.
+   FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
+   if (existingFuncDef && existingFuncDef->matches(argDefs)) {
+      if (!(context->getDefContext() == existingDef->context) ||
+          !existingFuncDef->isOverridable()
+          )
+         override = existingFuncDef;
+      else
+         error(nameTok,
+               SPUG_FSTR("Definition of " << name <<
+                        " hides previous overload."
+                        )
+               );
+   } else {
+      OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
+      if (existingOvldDef && 
+         (override = existingOvldDef->getSigMatch(argDefs)) &&
+         !override->isOverridable()
+         ) {
+         error(nameTok,
+               SPUG_FSTR("Definition of " << name <<
+                        " hides previous overload."
+                        )
+               );
+      }
+
+   }
+   
+   // parse the body
+   FuncDef::Flags flags =
+      (isMethod ? FuncDef::method : FuncDef::noFlags) |
+      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
+   FuncDefPtr funcDef =
+      context->builder.emitBeginFunc(*context, flags, name, returnType,
+                                     argDefs,
+                                     override.get()
+                                     );
+
+   // store the new definition in the parent context.
+   {
+      ContextStackFrame cstack(*this, context->parents[0].get());
+      addDef(funcDef.get());
+   }
+   
+   bool terminal = parseBlock(true);
+   
+   // if the block doesn't always terminate, either give an error or 
+   // return void if the function return type is void
+   if (!terminal)
+      if (context->globalData->voidType->matches(*context->returnType)) {
+         // remove the cleanup stack - we have already done cleanups at 
+         // the block level.
+         context->cleanupFrame = 0;
+         context->builder.emitReturn(*context, 0);
+      } else {
+         // XXX we don't have the closing curly brace location, 
+         // currently reporting the error on the top brace
+         error(tok3, "missing return statement for non-void function.");
+      }
+
+   context->builder.emitEndFunc(*context, funcDef.get());
+   cstack.restore();
+}         
+         
+
 // type var = initializer, var2 ;
 //     ^                         ^
 // type function() { }
@@ -675,133 +812,7 @@ bool Parser::parseDef(TypeDef *type) {
          return true;
       } else if (tok3.isLParen()) {
          // function definition
-
-         // check for an existing, non-function definition.
-         VarDefPtr existingDef = checkForExistingDef(tok2, true);
-
-         // if this is a class context, we're defining a method.
-         ContextPtr classCtx = context->getClassContext();
-         bool isMethod = classCtx ? true : false;
-
-         // push a new context, arg defs will be stored in the new context.
-         ContextPtr subCtx = context->createSubContext(Context::local);
-         ContextStackFrame cstack(*this, subCtx.get());
-         context->returnType = type;
-         context->toplevel = true;
-         
-         // if this is a method, add the "this" variable
-         if (isMethod) {
-            assert(classCtx && "method not in class context.");
-            ArgDefPtr argDef =
-               context->builder.createArgDef(classCtx->returnType.get(), 
-                                             "this"
-                                             );
-            addDef(argDef.get());
-         }
-
-         // parse the arguments
-         vector<ArgDefPtr> argDefs;
-         parseArgDefs(argDefs);
-         
-         tok3 = toker.getToken();
-         if (tok3.isSemi()) {
-            // abstract or forward declaration - see if we've got a stub 
-            // definition
-            StubDef *stub;
-            if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
-               FuncDefPtr funcDef =
-                  context->builder.createExternFunc(*context, FuncDef::noFlags,
-                                                    varName,
-                                                    type,
-                                                    argDefs,
-                                                    stub->address
-                                                    );
-               stub->context->removeDef(stub);
-               cstack.restore();
-               addDef(funcDef.get());
-               return true;
-            } else {
-               // XXX forward declaration
-               error(tok3, 
-                     "abstract/forward declarations are not supported yet");
-            }
-         } else if (!tok3.isLCurly()) {
-            unexpected(tok3, "expected '{' in function definition");
-         }
-
-         bool isVirtual = isMethod && classCtx->returnType->hasVTable && 
-                          !TypeDef::isImplicitFinal(varName);
-
-         // If we're overriding/implementing a previously declared virtual 
-         // function, we'll store it here.
-         FuncDefPtr override;
-
-         // XXX need to consolidate FuncDef and OverloadDef
-         // we now need to verify that the new definition doesn't hide an 
-         // existing definition.
-         FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
-         if (existingFuncDef && existingFuncDef->matches(argDefs)) {
-            if (!(context->getDefContext() == existingDef->context) ||
-                !existingFuncDef->isOverridable()
-                )
-               override = existingFuncDef;
-            else
-               error(tok2,
-                     SPUG_FSTR("Definition of " << tok2.getData() <<
-                              " hides previous overload."
-                              )
-                     );
-         } else {
-            OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-            if (existingOvldDef && 
-               (override = existingOvldDef->getSigMatch(argDefs)) &&
-               !override->isOverridable()
-               ) {
-               error(tok2,
-                     SPUG_FSTR("Definition of " << tok2.getData() <<
-                              " hides previous overload."
-                              )
-                     );
-            }
-
-         }
-         
-         // parse the body
-         FuncDef::Flags flags =
-            (isMethod ? FuncDef::method : FuncDef::noFlags) |
-            (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
-         FuncDefPtr funcDef =
-            context->builder.emitBeginFunc(*context, flags, varName, type,
-                                           argDefs,
-                                           override.get()
-                                           );
-
-         // store the new definition in the parent context.
-         {
-            ContextStackFrame cstack(*this, context->parents[0].get());
-            addDef(funcDef.get());
-         }
-         
-         bool terminal = parseBlock(true);
-         
-         // if the block doesn't always terminate, either give an error or 
-         // return void if the function return type is void
-         if (!terminal)
-            if (context->globalData->voidType->matches(*context->returnType)) {
-               // remove the cleanup stack - we have already done cleanups at 
-               // the block level.
-               context->cleanupFrame = 0;
-               context->builder.emitReturn(*context, 0);
-            } else {
-               // XXX we don't have the closing curly brace location, 
-               // currently reporting the error on the top brace
-               error(tok3, "missing return statement for non-void function.");
-            }
-
-         context->builder.emitEndFunc(*context, funcDef.get());
-         cstack.restore();
-         
-         
+         parseFuncDef(type, tok2, tok2.getData(), false);
          return true;
       } else {
          unexpected(tok3,
@@ -1011,100 +1022,26 @@ void Parser::parseImportStmt() {
 //     ^                     ^
 void Parser::parsePostOper(TypeDef *returnType) {
 
-   // push a new context for the function, arg defs will be stored in the new 
-   // context.
-   ContextPtr subCtx = context->createSubContext(Context::local);
-   ContextStackFrame cstack(*this, subCtx.get());
-   context->returnType = returnType;
-   context->toplevel = true;
-   
-   FuncDefPtr func;
-
    Token tok = toker.getToken();
-   Token tok2;
    if (tok.isIdent()) {
       const string &ident = tok.getData();
       if (ident == "init") {
-         tok2 = toker.getToken();
-         if (!tok2.isLParen())
-            unexpected(tok2, "argument list expected");
-         
          // oper init must be of type "void"
          if (!returnType)
             context->returnType = returnType =
                context->globalData->voidType.get();
          else if (returnType != context->globalData->voidType.get())
             error(tok, "oper init must be of return type 'void'");
-         
-         // add the "this"
-         ContextPtr classCtx = context->getClassContext();
-         ArgDefPtr argDef =
-            context->builder.createArgDef(classCtx->returnType.get(), 
-                                          "this"
-                                          );
-         addDef(argDef.get());
+         expectToken(Token::lparen, "expected argument list");
 
-         vector<ArgDefPtr> argDefs;
-         parseArgDefs(argDefs);
-         
-         // see if we're overriding
-         OverloadDefPtr overload = context->lookUp("oper init");
-         FuncDefPtr override;
-         if (overload)
-            override = overload->getSigMatch(argDefs);
-         
-         if (override && context->getDefContext() == override->context)
-            error(tok, SPUG_FSTR("Definition of oper " << ident << 
-                                  "hides previous overload."
-                                 )
-                  );
-         
-         FuncDef::Flags flags = FuncDef::method;
-         func =
-            context->builder.emitBeginFunc(*context, flags, "oper " + ident, 
-                                           returnType,
-                                           argDefs,
-                                           override.get()
-                                           );
-
+         parseFuncDef(returnType, tok, "oper init", true);
       } else {
-         unexpected(tok2, "only 'oper init' honored at this time");
+         unexpected(tok, "only 'oper init' honored at this time");
       }
 
    } else {
       unexpected(tok, "identifier expected after 'oper' keyword");
    }
-
-   // store the new definition in the parent context.
-   {
-      ContextStackFrame cstack(*this, context->parents[0].get());
-      addDef(func.get());
-   }
-
-   // parse the opening bracket
-   tok2 = toker.getToken();
-   if (!tok2.isLCurly())
-      unexpected(tok2, "expected open bracket '{'");
-   
-   bool terminal = parseBlock(true);
-   
-   // if the block doesn't always terminate, either give an error or 
-   // return void if the function return type is void
-   if (!terminal)
-      if (context->globalData->voidType->matches(*context->returnType)) {
-         // remove the cleanup stack - we have already done cleanups at 
-         // the block level.
-         context->cleanupFrame = 0;
-         context->builder.emitReturn(*context, 0);
-      } else {
-         // XXX we don't have the closing curly brace location, 
-         // currently reporting the error on the top brace
-         error(tok2, "missing return statement for non-void function.");
-      }
-
-   context->builder.emitEndFunc(*context, func.get());
-   cstack.restore();
-
 }
 
 // class name : base, base { ... }

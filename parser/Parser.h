@@ -88,6 +88,12 @@ class Parser {
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
 
+      /** 
+       * Get the next token and make sure it is of type 'type' otherwise 
+       * unexpected(tok, error);
+       */
+      void expectToken(Token::Type type, const char *error);
+
       /**
        * Parse a single statement.
        * @param defsAllowed true if a definition may be provided instead of a 
@@ -150,6 +156,20 @@ class Parser {
       model::TypeDefPtr parseTypeSpec();
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args);
+
+      /**
+       * Parse a function definition.
+       * @param returnType function return type.
+       * @param nameTok the last token parsed in the function name.
+       * @param name the full (but unqualified) function name.
+       * @param initializers if true, parse initializers and emit
+       *    initializers at the beginning of the body.  This should only be 
+       *    used for "oper init".
+       */
+      void parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
+                        const std::string &name,
+                        bool initializers
+                        );
 
       /**
        * Parse a definition. Returns false if there was no definition. 
