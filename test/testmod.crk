@@ -14,7 +14,7 @@ void func() {
 class A {
     byteptr data;
 
-    void init(byteptr data0) {
+    oper init(byteptr data0) {
         data = data0;
     }
     

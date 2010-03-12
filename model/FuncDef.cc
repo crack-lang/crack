@@ -65,7 +65,7 @@ bool FuncDef::matches(const ArgVec &other_args) {
 }
 
 bool FuncDef::isOverridable() const {
-    return flags & virtualized || name == "init";
+    return flags & virtualized || name == "oper init";
 }
 
 bool FuncDef::hasInstSlot() {

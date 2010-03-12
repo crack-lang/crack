@@ -164,6 +164,12 @@ class Parser {
       bool parseWhileStmt();
       void parseReturnStmt();
       void parseImportStmt();
+      
+      /**
+       * Parse a function definition after an "oper" keyword.
+       */
+      void parsePostOper(model::TypeDef *returnType);
+      
       model::TypeDefPtr parseClassDef();
       
       // error checking functions

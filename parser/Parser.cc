@@ -1007,6 +1007,106 @@ void Parser::parseImportStmt() {
    }
 }
 
+// oper name ( args ) { ... }
+//     ^                     ^
+void Parser::parsePostOper(TypeDef *returnType) {
+
+   // push a new context for the function, arg defs will be stored in the new 
+   // context.
+   ContextPtr subCtx = context->createSubContext(Context::local);
+   ContextStackFrame cstack(*this, subCtx.get());
+   context->returnType = returnType;
+   context->toplevel = true;
+   
+   FuncDefPtr func;
+
+   Token tok = toker.getToken();
+   Token tok2;
+   if (tok.isIdent()) {
+      const string &ident = tok.getData();
+      if (ident == "init") {
+         tok2 = toker.getToken();
+         if (!tok2.isLParen())
+            unexpected(tok2, "argument list expected");
+         
+         // oper init must be of type "void"
+         if (!returnType)
+            context->returnType = returnType =
+               context->globalData->voidType.get();
+         else if (returnType != context->globalData->voidType.get())
+            error(tok, "oper init must be of return type 'void'");
+         
+         // add the "this"
+         ContextPtr classCtx = context->getClassContext();
+         ArgDefPtr argDef =
+            context->builder.createArgDef(classCtx->returnType.get(), 
+                                          "this"
+                                          );
+         addDef(argDef.get());
+
+         vector<ArgDefPtr> argDefs;
+         parseArgDefs(argDefs);
+         
+         // see if we're overriding
+         OverloadDefPtr overload = context->lookUp("oper init");
+         FuncDefPtr override;
+         if (overload)
+            override = overload->getSigMatch(argDefs);
+         
+         if (override && context->getDefContext() == override->context)
+            error(tok, SPUG_FSTR("Definition of oper " << ident << 
+                                  "hides previous overload."
+                                 )
+                  );
+         
+         FuncDef::Flags flags = FuncDef::method;
+         func =
+            context->builder.emitBeginFunc(*context, flags, "oper " + ident, 
+                                           returnType,
+                                           argDefs,
+                                           override.get()
+                                           );
+
+      } else {
+         unexpected(tok2, "only 'oper init' honored at this time");
+      }
+
+   } else {
+      unexpected(tok, "identifier expected after 'oper' keyword");
+   }
+
+   // store the new definition in the parent context.
+   {
+      ContextStackFrame cstack(*this, context->parents[0].get());
+      addDef(func.get());
+   }
+
+   // parse the opening bracket
+   tok2 = toker.getToken();
+   if (!tok2.isLCurly())
+      unexpected(tok2, "expected open bracket '{'");
+   
+   bool terminal = parseBlock(true);
+   
+   // if the block doesn't always terminate, either give an error or 
+   // return void if the function return type is void
+   if (!terminal)
+      if (context->globalData->voidType->matches(*context->returnType)) {
+         // remove the cleanup stack - we have already done cleanups at 
+         // the block level.
+         context->cleanupFrame = 0;
+         context->builder.emitReturn(*context, 0);
+      } else {
+         // XXX we don't have the closing curly brace location, 
+         // currently reporting the error on the top brace
+         error(tok2, "missing return statement for non-void function.");
+      }
+
+   context->builder.emitEndFunc(*context, func.get());
+   cstack.restore();
+
+}
+
 // class name : base, base { ... }
 //      ^                         ^
 TypeDefPtr Parser::parseClassDef() {
@@ -1091,9 +1191,17 @@ TypeDefPtr Parser::parseClassDef() {
          } else if (tok.isSemi()) {
             continue;
          } else {
+            // deal with this class as the return type var type of the next 
+            // definition.
             toker.putBack(tok);
             parseDef(newType.get());
+            continue;
          }
+      
+      // check for "oper" keyword
+      } else if (tok.isOper()) {
+         parsePostOper(0);
+         continue;
       }
       
       // parse some other kind of definition

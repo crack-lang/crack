@@ -3,8 +3,8 @@
 
 class A {
     String s;
-    void init(String s0) {
-        init();
+    oper init(String s0) {
+        Object_init();
         s = s0;
     }
     

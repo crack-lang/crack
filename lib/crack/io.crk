@@ -16,7 +16,7 @@ void free(byteptr mem);
 class Writer : Object, XWriter {
     void Writer_init() {
         # object init
-        init();
+        Object_init();
     }
 
     ## Low level write method.  This is the only thing you need to implement.
@@ -36,7 +36,7 @@ class Writer : Object, XWriter {
 class FDWriter : Writer {
     int fd;
 
-    void init(int fd0) {
+    oper init(int fd0) {
         Writer_init();
         fd = fd0;
     }
@@ -76,9 +76,8 @@ class Reader {
 class FDReader : Reader {
     int fd;
     
-    void init(int fd0) {
-        # object init
-        init();
+    oper init(int fd0) {
+        Object_init();
         fd = fd0;
     }
     
@@ -129,9 +128,13 @@ class Formatter : Writer {
     
     Writer __rep;
 
-    void init(Writer rep) {
-        init();
+    void Formatter_init(Writer rep) {
+        Writer_init();
         __rep = rep;
+    }
+
+    oper init(Writer rep) {
+        Formatter_init(rep);
     }
     
     void write(byteptr data, uint size) {

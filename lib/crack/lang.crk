@@ -28,8 +28,12 @@ class FreeBase {};
 class Object : VTableBase {
     uint refCount;
 
-    void init() {
+    void Object_init() {
         refCount = 0;
+    }
+
+    oper init() {
+        Object_init();
     }
 
     # delete virtual function
@@ -76,12 +80,12 @@ class Buffer : Object {
     ## Initializer.
     void Buffer_init(byteptr buffer0, uint size0) {
         # do Object.init()
-        init();
+        Object_init();
         buffer = buffer0;
         size = size0;
     }
     
-    void init(byteptr buffer0, uint size0) {
+    oper init(byteptr buffer0, uint size0) {
         Buffer_init(buffer0, size0);
     }
     
@@ -98,7 +102,7 @@ class Buffer : Object {
 class WriteBuffer : Buffer {
     
     ## constructor inheritence would be nice
-    void init(byteptr buffer, uint size) {
+    oper init(byteptr buffer, uint size) {
         Buffer_init(buffer, size);
     }
 };
@@ -106,8 +110,8 @@ class WriteBuffer : Buffer {
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
 
-    void init(uint size) {
-        init(malloc(size), size);
+    oper init(uint size) {
+        Buffer_init(malloc(size), size);
     }
     
     ## Orphan's the byte buffer, returning it for use by the caller.  The 
@@ -128,29 +132,29 @@ class ManagedBuffer : WriteBuffer {
 class String : Buffer {
 
     ## Initialize from a buffer
-    void init(Buffer buf) {
+    oper init(Buffer buf) {
         byteptr b = malloc(buf.size);
         memcpy(b, buf.buffer, buf.size);
-        init(b, buf.size);
+        Buffer_init(b, buf.size);
     }
 
     ## Initialize from a WriteBuffer and take ownership (takeOwnership is 
     ## actually ignored).
-    void init(ManagedBuffer buf, bool takeOwnership) {
+    oper init(ManagedBuffer buf, bool takeOwnership) {
         size = buf.size;
         buffer = buf.orphan();
     }
     
     ## Initialize from a null-terminated c-string
-    void init(byteptr cString) {
+    oper init(byteptr cString) {
         size = strlen(cString);
         buffer = malloc(size + 1);
         memcpy(buffer, cString, size);
     }
 
     ## Create an empty string.
-    void init() {
-        init(malloc(0), 0);
+    oper init() {
+        Buffer_init(malloc(0), 0);
     }
     
     void del() {
@@ -161,7 +165,7 @@ class String : Buffer {
 
 class StaticString : String {
 
-    void init(byteptr data, uint size) {
+    oper init(byteptr data, uint size) {
         Buffer_init(data, size);
     }
     

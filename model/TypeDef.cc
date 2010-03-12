@@ -28,7 +28,7 @@ bool TypeDef::hasInstSlot() {
 }
 
 bool TypeDef::isImplicitFinal(const std::string &name) {
-    return name == "init" ||
+    return name == "oper init" ||
            name == "bind" ||
            name == "release" ||
            name == "toBool";
@@ -88,7 +88,7 @@ FuncDefPtr TypeDef::createDefaultInit() {
     TypeDef *voidType = context->globalData->voidType.get();
     FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
                                                         FuncDef::method,
-                                                        "init",
+                                                        "oper init",
                                                         voidType,
                                                         args,
                                                         0
@@ -102,7 +102,7 @@ FuncDefPtr TypeDef::createDefaultInit() {
 
         // if the base class contains no constructors at all, either it's a 
         // special class or it has no need for constructors, so ignore it.
-        OverloadDefPtr overloads = (*ibase)->lookUp("init");
+        OverloadDefPtr overloads = (*ibase)->lookUp("oper init");
         if (!overloads)
             continue;
 
@@ -225,7 +225,7 @@ void TypeDef::rectify() {
     defaultInitializer = 0;
     
     // collect all of the init methods.
-    VarDefPtr initMethods = context->lookUp("init", false);
+    VarDefPtr initMethods = context->lookUp("oper init", false);
     OverloadDef *overloads = OverloadDefPtr::rcast(initMethods);
     FuncDef *funcDef;
     bool gotInit = false;

@@ -121,8 +121,8 @@ test_output 'external references of base inst vars' \
 
 test_output 'internal references of base class inst vars' \
     'class A { int32 val; };
-    class B : A { void init() { val = 100; } int32 f() { return val; } };
-    B b; b.init(); printint(b.f());' \
+    class B : A { oper init() { val = 100; } int32 f() { return val; } };
+    B b; printint(b.f());' \
     100
 
 c='class A { int32 s; void i(int32 s0) {s=s0}
@@ -160,7 +160,7 @@ test_output 'premature return bypassing nested context' \
 135r'
 
 test_output 'explicit default constructor' \
-    'class A { int32 val; void init() { val = 100; } };
+    'class A { int32 val; oper init() { val = 100; } };
      A a; printint(a.val);' \
     100
 
@@ -244,7 +244,7 @@ test_output 'shared library imports' \
      4
 
 test_output 'temporary object construction' \
-    'class A { int32 val; void init(int32 val0) { val = val0; } };
+    'class A { int32 val; oper init(int32 val0) { val = val0; } };
      printint(A(100).val)' \
     100
 
@@ -343,7 +343,7 @@ D'
 # this test works because a call to the bind() operation gets generated from 
 # within the generated "new" operator and bind() gets called with an instance.
 test_output 'instance narrowing works more than one level' \
-    'class A { byteptr t; void init() { t = "ok"; } void bind() { puts(t); } };
+    'class A { byteptr t; oper init() { t = "ok"; } void bind() { puts(t); } };
      class B : A {};
      class C : B {}; C c;'  \
      ok
@@ -374,7 +374,7 @@ test_output 'correct caching of crack.lang' \
     ok
 
 test_output 'error messsage on default init with no default constructor' \
-    'class Obj { void init(int32 v) {} }; Obj o;' \
+    'class Obj { oper init(int32 v) {} }; Obj o;' \
     'ParseError: run_all_tests.tmp:1: no default constructor'
 
 test_output 'bool construction' \
@@ -484,7 +484,7 @@ test_output 'interpolation operator' \
 
     class F : Formatter {
         bool enabled;
-        void init(int fd) { init(FDWriter(fd)); enabled = true; }
+        oper init(int fd) { Formatter_init(FDWriter(fd)); enabled = true; }
         bool isTrue() { return enabled; }
     };
     out := F(1);
@@ -501,7 +501,7 @@ dollar sign: $'
 
 test_output 'assignment releases old value' \
     'class A { String val;
-        void init(String val0) { init(); val = val0; }
+        oper init(String val0) { Object_init(); val = val0; }
         void del() { print(val); }
      };
      
