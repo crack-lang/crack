@@ -62,7 +62,6 @@ inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
                                        static_cast<int>(b));
 }
         
-
 } // namespace model
 
 #endif

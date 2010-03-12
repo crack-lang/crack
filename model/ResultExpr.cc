@@ -19,7 +19,7 @@ void ResultExpr::handleAssignment(Context &context) {
 
     // the expression is non-productive: check for a bind function
     FuncCall::ExprVec args;
-    FuncDefPtr bindFunc = type->context->lookUp(context, "bind", args);
+    FuncDefPtr bindFunc = type->context->lookUpNoArgs("oper bind");
     if (!bindFunc)
         return;
     
@@ -38,8 +38,7 @@ void ResultExpr::handleTransient(Context &context) {
         return;
     
     // the expression is productive - check for a release function
-    FuncCall::ExprVec args;
-    FuncDefPtr releaseFunc = type->context->lookUp(context, "release", args);
+    FuncDefPtr releaseFunc = type->context->lookUpNoArgs("oper release");
     if (!releaseFunc)
         return;
     

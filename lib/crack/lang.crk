@@ -39,11 +39,11 @@ class Object : VTableBase {
     # delete virtual function
     void del() {}
 
-    void bind() {
+    oper bind() {
         refCount = refCount + 1;
     }
     
-    void release() {
+    oper release() {
         if (this is null)
             return;
 

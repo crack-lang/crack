@@ -615,7 +615,8 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
 
 void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                           const string &name,
-                          bool initializers
+                          bool initializers,
+                          int expectedArgCount
                           ) {
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, true);
@@ -641,8 +642,16 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    }
 
    // parse the arguments
-   vector<ArgDefPtr> argDefs;
+   FuncDef::ArgVec argDefs;
    parseArgDefs(argDefs);
+   
+   // if we are expecting an argument definition, check for it.
+   if (expectedArgCount > -1 && argDefs.size() != expectedArgCount)
+      error(nameTok, 
+            SPUG_FSTR("Expected " << expectedArgCount <<
+                      " arguments for function " << name
+                      )
+            );
    
    Token tok3 = toker.getToken();
    if (tok3.isSemi()) {
@@ -812,7 +821,7 @@ bool Parser::parseDef(TypeDef *type) {
          return true;
       } else if (tok3.isLParen()) {
          // function definition
-         parseFuncDef(type, tok2, tok2.getData(), false);
+         parseFuncDef(type, tok2, tok2.getData(), false, -1);
          return true;
       } else {
          unexpected(tok3,
@@ -1025,16 +1034,30 @@ void Parser::parsePostOper(TypeDef *returnType) {
    Token tok = toker.getToken();
    if (tok.isIdent()) {
       const string &ident = tok.getData();
-      if (ident == "init") {
-         // oper init must be of type "void"
+      bool isInit = ident == "init";
+      if (isInit || ident == "release" || ident == "bind") {
+         // these opers must be of type "void"
          if (!returnType)
             context->returnType = returnType =
                context->globalData->voidType.get();
          else if (returnType != context->globalData->voidType.get())
-            error(tok, "oper init must be of return type 'void'");
+            error(tok, 
+                  SPUG_FSTR("oper " << ident << 
+                            " must be of return type 'void'"
+                            )
+                  );
          expectToken(Token::lparen, "expected argument list");
+         
+         // the operators other than "init" require an empty args list.
+         int expectedArgCount;
+         if (!isInit)
+            expectedArgCount = 0;
+         else
+            expectedArgCount = -1;
 
-         parseFuncDef(returnType, tok, "oper init", true);
+         parseFuncDef(returnType, tok, "oper " + ident, isInit, 
+                      expectedArgCount
+                      );
       } else {
          unexpected(tok, "only 'oper init' honored at this time");
       }

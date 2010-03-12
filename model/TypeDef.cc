@@ -29,8 +29,8 @@ bool TypeDef::hasInstSlot() {
 
 bool TypeDef::isImplicitFinal(const std::string &name) {
     return name == "oper init" ||
-           name == "bind" ||
-           name == "release" ||
+           name == "oper bind" ||
+           name == "oper release" ||
            name == "toBool";
 }
 

@@ -165,10 +165,12 @@ class Parser {
        * @param initializers if true, parse initializers and emit
        *    initializers at the beginning of the body.  This should only be 
        *    used for "oper init".
+       * @param expectedArgCount if > -1, this is the expected number of arguments. 
        */
       void parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
                         const std::string &name,
-                        bool initializers
+                        bool initializers,
+                        int expectedArgCount
                         );
 
       /**

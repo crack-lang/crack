@@ -16,7 +16,7 @@ void CleanupFrame::addCleanup(VarDef *varDef) {
     // we only need to do cleanups for types with a "release" function
     FuncCall::ExprVec args;
     FuncDefPtr releaseFunc =
-        varDef->type->context->lookUp(*context, "release", args);
+        varDef->type->context->lookUp(*context, "oper release", args);
     
     if (releaseFunc) {
         VarRefPtr varRef = context->builder.createVarRef(varDef);

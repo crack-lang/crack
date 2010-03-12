@@ -15,6 +15,8 @@ function test_output {
     if [ "$result" = "$expected" ]; then
         echo ok
     else
+        echo $result
+        echo $expected
         echo FAILED
         rc=1
     fi
@@ -126,8 +128,8 @@ test_output 'internal references of base class inst vars' \
     100
 
 c='class A { int32 s; void i(int32 s0) {s=s0}
-             void bind() {printint(s); puts("b");}
-             void release() {printint(s); puts("r");} };'
+             oper bind() {printint(s); puts("b");}
+             oper release() {printint(s); puts("r");} };'
 
 test_output 'simple scope release' \
     "$c void func() { A a; a.i(2); printint(1)} func()" \
@@ -343,7 +345,7 @@ D'
 # this test works because a call to the bind() operation gets generated from 
 # within the generated "new" operator and bind() gets called with an instance.
 test_output 'instance narrowing works more than one level' \
-    'class A { byteptr t; oper init() { t = "ok"; } void bind() { puts(t); } };
+    'class A { byteptr t; oper init() { t = "ok"; } oper bind() { puts(t); } };
      class B : A {};
      class C : B {}; C c;'  \
      ok
@@ -352,7 +354,7 @@ test_output 'instance narrowing works more than one level' \
 # caused problems.
 test_output 'voidptr cast of class with release' \
     'void func(voidptr val) {printint(1);}
-     class A { void release() { printint(2); } };
+     class A { oper release() { printint(2); } };
      func(A());' \
      12
 
@@ -365,6 +367,14 @@ test_output 'hex and octal code escapes' \
 ok
 ok
 ok'
+
+test_output 'errors on bad argument lists for bind' \
+    'class A { oper bind(int val) {} };' \
+    'ParseError: run_all_tests.tmp:1: Expected 0 arguments for function oper bind'
+
+test_output 'errors on bad argument lists for release' \
+    'class A { oper release(int val) {} };' \
+    'ParseError: run_all_tests.tmp:1: Expected 0 arguments for function oper release'
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
