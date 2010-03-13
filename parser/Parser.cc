@@ -596,7 +596,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
       // context (and make sure that the current context is the function 
       // context)
       std::string varName = tok.getData();
-      checkForExistingDef(tok);
+      checkForExistingDef(tok, varName);
 
       // XXX need to check for a default variable assignment
       
@@ -619,7 +619,7 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                           int expectedArgCount
                           ) {
    // check for an existing, non-function definition.
-   VarDefPtr existingDef = checkForExistingDef(nameTok, true);
+   VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
    // if this is a class context, we're defining a method.
    ContextPtr classCtx = context->getClassContext();
@@ -771,7 +771,7 @@ bool Parser::parseDef(TypeDef *type) {
          // it's a variable.
 
          // make sure we're not hiding anything else
-         checkForExistingDef(tok2);
+         checkForExistingDef(tok2, tok2.getData());
          
          // make sure we've got a default initializer
          if (!type->defaultInitializer)
@@ -789,7 +789,7 @@ bool Parser::parseDef(TypeDef *type) {
          ExprPtr initializer;
 
          // make sure we're not hiding anything else
-         checkForExistingDef(tok2);
+         checkForExistingDef(tok2, tok2.getData());
 
          // check for a curly brace, indicating construction args.
          Token tok4 = toker.getToken();
@@ -1076,7 +1076,7 @@ TypeDefPtr Parser::parseClassDef() {
    string className = tok.getData();
    
    // check for an existing definition of the symbol
-   checkForExistingDef(tok);
+   checkForExistingDef(tok, tok.getData());
 
    // parse base class list   
    vector<TypeDefPtr> bases;
@@ -1210,9 +1210,11 @@ void Parser::parse() {
    parseBlock(false);
 }
 
-VarDefPtr Parser::checkForExistingDef(const Token &tok, bool overloadOk) {
+VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name, 
+                                      bool overloadOk
+                                      ) {
    ContextPtr classContext;
-   VarDefPtr existing = context->lookUp(tok.getData());
+   VarDefPtr existing = context->lookUp(name);
    if (existing) {
       Context *existingContext = existing->context;
 
@@ -1228,7 +1230,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, bool overloadOk) {
       // redefinition in the same context is an error
       if (existingContext == context)
          error(tok, 
-               SPUG_FSTR("Symbol " << tok.getData() <<
+               SPUG_FSTR("Symbol " << name <<
                           " is already defined in this context."
                          )
                );
@@ -1239,7 +1241,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, bool overloadOk) {
                !existingContext->returnType->matches(*classContext->returnType)
                ) {
          warn(tok,
-              SPUG_FSTR("Symbol " << tok.getData() << 
+              SPUG_FSTR("Symbol " << name << 
                          " hides another definition in an enclosing context."
                         )
               );

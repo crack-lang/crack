@@ -196,6 +196,7 @@ class Parser {
       
       // error checking functions
       model::VarDefPtr checkForExistingDef(const Token &tok,
+                                           const std::string &name,
                                            bool overloadOk = false);
 
    public:
