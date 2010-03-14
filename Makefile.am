@@ -43,3 +43,4 @@ TESTS = test/run_all_tests
 install-cracklib:
 	$(INSTALL) -d $(cracklib)/crack
 	$(INSTALL) lib/crack/lang.crk $(cracklib)/crack
+	$(INSTALL) lib/crack/io.crk $(cracklib)/crack
