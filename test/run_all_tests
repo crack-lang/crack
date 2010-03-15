@@ -548,4 +548,12 @@ test_output 'typed opers' \
     'class A { void oper init() { print("ok"); } }; A a;' \
     ok
 
+test_output 'array operator overloading' \
+    'import crack.io cout;
+     class A { int oper [](int i) { return i; }
+               int oper []=(int i, int v) { return i * v; } };
+     A a;
+     cout `$(a[100]) $(a[100] = 2)`;' \
+     '100 200'
+
 exit $rc

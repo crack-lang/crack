@@ -1076,7 +1076,25 @@ void Parser::parsePostOper(TypeDef *returnType) {
       }
 
    } else {
-      unexpected(tok, "identifier expected after 'oper' keyword");
+      
+      // all others require a return type
+      if (!returnType)
+         error(tok, "operator requires a return type");
+
+      if (tok.isLBracket()) {
+         // "oper []" or "oper []="
+         expectToken(Token::rbracket, "expected right bracket.");
+         tok = toker.getToken();
+         if (tok.isAssign()) {
+            expectToken(Token::lparen, "expected argument list.");
+            parseFuncDef(returnType, tok, "oper []=", false, 2);
+         } else {
+            parseFuncDef(returnType, tok, "oper []", false, 1);
+         }
+
+      } else {
+         unexpected(tok, "identifier or symbol expected after 'oper' keyword");
+      }
    }
 }
 
