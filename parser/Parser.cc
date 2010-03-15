@@ -829,6 +829,10 @@ bool Parser::parseDef(TypeDef *type) {
                     "definition."
                     );
       }
+   } else if (tok2.isOper()) {
+      // deal with an operator
+      parsePostOper(type);
+      return true;
    } else {
       unexpected(tok2, "expected variable definition");
    }
@@ -1036,6 +1040,15 @@ void Parser::parsePostOper(TypeDef *returnType) {
       const string &ident = tok.getData();
       bool isInit = ident == "init";
       if (isInit || ident == "release" || ident == "bind") {
+         
+         // these can only be defined in an instance context
+         if (context->scope != Context::composite)
+            error(tok, 
+                  SPUG_FSTR("oper " << ident << 
+                             " can only be defined in a class scope."
+                            )
+                  );
+         
          // these opers must be of type "void"
          if (!returnType)
             context->returnType = returnType =
