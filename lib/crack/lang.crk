@@ -40,7 +40,8 @@ class Object : VTableBase {
     void del() {}
 
     oper bind() {
-        refCount = refCount + 1;
+        if (!(this is null))
+            refCount = refCount + 1;
     }
     
     oper release() {
