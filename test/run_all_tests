@@ -564,4 +564,8 @@ test_output 'cleanup of temporarys in conditionals' \
     'if ("test") 1; while ("test".size == 0) 1; print("ok");' \
     ok
 
+test_output 'binary operator overloading' \
+    'class A {}; A a; int oper +(A x, A y) { return 100; } printint(a + a);' \
+    100
+
 exit $rc

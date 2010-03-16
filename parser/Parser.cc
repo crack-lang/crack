@@ -1091,7 +1091,14 @@ void Parser::parsePostOper(TypeDef *returnType) {
          } else {
             parseFuncDef(returnType, tok, "oper []", false, 1);
          }
-
+      
+      } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() ||
+                 tok.isGE() || tok.isGT() || tok.isPlus() || tok.isMinus() ||
+                 tok.isSlash() || tok.isAsterisk() || tok.isPercent()
+                 ) {
+         // binary operators
+         expectToken(Token::lparen, "expected argument list.");
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), false, 2);
       } else {
          unexpected(tok, "identifier or symbol expected after 'oper' keyword");
       }
