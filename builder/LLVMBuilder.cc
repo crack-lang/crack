@@ -2121,10 +2121,12 @@ BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
     // create a block to come after the else and jump to it from the current 
     // "if true" block.
     BasicBlock *falseBlock = bpos->block;
-    bpos->block = BasicBlock::Create(getGlobalContext(), "cond_end", func);
-    if (!terminal)
+    bpos->block = 0; 
+    if (!terminal) {
+        bpos->block = BasicBlock::Create(getGlobalContext(), "cond_end", func);
         builder.CreateBr(bpos->block);
-    
+    }    
+
     // new block is the "false" condition
     builder.SetInsertPoint(block = falseBlock);
     return pos;
@@ -2137,11 +2139,18 @@ void LLVMBuilder::emitEndIf(Context &context,
     BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // branch from the current block to the next block
-    if (!terminal)
+    if (!terminal) {
+        if (!bpos->block)
+            bpos->block = 
+                BasicBlock::Create(getGlobalContext(), "cond_end", func);
         builder.CreateBr(bpos->block);
 
-    // new block is the next block
-    builder.SetInsertPoint(block = bpos->block);
+    }
+
+    // if we ended up with any non-terminal paths our of the if, the new 
+    // block is the next block
+    if (bpos->block)
+        builder.SetInsertPoint(block = bpos->block);
 }
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 

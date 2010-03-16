@@ -40,6 +40,10 @@ test_output 'block if/else' \
     'if (1) { puts("abcd"); } else { puts("efgh"); }' 'abcd'
 test_output 'negative block if/else' \
     'if (0) { puts("abcd"); } else { puts("efgh"); }' 'efgh'
+test_output 'double if/else, all terminal' \
+    'void f() { if (1) return; else if (0) return; else return; }
+     puts("ok");' \
+    ok
 test_output 'function with no args' \
     'void func() { puts("abcd"); } func()' "abcd"
 test_output 'double terminal "if"' \
