@@ -556,4 +556,8 @@ test_output 'array operator overloading' \
      cout `$(a[100]) $(a[100] = 2)`;' \
      '100 200'
 
+test_output 'cleanup of temporarys in conditionals' \
+    'if ("test") 1; while ("test".size == 0) 1; print("ok");' \
+    ok
+
 exit $rc

@@ -2100,7 +2100,11 @@ BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
                                                                  )
                                               );
 
+    context.createCleanupFrame();
     cond->emitCond(context);
+    Value *condVal = lastValue;
+    context.closeCleanupFrame();
+    lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);
     
     // repoint to the new ("if true") block
@@ -2156,7 +2160,11 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     builder.SetInsertPoint(block = whileCond);
 
     // XXX see notes above on a conditional type.
+    context.createCleanupFrame();
     cond->emitCond(context);
+    Value *condVal = lastValue;
+    context.closeCleanupFrame();
+    lastValue = condVal;
     builder.CreateCondBr(lastValue, whileBody, bpos->block);
 
     // begin generating code in the while body    
