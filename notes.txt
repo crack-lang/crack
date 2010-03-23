@@ -414,3 +414,5 @@ Ugliness:
             there's probably a NamespaceDef base class
         -   Namespace should make use of polymorphism to deal better with 
             funny resolution stuff.
+        -   we should make the Parser::error() function part of Context so we 
+            can use it from all levels.

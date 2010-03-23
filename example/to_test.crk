@@ -90,3 +90,11 @@ class Foo {} print('test');
 # assignment to functions
 void f() {}
 f = 100;
+
+# this should cause an error because x is initialized before y and we are 
+# initializing x with the value of y.
+class A {
+    int x;
+    int y;
+    oper init() : y = 0, x = y {}
+};
