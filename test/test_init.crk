@@ -1,0 +1,33 @@
+## Tests of initializers.
+
+class A { 
+    int a;
+    oper init() {}
+    oper init(int a0) : a = a0 {}
+};
+
+class B {
+    int b;
+    oper init() {}
+};
+
+class C : A, B {
+    int c;
+    int d = 3;
+    A x;
+    oper init() : A(100), x(2), c = 1 {}
+};
+
+A a;
+if (a.a) puts('failed default constructor/default initializer');
+C c;
+if (c.a != 100) puts('failed base initializer/member initializer');
+if (c.c != 1) puts('failed member initializer');
+if (c.d != 3) puts('failed default initializer');
+if (c.x.a != 2) puts('failed member construction');
+puts('ok');
+
+
+
+
+

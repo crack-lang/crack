@@ -3,10 +3,7 @@
 
 class A {
     String s;
-    oper init(String s0) {
-        Object_init();
-        s = s0;
-    }
+    oper init(String s0) : s = s0 {}
     
     void del() {
         print(s);

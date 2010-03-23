@@ -2,7 +2,11 @@
 
 #include "Context.h"
 
+#include <spug/StringFmt.h>
 #include "builder/Builder.h"
+#include "parser/Token.h"
+#include "parser/Location.h"
+#include "parser/ParseError.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ArgDef.h"
@@ -183,12 +187,20 @@ FuncDefPtr Context::lookUp(Context &context,
     VarDefPtr var = lookUp(varName);
     if (!var)
         return 0;
-
+    
     // if "var" is a class definition, convert this to a lookup of the "oper 
     // new" function on the class.
     TypeDef *typeDef = TypeDefPtr::rcast(var);
-    if (typeDef)
-        return typeDef->context->lookUp(context, "oper new", args);
+    if (typeDef) {
+        FuncDefPtr operNew =
+            typeDef->context->lookUp(context, "oper new", args);
+
+        // don't inherit "oper new"
+        if (operNew->context != typeDef->context.get())
+            return 0;
+        
+        return operNew;
+    }
 
     // if this is an overload, get the function from it.
     OverloadDefPtr overload = OverloadDefPtr::rcast(var);
@@ -291,4 +303,31 @@ void Context::closeCleanupFrame() {
     CleanupFramePtr frame = cleanupFrame;
     cleanupFrame = frame->parent;
     frame->close();
+}
+
+void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
+                         Expr *initializer
+                         ) {
+    
+    // if the definition context is an instance context, make sure that we 
+    // haven't generated any constructors.
+    ContextPtr defCtx = getDefContext();
+    if (defCtx->scope == Context::instance && 
+         defCtx->returnType->initializersEmitted
+        ) {
+        parser::Location loc = tok.getLocation();
+        throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' << 
+                                            loc.getLineNumber() << 
+                                            ": Adding an instance variable "
+                                            "after 'oper init' has been "
+                                            "defined."
+                                           )
+                         );
+    }
+
+    createCleanupFrame();
+    VarDefPtr varDef = type->emitVarDef(*this, tok.getData(), initializer);
+    closeCleanupFrame();
+    defCtx->addDef(varDef.get());
+    cleanupFrame->addCleanup(varDef.get());
 }

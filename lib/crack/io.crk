@@ -14,10 +14,7 @@ void free(byteptr mem);
 ## Writer interface, for all objects that support "write()"
 ## needs to use Object as a virtual base class.
 class Writer : Object, XWriter {
-    void Writer_init() {
-        # object init
-        Object_init();
-    }
+    oper init() {}
 
     ## Low level write method.  This is the only thing you need to implement.
     void write(byteptr b, uint size) {
@@ -36,10 +33,7 @@ class Writer : Object, XWriter {
 class FDWriter : Writer {
     int fd;
 
-    oper init(int fd0) {
-        Writer_init();
-        fd = fd0;
-    }
+    oper init(int fd0) : fd = fd0 {}
 
     void write(byteptr buf, uint size) {
         write(fd, buf, size);
@@ -76,10 +70,7 @@ class Reader {
 class FDReader : Reader {
     int fd;
     
-    oper init(int fd0) {
-        Object_init();
-        fd = fd0;
-    }
+    oper init(int fd0) : fd = fd0 {}
     
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
@@ -128,15 +119,8 @@ class Formatter : Writer {
     
     Writer __rep;
 
-    void Formatter_init(Writer rep) {
-        Writer_init();
-        __rep = rep;
-    }
+    oper init(Writer rep) : __rep = rep {}
 
-    oper init(Writer rep) {
-        Formatter_init(rep);
-    }
-    
     void write(byteptr data, uint size) {
         __rep.write(data, size);
     }

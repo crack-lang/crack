@@ -1,10 +1,11 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import "libc.so.6" free, strlen, strdup, malloc, memcpy, abort;
+import "libc.so.6" free, strlen, strdup, malloc, memcpy, memcmp, abort;
 
 byteptr malloc(uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
+int memcmp(byteptr a, byteptr b, uint size);
 void free(voidptr mem);
 uint strlen(byteptr buf);
 byteptr strdup(byteptr buf);
@@ -28,12 +29,7 @@ class FreeBase {};
 class Object : VTableBase {
     uint refCount;
 
-    void Object_init() {
-        refCount = 0;
-    }
-
-    oper init() {
-        Object_init();
+    oper init() : refCount = 0 {
     }
 
     # delete virtual function
@@ -59,6 +55,12 @@ class Object : VTableBase {
         return true;
     }
     
+    ## Comparison function - returns a value < 0 if this < other, 0 if this is 
+    ## equal to other, > 0 if this > other.
+    int cmp(Object other) {
+        if (this is other) return 0; else return 1;
+    }
+    
     bool toBool() {
         if (this is null)
             return false;
@@ -78,17 +80,7 @@ class Buffer : Object {
     uint size;    
     byteptr buffer;
 
-    ## Initializer.
-    void Buffer_init(byteptr buffer0, uint size0) {
-        # do Object.init()
-        Object_init();
-        buffer = buffer0;
-        size = size0;
-    }
-    
-    oper init(byteptr buffer0, uint size0) {
-        Buffer_init(buffer0, size0);
-    }
+    oper init(byteptr buffer0, uint size0) : buffer = buffer0, size = size0 {}
     
     bool isTrue() {
         return size;
@@ -103,18 +95,14 @@ class Buffer : Object {
 class WriteBuffer : Buffer {
     
     ## constructor inheritence would be nice
-    oper init(byteptr buffer, uint size) {
-        Buffer_init(buffer, size);
-    }
+    oper init(byteptr buffer, uint size) : Buffer(buffer, size) {}
 };
 
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
 
-    oper init(uint size) {
-        Buffer_init(malloc(size), size);
-    }
-    
+    oper init(uint size) : WriteBuffer(malloc(size), size) {}
+
     ## Orphan's the byte buffer, returning it for use by the caller.  The 
     ## caller is responsible for freeing it.
     byteptr orphan() {
@@ -129,46 +117,51 @@ class ManagedBuffer : WriteBuffer {
     }
 };
 
-## The string class.  Strings are immutable _Buffy's.
+## The string class.  Strings are immutable managed Buffer's - when they are 
+## deleted, their buffer goes away.
 class String : Buffer {
 
     ## Initialize from a buffer
-    oper init(Buffer buf) {
-        byteptr b = malloc(buf.size);
-        memcpy(b, buf.buffer, buf.size);
-        Buffer_init(b, buf.size);
+    oper init(Buffer buf) : Buffer(malloc(buf.size), buf.size) {
+        memcpy(buffer, buf.buffer, buf.size);
     }
 
     ## Initialize from a WriteBuffer and take ownership (takeOwnership is 
     ## actually ignored).
-    oper init(ManagedBuffer buf, bool takeOwnership) {
-        size = buf.size;
-        buffer = buf.orphan();
+    oper init(ManagedBuffer buf, bool takeOwnership) : 
+        Buffer(buf.orphan(), size) {
+    }
+    
+    ## Initialize from byte pointer and size and take ownership.
+    oper init(byteptr buf, uint size, bool takeOwnership) :
+        Buffer(buf, size) {
     }
     
     ## Initialize from a null-terminated c-string
-    oper init(byteptr cString) {
-        size = strlen(cString);
-        buffer = malloc(size + 1);
+    oper init(byteptr cString) : Buffer(malloc(size + 1), strlen(cString)) {
         memcpy(buffer, cString, size);
     }
 
     ## Create an empty string.
-    oper init() {
-        Buffer_init(malloc(0), 0);
-    }
+    oper init() : Buffer(malloc(0), 0) {}
     
     void del() {
         free(buffer);
     }
-    
+
+    ## This needs to accept Object, we need type casts to be able to implement 
+    ## that interface.
+    int cmp(String other) {
+        if (size > other.size)
+            return memcmp(buffer, other.buffer, other.size);
+        else
+            return memcmp(buffer, other.buffer, size);
+    }
 };
 
 class StaticString : String {
 
-    oper init(byteptr data, uint size) {
-        Buffer_init(data, size);
-    }
+    oper init(byteptr data, uint size) : String(data, size, true) {}
     
     # overrides string delete so we don't try to delete a static buffer.
     void del() {}

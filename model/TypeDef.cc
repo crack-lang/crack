@@ -11,6 +11,7 @@
 #include "ArgDef.h"
 #include "Context.h"
 #include "FuncDef.h"
+#include "Initializers.h"
 #include "InstVarDef.h"
 #include "OverloadDef.h"
 #include "ResultExpr.h"
@@ -49,8 +50,8 @@ bool TypeDef::isDerivedFrom(const TypeDef *other) const {
 }
 
 VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
-                               Expr *initializer
-                               ) {
+                              Expr *initializer
+                              ) {
     return container.builder.emitVarDef(container, this, name, initializer);
 }
 
@@ -249,6 +250,18 @@ void TypeDef::rectify() {
         createNewFunc(createDefaultInit().get());
 }
 
+bool TypeDef::isParent(TypeDef *type) {
+    Context::ContextVec &parents = context->parents;
+    for (Context::ContextVec::iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         )
+        if (type == (*iter)->returnType.get())
+            return true;
+    
+    return false;
+}
+
 FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
     // XXX This is a half-assed general solution to the problem, we should 
     // really be using the canonical name of the type (and omitting the 
@@ -284,6 +297,90 @@ bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
     }
     
     return false;
+}
+
+void TypeDef::emitInitializers(Context &context, Initializers *inits) {
+
+    VarDefPtr thisDef = context.lookUp("this");
+    assert(thisDef && 
+            "trying to emit initializers in a context with no 'this'");
+    VarRefPtr thisRef = new VarRef(thisDef.get());
+
+    // do initialization for the base classes.
+    ContextPtr classCtx = context.getClassContext();
+    for (Context::ContextVec::iterator ibase = classCtx->parents.begin();
+         ibase != classCtx->parents.end();
+         ++ibase
+         ) {
+        TypeDef *base = (*ibase)->returnType.get();
+
+        // see if there's a constructor for the base class in our list of 
+        // initilaizers.
+        FuncCallPtr initCall = inits->getBaseInitializer(base);
+        if (initCall) {
+            initCall->emit(context);
+            continue;
+        }
+
+        // if the base class contains no constructors at all, either it's a 
+        // special class or it has no need for constructors, so ignore it.
+        OverloadDefPtr overloads = (*ibase)->lookUp("oper init");
+        if (!overloads)
+            continue;
+
+        // we must get a default initializer and it must be specific to the 
+        // base class (not inherited from an ancestor of the base class)
+        FuncDef::ArgVec args;
+        FuncDefPtr baseInit = overloads->getSigMatch(args);
+        if (!baseInit || baseInit->context != ibase->get())
+            // XXX make this a parser error
+            throw ParseError(SPUG_FSTR("Cannot create a default constructor "
+                                        "because base class " << 
+                                        (*ibase)->returnType->name <<
+                                        " has no default constructor."
+                                       )
+                             );
+
+        FuncCallPtr funcCall = context.builder.createFuncCall(baseInit.get());
+        funcCall->receiver = thisRef;
+        funcCall->emit(context);
+    }
+
+    // generate constructors for all of the instance variables
+    for (Context::VarDefMap::iterator iter = classCtx->beginDefs();
+         iter != classCtx->endDefs();
+         ++iter
+         )
+        // XXX need to put these in order of definition
+        if (iter->second->hasInstSlot()) {
+            InstVarDef *ivar = InstVarDefPtr::arcast(iter->second);
+            
+            // see if the user has supplied an initializer, use it if so.
+            ExprPtr initializer = inits->getFieldInitializer(ivar);
+            if (!initializer)
+                initializer = ivar->initializer;
+            
+            // when creating a default constructor, everything has to have an
+            // initializer.
+            // XXX make this a parser error
+            if (!initializer)
+                throw ParseError(SPUG_FSTR("no initializer for variable " << 
+                                           ivar->name << 
+                                           " while creating default "
+                                           "constructor."
+                                          )
+                                 );
+
+            AssignExprPtr assign = new AssignExpr(thisRef.get(),
+                                                  ivar,
+                                                  initializer.get()
+                                                  );
+            context.builder.emitFieldAssign(context, thisRef.get(),
+                                            assign.get()
+                                            );
+        }
+    
+    initializersEmitted = true;
 }
 
 void TypeDef::dump(ostream &out, const string &prefix) const {

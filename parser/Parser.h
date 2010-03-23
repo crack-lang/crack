@@ -16,6 +16,7 @@ namespace model {
    SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(Context);
    SPUG_RCPTR(Expr);
+   SPUG_RCPTR(Initializers);
    SPUG_RCPTR(TypeDef);
    SPUG_RCPTR(VarDef);
 };
@@ -153,9 +154,16 @@ class Parser {
       model::ExprPtr parseExpression(unsigned precedence = 0);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
 
-      model::TypeDefPtr parseTypeSpec();
+      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 
+                                       " is not a type."
+                                      );
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args);
+
+      /**
+       * Parse the initializer list after an oper init.
+       */
+      model::InitializersPtr parseInitializers(model::Expr *receiver);
 
       /**
        * Parse a function definition.

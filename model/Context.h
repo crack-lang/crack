@@ -12,6 +12,10 @@ namespace builder {
     class Builder;
 }
 
+namespace parser {
+    class Token;
+}
+
 namespace model {
 
 SPUG_RCPTR(BuilderContextData);
@@ -218,6 +222,13 @@ class Context : public spug::RCBase {
          * appropriate.
          */
         void closeCleanupFrame();
+        
+        /**
+         * Emit a variable definition in the context.
+         */
+        void emitVarDef(TypeDef *type, const parser::Token &name, 
+                        Expr *initializer
+                        );
 };
 
 }; // namespace model

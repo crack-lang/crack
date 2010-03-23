@@ -382,6 +382,20 @@ test_output 'errors on bad argument lists for release' \
     'class A { oper release(int val) {} };' \
     "${parseError}1: Expected 0 arguments for function oper release"
 
+test_output 'base constructors are non-transitive' \
+    'class A { oper init(int a0) {} };
+     class B : A { oper init() : A(100) {} };
+     class C : B { oper init() : B(100) {} };' \
+    "${parseError}3: No matching constructor found for B"
+
+test_output 'no inheritence of oper new' \
+    'class A { oper init(int a0) {} };
+     class B : A { oper init() : A(100) {} };
+     b := B(100);' \
+    "${parseError}3: No method exists matching B with these argument types."
+
+test_output 'constructor initializers' 'import test.test_init;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
@@ -500,7 +514,7 @@ test_output 'interpolation operator' \
 
     class F : Formatter {
         bool enabled;
-        oper init(int fd) { Formatter_init(FDWriter(fd)); enabled = true; }
+        oper init(int fd) : Formatter(FDWriter(fd)), enabled = true {}
         bool isTrue() { return enabled; }
     };
     out := F(1);
@@ -517,7 +531,7 @@ dollar sign: $'
 
 test_output 'assignment releases old value' \
     'class A { String val;
-        oper init(String val0) { Object_init(); val = val0; }
+        oper init(String val0) : val = val0 {}
         void del() { print(val); }
      };
      
