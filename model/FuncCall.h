@@ -22,8 +22,18 @@ class FuncCall : public Expr {
         // if FuncCall is a method, this is the receiver (the "this"), 
         // otherwise it will be null
         ExprPtr receiver;
+        
+        // if true, the function call is virtual (func->flags must include 
+        // "virtualized" in this case)
+        bool virtualized;
+        
+        /**
+         * @param squashVirtual If true, call a virtualized function 
+         * directly, without the use of the vtable (causes virtualized to be 
+         * set to false, regardless of whether funcDef is virtual).
+         */
+        FuncCall(FuncDef *funcDef, bool squashVirtual = false);
 
-        FuncCall(FuncDef *funcDef);
         virtual ResultExprPtr emit(Context &context);
         virtual void writeTo(std::ostream &out) const;
 };

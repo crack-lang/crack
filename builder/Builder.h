@@ -195,8 +195,18 @@ class Builder : public spug::RCBase {
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               ) = 0;
+
+        
+        /**
+         * @param squashVirtual If true, call a virtualized function 
+         *  directly, without the use of the vtable (causes virtualized to be 
+         *  set to false, regardless of whether funcDef is virtual).
+         */
         virtual model::FuncCallPtr 
-            createFuncCall(model::FuncDef *func) = 0;
+            createFuncCall(model::FuncDef *func, 
+                           bool squashVirtual = false
+                           ) = 0;
+
         virtual model::VarRefPtr
             createVarRef(model::VarDef *varDef) = 0;
         

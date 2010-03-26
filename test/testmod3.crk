@@ -5,7 +5,7 @@ class A {
     String s;
     oper init(String s0) : s = s0 {}
     
-    void del() {
+    oper del() {
         print(s);
     }
 };

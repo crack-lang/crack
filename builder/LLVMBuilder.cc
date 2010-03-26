@@ -1993,7 +1993,7 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
     
-    if (funcDef->flags & FuncDef::virtualized)
+    if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
                                                     valueArgs
@@ -2683,7 +2683,9 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
                          );
 }
                        
-model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func) {
+model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func, 
+                                               bool squashVirtual
+                                               ) {
     // try to create a BinCmp
     OpDef *specialOp = OpDefPtr::cast(func);
     if (specialOp) {
@@ -2691,7 +2693,7 @@ model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func) {
         return specialOp->createFuncCall();
     } else {
         // normal function call
-        return new FuncCall(func);
+        return new FuncCall(func, squashVirtual);
     }
 }
 

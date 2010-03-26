@@ -165,19 +165,27 @@ class Parser {
        */
       model::InitializersPtr parseInitializers(model::Expr *receiver);
 
+      enum FuncFlags {
+         normal,           // normal function
+         hasMemberInits,   // function with member/base class initializers
+                           // ("oper new")
+         hasMemberDels     // function with member/base class destructors
+                           // ("oper del")
+      };
+
       /**
        * Parse a function definition.
        * @param returnType function return type.
        * @param nameTok the last token parsed in the function name.
        * @param name the full (but unqualified) function name.
-       * @param initializers if true, parse initializers and emit
-       *    initializers at the beginning of the body.  This should only be 
-       *    used for "oper init".
+       * @param funcFlags flags defining special processing rules for the 
+       *    function (whether initializers or destructors need to be parsed 
+       *    and emitted).
        * @param expectedArgCount if > -1, this is the expected number of arguments. 
        */
       void parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
                         const std::string &name,
-                        bool initializers,
+                        FuncFlags funcFlags,
                         int expectedArgCount
                         );
 

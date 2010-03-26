@@ -153,6 +153,10 @@ OverloadDefPtr Context::getOverload(const std::string &varName,
         
 
 VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
+    // hack to allow us to call "oper del" without general operation syntax.
+    if (varName == "__del")
+        return lookUp("oper del", recurse);
+
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {
         return iter->second;
@@ -201,7 +205,7 @@ FuncDefPtr Context::lookUp(Context &context,
         
         return operNew;
     }
-
+    
     // if this is an overload, get the function from it.
     OverloadDefPtr overload = OverloadDefPtr::rcast(var);
     if (!overload)

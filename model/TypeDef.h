@@ -81,6 +81,11 @@ class TypeDef : public VarDef {
          * Create the default initializer.
          */
         FuncDefPtr createDefaultInit();
+        
+        /**
+         * Create the default destructor for the type.
+         */
+        void createDefaultDestructor();
 
         /**
          * Create a "new" function to wrap the specified "init" function.
@@ -124,6 +129,12 @@ class TypeDef : public VarDef {
          * members.
          */
         void emitInitializers(Context &context, Initializers *inits);
+        
+        /**
+         * Add the destructor cleanups for the type to the cleanup frame for 
+         * the context.
+         */
+        void addDestructorCleanups(Context &context);
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

@@ -8,6 +8,7 @@
 #include "parser/ParseError.h"  // need to move error handling into Context
 #include "AllocExpr.h"
 #include "AssignExpr.h"
+#include "CleanupFrame.h"
 #include "ArgDef.h"
 #include "Context.h"
 #include "FuncDef.h"
@@ -159,6 +160,36 @@ FuncDefPtr TypeDef::createDefaultInit() {
     return newFunc;
 }
 
+void TypeDef::createDefaultDestructor() {
+    ContextPtr funcContext = context->createSubContext(Context::local);
+
+    // create the "this" variable
+    ArgDefPtr thisDef = context->builder.createArgDef(this, "this");
+    funcContext->addDef(thisDef.get());
+    
+    FuncDef::Flags flags = 
+        FuncDef::method | 
+        (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
+    
+    FuncDef::ArgVec args(0);
+    TypeDef *voidType = context->globalData->voidType.get();
+    FuncDefPtr delFunc = context->builder.emitBeginFunc(*funcContext,
+                                                        flags,
+                                                        "oper del",
+                                                        voidType,
+                                                        args,
+                                                        0
+                                                        );
+
+    // all we have to do is add the destructor cleanups
+    addDestructorCleanups(*funcContext);
+
+    // ... and close off the function
+    context->builder.emitReturn(*funcContext, 0);
+    context->builder.emitEndFunc(*funcContext, delFunc.get());
+    context->addDef(delFunc.get());
+}
+
 void TypeDef::createNewFunc(FuncDef *initFunc) {
     ContextPtr funcContext = context->createSubContext(Context::local);
     
@@ -248,6 +279,12 @@ void TypeDef::rectify() {
     // default constructor and wrap it in a new function.
     if (!gotInit)
         createNewFunc(createDefaultInit().get());
+    
+    // if the class doesn't already define a delete operator specific to the 
+    // class, generate one.
+    FuncDefPtr operDel = context->lookUpNoArgs("oper del");
+    if (!operDel || operDel->context != context.get())
+        createDefaultDestructor();
 }
 
 bool TypeDef::isParent(TypeDef *type) {
@@ -378,6 +415,51 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
             context.builder.emitFieldAssign(context, thisRef.get(),
                                             assign.get()
                                             );
+        }
+    
+    initializersEmitted = true;
+}
+
+void TypeDef::addDestructorCleanups(Context &context) {
+    ContextPtr classCtx = context.getClassContext();
+    VarRefPtr thisRef = new VarRef(context.lookUp("this").get());
+    
+    // first add the cleanups for the base classes, in order defined, then the 
+    // cleanups for the derived classes.  Cleanups are applied in the reverse 
+    // order that they are added, so this will result in the expected 
+    // destruction order of instance variables followed by base classes.
+    
+    // generate calls to the destructors for all of the base classes.
+    for (Context::ContextVec::iterator ibase = classCtx->parents.begin();
+         ibase != classCtx->parents.end();
+         ++ibase
+         ) {
+        TypeDefPtr base = (*ibase)->returnType;
+        
+        // check for a delete operator (the primitive base classes don't have 
+        // them and don't need cleanup)
+        FuncDefPtr operDel = (*ibase)->lookUpNoArgs("oper del");
+        if (!operDel)
+            continue;
+        
+        // create a cleanup function and don't call it through the vtable.
+        FuncCallPtr funcCall =
+            context.builder.createFuncCall(operDel.get(), true);
+
+        funcCall->receiver = thisRef.get();
+        context.cleanupFrame->addCleanup(funcCall.get());
+    }
+
+    // generate destructors for all of the instance variables
+    // XXX again, need to do this in order of definition
+    for (Context::VarDefMap::iterator iter = classCtx->beginDefs();
+         iter != classCtx->endDefs();
+         ++iter
+         )
+        if (iter->second->hasInstSlot()) {
+            context.cleanupFrame->addCleanup(iter->second.get(), 
+                                             thisRef.get()
+                                             );
         }
     
     initializersEmitted = true;

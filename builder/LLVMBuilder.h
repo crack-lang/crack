@@ -178,7 +178,7 @@ class LLVMBuilder : public Builder {
         // definition.
         
         virtual model::FuncCallPtr
-            createFuncCall(model::FuncDef *func);
+            createFuncCall(model::FuncDef *func, bool squashVirtual);
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               );

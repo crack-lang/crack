@@ -532,7 +532,7 @@ dollar sign: $'
 test_output 'assignment releases old value' \
     'class A { String val;
         oper init(String val0) : val = val0 {}
-        void del() { print(val); }
+        oper del() { print(val); }
      };
      
      a := A("first");
@@ -581,5 +581,13 @@ test_output 'cleanup of temporarys in conditionals' \
 test_output 'binary operator overloading' \
     'class A {}; A a; int oper +(A x, A y) { return 100; } printint(a + a);' \
     100
+
+test_output 'order of destruction' \
+    'class A { oper del() { printint(1); } };
+     class B { oper del() { printint(2); } };
+     class C : A { B b; oper del() { printint(3); } };
+     C c;' \
+     321
+    
 
 exit $rc

@@ -743,7 +743,7 @@ InitializersPtr Parser::parseInitializers(Expr *receiver) {
 
 void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                           const string &name,
-                          bool initializersAllowed,
+                          Parser::FuncFlags funcFlags,
                           int expectedArgCount
                           ) {
    // check for an existing, non-function definition.
@@ -806,7 +806,7 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          error(tok3, 
                "abstract/forward declarations are not supported yet");
       }
-   } else if (initializersAllowed && tok3.isColon()) {
+   } else if (funcFlags == hasMemberInits && tok3.isColon()) {
       inits = parseInitializers(receiver.get());
       tok3 = toker.getToken();
    }
@@ -834,7 +834,7 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       else
          error(nameTok,
                SPUG_FSTR("Definition of " << name <<
-                        " hides previous overload."
+                        "hides previous overload."
                         )
                );
    } else {
@@ -842,13 +842,12 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       if (existingOvldDef && 
          (override = existingOvldDef->getSigMatch(argDefs)) &&
          !override->isOverridable()
-         ) {
+         )
          error(nameTok,
                SPUG_FSTR("Definition of " << name <<
                         " hides previous overload."
                         )
                );
-      }
 
    }
    
@@ -872,6 +871,13 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (inits)
       receiver->type->emitInitializers(*context, inits.get());
    
+   // if this is an "oper del" with base & member cleanups, store them in the 
+   // current cleanup frame
+   if (funcFlags == hasMemberDels) {
+      assert(classCtx && "emitting a destructor outside of class context");
+      classCtx->returnType->addDestructorCleanups(*context);
+   }
+
    bool terminal = parseBlock(true);
    
    // if the block doesn't always terminate, either give an error or 
@@ -951,7 +957,7 @@ bool Parser::parseDef(TypeDef *type) {
          return true;
       } else if (tok3.isLParen()) {
          // function definition
-         parseFuncDef(type, tok2, tok2.getData(), false, -1);
+         parseFuncDef(type, tok2, tok2.getData(), normal, -1);
          return true;
       } else {
          unexpected(tok3,
@@ -1169,7 +1175,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
    if (tok.isIdent()) {
       const string &ident = tok.getData();
       bool isInit = ident == "init";
-      if (isInit || ident == "release" || ident == "bind") {
+      if (isInit || ident == "release" || ident == "bind" || ident == "del") {
          
          // these can only be defined in an instance context
          if (context->scope != Context::composite)
@@ -1198,7 +1204,13 @@ void Parser::parsePostOper(TypeDef *returnType) {
          else
             expectedArgCount = -1;
 
-         parseFuncDef(returnType, tok, "oper " + ident, isInit, 
+         FuncFlags flags;
+         if (isInit)
+            flags = hasMemberInits;
+         else if (ident == "del")
+            flags = hasMemberDels;
+
+         parseFuncDef(returnType, tok, "oper " + ident, flags, 
                       expectedArgCount
                       );
       } else {
@@ -1217,9 +1229,9 @@ void Parser::parsePostOper(TypeDef *returnType) {
          tok = toker.getToken();
          if (tok.isAssign()) {
             expectToken(Token::lparen, "expected argument list.");
-            parseFuncDef(returnType, tok, "oper []=", false, 2);
+            parseFuncDef(returnType, tok, "oper []=", normal, 2);
          } else {
-            parseFuncDef(returnType, tok, "oper []", false, 1);
+            parseFuncDef(returnType, tok, "oper []", normal, 1);
          }
       
       } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() ||
@@ -1228,7 +1240,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
                  ) {
          // binary operators
          expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), false, 2);
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 2);
       } else {
          unexpected(tok, "identifier or symbol expected after 'oper' keyword");
       }
