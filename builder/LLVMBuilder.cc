@@ -2741,6 +2741,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     // Otherwise create a fixup.
     if (varContext->complete) {
         Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
+        narrow(assign->value->type.get(), assign->var->type.get());
         builder.CreateStore(lastValue, fieldRef);
     } else {
         // create a placeholder instruction
