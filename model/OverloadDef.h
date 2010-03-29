@@ -16,7 +16,27 @@ SPUG_RCPTR(OverloadDef);
 
 /** An overloaded function. */
 class OverloadDef : public VarDef {
+    public:
+        typedef std::list<FuncDefPtr> FuncList;
+
+        // the parent overloads.  These can either be an actual overload or a 
+        // context pointer (for the case where the parent context is being 
+        // constructed, as in a composite context whose parent is the current 
+        // class context).
+        struct Parent {
+            OverloadDefPtr overload;
+            ContextPtr context;
+            
+            FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
+                              bool convert
+                              );
+        };
+        typedef std::vector<Parent> ParentVec;
+
     private:
+        FuncList funcs;
+        ParentVec parents;
+
         /**
          * Sets the impl and the type object from the function.  To be called 
          * for the first function added as a hack to keep function-as-objects 
@@ -25,13 +45,6 @@ class OverloadDef : public VarDef {
         void setImpl(FuncDef *func);
 
     public:
-        typedef std::list<FuncDefPtr> FuncList;
-        FuncList funcs;
-
-        // the index of the first parent function in the overload vector.  New 
-        // functions added with addFunc() will be added at this point to 
-        // preserve the order of lookups.
-        std::list<FuncDefPtr>::iterator startOfParents;
 
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 
