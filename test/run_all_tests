@@ -600,4 +600,15 @@ test_output 'order of destruction' \
      C c;' \
      321
 
+test_output 'StringFormatter' \
+    'import crack.io StringFormatter, cout;
+     f := StringFormatter(5);
+     f `test larger than 2*size`;
+     f ` second write`;
+     if (!f.createString().cmp("test larger than 2*size second write"))
+        cout `ok`;
+    else
+        cout `FAIL`;' \
+    ok
+
 exit $rc

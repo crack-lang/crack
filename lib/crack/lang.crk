@@ -1,9 +1,11 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import "libc.so.6" free, strlen, strdup, malloc, memcpy, memcmp, abort;
+import "libc.so.6" abort, free, strlen, strdup, malloc, memcpy, memcmp, 
+                   realloc;
 
 byteptr malloc(uint size);
+byteptr realloc(byteptr buf, uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
 int memcmp(byteptr a, byteptr b, uint size);
 void free(voidptr mem);
@@ -115,6 +117,22 @@ class ManagedBuffer : WriteBuffer {
         temp := buffer;
         buffer = null;
         return temp;
+    }
+    
+    ## Grow the buffer to the new size.
+    void grow(uint newSize) {
+        if (newSize <= size) {
+            puts('attempt to grow to a smaller or same size.');
+            abort();
+        }
+        
+        newBuffer := malloc(newSize);
+        if (!(buffer is null)) {
+            memcpy(newBuffer, buffer, size);
+            free(buffer);
+        }
+        buffer = newBuffer;
+        size = newSize;
     }
 
     oper del() {
