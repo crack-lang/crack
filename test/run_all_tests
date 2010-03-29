@@ -401,6 +401,11 @@ test_output 'narrowing field assignment' \
      puts("ok");' \
     ok
 
+test_output 'overloading based on derived types' \
+    'class A { void f(A a) { puts("A"); } };
+     class B : A { void f(B b) { puts("B"); } };
+     B b; b.f(b);' \
+    B
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -594,6 +599,5 @@ test_output 'order of destruction' \
      class C : A { B b; oper del() { printint(3); } };
      C c;' \
      321
-    
 
 exit $rc
