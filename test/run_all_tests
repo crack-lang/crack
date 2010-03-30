@@ -407,6 +407,17 @@ test_output 'overloading based on derived types' \
      B b; b.f(b);' \
     B
 
+test_output 'overrides of globals' \
+    'void foo() { puts("global foo"); }
+     class A {
+        void foo(int v) { puts("class foo"); }
+        void bar() { foo(100); }
+     };
+     A a;
+     a.bar();' \
+     'class foo'
+
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

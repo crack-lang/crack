@@ -282,15 +282,12 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       // lookup the method from the variable context's type context
       // XXX needs to handle callable objects.
       FuncDefPtr func = varContext.lookUp(*context, ident.getData(), args);
-      if (!func) {
-         VarDefPtr v = varContext.lookUp(ident.getData());
-         std::cerr << *v << endl;
+      if (!func)
          error(ident,
                SPUG_FSTR("No method exists matching " << ident.getData() <<
                           " with these argument types."
                          )
                );
-      }
 
       // if the definition is for an instance variable, emit an implicit 
       // "this" dereference.  Otherwise just emit the variable

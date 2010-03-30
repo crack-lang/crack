@@ -93,34 +93,13 @@ ModuleDefPtr Context::createModule(const string &name) {
     return builder.createModule(*this, name);
 }
 
-namespace {
-    inline void allocOverload(OverloadDefPtr &overload, const string &name) {
-        if (!overload)
-            overload = new OverloadDef(name);
-    }
-    
-    inline void mergeOverloads(OverloadDef::FuncList &aggregator,
-                               const OverloadDef::FuncList &newSubset
-                               ) {
-        for (OverloadDef::FuncList::const_iterator iter = newSubset.begin();
-             iter != newSubset.end();
-             ++iter
-             ) 
-            aggregator.push_back(*iter);
-    }
-}
-
-OverloadDefPtr Context::getOverload(const std::string &varName, 
-                                    bool alwaysCreate
-                                    ) {
+OverloadDefPtr Context::getOverload(const std::string &varName) {
     // see if the name exists in the current context
     OverloadDefPtr overloads = lookUp(varName, false);
     if (overloads)
         return overloads;
 
-    // if we have to always create one of these, do so now.
-    if (alwaysCreate)
-        overloads = new OverloadDef(varName);
+    overloads = new OverloadDef(varName);
     
     // merge in the overloads from the parents
     if (parents.size())
@@ -128,19 +107,7 @@ OverloadDefPtr Context::getOverload(const std::string &varName,
              iter != parents.end();
              ++iter
              ) {
-            // XXX somebody somewhere needs to check for collisions
-            
-            // get the parent overloads if there are any
-            OverloadDefPtr parentOverloads = 
-                (*iter)->getOverload(varName, false);
-            
-            // merge the parent overloads with this one (creating this one if 
-            // necessary)
-            if (parentOverloads) {
-                if (!overloads)
-                    overloads = new OverloadDef(varName);
-                overloads->merge(*parentOverloads);
-            }
+            overloads->addParent(iter->get());
         }
 
     if (overloads) {
@@ -150,7 +117,6 @@ OverloadDefPtr Context::getOverload(const std::string &varName,
 
     return overloads;
 }
-        
 
 VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
     // hack to allow us to call "oper del" without general operation syntax.
@@ -334,4 +300,30 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
     closeCleanupFrame();
     defCtx->addDef(varDef.get());
     cleanupFrame->addCleanup(varDef.get());
+}
+
+void Context::dump(ostream &out, const std::string &prefix) const {
+    switch (scope) {
+        case module: out << "module "; break;
+        case instance: out << "instance "; break;
+        case local: out << "local "; break;
+        case composite: out << "composite "; break;
+        default: out << "UNKNOWN ";
+    }
+    out << "{\n";
+    string childPfx = prefix + "  ";
+    for (ContextVec::const_iterator parentIter = parents.begin();
+         parentIter != parents.end();
+         ++parentIter
+         ) {
+        out << childPfx << "parent context ";
+        (*parentIter)->dump(out, childPfx);
+    }
+    
+    for (VarDefMap::const_iterator varIter = defs.begin();
+         varIter != defs.end();
+         ++varIter
+         )
+        varIter->second->dump(out, childPfx);
+    out << prefix << "}\n";
 }

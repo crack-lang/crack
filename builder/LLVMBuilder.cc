@@ -273,16 +273,16 @@ namespace {
                 }
                 
                 // check for an overload (if it's not an overload, assume that 
-                // it's not a function).  Iterate over all of the overloads up 
-                // until the first parent class - the parent classes have 
+                // it's not a function).  Iterate over all of the overloads at 
+                // the top level - the parent classes have 
                 // already had their shot at extendVTables, and we don't want 
                 // their overloads to clobber ours.
                 OverloadDef *overload =
                     OverloadDefPtr::rcast(varIter->second);
                 if (overload)
                     for (OverloadDef::FuncList::iterator fiter =
-                            overload->funcs.begin();
-                         fiter != overload->startOfParents;
+                            overload->beginTopFuncs();
+                         fiter != overload->endTopFuncs();
                          ++fiter
                          )
                         if ((*fiter)->flags & FuncDef::virtualized)

@@ -9,6 +9,7 @@
 
 namespace model {
 
+SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 
@@ -18,18 +19,12 @@ SPUG_RCPTR(OverloadDef);
 class OverloadDef : public VarDef {
     public:
         typedef std::list<FuncDefPtr> FuncList;
-
-        // the parent overloads.  These can either be an actual overload or a 
-        // context pointer (for the case where the parent context is being 
-        // constructed, as in a composite context whose parent is the current 
-        // class context).
         struct Parent {
-            OverloadDefPtr overload;
+            mutable OverloadDefPtr overload;
             ContextPtr context;
             
-            FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
-                              bool convert
-                              );
+            Parent(Context *context) : context(context) {}
+            OverloadDef *getOverload(const OverloadDef *owner) const;
         };
         typedef std::vector<Parent> ParentVec;
 
@@ -49,8 +44,7 @@ class OverloadDef : public VarDef {
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 
             // the fact.
-            VarDef(0, name),
-            startOfParents(funcs.begin()) {
+            VarDef(0, name) {
         }
        
         /**
@@ -102,10 +96,19 @@ class OverloadDef : public VarDef {
         void addFunc(FuncDef *func);
         
         /**
-         * Merge the set of overloads from the parent.  Overloads will be 
-         * added to the end of the list.
+         * Adds the parent context to the overload set.  Lookups will be 
+         * delgated to parents in the order provided.
          */
-        void merge(OverloadDef &parent);
+        void addParent(Context *context);
+        
+        /**
+         * Iterate over the funcs local to this context - do not iterate over 
+         * the functions in the parent overloads.
+         */
+        /** @{ */
+        FuncList::iterator beginTopFuncs() { return funcs.begin(); }
+        FuncList::iterator endTopFuncs() { return funcs.end(); }
+        /** @} */
         
         bool hasInstSlot();
 
