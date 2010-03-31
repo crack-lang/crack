@@ -263,8 +263,8 @@ void TypeDef::rectify() {
     bool gotInit = false;
     if (overloads) {
         // multiple init funcs: create new functions for all of them.
-        for (OverloadDef::FuncList::iterator iter = overloads->funcs.begin();
-             iter != overloads->startOfParents;
+        for (OverloadDef::FuncList::iterator iter = overloads->beginTopFuncs();
+             iter != overloads->endTopFuncs();
              ++iter
              ) {
             createNewFunc(iter->get());

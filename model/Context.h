@@ -96,7 +96,8 @@ class Context : public spug::RCBase {
                        vtableBaseType,
                        objectType,
                        stringType,
-                       staticStringType;
+                       staticStringType,
+                       overloadType;
             
             // just make sure the bootstrapped types are null
             GlobalData();
@@ -140,14 +141,11 @@ class Context : public spug::RCBase {
 
         /**
          * Returns the Overload Definition for the given name for the current 
-         * context.
+         * context.  Creates an overload definition if one does not exist.
          * 
          * @param varName the overload name.
-         * @param alwaysCreate if true, create the overload even if no 
-         *  definitions are found for it in the parent classes.
          */
-        OverloadDefPtr getOverload(const std::string &varName,
-                                   bool alwaysCreate = true);
+        OverloadDefPtr getOverload(const std::string &varName);
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         
@@ -229,7 +227,13 @@ class Context : public spug::RCBase {
         void emitVarDef(TypeDef *type, const parser::Token &name, 
                         Expr *initializer
                         );
+
+        void dump(std::ostream &out, const std::string &prefix) const;
 };
+
+inline std::ostream operator <<(std::ostream &out, const Context &context) {
+    context.dump(out, "");
+}
 
 }; // namespace model
 

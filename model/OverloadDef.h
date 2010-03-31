@@ -9,6 +9,7 @@
 
 namespace model {
 
+SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 
@@ -16,28 +17,42 @@ SPUG_RCPTR(OverloadDef);
 
 /** An overloaded function. */
 class OverloadDef : public VarDef {
+    public:
+        typedef std::list<FuncDefPtr> FuncList;
+        struct Parent {
+            mutable OverloadDefPtr overload;
+            ContextPtr context;
+            
+            Parent(Context *context) : context(context) {}
+            OverloadDef *getOverload(const OverloadDef *owner) const;
+        };
+        typedef std::vector<Parent> ParentVec;
+
     private:
+        FuncList funcs;
+        ParentVec parents;
+
         /**
          * Sets the impl and the type object from the function.  To be called 
          * for the first function added as a hack to keep function-as-objects 
          * working.
          */
         void setImpl(FuncDef *func);
+        
+        /**
+         * Flatten the overload definition into a single list where each 
+         * signature is represented only once.
+         * 
+         * @param funcs output list of functions to add to.
+         */
+        void flatten(FuncList &funcs) const;
 
     public:
-        typedef std::list<FuncDefPtr> FuncList;
-        FuncList funcs;
-
-        // the index of the first parent function in the overload vector.  New 
-        // functions added with addFunc() will be added at this point to 
-        // preserve the order of lookups.
-        std::list<FuncDefPtr>::iterator startOfParents;
 
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 
             // the fact.
-            VarDef(0, name),
-            startOfParents(funcs.begin()) {
+            VarDef(0, name) {
         }
        
         /**
@@ -89,12 +104,31 @@ class OverloadDef : public VarDef {
         void addFunc(FuncDef *func);
         
         /**
-         * Merge the set of overloads from the parent.  Overloads will be 
-         * added to the end of the list.
+         * Adds the parent context to the overload set.  Lookups will be 
+         * delgated to parents in the order provided.
          */
-        void merge(OverloadDef &parent);
+        void addParent(Context *context);
+        
+        /**
+         * Iterate over the funcs local to this context - do not iterate over 
+         * the functions in the parent overloads.
+         */
+        /** @{ */
+        FuncList::iterator beginTopFuncs() { return funcs.begin(); }
+        FuncList::iterator endTopFuncs() { return funcs.end(); }
+        /** @} */
         
         bool hasInstSlot();
+        
+        /**
+         * Returns true if the overload consists of only one function.
+         */
+        bool isSingleFunction() const;
+        
+        /**
+         * Make sure we have an implementation object, create one if we don't.
+         */
+        void createImpl();
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
