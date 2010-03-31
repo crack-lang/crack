@@ -16,7 +16,6 @@ for 0.1:
             destruction
     -   need syntax to allow calling "oper" functions from an expression, need 
         to get rid of the __del() hack.
--   fix overload bug
 -   explicit base class method invocation syntax (void foo() {Super.foo();})
 -   composition of constructors/destructors
 -   "Foo x = {1, 2}" construction syntax.
@@ -42,6 +41,7 @@ Completed for 1.0:
 -   the '`' operator DONE
 -   multiple inheritence shouldn't cause bad errors (it need not work) DONE 
     (it now works).
+-   fix overload bug DONE
 
 for 1.0:
 -   cleanup:

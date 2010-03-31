@@ -71,19 +71,6 @@ class A {
     class B : A {}
 };
 
-# reference counting should work for assignment (should see "releasing" twice)
-class A {
-    void bind() {
-        puts('binding');
-    }
-    void release() {
-        puts('releasing');
-    }
-};
-
-a := A();
-a = A();
-
 # this breaks (not sure what we're doing in the parser)
 class Foo {} print('test');
 
