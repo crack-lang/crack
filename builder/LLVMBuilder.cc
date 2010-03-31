@@ -2872,7 +2872,19 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         gd->intType = int64Type;
         llvmIntType = int64Type->rep;
     }
+
+    // create OverloadDef's type
+    BTypeDefPtr overloadDef = new BTypeDef("", 0);
         
+    // Give it a context and an "oper to voidptr" method.
+    overloadDef->context =
+        new Context(context.builder, Context::instance,
+                    context.globalData
+                    );
+    overloadDef->context->addDef(
+        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+    );
+    gd->overloadType = overloadDef;
 
     // create an empty structure type and its pointer for VTableBase 
     // Actual type is {}** (another layer of pointer indirection) because 

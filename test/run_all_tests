@@ -417,7 +417,6 @@ test_output 'overrides of globals' \
      a.bar();' \
      'class foo'
 
-
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
@@ -530,6 +529,11 @@ test_output 'C Comments' \
 test_output 'functions as values' \
     'void func() {} voidptr v = func; if (func is v) print("ok");' \
     ok
+
+test_output 'functions as values in nested contexts' \
+    'void f() {}
+     class A { void a() { voidptr g = f; } }; print("ok");' \
+     ok
 
 test_output 'interpolation operator' \
     'import crack.io FDWriter, Formatter;

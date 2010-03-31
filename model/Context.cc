@@ -100,6 +100,7 @@ OverloadDefPtr Context::getOverload(const std::string &varName) {
         return overloads;
 
     overloads = new OverloadDef(varName);
+    overloads->type = globalData->overloadType;
     
     // merge in the overloads from the parents
     if (parents.size())

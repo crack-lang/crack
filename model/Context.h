@@ -96,7 +96,8 @@ class Context : public spug::RCBase {
                        vtableBaseType,
                        objectType,
                        stringType,
-                       staticStringType;
+                       staticStringType,
+                       overloadType;
             
             // just make sure the bootstrapped types are null
             GlobalData();

@@ -222,6 +222,21 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
    if (!var)
       error(ident,
             SPUG_FSTR("Undefined variable: " << ident.getData()));
+   
+   // check for an overload definition - if it is one, make sure there's only 
+   // a single overload.
+   OverloadDef *ovld = OverloadDefPtr::rcast(var);
+   if (ovld) {
+      if (!ovld->isSingleFunction())
+         error(ident, 
+               SPUG_FSTR("Cannot reference function " << ident.getData() <<
+                          " because there are multiple overloads."
+                         )
+               );
+      
+      // make sure that the implementation has been defined
+      ovld->createImpl();
+   }
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable

@@ -38,6 +38,14 @@ class OverloadDef : public VarDef {
          * working.
          */
         void setImpl(FuncDef *func);
+        
+        /**
+         * Flatten the overload definition into a single list where each 
+         * signature is represented only once.
+         * 
+         * @param funcs output list of functions to add to.
+         */
+        void flatten(FuncList &funcs) const;
 
     public:
 
@@ -111,6 +119,16 @@ class OverloadDef : public VarDef {
         /** @} */
         
         bool hasInstSlot();
+        
+        /**
+         * Returns true if the overload consists of only one function.
+         */
+        bool isSingleFunction() const;
+        
+        /**
+         * Make sure we have an implementation object, create one if we don't.
+         */
+        void createImpl();
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
