@@ -166,8 +166,8 @@ FuncDefPtr Context::lookUp(Context &context,
         FuncDefPtr operNew =
             typeDef->context->lookUp(context, "oper new", args);
 
-        // don't inherit "oper new"
-        if (operNew->context != typeDef->context.get())
+        // make sure we got it, and we didn't inherit it
+        if (!operNew || operNew->context != typeDef->context.get())
             return 0;
         
         return operNew;

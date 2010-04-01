@@ -422,6 +422,10 @@ test_output 'eol putbacks do not affect line numbers' \
      ; error;' \
     "${parseError}2: Unknown identifier error"
 
+test_output 'errors on invalid constructors' \
+    'class A {}; t := A(1, 2);' \
+    "${parseError}1: No method exists matching A with these argument types."
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
