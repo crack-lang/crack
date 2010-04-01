@@ -40,6 +40,11 @@ class LocationMap {
       void incrementLineNumber() {
 	 ++lineNumber;
       }
+      
+      /** Decrement the line number (needed for character putbacks) */
+      void decrementLineNumber() {
+         --lineNumber;
+      }
 };
 
 } // namespace parser

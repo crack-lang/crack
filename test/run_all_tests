@@ -67,7 +67,7 @@ test_output 'invalid return types' \
 'int32'
 test_output 'return in module scope' \
     'return' \
-    "${parseError}2: Return statement not allowed in module scope" \
+    "${parseError}1: Return statement not allowed in module scope" \
 
 test_output 'simple class definition' 'class Foo {};' ''
 test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
@@ -416,6 +416,11 @@ test_output 'overrides of globals' \
      A a;
      a.bar();' \
      'class foo'
+
+test_output 'eol putbacks do not affect line numbers' \
+    'int i
+     ; error;' \
+    "${parseError}2: Unknown identifier error"
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
