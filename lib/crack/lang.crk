@@ -1,7 +1,7 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import "libc.so.6" abort, free, strlen, strdup, malloc, memcpy, memcmp, 
+import "libc.so.6" abort, free, strcpy, strlen, strdup, malloc, memcpy, memcmp, 
                    realloc;
 
 byteptr malloc(uint size);
@@ -9,6 +9,7 @@ byteptr realloc(byteptr buf, uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
 int memcmp(byteptr a, byteptr b, uint size);
 void free(voidptr mem);
+byteptr strcpy(byteptr dest, byteptr src);
 uint strlen(byteptr buf);
 byteptr strdup(byteptr buf);
 void abort();
@@ -162,8 +163,9 @@ class String : Buffer {
     }
     
     ## Initialize from a null-terminated c-string
-    oper init(byteptr cString) : Buffer(malloc(size + 1), strlen(cString)) {
-        memcpy(buffer, cString, size);
+    oper init(byteptr cString) : Buffer(null, strlen(cString)) {
+        buffer = malloc(size + 1);
+        strcpy(buffer, cString);
     }
 
     ## Create an empty string.
