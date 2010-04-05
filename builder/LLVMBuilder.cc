@@ -22,6 +22,7 @@
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
 #include <spug/Exception.h>
+#include <spug/StringFmt.h>
 
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
@@ -1671,6 +1672,33 @@ namespace {
             }
     };
     
+    class ArrayAllocCall : public FuncCall {
+        public:
+            ArrayAllocCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                args[0]->emit(context)->handleTransient(context);
+                Value *size = builder.lastValue;
+                
+                // get the BTypeDef from the return type, then get the pointer 
+                // type out of that
+                BTypeDef *retType = BTypeDefPtr::rcast(func->returnType);
+                PointerType *ptrType = 
+                    cast<PointerType>(const_cast<Type *>(retType->rep));
+                
+                // malloc based on the element type
+                builder.lastValue = 
+                    builder.builder.CreateMalloc(ptrType->getElementType(), 
+                                                 size
+                                                 );
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
     // implements pointer arithmetic
     class ArrayOffsetCall : public FuncCall {
         public:
@@ -1811,6 +1839,92 @@ namespace {
     BINOP(ICmpULE, "<=");
     
     QUAL_BINOP(Is, ICmpEQ, "is");
+
+    void addArrayMethods(Context &context, TypeDef *arrayType, 
+                         BTypeDef *elemType
+                         ) {
+        Context::GlobalData *gd = context.globalData;
+        FuncDefPtr arrayGetItem = 
+            new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method, 
+                                               "oper []",
+                                               1
+                                               );
+        arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+        arrayType->context->addDef(arrayGetItem.get());
+    
+        FuncDefPtr arraySetItem = 
+            new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method, 
+                                               "oper []=",
+                                               2
+                                               );
+        arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+        arraySetItem->args[1] = new ArgDef(elemType, "value");
+        arrayType->context->addDef(arraySetItem.get());
+        
+        FuncDefPtr arrayOffset =
+            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags, 
+                                              "oper +",
+                                              2
+                                              );
+        arrayOffset->args[0] = new ArgDef(arrayType, "base");
+        arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
+        context.addDef(arrayOffset.get());
+        
+        FuncDefPtr arrayAlloc =
+            new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
+                                             "oper new",
+                                             1
+                                             );
+        arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
+        arrayType->context->addDef(arrayAlloc.get());
+    }
+
+    class ArrayTypeDef : public BTypeDef {
+        public:
+            ArrayTypeDef(const string &name, const Type *rep) :
+                BTypeDef(name, rep) {
+                generic = new SpecializationCache();
+            }
+            
+            // specializations of array types actually create a new type 
+            // object.
+            virtual TypeDef *getSpecialization(Context &context, 
+                                               TypeVec *types
+                                               ) {
+                // see if it already exists
+                TypeDef *spec = findSpecialization(types);
+                if (spec)
+                    return spec;
+                
+                // create it.
+                
+                assert(types->size() == 1);
+                
+                BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
+                
+                Type *llvmType = PointerType::getUnqual(parmType->rep);
+                TypeDefPtr tempSpec = 
+                    new BTypeDef(SPUG_FSTR(name << "[" << parmType->name << 
+                                            "]"
+                                           ),
+                                 llvmType
+                                 );
+                                  
+                tempSpec->context = new Context(context.builder, 
+                                                Context::instance,
+                                                context.globalData
+                                                );
+                tempSpec->context->returnType = tempSpec;
+                tempSpec->context->addDef(
+                    new VoidPtrOpDef(context.globalData->voidPtrType.get())
+                );
+                
+                // add all of the methods
+                addArrayMethods(context, tempSpec.get(), parmType);
+                (*generic)[types] = tempSpec;
+                return tempSpec.get();
+            }
+    };
 
 } // anon namespace
 
@@ -2885,6 +2999,13 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         new VoidPtrOpDef(context.globalData->voidPtrType.get())
     );
     gd->overloadType = overloadDef;
+    
+    // create the array generic
+    TypeDefPtr arrayType = new ArrayTypeDef("array", 0);
+    arrayType->context = new Context(context.builder, Context::instance,
+                                     context.globalData
+                                     );
+    context.addDef(arrayType.get());
 
     // create an empty structure type and its pointer for VTableBase 
     // Actual type is {}** (another layer of pointer indirection) because 
@@ -2993,32 +3114,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new NegateOpDef(boolType, "oper !"));
     
     // byteptr array indexing
-
-    FuncDefPtr arrayGetItem = 
-        new GeneralOpDef<ArrayGetItemCall>(byteType, FuncDef::method, 
-                                           "oper []",
-                                           1
-                                           );
-    arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-    byteptrType->context->addDef(arrayGetItem.get());
-
-    FuncDefPtr arraySetItem = 
-        new GeneralOpDef<ArraySetItemCall>(byteType, FuncDef::method, 
-                                           "oper []=",
-                                           2
-                                           );
-    arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-    arraySetItem->args[1] = new ArgDef(byteType, "value");
-    byteptrType->context->addDef(arraySetItem.get());
-    
-    FuncDefPtr arrayOffset =
-        new GeneralOpDef<ArrayOffsetCall>(byteptrType, FuncDef::noFlags, 
-                                          "oper +",
-                                          2
-                                          );
-    arrayOffset->args[0] = new ArgDef(byteptrType, "base");
-    arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-    context.addDef(arrayOffset.get());
+    addArrayMethods(context, byteptrType, byteType);
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

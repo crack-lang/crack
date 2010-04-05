@@ -25,6 +25,15 @@ using namespace model;
 using namespace spug;
 using parser::ParseError;
 
+TypeDef *TypeDef::findSpecialization(TypeVec *types) {
+    assert(generic && "find specialization called on non-generic type");
+    SpecializationCache::iterator match = generic->find(types);
+    if (match != generic->end())
+        return match->second.get();
+    else
+        return 0;
+}
+
 bool TypeDef::hasInstSlot() {
     return false;
 }
@@ -463,6 +472,12 @@ void TypeDef::addDestructorCleanups(Context &context) {
         }
     
     initializersEmitted = true;
+}
+
+TypeDef *TypeDef::getSpecialization(Context &context, 
+                                    TypeDef::TypeVec *types
+                                    ) {
+    assert(false && "generics are not yet supported for normal types.");
 }
 
 void TypeDef::dump(ostream &out, const string &prefix) const {

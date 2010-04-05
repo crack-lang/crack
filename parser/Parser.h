@@ -143,6 +143,12 @@ class Parser {
       model::ExprPtr parseIString(model::Expr *expr);
 
       /**
+       * If the expression is a VarRef referencing a TypeDef, return the 
+       * TypeDef.  Otherwise returns null.
+       */
+      static model::TypeDef *convertTypeRef(model::Expr *expr);
+
+      /**
        * Parse an expression.
        * 
        * @param precedence The function will not parse an operator of lower 
@@ -153,7 +159,14 @@ class Parser {
        */
       model::ExprPtr parseExpression(unsigned precedence = 0);
       void parseMethodArgs(std::vector<model::ExprPtr> &args);
-
+      
+      /** 
+       * Parse the "specializer" after a generic type name. 
+       * @param tok the left bracket token of the generic specifier.
+       */
+      model::TypeDef *parseSpecializer(const Token &tok, 
+                                       model::TypeDef *typeDef
+                                       );
       model::TypeDefPtr parseTypeSpec(const char *errorMsg = 
                                        " is not a type."
                                       );

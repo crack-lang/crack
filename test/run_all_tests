@@ -426,6 +426,13 @@ test_output 'errors on invalid constructors' \
     'class A {}; t := A(1, 2);' \
     "${parseError}1: No method exists matching A with these argument types."
 
+test_output 'array generics' \
+    'x := array[int](100);
+     i := 0; while (i < 100) { x[i] = i; i = i + 1; }
+     i = 0; while (i < 10) { if (x[i] != i) puts("FAIL"); i = i + 1; }
+     puts("ok")' \
+     ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

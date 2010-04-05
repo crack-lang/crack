@@ -4,6 +4,7 @@
 #define _model_TypeDef_h
 
 #include <vector>
+#include <map>
 #include <spug/RCPtr.h>
 
 #include "VarDef.h"
@@ -21,6 +22,35 @@ SPUG_RCPTR(TypeDef);
 // a type.
 class TypeDef : public VarDef {
     public:
+        class TypeVec;
+
+    protected:
+        TypeDef *findSpecialization(TypeVec *types);
+
+    public:
+
+        SPUG_RCPTR(TypeVec);
+        class TypeVec : public spug::RCBase, public std::vector<TypeDefPtr> {};
+        
+        // a vector of types that can be used as a key
+        struct TypeVecKey {
+            TypeVecPtr vec;
+//            TypeVecKey() : vec(0) {}
+            TypeVecKey(TypeVec *vec) : vec(vec) {}
+            bool operator <(const TypeVecKey &other) const {
+                if (vec == other.vec)
+                    return false;
+                else if (!vec && other.vec)
+                    return true;
+                else if (vec && !other.vec)
+                    return true;
+                else
+                    return *vec < *other.vec;
+            }
+        };
+        typedef std::map<TypeVecKey, TypeDefPtr> SpecializationCache;
+        // true if this is a generic type.
+        SpecializationCache *generic;
         
         // the type's context - contains all of the method/attribute 
         // definitions for the type.
@@ -44,10 +74,13 @@ class TypeDef : public VarDef {
         // XXX need a metatype
         TypeDef(const std::string &name, bool pointer = false) :
             VarDef(0, name),
+            generic(0),
             pointer(pointer),
             hasVTable(false),
             initializersEmitted(false) {
         }
+        
+        ~TypeDef() { if (generic) delete generic; }
 
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
@@ -135,6 +168,12 @@ class TypeDef : public VarDef {
          * the context.
          */
         void addDestructorCleanups(Context &context);
+
+        /**
+         * Returns a new specialization for the specified types, creating it 
+         * if necessary.
+         */
+        virtual TypeDef *getSpecialization(Context &context, TypeVec *types);
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

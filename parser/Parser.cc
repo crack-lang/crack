@@ -381,7 +381,14 @@ ExprPtr Parser::parseIString(Expr *expr) {
    
    return result;
 }
+
+TypeDef *Parser::convertTypeRef(Expr *expr) {
+   VarRef *ref = VarRefPtr::cast(expr);
+   if (!ref)
+      return 0;
    
+   return TypeDefPtr::rcast(ref->def);
+}
 
 ExprPtr Parser::parseExpression(unsigned precedence) {
 
@@ -447,6 +454,41 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          expr = parsePostIdent(expr.get(), tok);
       } else if (tok.isLBracket()) {
          // the array indexing operators
+         
+         // ... unless this is a type, in which case it is a specializer.
+         TypeDef *generic = convertTypeRef(expr.get());
+         if (generic) {
+            TypeDef *type = parseSpecializer(tok, generic);
+            
+            // check for a constructor
+            tok = toker.getToken();
+            if (tok.isLParen()) {
+               // parse an arg list
+               FuncCall::ExprVec args;
+               parseMethodArgs(args);
+               
+               // look up the new operator for the class
+               FuncDefPtr func =
+                  type->context->lookUp(*context, "oper new", args);
+               if (!func)
+                  error(tok,
+                        SPUG_FSTR("No constructor for " << type->name <<
+                                   " with these argument types."
+                                  )
+                        );
+               
+               FuncCallPtr funcCall = 
+                  context->builder.createFuncCall(func.get());
+               funcCall->args = args;
+               expr = funcCall;
+               tok = toker.getToken();
+            } else {
+               // otherwise just create a reference to the type.
+               expr = context->builder.createVarRef(type);
+            }
+            continue;
+         }
+         
          FuncCall::ExprVec args(1);
          args[0] = parseExpression();
          
@@ -553,6 +595,34 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args) {
    }
 }
 
+// type [ subtype, ... ]
+//       ^              ^
+TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
+   if (!typeDef->generic)
+      error(lbrack, 
+            SPUG_FSTR("You cannot specialize non-generic type " <<
+                       typeDef->getFullName()
+                      )
+            );
+   
+   TypeDef::TypeVecPtr types = new TypeDef::TypeVec();
+   Token tok;
+   while (true) {      
+      TypeDefPtr subType = parseTypeSpec();
+      types->push_back(subType);
+      
+      tok = toker.getToken();
+      if (tok.isRBracket())
+         break;
+      else if (!tok.isComma())
+         error(tok, "comma expected in specializer list.");
+   }
+
+   // XXX needs to verify the numbers and types of specializers
+   typeDef = typeDef->getSpecialization(*context, types.get());
+   return typeDef;
+}
+
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
    Token tok = toker.getToken();
    if (!tok.isIdent())
@@ -563,7 +633,12 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
    if (!typeDef)
       error(tok, SPUG_FSTR(tok.getData() << errorMsg));
    
-   // XXX need to deal with compound types
+   // see if there's a bracket operator   
+   tok = toker.getToken();
+   if (tok.isLBracket())
+      typeDef = parseSpecializer(tok, typeDef);
+   else
+      toker.putBack(tok);
    
    return typeDef;
 }
@@ -920,8 +995,12 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 //     ^              ^
 bool Parser::parseDef(TypeDef *type) {
    Token tok2 = toker.getToken();
-   // XXX if it's '<', make sure the type is a generic and parse 
-   // nested types.
+   
+   // if we get a '[', parse the specializer and get a generic type.
+   if (tok2.isLBracket()) {
+      type = parseSpecializer(tok2, type);
+      tok2 = toker.getToken();
+   }
    
    if (tok2.isIdent()) {
       string varName = tok2.getData();
