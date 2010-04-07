@@ -426,13 +426,18 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
                                              );
-   // for the unary "!" operator
-   } else if (tok.isBang()) {
+   // for the unary operators
+   } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
+              tok.isDecr()) {
       FuncCall::ExprVec args(1);
-      args[0] = parseExpression(getPrecedence(tok.getData()));
-      FuncDefPtr funcDef = context->lookUp(*context, "oper !", args);
+      string symbol = tok.getData();
+      args[0] = parseExpression(getPrecedence(symbol + "x"));
+
+      symbol = "oper " + symbol;
+      FuncDefPtr funcDef = context->lookUp(*context, symbol, args);
       if (!funcDef)
-         error(tok, "No ! operator exists for this type.");
+         error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+
       FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
       funcCall->args = args;
       expr = funcCall;
@@ -1038,8 +1043,9 @@ bool Parser::parseDef(TypeDef *type) {
             
             // XXX if this is a comma, we need to go back and parse 
             // another definition for the type.
-            tok4 = toker.getToken();
-            assert(tok4.isSemi());
+            expectToken(Token::semi, 
+                        "expected semicolon after variable initalizer."
+                        );
          }
 
          // make sure the initializer matches the declared type.
@@ -1327,10 +1333,16 @@ void Parser::parsePostOper(TypeDef *returnType) {
          } else {
             parseFuncDef(returnType, tok, "oper []", normal, 1);
          }
-      
-      } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() ||
-                 tok.isGE() || tok.isGT() || tok.isPlus() || tok.isMinus() ||
-                 tok.isSlash() || tok.isAsterisk() || tok.isPercent()
+      } else if (tok.isMinus()) {
+         // minus is special because it can be either unary or binary
+         expectToken(Token::lparen, "expected argument list.");
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, -1);
+      } else if (tok.isTilde() || tok.isBang() || tok.isDecr()) {
+         expectToken(Token::lparen, "expected an argument list.");
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 1);
+      } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
+                 tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
+                 tok.isAsterisk() || tok.isPercent()
                  ) {
          // binary operators
          expectToken(Token::lparen, "expected argument list.");
@@ -1459,7 +1471,14 @@ Parser::Parser(Toker &toker, model::Context *context) :
    
    // build the precedence table
    struct { const char *op; unsigned prec; } map[] = {
-      {"!", 4},
+      
+      // unary operators are distinguished from their non-unary forms by 
+      // appending an "x"
+      {"!x", 4},
+      {"-x", 4},
+      {"--x", 4},
+      {"~x", 4},
+
       {"*", 3},
       {"/", 3},
       {"%", 3},

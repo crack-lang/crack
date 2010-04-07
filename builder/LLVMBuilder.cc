@@ -1582,9 +1582,9 @@ namespace {
     UNOP(SExt);
     UNOP(ZExt);
 
-    class NegateOpCall : public FuncCall {
+    class BitNotOpCall : public FuncCall {
         public:
-            NegateOpCall(FuncDef *def) : FuncCall(def) {}
+            BitNotOpCall(FuncDef *def) : FuncCall(def) {}
             
             virtual ResultExprPtr emit(Context &context) {
                 args[0]->emit(context)->handleTransient(context);
@@ -1596,7 +1596,7 @@ namespace {
                         builder.lastValue,
                         ConstantInt::get(
                             BTypeDefPtr::arcast(func->returnType)->rep,
-                            1
+                            -1
                             )
                     );
                 
@@ -1604,15 +1604,49 @@ namespace {
             }
     };
 
-    class NegateOpDef : public OpDef {
+    class BitNotOpDef : public OpDef {
         public:
-            NegateOpDef(BTypeDef *resultType, const std::string &name) :
+            BitNotOpDef(BTypeDef *resultType, const std::string &name) :
                 OpDef(resultType, FuncDef::noFlags, name, 1) {
                 args[0] = new ArgDef(resultType, "operand");
             }
             
             virtual FuncCallPtr createFuncCall() {
-                return new NegateOpCall(this);
+                return new BitNotOpCall(this);
+            }
+    };
+
+    class NegOpCall : public FuncCall {
+        public:
+            NegOpCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                args[0]->emit(context)->handleTransient(context);
+                
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                builder.lastValue =
+                    builder.builder.CreateSub(
+                        ConstantInt::get(
+                            BTypeDefPtr::arcast(func->returnType)->rep,
+                            0
+                            ),
+                        builder.lastValue
+                    );
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+
+    class NegOpDef : public OpDef {
+        public:
+            NegOpDef(BTypeDef *resultType, const std::string &name) :
+                OpDef(resultType, FuncDef::noFlags, name, 1) {
+                args[0] = new ArgDef(resultType, "operand");
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new NegOpCall(this);
             }
     };
     
@@ -3035,6 +3069,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int64Type, boolType));
     context.addDef(new ICmpSGEOpDef(int64Type, boolType));
     context.addDef(new ICmpSLEOpDef(int64Type, boolType));
+    context.addDef(new NegOpDef(int64Type, "oper -"));
+    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
 
     context.addDef(new AddOpDef(uint64Type));
     context.addDef(new SubOpDef(uint64Type));
@@ -3047,6 +3083,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULTOpDef(uint64Type, boolType));
     context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
+    context.addDef(new NegOpDef(uint64Type, "oper -"));
+    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -3059,6 +3097,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int32Type, boolType));
     context.addDef(new ICmpSGEOpDef(int32Type, boolType));
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
+    context.addDef(new NegOpDef(int32Type, "oper -"));
+    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -3071,6 +3111,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULTOpDef(uint32Type, boolType));
     context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
+    context.addDef(new NegOpDef(uint32Type, "oper -"));
+    context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
 
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -3083,6 +3125,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(byteType, boolType));
     context.addDef(new ICmpSGEOpDef(byteType, boolType));
     context.addDef(new ICmpSLEOpDef(byteType, boolType));
+    context.addDef(new NegOpDef(byteType, "oper -"));
+    context.addDef(new BitNotOpDef(byteType, "oper ~"));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
@@ -3110,8 +3154,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));
     
-    // boolean negate
-    context.addDef(new NegateOpDef(boolType, "oper !"));
+    // boolean not
+    context.addDef(new BitNotOpDef(boolType, "oper !"));
     
     // byteptr array indexing
     addArrayMethods(context, byteptrType, byteType);

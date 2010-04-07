@@ -15,10 +15,10 @@ class Token {
       // the token types
       typedef enum { classKw, elseKw, ifKw, importKw, isKw, nullKw, operKw, 
                      returnKw, whileKw, assign, asterisk, bang, colon, comma, 
-                     define, dot, end, eq, ge, gt, ident, integer, lbracket, 
-                     lcurly, le, lparen, lt, minus, ne, percent, plus, 
-                     rbracket, rcurly, rparen, semi, slash, string,
-                     istrBegin, istrEnd
+                     decr, define, dot, end, eq, ge, gt, ident, integer, 
+                     lbracket, lcurly, le, lparen, lt, minus, ne, percent, 
+                     plus, rbracket, rcurly, rparen, semi, slash, string, 
+                     tilde, istrBegin, istrEnd
 		    } Type;
 
    private:
@@ -68,6 +68,7 @@ class Token {
       bool isSemi() const { return type == semi; }
       bool isComma() const { return type == comma; }
       bool isColon() const { return type == colon; }
+      bool isDecr() const { return type == decr; }
       bool isDefine() const { return type == define; }
       bool isDot() const { return type == dot; }
       bool isAssign() const { return type == assign; }
@@ -85,6 +86,7 @@ class Token {
       bool isSlash() const { return type == slash; }
       bool isPercent() const { return type == percent; }
       bool isNot() const { return type == bang; }
+      bool isTilde() const { return type == tilde; }
       bool isGT() const { return type == gt; }
       bool isLT() const { return type == lt; }
       bool isEQ() const { return type == eq; }

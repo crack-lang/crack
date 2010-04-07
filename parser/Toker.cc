@@ -117,7 +117,7 @@ Token Toker::readToken() {
                 } else if (ch == '+') {
                     return Token(Token::plus, "+", locationMap.getLocation());
                 } else if (ch == '-') {
-                    return Token(Token::minus, "-", locationMap.getLocation());
+                    state = st_minus;
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
                 } else if (ch == '%') {
@@ -137,6 +137,8 @@ Token Toker::readToken() {
                 } else if (isdigit(ch)) {
                     buf << ch;
                     state = st_integer;
+                } else if (ch == '~') {
+                    return Token(Token::tilde, "~", locationMap.getLocation());
                 } else if (ch == '`') {
                     state = st_istr;
                     return Token(Token::istrBegin, "`", 
@@ -148,6 +150,20 @@ Token Toker::readToken() {
                                             ),
                                       "unknown token"
                                       );
+                }
+                break;
+
+            case st_minus:
+                if (ch == '-') {
+                    state = st_none;
+                    return Token(Token::decr, "--", locationMap.getLocation());
+                } else if (isdigit(ch)) {
+                    buf << '-' << ch;
+                    state = st_integer;
+                } else {
+                    state = st_none;
+                    ungetChar(ch);
+                    return Token(Token::minus, "-", locationMap.getLocation());
                 }
                 break;
             

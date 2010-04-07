@@ -433,6 +433,24 @@ test_output 'array generics' \
      puts("ok")' \
      ok
 
+test_output 'negation' \
+    'if (1 - 2 != -1) puts("FAIL");
+     puts("ok");' \
+    ok
+
+test_output 'negation and bitwise not operators' \
+    'a := 32;
+     if (~a != -33) puts("1s complement FAIL");
+     if (-a != -32) puts("negation FAIL");
+     puts("ok");' \
+    ok
+
+test_output 'right error if multiple variables are used' \
+    'int x = 0, 1;' \
+    "${parseError}1: token , was not expected at this time, expected \
+semicolon after variable initalizer."
+    
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
@@ -494,7 +512,7 @@ test_output 'conversion from byteptr -> voidptr' \
     ok
 
 test_output 'various integer types and conversions' \
-    'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
+    'int32 i32 = -1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
      i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
      u64; u32 = u64; i64 = u64; byte b = u64; u64 = b; print("ok");' \
     ok
@@ -516,19 +534,19 @@ test_output 'multiple module loads' \
 in testmod2.func()'
 
 test_output 'remainder operator' \
-    'printint((0-1) % 2);' \
+    'printint((-1) % 2);' \
     '-1'
 
 test_output 'IO classes' \
     'import crack.io FDWriter, Formatter, Writer;
      f := Formatter(FDWriter(1));
      f.format("string");
-     int32 i32 = 0-100;
+     int32 i32 = -100;
      f.format(i32);
      uint32 u32 = 100;
      f.format(u32);
      int64 i64 = 123456789;
-     i64 = i64 * (0-123456789);
+     i64 = i64 * -123456789;
      f.format(i64);
      uint64 u64 = 123456789;
      u64 = u64 * u64;

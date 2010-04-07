@@ -39,6 +39,7 @@ class Toker {
          st_none, 
          st_ident, 
          st_slash,
+         st_minus,
          st_digram,
          st_comment, 
          st_ccomment,
