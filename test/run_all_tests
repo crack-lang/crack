@@ -449,7 +449,12 @@ test_output 'right error if multiple variables are used' \
     'int x = 0, 1;' \
     "${parseError}1: token , was not expected at this time, expected \
 semicolon after variable initalizer."
-    
+
+test_output '' \
+    'class A { int i; oper init(int i0, byteptr b0) : i = i0 {} 
+               oper init() : i = 200 {} };
+     A a = {100, "ok"}; A b = {}; if (a.i + b.i == 300) puts("ok");' \
+    ok
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'

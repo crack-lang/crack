@@ -158,7 +158,9 @@ class Parser {
        *    after the 'a'.
        */
       model::ExprPtr parseExpression(unsigned precedence = 0);
-      void parseMethodArgs(std::vector<model::ExprPtr> &args);
+      void parseMethodArgs(std::vector<model::ExprPtr> &args, 
+                           Token::Type terminator = Token::rparen
+                           );
       
       /** 
        * Parse the "specializer" after a generic type name. 
@@ -167,6 +169,12 @@ class Parser {
       model::TypeDef *parseSpecializer(const Token &tok, 
                                        model::TypeDef *typeDef
                                        );
+      
+      
+      model::ExprPtr parseConstructor(const Token &tok, model::TypeDef *type,
+                                      Token::Type terminator
+                                      );
+      
       model::TypeDefPtr parseTypeSpec(const char *errorMsg = 
                                        " is not a type."
                                       );

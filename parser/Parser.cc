@@ -468,24 +468,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
             // check for a constructor
             tok = toker.getToken();
             if (tok.isLParen()) {
-               // parse an arg list
-               FuncCall::ExprVec args;
-               parseMethodArgs(args);
-               
-               // look up the new operator for the class
-               FuncDefPtr func =
-                  type->context->lookUp(*context, "oper new", args);
-               if (!func)
-                  error(tok,
-                        SPUG_FSTR("No constructor for " << type->name <<
-                                   " with these argument types."
-                                  )
-                        );
-               
-               FuncCallPtr funcCall = 
-                  context->builder.createFuncCall(func.get());
-               funcCall->args = args;
-               expr = funcCall;
+               expr = parseConstructor(tok, type, Token::rparen);
                tok = toker.getToken();
             } else {
                // otherwise just create a reference to the type.
@@ -579,11 +562,13 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
 
 // func( arg, arg)
 //      ^         ^
-void Parser::parseMethodArgs(FuncCall::ExprVec &args) {
+// Type var = { arg, arg } ;
+//             ^          ^
+void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
      
    Token tok = toker.getToken();
    while (true) {
-      if (tok.isRParen())
+      if (tok.getType() == terminator)
          return;
          
       // XXX should be verifying arg types against signature
@@ -626,6 +611,31 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
    // XXX needs to verify the numbers and types of specializers
    typeDef = typeDef->getSpecialization(*context, types.get());
    return typeDef;
+}
+
+// Class( arg, arg )
+//       ^          ^
+// Class var = { arg, arg } ;
+//              ^          ^
+ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
+                                 Token::Type terminator
+                                 ) {
+   // parse an arg list
+   FuncCall::ExprVec args;
+   parseMethodArgs(args, terminator);
+   
+   // look up the new operator for the class
+   FuncDefPtr func = type->context->lookUp(*context, "oper new", args);
+   if (!func)
+      error(tok,
+            SPUG_FSTR("No constructor for " << type->name <<
+                       " with these argument types."
+                      )
+            );
+   
+   FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+   funcCall->args = args;
+   return funcCall;
 }
 
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
@@ -1035,18 +1045,19 @@ bool Parser::parseDef(TypeDef *type) {
          // check for a curly brace, indicating construction args.
          Token tok4 = toker.getToken();
          if (tok4.isLCurly()) {
-            // XXX need to deal with construction args
-            assert(false);
+            // got constructor args, parse an arg list terminated by a right 
+            // curly.
+            initializer = parseConstructor(tok4, type, Token::rcurly);
          } else {
             toker.putBack(tok4);
             initializer = parseExpression();
-            
-            // XXX if this is a comma, we need to go back and parse 
-            // another definition for the type.
-            expectToken(Token::semi, 
-                        "expected semicolon after variable initalizer."
-                        );
          }
+
+         // XXX if this is a comma, we need to go back and parse 
+         // another definition for the type.
+         expectToken(Token::semi, 
+                     "expected semicolon after variable initalizer."
+                     );
 
          // make sure the initializer matches the declared type.
          initializer = initializer->convert(*context, type);
