@@ -97,6 +97,32 @@ bool Parser::parseStatement(bool defsAllowed) {
          if (tok.isRCurly() || tok.isEnd())
             return false;
       }
+   } else if (tok.isBreak()) {
+      Branchpoint *branch = context->getBreak();
+      if (!branch)
+         error(tok, 
+               "Break can only be used in the body of a while, for or "
+               "switch statement."
+               );
+      context->builder.emitBreak(*context, branch);
+      
+      tok = toker.getToken();
+      if (!tok.isSemi())
+         toker.putBack(tok);
+      return true;
+   } else if (tok.isContinue()) {
+      Branchpoint *branch = context->getContinue();
+      if (!branch)
+         error(tok,
+               "Continue can only be used in the body of a while or for "
+               "loop."
+               );
+      context->builder.emitContinue(*context, branch);
+
+      tok = toker.getToken();
+      if (!tok.isSemi())
+         toker.putBack(tok);
+      return true;
    }
 
    ExprPtr expr;
@@ -1155,6 +1181,8 @@ bool Parser::parseWhileStmt() {
       unexpected(tok, "expected right paren after conditional expression");
    
    BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr.get());
+   context->setBreak(pos.get());
+   context->setContinue(pos.get());
    bool terminal = parseIfClause();
    context->builder.emitEndWhile(*context, pos.get());
    return terminal;

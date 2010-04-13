@@ -10,6 +10,7 @@
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ArgDef.h"
+#include "Branchpoint.h"
 #include "IntConst.h"
 #include "ModuleDef.h"
 #include "OverloadDef.h"
@@ -301,6 +302,41 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
     closeCleanupFrame();
     defCtx->addDef(varDef.get());
     cleanupFrame->addCleanup(varDef.get());
+}
+
+void Context::setBreak(Branchpoint *branch) {
+    breakBranch = branch;
+}
+
+void Context::setContinue(Branchpoint *branch) {
+    continueBranch = branch;
+}
+
+Branchpoint *Context::getBreak() {
+    if (breakBranch)
+        return breakBranch.get();
+    
+    // don't attempt to propagate out of an execution scope
+    if (!toplevel && !parents.empty()) {
+        assert(parents.size() == 1 && "local scope has more than one parent");
+        return parents[0]->getBreak();
+    } else {
+        std::cerr << "scope = " << scope << endl;
+        return 0;
+    }
+}
+
+Branchpoint *Context::getContinue() {
+    if (continueBranch)
+        return continueBranch.get();
+
+    // don't attempt to propagate out of an execution scope
+    if (!toplevel && !parents.empty()) {
+        assert(parents.size() == 1 && "local scope has more than one parent");
+        return parents[0]->getContinue();
+    } else {
+        return 0;
+    }
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

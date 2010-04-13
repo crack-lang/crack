@@ -11,6 +11,7 @@
 namespace model {
     class AllocExpr;
     class AssignExpr;
+    class Branchpoint;
     SPUG_RCPTR(ArgDef);
     SPUG_RCPTR(ModuleDef);
     SPUG_RCPTR(CleanupFrame);
@@ -121,6 +122,24 @@ class Builder : public spug::RCBase {
          */        
         virtual void emitEndWhile(model::Context &context,
                                   model::Branchpoint *pos
+                                  ) = 0;
+
+        /**
+         * Emit the code for a break statement (branch to the end of the 
+         * enclosing while/for/switch).
+         * @param branch branchpoint for the loop we're breaking out of.
+         */
+        virtual void emitBreak(model::Context &context,
+                               model::Branchpoint *branch
+                               ) = 0;
+        
+        /**
+         * Emit the code for the continue statement (branch to the beginning 
+         * of the enclosing while/for).
+         * @param branch branchpoint for the loop we're breaking out of.
+         */
+        virtual void emitContinue(model::Context &context,
+                                  model::Branchpoint *branch
                                   ) = 0;
 
         /**

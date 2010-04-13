@@ -18,6 +18,7 @@ namespace parser {
 
 namespace model {
 
+SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
@@ -40,8 +41,11 @@ class Context : public spug::RCBase {
     
     private:
         VarDefMap defs;
-
         typedef std::map<std::string, StrConstPtr> StrConstTable;
+        
+        // break and continue branchpoints
+        BranchpointPtr breakBranch, continueBranch;
+
     public:
 
         // context scope - this is used to control how variables defined in 
@@ -228,6 +232,30 @@ class Context : public spug::RCBase {
                         Expr *initializer
                         );
 
+        /**
+         * Set the branchpoint to be used for a break statement.
+         * @param branch the branchpoint, may be null.
+         */
+        void setBreak(Branchpoint *branch);
+        
+        /**
+         * Set the branchpoint to be used for a continue statement.
+         * @param branch the branchpoint, may be null.
+         */
+        void setContinue(Branchpoint *branch);
+        
+        /**
+         * Obtains the branchpoint to be used for a break statement, returns 
+         * null if there is none.
+         */
+        Branchpoint *getBreak();
+        
+        /**
+         * Obtains the branchpoint to be used for a continue statement, 
+         * returns null if there is none.
+         */
+        Branchpoint *getContinue();
+        
         void dump(std::ostream &out, const std::string &prefix) const;
 };
 

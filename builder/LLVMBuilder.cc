@@ -434,6 +434,10 @@ namespace {
         public:
             BasicBlock *block, *block2;
             
+            // context has a ref count to this so we use a raw pointer to 
+            // break the cycle.
+            Context *context;
+            
             BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
 
@@ -1960,12 +1964,35 @@ namespace {
             }
     };
 
+    void closeAllCleanupsStatic(Context &context) {
+        BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
+        while (frame) {
+            frame->close();
+            frame = BCleanupFramePtr::rcast(frame->parent);
+        }
+    }
+
+    // emit all cleanups from this context to that of the branchpoint.
+    void emitCleanupsTo(Context &context, BBranchpoint *bpos) {
+        
+        // unless we've reached our stop, emit for all parent contexts
+        if (!(bpos->context == &context)) {
+    
+            // close all cleanups in thie context
+            closeAllCleanupsStatic(context);
+    
+            assert(context.parents.size() == 1);
+            emitCleanupsTo(*context.parents[0], bpos);
+        }
+    }
+
+
 } // anon namespace
 
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
     
     // close all cleanups in this context.
-    closeAllCleanups(context);
+    closeAllCleanupsStatic(context);
     
     // recurse up through the parents.
     if (!context.toplevel)
@@ -2309,6 +2336,7 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
                                                                func
                                                                )
                                             );
+    bpos->context = &context;
 
     BasicBlock *whileCond = bpos->block2 =
         BasicBlock::Create(lctx, "while_cond", func);
@@ -2338,6 +2366,18 @@ void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos) {
 
     // new code goes to the following block
     builder.SetInsertPoint(block = bpos->block);
+}
+
+void LLVMBuilder::emitBreak(Context &context, Branchpoint *branch) {
+    BBranchpoint *bpos = BBranchpointPtr::acast(branch);
+    emitCleanupsTo(context, bpos);
+    builder.CreateBr(bpos->block);
+}
+
+void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
+    BBranchpoint *bpos = BBranchpointPtr::acast(branch);
+    emitCleanupsTo(context, bpos);
+    builder.CreateBr(bpos->block2);
 }
 
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
@@ -2759,7 +2799,7 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     func->setCallingConv(llvm::CallingConv::C);
     block = BasicBlock::Create(lctx, "__del__", func);
     builder.SetInsertPoint(block);
-    closeAllCleanups(context);
+    closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
     
     // restore the main function
@@ -2806,12 +2846,8 @@ CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
     return new BCleanupFrame(&context);
 }
 
-void LLVMBuilder::closeAllCleanups(model::Context &context) {
-    BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
-    while (frame) {
-        frame->close();
-        frame = BCleanupFramePtr::rcast(frame->parent);
-    }
+void LLVMBuilder::closeAllCleanups(Context &context) {
+    closeAllCleanupsStatic(context);
 }
 
 model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,

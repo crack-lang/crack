@@ -135,6 +135,14 @@ class LLVMBuilder : public Builder {
         virtual void emitEndWhile(model::Context &context,
                                   model::Branchpoint *pos);
 
+        virtual void emitBreak(model::Context &context, 
+                               model::Branchpoint *branch
+                               );
+
+        virtual void emitContinue(model::Context &context, 
+                                  model::Branchpoint *branch
+                                  );
+
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,

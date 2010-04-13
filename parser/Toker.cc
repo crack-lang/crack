@@ -26,8 +26,12 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
 }
 
 Token Toker::fixIdent(const string &data, const Location &loc) {
-    if (data == "class")
+    if (data == "break")
+        return Token(Token::breakKw, data, loc);
+    else if (data == "class")
         return Token(Token::classKw, data, loc);
+    else if (data == "continue")
+        return Token(Token::continueKw, data, loc);
     else if (data == "else")
         return Token(Token::elseKw, data, loc);
     else if (data == "if")
