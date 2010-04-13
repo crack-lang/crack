@@ -4,6 +4,10 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
+Unassigned
+----------
+
+-   decide what to do about operater overloads within classes.
 
 Roadmap
 -------
@@ -17,31 +21,31 @@ for 0.1:
     -   need syntax to allow calling "oper" functions from an expression, need 
         to get rid of the __del() hack.
 -   explicit base class method invocation syntax (void foo() {Super.foo();})
--   composition of constructors/destructors
--   "Foo x = {1, 2}" construction syntax.
--   break & continue
 -   short circuit logic operators
 -   floating point types
 -   Should be able to do instance construction in a statement context without 
     it being misinterpreted as a definition
 -   empty statements should work: if (false) ;
--   numeric negation: "int j = -i;"
 -   fix numeric conversion.
 -   string interpolation expressions: s := `some string $val`;
 -   type casting.
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports.
 
-Completed for 1.0:
+Completed for 0.1:
 -   global variables should not get cleaned up until the end of the program.
     DONE.
 -   fix cleanups during assignment (a = b does b.bind() but not a.release())
     DONE
+-   composition of constructors/destructors DONE
 -   allow utf-8 chars for strings and identifiers.  DONE
 -   the '`' operator DONE
 -   multiple inheritence shouldn't cause bad errors (it need not work) DONE 
     (it now works).
 -   fix overload bug DONE
+-   numeric negation: "int j = -i;" DONE
+-   "Foo x = {1, 2}" construction syntax. DONE
+-   break & continue DONE
 
 for 1.0:
 -   cleanup:
