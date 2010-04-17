@@ -71,22 +71,17 @@ class A {
     class B : A {}
 };
 
-# reference counting should work for assignment (should see "releasing" twice)
-class A {
-    void bind() {
-        puts('binding');
-    }
-    void release() {
-        puts('releasing');
-    }
-};
-
-a := A();
-a = A();
-
 # this breaks (not sure what we're doing in the parser)
 class Foo {} print('test');
 
 # assignment to functions
 void f() {}
 f = 100;
+
+# this should cause an error because x is initialized before y and we are 
+# initializing x with the value of y.
+class A {
+    int x;
+    int y;
+    oper init() : y = 0, x = y {}
+};

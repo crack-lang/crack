@@ -39,6 +39,7 @@ class Toker {
          st_none, 
          st_ident, 
          st_slash,
+         st_minus,
          st_digram,
          st_comment, 
          st_ccomment,
@@ -53,6 +54,21 @@ class Toker {
          st_integer,
          st_istr
       } state;
+      
+      // get the next character from the stream.
+      bool getChar(char &ch) {
+         bool result = src.read(&ch, 1);
+         if (ch == '\n') 
+            locationMap.incrementLineNumber();
+         return result;
+      }
+
+      // put back the character      
+      void ungetChar(char ch) {
+         src.putback(ch);
+         if (ch == '\n') 
+            locationMap.decrementLineNumber();
+      }
 
    public:
 

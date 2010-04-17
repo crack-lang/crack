@@ -3,21 +3,19 @@
 
 import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, XWriter;
 
-import "libc.so.6" strlen, write, malloc, free, read;
+import "libc.so.6" strlen, write, malloc, memcpy, free, read;
 
 uint strlen(byteptr string);
 uint write(int fd, byteptr buf, uint len);
 uint read(int fd, byteptr buf, uint size);
-byteptr malloc(int32 size);
+byteptr malloc(uint size);
+byteptr memcpy(byteptr dst, byteptr src, uint size);
 void free(byteptr mem);
 
 ## Writer interface, for all objects that support "write()"
 ## needs to use Object as a virtual base class.
 class Writer : Object, XWriter {
-    void Writer_init() {
-        # object init
-        Object_init();
-    }
+    oper init() {}
 
     ## Low level write method.  This is the only thing you need to implement.
     void write(byteptr b, uint size) {
@@ -36,10 +34,7 @@ class Writer : Object, XWriter {
 class FDWriter : Writer {
     int fd;
 
-    oper init(int fd0) {
-        Writer_init();
-        fd = fd0;
-    }
+    oper init(int fd0) : fd = fd0 {}
 
     void write(byteptr buf, uint size) {
         write(fd, buf, size);
@@ -76,10 +71,7 @@ class Reader {
 class FDReader : Reader {
     int fd;
     
-    oper init(int fd0) {
-        Object_init();
-        fd = fd0;
-    }
+    oper init(int fd0) : fd = fd0 {}
     
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
@@ -96,6 +88,14 @@ uint _format(uint64 val,  ## value to format
              uint size    ## size of the buffer
              ) {
     uint i = size;
+
+    # zero is special
+    if (!val) {
+        i = i - 1;
+        buf[i] = 48;
+        return i;
+    }
+    
     uint64 v = val;
     while (v) {
         i = i - 1;
@@ -126,19 +126,12 @@ uint _format(int64 val, byteptr buf, uint size) {
 ## Formatter base class - got a format() method for anything.
 class Formatter : Writer {
     
-    Writer __rep;
+    Writer rep;
 
-    void Formatter_init(Writer rep) {
-        Writer_init();
-        __rep = rep;
-    }
+    oper init(Writer rep0) : rep = rep0 {}
 
-    oper init(Writer rep) {
-        Formatter_init(rep);
-    }
-    
     void write(byteptr data, uint size) {
-        __rep.write(data, size);
+        rep.write(data, size);
     }
     
     void format(String data) {
@@ -184,3 +177,50 @@ cout := Formatter(FDWriter(1));
 cerr := Formatter(FDWriter(2));
 cin := FDReader(0);
 
+## Allows you to construct a string by writing to it.
+class StringWriter : Writer {
+    
+    ManagedBuffer buf = null;
+
+    # write position within the buffer
+    uint pos;
+    
+    oper init(uint initBufSize) : buf = ManagedBuffer(initBufSize) {}
+    oper init() : buf = ManagedBuffer(1024) {}
+    
+    void write(byteptr data, uint size) {
+        # reallocate if we overflow
+        if (pos + size > buf.size) {
+            newSize := buf.size * 2;
+            while (pos + size > newSize)
+                newSize = newSize * 2;
+            buf.grow(newSize);
+        }
+
+        memcpy(buf.buffer + pos, data, size);
+        pos = pos + size;
+    }
+    
+    ## Return a string containing everything that has been written so far.
+    String createString() {
+        # store the info in a temporary buffer, if we create a string directly 
+        # from buf the new String will steal the buffer from 
+        b := Buffer(buf.buffer, pos);
+        return String(b);
+    }
+};
+
+## Convenience wrapper, equivalent to Formatter(StringWriter())
+class StringFormatter : Formatter {
+
+    StringWriter __writer;
+
+    oper init(uint initBufSize) : Formatter(null), __writer(initBufSize) {
+        rep = __writer;
+    }
+
+    oper init() : Formatter(null) { rep = __writer; }
+
+    ## see: StringWriter.createString()
+    String createString() { return __writer.createString(); }
+};

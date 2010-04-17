@@ -54,7 +54,8 @@ bool FuncDef::matches(const ArgVec &other_args) {
          arg != args.end() && other_arg != other_args.end();
          ++arg, ++other_arg
          )
-        if (!(*arg)->type->matches(*(*other_arg)->type))
+        // if the types don't _exactly_ match, the signatures don't match.
+        if ((*arg)->type.get() != (*other_arg)->type.get())
             return false;
 
     // make sure that we checked everything in both lists   

@@ -16,6 +16,7 @@ namespace model {
    SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(Context);
    SPUG_RCPTR(Expr);
+   SPUG_RCPTR(Initializers);
    SPUG_RCPTR(TypeDef);
    SPUG_RCPTR(VarDef);
 };
@@ -142,6 +143,12 @@ class Parser {
       model::ExprPtr parseIString(model::Expr *expr);
 
       /**
+       * If the expression is a VarRef referencing a TypeDef, return the 
+       * TypeDef.  Otherwise returns null.
+       */
+      static model::TypeDef *convertTypeRef(model::Expr *expr);
+
+      /**
        * Parse an expression.
        * 
        * @param precedence The function will not parse an operator of lower 
@@ -151,25 +158,55 @@ class Parser {
        *    after the 'a'.
        */
       model::ExprPtr parseExpression(unsigned precedence = 0);
-      void parseMethodArgs(std::vector<model::ExprPtr> &args);
-
-      model::TypeDefPtr parseTypeSpec();
+      void parseMethodArgs(std::vector<model::ExprPtr> &args, 
+                           Token::Type terminator = Token::rparen
+                           );
+      
+      /** 
+       * Parse the "specializer" after a generic type name. 
+       * @param tok the left bracket token of the generic specifier.
+       */
+      model::TypeDef *parseSpecializer(const Token &tok, 
+                                       model::TypeDef *typeDef
+                                       );
+      
+      
+      model::ExprPtr parseConstructor(const Token &tok, model::TypeDef *type,
+                                      Token::Type terminator
+                                      );
+      
+      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 
+                                       " is not a type."
+                                      );
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args);
+
+      /**
+       * Parse the initializer list after an oper init.
+       */
+      model::InitializersPtr parseInitializers(model::Expr *receiver);
+
+      enum FuncFlags {
+         normal,           // normal function
+         hasMemberInits,   // function with member/base class initializers
+                           // ("oper new")
+         hasMemberDels     // function with member/base class destructors
+                           // ("oper del")
+      };
 
       /**
        * Parse a function definition.
        * @param returnType function return type.
        * @param nameTok the last token parsed in the function name.
        * @param name the full (but unqualified) function name.
-       * @param initializers if true, parse initializers and emit
-       *    initializers at the beginning of the body.  This should only be 
-       *    used for "oper init".
+       * @param funcFlags flags defining special processing rules for the 
+       *    function (whether initializers or destructors need to be parsed 
+       *    and emitted).
        * @param expectedArgCount if > -1, this is the expected number of arguments. 
        */
       void parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
                         const std::string &name,
-                        bool initializers,
+                        FuncFlags funcFlags,
                         int expectedArgCount
                         );
 

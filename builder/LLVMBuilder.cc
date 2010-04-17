@@ -22,6 +22,7 @@
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
 #include <spug/Exception.h>
+#include <spug/StringFmt.h>
 
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
@@ -273,16 +274,16 @@ namespace {
                 }
                 
                 // check for an overload (if it's not an overload, assume that 
-                // it's not a function).  Iterate over all of the overloads up 
-                // until the first parent class - the parent classes have 
+                // it's not a function).  Iterate over all of the overloads at 
+                // the top level - the parent classes have 
                 // already had their shot at extendVTables, and we don't want 
                 // their overloads to clobber ours.
                 OverloadDef *overload =
                     OverloadDefPtr::rcast(varIter->second);
                 if (overload)
                     for (OverloadDef::FuncList::iterator fiter =
-                            overload->funcs.begin();
-                         fiter != overload->startOfParents;
+                            overload->beginTopFuncs();
+                         fiter != overload->endTopFuncs();
                          ++fiter
                          )
                         if ((*fiter)->flags & FuncDef::virtualized)
@@ -432,6 +433,10 @@ namespace {
     class BBranchpoint : public model::Branchpoint {
         public:
             BasicBlock *block, *block2;
+            
+            // context has a ref count to this so we use a raw pointer to 
+            // break the cycle.
+            Context *context;
             
             BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
@@ -1558,9 +1563,9 @@ namespace {
     UNOP(SExt);
     UNOP(ZExt);
 
-    class NegateOpCall : public FuncCall {
+    class BitNotOpCall : public FuncCall {
         public:
-            NegateOpCall(FuncDef *def) : FuncCall(def) {}
+            BitNotOpCall(FuncDef *def) : FuncCall(def) {}
             
             virtual ResultExprPtr emit(Context &context) {
                 args[0]->emit(context)->handleTransient(context);
@@ -1572,7 +1577,7 @@ namespace {
                         builder.lastValue,
                         ConstantInt::get(
                             BTypeDefPtr::arcast(func->returnType)->rep,
-                            1
+                            -1
                             )
                     );
                 
@@ -1580,15 +1585,49 @@ namespace {
             }
     };
 
-    class NegateOpDef : public OpDef {
+    class BitNotOpDef : public OpDef {
         public:
-            NegateOpDef(BTypeDef *resultType, const std::string &name) :
+            BitNotOpDef(BTypeDef *resultType, const std::string &name) :
                 OpDef(resultType, FuncDef::noFlags, name, 1) {
                 args[0] = new ArgDef(resultType, "operand");
             }
             
             virtual FuncCallPtr createFuncCall() {
-                return new NegateOpCall(this);
+                return new BitNotOpCall(this);
+            }
+    };
+
+    class NegOpCall : public FuncCall {
+        public:
+            NegOpCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                args[0]->emit(context)->handleTransient(context);
+                
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                builder.lastValue =
+                    builder.builder.CreateSub(
+                        ConstantInt::get(
+                            BTypeDefPtr::arcast(func->returnType)->rep,
+                            0
+                            ),
+                        builder.lastValue
+                    );
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+
+    class NegOpDef : public OpDef {
+        public:
+            NegOpDef(BTypeDef *resultType, const std::string &name) :
+                OpDef(resultType, FuncDef::noFlags, name, 1) {
+                args[0] = new ArgDef(resultType, "operand");
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new NegOpCall(this);
             }
     };
     
@@ -1643,6 +1682,30 @@ namespace {
                 Value *addr = builder.builder.CreateGEP(r, i);
                 builder.lastValue =
                     builder.builder.CreateStore(builder.lastValue, addr);
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
+    class ArrayAllocCall : public FuncCall {
+        public:
+            ArrayAllocCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                // get the BTypeDef from the return type, then get the pointer 
+                // type out of that
+                BTypeDef *retType = BTypeDefPtr::rcast(func->returnType);
+                PointerType *ptrType = 
+                    cast<PointerType>(const_cast<Type *>(retType->rep));
+                
+                // malloc based on the element type
+                builder.emitAlloc(context, new 
+                                  AllocExpr(func->returnType.get()), 
+                                  args[0].get()
+                                  );
                 
                 return new BResultExpr(this, builder.lastValue);
             }
@@ -1789,12 +1852,121 @@ namespace {
     
     QUAL_BINOP(Is, ICmpEQ, "is");
 
+    void addArrayMethods(Context &context, TypeDef *arrayType, 
+                         BTypeDef *elemType
+                         ) {
+        Context::GlobalData *gd = context.globalData;
+        FuncDefPtr arrayGetItem = 
+            new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method, 
+                                               "oper []",
+                                               1
+                                               );
+        arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+        arrayType->context->addDef(arrayGetItem.get());
+    
+        FuncDefPtr arraySetItem = 
+            new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method, 
+                                               "oper []=",
+                                               2
+                                               );
+        arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+        arraySetItem->args[1] = new ArgDef(elemType, "value");
+        arrayType->context->addDef(arraySetItem.get());
+        
+        FuncDefPtr arrayOffset =
+            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags, 
+                                              "oper +",
+                                              2
+                                              );
+        arrayOffset->args[0] = new ArgDef(arrayType, "base");
+        arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
+        context.addDef(arrayOffset.get());
+        
+        FuncDefPtr arrayAlloc =
+            new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
+                                             "oper new",
+                                             1
+                                             );
+        arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
+        arrayType->context->addDef(arrayAlloc.get());
+    }
+
+    class ArrayTypeDef : public BTypeDef {
+        public:
+            ArrayTypeDef(const string &name, const Type *rep) :
+                BTypeDef(name, rep) {
+                generic = new SpecializationCache();
+            }
+            
+            // specializations of array types actually create a new type 
+            // object.
+            virtual TypeDef *getSpecialization(Context &context, 
+                                               TypeVec *types
+                                               ) {
+                // see if it already exists
+                TypeDef *spec = findSpecialization(types);
+                if (spec)
+                    return spec;
+                
+                // create it.
+                
+                assert(types->size() == 1);
+                
+                BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
+                
+                Type *llvmType = PointerType::getUnqual(parmType->rep);
+                TypeDefPtr tempSpec = 
+                    new BTypeDef(SPUG_FSTR(name << "[" << parmType->name << 
+                                            "]"
+                                           ),
+                                 llvmType
+                                 );
+                                  
+                tempSpec->context = new Context(context.builder, 
+                                                Context::instance,
+                                                context.globalData
+                                                );
+                tempSpec->context->returnType = tempSpec;
+                tempSpec->context->addDef(
+                    new VoidPtrOpDef(context.globalData->voidPtrType.get())
+                );
+                
+                // add all of the methods
+                addArrayMethods(context, tempSpec.get(), parmType);
+                (*generic)[types] = tempSpec;
+                return tempSpec.get();
+            }
+    };
+
+    void closeAllCleanupsStatic(Context &context) {
+        BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
+        while (frame) {
+            frame->close();
+            frame = BCleanupFramePtr::rcast(frame->parent);
+        }
+    }
+
+    // emit all cleanups from this context to that of the branchpoint.
+    void emitCleanupsTo(Context &context, BBranchpoint *bpos) {
+        
+        // unless we've reached our stop, emit for all parent contexts
+        if (!(bpos->context == &context)) {
+    
+            // close all cleanups in thie context
+            closeAllCleanupsStatic(context);
+    
+            assert(context.parents.size() == 1);
+            emitCleanupsTo(*context.parents[0], bpos);
+        }
+    }
+
+
 } // anon namespace
 
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
     
     // close all cleanups in this context.
-    closeAllCleanups(context);
+    closeAllCleanupsStatic(context);
     
     // recurse up through the parents.
     if (!context.toplevel)
@@ -1970,7 +2142,7 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
     
-    if (funcDef->flags & FuncDef::virtualized)
+    if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
                                                     valueArgs
@@ -2024,7 +2196,9 @@ ResultExprPtr LLVMBuilder::emitNull(Context &context,
     return new BResultExpr(nullExpr, lastValue);
 }
 
-ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
+ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
+                                     Expr *countExpr
+                                     ) {
     // XXX need to be able to do this for an incomplete class when we 
     // allow user defined oper new.
     BTypeDef *btype = BTypeDefPtr::arcast(allocExpr->type);
@@ -2034,7 +2208,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
     // XXX mega-hack, clear the contents of the allocated memory (this is to 
     // get around the temporary lack of automatic member initialization)
     
-    // calculate the size of the structure
+    // calculate the size of instances of the type
     Value *null = Constant::getNullValue(tp);
     assert(llvmIntType && "integer type has not been initialized");
     Value *startPos = builder.CreatePtrToInt(null, llvmIntType);
@@ -2045,13 +2219,23 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
             );
     Value *size = builder.CreateSub(endPos, startPos);
     
+    // if a count expression was supplied, emit it.  Otherwise, count is a 
+    // constant 1
+    Value *countVal;
+    if (countExpr) {
+        countExpr->emit(context)->handleTransient(context);
+        countVal = lastValue;
+    } else {
+        countVal = ConstantInt::get(llvmIntType, 1);
+    }
+    
     // construct a call to the "calloc" function
     Function *callocFunc = module->getFunction("calloc");
     assert(callocFunc && "calloc function has not been defined");
     BTypeDef *voidPtrType =
         BTypeDefPtr::arcast(context.globalData->voidPtrType);
     vector<Value *> callocArgs(2);
-    callocArgs[0] = ConstantInt::get(llvmIntType, 1);
+    callocArgs[0] = countVal;
     callocArgs[1] = size;
     Value *result = builder.CreateCall(callocFunc, callocArgs.begin(), 
                                        callocArgs.end()
@@ -2080,7 +2264,11 @@ BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
                                                                  )
                                               );
 
+    context.createCleanupFrame();
     cond->emitCond(context);
+    Value *condVal = lastValue;
+    context.closeCleanupFrame();
+    lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);
     
     // repoint to the new ("if true") block
@@ -2097,10 +2285,12 @@ BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
     // create a block to come after the else and jump to it from the current 
     // "if true" block.
     BasicBlock *falseBlock = bpos->block;
-    bpos->block = BasicBlock::Create(getGlobalContext(), "cond_end", func);
-    if (!terminal)
+    bpos->block = 0; 
+    if (!terminal) {
+        bpos->block = BasicBlock::Create(getGlobalContext(), "cond_end", func);
         builder.CreateBr(bpos->block);
-    
+    }    
+
     // new block is the "false" condition
     builder.SetInsertPoint(block = falseBlock);
     return pos;
@@ -2113,11 +2303,18 @@ void LLVMBuilder::emitEndIf(Context &context,
     BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // branch from the current block to the next block
-    if (!terminal)
+    if (!terminal) {
+        if (!bpos->block)
+            bpos->block = 
+                BasicBlock::Create(getGlobalContext(), "cond_end", func);
         builder.CreateBr(bpos->block);
 
-    // new block is the next block
-    builder.SetInsertPoint(block = bpos->block);
+    }
+
+    // if we ended up with any non-terminal paths our of the if, the new 
+    // block is the next block
+    if (bpos->block)
+        builder.SetInsertPoint(block = bpos->block);
 }
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 
@@ -2128,6 +2325,7 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
                                                                func
                                                                )
                                             );
+    bpos->context = &context;
 
     BasicBlock *whileCond = bpos->block2 =
         BasicBlock::Create(lctx, "while_cond", func);
@@ -2136,7 +2334,11 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     builder.SetInsertPoint(block = whileCond);
 
     // XXX see notes above on a conditional type.
+    context.createCleanupFrame();
     cond->emitCond(context);
+    Value *condVal = lastValue;
+    context.closeCleanupFrame();
+    lastValue = condVal;
     builder.CreateCondBr(lastValue, whileBody, bpos->block);
 
     // begin generating code in the while body    
@@ -2153,6 +2355,18 @@ void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos) {
 
     // new code goes to the following block
     builder.SetInsertPoint(block = bpos->block);
+}
+
+void LLVMBuilder::emitBreak(Context &context, Branchpoint *branch) {
+    BBranchpoint *bpos = BBranchpointPtr::acast(branch);
+    emitCleanupsTo(context, bpos);
+    builder.CreateBr(bpos->block);
+}
+
+void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
+    BBranchpoint *bpos = BBranchpointPtr::acast(branch);
+    emitCleanupsTo(context, bpos);
+    builder.CreateBr(bpos->block2);
 }
 
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
@@ -2574,7 +2788,7 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     func->setCallingConv(llvm::CallingConv::C);
     block = BasicBlock::Create(lctx, "__del__", func);
     builder.SetInsertPoint(block);
-    closeAllCleanups(context);
+    closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
     
     // restore the main function
@@ -2621,12 +2835,8 @@ CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
     return new BCleanupFrame(&context);
 }
 
-void LLVMBuilder::closeAllCleanups(model::Context &context) {
-    BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
-    while (frame) {
-        frame->close();
-        frame = BCleanupFramePtr::rcast(frame->parent);
-    }
+void LLVMBuilder::closeAllCleanups(Context &context) {
+    closeAllCleanupsStatic(context);
 }
 
 model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
@@ -2646,7 +2856,9 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
                          );
 }
                        
-model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func) {
+model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func, 
+                                               bool squashVirtual
+                                               ) {
     // try to create a BinCmp
     OpDef *specialOp = OpDefPtr::cast(func);
     if (specialOp) {
@@ -2654,7 +2866,7 @@ model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func) {
         return specialOp->createFuncCall();
     } else {
         // normal function call
-        return new FuncCall(func);
+        return new FuncCall(func, squashVirtual);
     }
 }
 
@@ -2702,6 +2914,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     // Otherwise create a fixup.
     if (varContext->complete) {
         Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
+        narrow(assign->value->type.get(), assign->var->type.get());
         builder.CreateStore(lastValue, fieldRef);
     } else {
         // create a placeholder instruction
@@ -2828,7 +3041,26 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         gd->intType = int64Type;
         llvmIntType = int64Type->rep;
     }
+
+    // create OverloadDef's type
+    BTypeDefPtr overloadDef = new BTypeDef("", 0);
         
+    // Give it a context and an "oper to voidptr" method.
+    overloadDef->context =
+        new Context(context.builder, Context::instance,
+                    context.globalData
+                    );
+    overloadDef->context->addDef(
+        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+    );
+    gd->overloadType = overloadDef;
+    
+    // create the array generic
+    TypeDefPtr arrayType = new ArrayTypeDef("array", 0);
+    arrayType->context = new Context(context.builder, Context::instance,
+                                     context.globalData
+                                     );
+    context.addDef(arrayType.get());
 
     // create an empty structure type and its pointer for VTableBase 
     // Actual type is {}** (another layer of pointer indirection) because 
@@ -2858,6 +3090,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int64Type, boolType));
     context.addDef(new ICmpSGEOpDef(int64Type, boolType));
     context.addDef(new ICmpSLEOpDef(int64Type, boolType));
+    context.addDef(new NegOpDef(int64Type, "oper -"));
+    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
 
     context.addDef(new AddOpDef(uint64Type));
     context.addDef(new SubOpDef(uint64Type));
@@ -2870,6 +3104,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULTOpDef(uint64Type, boolType));
     context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
+    context.addDef(new NegOpDef(uint64Type, "oper -"));
+    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -2882,6 +3118,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(int32Type, boolType));
     context.addDef(new ICmpSGEOpDef(int32Type, boolType));
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
+    context.addDef(new NegOpDef(int32Type, "oper -"));
+    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -2894,6 +3132,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULTOpDef(uint32Type, boolType));
     context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
+    context.addDef(new NegOpDef(uint32Type, "oper -"));
+    context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
 
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -2906,6 +3146,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLTOpDef(byteType, boolType));
     context.addDef(new ICmpSGEOpDef(byteType, boolType));
     context.addDef(new ICmpSLEOpDef(byteType, boolType));
+    context.addDef(new NegOpDef(byteType, "oper -"));
+    context.addDef(new BitNotOpDef(byteType, "oper ~"));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
@@ -2933,36 +3175,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));
     
-    // boolean negate
-    context.addDef(new NegateOpDef(boolType, "oper !"));
+    // boolean not
+    context.addDef(new BitNotOpDef(boolType, "oper !"));
     
     // byteptr array indexing
-
-    FuncDefPtr arrayGetItem = 
-        new GeneralOpDef<ArrayGetItemCall>(byteType, FuncDef::method, 
-                                           "oper []",
-                                           1
-                                           );
-    arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-    byteptrType->context->addDef(arrayGetItem.get());
-
-    FuncDefPtr arraySetItem = 
-        new GeneralOpDef<ArraySetItemCall>(byteType, FuncDef::method, 
-                                           "oper []=",
-                                           2
-                                           );
-    arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-    arraySetItem->args[1] = new ArgDef(byteType, "value");
-    byteptrType->context->addDef(arraySetItem.get());
-    
-    FuncDefPtr arrayOffset =
-        new GeneralOpDef<ArrayOffsetCall>(byteptrType, FuncDef::noFlags, 
-                                          "oper +",
-                                          2
-                                          );
-    arrayOffset->args[0] = new ArgDef(byteptrType, "base");
-    arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-    context.addDef(arrayOffset.get());
+    addArrayMethods(context, byteptrType, byteType);
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

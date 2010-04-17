@@ -15,6 +15,13 @@ class Expr;
 class FuncCall;
 class VarDef;
 
+/**
+ * CleanupFrame is a collection of cleanup activities to perform at the end of 
+ * a context - examples include the cleanup of variables at the end of a block 
+ * or the cleanup of temporaries after evalutation of a statement.
+ *
+ * Cleanups are to be executed in the reverse order that they are added.
+ */
 class CleanupFrame : public spug::RCBase {
     public:
         CleanupFramePtr parent;
@@ -29,8 +36,10 @@ class CleanupFrame : public spug::RCBase {
         
         /**
          * Adds a cleanup for the given variable definition if one is needed.
+         * @param aggregate if defined, this is the aggregate that varDef is a 
+         *  member of.
          */
-        void addCleanup(VarDef *varDef);
+        void addCleanup(VarDef *varDef, Expr *aggregate = 0);
         
         /** 
          * Close the cleanup frame.  If the code is not terminal at this 

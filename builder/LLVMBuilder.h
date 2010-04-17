@@ -106,7 +106,8 @@ class LLVMBuilder : public Builder {
                                               );
 
         virtual model::ResultExprPtr emitAlloc(model::Context &context, 
-                                               model::AllocExpr *allocExpr
+                                               model::AllocExpr *allocExpr,
+                                               model::Expr *countExpr
                                                );
 
         virtual void emitTest(model::Context &context,
@@ -133,6 +134,14 @@ class LLVMBuilder : public Builder {
 
         virtual void emitEndWhile(model::Context &context,
                                   model::Branchpoint *pos);
+
+        virtual void emitBreak(model::Context &context, 
+                               model::Branchpoint *branch
+                               );
+
+        virtual void emitContinue(model::Context &context, 
+                                  model::Branchpoint *branch
+                                  );
 
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
@@ -177,7 +186,7 @@ class LLVMBuilder : public Builder {
         // definition.
         
         virtual model::FuncCallPtr
-            createFuncCall(model::FuncDef *func);
+            createFuncCall(model::FuncDef *func, bool squashVirtual);
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               );

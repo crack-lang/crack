@@ -3,6 +3,8 @@
 
 rc=0
 
+parseError="ParseError: run_all_tests.tmp:"
+
 function test_output {
     text="$1"
     script="$2"
@@ -38,6 +40,10 @@ test_output 'block if/else' \
     'if (1) { puts("abcd"); } else { puts("efgh"); }' 'abcd'
 test_output 'negative block if/else' \
     'if (0) { puts("abcd"); } else { puts("efgh"); }' 'efgh'
+test_output 'double if/else, all terminal' \
+    'void f() { if (1) return; else if (0) return; else return; }
+     puts("ok");' \
+    ok
 test_output 'function with no args' \
     'void func() { puts("abcd"); } func()' "abcd"
 test_output 'double terminal "if"' \
@@ -53,15 +59,15 @@ test_output 'void func with explicit return' \
     'void f() { return; } f(); puts("abcd");' 'abcd'
 test_output 'returning void from non-void func' \
     'int32 f() { return; }' \
-    'ParseError: run_all_tests.tmp:1: Missing return expression for function returning'\
+    "${parseError}1: Missing return expression for function returning"\
 ' int32'
 test_output 'invalid return types' \
     'void f() {} int32 g() { return f(); }' \
-    'ParseError: run_all_tests.tmp:1: Invalid return type void for function returning '\
+    "${parseError}1: Invalid return type void for function returning "\
 'int32'
 test_output 'return in module scope' \
     'return' \
-    'ParseError: run_all_tests.tmp:2: Return statement not allowed in module scope' \
+    "${parseError}1: Return statement not allowed in module scope" \
 
 test_output 'simple class definition' 'class Foo {};' ''
 test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
@@ -69,13 +75,13 @@ test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
 # multiple inheritence working.
 #test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
 test_output 'bad class definition' 'class Foo xxx;' \
-    'ParseError: run_all_tests.tmp:1: token xxx was not expected at this time, '\
+    "${parseError}1: token xxx was not expected at this time, "\
 'expected colon or opening brace.'
 test_output 'class with nested def' 'class Foo { int32 val; }' ''
 test_output 'nested classes' 'class Foo { class Bar {}; }' ''
 test_output 'bad type for member function' \
     'class Foo { xxx f() {} };' \
-    'ParseError: run_all_tests.tmp:1: xxx is not a type.'
+    "${parseError}1: xxx is not a type."
 test_output 'the "define" (":=") operator' \
     'x := 1234; printint(x)' \
     '1234'
@@ -109,7 +115,7 @@ test_output 'explicit this' \
 
 test_output 'bad func names' \
     'class Foo { void f() { this.g(); }};' \
-    'ParseError: run_all_tests.tmp:1: No method exists matching g with these argument '\
+    "${parseError}1: No method exists matching g with these argument "\
 'types.'
 
 test_output 'using a classname with its definition' \
@@ -370,11 +376,87 @@ ok'
 
 test_output 'errors on bad argument lists for bind' \
     'class A { oper bind(int val) {} };' \
-    'ParseError: run_all_tests.tmp:1: Expected 0 arguments for function oper bind'
+    "${parseError}1: Expected 0 arguments for function oper bind"
 
 test_output 'errors on bad argument lists for release' \
     'class A { oper release(int val) {} };' \
-    'ParseError: run_all_tests.tmp:1: Expected 0 arguments for function oper release'
+    "${parseError}1: Expected 0 arguments for function oper release"
+
+test_output 'base constructors are non-transitive' \
+    'class A { oper init(int a0) {} };
+     class B : A { oper init() : A(100) {} };
+     class C : B { oper init() : B(100) {} };' \
+    "${parseError}3: No matching constructor found for B"
+
+test_output 'no inheritence of oper new' \
+    'class A { oper init(int a0) {} };
+     class B : A { oper init() : A(100) {} };
+     b := B(100);' \
+    "${parseError}3: No method exists matching B with these argument types."
+
+test_output 'constructor initializers' 'import test.test_init;' ok
+
+test_output 'narrowing field assignment' \
+    'class A {}; class B : A {}; class C { A a; }; C c; c.a = B();
+     puts("ok");' \
+    ok
+
+test_output 'overloading based on derived types' \
+    'class A { void f(A a) { puts("A"); } };
+     class B : A { void f(B b) { puts("B"); } };
+     B b; b.f(b);' \
+    B
+
+test_output 'overrides of globals' \
+    'void foo() { puts("global foo"); }
+     class A {
+        void foo(int v) { puts("class foo"); }
+        void bar() { foo(100); }
+     };
+     A a;
+     a.bar();' \
+     'class foo'
+
+test_output 'eol putbacks do not affect line numbers' \
+    'int i
+     ; error;' \
+    "${parseError}2: Unknown identifier error"
+
+test_output 'errors on invalid constructors' \
+    'class A {}; t := A(1, 2);' \
+    "${parseError}1: No method exists matching A with these argument types."
+
+test_output 'array generics' \
+    'x := array[int](100);
+     i := 0; while (i < 100) { x[i] = i; i = i + 1; }
+     i = 0; while (i < 10) { if (x[i] != i) puts("FAIL"); i = i + 1; }
+     puts("ok")' \
+     ok
+
+test_output 'negation' \
+    'if (1 - 2 != -1) puts("FAIL");
+     puts("ok");' \
+    ok
+
+test_output 'negation and bitwise not operators' \
+    'a := 32;
+     if (~a != -33) puts("1s complement FAIL");
+     if (-a != -32) puts("negation FAIL");
+     puts("ok");' \
+    ok
+
+test_output 'right error if multiple variables are used' \
+    'int x = 0, 1;' \
+    "${parseError}1: token , was not expected at this time, expected \
+semicolon after variable initalizer."
+
+test_output 'initializer constructor sugar' \
+    'class A { int i; oper init(int i0, byteptr b0) : i = i0 {} 
+               oper init() : i = 200 {} };
+     A a = {100, "ok"}; A b = {}; if (a.i + b.i == 300) puts("ok");' \
+    ok
+
+test_output 'break and continue' 'import test.test_break;' ok
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -385,7 +467,7 @@ test_output 'correct caching of crack.lang' \
 
 test_output 'error messsage on default init with no default constructor' \
     'class Obj { oper init(int32 v) {} }; Obj o;' \
-    'ParseError: run_all_tests.tmp:1: no default constructor'
+    "${parseError}1: no default constructor"
 
 test_output 'bool construction' \
     'bool b; if (b) print("fail"); else print("pass")' \
@@ -437,7 +519,7 @@ test_output 'conversion from byteptr -> voidptr' \
     ok
 
 test_output 'various integer types and conversions' \
-    'int32 i32 = 0-1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
+    'int32 i32 = -1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
      i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
      u64; u32 = u64; i64 = u64; byte b = u64; u64 = b; print("ok");' \
     ok
@@ -459,19 +541,19 @@ test_output 'multiple module loads' \
 in testmod2.func()'
 
 test_output 'remainder operator' \
-    'printint((0-1) % 2);' \
+    'printint((-1) % 2);' \
     '-1'
 
 test_output 'IO classes' \
     'import crack.io FDWriter, Formatter, Writer;
      f := Formatter(FDWriter(1));
      f.format("string");
-     int32 i32 = 0-100;
+     int32 i32 = -100;
      f.format(i32);
      uint32 u32 = 100;
      f.format(u32);
      int64 i64 = 123456789;
-     i64 = i64 * (0-123456789);
+     i64 = i64 * -123456789;
      f.format(i64);
      uint64 u64 = 123456789;
      u64 = u64 * u64;
@@ -489,12 +571,17 @@ test_output 'functions as values' \
     'void func() {} voidptr v = func; if (func is v) print("ok");' \
     ok
 
+test_output 'functions as values in nested contexts' \
+    'void f() {}
+     class A { void a() { voidptr g = f; } }; print("ok");' \
+     ok
+
 test_output 'interpolation operator' \
     'import crack.io FDWriter, Formatter;
 
     class F : Formatter {
         bool enabled;
-        oper init(int fd) { Formatter_init(FDWriter(fd)); enabled = true; }
+        oper init(int fd) : Formatter(FDWriter(fd)), enabled = true {}
         bool isTrue() { return enabled; }
     };
     out := F(1);
@@ -511,8 +598,8 @@ dollar sign: $'
 
 test_output 'assignment releases old value' \
     'class A { String val;
-        oper init(String val0) { Object_init(); val = val0; }
-        void del() { print(val); }
+        oper init(String val0) : val = val0 {}
+        oper del() { print(val); }
      };
      
      a := A("first");
@@ -537,5 +624,59 @@ test_output 'cin' \
      cout `got $data`;' \
      'got test data' \
      'test data'
+
+test_output 'oper init errors outside of class scope' \
+    'void oper init() {}' \
+    "${parseError}1: oper init can only be defined in a class scope."
+
+test_output 'typed opers' \
+    'class A { void oper init() { print("ok"); } }; A a;' \
+    ok
+
+test_output 'array operator overloading' \
+    'import crack.io cout;
+     class A { int oper [](int i) { return i; }
+               int oper []=(int i, int v) { return i * v; } };
+     A a;
+     cout `$(a[100]) $(a[100] = 2)`;' \
+     '100 200'
+
+test_output 'cleanup of temporarys in conditionals' \
+    'if ("test") 1; while ("test".size == 0) 1; print("ok");' \
+    ok
+
+test_output 'binary operator overloading' \
+    'class A {}; A a; int oper +(A x, A y) { return 100; } printint(a + a);' \
+    100
+
+test_output 'order of destruction' \
+    'class A { oper del() { printint(1); } };
+     class B { oper del() { printint(2); } };
+     class C : A { B b; oper del() { printint(3); } };
+     C c;' \
+     321
+
+test_output 'StringFormatter' \
+    'import crack.io StringFormatter, cout;
+     f := StringFormatter(5);
+     f `test larger than 2*size`;
+     f ` second write`;
+     if (!f.createString().cmp("test larger than 2*size second write"))
+        cout `ok`;
+    else
+        cout `FAIL`;' \
+    ok
+
+test_output 'operator overloading of unary operators' \
+    'import crack.io cout;
+     String oper ~(String s) { return "complemented"; }
+     String oper -(String s) { return "negated"; }
+     String oper --(String s) { return "decremented"; }
+     if ((-"test").cmp("negated")) cout `negation FAIL\n`;
+     if ((~"test").cmp("complemented")) cout `complement FAIL\n`;
+     if ((--"test").cmp("decremented")) cout `decrement FAIL\n`;
+     cout `ok\n`;' \
+    ok
+
 
 exit $rc

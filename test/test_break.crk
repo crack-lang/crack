@@ -1,0 +1,49 @@
+## test break and continue and cleanups
+
+# keep track of short sequences of activity by storing them in a multi-digit 
+# integer.
+int results;
+void put(int i) {
+    results = results * 10 + i;
+}
+
+# keep track of when an object is released
+class X {
+    int i; 
+    oper init(int i0) : i = i0 {}
+    oper release() {
+        put(i);
+    }
+};
+
+# make sure break works and make sure cleanups are called correctly.
+if (1) {
+    X x = {1};
+    while (0 == 0) {
+        X y = {2};
+        put(3);
+        if (1 == 1) {
+            X z = {4};
+            break;
+        }
+        put(5);
+    }
+    put(6);
+}
+if (results != 34261) puts('failed break cleanup');
+
+# make sure continue works.
+results = 0;
+if (1) {
+    int i = 0;
+    while (i < 2) {
+        put(1);
+        i = i + 1;
+        if (i == 1)
+            continue;
+        put(2);
+    }
+}
+if (results != 112) puts('failed continue');
+
+puts('ok');

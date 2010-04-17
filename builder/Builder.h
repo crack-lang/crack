@@ -11,6 +11,7 @@
 namespace model {
     class AllocExpr;
     class AssignExpr;
+    class Branchpoint;
     SPUG_RCPTR(ArgDef);
     SPUG_RCPTR(ModuleDef);
     SPUG_RCPTR(CleanupFrame);
@@ -64,7 +65,8 @@ class Builder : public spug::RCBase {
          * Emit an allocator for the specified type.
          */
         virtual model::ResultExprPtr emitAlloc(model::Context &context,
-                                               model::AllocExpr *allocExpr
+                                               model::AllocExpr *allocExpr,
+                                               model::Expr *countExpr = 0
                                                ) = 0;
         
         /**
@@ -121,6 +123,24 @@ class Builder : public spug::RCBase {
          */        
         virtual void emitEndWhile(model::Context &context,
                                   model::Branchpoint *pos
+                                  ) = 0;
+
+        /**
+         * Emit the code for a break statement (branch to the end of the 
+         * enclosing while/for/switch).
+         * @param branch branchpoint for the loop we're breaking out of.
+         */
+        virtual void emitBreak(model::Context &context,
+                               model::Branchpoint *branch
+                               ) = 0;
+        
+        /**
+         * Emit the code for the continue statement (branch to the beginning 
+         * of the enclosing while/for).
+         * @param branch branchpoint for the loop we're breaking out of.
+         */
+        virtual void emitContinue(model::Context &context,
+                                  model::Branchpoint *branch
                                   ) = 0;
 
         /**
@@ -195,8 +215,18 @@ class Builder : public spug::RCBase {
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name
                                               ) = 0;
+
+        
+        /**
+         * @param squashVirtual If true, call a virtualized function 
+         *  directly, without the use of the vtable (causes virtualized to be 
+         *  set to false, regardless of whether funcDef is virtual).
+         */
         virtual model::FuncCallPtr 
-            createFuncCall(model::FuncDef *func) = 0;
+            createFuncCall(model::FuncDef *func, 
+                           bool squashVirtual = false
+                           ) = 0;
+
         virtual model::VarRefPtr
             createVarRef(model::VarDef *varDef) = 0;
         

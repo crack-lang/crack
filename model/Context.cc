@@ -2,10 +2,15 @@
 
 #include "Context.h"
 
+#include <spug/StringFmt.h>
 #include "builder/Builder.h"
+#include "parser/Token.h"
+#include "parser/Location.h"
+#include "parser/ParseError.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ArgDef.h"
+#include "Branchpoint.h"
 #include "IntConst.h"
 #include "ModuleDef.h"
 #include "OverloadDef.h"
@@ -89,34 +94,14 @@ ModuleDefPtr Context::createModule(const string &name) {
     return builder.createModule(*this, name);
 }
 
-namespace {
-    inline void allocOverload(OverloadDefPtr &overload, const string &name) {
-        if (!overload)
-            overload = new OverloadDef(name);
-    }
-    
-    inline void mergeOverloads(OverloadDef::FuncList &aggregator,
-                               const OverloadDef::FuncList &newSubset
-                               ) {
-        for (OverloadDef::FuncList::const_iterator iter = newSubset.begin();
-             iter != newSubset.end();
-             ++iter
-             ) 
-            aggregator.push_back(*iter);
-    }
-}
-
-OverloadDefPtr Context::getOverload(const std::string &varName, 
-                                    bool alwaysCreate
-                                    ) {
+OverloadDefPtr Context::getOverload(const std::string &varName) {
     // see if the name exists in the current context
     OverloadDefPtr overloads = lookUp(varName, false);
     if (overloads)
         return overloads;
 
-    // if we have to always create one of these, do so now.
-    if (alwaysCreate)
-        overloads = new OverloadDef(varName);
+    overloads = new OverloadDef(varName);
+    overloads->type = globalData->overloadType;
     
     // merge in the overloads from the parents
     if (parents.size())
@@ -124,19 +109,7 @@ OverloadDefPtr Context::getOverload(const std::string &varName,
              iter != parents.end();
              ++iter
              ) {
-            // XXX somebody somewhere needs to check for collisions
-            
-            // get the parent overloads if there are any
-            OverloadDefPtr parentOverloads = 
-                (*iter)->getOverload(varName, false);
-            
-            // merge the parent overloads with this one (creating this one if 
-            // necessary)
-            if (parentOverloads) {
-                if (!overloads)
-                    overloads = new OverloadDef(varName);
-                overloads->merge(*parentOverloads);
-            }
+            overloads->addParent(iter->get());
         }
 
     if (overloads) {
@@ -146,9 +119,12 @@ OverloadDefPtr Context::getOverload(const std::string &varName,
 
     return overloads;
 }
-        
 
 VarDefPtr Context::lookUp(const std::string &varName, bool recurse) {
+    // hack to allow us to call "oper del" without general operation syntax.
+    if (varName == "__del")
+        return lookUp("oper del", recurse);
+
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {
         return iter->second;
@@ -183,13 +159,21 @@ FuncDefPtr Context::lookUp(Context &context,
     VarDefPtr var = lookUp(varName);
     if (!var)
         return 0;
-
+    
     // if "var" is a class definition, convert this to a lookup of the "oper 
     // new" function on the class.
     TypeDef *typeDef = TypeDefPtr::rcast(var);
-    if (typeDef)
-        return typeDef->context->lookUp(context, "oper new", args);
+    if (typeDef) {
+        FuncDefPtr operNew =
+            typeDef->context->lookUp(context, "oper new", args);
 
+        // make sure we got it, and we didn't inherit it
+        if (!operNew || operNew->context != typeDef->context.get())
+            return 0;
+        
+        return operNew;
+    }
+    
     // if this is an overload, get the function from it.
     OverloadDefPtr overload = OverloadDefPtr::rcast(var);
     if (!overload)
@@ -291,4 +275,92 @@ void Context::closeCleanupFrame() {
     CleanupFramePtr frame = cleanupFrame;
     cleanupFrame = frame->parent;
     frame->close();
+}
+
+void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
+                         Expr *initializer
+                         ) {
+    
+    // if the definition context is an instance context, make sure that we 
+    // haven't generated any constructors.
+    ContextPtr defCtx = getDefContext();
+    if (defCtx->scope == Context::instance && 
+         defCtx->returnType->initializersEmitted
+        ) {
+        parser::Location loc = tok.getLocation();
+        throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' << 
+                                            loc.getLineNumber() << 
+                                            ": Adding an instance variable "
+                                            "after 'oper init' has been "
+                                            "defined."
+                                           )
+                         );
+    }
+
+    createCleanupFrame();
+    VarDefPtr varDef = type->emitVarDef(*this, tok.getData(), initializer);
+    closeCleanupFrame();
+    defCtx->addDef(varDef.get());
+    cleanupFrame->addCleanup(varDef.get());
+}
+
+void Context::setBreak(Branchpoint *branch) {
+    breakBranch = branch;
+}
+
+void Context::setContinue(Branchpoint *branch) {
+    continueBranch = branch;
+}
+
+Branchpoint *Context::getBreak() {
+    if (breakBranch)
+        return breakBranch.get();
+    
+    // don't attempt to propagate out of an execution scope
+    if (!toplevel && !parents.empty()) {
+        assert(parents.size() == 1 && "local scope has more than one parent");
+        return parents[0]->getBreak();
+    } else {
+        std::cerr << "scope = " << scope << endl;
+        return 0;
+    }
+}
+
+Branchpoint *Context::getContinue() {
+    if (continueBranch)
+        return continueBranch.get();
+
+    // don't attempt to propagate out of an execution scope
+    if (!toplevel && !parents.empty()) {
+        assert(parents.size() == 1 && "local scope has more than one parent");
+        return parents[0]->getContinue();
+    } else {
+        return 0;
+    }
+}
+
+void Context::dump(ostream &out, const std::string &prefix) const {
+    switch (scope) {
+        case module: out << "module "; break;
+        case instance: out << "instance "; break;
+        case local: out << "local "; break;
+        case composite: out << "composite "; break;
+        default: out << "UNKNOWN ";
+    }
+    out << "{\n";
+    string childPfx = prefix + "  ";
+    for (ContextVec::const_iterator parentIter = parents.begin();
+         parentIter != parents.end();
+         ++parentIter
+         ) {
+        out << childPfx << "parent context ";
+        (*parentIter)->dump(out, childPfx);
+    }
+    
+    for (VarDefMap::const_iterator varIter = defs.begin();
+         varIter != defs.end();
+         ++varIter
+         )
+        varIter->second->dump(out, childPfx);
+    out << prefix << "}\n";
 }

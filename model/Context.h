@@ -12,8 +12,13 @@ namespace builder {
     class Builder;
 }
 
+namespace parser {
+    class Token;
+}
+
 namespace model {
 
+SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
@@ -36,8 +41,11 @@ class Context : public spug::RCBase {
     
     private:
         VarDefMap defs;
-
         typedef std::map<std::string, StrConstPtr> StrConstTable;
+        
+        // break and continue branchpoints
+        BranchpointPtr breakBranch, continueBranch;
+
     public:
 
         // context scope - this is used to control how variables defined in 
@@ -92,7 +100,8 @@ class Context : public spug::RCBase {
                        vtableBaseType,
                        objectType,
                        stringType,
-                       staticStringType;
+                       staticStringType,
+                       overloadType;
             
             // just make sure the bootstrapped types are null
             GlobalData();
@@ -136,14 +145,11 @@ class Context : public spug::RCBase {
 
         /**
          * Returns the Overload Definition for the given name for the current 
-         * context.
+         * context.  Creates an overload definition if one does not exist.
          * 
          * @param varName the overload name.
-         * @param alwaysCreate if true, create the overload even if no 
-         *  definitions are found for it in the parent classes.
          */
-        OverloadDefPtr getOverload(const std::string &varName,
-                                   bool alwaysCreate = true);
+        OverloadDefPtr getOverload(const std::string &varName);
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         
@@ -218,7 +224,44 @@ class Context : public spug::RCBase {
          * appropriate.
          */
         void closeCleanupFrame();
+        
+        /**
+         * Emit a variable definition in the context.
+         */
+        void emitVarDef(TypeDef *type, const parser::Token &name, 
+                        Expr *initializer
+                        );
+
+        /**
+         * Set the branchpoint to be used for a break statement.
+         * @param branch the branchpoint, may be null.
+         */
+        void setBreak(Branchpoint *branch);
+        
+        /**
+         * Set the branchpoint to be used for a continue statement.
+         * @param branch the branchpoint, may be null.
+         */
+        void setContinue(Branchpoint *branch);
+        
+        /**
+         * Obtains the branchpoint to be used for a break statement, returns 
+         * null if there is none.
+         */
+        Branchpoint *getBreak();
+        
+        /**
+         * Obtains the branchpoint to be used for a continue statement, 
+         * returns null if there is none.
+         */
+        Branchpoint *getContinue();
+        
+        void dump(std::ostream &out, const std::string &prefix) const;
 };
+
+inline std::ostream operator <<(std::ostream &out, const Context &context) {
+    context.dump(out, "");
+}
 
 }; // namespace model
 

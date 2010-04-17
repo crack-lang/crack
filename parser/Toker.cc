@@ -26,8 +26,12 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
 }
 
 Token Toker::fixIdent(const string &data, const Location &loc) {
-    if (data == "class")
+    if (data == "break")
+        return Token(Token::breakKw, data, loc);
+    else if (data == "class")
         return Token(Token::classKw, data, loc);
+    else if (data == "continue")
+        return Token(Token::continueKw, data, loc);
     else if (data == "else")
         return Token(Token::elseKw, data, loc);
     else if (data == "if")
@@ -70,11 +74,7 @@ Token Toker::readToken() {
  
     while (true) {
         // read the next character from the stream
-        if (!src.read(&ch, 1)) break;
-  
-        // if we got a newline, unconditionally increment the line number
-        if (ch == '\n') 
-           locationMap.incrementLineNumber();
+        if (!getChar(ch)) break;
   
         // processing varies according to state
         switch (state) {
@@ -121,7 +121,7 @@ Token Toker::readToken() {
                 } else if (ch == '+') {
                     return Token(Token::plus, "+", locationMap.getLocation());
                 } else if (ch == '-') {
-                    return Token(Token::minus, "-", locationMap.getLocation());
+                    state = st_minus;
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
                 } else if (ch == '%') {
@@ -141,6 +141,8 @@ Token Toker::readToken() {
                 } else if (isdigit(ch)) {
                     buf << ch;
                     state = st_integer;
+                } else if (ch == '~') {
+                    return Token(Token::tilde, "~", locationMap.getLocation());
                 } else if (ch == '`') {
                     state = st_istr;
                     return Token(Token::istrBegin, "`", 
@@ -154,6 +156,20 @@ Token Toker::readToken() {
                                       );
                 }
                 break;
+
+            case st_minus:
+                if (ch == '-') {
+                    state = st_none;
+                    return Token(Token::decr, "--", locationMap.getLocation());
+                } else if (isdigit(ch)) {
+                    buf << '-' << ch;
+                    state = st_integer;
+                } else {
+                    state = st_none;
+                    ungetChar(ch);
+                    return Token(Token::minus, "-", locationMap.getLocation());
+                }
+                break;
             
             case st_digram:
                 if (ch == '=') {
@@ -162,7 +178,7 @@ Token Toker::readToken() {
                     return Token(t2, all, locationMap.getLocation());
                 } else {
                     char all[2] = {ch1, 0};
-                    src.putback(ch);
+                    ungetChar(ch);
                     state = st_none;
                     return Token(t1, all, locationMap.getLocation());
                 }
@@ -173,7 +189,7 @@ Token Toker::readToken() {
    
                 // if we got a non-alphanumeric, non-underscore we're done
                 if (!isalnum(ch) && ch != '_' && ch > 0) {
-                    src.putback(ch);
+                    ungetChar(ch);
                     state = st_none;
                     return fixIdent(buf.str(), locationMap.getLocation());
                 }
@@ -187,7 +203,7 @@ Token Toker::readToken() {
                 } else if (ch == '*') {
                     state = st_ccomment;
                 } else {
-                    src.putback(ch);
+                    ungetChar(ch);
                     state = st_none;
                     return Token(Token::slash, "/", locationMap.getLocation());
                 }
@@ -279,7 +295,7 @@ Token Toker::readToken() {
                     ++codeLen;
                 } else {
                     buf << codeChar;
-                    src.putback(ch);
+                    ungetChar(ch);
                     state = (state == st_strOctal) ? st_string : st_istr;
                 }
                 break;
@@ -315,7 +331,7 @@ Token Toker::readToken() {
                 if (isdigit(ch))
                     buf << ch;
                 else {
-                    src.putback(ch);
+                    ungetChar(ch);
                     state = st_none;
                     return Token(Token::integer, buf.str(),
                                  locationMap.getLocation()
@@ -331,7 +347,7 @@ Token Toker::readToken() {
                         // token was returned, return it as a string now and 
                         // putback the '`' so we can do the istrEnd the next 
                         // time.
-                        src.putback(ch);
+                        ungetChar(ch);
                         return Token(Token::string, buf.str(),
                                      locationMap.getLocation()
                                      );

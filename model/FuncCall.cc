@@ -12,9 +12,12 @@
 
 using namespace model;
 
-FuncCall::FuncCall(FuncDef *funcDef) :
+FuncCall::FuncCall(FuncDef *funcDef, bool squashVirtual) :
     Expr(funcDef->returnType.get()),
-    func(funcDef) {
+    func(funcDef),
+    virtualized(squashVirtual ? false : 
+                                (funcDef->flags & FuncDef::virtualized)
+                ) {
     if (!funcDef->returnType)
         std::cerr << "bad func def: " << funcDef->name << std::endl;
     assert(funcDef->returnType);
