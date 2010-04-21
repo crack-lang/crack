@@ -458,6 +458,26 @@ test_output 'initializer constructor sugar' \
 
 test_output 'break and continue' 'import test.test_break;' ok
 
+test_output 'break scope limited to loop' \
+    'while (1) break;
+    break;' \
+    "${parseError}2: Break can only be used in the body of a while, for or \
+switch statement."
+
+test_output 'error on dead code' \
+    'while (1) { break; puts("fail"); }' \
+    "${parseError}1: unreachable code"
+
+test_output 'correct propagation of break terminal contexts' \
+    'while (1) { if (0) break; else break;
+                 puts("fail"); }' \
+    "${parseError}2: unreachable code"
+
+test_output 'correct propagation of return terminal contexts' \
+    'void func() { if (1) { if (0) return; else return; } else return;
+                   puts("fail"); }' \
+    "${parseError}2: unreachable code"
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

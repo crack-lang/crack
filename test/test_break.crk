@@ -46,4 +46,18 @@ if (1) {
 }
 if (results != 112) puts('failed continue');
 
+# make sure code after nested breaks is not marked unreachable
+results = 0;
+void foo() {
+    while (1) {
+        if (0)
+            break;
+        else
+            break;
+    }
+    put(1);
+}
+foo();
+if (results != 1) puts('failed reachability');
+
 puts('ok');

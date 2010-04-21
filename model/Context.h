@@ -77,6 +77,9 @@ class Context : public spug::RCBase {
         // are cleaning up.
         bool emittingCleanups;
         
+        // if true, a terminal statement has been emitted in the context.
+        bool terminal;
+        
         // this is the return type for a function context, and the class type 
         // for a class context.  XXX there is a reference cycle between the 
         // class and its context.
@@ -142,6 +145,24 @@ class Context : public spug::RCBase {
          * Definition contexts are non-composite contexts.
          */
         ContextPtr getDefContext();
+        
+        /**
+         * Returns the depth-first closest enclosing toplevel context.
+         */
+        ContextPtr getToplevel();
+        
+        /**
+         * Returns the parent of the context.  This function can only be used 
+         * on contexts with a exactly one parent.
+         */
+        ContextPtr getParent();
+        
+        /**
+         * Returns true if the context encloses the "other" context - a 
+         * context encloses another context if it is an ancestor of the other 
+         * context.
+         */
+        bool encloses(const Context &other) const;
 
         /**
          * Returns the Overload Definition for the given name for the current 

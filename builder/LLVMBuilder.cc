@@ -434,10 +434,6 @@ namespace {
         public:
             BasicBlock *block, *block2;
             
-            // context has a ref count to this so we use a raw pointer to 
-            // break the cycle.
-            Context *context;
-            
             BBranchpoint(BasicBlock *block) : block(block), block2(0) {}
     };
 
@@ -2358,11 +2354,14 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     return bpos;
 }
 
-void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos) {
+void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos, 
+                               bool isTerminal
+                               ) {
     BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
     // emit the branch back to conditional expression in the block
-    builder.CreateBr(bpos->block2);
+    if (!isTerminal)
+        builder.CreateBr(bpos->block2);
 
     // new code goes to the following block
     builder.SetInsertPoint(block = bpos->block);

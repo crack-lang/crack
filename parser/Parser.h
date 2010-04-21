@@ -100,19 +100,20 @@ class Parser {
        * @param defsAllowed true if a definition may be provided instead of a 
        *    statement.  Statements in block contexts may be definitions, 
        *    simple statements in conditionals must not be.
-       * @returns true if the statement is terminal (always returns or raises 
-       *    an exception).
+       * @returns the context that this statement terminates to.  If non-null, 
+       *    the statement is terminal in all contexts from the current context
+       *    to the returned context (non-inclusive).
        */
-      bool parseStatement(bool defsAllowed);
+      model::ContextPtr parseStatement(bool defsAllowed);
 
       /**
        * Parse a block - a sequence of statements in the same execution
        * context.  A block is "nested" if it is inside the implicit file scope
        * block and wrapped in curly brackets.
-       * @returns true if the statement is terminal (always returns or raises 
-       *    an exception).
+       * @returns the context that this statement terminates to.  See 
+       *    parseStatement().
        */
-      bool parseBlock(bool nested);
+      model::ContextPtr parseBlock(bool nested);
 
       /** Create a reference to the "this" variable, error if there is none. */
       model::ExprPtr makeThisRef(const Token &ident);
@@ -217,10 +218,20 @@ class Parser {
       bool parseDef(model::TypeDef *type);
       
       // statements
-      
-      bool parseIfClause();
-      bool parseIfStmt();
-      bool parseWhileStmt();
+
+      /*      
+       * @returns the context that this statement terminates to.  See 
+       *    parseStatement().
+       */
+      model::ContextPtr parseIfClause();
+
+      /*      
+       * @returns the context that this statement terminates to.  See 
+       *    parseStatement().
+       */
+      model::ContextPtr parseIfStmt();
+
+      void parseWhileStmt();
       void parseReturnStmt();
       void parseImportStmt();
       

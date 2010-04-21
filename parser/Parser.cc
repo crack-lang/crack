@@ -63,7 +63,7 @@ void Parser::expectToken(Token::Type type, const char *error) {
       unexpected(tok, error);
 }
 
-bool Parser::parseStatement(bool defsAllowed) {
+ContextPtr Parser::parseStatement(bool defsAllowed) {
    // peek at the next token
    Token tok = toker.getToken();
 
@@ -71,17 +71,21 @@ bool Parser::parseStatement(bool defsAllowed) {
    if (tok.isIf()) {
       return parseIfStmt();
    } else if (tok.isWhile()) {
-      return parseWhileStmt();
+      parseWhileStmt();
+      
+      // while statements are never terminal, there's always the possibility 
+      // that we could never execute the body.
+      return 0;
    } else if (tok.isElse()) {
       unexpected(tok, "'else' with no matching 'if'");
    } else if (tok.isReturn()) {
       if (context->scope == Context::module)
          error(tok, "Return statement not allowed in module scope");
       parseReturnStmt();
-      return true;
+      return context->getToplevel()->getParent();
    } else if (tok.isImport()) {
       parseImportStmt();
-      return false;
+      return 0;
    } else if (tok.isClass()) {
       if (!defsAllowed)
          error(tok, "class definitions are not allowed in this context");
@@ -91,11 +95,11 @@ bool Parser::parseStatement(bool defsAllowed) {
       // parse some variable definitions.
       tok = toker.getToken();
       if (tok.isSemi()) {
-         return false;
+         return 0;
       } else {
          toker.putBack(tok);
          if (tok.isRCurly() || tok.isEnd())
-            return false;
+            return 0;
       }
    } else if (tok.isBreak()) {
       Branchpoint *branch = context->getBreak();
@@ -109,7 +113,8 @@ bool Parser::parseStatement(bool defsAllowed) {
       tok = toker.getToken();
       if (!tok.isSemi())
          toker.putBack(tok);
-      return true;
+      assert(branch->context);
+      return branch->context;
    } else if (tok.isContinue()) {
       Branchpoint *branch = context->getContinue();
       if (!branch)
@@ -122,7 +127,8 @@ bool Parser::parseStatement(bool defsAllowed) {
       tok = toker.getToken();
       if (!tok.isSemi())
          toker.putBack(tok);
-      return true;
+      assert(branch->context);
+      return branch->context;
    }
 
    ExprPtr expr;
@@ -134,7 +140,7 @@ bool Parser::parseStatement(bool defsAllowed) {
       if (typeDef && parseDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
-         return false;
+         return 0;
       } else if (!def) {
          // XXX think I want to move this into expression, it's just as valid 
          // for an existing identifier (in a parent context) as for a 
@@ -177,15 +183,13 @@ bool Parser::parseStatement(bool defsAllowed) {
    else if (!tok.isSemi())
       unexpected(tok, "expected semicolon or a block terminator");
 
-   return false;
+   return 0;
 }
 
-bool Parser::parseBlock(bool nested) {
+ContextPtr Parser::parseBlock(bool nested) {
    Token tok;
+   ContextPtr terminal;
 
-   // this gets set to true if we encounter a "terminal statement" which is a 
-   // statement that will always return or throw an exception.
-   bool gotTerminalStatement = false;
    // keeps track of whether we've emitted a warning about stuff after a 
    // terminal statement.
    bool gotStuffAfterTerminalStatement = false;
@@ -212,21 +216,27 @@ bool Parser::parseBlock(bool nested) {
          // generate all of the cleanups, but not if we already did this (got 
          // a terminal statement) or we're at the top-level module (in which 
          // case we'll want to generate cleanups in a static cleanup function)
-         if (!gotTerminalStatement && nested)
+         if (!context->terminal && nested)
             context->builder.closeAllCleanups(*context);
-         return gotTerminalStatement;
+         return terminal;
       }
       
       toker.putBack(tok);
       
       // if we already got a terminal statement, anything else is just dead 
-      // code - warn them about the first thing.
-      if (gotTerminalStatement && !gotStuffAfterTerminalStatement) {
-         warn(tok, "unreachable code");
+      // code - warn them about the first thing. TODO: convert this to a 
+      // warning once we can turn off code generation.
+      if (context->terminal && !gotStuffAfterTerminalStatement) {
+         error(tok, "unreachable code");
          gotStuffAfterTerminalStatement = true;
       }
 
-      gotTerminalStatement |= parseStatement(true);
+      terminal = parseStatement(true);
+      if (terminal)
+         if (terminal != context)
+            context->terminal = true;
+         else
+            terminal = 0;
    }
 }
 
@@ -1009,7 +1019,7 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       classCtx->returnType->addDestructorCleanups(*context);
    }
 
-   bool terminal = parseBlock(true);
+   ContextPtr terminal = parseBlock(true);
    
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
@@ -1113,11 +1123,11 @@ bool Parser::parseDef(TypeDef *type) {
    return false;
 }
 
-bool Parser::parseIfClause() {
+ContextPtr Parser::parseIfClause() {
    Token tok = toker.getToken();
    if (tok.isLCurly()) {
       ContextStackFrame cstack(*this, context->createSubContext().get());
-      bool terminal = parseBlock(true);
+      ContextPtr terminal = parseBlock(true);
       cstack.restore();
       return terminal;
    } else {
@@ -1132,7 +1142,7 @@ bool Parser::parseIfClause() {
 //   ^               ^
 // if ( expr ) clause else clause
 //   ^                           ^
-bool Parser::parseIfStmt() {
+ContextPtr Parser::parseIfStmt() {
    Token tok = toker.getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
@@ -1148,8 +1158,8 @@ bool Parser::parseIfStmt() {
    
    BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
 
-   bool terminalIf = parseIfClause();
-   bool terminalElse = false;
+   ContextPtr terminalIf = parseIfClause();
+   ContextPtr terminalElse;
 
    // check for the "else"
    tok = toker.getToken();
@@ -1162,15 +1172,26 @@ bool Parser::parseIfStmt() {
       context->builder.emitEndIf(*context, pos.get(), terminalIf);
    }
 
-   // the if is terminal if both conditions are terminal   
-   return terminalIf && terminalElse;
+   // the if is terminal if both conditions are terminal.  The terminal 
+   // context is the innermost of the two.
+   if (terminalIf && terminalElse)
+      if (terminalIf->encloses(*terminalElse))
+         return terminalElse;
+      else
+         return terminalIf;
+   else
+      return 0;
 }
 
 // while ( expr ) stmt ; (';' can be replaced with EOF)
 //      ^               ^
 // while ( expr ) { ... }
 //      ^                ^
-bool Parser::parseWhileStmt() {
+void Parser::parseWhileStmt() {
+   // create a subcontext for the break and for variables defined in the 
+   // condition.
+   ContextStackFrame cstack(*this, context->createSubContext().get());
+
    Token tok = toker.getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
@@ -1183,9 +1204,8 @@ bool Parser::parseWhileStmt() {
    BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr.get());
    context->setBreak(pos.get());
    context->setContinue(pos.get());
-   bool terminal = parseIfClause();
-   context->builder.emitEndWhile(*context, pos.get());
-   return terminal;
+   ContextPtr terminal = parseIfClause();
+   context->builder.emitEndWhile(*context, pos.get(), terminal);
 }
 
 void Parser::parseReturnStmt() {

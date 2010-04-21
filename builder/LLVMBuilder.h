@@ -133,7 +133,9 @@ class LLVMBuilder : public Builder {
                            model::Expr *cond);
 
         virtual void emitEndWhile(model::Context &context,
-                                  model::Branchpoint *pos);
+                                  model::Branchpoint *pos,
+                                  bool isTerminal
+                                  );
 
         virtual void emitBreak(model::Context &context, 
                                model::Branchpoint *branch
