@@ -13,6 +13,7 @@ Roadmap
 -------
 
 for 0.1:
+-   get rid of the semicolon after class definitions
 -   the "oper" keyword
     -   general implementation DONE
     -   oper init initializers, oper del cleanups
@@ -52,6 +53,19 @@ for 1.0:
     -   combine FuncDef and OverloadDef into a base class with a virtual 
         matches() for arg list defs, or just make FuncDef a smaller thing and 
         always use OverloadDef
+    -   allowing turning off code generation by replacing the builder with a 
+        "NullBuilder"  NullResultExpr follows:
+            class NullResultExpr : public ResultExpr {
+                public:
+                    // won't work, need a non-null ResultExpr value
+                    NullResultExpr() : ResultExpr(0) {} 
+                    
+                    ResultExprPtr emit(Context &context) {
+                        return this;
+                    }
+            };
+    
+        
 -   function arguments are currently SSA values, which means this won't work:
     type func(int a) { a = 100; }
 -   doc-comments

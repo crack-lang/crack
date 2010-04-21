@@ -85,3 +85,11 @@ class A {
     int y;
     oper init() : y = 0, x = y {}
 };
+
+# not sure why, but this causes a "Calling a function with a bad signature" 
+# assertion failure in LLVM:
+import crack.lang FreeBase;
+class Foo : FreeBase { oper bind() { print('binding'); } oper release() { print('releasing'); } };
+f := array[Foo](10);
+Foo foo;
+f[0] = Foo();
