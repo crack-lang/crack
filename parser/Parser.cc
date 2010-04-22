@@ -68,7 +68,10 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
    Token tok = toker.getToken();
 
    // check for statements
-   if (tok.isIf()) {
+   if (tok.isSemi()) {
+      // null statement
+      return 0;
+   } else if (tok.isIf()) {
       return parseIfStmt();
    } else if (tok.isWhile()) {
       parseWhileStmt();
@@ -90,17 +93,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       if (!defsAllowed)
          error(tok, "class definitions are not allowed in this context");
       parseClassDef();
-      
-      // check for a semicolon or another terminator, if it's something else 
-      // parse some variable definitions.
-      tok = toker.getToken();
-      if (tok.isSemi()) {
-         return 0;
-      } else {
-         toker.putBack(tok);
-         if (tok.isRCurly() || tok.isEnd())
-            return 0;
-      }
+      return 0;      
    } else if (tok.isBreak()) {
       Branchpoint *branch = context->getBreak();
       if (!branch)

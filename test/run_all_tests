@@ -478,6 +478,10 @@ test_output 'correct propagation of return terminal contexts' \
                    puts("fail"); }' \
     "${parseError}2: unreachable code"
 
+test_output 'semicolons unnecessary after classes, null statements' \
+    'class A {} if (1) ; if (1) ; else ; if (1) {;;;} puts("ok")' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
