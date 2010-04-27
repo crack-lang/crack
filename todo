@@ -21,7 +21,6 @@ for 0.1:
             destruction
     -   need syntax to allow calling "oper" functions from an expression, need 
         to get rid of the __del() hack.
--   explicit base class method invocation syntax (void foo() {Super.foo();})
 -   short circuit logic operators
 -   floating point types
 -   Should be able to do instance construction in a statement context without 
@@ -47,6 +46,8 @@ Completed for 0.1:
 -   numeric negation: "int j = -i;" DONE
 -   "Foo x = {1, 2}" construction syntax. DONE
 -   break & continue DONE
+-   explicit base class method invocation syntax (void foo() {Super.foo();}) 
+    DONE
 
 for 1.0:
 -   cleanup:
