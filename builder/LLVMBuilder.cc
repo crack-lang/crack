@@ -249,11 +249,12 @@ namespace {
             map<BTypeDef *, Constant *> vtables;
             const Type *firstVTableType;
 
-            BTypeDef(const string &name, const llvm::Type *rep,
+            BTypeDef(TypeDef *metaType, const string &name, 
+                     const llvm::Type *rep,
                      bool pointer = false,
                      unsigned nextVTableSlot = 0
                      ) :
-                model::TypeDef(name, pointer),
+                model::TypeDef(metaType, name, pointer),
                 rep(rep),
                 nextVTableSlot(nextVTableSlot),
                 firstVTableType(0) {
@@ -1915,8 +1916,10 @@ namespace {
 
     class ArrayTypeDef : public BTypeDef {
         public:
-            ArrayTypeDef(const string &name, const Type *rep) :
-                BTypeDef(name, rep) {
+            ArrayTypeDef(TypeDef *metaType, const string &name,
+                         const Type *rep
+                         ) :
+                BTypeDef(metaType, name, rep) {
                 generic = new SpecializationCache();
             }
             
@@ -1938,7 +1941,8 @@ namespace {
                 
                 Type *llvmType = PointerType::getUnqual(parmType->rep);
                 TypeDefPtr tempSpec = 
-                    new BTypeDef(SPUG_FSTR(name << "[" << parmType->name << 
+                    new BTypeDef(type.get(),
+                                 SPUG_FSTR(name << "[" << parmType->name << 
                                             "]"
                                            ),
                                  llvmType
@@ -2100,7 +2104,9 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
         return TypeDefPtr::rcast(iter->second);
 
     // nope.  create a new type object and store it
-    BTypeDefPtr crkFuncType = new BTypeDef("", llvmFuncType);
+    BTypeDefPtr crkFuncType = new BTypeDef(context.globalData->classType.get(), "", 
+                                           llvmFuncType
+                                           );
     funcTypes[llvmFuncType] = crkFuncType;
     
     // Give it a context and an "oper to voidptr" method.
@@ -2518,12 +2524,32 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
             baseWithVTable = base;
     }
     
+    // create a meta-class
     OpaqueType *opaque = OpaqueType::get(getGlobalContext());
-    bdata->type = new BTypeDef(name, PointerType::getUnqual(opaque), true,
+    TypeDefPtr metaType = new BTypeDef(context.globalData->classType.get(),
+                                       SPUG_FSTR("Class[" << name << "]"),
+                                       PointerType::getUnqual(opaque),
+                                       true,
+                                       baseWithVTable ?
+                                        baseWithVTable->nextVTableSlot : 0
+                                       );
+    metaType->context = new Context(context.builder, Context::instance,
+                                    context.globalData
+                                    );
+    metaType->context->returnType = metaType;
+
+    // create the class definition
+    opaque = OpaqueType::get(getGlobalContext());
+    bdata->type = new BTypeDef(metaType.get(), name, 
+                               PointerType::getUnqual(opaque),
+                               true,
                                baseWithVTable ? 
                                 baseWithVTable->nextVTableSlot : 0
                                );
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
+    
+    // tie the meta-class to the class
+    metaType->meta = bdata->type.get();
     
     // create function to convert to voidptr
     context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
@@ -2955,9 +2981,12 @@ extern "C" void __memclear(void *p, size_t size) {
 
 namespace {
     BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
-                             const char *name
-                             ) {
-        BTypeDefPtr btype = new BTypeDef(name, llvmType);
+                                const char *name
+                                ) {
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(), 
+                                         name, 
+                                         llvmType
+                                         );
         btype->defaultInitializer =
             context.builder.createIntConst(context, 0, btype.get());
         btype->context =
@@ -2984,22 +3013,43 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // create the basic types
     
+    BTypeDef *classType;
+    gd->classType = classType = new BTypeDef(context.globalData->classType.get(), 
+                                             "Class",
+                                             Type::getVoidTy(lctx)
+                                             );
+    classType->context = new Context(*this, Context::instance, gd);
+    context.addDef(classType);
+    
     BTypeDef *voidType;
-    gd->voidType = voidType = new BTypeDef("void", Type::getVoidTy(lctx));
+    gd->voidType = voidType = new BTypeDef(context.globalData->classType.get(), 
+                                           "void", 
+                                           Type::getVoidTy(lctx)
+                                           );
     voidType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidType);
+    
+    // make the "class" class the meta type of void. XXX every class needs its 
+    // own meta type.
+    gd->classType->meta = voidType;
     
     BTypeDef *voidPtrType;
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
-    gd->voidPtrType = voidPtrType = new BTypeDef("voidptr", llvmVoidPtrType);
+    gd->voidPtrType = voidPtrType = new BTypeDef(context.globalData->classType.get(), 
+                                                 "voidptr", 
+                                                 llvmVoidPtrType
+                                                 );
     voidPtrType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidPtrType);
     
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
-    gd->byteptrType = byteptrType = new BTypeDef("byteptr", llvmBytePtrType);
+    gd->byteptrType = byteptrType = new BTypeDef(context.globalData->classType.get(), 
+                                                 "byteptr", 
+                                                 llvmBytePtrType
+                                                 );
     byteptrType->defaultInitializer = createStrConst(context, "");
     byteptrType->context = new Context(*this, Context::instance, gd);
     byteptrType->context->returnType = byteptrType;
@@ -3010,7 +3060,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
-    gd->boolType = boolType = new BTypeDef("bool", llvmBoolType);
+    gd->boolType = boolType = new BTypeDef(context.globalData->classType.get(), 
+                                           "bool", 
+                                           llvmBoolType
+                                           );
     gd->boolType->defaultInitializer = new BIntConst(boolType, 0);
     boolType->context = new Context(*this, Context::instance, gd);
     boolType->context->returnType = boolType;
@@ -3057,7 +3110,9 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     // create OverloadDef's type
-    BTypeDefPtr overloadDef = new BTypeDef("", 0);
+    BTypeDefPtr overloadDef = new BTypeDef(context.globalData->classType.get(), "", 
+                                           0
+                                           );
         
     // Give it a context and an "oper to voidptr" method.
     overloadDef->context =
@@ -3070,7 +3125,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->overloadType = overloadDef;
     
     // create the array generic
-    TypeDefPtr arrayType = new ArrayTypeDef("array", 0);
+    TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),
+                                            "array", 
+                                            0
+                                            );
     arrayType->context = new Context(context.builder, Context::instance,
                                      context.globalData
                                      );
@@ -3084,7 +3142,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
-        new BTypeDef("VTableBase", PointerType::getUnqual(vtablePtrType), 
+        new BTypeDef(context.globalData->classType.get(), "VTableBase", 
+                     PointerType::getUnqual(vtablePtrType), 
                      true
                      );
     vtableBaseType->hasVTable = true;

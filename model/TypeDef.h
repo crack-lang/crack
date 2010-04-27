@@ -49,7 +49,9 @@ class TypeDef : public VarDef {
             }
         };
         typedef std::map<TypeVecKey, TypeDefPtr> SpecializationCache;
-        // true if this is a generic type.
+        
+        // defined for a generic type.  Stores the cache of all 
+        // specializations for the type.
         SpecializationCache *generic;
         
         // the type's context - contains all of the method/attribute 
@@ -67,16 +69,22 @@ class TypeDef : public VarDef {
         // if true, the type has a vtable (and is derived from vtable_base)
         bool hasVTable;
         
+        // if the type is a meta type, "meta" is the type that it is the 
+        // meta-type of.
+        TypeDef *meta;
+        
         // if true, the initializers for the type have been emitted and it is 
         // now illegal to add instance variables.
         bool initializersEmitted;
         
-        // XXX need a metatype
-        TypeDef(const std::string &name, bool pointer = false) :
-            VarDef(0, name),
+        TypeDef(TypeDef *metaType, const std::string &name, 
+                bool pointer = false
+                ) :
+            VarDef(metaType, name),
             generic(0),
             pointer(pointer),
             hasVTable(false),
+            meta(0),
             initializersEmitted(false) {
         }
         

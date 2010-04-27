@@ -36,7 +36,16 @@ using namespace parser;
 using namespace model;
 
 void Parser::addDef(VarDef *varDef) {
-   context->getDefContext()->addDef(varDef);
+   ContextPtr defContext = context->getDefContext();
+   defContext->addDef(varDef);
+   
+   // if the definition context is a class context and the definition is a 
+   // function, add it to the meta-class.
+   FuncDef *func;
+   if (defContext->scope == Context::instance &&
+       (func = FuncDefPtr::cast(varDef))
+       )
+      defContext->returnType->type->context->addAlias(varDef);
 }
 
 unsigned Parser::getPrecedence(const string &op) {
@@ -336,11 +345,40 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       // if the definition is for an instance variable, emit an implicit 
       // "this" dereference.  Otherwise just emit the variable
       ExprPtr receiver;
-      if (func->flags & FuncDef::method)
-         // if there's no container, try to use an implicit "this"
-         receiver = container ? container : makeThisRef(ident);
+      bool squashVirtual = false;
+      if (func->flags & FuncDef::method) {
+         // keep track of whether we need to verify that "this" is an instance 
+         // of the container (assumes the container is a TypeDef)
+         bool verifyThisIsContainer = false;
 
-      FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+         // if we've got a container and the container is not a class, use it 
+         // as the receiver.
+         if (container)
+            if (container->type->meta) {
+               // if the container _is_ a class, this is an explicit call of a 
+               // base class function.
+               squashVirtual = true;
+               verifyThisIsContainer = true;
+            } else {
+               receiver = container;
+            }
+
+         // if we didn't get the receiver from the container, lookup the 
+         // "this" variable.
+         if (!receiver) {
+            receiver = makeThisRef(ident);
+            if (verifyThisIsContainer && 
+                 !receiver->type->isDerivedFrom(container->type->meta))
+               error(tok1, SPUG_FSTR("'this' is not an instance of " <<
+                                     container->type->meta->name
+                                     )
+                     );
+         }
+      }
+
+      FuncCallPtr funcCall = context->builder.createFuncCall(func.get(),
+                                                             squashVirtual
+                                                             );
       funcCall->args = args;
       funcCall->receiver = receiver;
       return funcCall;

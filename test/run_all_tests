@@ -482,6 +482,18 @@ test_output 'semicolons unnecessary after classes, null statements' \
     'class A {} if (1) ; if (1) ; else ; if (1) {;;;} puts("ok")' \
     ok
 
+test_output 'explicit calls of base class functions' \
+    'class A : VTableBase { void f() { puts("ok"); } }
+     class B : A { void f() { (A.f()); } }
+     B b; b.f()' \
+     ok
+
+test_output 'error on explicit call to non-base class' \
+    'class A : VTableBase { void f() { puts("ok"); } }
+     class B { void f() { (A.f()); } }
+     B b; b.f()' \
+     "${parseError}2: 'this' is not an instance of A"
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

@@ -23,6 +23,16 @@
 using namespace model;
 using namespace std;
 
+void Context::storeDef(VarDef *def) {
+    FuncDef *funcDef;
+    if (funcDef = FuncDefPtr::cast(def)) {
+        OverloadDefPtr overloads = getOverload(def->name);
+        overloads->addFunc(funcDef);
+    } else {
+        defs[def->name] = def;
+    }
+}
+
 Context::GlobalData::GlobalData() : 
     objectType(0), stringType(0), staticStringType(0) {
 }
@@ -229,15 +239,7 @@ void Context::addDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");
 
-    // if this is a function, create an overload definition
-    FuncDef *funcDef;
-    if (funcDef = FuncDefPtr::cast(def)) {
-        OverloadDefPtr overloads = getOverload(def->name);
-        overloads->addFunc(funcDef);
-    } else {
-        // not an overload.  Just add it.
-        defs[def->name] = def;
-    }
+    storeDef(def);
     def->context = this;
 }
 
@@ -251,7 +253,7 @@ void Context::removeDef(VarDef *def) {
 void Context::addAlias(VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->context);
-    defs[def->name] = def;
+    storeDef(def);
 }
 
 void Context::addAlias(const string &name, VarDef *def) {

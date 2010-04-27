@@ -46,6 +46,11 @@ class Context : public spug::RCBase {
         // break and continue branchpoints
         BranchpointPtr breakBranch, continueBranch;
 
+        /**
+         * Stores a definition, promoting it to an overload if necessary.
+         */
+        void storeDef(VarDef *def);
+
     public:
 
         // context scope - this is used to control how variables defined in 
@@ -90,7 +95,8 @@ class Context : public spug::RCBase {
 
         struct GlobalData {
             StrConstTable strConstTable;
-            TypeDefPtr voidType,
+            TypeDefPtr classType,
+                       voidType,
                        voidPtrType,
                        boolType,
                        byteptrType,
