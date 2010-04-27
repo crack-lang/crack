@@ -2,11 +2,12 @@
 # Copyright 2010 Google Inc.
 
 import "libc.so.6" abort, free, strcpy, strlen, strdup, malloc, memcpy, memcmp, 
-                   realloc;
+                   memmove, realloc;
 
 byteptr malloc(uint size);
 byteptr realloc(byteptr buf, uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
+byteptr memmove(byteptr dest, byteptr src, uint size);
 int memcmp(byteptr a, byteptr b, uint size);
 void free(voidptr mem);
 byteptr strcpy(byteptr dest, byteptr src);
@@ -16,6 +17,11 @@ void abort();
 
 bool true = (1 == 1);
 bool false = (1 == 0);
+
+void _die(byteptr message) {
+    puts("Object with non-zero ref count deleted!");
+    abort();
+}
 
 class XWriter : VTableBase {
     void write(byteptr buf, uint size) {
@@ -38,8 +44,7 @@ class Object : VTableBase {
     # delete virtual function
     oper del() { 
         if (refCount) {
-            puts("Object with non-zero ref count deleted!");
-            abort();
+            _die("Object with non-zero ref count deleted!");
         }
     }
 
@@ -105,6 +110,25 @@ class WriteBuffer : Buffer {
     
     ## constructor inheritence would be nice
     oper init(byteptr buffer, uint size) : Buffer(buffer, size) {}
+
+    ## Move data from an arbitrary byteptr into the buffer.
+    void move(uint start, byteptr ptr, uint count) {
+        if (start + count > size)
+            _die('Move target out of bounds');
+        memmove(buffer + start, ptr, count);
+    }
+
+    ## move data from one place in the buffer to another place in the buffer.
+    void move(uint newStart, uint oldStart, uint count) {
+        if (oldStart + count > size)
+            _die('Move source out of bounds');
+        move(newStart, buffer + oldStart, count);
+    }
+    
+    ## move a buffer to a place in this buffer.
+    void move(uint newStart, Buffer buf) {
+        move(newStart, buf.buffer, buf.size);
+    }
 };
 
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
@@ -135,7 +159,7 @@ class ManagedBuffer : WriteBuffer {
         buffer = newBuffer;
         size = newSize;
     }
-
+    
     oper del() {
         if (!(buffer is null))
             free(buffer);
@@ -146,13 +170,14 @@ class ManagedBuffer : WriteBuffer {
 ## deleted, their buffer goes away.
 class String : Buffer {
 
-    ## Initialize from a buffer
+    ## Initialize from a buffer.  This copies the buffer, it does not assume 
+    ## ownership.
     oper init(Buffer buf) : Buffer(malloc(buf.size), buf.size) {
         memcpy(buffer, buf.buffer, buf.size);
     }
 
-    ## Initialize from a WriteBuffer and take ownership (takeOwnership is 
-    ## actually ignored).
+    ## Initialize from a WriteBuffer and take ownership (the value of 
+    ## takeOwnership is actually ignored).
     oper init(ManagedBuffer buf, bool takeOwnership) : 
         Buffer(buf.orphan(), size) {
     }
