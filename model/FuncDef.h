@@ -36,10 +36,11 @@ class FuncDef : public VarDef {
          * @param convert if true, attempt to construct the value if it does 
          *        not exist.
          */
-        bool matches(Context &context, const std::vector<ExprPtr> &vals,
-                     std::vector<ExprPtr> &newVals,
-                     bool convert
-                     );
+        virtual bool matches(Context &context, 
+                             const std::vector<ExprPtr> &vals,
+                             std::vector<ExprPtr> &newVals,
+                             bool convert
+                             );
         
         /**
          * Returns true if the arg list matches the functions args.

@@ -1816,6 +1816,55 @@ namespace {
             }
     };
     
+    class UnsafeCastCall : public FuncCall {
+        public:
+            UnsafeCastCall(FuncDef *def) : 
+                FuncCall(def) {
+            }
+
+            virtual ResultExprPtr emit(Context &context) {
+                // emit the argument
+                args[0]->emit(context)->handleTransient(context);
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
+                builder.lastValue =
+                    builder.builder.CreateBitCast(builder.lastValue,
+                                                  type->rep
+                                                  );
+
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+
+    class UnsafeCastDef : public OpDef {
+        public:
+            UnsafeCastDef(TypeDef *resultType) :
+                OpDef(resultType, FuncDef::noFlags, "unsafeCast", 1) {
+                args[0] = new ArgDef(resultType, "val");
+            }
+            
+            // Override "matches()" so that the function matches any single 
+            // argument call.
+            virtual bool matches(Context &context, 
+                                 const std::vector<ExprPtr> &vals,
+                                 std::vector<ExprPtr> &newVals,
+                                 bool convert
+                                 ) {
+                if (vals.size() != 1)
+                    return false;
+                
+                if (convert)
+                    newVals = vals;
+                return true;
+            }
+            
+            virtual FuncCallPtr createFuncCall() {
+                return new UnsafeCastCall(this);
+            }
+    };
+    
 #define QUAL_BINOP(prefix, opCode, op)                                      \
     class prefix##OpCall : public FuncCall {                                \
         public:                                                             \
@@ -2550,6 +2599,9 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     
     // tie the meta-class to the class
     metaType->meta = bdata->type.get();
+
+    // create the unsafeCast() function.
+    metaType->context->addDef(new UnsafeCastDef(bdata->type.get()));
     
     // create function to convert to voidptr
     context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
@@ -3028,11 +3080,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            );
     voidType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidType);
-    
+
     // make the "class" class the meta type of void. XXX every class needs its 
     // own meta type.
     gd->classType->meta = voidType;
-    
+
     BTypeDef *voidPtrType;
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));

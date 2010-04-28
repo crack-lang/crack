@@ -494,6 +494,11 @@ test_output 'error on explicit call to non-base class' \
      B b; b.f()' \
      "${parseError}2: 'this' is not an instance of A"
 
+test_output 'unsafe casts' \
+    'class A {} class B : A { void run() { puts("ok"); } } A a = B(); 
+     (B.unsafeCast(a).run());' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
