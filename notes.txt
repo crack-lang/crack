@@ -405,7 +405,7 @@ Ugliness:
     -   There should be a Def base class instead of deriving everything from 
         VarDef.  Def should have a name and a "parent" Namespace but no type. 
         Then we can get rid of VarDefImpl and just have the builder 
-        specialize VarDef.
+        specialize VarDef. (type needs to move into Def because of meta-types)
 
     -   Context is bad:
         -   there's a dichotomy between "compile context" and "the symbol 
@@ -416,3 +416,5 @@ Ugliness:
             funny resolution stuff.
         -   we should make the Parser::error() function part of Context so we 
             can use it from all levels.
+
+    -   AncestorPaths should be reference counted objects cached by type defs.
