@@ -499,6 +499,12 @@ test_output 'unsafe casts' \
      (B.unsafeCast(a).run());' \
     ok
 
+test_output 'unsafe casts from non-primary base classes' \
+    'class A {} class B {}
+     class C : A, B { void run() { puts("ok"); } }
+     B b = C(); (C.unsafeCast(b).run());' \
+     ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

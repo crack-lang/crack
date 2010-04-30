@@ -1061,10 +1061,6 @@ namespace {
     const Type *llvmIntType = 0;
     
     /**
-     * Instruction that does an un-GEP - widens from a base class to a 
-     * derived class.
-     */
-    /**
      * Implements a ResultExpr that tracks the result by storing the Value.
      */
     class BResultExpr : public ResultExpr {
@@ -1290,10 +1286,14 @@ namespace {
             }
     };
 
+    /**
+     * Instruction that does an un-GEP - widens from a base class to a 
+     * derived class.
+     */
     class IncompleteSpecialize : public PlaceholderInstruction {
         private:
             Value *value;
-            BFuncDefPtr funcDef;
+            TypeDef::AncestorPath ancestorPath;
 
         public:
             // allocate space for 1 operand
@@ -1303,15 +1303,16 @@ namespace {
 
             virtual Instruction *clone(LLVMContext &context) const {
                 return new IncompleteSpecialize(getType(), value, 
-                                                funcDef.get()
+                                                ancestorPath
                                                 );
             }
             
             /**
-             * funcDef: the function that specialization is being called in.
+             * ancestorPath: path from the target class to the ancestor that 
+             *  value is referencing an instance of.
              */
             IncompleteSpecialize(const Type *type, Value *value, 
-                                 BFuncDef *funcDef,
+                                 const TypeDef::AncestorPath &ancestorPath,
                                  Instruction *insertBefore = 0
                                  ) :
                 PlaceholderInstruction(
@@ -1321,12 +1322,12 @@ namespace {
                     OperandTraits<IncompleteSpecialize>::operands(this)
                 ),
                 value(value),
-                funcDef(funcDef) {
+                ancestorPath(ancestorPath) {
                 Op<0>() = value;
             }
             
             IncompleteSpecialize(const Type *type, Value *value, 
-                                 BFuncDef *funcDef,
+                                 const TypeDef::AncestorPath &ancestorPath,
                                  BasicBlock *parent
                                  ) :
                 PlaceholderInstruction(
@@ -1336,19 +1337,24 @@ namespace {
                     OperandTraits<IncompleteSpecialize>::operands(this)
                 ),
                 value(value),
-                funcDef(funcDef) {
+                ancestorPath(ancestorPath) {
                 Op<0>() = value;
             }
             
-            virtual void insertInstructions(IRBuilder<> &builder) {
+            static Value *emitSpecializeInner(
+                IRBuilder<> &builder,
+                const Type *type,
+                Value *value,
+                const TypeDef::AncestorPath &ancestorPath
+            ) {
                 // XXX won't work for virtual base classes
                 
                 // create a constant offset from the start of the derived 
                 // class to the start of the base class
                 Value *offset =
                     narrowToAncestor(builder, 
-                                     Constant::getNullValue(getType()),
-                                     funcDef->pathToFirstDeclaration
+                                     Constant::getNullValue(type),
+                                     ancestorPath
                                      );
 
                 // convert to an integer and subtract from the pointer to the 
@@ -1358,8 +1364,49 @@ namespace {
                 value = builder.CreatePtrToInt(value, llvmIntType);
                 Value *derived = builder.CreateSub(value, offset);
                 Value *specialized = 
-                    builder.CreateIntToPtr(derived, getType());
-                replaceAllUsesWith(specialized);
+                    builder.CreateIntToPtr(derived, type);
+                return specialized;
+            }
+            
+            virtual void insertInstructions(IRBuilder<> &builder) {
+                replaceAllUsesWith(emitSpecializeInner(builder,
+                                                       getType(),
+                                                       value,
+                                                       ancestorPath
+                                                       )
+                                   );
+            }
+            
+            // Utility function - emits the specialize instructions if the 
+            // target class is defined, emits a placeholder instruction if it 
+            // is not.
+            static Value *emitSpecialize(
+               Context &context, const Type *type,
+               Value *value,
+               Context &derivedClassCtx,
+               const TypeDef::AncestorPath &ancestorPath
+            ) {
+                LLVMBuilder &llvmBuilder = 
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                
+                if (derivedClassCtx.complete) {
+                    return emitSpecializeInner(llvmBuilder.builder, type, 
+                                               value,
+                                               ancestorPath
+                                               );
+                } else {
+                    PlaceholderInstruction *placeholder =
+                        new IncompleteSpecialize(type, value, ancestorPath,
+                                                 llvmBuilder.block
+                                                 );
+                    BBuilderContextData *bdata =
+                        BBuilderContextDataPtr::rcast(
+                            derivedClassCtx.builderData
+                        );
+                    bdata->addPlaceholder(placeholder);
+                    return placeholder;
+                }
+                    
             }
     };
     
@@ -2093,6 +2140,7 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         bdata->addPlaceholder(placeholder);
     }
 }
+
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
@@ -2104,7 +2152,7 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
                                           bfuncDef->name,
                                           module
                                           );
-        execEng->addGlobalMapping(func, 
+        execEng->addGlobalMapping(func,
                                   execEng->getPointerToFunction(bfuncDef->rep)
                                   );
         
@@ -2510,14 +2558,18 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         // instance to the method's class instance.
         Value *inst = 
             dynamic_cast<BArgVarDefImpl *>(f.receiver->impl.get())->rep;
-        PlaceholderInstruction *placeholder =
-            new IncompleteSpecialize(classType->rep, inst, funcDef, block);
-        classContextData->addPlaceholder(placeholder);
-
+        Context *classCtx = context.getClassContext().get();
+        Value *thisRep =
+            IncompleteSpecialize::emitSpecialize(context, 
+                                                 classType->rep,
+                                                 inst, 
+                                                 *classCtx,
+                                                 funcDef->pathToFirstDeclaration
+                                                 );
         // lookup the "this" variable, and replace its rep
         VarDefPtr thisVar = context.lookUp("this");
         BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
-        thisImpl->rep = placeholder;
+        thisImpl->rep = thisRep;
     }
     
     return f.funcDef;
