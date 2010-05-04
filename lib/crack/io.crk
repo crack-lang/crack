@@ -167,6 +167,13 @@ class Formatter : Writer {
         write(Buffer(buffer.buffer + start, buffer.size - start));
     }
     
+    void format(bool val) {
+        if (val)
+            write('true');
+        else
+            write('false');
+    }
+    
     void format(Object obj) {
         obj.writeTo(this);
     }
