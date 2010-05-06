@@ -11,7 +11,6 @@
 
 namespace llvm {
     class Module;
-    class ModuleProvider;
     class Function;
     class BasicBlock;
     class Type;
@@ -55,7 +54,7 @@ class LLVMBuilder : public Builder {
 
         LLVMBuilderPtr rootBuilder;
         
-        llvm::ExecutionEngine *bindModule(llvm::ModuleProvider *mp);
+        llvm::ExecutionEngine *bindModule(llvm::Module *mp);
 
     public:
         // currently experimenting with making these public to give objects in 
@@ -107,7 +106,8 @@ class LLVMBuilder : public Builder {
                                               );
 
         virtual model::ResultExprPtr emitAlloc(model::Context &context, 
-                                               model::AllocExpr *allocExpr
+                                               model::AllocExpr *allocExpr,
+                                               model::Expr *countExpr
                                                );
 
         virtual void emitTest(model::Context &context,
