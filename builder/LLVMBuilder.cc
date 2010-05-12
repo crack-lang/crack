@@ -1597,6 +1597,51 @@ namespace {
             }
     };
 
+    class LogicAndOpCall : public FuncCall {
+        public:
+            LogicAndOpCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                BasicBlock* oBlock = builder.block;
+
+                // condition on lhs
+                BranchpointPtr pos = builder.emitIf(context, args[0].get(), "logicAndTrue", "logicAndFalse");
+                Value* oVal = builder.lastValue;
+
+                // pointing to true, condition on rhs
+                args[1].get()->emitCond(context);
+                Value* fVal = builder.lastValue;
+                BasicBlock* fBlock = builder.block;
+
+                // this branches us to end
+                builder.emitEndIf(context, pos.get(), false);
+
+                // now we phi for result
+                PHINode* p = builder.builder.CreatePHI(BTypeDefPtr::arcast(context.globalData->boolType)->rep, "logicAndResult");
+                p->addIncoming(oVal, oBlock);
+                p->addIncoming(fVal, fBlock);
+                builder.lastValue = p;
+
+                return new BResultExpr(this, builder.lastValue);
+
+            }
+    };
+
+    class LogicAndOpDef : public BinOpDef {
+        public:
+            LogicAndOpDef(TypeDef *argType, TypeDef *resultType) :
+                BinOpDef(argType, resultType, "oper &&") {
+            }
+
+            virtual FuncCallPtr createFuncCall() {
+                return new LogicAndOpCall(this);
+            }
+    };
+
     class NegOpCall : public FuncCall {
         public:
             NegOpCall(FuncDef *def) : FuncCall(def) {}
@@ -1849,7 +1894,7 @@ namespace {
     BINOP(ICmpULT, "<");
     BINOP(ICmpUGE, ">=");
     BINOP(ICmpULE, "<=");
-    
+
     QUAL_BINOP(Is, ICmpEQ, "is");
 
     void addArrayMethods(Context &context, TypeDef *arrayType, 
@@ -2254,12 +2299,12 @@ void LLVMBuilder::emitTest(Context &context, Expr *expr) {
                              );
 }
 
-BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
+BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond, const char* tLabel, const char* fLabel) {
     // create blocks for the true and false conditions
     LLVMContext &lctx = getGlobalContext();
-    BasicBlock *trueBlock = BasicBlock::Create(lctx, "cond_true", func);
+    BasicBlock *trueBlock = BasicBlock::Create(lctx, (tLabel) ? tLabel : "cond_true", func);
     BBranchpointPtr result = new BBranchpoint(BasicBlock::Create(lctx,
-                                                                 "cond_false",
+                                                                 (fLabel) ? fLabel : "cond_false",
                                                                  func
                                                                  )
                                               );
@@ -2775,7 +2820,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     return new BModuleDef(name, &context);
 }
 
-void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
+void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef, bool optimize) {
     assert(module);
     builder.CreateRetVoid();
     
@@ -2806,24 +2851,26 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
          )
         execEng->addGlobalMapping(iter->first, iter->second);
 
-    // optimize
-    llvm::PassManager passMan;
-
-    // Set up the optimizer pipeline.  Start with registering info about how 
-    // the target lays out data structures.
-    passMan.add(new llvm::TargetData(*execEng->getTargetData()));
-    // Promote allocas to registers.
-    passMan.add(createPromoteMemoryToRegisterPass());
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
-    passMan.add(llvm::createInstructionCombiningPass());
-    // Reassociate expressions.
-    passMan.add(llvm::createReassociatePass());
-    // Eliminate Common SubExpressions.
-    passMan.add(llvm::createGVNPass());
-    // Simplify the control flow graph (deleting unreachable blocks, etc).
-    passMan.add(llvm::createCFGSimplificationPass());
+    if (optimize) {
+        // optimize
+        llvm::PassManager passMan;
     
-    passMan.run(*module);
+        // Set up the optimizer pipeline.  Start with registering info about how
+        // the target lays out data structures.
+        passMan.add(new llvm::TargetData(*execEng->getTargetData()));
+        // Promote allocas to registers.
+        passMan.add(createPromoteMemoryToRegisterPass());
+        // Do simple "peephole" optimizations and bit-twiddling optzns.
+        passMan.add(llvm::createInstructionCombiningPass());
+        // Reassociate expressions.
+        passMan.add(llvm::createReassociatePass());
+        // Eliminate Common SubExpressions.
+        passMan.add(llvm::createGVNPass());
+        // Simplify the control flow graph (deleting unreachable blocks, etc).
+        passMan.add(llvm::createCFGSimplificationPass());
+
+        passMan.run(*module);
+    }
     
     BModuleDefPtr::cast(moduleDef)->cleanup = 
         reinterpret_cast<void (*)()>(
@@ -3092,6 +3139,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int64Type, boolType));
     context.addDef(new NegOpDef(int64Type, "oper -"));
     context.addDef(new BitNotOpDef(int64Type, "oper ~"));
+    context.addDef(new LogicAndOpDef(int64Type, boolType));
 
     context.addDef(new AddOpDef(uint64Type));
     context.addDef(new SubOpDef(uint64Type));
@@ -3106,6 +3154,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
     context.addDef(new NegOpDef(uint64Type, "oper -"));
     context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
+    context.addDef(new LogicAndOpDef(uint64Type, boolType));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -3120,6 +3169,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
     context.addDef(new NegOpDef(int32Type, "oper -"));
     context.addDef(new BitNotOpDef(int32Type, "oper ~"));
+    context.addDef(new LogicAndOpDef(int32Type, boolType));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -3134,6 +3184,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
     context.addDef(new NegOpDef(uint32Type, "oper -"));
     context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
+    context.addDef(new LogicAndOpDef(uint32Type, boolType));
 
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -3148,6 +3199,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(byteType, boolType));
     context.addDef(new NegOpDef(byteType, "oper -"));
     context.addDef(new BitNotOpDef(byteType, "oper ~"));
+    context.addDef(new LogicAndOpDef(byteType, boolType));
+
+    // boolean logic
+    context.addDef(new LogicAndOpDef(boolType, boolType));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));

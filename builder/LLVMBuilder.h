@@ -115,7 +115,8 @@ class LLVMBuilder : public Builder {
                               );
 
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             model::Expr *cond);
+                                             model::Expr *cond,
+                                             const char* tLabel=0, const char* fLabel=0);
         
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
@@ -204,7 +205,8 @@ class LLVMBuilder : public Builder {
                                                  const std::string &name
                                                  );
         virtual void closeModule(model::Context &context,
-                                 model::ModuleDef *module
+                                 model::ModuleDef *module,
+                                 bool optimize
                                  );
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
