@@ -1,40 +1,55 @@
 
+int s = 0;
+
 // basic
-if (true && false)
- print("failed");
+if (1 && 0)
+ puts("failed");
 
-if (true && true)
- print("worked");
+if (1 && 1)
+ s = 1;
 
-if (false && true)
- print("failed");
+if (s != 1)
+ puts("fail");
 
-if (true && (true && false))
- print("failed");
+if (0 && 1)
+ puts("failed");
 
-if (true && (false && true))
- print("failed");
+if (1 && (1 && 0))
+ puts("failed");
 
-if (true && (true && true))
- print("worked");
+if (1 && (0 && 1))
+ puts("failed");
 
+if (1 && (1 && 1))
+ s = 2;
+if (s != 2)
+ puts("fail");
+ 
 int a = 0;
-if (true && (a = 5))
- print("worked");
-
+if (1 && (a = 5))
+ s = 3;
+if (s != 3)
+ puts("fail");
+ 
 // side effects
-if (false && (a = 10))
- print("failed");
+if (0 && (a = 10))
+ puts("failed");
 
 if (a == 10)
- print("failed");
+ puts("failed");
 if (a == 5)
- print("worked");
-
+ s = 4;
+if (s != 4)
+ puts("fail");
+ 
 // precedence
 int b = 0;
 if (a && b == 0)
- print("worked");
+ s = 5;
 else
- print("failed");
+ puts("failed");
+
+if (s != 5)
+ puts("fail");
  
+puts("ok");

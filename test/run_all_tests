@@ -458,6 +458,8 @@ test_output 'initializer constructor sugar' \
 
 test_output 'break and continue' 'import test.test_break;' ok
 
+test_output 'logical and' 'import test.test_logicaland;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
