@@ -45,6 +45,8 @@
 #include <model/TypeDef.h>
 #include <model/VarDef.h>
 #include <model/VarRef.h>
+#include "parser/Parser.h"
+#include "parser/ParseError.h"
 
 
 using namespace builder;
@@ -1999,7 +2001,7 @@ namespace {
                                               );
         arrayOffset->args[0] = new ArgDef(arrayType, "base");
         arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-        context.addDef(arrayOffset.get());
+        context.getDefContext()->addDef(arrayOffset.get());
         
         FuncDefPtr arrayAlloc =
             new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
@@ -2080,6 +2082,122 @@ namespace {
             assert(context.parents.size() == 1);
             emitCleanupsTo(*context.parents[0], bpos);
         }
+    }
+
+    // Create a new meta-class.
+    // context: enclosing context.
+    // name: the original class name.
+    // bases: the base classes.
+    // classImpl: returned impl object for the original class.
+    BTypeDefPtr createMetaClass(Context &context, 
+                                const string &name,
+                                vector<TypeDefPtr> bases,
+                                BGlobalVarDefImplPtr &classImpl
+                                ) {
+        LLVMBuilder &llvmBuilder = 
+            dynamic_cast<LLVMBuilder &>(context.builder);
+        LLVMContext &lctx = getGlobalContext();
+        
+        BTypeDefPtr metaType = 
+            new BTypeDef(context.globalData->classType.get(),
+                         SPUG_FSTR("Class[" << name << "]"),
+                         0,
+                         true,
+                         0
+                         );
+        BTypeDef *classType =
+            BTypeDefPtr::arcast(context.globalData->classType);
+        const PointerType *classPtrType = cast<PointerType>(classType->rep);
+        const StructType *classStructType =
+            cast<StructType>(classPtrType->getElementType());
+        Context *classTypeCtx = classType->context.get();
+        metaType->context = new Context(context.builder, Context::instance,
+                                        classTypeCtx
+                                        );
+        metaType->context->returnType = metaType;
+        
+        // Create a struct representation of the meta class.  This just has the 
+        // Class class as its only field.
+        vector<const Type *> fields(1);
+        fields[0] = classStructType;
+        const StructType *metaClassStructType = StructType::get(lctx, fields);
+        const Type *metaClassPtrType =
+            PointerType::getUnqual(metaClassStructType);
+        metaType->rep = metaClassPtrType;
+        
+        // create a global variable holding the class object.
+        vector<Constant *> classStructVals(3);
+    
+        Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
+        Constant *index0[] = { zero, };
+        Constant *index00[] = { zero, zero }; 
+        
+        // name
+        Constant *nameInit = ConstantArray::get(lctx, name, true);
+        GlobalVariable *nameGVar =
+            new GlobalVariable(*llvmBuilder.module,
+                               nameInit->getType(),
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               nameInit,
+                               name + ":name"
+                               );
+        classStructVals[0] =
+            ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
+        
+        // numBases
+        const Type *uintType =
+            BTypeDefPtr::arcast(context.globalData->uintType)->rep;
+        classStructVals[1] = ConstantInt::get(uintType, bases.size());
+        
+        // bases
+        vector<Constant *> basesVal(bases.size());
+        for (int i = 0; i < bases.size(); ++i) {
+            // get the pointer to the inner "Class" object of "Class[BaseName]"
+            BGlobalVarDefImplPtr impl =
+                BGlobalVarDefImplPtr::arcast(
+                    BTypeDefPtr::arcast(bases[i])->impl
+                );
+            Constant *baseAsClass =
+                ConstantExpr::getGetElementPtr(impl->rep, index00, 2);
+            basesVal[i] = baseAsClass;
+        }
+        const ArrayType *baseArrayType =
+            ArrayType::get(classType->rep, bases.size());
+        Constant *baseArrayInit = ConstantArray::get(baseArrayType, basesVal);
+        GlobalVariable *basesGVar =
+            new GlobalVariable(*llvmBuilder.module,
+                               baseArrayType,
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               baseArrayInit,
+                               name + ":bases"
+                               );
+        classStructVals[2] = ConstantExpr::getGetElementPtr(basesGVar, index00, 2);
+        
+        // build the instance of Class
+        Constant *classStruct =
+            ConstantStruct::get(classStructType, classStructVals);
+        
+        // the new meta class's structure is another structure with only 
+        // Class as a member.
+        vector<Constant *> metaClassStructVals(1);
+        metaClassStructVals[0] = classStruct;
+        Constant *classObjVal =
+            ConstantStruct::get(metaClassStructType, metaClassStructVals);
+    
+        // Create the class global variable
+        GlobalVariable *classInst = 
+            new GlobalVariable(*llvmBuilder.module,
+                               metaClassStructType,
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               classObjVal,
+                               name
+                               );
+    
+        classImpl = new BGlobalVarDefImpl(classInst);
+        return metaType;
     }
 
 
@@ -2217,7 +2335,6 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
     
     return crkFuncType.get();
 }
-        
 
 LLVMBuilder::LLVMBuilder() :
     module(0),
@@ -2612,7 +2729,11 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
-    
+
+    // create the meta-class
+    BGlobalVarDefImplPtr classImpl;
+    BTypeDefPtr metaType = createMetaClass(context, name, bases, classImpl);
+
     // process the base classes, get the first base class with a vtable
     BTypeDef *baseWithVTable = 0;
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
@@ -2625,38 +2746,41 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
             baseWithVTable = base;
     }
     
-    // create a meta-class
-    OpaqueType *opaque = OpaqueType::get(getGlobalContext());
-    TypeDefPtr metaType = new BTypeDef(context.globalData->classType.get(),
-                                       SPUG_FSTR("Class[" << name << "]"),
-                                       PointerType::getUnqual(opaque),
-                                       true,
-                                       baseWithVTable ?
-                                        baseWithVTable->nextVTableSlot : 0
-                                       );
-    metaType->context = new Context(context.builder, Context::instance,
-                                    context.globalData
-                                    );
-    metaType->context->returnType = metaType;
-
-    // create the class definition
-    opaque = OpaqueType::get(getGlobalContext());
+    // create the class definition (for classes with no bases, start with 
+    // vtable slot 1: slot 0 is the "oper class" function)
+    const Type *opaque = OpaqueType::get(getGlobalContext());
     bdata->type = new BTypeDef(metaType.get(), name, 
                                PointerType::getUnqual(opaque),
                                true,
                                baseWithVTable ? 
-                                baseWithVTable->nextVTableSlot : 0
+                                baseWithVTable->nextVTableSlot : 1
                                );
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
     
     // tie the meta-class to the class
     metaType->meta = bdata->type.get();
+    
+    // Make our pointer global variable our impl
+    bdata->type->impl = classImpl;
 
     // create the unsafeCast() function.
     metaType->context->addDef(new UnsafeCastDef(bdata->type.get()));
     
     // create function to convert to voidptr
     context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
+
+#if 0    
+    // create the "oper class" function - currently returns voidptr, but 
+    // that's good enough for now.
+    context.addDef(new OperClassOpDef(context.globalData->voidPtrType.get()));
+
+    if (context.globalData->objectType)
+        metaType->context->addDef(new CastDef(bdata->type.get(), 
+                                              context.globalData->objectType
+                                              )
+                                  );
+#endif
+
     return bdata->type.get();
 }
         
@@ -3110,6 +3234,81 @@ namespace {
     }
 }
 
+namespace {
+    void finishClassType(Context &context, BTypeDef *classType) {
+        // for the kinds of things we're about to do, we need a global block 
+        // for functions to restore to, and for that we need a function and 
+        // module.
+        LLVMContext &lctx = getGlobalContext();
+        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+        builder.module = new Module("<builtin>", lctx);
+        vector<const Type *> argTypes;
+        FunctionType *voidFuncNoArgs =
+            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
+        Function *func = Function::Create(voidFuncNoArgs,
+                                          Function::ExternalLinkage,
+                                          "__builtin_init__",
+                                          builder.module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        builder.block =
+            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
+
+        // add "Class"
+        int lineNum = __LINE__ + 1;
+        string temp("    byteptr name;\n"
+                    "    uint numBases;\n"
+                    "    array[Class] bases = null;\n"
+                    "    bool isSubclass(Class other) {\n"
+                    "        if (this is other)\n"
+                    "            return (1==1);\n"
+                    "        uint i;\n"
+                    "        while (i < numBases) {\n"
+                    "            if (bases[i].isSubclass(other))\n"
+                    "                return (1==1);\n"
+                    "        }\n"
+                    "        return (1==0);\n"
+                    "    }\n"
+                    "}\n"
+                    );
+        ContextPtr lexicalContext = new Context(context.builder, 
+                                                Context::composite,
+                                                context.globalData
+                                                );
+        lexicalContext->parents.push_back(classType->context);
+        lexicalContext->parents.push_back(&context);
+        BBuilderContextData *bdata;
+        classType->context->builderData = bdata = new BBuilderContextData();
+        bdata->type = classType;
+        
+        istringstream src(temp);
+        try {
+            parser::Toker toker(src, "<builtin>", lineNum);
+            parser::Parser p(toker, lexicalContext.get());
+            p.parseClassBody();
+        } catch (parser::ParseError &ex) {
+            std::cerr << ex << endl;
+            assert(false);
+        }
+        
+        // let the "end class" emitter handle the rest of this.
+        context.builder.emitEndClass(*classType->context);
+        
+        // close off the block.
+        builder.builder.CreateRetVoid();
+    }
+
+    void fixMeta(Context &context, TypeDef *type) {
+        BTypeDefPtr metaType;
+        BGlobalVarDefImplPtr classImpl;
+        vector<TypeDefPtr> noBases;
+        type->type = metaType =
+            createMetaClass(context, type->name, noBases, classImpl);
+        metaType->meta = type;
+        type->impl = classImpl;
+    }
+}
+
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     Context::GlobalData *gd = context.globalData;
@@ -3118,12 +3317,19 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // create the basic types
     
     BTypeDef *classType;
-    gd->classType = classType = new BTypeDef(context.globalData->classType.get(), 
-                                             "Class",
-                                             Type::getVoidTy(lctx)
-                                             );
+    Type *classTypeRep = OpaqueType::get(lctx);
+    Type *classTypePtrRep = PointerType::getUnqual(classTypeRep);
+    gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
+    classType->type = classType;
+    classType->meta = classType;
     classType->context = new Context(*this, Context::instance, gd);
+    classType->context->returnType = classType;
     context.addDef(classType);
+
+    // some tools for creating meta-classes
+    BTypeDefPtr metaType;           // storage for meta-types
+    BGlobalVarDefImplPtr classImpl; // storage for class impls
+    vector<TypeDefPtr> noBases;     // empty base class list
     
     BTypeDef *voidType;
     gd->voidType = voidType = new BTypeDef(context.globalData->classType.get(), 
@@ -3132,10 +3338,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            );
     voidType->context = new Context(*this, Context::instance, gd);
     context.addDef(voidType);
-
-    // make the "class" class the meta type of void. XXX every class needs its 
-    // own meta type.
-    gd->classType->meta = voidType;
 
     BTypeDef *voidPtrType;
     llvmVoidPtrType = 
@@ -3213,48 +3415,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         llvmIntType = int64Type->rep;
     }
 
-    // create OverloadDef's type
-    BTypeDefPtr overloadDef = new BTypeDef(context.globalData->classType.get(), "", 
-                                           0
-                                           );
-        
-    // Give it a context and an "oper to voidptr" method.
-    overloadDef->context =
-        new Context(context.builder, Context::instance,
-                    context.globalData
-                    );
-    overloadDef->context->addDef(
-        new VoidPtrOpDef(context.globalData->voidPtrType.get())
-    );
-    gd->overloadType = overloadDef;
-    
-    // create the array generic
-    TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),
-                                            "array", 
-                                            0
-                                            );
-    arrayType->context = new Context(context.builder, Context::instance,
-                                     context.globalData
-                                     );
-    context.addDef(arrayType.get());
-
-    // create an empty structure type and its pointer for VTableBase 
-    // Actual type is {}** (another layer of pointer indirection) because 
-    // classes need to be pointer types.
-    vector<const Type *> members;
-    Type *vtableType = StructType::get(getGlobalContext(), members);
-    Type *vtablePtrType = PointerType::getUnqual(vtableType);
-    BTypeDef *vtableBaseType;
-    gd->vtableBaseType = vtableBaseType =
-        new BTypeDef(context.globalData->classType.get(), "VTableBase", 
-                     PointerType::getUnqual(vtablePtrType), 
-                     true
-                     );
-    vtableBaseType->hasVTable = true;
-    vtableBaseType->context = new Context(*this, Context::instance, gd);
-    vtableBaseType->context->returnType = vtableBaseType;
-    context.addDef(vtableBaseType);
-    
     // create integer operations
     context.addDef(new AddOpDef(int64Type));
     context.addDef(new SubOpDef(int64Type));
@@ -3348,6 +3508,70 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
     
+    // create the array generic
+    TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),
+                                            "array", 
+                                            0
+                                            );
+    arrayType->context = new Context(context.builder, Context::instance,
+                                     context.globalData
+                                     );
+    context.addDef(arrayType.get());
+
+    // now that we have byteptr and array and all of the integer types, we can
+    // initialize the body of Class.
+    context.addDef(new IsOpDef(classType, boolType));
+    finishClassType(context, classType);
+    
+    // back-fill meta class and impls for the existing primitives
+    fixMeta(context, voidType);
+    fixMeta(context, voidPtrType);
+    fixMeta(context, boolType);
+    fixMeta(context, byteType);
+    fixMeta(context, int32Type);
+    fixMeta(context, int64Type);
+    fixMeta(context, uint32Type);
+    fixMeta(context, uint64Type);
+    fixMeta(context, arrayType.get());
+
+    // create OverloadDef's type
+    metaType = createMetaClass(context, "Overload", noBases, classImpl);
+    BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload",
+                                           0
+                                           );
+    metaType->meta = overloadDef.get();
+    metaType->impl = classImpl;
+        
+    // Give it a context and an "oper to voidptr" method.
+    overloadDef->context =
+        new Context(context.builder, Context::instance,
+                    context.globalData
+                    );
+    overloadDef->context->addDef(
+        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+    );
+    gd->overloadType = overloadDef;
+    
+    // create an empty structure type and its pointer for VTableBase 
+    // Actual type is {}** (another layer of pointer indirection) because 
+    // classes need to be pointer types.
+    vector<const Type *> members;
+    Type *vtableType = StructType::get(getGlobalContext(), members);
+    Type *vtablePtrType = PointerType::getUnqual(vtableType);
+    metaType = createMetaClass(context, "VTableBase", noBases, classImpl);
+    BTypeDef *vtableBaseType;
+    gd->vtableBaseType = vtableBaseType =
+        new BTypeDef(metaType.get(), "VTableBase", 
+                     PointerType::getUnqual(vtablePtrType), 
+                     true
+                     );
+    vtableBaseType->hasVTable = true;
+    vtableBaseType->context = new Context(*this, Context::instance, gd);
+    vtableBaseType->context->returnType = vtableBaseType;
+    vtableBaseType->impl = classImpl;
+    metaType->meta = vtableBaseType;
+    context.addDef(vtableBaseType);
+    
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));
@@ -3356,7 +3580,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new BitNotOpDef(boolType, "oper !"));
     
     // byteptr array indexing
-    addArrayMethods(context, byteptrType, byteType);
+    addArrayMethods(context, byteptrType, byteType);    
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

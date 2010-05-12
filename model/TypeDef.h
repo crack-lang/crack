@@ -35,17 +35,16 @@ class TypeDef : public VarDef {
         // a vector of types that can be used as a key
         struct TypeVecKey {
             TypeVecPtr vec;
-//            TypeVecKey() : vec(0) {}
             TypeVecKey(TypeVec *vec) : vec(vec) {}
             bool operator <(const TypeVecKey &other) const {
                 if (vec == other.vec)
                     return false;
-                else if (!vec && other.vec)
-                    return true;
-                else if (vec && !other.vec)
-                    return true;
                 else
                     return *vec < *other.vec;
+            }
+            
+            bool equals(const TypeVec *other) const {
+                return *vec == *other;
             }
         };
         typedef std::map<TypeVecKey, TypeDefPtr> SpecializationCache;

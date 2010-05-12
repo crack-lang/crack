@@ -28,7 +28,7 @@ using parser::ParseError;
 TypeDef *TypeDef::findSpecialization(TypeVec *types) {
     assert(generic && "find specialization called on non-generic type");
     SpecializationCache::iterator match = generic->find(types);
-    if (match != generic->end())
+    if (match != generic->end() && match->first.equals(types))
         return match->second.get();
     else
         return 0;

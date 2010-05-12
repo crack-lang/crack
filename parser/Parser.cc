@@ -40,10 +40,12 @@ void Parser::addDef(VarDef *varDef) {
    defContext->addDef(varDef);
    
    // if the definition context is a class context and the definition is a 
-   // function, add it to the meta-class.
+   // function and this isn't the "Class" class (which is its own meta-class), 
+   // add it to the meta-class.
    FuncDef *func;
    if (defContext->scope == Context::instance &&
-       (func = FuncDefPtr::cast(varDef))
+       (func = FuncDefPtr::cast(varDef)) &&
+       defContext->returnType->type != defContext->returnType
        )
       defContext->returnType->type->context->addAlias(varDef);
 }
@@ -1512,39 +1514,8 @@ TypeDefPtr Parser::parseClassDef() {
    type->hasVTable = gotVTable;
    cstack.parent().getDefContext()->addDef(type.get());
 
-   // parse the class body   
-   while (true) {
-      
-      // check for a closing brace or a nested class definition
-      tok = toker.getToken();
-      if (tok.isRCurly()) {
-         break;
-      } else if (tok.isClass()) {
-         TypeDefPtr newType = parseClassDef();
-         tok = toker.getToken();
-         if (tok.isRCurly()) {
-            break;
-         } else if (tok.isSemi()) {
-            continue;
-         } else {
-            // deal with this class as the return type var type of the next 
-            // definition.
-            toker.putBack(tok);
-            parseDef(newType.get());
-            continue;
-         }
-      
-      // check for "oper" keyword
-      } else if (tok.isOper()) {
-         parsePostOper(0);
-         continue;
-      }
-      
-      // parse some other kind of definition
-      toker.putBack(tok);
-      TypeDefPtr type = parseTypeSpec();
-      parseDef(type.get());
-   }
+   // parse the body
+   parseClassBody();
 
    type->rectify();
    classContext->complete = true;
@@ -1591,6 +1562,44 @@ Parser::Parser(Toker &toker, model::Context *context) :
 void Parser::parse() {
    // outer parser just parses an un-nested block
    parseBlock(false);
+}
+
+// class name { ... }
+//             ^     ^
+void Parser::parseClassBody() {
+   // parse the class body   
+   while (true) {
+      
+      // check for a closing brace or a nested class definition
+      Token tok = toker.getToken();
+      if (tok.isRCurly()) {
+         break;
+      } else if (tok.isClass()) {
+         TypeDefPtr newType = parseClassDef();
+         tok = toker.getToken();
+         if (tok.isRCurly()) {
+            break;
+         } else if (tok.isSemi()) {
+            continue;
+         } else {
+            // deal with this class as the return type var type of the next 
+            // definition.
+            toker.putBack(tok);
+            parseDef(newType.get());
+            continue;
+         }
+      
+      // check for "oper" keyword
+      } else if (tok.isOper()) {
+         parsePostOper(0);
+         continue;
+      }
+      
+      // parse some other kind of definition
+      toker.putBack(tok);
+      TypeDefPtr type = parseTypeSpec();
+      parseDef(type.get());
+   }
 }
 
 VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name, 

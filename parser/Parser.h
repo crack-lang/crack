@@ -252,6 +252,8 @@ class Parser {
 
       void parse();
 
+      void parseClassBody();
+
       /** 
        * throws a ParseError, properly formatted with the location and
        * message text.
