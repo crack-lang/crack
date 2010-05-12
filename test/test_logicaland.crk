@@ -1,0 +1,40 @@
+
+// basic
+if (true && false)
+ print("failed");
+
+if (true && true)
+ print("worked");
+
+if (false && true)
+ print("failed");
+
+if (true && (true && false))
+ print("failed");
+
+if (true && (false && true))
+ print("failed");
+
+if (true && (true && true))
+ print("worked");
+
+int a = 0;
+if (true && (a = 5))
+ print("worked");
+
+// side effects
+if (false && (a = 10))
+ print("failed");
+
+if (a == 10)
+ print("failed");
+if (a == 5)
+ print("worked");
+
+// precedence
+int b = 0;
+if (a && b == 0)
+ print("worked");
+else
+ print("failed");
+ 
