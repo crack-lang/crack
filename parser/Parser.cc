@@ -353,12 +353,13 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          // of the container (assumes the container is a TypeDef)
          bool verifyThisIsContainer = false;
 
-         // if we've got a container and the container is not a class, use it 
-         // as the receiver.
+         // if we've got a container and the container is not a class, or the 
+         // container _is_ a class but the function is a method of its 
+         // meta-class, use the container as the receiver.
          if (container)
-            if (container->type->meta) {
-               // if the container _is_ a class, this is an explicit call of a 
-               // base class function.
+            if (container->type->meta && !func->context->returnType->meta) {
+               // the container is a class and the function is an explicit 
+               // call of a (presumably base class) method.
                squashVirtual = true;
                verifyThisIsContainer = true;
             } else {

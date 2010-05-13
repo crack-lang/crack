@@ -2124,12 +2124,12 @@ namespace {
         const Type *metaClassPtrType =
             PointerType::getUnqual(metaClassStructType);
         metaType->rep = metaClassPtrType;
+        metaType->context->complete = true;
         
         // create a global variable holding the class object.
         vector<Constant *> classStructVals(3);
     
         Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
-        Constant *index0[] = { zero, };
         Constant *index00[] = { zero, zero }; 
         
         // name
@@ -2158,8 +2158,13 @@ namespace {
                 BGlobalVarDefImplPtr::arcast(
                     BTypeDefPtr::arcast(bases[i])->impl
                 );
+            
+            // extract the initializer from the rep (which is the global 
+            // variable for the _pointer_ to the class) and then GEP our way 
+            // into the base class (Class) instance.
+            Constant *baseClassPtr = impl->rep->getInitializer();
             Constant *baseAsClass =
-                ConstantExpr::getGetElementPtr(impl->rep, index00, 2);
+                ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
             basesVal[i] = baseAsClass;
         }
         const ArrayType *baseArrayType =
@@ -2173,7 +2178,9 @@ namespace {
                                baseArrayInit,
                                name + ":bases"
                                );
-        classStructVals[2] = ConstantExpr::getGetElementPtr(basesGVar, index00, 2);
+        classStructVals[2] = ConstantExpr::getGetElementPtr(basesGVar, index00,
+                                                            2
+                                                            );
         
         // build the instance of Class
         Constant *classStruct =
@@ -2193,10 +2200,20 @@ namespace {
                                true, // is constant
                                GlobalValue::ExternalLinkage,
                                classObjVal,
+                               name + ":body"
+                               );
+        
+        // create the pointer to the class instance
+        GlobalVariable *classInstPtr =
+            new GlobalVariable(*llvmBuilder.module,
+                               metaClassPtrType,
+                               true, // is constant
+                               GlobalVariable::ExternalLinkage,
+                               classInst,
                                name
                                );
     
-        classImpl = new BGlobalVarDefImpl(classInst);
+        classImpl = new BGlobalVarDefImpl(classInstPtr);
         return metaType;
     }
 

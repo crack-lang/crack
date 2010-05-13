@@ -505,6 +505,12 @@ test_output 'unsafe casts from non-primary base classes' \
      B b = C(); (C.unsafeCast(b).run());' \
      ok
 
+test_output 'dyanmic subclass check' \
+    'class A {} class B : A {} class C {}
+     if (C.isSubclass(A)) puts("FAIL");
+     if (B.isSubclass(A)) puts("ok");' \
+     ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
