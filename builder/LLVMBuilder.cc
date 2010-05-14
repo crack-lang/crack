@@ -1606,24 +1606,24 @@ namespace {
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
 
-                BasicBlock* oBlock = builder.block;
-
                 // condition on lhs
-                BranchpointPtr pos = builder.emitIf(context, args[0].get(), "logicAndTrue", "logicAndFalse");
-                Value* oVal = builder.lastValue;
+                BranchpointPtr pos = builder.emitIf(context, args[0].get(), "and_T", "and_F");
+                BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
+                Value* oVal = builder.lastValue; // arg[0] condition value
+                BasicBlock* oBlock = bpos->block2; // value block
 
-                // pointing to true, condition on rhs
+                // now pointing to true block, emit condition of rhs
                 args[1].get()->emitCond(context);
-                Value* fVal = builder.lastValue;
-                BasicBlock* fBlock = builder.block;
+                Value* tVal = builder.lastValue; // arg[1] condition value
+                BasicBlock* tBlock = builder.block; // arg[1] value block
 
                 // this branches us to end
                 builder.emitEndIf(context, pos.get(), false);
 
                 // now we phi for result
-                PHINode* p = builder.builder.CreatePHI(BTypeDefPtr::arcast(context.globalData->boolType)->rep, "logicAndResult");
+                PHINode* p = builder.builder.CreatePHI(BTypeDefPtr::arcast(context.globalData->boolType)->rep, "and_R");
                 p->addIncoming(oVal, oBlock);
-                p->addIncoming(fVal, fBlock);
+                p->addIncoming(tVal, tBlock);
                 builder.lastValue = p;
 
                 return new BResultExpr(this, builder.lastValue);
@@ -2311,7 +2311,8 @@ BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond, const char* tLa
 
     context.createCleanupFrame();
     cond->emitCond(context);
-    Value *condVal = lastValue;
+    result->block2 = block; // condition block
+    Value *condVal = lastValue; // condition value
     context.closeCleanupFrame();
     lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);

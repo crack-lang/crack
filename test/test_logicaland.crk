@@ -51,5 +51,23 @@ else
 
 if (s != 5)
  puts("fail");
- 
+
+a = 1;
+b = 1;
+int c = 0;
+if (a && b && c)
+ s = 6; 
+
+if (s == 6)
+ puts("fail");
+
+
+c=1;
+int d=1;
+if (a && b && c && d)
+ s = 7; 
+
+if (s != 7)
+ puts("fail");
+
 puts("ok");
