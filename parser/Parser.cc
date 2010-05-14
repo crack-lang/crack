@@ -521,10 +521,28 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    tok = toker.getToken();
    while (true) {
       if (tok.isDot()) {
-	 // get the next token, which should be an identifier
 	 tok = toker.getToken();
-	 if (!tok.isIdent())
-	    error(tok, "identifier expected");
+	 
+	 // if the next token is "class", this is the class operator.
+	 if (tok.isClass()) {
+            FuncDefPtr funcDef = 
+               expr->type->context->lookUpNoArgs("oper class");
+            if (!funcDef)
+               error(tok, SPUG_FSTR("class operator not defined for " <<
+                                    expr->type->name
+                                    )
+                     );
+            
+            FuncCallPtr funcCall =
+               context->builder.createFuncCall(funcDef.get());
+            funcCall->receiver = expr;
+            expr = funcCall;
+            tok = toker.getToken();
+            continue;
+	 } else if (!tok.isIdent()) {
+            // make sure it's an identifier
+            error(tok, "identifier expected");
+	 }
 
          expr = parsePostIdent(expr.get(), tok);
       } else if (tok.isLBracket()) {
@@ -1509,9 +1527,8 @@ TypeDefPtr Parser::parseClassDef() {
    
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
-   TypeDefPtr type = classContext->returnType =
+   TypeDefPtr type =
       context->builder.emitBeginClass(*classContext, className, bases);
-   type->context = classContext;
    type->hasVTable = gotVTable;
    cstack.parent().getDefContext()->addDef(type.get());
 

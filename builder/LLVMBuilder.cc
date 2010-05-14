@@ -1424,6 +1424,13 @@ namespace {
             // the receiver variable
             VarDefPtr receiver;
 
+            // This is lame:  if there is a receiver, "context" 
+            // should be the function context (and include a definition for 
+            // the receiver) and the finish() method should be called with a 
+            // "false" value - indicating that the definition should not be 
+            // stored in the context.
+            // If there is no receiver, it's safe to call this with the 
+            // context in which the definition should be stored.
             FuncBuilder(Context &context, FuncDef::Flags flags,
                         BTypeDef *returnType,
                         const string &name,
@@ -2217,6 +2224,33 @@ namespace {
         return metaType;
     }
 
+    // Prepares a function "func" to act as an override for "override"
+    unsigned wrapOverride(TypeDef *classType, BFuncDef *overriden, 
+                          FuncBuilder &funcBuilder
+                          ) {
+        // find the path to the overriden's class
+        BTypeDef *overridenClass =
+            BTypeDefPtr::arcast(overriden->context->returnType);
+        classType->getPathToAncestor(
+            *overridenClass, 
+            funcBuilder.funcDef->pathToFirstDeclaration
+        );
+        
+        // augment it with the path from the overriden to its first 
+        // declaration.
+        funcBuilder.funcDef->pathToFirstDeclaration.insert(
+            funcBuilder.funcDef->pathToFirstDeclaration.end(),
+            overriden->pathToFirstDeclaration.begin(),
+            overriden->pathToFirstDeclaration.end()
+        );
+
+        // the type of the receiver is that of its first declaration                
+        BTypeDef *receiverClass = overriden->getReceiverType();
+        funcBuilder.setReceiverType(receiverClass);
+
+        funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
+        return overriden->vtableSlot;
+    }
 
 } // anon namespace
 
@@ -2650,28 +2684,10 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         if (flags & FuncDef::virtualized)
             // use the original's slot if this is an override.
             if (override) {
-                
-                // find the path to the override's class
-                BTypeDef *overrideClass =
-                    BTypeDefPtr::arcast(override->context->returnType);
-                classType->getPathToAncestor(*overrideClass, 
-                                             funcDef->pathToFirstDeclaration
-                                             );
-                
-                // augment it with the path from the override to its first 
-                // declaration.
-                BFuncDef *boverride = BFuncDefPtr::acast(override);
-                f.funcDef->pathToFirstDeclaration.insert(
-                    funcDef->pathToFirstDeclaration.end(),
-                    boverride->pathToFirstDeclaration.begin(),
-                    boverride->pathToFirstDeclaration.end()
-                );
-
-                // the type of the receiver is that of its first declaration                
-                BTypeDef *receiverClass = boverride->getReceiverType();
-                f.setReceiverType(receiverClass);
-                
-                vtableSlot = boverride->vtableSlot;
+                vtableSlot = wrapOverride(classType, 
+                                          BFuncDefPtr::acast(override), 
+                                          f
+                                          );                
             } else {
                 vtableSlot = classType->nextVTableSlot++;
                 f.setReceiverType(classType);
@@ -2740,6 +2756,48 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
     return f.funcDef;
 }
 
+namespace {
+    void createOperClassFunc(Context &context,
+                             BTypeDef *objClass,
+                             BTypeDef *metaClass
+                             ) {
+
+        // build a local context to hold the "this"
+        Context localCtx(context.builder, Context::local, &context);
+        localCtx.addDef(new ArgDef(objClass, "this"));
+
+        FuncBuilder funcBuilder(localCtx,
+                                FuncDef::method | FuncDef::virtualized,
+                                metaClass,
+                                "oper class",
+                                0
+                                );
+        funcBuilder.setReceiverType(objClass);
+
+        // if this is an override, do the wrapping.
+        FuncDefPtr override = context.lookUpNoArgs("oper class");
+        if (override)
+            wrapOverride(objClass, BFuncDefPtr::arcast(override), funcBuilder);
+        else
+            funcBuilder.funcDef->vtableSlot = objClass->nextVTableSlot++;
+
+        funcBuilder.finish(false);
+        context.addDef(funcBuilder.funcDef.get());
+
+        BasicBlock *block = BasicBlock::Create(getGlobalContext(),
+                                               "oper class", 
+                                               funcBuilder.funcDef->rep
+                                               );
+        
+        // body of the function: load the global variable and return it.
+        IRBuilder<> builder(block);
+        BGlobalVarDefImpl *impl = 
+            BGlobalVarDefImplPtr::arcast(objClass->impl);
+        Value *val = builder.CreateLoad(impl->rep);
+        builder.CreateRet(val);
+    }
+}
+
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases) {
@@ -2770,14 +2828,18 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                PointerType::getUnqual(opaque),
                                true,
                                baseWithVTable ? 
-                                baseWithVTable->nextVTableSlot : 1
+                                baseWithVTable->nextVTableSlot : 0
                                );
     bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
+    
+    // bind the class to its context and the context to its class
+    bdata->type->context = &context;
+    context.returnType = bdata->type;
     
     // tie the meta-class to the class
     metaType->meta = bdata->type.get();
     
-    // Make our pointer global variable our impl
+    // Make the pointer global variable our impl
     bdata->type->impl = classImpl;
 
     // create the unsafeCast() function.
@@ -2786,11 +2848,13 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     // create function to convert to voidptr
     context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
 
-#if 0    
     // create the "oper class" function - currently returns voidptr, but 
     // that's good enough for now.
-    context.addDef(new OperClassOpDef(context.globalData->voidPtrType.get()));
+    if (baseWithVTable)
+        createOperClassFunc(context, bdata->type.get(), metaType.get());
 
+#if 0
+    // create the safe cast function.
     if (context.globalData->objectType)
         metaType->context->addDef(new CastDef(bdata->type.get(), 
                                               context.globalData->objectType
@@ -3283,6 +3347,7 @@ namespace {
                     "        while (i < numBases) {\n"
                     "            if (bases[i].isSubclass(other))\n"
                     "                return (1==1);\n"
+                    "            i = i + 1;\n"
                     "        }\n"
                     "        return (1==0);\n"
                     "    }\n"

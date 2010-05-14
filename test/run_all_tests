@@ -511,6 +511,12 @@ test_output 'dyanmic subclass check' \
      if (B.isSubclass(A)) puts("ok");' \
      ok
 
+test_output 'the class operator' \
+    'class A : VTableBase {} class B : A {} class C : VTableBase {}
+     if (C().class.isSubclass(A)) puts("FAIL");
+     if (B().class.isSubclass(A)) puts("ok");' \
+     ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
