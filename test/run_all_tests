@@ -517,6 +517,13 @@ test_output 'the class operator' \
      if (B().class.isSubclass(A)) puts("ok");' \
      ok
 
+test_output 'safe casting' \
+    'class A : VTableBase {}
+     class B : A { void check() { puts("ok"); } }
+     A b = B();
+     (B).cast(b).check();' \
+    'ok'
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

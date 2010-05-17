@@ -10,11 +10,13 @@
 #include "AssignExpr.h"
 #include "CleanupFrame.h"
 #include "ArgDef.h"
+#include "Branchpoint.h"
 #include "Context.h"
 #include "FuncDef.h"
 #include "Initializers.h"
 #include "InstVarDef.h"
 #include "OverloadDef.h"
+#include "NullConst.h"
 #include "ResultExpr.h"
 #include "VarDef.h"
 #include "VarDefImpl.h"
@@ -259,6 +261,84 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
     // if this is the default initializer, store a call to it
     if (initFunc->args.size() == 0)
         defaultInitializer = new FuncCall(newFunc.get());
+}
+
+void TypeDef::createCast(Context &outer) {
+    assert(hasVTable && "Attempt to createCast() on a non-virtual class");
+    ContextPtr funcCtx = context->createSubContext(Context::local);
+    
+    FuncDef::ArgVec args(1);
+    args[0] = 
+        context->builder.createArgDef(context->globalData->vtableBaseType.get(),
+                                      "val"
+                                      );
+    FuncDefPtr castFunc = context->builder.emitBeginFunc(*funcCtx,
+                                                         FuncDef::noFlags,
+                                                         "cast",
+                                                         this,
+                                                         args,
+                                                         0
+                                                         );
+    
+    // function body is:
+    //  if (val.class.isSubclass(ThisClass);
+    //      return ThisClass.unsafeCast(val);
+    //  else
+    //      __die("Invalid class cast");
+    
+    // val.class
+    VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
+    FuncDefPtr f = funcCtx->lookUpNoArgs("oper class");
+    assert(f && "oper class missing");
+    FuncCallPtr call = funcCtx->builder.createFuncCall(f.get());
+    call->receiver = valRef;
+    
+    // $.isSubclass(ThisClass)
+    FuncCall::ExprVec isSubclassArgs(1);
+    isSubclassArgs[0] = funcCtx->builder.createVarRef(this);
+    f = type->context->lookUp(*funcCtx, "isSubclass", isSubclassArgs);
+    assert(f && "isSubclass missing");
+    call = funcCtx->builder.createFuncCall(f.get());
+    call->args = isSubclassArgs;
+    call->receiver = funcCtx->builder.createVarRef(this);
+
+    // if ($)
+    BranchpointPtr branchpoint = funcCtx->builder.emitIf(*funcCtx, call.get());
+    
+    // return ThisClass.unsafeCast(val);
+    FuncCall::ExprVec unsafeCastArgs(1);
+    unsafeCastArgs[0] = valRef;
+    f = type->context->lookUp(*funcCtx, "unsafeCast", unsafeCastArgs);
+    assert(f && "unsafeCast missing");
+    call = funcCtx->builder.createFuncCall(f.get());
+    call->args = unsafeCastArgs;
+    funcCtx->builder.emitReturn(*funcCtx, call.get());
+
+    // else    
+    branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
+
+    // __die()
+    FuncCall::ExprVec abortArgs(1);
+    abortArgs[0] = funcCtx->getStrConst("Invalid class cast.", true);
+    f = outer.lookUp(*funcCtx, "__die", abortArgs);
+    assert(f && "__die missing");
+    call = funcCtx->builder.createFuncCall(f.get());
+    call->args = abortArgs;
+    funcCtx->createCleanupFrame();
+    call->emit(*funcCtx)->handleTransient(*funcCtx);
+    funcCtx->closeCleanupFrame();
+    
+    // need to "return null" to provide a terminator.
+    TypeDef *vp = context->globalData->voidPtrType.get();
+    ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
+    funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
+
+    // end of story.
+    funcCtx->builder.emitEndIf(*funcCtx, branchpoint.get(), true);
+    funcCtx->builder.emitEndFunc(*funcCtx, castFunc.get());
+    
+    // add the cast function to the meta-class
+    type->context->addDef(castFunc.get());
 }
 
 void TypeDef::rectify() {

@@ -1531,6 +1531,10 @@ TypeDefPtr Parser::parseClassDef() {
       context->builder.emitBeginClass(*classContext, className, bases);
    type->hasVTable = gotVTable;
    cstack.parent().getDefContext()->addDef(type.get());
+   
+   // add the "cast" method
+   if (gotVTable)
+      type->createCast(*context);
 
    // parse the body
    parseClassBody();

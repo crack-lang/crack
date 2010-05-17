@@ -234,8 +234,10 @@ class Context : public spug::RCBase {
          * Get or create a string constant.  This can be either a
          * "StaticString(StrConst, uint size)" expression if StaticString is 
          * defined, or a simple StrConst if it is not.
+         * @param raw if true, create a byteptr even if StaticString is 
+         *  defined.
          */
-        ExprPtr getStrConst(const std::string &value);
+        ExprPtr getStrConst(const std::string &value, bool raw = false);
 
         /**
          * Create a new cleanup frame.  Cleanup frames group all 

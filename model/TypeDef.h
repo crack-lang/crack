@@ -139,6 +139,15 @@ class TypeDef : public VarDef {
         virtual FuncDefPtr getConverter(const TypeDef &other);
 
         /**
+         * Create a function to cast to the type (should only be used on a 
+         * type with a vtable)
+         * @param outerContext this should be the context that the type was 
+         *        defined in (it's used to find the module scoped __die() 
+         *        function).
+         */
+        void createCast(Context &outerContext);
+
+        /**
          * Fill in everything that's missing from the class.
          */
         void rectify();

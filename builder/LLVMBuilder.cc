@@ -3114,6 +3114,13 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
         f.finish();
     }
     
+    // create "void __die(byteptr message)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "__die", 1);
+        f.addArg("message", byteptrType);
+        f.finish();
+    }
+    
     // bind the module to the execution engine
     bindModule(new ExistingModuleProvider(module));
     
@@ -3286,6 +3293,11 @@ extern "C" void printint(int val) {
 
 extern "C" void __memclear(void *p, size_t size) {
     memset(p, 0, size);
+}
+
+extern "C" void __die(const char *message) {
+    std::cout << message << endl;
+    abort();
 }
 
 namespace {

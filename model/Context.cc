@@ -269,7 +269,7 @@ void Context::replaceDef(VarDef *def) {
     defs[def->name] = def;
 }
 
-ExprPtr Context::getStrConst(const std::string &value) {
+ExprPtr Context::getStrConst(const std::string &value, bool raw) {
     
     // look up the raw string constant
     StrConstPtr strConst;
@@ -282,8 +282,9 @@ ExprPtr Context::getStrConst(const std::string &value) {
         globalData->strConstTable[value] = strConst;
     }
     
-    // if we don't have a StaticString type yet, we're done.
-    if (!globalData->staticStringType)
+    // if we don't have a StaticString type yet (or the caller wants a raw
+    // bytestr), we're done.
+    if (raw || !globalData->staticStringType)
         return strConst;
     
     // create the "new" expression for the string.
