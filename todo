@@ -13,7 +13,6 @@ Roadmap
 -------
 
 for 0.1:
--   get rid of the semicolon after class definitions
 -   the "oper" keyword
     -   general implementation DONE
     -   oper init initializers, oper del cleanups
@@ -25,12 +24,13 @@ for 0.1:
 -   floating point types
 -   Should be able to do instance construction in a statement context without 
     it being misinterpreted as a definition
--   empty statements should work: if (false) ;
 -   fix numeric conversion.
 -   string interpolation expressions: s := `some string $val`;
 -   type casting.
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports.
+-   fix instance variable default initialization: 
+    class A { B b; oper init() {} } doesn't construct 'b'.
 
 Completed for 0.1:
 -   global variables should not get cleaned up until the end of the program.
@@ -48,6 +48,8 @@ Completed for 0.1:
 -   break & continue DONE
 -   explicit base class method invocation syntax (void foo() {Super.foo();}) 
     DONE
+-   empty statements should work: if (false) ; DONE
+-   get rid of the semicolon after class definitions DONE
 
 for 1.0:
 -   cleanup:
