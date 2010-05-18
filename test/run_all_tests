@@ -524,6 +524,8 @@ test_output 'safe casting' \
      (B).cast(b).check();' \
     'ok'
 
+test_output 'logical and' 'import test.test_logicaland;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

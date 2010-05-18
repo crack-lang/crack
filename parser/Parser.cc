@@ -212,8 +212,8 @@ ContextPtr Parser::parseBlock(bool nested) {
          gotBlockTerminator = true;
       } else if (tok.isEnd()) {
          if (nested)
-	    unexpected(tok, "expected statement or closing brace.");
-	 gotBlockTerminator = true;
+             unexpected(tok, "expected statement or closing brace.");
+         gotBlockTerminator = true;
       }
       
       if (gotBlockTerminator) {
@@ -1557,23 +1557,24 @@ Parser::Parser(Toker &toker, model::Context *context) :
       
       // unary operators are distinguished from their non-unary forms by 
       // appending an "x"
-      {"!x", 4},
-      {"-x", 4},
-      {"--x", 4},
-      {"~x", 4},
+       {"!x", 5},
+       {"-x", 5},
+       {"--x", 5},
+       {"~x", 5},
 
-      {"*", 3},
-      {"/", 3},
-      {"%", 3},
-      {"+", 2},
-      {"-", 2},
-      {"==", 1},
-      {"!=", 1},
-      {"<", 1},
-      {">", 1},
-      {"<=", 1},
-      {">=", 1},
-      {"is", 1},
+       {"*", 4},
+       {"/", 4},
+       {"%", 4},
+       {"+", 3},
+       {"-", 3},
+       {"==", 2},
+       {"!=", 2},
+       {"<", 2},
+       {">", 2},
+       {"<=", 2},
+       {">=", 2},
+       {"is", 2},
+       {"&&", 1},
       {0, 0}
    };
    

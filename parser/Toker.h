@@ -52,6 +52,7 @@ class Toker {
          st_strHex,
          st_istrHex,
          st_integer,
+         st_amp,
          st_istr
       } state;
       

@@ -122,6 +122,8 @@ Token Toker::readToken() {
                     return Token(Token::plus, "+", locationMap.getLocation());
                 } else if (ch == '-') {
                     state = st_minus;
+                } else if (ch == '&') {
+                    state = st_amp;
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
                 } else if (ch == '%') {
@@ -154,6 +156,17 @@ Token Toker::readToken() {
                                             ),
                                       "unknown token"
                                       );
+                }
+                break;
+
+            case st_amp:
+                if (ch == '&') {
+                    state = st_none;
+                    return Token(Token::logicAnd, "&&", locationMap.getLocation());
+                }
+                else {
+                    state = st_none;
+                    // XXX bad token caught in st_none?
                 }
                 break;
 

@@ -82,7 +82,8 @@ class Builder : public spug::RCBase {
          * must be passed to the subsequent emitElse() or emitEndIf().
          */
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             model::Expr *cond) = 0;
+                                             model::Expr *cond,
+                                             const char* tLabel=0, const char* fLabel=0) = 0;
         
         /**
          * Emits an "else" statement.
@@ -255,7 +256,8 @@ class Builder : public spug::RCBase {
                                                  const std::string &name
                                                  ) = 0;
         virtual void closeModule(model::Context &context,
-                                 model::ModuleDef *modDef
+                                 model::ModuleDef *modDef,
+                                 bool optimize
                                  ) = 0;
         
         /**

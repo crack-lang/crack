@@ -30,6 +30,8 @@ int main(int argc, const char **argv) {
             break;
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
+        } else if (!strcmp(*arg, "-O0")) {
+            Crack::getInstance().optimize = false;
         } else if (!strcmp(*arg, "-n")) {
             Crack::getInstance().noBootstrap = true;
         } else if (!strcmp(*arg, "-g")) {
