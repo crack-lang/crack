@@ -67,8 +67,8 @@ class Crack {
         // if true, do not execute anything, but rather dump modules.
         bool dump;
 
-        // if true, run LLVM optimization passes before executing or dumping
-        bool optimize;
+        // optimization level to pass to builder
+        int optimizeLevel;
 
         // if true, don not load the bootstrapping modules before running a 
         // script.  This changes some of the language semantics: constant 

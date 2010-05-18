@@ -43,7 +43,7 @@ Crack::Crack() :
     rootBuilder(new LLVMBuilder()), 
     initialized(false),
     dump(false),
-    optimize(true),
+    optimizeLevel(0),
     noBootstrap(false),
     useGlobalLibs(true) {
 
@@ -156,7 +156,8 @@ void Crack::parseModule(ModuleDef *module,
     Toker toker(src, path.c_str());
     Parser parser(toker, module->moduleContext.get());
     parser.parse();
-    module->close(optimize);
+    module->moduleContext->builder.setOptimize(optimizeLevel);
+    module->close();
     if (dump)
         module->moduleContext->builder.dump();
     else
