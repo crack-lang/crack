@@ -10,7 +10,7 @@
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Module.h>
 #include <llvm/Function.h>
-#include <llvm/ModuleProvider.h>
+#include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
 #include <llvm/Analysis/Verifier.h>
@@ -542,7 +542,7 @@ namespace {
                 Op<0>() = aggregate;
             }
 
-            virtual Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone_impl() const {
                 return new IncompleteInstVarRef(getType(), Op<0>(), index);
             }
             
@@ -594,7 +594,7 @@ namespace {
                 Op<1>() = rval;
             }
 
-            virtual Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone_impl() const {
                 return new IncompleteInstVarAssign(getType(), Op<0>(), index, 
                                                    Op<1>()
                                                    );
@@ -652,7 +652,7 @@ namespace {
                 Op<0>() = aggregate;
             }
 
-            virtual Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone_impl() const {
                 return new IncompleteNarrower(Op<0>(), startType, ancestor);
             }
             
@@ -732,7 +732,7 @@ namespace {
                 Op<0>() = aggregate;
             }
             
-            virtual Instruction *clone(LLVMContext &lctx) const {
+            virtual Instruction *clone_impl() const {
                 return new IncompleteVTableInit(aggregateType, Op<0>(), 
                                                 vtableBaseType
                                                 );
@@ -999,7 +999,7 @@ namespace {
         
         public:
 
-            virtual Instruction *clone(LLVMContext &context) const {
+            virtual Instruction *clone_impl() const {
                 return new(NumOperands) IncompleteVirtualFunc(vtableBaseType,
                                                               funcDef,
                                                               OperandList,
@@ -1303,7 +1303,7 @@ namespace {
                 return User::operator new(s, 1);
             }
 
-            virtual Instruction *clone(LLVMContext &context) const {
+            virtual Instruction *clone_impl() const {
                 return new IncompleteSpecialize(getType(), value, 
                                                 ancestorPath
                                                 );
@@ -1539,29 +1539,6 @@ namespace {
                 
     };
 
-    // weird stuff
-    
-    class MallocExpr : public Expr {
-        public:
-            MallocExpr(TypeDef *type) : Expr(type) {}
-            
-            ResultExprPtr emit(Context &context) {
-                LLVMBuilder &builder =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                BTypeDef *btype = BTypeDefPtr::rcast(type);
-                PointerType *tp =
-                    cast<PointerType>(const_cast<Type *>(btype->rep));
-                builder.lastValue =
-                    builder.builder.CreateMalloc(tp->getElementType());
-
-                return new BResultExpr(this, builder.lastValue);
-            }
-            
-            virtual void writeTo(ostream &out) const {
-                out << "malloc(" << type->name << ')';
-            }
-    };
-    
     // primitive operations
 
     SPUG_RCPTR(OpDef);
@@ -1771,9 +1748,6 @@ namespace {
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
 
-                args[0]->emit(context)->handleTransient(context);
-                Value *size = builder.lastValue;
-                
                 // get the BTypeDef from the return type, then get the pointer 
                 // type out of that
                 BTypeDef *retType = BTypeDefPtr::rcast(func->returnType);
@@ -1781,10 +1755,10 @@ namespace {
                     cast<PointerType>(const_cast<Type *>(retType->rep));
                 
                 // malloc based on the element type
-                builder.lastValue = 
-                    builder.builder.CreateMalloc(ptrType->getElementType(), 
-                                                 size
-                                                 );
+                builder.emitAlloc(context, new 
+                                  AllocExpr(func->returnType.get()), 
+                                  args[0].get()
+                                  );
                 
                 return new BResultExpr(this, builder.lastValue);
             }
@@ -2269,14 +2243,14 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
                 emitFunctionCleanups(**parent);
 }
 
-ExecutionEngine *LLVMBuilder::bindModule(ModuleProvider *mp) {
+ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     if (execEng) {
-        execEng->addModuleProvider(mp);
+        execEng->addModule(mod);
     } else {
         if (rootBuilder) 
-            execEng = rootBuilder->bindModule(mp);
+            execEng = rootBuilder->bindModule(mod);
         else
-            execEng = ExecutionEngine::create(mp);
+            execEng = ExecutionEngine::create(mod);
     }
     
     return execEng;
@@ -2489,36 +2463,51 @@ ResultExprPtr LLVMBuilder::emitNull(Context &context,
     return new BResultExpr(nullExpr, lastValue);
 }
 
-ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr) {
+ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
+                                     Expr *countExpr
+                                     ) {
     // XXX need to be able to do this for an incomplete class when we 
     // allow user defined oper new.
     BTypeDef *btype = BTypeDefPtr::arcast(allocExpr->type);
     PointerType *tp =
         cast<PointerType>(const_cast<Type *>(btype->rep));
-    lastValue = builder.CreateMalloc(tp->getElementType());
     
     // XXX mega-hack, clear the contents of the allocated memory (this is to 
     // get around the temporary lack of automatic member initialization)
     
-    // calculate the size of the structure
+    // calculate the size of instances of the type
+    Value *null = Constant::getNullValue(tp);
     assert(llvmIntType && "integer type has not been initialized");
-    Value *startPos = builder.CreatePtrToInt(lastValue, llvmIntType);
+    Value *startPos = builder.CreatePtrToInt(null, llvmIntType);
     Value *endPos = 
         builder.CreatePtrToInt(
-            builder.CreateConstGEP1_32(lastValue, 1),
+            builder.CreateConstGEP1_32(null, 1),
             llvmIntType
             );
     Value *size = builder.CreateSub(endPos, startPos);
     
-    // construct a call to the "memclear" function
-    Function *memclearFunc = module->getFunction("__memclear");
-    assert(memclearFunc && "__memclear function has not been defined");
+    // if a count expression was supplied, emit it.  Otherwise, count is a 
+    // constant 1
+    Value *countVal;
+    if (countExpr) {
+        countExpr->emit(context)->handleTransient(context);
+        countVal = lastValue;
+    } else {
+        countVal = ConstantInt::get(llvmIntType, 1);
+    }
+    
+    // construct a call to the "calloc" function
+    Function *callocFunc = module->getFunction("calloc");
+    assert(callocFunc && "calloc function has not been defined");
     BTypeDef *voidPtrType =
         BTypeDefPtr::arcast(context.globalData->voidPtrType);
-    vector<Value *> memclearArgs(2);
-    memclearArgs[0] = builder.CreateBitCast(lastValue, voidPtrType->rep);
-    memclearArgs[1] = size;
-    builder.CreateCall(memclearFunc, memclearArgs.begin(), memclearArgs.end());
+    vector<Value *> callocArgs(2);
+    callocArgs[0] = countVal;
+    callocArgs[1] = size;
+    Value *result = builder.CreateCall(callocFunc, callocArgs.begin(), 
+                                       callocArgs.end()
+                                       );
+    lastValue = builder.CreateBitCast(result, tp);
     
     return new BResultExpr(allocExpr, lastValue);
 }
@@ -2830,7 +2819,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                baseWithVTable ? 
                                 baseWithVTable->nextVTableSlot : 0
                                );
-    bdata->type->defaultInitializer = new MallocExpr(bdata->type.get());
+    bdata->type->defaultInitializer = new NullConst(bdata->type.get());
     
     // bind the class to its context and the context to its class
     bdata->type->context = &context;
@@ -3106,10 +3095,10 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
         f.finish();
     }
     
-    // create "void __memclear(voidptr p, uint size)"
+    // create "void *calloc(uint size)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "__memclear", 2);
-        f.addArg("p", voidptrType);
+        FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
+        f.addArg("size", intType);
         f.addArg("size", intType);
         f.finish();
     }
@@ -3122,7 +3111,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     }
     
     // bind the module to the execution engine
-    bindModule(new ExistingModuleProvider(module));
+    bindModule(module);
     
     return new BModuleDef(name, &context);
 }
@@ -3149,7 +3138,7 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     verifyModule(*module, llvm::PrintMessageAction);
     
     // bind the module to the execution engine
-    bindModule(new ExistingModuleProvider(module));
+    bindModule(module);
     
     // store primitive functions
     for (map<Function *, void *>::iterator iter = primFuncs.begin();
@@ -3289,10 +3278,6 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 
 extern "C" void printint(int val) {
     std::cout << val << flush;
-}
-
-extern "C" void __memclear(void *p, size_t size) {
-    memset(p, 0, size);
 }
 
 extern "C" void __die(const char *message) {

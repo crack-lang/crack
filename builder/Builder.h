@@ -65,7 +65,8 @@ class Builder : public spug::RCBase {
          * Emit an allocator for the specified type.
          */
         virtual model::ResultExprPtr emitAlloc(model::Context &context,
-                                               model::AllocExpr *allocExpr
+                                               model::AllocExpr *allocExpr,
+                                               model::Expr *countExpr = 0
                                                ) = 0;
         
         /**
