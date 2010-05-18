@@ -33,6 +33,10 @@ SPUG_RCPTR(Builder);
 
 /** Abstract base class for builders.  Builders generate code. */
 class Builder : public spug::RCBase {
+
+    protected:
+        int optimizeLevel;
+
     public:
         /**
          * This gets called on the "root builder" everytime a new module gets 
@@ -82,8 +86,7 @@ class Builder : public spug::RCBase {
          * must be passed to the subsequent emitElse() or emitEndIf().
          */
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             model::Expr *cond,
-                                             const char* tLabel=0, const char* fLabel=0) = 0;
+                                             model::Expr *cond) = 0;
         
         /**
          * Emits an "else" statement.
@@ -255,8 +258,7 @@ class Builder : public spug::RCBase {
                                                  const std::string &name
                                                  ) = 0;
         virtual void closeModule(model::Context &context,
-                                 model::ModuleDef *modDef,
-                                 bool optimize
+                                 model::ModuleDef *modDef
                                  ) = 0;
         
         /**
@@ -308,6 +310,10 @@ class Builder : public spug::RCBase {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     ) = 0;
+
+        // implementation specific optimization level
+        void setOptimize(int level) { optimizeLevel = level; }
+
 };
 
 } // namespace builder

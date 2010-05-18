@@ -1607,7 +1607,10 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
 
                 // condition on lhs
-                BranchpointPtr pos = builder.emitIf(context, args[0].get(), "and_T", "and_F");
+                BranchpointPtr pos = builder.labeledIf(context,
+                        args[0].get(),
+                        "and_T",
+                        "and_F");
                 BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
                 Value* oVal = builder.lastValue; // arg[0] condition value
                 BasicBlock* oBlock = bpos->block2; // value block
@@ -1621,7 +1624,9 @@ namespace {
                 builder.emitEndIf(context, pos.get(), false);
 
                 // now we phi for result
-                PHINode* p = builder.builder.CreatePHI(BTypeDefPtr::arcast(context.globalData->boolType)->rep, "and_R");
+                PHINode* p = builder.builder.CreatePHI(
+                        BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+                        "and_R");
                 p->addIncoming(oVal, oBlock);
                 p->addIncoming(tVal, tBlock);
                 builder.lastValue = p;
@@ -2299,15 +2304,20 @@ void LLVMBuilder::emitTest(Context &context, Expr *expr) {
                              );
 }
 
-BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond, const char* tLabel, const char* fLabel) {
+BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
+    return labeledIf(context, cond, "true", "false");
+}
+
+BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
+                                      const char* tLabel,
+                                      const char* fLabel) {
+
     // create blocks for the true and false conditions
     LLVMContext &lctx = getGlobalContext();
-    BasicBlock *trueBlock = BasicBlock::Create(lctx, (tLabel) ? tLabel : "cond_true", func);
-    BBranchpointPtr result = new BBranchpoint(BasicBlock::Create(lctx,
-                                                                 (fLabel) ? fLabel : "cond_false",
-                                                                 func
-                                                                 )
-                                              );
+    BasicBlock *trueBlock = BasicBlock::Create(lctx, tLabel, func);
+
+    BBranchpointPtr result = new BBranchpoint(
+            BasicBlock::Create(lctx, fLabel, func));
 
     context.createCleanupFrame();
     cond->emitCond(context);
@@ -2821,7 +2831,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     return new BModuleDef(name, &context);
 }
 
-void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef, bool optimize) {
+void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
     builder.CreateRetVoid();
     
@@ -2852,7 +2862,9 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef, bool optim
          )
         execEng->addGlobalMapping(iter->first, iter->second);
 
-    if (optimize) {
+    // XXX right now, only checking for > 0, later perhaps we can
+    // run specific optimizations at different levels
+    if (optimizeLevel) {
         // optimize
         llvm::PassManager passMan;
     
@@ -3140,7 +3152,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int64Type, boolType));
     context.addDef(new NegOpDef(int64Type, "oper -"));
     context.addDef(new BitNotOpDef(int64Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(int64Type, boolType));
 
     context.addDef(new AddOpDef(uint64Type));
     context.addDef(new SubOpDef(uint64Type));
@@ -3155,7 +3166,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
     context.addDef(new NegOpDef(uint64Type, "oper -"));
     context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(uint64Type, boolType));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -3170,7 +3180,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
     context.addDef(new NegOpDef(int32Type, "oper -"));
     context.addDef(new BitNotOpDef(int32Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(int32Type, boolType));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -3185,7 +3194,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
     context.addDef(new NegOpDef(uint32Type, "oper -"));
     context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(uint32Type, boolType));
 
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -3200,7 +3208,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(byteType, boolType));
     context.addDef(new NegOpDef(byteType, "oper -"));
     context.addDef(new BitNotOpDef(byteType, "oper ~"));
-    context.addDef(new LogicAndOpDef(byteType, boolType));
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
