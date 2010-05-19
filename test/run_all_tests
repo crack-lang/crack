@@ -460,6 +460,8 @@ test_output 'break and continue' 'import test.test_break;' ok
 
 test_output 'logical and' 'import test.test_logicaland;' ok
 
+test_output 'logical or' 'import test.test_logicalor;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

@@ -1647,6 +1647,60 @@ namespace {
             }
     };
 
+    class LogicOrOpCall : public FuncCall {
+        public:
+            LogicOrOpCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                // condition on lhs
+                BranchpointPtr pos = builder.labeledIf(context,
+                        args[0].get(),
+                        "or_T",
+                        "or_F");
+                BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
+                Value* oVal = builder.lastValue; // arg[0] condition value
+                BasicBlock* fBlock = bpos->block; // false block
+                BasicBlock* oBlock = bpos->block2; // condition block
+
+                // now pointing to true block, save it for phi
+                BasicBlock* tBlock = builder.block;
+
+                // repoint to false block, emit condition of rhs
+                builder.builder.SetInsertPoint(fBlock);
+                args[1].get()->emitCond(context);
+                Value* fVal = builder.lastValue; // arg[1] condition value
+                // branch to true for phi
+                builder.builder.CreateBr(tBlock);
+
+                // now jump back to true and phi for result
+                builder.builder.SetInsertPoint(tBlock);
+                PHINode* p = builder.builder.CreatePHI(
+                        BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+                        "or_R");
+                p->addIncoming(oVal, oBlock);
+                p->addIncoming(fVal, fBlock);
+                builder.lastValue = p;
+
+                return new BResultExpr(this, builder.lastValue);
+
+            }
+    };
+
+    class LogicOrOpDef : public BinOpDef {
+        public:
+            LogicOrOpDef(TypeDef *argType, TypeDef *resultType) :
+                BinOpDef(argType, resultType, "oper ||") {
+            }
+
+            virtual FuncCallPtr createFuncCall() {
+                return new LogicOrOpCall(this);
+            }
+    };
+
     class NegOpCall : public FuncCall {
         public:
             NegOpCall(FuncDef *def) : FuncCall(def) {}
@@ -3211,6 +3265,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
+    context.addDef(new LogicOrOpDef(boolType, boolType));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));

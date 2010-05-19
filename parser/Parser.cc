@@ -1531,6 +1531,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
        {">=", 2},
        {"is", 2},
        {"&&", 1},
+       {"||", 1},
       {0, 0}
    };
    

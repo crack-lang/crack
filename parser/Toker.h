@@ -53,7 +53,8 @@ class Toker {
          st_istrHex,
          st_integer,
          st_amp,
-         st_istr
+         st_istr,
+         st_pipe
       } state;
       
       // get the next character from the stream.

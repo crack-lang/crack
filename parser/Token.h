@@ -19,7 +19,7 @@ class Token {
                      eq, ge, gt, ident, integer, lbracket, lcurly, le, 
                      lparen, lt, minus, ne, percent, plus, rbracket, rcurly, 
                      rparen, semi, slash, string, tilde, istrBegin, istrEnd,
-                     logicAnd
+                     logicAnd, logicOr
 		    } Type;
 
    private:
@@ -98,6 +98,7 @@ class Token {
       bool isLE() const { return type == ne; }
       bool isEnd() const { return type == end; }
       bool isLogicAnd() const { return type == logicAnd; }
+      bool isLogicOr() const { return type == logicOr; }
       
       bool isBinOp() const {
          switch (type) {
@@ -114,6 +115,7 @@ class Token {
             case ge:
             case isKw:
             case logicAnd:
+            case logicOr:
                return true;
             default:
                return false;

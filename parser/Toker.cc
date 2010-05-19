@@ -124,6 +124,8 @@ Token Toker::readToken() {
                     state = st_minus;
                 } else if (ch == '&') {
                     state = st_amp;
+                } else if (ch == '|') {
+                    state = st_pipe;
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
                 } else if (ch == '%') {
@@ -163,6 +165,17 @@ Token Toker::readToken() {
                 if (ch == '&') {
                     state = st_none;
                     return Token(Token::logicAnd, "&&", locationMap.getLocation());
+                }
+                else {
+                    state = st_none;
+                    // XXX bad token caught in st_none?
+                }
+                break;
+
+            case st_pipe:
+                if (ch == '|') {
+                    state = st_none;
+                    return Token(Token::logicOr, "||", locationMap.getLocation());
                 }
                 else {
                     state = st_none;
