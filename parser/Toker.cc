@@ -167,8 +167,12 @@ Token Toker::readToken() {
                     return Token(Token::logicAnd, "&&", locationMap.getLocation());
                 }
                 else {
-                    state = st_none;
-                    // XXX bad token caught in st_none?
+                    // XXX until we have bitwise operators
+                    ParseError::abort(Token(Token::dot, "",
+                                            locationMap.getLocation()
+                                            ),
+                                      "unknown token, expected &&"
+                                      );
                 }
                 break;
 
@@ -178,8 +182,12 @@ Token Toker::readToken() {
                     return Token(Token::logicOr, "||", locationMap.getLocation());
                 }
                 else {
-                    state = st_none;
-                    // XXX bad token caught in st_none?
+                    // XXX until we have bitwise operators
+                    ParseError::abort(Token(Token::dot, "",
+                                            locationMap.getLocation()
+                                            ),
+                                      "unknown token, expected ||"
+                                      );
                 }
                 break;
 
