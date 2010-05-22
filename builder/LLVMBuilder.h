@@ -100,6 +100,9 @@ class LLVMBuilder : public Builder {
         virtual model::ResultExprPtr emitIntConst(model::Context &context,
                                                   model::IntConst *val
                                                   );
+        virtual model::ResultExprPtr emitFloatConst(model::Context &context,
+                                                  model::FloatConst *val
+                                                  );
 
         virtual model::ResultExprPtr emitNull(model::Context &context,
                                               model::NullConst *nullExpr
@@ -218,6 +221,10 @@ class LLVMBuilder : public Builder {
                                                   const std::string &val);
         virtual model::IntConstPtr createIntConst(model::Context &context,
                                                   long val,
+                                                  model::TypeDef *type = 0
+                                                  );
+        virtual model::FloatConstPtr createFloatConst(model::Context &context,
+                                                  double val,
                                                   model::TypeDef *type = 0
                                                   );
 

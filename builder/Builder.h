@@ -19,6 +19,7 @@ namespace model {
     class Context;
     SPUG_RCPTR(FuncCall);
     SPUG_RCPTR(IntConst);
+    SPUG_RCPTR(FloatConst);
     class NullConst;
     SPUG_RCPTR(StrConst);
     SPUG_RCPTR(TypeDef);
@@ -57,6 +58,9 @@ class Builder : public spug::RCBase {
         virtual model::ResultExprPtr emitIntConst(model::Context &context,
                                                   model::IntConst *val
                                                   ) = 0;
+        virtual model::ResultExprPtr emitFloatConst(model::Context &context,
+                                                    model::FloatConst *val
+                                                   ) = 0;
 
         /**
          * Emits a null of the specified type.
@@ -280,6 +284,10 @@ class Builder : public spug::RCBase {
                                                   long val,
                                                   model::TypeDef *type = 0
                                                   ) = 0;
+        virtual model::FloatConstPtr createFloatConst(model::Context &context,
+                                                    double val,
+                                                    model::TypeDef *type = 0
+                                                    ) = 0;
         
         virtual void registerPrimFuncs(model::Context &context) = 0;
 

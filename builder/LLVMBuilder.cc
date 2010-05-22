@@ -36,6 +36,7 @@
 #include <model/FuncCall.h>
 #include <model/InstVarDef.h>
 #include <model/IntConst.h>
+#include <model/FloatConst.h>
 #include <model/ModuleDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
@@ -425,6 +426,15 @@ namespace {
             BIntConst(BTypeDef *type, long val) :
                 IntConst(type, val),
                 rep(ConstantInt::get(type->rep, val)) {
+            }
+    };
+
+    class BFloatConst : public model::FloatConst {
+        public:
+            llvm::Value *rep;
+            BFloatConst(BTypeDef *type, double val) :
+                FloatConst(type, val),
+                rep(ConstantFP::get(type->rep, val)) {
             }
     };
     
@@ -2291,6 +2301,11 @@ ResultExprPtr LLVMBuilder::emitIntConst(Context &context, IntConst *val) {
     return new BResultExpr(val, lastValue);
 }
 
+ResultExprPtr LLVMBuilder::emitFloatConst(Context &context, FloatConst *val) {
+    lastValue = dynamic_cast<const BFloatConst *>(val)->rep;
+    return new BResultExpr(val, lastValue);
+}
+
 ResultExprPtr LLVMBuilder::emitNull(Context &context,
                                     NullConst *nullExpr
                                     ) {
@@ -2969,6 +2984,18 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
                          val
                          );
 }
+
+FloatConstPtr LLVMBuilder::createFloatConst(model::Context &context, double val,
+                                        TypeDef *typeDef
+                                        ) {
+    // XXX probably need to consider the simplest type that the constant can
+    // fit into (compatibility rules will allow us to coerce it into another
+    // type)
+    return new BFloatConst(typeDef ? BTypeDefPtr::acast(typeDef) :
+                          BTypeDefPtr::arcast(context.globalData->float32Type),
+                         val
+                         );
+}
                        
 model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func, 
                                                bool squashVirtual
@@ -3075,6 +3102,27 @@ namespace {
         context.addDef(btype.get());
         return btype.get();
     }
+    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
+                             const char *name
+                             ) {
+        BTypeDefPtr btype = new BTypeDef(name, llvmType);
+        btype->defaultInitializer =
+            context.builder.createFloatConst(context, 0.0, btype.get());
+        btype->context =
+            new Context(context.builder, Context::instance,
+                        context.globalData
+                        );
+        btype->context->returnType = btype;
+        btype->context->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                             "toBool"
+                                             )
+                               );
+
+        // if you remove this, for the love of god, change the return type so
+        // we don't leak the pointer.
+        context.addDef(btype.get());
+        return btype.get();
+    }
 }
 
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
@@ -3139,20 +3187,34 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             "uint64"
                                             );
     gd->uint64Type = uint64Type;
-    
+
+    BTypeDef *float32Type = createFloatPrimType(context, Type::getFloatTy(lctx),
+                                            "float32"
+                                            );
+    gd->float32Type = float32Type;
+
+    BTypeDef *float64Type = createFloatPrimType(context, Type::getDoubleTy(lctx),
+                                            "float64"
+                                            );
+    gd->float64Type = float64Type;
+
     // XXX bad assumptions about sizeof
     if (sizeof(int) == 4) {
         context.addAlias("int", int32Type);
         context.addAlias("uint", uint32Type);
+        context.addAlias("float", float32Type);
         gd->uintType = uint32Type;
         gd->intType = int32Type;
+        gd->floatType = float32Type;
         llvmIntType = int32Type->rep;
     } else {
         assert(sizeof(int) == 8);
         context.addAlias("int", int64Type);
         context.addAlias("uint", uint64Type);
+        context.addAlias("float", float64Type);
         gd->uintType = uint64Type;
         gd->intType = int64Type;
+        gd->floatType = float64Type;
         llvmIntType = int64Type->rep;
     }
 

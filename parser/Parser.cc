@@ -17,6 +17,7 @@
 #include "model/Expr.h"
 #include "model/Initializers.h"
 #include "model/IntConst.h"
+#include "model/FloatConst.h"
 #include "model/ModuleDef.h"
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
@@ -452,6 +453,10 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
                                              );
+   } else if (tok.isFloat()) {
+      expr = context->builder.createFloatConst(*context,
+                                             atof(tok.getData().c_str())
+                                             );
    // for the unary operators
    } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
               tok.isDecr()) {
@@ -477,10 +482,10 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    tok = toker.getToken();
    while (true) {
       if (tok.isDot()) {
-	 // get the next token, which should be an identifier
-	 tok = toker.getToken();
-	 if (!tok.isIdent())
-	    error(tok, "identifier expected");
+         // get the next token, which should be an identifier
+         tok = toker.getToken();
+         if (!tok.isIdent())
+            error(tok, "identifier expected");
 
          expr = parsePostIdent(expr.get(), tok);
       } else if (tok.isLBracket()) {

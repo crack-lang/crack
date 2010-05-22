@@ -49,6 +49,7 @@ set(CRACK_SRC_FILES
   model/Initializers.cc
   model/AllocExpr.cc
   model/IntConst.cc
+  model/FloatConst.cc
   model/VarDef.cc
   model/Context.cc
   model/NullConst.cc
