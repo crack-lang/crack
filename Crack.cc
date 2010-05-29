@@ -252,6 +252,14 @@ bool Crack::loadBootstrapModules() {
         rootContext->globalData->staticStringType = 
             extractClass(mod.get(), "StaticString");
         rootContext->addAlias(rootContext->globalData->staticStringType.get());
+
+        // replace the bootstrapping context with a new context that 
+        // delegates to the original root context - this is the "bootstrapped 
+        // context."  It contains all of the special definitions that were 
+        // extracted from the bootstrapping modules.
+        rootContext = new Context(*rootBuilder, Context::module, 
+                                  rootContext.get()
+                                  );
         
         // extract some constants
         VarDefPtr v = mod->moduleContext->lookUp("true");

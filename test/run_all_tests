@@ -760,5 +760,7 @@ test_output 'operator overloading of unary operators' \
      cout `ok\n`;' \
     ok
 
+test_output 'bootstrapped overloads' 'print()' \
+    "${parseError}1: No method exists matching print with these argument types."
 
 exit $rc
