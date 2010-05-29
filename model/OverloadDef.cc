@@ -109,6 +109,33 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
     return 0;
 }
 
+FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
+    
+    // check the local functions.
+    for (FuncList::iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        if ((*iter)->args.empty() && 
+            (acceptAlias || (*iter)->context == context)
+            )
+            return iter->get();
+
+    // check delegated functions.
+    for (ParentVec::iterator parent = parents.begin();
+         parent != parents.end();
+         ++parent
+         ) {
+        OverloadDef *parentOverload = parent->getOverload(this);
+        FuncDef *result = 
+            parentOverload ? parentOverload->getNoArgMatch(acceptAlias) : 0;
+        if (result)
+            return result;
+    }
+    
+    return 0;
+}
+
 void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);

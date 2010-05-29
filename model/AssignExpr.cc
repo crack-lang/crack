@@ -46,7 +46,7 @@ AssignExprPtr AssignExpr::create(Context &context,
 
 ResultExprPtr AssignExpr::emit(Context &context) {
     // if the variable has a release function, call it for the existing value.
-    FuncDefPtr func = var->type->context->lookUpNoArgs("oper release");
+    FuncDefPtr func = var->type->context->lookUpNoArgs("oper release", false);
     FuncCallPtr releaseCall;
     if (func)
         releaseCall = context.builder.createFuncCall(func.get());

@@ -28,7 +28,7 @@ void Context::storeDef(VarDef *def) {
     if (funcDef = FuncDefPtr::cast(def)) {
         OverloadDefPtr overloads = getOverload(def->name);
         overloads->addFunc(funcDef);
-    } else {
+    } else {        
         defs[def->name] = def;
     }
 }
@@ -225,14 +225,15 @@ FuncDefPtr Context::lookUp(Context &context,
     return overload->getMatch(context, args);
 }
 
-FuncDefPtr Context::lookUpNoArgs(const std::string &name) {
+FuncDefPtr Context::lookUpNoArgs(const std::string &name, bool acceptAlias) {
     OverloadDefPtr overload = getOverload(name);
     if (!overload)
         return 0;
 
     // we can just check for a signature match here - cheaper and easier.
     FuncDef::ArgVec args;
-    return overload->getSigMatch(args);
+    FuncDefPtr result = overload->getNoArgMatch(acceptAlias);
+    return result;
 }
 
 void Context::addDef(VarDef *def) {
@@ -253,7 +254,14 @@ void Context::removeDef(VarDef *def) {
 void Context::addAlias(VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->context);
-    storeDef(def);
+
+    // overloads should never be aliased - otherwise the new context could 
+    // extend them.
+    OverloadDef *overload = OverloadDefPtr::cast(def);
+    if (overload)
+        storeDef(overload->createChild().get());
+    else
+        storeDef(def);
 }
 
 void Context::addAlias(const string &name, VarDef *def) {

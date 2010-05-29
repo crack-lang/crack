@@ -31,6 +31,7 @@ for 0.1:
     part of the standard imports.
 -   fix instance variable default initialization: 
     class A { B b; oper init() {} } doesn't construct 'b'.
+-   The implicit "oper del" does not override correctly (see to_test.crk)
 
 Completed for 0.1:
 -   global variables should not get cleaned up until the end of the program.

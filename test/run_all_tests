@@ -524,7 +524,21 @@ test_output 'safe casting' \
      (B).cast(b).check();' \
     'ok'
 
+test_output 'safe cast failure (correct inheritence, bad runtime value)' \
+    'class A : VTableBase {}
+     class B : A {}
+     (B.cast(A()));' \
+    'Invalid class cast.'
+
+test_output 'safe cast failure (incorrect inheritence)' \
+    'class A : VTableBase {}
+     class B : VTableBase {}
+     (B.cast(A()));' \
+    'Invalid class cast.'
+
 test_output 'logical and' 'import test.test_logicaland;' ok
+
+test_output 'assigning a class' 'class A {} Class c = A; puts("ok");' ok
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'

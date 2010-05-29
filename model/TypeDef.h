@@ -160,8 +160,7 @@ class TypeDef : public VarDef {
         struct AncestorReference {
             unsigned index;
             TypeDefPtr ancestor;
-        };
-        
+        };        
         typedef std::vector<AncestorReference> AncestorPath;
         
         /**
@@ -171,7 +170,7 @@ class TypeDef : public VarDef {
         bool getPathToAncestor(const TypeDef &ancestor, AncestorPath &path,
                                unsigned depth = 0
                                );
-        
+
         /**
          * Emit all of the initializers for the type (base classes and fields) 
          * and amrk the type as initilalized so we can't go introducing new 

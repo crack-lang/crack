@@ -288,10 +288,16 @@ void TypeDef::createCast(Context &outer) {
     
     // val.class
     VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
-    FuncDefPtr f = funcCtx->lookUpNoArgs("oper class");
+    FuncDefPtr f = funcCtx->lookUpNoArgs("oper class", false);
     assert(f && "oper class missing");
+//  XXX this was trace code that mysteriously seg-faults: since I think there 
+//  might be some memory corruption happening, I'm leaving this until I can 
+//  investigate.
+//    string s = f->getReceiverType()->name;
+//    std::cerr << "Got oper class for " << s << endl;
     FuncCallPtr call = funcCtx->builder.createFuncCall(f.get());
     call->receiver = valRef;
+    ExprPtr valClass = call;
     
     // $.isSubclass(ThisClass)
     FuncCall::ExprVec isSubclassArgs(1);
@@ -300,7 +306,7 @@ void TypeDef::createCast(Context &outer) {
     assert(f && "isSubclass missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = isSubclassArgs;
-    call->receiver = funcCtx->builder.createVarRef(this);
+    call->receiver = valClass;
 
     // if ($)
     BranchpointPtr branchpoint = funcCtx->builder.emitIf(*funcCtx, call.get());

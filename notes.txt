@@ -418,3 +418,28 @@ Ugliness:
             can use it from all levels.
 
     -   AncestorPaths should be reference counted objects cached by type defs.
+
+    -   The way I'm doing explicit class specification causes some serious 
+        problems.  Methods are defined in both the class context and the 
+        meta-class context.  This introduces ambiguity when looking up methods 
+        on a class object.  The ambiguity becomes extremely problematic when 
+        doing lookups on builtins like "oper bind" and "oper release", where 
+        we now have to verify that the function is not an alias after lookup.
+        It's difficult to generalize the "no-alias" lookups because of 
+        overloads - overloads can probably end up aggregating both owned 
+        functions and aliased functions, so what do you do if a function has 
+        both owned and aliased varieties?
+        
+        Possible solutions:
+        
+        -   dump the Class.method() syntax, reserve it for methods of the
+            meta-class.  Revert to C++'s Class::method() syntax instead.
+
+    -   Allowing the java-like syntax for base method specification (e.g. 
+        "BaseClass.method()") was a bad idea given that this can also refer to 
+        a method applied to the class object.  It creates an ambiguity in the 
+        language and complicates the compiler, requiring the "no alias" 
+        lookups to prevent class objects from picking up instance methods.
+        My current feeling is that we should revert to "BaseClass::method()" 
+        for this sort of thing, especially since it works with a non-this 
+        instance: "other.BaseClass::method()".

@@ -197,8 +197,11 @@ class Context : public spug::RCBase {
         /**
          * Look up a function with no arguments.  This is provided as a 
          * convenience, as in this case we don't need to pass the call context.
+         * @param acceptAlias if false, ignore an alias.
          */
-        FuncDefPtr lookUpNoArgs(const std::string &varName);
+        FuncDefPtr lookUpNoArgs(const std::string &varName, 
+                                bool acceptAlias = true
+                                );
         
         ModuleDefPtr createModule(const std::string &name);
         void addDef(VarDef *def);

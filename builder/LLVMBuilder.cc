@@ -116,9 +116,7 @@ namespace {
             // it.
             llvm::Function *rep;
             
-            // for a virtual function, these are the path to the base class 
-            // where the vtable is defined and the vtable slot position.
-            TypeDef::AncestorPath pathToFirstDeclaration;
+            // for a virtual function, this is the vtable slot position.
             unsigned vtableSlot;
             
             // for a virtual function, this holds the ancestor class that owns 
@@ -141,30 +139,7 @@ namespace {
                     rep = builder.getModFunc(this);
                 return rep;
             }
-            
-            /**
-             * Returns the "receiver type."  For a non-virtual function, this 
-             * is simply the type that the function was declared in.  For a 
-             * virtual function, it is the type of the base class in which the 
-             * function was first declared.
-             */
-            BTypeDef *getReceiverType() const {
-                TypeDef *result;
-                if (pathToFirstDeclaration.size())
-                    result = pathToFirstDeclaration.back().ancestor.get();
-                else
-                    result = context->returnType.get();
-                return BTypeDefPtr::acast(result);
-            }
-            
-            /**
-             * Returns the "this" type of the function.  This is always either 
-             * the receiver type or a specialization of it.
-             */
-            BTypeDef *getThisType() const {
-                return BTypeDefPtr::arcast(context->returnType);
-            }
-            
+                        
     };
     
     SPUG_RCPTR(VTableInfo);
@@ -183,6 +158,16 @@ namespace {
             vector<Constant *> entries;
             
             VTableInfo(const string &name) : name(name) {}
+            
+            void dump() {
+                std::cerr << name << ":\n";
+                for (int i = 0; i < entries.size(); ++i) {
+                    if (entries[i])
+                        entries[i]->dump();
+                    else
+                        std::cerr << "null entry" << endl;
+                }
+            }
     };
 
     // encapsulates all of the vtables for a new type
@@ -194,19 +179,23 @@ namespace {
             // keep track of the first VTable in the type
             VTableInfo *firstVTable;
 
+            BTypeDef *vtableBaseType;
+            
         public:
-            // add a new function entry to the appropriate VTable
-            void add(BFuncDef *func) {
-                
-                // find the ancestor whose vtable this function needs to go 
-                // into
-                BTypeDef *ancestor;
-                TypeDef::AncestorPath &path = func->pathToFirstDeclaration;
-                if (path.size())
-                    ancestor = BTypeDefPtr::arcast(path.back().ancestor);
-                else
-                    ancestor = BTypeDefPtr::arcast(func->context->returnType);
-                
+            VTableBuilder(BTypeDef *vtableBaseType) :
+                firstVTable(0),
+                vtableBaseType(vtableBaseType) {
+            }
+
+            void dump() {
+                for (VTableMap::iterator iter = vtables.begin();
+                     iter != vtables.end();
+                     ++iter
+                     )
+                    iter->second->dump();
+            }
+
+            void addToAncestor(BTypeDef *ancestor, BFuncDef *func) {
                 // lookup the vtable
                 VTableMap::iterator iter = vtables.find(ancestor);
 
@@ -224,6 +213,41 @@ namespace {
                 vector<Constant *> &entries = targetVTable->entries;
                 accomodate(entries, func->vtableSlot);
                 entries[func->vtableSlot] = func->rep;
+            }
+            
+            // add the function to all vtables.
+            void addToAll(BFuncDef *func) {
+                for (VTableMap::iterator iter = vtables.begin();
+                     iter != vtables.end();
+                     ++iter
+                     ) {
+                    vector<Constant *> &entries = iter->second->entries;
+                    accomodate(entries, func->vtableSlot);
+                    entries[func->vtableSlot] = func->rep;
+                }
+            }
+                     
+            // add a new function entry to the appropriate VTable
+            void add(BFuncDef *func) {
+                
+                // find the ancestor whose vtable this function needs to go 
+                // into
+                BTypeDef *ancestor;
+                TypeDef::AncestorPath &path = func->pathToFirstDeclaration;
+                if (path.size())
+                    ancestor = BTypeDefPtr::arcast(path.back().ancestor);
+                else
+                    ancestor = BTypeDefPtr::arcast(func->context->returnType);
+                
+                // if the function comes from VTableBase, we have to insert 
+                // the function into _all_ of the vtables - this is because 
+                // all of them are derived from vtable base.  (the only such 
+                // function is "oper class")
+                if (ancestor == vtableBaseType)
+                    addToAll(func);
+                else
+                    addToAncestor(ancestor, func);
+                
             }
             
             // create a new VTable
@@ -307,6 +331,15 @@ namespace {
                               BTypeDef *vtableBaseType,
                               bool firstVTable = true
                               ) {
+            
+            // if this is VTableBase, we need to create the VTable.
+            // This is a special case: we should only get here when 
+            // initializing VTableBase's own vtable.
+            if (this == vtableBaseType)
+                vtb.createVTable(this, name, true);
+
+            // iterate over the base classes, construct VTables for all 
+            // ancestors that require them.
             for (Context::ContextVec::iterator baseIter = 
                     context->parents.begin();
                  baseIter != context->parents.end();
@@ -337,6 +370,9 @@ namespace {
 
                 firstVTable = false;
             }
+            
+            // we must either have ancestors with vtables or be vtable base.
+            assert(!firstVTable || this == vtableBaseType);
             
             // add my functions to their vtables
             extendVTables(vtb);
@@ -376,8 +412,10 @@ namespace {
                     entries.begin();
                 entryIter != entries.end();
                 ++entryIter, ++i
-                )
+                ) {
+                assert(*entryIter && "Null vtable entry.");
                 vtableTypes[i] = (*entryIter)->getType();
+            }
 
             // create a constant structure that actually is the vtable
             const StructType *vtableStructType =
@@ -864,16 +902,16 @@ namespace {
                                              BTypeDef *curType,
                                              Value *inst
                                              ) {
-                
-                // (the logic here looks painfully like that of 
-                // emitVTableInit(), but IMO converting this to an internal 
+
+                // (the logic here looks painfully like that of
+                // emitVTableInit(), but IMO converting this to an internal
                 // iterator would just make the code harder to grok)
 
                 if (curType == vtableBaseType) {
-                    
+
                     // XXX this is fucked
-                    
-                    // convert the instance pointer to the address of a 
+
+                    // convert the instance pointer to the address of a
                     // vtable pointer.
                     return builder.CreateBitCast(inst, finalVTableType);
             
@@ -914,7 +952,8 @@ namespace {
                                         const vector<Value *> &args
                                         ) {
                 
-                BTypeDef *receiverType = funcDef->getReceiverType();
+                BTypeDef *receiverType = 
+                    BTypeDefPtr::acast(funcDef->getReceiverType());
                 assert(receiver->getType() == receiverType->rep);
 
                 // get the underlying vtable
@@ -2264,7 +2303,8 @@ namespace {
         );
 
         // the type of the receiver is that of its first declaration                
-        BTypeDef *receiverClass = overriden->getReceiverType();
+        BTypeDef *receiverClass = 
+            BTypeDefPtr::acast(overriden->getReceiverType());
         funcBuilder.setReceiverType(receiverClass);
 
         funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
@@ -2807,20 +2847,24 @@ namespace {
                                 "oper class",
                                 0
                                 );
-        funcBuilder.setReceiverType(objClass);
 
         // if this is an override, do the wrapping.
         FuncDefPtr override = context.lookUpNoArgs("oper class");
-        if (override)
+        if (override) {
             wrapOverride(objClass, BFuncDefPtr::arcast(override), funcBuilder);
-        else
+        } else {
+            // everything must have an override except for VTableBase::oper 
+            // class.
+            assert(objClass == context.globalData->vtableBaseType);
             funcBuilder.funcDef->vtableSlot = objClass->nextVTableSlot++;
+            funcBuilder.setReceiverType(objClass);
+        }
 
         funcBuilder.finish(false);
         context.addDef(funcBuilder.funcDef.get());
 
         BasicBlock *block = BasicBlock::Create(getGlobalContext(),
-                                               "oper class", 
+                                               "oper class",
                                                funcBuilder.funcDef->rep
                                                );
         
@@ -2961,7 +3005,9 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // construct the vtable if necessary
     if (bdata->type->hasVTable) {
-        VTableBuilder vtableBuilder;
+        VTableBuilder vtableBuilder(
+            BTypeDefPtr::arcast(context.globalData->vtableBaseType)
+        );
         bdata->type->createAllVTables(
             vtableBuilder, 
             ".vtable." + bdata->type->name,
@@ -3706,7 +3752,17 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vtableBaseType->impl = classImpl;
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
-    
+    createOperClassFunc(*vtableBaseType->context, vtableBaseType, 
+                        metaType.get()
+                        );
+
+    // build VTableBase's vtable
+    VTableBuilder vtableBuilder(vtableBaseType);
+    vtableBaseType->createAllVTables(vtableBuilder, ".vtable.VTableBase", 
+                                     vtableBaseType
+                                     );
+    vtableBuilder.emit(module, vtableBaseType);
+
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidPtrType, boolType));
     context.addDef(new IsOpDef(byteptrType, boolType));

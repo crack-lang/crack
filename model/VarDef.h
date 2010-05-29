@@ -47,7 +47,7 @@ class VarDef : public spug::RCBase {
         /**
          * Allow dumping from the debugger.
          */
-        void dump();
+        void dump() const;
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

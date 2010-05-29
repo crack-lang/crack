@@ -24,6 +24,7 @@ class OverloadDef : public VarDef {
             ContextPtr context;
             
             Parent(Context *context) : context(context) {}
+            Parent(OverloadDef *overload) : context(0), overload(overload) {}
             OverloadDef *getOverload(const OverloadDef *owner) const;
         };
         typedef std::vector<Parent> ParentVec;
@@ -88,6 +89,13 @@ class OverloadDef : public VarDef {
          */
         FuncDef *getSigMatch(const FuncDef::ArgVec &args);
         
+        /**
+         * Returns the overload with no arguments.  If 'acceptAlias' is false, 
+         * it must belong to the same context as the overload in which it is 
+         * defined.
+         */
+        FuncDef *getNoArgMatch(bool acceptAlias);
+        
         /** 
          * Returns true if the overload includeds a signature for the 
          * specified argument list.
@@ -108,6 +116,15 @@ class OverloadDef : public VarDef {
          * delgated to parents in the order provided.
          */
         void addParent(Context *context);
+        
+        /**
+         * Creates a new overload that is a child of this one.
+         */
+        OverloadDefPtr createChild() {
+            OverloadDefPtr def = new OverloadDef(name);
+            def->parents.push_back(Parent(this));
+            return def;
+        }
         
         /**
          * Iterate over the funcs local to this context - do not iterate over 

@@ -33,6 +33,6 @@ void VarDef::dump(ostream &out, const string &prefix) const {
     out << prefix << type->getFullName() << " " << name << endl;
 }
 
-void VarDef::dump() {
+void VarDef::dump() const {
     dump(std::cerr, "");
 }

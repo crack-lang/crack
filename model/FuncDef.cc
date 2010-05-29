@@ -73,6 +73,19 @@ bool FuncDef::hasInstSlot() {
     return false;
 }
 
+TypeDef *FuncDef::getReceiverType() const {
+    TypeDef *result;
+    if (pathToFirstDeclaration.size())
+        result = pathToFirstDeclaration.back().ancestor.get();
+    else
+        result = context->returnType.get();
+    return result;
+}
+
+TypeDef *FuncDef::getThisType() const {
+    return context->returnType.get();
+}
+
 void FuncDef::dump(ostream &out, const string &prefix) const {
     string parent;
     if (context && context->returnType)
@@ -93,4 +106,3 @@ void FuncDef::dump(ostream &out, const string &prefix) const {
     }
     out << ")\n";
 }
-    
