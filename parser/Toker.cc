@@ -75,7 +75,7 @@ Token Toker::readToken() {
     while (true) {
         // read the next character from the stream
         if (!getChar(ch)) break;
-  
+
         // processing varies according to state
         switch (state) {
             case st_none:
@@ -124,6 +124,8 @@ Token Toker::readToken() {
                     state = st_minus;
                 } else if (ch == '&') {
                     state = st_amp;
+                } else if (ch == '|') {
+                    state = st_pipe;
                 } else if (ch == '*') {
                     return Token(Token::asterisk, "*", locationMap.getLocation());
                 } else if (ch == '%') {
@@ -165,8 +167,27 @@ Token Toker::readToken() {
                     return Token(Token::logicAnd, "&&", locationMap.getLocation());
                 }
                 else {
+                    // XXX until we have bitwise operators
+                    ParseError::abort(Token(Token::dot, "",
+                                            locationMap.getLocation()
+                                            ),
+                                      "unknown token, expected &&"
+                                      );
+                }
+                break;
+
+            case st_pipe:
+                if (ch == '|') {
                     state = st_none;
-                    // XXX bad token caught in st_none?
+                    return Token(Token::logicOr, "||", locationMap.getLocation());
+                }
+                else {
+                    // XXX until we have bitwise operators
+                    ParseError::abort(Token(Token::dot, "",
+                                            locationMap.getLocation()
+                                            ),
+                                      "unknown token, expected ||"
+                                      );
                 }
                 break;
 
@@ -341,16 +362,30 @@ Token Toker::readToken() {
                 break;
 
             case st_integer:
+            case st_float:
                 if (isdigit(ch))
                     buf << ch;
+                else if (ch == '.') {
+                    if (state == st_float) {
+                        // whoops, two decimal points
+                        ParseError::abort(Token(Token::string, buf.str(),
+                                                locationMap.getLocation()
+                                                ),
+                                          "invalid float (two decimal points)");
+                    }
+                    state = st_float;
+                    buf << ch;
+                }
                 else {
                     ungetChar(ch);
+                    Token::Type tt = (state == st_integer) ? Token::integer :
+                              Token::floatLit;
                     state = st_none;
-                    return Token(Token::integer, buf.str(),
+                    return Token(tt,
+                                 buf.str(),
                                  locationMap.getLocation()
                                  );
                 }
-    
                 break;
             
             case st_istr:

@@ -36,6 +36,7 @@
 #include <model/FuncCall.h>
 #include <model/InstVarDef.h>
 #include <model/IntConst.h>
+#include <model/FloatConst.h>
 #include <model/ModuleDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
@@ -466,6 +467,15 @@ namespace {
             BIntConst(BTypeDef *type, long val) :
                 IntConst(type, val),
                 rep(ConstantInt::get(type->rep, val)) {
+            }
+    };
+
+    class BFloatConst : public model::FloatConst {
+        public:
+            llvm::Value *rep;
+            BFloatConst(BTypeDef *type, double val) :
+                FloatConst(type, val),
+                rep(ConstantFP::get(type->rep, val)) {
             }
     };
     
@@ -1699,7 +1709,10 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
 
                 // condition on lhs
-                BranchpointPtr pos = builder.emitIf(context, args[0].get(), "and_T", "and_F");
+                BranchpointPtr pos = builder.labeledIf(context,
+                        args[0].get(),
+                        "and_T",
+                        "and_F");
                 BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
                 Value* oVal = builder.lastValue; // arg[0] condition value
                 BasicBlock* oBlock = bpos->block2; // value block
@@ -1713,7 +1726,9 @@ namespace {
                 builder.emitEndIf(context, pos.get(), false);
 
                 // now we phi for result
-                PHINode* p = builder.builder.CreatePHI(BTypeDefPtr::arcast(context.globalData->boolType)->rep, "and_R");
+                PHINode* p = builder.builder.CreatePHI(
+                        BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+                        "and_R");
                 p->addIncoming(oVal, oBlock);
                 p->addIncoming(tVal, tBlock);
                 builder.lastValue = p;
@@ -1731,6 +1746,60 @@ namespace {
 
             virtual FuncCallPtr createFuncCall() {
                 return new LogicAndOpCall(this);
+            }
+    };
+
+    class LogicOrOpCall : public FuncCall {
+        public:
+            LogicOrOpCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                // condition on lhs
+                BranchpointPtr pos = builder.labeledIf(context,
+                        args[0].get(),
+                        "or_T",
+                        "or_F");
+                BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
+                Value* oVal = builder.lastValue; // arg[0] condition value
+                BasicBlock* fBlock = bpos->block; // false block
+                BasicBlock* oBlock = bpos->block2; // condition block
+
+                // now pointing to true block, save it for phi
+                BasicBlock* tBlock = builder.block;
+
+                // repoint to false block, emit condition of rhs
+                builder.builder.SetInsertPoint(fBlock);
+                args[1].get()->emitCond(context);
+                Value* fVal = builder.lastValue; // arg[1] condition value
+                // branch to true for phi
+                builder.builder.CreateBr(tBlock);
+
+                // now jump back to true and phi for result
+                builder.builder.SetInsertPoint(tBlock);
+                PHINode* p = builder.builder.CreatePHI(
+                        BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+                        "or_R");
+                p->addIncoming(oVal, oBlock);
+                p->addIncoming(fVal, fBlock);
+                builder.lastValue = p;
+
+                return new BResultExpr(this, builder.lastValue);
+
+            }
+    };
+
+    class LogicOrOpDef : public BinOpDef {
+        public:
+            LogicOrOpDef(TypeDef *argType, TypeDef *resultType) :
+                BinOpDef(argType, resultType, "oper ||") {
+            }
+
+            virtual FuncCallPtr createFuncCall() {
+                return new LogicOrOpCall(this);
             }
     };
 
@@ -2539,6 +2608,11 @@ ResultExprPtr LLVMBuilder::emitIntConst(Context &context, IntConst *val) {
     return new BResultExpr(val, lastValue);
 }
 
+ResultExprPtr LLVMBuilder::emitFloatConst(Context &context, FloatConst *val) {
+    lastValue = dynamic_cast<const BFloatConst *>(val)->rep;
+    return new BResultExpr(val, lastValue);
+}
+
 ResultExprPtr LLVMBuilder::emitNull(Context &context,
                                     NullConst *nullExpr
                                     ) {
@@ -2606,15 +2680,20 @@ void LLVMBuilder::emitTest(Context &context, Expr *expr) {
                              );
 }
 
-BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond, const char* tLabel, const char* fLabel) {
+BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
+    return labeledIf(context, cond, "true", "false");
+}
+
+BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
+                                      const char* tLabel,
+                                      const char* fLabel) {
+
     // create blocks for the true and false conditions
     LLVMContext &lctx = getGlobalContext();
-    BasicBlock *trueBlock = BasicBlock::Create(lctx, (tLabel) ? tLabel : "cond_true", func);
-    BBranchpointPtr result = new BBranchpoint(BasicBlock::Create(lctx,
-                                                                 (fLabel) ? fLabel : "cond_false",
-                                                                 func
-                                                                 )
-                                              );
+    BasicBlock *trueBlock = BasicBlock::Create(lctx, tLabel, func);
+
+    BBranchpointPtr result = new BBranchpoint(
+            BasicBlock::Create(lctx, fLabel, func));
 
     context.createCleanupFrame();
     cond->emitCond(context);
@@ -3208,7 +3287,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     return new BModuleDef(name, &context);
 }
 
-void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef, bool optimize) {
+void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
     builder.CreateRetVoid();
     
@@ -3239,7 +3318,9 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef, bool optim
          )
         execEng->addGlobalMapping(iter->first, iter->second);
 
-    if (optimize) {
+    // XXX right now, only checking for > 0, later perhaps we can
+    // run specific optimizations at different levels
+    if (optimizeLevel) {
         // optimize
         llvm::PassManager passMan;
     
@@ -3287,6 +3368,18 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
     // type)
     return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
                           BTypeDefPtr::arcast(context.globalData->int32Type),
+                         val
+                         );
+}
+
+FloatConstPtr LLVMBuilder::createFloatConst(model::Context &context, double val,
+                                        TypeDef *typeDef
+                                        ) {
+    // XXX probably need to consider the simplest type that the constant can
+    // fit into (compatibility rules will allow us to coerce it into another
+    // type)
+    return new BFloatConst(typeDef ? BTypeDefPtr::acast(typeDef) :
+                          BTypeDefPtr::arcast(context.globalData->float32Type),
                          val
                          );
 }
@@ -3400,6 +3493,27 @@ namespace {
                                );
         
         // if you remove this, for the love of god, change the return type so 
+        // we don't leak the pointer.
+        context.addDef(btype.get());
+        return btype.get();
+    }
+    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
+                             const char *name
+                             ) {
+        BTypeDefPtr btype = new BTypeDef(name, llvmType);
+        btype->defaultInitializer =
+            context.builder.createFloatConst(context, 0.0, btype.get());
+        btype->context =
+            new Context(context.builder, Context::instance,
+                        context.globalData
+                        );
+        btype->context->returnType = btype;
+        btype->context->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                             "toBool"
+                                             )
+                               );
+
+        // if you remove this, for the love of god, change the return type so
         // we don't leak the pointer.
         context.addDef(btype.get());
         return btype.get();
@@ -3571,20 +3685,34 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             "uint64"
                                             );
     gd->uint64Type = uint64Type;
-    
+
+    BTypeDef *float32Type = createFloatPrimType(context, Type::getFloatTy(lctx),
+                                            "float32"
+                                            );
+    gd->float32Type = float32Type;
+
+    BTypeDef *float64Type = createFloatPrimType(context, Type::getDoubleTy(lctx),
+                                            "float64"
+                                            );
+    gd->float64Type = float64Type;
+
     // XXX bad assumptions about sizeof
     if (sizeof(int) == 4) {
         context.addAlias("int", int32Type);
         context.addAlias("uint", uint32Type);
+        context.addAlias("float", float32Type);
         gd->uintType = uint32Type;
         gd->intType = int32Type;
+        gd->floatType = float32Type;
         llvmIntType = int32Type->rep;
     } else {
         assert(sizeof(int) == 8);
         context.addAlias("int", int64Type);
         context.addAlias("uint", uint64Type);
+        context.addAlias("float", float64Type);
         gd->uintType = uint64Type;
         gd->intType = int64Type;
+        gd->floatType = float64Type;
         llvmIntType = int64Type->rep;
     }
 
@@ -3602,7 +3730,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int64Type, boolType));
     context.addDef(new NegOpDef(int64Type, "oper -"));
     context.addDef(new BitNotOpDef(int64Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(int64Type, boolType));
 
     context.addDef(new AddOpDef(uint64Type));
     context.addDef(new SubOpDef(uint64Type));
@@ -3617,7 +3744,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint64Type, boolType));
     context.addDef(new NegOpDef(uint64Type, "oper -"));
     context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(uint64Type, boolType));
 
     context.addDef(new AddOpDef(int32Type));
     context.addDef(new SubOpDef(int32Type));
@@ -3632,7 +3758,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(int32Type, boolType));
     context.addDef(new NegOpDef(int32Type, "oper -"));
     context.addDef(new BitNotOpDef(int32Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(int32Type, boolType));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -3647,7 +3772,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpULEOpDef(uint32Type, boolType));
     context.addDef(new NegOpDef(uint32Type, "oper -"));
     context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
-    context.addDef(new LogicAndOpDef(uint32Type, boolType));
 
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -3662,10 +3786,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmpSLEOpDef(byteType, boolType));
     context.addDef(new NegOpDef(byteType, "oper -"));
     context.addDef(new BitNotOpDef(byteType, "oper ~"));
-    context.addDef(new LogicAndOpDef(byteType, boolType));
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
+    context.addDef(new LogicOrOpDef(boolType, boolType));
     
     // conversions
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));

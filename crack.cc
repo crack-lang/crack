@@ -21,7 +21,10 @@ int main(int argc, const char **argv) {
         cerr << "  crack <script>" << endl;
         return 1;
     }
-    
+
+    // default optimize
+    Crack::getInstance().optimizeLevel = 1;
+
     // parse the main module
     const char **arg = &argv[1];
     while (*arg) {
@@ -31,7 +34,13 @@ int main(int argc, const char **argv) {
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
         } else if (!strcmp(*arg, "-O0")) {
-            Crack::getInstance().optimize = false;
+            Crack::getInstance().optimizeLevel = 0;
+        } else if (!strcmp(*arg, "-O1")) {
+            Crack::getInstance().optimizeLevel = 1;
+        } else if (!strcmp(*arg, "-O2")) {
+            Crack::getInstance().optimizeLevel = 2;
+        } else if (!strcmp(*arg, "-O3")) {
+            Crack::getInstance().optimizeLevel = 3;
         } else if (!strcmp(*arg, "-n")) {
             Crack::getInstance().noBootstrap = true;
         } else if (!strcmp(*arg, "-g")) {

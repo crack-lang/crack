@@ -16,10 +16,10 @@ class Token {
       typedef enum { breakKw, classKw, continueKw, elseKw, ifKw, importKw, 
                      isKw, nullKw, operKw, returnKw, whileKw, assign, 
                      asterisk, bang, colon, comma, decr, define, dot, end, 
-                     eq, ge, gt, ident, integer, lbracket, lcurly, le, 
+                     eq, ge, gt, ident, integer, lbracket, lcurly, le,
                      lparen, lt, minus, ne, percent, plus, rbracket, rcurly, 
                      rparen, semi, slash, string, tilde, istrBegin, istrEnd,
-                     logicAnd
+                     logicAnd, logicOr, floatLit
 		    } Type;
 
    private:
@@ -82,6 +82,7 @@ class Token {
       bool isLBracket() const { return type == lbracket; }
       bool isRBracket() const { return type == rbracket; }
       bool isInteger() const { return type == integer; }
+      bool isFloat() const { return type == floatLit; }
       bool isPlus() const { return type == plus; }
       bool isMinus() const { return type == minus; }
       bool isAsterisk() const { return type == asterisk; }
@@ -98,6 +99,7 @@ class Token {
       bool isLE() const { return type == ne; }
       bool isEnd() const { return type == end; }
       bool isLogicAnd() const { return type == logicAnd; }
+      bool isLogicOr() const { return type == logicOr; }
       
       bool isBinOp() const {
          switch (type) {
@@ -114,6 +116,7 @@ class Token {
             case ge:
             case isKw:
             case logicAnd:
+            case logicOr:
                return true;
             default:
                return false;

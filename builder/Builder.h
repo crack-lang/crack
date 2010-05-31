@@ -19,6 +19,7 @@ namespace model {
     class Context;
     SPUG_RCPTR(FuncCall);
     SPUG_RCPTR(IntConst);
+    SPUG_RCPTR(FloatConst);
     class NullConst;
     SPUG_RCPTR(StrConst);
     SPUG_RCPTR(TypeDef);
@@ -33,6 +34,10 @@ SPUG_RCPTR(Builder);
 
 /** Abstract base class for builders.  Builders generate code. */
 class Builder : public spug::RCBase {
+
+    protected:
+        int optimizeLevel;
+
     public:
         /**
          * This gets called on the "root builder" everytime a new module gets 
@@ -53,6 +58,9 @@ class Builder : public spug::RCBase {
         virtual model::ResultExprPtr emitIntConst(model::Context &context,
                                                   model::IntConst *val
                                                   ) = 0;
+        virtual model::ResultExprPtr emitFloatConst(model::Context &context,
+                                                    model::FloatConst *val
+                                                   ) = 0;
 
         /**
          * Emits a null of the specified type.
@@ -82,8 +90,7 @@ class Builder : public spug::RCBase {
          * must be passed to the subsequent emitElse() or emitEndIf().
          */
         virtual model::BranchpointPtr emitIf(model::Context &context,
-                                             model::Expr *cond,
-                                             const char* tLabel=0, const char* fLabel=0) = 0;
+                                             model::Expr *cond) = 0;
         
         /**
          * Emits an "else" statement.
@@ -256,8 +263,7 @@ class Builder : public spug::RCBase {
                                                  const std::string &name
                                                  ) = 0;
         virtual void closeModule(model::Context &context,
-                                 model::ModuleDef *modDef,
-                                 bool optimize
+                                 model::ModuleDef *modDef
                                  ) = 0;
         
         /**
@@ -279,6 +285,10 @@ class Builder : public spug::RCBase {
                                                   long val,
                                                   model::TypeDef *type = 0
                                                   ) = 0;
+        virtual model::FloatConstPtr createFloatConst(model::Context &context,
+                                                    double val,
+                                                    model::TypeDef *type = 0
+                                                    ) = 0;
         
         virtual void registerPrimFuncs(model::Context &context) = 0;
 
@@ -309,6 +319,10 @@ class Builder : public spug::RCBase {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     ) = 0;
+
+        // implementation specific optimization level
+        void setOptimize(int level) { optimizeLevel = level; }
+
 };
 
 } // namespace builder

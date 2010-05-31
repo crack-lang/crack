@@ -1,0 +1,53 @@
+
+int s = 0;
+
+// basic
+if (0 || 0)
+ puts("failed");
+
+if (1 || 1)
+ s = 1;
+
+if (s != 1)
+ puts("fail1");
+
+if (1 || 0)
+ s = 2;
+
+if (s != 2)
+ puts("fail2");
+
+if (0 || 1)
+ s = 3;
+
+if (s != 3)
+ puts("fail3");
+ 
+// precedence
+int b = 0;
+int a = 0;
+if (a || b == 0)
+ s = 5;
+else
+ puts("failed");
+
+if (s != 5)
+ puts("fail5");
+
+a = 0;
+b = 0;
+int c = 0;
+if (a || b || c)
+ s = 6; 
+
+if (s == 6)
+ puts("fail6");
+
+int d=1;
+if (a || b || c || d)
+ s = 7; 
+
+if (s != 7)
+ puts("fail7");
+
+puts("ok");

@@ -33,7 +33,7 @@ class ModuleDef : public VarDef {
         /**
          * Close the module, executing it.
          */
-        void close(bool optimize);
+        void close();
         
         /**
          * Call the module destructor - cleans up all global variables.

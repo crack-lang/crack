@@ -17,6 +17,7 @@
 #include "model/Expr.h"
 #include "model/Initializers.h"
 #include "model/IntConst.h"
+#include "model/FloatConst.h"
 #include "model/ModuleDef.h"
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
@@ -495,6 +496,10 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    } else if (tok.isInteger()) {
       expr = context->builder.createIntConst(*context, 
                                              atoi(tok.getData().c_str())
+                                             );
+   } else if (tok.isFloat()) {
+      expr = context->builder.createFloatConst(*context,
+                                             atof(tok.getData().c_str())
                                              );
    // for the unary operators
    } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
@@ -1575,6 +1580,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
        {">=", 2},
        {"is", 2},
        {"&&", 1},
+       {"||", 1},
       {0, 0}
    };
    
