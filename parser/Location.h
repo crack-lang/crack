@@ -52,7 +52,7 @@ class Location {
 
       friend std::ostream &
       operator <<(std::ostream &out, const Location &loc) {
-	 out << loc.name << ':' << std::dec << loc.lineNumber;
+	 return out << loc.name << ':' << std::dec << loc.lineNumber;
       }
 };
 

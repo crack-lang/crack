@@ -48,7 +48,7 @@ class Token {
 
       /** dump a representation of the token to a stream */
       friend std::ostream &operator <<(std::ostream &out, const Token &tok) {
-	 out << tok.loc << ":\"" << tok.data;
+	 return out << tok.loc << ":\"" << tok.data;
       }
 
       /** Methods to check the token type */
