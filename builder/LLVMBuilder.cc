@@ -3497,10 +3497,14 @@ namespace {
         context.addDef(btype.get());
         return btype.get();
     }
+
     BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
                              const char *name
                              ) {
-        BTypeDefPtr btype = new BTypeDef(name, llvmType);
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+                                         name,
+                                         llvmType
+                                         );
         btype->defaultInitializer =
             context.builder.createFloatConst(context, 0.0, btype.get());
         btype->context =
