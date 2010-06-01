@@ -50,4 +50,9 @@ if (a || b || c || d)
 if (s != 7)
  puts("fail7");
 
+// verify lower precedence than && (if || takes precedence, check() won't be 
+// called)
+if (!(1 || 0 && 0))
+ puts('fail8');
+
 puts("ok");

@@ -1760,29 +1760,34 @@ namespace {
 
                 // condition on lhs
                 BranchpointPtr pos = builder.labeledIf(context,
-                        args[0].get(),
-                        "or_T",
-                        "or_F");
+                    args[0].get(),
+                    "or_T",
+                    "or_F"
+                );
                 BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
-                Value* oVal = builder.lastValue; // arg[0] condition value
-                BasicBlock* fBlock = bpos->block; // false block
-                BasicBlock* oBlock = bpos->block2; // condition block
+                Value *oVal = builder.lastValue; // arg[0] condition value
+                BasicBlock *fBlock = bpos->block; // false block
+                BasicBlock *oBlock = bpos->block2; // condition block
 
                 // now pointing to true block, save it for phi
-                BasicBlock* tBlock = builder.block;
+                BasicBlock *tBlock = builder.block;
 
                 // repoint to false block, emit condition of rhs
-                builder.builder.SetInsertPoint(fBlock);
-                args[1].get()->emitCond(context);
-                Value* fVal = builder.lastValue; // arg[1] condition value
+                builder.builder.SetInsertPoint(builder.block = fBlock);
+                args[1]->emitCond(context);
+                Value *fVal = builder.lastValue; // arg[1] condition value
                 // branch to true for phi
                 builder.builder.CreateBr(tBlock);
+                
+                // pick up any changes to the fBlock
+                fBlock = builder.block;
 
                 // now jump back to true and phi for result
-                builder.builder.SetInsertPoint(tBlock);
-                PHINode* p = builder.builder.CreatePHI(
-                        BTypeDefPtr::arcast(context.globalData->boolType)->rep,
-                        "or_R");
+                builder.builder.SetInsertPoint(builder.block = tBlock);
+                PHINode *p = builder.builder.CreatePHI(
+                    BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+                    "or_R"
+                );
                 p->addIncoming(oVal, oBlock);
                 p->addIncoming(fVal, fBlock);
                 builder.lastValue = p;
@@ -2693,7 +2698,8 @@ BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
     BasicBlock *trueBlock = BasicBlock::Create(lctx, tLabel, func);
 
     BBranchpointPtr result = new BBranchpoint(
-            BasicBlock::Create(lctx, fLabel, func));
+        BasicBlock::Create(lctx, fLabel, func)
+    );
 
     context.createCleanupFrame();
     cond->emitCond(context);

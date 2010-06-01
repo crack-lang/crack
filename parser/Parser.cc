@@ -1558,30 +1558,34 @@ Parser::Parser(Toker &toker, model::Context *context) :
    context(context) {
    
    // build the precedence table
+   enum { noPrec, logOrPrec, logAndPrec, cmpPrec, addPrec, multPrec,
+          unaryPrec
+         };
    struct { const char *op; unsigned prec; } map[] = {
       
       // unary operators are distinguished from their non-unary forms by 
       // appending an "x"
-       {"!x", 5},
-       {"-x", 5},
-       {"--x", 5},
-       {"~x", 5},
+      {"!x", unaryPrec},
+      {"-x", unaryPrec},
+      {"--x", unaryPrec},
+      {"~x", unaryPrec},
 
-       {"*", 4},
-       {"/", 4},
-       {"%", 4},
-       {"+", 3},
-       {"-", 3},
-       {"==", 2},
-       {"!=", 2},
-       {"<", 2},
-       {">", 2},
-       {"<=", 2},
-       {">=", 2},
-       {"is", 2},
-       {"&&", 1},
-       {"||", 1},
-      {0, 0}
+      {"*", multPrec},
+      {"/", multPrec},
+      {"%", multPrec},
+      {"+", addPrec},
+      {"-", addPrec},
+      {"==", cmpPrec},
+      {"!=", cmpPrec},
+      {"<", cmpPrec},
+      {">", cmpPrec},
+      {"<=", cmpPrec},
+      {">=", cmpPrec},
+      {"is", cmpPrec},
+      {"&&", logAndPrec},
+      {"||", logOrPrec},
+      
+      {0, noPrec}
    };
    
    for (int i = 0; map[i].op; ++i)
