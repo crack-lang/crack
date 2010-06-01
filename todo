@@ -20,13 +20,11 @@ for 0.1:
             destruction
     -   need syntax to allow calling "oper" functions from an expression, need 
         to get rid of the __del() hack.
--   short circuit logic operators
 -   floating point types
 -   Should be able to do instance construction in a statement context without 
     it being misinterpreted as a definition
 -   fix numeric conversion.
 -   string interpolation expressions: s := `some string $val`;
--   type casting.
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports.
 -   fix instance variable default initialization: 
@@ -34,6 +32,8 @@ for 0.1:
 -   The implicit "oper del" does not override correctly (see to_test.crk)
 
 Completed for 0.1:
+-   type casting. DONE
+-   short circuit logic operators DONE
 -   global variables should not get cleaned up until the end of the program.
     DONE.
 -   fix cleanups during assignment (a = b does b.bind() but not a.release())
