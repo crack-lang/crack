@@ -3150,13 +3150,20 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     // do initialization (unless we're in instance scope - instance variables 
     // get initialized in the constructors)
     if (defCtx->scope != Context::instance) {
+        ResultExprPtr result;
         if (initializer) {
-            initializer->emit(context)->handleAssignment(context);
+            result = initializer->emit(context);
             narrow(initializer->type.get(), type);
         } else {
             // assuming that we don't need to narrow a default initializer.
-            type->defaultInitializer->emit(context)->handleAssignment(context);
+            result = type->defaultInitializer->emit(context);
         }
+        
+        // handle the assignment, then restore the original last value (since 
+        // assignment handling can modify that.
+        Value *tmp = lastValue;
+        result->handleAssignment(context);
+        lastValue = tmp;
     }
     
     Value *var = 0;

@@ -542,6 +542,10 @@ test_output 'logical or' 'import test.test_logicalor;' ok
 
 test_output 'assigning a class' 'class A {} Class c = A; puts("ok");' ok
 
+test_output 'initialization from a non-productive expression' \
+    'class X { oper bind() {} } X x = null; y := x; puts("ok");' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
