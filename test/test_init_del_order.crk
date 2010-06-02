@@ -21,8 +21,10 @@ class A {
 }
 
 class B {
-    # since these are stored in a map ordered by the name, the test is to 
-    # reverse the order and verify that constructor and destructor respect it.
+    # since these are stored in a map ordered by the name, we order instance 
+    # vars in these tests reverse-alpabetically to rule out the possibility 
+    # that initializer/destructor generation could still be generated from 
+    # the order of the map.
     A y = A('y');
     A x = A('x');
 }
@@ -46,7 +48,6 @@ class D {
     A y = A('WRONG');
     A x = A('WRONG');
     
-    # init breaks del (and doesn't order args correctly)
     oper init() : x('x'), y = A('y') {}    
 }
 out = StringFormatter();
