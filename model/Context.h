@@ -38,10 +38,16 @@ class Context : public spug::RCBase {
     
     public:
         typedef std::map<std::string, VarDefPtr> VarDefMap;
+        typedef std::vector<VarDefPtr> VarDefVec;
     
     private:
         VarDefMap defs;
         typedef std::map<std::string, StrConstPtr> StrConstTable;
+        
+        // in an "instance" context, this maintains the order of declaration 
+        // of the instance variables so we can create and delete in the 
+        // correct order.
+        VarDefVec ordered;
         
         // break and continue branchpoints
         BranchpointPtr breakBranch, continueBranch;
@@ -236,6 +242,12 @@ class Context : public spug::RCBase {
         VarDefMap::iterator endDefs() { return defs.end(); }
         /// @}
         
+        /** Funcs to iterate over the definitions in order of declaration. */
+        /// @{
+        VarDefVec::iterator beginOrderedDefs() { return ordered.begin(); }
+        VarDefVec::iterator endOrderedDefs() { return ordered.end(); }
+        /// @}
+
         /** 
          * Get or create a string constant.  This can be either a
          * "StaticString(StrConst, uint size)" expression if StaticString is 

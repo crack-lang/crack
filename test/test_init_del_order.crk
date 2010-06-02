@@ -1,0 +1,65 @@
+# Copyright 2010 Google Inc.
+# tests that order of construction and destruction of instance variables is 
+# correct in all modes.
+
+import crack.io StringFormatter, cout;
+
+out := StringFormatter();
+
+class A {
+    String val;
+
+    oper init(String val0) : val(val0) {
+        out `init $val;`;
+    }
+    
+    oper init() : val('default') {}
+    
+    oper del() {
+        out `delete $val;`;
+    }
+}
+
+class B {
+    # since these are stored in a map ordered by the name, the test is to 
+    # reverse the order and verify that constructor and destructor respect it.
+    A y = A('y');
+    A x = A('x');
+}
+
+(B());
+if (out.createString().cmp('init y;init x;delete x;delete y;'))
+    cout `FAILED default init/del\n`;
+
+class C {
+    A y = A('y');
+    A x = A('x');
+    oper del() {}
+}
+out = StringFormatter();
+(C());
+if (out.createString().cmp('init y;init x;delete x;delete y;'))
+    cout `FAILED default init specified del\n`;
+
+class D {
+    A z = A('z');
+    A y = A('WRONG');
+    A x = A('WRONG');
+    
+    # init breaks del (and doesn't order args correctly)
+    oper init() : x('x'), y = A('y') {}    
+}
+out = StringFormatter();
+(D());
+if (out.createString().cmp('init z;init y;init x;delete x;delete y;delete z;'))
+    cout `FAILED explicit initializers\n`;
+
+class E {
+    A x;
+    oper init() {}
+}
+out = StringFormatter();
+if (out.createString().cmp('init default;delete default;'))
+    cout `FAILED init with no initializers\n`;
+
+cout `ok\n`;

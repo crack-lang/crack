@@ -137,32 +137,32 @@ FuncDefPtr TypeDef::createDefaultInit() {
         funcCall->emit(*context);
     }
 
-    // generate constructors for all of the instance variables
-    for (Context::VarDefMap::iterator iter = context->beginDefs();
-         iter != context->endDefs();
+    // generate constructors for all of the instance variables in the order 
+    // that they were declared.
+    for (Context::VarDefVec::iterator iter = context->beginOrderedDefs();
+         iter != context->endOrderedDefs();
          ++iter
-         )
-        if (iter->second->hasInstSlot()) {
-            InstVarDef *ivar = InstVarDefPtr::arcast(iter->second);
-            
-            // when creating a default constructor, everything has to have an
-            // initializer.
-            // XXX make this a parser error
-            if (!ivar->initializer)
-                throw ParseError(SPUG_FSTR("no initializer for variable " << 
-                                           ivar->name << 
-                                           " while creating default "
-                                           "constructor."
-                                          )
-                                 );
+         ) {
+        InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
+        
+        // when creating a default constructor, everything has to have an
+        // initializer.
+        // XXX make this a parser error
+        if (!ivar->initializer)
+            throw ParseError(SPUG_FSTR("no initializer for variable " << 
+                                       ivar->name << 
+                                       " while creating default "
+                                       "constructor."
+                                      )
+                             );
 
-            AssignExprPtr assign = new AssignExpr(thisRef.get(),
-                                                  ivar,
-                                                  ivar->initializer.get()
-                                                  );
-            context->builder.emitFieldAssign(*funcContext, thisRef.get(),
-                                             assign.get()
-                                             );
+        AssignExprPtr assign = new AssignExpr(thisRef.get(),
+                                              ivar,
+                                              ivar->initializer.get()
+                                              );
+        context->builder.emitFieldAssign(*funcContext, thisRef.get(),
+                                         assign.get()
+                                         );
         }
     
     context->builder.emitReturn(*funcContext, 0);
@@ -182,6 +182,9 @@ void TypeDef::createDefaultDestructor() {
         FuncDef::method | 
         (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
     
+    // check for an override
+    FuncDefPtr override = context->lookUpNoArgs("oper del");
+    
     FuncDef::ArgVec args(0);
     TypeDef *voidType = context->globalData->voidType.get();
     FuncDefPtr delFunc = context->builder.emitBeginFunc(*funcContext,
@@ -189,7 +192,7 @@ void TypeDef::createDefaultDestructor() {
                                                         "oper del",
                                                         voidType,
                                                         args,
-                                                        0
+                                                        override.get()
                                                         );
 
     // all we have to do is add the destructor cleanups
@@ -479,38 +482,36 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
     }
 
     // generate constructors for all of the instance variables
-    for (Context::VarDefMap::iterator iter = classCtx->beginDefs();
-         iter != classCtx->endDefs();
+    for (Context::VarDefVec::iterator iter = classCtx->beginOrderedDefs();
+         iter != classCtx->endOrderedDefs();
          ++iter
-         )
-        // XXX need to put these in order of definition
-        if (iter->second->hasInstSlot()) {
-            InstVarDef *ivar = InstVarDefPtr::arcast(iter->second);
-            
-            // see if the user has supplied an initializer, use it if so.
-            ExprPtr initializer = inits->getFieldInitializer(ivar);
-            if (!initializer)
-                initializer = ivar->initializer;
-            
-            // when creating a default constructor, everything has to have an
-            // initializer.
-            // XXX make this a parser error
-            if (!initializer)
-                throw ParseError(SPUG_FSTR("no initializer for variable " << 
-                                           ivar->name << 
-                                           " while creating default "
-                                           "constructor."
-                                          )
-                                 );
+         ) {
+        InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
+        
+        // see if the user has supplied an initializer, use it if so.
+        ExprPtr initializer = inits->getFieldInitializer(ivar);
+        if (!initializer)
+            initializer = ivar->initializer;
+        
+        // when creating a default constructor, everything has to have an
+        // initializer.
+        // XXX make this a parser error
+        if (!initializer)
+            throw ParseError(SPUG_FSTR("no initializer for variable " << 
+                                       ivar->name << 
+                                       " while creating default "
+                                       "constructor."
+                                      )
+                             );
 
-            AssignExprPtr assign = new AssignExpr(thisRef.get(),
-                                                  ivar,
-                                                  initializer.get()
-                                                  );
-            context.builder.emitFieldAssign(context, thisRef.get(),
-                                            assign.get()
-                                            );
-        }
+        AssignExprPtr assign = new AssignExpr(thisRef.get(),
+                                              ivar,
+                                              initializer.get()
+                                              );
+        context.builder.emitFieldAssign(context, thisRef.get(),
+                                        assign.get()
+                                        );
+    }
     
     initializersEmitted = true;
 }
@@ -545,17 +546,17 @@ void TypeDef::addDestructorCleanups(Context &context) {
         context.cleanupFrame->addCleanup(funcCall.get());
     }
 
-    // generate destructors for all of the instance variables
-    // XXX again, need to do this in order of definition
-    for (Context::VarDefMap::iterator iter = classCtx->beginDefs();
-         iter != classCtx->endDefs();
+    // generate destructors for all of the instance variables in order of 
+    // definition (cleanups run in the reverse order that they were added, 
+    // which is exactly what we want).
+    for (Context::VarDefVec::iterator iter =
+            classCtx->beginOrderedDefs();
+         iter != classCtx->endOrderedDefs();
          ++iter
          )
-        if (iter->second->hasInstSlot()) {
-            context.cleanupFrame->addCleanup(iter->second.get(), 
-                                             thisRef.get()
-                                             );
-        }
+        context.cleanupFrame->addCleanup(iter->get(), 
+                                         thisRef.get()
+                                         );
     
     initializersEmitted = true;
 }

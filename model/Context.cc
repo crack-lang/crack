@@ -30,6 +30,8 @@ void Context::storeDef(VarDef *def) {
         overloads->addFunc(funcDef);
     } else {        
         defs[def->name] = def;
+        if (scope == instance && def->hasInstSlot())
+            ordered.push_back(def);
     }
 }
 
@@ -273,6 +275,10 @@ void Context::addAlias(const string &name, VarDef *def) {
 void Context::replaceDef(VarDef *def) {
     assert(!def->context);
     assert(scope != composite && "defining a variable in a composite scope.");
+    assert(!def->hasInstSlot() && 
+           "Attempted to replace an instance variable, this doesn't work "
+           "because it won't change the 'ordered' vector."
+           );
     def->context = this;
     defs[def->name] = def;
 }

@@ -185,7 +185,7 @@ class Parser {
       /**
        * Parse the initializer list after an oper init.
        */
-      model::InitializersPtr parseInitializers(model::Expr *receiver);
+      void parseInitializers(model::Initializers *inits, model::Expr *receiver);
 
       enum FuncFlags {
          normal,           // normal function

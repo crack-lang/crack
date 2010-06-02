@@ -538,9 +538,9 @@ test_output 'safe cast failure (incorrect inheritence)' \
 
 test_output 'logical and' 'import test.test_logicaland;' ok
 
-test_output 'assigning a class' 'class A {} Class c = A; puts("ok");' ok
-
 test_output 'logical or' 'import test.test_logicalor;' ok
+
+test_output 'assigning a class' 'class A {} Class c = A; puts("ok");' ok
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -764,5 +764,8 @@ test_output 'operator overloading of unary operators' \
 
 test_output 'bootstrapped overloads' 'print()' \
     "${parseError}1: No method exists matching print with these argument types."
+
+test_output 'order of initialization and destruction' \
+    'import test.test_init_del_order;' ok
 
 exit $rc

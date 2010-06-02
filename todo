@@ -17,7 +17,7 @@ for 0.1:
     -   general implementation DONE
     -   oper init initializers, oper del cleanups
         -   preserve order of definition during member initialization and 
-            destruction
+            destruction DONE
     -   need syntax to allow calling "oper" functions from an expression, need 
         to get rid of the __del() hack.
 -   floating point types
@@ -27,11 +27,11 @@ for 0.1:
 -   string interpolation expressions: s := `some string $val`;
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports.
--   fix instance variable default initialization: 
-    class A { B b; oper init() {} } doesn't construct 'b'.
--   The implicit "oper del" does not override correctly (see to_test.crk)
 
 Completed for 0.1:
+-   fix instance variable default initialization: 
+    class A { B b; oper init() {} } doesn't construct 'b'. DONE
+-   The implicit "oper del" does not override correctly (see to_test.crk) DONE
 -   type casting. DONE
 -   short circuit logic operators DONE
 -   global variables should not get cleaned up until the end of the program.

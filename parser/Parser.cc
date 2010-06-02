@@ -809,8 +809,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
 
 // oper init(...) : init1(expr), ... {
 //                 ^                ^
-InitializersPtr Parser::parseInitializers(Expr *receiver) {
-   InitializersPtr inits = new Initializers();
+void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
    ContextPtr classCtx = context->getClassContext();
    
    while (true) {
@@ -914,13 +913,7 @@ InitializersPtr Parser::parseInitializers(Expr *receiver) {
          }
          
          // generate an assignment, add it to the initializers
-         if (!inits->addFieldInitializer(
-               varDef.get(),
-               AssignExpr::create(*context, tok, receiver, varDef.get(), 
-                                  initializer.get()
-                                  ).get()
-              )
-             )
+         if (!inits->addFieldInitializer(varDef.get(), initializer.get()))
             error(tok,
                   SPUG_FSTR("Instance variable " << varDef->name <<
                             " already initialized."
@@ -935,8 +928,6 @@ InitializersPtr Parser::parseInitializers(Expr *receiver) {
          break;
       }
    }
-   
-   return inits;
 }
 
 void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
@@ -1004,9 +995,12 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          error(tok3, 
                "abstract/forward declarations are not supported yet");
       }
-   } else if (funcFlags == hasMemberInits && tok3.isColon()) {
-      inits = parseInitializers(receiver.get());
-      tok3 = toker.getToken();
+   } else if (funcFlags == hasMemberInits) {
+      inits = new Initializers();
+      if (tok3.isColon()) {
+         parseInitializers(inits.get(), receiver.get());
+         tok3 = toker.getToken();
+      }
    }
 
    if (!tok3.isLCurly()) {
@@ -1425,6 +1419,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
             flags = hasMemberInits;
          else if (ident == "del")
             flags = hasMemberDels;
+         else
+            flags = normal;
 
          parseFuncDef(returnType, tok, "oper " + ident, flags, 
                       expectedArgCount
