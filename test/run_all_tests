@@ -546,6 +546,15 @@ test_output 'initialization from a non-productive expression' \
     'class X { oper bind() {} } X x = null; y := x; puts("ok");' \
     ok
 
+test_output 'storing objects in an array' \
+    'class Foo { oper bind() { puts("binding"); } 
+                 oper release() { puts("releasing"); } };
+     f := array[Foo](10);
+     Foo foo;
+     f[0] = foo;' \
+     'binding
+releasing'
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

@@ -1875,6 +1875,8 @@ namespace {
 
                 return new BResultExpr(this, builder.lastValue);
             }
+            
+            virtual bool isProductive() const { return false; }
     };
     
     class ArraySetItemCall : public FuncCall {
@@ -1882,20 +1884,30 @@ namespace {
             ArraySetItemCall(FuncDef *def) : FuncCall(def) {}
             
             virtual ResultExprPtr emit(Context &context) {
-                receiver->emit(context)->handleTransient(context);
-
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
+
+                // emit the receiver
+                receiver->emit(context)->handleTransient(context);
                 Value *r = builder.lastValue;
+
+                // emit the index
                 args[0]->emit(context)->handleTransient(context);
                 Value *i = builder.lastValue;
+                
+                // emit the rhs value
                 args[1]->emit(context)->handleTransient(context);
+                Value *v = builder.lastValue;
+
+                // get the address of the index, store the value in it.
                 Value *addr = builder.builder.CreateGEP(r, i);
                 builder.lastValue =
-                    builder.builder.CreateStore(builder.lastValue, addr);
+                    builder.builder.CreateStore(v, addr);
                 
-                return new BResultExpr(this, builder.lastValue);
+                return new BResultExpr(this, v);
             }
+        
+        virtual bool isProductive() const { return false; }
     };
     
     class ArrayAllocCall : public FuncCall {
