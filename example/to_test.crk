@@ -71,9 +71,6 @@ class A {
     class B : A {}
 };
 
-# this breaks (not sure what we're doing in the parser)
-class Foo {} print('test');
-
 # assignment to functions
 void f() {}
 f = 100;
@@ -94,18 +91,7 @@ f := array[Foo](10);
 Foo foo;
 f[0] = Foo();
 
-# the implicit "del" operator does not override correctly
-class Marker { oper release() { puts('releasing Marker'); } }
-class A : VTableBase {}
-class B : A {
-    Marker m;
-}
-A a = B();
-a.__del();
-
-# this should fail but does not.
-class A : VTableBase {}
-class B : A {}
-A a;
-(B.cast(a)); # should die here.
-puts('fail');
+# this gives a "adding placeholder to completed class" error.
+class Foo {}
+import crack.io cout;
+(Foo().class.name);
