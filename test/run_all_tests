@@ -555,6 +555,10 @@ test_output 'storing objects in an array' \
      'binding
 releasing'
 
+test_output 'explicit operator invocation' \
+    'import test.test_opers;' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 

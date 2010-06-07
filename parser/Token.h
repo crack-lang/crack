@@ -96,7 +96,7 @@ class Token {
       bool isEQ() const { return type == eq; }
       bool isNE() const { return type == ne; }
       bool isGE() const { return type == ge; }
-      bool isLE() const { return type == ne; }
+      bool isLE() const { return type == le; }
       bool isEnd() const { return type == end; }
       bool isLogicAnd() const { return type == logicAnd; }
       bool isLogicOr() const { return type == logicOr; }

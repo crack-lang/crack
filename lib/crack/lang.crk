@@ -59,8 +59,7 @@ class Object : VTableBase {
 
         refCount = refCount - 1;
         if (refCount == 0) {
-            # XXX more overloading nonsense
-            this.__del();
+            this.oper del();
             free(this);
         }
     }

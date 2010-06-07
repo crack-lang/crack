@@ -116,13 +116,20 @@ class Parser {
       model::ContextPtr parseBlock(bool nested);
 
       /** Create a reference to the "this" variable, error if there is none. */
-      model::ExprPtr makeThisRef(const Token &ident);
+      model::ExprPtr makeThisRef(const Token &ident,
+                                 const std::string &memberName
+                                 );
 
       /** 
        * Create a variable reference expression, complete with an implicit
        * "this" if necessary.
        */
       model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident);
+
+      /**
+       * Parse the rest of an explicit "oper" name.
+       */
+      std::string parseOperSpec();
 
       /**
        * Parse the kinds of things that can come after an identifier.

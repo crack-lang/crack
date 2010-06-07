@@ -24,7 +24,6 @@ for 0.1:
 -   Should be able to do instance construction in a statement context without 
     it being misinterpreted as a definition
 -   fix numeric conversion.
--   string interpolation expressions: s := `some string $val`;
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports.
 
@@ -80,6 +79,7 @@ for 1.0:
 -   for/in loops
 -   exceptions
 -   minor features
+-   string interpolation expressions: s := `some string $val`;
     -   warn the user when an overload hides an earlier overload (foo(String) 
         following foo(Object), for example).
 

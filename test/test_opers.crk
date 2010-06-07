@@ -1,0 +1,55 @@
+# tests of explicit operator invocation.
+# Copyright 2009 Google Inc.
+
+int tester;
+void check(int val, byteptr failMsg) {
+    if (tester != val)
+        puts(failMsg);
+}
+
+class Foo {
+    oper bind() { tester = 1 } 
+    oper release() { tester = 2; }
+    int oper [](uint index) { tester = 3; return 0; }
+    void oper []=(uint index, int val) { tester = 4; }
+    int oper -(Foo other) { tester = 5; return 0; }
+    int oper ~(Foo val) { tester = 6; return 0; }
+    int oper !(Foo val) { tester = 7; return 0; }
+    int oper --(Foo val) { tester = 8; return 0; }
+    int oper ==(Foo self, Foo other) { tester = 9; return 0; }
+    int oper !=(Foo self, Foo other) { tester = 10; return 0; }
+    int oper <(Foo self, Foo other) { tester = 11; return 0; }
+    int oper <=(Foo self, Foo other) { tester = 12; return 0; }
+    int oper >=(Foo self, Foo other) { tester = 13; return 0; }
+    int oper >(Foo self, Foo other) { tester = 14; return 0; }
+    int oper +(Foo self, Foo other) { tester = 15; return 0; }
+    int oper /(Foo self, Foo other) { tester = 16; return 0; }
+    int oper *(Foo self, Foo other) { tester = 17; return 0; }
+    int oper %(Foo self, Foo other) { tester = 18; return 0; }
+    oper init() { tester = 19; }
+    oper del() { tester = 20; }
+}
+
+Foo f;
+f.oper bind(); check(1, 'FAILED bind');
+f.oper release(); check(2, 'FAILED release');
+f.oper [](100); check(3, 'FAILED []');
+f.oper []=(100, 200); check(4, 'FAILED []=');
+f.oper -(f); check(5, 'FAILED minus');
+f.oper ~(f); check(6, 'FAILED tilde');
+f.oper !(f); check(7, 'FAILED bang');
+f.oper --(f); check(8, 'FAILED decr');
+f.oper ==(f, f); check(9, 'FAILED ==');
+f.oper !=(f, f); check(10, 'FAILED !=');
+f.oper <(f, f); check(11, 'FAILED <');
+f.oper <=(f, f); check(12, 'FAILED <=');
+f.oper >=(f, f); check(13, 'FAILED >=');
+f.oper >(f, f); check(14, 'FAILED >');
+f.oper +(f, f); check(15, 'FAILED +');
+f.oper /(f, f); check(16, 'FAILED /');
+f.oper *(f, f); check(17, 'FAILED *');
+f.oper %(f, f); check(18, 'FAILED %');
+f.oper init(); check(19, 'FAILED init');
+f.oper del(); check(20, 'FAILED del');
+
+puts('ok');

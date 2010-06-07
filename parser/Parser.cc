@@ -245,7 +245,7 @@ ContextPtr Parser::parseBlock(bool nested) {
    }
 }
 
-ExprPtr Parser::makeThisRef(const Token &ident) {
+ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
    VarDefPtr thisVar = context->lookUp("this");
    if (!thisVar)
       error(ident,
@@ -283,18 +283,56 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
    // "this" dereference.  Otherwise just emit the variable
    if (var->context->scope == Context::instance) {
       // if there's no container, try to use an implicit "this"
-      ExprPtr receiver = container ? container : makeThisRef(ident);
+      ExprPtr receiver = container ? container : 
+                                     makeThisRef(ident, ident.getData());
       return context->builder.createFieldRef(receiver.get(), var.get());
    } else {
       return context->builder.createVarRef(var.get());
    }
 }
 
+// obj.oper <symbol>
+string Parser::parseOperSpec() {
+   Token tok = toker.getToken();
+   const string &ident = tok.getData();
+   if (tok.isMinus() || tok.isTilde() || tok.isBang() || tok.isDecr() ||
+       tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
+       tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
+       tok.isAsterisk() || tok.isPercent() ||
+       ident == "init" || ident == "release" || ident == "bind" ||
+       ident == "del"
+       )
+      return "oper " + ident;
+   else if (tok.isLBracket()) {
+      tok = toker.getToken();
+      if (!tok.isRBracket())
+         error(tok, "Expected right bracket in 'oper ['");
+      
+      // see if this is "[]="
+      tok = toker.getToken();
+      if (tok.isAssign()) {
+         return "oper []=";
+      } else {
+         toker.putBack(tok);
+         return "oper []";
+      }
+   } else if (ident == "to") {
+      TypeDefPtr type = parseTypeSpec();
+      return "oper to " + type->getFullName();
+   } else {
+      unexpected(tok, "expected legal operator name or symbol.");
+   }
+}
+
 ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    Context &varContext = container ? *container->type->context : *context;
+   
    // is it an assignment?
    Token tok1 = toker.getToken();
    if (tok1.isAssign()) {
+      
+      if (ident.isOper())
+         error(tok1, "Expected operator identifier after 'oper' keyword");
 
       VarDefPtr var = varContext.lookUp(ident.getData());
       if (!var)
@@ -318,17 +356,29 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       // Otherwise emit a normal variable assignment.
       if (var->context->scope == Context::instance) {
          // if there's no container, try to use an implicit "this"
-         ExprPtr receiver = container ? container : makeThisRef(ident);
+         ExprPtr receiver = container ? container : 
+                                        makeThisRef(ident, ident.getData());
          return AssignExpr::create(*context, ident, receiver.get(), var.get(), 
                                    val.get()
                                    );
       } else {
          return AssignExpr::create(*context, ident, var.get(), val.get());
       }
+   } // should not fall through - always returns or throws.
 
-   } else if (tok1.isLParen()) {
+   // if this is an explicit operator call, give it special treatment.
+   string funcName;
+   if (ident.isOper()) {
+      toker.putBack(tok1);
+      funcName = parseOperSpec();
+      tok1 = toker.getToken();
+   } else {
+      funcName = ident.getData();
+   }
+   
+   if (tok1.isLParen()) {
       // function/method invocation
-      
+
       // parse the arg list
       FuncCall::ExprVec args;
       parseMethodArgs(args);
@@ -337,10 +387,10 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       
       // lookup the method from the variable context's type context
       // XXX needs to handle callable objects.
-      FuncDefPtr func = varContext.lookUp(*context, ident.getData(), args);
+      FuncDefPtr func = varContext.lookUp(*context, funcName, args);
       if (!func)
          error(ident,
-               SPUG_FSTR("No method exists matching " << ident.getData() <<
+               SPUG_FSTR("No method exists matching " << funcName <<
                           " with these argument types."
                          )
                );
@@ -370,7 +420,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          // if we didn't get the receiver from the container, lookup the 
          // "this" variable.
          if (!receiver) {
-            receiver = makeThisRef(ident);
+            receiver = makeThisRef(ident, funcName);
             if (verifyThisIsContainer && 
                  !receiver->type->isDerivedFrom(container->type->meta))
                error(tok1, SPUG_FSTR("'this' is not an instance of " <<
@@ -387,6 +437,13 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       funcCall->receiver = receiver;
       return funcCall;
    } else {
+      if (ident.isOper())
+         unexpected(tok1,
+                    SPUG_FSTR("expected parameter list after " << 
+                              funcName
+                              ).c_str()
+                    );
+
       // for anything else, it's a variable reference
       toker.putBack(tok1);
       return createVarRef(container, ident);
@@ -544,7 +601,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
             expr = funcCall;
             tok = toker.getToken();
             continue;
-	 } else if (!tok.isIdent()) {
+         
+	 } else if (!tok.isIdent() && !tok.isOper()) {
             // make sure it's an identifier
             error(tok, "identifier expected");
 	 }
