@@ -561,17 +561,26 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    // for the unary operators
    } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
               tok.isDecr()) {
-      FuncCall::ExprVec args(1);
+      FuncCall::ExprVec args;
       string symbol = tok.getData();
-      args[0] = parseExpression(getPrecedence(symbol + "x"));
 
+      // try to look it up for the expression, then for the context.
+      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
       symbol = "oper " + symbol;
-      FuncDefPtr funcDef = context->lookUp(*context, symbol, args);
+      FuncDefPtr funcDef = operand->type->context->lookUp(*context, symbol, 
+                                                          args
+                                                          );
+      if (!funcDef) {
+         args.push_back(operand);
+         funcDef = context->lookUp(*context, symbol, args);
+      }
       if (!funcDef)
          error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
 
       FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
       funcCall->args = args;
+      if (funcDef->flags & FuncDef::method)
+         funcCall->receiver = operand;
       expr = funcCall;
    } else if (tok.isLCurly()) {
       assert(false);
@@ -681,11 +690,18 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          // parse the right-hand-side expression
          ExprPtr rhs = parseExpression(newPrec);
          
-         FuncCall::ExprVec exprs(2);
-         exprs[0] = expr;
-         exprs[1] = rhs;
+         FuncCall::ExprVec exprs(1);
+         exprs[0] = rhs;
          std::string name = "oper " + tok.getData();
-         FuncDefPtr func = context->lookUp(*context, name, exprs);
+         
+         // first try to find it in the type's context, then try to find it in 
+         // the current context.
+         FuncDefPtr func = expr->type->context->lookUp(*context, name, exprs);
+         if (!func) {
+            exprs[0] = expr;
+            exprs.push_back(rhs);
+            func = context->lookUp(*context, name, exprs);
+         }
          if (!func)
             error(tok,
                   SPUG_FSTR("Operator " << expr->type->name << " " <<
@@ -695,6 +711,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
                   );
          FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
          funcCall->args = exprs;
+         if (func->flags & FuncDef::method)
+            funcCall->receiver = expr;
          expr = funcCall;
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
@@ -988,11 +1006,11 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
    }
 }
 
-void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
-                          const string &name,
-                          Parser::FuncFlags funcFlags,
-                          int expectedArgCount
-                          ) {
+int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
+                         const string &name,
+                         Parser::FuncFlags funcFlags,
+                         int expectedArgCount
+                         ) {
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
@@ -1047,7 +1065,7 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          stub->context->removeDef(stub);
          cstack.restore();
          addDef(funcDef.get());
-         return;
+         return argDefs.size();
       } else {
          // XXX forward declaration
          error(tok3, 
@@ -1146,6 +1164,8 @@ void Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    context->builder.emitEndFunc(*context, funcDef.get());
    cstack.restore();
+   
+   return argDefs.size();
 }         
          
 
@@ -1497,6 +1517,10 @@ void Parser::parsePostOper(TypeDef *returnType) {
          // "oper []" or "oper []="
          expectToken(Token::rbracket, "expected right bracket.");
          tok = toker.getToken();
+         if (context->scope != Context::composite)
+            error(tok, 
+                  "Bracket operators may only be defined in class scope."
+                  );
          if (tok.isAssign()) {
             expectToken(Token::lparen, "expected argument list.");
             parseFuncDef(returnType, tok, "oper []=", normal, 2);
@@ -1506,17 +1530,38 @@ void Parser::parsePostOper(TypeDef *returnType) {
       } else if (tok.isMinus()) {
          // minus is special because it can be either unary or binary
          expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, -1);
+         int numArgs = parseFuncDef(returnType, tok, "oper " + tok.getData(), 
+                                    normal, 
+                                    -1
+                                    );
+         
+         int receiverCount = (context->scope == Context::composite);
+         if (numArgs != 1 - receiverCount && numArgs != 2 - receiverCount)
+            error(tok, SPUG_FSTR("'oper -' must have " << 1 - receiverCount <<
+                                 " or " << 2 - receiverCount <<
+                                 " arguments."
+                                 )
+                  );
       } else if (tok.isTilde() || tok.isBang() || tok.isDecr()) {
          expectToken(Token::lparen, "expected an argument list.");
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 1);
+         // in composite context, these should have no arguments.
+         int numArgs = (context->scope == Context::composite) ? 0 : 1;
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
+                      numArgs
+                      );
       } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
                  tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
                  tok.isAsterisk() || tok.isPercent()
                  ) {
          // binary operators
+         
+         // in composite context, these should have just one argument.
+         int numArgs = (context->scope == Context::composite) ? 1 : 2;
+         
          expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 2);
+         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
+                      numArgs
+                      );
       } else {
          unexpected(tok, "identifier or symbol expected after 'oper' keyword");
       }

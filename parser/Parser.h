@@ -211,12 +211,13 @@ class Parser {
        *    function (whether initializers or destructors need to be parsed 
        *    and emitted).
        * @param expectedArgCount if > -1, this is the expected number of arguments. 
+       * @returns the number of actual arguments.
        */
-      void parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
-                        const std::string &name,
-                        FuncFlags funcFlags,
-                        int expectedArgCount
-                        );
+      int parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
+                       const std::string &name,
+                       FuncFlags funcFlags,
+                       int expectedArgCount
+                       );
 
       /**
        * Parse a definition. Returns false if there was no definition. 
