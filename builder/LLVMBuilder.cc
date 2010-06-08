@@ -2036,6 +2036,10 @@ namespace {
 
                 return new BResultExpr(this, builder.lastValue);
             }
+            
+            virtual bool isProductive() const {
+                return false;
+            }
     };
 
     class UnsafeCastDef : public OpDef {
