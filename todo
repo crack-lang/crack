@@ -7,25 +7,20 @@ Copyright 2009 Google Inc.
 Unassigned
 ----------
 
--   decide what to do about operater overloads within classes.
+-   make operator overloads internal to classes.
+-   allow explicit operators to be called without the "var." prefix.
+-   need to be able to instantiate a class from within the class (generate the 
+    "new" operator as soon as an "init" is defined).
 
 Roadmap
 -------
 
 for 0.1:
--   the "oper" keyword
-    -   general implementation DONE
-    -   oper init initializers, oper del cleanups
-        -   preserve order of definition during member initialization and 
-            destruction DONE
-    -   need syntax to allow calling "oper" functions from an expression, need 
-        to get rid of the __del() hack.
 -   floating point types
 -   Should be able to do instance construction in a statement context without 
     it being misinterpreted as a definition
 -   fix numeric conversion.
--   need to define comparison operators for Object in crack.lang and make them 
-    part of the standard imports.
+-   need access to argv
 
 Completed for 0.1:
 -   fix instance variable default initialization: 
@@ -50,6 +45,15 @@ Completed for 0.1:
     DONE
 -   empty statements should work: if (false) ; DONE
 -   get rid of the semicolon after class definitions DONE
+-   the "oper" keyword
+    -   general implementation DONE
+    -   oper init initializers, oper del cleanups
+        -   preserve order of definition during member initialization and 
+            destruction DONE
+    -   need syntax to allow calling "oper" functions from an expression, need 
+        to get rid of the __del() hack. DONE
+-   need to define comparison operators for Object in crack.lang and make them 
+    part of the standard imports. DONE
 
 for 1.0:
 -   cleanup:

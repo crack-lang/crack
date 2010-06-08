@@ -95,3 +95,13 @@ f[0] = Foo();
 class Foo {}
 import crack.io cout;
 (Foo().class.name);
+
+# the "unsafeCast" from non-primary base class test should really be this.  
+# The general problem of correctly specializing a base class is not one we can 
+# currently deal with because a class can have multiple VTableBase ancestors 
+# so there's no way to infer which of them the pointer references at compile 
+# time.  The only thing I can think of is to have another special method in 
+# VTableBase that provides an offset table.
+class A : VTableBase {} class B { int j; }
+class C : A, B { int k; void run() { puts("ok"); } }
+B b = C(); (C.unsafeCast(b).run());
