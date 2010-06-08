@@ -785,4 +785,7 @@ test_output 'bootstrapped overloads' 'print()' \
 test_output 'order of initialization and destruction' \
     'import test.test_init_del_order;' ok
 
+test_output 'Object/String comparison operators' \
+    'import test.test_compare;' ok
+
 exit $rc

@@ -1,0 +1,18 @@
+# Copyright 2010 Google Inc.
+# test of string comparison operators.
+
+import crack.io cout;
+a := "first";
+a1 := "first";
+b := 'second';
+if (!(a == a)) cout `failed is check\n`;
+if (!(a == a1)) cout `failed compare\n`;
+if (b < a) cout `failed <\n`;
+if (b <= a) cout `failed <=\n`;
+if (!(a <= a1)) cout `failed a <= a1\n`;
+if (a != a1) cout `failed a != a1\n`;
+if (a >= b) cout `failed a >= b\n`;
+if (!(a >= a1)) cout `failed a >= a1\n`;
+if (a > b) cout `failed a > b\n`;
+cout `ok\n`;
+

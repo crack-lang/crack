@@ -74,6 +74,30 @@ class Object : VTableBase {
         if (this is other) return 0; else return 1;
     }
     
+    bool oper <(Object other) {
+        return cmp(other) < 0;
+    }
+    
+    bool oper <=(Object other) {
+        return cmp(other) <= 0;
+    }
+    
+    bool oper ==(Object other) {
+        return cmp(other) == 0;
+    }
+    
+    bool oper !=(Object other) {
+        return cmp(other) != 0;
+    }
+
+    bool oper >=(Object other) {
+        return cmp(other) >= 0;
+    }
+
+    bool oper >(Object other) {
+        return cmp(other) > 0;
+    }
+
     bool toBool() {
         if (this is null)
             return false;
@@ -203,13 +227,24 @@ class String : Buffer {
         _freeBuffer();
     }
 
-    ## This needs to accept Object, we need type casts to be able to implement 
-    ## that interface.
-    int cmp(String other) {
-        if (size > other.size)
-            return memcmp(buffer, other.buffer, other.size);
-        else
-            return memcmp(buffer, other.buffer, size);
+    ## Override Object.cmp() to do string comparison.
+    int cmp(Object other) {
+        
+        # deal with the simple case
+        if (this is other)
+            return 0;
+
+        # if the other object is a string, do string comparison.
+        if (other.class.isSubclass(String)) {
+            os := String.unsafeCast(other);
+            if (size > os.size)
+                return memcmp(buffer, os.buffer, os.size);
+            else
+                return memcmp(buffer, os.buffer, size);
+        } else {
+            # if other is not a string, it is not equal.
+            return 1;
+        }
     }
 };
 
