@@ -106,6 +106,7 @@ class Context : public spug::RCBase {
                        voidPtrType,
                        boolType,
                        byteptrType,
+                       byteType,
                        int32Type,
                        int64Type,
                        uint32Type,

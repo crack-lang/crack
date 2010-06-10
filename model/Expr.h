@@ -49,6 +49,12 @@ class Expr : public spug::RCBase {
         virtual bool isProductive() const;
         
         /**
+         * Returns true if the expression changes type to adapt to the 
+         * requirements of the context (integer and float constants).
+         */
+        virtual bool isAdaptive() const;
+        
+        /**
          * Write a representation of the expression to the stream.
          */
         virtual void writeTo(std::ostream &out) const = 0;

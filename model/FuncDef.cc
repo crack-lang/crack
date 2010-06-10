@@ -21,7 +21,7 @@ FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
 
 bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals, 
                       vector<ExprPtr> &newVals,
-                      bool convert
+                      FuncDef::Convert convertFlag
                       ) {
     ArgVec::iterator arg;
     vector<ExprPtr>::const_iterator val;
@@ -30,13 +30,30 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
          arg != args.end() && val != vals.end();
          ++arg, ++val, ++i
          ) {
-        if (convert) {
-            newVals[i] = (*val)->convert(context, (*arg)->type.get());
-            if (!newVals[i])
-                return false;
-        } else {
-            if (!(*arg)->type->matches(*(*val)->type))
-                return false;
+        switch (convertFlag) {
+            case adapt:
+            case adaptSecondary:
+                if ((convertFlag == adapt || i) &&
+                    (*val)->isAdaptive()
+                    ) {
+                    newVals[i] = (*val)->convert(context, (*arg)->type.get());
+                    if (!newVals[i])
+                        return false;
+                } else if ((*arg)->type->matches(*(*val)->type)) {
+                    newVals[i] = *val;
+                } else {
+                    return false;
+                }
+                break;
+            case convert:
+                newVals[i] = (*val)->convert(context, (*arg)->type.get());
+                if (!newVals[i])
+                    return false;
+                break;
+            case noConvert:
+                if (!(*arg)->type->matches(*(*val)->type))
+                    return false;
+                break;
         }
     }
 

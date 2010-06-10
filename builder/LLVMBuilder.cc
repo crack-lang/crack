@@ -1661,10 +1661,30 @@ namespace {
             }                                                               \
     };
 
-    UNOP(Trunc);
     UNOP(SExt);
     UNOP(ZExt);
 
+    // truncate is a unary op but is used as the "oper new" so it doesn't get 
+    // a receiver.
+    class TruncOpCall : public FuncCall {
+        public:
+            TruncOpCall(FuncDef *def) : FuncCall(def) {}
+            
+            virtual ResultExprPtr emit(Context &context) {
+                args[0]->emit(context)->handleTransient(context);
+            
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+                builder.lastValue =
+                    builder.builder.CreateTrunc(
+                        builder.lastValue,
+                        BTypeDefPtr::arcast(func->returnType)->rep
+                    );
+                
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+    
     class BitNotOpCall : public FuncCall {
         public:
             BitNotOpCall(FuncDef *def) : FuncCall(def) {}
@@ -2054,7 +2074,7 @@ namespace {
             virtual bool matches(Context &context, 
                                  const std::vector<ExprPtr> &vals,
                                  std::vector<ExprPtr> &newVals,
-                                 bool convert
+                                 FuncDef::Convert convertFlag
                                  ) {
                 if (vals.size() != 1)
                     return false;
@@ -3585,7 +3605,7 @@ namespace {
                     "        while (i < numBases) {\n"
                     "            if (bases[i].isSubclass(other))\n"
                     "                return (1==1);\n"
-                    "            i = i + 1;\n"
+                    "            i = i + uint(1);\n"
                     "        }\n"
                     "        return (1==0);\n"
                     "    }\n"
@@ -3626,6 +3646,18 @@ namespace {
             createMetaClass(context, type->name, noBases, classImpl);
         metaType->meta = type;
         type->impl = classImpl;
+    }
+
+    void addExplicitTruncate(BTypeDef *sourceType,
+                             BTypeDef *targetType
+                             ) {
+        FuncDefPtr func = 
+            new GeneralOpDef<TruncOpCall>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->context->addDef(func.get());
     }
 }
 
@@ -3698,6 +3730,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
                                            "byte"
                                            );
+    gd->byteType = byteType;
 
     BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "int32"
@@ -3750,47 +3783,19 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     // create integer operations
-    context.addDef(new AddOpDef(int64Type));
-    context.addDef(new SubOpDef(int64Type));
-    context.addDef(new MulOpDef(int64Type));
-    context.addDef(new SDivOpDef(int64Type));
-    context.addDef(new SRemOpDef(int64Type));
-    context.addDef(new ICmpEQOpDef(int64Type, boolType));
-    context.addDef(new ICmpNEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
-    context.addDef(new NegOpDef(int64Type, "oper -"));
-    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
-
-    context.addDef(new AddOpDef(uint64Type));
-    context.addDef(new SubOpDef(uint64Type));
-    context.addDef(new MulOpDef(uint64Type));
-    context.addDef(new UDivOpDef(uint64Type));
-    context.addDef(new URemOpDef(uint64Type));
-    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
-    context.addDef(new NegOpDef(uint64Type, "oper -"));
-    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
-
-    context.addDef(new AddOpDef(int32Type));
-    context.addDef(new SubOpDef(int32Type));
-    context.addDef(new MulOpDef(int32Type));
-    context.addDef(new SDivOpDef(int32Type));
-    context.addDef(new SRemOpDef(int32Type));
-    context.addDef(new ICmpEQOpDef(int32Type, boolType));
-    context.addDef(new ICmpNEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int32Type, boolType));
-    context.addDef(new NegOpDef(int32Type, "oper -"));
-    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
+    context.addDef(new AddOpDef(byteType));
+    context.addDef(new SubOpDef(byteType));
+    context.addDef(new MulOpDef(byteType));
+    context.addDef(new SDivOpDef(byteType));
+    context.addDef(new SRemOpDef(byteType));
+    context.addDef(new ICmpEQOpDef(byteType, boolType));
+    context.addDef(new ICmpNEOpDef(byteType, boolType));
+    context.addDef(new ICmpSGTOpDef(byteType, boolType));
+    context.addDef(new ICmpSLTOpDef(byteType, boolType));
+    context.addDef(new ICmpSGEOpDef(byteType, boolType));
+    context.addDef(new ICmpSLEOpDef(byteType, boolType));
+    context.addDef(new NegOpDef(byteType, "oper -"));
+    context.addDef(new BitNotOpDef(byteType, "oper ~"));
 
     context.addDef(new AddOpDef(uint32Type));
     context.addDef(new SubOpDef(uint32Type));
@@ -3806,19 +3811,47 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new NegOpDef(uint32Type, "oper -"));
     context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
 
-    context.addDef(new AddOpDef(byteType));
-    context.addDef(new SubOpDef(byteType));
-    context.addDef(new MulOpDef(byteType));
-    context.addDef(new SDivOpDef(byteType));
-    context.addDef(new SRemOpDef(byteType));
-    context.addDef(new ICmpEQOpDef(byteType, boolType));
-    context.addDef(new ICmpNEOpDef(byteType, boolType));
-    context.addDef(new ICmpSGTOpDef(byteType, boolType));
-    context.addDef(new ICmpSLTOpDef(byteType, boolType));
-    context.addDef(new ICmpSGEOpDef(byteType, boolType));
-    context.addDef(new ICmpSLEOpDef(byteType, boolType));
-    context.addDef(new NegOpDef(byteType, "oper -"));
-    context.addDef(new BitNotOpDef(byteType, "oper ~"));
+    context.addDef(new AddOpDef(int32Type));
+    context.addDef(new SubOpDef(int32Type));
+    context.addDef(new MulOpDef(int32Type));
+    context.addDef(new SDivOpDef(int32Type));
+    context.addDef(new SRemOpDef(int32Type));
+    context.addDef(new ICmpEQOpDef(int32Type, boolType));
+    context.addDef(new ICmpNEOpDef(int32Type, boolType));
+    context.addDef(new ICmpSGTOpDef(int32Type, boolType));
+    context.addDef(new ICmpSLTOpDef(int32Type, boolType));
+    context.addDef(new ICmpSGEOpDef(int32Type, boolType));
+    context.addDef(new ICmpSLEOpDef(int32Type, boolType));
+    context.addDef(new NegOpDef(int32Type, "oper -"));
+    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
+
+    context.addDef(new AddOpDef(uint64Type));
+    context.addDef(new SubOpDef(uint64Type));
+    context.addDef(new MulOpDef(uint64Type));
+    context.addDef(new UDivOpDef(uint64Type));
+    context.addDef(new URemOpDef(uint64Type));
+    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
+    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
+    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
+    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
+    context.addDef(new NegOpDef(uint64Type, "oper -"));
+    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
+
+    context.addDef(new AddOpDef(int64Type));
+    context.addDef(new SubOpDef(int64Type));
+    context.addDef(new MulOpDef(int64Type));
+    context.addDef(new SDivOpDef(int64Type));
+    context.addDef(new SRemOpDef(int64Type));
+    context.addDef(new ICmpEQOpDef(int64Type, boolType));
+    context.addDef(new ICmpNEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
+    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
+    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
+    context.addDef(new NegOpDef(int64Type, "oper -"));
+    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
@@ -3829,23 +3862,25 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     byteType->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
     byteType->context->addDef(new ZExtOpDef(uint32Type, "oper to uint32"));
     byteType->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
-    int64Type->context->addDef(new TruncOpDef(uint64Type, "oper to uint64"));
-    int64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
-    int64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
-    int64Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
-    uint64Type->context->addDef(new TruncOpDef(int64Type, "oper to int64"));
-    uint64Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
-    uint64Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
-    uint64Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
-    int32Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
-    int32Type->context->addDef(new TruncOpDef(uint32Type, "oper to uint32"));
     int32Type->context->addDef(new SExtOpDef(int64Type, "oper to int64"));
     int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
-    uint32Type->context->addDef(new TruncOpDef(byteType, "oper to byte"));
-    uint32Type->context->addDef(new TruncOpDef(int32Type, "oper to int32"));
     uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
-    
+
+    addExplicitTruncate(int64Type, uint64Type);
+    addExplicitTruncate(int64Type, int32Type);
+    addExplicitTruncate(int64Type, uint32Type);
+    addExplicitTruncate(int64Type, byteType);
+    addExplicitTruncate(uint64Type, int64Type);
+    addExplicitTruncate(uint64Type, int32Type);
+    addExplicitTruncate(uint64Type, uint32Type);
+    addExplicitTruncate(uint64Type, byteType);
+    addExplicitTruncate(int32Type, byteType);
+    addExplicitTruncate(int32Type, uint32Type);
+    addExplicitTruncate(int32Type, uint32Type);
+    addExplicitTruncate(uint32Type, byteType);
+    addExplicitTruncate(uint32Type, int32Type);
+
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),
                                             "array", 

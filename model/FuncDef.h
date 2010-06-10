@@ -22,6 +22,15 @@ class FuncDef : public VarDef {
             virtualized = 2, // function is virtual
         } flags;
         
+        // flag to tell us what to do about function arguments during matching.
+        enum Convert {
+            noConvert = 0,
+            adapt = 1,          // only convert adaptive arguments
+            adaptSecondary = 2, // convert adaptives except for the first 
+                                // argument
+            convert = 3         // convert all arguments
+        };
+        
         typedef std::vector<ArgDefPtr> ArgVec;
         ArgVec args;
         TypeDefPtr returnType;
@@ -37,14 +46,14 @@ class FuncDef : public VarDef {
          * arguments.
          * 
          * @param newValues the set of converted values.  This is only
-         *        constructed if 'convert' is true.
-         * @param convert if true, attempt to construct the value if it does 
-         *        not exist.
+         *        constructed if 'convertFlag' is something other than 
+         *        "noConvert".
+         * @param convertFlag defines how to do argument conversions.
          */
         virtual bool matches(Context &context, 
                              const std::vector<ExprPtr> &vals,
                              std::vector<ExprPtr> &newVals,
-                             bool convert
+                             Convert convertFlag
                              );
         
         /**

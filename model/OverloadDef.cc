@@ -61,14 +61,14 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
 }
 
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
-                               bool convert
+                               FuncDef::Convert convertFlag
                                ) {
     vector<ExprPtr> newArgs(args.size());
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
-        if ((*iter)->matches(context, args, newArgs, convert)) {
-            if (convert)
+        if ((*iter)->matches(context, args, newArgs, convertFlag)) {
+            if (convertFlag != FuncDef::noConvert)
                 args = newArgs;
             return iter->get();
         }
@@ -79,13 +79,43 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
          ) {
         OverloadDef *parentOverload = parent->getOverload(this);
         FuncDef *result = 
-            parentOverload ? parentOverload->getMatch(context, args, convert) :
+            parentOverload ? parentOverload->getMatch(context, args, 
+                                                      convertFlag
+                                                      ) :
                              0;
         if (result)
             return result;
     }
     
     return 0;
+}
+
+FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args) {
+    
+    // see if we have any adaptive arguments and if all of them are adaptive.
+    bool someAdaptive = false, allAdaptive = true;
+    for (vector<ExprPtr>::iterator iter = args.begin();
+         iter != args.end();
+         ++iter
+         )
+        if ((*iter)->isAdaptive())
+            someAdaptive = true;
+        else
+            allAdaptive = false;
+    
+    // if any of the arguments are adpative, convert the adaptive arguments.
+    FuncDef::Convert convertFlag = FuncDef::noConvert;
+    if (someAdaptive)
+        convertFlag = FuncDef::adapt;
+
+    // if _all_ of the arguments are adaptive, 
+    if (allAdaptive)
+        convertFlag = FuncDef::adaptSecondary;
+    
+    FuncDef *result = getMatch(context, args, convertFlag);
+    if (!result)
+        result = getMatch(context, args, FuncDef::convert);
+    return result;
 }
 
 FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {

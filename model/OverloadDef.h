@@ -11,7 +11,6 @@ namespace model {
 
 SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
-SPUG_RCPTR(FuncDef);
 
 SPUG_RCPTR(OverloadDef);
 
@@ -62,12 +61,12 @@ class OverloadDef : public VarDef {
          * 
          * @param context the context used in case conversion expressions need 
          *        to be constructed.
-         * @param args the argument list.  This may be modified if 'convert' 
-         *        is true and there are conversions to be applied.
-         * @param convert if true, attempt to convert arguments.
+         * @param args the argument list.  This will be modified if 'convert' 
+         *        is not "noConvert".
+         * @param convertFlag defines whether and when conversions are done.
          */
         FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
-                          bool convert
+                          FuncDef::Convert convertFlag
                           );
  
         /**
@@ -76,12 +75,7 @@ class OverloadDef : public VarDef {
          * conversions and then applying conversions.  As such, it will modify
          * "args" if there are conversions to be applied.
          */
-        FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args) {
-            FuncDef *result = getMatch(context, args, false);
-            if (!result)
-                result = getMatch(context, args, true);
-            return result;
-        }
+        FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args);
         
         /**
          * Returns the overload with the matching signature if there is one, 
