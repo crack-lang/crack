@@ -1706,21 +1706,13 @@ void Parser::parseClassBody() {
       Token tok = toker.getToken();
       if (tok.isRCurly()) {
          break;
+      } else if (tok.isSemi()) {
+         // ignore stray semicolons
+         continue;
       } else if (tok.isClass()) {
          TypeDefPtr newType = parseClassDef();
-         tok = toker.getToken();
-         if (tok.isRCurly()) {
-            break;
-         } else if (tok.isSemi()) {
-            continue;
-         } else {
-            // deal with this class as the return type var type of the next 
-            // definition.
-            toker.putBack(tok);
-            parseDef(newType.get());
-            continue;
-         }
-      
+         continue;
+
       // check for "oper" keyword
       } else if (tok.isOper()) {
          parsePostOper(0);
