@@ -1663,6 +1663,7 @@ namespace {
 
     UNOP(SExt);
     UNOP(ZExt);
+    UNOP(FPExt);
 
     // truncate is a unary op but is used as the "oper new" so it doesn't get 
     // a receiver.
@@ -3922,6 +3923,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
+    float32Type->context->addDef(new FPExtOpDef(float64Type, "oper to float64"));
 
     addExplicitTruncate(int64Type, uint64Type);
     addExplicitTruncate(int64Type, int32Type);
