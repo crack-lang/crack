@@ -54,4 +54,8 @@ f3 = f1 % 2.0;
 //if (f3 != 0.560059)
 //   puts("fail");
 
+f3 = -f1;
+if (f3 != (0.0 - f1))
+    puts("fail");
+
 puts("ok");
