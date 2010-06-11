@@ -141,7 +141,16 @@ Token Toker::readToken() {
                     ch1 = ch; t1 = Token::colon; t2 = Token::define;
                     state = st_digram;
                 } else if (ch == '.') {
-                    return Token(Token::dot, ".", locationMap.getLocation());
+                    char peek;
+                    getChar(peek);
+                    if (isdigit(peek)) {
+                        state = st_float;
+                        ungetChar(peek);
+                    }
+                    else {
+                        ungetChar(peek);
+                        return Token(Token::dot, ".", locationMap.getLocation());
+                    }
                 } else if (isdigit(ch)) {
                     buf << ch;
                     state = st_integer;
