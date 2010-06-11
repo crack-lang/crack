@@ -99,7 +99,7 @@ uint _format(uint64 val,  ## value to format
     uint64 v = val;
     while (v) {
         i = i - 1;
-        digit := v % 10;
+        digit := byte(v % 10);
         v = v / 10;
         buf[i] = 48 + digit;
     }
@@ -113,11 +113,11 @@ uint _format(int64 val, byteptr buf, uint size) {
     if (val < 0) {
         # negate the value, format the absolute value then add the sign to the 
         # beginning
-        uint64 raw = 0 - val;
+        raw := uint64(-val);
         i = _format(raw, buf, size) - 1;
         buf[i] = 45; # 45 == '-'
     } else {
-        uint64 raw = val;
+        raw := uint64(val);
         i = _format(raw, buf, size);
     }
     return i;

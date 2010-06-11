@@ -39,3 +39,7 @@ bool Expr::isProductive() const {
     // by default, all expresssions returning pointer types are productive
     return type->pointer;
 }
+
+bool Expr::isAdaptive() const {
+    return false;
+}

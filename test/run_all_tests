@@ -211,7 +211,7 @@ test_output 'function overloads' \
     'void f(bool b) {if (b) puts("true"); else puts("false")}
      void f(int32 v) {printint(v);}
      void f(byteptr v) {puts(v);}
-     f(100); f("test"); f(1 == 0);' \
+     f(int32(100)); f("test"); f(1 == 0);' \
      '100test
 false'
 
@@ -427,8 +427,8 @@ test_output 'errors on invalid constructors' \
     "${parseError}1: No method exists matching A with these argument types."
 
 test_output 'array generics' \
-    'x := array[int](100);
-     i := 0; while (i < 100) { x[i] = i; i = i + 1; }
+    'x := array[uint](100);
+     uint i = 0; while (i < 100) { x[i] = i; i = i + 1; }
      i = 0; while (i < 10) { if (x[i] != i) puts("FAIL"); i = i + 1; }
      puts("ok")' \
      ok
@@ -559,8 +559,12 @@ test_output 'explicit operator invocation' \
     'import test.test_opers;' \
     ok
 
-test_output 'Float type and operators' \
+test_output 'float type and operators' \
     'import test.test_float;' ok
+
+test_output 'nested class syntax' \
+    'class A { class B {} class C {}; class D {} }; puts ("ok")' \
+    ok
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -623,14 +627,16 @@ test_output 'conversion from byteptr -> voidptr' \
     ok
 
 test_output 'various integer types and conversions' \
-    'int32 i32 = -1; uint32 u32 = i32; int64 i64 = i32; uint64 u64 = i32; 
-     i32 = u32; i64 = u32; u64 = u32; i32 = i64; u32 = i64; u64 = i64; i32 = 
-     u64; u32 = u64; i64 = u64; byte b = u64; u64 = b; print("ok");' \
+    'int32 i32 = -1; uint32 u32 = uint32(i32); int64 i64 = i32; 
+     uint64 u64 = uint64(i32); i32 = int32(u32); i64 = u32; u64 = u32; 
+     i32 = int32(i64); u32 = uint32(i64); u64 = uint64(i64); 
+     i32 = int32(u64); u32 = uint32(u64); i64 = int64(u64); 
+     byte b = byte(u64); u64 = b; print("ok");' \
     ok
 
 test_output 'matching preceeds conversion' \
     'void f(int32 i) { printint(1); } void f(uint32 u) { printint(2); }
-     int32 i; uint32 u; f(i); f(u); uint64 u64; f(u64);' \
+     int32 i; uint32 u; f(i); f(u); byte b; f(b);' \
     121
 
 test_output 'narrowing during return' \

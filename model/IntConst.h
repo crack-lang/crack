@@ -20,7 +20,8 @@ class IntConst : public Expr {
         
         virtual ResultExprPtr emit(Context &context);
         virtual ExprPtr convert(Context &context, TypeDef *newType);
-        virtual void writeTo(std::ostream &out) const;        
+        virtual void writeTo(std::ostream &out) const;
+        virtual bool isAdaptive() const;
 };
 
 } // namespace parser
