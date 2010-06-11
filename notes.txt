@@ -4,6 +4,9 @@ The Definitive Crack Language Reference File
 
 Copyright 2009 Google Inc.
 
+This is a rough description of where the language is _going._  Lots of these 
+features haven't been implemented yet.
+
 
     ---------------------
     #!/usr/bin/crack
@@ -30,13 +33,14 @@ Copyright 2009 Google Inc.
     String var2;
     
     # yet another way to define a variable, ":=" defines and initializes.  '' 
-    # is equivalent to "String()"
+    # is equivalent to "String()" (roughly - it's actually a StaticString).
     var3 := '';
     
     # var4 will be null - like in C or java.
     String var4 = null;
     
-    # reassign it to reference var1;
+    # reassign it to reference var1.  All object variables are essentially 
+    # pointers.
     var4 = var1;
     
     # the expression evaluates to true
@@ -96,7 +100,7 @@ Copyright 2009 Google Inc.
         stdout `less interesting\n`;
     }
     
-    # functions are objects
+    # functions are objects (not sure about the typedef)
 
     typedef String Callback(String val);
     void useCallback(Callback cb) {
@@ -111,7 +115,7 @@ Copyright 2009 Google Inc.
     struct Masala {
         int count;
         void run(String text) {
-            for (i in range(count))
+            for (i :in range(count))
                 stdout.write(text);
         }
     }
@@ -168,8 +172,7 @@ Resulting rules:
     2) compiles should be single-pass.  Code generation should be at the time 
         of compile, with code generation steps occuring after every statement.
     3) Documentation is a first-class citizen.
-    4) Rich augmentation of language structures through annotations.
-
+    4) Rich augmentation of language structures through annotations and macros.
 
 Curly brackets are magical - they're semantics are dependent on their context.
 So in initialization context:
@@ -178,7 +181,7 @@ So in initialization context:
         int a; 
         int b; 
         Foo(int a, int b) : a(a), b(b) {}
-    } // need semicolon here?
+    } // the semicolon is unncessary here.
     Foo f = { a: 100, b: 200}; // equivalent to f := Foo(a: 100, b: 200);
 
 In other expression contexts, they are lambdas:
@@ -206,7 +209,7 @@ Lambdas:
             ...
             List[T] filter(bool filterFunc(T item)) {
                 List[T] result;
-                for (item in this) {
+                for (item :in this) {
                     if (filterFunc(item))
                         result.append(item);
                 }
@@ -322,11 +325,19 @@ Function Resolution Order:
     This doesn't apply to constructors - constructors resolution is not 
     delegated.  Constructor inheritence works by generating constructors given 
     the set of constructors and instance variables of the base classes.
+    
+    Before step 3, we can still do conversions of "adaptive" expressions 
+    (currently only constants).  If all of the arguments of a function are 
+    adaptive, the first will not go through conversion.  This is a work-around 
+    for some extremely unintuitive behavior introduced by the normal 
+    resolution order and the fact that constant integer types are very 
+    accomocating (1 - 2 == 255 without it).
 
 Generics:
     
-    Currently thinking of replacing the syntax for specifying generics so it 
-    doesn't clash with the use of the <> operators.  The bracket should work:
+    Crack deviates from the C++ and Java generic syntax so as not to clash 
+    with the use of the <> operators.  It uses the square brackets instead of 
+    the angle brackets:
     
         Array[Foo] getAllFoos() { ... }
     
@@ -364,6 +375,38 @@ Cleanups:
         // obj1.oper deref()
     }
 
+Primitive Arrays:
+
+    Primitive arrays use the Generic syntax but emit very efficient, C-like 
+    array and pointer semantics.  There is no bounds checking, no refernce 
+    counting and no cleanup associated with primitive arrays.  They are used 
+    like this:
+    
+        // allocate a 10 element array
+        arr := array[int](10);
+        
+        arr[0] = 100;
+        cout `$(arr[0])\n`;
+
+        // free the array using a normal "free" function.
+        free(arr);
+    
+    Since there is no reference count management, for derived types you need 
+    to do your own bind and release:
+    
+        arr := array[Object](10);
+        
+        arr[0].oper release();  # release the existing value
+        
+        String s = 'stirng value';
+        arr[0] = s;
+        arr[0].oper bind();     # bind the new value
+        
+        # do cleanups
+        for (i := 0; i < 10; ++i)
+            arr[i].oper release();
+        free(arr);
+
 Design principals:
     In cases where we can provide useful information from the Parser or keep 
     track of it in the Builder, it's better to provide it in the Parser.  
@@ -399,6 +442,48 @@ Constructors:
         -   it either has no instance variables or all instance variables have 
             default constructors.
         -   all other base classes have a default constructor.
+
+Adaptive Expressions:
+
+    Constant integers are special in that they adapt to the type required by 
+    the context.  So for example, in "byte b = 100;" the constant 100 is of 
+    type byte, and we want to verify that the value of the constant is small 
+    enough to fit in a byte.
+    
+    But this is problematic given the rules about function resolution.  For 
+    example, because we can do implicit conversions from "bigger" integer 
+    types to smaller ones, we want to define our operators so that the 
+    smallest ones are resolved first: "byte + byte" should match before 
+    "int32 + int32".  But say, for example, that we add 1 to a byte variable b:
+    
+        b + 1
+    
+    This won't match "byte + byte" because 1 is stored as an int32, so the 
+    result will be int32, even though you would expect it to be a byte.
+    We could match "byte + byte" on the second (converting) pass, but we won't 
+    get there because without conversion the expression will match "int32 + 
+    int32".
+    
+    We remedy this by making the constant "adaptive."  Instead of limiting 
+    conversions to the second, converting resolution pass, the compiler 
+    converts adaptive expressions during the first pass.  So since 1 can 
+    safely convert to a byte, the expression will match "byte + byte".
+    
+    Unfortunately, this introduces another problem when dealing with 
+    expressions consisting entirely of constants.  Consider the cast of "1 - 
+    2".  1 and 2 can both convert to a byte value, so the expression ends up 
+    matching "byte + byte", producing a byte value of 255!
+    
+    There is a hack in place to work around this: if all of the arguments of a 
+    function are adaptive, we inhibit conversion of the first argument in the 
+    first resolution pass - so the 1 in "1 - 2" will be interpreted as an 
+    int32 and force the selection of "int32 + int32".
+    
+    This is a rather lame solution to the problem.  Another possibility would 
+    be to make constants default to the smallest accomodating type and 
+    introduce constant folding into the function model - so the compiler would 
+    recognize 1 and 2 as byte, but then fold "1 - 2" to a new constant 
+    (presumable an int16 with a value of -1).
 
 Ugliness:
 
