@@ -445,10 +445,9 @@ test_output 'negation and bitwise not operators' \
      puts("ok");' \
     ok
 
-test_output 'right error if multiple variables are used' \
-    'int x = 0, 1;' \
-    "${parseError}1: token , was not expected at this time, expected \
-semicolon after variable initalizer."
+test_output 'multiple variables' \
+    'int x = 0, y = 1; printint(x); printint(y)' \
+    '01'
 
 test_output 'initializer constructor sugar' \
     'class A { int i; oper init(int i0, byteptr b0) : i = i0 {} 
@@ -562,6 +561,14 @@ test_output 'explicit operator invocation' \
 test_output 'nested class syntax' \
     'class A { class B {} class C {}; class D {} }; puts ("ok")' \
     ok
+
+test_output 'class at the start of an expression' \
+    'class A { void ok() { puts("ok"); } } A().ok()' \
+    ok
+
+test_output 'multiple variables in the same definition' \
+    'int a, b = 100, c; printint(a); printint(b); printint(c);' \
+    01000
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'

@@ -75,6 +75,86 @@ void Parser::expectToken(Token::Type type, const char *error) {
       unexpected(tok, error);
 }
 
+void Parser::parseClause(bool defsAllowed) {
+   Token tok = toker.getToken();
+   ExprPtr expr;
+   if (tok.isIdent()) {
+      
+      // if the identifier is a type, try to parse a definition
+      VarDefPtr def = context->lookUp(tok.getData());
+      TypeDef *typeDef = TypeDefPtr::rcast(def);
+      if (typeDef && parseDef(typeDef)) {
+         if (!defsAllowed)
+            error(tok, "definition is not allowed in this context");
+         // bypass expression emission and semicolon parsing (parseDef() 
+         // consumes it's own semicolon)
+         return;
+      } else if (typeDef) {
+         // we didn't parse a definition
+         
+         // see if this is a define
+         Token tok2 = toker.getToken();
+         if (tok2.isDefine()) {
+            if (def->context == context)
+               redefineError(tok2, def.get());
+            else
+               warn(tok2, SPUG_FSTR("Redefining symbol " << def->name));
+            
+            expr = parseExpression();
+            context->emitVarDef(expr->type.get(), tok, expr.get());
+            
+            // don't do expression processing
+            expr = 0;
+         } else {
+
+            // try treating the class as a primary
+            toker.putBack(tok2);
+            expr = parsePostIdent(0, tok);
+            expr = parseSecondary(expr.get());
+         }
+      } else if (!def) {
+         // XXX think I want to move this into expression, it's just as valid 
+         // for an existing identifier (in a parent context) as for a 
+         // non-existing one.
+         // unknown identifier. if the next token(s) is ':=' (the "define" 
+         // operator) then this is an assignment
+         Token tok2 = toker.getToken();
+         if (tok2.isDefine()) {
+            if (!defsAllowed)
+               error(tok, "definition is not allowed in this context.");
+            expr = parseExpression();
+            context->emitVarDef(expr->type.get(), tok, expr.get());
+            
+            // trick the expression processing into not happening
+            expr = 0;
+         } else {
+            error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
+         }
+      } else {
+         toker.putBack(tok);
+         expr = parseExpression();
+      }
+
+   } else {
+      toker.putBack(tok);
+      expr = parseExpression();
+   }
+
+   // if we got an expression, emit it.
+   if (expr) {
+      context->createCleanupFrame();
+      expr->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+   }
+
+   // consume a semicolon, put back a block terminator
+   tok = toker.getToken();
+   if (tok.isEnd() || tok.isRCurly())
+      toker.putBack(tok);
+   else if (!tok.isSemi())
+      unexpected(tok, "expected semicolon or a block terminator");
+}
+
 ContextPtr Parser::parseStatement(bool defsAllowed) {
    // peek at the next token
    Token tok = toker.getToken();
@@ -136,57 +216,8 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       return branch->context;
    }
 
-   ExprPtr expr;
-   if (tok.isIdent()) {
-      
-      // if the identifier is a type, try to parse a definition
-      VarDefPtr def = context->lookUp(tok.getData());
-      TypeDef *typeDef = TypeDefPtr::rcast(def);
-      if (typeDef && parseDef(typeDef)) {
-         if (!defsAllowed)
-            error(tok, "definition is not allowed in this context");
-         return 0;
-      } else if (!def) {
-         // XXX think I want to move this into expression, it's just as valid 
-         // for an existing identifier (in a parent context) as for a 
-         // non-existing one.
-         // unknown identifier. if the next token(s) is ':=' (the "define" 
-         // operator) then this is an assignment
-         Token tok2 = toker.getToken();
-         if (tok2.isDefine()) {
-            if (!defsAllowed)
-               error(tok, "definition is not allowed in this context.");
-            expr = parseExpression();
-            context->emitVarDef(expr->type.get(), tok, expr.get());
-            
-            // trick the expression processing into not happening
-            expr = 0;
-         } else {
-            error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
-         }
-      } else {
-         toker.putBack(tok);
-         expr = parseExpression();
-      }
-
-   } else {
-      toker.putBack(tok);
-      expr = parseExpression();
-   }
-
-   // if we got an expression, emit it.
-   if (expr) {
-      context->createCleanupFrame();
-      expr->emit(*context)->handleTransient(*context);
-      context->closeCleanupFrame();
-   }
-
-   // consume a semicolon, put back a block terminator
-   tok = toker.getToken();
-   if (tok.isEnd() || tok.isRCurly())
-      toker.putBack(tok);
-   else if (!tok.isSemi())
-      unexpected(tok, "expected semicolon or a block terminator");
+   toker.putBack(tok);
+   parseClause(defsAllowed);
 
    return 0;
 }
@@ -324,6 +355,70 @@ string Parser::parseOperSpec() {
    }
 }
 
+FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
+                                  Context &varContext, 
+                                  Expr *container
+                                  ) {
+
+   // parse the arg list
+   FuncCall::ExprVec args;
+   parseMethodArgs(args);
+   
+   // look up the variable
+   
+   // lookup the method from the variable context's type context
+   // XXX needs to handle callable objects.
+   FuncDefPtr func = varContext.lookUp(*context, funcName, args);
+   if (!func)
+      error(ident,
+            SPUG_FSTR("No method exists matching " << funcName <<
+                       " with these argument types."
+                      )
+            );
+
+   // if the definition is for an instance variable, emit an implicit 
+   // "this" dereference.  Otherwise just emit the variable
+   ExprPtr receiver;
+   bool squashVirtual = false;
+   if (func->flags & FuncDef::method) {
+      // keep track of whether we need to verify that "this" is an instance 
+      // of the container (assumes the container is a TypeDef)
+      bool verifyThisIsContainer = false;
+
+      // if we've got a container and the container is not a class, or the 
+      // container _is_ a class but the function is a method of its 
+      // meta-class, use the container as the receiver.
+      if (container)
+         if (container->type->meta && !func->context->returnType->meta) {
+            // the container is a class and the function is an explicit 
+            // call of a (presumably base class) method.
+            squashVirtual = true;
+            verifyThisIsContainer = true;
+         } else {
+            receiver = container;
+         }
+
+      // if we didn't get the receiver from the container, lookup the 
+      // "this" variable.
+      if (!receiver) {
+         receiver = makeThisRef(ident, funcName);
+         if (verifyThisIsContainer && 
+              !receiver->type->isDerivedFrom(container->type->meta))
+            error(ident, SPUG_FSTR("'this' is not an instance of " <<
+                                    container->type->meta->name
+                                   )
+                  );
+      }
+   }
+
+   FuncCallPtr funcCall = context->builder.createFuncCall(func.get(),
+                                                          squashVirtual
+                                                          );
+   funcCall->args = args;
+   funcCall->receiver = receiver;
+   return funcCall;
+}
+
 ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    Context &varContext = container ? *container->type->context : *context;
    
@@ -378,64 +473,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    
    if (tok1.isLParen()) {
       // function/method invocation
-
-      // parse the arg list
-      FuncCall::ExprVec args;
-      parseMethodArgs(args);
-      
-      // look up the variable
-      
-      // lookup the method from the variable context's type context
-      // XXX needs to handle callable objects.
-      FuncDefPtr func = varContext.lookUp(*context, funcName, args);
-      if (!func)
-         error(ident,
-               SPUG_FSTR("No method exists matching " << funcName <<
-                          " with these argument types."
-                         )
-               );
-
-      // if the definition is for an instance variable, emit an implicit 
-      // "this" dereference.  Otherwise just emit the variable
-      ExprPtr receiver;
-      bool squashVirtual = false;
-      if (func->flags & FuncDef::method) {
-         // keep track of whether we need to verify that "this" is an instance 
-         // of the container (assumes the container is a TypeDef)
-         bool verifyThisIsContainer = false;
-
-         // if we've got a container and the container is not a class, or the 
-         // container _is_ a class but the function is a method of its 
-         // meta-class, use the container as the receiver.
-         if (container)
-            if (container->type->meta && !func->context->returnType->meta) {
-               // the container is a class and the function is an explicit 
-               // call of a (presumably base class) method.
-               squashVirtual = true;
-               verifyThisIsContainer = true;
-            } else {
-               receiver = container;
-            }
-
-         // if we didn't get the receiver from the container, lookup the 
-         // "this" variable.
-         if (!receiver) {
-            receiver = makeThisRef(ident, funcName);
-            if (verifyThisIsContainer && 
-                 !receiver->type->isDerivedFrom(container->type->meta))
-               error(tok1, SPUG_FSTR("'this' is not an instance of " <<
-                                     container->type->meta->name
-                                     )
-                     );
-         }
-      }
-
-      FuncCallPtr funcCall = context->builder.createFuncCall(func.get(),
-                                                             squashVirtual
-                                                             );
-      funcCall->args = args;
-      funcCall->receiver = receiver;
-      return funcCall;
+      return parseFuncCall(ident, funcName, varContext, container);
    } else {
       if (ident.isOper())
          unexpected(tok1,
@@ -518,78 +556,9 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
    return TypeDefPtr::rcast(ref->def);
 }
 
-ExprPtr Parser::parseExpression(unsigned precedence) {
-
-   ExprPtr expr;
-
-   // check for null
+ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
+   ExprPtr expr = expr0;
    Token tok = toker.getToken();
-   if (tok.isNull()) {
-      expr = new NullConst(context->globalData->voidPtrType.get());
-   
-   // check for a nested parenthesized expression
-   } else if (tok.isLParen()) {
-      expr = parseExpression();
-      tok = toker.getToken();
-      if (!tok.isRParen())
-         unexpected(tok, "expected a right paren");
-
-   // check for a method
-   } else if (tok.isIdent()) {
-      expr = parsePostIdent(0, tok);
-   
-   // for a string constant
-   } else if (tok.isString()) {
-      expr = context->getStrConst(tok.getData());
-   
-   // for an interpolated string
-   } else if (tok.isIstrBegin()) {
-      assert(false && "istring expressions not yet implemented");
-      // XXX we need to create a StringFormatter and pass it to parseIString() 
-      // as the formatter.
-//      expr = parseIString(formatter);
-   
-   // for an integer constant
-   } else if (tok.isInteger()) {
-      expr = context->builder.createIntConst(*context, 
-                                             atoi(tok.getData().c_str())
-                                             );
-   } else if (tok.isFloat()) {
-      expr = context->builder.createFloatConst(*context,
-                                             atof(tok.getData().c_str())
-                                             );
-   // for the unary operators
-   } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
-              tok.isDecr()) {
-      FuncCall::ExprVec args;
-      string symbol = tok.getData();
-
-      // try to look it up for the expression, then for the context.
-      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
-      symbol = "oper " + symbol;
-      FuncDefPtr funcDef = operand->type->context->lookUp(*context, symbol, 
-                                                          args
-                                                          );
-      if (!funcDef) {
-         args.push_back(operand);
-         funcDef = context->lookUp(*context, symbol, args);
-      }
-      if (!funcDef)
-         error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
-
-      FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
-      funcCall->args = args;
-      if (funcDef->flags & FuncDef::method)
-         funcCall->receiver = operand;
-      expr = funcCall;
-   } else if (tok.isLCurly()) {
-      assert(false);
-   } else {
-      unexpected(tok, "expected an expression");
-   }
-
-   // parse any following secondary expressions...
-   tok = toker.getToken();
    while (true) {
       if (tok.isDot()) {
 	 tok = toker.getToken();
@@ -727,6 +696,79 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    }
    toker.putBack(tok);
    return expr;
+}   
+
+ExprPtr Parser::parseExpression(unsigned precedence) {
+
+   ExprPtr expr;
+
+   // check for null
+   Token tok = toker.getToken();
+   if (tok.isNull()) {
+      expr = new NullConst(context->globalData->voidPtrType.get());
+   
+   // check for a nested parenthesized expression
+   } else if (tok.isLParen()) {
+      expr = parseExpression();
+      tok = toker.getToken();
+      if (!tok.isRParen())
+         unexpected(tok, "expected a right paren");
+
+   // check for a method
+   } else if (tok.isIdent()) {
+      expr = parsePostIdent(0, tok);
+   
+   // for a string constant
+   } else if (tok.isString()) {
+      expr = context->getStrConst(tok.getData());
+   
+   // for an interpolated string
+   } else if (tok.isIstrBegin()) {
+      assert(false && "istring expressions not yet implemented");
+      // XXX we need to create a StringFormatter and pass it to parseIString() 
+      // as the formatter.
+//      expr = parseIString(formatter);
+   
+   // for an integer constant
+   } else if (tok.isInteger()) {
+      expr = context->builder.createIntConst(*context, 
+                                             atoi(tok.getData().c_str())
+                                             );
+   } else if (tok.isFloat()) {
+      expr = context->builder.createFloatConst(*context,
+                                             atof(tok.getData().c_str())
+                                             );
+   // for the unary operators
+   } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
+              tok.isDecr()) {
+      FuncCall::ExprVec args;
+      string symbol = tok.getData();
+
+      // try to look it up for the expression, then for the context.
+      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
+      symbol = "oper " + symbol;
+      FuncDefPtr funcDef = operand->type->context->lookUp(*context, symbol, 
+                                                          args
+                                                          );
+      if (!funcDef) {
+         args.push_back(operand);
+         funcDef = context->lookUp(*context, symbol, args);
+      }
+      if (!funcDef)
+         error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+
+      FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+      funcCall->args = args;
+      if (funcDef->flags & FuncDef::method)
+         funcCall->receiver = operand;
+      expr = funcCall;
+   } else if (tok.isLCurly()) {
+      assert(false);
+   } else {
+      unexpected(tok, "expected an expression");
+   }
+
+   return parseSecondary(expr.get(), precedence);
 }
 
 // func( arg, arg)
@@ -1053,6 +1095,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (tok3.isSemi()) {
       // abstract or forward declaration - see if we've got a stub 
       // definition
+      toker.putBack(tok3);
       StubDef *stub;
       if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
          FuncDefPtr funcDef =
@@ -1182,74 +1225,90 @@ bool Parser::parseDef(TypeDef *type) {
       tok2 = toker.getToken();
    }
    
-   if (tok2.isIdent()) {
-      string varName = tok2.getData();
-
-      // this could be a variable or a function
-      Token tok3 = toker.getToken();
-      if (tok3.isSemi()) {
-         // it's a variable.
-
-         // make sure we're not hiding anything else
-         checkForExistingDef(tok2, tok2.getData());
-         
-         // make sure we've got a default initializer
-         if (!type->defaultInitializer)
-            error(tok2, "no default constructor");
-         
-         // Emit a variable definition and store it in the context (in a 
-         // cleanup frame so transient initializers get destroyed here)
-         context->emitVarDef(type, tok2, 0);
-         return true;
-      } else if (tok3.isAssign()) {
-         ExprPtr initializer;
-
-         // make sure we're not hiding anything else
-         checkForExistingDef(tok2, tok2.getData());
-
-         // check for a curly brace, indicating construction args.
-         Token tok4 = toker.getToken();
-         if (tok4.isLCurly()) {
-            // got constructor args, parse an arg list terminated by a right 
-            // curly.
-            initializer = parseConstructor(tok4, type, Token::rcurly);
-         } else {
-            toker.putBack(tok4);
-            initializer = parseExpression();
-         }
-
-         // XXX if this is a comma, we need to go back and parse 
-         // another definition for the type.
-         expectToken(Token::semi, 
-                     "expected semicolon after variable initalizer."
-                     );
-
-         // make sure the initializer matches the declared type.
-         initializer = initializer->convert(*context, type);
-         if (!initializer)
-            error(tok4, "Incorrect type for initializer.");
-         
-         context->emitVarDef(type, tok2, initializer.get());
-         return true;
-      } else if (tok3.isLParen()) {
-         // function definition
-         parseFuncDef(type, tok2, tok2.getData(), normal, -1);
-         return true;
-      } else {
-         unexpected(tok3,
-                    "expected variable initializer or function "
-                    "definition."
-                    );
-      }
-   } else if (tok2.isOper()) {
-      // deal with an operator
-      parsePostOper(type);
-      return true;
-   } else {
-      unexpected(tok2, "expected variable definition");
-   }
+   while (true) {
+      if (tok2.isIdent()) {
+         string varName = tok2.getData();
    
-   return false;
+         // this could be a variable or a function
+         Token tok3 = toker.getToken();
+         if (tok3.isSemi() || tok3.isComma()) {
+            // it's a variable.
+
+            // make sure we're not hiding anything else
+            checkForExistingDef(tok2, tok2.getData());
+            
+            // make sure we've got a default initializer
+            if (!type->defaultInitializer)
+               error(tok2, "no default constructor");
+            
+            // Emit a variable definition and store it in the context (in a 
+            // cleanup frame so transient initializers get destroyed here)
+            context->emitVarDef(type, tok2, 0);
+            
+            if (tok3.isSemi())
+               return true;
+            else {
+               tok2 = toker.getToken();
+               continue;
+            }
+         } else if (tok3.isAssign()) {
+            ExprPtr initializer;
+   
+            // make sure we're not hiding anything else
+            checkForExistingDef(tok2, tok2.getData());
+   
+            // check for a curly brace, indicating construction args.
+            Token tok4 = toker.getToken();
+            if (tok4.isLCurly()) {
+               // got constructor args, parse an arg list terminated by a right 
+               // curly.
+               initializer = parseConstructor(tok4, type, Token::rcurly);
+            } else {
+               toker.putBack(tok4);
+               initializer = parseExpression();
+            }
+   
+            // make sure the initializer matches the declared type.
+            initializer = initializer->convert(*context, type);
+            if (!initializer)
+               error(tok4, "Incorrect type for initializer.");
+            
+            context->emitVarDef(type, tok2, initializer.get());
+   
+            // if this is a comma, we need to go back and parse 
+            // another definition for the type.
+            tok4 = toker.getToken();
+            if (tok4.isComma()) {
+               tok2 = toker.getToken();
+               continue;
+            } else if (tok4.isSemi()) {
+               return true;
+            } else {
+               unexpected(tok4, 
+                          "Expected comma or semicolon after variable "
+                           "definition."
+                          );
+            }
+         } else if (tok3.isLParen()) {
+            // function definition
+            parseFuncDef(type, tok2, tok2.getData(), normal, -1);
+            return true;
+         } else {
+            unexpected(tok3,
+                     "expected variable initializer or function "
+                     "definition."
+                     );
+         }
+      } else if (tok2.isOper()) {
+         // deal with an operator
+         parsePostOper(type);
+         return true;
+      }
+
+      // if we haven't "continued", were done.
+      toker.putBack(tok2);
+      return false;
+   }
 }
 
 ContextPtr Parser::parseIfClause() {
@@ -1745,11 +1804,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
 
       // redefinition in the same context is an error
       if (existingContext == context)
-         error(tok, 
-               SPUG_FSTR("Symbol " << name <<
-                          " is already defined in this context."
-                         )
-               );
+         redefineError(tok, existing.get());
       // redefinition in a derived context is fine, but if we're not in a 
       // derived context display a warning.
       else if (!(classContext = context->getClassContext()) ||
@@ -1765,6 +1820,14 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
    }
    
    return 0;
+}
+
+void Parser::redefineError(const Token &tok, const VarDef *existing) {
+   error(tok, 
+         SPUG_FSTR("Symbol " << existing->name <<
+                    " is already defined in this context."
+                   )
+         );
 }
 
 void Parser::error(const Token &tok, const std::string &msg) {
