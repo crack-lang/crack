@@ -39,8 +39,27 @@ class TypeDef : public VarDef {
             bool operator <(const TypeVecKey &other) const {
                 if (vec == other.vec)
                     return false;
-                else
-                    return *vec < *other.vec;
+                else {
+                    size_t mySize = vec->size(), otherSize = other.vec->size();
+                    for (int i = 0; i < std::max(mySize, otherSize);
+                         ++i
+                         ) {
+                        if (i >= mySize)
+                            // other is greater
+                            return true;
+                        else if (i >= otherSize)
+                            // this is greater
+                            return false;
+                        
+                        TypeDef *myVal = vec->operator [](i).get(),
+                                *otherVal = other.vec->operator [](i).get();
+                        if (myVal < otherVal)
+                            return true;
+                        else if (otherVal < myVal)
+                            return false;
+                    }
+                    return false;
+                }
             }
             
             bool equals(const TypeVec *other) const {
