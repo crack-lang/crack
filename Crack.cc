@@ -284,6 +284,10 @@ bool Crack::loadBootstrapModules() {
     return true;
 }
 
+void Crack::setArgv(int argc, char **argv) {
+    rootBuilder->setArgv(argc, argv);
+}
+
 int Crack::runScript(std::istream &src, const std::string &name) {
     // finalize all initialization
     if (!init())

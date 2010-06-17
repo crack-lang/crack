@@ -15,7 +15,7 @@ using namespace std;
 
 bool dump = false;
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
     if (argc < 2) {
         cerr << "Usage:" << endl;
         cerr << "  crack <script>" << endl;
@@ -26,9 +26,10 @@ int main(int argc, const char **argv) {
     Crack::getInstance().optimizeLevel = 1;
 
     // parse the main module
-    const char **arg = &argv[1];
+    char **arg = &argv[1];
     while (*arg) {
         if (!strcmp(*arg, "-")) {
+            Crack::getInstance().setArgv(argc - (arg - argv), arg);
             Crack::getInstance().runScript(cin, "<stdin>");
             break;
         } else if (!strcmp(*arg, "-d")) {
@@ -51,6 +52,7 @@ int main(int argc, const char **argv) {
         } else {
             // it's the script name - run it.
             ifstream src(*arg);
+            Crack::getInstance().setArgv(argc - (arg - argv), arg);
             Crack::getInstance().runScript(src, *arg);
             break;
         }
