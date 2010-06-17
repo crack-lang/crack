@@ -811,4 +811,13 @@ test_output 'order of initialization and destruction' \
 test_output 'Object/String comparison operators' \
     'import test.test_compare;' ok
 
+test_output 'command line arguments' \
+    'import crack.sys argv; uint i = 1;
+     while (i < argv.count()) { print(argv[i]); i = i + 1; }' \
+    'a
+b
+c' \
+    '' \
+    'a b c'
+
 exit $rc

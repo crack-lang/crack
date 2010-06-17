@@ -1,0 +1,62 @@
+## This module provides access to system internals.
+## Copyright 2010 Google Inc.
+
+import crack.lang die;
+
+class StringArray {
+    
+    array[String] __rep = null;
+    uint __count;
+    
+    oper init(uint count) : 
+        __rep = array[String](count),
+        __count = count {
+    }
+
+    void oper []=(uint i, String val) {
+        if (i > __count)
+            die('Array index out of bounds');
+
+        # bind the new value, release the existing one
+        val.oper bind();
+        __rep[i].oper release();
+        __rep[i] = val;
+    }
+    
+    String oper [](uint i) {
+        if (i > __count)
+            die('Array index out of bounds');
+
+        result := __rep[i];
+        return __rep[i];
+    }
+    
+    oper del() {
+        # release all of the elements
+        uint i;
+        while (i < __count) {
+            __rep[i].oper release();
+            i = i + 1;
+        }
+    }
+
+    ## Returns the number of elements in the array.    
+    uint count() {
+        return __count;
+    }
+}
+
+StringArray _createArgv() {
+    v := __getArgv();
+    c := __getArgc();
+    argv := StringArray(uint(c));
+    uint i;
+    while (i < c) {
+        argv[i] = StaticString(v[i]);
+        i = i + 1;
+    }
+    return argv;
+}
+
+## The "argv" variable.
+argv := _createArgv();
