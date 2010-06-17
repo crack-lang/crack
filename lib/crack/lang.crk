@@ -252,6 +252,9 @@ class StaticString : String {
 
     oper init(byteptr data, uint size) : String(data, size, true) {}
     
+    ## Initialize from a null terminated string.
+    oper init(byteptr data) : String(data, strlen(data), true) {}
+    
     # override _freeBuffer so we don't...
     void _freeBuffer() {}
 };

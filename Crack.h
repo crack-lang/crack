@@ -158,6 +158,13 @@ class Crack {
         bool loadBootstrapModules();
 
         /**
+         * Set the program's arg list (this should be done prior to calling 
+         * runScript()).
+         */
+        void setArgv(int argc, char **argv);
+
+
+        /**
          * Run the specified script.  Catches all parse exceptions, returns 
          * an exit code, which will be non-zero if a parse error occurred and 
          * should eventually be settable by the application.

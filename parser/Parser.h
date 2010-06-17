@@ -15,6 +15,7 @@
 namespace model {
    SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(Context);
+   SPUG_RCPTR(FuncCall);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(Initializers);
    SPUG_RCPTR(TypeDef);
@@ -132,6 +133,15 @@ class Parser {
       std::string parseOperSpec();
 
       /**
+       * Parse and emit a function call.
+       */
+      model::FuncCallPtr parseFuncCall(const Token &ident,
+                                       const std::string &funcName,
+                                       model::Context &varContext,
+                                       model::Expr *container
+                                       );
+
+      /**
        * Parse the kinds of things that can come after an identifier.
        *
        * @param container the aggregate that the identifier is scoped to, as 
@@ -155,6 +165,19 @@ class Parser {
        * TypeDef.  Otherwise returns null.
        */
       static model::TypeDef *convertTypeRef(model::Expr *expr);
+
+      /**
+       * Parse a secondary expression.  Secondary expressions include a the 
+       * dot operator, binary operators and the bracket operators and their 
+       * associated expressions.
+       * 
+       * @param expr the primary expression that this secondary expression 
+       *        modifies.
+       * @param precedence the current level of operator precedence.
+       */
+      model::ExprPtr parseSecondary(model::Expr *expr, 
+                                    unsigned precedence = 0
+                                    );
 
       /**
        * Parse an expression.
@@ -227,6 +250,12 @@ class Parser {
       
       // statements
 
+      /**
+       * Parse a clause, which can either be a an expression statement or a 
+       * definition.
+       */
+      void parseClause(bool defsAllowed);
+
       /*      
        * @returns the context that this statement terminates to.  See 
        *    parseStatement().
@@ -261,6 +290,16 @@ class Parser {
       void parse();
 
       void parseClassBody();
+
+      /**
+       * Throws a parse error about an attempt to override a variable that has 
+       * been defined in the same context.
+       * @param tok the last parsed token
+       * @param existing the existing variable definition.
+       */
+      static void redefineError(const Token &tok, 
+                                const model::VarDef *existing
+                                );
 
       /** 
        * throws a ParseError, properly formatted with the location and

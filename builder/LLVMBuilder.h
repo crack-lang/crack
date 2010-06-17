@@ -64,6 +64,8 @@ class LLVMBuilder : public Builder {
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *block;
+        static int argc;
+        static char **argv;
 
         void narrow(model::TypeDef *curType, model::TypeDef *ancestor);
 
@@ -237,7 +239,8 @@ class LLVMBuilder : public Builder {
         virtual void registerImport(model::Context &context, 
                                     model::VarDef *varDef
                                     );
-        
+
+        virtual void setArgv(int argc, char **argv);        
         virtual void run();
         virtual void dump();
         

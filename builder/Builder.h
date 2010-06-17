@@ -308,6 +308,11 @@ class Builder : public spug::RCBase {
         virtual void registerImport(model::Context &context, 
                                     model::VarDef *varDef
                                     ) = 0;
+
+        /**
+         * Provides the builder with access to the program's argument list.
+         */
+        virtual void setArgv(int argc, char **argv) = 0;
         
         virtual void run() = 0;
         

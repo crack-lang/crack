@@ -2482,6 +2482,12 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     return execEng;
 }
 
+int LLVMBuilder::argc = 1;
+namespace {
+    char *tempArgv[] = {"undefined"};
+}
+char **LLVMBuilder::argv = tempArgv;
+
 void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
     if (curType == ancestor)
@@ -3369,6 +3375,27 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
         f.finish();
     }
     
+    // create "array[byteptr] __getArgv()"
+    {
+        TypeDefPtr array = context.lookUp("array");
+        TypeDef::TypeVecPtr types = new TypeDef::TypeVec();
+        types->push_back(context.globalData->byteptrType.get());
+        TypeDefPtr arrayOfByteptr =
+            array->getSpecialization(context, types.get());
+        FuncBuilder f(context, FuncDef::noFlags, 
+                      BTypeDefPtr::arcast(arrayOfByteptr), 
+                      "__getArgv", 
+                      0
+                      );
+        f.finish();
+    }
+    
+    // create "int __getArgc()"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
+        f.finish();
+    }
+    
     // bind the module to the execution engine
     bindModule(module);
     
@@ -3562,6 +3589,14 @@ extern "C" void printint(int val) {
 extern "C" void __die(const char *message) {
     std::cout << message << endl;
     abort();
+}
+
+extern "C" char **__getArgv() {
+    return LLVMBuilder::argv;
+}
+
+extern "C" int __getArgc() {
+    return LLVMBuilder::argc;
 }
 
 namespace {
@@ -4050,6 +4085,11 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
 
 void LLVMBuilder::registerImport(Context &context, VarDef *varDef) {
     // no-op for LLVM builder.
+}
+
+void LLVMBuilder::setArgv(int newArgc, char **newArgv) {
+    argc = newArgc;
+    argv = newArgv;
 }
 
 void LLVMBuilder::run() {

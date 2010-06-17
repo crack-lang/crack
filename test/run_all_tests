@@ -10,15 +10,16 @@ function test_output {
     script="$2"
     expected="$3"
     stdin="$4"
+    args="$5"
     
     echo -n "$text..."
     echo "$script" >run_all_tests.tmp
-    result="$(echo $stdin | ./crack $opts run_all_tests.tmp 2>&1)"
+    result="$(echo $stdin | ./crack $opts run_all_tests.tmp $args 2>&1)"
     if [ "$result" = "$expected" ]; then
         echo ok
     else
-        echo $result
-        echo $expected
+        echo "Expected: $expected"
+        echo "Got: $result"
         echo FAILED
         rc=1
     fi
@@ -445,10 +446,9 @@ test_output 'negation and bitwise not operators' \
      puts("ok");' \
     ok
 
-test_output 'right error if multiple variables are used' \
-    'int x = 0, 1;' \
-    "${parseError}1: token , was not expected at this time, expected \
-semicolon after variable initalizer."
+test_output 'multiple variables' \
+    'int x = 0, y = 1; printint(x); printint(y)' \
+    '01'
 
 test_output 'initializer constructor sugar' \
     'class A { int i; oper init(int i0, byteptr b0) : i = i0 {} 
@@ -565,6 +565,23 @@ test_output 'float type and operators' \
 test_output 'nested class syntax' \
     'class A { class B {} class C {}; class D {} }; puts ("ok")' \
     ok
+
+test_output 'class at the start of an expression' \
+    'class A { void ok() { puts("ok"); } } A().ok()' \
+    ok
+
+test_output 'multiple variables in the same definition' \
+    'int a, b = 100, c; printint(a); printint(b); printint(c);' \
+    01000
+
+test_output 'command line arguments' \
+    'uint i = 1; argv := __getArgv(); argc := __getArgc();
+     while (i < argc) { puts(argv[i]); i = i + 1; }' \
+    'a
+b
+c' \
+    '' \
+    'a b c'
 
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
@@ -796,5 +813,14 @@ test_output 'order of initialization and destruction' \
 
 test_output 'Object/String comparison operators' \
     'import test.test_compare;' ok
+
+test_output 'command line arguments' \
+    'import crack.sys argv; uint i = 1;
+     while (i < argv.count()) { print(argv[i]); i = i + 1; }' \
+    'a
+b
+c' \
+    '' \
+    'a b c'
 
 exit $rc
