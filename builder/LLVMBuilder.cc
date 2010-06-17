@@ -1831,8 +1831,7 @@ namespace {
 
     class NegOpCall : public FuncCall {
         public:
-            typedef enum { intType, floatType } negType;
-            NegOpCall(FuncDef *def, negType t) : FuncCall(def), _t(t) {}
+            NegOpCall(FuncDef *def) : FuncCall(def) {}
             
             virtual ResultExprPtr emit(Context &context) {
                 args[0]->emit(context)->handleTransient(context);
@@ -1840,46 +1839,64 @@ namespace {
                 LLVMBuilder &builder =
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 
-                if (_t == intType) {
-                    builder.lastValue =
-                        builder.builder.CreateSub(
-                            ConstantInt::get(
-                                BTypeDefPtr::arcast(func->returnType)->rep,
-                                0
-                                ),
-                            builder.lastValue
-                        );
-                }
-                else {
-                    builder.lastValue =
-                        builder.builder.CreateFSub(
-                                ConstantFP::get(BTypeDefPtr::arcast(func->returnType)->rep,
-                                0
-                                ),
-                            builder.lastValue
-                        );
-                }
-
+                builder.lastValue =
+                    builder.builder.CreateSub(
+                        ConstantInt::get(
+                            BTypeDefPtr::arcast(func->returnType)->rep,
+                            0
+                            ),
+                        builder.lastValue
+                    );
                 return new BResultExpr(this, builder.lastValue);
             }
-        private:
-            negType _t;
     };
 
     class NegOpDef : public OpDef {
-            NegOpCall::negType _t;
         public:
-            NegOpDef(BTypeDef *resultType, const std::string &name,
-                    NegOpCall::negType t = NegOpCall::intType) :
-                OpDef(resultType, FuncDef::noFlags, name, 1), _t(t) {
+            NegOpDef(BTypeDef *resultType, const std::string &name) :
+                OpDef(resultType, FuncDef::noFlags, name, 1) {
                 args[0] = new ArgDef(resultType, "operand");
             }
             
             virtual FuncCallPtr createFuncCall() {
-                return new NegOpCall(this, _t);
+                return new NegOpCall(this);
             }
     };
-    
+
+    class FNegOpCall : public FuncCall {
+        public:
+            FNegOpCall(FuncDef *def) : FuncCall(def) {}
+
+            virtual ResultExprPtr emit(Context &context) {
+                args[0]->emit(context)->handleTransient(context);
+
+                LLVMBuilder &builder =
+                    dynamic_cast<LLVMBuilder &>(context.builder);
+
+                builder.lastValue =
+                    builder.builder.CreateFSub(
+                            ConstantFP::get(BTypeDefPtr::arcast(func->returnType)->rep,
+                            0
+                            ),
+                        builder.lastValue
+                    );
+
+                return new BResultExpr(this, builder.lastValue);
+            }
+    };
+
+    class FNegOpDef : public OpDef {
+        public:
+            FNegOpDef(BTypeDef *resultType, const std::string &name) :
+                OpDef(resultType, FuncDef::noFlags, name, 1) {
+                args[0] = new ArgDef(resultType, "operand");
+            }
+
+            virtual FuncCallPtr createFuncCall() {
+                return new FNegOpCall(this);
+            }
+    };
+
     template<class T>
     class GeneralOpDef : public OpDef {
         public:
@@ -3943,7 +3960,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new FCmpOLTOpDef(float32Type, boolType));
     context.addDef(new FCmpOGEOpDef(float32Type, boolType));
     context.addDef(new FCmpOLEOpDef(float32Type, boolType));
-    context.addDef(new NegOpDef(float32Type, "oper -", NegOpCall::floatType));
+    context.addDef(new FNegOpDef(float32Type, "oper -"));
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
