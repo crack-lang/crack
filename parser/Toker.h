@@ -39,6 +39,7 @@ class Toker {
          st_none, 
          st_ident, 
          st_slash,
+         st_plus,
          st_minus,
          st_digram,
          st_comment, 
@@ -51,8 +52,9 @@ class Toker {
          st_istrOctal,
          st_strHex,
          st_istrHex,
-         st_integer,
+         st_number,
          st_float,
+         st_exponent,
          st_amp,
          st_istr,
          st_pipe
