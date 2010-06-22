@@ -2445,7 +2445,16 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
         if (rootBuilder) 
             execEng = rootBuilder->bindModule(mod);
         else
-            execEng = ExecutionEngine::create(mod);
+            // we have to specify all of the arguments for this so we can turn 
+            // off "allocate globals with code."  In addition to being 
+            // deprecated in the docs for this function, this option causes 
+            // seg-faults when we allocate globals under certain conditions.
+            execEng = ExecutionEngine::create(mod,
+                                              false, // force interpreter
+                                              0, // error string
+                                              CodeGenOpt::Default, // opt lvl
+                                              false // alloc globals with code
+                                              );
     }
     
     return execEng;
@@ -2453,7 +2462,7 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
 
 int LLVMBuilder::argc = 1;
 namespace {
-    char *tempArgv[] = {"undefined"};
+    char *tempArgv[] = {const_cast<char *>("undefined")};
 }
 char **LLVMBuilder::argv = tempArgv;
 
@@ -2517,7 +2526,7 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
         const Type *type = bvar->rep->getType()->getElementType();
 
         GlobalVariable *global =
-            new GlobalVariable(*module, type, false,
+            new GlobalVariable(*module, type, bvar->rep->isConstant(),
                                GlobalValue::ExternalLinkage,
                                0, // initializer: null for externs
                                bvar->rep->getName()

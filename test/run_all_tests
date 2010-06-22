@@ -584,6 +584,10 @@ test_output 'specialization comparisons' \
     'array[byteptr] b = array[byteptr](10); puts("ok")' \
     ok
 
+test_output 'use of external class globals' \
+    'b := byte; puts("ok");' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts='-g -l .:lib'
 
