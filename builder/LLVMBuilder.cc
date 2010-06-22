@@ -1737,9 +1737,13 @@ namespace {
                 Value* oVal = builder.lastValue; // arg[0] condition value
                 BasicBlock* oBlock = bpos->block2; // value block
 
-                // now pointing to true block, emit condition of rhs
+                // now pointing to true block, emit condition of rhs in its 
+                // own cleanup frame (only want to do cleanups if we evaluated 
+                // this expression)
+                context.createCleanupFrame();
                 args[1].get()->emitCond(context);
                 Value* tVal = builder.lastValue; // arg[1] condition value
+                context.closeCleanupFrame();
                 BasicBlock* tBlock = builder.block; // arg[1] value block
 
                 // this branches us to end
@@ -1792,10 +1796,14 @@ namespace {
                 // now pointing to true block, save it for phi
                 BasicBlock *tBlock = builder.block;
 
-                // repoint to false block, emit condition of rhs
+                // repoint to false block, emit condition of rhs (in its own 
+                // cleanup frame, we only want to cleanup if we evaluated this 
+                // expression)
                 builder.builder.SetInsertPoint(builder.block = fBlock);
+                context.createCleanupFrame();
                 args[1]->emitCond(context);
                 Value *fVal = builder.lastValue; // arg[1] condition value
+                context.closeCleanupFrame();
                 // branch to true for phi
                 builder.builder.CreateBr(tBlock);
                 
