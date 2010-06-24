@@ -1661,9 +1661,12 @@ namespace {
             }                                                               \
     };
 
+    // type conversion
     UNOP(SExt);
     UNOP(ZExt);
     UNOP(FPExt);
+    UNOP(SIToFP);
+    UNOP(UIToFP);
 
     // truncate is a unary op but is used as the "oper new" so it doesn't get 
     // a receiver.
@@ -3962,21 +3965,39 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new FCmpOLEOpDef(float32Type, boolType));
     context.addDef(new FNegOpDef(float32Type, "oper -"));
 
+    context.addDef(new FAddOpDef(float64Type));
+    context.addDef(new FSubOpDef(float64Type));
+    context.addDef(new FMulOpDef(float64Type));
+    context.addDef(new FDivOpDef(float64Type));
+    context.addDef(new FRemOpDef(float64Type));
+    context.addDef(new FCmpOEQOpDef(float64Type, boolType));
+    context.addDef(new FCmpONEOpDef(float64Type, boolType));
+    context.addDef(new FCmpOGTOpDef(float64Type, boolType));
+    context.addDef(new FCmpOLTOpDef(float64Type, boolType));
+    context.addDef(new FCmpOGEOpDef(float64Type, boolType));
+    context.addDef(new FCmpOLEOpDef(float64Type, boolType));
+    context.addDef(new FNegOpDef(float64Type, "oper -"));
+
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
     context.addDef(new LogicOrOpDef(boolType, boolType));
     
-    // conversions
+    // implicit conversions (no loss of precision)
     byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
     byteType->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
     byteType->context->addDef(new ZExtOpDef(uint32Type, "oper to uint32"));
     byteType->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    byteType->context->addDef(new UIToFPOpDef(float32Type, "oper to float32"));
+    byteType->context->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
     int32Type->context->addDef(new SExtOpDef(int64Type, "oper to int64"));
     int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    int32Type->context->addDef(new SIToFPOpDef(float64Type, "oper to float64"));
     uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
     uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
+    uint32Type->context->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
     float32Type->context->addDef(new FPExtOpDef(float64Type, "oper to float64"));
 
+    // explicit (loss of precision)
     addExplicitTruncate(int64Type, uint64Type);
     addExplicitTruncate(int64Type, int32Type);
     addExplicitTruncate(int64Type, uint32Type);

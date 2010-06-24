@@ -22,6 +22,7 @@ class FloatConst : public Expr {
         virtual ResultExprPtr emit(Context &context);
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;        
+        bool isAdaptive() const;
 };
 
 } // namespace parser

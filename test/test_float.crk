@@ -1,9 +1,13 @@
 # test of float type and operators
+# NOTE: 6/2010 - this is inadequate
 
-int i = 0;
+// basic constants
 float32 f1 = 1234.56;
 float32 f2 = 2345.67;
+float64 d1 = 1.123456789;
+float64 d2 = 2.345678901;
 
+// scientific notation
 float e = +1.23e10;
 e = -1.23e10;
 e = +1.23e-10;
@@ -12,6 +16,12 @@ e = 1e2;
 e = 1e-5;
 e = -1e+10;
 
+e = 12.34e-1;
+float e2 = 123.4e-2;
+if (e != e2)
+    puts("fail");
+
+// operators
 if (f1 != 1234.56)
     puts("fail");
 
@@ -66,9 +76,40 @@ f3 = -f1;
 if (f3 != (0.0 - f1))
     puts("fail");
 
-float64 f10 = 1.123456789;
-float64 f11 = 2.345678901;
-//if (f10 != 1.123456789)
-//    puts("fail");
+// conversions
+
+// byte -> float32
+byte b = 1;
+f1 = b;
+if (f1 != 1.0)
+    puts("fail");
+
+// byte -> float64
+d1 = b;
+if (d1 != 1.0)
+    puts("fail");
+
+// int16 -> float32
+// uint16 -> float32
+// int16 -> float64
+// uint16 -> float64
+
+// int32 -> float64
+int32 i = -5; 
+d1 = i;
+if (d1 != -5.0)
+    puts("fail");
+
+// uint32 -> float64
+uint32 ui = 5; 
+d1 = ui;
+if (d1 != 5.0)
+    puts("fail");
+
+// float32 -> float64
+f1 = 5.0;
+d1 = f1;
+if (d1 != 5.0)
+    puts("fail");
 
 puts("ok");
