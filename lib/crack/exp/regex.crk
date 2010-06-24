@@ -1,0 +1,155 @@
+## Regular expressions (based on PCRE)
+
+import crack.lang Buffer, die, free;
+import crack.io cerr, StringFormatter;
+import crack.exp.bindings ByteptrWrapper, IntWrapper, Opaque;
+
+import 'libpcre.so.3' pcre_compile2, pcre_exec, pcre_fullinfo, 
+                      pcre_get_stringnumber;
+
+class _PCRE : Opaque {};
+
+int _PCRE_INFO_CAPTURECOUNT = 2;
+_PCRE pcre_compile2(byteptr pattern, int options, IntWrapper errorCode,
+                    ByteptrWrapper errorText,
+                    IntWrapper errorOffset,
+                    byteptr tablePtr
+                    );
+int pcre_exec(_PCRE pcre, voidptr extra, byteptr subject, uint subjectSize,
+              int startOffset,
+              int options,
+              array[int] outputVec,
+              uint outputVecSize
+              );
+void pcre_fullinfo(_PCRE pcre, voidptr extra, int param, IntWrapper result);
+int pcre_get_stringnumber(_PCRE pcre, byteptr name);
+
+# keep one of these around in case we want to format a death string.
+death := StringFormatter();
+
+## regex base class that we can store in a Match object.
+class _RegexBase {
+    _PCRE _rx = null;
+    
+    oper init(_PCRE rx0) : _rx = rx0 {}
+};
+
+## A regular expression match.
+class Match {
+    String subject;
+    _RegexBase regex = null;
+    array[int] __captures = null;
+    int __captureCount;
+    
+    oper init(_RegexBase regex0, String subject0, array[int] captures, 
+              uint captureCount
+              ) : 
+        regex = regex0,
+        subject = subject0,
+        __captures = captures,
+        __captureCount = captureCount {
+    }
+    
+    oper del() {
+        free(__captures);
+    }
+
+    void __checkGroupIndex(uint index) {
+        if (index >= __captureCount) {
+            death 
+                `match out of bounds (index = $index, max = $__captureCount)`;
+            die(death.createString());
+        }
+    }
+    
+    ## Returns the match group by index.  Groups are indexed from left to 
+    ## right by the position of the starting parenthesis.  Group 0 is the 
+    ## entire expression.
+    String group(uint index) {
+        __checkGroupIndex(index);
+        
+        i := index * 2;
+        start := __captures[i];
+        end := __captures[i + 1];
+        return String(Buffer(subject.buffer + uint(start), uint(end - start)));
+    }
+    
+    String group() { return group(0); }
+
+    ## Returns the index of the beginning of the indexed group.
+    int begin(uint index) {
+        __checkGroupIndex(index);
+        return __captures[index * 2];
+    }
+    
+    int begin() { return begin(0); }
+    
+    ## Returns the index of the end of the indexed group.
+    int end(uint index) {
+        __checkGroupIndex(index);
+        return __captures[index * 2 + 1];
+    }
+    
+    int end() { return end(0); }
+
+    ## Returns the value of the named group.    
+    String group(String name) {
+        int i = pcre_get_stringnumber(regex._rx, name.buffer);
+        if (i < 0) {
+            death `undefined group name $name`;
+            die(death.createString());
+        }
+        return group(uint(i));
+    }
+};
+
+## A compiled regular expression.
+class Regex : _RegexBase {
+    
+    # the number of sub-expressions to capture.
+    uint __captureCount;
+    
+    ## Compile a regular expression from 'pattern'.  The regex library uses 
+    ## PCRE, see the 'pcresyntax' man page for regular expression syntax.
+    oper init(String pattern) : _RegexBase(null) {
+        errorCode := IntWrapper(0);
+        errorText := ByteptrWrapper(null);
+        errorOffset := IntWrapper(0);
+        _rx = pcre_compile2(pattern.buffer, 0, errorCode, errorText,
+                             errorOffset,
+                             null
+                             );
+        if (_rx is null) {
+            # error compiling the regex.
+            f := StringFormatter();
+            f `Error compiling regular expression: $(String(errorText.val))`;
+            die(f.createString());
+        }
+        
+        # figure out how many capturing sub-patterns there are
+        cc := IntWrapper(0);
+        pcre_fullinfo(_rx, null, _PCRE_INFO_CAPTURECOUNT, cc);
+        __captureCount = uint(cc.val) + 1;
+    }
+    
+    ## Search 'subject' for the regular expression.  Returns a Match 
+    ## object if it is found or null if not.
+    Match search(String subject) {
+        captures := array[int](__captureCount * 3);
+        Match result = null;
+        rc := pcre_exec(_rx, null, subject.buffer, subject.size, 0, 0, 
+                        captures,
+                        __captureCount * 3
+                        );
+        if (rc >= 0) {
+            return Match(this, subject, captures, __captureCount);
+        } else {
+            free(captures);
+            return null;
+        }
+    }
+    
+    oper del() { free(_rx); }
+};
+
+
