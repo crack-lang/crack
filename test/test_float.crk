@@ -112,4 +112,16 @@ d1 = f1;
 if (d1 != 5.0)
     puts("fail");
 
+// int constant -> float32, float64
+float32 fc = 5;
+float64 dc = 10;
+if (fc != 5.0)
+    puts("fail");
+if (dc != 10.0)
+    puts("fail");
+if (fc != 5)
+    puts("fail");
+if (dc != 10)
+    puts("fail");
+
 puts("ok");
