@@ -1,0 +1,16 @@
+
+import crack.lang die;
+import crack.io cout;
+import crack.exp.regex Regex;
+
+rx := Regex('simple');
+m := rx.search('not simple');
+if (m.begin() != 4) die('begin failed');
+if (m.end() != 10) die('end failed');
+if (m.group().cmp('simple')) die('group failed');
+cout `simple search ok\n`;
+
+rx = Regex('blah{(.*)}');
+m = rx.search('this is blah{foo}');
+if (m.group(1).cmp('foo')) die('group(1) failed');
+cout `subgroups ok\n`;
