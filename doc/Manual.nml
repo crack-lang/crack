@@ -1,0 +1,429 @@
+
+The Crack Programming Language Guide
+====================================
+
+If you're reading this, you're one of the intrepid folks who have downloaded 
+the Crack 0.1 programming language.  Thanks!  Before we get into telling you 
+about the language, there's something you need to be aware of:  Crack 0.1 is 
+very much alpha-quality code.  Lots of very basic language features haven't 
+been implemented yet.  There are lots of bugs, some known, some yet to be 
+discovered.  There's no debug info, stack traces, or anything else that you 
+might use to make your life easier.  If you're looking for a language to do 
+serious development in, Crack 0.1 ain't it.
+
+But that said, if you want to get in on the ground floor of a new scripting 
+language that is C-like, fast, and interfaces well with C and C++ code, Crack 
+is the language and this version is definitely the ground floor.  We're 
+releasing it mainly to get attention.  The language exists, we believe it 
+will (eventually) rock, and we'd love to have people banging on it and giving 
+us feedback.
+
+So without further caveats - let's do some Crack!
+
+Installation
+------------
+
+See the INSTALL file for the latest installation instructions.
+
+Hello World
+-----------
+
+Here's the crack "hello world" program:
+
+{{
+    #!/usr/local/bin/crack
+    import crack.io cout;
+    cout `hello world!\n`;
+}}
+
+If you write this as a script and "chmod u+x" it, when you run it you should 
+see "hello world!" written to the terminal.
+
+The first line is the standard unix "`#!`" line.  It tells the kernel to 
+execute the script by passing its full name as an argument to the 
+"`/usr/local/bin/crack`" program.
+
+The second line imports the "#cout#" variable from the #crack.io# module.  
+Like C++, Crack uses "#cin#", "#cout#" and "#cerr#" for its standard input, 
+output and error streams.  "#cout#" and "#cerr#" are both "formatters," which 
+means that they support the use of the back-tick operator for formatting.
+
+The third line actually uses the back-tick operator to print some text.  We 
+won't go into too much detail on this operator right now - suffice it to say 
+that this line is roughly equivalent to "#cout.format('hello world!\n');#"
+
+Comments
+--------
+
+Crack permits the use of C, C++ and shell style comments:
+
+{{
+    /* C Style comment */
+    // C++ style comment
+    # shell style comment
+}}
+
+For code that you hope to get a lot of re-use out of, we recommend the 
+convention of Doxygen-style doc-comments for classes, functions and global 
+variables:
+
+{{
+    /** C-style doc-comment */
+    /// C++ style doc-comment
+    ## shell-ish doc-comment
+}}
+
+These currently get treated the same as any other comments.  However, future 
+versions of Crack will parse them and store them with the meta-data for the 
+code, permitting the easy extraction of reference documentation from the 
+source.
+
+Variables and Types
+-------------------
+
+Like most languages, Crack allows you to define variables:
+
+{{
+    # define the variable i and initialize it to 100.
+    int i = 100;
+}}
+
+You can also define variables using the more terse ":=" operator:
+
+{{
+    i := 100;           # equivalent to "int i = 100;"
+    j := uint32(100);   # equivalent to "uint32 j = 100;"
+}}
+
+If you don't specify an initializer for a variable, the default initializer 
+will be used.  For the numeric types, this is zero.  For complex types (which 
+we'll discuss later), the default constructor is used.
+
+Built-in Types
+''''''''''''''
+
+The Crack language defines the following set of built-in types - these can be 
+expected to exist in every namespace without requiring an explicit import:
+
+void::
+    The "void" type - this only exists so you can have a function that doesn't 
+    return anything.  Bad things will happen if you try to define void 
+    variables. 
+byte::
+    An 8-bit unsigned integer.
+bool::
+    A boolean.  Values are *true* and *false*, which are built-in variables.
+int32::
+    A 32-bit signed integer.
+uint32::
+    A 32-bit unsigned integer.
+int64::
+    A 64-bit signed integer.
+uint64::
+    A 64-bit unsigned integer.
+float32:
+    A 32-bit floating point.
+float64::
+    A 64-bit floating point.
+int::
+    An integer of the C compiler's default int-size for the platform (this is 
+    an alias to either int32 or int64).
+uint::
+    An unsigned integer of the C compiler's default unsigned int-size for the 
+    platform (this is an alias to either uint32 or uint64).
+float::
+    A floating point of the C compiler's float size for the platform.
+byteptr::
+    A pointer to an array of bytes.
+voidptr::
+    A pointer to anything.  All high level classes can implicitly convert to 
+    voidptr.
+array[class]::
+    The low-level array type.  You should generally avoid using this in favor 
+    of high-level datastructures.
+
+    This is Crack's only existing generic datatype - to use it, you specialize 
+    it with another class type, for example: #array[int]#
+VTableBase::
+    The base class used for all classes that have a vtable (more on this 
+    later).
+Object::
+    The implicit base class of all classes that don't define base classes.
+String::
+    A string of bytes.
+StaticString::
+    This is a String whose buffer can point to read-only memory.
+Class::
+    The meta-class for all class objects.
+
+Of these, the #byte#, #bool#, #int#, #uint# and #float# types (including all 
+variations of #int#, #uint# and #float#) are /primitives/.  These types are 
+notable in that they are copy-by-value and consume no memory external to the 
+scope in which they are defined.
+
+The #byteptr#, #voidptr# and #array# types are classified as /primitive 
+pointer/ types.  
+
+Primitive types, primitive pointer types, and the #void# type are all 
+classified as /low-level/ types.  They are distinguished from the higher 
+level aggregate types by naming convention: low-level types will always be all 
+lower case (and digits), high-level types (at least the ones in the standard 
+libraries) will always begin with an upper-case character.  You may not 
+currently subclass low-level types, this restriction will be lifted in a 
+future version of Crack.
+
+/High level/ or /aggregate/ types are first class objects: variables of this 
+type are pointers to allocated regions of memory large enough to accomodate 
+the state data defined for the type.  They can be extended to create other 
+high-level types through sub-classing (more on this later).
+
+Numeric Conversion
+''''''''''''''''''
+
+Numeric types will implicitly convert between one another as long as there is 
+no risk of precision loss.  In cases where there is a risk of precision loss, 
+you can use explicit construction to force a conversion - truncating the value 
+if necessary.
+
+{{
+    # implicit conversions
+    byte b;
+    int32 i32 = b;
+    uint32 u32 = b;
+    int64 i64 = i32;
+    i64 = u32;
+    uint64 u64 = u32;
+    float32 f32 = b;
+    float64 f64 = i32;
+    f64 = u32;
+    
+    # explicit conversions
+    i32 = int32(i64);
+    b = byte(f32);
+    i64 = int64(u64);
+}}
+
+Strings
+'''''''
+
+Most programming languages support strings of characters, which are usually 
+implemented as some kind of array.  Crack strings are strings of bytes - you 
+can embed any kind of byte values you want in them, there are no assumptions 
+about encoding.
+
+String constants are sequences of bytes enclosed in single or double quotes:
+
+{{
+    String s = "first string";
+    t := 'second string';
+}}
+
+String constants actually instances of the "StaticString" class - they're just 
+like strings except since their buffers are constants, they don't try to 
+deallocate them on destruction.
+
+Control Structures
+------------------
+
+Crack 0.1 only supports two control structures: the "if/else" statement and 
+the "while" statement.  "if" runs code blocks depending on whether a condition 
+is true or false:
+
+{{
+    import crack.io cout;
+    if (true)
+        cout `true is true\n`; 
+    else
+        cout `something is wrong\n`;
+}}
+
+The code above will always print out "true is true".  
+
+If we wanted to do something a little more useful, we could have used it to 
+check the command line argument:
+
+{{
+    import crack.sys argv;
+    import crack.io cout;
+    
+    if (argv.count() > 1 && argv[1] == 'true')
+        cout `arg is true\n`;
+    else
+        cout `arg is false\n`;
+}}
+
+There's a lot of new stuff going on here: first of all, we're importing the 
+"argv" variable form #crack.sys#.  This variable contains the program's 
+command line arguments.
+
+#count()# is a method that returns the number of items in argv.  #argv[1]# 
+accesses item 1 of the argument list (indexes are zero-based, so item 1 is the 
+second element of the sequence).
+
+The "&&" is a short-circuit logical and: it returns true if both of the 
+expressions are true, but it won't evaluate the second expression unless the 
+first is true.  This is important in this case, because if we were to check 
+#argv[1]# in a case where #argv# had less than two elements, a fatal error 
+would result.
+
+The #if# statement need not be accompanied by an else:
+
+{{
+    if (argv.count() > 1 && argv[1] == 'true')
+        cout `arg is true\n`;
+    cout `this gets written no matter what the args are\n`;
+}}
+
+The code in an #if# or an #else# can either be a single statement, or a 
+sequence of statements enclosed in curly braces:
+
+{{
+    if (argv.count() > 1 && argv[1] == 'true') {
+        cout `arg is true\n`;
+        cout `and so are you!\n`;
+    }
+}}
+
+You can also chain if\/else blocks:
+
+{{
+    argCount := argv.count();
+    if (argCount > 2)
+        cout `more than one arg\n`;
+    else if (argCount > 1)
+        cout `just one arg\n`;
+    else
+        cout `no args.\n`;
+}}
+
+The while statement
+'''''''''''''''''''
+
+The #while# statement repeatedly executes the same code block while the 
+condition is true.  For example, we could iterate over the list of arguments 
+with the following code:
+
+{{
+    import crack.sys argv;
+    import crack.io cout;
+    
+    uint i;
+    while (i < argv.count()) {
+        cout `argv $i: $(argv[i])\n`;
+        i = i + 1;
+    }
+}}
+
+Note that the code in the while is enclosed in curly braces.  In general, the 
+code managed by a control structure can either be a single statement, or a 
+group of statements enclosed in curly braces.  The #if# statement works the 
+same way.
+
+This example also introduces the primary feature of the back-tick operator: 
+variable interpolation.  A dollar sign followed by a variable name formats the 
+variable.  A dollar sign followed by a parenthesized expression formats the 
+value of the expression.
+
+Functions
+---------
+
+Functions let you encapsulate common functionality.  They are defined with a 
+type name, an argument list, and a block of code, just like in C:
+
+{{
+    int factorial(int val) {
+        if (val == 1)
+            return 1;
+        else
+            return val * factorial(val - 1);
+    }
+}}
+
+Also note that Crack supports recursion: you can call a function from within 
+the definition of that function.
+
+You can define a function that doesn't return a value by using the special 
+"void" type:
+
+{{
+    void printInt(int i) {
+        cout `$i\n`;
+    }
+}}
+
+Primitive types are always passed "by value."  The system makes a copy of them 
+for the function.  For example:
+
+{{
+    
+
+Classes
+-------
+
+Classes are a feature of object oriented programming languages that combine a 
+set of data variables with a set of special functions called "methods."  As a 
+simple example of a class, consider the representation of an x, y grahics 
+coordinate:
+
+{{
+    import crack.lang XWriter;
+    import crack.io cout, XWFormatter;
+
+    class Coord {
+        int x, y;
+        
+        oper init(int x0, int y0) : x = x0, y = y0 {}
+        oper init() {}
+
+        void writeTo(XWriter out) {
+            XWFormatter(out) `Coord($x, $y)`;
+        }
+    }
+}}
+
+This class has two "instance variables:" #x# and #y#.  These get bundled 
+together in a package whenever we create an instance of the class.
+
+The "oper init" syntax creates a /constructor/, which is a special function 
+that gets called when an instance of the class is created.  The constructor 
+performs basic initialization of all of the instance variables.  The second 
+"oper init", the one without arguments, is called the "default constructor."  
+As in C++, these get generated automatically if the class has no other defined 
+constructors.  If the class does define constructors, and you want a default 
+constructor, you have to specify one explicitly as we've done above.
+
+We can create an instance of #Coord# like so:
+
+{{
+    c := Coord(3, 4);
+}}
+
+Alternately, we can use a more C-like syntax:
+
+{{
+    Coord c = {3, 4};
+}}
+
+Both of these are just different syntactic flavors of the same thing: in both 
+cases we're defining a variable "c" that is a reference to a #Coord# object.  
+The system initializes this variable by:
+
+-   Allocating memory large enough to accomodate a Coord object.
+-   calling the appropriate "oper init" function for the construction 
+    arguments ("3, 4" in the examples above).
+-   Assigning the address of the newly created #Coord# object to #c#.
+
+Note that the all variables of class types are references - they behave very 
+much like pointers in C.  So if we were to initialize one variable from 
+another, both variables would refer to the same object:
+
+{{
+    c := Coord(3, 4);
+    d := c;
+    c.y = 5; # d.y is now also 5
+}}
+
+This is different from the way that the primitive types behave.  Primitive 
+types are always passed "by value."
+    
+XXX to finish XXX
