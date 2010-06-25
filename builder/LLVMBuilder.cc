@@ -1688,7 +1688,31 @@ namespace {
                 return new BResultExpr(this, builder.lastValue);
             }
     };
-    
+
+#define FPTRUNCOP(opCode) \
+    class opCode##OpCall : public FuncCall {                                \
+        public:                                                             \
+            opCode##OpCall(FuncDef *def) : FuncCall(def) {}                 \
+                                                                            \
+            virtual ResultExprPtr emit(Context &context) {                  \
+                args[0]->emit(context)->handleTransient(context);           \
+                                                                            \
+                LLVMBuilder &builder =                                      \
+                    dynamic_cast<LLVMBuilder &>(context.builder);           \
+                builder.lastValue =                                         \
+                    builder.builder.Create##opCode(                         \
+                        builder.lastValue,                                  \
+                        BTypeDefPtr::arcast(func->returnType)->rep          \
+                    );                                                      \
+                                                                            \
+                return new BResultExpr(this, builder.lastValue);            \
+            }                                                               \
+    };                                                                      \
+
+    FPTRUNCOP(FPTrunc);
+    FPTRUNCOP(FPToSI);
+    FPTRUNCOP(FPToUI);
+
     class BitNotOpCall : public FuncCall {
         public:
             BitNotOpCall(FuncDef *def) : FuncCall(def) {}
@@ -3774,6 +3798,20 @@ namespace {
         func->args[0] = new ArgDef(sourceType, "val");
         targetType->context->addDef(func.get());
     }
+
+    template <typename opType>
+    void addExplicitFPTruncate(BTypeDef *sourceType,
+                               BTypeDef *targetType
+                               ) {
+        FuncDefPtr func =
+            new GeneralOpDef<opType>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->context->addDef(func.get());
+    }
+
 }
 
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
@@ -4028,6 +4066,18 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitTruncate(int32Type, uint32Type);
     addExplicitTruncate(uint32Type, byteType);
     addExplicitTruncate(uint32Type, int32Type);
+
+    addExplicitFPTruncate<FPTruncOpCall>(float64Type, float32Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float32Type, byteType);
+    addExplicitFPTruncate<FPToSIOpCall>(float32Type, int32Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float32Type, uint32Type);
+    addExplicitFPTruncate<FPToSIOpCall>(float32Type, int64Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float32Type, uint64Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float64Type, byteType);
+    addExplicitFPTruncate<FPToSIOpCall>(float64Type, int32Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float64Type, uint32Type);
+    addExplicitFPTruncate<FPToSIOpCall>(float64Type, int64Type);
+    addExplicitFPTruncate<FPToUIOpCall>(float64Type, uint64Type);
 
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),

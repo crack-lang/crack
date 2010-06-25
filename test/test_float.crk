@@ -124,4 +124,50 @@ if (fc != 5)
 if (dc != 10)
     puts("fail");
 
+// truncate (loss of precision)
+d1 = 1.234;
+f1 = float32(d1);
+if (f1 != 1.234)
+    puts("fail");
+
+f1 = 1.234;
+i = int32(f1);
+if (i != 1)
+    puts("fail");
+
+f1 = 2.234;
+ui = uint32(f1);
+if (ui != 2)
+    puts("fail");
+
+d1 = 1.234;
+i = int32(d1);
+if (i != 1)
+    puts("fail");
+
+d1 = 2.234;
+ui = uint32(d1);
+if (ui != 2)
+    puts("fail");
+
+f1 = 1.234;
+int64 i64 = int64(f1);
+if (i64 != 1)
+    puts("fail");
+
+f1 = 2.234;
+uint64 ui64 = uint64(f1);
+if (ui64 != 2)
+    puts("fail");
+
+d1 = 1.234;
+i64 = int64(d1);
+if (i != 1)
+    puts("fail");
+
+d1 = 2.234;
+ui64 = uint64(d1);
+if (ui64 != 2)
+    puts("fail");
+
 puts("ok");
