@@ -11,16 +11,18 @@ Unassigned
 -   allow explicit operators to be called without the "var." prefix.
 -   need to be able to instantiate a class from within the class (generate the 
     "new" operator as soon as an "init" is defined).
+-   give an error when you try to derive from a low-level type.
+-   implement inheritence from low-level types.
+-   need to be able to instantiate objects from within the class (i.e. oper 
+    new must be generated after oper init is parsed)
+-   annotations
+
 
 Roadmap
 -------
 
 for 0.1:
 -   floating point types
--   Should be able to do instance construction in a statement context without 
-    it being misinterpreted as a definition
--   fix numeric conversion.
--   need access to argv
 
 Completed for 0.1:
 -   fix instance variable default initialization: 
@@ -54,6 +56,10 @@ Completed for 0.1:
         to get rid of the __del() hack. DONE
 -   need to define comparison operators for Object in crack.lang and make them 
     part of the standard imports. DONE
+-   fix numeric conversion. DONE
+-   Should be able to do instance construction in a statement context without 
+    it being misinterpreted as a definition DONE
+-   need access to argv DONE
 
 for 1.0:
 -   cleanup:

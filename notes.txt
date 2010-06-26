@@ -435,6 +435,25 @@ Reference counting rules:
     If this is done, the compiler must verify that the function only returns 
     non-productive expressions.  If the function is a method, this must also 
     be verified for all derived functions.
+    
+    Cleanup frames are a way of tracking which cleanups need to be run when 
+    we exit a particular context.  Objects that have a "oper release()" 
+    method may have that method called at the end of the cleanup frame.
+    Every time the compiler emits an expression it produces a result.  We 
+    have to either call handleTransient() or handleAssignment() on that result 
+    depending on what we're doing with it.
+    
+    handleTransient() means that the object is temporary - it lives for the 
+    life of the expression it is contained in.  If the result is 
+    non-productive, handleTransient() doesn't have to do anything.  But if 
+    the result is productive, handleTransient() adds it to the current 
+    cleanup frame and "oper release()" will get called on it when we're done 
+    with the statement.
+
+    handleAssignment() has the complimentary semantics: if the expression is 
+    productive, ignore it (the "produced" value will be consumed by an 
+    assignment).  If it is non-productive, call "oper bind()" on it.
+
 
 Constructors:
     -   A class will inherit the constructors of its first base class if:
@@ -528,3 +547,50 @@ Ugliness:
         My current feeling is that we should revert to "BaseClass::method()" 
         for this sort of thing, especially since it works with a non-this 
         instance: "other.BaseClass::method()".
+    
+    -   Parser could use a re-write.  We need to come up with a normalized
+        grammar that deals with the class-as-class/class-as-object ambiguity.
+
+Parsing Oddities:
+    
+    in a class, you can have:
+        variable defs
+        func defs & class defs
+    
+    in a code block:
+        variable defs
+        func defs & class defs
+        statements
+    
+    in a condition:
+        variable defs
+        expressions
+    
+    So clause ::= var_def | expression
+        but this doesn't help much because
+        
+        class:
+            if tok is class:
+                parseClassDef()
+            else
+                expr = parsePrimary()
+                make sure expr is a typespec
+
+Desired Grammer:
+
+    This is going to be the 1.0 grammar description of the language.
+
+    XXX Finish this. XXX
+    
+    condition = expr | var_def
+    typespec_list = typespec |
+                    typespec_list ',' typespec ;
+    typespec ::= identifier |
+                 typespec '.' identifier |
+                 typespec '[' typespec_list ']
+    primary ::= constant |
+                identifier |
+                primary '.' identifier |
+                primary arg_list |
+                primary '[' expr ']' ;
+    expr ::= constant | primary
