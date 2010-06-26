@@ -178,7 +178,22 @@ class Formatter : Writer {
         obj.writeTo(this);
     }
 
-};
+}
+
+## Adapter to allow us to use an XWriter as a Writer.
+class XWriterWrapper : Writer {
+    XWriter __xw;
+    
+    oper init(XWriter xw) : __xw = xw {}
+    
+    void write(byteptr data, uint size) {
+        __xw.write(data, size);
+    }
+}
+
+class XWFormatter : Formatter {
+    oper init(XWriter xwriter) : Formatter(XWriterWrapper(xwriter)) {}
+}    
 
 cout := Formatter(FDWriter(1));
 cerr := Formatter(FDWriter(2));
