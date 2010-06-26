@@ -1,0 +1,173 @@
+# test of float type and operators
+# NOTE: 6/2010 - this is inadequate
+
+// basic constants
+float32 f1 = 1234.56;
+float32 f2 = 2345.67;
+float64 d1 = 1.123456789;
+float64 d2 = 2.345678901;
+
+// scientific notation
+float e = +1.23e10;
+e = -1.23e10;
+e = +1.23e-10;
+e = +1.23e+10;
+e = 1e2;
+e = 1e-5;
+e = -1e+10;
+
+e = 12.34e-1;
+float e2 = 123.4e-2;
+if (e != e2)
+    puts("fail");
+
+// operators
+if (f1 != 1234.56)
+    puts("fail");
+
+if (!(f1 == 1234.56))
+    puts("fail");
+
+if (f1 == f2)
+    puts("fail");
+
+if (!(f1 != f2))
+    puts("fail");
+
+if (f1 > f2)
+   puts("fail");
+   
+if (!(f1 < f2))
+   puts("fail");
+
+if (!(f1 <= 1234.56))
+   puts("fail");
+
+ if (!(f1 <= f2))
+   puts("fail");
+
+if (!(f2 >= 1234.56))
+   puts("fail");
+
+ if (!(f2 >= f1))
+   puts("fail");
+
+float f3 = f1 + f2;
+if (f3 != 3580.23)
+   puts("fail");
+
+f3 = f3 - f1;
+if (f3 != f2)
+   puts("fail");
+
+f3 = f1 * 2.0;
+if (f3 != 2469.12)
+   puts("fail");
+
+f3 = f3 / 2.0;
+if (f3 != f1)
+   puts("fail");
+
+f3 = f1 % 2.0;
+//if (f3 != 0.560059)
+//   puts("fail");
+
+f3 = -f1;
+if (f3 != (0.0 - f1))
+    puts("fail");
+
+// conversions
+
+// byte -> float32
+byte b = 1;
+f1 = b;
+if (f1 != 1.0)
+    puts("fail");
+
+// byte -> float64
+d1 = b;
+if (d1 != 1.0)
+    puts("fail");
+
+// int16 -> float32
+// uint16 -> float32
+// int16 -> float64
+// uint16 -> float64
+
+// int32 -> float64
+int32 i = -5; 
+d1 = i;
+if (d1 != -5.0)
+    puts("fail");
+
+// uint32 -> float64
+uint32 ui = 5; 
+d1 = ui;
+if (d1 != 5.0)
+    puts("fail");
+
+// float32 -> float64
+f1 = 5.0;
+d1 = f1;
+if (d1 != 5.0)
+    puts("fail");
+
+// int constant -> float32, float64
+float32 fc = 5;
+float64 dc = 10;
+if (fc != 5.0)
+    puts("fail");
+if (dc != 10.0)
+    puts("fail");
+if (fc != 5)
+    puts("fail");
+if (dc != 10)
+    puts("fail");
+
+// truncate (loss of precision)
+d1 = 1.234;
+f1 = float32(d1);
+if (f1 != 1.234)
+    puts("fail");
+
+f1 = 1.234;
+i = int32(f1);
+if (i != 1)
+    puts("fail");
+
+f1 = 2.234;
+ui = uint32(f1);
+if (ui != 2)
+    puts("fail");
+
+d1 = 1.234;
+i = int32(d1);
+if (i != 1)
+    puts("fail");
+
+d1 = 2.234;
+ui = uint32(d1);
+if (ui != 2)
+    puts("fail");
+
+f1 = 1.234;
+int64 i64 = int64(f1);
+if (i64 != 1)
+    puts("fail");
+
+f1 = 2.234;
+uint64 ui64 = uint64(f1);
+if (ui64 != 2)
+    puts("fail");
+
+d1 = 1.234;
+i64 = int64(d1);
+if (i != 1)
+    puts("fail");
+
+d1 = 2.234;
+ui64 = uint64(d1);
+if (ui64 != 2)
+    puts("fail");
+
+puts("ok");

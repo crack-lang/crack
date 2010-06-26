@@ -559,6 +559,9 @@ test_output 'explicit operator invocation' \
     'import test.test_opers;' \
     ok
 
+test_output 'float type and operators' \
+    'import test.test_float;' ok
+
 test_output 'nested class syntax' \
     'class A { class B {} class C {}; class D {} }; puts ("ok")' \
     ok

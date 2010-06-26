@@ -8,6 +8,7 @@
 #include "Context.h"
 #include "ResultExpr.h"
 #include "TypeDef.h"
+#include "FloatConst.h"
 
 using namespace model;
 using namespace parser;
@@ -38,6 +39,10 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
         if (val > (1L << 31 - 1) || val < -(1L << 31 - 1))
             return 0;
             // context.error = "Constant out of range of int32"
+    } else if ((newType == context.globalData->float32Type) ||
+               (newType == context.globalData->float64Type)) {
+        // XXX range check?
+        return context.builder.createFloatConst(context, (double)val, newType);
     } else if (newType == context.globalData->uint32Type) {
         if (val < 0 || val > (1LL << 32 - 1))
             return 0;

@@ -331,7 +331,7 @@ Function Resolution Order:
     adaptive, the first will not go through conversion.  This is a work-around 
     for some extremely unintuitive behavior introduced by the normal 
     resolution order and the fact that constant integer types are very 
-    accomocating (1 - 2 == 255 without it).
+    accomodating (1 - 2 == 255 without it).
 
 Generics:
     
@@ -489,7 +489,7 @@ Adaptive Expressions:
     safely convert to a byte, the expression will match "byte + byte".
     
     Unfortunately, this introduces another problem when dealing with 
-    expressions consisting entirely of constants.  Consider the cast of "1 - 
+    expressions consisting entirely of constants.  Consider the case of "1 - 
     2".  1 and 2 can both convert to a byte value, so the expression ends up 
     matching "byte + byte", producing a byte value of 255!
     

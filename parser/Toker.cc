@@ -119,7 +119,7 @@ Token Toker::readToken() {
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '+') {
-                    return Token(Token::plus, "+", locationMap.getLocation());
+                    state = st_plus;
                 } else if (ch == '-') {
                     state = st_minus;
                 } else if (ch == '&') {
@@ -141,10 +141,19 @@ Token Toker::readToken() {
                     ch1 = ch; t1 = Token::colon; t2 = Token::define;
                     state = st_digram;
                 } else if (ch == '.') {
-                    return Token(Token::dot, ".", locationMap.getLocation());
+                    // check for float
+                    getChar(ch);
+                    if (isdigit(ch)) {
+                        state = st_float;
+                        ungetChar(ch);
+                    }
+                    else {
+                        ungetChar(ch);
+                        return Token(Token::dot, ".", locationMap.getLocation());
+                    }
                 } else if (isdigit(ch)) {
                     buf << ch;
-                    state = st_integer;
+                    state = st_number;
                 } else if (ch == '~') {
                     return Token(Token::tilde, "~", locationMap.getLocation());
                 } else if (ch == '`') {
@@ -191,13 +200,26 @@ Token Toker::readToken() {
                 }
                 break;
 
+            case st_plus:
+
+                if (isdigit(ch)) {
+                    // if numeric, omit unnecessary + char
+                    buf << ch;
+                    state = st_number;
+                } else {
+                    state = st_none;
+                    ungetChar(ch);
+                    return Token(Token::plus, "+", locationMap.getLocation());
+                }
+                break;
+
             case st_minus:
                 if (ch == '-') {
                     state = st_none;
                     return Token(Token::decr, "--", locationMap.getLocation());
                 } else if (isdigit(ch)) {
                     buf << '-' << ch;
-                    state = st_integer;
+                    state = st_number;
                 } else {
                     state = st_none;
                     ungetChar(ch);
@@ -361,7 +383,7 @@ Token Toker::readToken() {
                 }
                 break;
 
-            case st_integer:
+            case st_number:
             case st_float:
                 if (isdigit(ch))
                     buf << ch;
@@ -376,10 +398,32 @@ Token Toker::readToken() {
                     state = st_float;
                     buf << ch;
                 }
+                else if ((ch == 'e') || (ch == 'E')) {
+                    state = st_exponent;
+                    buf << ch;
+                    // eat possible + or - immediately and make sure
+                    // we have at least one digit in exponent
+                    getChar(ch);
+                    if ((ch == '+') || (ch == '-')) {
+                        buf << ch;
+                        getChar(ch);
+                    }
+
+                    if (isdigit(ch)) {
+                        buf << ch;
+                    }
+                    else {
+                        ParseError::abort(Token(Token::string, buf.str(),
+                                                locationMap.getLocation()
+                                                ),
+                                          "invalid float specification");
+                    }
+                    break;
+                }
                 else {
                     ungetChar(ch);
-                    Token::Type tt = (state == st_integer) ? Token::integer :
-                              Token::floatLit;
+                    Token::Type tt = (state == st_float) ? Token::floatLit :
+                              Token::integer;
                     state = st_none;
                     return Token(tt,
                                  buf.str(),
@@ -387,7 +431,21 @@ Token Toker::readToken() {
                                  );
                 }
                 break;
-            
+
+            case st_exponent:
+                if (isdigit(ch)) {
+                    buf << ch;
+                }
+                else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::floatLit,
+                                 buf.str(),
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
+
             case st_istr:
                 if (ch == '`') {
                     if (buf.tellp()) {
