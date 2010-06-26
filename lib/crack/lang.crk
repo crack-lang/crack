@@ -126,6 +126,12 @@ class Buffer : Object {
     void writeTo(XWriter writer) {
         writer.write(buffer, size);
     }
+
+    byte oper [](uint index) {
+        if (index >= size)
+            _die('string index out of bounds');
+        return buffer[index];
+    }
 };
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
