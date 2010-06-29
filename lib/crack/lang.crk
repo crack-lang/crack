@@ -2,8 +2,8 @@
 # Copyright 2010 Google Inc.
 
 import "libc.so.6" abort, free, strcpy, strlen, strdup, malloc, memcpy, memcmp, 
-                   memmove, realloc;
-
+                   memmove, realloc, exit;
+                   
 byteptr malloc(uint size);
 byteptr realloc(byteptr buf, uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
@@ -14,6 +14,7 @@ byteptr strcpy(byteptr dest, byteptr src);
 uint strlen(byteptr buf);
 byteptr strdup(byteptr buf);
 void abort();
+void exit(int status);
 
 bool true = (1 == 1);
 bool false = (1 == 0);
