@@ -66,5 +66,6 @@ target_link_libraries( crack
 
 # test suite
 add_custom_target(check 
-                  ${PROJECT_SOURCE_DIR}/test/run_all_tests
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+                  ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/lang
+                  #WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+		  )

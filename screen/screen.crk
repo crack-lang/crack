@@ -1,0 +1,37 @@
+// A test suite for crack
+// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.lang die, exit;
+import crack.io cout;
+import crack.sys argv;
+
+class TestSuite {
+
+    String _rootDir;
+    
+    void usage() {
+        cout `screen <dir>\n`;
+        exit(1);
+    }
+
+    oper init() {
+        
+        if (argv.count() <= 1) {
+            usage();            
+        }
+                
+        _rootDir = argv[1];
+                
+        cout `importing tests from $_rootDir ...\n`;
+        
+    }
+
+}
+
+class Test {
+    
+    String _name, _desc;
+
+}
+
+suite := TestSuite();
