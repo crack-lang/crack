@@ -4,6 +4,7 @@
 import crack.lang die, exit;
 import crack.io cout;
 import crack.sys argv;
+import crack.exp.dir Directory;
 
 class TestSuite {
 
@@ -23,6 +24,9 @@ class TestSuite {
         _rootDir = argv[1];
                 
         cout `importing tests from $_rootDir ...\n`;
+        d := Directory(_rootDir);
+        if (!d.isValid())        
+            die("invalid directory");
         
     }
 

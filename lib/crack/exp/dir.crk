@@ -1,0 +1,33 @@
+# Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+# Classes for directory traversal
+
+import crack.io cerr, StringFormatter;
+import crack.lang die;
+import crack.exp.bindings Opaque;
+
+import "libcrack-runtime.so" _crack_opendir, _crack_closedir;
+
+class _DIR: Opaque { }
+
+_DIR _crack_opendir(byteptr dirname);
+int _crack_closedir (_DIR d);
+
+class Directory {
+
+    _DIR _dir = null;
+    bool _isValid = false;
+        
+    oper init(String name): _isValid = false {
+        _dir = _crack_opendir(name.buffer);
+        _isValid = !(_dir is null);
+    }
+    
+    oper del() {
+        if (_isValid)
+            _crack_closedir(_dir);
+    }
+
+    bool isValid() { return _isValid; }
+    
+}
+
