@@ -10,6 +10,7 @@ extern "C" {
 
 DIR* _crack_opendir(const char* name);
 int _crack_closedir(DIR* d);
+const char* _crack_readdir(DIR* d);
 
 }
 

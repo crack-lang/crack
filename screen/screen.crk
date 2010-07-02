@@ -14,6 +14,20 @@ class TestSuite {
         cout `screen <dir>\n`;
         exit(1);
     }
+    
+    void scanForTests() {
+    
+        cout `importing tests from $_rootDir ...\n`;
+        d := Directory(_rootDir);
+        if (!d.isValid())        
+            die("invalid directory");
+
+        String curDir;
+        while (curDir = d.nextDir()) {
+            cout `looking in dir: $curDir\n`;
+        }
+        
+    }
 
     oper init() {
         
@@ -22,11 +36,7 @@ class TestSuite {
         }
                 
         _rootDir = argv[1];
-                
-        cout `importing tests from $_rootDir ...\n`;
-        d := Directory(_rootDir);
-        if (!d.isValid())        
-            die("invalid directory");
+        scanForTests();
         
     }
 

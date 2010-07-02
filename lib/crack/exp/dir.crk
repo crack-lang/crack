@@ -5,17 +5,20 @@ import crack.io cerr, StringFormatter;
 import crack.lang die;
 import crack.exp.bindings Opaque;
 
-import "libcrack-runtime.so" _crack_opendir, _crack_closedir;
+import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir;
 
 class _DIR: Opaque { }
 
 _DIR _crack_opendir(byteptr dirname);
-int _crack_closedir (_DIR d);
+int _crack_closedir(_DIR d);
+byteptr _crack_readdir(_DIR d);
 
 class Directory {
 
     _DIR _dir = null;
     bool _isValid = false;
+    
+    int _cnt = 0;
         
     oper init(String name): _isValid = false {
         _dir = _crack_opendir(name.buffer);
@@ -28,6 +31,18 @@ class Directory {
     }
 
     bool isValid() { return _isValid; }
+    
+    StaticString nextDir() {
+        if (_isValid) {
+            byteptr d =_crack_readdir(_dir);
+            if (d is null)
+                return null;
+            else 
+                return StaticString(d);
+        }
+        else
+            return null;
+    };
     
 }
 
