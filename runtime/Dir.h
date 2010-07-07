@@ -8,9 +8,18 @@
 
 extern "C" {
 
+#define CRACK_DTYPE_DIR   1
+#define CRACK_DTYPE_FILE  2
+#define CRACK_DTYPE_OTHER 3
+
+typedef struct {
+    char* name;
+    int type;
+} _crack_dirEntry;
+
 DIR* _crack_opendir(const char* name);
 int _crack_closedir(DIR* d);
-const char* _crack_readdir(DIR* d);
+int _crack_readdir(DIR* d, _crack_dirEntry* i);
 
 }
 

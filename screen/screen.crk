@@ -15,17 +15,25 @@ class TestSuite {
         exit(1);
     }
     
-    void scanForTests() {
+    void scanForTests(String dir) {
     
-        cout `importing tests from $_rootDir ...\n`;
-        d := Directory(_rootDir);
+        cout `importing tests from $dir ...\n`;
+        d := Directory(dir, true);
         if (!d.isValid())        
             die("invalid directory");
 
-        String curDir;
-        while (curDir = d.nextDir()) {
-            cout `looking in dir: $curDir\n`;
+        // recurse to directories
+        String nextDir;
+        while (nextDir = d.nextDir()) {
+            if (nextDir != '.' && nextDir != '..')
+                scanForTests(strcat(dir,nextDir));
         }
+
+        // gather test files
+        //String nextFile;
+        //while (nextFile = d.nextFile()) {
+
+        //}
         
     }
 
@@ -36,7 +44,7 @@ class TestSuite {
         }
                 
         _rootDir = argv[1];
-        scanForTests();
+        scanForTests(_rootDir);
         
     }
 
