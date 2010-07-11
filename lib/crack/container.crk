@@ -1,0 +1,296 @@
+# Copyright 2010 Google Inc.
+# The Crack Container library.
+
+import crack.io cout, cerr, XWFormatter;
+import crack.lang die, free, XWriter;
+
+## Abstract base class of all iterators.
+class Iterator {
+    
+    ## Return the element at the position.
+    Object elem() { die('Iterator.elem() not implemented'); return null; }
+    
+    ## Forward to the next node, return true if there is one, false if we've 
+    ## run out of elements.
+    bool next() { die('Iterator.next() not implemented'); return false; }
+    
+    ## Forward to the next node unless this is the first time it is called, 
+    ## allowing the pattern "while (iter.nx()) ..." to iterate over an entire 
+    ## collection.
+    ## Returns true if the iterator is valid.
+    bool nx() { die('Iterator.nx() not implemented'); return false; }
+    
+    ## Returns true if the container is valid, allowing us to do "if (iter)"
+    bool isTrue() { die('Iterator.isTrue() not implemented'); return false; }
+}
+
+class MapElem {
+    Object key, val;
+    oper init(Object key0, Object val0) : key = key0, val = val0 {}
+}
+
+## Base class for map iterators - maps are collections stored by key and value.
+class MapIterator : Iterator {
+    Object key() { die('MapIterator.key() not implemented'); return null; }
+    Object val() { die('MapIterator.val() not implemented'); return null; }
+    
+    ## A sub-optimal implementation of elem() for maps - derived classes are 
+    ## encouraged to override.
+    Object elem() { return MapElem(key(), val()); }
+}
+
+## base class of all containers.
+class Container {
+    Iterator iter() {
+        return null;
+    }
+
+    void writeTo(XWriter writer) {
+        out := XWFormatter(writer);
+        i := iter();
+        out `[`;
+        if (i) out `$(i.elem())`;
+        while (i.next())
+            out `, $(i.elem())`;
+        out `]`;
+    }
+}
+
+# classes to support linked lists.
+
+class ListNode {
+    Object elem = null;
+    ListNode next = null;
+    
+    oper init(Object elem0) : elem = elem0 {}
+}
+
+## A linked list iterator.
+class ListIter : Iterator {
+    ListNode __node = null;
+    bool __first;
+    oper init(ListNode node) : __node = node, __first = true {}
+    
+    Object elem() {
+        if (__node)
+            return __node.elem;
+        else
+            return null;
+    }
+    
+    bool next() {
+        if (!__node)
+            return false;
+        
+        __node = __node.next;
+        return __node;
+    }
+
+    bool nx() {
+        if (!__node)
+            return false;
+        
+        if (__first)
+            __first = false;
+        else
+            __node = __node.next;
+        return __node;
+    }
+    
+    bool isTrue() { return __node; }
+}
+
+## A singly-linked list.
+class List : Container {
+    ListNode head = null;
+    ListNode tail = null;
+    
+    Iterator iter() {
+        return ListIter(head);
+    }
+    
+    void append(Object elem) {
+        if (tail) {
+            temp := ListNode(elem);
+            tail.next = temp;
+            tail = temp;
+        } else {
+            head = tail = ListNode(elem);
+        }
+    }
+    
+    void pushFront(Object elem) {
+        newNode := ListNode(elem);
+        if (head) {
+            newNode.next = head;
+            head = newNode;
+        } else {
+            head = tail = newNode;
+        }
+    }
+
+    void insert(uint index, Object elem) {
+        # special-case inserting at the beginning
+        if (!index) {
+            pushFront(elem);
+            return;
+        }
+
+        # find the node that's going to be before the new node
+        i := index - 1;
+        ListNode node = head, lastNode = null;
+        while (i && node) {
+            i = i - 1;
+            node = node.next;
+        }
+        if (!node) die('List index out of bounds.');
+
+        # create a new node and append it to the node we found
+        newNode := ListNode(elem);
+        newNode.next = node.next;
+        node.next = newNode;
+        
+        # see if we need to fix the tail
+        if (node is tail)
+            tail = newNode;
+    }
+
+    Object oper [](uint index) {
+        i := index;
+        node := head;
+        while (i && node) {
+            node = node.next;
+            i = i - 1;
+        }
+        if (!node) die('List index out of range in oper []');
+        return node.elem;
+    }
+}
+
+class _ArrayIface : Container {
+    
+    Object oper [](uint index) {
+        die('_ArrayIface.oper []() not implemented');
+        return null;
+    }
+    
+    uint count() {
+        die('_ArrayIface.count() not implemented');
+        return 0;
+    }
+}
+
+class ArrayIter : Iterator {
+    _ArrayIface __arr;
+    uint __index;
+    bool __first = true;
+
+    oper init(_ArrayIface arr) : __arr = arr {}
+    
+    Object elem() {
+        return __arr[__index];
+    }
+    
+    bool next() {
+        count := __arr.count();
+        if (__index < count) {
+            __index = __index + 1;
+            return __index < count;
+        } else {
+            return false;
+        }
+    }
+
+    bool nx() {
+        if (__first) {
+            __first = false;
+            return __index < __arr.count();
+        } else {
+            return next();
+        }
+    }
+    
+    bool isTrue() {
+        return __index < __arr.count();
+    }
+}
+
+## An Array is a sequence backed by a low-level array.  It supports the 
+## bracket operators and adding items at the end.
+class Array : _ArrayIface {
+    
+    array[Object] __rep = null;
+    uint __cap, __size;
+    
+    oper init(uint initCapacity) :
+        __rep = array[Object](initCapacity), 
+        __cap = initCapacity,
+        __size = 0 {
+    }
+    
+    oper init() : 
+        __rep = array[Object](16), 
+        __cap = 16,
+        __size = 0 {
+    }
+    
+    oper del() {
+        uint i;
+        while (i < __size) {
+            __rep[i].oper release();
+            i = i + 1;
+        }
+        free(__rep);
+    }
+    
+    void realloc(uint newCapacity) {
+        if (newCapacity < __cap)
+            die('Array.realloc() - decreasing capacity');
+            
+        newRep := array[Object](newCapacity);
+        
+        # move all of the entries to the new array.
+        uint i;
+        while (i < __size) {
+            newRep[i] = __rep[i];
+            i = i + 1;
+        }
+
+        free(__rep);
+        __rep = newRep;
+        __cap = newCapacity;
+    }
+    
+    void append(Object elem) {
+        if (__size == __cap)
+            realloc(__cap * 2);
+        
+        __rep[__size] = elem;
+        elem.oper bind();
+        __size = __size + 1;
+    }
+
+    Object oper [](uint index) {
+        if (index > __size)
+            die('Index out of range in Array.oper []');
+        
+        return __rep[index];
+    }
+
+    void oper []=(uint index, Object elem) {
+        if (index > __size)
+            die('Index out of range in Array.oper []=');
+        
+        __rep[index].oper release();
+        __rep[index] = elem;
+        elem.oper bind();
+    }    
+    
+    Iterator iter() {
+        return ArrayIter(this);
+    }
+    
+    uint count() {
+        return __size;
+    }
+}
