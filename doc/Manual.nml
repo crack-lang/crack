@@ -7,9 +7,9 @@ the Crack 0.1 programming language.  Thanks!  Before we get into telling you
 about the language, there's something you need to be aware of:  Crack 0.1 is 
 very much alpha-quality code.  Lots of very basic language features haven't 
 been implemented yet.  There are lots of bugs, some known, some yet to be 
-discovered.  There's no debug info, stack traces, or anything else that you 
-might use to make your life easier.  If you're looking for a language to do 
-serious development in, Crack 0.1 ain't it.
+discovered.  There's very little debug info or anything else that you might 
+use to make your life easier.  If you're looking for a language to do serious 
+development in, Crack 0.1 ain't it.
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
@@ -50,11 +50,11 @@ means that they support the use of the back-tick operator for formatting.
 
 The third line actually uses the back-tick operator to print some text.  We 
 won't go into too much detail on this operator right now - suffice it to say 
-that this line is roughly equivalent to "#cout.format('hello world!\n');#"  
+that this line is roughly equivalent to "#cout.format('hello world!\\n');#"  
 The "\n" at the end of the string translates into a newline (the ASCII "LF" 
 character, character code 10).
 
-The general form of "/value/ `/contents/`" is called an "interpolation 
+The general form of "/value/ \`/contents/\`" is called an "interpolation 
 expression."
 
 Comments
@@ -127,7 +127,7 @@ int64::
     A 64-bit signed integer.
 uint64::
     A 64-bit unsigned integer.
-float32:
+float32::
     A 32-bit floating point.
 float64::
     A 64-bit floating point.
@@ -144,9 +144,10 @@ byteptr::
 voidptr::
     A pointer to anything.  All high level classes can implicitly convert to 
     voidptr.
-array[class]::
+array[/class/]::
     The low-level array type.  You should generally avoid using this in favor 
-    of high-level datastructures.
+    of high-level datastructures.  They are not memory-managed, and don't do 
+    memory management of their elements.
 
     This is Crack's only existing generic datatype - to use it, you specialize 
     it with another class type, for example: #array[int]#
@@ -182,6 +183,11 @@ future version of Crack.
 type are pointers to allocated regions of memory large enough to accomodate 
 the state data defined for the type.  They can be extended to create other 
 high-level types through sub-classing (more on this later).
+
+Type names in Crack are very simple.  They are either a single word or 
+"#array[#/other-type-name/#]#"  The latter form, though currently used only 
+for arrays, will eventually be expanded as the instantiation mechanism for 
+/generic types/, similar to generics in Java.
 
 Implicit Conversion
 '''''''''''''''''''
@@ -234,10 +240,28 @@ String constants actually instances of the "StaticString" class - they're just
 like strings except since their buffers are constants, they don't try to 
 deallocate them on destruction.
 
+As in the other C-like languages, string constants can have escape sequences 
+in them.  We've dealt with one of these already ("\\n").  The full list is:
+
+*\\t*::
+    ASCII Tab character (9).
+*\\n*::
+    ASCII newline character (10).
+*\\a*::
+    ASCII alarm character (7).
+*\\r*::
+    ASCII carriage return (13).
+*\\b*::
+    ASCII backspace (8).
+*\\x*/XX/::
+    Two digit hex character value (examples: "#\\x1f#", "#\\x07#")
+*\\*/OOO/::
+    1 to 3 character octal character value.  (examples: "#\\0#", "#\\141#")
+    
 Control Structures
 ------------------
 
-Crack 0.1 only supports two control structures: the "if/else" statement and 
+Crack 0.1 only supports two control structures: the "if\/else" statement and 
 the "while" statement.  "if" runs code blocks depending on whether a condition 
 is true or false:
 
@@ -268,15 +292,19 @@ There's a lot of new stuff going on here: first of all, we're importing the
 "argv" variable form #crack.sys#.  This variable contains the program's 
 command line arguments.
 
-#count()# is a method that returns the number of items in argv.  #argv[1]# 
-accesses item 1 of the argument list (indexes are zero-based, so item 1 is the 
-second element of the sequence).
+#count()# is a /method/ (a function attached to an value) that returns the
+number of items in argv.  #argv[1]# accesses item 1 of the argument list 
+(indexes are zero-based, so item 1 is the second element of the sequence).
 
 The "&&" is a short-circuit logical and: it returns true if both of the 
 expressions are true, but it won't evaluate the second expression unless the 
 first is true.  This is important in this case, because if we were to check 
 #argv[1]# in a case where #argv# had less than two elements, a fatal error 
 would result.
+
+There is also a "||" operator which is a short-circuit logical or.  It returns 
+true if either expression is true but does not evaluate the second expression 
+if the first is true.
 
 The #if# statement need not be accompanied by an else:
 
@@ -351,7 +379,7 @@ type name, an argument list, and a block of code, just like in C:
     }
 }}
 
-Also note that Crack supports recursion: you can call a function from within 
+Also note that Crack supports /recursion/: you can call a function from within 
 the definition of that function.
 
 You can define a function that doesn't return a value by using the special 
@@ -459,15 +487,14 @@ coordinate:
 This class has two "instance variables:" #x# and #y#.  These get bundled 
 together in a package whenever we create an instance of the class.
 
-XXX we can use instance variables in methods
-
 The "oper init" syntax creates a /constructor/, which is a special function 
 that gets called when an instance of the class is created.  The constructor 
 performs basic initialization of all of the instance variables.  The second 
 "oper init", the one without arguments, is called the "default constructor."  
-As in C++, these get generated automatically if the class has no other defined 
-constructors.  If the class does define constructors, and you want a default 
-constructor, you have to specify one explicitly as we've done above.
+As in C++, default constructors get generated automatically if the class has 
+no other defined constructors.  If the class does define constructors, and 
+you want a default constructor, you have to specify one explicitly as we've 
+done above.
 
 We can create an instance of #Coord# like so:
 
@@ -509,17 +536,98 @@ types are always passed "by value."  So:
     c = c + 1; # c is now 101, d is still 100
 }}
 
-XXX talk about receivers.
-XXX explicit calls to base class methods: Base.foo()
-XXX safe/unsafe casts.
+We can tell if two variables are references to the same object using the 
+special #is# operator:
 
-Our #Coord# class also has a writeTo() method.  This allows us to implement 
+{{
+    c := Coord(1, 2);
+    d := c;
+    e := Coord(1, 2);
+    if (c is d)
+        cout `this will always be printed\n`;
+    if (c is e)
+        cout `this will never be printed\n`;
+}}
+
+Note that /identity/ (the property tested by the #is# operator) in Crack is a 
+different concept from /equality/ (as tested by the #==# operator).  Two 
+objects are typically equal if they have the same state (it might be 
+reasonable to expect that #c# and #d# are equal, since they both have values 
+(x = 1, y = 2), although in fact they would not be since #Coord# does not 
+implement the #cmp()# method).
+
+There is a special constant, "#null#" which allows you to clear these kinds of 
+variables so that they don't reference any object.
+
+{{
+    # initialize c to null, then set it conditionally
+    Coord c = null;
+    if (positive)
+        c = Coord(1, 1);
+    else
+        c = Coord(-1, -1);
+}}
+
+You can use the #is# operator on null values:
+
+{{
+    void drawImage(Coord pos, Image img, Coord size) {
+        if (size is null)
+            copyImage(pos, img);
+        else
+            stretchImage(pos, img, size);
+    }
+}}
+
+For classes derived from #Object#, #null# values are always treated as false:
+
+{{
+    Coord c = null;
+    if (!c)
+        cout `this will always be printed\n`;
+}}
+
+Our #Coord# class also has a #writeTo()# method.  This allows us to implement 
 the #writeTo()# method which controls how an Object is written using the 
 back-tick operator.  For example:
 
 {{
     cout `$(Coord(10, 20))\n`; # prints "Coord(10, 10)" to standard output.
 }}
+
+#writeTo()# uses the instance variables #x# and #y#.  One characteristic of 
+methods is that instance variables and other methods can be used without 
+qualification.  As another example, we could define a method to give us the 
+square of the distance from the origin as follows:
+
+{{
+    int distOrgSquared() {
+        return x * x + y * y;
+    }
+}}
+
+We could then add this information to our #writeTo()# method:
+
+{{
+    void writeTo(XWriter out) {
+        XWFormatter(out) `Coord($x, $y) [dist squared = $(distOrgSquared())]`;
+    }
+}}
+
+Methods also have a a special variable called "#this#".  Just as in C++, 
+#this# refers to the object that the method has been called on.  In 
+traditional Object-Oriented parlance, this object is called "the receiver."
+
+We could have rewritten #distOrgSquared()# as follows:
+
+{{
+    int distOrgSquared() {
+        return this.x * this.x + this.y * this.y;
+    }
+}}
+
+The #this# variable is mainly useful for passing the receiver to other 
+functions.
 
 Constructors
 ''''''''''''
@@ -610,7 +718,7 @@ this:
     c0.x = 20;  # l.c0.x is now also 20.
 }}
 
-changing #c0.x# in this case also changes the value within #ls$ 
+changing #c0.x# in this case also changes the value within #ls#
 because the #ls#'s #c0# is the same object as the caller's #c0#.
 If we had instead using the construction syntax, #ls# would have had its own 
 copies of the #Coord# objects, and changing #c0#'s #x# value wouldn't have had 
@@ -685,10 +793,27 @@ derived from #Coord#.  It will inherit all of #Coord#'s instance variables and
 methods.  We call #Coord# #NamedCoord#'s /base class/.  #NamedCoord# is a 
 /subclass/ or /derived class/ of #Coord#.
 
-One of the first things we have to deal with is #Coord#'s constructor.  Note 
-that in the new initializer list, we have an entry for the base class as well 
-as for the #name# variable.  If we didn't specify a constructor, the compiler 
-would have used the default constructor if there was one.
+In addition to allowing reuse of code, inheritence also has the advantage that 
+instances of the derived class can be used in situations that call for an 
+instance of the base class.  So if we had a function that accepted a #Coord#, 
+we could pass it a #NamedCoord#:
+
+{{
+    void drawLine(Coord c0, Coord c1) { ... }
+    
+    NamedCoord c1 = {1, 2, 'c1'}, c2 = {3, 4, 'c2'};
+    drawLine(c1, c2);
+}}
+
+Note that this is not conversion: instances of #NamedCoord# are already 
+instances of #Coord#.  As such, function calls passing classes derived from 
+argument types will match in the first resolution pass.
+
+One of the first things we have to deal with in creating #NamedCoord# is 
+#Coord#'s constructor.  Note that in the new initializer list, we have an 
+entry for the base class as well as for the #name# variable.  If we didn't 
+specify a constructor, the compiler would have used the default constructor 
+if there was one.
 
 Like member initializers, base classes are initialized in the order in which 
 they are defined.  All base class initializers are run before any of the 
@@ -727,17 +852,30 @@ method:
 
 {{
     void writeTo(XWriter out) {
-        XWFormatter(out) `NameCoord($x, $y)`;
+        XWFormatter(out) `NamedCoord($x, $y)`;
     }
 }}
 
 We did this because #Coord#'s #writeTo()# method writes out "Coord($x, $y)".  
 We want to write "NamedCoord($x, $y)".
 
-XXX talk about how derived types match base class type parameters and how this 
-is _not_ conversion.
+Sometimes you want to call the base class version of a function that is 
+overriden in the derived class.  Most often this is used to extend the base 
+class functionality.  Crack lets you do this by qualifying the method with the 
+class name.  For example, we could have instead overriden #writeTo()# 
+like this:
 
-Crack also supports /multiple inheritence/: you can have any number of base 
+{{
+    void writeTo(XWriter out) {
+        XWriterWrapper(out).write('Named');
+        Coord.writeTo(out);
+    }
+}}
+
+Multiple Inheritence
+''''''''''''''''''''
+
+Crack supports /multiple inheritence/: you can have any number of base 
 classes.  But beware - it is illegal to inherit from the same base class 
 multiple times, and Crack 0.1 doesn't guard against this very well.  
 Eventually, Crack will support this using virtual base classes like in C++.  
@@ -746,7 +884,45 @@ We'll talk more about multiple inheritence in the next section.
 Destructors
 '''''''''''
 
-XXX destructors
+In addition to "#oper init#" constructors, Crack classes can have destructors.  
+These are called by #Object.oper release()# when an object's reference count 
+drops to zero.  They can also be called explicitly by objects implementing 
+their own memory management strategies.
+
+You can implement the destructor for a class by defining an "#oper del#" 
+method:
+
+{{
+    class Noisy {
+        oper del() { cout `Noisy object deleted\n`; }
+    }
+    
+    Noisy x;  # Prints a message when x goes out of scope.
+}}
+
+After calling the user defined code, #oper del# automatically calls #oper 
+release# on all of the instance variables that have an #oper relesae# method. 
+It then automatically calls the #oper del# method of each of its base classes, 
+In both cases, these calls are in reverse order of initialization: first the 
+instance variables in the reverse order that they are defined, then the base 
+classes in the reverse order that they are listed.
+
+Because of all of this automatic destruction, most #oper del# method don't 
+need to have any user code at all - everything takes care of its own cleanup.  
+If you don't define an #oper del# method, the compiler will generate one by 
+default.
+
+The only cases where you really need to define an #oper del# method are in the 
+case of certain external consequences: for example, a File object might want 
+to make sure that its file descriptor is closed upon destruction.
+
+It should be noted that an object must do nothing to change its own reference 
+count during processing of #oper del#, such as assigning it to an external 
+variable, or inserting it into an external collection.  If you do this, the 
+object will still be deleted and the external reference will be invalid.  
+Future versions of Crack will have some degree of protection against this, for 
+now - don't do it.
+
 
 The Special Base Classes
 ''''''''''''''''''''''''
@@ -787,8 +963,86 @@ structure).  #FreeBase# does not support virtual functions, memory management,
 or anything you don't put into your derived class.  If you're going to use it, 
 you should at minimum figure out how to deal with memory management.
 
-XXX the "is" operator
-XXX the "null" constant.
+There are situations where you get a base class but you suspect or know that 
+it is a derived cast.  Like C++, Crack lets you /typecast/ a base class to a 
+derived class using #cast()# and #unsafeCast()#.
+
+Typecasting is generally deprecated in object-oriented paradigms.  However, 
+there are certain situations where it is necessary, and others where it is 
+just the easiest way to get something done.  Consider the case of 
+containers:
+
+{{
+    import crack.container Array;
+    
+    # create an array of coordinates
+    coords := Array();
+    coords.append(Coord(1, 2));
+    coords.append(Coord(3, 4));
+}}
+
+We've stored a couple of #Coord# objects in the array, but we can't use these 
+directly because #Array# stores an array of objects: 
+
+{{
+    # gives an error because there is no drawLine(Object, Object) function.
+    drawLine(coords[0], coords[1]);
+}}
+
+This is the same problem that early versions of Java had - it will be fixed 
+in a later version of Crack through the introduction of generics.  But for now 
+we can work around this with a type cast:
+
+{{
+    drawLine(Coord.cast(coords[0]), Coord.cast(coords[1]));
+}}
+
+The #cast()# function is defined for all classes that derive from 
+#VTableBase# (including all classes derived from #Object#).  If you attempt 
+to cast an object to a type that it is not an instance of, the program will 
+abort with a (fairly useless) class cast error.
+
+For classes not derived from #VTableBase#, you can use #unsafeCast()#:
+
+{{
+    import crack.lang FreeBase;
+    class Rogue : FreeBase {}
+    
+    FreeBase f = Rogue();
+    Rogue r = Rogue.unsafeCast(f);
+}}
+
+Unlike #cast()#, #unsafeCast()# does no checking whatsoever - the programmer 
+is responsible for insuring that the object is of the type that he is casting 
+it to.  If it's not, #unsafeCast()# will happily deliver a reference to an 
+invalid object.
+
+For classes derived from #VTableBase#, you can verify prior to doing an 
+#unsafeCast()# in the same method that #cast()# does, by looking at the 
+associated class object:
+
+{{
+    Coord c = null
+    if (obj.class.isSubclass(Coord))
+        c = Coord.unsafeCast(c);
+}}
+
+Every object derived from #VTableBase# has a special #class# attribute - it's 
+like an instance variable, only you can't assign it.  It is implemented using 
+a virtual function.  The #class# attribute returns the object's class (recall 
+that classes are also values that exist at runtime).  So we could also do 
+something like this:
+
+{{
+    Coord c;
+    if (c.class is Coord)
+        cout `this will always get printed\n`;
+}}
+
+Note that you usually don't want to use the #is# operator to check the class 
+because it's usually acceptable for the class to be either the same as the 
+class you are checking for or /derived from/ the class you are checking for.  
+Use #isSubclass()# instead.
 
 Special Methods
 '''''''''''''''
@@ -821,6 +1075,9 @@ invoked on a #null# value.
     than zero if the receiver is greater than #other#, returns a value less 
     than zero if it is less than #other#, and returns zero if the two objects 
     are equal.
+    
+    If you implement this, all of the normal comparison operators ("#==#", 
+    "#!=#", "#<#", "#>#", "#<=#" and "#>=#") will work for you.
 #void writeTo(XWriter writer)#::
     Write the receiver to #writer#.  This is used to allow the object to write 
     itself in its most natural representation - whatever that means for the 
@@ -841,7 +1098,7 @@ The following operators can be overloaded:
 #oper +(#/type/ #other)#::
     Binary plus.
 #oper -()#::
-    Unary minus.
+    Unary negate.
 #oper -(#/type/ #other)#::
     Binary minus.
 #oper \*(#/type/ #other)#::
@@ -876,7 +1133,7 @@ The following operators can be overloaded:
     Binary "greater than or equal to."  #Object# implements this as 
     "#cmp(other) >= 0#".
     
-The numeric types mostly have intrinsic implementations for these.
+The primitive types mostly have intrinsic implementations of the operators.
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -923,6 +1180,56 @@ For these reasons, method resolution will change in a future version of crack
 so that overrides will not be checked as part of the method set in the 
 override's context - they will only be checked in the base class where they 
 were first defined.
+
+Modules
+-------
+
+We've been making casual use of the #import# statement throughout this
+document.  The #import# statement is used to import symbols from modules, for 
+example we've use it to import the global variable #cout# from the #crack.io# 
+module:
+
+{{
+    import crack.io cout;
+}}
+
+The general format of the import statement is:
+
+[[
+    #import# /module-name/ /name-list/;
+]]
+
+/module-name/ is a dot-delimited module name.  /name-list/ is a comma 
+separated list of functions, variables and classes from.
+
+Module names correspond directly to directory and file names in the Crack 
+"library path."  When resolving a module name, the system:
+
+-   checks to see if the module has already been loaded, if so it just uses the 
+    existing module information.
+-   Load the parent module (if the parent module is not found, this is not an 
+    error)
+-   splits the name up by periods, concatenates all but the last part of the 
+    name into a relative directory path.  The last part of the name becomes 
+    the filename.  Example: "foo.bar.baz" -> path = "`foo/bar`", filename = 
+    "baz"
+-   for every directory in the crack library path, search for a subdirectory 
+    matching the path and the filename with a ".crk" exception
+-   when we find it, compile it and then execute the module top-level code 
+    (everything that's not in a function).
+
+So for example, to load the #crack.lang# module for the first time we:
+
+-   First try to load the #crack# module.
+-   Search the library path for "`crack/lang.crk`"
+-   Compile and execute the file.
+
+The crack library path is specified with the "-l" option values on the command 
+line.  By default, the executor inserts the `$PREFIX/lib/crack$VERSION`  path 
+and the current directory into the beginning of the search path.
+
+Variables defined in the module top-level are not released until program 
+termination.  Cleanups are called in the reverse order of definition.
 
 The Formatter Interface
 -----------------------
@@ -1003,7 +1310,28 @@ its functionality:
 
 Note that we had to reimplement #format(StaticString)# in the example above.  
 The static content in an interpolation expression is of type #StaticString# 
-like all string constants in crack.  If we had xxx
+like all string constants in crack.  If we had not defined 
+#format(StaticString)#, the normal format method would have been used for the 
+"value is " string (this is because of the current resolution order of 
+methods: it will be changed in a future version of the language so that we 
+don't have this problem).
+
+You can create your own #Formatter# objects given a #Writer# object.  There 
+are already a few specializations of this class in the #crack.io# module.
+
+#StringFormatter# allows you to construct a string using a formatter:
+
+{{
+    import crack.io StringFormatter;
+    
+    f := StringFormatter();
+    f `some text`;
+    s := f.createString();  # s == "some text"
+}}
+
+#XWFormatter# lets you do high-level formatting given the low-level #XWriter# 
+object that gets passed to the #writeTo()# method (see the section on 
+\X(Inheritence) for an example).
 
 Reference Counting
 ------------------
@@ -1179,8 +1507,6 @@ You can get this effect by defining a function and using a parameter type of
 This won't work for overloaded functions: the compiler won't be able to tell 
 which overload to use.
 
-Caveats
-'''''''
 
 Crack's current approach to bindings is not without its problems:
 
@@ -1188,9 +1514,30 @@ Crack's current approach to bindings is not without its problems:
     that the shared libraries that you're importing will have the same names 
     on other platforms, or that the functions you define will not be 
     implemented as macros.  Eventually, Crack will have an extension API to 
-    allow you to write wrappers in C or C++.  We will also probably include an 
-    installer that generates a custom binding script for a given platform.
+    allow you to write wrappers in C or C++.  To continue to facilitate the 
+    current mechanism, we will also probably include an installer that 
+    generates a custom binding script for a given platform.
 -   You can't currently import global variables.
 
 
-XXX threading (breaks reference counting)
+Threading
+---------
+
+As it stands, Crack 0.1 is written with little regard for threads.  You can 
+attempt to use the normal threading libraries, if you like, but you're likely 
+to run into some problems.  In particular, you should be aware that the 
+reference counting mechanism is not thread-safe, so memory management will 
+most likely fail in really hard to debug ways if you share lots of objects 
+between threads.
+
+This will be remedied in a future version through the introduction of atomic 
+operations, which will allow the reference counting mechanism to be 
+implemented safely - with some cost to performance of threaded applications.
+
+Debugging
+---------
+
+Crack has only minimal support for debugging in 0.1.  If your program 
+seg-faults or aborts, you can at least get a sparse stack-trace by running it 
+under a fairly recent version of GDB (7.0 or later).
+
