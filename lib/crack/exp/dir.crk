@@ -4,6 +4,7 @@
 import crack.io cerr, StringFormatter;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
+import crack.container List, Iterator;
 
 import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir;
 
@@ -28,23 +29,47 @@ StaticString PATH_SEPARATOR = "/";
 
 class FileInfo {
 
+    String name;
+
+    oper init(String name0): name(name0) { }
+    oper init(byteptr name0): name(name0) { }
 
 }
 
 class Directory {
 
+    String name;
+
     _DIR _dir = null;
     bool _isValid = false; // implies isOpened
     bool _isOpened = false;
-    String _name;
+
+    List _dirList;
+    List _fileList;
 
     void _openDir() {
-        _dir = _crack_opendir(_name.buffer);
+
+        _dir = _crack_opendir(name.buffer);
         _isValid = !(_dir is null);
         _isOpened = true;
+
+        _DirEntry d;
+        int r;
+        // note, this should be done lazily so we don't have to load
+        // an entire directory structure on open
+        while (r = _crack_readdir(_dir, d)) {
+            if (d._type == __CRACK_DTYPE_DIR) {
+                // XXX should add a Directory when issue 5 is fixed
+                _dirList.append(String(d._name));
+            }
+            else {
+                _fileList.append(FileInfo(d._name));
+            }
+        }
+
     }
 
-    oper init(String name, bool open/*=true*/): _name(name) {
+    oper init(String name0, bool open/*=true*/): name(name0) {
         if (open)
             _openDir();
     }
@@ -59,37 +84,9 @@ class Directory {
 
     bool isOpened() { return _isOpened; }
 
-    String name() { return _name; }
+    Iterator dirIter() { return _dirList.iter(); }
 
-    // XXX this should return Directory when issue #5 is fixed    
-    StaticString nextDir() {
-
-        if (!_isOpened)
-            _openDir();
-
-        if (!_isValid)
-            return null;
-
-        _DirEntry d;
-        r := _crack_readdir(_dir, d);
-        if (!r)
-            return null;
-        else  {
-            if (d._type == __CRACK_DTYPE_DIR) {
-                return StaticString(d._name);
-            }
-            else
-                return nextDir();
-        }
-            
-    };
-
-    /*    
-    FileInfo nextFile() {
-        if (!_isValid)
-            return null;
-    }
-    */
+    Iterator fileInfoIter() { return _fileList.iter(); }
     
 }
 

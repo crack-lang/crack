@@ -4,7 +4,8 @@
 import crack.lang die, exit, strcat;
 import crack.io cout, StringFormatter;
 import crack.sys argv;
-import crack.exp.dir Directory, PATH_SEPARATOR;
+import crack.container Iterator;
+import crack.exp.dir Directory, PATH_SEPARATOR, FileInfo;
 
 class TestSuite {
 
@@ -17,15 +18,17 @@ class TestSuite {
     
     void scanForTests(String dir) {
     
-        //cout `importing tests from $dir ...\n`;
+        cout `importing tests from $dir ...\n`;
         d := Directory(dir, true);
-        //if (!d.isValid())
-        //    die("invalid directory");
+        if (!d.isValid())
+            die("invalid directory");
 
         // recurse to directories
-        String nextDir;
+        String nextDir = null;
         StringFormatter f;
-        while (nextDir = d.nextDir()) {
+        Iterator i = d.dirIter();
+        while (i.nx()) {
+            nextDir = String.cast(i.elem());
             if (nextDir != '.' && nextDir != '..') {
                 f `$dir$PATH_SEPARATOR$nextDir`;
                 scanForTests(f.createString());
@@ -33,11 +36,13 @@ class TestSuite {
         }
 
         // gather test files
-        //String nextFile;
-        //while (nextFile = d.nextFile()) {
+        FileInfo nextFile = null;
+        i = d.fileInfoIter();
+        while (i.nx()) {
+            nextFile = FileInfo.cast(i.elem());
+            cout `found file: $(dir)$(PATH_SEPARATOR)$(nextFile.name)\n`;
+        }
 
-        //}
-        
     }
 
     oper init() {
