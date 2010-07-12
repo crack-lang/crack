@@ -134,6 +134,10 @@ class Formatter : Writer {
         rep.write(data, size);
     }
     
+    void format(StaticString data) {
+        write(data);
+    }
+    
     void format(String data) {
         write(data);
     }

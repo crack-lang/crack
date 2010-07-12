@@ -14,7 +14,7 @@ class StringArray {
     }
 
     void oper []=(uint i, String val) {
-        if (i > __count)
+        if (i >= __count)
             die('Array index out of bounds');
 
         # bind the new value, release the existing one
@@ -24,7 +24,7 @@ class StringArray {
     }
     
     String oper [](uint i) {
-        if (i > __count)
+        if (i >= __count)
             die('Array index out of bounds');
 
         result := __rep[i];

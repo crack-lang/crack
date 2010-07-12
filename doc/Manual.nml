@@ -7,9 +7,9 @@ the Crack 0.1 programming language.  Thanks!  Before we get into telling you
 about the language, there's something you need to be aware of:  Crack 0.1 is 
 very much alpha-quality code.  Lots of very basic language features haven't 
 been implemented yet.  There are lots of bugs, some known, some yet to be 
-discovered.  There's no debug info, stack traces, or anything else that you 
-might use to make your life easier.  If you're looking for a language to do 
-serious development in, Crack 0.1 ain't it.
+discovered.  There's very little debug info or anything else that you might 
+use to make your life easier.  If you're looking for a language to do serious 
+development in, Crack 0.1 ain't it.
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
@@ -50,7 +50,12 @@ means that they support the use of the back-tick operator for formatting.
 
 The third line actually uses the back-tick operator to print some text.  We 
 won't go into too much detail on this operator right now - suffice it to say 
-that this line is roughly equivalent to "#cout.format('hello world!\n');#"
+that this line is roughly equivalent to "#cout.format('hello world!\\n');#"  
+The "\n" at the end of the string translates into a newline (the ASCII "LF" 
+character, character code 10).
+
+The general form of "/value/ \`/contents/\`" is called an "interpolation 
+expression."
 
 Comments
 --------
@@ -96,8 +101,9 @@ You can also define variables using the more terse ":=" operator:
 }}
 
 If you don't specify an initializer for a variable, the default initializer 
-will be used.  For the numeric types, this is zero.  For complex types (which 
-we'll discuss later), the default constructor is used.
+will be used.  For the numeric types, this is zero.  For #bool#, it's #false#. 
+For complex types (which we'll discuss later), the default constructor is 
+used to create a new instance.
 
 Built-in Types
 ''''''''''''''
@@ -121,7 +127,7 @@ int64::
     A 64-bit signed integer.
 uint64::
     A 64-bit unsigned integer.
-float32:
+float32::
     A 32-bit floating point.
 float64::
     A 64-bit floating point.
@@ -138,9 +144,10 @@ byteptr::
 voidptr::
     A pointer to anything.  All high level classes can implicitly convert to 
     voidptr.
-array[class]::
+array[/class/]::
     The low-level array type.  You should generally avoid using this in favor 
-    of high-level datastructures.
+    of high-level datastructures.  They are not memory-managed, and don't do 
+    memory management of their elements.
 
     This is Crack's only existing generic datatype - to use it, you specialize 
     it with another class type, for example: #array[int]#
@@ -177,8 +184,19 @@ type are pointers to allocated regions of memory large enough to accomodate
 the state data defined for the type.  They can be extended to create other 
 high-level types through sub-classing (more on this later).
 
-Numeric Conversion
-''''''''''''''''''
+Type names in Crack are very simple.  They are either a single word or 
+"#array[#/other-type-name/#]#"  The latter form, though currently used only 
+for arrays, will eventually be expanded as the instantiation mechanism for 
+/generic types/, similar to generics in Java.
+
+Implicit Conversion
+'''''''''''''''''''
+
+In certain cases, types will automatically convert to other types. Most types 
+will implicitly convert to boolean, allowing pretty much anything to be used 
+as the condition in an #if# or #while# statement.
+
+Aggregate types will implicitly convert to #voidptr#.
 
 Numeric types will implicitly convert between one another as long as there is 
 no risk of precision loss.  In cases where there is a risk of precision loss, 
@@ -222,10 +240,28 @@ String constants actually instances of the "StaticString" class - they're just
 like strings except since their buffers are constants, they don't try to 
 deallocate them on destruction.
 
+As in the other C-like languages, string constants can have escape sequences 
+in them.  We've dealt with one of these already ("\\n").  The full list is:
+
+*\\t*::
+    ASCII Tab character (9).
+*\\n*::
+    ASCII newline character (10).
+*\\a*::
+    ASCII alarm character (7).
+*\\r*::
+    ASCII carriage return (13).
+*\\b*::
+    ASCII backspace (8).
+*\\x*/XX/::
+    Two digit hex character value (examples: "#\\x1f#", "#\\x07#")
+*\\*/OOO/::
+    1 to 3 character octal character value.  (examples: "#\\0#", "#\\141#")
+    
 Control Structures
 ------------------
 
-Crack 0.1 only supports two control structures: the "if/else" statement and 
+Crack 0.1 only supports two control structures: the "if\/else" statement and 
 the "while" statement.  "if" runs code blocks depending on whether a condition 
 is true or false:
 
@@ -256,15 +292,19 @@ There's a lot of new stuff going on here: first of all, we're importing the
 "argv" variable form #crack.sys#.  This variable contains the program's 
 command line arguments.
 
-#count()# is a method that returns the number of items in argv.  #argv[1]# 
-accesses item 1 of the argument list (indexes are zero-based, so item 1 is the 
-second element of the sequence).
+#count()# is a /method/ (a function attached to an value) that returns the
+number of items in argv.  #argv[1]# accesses item 1 of the argument list 
+(indexes are zero-based, so item 1 is the second element of the sequence).
 
 The "&&" is a short-circuit logical and: it returns true if both of the 
 expressions are true, but it won't evaluate the second expression unless the 
 first is true.  This is important in this case, because if we were to check 
 #argv[1]# in a case where #argv# had less than two elements, a fatal error 
 would result.
+
+There is also a "||" operator which is a short-circuit logical or.  It returns 
+true if either expression is true but does not evaluate the second expression 
+if the first is true.
 
 The #if# statement need not be accompanied by an else:
 
@@ -339,7 +379,7 @@ type name, an argument list, and a block of code, just like in C:
     }
 }}
 
-Also note that Crack supports recursion: you can call a function from within 
+Also note that Crack supports /recursion/: you can call a function from within 
 the definition of that function.
 
 You can define a function that doesn't return a value by using the special 
@@ -352,10 +392,73 @@ You can define a function that doesn't return a value by using the special
 }}
 
 Primitive types are always passed "by value."  The system makes a copy of them 
-for the function.  For example:
+for the function.  This fact is academic in Crack 0.1, because parameters 
+can't be modified anyway.
+
+Multiple functions can share the same name as long as their arguments differ: 
+this feature is called /overloading/.  For example, rather than "#printInt#" 
+above, we could have defined a #print# function for multiple types:
 
 {{
+    void print(int64 i) {
+        cout `int $i\n`;
+    }
     
+    void print(uint64 u) {
+        cout `uint $u\n`;
+    }
+    
+    void print(String s) {
+        cout `String $s\n`;
+    }
+}}
+
+The compiler chooses a function using a two-pass process: the first pass 
+attempts to find a match based on the argument types without any conversions.  
+The second pass attempts to find a match applying conversions whenever 
+possible.
+
+The general order of resolution in both passes is:
+
+-   search for a match in the current namespace by /order of definition/.
+-   repeat the search in each of the parent namespaces.
+
+So for example, if we called #print()# with a #uint64# parameter, the 
+resolver would check the first #print#, then check the second print, find a 
+match and use #print(uint64 u)#.  If we called it with an #int32# parameter, 
+the resolver would try all three functions, and not find a match.  It would 
+then repeat the search with conversion enabled and immediately match the first 
+function, because #int32# can implicity convert to #int64#.
+
+We mentioned searching across namespaces: functions can be defined in most 
+block contexts, including within other functions:
+
+{{
+    void outer() {
+        void inner(int i) {
+            cout `in inner\n`;
+        }
+        
+        inner(100);
+    }
+    
+    # we can't call "inner() from here...
+}}
+
+If there were another function, "#inner(uint u)#" defined in the same scope as 
+#outer()#, the resolver would consider #inner(int i)# prior to #inner(uint 
+u)#.  It would be an error to define an #inner(int i)# inside outer, because 
+this would hide the definition in the parent scope.
+
+Note that it is currently an error to use instance variables from the outer 
+function in the inner function:
+
+{{
+    void outer() { int a; int inner() { return a; } } # DOESN'T WORK
+}}
+
+Due to a bug in the compiler, this will result in a lot of LLVM optimization 
+errors being output - try to avoid doing this.
 
 Classes
 -------
@@ -388,9 +491,10 @@ The "oper init" syntax creates a /constructor/, which is a special function
 that gets called when an instance of the class is created.  The constructor 
 performs basic initialization of all of the instance variables.  The second 
 "oper init", the one without arguments, is called the "default constructor."  
-As in C++, these get generated automatically if the class has no other defined 
-constructors.  If the class does define constructors, and you want a default 
-constructor, you have to specify one explicitly as we've done above.
+As in C++, default constructors get generated automatically if the class has 
+no other defined constructors.  If the class does define constructors, and 
+you want a default constructor, you have to specify one explicitly as we've 
+done above.
 
 We can create an instance of #Coord# like so:
 
@@ -424,6 +528,1016 @@ another, both variables would refer to the same object:
 }}
 
 This is different from the way that the primitive types behave.  Primitive 
-types are always passed "by value."
+types are always passed "by value."  So:
+
+{{
+    c := 100;
+    d := c;
+    c = c + 1; # c is now 101, d is still 100
+}}
+
+We can tell if two variables are references to the same object using the 
+special #is# operator:
+
+{{
+    c := Coord(1, 2);
+    d := c;
+    e := Coord(1, 2);
+    if (c is d)
+        cout `this will always be printed\n`;
+    if (c is e)
+        cout `this will never be printed\n`;
+}}
+
+Note that /identity/ (the property tested by the #is# operator) in Crack is a 
+different concept from /equality/ (as tested by the #==# operator).  Two 
+objects are typically equal if they have the same state (it might be 
+reasonable to expect that #c# and #d# are equal, since they both have values 
+(x = 1, y = 2), although in fact they would not be since #Coord# does not 
+implement the #cmp()# method).
+
+There is a special constant, "#null#" which allows you to clear these kinds of 
+variables so that they don't reference any object.
+
+{{
+    # initialize c to null, then set it conditionally
+    Coord c = null;
+    if (positive)
+        c = Coord(1, 1);
+    else
+        c = Coord(-1, -1);
+}}
+
+You can use the #is# operator on null values:
+
+{{
+    void drawImage(Coord pos, Image img, Coord size) {
+        if (size is null)
+            copyImage(pos, img);
+        else
+            stretchImage(pos, img, size);
+    }
+}}
+
+For classes derived from #Object#, #null# values are always treated as false:
+
+{{
+    Coord c = null;
+    if (!c)
+        cout `this will always be printed\n`;
+}}
+
+Our #Coord# class also has a #writeTo()# method.  This allows us to implement 
+the #writeTo()# method which controls how an Object is written using the 
+back-tick operator.  For example:
+
+{{
+    cout `$(Coord(10, 20))\n`; # prints "Coord(10, 10)" to standard output.
+}}
+
+#writeTo()# uses the instance variables #x# and #y#.  One characteristic of 
+methods is that instance variables and other methods can be used without 
+qualification.  As another example, we could define a method to give us the 
+square of the distance from the origin as follows:
+
+{{
+    int distOrgSquared() {
+        return x * x + y * y;
+    }
+}}
+
+We could then add this information to our #writeTo()# method:
+
+{{
+    void writeTo(XWriter out) {
+        XWFormatter(out) `Coord($x, $y) [dist squared = $(distOrgSquared())]`;
+    }
+}}
+
+Methods also have a a special variable called "#this#".  Just as in C++, 
+#this# refers to the object that the method has been called on.  In 
+traditional Object-Oriented parlance, this object is called "the receiver."
+
+We could have rewritten #distOrgSquared()# as follows:
+
+{{
+    int distOrgSquared() {
+        return this.x * this.x + this.y * this.y;
+    }
+}}
+
+The #this# variable is mainly useful for passing the receiver to other 
+functions.
+
+Constructors
+''''''''''''
+
+We mentioned the "oper init" functions earlier.  These are called 
+constructors.  In Java and C++, constructors are defined using a function that 
+looks like the class name.  In the interests of providing uniform syntax for 
+all special methods, Crack uses the "oper" keyword to introduce overloaded 
+operators and special methods, including the constructors and destructors.
+
+Constructor definitions have some special syntax.  The return type can be 
+omitted, and you can provide an /initializer list/ for member variables and 
+base classes.
+
+In the example above, we defined two constructors:
+
+{{
+    oper init(int x0, int y0) : x = x0, y = y0 {}
+    oper init() {}
+}}
+
+In the first case, the initializer list initializes the x and y member 
+variables from the arguments x0 and y0.  Note that the initializers are 
+specified using assignment syntax: "x = x0" instead of the construction syntax 
+that C++ would have used: "x(x0)".
+
+The construction syntax can be used, too, but it has a different meaning.  
+Construction syntax means "construct the variable with the given arguments."  
+Assignment syntax means "initialize the variable from the given value."
+
+So, for example, "x(x0)" would be equivalent to "x = int(x0)", which is 
+perfectly legal.  The uses for these two types of syntax becomes more obvious 
+when we deal with members that are themselves class instances.
+
+For example, let's say that we want to define a line segment:
+
+{{
+    class LineSegment {
     
-XXX to finish XXX
+        # two coordinates
+        Coord c0, c1;
+        
+        ## Construct from two coordinates.
+        oper init(Coord initC0, Coord initC1) : 
+            c0 = initC0,  
+            c1 = initC1 {
+        }
+        
+        ## Construct from raw x and y values
+        oper init(int x0, int y0, int x1, int y1) :
+            c0(x0, y0),
+            c1(x1, y1) {
+        }
+    }
+}}
+
+In the first constructor, we're using the assignment syntax because we want to 
+bind the objects passed in (#initC0# and #initC1#) to the c0 and c1 variables. 
+If we had instead used construction syntax:
+
+{{
+    oper init(Coord initC0, Coord initC1) : 
+        c0(initC0),  
+        c1{initC1) {
+    }
+}}
+
+The compiler would have tried to find a #Coord# constructor that accepts 
+another #Coord# object as an argument.  Since there is no such constructor, we 
+would have gotten an error.  We could have instead done this:
+
+{{
+    oper init(Coord initC0, Coord initC1) : 
+        c0(initC0.x, initC0.y),  
+        c1(initC1.x, initC1.y) {
+    }
+}}
+
+This would have called the two argument constructors and created two new 
+#Coord# objects for c0 and c1.  There's an important difference between this 
+and the assignment syntax we started with: with the assignment syntax, c0 and 
+c1 become references to the objects that were passed into them.  If we did 
+this:
+
+{{
+    Coord c0 = {10, 10}, c1 = {20, 20};
+    ls := LineSegment(c0, c1);
+    c0.x = 20;  # l.c0.x is now also 20.
+}}
+
+changing #c0.x# in this case also changes the value within #ls#
+because the #ls#'s #c0# is the same object as the caller's #c0#.
+If we had instead using the construction syntax, #ls# would have had its own 
+copies of the #Coord# objects, and changing #c0#'s #x# value wouldn't have had 
+any effect on #ls#.
+
+If you don't specify an initializer for one of your instance variables, the 
+constructor will initialize the variable based on whatever initializers you 
+gave it in the instance variable definition.  So, for example, if we wanted 
+coordinates to default to "-1, -1" for some reason, we could have done this:
+
+class Coord {
+    int x = -1, y = -1;
+}
+
+As with ordinary variables, the default constructors is used if no 
+initializers are specified.
+
+Initializers are not necessarily run in the order that you specify them: they 
+are run in the order of member definition.  So in our examples above, if we 
+had specified an initializer list of "#: y = y0, x = x0#", #x# still would 
+have been initialized first.
+
+You can define as many constructors as you want as long as their arguments 
+have different types.  This is another example of overloading: the compiler 
+can tell the difference between them from their argument types.
+
+The /default constructor/ is the constructor without any arguments.  If you 
+don't define any constructors in your class, the compiler will attempt to 
+generate a default constructor for you - it will generate a constructor that 
+initializes the members with their variable initializers, using their default 
+constructors if there were no initializers.
+
+In future versions of Crack, if a class defines no constructors, it will 
+attempt to inherit _all_ of the constructors of the base classes (see 
+\X(Inheritence)).
+
+Inheritence
+'''''''''''
+
+One important property of object-oriented programming languages is 
+/inheritence/:  the ability to create a new class by extending an existing 
+class.  Crack supports inheritence with a syntax similar to that of C++.  
+Let's say that we wanted a coordinate like in our last example, only we also 
+wanted it to have a name.  We could create a new class for this:
+
+{{
+    class NamedCoord {
+        int x, y;
+        String name;
+    }
+}}
+
+but then we'd have to write everything that we wanted to reuse over again in 
+the new class.  And everytime we fixed a bug in #Coord#, we'd have to fix the 
+same bug in #NamedCoord#.  Inheritence provides a better way to do reuse code:
+
+{{
+    class NamedCoord : Coord {
+        
+        String name;
+        
+        oper init(int x, int y, String name0) : Coord(x, y), name = name0 {}
+        
+        void writeTo(XWriter out) {
+            XWFormatter(out) `NameCoord($x, $y)`;
+        }
+    }
+}}
+
+In the example above, we're creating a new class called #NamedCoord# that is 
+derived from #Coord#.  It will inherit all of #Coord#'s instance variables and 
+methods.  We call #Coord# #NamedCoord#'s /base class/.  #NamedCoord# is a 
+/subclass/ or /derived class/ of #Coord#.
+
+In addition to allowing reuse of code, inheritence also has the advantage that 
+instances of the derived class can be used in situations that call for an 
+instance of the base class.  So if we had a function that accepted a #Coord#, 
+we could pass it a #NamedCoord#:
+
+{{
+    void drawLine(Coord c0, Coord c1) { ... }
+    
+    NamedCoord c1 = {1, 2, 'c1'}, c2 = {3, 4, 'c2'};
+    drawLine(c1, c2);
+}}
+
+Note that this is not conversion: instances of #NamedCoord# are already 
+instances of #Coord#.  As such, function calls passing classes derived from 
+argument types will match in the first resolution pass.
+
+One of the first things we have to deal with in creating #NamedCoord# is 
+#Coord#'s constructor.  Note that in the new initializer list, we have an 
+entry for the base class as well as for the #name# variable.  If we didn't 
+specify a constructor, the compiler would have used the default constructor 
+if there was one.
+
+Like member initializers, base classes are initialized in the order in which 
+they are defined.  All base class initializers are run before any of the 
+instance variable initializers for the class.  Consider the following example:
+
+{{
+
+    import crack.io cout;
+    
+    class A {
+        oper init(String name) { cout `initializing $name\n`; }
+        oper init() {}
+    }
+    
+    class B : A {
+        A a1, a2;
+        
+        # the order of initializers is ignored.
+        oper init() : a2('a2'), a1('a1'), A('base class') {}
+    }
+    
+    # create a temporary instance of B, prints
+    B();
+}}
+
+This will print the following:
+
+{{
+    initializing base class
+    initializing a1
+    initializing a2
+}}
+
+Going back to our #NamedCoord# example, we also defined another #writeTo()# 
+method:
+
+{{
+    void writeTo(XWriter out) {
+        XWFormatter(out) `NamedCoord($x, $y)`;
+    }
+}}
+
+We did this because #Coord#'s #writeTo()# method writes out "Coord($x, $y)".  
+We want to write "NamedCoord($x, $y)".
+
+Sometimes you want to call the base class version of a function that is 
+overriden in the derived class.  Most often this is used to extend the base 
+class functionality.  Crack lets you do this by qualifying the method with the 
+class name.  For example, we could have instead overriden #writeTo()# 
+like this:
+
+{{
+    void writeTo(XWriter out) {
+        XWriterWrapper(out).write('Named');
+        Coord.writeTo(out);
+    }
+}}
+
+Multiple Inheritence
+''''''''''''''''''''
+
+Crack supports /multiple inheritence/: you can have any number of base 
+classes.  But beware - it is illegal to inherit from the same base class 
+multiple times, and Crack 0.1 doesn't guard against this very well.  
+Eventually, Crack will support this using virtual base classes like in C++.  
+We'll talk more about multiple inheritence in the next section.
+
+Destructors
+'''''''''''
+
+In addition to "#oper init#" constructors, Crack classes can have destructors.  
+These are called by #Object.oper release()# when an object's reference count 
+drops to zero.  They can also be called explicitly by objects implementing 
+their own memory management strategies.
+
+You can implement the destructor for a class by defining an "#oper del#" 
+method:
+
+{{
+    class Noisy {
+        oper del() { cout `Noisy object deleted\n`; }
+    }
+    
+    Noisy x;  # Prints a message when x goes out of scope.
+}}
+
+After calling the user defined code, #oper del# automatically calls #oper 
+release# on all of the instance variables that have an #oper relesae# method. 
+It then automatically calls the #oper del# method of each of its base classes, 
+In both cases, these calls are in reverse order of initialization: first the 
+instance variables in the reverse order that they are defined, then the base 
+classes in the reverse order that they are listed.
+
+Because of all of this automatic destruction, most #oper del# method don't 
+need to have any user code at all - everything takes care of its own cleanup.  
+If you don't define an #oper del# method, the compiler will generate one by 
+default.
+
+The only cases where you really need to define an #oper del# method are in the 
+case of certain external consequences: for example, a File object might want 
+to make sure that its file descriptor is closed upon destruction.
+
+It should be noted that an object must do nothing to change its own reference 
+count during processing of #oper del#, such as assigning it to an external 
+variable, or inserting it into an external collection.  If you do this, the 
+object will still be deleted and the external reference will be invalid.  
+Future versions of Crack will have some degree of protection against this, for 
+now - don't do it.
+
+
+The Special Base Classes
+''''''''''''''''''''''''
+
+There are three "special" base classes in Crack:
+
+-   #Object#
+-   #VTableBase#
+-   #FreeBase#
+
+The first two are available from any Crack code, #FreeBase# must be explicitly 
+imported from #crack.lang#.
+
+#Object# is the default base class for all other classes.  If you don't 
+specify any base classes, your class will implicitly be derived from #Object#
+(that's not entirely true: there is a bootstrapping mode in which classes have 
+no default base class, but that's another story).
+
+#Object# supports a general set of functionality that is applicable
+to most types, including:
+
+-   Reference counting.
+-   Boolean conversion.
+-   Formatting.
+-   Comparison operators.
+
+#VTableBase# is the base class for all classes with a vtable, which is the 
+implementation mechanism of virtual functions.  It is a special class that is 
+defined by the compiler, and it has no special contents other than a hidden 
+vtable pointer instance variable.
+
+#Object# is derived from #VTableBase#, so by default most methods in #Object# 
+and all of its derived classes are virtual.
+
+#FreeBase# is a base class that can be used in cases where you don't want to 
+be derived from #Object# (like when defining a class that mirrors a C 
+structure).  #FreeBase# does not support virtual functions, memory management,
+or anything you don't put into your derived class.  If you're going to use it, 
+you should at minimum figure out how to deal with memory management.
+
+There are situations where you get a base class but you suspect or know that 
+it is a derived cast.  Like C++, Crack lets you /typecast/ a base class to a 
+derived class using #cast()# and #unsafeCast()#.
+
+Typecasting is generally deprecated in object-oriented paradigms.  However, 
+there are certain situations where it is necessary, and others where it is 
+just the easiest way to get something done.  Consider the case of 
+containers:
+
+{{
+    import crack.container Array;
+    
+    # create an array of coordinates
+    coords := Array();
+    coords.append(Coord(1, 2));
+    coords.append(Coord(3, 4));
+}}
+
+We've stored a couple of #Coord# objects in the array, but we can't use these 
+directly because #Array# stores an array of objects: 
+
+{{
+    # gives an error because there is no drawLine(Object, Object) function.
+    drawLine(coords[0], coords[1]);
+}}
+
+This is the same problem that early versions of Java had - it will be fixed 
+in a later version of Crack through the introduction of generics.  But for now 
+we can work around this with a type cast:
+
+{{
+    drawLine(Coord.cast(coords[0]), Coord.cast(coords[1]));
+}}
+
+The #cast()# function is defined for all classes that derive from 
+#VTableBase# (including all classes derived from #Object#).  If you attempt 
+to cast an object to a type that it is not an instance of, the program will 
+abort with a (fairly useless) class cast error.
+
+For classes not derived from #VTableBase#, you can use #unsafeCast()#:
+
+{{
+    import crack.lang FreeBase;
+    class Rogue : FreeBase {}
+    
+    FreeBase f = Rogue();
+    Rogue r = Rogue.unsafeCast(f);
+}}
+
+Unlike #cast()#, #unsafeCast()# does no checking whatsoever - the programmer 
+is responsible for insuring that the object is of the type that he is casting 
+it to.  If it's not, #unsafeCast()# will happily deliver a reference to an 
+invalid object.
+
+For classes derived from #VTableBase#, you can verify prior to doing an 
+#unsafeCast()# in the same method that #cast()# does, by looking at the 
+associated class object:
+
+{{
+    Coord c = null
+    if (obj.class.isSubclass(Coord))
+        c = Coord.unsafeCast(c);
+}}
+
+Every object derived from #VTableBase# has a special #class# attribute - it's 
+like an instance variable, only you can't assign it.  It is implemented using 
+a virtual function.  The #class# attribute returns the object's class (recall 
+that classes are also values that exist at runtime).  So we could also do 
+something like this:
+
+{{
+    Coord c;
+    if (c.class is Coord)
+        cout `this will always get printed\n`;
+}}
+
+Note that you usually don't want to use the #is# operator to check the class 
+because it's usually acceptable for the class to be either the same as the 
+class you are checking for or /derived from/ the class you are checking for.  
+Use #isSubclass()# instead.
+
+Special Methods
+'''''''''''''''
+
+Certain methods have special meaning within the language or the standard 
+libraries.
+
+*final* is used to designate methods that are inherently non-virtual - even if 
+the class derives from VTableBase, the method will not be turned into a 
+virtual method.  As such, the method can not be overloaded.  It may also be 
+invoked on a #null# value.
+
+#oper init#::
+    A constructor.
+#oper del#::
+    The destructor.
+#bool toBool()#::
+    (*final*) If this method is defined, instances of the class can be implicitly 
+    converted to null (see \X(Implicit Conversion)).  #Object# implements this 
+
+    This will be replaced with the more general "#oper to# /type/" form in a 
+    future version of the language.
+#bool isTrue()#::
+    Returns true if the object is "true" when converted to a boolean.
+    This is a virtual function defined in #Object# that is called for non-null 
+    values by #toBool()#.  It allows derived classes to easily override 
+    conversion to #bool#.
+#int cmp(Object other)#::
+    Compare the object with another object.  Return a value that is greater 
+    than zero if the receiver is greater than #other#, returns a value less 
+    than zero if it is less than #other#, and returns zero if the two objects 
+    are equal.
+    
+    If you implement this, all of the normal comparison operators ("#==#", 
+    "#!=#", "#<#", "#>#", "#<=#" and "#>=#") will work for you.
+#void writeTo(XWriter writer)#::
+    Write the receiver to #writer#.  This is used to allow the object to write 
+    itself in its most natural representation - whatever that means for the 
+    object type.
+#void format(#/type/ #object)#::
+    This method is used by the back-tick operator to format objects of 
+    specific types in specific ways.  See \X(The Formatter Interface).
+
+Operator Overloading
+''''''''''''''''''''
+
+The #oper# keyword originated as a short form of the "operator" keyword in 
+C++ which is designed to allow you to define your own implementation of 
+the operators (e.g. "+", "-", ">" ...).
+
+The following operators can be overloaded:
+
+#oper +(#/type/ #other)#::
+    Binary plus.
+#oper -()#::
+    Unary negate.
+#oper -(#/type/ #other)#::
+    Binary minus.
+#oper \*(#/type/ #other)#::
+    Binary multiply.
+#oper \/(#/type/ #other)#::
+    Binary divide.
+#oper %(#/type/ #other)#::
+    Binary remainder.
+#oper [](#/type/ #index)#::
+    Array element access.
+#oper []=(#/type/ #index,# /type/ #value)#::
+    Array element assignemnt.
+#oper --()#::
+    Unary pre-decrement (post-decrement, pre-increment and post-increment don't 
+    exist yet, not sure why this one does).
+#oper !()#::
+    Unary boolean negate.
+#oper ~()#::
+    Unary bitwise negate.
+#oper ==(#/type/ #other)#::
+    Binary "equals."  #Object# implements this as "#cmp(other) == 0#".
+#oper !=(#/type/ #other)#::
+    Binary "not equals."  #Object# implements this as "#cmp(other) != 0#".
+#oper <(#/type/ #other)#::
+    Binary "less than."  #Object# implements this as "#cmp(other) < 0#".
+#oper <=(#/type/ #other)#::
+    Binary "less than or equal to."  #Object# implements this as "#cmp(other) 
+    <= 0#".
+#oper >(#/type/ #other)#::
+    Binary "greater than."  #Object# implements this as "#cmp(other) > 0#".
+#oper >=(#/type/ #other)#::
+    Binary "greater than or equal to."  #Object# implements this as 
+    "#cmp(other) >= 0#".
+    
+The primitive types mostly have intrinsic implementations of the operators.
+
+Method Resolution in Classes
+''''''''''''''''''''''''''''
+
+When resolving an overloaded method, Crack uses the same rules as for normal 
+function resolution: check each method in each namespace in the order defined, 
+then do the same in the parent namespaces.  If no result is found, repeat with 
+conversions.
+
+For classes, "parent namespaces" are the base classes.  So if we have:
+
+{{
+    class Base {
+        void func(B b) {}
+        void func(A a) {}
+    }
+    
+    class Derived : Base {
+        void func(A a) {}
+    }
+}}
+
+when we try to resolve #func(val)#, the compiler will check:
+
+-   #Derived.func(A a)#
+-   #Base.func(B b)#
+-   #Base.func(A a)#
+
+This is somewhat problematic because, in the case above, if B is derived from 
+A we probably don't want to override the more specific #func(B)# when we 
+override the more general #func(A)#, but that's what will happen because 
+#Derived.func(A)# will match calls to #func# with #B# as an argument.
+
+This results in even more weirdness when we deal with Base as an abstract 
+interface:
+
+{{
+    Derived().func(B());   # calls Derived.func(A)
+    Base base = Derived();
+    base.func(B());        # calls Base.func(B)!
+}}
+
+For these reasons, method resolution will change in a future version of crack 
+so that overrides will not be checked as part of the method set in the 
+override's context - they will only be checked in the base class where they 
+were first defined.
+
+Modules
+-------
+
+We've been making casual use of the #import# statement throughout this
+document.  The #import# statement is used to import symbols from modules, for 
+example we've use it to import the global variable #cout# from the #crack.io# 
+module:
+
+{{
+    import crack.io cout;
+}}
+
+The general format of the import statement is:
+
+[[
+    #import# /module-name/ /name-list/;
+]]
+
+/module-name/ is a dot-delimited module name.  /name-list/ is a comma 
+separated list of functions, variables and classes from.
+
+Module names correspond directly to directory and file names in the Crack 
+"library path."  When resolving a module name, the system:
+
+-   checks to see if the module has already been loaded, if so it just uses the 
+    existing module information.
+-   Load the parent module (if the parent module is not found, this is not an 
+    error)
+-   splits the name up by periods, concatenates all but the last part of the 
+    name into a relative directory path.  The last part of the name becomes 
+    the filename.  Example: "foo.bar.baz" -> path = "`foo/bar`", filename = 
+    "baz"
+-   for every directory in the crack library path, search for a subdirectory 
+    matching the path and the filename with a ".crk" exception
+-   when we find it, compile it and then execute the module top-level code 
+    (everything that's not in a function).
+
+So for example, to load the #crack.lang# module for the first time we:
+
+-   First try to load the #crack# module.
+-   Search the library path for "`crack/lang.crk`"
+-   Compile and execute the file.
+
+The crack library path is specified with the "-l" option values on the command 
+line.  By default, the executor inserts the `$PREFIX/lib/crack$VERSION`  path 
+and the current directory into the beginning of the search path.
+
+Variables defined in the module top-level are not released until program 
+termination.  Cleanups are called in the reverse order of definition.
+
+The Formatter Interface
+-----------------------
+
+As we've shown, the back-tick operator allows us to do formatted output of 
+static data, variables and expression values:
+
+{{
+    int a;
+    cout `a = $a, a + 1 = $(a + 1)\n`;
+}}
+
+Expressions of this form are called "interpolation expressions," because they 
+interpolate values into format strings.  The interpolation expression above 
+is equivalent to the following code:
+
+{{
+    if (cout) {
+        cout.format('a = ');
+        cout.format(a);
+        cout.format(', a + 1 = ');
+        cout.format(a + 1);
+        cout.format('\n');
+    }
+}}
+
+The #cout# variable is defined in #crack.io# as an instance of #Formatter#.  
+Interpolation expressions are not limited to use with #Formatter#, they can 
+be used on any object that supports conversion to boolean and #format()# 
+methods for all of the values in the expression.  For example, we could 
+create our own formatter that could be used in the expression above:
+
+{{
+    class SumOfInts {
+        int total;
+        
+        ## ignore static strings.
+        void format(StaticString s) {}
+        
+        ## make integer formatting add the value to the sum.
+        void format(int val) { total = total + val; }
+    }
+    
+    SumOfInts sum;
+    sum `a = $a, a + 1 = $(a + 1)\n`;
+    
+    # sum.total is 2a + 1
+}}
+
+More often when doing this, you'll want to derive from formatter and extend 
+its functionality:
+
+{{
+    import crack.io Formatter;
+    
+    ## Formatter that encloses strings in quotes.
+    class StrQuoter : Formatter {
+
+        oper init(Writer w) : Formatter(w) {}
+
+        ## implemented so we don't quote StaticString
+        void format(StaticString s) { rep.write(s); }
+        
+        ## Write strings wrapped in quotes.
+        void format(String s) {
+            rep.write('"');
+            rep.write(s);
+            rep.write('"');
+        }
+    }
+    
+    String s = 'string value';
+    
+    # wrap standard output's underlying writer with our formatter and use it 
+    # to format the value.
+    StrQuoter(cout.rep) `value is $s\n`;
+}}
+
+Note that we had to reimplement #format(StaticString)# in the example above.  
+The static content in an interpolation expression is of type #StaticString# 
+like all string constants in crack.  If we had not defined 
+#format(StaticString)#, the normal format method would have been used for the 
+"value is " string (this is because of the current resolution order of 
+methods: it will be changed in a future version of the language so that we 
+don't have this problem).
+
+You can create your own #Formatter# objects given a #Writer# object.  There 
+are already a few specializations of this class in the #crack.io# module.
+
+#StringFormatter# allows you to construct a string using a formatter:
+
+{{
+    import crack.io StringFormatter;
+    
+    f := StringFormatter();
+    f `some text`;
+    s := f.createString();  # s == "some text"
+}}
+
+#XWFormatter# lets you do high-level formatting given the low-level #XWriter# 
+object that gets passed to the #writeTo()# method (see the section on 
+\X(Inheritence) for an example).
+
+Reference Counting
+------------------
+
+Reference counting is a simple form of memory management.  Every object is 
+assigned a /reference count/, which is essentially the number of other 
+objects or variables referencing the object.  When a new reference is added, 
+the reference count is increased.  When a reference is removed, the reference 
+count is decreased.  When the reference count drops to zero, the destructor is
+called and the object's memory is released.
+
+Crack's reference counting mechanism is actually implemented in the language 
+as part of the implementation of #Object# in the #crack.lang# module.  The 
+compiler uses two special hooks - the "#oper bind#" and "#oper release#" 
+methods - to notify an object of when a reference is being added (by calling 
+"#oper bind#") and released (by calling "#oper release#").  These methods are 
+implicitly non-virtual: they cannot be overriden by a derived class, do not 
+make use of the vtable and therefore they can be safely applied to null 
+pointers.
+
+It is possible to implement the bind and release methods in classes derived 
+from #FreeBase# or #VTableBase# to implement your own memory management.  For 
+example, the #Wrapper# class in #crack.exp.bindings# uses it #oper release# to 
+always free the #Wrapper# instance when it is released, allowing it to 
+essentially exist in the scope in which it is defined.  Note that if you were 
+to pass such an object out of that scope, the results would be undefined.
+
+For efficiency, Crack does not bind and release every time you might expect: 
+for one thing, objects passed as function arguments are not bound and released 
+for the function call - we know that the external caller has a reference to 
+these objects.  The called function can simply borrow them.
+
+Crack also has the notion of "productive" and "non-productive" expressions.  A 
+productive expression is one that produces a reference.  A non-productive 
+expression simply borrows an existing reference.  Variable references are 
+always non-productive.  Functions returning values are (almost) always 
+productive.
+
+The compiler will call #oper bind# when assigning a non-productive value to 
+a reference, or when returning a non-productive value.  It will call "oper 
+release" when a variable goes out of scope or when productive temporary value 
+is cleaned up.  In general, temporaries get cleaned up at the end of the 
+outermost expression.  For the "#&&#" and "#||#" operators, temporaries get 
+cleaned up for the secondary expression prior to cleanup of outer expressions.
+
+There's one thing you need to be aware of about reference counting: the 
+mechanism is susceptible to the problem of reference cycles - this is when an 
+object directly or indirectly references itself.  When this happens, the 
+entire cycle of objects can become unfreeable, resulting in a memory leak.  
+This is because each object retains a reference from the last object in the 
+sequence, so even when all external references are removed, none of the 
+objects will drop to a reference count of zero.
+
+There's currently no good way around this: you just have to be aware that if 
+you create a reference that can introduce a cycle, you'll need to take certain 
+remedial measures to avoid leaking the objects.  This is typically 
+accomplished by breaking the cycles at some point, normally during the 
+destruction of some external object that references the cycle without 
+particpating in it.
+
+Primitive Bindings
+------------------
+
+Crack allows you to directly import and call functions from shared libraries.  
+A special variation of the #import# statement allows you to import symbols 
+from a shared library:
+
+{{
+    # import malloc() and free()
+    import "libc.so.6" free, malloc;
+}}
+
+After doing this, it is necessary to provide declarations of the functions 
+you've imported:
+
+{{
+    byteptr malloc(uint size);
+    void free(byteptr val);
+}}
+
+You can then use them like any other function:
+
+{{
+    mem := malloc(100);
+    free(mem);
+}}
+
+Many C functions require special arguments like pointers to integers or 
+structures that are not natively supported in Crack.  However, we can often 
+get the effect of these kinds of things by making use of the fact that all 
+Crack objects are essentially pointers to the corresponding C structures:
+
+{{
+
+    # import "free()"
+    import "libc.so.6" free;
+    void free(voidptr mem);
+
+    # define a wrapper around int
+    class IntWrapper {
+        int val;
+        
+        # free the structure's memory when we go out of scope.
+        oper release() { free(this); }
+    };
+
+    # import C function "void doSomething(int *inOutVal)"
+    import "somelib.so" doSomething;
+    void doSomething(IntWrapper inOutVal);
+    
+    # call it
+    v := IntWrapper();
+    v.val = 100;
+    doSomething(v);
+}}
+
+A set of wrapper types for this sort of thing is already defined in 
+the #crack.exp.bindings# module.   Instead of defining our own IntWrapper, we 
+could have just done:
+
+{{
+    import crack.exp.bindings IntWrapper;
+    v := IntWrapper(100);
+}}
+
+All of the Wrapper classes in this module derive from the #Wrapper# base 
+class.  #Wrapper# has the #oper release()# method definition, which frees the 
+object when it goes out of scope.  Note that wrappers must not be passed out 
+of scope:
+
+{{
+    class Broken {
+        IntWrapper wrapper = null;
+        
+        IntWrapper bad() {
+            i := IntWrapper(100);
+            wrapper = i;           # BAD.  Instance variable will reference 
+                                   # a deleted object.
+            return i;              # BAD.  Caller will get a deleted object.
+        }
+    }
+}}
+            
+The #crack.exp.bindings# module also defines an #Opaque# class.  This can be 
+used for structures returned from C functions that contain no user-servicable 
+parts.  For example:
+
+{{
+    import crack.exp.bindings Opaque;
+    import "libFoo.so" Foo_Create, Foo_Destroy;
+    class Foo : Opaque {}
+    
+    # create a Foo instance, then destroy it.
+    foo := Foo_Create();
+    Foo_Destroy(foo);
+}}
+
+#Opaque# doesn't attempt to free the object like #Wrapper# derivatives, so it 
+is important that you manage the object correctly yourself.
+
+Some times C functions want to accept a function pointer to use as a callback.
+You can get this effect by defining a function and using a parameter type of 
+#voidptr# for the callback parameter:
+
+{{
+    import "libFoo.so" Foo_SetCallback;
+    void Foo_SetCallback(Foo obj, voidptr callback);
+    
+    void myCallback(Foo obj) { cout `callback called\n`; }
+    Foo_SetCallback(Foo_Create(), myCallback);
+}}
+
+This won't work for overloaded functions: the compiler won't be able to tell 
+which overload to use.
+
+
+Crack's current approach to bindings is not without its problems:
+
+-   This whole business is extremely platform dependent.  There's no guarantee 
+    that the shared libraries that you're importing will have the same names 
+    on other platforms, or that the functions you define will not be 
+    implemented as macros.  Eventually, Crack will have an extension API to 
+    allow you to write wrappers in C or C++.  To continue to facilitate the 
+    current mechanism, we will also probably include an installer that 
+    generates a custom binding script for a given platform.
+-   You can't currently import global variables.
+
+
+Threading
+---------
+
+As it stands, Crack 0.1 is written with little regard for threads.  You can 
+attempt to use the normal threading libraries, if you like, but you're likely 
+to run into some problems.  In particular, you should be aware that the 
+reference counting mechanism is not thread-safe, so memory management will 
+most likely fail in really hard to debug ways if you share lots of objects 
+between threads.
+
+This will be remedied in a future version through the introduction of atomic 
+operations, which will allow the reference counting mechanism to be 
+implemented safely - with some cost to performance of threaded applications.
+
+Debugging
+---------
+
+Crack has only minimal support for debugging in 0.1.  If your program 
+seg-faults or aborts, you can at least get a sparse stack-trace by running it 
+under a fairly recent version of GDB (7.0 or later).
+

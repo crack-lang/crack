@@ -831,4 +831,8 @@ c' \
     '' \
     'a b c'
 
+test_output 'arg index out of bounds' \
+    'import crack.sys argv; argv[1];' \
+    'Array index out of bounds'
+
 exit $rc
