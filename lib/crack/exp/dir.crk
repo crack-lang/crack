@@ -23,6 +23,9 @@ _DIR _crack_opendir(byteptr dirname);
 int _crack_closedir(_DIR d);
 int _crack_readdir(_DIR d, _DirEntry i);
 
+// XXX make portable
+StaticString PATH_SEPARATOR = "/";
+
 class FileInfo {
 
 
