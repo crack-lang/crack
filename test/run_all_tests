@@ -26,8 +26,12 @@ function test_output {
     rm run_all_tests.tmp
 }
 
+# find the root of the source tree (should be my parent directory)
+root=$(cd $(dirname "$0")/..; pwd)
+echo "dirname = $0, root = $root"
+
 # start with no bootstrapping
-opts='-g -n'   
+opts="-g -n -l $root"   
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -592,7 +596,7 @@ test_output 'use of external class globals' \
     ok
 
 # switch to full bootstrapping mode now that importing works
-opts='-g -l .:lib'
+opts="-g -l $root -l $root/lib"
 
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \
