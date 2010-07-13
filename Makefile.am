@@ -39,7 +39,7 @@ noinst_HEADERS = model/AllocExpr.h model/FloatConst.h model/FuncDef.h \
     builder/LLVMBuilder.h parser/Parser.h parser/Token.h parser/LocationMap.h \
     parser/ParseError.h parser/Location.h parser/Toker.h Crack.h
 
-EXTRA_DIST = doc lib test Credits
+EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt cmake
 
 bin_PROGRAMS = crack
 
