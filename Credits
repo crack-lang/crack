@@ -1,0 +1,9 @@
+Here are the people who have contributed to Crack:
+
+tcmreastwood:
+    GCC 4.4.2 fixes.
+Shannon Weyrick:
+    Floating point types.  Logical "&&" and "||" operators.  CMake support.
+Michael Muller:
+    Everything else.
+
