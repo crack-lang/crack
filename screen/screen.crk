@@ -18,15 +18,28 @@ class TestSuite {
     
     void scanForTests(String dir) {
     
-        cout `importing tests from $dir ...\n`;
         d := Directory(dir, true);
         if (!d.isValid())
             die("invalid directory");
+        
+        cout `importing tests from $d ...\n`;
+
+        Iterator i;
+        
+        // gather test files
+        FileInfo curFile = null;
+        i = d.fileInfoIter();
+        while (i.nx()) {
+            curFile = FileInfo.cast(i.elem());
+            if (curFile.matches("*.crkt")) {
+                cout `found test template file: $curFile\n`;
+            }
+        }
 
         // recurse to directories
         String nextDir = null;
         StringFormatter f;
-        Iterator i = d.dirIter();
+        i = d.dirIter();
         while (i.nx()) {
             nextDir = String.cast(i.elem());
             if (nextDir != '.' && nextDir != '..') {
@@ -35,13 +48,6 @@ class TestSuite {
             }
         }
 
-        // gather test files
-        FileInfo nextFile = null;
-        i = d.fileInfoIter();
-        while (i.nx()) {
-            nextFile = FileInfo.cast(i.elem());
-            cout `found file: $(dir)$(PATH_SEPARATOR)$(nextFile.name)\n`;
-        }
 
     }
 

@@ -1,12 +1,13 @@
 # Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 # Classes for directory traversal
 
-import crack.io cerr, StringFormatter;
+import crack.io cerr, StringFormatter, XWFormatter, XWriter;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
 
-import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir;
+import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
+                             _crack_fnmatch;
 
 class _DIR: Opaque { }
 
@@ -23,6 +24,7 @@ int __CRACK_DTYPE_OTHER = 3;
 _DIR _crack_opendir(byteptr dirname);
 int _crack_closedir(_DIR d);
 int _crack_readdir(_DIR d, _DirEntry i);
+int _crack_fnmatch(byteptr pattern, byteptr string);
 
 // XXX make portable
 StaticString PATH_SEPARATOR = "/";
@@ -33,6 +35,14 @@ class FileInfo {
 
     oper init(String name0): name(name0) { }
     oper init(byteptr name0): name(name0) { }
+
+    bool matches(String pattern) {
+        return (_crack_fnmatch(pattern.buffer, name.buffer) == 0);
+    }
+
+    void writeTo(XWriter out) {
+        XWFormatter(out) `$name`;
+    }
 
 }
 
@@ -53,6 +63,9 @@ class Directory {
         _isValid = !(_dir is null);
         _isOpened = true;
 
+        if (!_isValid)
+            return;
+        
         _DirEntry d;
         int r;
         // note, this should be done lazily so we don't have to load
@@ -84,9 +97,27 @@ class Directory {
 
     bool isOpened() { return _isOpened; }
 
-    Iterator dirIter() { return _dirList.iter(); }
+    Iterator dirIter() { 
+        if (!_isOpened)
+            _openDir();
+        if (_isValid)
+            return _dirList.iter(); 
+        else
+            return null;
+    }
 
-    Iterator fileInfoIter() { return _fileList.iter(); }
+    Iterator fileInfoIter() {
+        if (!_isOpened)
+            _openDir();
+        if (_isValid)
+            return _fileList.iter(); 
+        else
+            return null;        
+    }
+    
+    void writeTo(XWriter out) {
+        XWFormatter(out) `$name`;
+    }
     
 }
 

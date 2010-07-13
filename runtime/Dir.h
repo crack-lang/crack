@@ -8,6 +8,7 @@
 
 extern "C" {
 
+// needs to match dir.crk in runtime
 #define CRACK_DTYPE_DIR   1
 #define CRACK_DTYPE_FILE  2
 #define CRACK_DTYPE_OTHER 3
@@ -20,6 +21,8 @@ typedef struct {
 DIR* _crack_opendir(const char* name);
 int _crack_closedir(DIR* d);
 int _crack_readdir(DIR* d, _crack_dirEntry* i);
+
+int _crack_fnmatch(const char* pattern, const char* string); 
 
 }
 
