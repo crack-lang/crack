@@ -4,6 +4,9 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
+-   Allow Class.cast(obj, defaultValue) so you can check-and-cast without 
+    resorting to unsafeCast().
+
 Unassigned
 ----------
 
@@ -11,12 +14,10 @@ Unassigned
 -   allow explicit operators to be called without the "var." prefix.
 -   need to be able to instantiate a class from within the class (generate the 
     "new" operator as soon as an "init" is defined).
--   give an error when you try to derive from a low-level type.
 -   implement inheritence from low-level types.
--   need to be able to instantiate objects from within the class (i.e. oper 
-    new must be generated after oper init is parsed)
 -   annotations
-
+-   Overrides should not be considered in method resolution order (see manual 
+    on "Method Resolution in Classes")
 
 Roadmap
 -------
