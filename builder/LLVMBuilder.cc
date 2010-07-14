@@ -18,6 +18,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetSelect.h>
+#include <llvm/Target/TargetOptions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
@@ -2527,7 +2528,8 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     } else {
         if (rootBuilder) 
             execEng = rootBuilder->bindModule(mod);
-        else
+        else {
+            llvm::JITEmitDebugInfo = true;
             // we have to specify all of the arguments for this so we can turn 
             // off "allocate globals with code."  In addition to being 
             // deprecated in the docs for this function, this option causes 
@@ -2538,6 +2540,7 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
                                               CodeGenOpt::Default, // opt lvl
                                               false // alloc globals with code
                                               );
+        }
     }
     
     return execEng;

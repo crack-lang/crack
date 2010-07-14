@@ -43,6 +43,7 @@ add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}
 # share this is autoconf
 file(STRINGS sourceModules.txt CRACK_SRC_FILES)
 #MESSAGE( STATUS "modules: " ${CRACK_SRC_FILES})
+file(STRINGS runtimeModules.txt RUNTIME_SRC_FILES)
 
 # these are llvm specific compile flags, needed only for source files that
 # include llvm headers
@@ -51,6 +52,8 @@ set_source_files_properties( ${CRACK_SRC_FILES}
                             )
 
 add_executable( crack ${CRACK_SRC_FILES} )
+
+add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
 
 set_target_properties( crack
                        PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
@@ -66,5 +69,6 @@ target_link_libraries( crack
 
 # test suite
 add_custom_target(check 
-                  ${PROJECT_SOURCE_DIR}/test/run_all_tests
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+                  ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests
+                  #WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+		  )

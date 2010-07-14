@@ -19,3 +19,5 @@ config.sub
 conf\d+.sh
 configure
 missing
+.*~
+build/*
