@@ -67,6 +67,19 @@ target_link_libraries( crack
             ${LLVM_LIBS}
                       ) 
 
+# install targets
+install(TARGETS crack
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+       )
+install(FILES doc/Manual.html DESTINATION share/doc/crack)
+# todo: a better scheme that saves directory structure of lib directory
+FILE(GLOB lib_files_root lib/crack/*.crk)
+install(FILES ${lib_files_root} DESTINATION "lib/crack-${CRACK_VERSION}/crack")
+FILE(GLOB lib_files_exp lib/crack/exp/*.crk)
+install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/crack/exp")
+
 # test suite
 add_custom_target(check 
                   ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests
