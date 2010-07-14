@@ -57,7 +57,7 @@ INCLUDES =  @SPUGPP_CXXFLAGS@
 TESTS = test/run_all_tests
 
 doc/Manual.html: doc/Manual.nml
-	@if which nml2html >/dev/null; then echo generating $@; nml2html $*; \
+	@if which nml2html >/dev/null; then echo generating $@; nml2html $?; \
 	else \
 	   echo "To regenerate the manual, you need the nml2html tool and "; \
 	   echo "the spug libraries."; \
