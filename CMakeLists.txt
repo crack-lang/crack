@@ -76,9 +76,9 @@ install(TARGETS crack
 install(FILES doc/Manual.html DESTINATION share/doc/crack)
 # todo: a better scheme that saves directory structure of lib directory
 FILE(GLOB lib_files_root lib/crack/*.crk)
-install(FILES ${lib_files_root} DESTINATION "lib/crack-${CRACK_VERSION}")
+install(FILES ${lib_files_root} DESTINATION "lib/crack-${CRACK_VERSION}/crack")
 FILE(GLOB lib_files_exp lib/crack/exp/*.crk)
-install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/exp")
+install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/crack/exp")
 
 # test suite
 add_custom_target(check 
