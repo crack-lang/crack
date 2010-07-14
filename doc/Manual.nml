@@ -20,9 +20,6 @@ us feedback.
 
 So without further caveats - let's do some Crack!
 
-XXX I thought something like this Overview section may be useful, feel free to
-XXX omit or change
-
 Overview
 --------
 
@@ -78,13 +75,11 @@ means that they support the use of the back-tick operator for formatting.
 The third line actually uses the back-tick operator to print some text.  We 
 won't go into too much detail on this operator right now - suffice it to say 
 that this line is roughly equivalent to "#cout.format('hello world!\\n');#"  
-XXX this newline is parsing into a literal newline in HTML
-The "\n" at the end of the string translates into a newline (the ASCII "LF"
+The "\\n" at the end of the string translates into a newline (the ASCII "LF"
 character, character code 10).
 
-XXX don't understand "value `contents`" .. just `string content` ?
-The general form of "/value/ \`/contents/\`" is called an "interpolation 
-expression."
+Expressions consisting of a value followed by back-tick quoted text and code 
+are called "interpolation expressions."
 
 Comments
 --------
@@ -116,7 +111,7 @@ Variables and Types
 -------------------
 
 Like most languages, Crack allows you to define variables. But unlike most
-"scripting" languages, Crack is statically typed so you must specify
+other scripting languages, Crack is statically typed so you must specify
 (or imply) a type for all variables.
 
 {{
@@ -126,7 +121,7 @@ Like most languages, Crack allows you to define variables. But unlike most
 
 
 You can also define variables using the more terse ":=" operator, which derives
-the type from the context:
+the type from that of the value:
 
 {{
     i := 100;           # equivalent to "int i = 100;"
@@ -174,13 +169,13 @@ float::
     A floating point of the C compiler's float size for the platform (this is
     an alias to either float32 or float64).
 byteptr::
-    A pointer to an array of bytes (roughly like C's char*)
+    A pointer to an array of bytes (roughly like C's #char\*#)
 voidptr::
-    A pointer to anything (like C's void*).  All high level classes can
+    A pointer to anything (like C's #void\*#).  All high level classes can
     implicitly convert to voidptr.
 array[/class/]::
     The low-level array type.  You should generally avoid using this in favor 
-    of high-level data structures (see crack.container). They are not
+    of high-level data structures (see #crack.container#). They are not
     memory-managed, and don't do memory management of their elements.
 
     This is Crack's only existing generic datatype - to use it, you specialize 
@@ -195,11 +190,9 @@ String::
     An immutable, memory managed string of bytes.
 StaticString::
     This is a String whose buffer can point to read-only memory.
-XXX Class entry below is vague and potentially confusing since it's
-XXX such a generic OO term, and "meta-class" isn't defined anywhere.
-XXX add "used for reflection and type casting" ? "base class for reflection meta class"?
 Class::
-    The meta-class for all class objects.
+    The type of class objects themselves.  Crack classes exist at runtime as 
+    well as compile time.  See \X(Classes are Variables).
 
 Of these, the #byte#, #bool#, #int#, #uint# and #float# types (including all 
 variations of #int#, #uint# and #float#) are /primitives/.  These types are 
@@ -279,9 +272,9 @@ String constants are actually instances of the "StaticString" class - they're
 just like strings except that since their buffers are constants, they don't try
 to deallocate them on destruction.
 
-As in the other C-like languages, string constants (both single a double quoted)
-can have escape sequences in them.  We've dealt with one of these already
-("\\n").  The full list is:
+As in the other C-like languages, string constants (both single and double 
+quoted) can have escape sequences in them.  We've dealt with one of these 
+already ("\\n").  The full list is:
 
 *\\t*::
     ASCII Tab character (9).
@@ -332,9 +325,10 @@ There's a lot of new stuff going on here: first of all, we're importing the
 "argv" variable form #crack.sys#.  This variable contains the program's 
 command line arguments.
 
-#count()# is a /method/ (a function attached to a class) that returns the
-number of items in argv.  #argv[1]# accesses item 1 of the argument list 
-(indexes are zero-based, so item 1 is the second element of the sequence).
+#count()# is a /method/ (a function attached to a value called "the 
+receiver") that returns the number of items in argv.  #argv[1]# accesses item 
+1 of the argument list (indexes are zero-based, so item 1 is the second 
+element of the sequence).
 
 The "&&" is a short-circuit logical and: it returns true if both of the 
 expressions are true, but it won't evaluate the second expression unless the 
@@ -375,6 +369,11 @@ You can also chain if\/else blocks:
     else
         cout `no args.\n`;
 }}
+
+Note that blocks of code in curly braces can include the definitions of new 
+variables that are only visible from within that block.  Each block is a 
+/namespace/ that inherets definitions from the outer namespace.  The top-level 
+code in the file is the /module namespace/.
 
 The while statement
 '''''''''''''''''''
@@ -432,9 +431,9 @@ You can define a function that doesn't return a value by using the special
 }}
 
 Primitive types are always passed "by value."  The system makes a copy of them 
-for the function.  This fact is academic in Crack 0.1, because parameters
-can't be modified anyway (apart from calling methods or setting member variables
-on passed objects).
+for the function.  This fact is academic in Crack 0.1, because parameter
+variables can't be assigned anyway (if they are high-level types, you can 
+modify the objects that they reference).
 
 Multiple functions can share the same name as long as their arguments differ: 
 this feature is called /overloading/.  For example, rather than "#printInt#" 
@@ -460,12 +459,6 @@ The second pass attempts to find a match applying conversions whenever
 possible.
 
 The general order of resolution in both passes is:
-
-XXX The term 'namespace' is used here and a few places. Perhaps it should be defined
-XXX somewhere near the top, or maybe in Modules section which can be moved up.
-XXX It's a bit confusing because we're saying that some things in Crack are
-XXX like C++, but they aren't exactly like C++ namespace, which is what i thought
-XXX of at first read
 
 -   search for a match in the current namespace by /order of definition/.
 -   repeat the search in each of the parent namespaces.
@@ -596,16 +589,15 @@ special #is# operator:
         cout `this will never be printed\n`;
 }}
 
-XXX I changed the wording here to make more sense to me, but my understanding
-XXX may be wrong ... ?
 Note that /identity/ (the property tested by the #is# operator) in Crack is a 
 different concept from /equality/ (as tested by the #==# operator). Two objects
-have the same identity if their underlying references (pointers) are equal.
-However, two different object references may still be equal if they have the
-same state (as determined by the #cmp()# method). In this case, it might be
-reasonable to expect that #c# and #d# are equal, since they both have
-values (x = 1, y = 2), although in fact they would not be unless #Coord#
-implemented a #cmp()# method which provided this logic.
+have the same identity if their underlying references are equal.
+However, references to two different object may still be equal if they have the
+same state (as determined by the #cmp()# method). In the example above, it 
+might be reasonable to expect that #c# and #e# are equal, since they both have
+values (x = 1, y = 2), although in fact they would not be unless #Coord# 
+implemented a #cmp()# method which provided this logic.  The #cmp()# method 
+provided by #Object# is simply an identity check.
 
 There is a special constant, "#null#" which allows you to clear these kinds of 
 variables so that they don't reference any object.
@@ -630,9 +622,6 @@ You can use the #is# operator on null values:
     }
 }}
 
-XXX what does "== null" do? avoid it? i imagine this would a common idiom for
-XXX C programmers
-
 For classes derived from #Object#, #null# values are always treated as false:
 
 {{
@@ -651,9 +640,9 @@ back-tick operator.  For example:
 
 #writeTo()# uses the instance variables #x# and #y#.  One characteristic of 
 methods is that instance variables and other methods can be used without 
-qualification such as "self" or "this" (although this is possible, see below).
-As another example, we could define a method to give us the square of the
-distance from the origin as follows:
+qualification (you don't need a "self" or "this" variable, although this is 
+possible, see below). As another example, we could define a method to give us 
+the square of the distance from the origin as follows:
 
 {{
     int distOrgSquared() {
@@ -683,6 +672,20 @@ We could have rewritten #distOrgSquared()# as follows:
 
 The #this# variable is mainly useful for passing the receiver to other 
 functions.
+
+Classes are Variables
+'''''''''''''''''''''
+
+In addition to being compile-time entities, Classes are also variables that 
+can be accessed at runtime.  They are of type #Class#.  So, for example, we 
+can do this:
+
+{{
+    class Foo {}
+    Class foo2 = Foo;
+    if (foo.isSubclass(Object))
+        cout `Foo is an Object\n`;
+}}
 
 Constructors
 ''''''''''''
@@ -957,7 +960,7 @@ method:
 
 After calling the user defined code, #oper del# automatically calls #oper 
 release# on all of the instance variables that have an #oper release# method
-(see Reference Counting section). It then automatically calls the #oper del#
+(see \X(Reference Counting)). It then automatically calls the #oper del#
 method of each of its base classes. In both cases, these calls are in reverse
 order of initialization: first the instance variables in the reverse order that
 they are defined, then the base classes in the reverse order that they are
@@ -994,6 +997,8 @@ imported from #crack.lang#.
 
 #Object# is the default base class for all other classes.  If you don't 
 specify any base classes, your class will implicitly be derived from #Object#.
+(that's not entirely true: there is a bootstrapping mode in which classes have
+no default base class, but that's another story).
 
 #Object# supports a general set of functionality that is applicable
 to most types, including:
@@ -1081,8 +1086,6 @@ associated class object:
     if (obj.class.isSubclass(Coord))
         c = Coord.unsafeCast(c);
 }}
-
-XXX says "recall that classes..." but this isn't explained anywhere else?
 
 Every object derived from #VTableBase# has a special #class# attribute - it's 
 like an instance variable, only you can't assign it.  It is implemented using 
@@ -1422,9 +1425,6 @@ for one thing, objects passed as function arguments are not bound and released
 for the function call - we know that the external caller has a reference to 
 these objects.  The called function can simply borrow them.
 
-XXX I still don't follow this precisely. but I'm not sure this is the best place
-XXX to go into any more detail about it.
-
 Crack also has the notion of "productive" and "non-productive" expressions.  A 
 productive expression is one that produces a reference.  A non-productive 
 expression simply borrows an existing reference.  Variable references are 
@@ -1437,8 +1437,6 @@ release" when a variable goes out of scope or when productive temporary value
 is cleaned up.  In general, temporaries get cleaned up at the end of the 
 outermost expression.  For the "#&&#" and "#||#" operators, temporaries get 
 cleaned up for the secondary expression prior to cleanup of outer expressions.
-
-XXX
 
 There's one thing you need to be aware of about reference counting: the 
 mechanism is susceptible to the problem of reference cycles - this is when an 
