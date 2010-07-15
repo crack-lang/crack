@@ -49,16 +49,18 @@ CMake Install Instructions
 
 CMake version 2.6 or greater is required. We recommend an out-of-tree
 build. You should ensure llvm 2.7 and spug++ 0.8 are already installed 
-before running cmake.
+(see above) before running cmake.
 
 Quick Install:
 
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd <crack-source-dir>
+$ cd crack-0.1
 $ mkdir build; cd build
 $ cmake ..
+$ make
+$ make check  # optional
 $ make install
 
 Details:
