@@ -8,8 +8,10 @@ need the following packages:
 - LLVM 2.7 built with RTTI support.
 - spug++ 0.8
 
-LLVM 2.7 is available as a package in Ubuntu Lucid, and is built with RTTI
-support.
+LLVM 2.7 is available as a package in Ubuntu Lucid, and is built with RTTI 
+support, but the configuration was broken for us.  It attempts to link in the 
+ffi library, which is does not exist.  Unless you want to try to hack around 
+this problem, we recommend that you rebuild LLVM from source.
 
 Autoconf Install Instructions
 -----------------------------
