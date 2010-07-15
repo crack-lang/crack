@@ -1,4 +1,49 @@
 
+Installation
+============
+
+Crack can be built using either autoconf or CMake.  In either case, you'll 
+need the following packages:
+
+- LLVM 2.7 built with RTTI support.
+- spug++ 0.8
+
+LLVM 2.7 is available as a package in Ubuntu Lucid, and is built with RTTI
+support.
+
+Autoconf Install Instructions
+-----------------------------
+
+Build LLVM 2.7 (if it is available as a package on your distro, you can just 
+apt-get it):
+
+$ tar -xvzf llvm-2.7.tgz
+$ cd llvm-2.7
+$ ./configure
+$ make REQUIRES_RTTI=1
+$ make install
+
+Build and install spug++:
+
+$ tar -xvzf spug++-0.8.tar.gz
+$ cd spug++-0.8
+$ ./configure
+$ make
+$ make check  # optional
+$ make install
+
+Build Crack:
+
+$ tar -xvzf crack-0.1.tar.gz
+$ cd crack-0.1
+$ ./configure
+$ make
+$ make check  # optional
+$ make install
+
+See "Installation Instructions" below for the complete details of how to use
+the autoconf build.
+
 CMake Install Instructions
 --------------------------
 
