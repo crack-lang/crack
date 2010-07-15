@@ -1,3 +1,41 @@
+
+CMake Install Instructions
+--------------------------
+
+CMake version 2.6 or greater is required. We recommend an out-of-tree
+build. You should ensure llvm 2.7 and spug++ 0.8 are already installed 
+before running cmake.
+
+Quick Install:
+
+(if llvm and spug are in standard locations, and you wish to install in
+ the default /usr/local)
+
+$ cd <crack-source-dir>
+$ mkdir build; cd build
+$ cmake ..
+$ make install
+
+Details:
+
+If you need to specify a non-standard location for spug, then set the
+SPUG_DIR environment variable to the spug install directory (the one you 
+passed to --prefix during spug configure) when you call cmake. 
+
+For example:
+
+$ SPUG_DIR=/home/user/local cmake ..
+
+If your llvm is in a non-standard location, you'll have to specify the
+location of llvm-config via the LLVM_CONFIG_EXECUTABLE cmake variable. 
+If you would like to change the install location, set the 
+CMAKE_INSTALL_PREFIX variable. You can set these with -D on the command
+line, or use a tool like ccmake.
+
+See cmake --help for more options.
+
+=========================================================================
+
 Installation Instructions
 *************************
 
