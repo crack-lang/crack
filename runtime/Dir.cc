@@ -44,7 +44,7 @@ int _crack_readdir(DIR* d, _crack_dirEntry* i) {
     return 1;
 }
 
-bool _crack_fnmatch(const char* pattern, const char* string) {
+int _crack_fnmatch(const char* pattern, const char* string) {
     return fnmatch(pattern, string, 0);
 }
 
