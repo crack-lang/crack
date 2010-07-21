@@ -54,6 +54,7 @@
 #include "BResultExpr.h"
 #include "VTableBuilder.h"
 #include "Ops.h"
+#include "PlaceholderInstruction.h"
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -157,41 +158,6 @@ namespace {
             }
     };
     
-    /**
-     * This is a special instruction that serves as a placeholder for 
-     * operations where we dereference incomplete types.  These get stored in 
-     * a block and subsequently replaced with a reference to the actual type.
-     */    
-    class PlaceholderInstruction : public Instruction {
-        public:
-            PlaceholderInstruction(const Type *type, BasicBlock *parent,
-                                   Use *ops = 0, 
-                                   unsigned opCount = 0
-                                   ) :
-                Instruction(type, OtherOpsEnd + 1, ops, opCount, parent) {
-            }
-
-            PlaceholderInstruction(const Type *type,
-                                   Instruction *insertBefore = 0,
-                                   Use *ops = 0,
-                                   unsigned opCount = 0
-                                   ) :
-                Instruction(type, OtherOpsEnd + 1, ops, opCount, 
-                            insertBefore
-                            ) {
-            }
-            
-            /** Replace the placeholder with a real instruction. */
-            void fix() {
-                IRBuilder<> builder(getParent(), this);
-                insertInstructions(builder);
-                this->eraseFromParent();
-                // ADD NO CODE AFTER SELF-DELETION.
-            }
-            
-            virtual void insertInstructions(IRBuilder<> &builder) = 0;
-    };
-
     SPUG_RCPTR(BBuilderContextData);
 
     class BBuilderContextData : public BuilderContextData {

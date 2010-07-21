@@ -21,7 +21,7 @@ parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
 builder/llvm/LLVMBuilder.cc
-builder/llvm/BTypeDef.cc
+builder/llvm/PlaceholderInstruction.cc
 builder/llvm/Ops.cc
 builder/llvm/VTableBuilder.cc
 builder/llvm/BFuncDef.cc

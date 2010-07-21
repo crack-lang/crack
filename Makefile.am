@@ -3,7 +3,12 @@
 
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = \
-    builder/LLVMBuilder.cc \
+    builder/llvm/LLVMBuilder.cc \
+    builder/llvm/PlaceholderInstruction.cc \
+    builder/llvm/BTypeDef.cc \
+    builder/llvm/Ops.cc \
+    builder/llvm/VTableBuilder.cc \
+    builder/llvm/BFuncDef.cc \
     parser/Token.cc \
     parser/Toker.cc \
     parser/ParseError.cc \
@@ -36,8 +41,12 @@ noinst_HEADERS = model/AllocExpr.h model/FloatConst.h model/FuncDef.h \
     model/BuilderContextData.h model/VarDefImpl.h model/NullConst.h \
     model/CleanupFrame.h model/Initializers.h model/StubDef.h \
     model/ResultExpr.h model/FuncCall.h builder/Builder.h \
-    builder/LLVMBuilder.h parser/Parser.h parser/Token.h parser/LocationMap.h \
-    parser/ParseError.h parser/Location.h parser/Toker.h Crack.h
+    builder/llvm/LLVMBuilder.h builder/llvm/Ops.h builder/llvm/BBranchPoint.h \
+    builder/llvm/BFuncDef.h builder/llvm/BResultExpr.h \
+    builder/llvm/BTypeDef.h builder/llvm/PlaceholderInstruction.h \
+    builder/llvm/VTableBuilder.h parser/Parser.h parser/Token.h \
+    parser/LocationMap.h parser/ParseError.h parser/Location.h \
+    parser/Toker.h Crack.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt cmake
 
