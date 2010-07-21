@@ -4,9 +4,16 @@
 
 #include "BTypeDef.h"
 #include "BFuncDef.h"
+#include "model/Context.h"
+
+#include <llvm/LLVMContext.h>
+#include <llvm/GlobalVariable.h>
 #include <vector>
 
+
 using namespace std;
+using namespace llvm;
+using namespace model;
 
 namespace {
     // utility function to resize a vector to accomodate a new element, but
@@ -53,9 +60,9 @@ void VTableBuilder::addToAncestor(BTypeDef *ancestor, BFuncDef *func) {
     }
 
     // insert the function
-    vector<llvm::Constant *> &entries = targetVTable->entries;
+    vector<Constant *> &entries = targetVTable->entries;
     accomodate(entries, func->vtableSlot);
-    entries[func->vtableSlot] = func->rep;
+    entries[func->vtableSlot] = (Constant*)func->rep;
 }
 
 // add the function to all vtables.
@@ -66,7 +73,7 @@ void VTableBuilder::addToAll(BFuncDef *func) {
             ) {
         vector<Constant *> &entries = iter->second->entries;
         accomodate(entries, func->vtableSlot);
-        entries[func->vtableSlot] = func->rep;
+        entries[func->vtableSlot] = (Constant*)func->rep;
     }
 }
 
