@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
 
-#ifndef _builder_LLVMBUilder_h_
-#define _builder_LLVMBUilder_h_
+#ifndef _builder_LLVMBuilder_h_
+#define _builder_LLVMBuilder_h_
 
 #include <map>
 
-#include "Builder.h"
+#include "builder/Builder.h"
 
 #include <llvm/Support/IRBuilder.h>
 
@@ -20,6 +20,7 @@ namespace llvm {
 };
 
 namespace builder {
+namespace mvll {
 
 SPUG_RCPTR(LLVMBuilder);
 
@@ -256,6 +257,7 @@ class LLVMBuilder : public Builder {
                                     );
 };
 
+} // namespace builder::mvll
 } // namespace builder
 #endif
 

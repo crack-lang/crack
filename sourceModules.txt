@@ -1,4 +1,3 @@
-builder/LLVMBuilder.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
@@ -21,5 +20,10 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
+builder/llvm/LLVMBuilder.cc
+builder/llvm/BTypeDef.cc
+builder/llvm/Ops.cc
+builder/llvm/VTableBuilder.cc
+builder/llvm/BFuncDef.cc
 Crack.cc
 crack.cc

@@ -6,10 +6,11 @@
 #include <vector>
 #include "TypeDef.h"
 #include "VarDef.h"
+#include "ArgDef.h"
 
 namespace model {
 
-SPUG_RCPTR(ArgDef);
+//SPUG_RCPTR(ArgDef);
 SPUG_RCPTR(Expr);
 
 SPUG_RCPTR(FuncDef);

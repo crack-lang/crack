@@ -8,7 +8,7 @@
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/TypeDef.h"
-#include "builder/LLVMBuilder.h"
+#include "builder/llvm/LLVMBuilder.h"
 #include "Crack.h"
 
 using namespace std;

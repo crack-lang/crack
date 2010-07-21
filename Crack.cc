@@ -11,12 +11,13 @@
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
 #include "builder/Builder.h"
-#include "builder/LLVMBuilder.h"
+#include "builder/llvm/LLVMBuilder.h"
 
 using namespace std;
 using namespace model;
 using namespace parser;
 using namespace builder;
+using namespace builder::mvll;
 
 Crack *Crack::theInstance = 0;
 
