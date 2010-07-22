@@ -7,6 +7,7 @@ libcrack_la_SOURCES = \
     builder/llvm/PlaceholderInstruction.cc \
     builder/llvm/BTypeDef.cc \
     builder/llvm/Ops.cc \
+    builder/llvm/Consts.cc \
     builder/llvm/VTableBuilder.cc \
     builder/llvm/BFuncDef.cc \
     parser/Token.cc \

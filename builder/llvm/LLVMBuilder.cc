@@ -36,13 +36,13 @@
 //#include <model/FuncDef.h>
 //#include <model/FuncCall.h>
 #include <model/InstVarDef.h>
-#include <model/IntConst.h>
-#include <model/FloatConst.h>
+//#include <model/IntConst.h>
+//#include <model/FloatConst.h>
 #include <model/ModuleDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 //#include <model/ResultExpr.h>
-#include <model/StrConst.h>
+//#include <model/StrConst.h>
 #include <model/StubDef.h>
 //#include <model/TypeDef.h>
 #include <model/VarDef.h>
@@ -55,6 +55,7 @@
 #include "VTableBuilder.h"
 #include "Ops.h"
 #include "PlaceholderInstruction.h"
+#include "Consts.h"
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -127,37 +128,7 @@ namespace {
             }
     };
 
-    
-    SPUG_RCPTR(BStrConst);
-
-    class BStrConst : public model::StrConst {
-        public:
-            // XXX need more specific type?
-            llvm::Value *rep;
-            BStrConst(TypeDef *type, const std::string &val) :
-                StrConst(type, val),
-                rep(0) {
-            }
-    };
-    
-    class BIntConst : public model::IntConst {
-        public:
-            llvm::Value *rep;
-            BIntConst(BTypeDef *type, long val) :
-                IntConst(type, val),
-                rep(ConstantInt::get(type->rep, val)) {
-            }
-    };
-
-    class BFloatConst : public model::FloatConst {
-        public:
-            llvm::Value *rep;
-            BFloatConst(BTypeDef *type, double val) :
-                FloatConst(type, val),
-                rep(ConstantFP::get(type->rep, val)) {
-            }
-    };
-    
+        
     SPUG_RCPTR(BBuilderContextData);
 
     class BBuilderContextData : public BuilderContextData {
