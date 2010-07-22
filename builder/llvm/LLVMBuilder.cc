@@ -28,34 +28,25 @@
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
 #include <model/ArgDef.h>
-//#include <model/Branchpoint.h>
 #include <model/BuilderContextData.h>
 #include <model/CleanupFrame.h>
 #include <model/VarDefImpl.h>
-//#include <model/Context.h>
-//#include <model/FuncDef.h>
-//#include <model/FuncCall.h>
 #include <model/InstVarDef.h>
-//#include <model/IntConst.h>
-//#include <model/FloatConst.h>
-#include <model/ModuleDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
-//#include <model/ResultExpr.h>
-//#include <model/StrConst.h>
 #include <model/StubDef.h>
-//#include <model/TypeDef.h>
 #include <model/VarDef.h>
 #include <model/VarRef.h>
 
-#include "BTypeDef.h"
-#include "BFuncDef.h"
 #include "BBranchPoint.h"
+#include "BFuncDef.h"
+#include "BModuleDef.h"
 #include "BResultExpr.h"
-#include "VTableBuilder.h"
+#include "BTypeDef.h"
+#include "Consts.h"
 #include "Ops.h"
 #include "PlaceholderInstruction.h"
-#include "Consts.h"
+#include "VTableBuilder.h"
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -108,26 +99,6 @@ namespace llvm {
 
 
 namespace {
-        
-    SPUG_RCPTR(BModuleDef);
-    
-    class BModuleDef : public ModuleDef {
-        
-        public:
-            // primitive cleanup function
-            void (*cleanup)();
-            
-            BModuleDef(const string &canonicalName, Context *context) :
-                ModuleDef(canonicalName, context),
-                cleanup(0) {
-            }
-            
-            void callDestructor() {
-                if (cleanup)
-                    cleanup();
-            }
-    };
-
         
     SPUG_RCPTR(BBuilderContextData);
 
