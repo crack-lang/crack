@@ -27,5 +27,7 @@ builder/llvm/Ops.cc
 builder/llvm/Consts.cc
 builder/llvm/VTableBuilder.cc
 builder/llvm/BFuncDef.cc
+builder/llvm/FuncBuilder.cc
+builder/llvm/VarDefs.cc
 Crack.cc
 crack.cc

@@ -30,7 +30,6 @@
 #include <model/ArgDef.h>
 #include <model/BuilderContextData.h>
 #include <model/CleanupFrame.h>
-#include <model/VarDefImpl.h>
 #include <model/InstVarDef.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
@@ -44,8 +43,10 @@
 #include "BResultExpr.h"
 #include "BTypeDef.h"
 #include "Consts.h"
+#include "FuncBuilder.h"
 #include "Ops.h"
 #include "PlaceholderInstruction.h"
+#include "VarDefs.h"
 #include "VTableBuilder.h"
 
 #include "parser/Parser.h"
@@ -710,107 +711,6 @@ namespace {
             }
     };            
     
-    // generates references for memory variables (globals and instance vars)
-    SPUG_RCPTR(BMemVarDefImpl);
-    class BMemVarDefImpl : public VarDefImpl {
-        public:
-
-            virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
-                LLVMBuilder &b =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                b.emitMemVarRef(context, getRep(b));
-                return new BResultExpr(var, b.lastValue);
-            }
-            
-            virtual ResultExprPtr
-            emitAssignment(Context &context, AssignExpr *assign) {
-                LLVMBuilder &b =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                ResultExprPtr result = assign->value->emit(context);
-                b.narrow(assign->value->type.get(), assign->var->type.get());
-                Value *exprVal = b.lastValue;
-                b.builder.CreateStore(exprVal, getRep(b));
-                result->handleAssignment(context);
-                b.lastValue = exprVal;
-                
-                return new BResultExpr(assign, exprVal);
-            }
-            
-            virtual Value *getRep(LLVMBuilder &builder) = 0;
-    };
-    
-    class BHeapVarDefImpl : public BMemVarDefImpl {
-        public:
-            Value *rep;
-
-            BHeapVarDefImpl(Value *rep) : rep(rep) {}
-            
-            virtual Value *getRep(LLVMBuilder &builder) {
-                return rep;
-            }
-    };
-    
-    SPUG_RCPTR(BGlobalVarDefImpl);
-    class BGlobalVarDefImpl : public BMemVarDefImpl {
-        public:
-            GlobalVariable *rep;
-
-            BGlobalVarDefImpl(GlobalVariable *rep) : rep(rep) {}
-
-            virtual Value *getRep(LLVMBuilder &builder) {
-                if (rep->getParent() != builder.module)
-                    rep = builder.getModVar(this);
-                return rep;
-            }
-    };
-    
-    class BConstDefImpl : public VarDefImpl {
-        public:
-            Constant *rep;
-            
-            BConstDefImpl(Constant *rep) : rep(rep) {}
-
-            virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
-                LLVMBuilder &b =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                b.lastValue = rep;
-                return new BResultExpr(var, b.lastValue);
-            }
-            
-            virtual ResultExprPtr
-            emitAssignment(Context &context, AssignExpr *assign) {
-                assert(false && "assignment to a constant");
-                return 0;
-            }
-            
-    };
-    
-    SPUG_RCPTR(BInstVarDefImpl);
-
-    // Impl object for instance variables.  These should never be used to emit 
-    // instance variables, so when used they just raise an assertion error.
-    class BInstVarDefImpl : public VarDefImpl {
-        public:
-            unsigned index;
-            BInstVarDefImpl(unsigned index) : index(index) {}
-            virtual ResultExprPtr emitRef(Context &context,
-                                          VarRef *var
-                                          ) { 
-                assert(false && 
-                       "attempting to emit a direct reference to a instance "
-                       "variable."
-                       );
-            }
-            
-            virtual ResultExprPtr emitAssignment(Context &context,
-                                                 AssignExpr *assign
-                                                 ) {
-                assert(false && 
-                       "attempting to assign a direct reference to a instance "
-                       "variable."
-                       );
-            }
-    };
     
     class BFieldRef : public VarRef {
         public:
@@ -864,34 +764,6 @@ namespace {
                 aggregateResult->handleTransient(context);
                 
                 return new BResultExpr(this, bb.lastValue);
-            }
-    };
-
-    SPUG_RCPTR(BArgVarDefImpl);
-
-    class BArgVarDefImpl : public VarDefImpl {
-        public:
-            Value *rep;
-            
-            BArgVarDefImpl(Value *rep) : rep(rep) {}
-
-            virtual ResultExprPtr emitRef(Context &context,
-                                          VarRef *var
-                                          ) {
-                LLVMBuilder &b =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                b.emitArgVarRef(context, rep);
-                
-                return new BResultExpr(var, b.lastValue);
-            }
-            
-            virtual ResultExprPtr
-            emitAssignment(Context &context, AssignExpr *assign) {
-                // XXX implement argument assignment
-                assert(false && "can't assign arguments yet");
-                LLVMBuilder &b =
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-//                b.emitArgVarAssgn(context, rep);
             }
     };
 
@@ -1017,134 +889,7 @@ namespace {
                 }
                     
             }
-    };
-    
-    class FuncBuilder {
-        public:
-            Context &context;
-            BTypeDefPtr returnType;
-            BTypeDefPtr receiverType;
-            BFuncDefPtr funcDef;
-            int argIndex;
-            Function::LinkageTypes linkage;
-            
-            // the receiver variable
-            VarDefPtr receiver;
-
-            // This is lame:  if there is a receiver, "context" 
-            // should be the function context (and include a definition for 
-            // the receiver) and the finish() method should be called with a 
-            // "false" value - indicating that the definition should not be 
-            // stored in the context.
-            // If there is no receiver, it's safe to call this with the 
-            // context in which the definition should be stored.
-            FuncBuilder(Context &context, FuncDef::Flags flags,
-                        BTypeDef *returnType,
-                        const string &name,
-                        size_t argCount,
-                        Function::LinkageTypes linkage = 
-                            Function::ExternalLinkage
-                        ) :
-                    context(context),
-                    returnType(returnType),
-                    funcDef(new BFuncDef(flags, name, argCount)),
-                    linkage(linkage),
-                    argIndex(0) {
-                funcDef->returnType = returnType;
-            }
-            
-            void finish(bool storeDef = true) {
-                size_t argCount = funcDef->args.size();
-                assert(argIndex == argCount);
-                vector<const Type *> llvmArgs(argCount + 
-                                               (receiverType ? 1 : 0)
-                                              );
-                
-                // create the array of LLVM arguments
-                int i = 0;
-                if (receiverType)
-                    llvmArgs[i++] = receiverType->rep;
-                for (vector<ArgDefPtr>::iterator iter = 
-                        funcDef->args.begin();
-                     iter != funcDef->args.end();
-                     ++iter, ++i)
-                    llvmArgs[i] = BTypeDefPtr::rcast((*iter)->type)->rep;
-
-                // register the function with LLVM
-                const Type *rawRetType =
-                    returnType->rep ? returnType->rep : 
-                                      Type::getVoidTy(getGlobalContext());
-                FunctionType *llvmFuncType =
-                    FunctionType::get(rawRetType, llvmArgs, false);
-                LLVMBuilder &builder = 
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                Function *func = Function::Create(llvmFuncType,
-                                                  linkage,
-                                                  funcDef->name,
-                                                  builder.module
-                                                  );
-                func->setCallingConv(llvm::CallingConv::C);
-
-                // back-fill builder data and set arg names
-                Function::arg_iterator llvmArg = func->arg_begin();
-                vector<ArgDefPtr>::const_iterator crackArg =
-                    funcDef->args.begin();
-                if (receiverType) {
-                    llvmArg->setName("this");
-                    
-                    // add the implementation to the "this" var
-                    receiver = context.lookUp("this");
-                    assert(receiver &&
-                            "missing 'this' variable in the context of a "
-                            "function with a receiver"
-                           );
-                    receiver->impl = new BArgVarDefImpl(llvmArg);
-                    ++llvmArg;
-                }
-                for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
-                    llvmArg->setName((*crackArg)->name);
-            
-                    // need the address of the value here because it is going 
-                    // to be used in a "load" context.
-                    (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
-                }
-                
-                // store the LLVM function in the table for the module
-                builder.setModFunc(funcDef.get(), func);
-
-                // get or create the type registered for the function                
-                BTypeDef *crkFuncType = 
-                    BTypeDefPtr::acast(builder.getFuncType(context,
-                                                           llvmFuncType
-                                                           )
-                                       );
-                funcDef->type = crkFuncType;
-                
-                // create an implementation object to return the function 
-                // pointer
-                funcDef->impl = new BConstDefImpl(func);
-                
-                funcDef->rep = func;
-                if (storeDef)
-                    context.addDef(funcDef.get());
-            }
-
-            void addArg(const char *name, TypeDef *type) {
-                assert(argIndex <= funcDef->args.size());
-                funcDef->args[argIndex++] = new ArgDef(type, name);
-            }
-            
-            void setArgs(const vector<ArgDefPtr> &args) {
-                assert(argIndex == 0 && args.size() == funcDef->args.size());
-                argIndex = args.size();
-                funcDef->args = args;
-            }
-            
-            void setReceiverType(BTypeDef *type) {
-                receiverType = type;
-            }
-                
-    };
+    };    
 
     void addArrayMethods(Context &context, TypeDef *arrayType, 
                          BTypeDef *elemType

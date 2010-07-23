@@ -10,6 +10,8 @@ libcrack_la_SOURCES = \
     builder/llvm/Consts.cc \
     builder/llvm/VTableBuilder.cc \
     builder/llvm/BFuncDef.cc \
+    builder/llvm/FuncBuilder.cc \
+    builder/llvm/VarDefs.cc \
     parser/Token.cc \
     parser/Toker.cc \
     parser/ParseError.cc \
