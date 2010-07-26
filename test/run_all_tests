@@ -595,6 +595,12 @@ test_output 'use of external class globals' \
     'b := byte; puts("ok");' \
     ok
 
+test_output 'errors get locations outside of the Parser class' \
+    'class A { oper init(int i) {} }
+    class B : A {}' \
+    "${parseError}2: Cannot create a default constructor because base class \
+A has no default constructor."
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

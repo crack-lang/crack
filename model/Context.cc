@@ -24,6 +24,8 @@
 using namespace model;
 using namespace std;
 
+parser::Location Context::emptyLoc;
+
 Context::GlobalData::GlobalData() : 
     objectType(0), stringType(0), staticStringType(0) {
 }
@@ -32,6 +34,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
                  Namespace *ns
                  ) :
+    loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
     ns(ns),
     builder(builder),
@@ -207,6 +210,14 @@ Branchpoint *Context::getContinue() {
     } else {
         return 0;
     }
+}
+
+void Context::error(const string &msg) {
+    throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
+                                       loc.getLineNumber() << ": " <<
+                                       msg
+                                       )
+                             );
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

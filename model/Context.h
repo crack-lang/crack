@@ -7,6 +7,7 @@
 #include <vector>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
+#include "parser/Location.h"
 
 namespace builder {
     class Builder;
@@ -41,6 +42,12 @@ class Context : public spug::RCBase {
         
         // break and continue branchpoints
         BranchpointPtr breakBranch, continueBranch;
+        
+        // the current source location.
+        parser::Location loc;
+        
+        // initializer for an empty location object
+        static parser::Location emptyLoc;
 
     public:
 
@@ -220,6 +227,26 @@ class Context : public spug::RCBase {
          * returns null if there is none.
          */
         Branchpoint *getContinue();
+
+        /**
+         * Set the current source location.
+         */        
+        void setLocation(const parser::Location loc0) {
+            loc = loc0;
+        }
+        
+        /**
+         * Get the current location.
+         */
+        const parser::Location &getLocation() const {
+            return loc;
+        }
+        
+        /**
+         * Emit an error message (throws a ParseException).  If there is a 
+         * current Location, this is the location for the error.
+         */
+        void error(const std::string &msg);
         
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();

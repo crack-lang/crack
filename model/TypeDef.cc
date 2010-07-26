@@ -5,7 +5,6 @@
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
-#include "parser/ParseError.h"  // need to move error handling into Context
 #include "AllocExpr.h"
 #include "AssignExpr.h"
 #include "CleanupFrame.h"
@@ -25,7 +24,6 @@
 using namespace std;
 using namespace model;
 using namespace spug;
-using parser::ParseError;
 
 TypeDef *TypeDef::findSpecialization(TypeVecObj *types) {
     assert(generic && "find specialization called on non-generic type");
@@ -128,13 +126,12 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
         if (!baseInit || baseInit->owner != ibase->get())
-            // XXX make this a parser error
-            throw ParseError(SPUG_FSTR("Cannot create a default constructor "
-                                        "because base class " << 
-                                        (*ibase)->name <<
-                                        " has no default constructor."
-                                       )
-                             );
+            classContext.error(SPUG_FSTR("Cannot create a default constructor "
+                                          "because base class " << 
+                                          (*ibase)->name <<
+                                          " has no default constructor."
+                                         )
+                               );
 
         FuncCallPtr funcCall =
             classContext.builder.createFuncCall(baseInit.get());
@@ -154,12 +151,12 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
         // initializer.
         // XXX make this a parser error
         if (!ivar->initializer)
-            throw ParseError(SPUG_FSTR("no initializer for variable " << 
-                                       ivar->name << 
-                                       " while creating default "
-                                       "constructor."
-                                      )
-                             );
+            classContext.error(SPUG_FSTR("no initializer for variable " << 
+                                         ivar->name << 
+                                         " while creating default "
+                                         "constructor."
+                                        )
+                               );
 
         AssignExprPtr assign = new AssignExpr(thisRef.get(),
                                               ivar,
@@ -473,13 +470,12 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
         if (!baseInit || baseInit->owner != base)
-            // XXX make this a parser error
-            throw ParseError(SPUG_FSTR("Cannot create a default constructor "
-                                        "because base class " << 
-                                        base->name <<
-                                        " has no default constructor."
-                                       )
-                             );
+            context.error(SPUG_FSTR("Cannot create a default constructor "
+                                     "because base class " << 
+                                     base->name <<
+                                     " has no default constructor."
+                                    )
+                          );
 
         FuncCallPtr funcCall = context.builder.createFuncCall(baseInit.get());
         funcCall->receiver = thisRef;
@@ -502,12 +498,12 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         // initializer.
         // XXX make this a parser error
         if (!initializer)
-            throw ParseError(SPUG_FSTR("no initializer for variable " << 
-                                       ivar->name << 
-                                       " while creating default "
-                                       "constructor."
-                                      )
-                             );
+            context.error(SPUG_FSTR("no initializer for variable " << 
+                                     ivar->name << 
+                                     " while creating default "
+                                     "constructor."
+                                    )
+                           );
 
         AssignExprPtr assign = new AssignExpr(thisRef.get(),
                                               ivar,

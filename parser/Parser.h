@@ -84,6 +84,12 @@ class Parser {
       void addDef(model::VarDef *context);
       
       /**
+       * Returns the next token from the tokenizer and stores its location in 
+       * the current context.
+       */
+      Token getToken();
+      
+      /**
        * Returns the precedence of the specified operator.
        */
       unsigned getPrecedence(const std::string &op);
