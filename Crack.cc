@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include "model/Context.h"
+#include "model/LocalNamespace.h"
 #include "model/ModuleDef.h"
 #include "model/TypeDef.h"
 #include "parser/Parser.h"
@@ -48,7 +49,9 @@ Crack::Crack() :
     noBootstrap(false),
     useGlobalLibs(true) {
 
-    rootContext = new Context(*rootBuilder, Context::module, (Context *)0);
+    rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
+                              new LocalNamespace(0)
+                              );
 
     // register the primitives    
     rootBuilder->registerPrimFuncs(*rootContext);
@@ -206,7 +209,9 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     // create a new builder, context and module
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
-        new Context(*builder, Context::module, rootContext.get());
+        new Context(*builder, Context::module, rootContext.get(),
+                    new LocalNamespace(rootContext->ns.get())
+                    );
     ModuleDefPtr modDef = context->createModule(canonicalName);
     if (!modPath.isDir) {
         ifstream src(modPath.path.c_str());
@@ -222,7 +227,7 @@ namespace {
     // extract a class from a module and verify that it is a class - returns 
     // null on failure.
     TypeDef *extractClass(ModuleDef *mod, const char *name) {
-        VarDefPtr var = mod->moduleContext->lookUp(name);
+        VarDefPtr var = mod->moduleContext->ns->lookUp(name);
         TypeDef *type;
         if (var && (type = TypeDefPtr::rcast(var))) {
             return type;
@@ -248,31 +253,31 @@ bool Crack::loadBootstrapModules() {
 
         // extract the basic types from the module context
         rootContext->globalData->objectType = extractClass(mod.get(), "Object");
-        rootContext->addAlias(rootContext->globalData->objectType.get());
+        rootContext->ns->addAlias(rootContext->globalData->objectType.get());
         rootContext->globalData->stringType = extractClass(mod.get(), "String");
-        rootContext->addAlias(rootContext->globalData->stringType.get());
+        rootContext->ns->addAlias(rootContext->globalData->stringType.get());
         rootContext->globalData->staticStringType = 
             extractClass(mod.get(), "StaticString");
-        rootContext->addAlias(rootContext->globalData->staticStringType.get());
+        rootContext->ns->addAlias(
+            rootContext->globalData->staticStringType.get()
+        );
 
         // replace the bootstrapping context with a new context that 
         // delegates to the original root context - this is the "bootstrapped 
         // context."  It contains all of the special definitions that were 
         // extracted from the bootstrapping modules.
-        rootContext = new Context(*rootBuilder, Context::module, 
-                                  rootContext.get()
-                                  );
+        rootContext = rootContext->createSubContext(Context::module);
         
         // extract some constants
-        VarDefPtr v = mod->moduleContext->lookUp("true");
+        VarDefPtr v = mod->moduleContext->ns->lookUp("true");
         if (v)
-            rootContext->addAlias(v.get());
-        v = mod->moduleContext->lookUp("false");
+            rootContext->ns->addAlias(v.get());
+        v = mod->moduleContext->ns->lookUp("false");
         if (v)
-            rootContext->addAlias(v.get());
-        v = mod->moduleContext->lookUp("print");
+            rootContext->ns->addAlias(v.get());
+        v = mod->moduleContext->ns->lookUp("print");
         if (v)
-            rootContext->addAlias(v.get());
+            rootContext->ns->addAlias(v.get());
         
         return rootContext->globalData->objectType && 
                rootContext->globalData->stringType;
@@ -297,7 +302,9 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
-        new Context(*builder, Context::module, rootContext.get());
+        new Context(*builder, Context::module, rootContext.get(),
+                    new LocalNamespace(rootContext->ns.get())
+                    );
 
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 

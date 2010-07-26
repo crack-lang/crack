@@ -8,6 +8,7 @@
 #include <spug/RCPtr.h>
 
 #include "VarDef.h"
+#include "Namespace.h"
 
 namespace model {
 
@@ -20,23 +21,27 @@ SPUG_RCPTR(VarDef);
 SPUG_RCPTR(TypeDef);
 
 // a type.
-class TypeDef : public VarDef {
+class TypeDef : public VarDef, public Namespace {
     public:
-        class TypeVec;
+        class TypeVecObj;
+        typedef std::vector<TypeDefPtr> TypeVec;
 
     protected:
-        TypeDef *findSpecialization(TypeVec *types);
+        TypeDef *findSpecialization(TypeVecObj *types);
+        virtual void storeDef(VarDef *def);
 
     public:
 
-        SPUG_RCPTR(TypeVec);
-        class TypeVec : public spug::RCBase, public std::vector<TypeDefPtr> {};
+        SPUG_RCPTR(TypeVecObj);
+        class TypeVecObj : public spug::RCBase, 
+                           public std::vector<TypeDefPtr> {
+        };
         
         // a vector of types that can be used as a key
-        struct TypeVecKey {
-            TypeVecPtr vec;
-            TypeVecKey(TypeVec *vec) : vec(vec) {}
-            bool operator <(const TypeVecKey &other) const {
+        struct TypeVecObjKey {
+            TypeVecObjPtr vec;
+            TypeVecObjKey(TypeVecObj *vec) : vec(vec) {}
+            bool operator <(const TypeVecObjKey &other) const {
                 if (vec == other.vec)
                     return false;
                 else {
@@ -62,19 +67,18 @@ class TypeDef : public VarDef {
                 }
             }
             
-            bool equals(const TypeVec *other) const {
+            bool equals(const TypeVecObj *other) const {
                 return *vec == *other;
             }
         };
-        typedef std::map<TypeVecKey, TypeDefPtr> SpecializationCache;
+        typedef std::map<TypeVecObjKey, TypeDefPtr> SpecializationCache;
+        
+        // the parent vector.
+        TypeVec parents;
         
         // defined for a generic type.  Stores the cache of all 
         // specializations for the type.
         SpecializationCache *generic;
-        
-        // the type's context - contains all of the method/attribute 
-        // definitions for the type.
-        ContextPtr context;
         
         // the default initializer expression (XXX I'm not sure that we want 
         // to keep this, for now it's expedient to be able to do variable 
@@ -90,7 +94,12 @@ class TypeDef : public VarDef {
         // if the type is a meta type, "meta" is the type that it is the 
         // meta-type of.
         TypeDef *meta;
-        
+
+        // true if the types has been completely defined (so that we can 
+        // determine whether to emit references or placeholders for instance 
+        // variable references and assignments)
+        bool complete;
+                
         // if true, the initializers for the type have been emitted and it is 
         // now illegal to add instance variables.
         bool initializersEmitted;
@@ -103,11 +112,15 @@ class TypeDef : public VarDef {
             pointer(pointer),
             hasVTable(false),
             meta(0),
+            complete(false),
             initializersEmitted(false) {
         }
         
         ~TypeDef() { if (generic) delete generic; }
 
+        /** required implementation of Namespace::getParent() */
+        virtual NamespacePtr getParent(unsigned i);
+        
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).
@@ -139,17 +152,17 @@ class TypeDef : public VarDef {
         /**
          * Create the default initializer.
          */
-        FuncDefPtr createDefaultInit();
+        FuncDefPtr createDefaultInit(Context &classContext);
         
         /**
          * Create the default destructor for the type.
          */
-        void createDefaultDestructor();
+        void createDefaultDestructor(Context &classContext);
 
         /**
          * Create a "new" function to wrap the specified "init" function.
          */
-        void createNewFunc(FuncDef *initFunc);
+        void createNewFunc(Context &classContext, FuncDef *initFunc);
         
         /**
          * Return a function to convert to the specified type, if such a 
@@ -169,7 +182,7 @@ class TypeDef : public VarDef {
         /**
          * Fill in everything that's missing from the class.
          */
-        void rectify();
+        void rectify(Context &classContext);
         
         /**
          * Returns true if 'type' is a parent.
@@ -207,7 +220,7 @@ class TypeDef : public VarDef {
          * Returns a new specialization for the specified types, creating it 
          * if necessary.
          */
-        virtual TypeDef *getSpecialization(Context &context, TypeVec *types);
+        virtual TypeDef *getSpecialization(Context &context, TypeVecObj *types);
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

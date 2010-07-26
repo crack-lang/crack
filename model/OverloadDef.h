@@ -9,8 +9,10 @@
 
 namespace model {
 
-SPUG_RCPTR(Context);
+class Context;
 SPUG_RCPTR(Expr);
+SPUG_RCPTR(Namespace);
+SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(OverloadDef);
 
@@ -20,10 +22,10 @@ class OverloadDef : public VarDef {
         typedef std::list<FuncDefPtr> FuncList;
         struct Parent {
             mutable OverloadDefPtr overload;
-            ContextPtr context;
+            NamespacePtr ns;
             
-            Parent(Context *context) : context(context) {}
-            Parent(OverloadDef *overload) : context(0), overload(overload) {}
+            Parent(Namespace *ns) :  ns(ns) {}
+            Parent(OverloadDef *overload) : ns(0), overload(overload) {}
             OverloadDef *getOverload(const OverloadDef *owner) const;
         };
         typedef std::vector<Parent> ParentVec;
@@ -48,6 +50,12 @@ class OverloadDef : public VarDef {
         void flatten(FuncList &funcs) const;
 
     public:
+
+        // XXX this is a terrible hack that breaks re-entrancy of the 
+        // executor.  We need to store the overload class object so that we 
+        // can generated it from a Namespace without having to pass the 
+        // Context through all lookup funcs.
+        static TypeDefPtr overloadType;
 
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 
@@ -109,7 +117,7 @@ class OverloadDef : public VarDef {
          * Adds the parent context to the overload set.  Lookups will be 
          * delgated to parents in the order provided.
          */
-        void addParent(Context *context);
+        void addParent(Namespace *paren);
         
         /**
          * Creates a new overload that is a child of this one.

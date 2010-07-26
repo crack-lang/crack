@@ -15,7 +15,7 @@ OverloadDef *OverloadDef::Parent::getOverload(const OverloadDef *owner) const {
     // if we don't currently have an overload, try to get one from the parent 
     // context.
     if (!overload) {
-        VarDefPtr varDef = context->lookUp(owner->name);
+        VarDefPtr varDef = ns->lookUp(owner->name);
         if (varDef)
             overload = OverloadDefPtr::rcast(varDef);
     }
@@ -59,6 +59,8 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
             parentOverload->flatten(flatFuncs);
     }
 }
+
+TypeDefPtr OverloadDef::overloadType;
 
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
                                FuncDef::Convert convertFlag
@@ -147,7 +149,7 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
          ++iter
          )
         if ((*iter)->args.empty() && 
-            (acceptAlias || (*iter)->context == context)
+            (acceptAlias || (*iter)->owner == owner)
             )
             return iter->get();
 
@@ -171,8 +173,8 @@ void OverloadDef::addFunc(FuncDef *func) {
     funcs.push_back(func);
 }
 
-void OverloadDef::addParent(Context *context) {
-    parents.push_back(context);
+void OverloadDef::addParent(Namespace *ns) {
+    parents.push_back(ns);
 }
 
 bool OverloadDef::hasInstSlot() {

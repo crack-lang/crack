@@ -27,11 +27,24 @@ using namespace model;
 using namespace spug;
 using parser::ParseError;
 
-TypeDef *TypeDef::findSpecialization(TypeVec *types) {
+TypeDef *TypeDef::findSpecialization(TypeVecObj *types) {
     assert(generic && "find specialization called on non-generic type");
     SpecializationCache::iterator match = generic->find(types);
     if (match != generic->end() && match->first.equals(types))
         return match->second.get();
+    else
+        return 0;
+}
+
+void TypeDef::storeDef(VarDef *def) {
+    Namespace::storeDef(def);
+    if (def->hasInstSlot())
+        ordered.push_back(def);
+}
+
+NamespacePtr TypeDef::getParent(unsigned i) {
+    if (i < parents.size())
+        return parents[i];
     else
         return 0;
 }
@@ -51,12 +64,11 @@ bool TypeDef::isDerivedFrom(const TypeDef *other) const {
     if (this == other)
         return true;
 
-    Context::ContextVec &parents = context->parents;
-    for (Context::ContextVec::iterator iter = parents.begin();
-         iter != parents.end();
-         ++iter
-         )
-        if ((*iter)->returnType->isDerivedFrom(other))
+    for (TypeVec::const_iterator iter = parents.begin();
+           iter != parents.end();
+           ++iter
+           )
+        if ((*iter)->isDerivedFrom(other))
             return true;
     return false;
 }
@@ -70,46 +82,38 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
 bool TypeDef::matches(const TypeDef &other) const {
     if (&other == this)
         return true;
-    else if (!other.context)
-        // primitive types may not have contexts and hence may not have 
-        // parents.
-        return false;
     
     // try the parents
-    Context::ContextVec &otherParents = other.context->parents;
-    for (Context::ContextVec::iterator iter = otherParents.begin();
-         iter != otherParents.end();
+    for (TypeVec::const_iterator iter = other.parents.begin();
+         iter != other.parents.end();
          ++iter
-         ) {
-        assert((*iter)->returnType && "type has a parent that is not a class");
-        if (matches(*(*iter)->returnType))
+         )
+        if (matches(**iter))
             return true;
-    }
     
     return false;
 }    
 
-FuncDefPtr TypeDef::createDefaultInit() {
-    ContextPtr funcContext = context->createSubContext(Context::local);
+FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
+    ContextPtr funcContext = classContext.createSubContext(Context::local);
 
     // create the "this" variable
-    ArgDefPtr thisDef = context->builder.createArgDef(this, "this");
-    funcContext->addDef(thisDef.get());
+    ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
+    funcContext->ns->addDef(thisDef.get());
     VarRefPtr thisRef = new VarRef(thisDef.get());
     
     FuncDef::ArgVec args(0);
-    TypeDef *voidType = context->globalData->voidType.get();
-    FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
-                                                        FuncDef::method,
-                                                        "oper init",
-                                                        voidType,
-                                                        args,
-                                                        0
-                                                        );
+    TypeDef *voidType = classContext.globalData->voidType.get();
+    FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext,
+                                                            FuncDef::method,
+                                                            "oper init",
+                                                            voidType,
+                                                            args,
+                                                            0
+                                                            );
 
     // do initialization for the base classes.
-    for (Context::ContextVec::iterator ibase = context->parents.begin();
-         ibase != context->parents.end();
+    for (TypeVec::iterator ibase = parents.begin(); ibase != parents.end();
          ++ibase
          ) {
 
@@ -123,24 +127,25 @@ FuncDefPtr TypeDef::createDefaultInit() {
         // base class (not inherited from an ancestor of the base class)
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
-        if (!baseInit || baseInit->context != ibase->get())
+        if (!baseInit || baseInit->owner != ibase->get())
             // XXX make this a parser error
             throw ParseError(SPUG_FSTR("Cannot create a default constructor "
                                         "because base class " << 
-                                        (*ibase)->returnType->name <<
+                                        (*ibase)->name <<
                                         " has no default constructor."
                                        )
                              );
 
-        FuncCallPtr funcCall = context->builder.createFuncCall(baseInit.get());
+        FuncCallPtr funcCall =
+            classContext.builder.createFuncCall(baseInit.get());
         funcCall->receiver = thisRef;
-        funcCall->emit(*context);
+        funcCall->emit(classContext);
     }
 
     // generate constructors for all of the instance variables in the order 
     // that they were declared.
-    for (Context::VarDefVec::iterator iter = context->beginOrderedDefs();
-         iter != context->endOrderedDefs();
+    for (VarDefVec::iterator iter = beginOrderedDefs();
+         iter != endOrderedDefs();
          ++iter
          ) {
         InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
@@ -160,52 +165,54 @@ FuncDefPtr TypeDef::createDefaultInit() {
                                               ivar,
                                               ivar->initializer.get()
                                               );
-        context->builder.emitFieldAssign(*funcContext, thisRef.get(),
-                                         assign.get()
-                                         );
+        classContext.builder.emitFieldAssign(*funcContext, thisRef.get(),
+                                             assign.get()
+                                             );
         }
     
-    context->builder.emitReturn(*funcContext, 0);
-    context->builder.emitEndFunc(*funcContext, newFunc.get());
-    context->addDef(newFunc.get());
+    classContext.builder.emitReturn(*funcContext, 0);
+    classContext.builder.emitEndFunc(*funcContext, newFunc.get());
+    addDef(newFunc.get());
     return newFunc;
 }
 
-void TypeDef::createDefaultDestructor() {
-    ContextPtr funcContext = context->createSubContext(Context::local);
+void TypeDef::createDefaultDestructor(Context &classContext) {
+    ContextPtr funcContext = classContext.createSubContext(Context::local);
 
     // create the "this" variable
-    ArgDefPtr thisDef = context->builder.createArgDef(this, "this");
-    funcContext->addDef(thisDef.get());
+    ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
+    funcContext->ns->addDef(thisDef.get());
     
     FuncDef::Flags flags = 
         FuncDef::method | 
         (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
     
     // check for an override
-    FuncDefPtr override = context->lookUpNoArgs("oper del");
+    FuncDefPtr override = lookUpNoArgs("oper del");
     
     FuncDef::ArgVec args(0);
-    TypeDef *voidType = context->globalData->voidType.get();
-    FuncDefPtr delFunc = context->builder.emitBeginFunc(*funcContext,
-                                                        flags,
-                                                        "oper del",
-                                                        voidType,
-                                                        args,
-                                                        override.get()
-                                                        );
+    TypeDef *voidType = classContext.globalData->voidType.get();
+    FuncDefPtr delFunc = classContext.builder.emitBeginFunc(*funcContext,
+                                                            flags,
+                                                            "oper del",
+                                                            voidType,
+                                                            args,
+                                                            override.get()
+                                                            );
 
     // all we have to do is add the destructor cleanups
     addDestructorCleanups(*funcContext);
 
     // ... and close off the function
-    context->builder.emitReturn(*funcContext, 0);
-    context->builder.emitEndFunc(*funcContext, delFunc.get());
-    context->addDef(delFunc.get());
+    classContext.builder.emitReturn(*funcContext, 0);
+    classContext.builder.emitEndFunc(*funcContext, delFunc.get());
+    addDef(delFunc.get());
 }
 
-void TypeDef::createNewFunc(FuncDef *initFunc) {
-    ContextPtr funcContext = context->createSubContext(Context::local);
+void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
+    ContextPtr funcContext = classContext.createSubContext(Context::local);
+    funcContext->toplevel = true;
+    funcContext->returnType = this;
     
     // copy the original arg list
     FuncDef::ArgVec args;
@@ -214,34 +221,34 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
          ++iter
          ) {
         ArgDefPtr argDef =
-            context->builder.createArgDef((*iter)->type.get(), 
-                                          (*iter)->name
-                                          );
+            classContext.builder.createArgDef((*iter)->type.get(), 
+                                              (*iter)->name
+                                              );
         args.push_back(argDef);
-        funcContext->addDef(argDef.get());
+        funcContext->ns->addDef(argDef.get());
     }
     
-    FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext, 
-                                                        FuncDef::noFlags,
-                                                        "oper new",
-                                                        this,
-                                                        args,
-                                                        0
-                                                        );
+    FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext, 
+                                                            FuncDef::noFlags,
+                                                            "oper new",
+                                                            this,
+                                                            args,
+                                                            0
+                                                            );
     // create "Type this = alloc(Type);"
     ExprPtr allocExpr = new AllocExpr(this);
-    VarDefPtr thisVar = context->builder.emitVarDef(*funcContext, this,
-                                                    "this",
-                                                    allocExpr.get(),
-                                                    false
-                                                    );
+    VarDefPtr thisVar = classContext.builder.emitVarDef(*funcContext, this,
+                                                        "this",
+                                                        allocExpr.get(),
+                                                        false
+                                                        );
     VarRefPtr thisRef = new VarRef(thisVar.get());
     
     // initialize all vtable_base pointers. XXX hack.  Replace this with code 
     // in vtable_base.oper init() once we get proper constructor composition
     if (hasVTable) {
         thisRef->emit(*funcContext);
-        context->builder.emitVTableInit(*funcContext, this);
+        classContext.builder.emitVTableInit(*funcContext, this);
     }
 
     // create "this.init(*args);"
@@ -255,11 +262,11 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
     initFuncCall->emit(*funcContext);
     
     // return the resulting object and close the new function
-    context->builder.emitReturn(*funcContext, thisRef.get());
-    context->builder.emitEndFunc(*funcContext, newFunc.get());
+    classContext.builder.emitReturn(*funcContext, thisRef.get());
+    classContext.builder.emitEndFunc(*funcContext, newFunc.get());
 
     // register it in the class
-    context->addDef(newFunc.get());
+    addDef(newFunc.get());
 
     // if this is the default initializer, store a call to it
     if (initFunc->args.size() == 0)
@@ -268,20 +275,22 @@ void TypeDef::createNewFunc(FuncDef *initFunc) {
 
 void TypeDef::createCast(Context &outer) {
     assert(hasVTable && "Attempt to createCast() on a non-virtual class");
-    ContextPtr funcCtx = context->createSubContext(Context::local);
+    ContextPtr funcCtx = outer.createSubContext(Context::local);
+    funcCtx->toplevel = true;
+    funcCtx->returnType = this;
     
     FuncDef::ArgVec args(1);
     args[0] = 
-        context->builder.createArgDef(context->globalData->vtableBaseType.get(),
-                                      "val"
-                                      );
-    FuncDefPtr castFunc = context->builder.emitBeginFunc(*funcCtx,
-                                                         FuncDef::noFlags,
-                                                         "cast",
-                                                         this,
-                                                         args,
-                                                         0
-                                                         );
+        outer.builder.createArgDef(outer.globalData->vtableBaseType.get(),
+                                   "val"
+                                   );
+    FuncDefPtr castFunc = outer.builder.emitBeginFunc(*funcCtx,
+                                                      FuncDef::noFlags,
+                                                      "cast",
+                                                      this,
+                                                      args,
+                                                      0
+                                                      );
     
     // function body is:
     //  if (val.class.isSubclass(ThisClass);
@@ -291,7 +300,7 @@ void TypeDef::createCast(Context &outer) {
     
     // val.class
     VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
-    FuncDefPtr f = funcCtx->lookUpNoArgs("oper class", false);
+    FuncDefPtr f = funcCtx->ns->lookUpNoArgs("oper class", false);
     assert(f && "oper class missing");
 //  XXX this was trace code that mysteriously seg-faults: since I think there 
 //  might be some memory corruption happening, I'm leaving this until I can 
@@ -305,7 +314,7 @@ void TypeDef::createCast(Context &outer) {
     // $.isSubclass(ThisClass)
     FuncCall::ExprVec isSubclassArgs(1);
     isSubclassArgs[0] = funcCtx->builder.createVarRef(this);
-    f = type->context->lookUp(*funcCtx, "isSubclass", isSubclassArgs);
+    f = type->lookUp(*funcCtx, "isSubclass", isSubclassArgs);
     assert(f && "isSubclass missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = isSubclassArgs;
@@ -317,7 +326,7 @@ void TypeDef::createCast(Context &outer) {
     // return ThisClass.unsafeCast(val);
     FuncCall::ExprVec unsafeCastArgs(1);
     unsafeCastArgs[0] = valRef;
-    f = type->context->lookUp(*funcCtx, "unsafeCast", unsafeCastArgs);
+    f = type->lookUp(*funcCtx, "unsafeCast", unsafeCastArgs);
     assert(f && "unsafeCast missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = unsafeCastArgs;
@@ -326,10 +335,10 @@ void TypeDef::createCast(Context &outer) {
     // else    
     branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
 
-    // __die()
+    // __die() (we have to get it from the class's parent context)
     FuncCall::ExprVec abortArgs(1);
     abortArgs[0] = funcCtx->getStrConst("Invalid class cast.", true);
-    f = outer.lookUp(*funcCtx, "__die", abortArgs);
+    f = outer.getParent()->ns->lookUp(*funcCtx, "__die", abortArgs);
     assert(f && "__die missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = abortArgs;
@@ -338,7 +347,7 @@ void TypeDef::createCast(Context &outer) {
     funcCtx->closeCleanupFrame();
     
     // need to "return null" to provide a terminator.
-    TypeDef *vp = context->globalData->voidPtrType.get();
+    TypeDef *vp = outer.globalData->voidPtrType.get();
     ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
     funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
 
@@ -347,15 +356,15 @@ void TypeDef::createCast(Context &outer) {
     funcCtx->builder.emitEndFunc(*funcCtx, castFunc.get());
     
     // add the cast function to the meta-class
-    type->context->addDef(castFunc.get());
+    type->addDef(castFunc.get());
 }
 
-void TypeDef::rectify() {
+void TypeDef::rectify(Context &classContext) {
     // clear the default initializer
     defaultInitializer = 0;
     
     // collect all of the init methods.
-    VarDefPtr initMethods = context->lookUp("oper init", false);
+    VarDefPtr initMethods = lookUp("oper init", false);
     OverloadDef *overloads = OverloadDefPtr::rcast(initMethods);
     FuncDef *funcDef;
     bool gotInit = false;
@@ -365,7 +374,7 @@ void TypeDef::rectify() {
              iter != overloads->endTopFuncs();
              ++iter
              ) {
-            createNewFunc(iter->get());
+            createNewFunc(classContext, iter->get());
             gotInit = true;
         }
     } else if (funcDef = FuncDefPtr::rcast(initMethods)) {
@@ -376,22 +385,21 @@ void TypeDef::rectify() {
     // if there are no init functions specific to this class, create a 
     // default constructor and wrap it in a new function.
     if (!gotInit)
-        createNewFunc(createDefaultInit().get());
+        createNewFunc(classContext, createDefaultInit(classContext).get());
     
     // if the class doesn't already define a delete operator specific to the 
     // class, generate one.
-    FuncDefPtr operDel = context->lookUpNoArgs("oper del");
-    if (!operDel || operDel->context != context.get())
-        createDefaultDestructor();
+    FuncDefPtr operDel = lookUpNoArgs("oper del");
+    if (!operDel || operDel->owner != this)
+        createDefaultDestructor(classContext);
 }
 
 bool TypeDef::isParent(TypeDef *type) {
-    Context::ContextVec &parents = context->parents;
-    for (Context::ContextVec::iterator iter = parents.begin();
+    for (TypeVec::iterator iter = parents.begin();
          iter != parents.end();
          ++iter
          )
-        if (type == (*iter)->returnType.get())
+        if (type == iter->get())
             return true;
     
     return false;
@@ -402,9 +410,9 @@ FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
     // really be using the canonical name of the type (and omitting the 
     // special case for bool).
     if (other.name == "bool") {
-        return context->lookUpNoArgs("toBool");
+        return lookUpNoArgs("toBool");
     } else {
-        return context->lookUpNoArgs("oper to " + other.name);
+        return lookUpNoArgs("oper to " + other.name);
     }
 }
 
@@ -418,12 +426,11 @@ bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
     }
         
     int i = 0;
-    Context::ContextVec &parents = context->parents;
-    for (Context::ContextVec::iterator iter = parents.begin();
+    for (TypeVec::iterator iter = parents.begin();
          iter != parents.end();
          ++iter, ++i
          ) {
-        TypeDef *base = (*iter)->returnType.get();
+        TypeDef *base = iter->get();
         if (base->getPathToAncestor(ancestor, path, depth + 1)) {
             path[depth].index = i;
             path[depth].ancestor = base;
@@ -436,18 +443,16 @@ bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
 
 void TypeDef::emitInitializers(Context &context, Initializers *inits) {
 
-    VarDefPtr thisDef = context.lookUp("this");
+    VarDefPtr thisDef = context.ns->lookUp("this");
     assert(thisDef && 
             "trying to emit initializers in a context with no 'this'");
     VarRefPtr thisRef = new VarRef(thisDef.get());
 
     // do initialization for the base classes.
-    ContextPtr classCtx = context.getClassContext();
-    for (Context::ContextVec::iterator ibase = classCtx->parents.begin();
-         ibase != classCtx->parents.end();
+    for (TypeVec::iterator ibase = parents.begin(); ibase != parents.end();
          ++ibase
          ) {
-        TypeDef *base = (*ibase)->returnType.get();
+        TypeDef *base = ibase->get();
 
         // see if there's a constructor for the base class in our list of 
         // initilaizers.
@@ -459,7 +464,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
 
         // if the base class contains no constructors at all, either it's a 
         // special class or it has no need for constructors, so ignore it.
-        OverloadDefPtr overloads = (*ibase)->lookUp("oper init");
+        OverloadDefPtr overloads = base->lookUp("oper init");
         if (!overloads)
             continue;
 
@@ -467,11 +472,11 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         // base class (not inherited from an ancestor of the base class)
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
-        if (!baseInit || baseInit->context != ibase->get())
+        if (!baseInit || baseInit->owner != base)
             // XXX make this a parser error
             throw ParseError(SPUG_FSTR("Cannot create a default constructor "
                                         "because base class " << 
-                                        (*ibase)->returnType->name <<
+                                        base->name <<
                                         " has no default constructor."
                                        )
                              );
@@ -482,8 +487,8 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
     }
 
     // generate constructors for all of the instance variables
-    for (Context::VarDefVec::iterator iter = classCtx->beginOrderedDefs();
-         iter != classCtx->endOrderedDefs();
+    for (VarDefVec::iterator iter = beginOrderedDefs();
+         iter != endOrderedDefs();
          ++iter
          ) {
         InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
@@ -517,8 +522,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
 }
 
 void TypeDef::addDestructorCleanups(Context &context) {
-    ContextPtr classCtx = context.getClassContext();
-    VarRefPtr thisRef = new VarRef(context.lookUp("this").get());
+    VarRefPtr thisRef = new VarRef(context.ns->lookUp("this").get());
     
     // first add the cleanups for the base classes, in order defined, then the 
     // cleanups for the derived classes.  Cleanups are applied in the reverse 
@@ -526,15 +530,15 @@ void TypeDef::addDestructorCleanups(Context &context) {
     // destruction order of instance variables followed by base classes.
     
     // generate calls to the destructors for all of the base classes.
-    for (Context::ContextVec::iterator ibase = classCtx->parents.begin();
-         ibase != classCtx->parents.end();
+    for (TypeVec::iterator ibase = parents.begin();
+         ibase != parents.end();
          ++ibase
          ) {
-        TypeDefPtr base = (*ibase)->returnType;
+        TypeDef *base = ibase->get();
         
         // check for a delete operator (the primitive base classes don't have 
         // them and don't need cleanup)
-        FuncDefPtr operDel = (*ibase)->lookUpNoArgs("oper del");
+        FuncDefPtr operDel = base->lookUpNoArgs("oper del");
         if (!operDel)
             continue;
         
@@ -549,20 +553,17 @@ void TypeDef::addDestructorCleanups(Context &context) {
     // generate destructors for all of the instance variables in order of 
     // definition (cleanups run in the reverse order that they were added, 
     // which is exactly what we want).
-    for (Context::VarDefVec::iterator iter =
-            classCtx->beginOrderedDefs();
-         iter != classCtx->endOrderedDefs();
+    for (VarDefVec::iterator iter = beginOrderedDefs();
+         iter != endOrderedDefs();
          ++iter
          )
-        context.cleanupFrame->addCleanup(iter->get(), 
-                                         thisRef.get()
-                                         );
+        context.cleanupFrame->addCleanup(iter->get(), thisRef.get());
     
     initializersEmitted = true;
 }
 
 TypeDef *TypeDef::getSpecialization(Context &context, 
-                                    TypeDef::TypeVec *types
+                                    TypeDef::TypeVecObj *types
                                     ) {
     assert(false && "generics are not yet supported for normal types.");
 }
@@ -570,8 +571,16 @@ TypeDef *TypeDef::getSpecialization(Context &context,
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;
     string childPrefix = prefix + "  ";
-    for (Context::VarDefMap::iterator iter = context->beginDefs();
-         iter != context->endDefs();
+    
+    for (TypeVec::const_iterator baseIter = parents.begin();
+         baseIter != parents.end();
+         ++baseIter
+         ) {
+        out << prefix << "parent" << endl;
+        (*baseIter)->dump(out, prefix);
+    }
+    
+    for (VarDefMap::const_iterator iter = beginDefs(); iter != endDefs();
          ++iter
          )
         iter->second->dump(out, childPrefix);

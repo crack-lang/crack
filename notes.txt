@@ -594,3 +594,7 @@ Desired Grammer:
                 primary arg_list |
                 primary '[' expr ']' ;
     expr ::= constant | primary
+
+Compatibility issues for 0.2:
+    We're now checking for variable overrides in method arguments, and it's 
+    really annoying.  Consider capping the redefinition check at Toplevel.

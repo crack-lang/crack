@@ -15,7 +15,7 @@ using namespace model;
 VarDef::VarDef(TypeDef *type, const std::string &name) :
     type(type),
     name(name),
-    context(0) {
+    owner(0) {
 }
 
 VarDef::~VarDef() {}

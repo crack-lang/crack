@@ -138,9 +138,9 @@ class Buffer : Object {
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
 class WriteBuffer : Buffer {
-    
+
     ## constructor inheritence would be nice
-    oper init(byteptr buffer, uint size) : Buffer(buffer, size) {}
+    oper init(byteptr buffer0, uint size0) : Buffer(buffer0, size0) {}
 
     ## Move data from an arbitrary byteptr into the buffer.
     void move(uint start, byteptr ptr, uint count) {
@@ -165,7 +165,7 @@ class WriteBuffer : Buffer {
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
 
-    oper init(uint size) : WriteBuffer(malloc(size), size) {}
+    oper init(uint size0) : WriteBuffer(malloc(size0), size0) {}
 
     ## Orphan's the byte buffer, returning it for use by the caller.  The 
     ## caller is responsible for freeing it.
@@ -214,8 +214,8 @@ class String : Buffer {
     }
     
     ## Initialize from byte pointer and size and take ownership.
-    oper init(byteptr buf, uint size, bool takeOwnership) :
-        Buffer(buf, size) {
+    oper init(byteptr buf, uint size0, bool takeOwnership) :
+        Buffer(buf, size0) {
     }
     
     ## Initialize from a null-terminated c-string
@@ -270,7 +270,7 @@ class String : Buffer {
 
 class StaticString : String {
 
-    oper init(byteptr data, uint size) : String(data, size, true) {}
+    oper init(byteptr data, uint size0) : String(data, size0, true) {}
     
     ## Initialize from a null terminated string.
     oper init(byteptr data) : String(data, strlen(data), true) {}

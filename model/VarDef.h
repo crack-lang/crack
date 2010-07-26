@@ -10,17 +10,18 @@ namespace model {
 
 class Context;
 SPUG_RCPTR(Expr);
-SPUG_RCPTR(VarDefImpl);
+class Namespace;
 SPUG_RCPTR(ResultExpr);
 SPUG_RCPTR(TypeDef);
+SPUG_RCPTR(VarDefImpl);
 
 SPUG_RCPTR(VarDef);
 
 // Variable definition.  All names in a context (including functions and 
 // types) are derived from VarDef's.
-class VarDef : public spug::RCBase {
+class VarDef : public virtual spug::RCBase {
     public:
-        Context *context;
+        Namespace *owner;
         TypeDefPtr type;
         std::string name;
         VarDefImplPtr impl;

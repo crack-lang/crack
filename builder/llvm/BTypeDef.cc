@@ -5,6 +5,7 @@
 
 #include "model/Context.h"
 #include "model/OverloadDef.h"
+#include "PlaceholderInstruction.h"
 
 using namespace model;
 using namespace std;
@@ -15,10 +16,10 @@ namespace mvll {
 // add all of my virtual functions to 'vtb'
 void BTypeDef::extendVTables(VTableBuilder &vtb) {
     // find all of the virtual functions
-    for (Context::VarDefMap::iterator varIter = context->beginDefs();
-    varIter != context->endDefs();
-    ++varIter
-            ) {
+    for (Namespace::VarDefMap::iterator varIter = beginDefs();
+         varIter != endDefs();
+         ++varIter
+         ) {
 
         BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
         if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
@@ -32,27 +33,27 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
         // already had their shot at extendVTables, and we don't want
         // their overloads to clobber ours.
         OverloadDef *overload =
-                OverloadDefPtr::rcast(varIter->second);
+            OverloadDefPtr::rcast(varIter->second);
         if (overload)
             for (OverloadDef::FuncList::iterator fiter =
-                 overload->beginTopFuncs();
-        fiter != overload->endTopFuncs();
-        ++fiter
-                )
+                  overload->beginTopFuncs();
+                 fiter != overload->endTopFuncs();
+                 ++fiter
+                 )
                 if ((*fiter)->flags & FuncDef::virtualized)
                     vtb.add(BFuncDefPtr::arcast(*fiter));
     }
 }
 
 /**
-     * Create all of the vtables for 'type'.
-     *
-     * @param vtb the vtable builder
-     * @param name the name stem for the VTable global variables.
-     * @param vtableBaseType the global vtable base type.
-     * @param firstVTable if true, we have not yet discovered the first
-     *  vtable in the class schema.
-     */
+ * Create all of the vtables for 'type'.
+ *
+ * @param vtb the vtable builder
+ * @param name the name stem for the VTable global variables.
+ * @param vtableBaseType the global vtable base type.
+ * @param firstVTable if true, we have not yet discovered the first
+ *  vtable in the class schema.
+ */
 void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
                       BTypeDef *vtableBaseType,
                       bool firstVTable
@@ -66,12 +67,11 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
 
     // iterate over the base classes, construct VTables for all
     // ancestors that require them.
-    for (model::Context::ContextVec::iterator baseIter =
-         context->parents.begin();
-    baseIter != context->parents.end();
-    ++baseIter
-            ) {
-        BTypeDef *base = BTypeDefPtr::arcast((*baseIter)->returnType);
+    for (TypeVec::iterator baseIter = parents.begin();
+         baseIter != parents.end();
+         ++baseIter
+         ) {
+        BTypeDef *base = BTypeDefPtr::arcast(*baseIter);
 
         // if the base class is VTableBase, we've hit bottom -
         // construct the initial vtable and store the first vtable
@@ -102,6 +102,18 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
 
     // add my functions to their vtables
     extendVTables(vtb);
+}
+
+void BTypeDef::addBaseClass(BTypeDef *base) {
+    ++fieldCount;
+    parents.push_back(base);
+    if (base->hasVTable)
+        hasVTable = true;
+}
+
+void BTypeDef::addPlaceholder(PlaceholderInstruction *inst) {
+    assert(!complete && "Adding placeholder to a completed class");
+    placeholders.push_back(inst);
 }
 
 } // end namespace builder::vmll

@@ -8,6 +8,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace llvm {
     class Type;
@@ -17,13 +18,17 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+class PlaceholderInstruction;
+
 SPUG_RCPTR(BTypeDef);
 
 // (RCPTR defined above)
 class BTypeDef : public model::TypeDef {
 public:
+    unsigned fieldCount;
     const llvm::Type *rep;
     unsigned nextVTableSlot;
+    std::vector<PlaceholderInstruction *> placeholders;
 
     // mapping from base types to their vtables.
     std::map<BTypeDef *, llvm::Constant *> vtables;
@@ -35,6 +40,7 @@ public:
              unsigned nextVTableSlot = 0
                                        ) :
     model::TypeDef(metaType, name, pointer),
+    fieldCount(0),
     rep(rep),
     nextVTableSlot(nextVTableSlot),
     firstVTableType(0) {
@@ -44,18 +50,29 @@ public:
     void extendVTables(VTableBuilder &vtb);
 
     /**
-         * Create all of the vtables for 'type'.
-         * 
-         * @param vtb the vtable builder
-         * @param name the name stem for the VTable global variables.
-         * @param vtableBaseType the global vtable base type.
-         * @param firstVTable if true, we have not yet discovered the first 
-         *  vtable in the class schema.
-         */
+     * Create all of the vtables for 'type'.
+     * 
+     * @param vtb the vtable builder
+     * @param name the name stem for the VTable global variables.
+     * @param vtableBaseType the global vtable base type.
+     * @param firstVTable if true, we have not yet discovered the first 
+     *  vtable in the class schema.
+     */
     void createAllVTables(VTableBuilder &vtb, const std::string &name,
                           BTypeDef *vtableBaseType,
                           bool firstVTable = true
-                                             );
+                          );
+
+    /**
+     * Add a base class to the type.
+     */
+    void addBaseClass(BTypeDef *base);
+    
+    /**
+     * register a placeholder instruction to be replaced when the class is 
+     * completed.
+     */
+    void addPlaceholder(PlaceholderInstruction *inst);
 
 };
 

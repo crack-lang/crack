@@ -18,6 +18,7 @@ namespace model {
    SPUG_RCPTR(FuncCall);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(Initializers);
+   class Namespace;
    SPUG_RCPTR(TypeDef);
    SPUG_RCPTR(VarDef);
 };
@@ -137,7 +138,7 @@ class Parser {
        */
       model::FuncCallPtr parseFuncCall(const Token &ident,
                                        const std::string &funcName,
-                                       model::Context &varContext,
+                                       model::Namespace *ns,
                                        model::Expr *container
                                        );
 
@@ -210,7 +211,7 @@ class Parser {
                                        " is not a type."
                                       );
       void parseModuleName(std::vector<std::string> &moduleName);
-      void parseArgDefs(std::vector<model::ArgDefPtr> &args);
+      void parseArgDefs(std::vector<model::ArgDefPtr> &args, bool isMethod);
 
       /**
        * Parse the initializer list after an oper init.

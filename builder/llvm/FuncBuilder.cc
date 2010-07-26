@@ -69,7 +69,7 @@ void FuncBuilder::finish(bool storeDef) {
         llvmArg->setName("this");
 
         // add the implementation to the "this" var
-        receiver = context.lookUp("this");
+        receiver = context.ns->lookUp("this");
         assert(receiver &&
                "missing 'this' variable in the context of a "
                "function with a receiver"
@@ -102,7 +102,7 @@ void FuncBuilder::finish(bool storeDef) {
 
     funcDef->rep = func;
     if (storeDef)
-        context.addDef(funcDef.get());
+        context.ns->addDef(funcDef.get());
 }
 
 void FuncBuilder::addArg(const char *name, TypeDef *type) {

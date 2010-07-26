@@ -95,18 +95,19 @@ TypeDef *FuncDef::getReceiverType() const {
     if (pathToFirstDeclaration.size())
         result = pathToFirstDeclaration.back().ancestor.get();
     else
-        result = context->returnType.get();
+        result = TypeDefPtr::cast(owner);
     return result;
 }
 
 TypeDef *FuncDef::getThisType() const {
-    return context->returnType.get();
+    return TypeDefPtr::cast(owner);
 }
 
 void FuncDef::dump(ostream &out, const string &prefix) const {
     string parent;
-    if (context && context->returnType)
-        parent = context->returnType->name + ".";
+    TypeDef *myClass;
+    if (myClass = TypeDefPtr::cast(owner))
+        parent = myClass->name + ".";
     else
         parent = "";
 

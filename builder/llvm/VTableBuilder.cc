@@ -87,7 +87,7 @@ void VTableBuilder::add(BFuncDef *func) {
     if (path.size())
         ancestor = BTypeDefPtr::arcast(path.back().ancestor);
     else
-        ancestor = BTypeDefPtr::arcast(func->context->returnType);
+        ancestor = BTypeDefPtr::acast(func->owner);
 
     // if the function comes from VTableBase, we have to insert
     // the function into _all_ of the vtables - this is because

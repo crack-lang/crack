@@ -3,14 +3,14 @@
 
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = \
-    builder/llvm/LLVMBuilder.cc \
-    builder/llvm/PlaceholderInstruction.cc \
-    builder/llvm/BTypeDef.cc \
-    builder/llvm/Ops.cc \
-    builder/llvm/Consts.cc \
-    builder/llvm/VTableBuilder.cc \
     builder/llvm/BFuncDef.cc \
+    builder/llvm/BTypeDef.cc \
+    builder/llvm/Consts.cc \
     builder/llvm/FuncBuilder.cc \
+    builder/llvm/LLVMBuilder.cc \
+    builder/llvm/Ops.cc \
+    builder/llvm/PlaceholderInstruction.cc \
+    builder/llvm/VTableBuilder.cc \
     builder/llvm/VarDefs.cc \
     parser/Token.cc \
     parser/Toker.cc \
@@ -19,6 +19,7 @@ libcrack_la_SOURCES = \
     model/AllocExpr.cc \
     model/AssignExpr.cc \
     model/CleanupFrame.cc \
+    model/CompositeNamespace.cc \
     model/Context.cc \
     model/Expr.cc \
     model/FuncCall.cc \
@@ -26,7 +27,9 @@ libcrack_la_SOURCES = \
     model/Initializers.cc \
     model/IntConst.cc \
     model/FloatConst.cc \
+    model/LocalNamespace.cc \
     model/ModuleDef.cc \
+    model/Namespace.cc \
     model/NullConst.cc \
     model/OverloadDef.cc \
     model/ResultExpr.cc \
@@ -37,19 +40,54 @@ libcrack_la_SOURCES = \
     Crack.cc
 libcrack_la_LDFLAGS = -version-info 0:0:0
 
-noinst_HEADERS = model/AllocExpr.h model/FloatConst.h model/FuncDef.h \
-    model/ArgDef.h model/TypeDef.h model/InstVarDef.h model/Expr.h \
-    model/AssignExpr.h model/StrConst.h model/VarDef.h model/IntConst.h \
-    model/Branchpoint.h model/OverloadDef.h model/VarRef.h model/ModuleDef.h model/Context.h \
-    model/BuilderContextData.h model/VarDefImpl.h model/NullConst.h \
-    model/CleanupFrame.h model/Initializers.h model/StubDef.h \
-    model/ResultExpr.h model/FuncCall.h builder/Builder.h \
-    builder/llvm/LLVMBuilder.h builder/llvm/Ops.h builder/llvm/BBranchPoint.h \
-    builder/llvm/BFuncDef.h builder/llvm/BResultExpr.h \
-    builder/llvm/BTypeDef.h builder/llvm/PlaceholderInstruction.h \
-    builder/llvm/VTableBuilder.h parser/Parser.h parser/Token.h \
-    parser/LocationMap.h parser/ParseError.h parser/Location.h \
-    parser/Toker.h Crack.h
+noinst_HEADERS = \
+    builder/Builder.h \
+    builder/llvm/BBranchPoint.h \
+    builder/llvm/BFuncDef.h \
+    builder/llvm/BModuleDef.h \
+    builder/llvm/BResultExpr.h \
+    builder/llvm/BTypeDef.h \
+    builder/llvm/Consts.h \
+    builder/llvm/FuncBuilder.h \
+    builder/llvm/LLVMBuilder.h \
+    builder/llvm/Ops.h \
+    builder/llvm/PlaceholderInstruction.h \
+    builder/llvm/VTableBuilder.h \
+    builder/llvm/VarDefs.h \
+    model/AllocExpr.h \
+    model/ArgDef.h \
+    model/AssignExpr.h \
+    model/Branchpoint.h \
+    model/BuilderContextData.h \
+    model/CleanupFrame.h \
+    model/CompositeNamespace.h \
+    model/Context.h \
+    model/Expr.h \
+    model/FloatConst.h \
+    model/FuncCall.h \
+    model/FuncDef.h \
+    model/Initializers.h \
+    model/InstVarDef.h \
+    model/IntConst.h \
+    model/LocalNamespace.h \
+    model/ModuleDef.h \
+    model/Namespace.h \
+    model/NullConst.h \
+    model/OverloadDef.h \
+    model/ResultExpr.h \
+    model/StrConst.h \
+    model/StubDef.h \
+    model/TypeDef.h \
+    model/VarDef.h \
+    model/VarDefImpl.h \
+    model/VarRef.h \
+    parser/Location.h \
+    parser/LocationMap.h \
+    parser/ParseError.h \
+    parser/Parser.h \
+    parser/Token.h \
+    parser/Toker.h \
+    Crack.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt cmake
 

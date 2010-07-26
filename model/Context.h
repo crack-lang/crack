@@ -24,6 +24,7 @@ SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(ModuleDef);
+SPUG_RCPTR(Namespace);
 SPUG_RCPTR(OverloadDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
@@ -35,27 +36,11 @@ SPUG_RCPTR(Context);
  * Holds everything relevant to the current parse context.
  */
 class Context : public spug::RCBase {
-    
-    public:
-        typedef std::map<std::string, VarDefPtr> VarDefMap;
-        typedef std::vector<VarDefPtr> VarDefVec;
-    
     private:
-        VarDefMap defs;
         typedef std::map<std::string, StrConstPtr> StrConstTable;
-        
-        // in an "instance" context, this maintains the order of declaration 
-        // of the instance variables so we can create and delete in the 
-        // correct order.
-        VarDefVec ordered;
         
         // break and continue branchpoints
         BranchpointPtr breakBranch, continueBranch;
-
-        /**
-         * Stores a definition, promoting it to an overload if necessary.
-         */
-        void storeDef(VarDef *def);
 
     public:
 
@@ -68,17 +53,14 @@ class Context : public spug::RCBase {
             composite  // scope is just a composition of parent scopes
         };
         
-        typedef std::vector<ContextPtr> ContextVec;
-        ContextVec parents;
+        ContextPtr parent;
+        
+        // the context namespace.
+        NamespacePtr ns;
 
         builder::Builder &builder;
         BuilderContextDataPtr builderData;
         Scope scope;
-        
-        // true if the context has been completely defined (so that we can 
-        // determine whether to emit references or placeholders for instance 
-        // variable references and assignments)
-        bool complete;
         
         // true if the context is the outermost context of a function.
         bool toplevel;
@@ -92,8 +74,7 @@ class Context : public spug::RCBase {
         bool terminal;
         
         // this is the return type for a function context, and the class type 
-        // for a class context.  XXX there is a reference cycle between the 
-        // class and its context.
+        // for a class context.
         TypeDefPtr returnType;
         
         // the current cleanup frame.
@@ -127,11 +108,13 @@ class Context : public spug::RCBase {
         } *globalData;
     
         Context(builder::Builder &builder, Scope scope,
-                Context *parentContext
+                Context *parentContext,
+                Namespace *ns
                 );
         
         Context(builder::Builder &builder, Scope scope,
-                GlobalData *globalData
+                GlobalData *globalData,
+                Namespace *ns
                 );
         
         ~Context();
@@ -140,13 +123,13 @@ class Context : public spug::RCBase {
          * Create a new subcontext with a different scope from the parent 
          * context.
          */
-        ContextPtr createSubContext(Scope newScope);
+        ContextPtr createSubContext(Scope newScope, Namespace *ns = 0);
 
         /**
          * Create a new subcontext in the same scope.
          */
         ContextPtr createSubContext() {
-            return createSubContext(scope);
+            return createSubContext(scope, 0);
         }
         
         /**
@@ -168,11 +151,12 @@ class Context : public spug::RCBase {
         ContextPtr getToplevel();
         
         /**
-         * Returns the parent of the context.  This function can only be used 
-         * on contexts with a exactly one parent.
+         * Returns the parent of the context.
          */
-        ContextPtr getParent();
-        
+        ContextPtr getParent() {
+            return parent;
+        }
+
         /**
          * Returns true if the context encloses the "other" context - a 
          * context encloses another context if it is an ancestor of the other 
@@ -180,74 +164,7 @@ class Context : public spug::RCBase {
          */
         bool encloses(const Context &other) const;
 
-        /**
-         * Returns the Overload Definition for the given name for the current 
-         * context.  Creates an overload definition if one does not exist.
-         * 
-         * @param varName the overload name.
-         */
-        OverloadDefPtr getOverload(const std::string &varName);
-
-        VarDefPtr lookUp(const std::string &varName, bool recurse = true);
-        
-        /**
-         * Looks up a function matching the given expression list.
-         * 
-         * @param context the current context (distinct from the lookup 
-         *  context)
-         * @param varName the function name
-         * @param vals list of parameter expressions.  These will be converted 
-         *  to conversion expressions of the correct type for a match.
-         */
-        FuncDefPtr lookUp(Context &context,
-                          const std::string &varName,
-                          std::vector<ExprPtr> &vals
-                          );
-        
-        /**
-         * Look up a function with no arguments.  This is provided as a 
-         * convenience, as in this case we don't need to pass the call context.
-         * @param acceptAlias if false, ignore an alias.
-         */
-        FuncDefPtr lookUpNoArgs(const std::string &varName, 
-                                bool acceptAlias = true
-                                );
-        
         ModuleDefPtr createModule(const std::string &name);
-        void addDef(VarDef *def);
-        
-        /** 
-         * Remove a definition.  Intended for use with stubs - "def" must not 
-         * be an OverloadDef. 
-         */
-        void removeDef(VarDef *def);
-        
-        /**
-         * Adds a definition to the context, but does not make the definition's 
-         * context the context.  This is used for importing symbols into a 
-         * module context.
-         */
-        void addAlias(VarDef *def);
-        void addAlias(const std::string &name, VarDef *def);
-        
-        /**
-         * Replace an existing defintion with the new definition.
-         * This is only used to replace a StubDef with an external function 
-         * definition.
-         */
-        void replaceDef(VarDef *def);
-        
-        /** Funcs to iterate over the set of definitions. */
-        /// @{
-        VarDefMap::iterator beginDefs() { return defs.begin(); }
-        VarDefMap::iterator endDefs() { return defs.end(); }
-        /// @}
-        
-        /** Funcs to iterate over the definitions in order of declaration. */
-        /// @{
-        VarDefVec::iterator beginOrderedDefs() { return ordered.begin(); }
-        VarDefVec::iterator endOrderedDefs() { return ordered.end(); }
-        /// @}
 
         /** 
          * Get or create a string constant.  This can be either a
@@ -305,10 +222,12 @@ class Context : public spug::RCBase {
         Branchpoint *getContinue();
         
         void dump(std::ostream &out, const std::string &prefix) const;
+        void dump();
 };
 
-inline std::ostream operator <<(std::ostream &out, const Context &context) {
+inline std::ostream &operator <<(std::ostream &out, const Context &context) {
     context.dump(out, "");
+    return out;
 }
 
 }; // namespace model

@@ -9,6 +9,7 @@
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
+#include "model/CompositeNamespace.h"
 #include "model/CleanupFrame.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
@@ -38,17 +39,20 @@ using namespace model;
 
 void Parser::addDef(VarDef *varDef) {
    ContextPtr defContext = context->getDefContext();
-   defContext->addDef(varDef);
+   defContext->ns->addDef(varDef);
    
    // if the definition context is a class context and the definition is a 
    // function and this isn't the "Class" class (which is its own meta-class), 
    // add it to the meta-class.
    FuncDef *func;
+   TypeDef *type;
    if (defContext->scope == Context::instance &&
-       (func = FuncDefPtr::cast(varDef)) &&
-       defContext->returnType->type != defContext->returnType
-       )
-      defContext->returnType->type->context->addAlias(varDef);
+       (func = FuncDefPtr::cast(varDef))
+       ) {
+      type = TypeDefPtr::arcast(defContext->ns);
+      if (type != type->type.get())
+         type->type->addAlias(varDef);
+   }
 }
 
 unsigned Parser::getPrecedence(const string &op) {
@@ -81,7 +85,7 @@ void Parser::parseClause(bool defsAllowed) {
    if (tok.isIdent()) {
       
       // if the identifier is a type, try to parse a definition
-      VarDefPtr def = context->lookUp(tok.getData());
+      VarDefPtr def = context->ns->lookUp(tok.getData());
       TypeDef *typeDef = TypeDefPtr::rcast(def);
       if (typeDef && parseDef(typeDef)) {
          if (!defsAllowed)
@@ -95,7 +99,7 @@ void Parser::parseClause(bool defsAllowed) {
          // see if this is a define
          Token tok2 = toker.getToken();
          if (tok2.isDefine()) {
-            if (def->context == context)
+            if (def->owner == context->ns.get())
                redefineError(tok2, def.get());
             else
                warn(tok2, SPUG_FSTR("Redefining symbol " << def->name));
@@ -277,7 +281,7 @@ ContextPtr Parser::parseBlock(bool nested) {
 }
 
 ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
-   VarDefPtr thisVar = context->lookUp("this");
+   VarDefPtr thisVar = context->ns->lookUp("this");
    if (!thisVar)
       error(ident,
             SPUG_FSTR("instance member " << ident.getData() <<
@@ -289,8 +293,8 @@ ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
 }
 
 ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
-   Context &varContext = container ? *container->type->context : *context;
-   VarDefPtr var = varContext.lookUp(ident.getData());
+   Namespace &varNS = container ? *container->type : *context->ns;
+   VarDefPtr var = varNS.lookUp(ident.getData());
    if (!var)
       error(ident,
             SPUG_FSTR("Undefined variable: " << ident.getData()));
@@ -312,7 +316,7 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
-   if (var->context->scope == Context::instance) {
+   if (TypeDefPtr::cast(var->owner)) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      makeThisRef(ident, ident.getData());
@@ -356,7 +360,7 @@ string Parser::parseOperSpec() {
 }
 
 FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
-                                  Context &varContext, 
+                                  Namespace *ns, 
                                   Expr *container
                                   ) {
 
@@ -368,7 +372,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    
    // lookup the method from the variable context's type context
    // XXX needs to handle callable objects.
-   FuncDefPtr func = varContext.lookUp(*context, funcName, args);
+   FuncDefPtr func = ns->lookUp(*context, funcName, args);
    if (!func)
       error(ident,
             SPUG_FSTR("No method exists matching " << funcName <<
@@ -389,7 +393,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       // container _is_ a class but the function is a method of its 
       // meta-class, use the container as the receiver.
       if (container)
-         if (container->type->meta && !func->context->returnType->meta) {
+         if (container->type->meta && !TypeDefPtr::acast(func->owner)->meta) {
             // the container is a class and the function is an explicit 
             // call of a (presumably base class) method.
             squashVirtual = true;
@@ -420,7 +424,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
 }
 
 ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
-   Context &varContext = container ? *container->type->context : *context;
+   Namespace *ns = container ? container->type.get() : context->ns.get();
    
    // is it an assignment?
    Token tok1 = toker.getToken();
@@ -429,7 +433,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       if (ident.isOper())
          error(tok1, "Expected operator identifier after 'oper' keyword");
 
-      VarDefPtr var = varContext.lookUp(ident.getData());
+      VarDefPtr var = ns->lookUp(ident.getData());
       if (!var)
          error(tok1,
                SPUG_FSTR("attempted to assign undefined variable " <<
@@ -449,7 +453,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 
       // if this is an instance variable, emit a field assignment.  
       // Otherwise emit a normal variable assignment.
-      if (var->context->scope == Context::instance) {
+      if (TypeDefPtr::cast(var->owner)) {
          // if there's no container, try to use an implicit "this"
          ExprPtr receiver = container ? container : 
                                         makeThisRef(ident, ident.getData());
@@ -473,7 +477,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    
    if (tok1.isLParen()) {
       // function/method invocation
-      return parseFuncCall(ident, funcName, varContext, container);
+      return parseFuncCall(ident, funcName, ns, container);
    } else {
       if (ident.isOper())
          unexpected(tok1,
@@ -528,7 +532,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       // look up a format method for the argument
       FuncCall::ExprVec args(1);
       args[0] = arg;
-      FuncDefPtr func = expr->type->context->lookUp(*context, "format", args);
+      FuncDefPtr func = expr->type->lookUp(*context, "format", args);
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
@@ -566,7 +570,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 	 // if the next token is "class", this is the class operator.
 	 if (tok.isClass()) {
             FuncDefPtr funcDef = 
-               expr->type->context->lookUpNoArgs("oper class");
+               expr->type->lookUpNoArgs("oper class");
             if (!funcDef)
                error(tok, SPUG_FSTR("class operator not defined for " <<
                                     expr->type->name
@@ -621,7 +625,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             // this is "a[i] = v"
             args.push_back(parseExpression());
             FuncDefPtr funcDef =
-               expr->type->context->lookUp(*context, "oper []=", args);
+               expr->type->lookUp(*context, "oper []=", args);
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []=' not defined for " <<
@@ -635,7 +639,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             // this is "a[i]"
             toker.putBack(tok2);
             FuncDefPtr funcDef =
-               expr->type->context->lookUp(*context, "oper []", args);
+               expr->type->lookUp(*context, "oper []", args);
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []' not defined for " <<
@@ -665,11 +669,11 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          
          // first try to find it in the type's context, then try to find it in 
          // the current context.
-         FuncDefPtr func = expr->type->context->lookUp(*context, name, exprs);
+         FuncDefPtr func = expr->type->lookUp(*context, name, exprs);
          if (!func) {
             exprs[0] = expr;
             exprs.push_back(rhs);
-            func = context->lookUp(*context, name, exprs);
+            func = context->ns->lookUp(*context, name, exprs);
          }
          if (!func)
             error(tok,
@@ -747,12 +751,12 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       // try to look it up for the expression, then for the context.
       ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
       symbol = "oper " + symbol;
-      FuncDefPtr funcDef = operand->type->context->lookUp(*context, symbol, 
+      FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, 
                                                           args
                                                           );
       if (!funcDef) {
          args.push_back(operand);
-         funcDef = context->lookUp(*context, symbol, args);
+         funcDef = context->ns->lookUp(*context, symbol, args);
       }
       if (!funcDef)
          error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
@@ -806,7 +810,7 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
                       )
             );
    
-   TypeDef::TypeVecPtr types = new TypeDef::TypeVec();
+   TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
    Token tok;
    while (true) {      
       TypeDefPtr subType = parseTypeSpec();
@@ -836,7 +840,7 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    parseMethodArgs(args, terminator);
    
    // look up the new operator for the class
-   FuncDefPtr func = type->context->lookUp(*context, "oper new", args);
+   FuncDefPtr func = type->lookUp(*context, "oper new", args);
    if (!func)
       error(tok,
             SPUG_FSTR("No constructor for " << type->name <<
@@ -854,7 +858,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
    if (!tok.isIdent())
       unexpected(tok, "type identifier expected");
    
-   VarDefPtr def = context->lookUp(tok.getData());
+   VarDefPtr def = context->ns->lookUp(tok.getData());
    TypeDef *typeDef = TypeDefPtr::rcast(def);
    if (!typeDef)
       error(tok, SPUG_FSTR(tok.getData() << errorMsg));
@@ -887,7 +891,7 @@ void Parser::parseModuleName(vector<string> &moduleName) {
 
 // type funcName ( type argName, ... ) {
 //                ^                   ^
-void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
+void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
 
    // load the next token so we can check for the immediate closing paren of 
    // an empty argument list.
@@ -929,6 +933,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args) {
 //                 ^                ^
 void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
    ContextPtr classCtx = context->getClassContext();
+   TypeDefPtr type = TypeDefPtr::rcast(classCtx->ns);
    
    while (true) {
       // get an identifier
@@ -937,7 +942,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          unexpected(tok, "identifier expected in initializer list.");
       
       // try to look up an instance variable
-      VarDefPtr varDef = context->lookUp(tok.getData());
+      VarDefPtr varDef = context->ns->lookUp(tok.getData());
       if (!varDef || TypeDefPtr::rcast(varDef)) {
          // not a variable def, parse a type def.
          toker.putBack(tok);
@@ -945,11 +950,11 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             parseTypeSpec(" is neither a base class nor an instance variable");
             
          // try to find it in our base classes
-         if (!classCtx->returnType->isParent(base.get()))
+         if (!type->isParent(base.get()))
             error(tok, 
                   SPUG_FSTR(base->getFullName() << 
                              " is not a direct base class of " <<
-                             classCtx->returnType->name
+                             type->name
                             )
                   );
          
@@ -960,8 +965,8 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          
          // look up the appropriate constructor
          FuncDefPtr operInit = 
-            base->context->lookUp(*context, "oper init", args);
-         if (!operInit || operInit->context != base->context.get())
+            base->lookUp(*context, "oper init", args);
+         if (!operInit || operInit->owner != base.get())
             error(tok, SPUG_FSTR("No matching constructor found for " <<
                                   base->getFullName()
                                  )
@@ -978,10 +983,10 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                   );
       
       // make sure that it is a direct member of this class.
-      } else if (varDef->context != classCtx.get()) {
+      } else if (varDef->owner != type.get()) {
          error(tok,
                SPUG_FSTR(tok.getData() << " is not an immediate member of " <<
-                         classCtx->returnType->name
+                         type->name
                          )
                );
 
@@ -1006,7 +1011,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             
             // look up the appropriate constructor
             FuncDefPtr operNew = 
-               varDef->type->context->lookUp(*context, "oper new", args);
+               varDef->type->lookUp(*context, "oper new", args);
             if (!operNew)
                error(tok2,
                      SPUG_FSTR("No matching constructor found for instance "
@@ -1059,6 +1064,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // if this is a class context, we're defining a method.
    ContextPtr classCtx = context->getClassContext();
    bool isMethod = classCtx ? true : false;
+   TypeDef *classTypeDef = 0;
 
    // push a new context, arg defs will be stored in the new context.
    ContextPtr subCtx = context->createSubContext(Context::local);
@@ -1070,17 +1076,15 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    ExprPtr receiver;
    if (isMethod) {
       assert(classCtx && "method not in class context.");
-      ArgDefPtr argDef =
-         context->builder.createArgDef(classCtx->returnType.get(), 
-                                       "this"
-                                       );
+      classTypeDef = TypeDefPtr::arcast(classCtx->ns);
+      ArgDefPtr argDef = context->builder.createArgDef(classTypeDef, "this");
       addDef(argDef.get());
       receiver = context->builder.createVarRef(argDef.get());
    }
 
    // parse the arguments
    FuncDef::ArgVec argDefs;
-   parseArgDefs(argDefs);
+   parseArgDefs(argDefs, isMethod);
    
    // if we are expecting an argument definition, check for it.
    if (expectedArgCount > -1 && argDefs.size() != expectedArgCount)
@@ -1105,7 +1109,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               argDefs,
                                               stub->address
                                               );
-         stub->context->removeDef(stub);
+         stub->owner->removeDef(stub);
          cstack.restore();
          addDef(funcDef.get());
          return argDefs.size();
@@ -1126,7 +1130,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       unexpected(tok3, "expected '{' in function definition");
    }
 
-   bool isVirtual = isMethod && classCtx->returnType->hasVTable && 
+   bool isVirtual = isMethod && classTypeDef->hasVTable && 
                     !TypeDef::isImplicitFinal(name);
 
    // If we're overriding/implementing a previously declared virtual 
@@ -1138,7 +1142,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // existing definition.
    FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
    if (existingFuncDef && existingFuncDef->matches(argDefs)) {
-      if (!(context->getDefContext() == existingDef->context) ||
+      if (!(context->getDefContext()->ns.get() == existingDef->owner) ||
           !existingFuncDef->isOverridable()
           )
          override = existingFuncDef;
@@ -1174,19 +1178,19 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    // store the new definition in the parent context.
    {
-      ContextStackFrame cstack(*this, context->parents[0].get());
+      ContextStackFrame cstack(*this, context->getParent().get());
       addDef(funcDef.get());
    }
 
    // if there were initializers, emit them.
    if (inits)
-      receiver->type->emitInitializers(*context, inits.get());
+      classTypeDef->emitInitializers(*context, inits.get());
    
    // if this is an "oper del" with base & member cleanups, store them in the 
    // current cleanup frame
    if (funcFlags == hasMemberDels) {
       assert(classCtx && "emitting a destructor outside of class context");
-      classCtx->returnType->addDestructorCleanups(*context);
+      classTypeDef->addDestructorCleanups(*context);
    }
 
    ContextPtr terminal = parseBlock(true);
@@ -1496,7 +1500,7 @@ void Parser::parseImportStmt() {
            ++iter
            ) {
          // make sure we don't already have it
-         if (context->lookUp(*iter))
+         if (context->ns->lookUp(*iter))
             error(tok, SPUG_FSTR("imported name " << *iter << 
                                   " hides existing definition."
                                  )
@@ -1509,7 +1513,7 @@ void Parser::parseImportStmt() {
                                  )
                   );
          context->builder.registerImport(*context, symVal.get());
-         context->addAlias(symVal.get());
+         context->ns->addAlias(symVal.get());
       }
    }
 }
@@ -1660,50 +1664,41 @@ TypeDefPtr Parser::parseClassDef() {
    if (!bases.size() && context->globalData->objectType)
       bases.push_back(context->globalData->objectType);
 
-   // create a class context, and a lexical context which delegates to both 
-   // the class context and the parent context.
+   // create a class context
    ContextPtr classContext = new Context(context->builder, 
                                          Context::instance,
-                                         context->globalData
+                                         context.get(),
+                                         0
                                          );
-   ContextPtr lexicalContext = new Context(context->builder, 
-                                           Context::composite,
-                                           context->globalData
-                                           );
-   lexicalContext->parents.push_back(classContext);
-   lexicalContext->parents.push_back(context);
 
-   // store the base classes as the parent contexts of the class context.  
-   // Track whether there's a vtable while we're at it.
-   bool gotVTable = false;
-   for (vector<TypeDefPtr>::iterator iter = bases.begin();
-        iter != bases.end();\
-        ++iter
-        ) {
-      classContext->parents.push_back((*iter)->context);
-      if ((*iter)->hasVTable)
-         gotVTable = true;
-   }
-
-   // push the context
-   ContextStackFrame cstack(*this, lexicalContext.get());
-   
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
    TypeDefPtr type =
       context->builder.emitBeginClass(*classContext, className, bases);
-   type->hasVTable = gotVTable;
-   cstack.parent().getDefContext()->addDef(type.get());
+   context->ns->addDef(type.get());
    
    // add the "cast" method
-   if (gotVTable)
-      type->createCast(*context);
+   if (type->hasVTable)
+      type->createCast(*classContext);
+
+   // create a lexical context which delegates to both the class context and 
+   // the parent context.
+   NamespacePtr lexicalNS =
+      new CompositeNamespace(type.get(), context->ns.get());
+   ContextPtr lexicalContext = new Context(context->builder, 
+                                           Context::composite,
+                                           classContext.get(),
+                                           lexicalNS.get()
+                                           );
+
+   // push the new context
+   ContextStackFrame cstack(*this, lexicalContext.get());
 
    // parse the body
    parseClassBody();
 
-   type->rectify();
-   classContext->complete = true;
+   type->rectify(*classContext);
+   type->complete = true;
    classContext->builder.emitEndClass(*classContext);
    cstack.restore();
    
@@ -1789,9 +1784,10 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
                                       bool overloadOk
                                       ) {
    ContextPtr classContext;
-   VarDefPtr existing = context->lookUp(name);
+   VarDefPtr existing = context->ns->lookUp(name);
    if (existing) {
-      Context *existingContext = existing->context;
+      Namespace *existingNS = existing->owner;
+      TypeDef *existingClass = 0;
 
       // if it's ok to overload, make sure that the existing definition is a 
       // function or an overload def or a stub.
@@ -1803,13 +1799,15 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
          return existing;
 
       // redefinition in the same context is an error
-      if (existingContext == context)
+      if (existingNS == context->ns.get())
          redefineError(tok, existing.get());
       // redefinition in a derived context is fine, but if we're not in a 
-      // derived context display a warning.
+      // derived context display a warning.  TODO: if this check doesn't need 
+      // to be this way, replace it with something that makes sense.
       else if (!(classContext = context->getClassContext()) ||
-               !classContext->returnType || !existingContext->returnType ||
-               !existingContext->returnType->matches(*classContext->returnType)
+               !classContext->returnType || 
+               !(existingClass = TypeDefPtr::cast(existingNS)) ||
+               !existingClass->matches(*classContext->returnType)
                ) {
          warn(tok,
               SPUG_FSTR("Symbol " << name << 

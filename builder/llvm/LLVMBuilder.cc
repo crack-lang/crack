@@ -30,7 +30,10 @@
 #include <model/ArgDef.h>
 #include <model/BuilderContextData.h>
 #include <model/CleanupFrame.h>
+#include <model/CompositeNamespace.h>
+#include <model/VarDefImpl.h>
 #include <model/InstVarDef.h>
+#include <model/LocalNamespace.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
@@ -56,6 +59,7 @@
 using namespace std;
 using namespace llvm;
 using namespace model;
+using namespace builder;
 using namespace builder::mvll;
 
 typedef model::FuncCall::ExprVec ExprVec;
@@ -100,32 +104,16 @@ namespace llvm {
 
 
 namespace {
-        
     SPUG_RCPTR(BBuilderContextData);
 
     class BBuilderContextData : public BuilderContextData {
         public:
             Function *func;
             BasicBlock *block;
-            unsigned fieldCount;
-            BTypeDefPtr type;
-            vector<PlaceholderInstruction *> placeholders;
-            bool complete;
             
             BBuilderContextData() :
                 func(0),
-                block(0),
-                fieldCount(0),
-                complete(false) {
-            }
-            
-            void addBaseClass(const BTypeDefPtr &base) {
-                ++fieldCount;
-            }
-            
-            void addPlaceholder(PlaceholderInstruction *inst) {
-                assert(!complete && "Adding placeholder to a completed class");
-                placeholders.push_back(inst);
+                block(0) {
             }
     };
     
@@ -294,15 +282,14 @@ namespace {
                     return inst;
 
                 int i = 0;
-                for (Context::ContextVec::iterator iter = 
-                        type->context->parents.begin();
-                     iter != type->context->parents.end();
+                for (TypeDef::TypeVec::iterator iter = type->parents.begin();
+                     iter != type->parents.end();
                      ++iter, ++i
                      )
-                    if ((*iter)->returnType->isDerivedFrom(ancestor)) {
+                    if ((*iter)->isDerivedFrom(ancestor)) {
                         inst = builder.CreateStructGEP(inst, i);
                         BTypeDef *base = 
-                            BTypeDefPtr::arcast((*iter)->returnType);
+                            BTypeDefPtr::arcast(*iter);
                         return emitGEP(builder, base, ancestor, inst);
                     }
                 assert(false && "narrowing to non-ancestor!");
@@ -371,15 +358,14 @@ namespace {
                                        Constant *vtable
                                        ) {
                 
-                Context::ContextVec &parents = btype->context->parents;
+                TypeDef::TypeVec &parents = btype->parents;
                 int i = 0;
-                for (Context::ContextVec::iterator ctxIter = 
+                for (TypeDef::TypeVec::iterator ctxIter = 
                         parents.begin();
                      ctxIter != parents.end();
                      ++ctxIter, ++i
                      ) {
-                    BTypeDef *base = 
-                        BTypeDefPtr::arcast((*ctxIter)->returnType);
+                    BTypeDef *base = BTypeDefPtr::arcast(*ctxIter);
                     if (base == vtableBaseType) {
                         inst = builder.CreateStructGEP(inst, i);
 
@@ -421,15 +407,15 @@ namespace {
                 }
 
                 // recurse through all other parents with vtables
-                Context::ContextVec &parents = btype->context->parents;
+                TypeDef::TypeVec &parents = btype->parents;
                 int i = 0;
-                for (Context::ContextVec::iterator ctxIter = 
+                for (TypeDef::TypeVec::iterator ctxIter = 
                         parents.begin() + startClass;
                      ctxIter != parents.end();
                      ++ctxIter, ++i
                      ) {
                     BTypeDef *base = 
-                        BTypeDefPtr::arcast((*ctxIter)->returnType);
+                        BTypeDefPtr::arcast(*ctxIter);
                     
                     // see if this class has a vtable in the aggregate type
                     map<BTypeDef *, Constant *>::iterator vtableIter =
@@ -505,15 +491,14 @@ namespace {
             
                 } else {
                     // recurse through all parents with vtables
-                    Context::ContextVec &parents = curType->context->parents;
+                    TypeDef::TypeVec &parents = curType->parents;
                     int i = 0;
-                    for (Context::ContextVec::iterator ctxIter = 
-                            parents.begin();
-                         ctxIter != parents.end();
-                         ++ctxIter, ++i
+                    for (TypeDef::TypeVec::iterator baseIter = parents.begin();
+                         baseIter != parents.end();
+                         ++baseIter, ++i
                          ) {
                         BTypeDef *base = 
-                            BTypeDefPtr::arcast((*ctxIter)->returnType);
+                            BTypeDefPtr::arcast(*baseIter);
                         if (base->hasVTable) {
                             Value *baseInst =
                                 builder.CreateStructGEP(inst, i);
@@ -656,11 +641,11 @@ namespace {
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 BTypeDef *vtableBaseType =
                     BTypeDefPtr::arcast(context.globalData->vtableBaseType);
-                Context *classCtx = funcDef->context->getClassContext().get();
+                BTypeDef *type = BTypeDefPtr::acast(funcDef->owner);
 
                 // if this is for a complete class, go ahead and emit the code.  
                 // Otherwise just emit a placeholder.
-                if (classCtx->complete) {
+                if (type->complete) {
                     Value *val = innerEmitCall(llvmBuilder.builder, 
                                                vtableBaseType,
                                                funcDef, 
@@ -677,18 +662,14 @@ namespace {
                             args,
                             llvmBuilder.block
                         );
-                    BBuilderContextData *bdata =
-                        BBuilderContextDataPtr::rcast(
-                            classCtx->builderData
-                        );
-                    bdata->addPlaceholder(placeholder);
+                    type->addPlaceholder(placeholder);
                     return placeholder;
                 }
             }
     };
     
     const Type *llvmIntType = 0;
-        
+    
     SPUG_RCPTR(BCleanupFrame)
 
     class BCleanupFrame : public CleanupFrame {
@@ -724,16 +705,15 @@ namespace {
                 ResultExprPtr aggregateResult = aggregate->emit(context);
                 LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
 
-                // narrow to the ancestor type where there variable is defined.
-                bb.narrow(aggregate->type.get(),
-                          def->context->returnType.get()
-                          );
+                // narrow to the ancestor type where the variable is defined.
+                bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->owner));
 
                 unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
                 
-                // if the variable is from a complete context, we can emit it. 
+                // if the variable is from a complete type, we can emit it. 
                 //  Otherwise, we need to store a placeholder.
-                if (def->context->complete) {
+                BTypeDef *owner = BTypeDefPtr::acast(def->owner);
+                if (owner->complete) {
                     Value *fieldPtr = 
                         bb.builder.CreateStructGEP(bb.lastValue, index);
                     bb.lastValue = bb.builder.CreateLoad(fieldPtr);
@@ -753,11 +733,7 @@ namespace {
                     bb.lastValue = placeholder;
 
                     // store the placeholder
-                    BBuilderContextData *bdata =
-                        BBuilderContextDataPtr::rcast(
-                            def->context->builderData
-                        );
-                    bdata->addPlaceholder(placeholder);
+                    owner->addPlaceholder(placeholder);
                 }
                 
                 // release the aggregate
@@ -862,29 +838,25 @@ namespace {
             // target class is defined, emits a placeholder instruction if it 
             // is not.
             static Value *emitSpecialize(
-               Context &context, const Type *type,
+               Context &context, BTypeDef *type,
                Value *value,
-               Context &derivedClassCtx,
                const TypeDef::AncestorPath &ancestorPath
             ) {
                 LLVMBuilder &llvmBuilder = 
                     dynamic_cast<LLVMBuilder &>(context.builder);
                 
-                if (derivedClassCtx.complete) {
-                    return emitSpecializeInner(llvmBuilder.builder, type, 
+                if (type->complete) {
+                    return emitSpecializeInner(llvmBuilder.builder, type->rep,
                                                value,
                                                ancestorPath
                                                );
                 } else {
                     PlaceholderInstruction *placeholder =
-                        new IncompleteSpecialize(type, value, ancestorPath,
+                        new IncompleteSpecialize(type->rep, value, 
+                                                 ancestorPath,
                                                  llvmBuilder.block
                                                  );
-                    BBuilderContextData *bdata =
-                        BBuilderContextDataPtr::rcast(
-                            derivedClassCtx.builderData
-                        );
-                    bdata->addPlaceholder(placeholder);
+                    type->addPlaceholder(placeholder);
                     return placeholder;
                 }
                     
@@ -901,7 +873,7 @@ namespace {
                                                1
                                                );
         arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arrayType->context->addDef(arrayGetItem.get());
+        arrayType->addDef(arrayGetItem.get());
     
         FuncDefPtr arraySetItem = 
             new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method, 
@@ -910,7 +882,7 @@ namespace {
                                                );
         arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
         arraySetItem->args[1] = new ArgDef(elemType, "value");
-        arrayType->context->addDef(arraySetItem.get());
+        arrayType->addDef(arraySetItem.get());
         
         FuncDefPtr arrayOffset =
             new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags, 
@@ -919,7 +891,7 @@ namespace {
                                               );
         arrayOffset->args[0] = new ArgDef(arrayType, "base");
         arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-        context.getDefContext()->addDef(arrayOffset.get());
+        context.getDefContext()->ns->addDef(arrayOffset.get());
         
         FuncDefPtr arrayAlloc =
             new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
@@ -927,7 +899,7 @@ namespace {
                                              1
                                              );
         arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
-        arrayType->context->addDef(arrayAlloc.get());
+        arrayType->addDef(arrayAlloc.get());
     }
 
     class ArrayTypeDef : public BTypeDef {
@@ -942,7 +914,7 @@ namespace {
             // specializations of array types actually create a new type 
             // object.
             virtual TypeDef *getSpecialization(Context &context, 
-                                               TypeVec *types
+                                               TypeVecObj *types
                                                ) {
                 // see if it already exists
                 TypeDef *spec = findSpecialization(types);
@@ -964,12 +936,7 @@ namespace {
                                  llvmType
                                  );
                                   
-                tempSpec->context = new Context(context.builder, 
-                                                Context::instance,
-                                                context.globalData
-                                                );
-                tempSpec->context->returnType = tempSpec;
-                tempSpec->context->addDef(
+                tempSpec->addDef(
                     new VoidPtrOpDef(context.globalData->voidPtrType.get())
                 );
                 
@@ -996,9 +963,7 @@ namespace {
     
             // close all cleanups in thie context
             closeAllCleanupsStatic(context);
-    
-            assert(context.parents.size() == 1);
-            emitCleanupsTo(*context.parents[0], bpos);
+            emitCleanupsTo(*context.parent, bpos);
         }
     }
 
@@ -1025,14 +990,10 @@ namespace {
                          );
         BTypeDef *classType =
             BTypeDefPtr::arcast(context.globalData->classType);
+        metaType->addBaseClass(classType);
         const PointerType *classPtrType = cast<PointerType>(classType->rep);
         const StructType *classStructType =
             cast<StructType>(classPtrType->getElementType());
-        Context *classTypeCtx = classType->context.get();
-        metaType->context = new Context(context.builder, Context::instance,
-                                        classTypeCtx
-                                        );
-        metaType->context->returnType = metaType;
         
         // Create a struct representation of the meta class.  This just has the 
         // Class class as its only field.
@@ -1042,7 +1003,7 @@ namespace {
         const Type *metaClassPtrType =
             PointerType::getUnqual(metaClassStructType);
         metaType->rep = metaClassPtrType;
-        metaType->context->complete = true;
+        metaType->complete = true;
         
         // create a global variable holding the class object.
         vector<Constant *> classStructVals(3);
@@ -1140,8 +1101,7 @@ namespace {
                           FuncBuilder &funcBuilder
                           ) {
         // find the path to the overriden's class
-        BTypeDef *overridenClass =
-            BTypeDefPtr::arcast(overriden->context->returnType);
+        BTypeDef *overridenClass = BTypeDefPtr::acast(overriden->owner);
         classType->getPathToAncestor(
             *overridenClass, 
             funcBuilder.funcDef->pathToFirstDeclaration
@@ -1166,22 +1126,14 @@ namespace {
 
 } // anon namespace
 
-namespace builder {
-namespace mvll {
-
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
     
     // close all cleanups in this context.
     closeAllCleanupsStatic(context);
     
     // recurse up through the parents.
-    if (!context.toplevel)
-        for (Context::ContextVec::iterator parent = context.parents.begin();
-            parent != context.parents.end();
-            ++parent
-            )
-            if ((*parent)->scope == Context::local)
-                emitFunctionCleanups(**parent);
+    if (!context.toplevel && context.parent->scope == Context::local)
+        emitFunctionCleanups(*context.parent);
 }
 
 ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
@@ -1221,10 +1173,9 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     
     assert(curType->isDerivedFrom(ancestor));
 
-    Context *ctx = curType->context.get();
     BTypeDef *bcurType = BTypeDefPtr::acast(curType);
     BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
-    if (ctx->complete) {
+    if (curType->complete) {
         lastValue = IncompleteNarrower::emitGEP(builder, bcurType, bancestor,
                                                 lastValue
                                                 );
@@ -1236,9 +1187,7 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         lastValue = placeholder;
 
         // store it
-        BBuilderContextData *bdata =
-            BBuilderContextDataPtr::rcast(ctx->builderData);
-        bdata->addPlaceholder(placeholder);
+        bcurType->addPlaceholder(placeholder);
     }
 }
 
@@ -1307,12 +1256,8 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
                                            );
     funcTypes[llvmFuncType] = crkFuncType;
     
-    // Give it a context and an "oper to voidptr" method.
-    crkFuncType->context =
-        new Context(context.builder, Context::instance,
-                    context.globalData
-                    );
-    crkFuncType->context->addDef(
+    // Give it an "oper to voidptr" method.
+    crkFuncType->addDef(
         new VoidPtrOpDef(context.globalData->voidPtrType.get())
     );
     
@@ -1632,12 +1577,10 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     // see if this is a method, if so store the class type as the receiver type
     unsigned vtableSlot = 0;
     BTypeDef *classType = 0;
-    BBuilderContextData *classContextData;
     if (flags & FuncDef::method) {
         ContextPtr classCtx = context.getClassContext();
         assert(classCtx && "method is not nested in a class context.");
-        classContextData = BBuilderContextDataPtr::rcast(classCtx->builderData);
-        classType = classContextData->type.get();
+        classType = BTypeDefPtr::arcast(classCtx->ns);
 
         // create the vtable slot for a virtual function
         if (flags & FuncDef::virtualized)
@@ -1669,14 +1612,13 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
             dynamic_cast<BArgVarDefImpl *>(f.receiver->impl.get())->rep;
         Context *classCtx = context.getClassContext().get();
         Value *thisRep =
-            IncompleteSpecialize::emitSpecialize(context, 
-                                                 classType->rep,
-                                                 inst, 
-                                                 *classCtx,
+            IncompleteSpecialize::emitSpecialize(context,
+                                                 classType,
+                                                 inst,
                                                  funcDef->pathToFirstDeclaration
                                                  );
         // lookup the "this" variable, and replace its rep
-        VarDefPtr thisVar = context.lookUp("this");
+        VarDefPtr thisVar = context.ns->lookUp("this");
         BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
         thisImpl->rep = thisRep;
     }
@@ -1722,8 +1664,10 @@ namespace {
                              ) {
 
         // build a local context to hold the "this"
-        Context localCtx(context.builder, Context::local, &context);
-        localCtx.addDef(new ArgDef(objClass, "this"));
+        Context localCtx(context.builder, Context::local, &context,
+                         new LocalNamespace(objClass)
+                         );
+        localCtx.ns->addDef(new ArgDef(objClass, "this"));
 
         FuncBuilder funcBuilder(localCtx,
                                 FuncDef::method | FuncDef::virtualized,
@@ -1733,7 +1677,7 @@ namespace {
                                 );
 
         // if this is an override, do the wrapping.
-        FuncDefPtr override = context.lookUpNoArgs("oper class");
+        FuncDefPtr override = objClass->lookUpNoArgs("oper class");
         if (override) {
             wrapOverride(objClass, BFuncDefPtr::arcast(override), funcBuilder);
         } else {
@@ -1745,7 +1689,7 @@ namespace {
         }
 
         funcBuilder.finish(false);
-        context.addDef(funcBuilder.funcDef.get());
+        objClass->addDef(funcBuilder.funcDef.get());
 
         BasicBlock *block = BasicBlock::Create(getGlobalContext(),
                                                "oper class",
@@ -1772,60 +1716,69 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     BGlobalVarDefImplPtr classImpl;
     BTypeDefPtr metaType = createMetaClass(context, name, bases, classImpl);
 
-    // process the base classes, get the first base class with a vtable
+    // find the first base class with a vtable
     BTypeDef *baseWithVTable = 0;
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
          iter != bases.end();
          ++iter
          ) {
         BTypeDef *base = BTypeDefPtr::rcast(*iter);
-        bdata->addBaseClass(base);
-        if (!baseWithVTable && base->hasVTable)
+        if (base->hasVTable) {
             baseWithVTable = base;
+            break;
+        }
     }
     
     // create the class definition (for classes with no bases, start with 
     // vtable slot 1: slot 0 is the "oper class" function)
     const Type *opaque = OpaqueType::get(getGlobalContext());
-    bdata->type = new BTypeDef(metaType.get(), name, 
-                               PointerType::getUnqual(opaque),
-                               true,
-                               baseWithVTable ? 
-                                baseWithVTable->nextVTableSlot : 0
-                               );
-    bdata->type->defaultInitializer = new NullConst(bdata->type.get());
+    BTypeDefPtr type = new BTypeDef(metaType.get(), name, 
+                                    PointerType::getUnqual(opaque),
+                                    true,
+                                    baseWithVTable ? 
+                                        baseWithVTable->nextVTableSlot : 0
+                                    );
+    type->defaultInitializer = new NullConst(type.get());
     
-    // bind the class to its context and the context to its class
-    bdata->type->context = &context;
-    context.returnType = bdata->type;
+    // add all of the base classes to the type
+    for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
+         iter != bases.end();
+         ++iter
+         ) {
+        BTypeDef *base = BTypeDefPtr::rcast(*iter);
+        type->addBaseClass(base);
+    }
+
+    // make the type the namespace of the context
+    context.ns = type;
     
     // tie the meta-class to the class
-    metaType->meta = bdata->type.get();
+    metaType->meta = type.get();
     
     // Make the pointer global variable our impl
-    bdata->type->impl = classImpl;
+    type->impl = classImpl;
 
     // create the unsafeCast() function.
-    metaType->context->addDef(new UnsafeCastDef(bdata->type.get()));
+    metaType->addDef(new UnsafeCastDef(type.get()));
     
     // create function to convert to voidptr
-    context.addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
+    context.ns->addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
 
     // create the "oper class" function - currently returns voidptr, but 
     // that's good enough for now.
     if (baseWithVTable)
-        createOperClassFunc(context, bdata->type.get(), metaType.get());
+        createOperClassFunc(context, type.get(), metaType.get());
 
 #if 0
     // create the safe cast function.
     if (context.globalData->objectType)
-        metaType->context->addDef(new CastDef(bdata->type.get(), 
+        metaType->context->addDef(new CastDef(type.get(), 
                                               context.globalData->objectType
                                               )
                                   );
 #endif
 
-    return bdata->type.get();
+    return type.get();
 }
         
 void LLVMBuilder::emitEndClass(Context &context) {
@@ -1833,16 +1786,17 @@ void LLVMBuilder::emitEndClass(Context &context) {
     vector<const Type *> members;
     
     // first the base classes
-    for (Context::ContextVec::iterator baseIter = context.parents.begin();
-         baseIter != context.parents.end();
+    BTypeDef *type = BTypeDefPtr::arcast(context.ns);
+    for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
+         baseIter != type->parents.end();
          ++baseIter
          ) {
-        BTypeDef *typeDef = BTypeDefPtr::arcast((*baseIter)->returnType);
+        BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
         members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
     }
     
-    for (Context::VarDefMap::iterator iter = context.beginDefs();
-        iter != context.endDefs();
+    for (TypeDef::VarDefMap::iterator iter = type->beginDefs();
+        iter != type->endDefs();
         ++iter
         ) {
         BFuncDef *funcDef;
@@ -1872,10 +1826,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // refine the type to the actual type of the structure.
     
     // extract the opaque type out of the pointer type.
-    BBuilderContextData *bdata =
-        BBuilderContextDataPtr::rcast(context.builderData);
     PointerType *ptrType =
-        cast<PointerType>(const_cast<Type *>(bdata->type->rep));
+        cast<PointerType>(const_cast<Type *>(type->rep));
     DerivedType *curType = 
         cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
     
@@ -1885,30 +1837,30 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // refine the type and store the new pointer type (the existing pointer 
     // to opaque type may not end up getting changed)
     curType->refineAbstractTypeTo(newType);
-    bdata->type->rep = PointerType::getUnqual(newType);
+    type->rep = PointerType::getUnqual(newType);
 
     // construct the vtable if necessary
-    if (bdata->type->hasVTable) {
+    if (type->hasVTable) {
         VTableBuilder vtableBuilder(
             BTypeDefPtr::arcast(context.globalData->vtableBaseType)
         );
-        bdata->type->createAllVTables(
+        type->createAllVTables(
             vtableBuilder, 
-            ".vtable." + bdata->type->name,
+            ".vtable." + type->name,
             BTypeDefPtr::arcast(context.globalData->vtableBaseType)
         );
-        vtableBuilder.emit(module, bdata->type.get());
+        vtableBuilder.emit(module, type);
     }
 
     // fix-up all of the placeholder instructions
     for (vector<PlaceholderInstruction *>::iterator iter = 
-            bdata->placeholders.begin();
-         iter != bdata->placeholders.end();
+            type->placeholders.begin();
+         iter != type->placeholders.end();
          ++iter
          )
         (*iter)->fix();
-    bdata->placeholders.clear();
-    bdata->complete = true;
+    type->placeholders.clear();
+    type->complete = true;
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -1977,17 +1929,14 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
             // to fall through to module scope
             if (!staticScope) {
                 // first, we need to determine the index of the new field.
-                BBuilderContextData *bdata =
-                    BBuilderContextDataPtr::rcast(
-                        defCtx->builderData
-                    );
-                unsigned idx = bdata->fieldCount++;
+                BTypeDef *btype = BTypeDefPtr::arcast(defCtx->ns);
+                unsigned idx = btype->fieldCount++;
                 
-                // instance variables are unlike the other stored types - we 
-                // use the InstVarDef class to preserve the initializer and a 
+                // instance variables are unlike the other stored types - we
+                // use the InstVarDef class to preserve the initializer and a
                 // different kind of implementation object.
                 VarDefPtr varDef =
-                    new InstVarDef(type, name, 
+                    new InstVarDef(type, name,
                                    initializer ? initializer :
                                                  type->defaultInitializer.get()
                                    );
@@ -2103,8 +2052,8 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     
     // create "array[byteptr] __getArgv()"
     {
-        TypeDefPtr array = context.lookUp("array");
-        TypeDef::TypeVecPtr types = new TypeDef::TypeVec();
+        TypeDefPtr array = context.ns->lookUp("array");
+        TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
         types->push_back(context.globalData->byteptrType.get());
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
@@ -2265,8 +2214,8 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     aggregate->emit(context);
 
     // narrow to the field type.
-    Context *varContext = assign->var->context;
-    narrow(aggregate->type.get(), varContext->returnType.get());
+    BTypeDef *typeDef = BTypeDefPtr::acast(assign->var->owner);
+    narrow(aggregate->type.get(), typeDef);
     Value *aggregateRep = lastValue;
     
     // emit the value last, lastValue after this needs to be the expression so 
@@ -2281,7 +2230,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     unsigned index = BInstVarDefImplPtr::rcast(assign->var->impl)->index;
     // if the variable is part of a complete context, just do the store.  
     // Otherwise create a fixup.
-    if (varContext->complete) {
+    if (typeDef->complete) {
         Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
         narrow(assign->value->type.get(), assign->var->type.get());
         builder.CreateStore(lastValue, fieldRef);
@@ -2296,9 +2245,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
                                         );
 
         // store it
-        BBuilderContextData *bdata =
-            BBuilderContextDataPtr::rcast(varContext->builderData);
-        bdata->addPlaceholder(placeholder);
+        typeDef->addPlaceholder(placeholder);
     }
 
     return new BResultExpr(assign, lastValue);
@@ -2335,19 +2282,14 @@ namespace {
                                          );
         btype->defaultInitializer =
             context.builder.createIntConst(context, 0, btype.get());
-        btype->context =
-            new Context(context.builder, Context::instance, 
-                        context.globalData
-                        );
-        btype->context->returnType = btype;
-        btype->context->addDef(new BoolOpDef(context.globalData->boolType.get(), 
-                                             "toBool"
-                                             )
-                               );
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(), 
+                                    "toBool"
+                                    )
+                      );
         
         // if you remove this, for the love of god, change the return type so 
         // we don't leak the pointer.
-        context.addDef(btype.get());
+        context.ns->addDef(btype.get());
         return btype.get();
     }
 
@@ -2360,19 +2302,14 @@ namespace {
                                          );
         btype->defaultInitializer =
             context.builder.createFloatConst(context, 0.0, btype.get());
-        btype->context =
-            new Context(context.builder, Context::instance,
-                        context.globalData
-                        );
-        btype->context->returnType = btype;
-        btype->context->addDef(new BoolOpDef(context.globalData->boolType.get(),
-                                             "toBool"
-                                             )
-                               );
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                    "toBool"
+                                    )
+                      );
 
         // if you remove this, for the love of god, change the return type so
         // we don't leak the pointer.
-        context.addDef(btype.get());
+        context.ns->addDef(btype.get());
         return btype.get();
     }
 }
@@ -2415,15 +2352,24 @@ namespace {
                     "    }\n"
                     "}\n"
                     );
+
+        // create the class context
+        ContextPtr classCtx = new Context(context.builder,
+                                          Context::instance,
+                                          &context,
+                                          classType
+                                          );
+
+        CompositeNamespacePtr ns = new CompositeNamespace(classType, 
+                                                          context.ns.get()
+                                                          );
         ContextPtr lexicalContext = new Context(context.builder, 
                                                 Context::composite,
-                                                context.globalData
+                                                classCtx.get(),
+                                                ns.get()
                                                 );
-        lexicalContext->parents.push_back(classType->context);
-        lexicalContext->parents.push_back(&context);
         BBuilderContextData *bdata;
-        classType->context->builderData = bdata = new BBuilderContextData();
-        bdata->type = classType;
+        lexicalContext->builderData = bdata = new BBuilderContextData();
         
         istringstream src(temp);
         try {
@@ -2436,7 +2382,7 @@ namespace {
         }
         
         // let the "end class" emitter handle the rest of this.
-        context.builder.emitEndClass(*classType->context);
+        context.builder.emitEndClass(*classCtx);
         
         // close off the block.
         builder.builder.CreateRetVoid();
@@ -2461,7 +2407,7 @@ namespace {
                                           1
                                           );
         func->args[0] = new ArgDef(sourceType, "val");
-        targetType->context->addDef(func.get());
+        targetType->addDef(func.get());
     }
 
     template <typename opType>
@@ -2474,7 +2420,7 @@ namespace {
                                           1
                                           );
         func->args[0] = new ArgDef(sourceType, "val");
-        targetType->context->addDef(func.get());
+        targetType->addDef(func.get());
     }
 
 }
@@ -2492,9 +2438,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
     classType->type = classType;
     classType->meta = classType;
-    classType->context = new Context(*this, Context::instance, gd);
-    classType->context->returnType = classType;
-    context.addDef(classType);
+    context.ns->addDef(classType);
 
     // some tools for creating meta-classes
     BTypeDefPtr metaType;           // storage for meta-types
@@ -2506,8 +2450,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            "void", 
                                            Type::getVoidTy(lctx)
                                            );
-    voidType->context = new Context(*this, Context::instance, gd);
-    context.addDef(voidType);
+    context.ns->addDef(voidType);
 
     BTypeDef *voidPtrType;
     llvmVoidPtrType = 
@@ -2516,8 +2459,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  "voidptr", 
                                                  llvmVoidPtrType
                                                  );
-    voidPtrType->context = new Context(*this, Context::instance, gd);
-    context.addDef(voidPtrType);
+    context.ns->addDef(voidPtrType);
     
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
@@ -2527,12 +2469,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  llvmBytePtrType
                                                  );
     byteptrType->defaultInitializer = createStrConst(context, "");
-    byteptrType->context = new Context(*this, Context::instance, gd);
-    byteptrType->context->returnType = byteptrType;
-    byteptrType->context->addDef(
+    byteptrType->addDef(
         new VoidPtrOpDef(context.globalData->voidPtrType.get())
     );
-    context.addDef(byteptrType);
+    context.ns->addDef(byteptrType);
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
@@ -2541,9 +2481,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            llvmBoolType
                                            );
     gd->boolType->defaultInitializer = new BIntConst(boolType, 0);
-    boolType->context = new Context(*this, Context::instance, gd);
-    boolType->context->returnType = boolType;
-    context.addDef(boolType);
+    context.ns->addDef(boolType);
     
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
                                            "byte"
@@ -2582,18 +2520,18 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // XXX bad assumptions about sizeof
     if (sizeof(int) == 4) {
-        context.addAlias("int", int32Type);
-        context.addAlias("uint", uint32Type);
-        context.addAlias("float", float32Type);
+        context.ns->addAlias("int", int32Type);
+        context.ns->addAlias("uint", uint32Type);
+        context.ns->addAlias("float", float32Type);
         gd->uintType = uint32Type;
         gd->intType = int32Type;
         gd->floatType = float32Type;
         llvmIntType = int32Type->rep;
     } else {
         assert(sizeof(int) == 8);
-        context.addAlias("int", int64Type);
-        context.addAlias("uint", uint64Type);
-        context.addAlias("float", float64Type);
+        context.ns->addAlias("int", int64Type);
+        context.ns->addAlias("uint", uint64Type);
+        context.ns->addAlias("float", float64Type);
         gd->uintType = uint64Type;
         gd->intType = int64Type;
         gd->floatType = float64Type;
@@ -2601,121 +2539,121 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     // create integer operations
-    context.addDef(new AddOpDef(byteType));
-    context.addDef(new SubOpDef(byteType));
-    context.addDef(new MulOpDef(byteType));
-    context.addDef(new SDivOpDef(byteType));
-    context.addDef(new SRemOpDef(byteType));
-    context.addDef(new ICmpEQOpDef(byteType, boolType));
-    context.addDef(new ICmpNEOpDef(byteType, boolType));
-    context.addDef(new ICmpSGTOpDef(byteType, boolType));
-    context.addDef(new ICmpSLTOpDef(byteType, boolType));
-    context.addDef(new ICmpSGEOpDef(byteType, boolType));
-    context.addDef(new ICmpSLEOpDef(byteType, boolType));
-    context.addDef(new NegOpDef(byteType, "oper -"));
-    context.addDef(new BitNotOpDef(byteType, "oper ~"));
+    context.ns->addDef(new AddOpDef(byteType));
+    context.ns->addDef(new SubOpDef(byteType));
+    context.ns->addDef(new MulOpDef(byteType));
+    context.ns->addDef(new SDivOpDef(byteType));
+    context.ns->addDef(new SRemOpDef(byteType));
+    context.ns->addDef(new ICmpEQOpDef(byteType, boolType));
+    context.ns->addDef(new ICmpNEOpDef(byteType, boolType));
+    context.ns->addDef(new ICmpSGTOpDef(byteType, boolType));
+    context.ns->addDef(new ICmpSLTOpDef(byteType, boolType));
+    context.ns->addDef(new ICmpSGEOpDef(byteType, boolType));
+    context.ns->addDef(new ICmpSLEOpDef(byteType, boolType));
+    context.ns->addDef(new NegOpDef(byteType, "oper -"));
+    context.ns->addDef(new BitNotOpDef(byteType, "oper ~"));
 
-    context.addDef(new AddOpDef(uint32Type));
-    context.addDef(new SubOpDef(uint32Type));
-    context.addDef(new MulOpDef(uint32Type));
-    context.addDef(new UDivOpDef(uint32Type));
-    context.addDef(new URemOpDef(uint32Type));
-    context.addDef(new ICmpEQOpDef(uint32Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint32Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint32Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint32Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint32Type, boolType));
-    context.addDef(new NegOpDef(uint32Type, "oper -"));
-    context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
+    context.ns->addDef(new AddOpDef(uint32Type));
+    context.ns->addDef(new SubOpDef(uint32Type));
+    context.ns->addDef(new MulOpDef(uint32Type));
+    context.ns->addDef(new UDivOpDef(uint32Type));
+    context.ns->addDef(new URemOpDef(uint32Type));
+    context.ns->addDef(new ICmpEQOpDef(uint32Type, boolType));
+    context.ns->addDef(new ICmpNEOpDef(uint32Type, boolType));
+    context.ns->addDef(new ICmpUGTOpDef(uint32Type, boolType));
+    context.ns->addDef(new ICmpULTOpDef(uint32Type, boolType));
+    context.ns->addDef(new ICmpUGEOpDef(uint32Type, boolType));
+    context.ns->addDef(new ICmpULEOpDef(uint32Type, boolType));
+    context.ns->addDef(new NegOpDef(uint32Type, "oper -"));
+    context.ns->addDef(new BitNotOpDef(uint32Type, "oper ~"));
 
-    context.addDef(new AddOpDef(int32Type));
-    context.addDef(new SubOpDef(int32Type));
-    context.addDef(new MulOpDef(int32Type));
-    context.addDef(new SDivOpDef(int32Type));
-    context.addDef(new SRemOpDef(int32Type));
-    context.addDef(new ICmpEQOpDef(int32Type, boolType));
-    context.addDef(new ICmpNEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int32Type, boolType));
-    context.addDef(new NegOpDef(int32Type, "oper -"));
-    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
+    context.ns->addDef(new AddOpDef(int32Type));
+    context.ns->addDef(new SubOpDef(int32Type));
+    context.ns->addDef(new MulOpDef(int32Type));
+    context.ns->addDef(new SDivOpDef(int32Type));
+    context.ns->addDef(new SRemOpDef(int32Type));
+    context.ns->addDef(new ICmpEQOpDef(int32Type, boolType));
+    context.ns->addDef(new ICmpNEOpDef(int32Type, boolType));
+    context.ns->addDef(new ICmpSGTOpDef(int32Type, boolType));
+    context.ns->addDef(new ICmpSLTOpDef(int32Type, boolType));
+    context.ns->addDef(new ICmpSGEOpDef(int32Type, boolType));
+    context.ns->addDef(new ICmpSLEOpDef(int32Type, boolType));
+    context.ns->addDef(new NegOpDef(int32Type, "oper -"));
+    context.ns->addDef(new BitNotOpDef(int32Type, "oper ~"));
 
-    context.addDef(new AddOpDef(uint64Type));
-    context.addDef(new SubOpDef(uint64Type));
-    context.addDef(new MulOpDef(uint64Type));
-    context.addDef(new UDivOpDef(uint64Type));
-    context.addDef(new URemOpDef(uint64Type));
-    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
-    context.addDef(new NegOpDef(uint64Type, "oper -"));
-    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
+    context.ns->addDef(new AddOpDef(uint64Type));
+    context.ns->addDef(new SubOpDef(uint64Type));
+    context.ns->addDef(new MulOpDef(uint64Type));
+    context.ns->addDef(new UDivOpDef(uint64Type));
+    context.ns->addDef(new URemOpDef(uint64Type));
+    context.ns->addDef(new ICmpEQOpDef(uint64Type, boolType));
+    context.ns->addDef(new ICmpNEOpDef(uint64Type, boolType));
+    context.ns->addDef(new ICmpUGTOpDef(uint64Type, boolType));
+    context.ns->addDef(new ICmpULTOpDef(uint64Type, boolType));
+    context.ns->addDef(new ICmpUGEOpDef(uint64Type, boolType));
+    context.ns->addDef(new ICmpULEOpDef(uint64Type, boolType));
+    context.ns->addDef(new NegOpDef(uint64Type, "oper -"));
+    context.ns->addDef(new BitNotOpDef(uint64Type, "oper ~"));
 
-    context.addDef(new AddOpDef(int64Type));
-    context.addDef(new SubOpDef(int64Type));
-    context.addDef(new MulOpDef(int64Type));
-    context.addDef(new SDivOpDef(int64Type));
-    context.addDef(new SRemOpDef(int64Type));
-    context.addDef(new ICmpEQOpDef(int64Type, boolType));
-    context.addDef(new ICmpNEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
-    context.addDef(new NegOpDef(int64Type, "oper -"));
-    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
+    context.ns->addDef(new AddOpDef(int64Type));
+    context.ns->addDef(new SubOpDef(int64Type));
+    context.ns->addDef(new MulOpDef(int64Type));
+    context.ns->addDef(new SDivOpDef(int64Type));
+    context.ns->addDef(new SRemOpDef(int64Type));
+    context.ns->addDef(new ICmpEQOpDef(int64Type, boolType));
+    context.ns->addDef(new ICmpNEOpDef(int64Type, boolType));
+    context.ns->addDef(new ICmpSGTOpDef(int64Type, boolType));
+    context.ns->addDef(new ICmpSLTOpDef(int64Type, boolType));
+    context.ns->addDef(new ICmpSGEOpDef(int64Type, boolType));
+    context.ns->addDef(new ICmpSLEOpDef(int64Type, boolType));
+    context.ns->addDef(new NegOpDef(int64Type, "oper -"));
+    context.ns->addDef(new BitNotOpDef(int64Type, "oper ~"));
 
     // float operations
-    context.addDef(new FAddOpDef(float32Type));
-    context.addDef(new FSubOpDef(float32Type));
-    context.addDef(new FMulOpDef(float32Type));
-    context.addDef(new FDivOpDef(float32Type));
-    context.addDef(new FRemOpDef(float32Type));
-    context.addDef(new FCmpOEQOpDef(float32Type, boolType));
-    context.addDef(new FCmpONEOpDef(float32Type, boolType));
-    context.addDef(new FCmpOGTOpDef(float32Type, boolType));
-    context.addDef(new FCmpOLTOpDef(float32Type, boolType));
-    context.addDef(new FCmpOGEOpDef(float32Type, boolType));
-    context.addDef(new FCmpOLEOpDef(float32Type, boolType));
-    context.addDef(new FNegOpDef(float32Type, "oper -"));
+    context.ns->addDef(new FAddOpDef(float32Type));
+    context.ns->addDef(new FSubOpDef(float32Type));
+    context.ns->addDef(new FMulOpDef(float32Type));
+    context.ns->addDef(new FDivOpDef(float32Type));
+    context.ns->addDef(new FRemOpDef(float32Type));
+    context.ns->addDef(new FCmpOEQOpDef(float32Type, boolType));
+    context.ns->addDef(new FCmpONEOpDef(float32Type, boolType));
+    context.ns->addDef(new FCmpOGTOpDef(float32Type, boolType));
+    context.ns->addDef(new FCmpOLTOpDef(float32Type, boolType));
+    context.ns->addDef(new FCmpOGEOpDef(float32Type, boolType));
+    context.ns->addDef(new FCmpOLEOpDef(float32Type, boolType));
+    context.ns->addDef(new FNegOpDef(float32Type, "oper -"));
 
-    context.addDef(new FAddOpDef(float64Type));
-    context.addDef(new FSubOpDef(float64Type));
-    context.addDef(new FMulOpDef(float64Type));
-    context.addDef(new FDivOpDef(float64Type));
-    context.addDef(new FRemOpDef(float64Type));
-    context.addDef(new FCmpOEQOpDef(float64Type, boolType));
-    context.addDef(new FCmpONEOpDef(float64Type, boolType));
-    context.addDef(new FCmpOGTOpDef(float64Type, boolType));
-    context.addDef(new FCmpOLTOpDef(float64Type, boolType));
-    context.addDef(new FCmpOGEOpDef(float64Type, boolType));
-    context.addDef(new FCmpOLEOpDef(float64Type, boolType));
-    context.addDef(new FNegOpDef(float64Type, "oper -"));
+    context.ns->addDef(new FAddOpDef(float64Type));
+    context.ns->addDef(new FSubOpDef(float64Type));
+    context.ns->addDef(new FMulOpDef(float64Type));
+    context.ns->addDef(new FDivOpDef(float64Type));
+    context.ns->addDef(new FRemOpDef(float64Type));
+    context.ns->addDef(new FCmpOEQOpDef(float64Type, boolType));
+    context.ns->addDef(new FCmpONEOpDef(float64Type, boolType));
+    context.ns->addDef(new FCmpOGTOpDef(float64Type, boolType));
+    context.ns->addDef(new FCmpOLTOpDef(float64Type, boolType));
+    context.ns->addDef(new FCmpOGEOpDef(float64Type, boolType));
+    context.ns->addDef(new FCmpOLEOpDef(float64Type, boolType));
+    context.ns->addDef(new FNegOpDef(float64Type, "oper -"));
 
     // boolean logic
-    context.addDef(new LogicAndOpDef(boolType, boolType));
-    context.addDef(new LogicOrOpDef(boolType, boolType));
+    context.ns->addDef(new LogicAndOpDef(boolType, boolType));
+    context.ns->addDef(new LogicOrOpDef(boolType, boolType));
     
     // implicit conversions (no loss of precision)
-    byteType->context->addDef(new ZExtOpDef(int32Type, "oper to int32"));
-    byteType->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
-    byteType->context->addDef(new ZExtOpDef(uint32Type, "oper to uint32"));
-    byteType->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
-    byteType->context->addDef(new UIToFPOpDef(float32Type, "oper to float32"));
-    byteType->context->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
-    int32Type->context->addDef(new SExtOpDef(int64Type, "oper to int64"));
-    int32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
-    int32Type->context->addDef(new SIToFPOpDef(float64Type, "oper to float64"));
-    uint32Type->context->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
-    uint32Type->context->addDef(new ZExtOpDef(int64Type, "oper to int64"));
-    uint32Type->context->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
-    float32Type->context->addDef(new FPExtOpDef(float64Type, "oper to float64"));
+    byteType->addDef(new ZExtOpDef(int32Type, "oper to int32"));
+    byteType->addDef(new ZExtOpDef(int64Type, "oper to int64"));
+    byteType->addDef(new ZExtOpDef(uint32Type, "oper to uint32"));
+    byteType->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    byteType->addDef(new UIToFPOpDef(float32Type, "oper to float32"));
+    byteType->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
+    int32Type->addDef(new SExtOpDef(int64Type, "oper to int64"));
+    int32Type->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    int32Type->addDef(new SIToFPOpDef(float64Type, "oper to float64"));
+    uint32Type->addDef(new ZExtOpDef(uint64Type, "oper to uint64"));
+    uint32Type->addDef(new ZExtOpDef(int64Type, "oper to int64"));
+    uint32Type->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
+    float32Type->addDef(new FPExtOpDef(float64Type, "oper to float64"));
 
     // explicit (loss of precision)
     addExplicitTruncate(int64Type, uint64Type);
@@ -2749,14 +2687,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             "array", 
                                             0
                                             );
-    arrayType->context = new Context(context.builder, Context::instance,
-                                     context.globalData
-                                     );
-    context.addDef(arrayType.get());
+    context.ns->addDef(arrayType.get());
 
     // now that we have byteptr and array and all of the integer types, we can
     // initialize the body of Class.
-    context.addDef(new IsOpDef(classType, boolType));
+    context.ns->addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
     
     // back-fill meta class and impls for the existing primitives
@@ -2779,14 +2714,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     metaType->impl = classImpl;
         
     // Give it a context and an "oper to voidptr" method.
-    overloadDef->context =
-        new Context(context.builder, Context::instance,
-                    context.globalData
-                    );
-    overloadDef->context->addDef(
+    overloadDef->addDef(
         new VoidPtrOpDef(context.globalData->voidPtrType.get())
     );
-    gd->overloadType = overloadDef;
+    OverloadDef::overloadType = gd->overloadType = overloadDef;
     
     // create an empty structure type and its pointer for VTableBase 
     // Actual type is {}** (another layer of pointer indirection) because 
@@ -2802,14 +2733,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      true
                      );
     vtableBaseType->hasVTable = true;
-    vtableBaseType->context = new Context(*this, Context::instance, gd);
-    vtableBaseType->context->returnType = vtableBaseType;
     vtableBaseType->impl = classImpl;
     metaType->meta = vtableBaseType;
-    context.addDef(vtableBaseType);
-    createOperClassFunc(*vtableBaseType->context, vtableBaseType, 
-                        metaType.get()
-                        );
+    context.ns->addDef(vtableBaseType);
+    createOperClassFunc(context, vtableBaseType, metaType.get());
 
     // build VTableBase's vtable
     VTableBuilder vtableBuilder(vtableBaseType);
@@ -2819,11 +2746,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vtableBuilder.emit(module, vtableBaseType);
 
     // pointer equality check (to allow checking for None)
-    context.addDef(new IsOpDef(voidPtrType, boolType));
-    context.addDef(new IsOpDef(byteptrType, boolType));
+    context.ns->addDef(new IsOpDef(voidPtrType, boolType));
+    context.ns->addDef(new IsOpDef(byteptrType, boolType));
     
     // boolean not
-    context.addDef(new BitNotOpDef(boolType, "oper !"));
+    context.ns->addDef(new BitNotOpDef(boolType, "oper !"));
     
     // byteptr array indexing
     addArrayMethods(context, byteptrType, byteType);    
@@ -2846,10 +2773,11 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
             throw spug::Exception(dlerror());
 
         // store a stub for the symbol        
-        context.addDef(new StubDef(context.globalData->voidType.get(), *iter,
-                                   sym
-                                   )
-                       );
+        context.ns->addDef(new StubDef(context.globalData->voidType.get(), 
+                                       *iter,
+                                       sym
+                                       )
+                           );
     }
 }
 
@@ -2888,10 +2816,5 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     PlaceholderInstruction *vtableInit =
         new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
     // store it
-    BBuilderContextData *bdata =
-        BBuilderContextDataPtr::rcast(context.getClassContext()->builderData);
-    bdata->addPlaceholder(vtableInit);
+    btype->addPlaceholder(vtableInit);
 }
-
-} // end namespace builder::vmll
-} // end namespace builder

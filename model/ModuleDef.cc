@@ -13,7 +13,7 @@ ModuleDef::ModuleDef(const std::string &name, Context *moduleContext) :
 }
 
 VarDefPtr ModuleDef::lookUp(const std::string &name) {
-    return moduleContext->lookUp(name);
+    return moduleContext->ns->lookUp(name);
 }
 
 bool ModuleDef::hasInstSlot() {

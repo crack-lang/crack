@@ -7,11 +7,14 @@ model/OverloadDef.cc
 model/ResultExpr.cc
 model/Initializers.cc
 model/AllocExpr.cc
+model/CompositeNamespace.cc
 model/IntConst.cc
 model/FloatConst.cc
 model/VarDef.cc
 model/Context.cc
+model/LocalNamespace.cc
 model/NullConst.cc
+model/Namespace.cc
 model/CleanupFrame.cc
 model/TypeDef.cc
 model/FuncDef.cc
