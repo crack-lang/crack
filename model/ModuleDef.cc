@@ -7,19 +7,19 @@
 
 using namespace model;
 
-ModuleDef::ModuleDef(const std::string &name, Context *moduleContext) :
+ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
-    moduleContext(moduleContext) {
-}
-
-VarDefPtr ModuleDef::lookUp(const std::string &name) {
-    return moduleContext->ns->lookUp(name);
+    parent(parent) {
 }
 
 bool ModuleDef::hasInstSlot() {
     return false;
 }
 
-void ModuleDef::close() {
-    moduleContext->builder.closeModule(*moduleContext, this);
+void ModuleDef::close(Context &context) {
+    context.builder.closeModule(context, this);
+}
+
+NamespacePtr ModuleDef::getParent(unsigned index) {
+    return index ? NamespacePtr(0) : parent;
 }

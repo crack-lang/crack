@@ -2074,7 +2074,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     // bind the module to the execution engine
     bindModule(module);
     
-    return new BModuleDef(name, &context);
+    return new BModuleDef(name, context.ns.get());
 }
 
 void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {

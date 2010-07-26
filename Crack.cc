@@ -153,19 +153,20 @@ Crack::ModulePath Crack::searchPath(const Crack::StringVec &path,
     return ModulePath(empty, false, false);
 }
 
-void Crack::parseModule(ModuleDef *module,
+void Crack::parseModule(Context &context,
+                        ModuleDef *module,
                         const std::string &path,
                         istream &src
                         ) {
     Toker toker(src, path.c_str());
-    Parser parser(toker, module->moduleContext.get());
+    Parser parser(toker, &context);
     parser.parse();
-    module->moduleContext->builder.setOptimize(optimizeLevel);
-    module->close();
+    context.builder.setOptimize(optimizeLevel);
+    module->close(context);
     if (dump)
-        module->moduleContext->builder.dump();
+        context.builder.dump();
     else
-        module->moduleContext->builder.run();
+        context.builder.run();
 }
 
 ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
@@ -215,7 +216,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     ModuleDefPtr modDef = context->createModule(canonicalName);
     if (!modPath.isDir) {
         ifstream src(modPath.path.c_str());
-        parseModule(modDef.get(), modPath.path, src);
+        parseModule(*context, modDef.get(), modPath.path, src);
     }
 
     loadedModules.push_back(modDef);
@@ -227,7 +228,7 @@ namespace {
     // extract a class from a module and verify that it is a class - returns 
     // null on failure.
     TypeDef *extractClass(ModuleDef *mod, const char *name) {
-        VarDefPtr var = mod->moduleContext->ns->lookUp(name);
+        VarDefPtr var = mod->lookUp(name);
         TypeDef *type;
         if (var && (type = TypeDefPtr::rcast(var))) {
             return type;
@@ -269,13 +270,13 @@ bool Crack::loadBootstrapModules() {
         rootContext = rootContext->createSubContext(Context::module);
         
         // extract some constants
-        VarDefPtr v = mod->moduleContext->ns->lookUp("true");
+        VarDefPtr v = mod->lookUp("true");
         if (v)
             rootContext->ns->addAlias(v.get());
-        v = mod->moduleContext->ns->lookUp("false");
+        v = mod->lookUp("false");
         if (v)
             rootContext->ns->addAlias(v.get());
-        v = mod->moduleContext->ns->lookUp("print");
+        v = mod->lookUp("print");
         if (v)
             rootContext->ns->addAlias(v.get());
         
@@ -311,7 +312,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     // "foo.crk" -> foo, "anything weird" -> "__main__" or something.
     ModuleDefPtr modDef = context->createModule(name);
     try {
-        parseModule(modDef.get(), name, src);
+        parseModule(*context, modDef.get(), name, src);
         loadedModules.push_back(modDef);
     } catch (const ParseError &ex) {
         cerr << ex << endl;

@@ -4,6 +4,7 @@
 #define _model_ModuleDef_h_
 
 #include <vector>
+#include "Namespace.h"
 #include "VarDef.h"
 
 namespace model {
@@ -16,24 +17,18 @@ SPUG_RCPTR(ModuleDef);
  * A module.
  * The context of a module is the parent module.
  */
-class ModuleDef : public VarDef {
+class ModuleDef : public VarDef, public Namespace {
     public:
-        // the module's context (VarDef::context is the parent module context, 
-        // but not a parent of moduleContext - module scope does not 
-        // delegate to parent scope).
-        ContextPtr moduleContext;
+        // the parent namespace.  This should be the root namespace where 
+        // builtins are stored.
+        NamespacePtr parent;
 
-        ModuleDef(const std::string &name, Context *moduleContext);
+        ModuleDef(const std::string &name, Namespace *parent);
 
-        /**
-         * Resolve a symbol from the module.
-         */
-        VarDefPtr lookUp(const std::string &name);
-        
         /**
          * Close the module, executing it.
          */
-        void close();
+        void close(Context &context);
         
         /**
          * Call the module destructor - cleans up all global variables.
@@ -41,6 +36,8 @@ class ModuleDef : public VarDef {
         virtual void callDestructor() = 0;
         
         virtual bool hasInstSlot();
+        
+        virtual NamespacePtr getParent(unsigned index);
 };
 
 } // namespace model

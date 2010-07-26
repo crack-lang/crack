@@ -22,8 +22,8 @@ public:
     // primitive cleanup function
     void (*cleanup)();
 
-    BModuleDef(const std::string &canonicalName, model::Context *context) :
-            ModuleDef(canonicalName, context),
+    BModuleDef(const std::string &canonicalName, model::Namespace *parent) :
+            ModuleDef(canonicalName, parent),
             cleanup(0) {
     }
 

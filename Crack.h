@@ -137,7 +137,9 @@ class Crack {
          * Parse the specified module out of the input stream.  Raises all 
          * ParseError's that occur.
          */
-        void parseModule(model::ModuleDef *module, const std::string &path,
+        void parseModule(model::Context &moduleContext,
+                         model::ModuleDef *module,
+                         const std::string &path,
                          std::istream &src
                          );
         
