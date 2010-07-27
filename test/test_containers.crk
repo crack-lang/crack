@@ -1,0 +1,50 @@
+
+import crack.lang exit;
+import crack.io cout;
+import crack.container List, Array;
+
+List list;
+list.append('first');
+list.append('second');
+list.append('third');
+list.insert(0, 'zeroth');
+list.insert(4, 'fourth');
+list.insert(3, '2.5');
+list.insert(0, '-1');
+list.insert(2, '0.5');
+list.append('final');
+list.delete(0);
+list.delete(1);
+list.delete(6);
+
+if (list[0] != 'zeroth' || list[1] != 'first' || list[2] != 'second' ||
+    list[3] != '2.5' || list[4] != 'third' || list[5] != 'fourth' ||
+    list.count() != 6) {
+    cout `$list is not 
+          ['zeroth', 'first', 'second', '2.5', 'third', 'fourth']\n`;
+    exit(1);
+}
+
+Array a1 = {3};
+a1.append('first');
+a1.append('second');
+a1.append('xxx');
+a1.append('fourth');
+a1[2] = 'third';
+
+if (a1[0] != 'first' || a1[1] != 'second' || a1[2] != 'third' ||
+    a1[3] != 'fourth' || a1.count() != 4) {
+    cout `$a1 is not ['first', 'second', 'third', 'fourth']\n`;
+    exit(1);
+}
+
+Array a2;
+a2.append('1');
+a2.append('2');
+if (a2[0] != '1' || a2[1] != '2' || a2.count() != 2) {
+    cout `$a2 is not ['1', '2']\n`;
+    exit(1);
+}
+
+cout `ok\n`;
+

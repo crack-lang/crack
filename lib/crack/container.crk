@@ -104,6 +104,7 @@ class ListIter : Iterator {
 class List : Container {
     ListNode head = null;
     ListNode tail = null;
+    uint __count;
     
     Iterator iter() {
         return ListIter(head);
@@ -117,6 +118,7 @@ class List : Container {
         } else {
             head = tail = ListNode(elem);
         }
+        __count = __count + 1;
     }
     
     void pushFront(Object elem) {
@@ -127,6 +129,7 @@ class List : Container {
         } else {
             head = tail = newNode;
         }
+        __count = __count + 1;
     }
 
     void insert(uint index, Object elem) {
@@ -153,18 +156,51 @@ class List : Container {
         # see if we need to fix the tail
         if (node is tail)
             tail = newNode;
+        __count = __count + 1;
     }
 
-    Object oper [](uint index) {
+    ListNode __findNode(uint index) {
         i := index;
         node := head;
         while (i && node) {
             node = node.next;
             i = i - 1;
         }
-        if (!node) die('List index out of range in oper []');
+        if (!node) die('Assertion failed in oper []');
+        return node;
+    }
+    
+    void delete(uint index) {
+        if (index > __count)
+            die('List index out of range in delete()');
+        if (index > 0) {
+            # find the node before it.
+            node := __findNode(index - 1);
+            
+            # if the next node is the tail, reset the tail.
+            if (node.next is tail)
+                tail = node;
+            
+            # drop the current next node.
+            tmp := node.next.next;
+            node.next = tmp;
+        } else {
+            # first node is special and easy
+            tmp := head.next;
+            head = tmp;
+        }
+        
+        __count = __count - 1;
+    }
+
+    Object oper [](uint index) {
+        if (index > __count)
+            die('List index out of range in delete()');
+        node := __findNode(index);
         return node.elem;
     }
+    
+    uint count() { return __count; }
 }
 
 class _ArrayIface : Container {
@@ -284,7 +320,7 @@ class Array : _ArrayIface {
         __rep[index].oper release();
         __rep[index] = elem;
         elem.oper bind();
-    }    
+    }
     
     Iterator iter() {
         return ArrayIter(this);
