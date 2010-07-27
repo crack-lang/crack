@@ -2,14 +2,33 @@
                 
 #include "LLVMBuilder.h"
 
-#include <dlfcn.h>
+#include "ArrayTypeDef.h"
+#include "BBuilderContextData.h"
+#include "BBranchPoint.h"
+#include "BCleanupFrame.h"
+#include "BFieldRef.h"
+#include "BFuncDef.h"
+#include "BModuleDef.h"
+#include "BResultExpr.h"
+#include "BTypeDef.h"
+#include "Consts.h"
+#include "FuncBuilder.h"
+#include "Incompletes.h"
+#include "Ops.h"
+#include "PlaceholderInstruction.h"
+#include "Utils.h"
+#include "VarDefs.h"
+#include "VTableBuilder.h"
 
-// LLVM includes
+#include "parser/Parser.h"
+#include "parser/ParseError.h"
+
+#include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
+
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Module.h>
-#include <llvm/Function.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
@@ -27,34 +46,12 @@
 
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
-#include <model/ArgDef.h>
-#include <model/BuilderContextData.h>
-#include <model/CleanupFrame.h>
 #include <model/CompositeNamespace.h>
-#include <model/VarDefImpl.h>
 #include <model/InstVarDef.h>
 #include <model/LocalNamespace.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
-#include <model/VarDef.h>
-#include <model/VarRef.h>
-
-#include "BBranchPoint.h"
-#include "BFuncDef.h"
-#include "BModuleDef.h"
-#include "BResultExpr.h"
-#include "BTypeDef.h"
-#include "Consts.h"
-#include "FuncBuilder.h"
-#include "Ops.h"
-#include "PlaceholderInstruction.h"
-#include "VarDefs.h"
-#include "VTableBuilder.h"
-
-#include "parser/Parser.h"
-#include "parser/ParseError.h"
-
 
 using namespace std;
 using namespace llvm;
@@ -64,888 +61,42 @@ using namespace builder::mvll;
 
 typedef model::FuncCall::ExprVec ExprVec;
 
-// for reasons I don't understand, we have to specialize the OperandTraits 
-// templates in the llvm namespace.
-namespace {
-    class IncompleteInstVarRef;
-    class IncompleteInstVarAssign;
-    class IncompleteNarrower;
-    class IncompleteVTableInit;
-    class IncompleteSpecialize;
-    class IncompleteVirtualFunc;
-};
+// XXX find a way to remove this? see Incompletes.cc
+const Type *llvmIntType = 0;
 
-namespace llvm {
-    template<>
-    struct OperandTraits<IncompleteInstVarRef> :
-        FixedNumOperandTraits<1> {
-    };
-    template<>
-    struct OperandTraits<IncompleteInstVarAssign> :
-        FixedNumOperandTraits<2> {
-    };
-    template<>
-    struct OperandTraits<IncompleteNarrower> :
-        FixedNumOperandTraits<1> {
-    };
-    template<>
-    struct OperandTraits<IncompleteVTableInit> :
-        FixedNumOperandTraits<1> {
-    };
-    template<>
-    struct OperandTraits<IncompleteSpecialize> :
-        FixedNumOperandTraits<1> {
-    };
-    template<>
-    struct OperandTraits<IncompleteVirtualFunc> :
-        VariadicOperandTraits<1> {
-    };
+int LLVMBuilder::argc = 1;
+
+namespace {
+    char *tempArgv[] = {const_cast<char *>("undefined")};
+}
+char **LLVMBuilder::argv = tempArgv;
+
+extern "C" {
+
+    void printfloat(float val) {
+        std::cout << val << flush;
+    }
+
+    void printint(int val) {
+        std::cout << val << flush;
+    }
+
+    void __die(const char *message) {
+        std::cout << message << endl;
+        abort();
+    }
+
+    char **__getArgv() {
+        return LLVMBuilder::argv;
+    }
+
+    int __getArgc() {
+        return LLVMBuilder::argc;
+    }
+
 }
 
-
-namespace {
-    SPUG_RCPTR(BBuilderContextData);
-
-    class BBuilderContextData : public BuilderContextData {
-        public:
-            Function *func;
-            BasicBlock *block;
-            
-            BBuilderContextData() :
-                func(0),
-                block(0) {
-            }
-    };
-    
-    /** an incomplete reference to an instance variable. */
-    class IncompleteInstVarRef : public PlaceholderInstruction {
-        private:
-            unsigned index;
-
-        public:
-            // allocate space for 1 operand
-            void *operator new(size_t s) {
-                return User::operator new(s, 1);
-            }
-
-            IncompleteInstVarRef(const Type *type, Value *aggregate,
-                                 unsigned index,
-                                 BasicBlock *parent
-                                 ) :
-                PlaceholderInstruction(
-                    type,
-                    parent,
-                    OperandTraits<IncompleteInstVarRef>::op_begin(this),
-                    OperandTraits<IncompleteInstVarRef>::operands(this)
-                ),
-                index(index) {
-                Op<0>() = aggregate;
-            }
-            
-            IncompleteInstVarRef(const Type *type, Value *aggregate,
-                                 unsigned index,
-                                 Instruction *insertBefore = 0
-                                 ) :
-                PlaceholderInstruction(
-                    type,
-                    insertBefore,
-                    OperandTraits<IncompleteInstVarRef>::op_begin(this),
-                    OperandTraits<IncompleteInstVarRef>::operands(this)
-                ),
-                index(index) {
-                Op<0>() = aggregate;
-            }
-
-            virtual Instruction *clone_impl() const {
-                return new IncompleteInstVarRef(getType(), Op<0>(), index);
-            }
-            
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
-                replaceAllUsesWith(builder.CreateLoad(fieldPtr));
-            }
-    };
-
-    class IncompleteInstVarAssign : public PlaceholderInstruction {
-        private:
-            unsigned index;
-
-        public:
-            // allocate space for 2 operands
-            void *operator new(size_t s) {
-                return User::operator new(s, 2);
-            }
-
-            IncompleteInstVarAssign(const Type *type, Value *aggregate,
-                                    unsigned index,
-                                    Value *rval,
-                                    BasicBlock *parent
-                                    ) :
-                PlaceholderInstruction(
-                    type,
-                    parent,
-                    OperandTraits<IncompleteInstVarAssign>::op_begin(this),
-                    OperandTraits<IncompleteInstVarAssign>::operands(this)
-                ),
-                index(index) {
-                Op<0>() = aggregate;
-                Op<1>() = rval;
-            }
-            
-            IncompleteInstVarAssign(const Type *type, Value *aggregate,
-                                    unsigned index,
-                                    Value *rval,
-                                    Instruction *insertBefore = 0
-                                    ) :
-                PlaceholderInstruction(
-                    type,
-                    insertBefore,
-                    OperandTraits<IncompleteInstVarAssign>::op_begin(this),
-                    OperandTraits<IncompleteInstVarAssign>::operands(this)
-                ),
-                index(index) {
-                Op<0>() = aggregate;
-                Op<1>() = rval;
-            }
-
-            virtual Instruction *clone_impl() const {
-                return new IncompleteInstVarAssign(getType(), Op<0>(), index, 
-                                                   Op<1>()
-                                                   );
-            }
-            
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
-                builder.CreateStore(Op<1>(), fieldPtr);
-            }
-    };
-
-    /**
-     * A placeholder for a "narrower" - a GEP instruction that provides
-     * pointer to a base class from a derived class.
-     */
-    class IncompleteNarrower : public PlaceholderInstruction {
-        private:
-            BTypeDef *startType, *ancestor;
-
-        public:
-            // allocate space for 1 operand
-            void *operator new(size_t s) {
-                return User::operator new(s, 1);
-            }
-
-            IncompleteNarrower(Value *aggregate,
-                               BTypeDef *startType,
-                               BTypeDef *ancestor,
-                               BasicBlock *parent
-                               ) :
-                PlaceholderInstruction(
-                    ancestor->rep,
-                    parent,
-                    OperandTraits<IncompleteNarrower>::op_begin(this),
-                    OperandTraits<IncompleteNarrower>::operands(this)
-                ),
-                startType(startType),
-                ancestor(ancestor) {
-                Op<0>() = aggregate;
-            }
-            
-            IncompleteNarrower(Value *aggregate,
-                               BTypeDef *startType,
-                               BTypeDef *ancestor,
-                               Instruction *insertBefore = 0
-                               ) :
-                PlaceholderInstruction(
-                    ancestor->rep,
-                    insertBefore,
-                    OperandTraits<IncompleteNarrower>::op_begin(this),
-                    OperandTraits<IncompleteNarrower>::operands(this)
-                ),
-                startType(startType),
-                ancestor(ancestor) {
-                Op<0>() = aggregate;
-            }
-
-            virtual Instruction *clone_impl() const {
-                return new IncompleteNarrower(Op<0>(), startType, ancestor);
-            }
-            
-            /**
-             * Emits the GEP instructions to narrow 'inst' from 'type' to 
-             * 'ancestor'.  Returns the resulting end-value.
-             */
-            static Value *emitGEP(IRBuilder<> &builder, BTypeDef *type, 
-                                  BTypeDef *ancestor,
-                                  Value *inst
-                                  ) {
-                if (type == ancestor)
-                    return inst;
-
-                int i = 0;
-                for (TypeDef::TypeVec::iterator iter = type->parents.begin();
-                     iter != type->parents.end();
-                     ++iter, ++i
-                     )
-                    if ((*iter)->isDerivedFrom(ancestor)) {
-                        inst = builder.CreateStructGEP(inst, i);
-                        BTypeDef *base = 
-                            BTypeDefPtr::arcast(*iter);
-                        return emitGEP(builder, base, ancestor, inst);
-                    }
-                assert(false && "narrowing to non-ancestor!");
-            }
-            
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                replaceAllUsesWith(emitGEP(builder, startType, ancestor,
-                                           Op<0>()
-                                           )
-                                   );
-            }
-    };
-
-    class IncompleteVTableInit : public PlaceholderInstruction {
-        public:
-            // allocate space for 1 operand
-            void *operator new(size_t s) {
-                return User::operator new(s, 1);
-            }
-
-            // we can make these raw pointers, the type _must_ be in existence 
-            // during the lifetime of this object.
-            BTypeDef *aggregateType;
-            BTypeDef *vtableBaseType;
-
-            IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
-                                 BTypeDef *vtableBaseType,
-                                 BasicBlock *parent
-                                 ) :
-                PlaceholderInstruction(
-                    aggregateType->rep,
-                    parent,
-                    OperandTraits<IncompleteVTableInit>::op_begin(this),
-                    OperandTraits<IncompleteVTableInit>::operands(this)
-                ),
-                aggregateType(aggregateType),
-                vtableBaseType(vtableBaseType) {
-                Op<0>() = aggregate;
-            }
-            
-            IncompleteVTableInit(BTypeDef *aggregateType, Value *aggregate,
-                                 BTypeDef *vtableBaseType,
-                                 Instruction *insertBefore = 0
-                                 ) :
-                PlaceholderInstruction(
-                    aggregateType->rep,
-                    insertBefore,
-                    OperandTraits<IncompleteVTableInit>::op_begin(this),
-                    OperandTraits<IncompleteVTableInit>::operands(this)
-                ),
-                aggregateType(aggregateType),
-                vtableBaseType(vtableBaseType) {
-                Op<0>() = aggregate;
-            }
-            
-            virtual Instruction *clone_impl() const {
-                return new IncompleteVTableInit(aggregateType, Op<0>(), 
-                                                vtableBaseType
-                                                );
-            }
-
-            // emit the code to initialize the first VTable in btype.
-            void emitInitOfFirstVTable(IRBuilder<> &builder, 
-                                       BTypeDef *btype,
-                                       Value *inst,
-                                       Constant *vtable
-                                       ) {
-                
-                TypeDef::TypeVec &parents = btype->parents;
-                int i = 0;
-                for (TypeDef::TypeVec::iterator ctxIter = 
-                        parents.begin();
-                     ctxIter != parents.end();
-                     ++ctxIter, ++i
-                     ) {
-                    BTypeDef *base = BTypeDefPtr::arcast(*ctxIter);
-                    if (base == vtableBaseType) {
-                        inst = builder.CreateStructGEP(inst, i);
-
-                        // convert the vtable to {}*
-                        const PointerType *emptyStructPtrType =
-                            cast<PointerType>(vtableBaseType->rep);
-                        const Type *emptyStructType = 
-                            emptyStructPtrType->getElementType();
-                        Value *castVTable =
-                            builder.CreateBitCast(vtable, emptyStructType);
-                
-                        // store the vtable pointer in the field.
-                        builder.CreateStore(castVTable, inst);
-                        return;
-                    }
-                }
-                
-                assert(false && "no vtable base class");
-            }
-
-            // emit the code to initialize all vtables in an object.
-            void emitVTableInit(IRBuilder<> &builder, BTypeDef *btype,
-                                Value *inst
-                                ) {
-
-                // if btype has a registered vtable, startClass gets 
-                // incremented so that we don't emit a parent vtable that
-                // overwrites it.
-                int startClass = 0;
-
-                // check for the vtable of the current class
-                map<BTypeDef *, Constant *>::iterator firstVTableIter =
-                    aggregateType->vtables.find(btype);
-                if (firstVTableIter != aggregateType->vtables.end()) {
-                    emitInitOfFirstVTable(builder, btype, inst,
-                                          firstVTableIter->second
-                                          );
-                    startClass = 1;
-                }
-
-                // recurse through all other parents with vtables
-                TypeDef::TypeVec &parents = btype->parents;
-                int i = 0;
-                for (TypeDef::TypeVec::iterator ctxIter = 
-                        parents.begin() + startClass;
-                     ctxIter != parents.end();
-                     ++ctxIter, ++i
-                     ) {
-                    BTypeDef *base = 
-                        BTypeDefPtr::arcast(*ctxIter);
-                    
-                    // see if this class has a vtable in the aggregate type
-                    map<BTypeDef *, Constant *>::iterator vtableIter =
-                        aggregateType->vtables.find(base);
-                    if (vtableIter != aggregateType->vtables.end()) {
-                        Value *baseInst =
-                            builder.CreateStructGEP(inst, i);
-                        emitInitOfFirstVTable(builder, base, baseInst,
-                                              vtableIter->second
-                                              );
-                    } else if (base->hasVTable) {
-                        Value *baseInst =
-                            builder.CreateStructGEP(inst, i);
-                        emitVTableInit(builder, base, baseInst);
-                    }
-                }
-            }
-                        
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                emitVTableInit(builder, aggregateType, Op<0>());
-            }
-    };
-
-    Value *narrowToAncestor(IRBuilder<> &builder, Value *receiver,
-                            const TypeDef::AncestorPath &path
-                            ) {
-        for (TypeDef::AncestorPath::const_iterator iter = path.begin();
-             iter != path.end();
-             ++iter
-             )
-            receiver =
-                builder.CreateStructGEP(receiver, iter->index);
-        
-        return receiver;
-    }
-
-    
-    class IncompleteVirtualFunc : public PlaceholderInstruction {
-        private:
-            BTypeDef *vtableBaseType;
-            BFuncDef *funcDef;
-
-            /**
-             * Returns the first vtable pointer in the instance layout, casted 
-             * to finalVTableType.
-             * 
-             * @param builder the builder in which to generate the GEPs
-             * @param vtableBaseType the type object for the global VTableBase 
-             *        class
-             * @param finalVTableType the type that we need to cast the 
-             *        VTable to.
-             * @param curType the current type of 'inst'
-             * @param inst the instance that we are retrieving the vtable for.
-             */
-            static Value *getVTableReference(IRBuilder<> &builder,
-                                             BTypeDef *vtableBaseType,
-                                             const Type *finalVTableType,
-                                             BTypeDef *curType,
-                                             Value *inst
-                                             ) {
-
-                // (the logic here looks painfully like that of
-                // emitVTableInit(), but IMO converting this to an internal
-                // iterator would just make the code harder to grok)
-
-                if (curType == vtableBaseType) {
-
-                    // XXX this is fucked
-
-                    // convert the instance pointer to the address of a
-                    // vtable pointer.
-                    return builder.CreateBitCast(inst, finalVTableType);
-            
-                } else {
-                    // recurse through all parents with vtables
-                    TypeDef::TypeVec &parents = curType->parents;
-                    int i = 0;
-                    for (TypeDef::TypeVec::iterator baseIter = parents.begin();
-                         baseIter != parents.end();
-                         ++baseIter, ++i
-                         ) {
-                        BTypeDef *base = 
-                            BTypeDefPtr::arcast(*baseIter);
-                        if (base->hasVTable) {
-                            Value *baseInst =
-                                builder.CreateStructGEP(inst, i);
-                            Value *vtable = 
-                                getVTableReference(builder, vtableBaseType,
-                                                   finalVTableType,
-                                                   base,
-                                                   baseInst
-                                                   );
-                            if (vtable)
-                                return vtable;
-                        }
-                    
-                    }
-
-                    return 0;
-                }
-            }
-
-            static Value *innerEmitCall(IRBuilder<> &builder,
-                                        BTypeDef *vtableBaseType,
-                                        BFuncDef *funcDef, 
-                                        Value *receiver,
-                                        const vector<Value *> &args
-                                        ) {
-                
-                BTypeDef *receiverType = 
-                    BTypeDefPtr::acast(funcDef->getReceiverType());
-                assert(receiver->getType() == receiverType->rep);
-
-                // get the underlying vtable
-                Value *vtable =
-                    getVTableReference(builder, vtableBaseType,
-                                       receiverType->firstVTableType,
-                                       receiverType,
-                                       receiver
-                                       );
-                assert(vtable && "virtual function receiver has no vtable");
-                
-                vtable = builder.CreateLoad(vtable);
-                Value *funcFieldRef =
-                    builder.CreateStructGEP(vtable, funcDef->vtableSlot);
-                Value *funcPtr = builder.CreateLoad(funcFieldRef);
-                Value *result = builder.CreateCall(funcPtr, args.begin(), 
-                                                   args.end()
-                                                   );
-                return result;
-            }
-
-            void init(Value *receiver, const vector<Value *> &args) {
-                // fill in all of the operands
-                assert(NumOperands == args.size() + 1);
-                OperandList[0] = receiver;
-                for (int i = 0; i < args.size(); ++i)
-                    OperandList[i + 1] = args[i];
-            }
-        
-            IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
-                                  Value *receiver,
-                                  const vector<Value *> &args,
-                                  BasicBlock *parent
-                                  ) :
-                PlaceholderInstruction(
-                    BTypeDefPtr::arcast(funcDef->returnType)->rep, 
-                    parent,
-                    OperandTraits<IncompleteVirtualFunc>::op_end(this) - 
-                     (args.size() + 1),
-                    args.size() + 1
-                ),
-                vtableBaseType(vtableBaseType),
-                funcDef(funcDef) {
-
-                init(receiver, args);
-            }
-                                    
-            IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
-                                  Value *receiver,
-                                  const vector<Value *> &args,
-                                  Instruction *insertBefore = 0
-                                  ) :
-                PlaceholderInstruction(
-                    BTypeDefPtr::arcast(funcDef->returnType)->rep, 
-                    insertBefore,
-                    OperandTraits<IncompleteVirtualFunc>::op_end(this) - 
-                     (args.size() + 1),
-                    args.size() + 1
-                ),
-                vtableBaseType(vtableBaseType),
-                funcDef(funcDef) {
-                
-                init(receiver, args);
-            }
-        
-            IncompleteVirtualFunc(BTypeDef *vtableBaseType, BFuncDef *funcDef,
-                                  Use *operands,
-                                  unsigned numOperands
-                                  ) :
-                PlaceholderInstruction(
-                    BTypeDefPtr::arcast(funcDef->returnType)->rep,
-                    static_cast<Instruction *>(0),
-                    operands,
-                    numOperands
-                ),
-                vtableBaseType(vtableBaseType),
-                funcDef(funcDef) {
-                
-                for (int i = 0; i < numOperands; ++i)
-                    OperandList[i] = operands[i];
-            }
-        
-        public:
-
-            virtual Instruction *clone_impl() const {
-                return new(NumOperands) IncompleteVirtualFunc(vtableBaseType,
-                                                              funcDef,
-                                                              OperandList,
-                                                              NumOperands
-                                                              );
-            }
-
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                vector<Value *> args(NumOperands - 1);
-                for (int i = 1; i < NumOperands; ++i)
-                    args[i - 1] = OperandList[i];
-                Value *callInst =
-                    innerEmitCall(builder, vtableBaseType, funcDef, 
-                                  OperandList[0],
-                                  args
-                                  );
-                replaceAllUsesWith(callInst);
-            }
-            
-            static Value *emitCall(Context &context, 
-                                   BFuncDef *funcDef, 
-                                   Value *receiver,
-                                   const vector<Value *> &args
-                                   ) {
-                // do some conversions that we need to do either way.
-                LLVMBuilder &llvmBuilder = 
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                BTypeDef *vtableBaseType =
-                    BTypeDefPtr::arcast(context.globalData->vtableBaseType);
-                BTypeDef *type = BTypeDefPtr::acast(funcDef->owner);
-
-                // if this is for a complete class, go ahead and emit the code.  
-                // Otherwise just emit a placeholder.
-                if (type->complete) {
-                    Value *val = innerEmitCall(llvmBuilder.builder, 
-                                               vtableBaseType,
-                                               funcDef, 
-                                               receiver,
-                                               args
-                                               );
-                    return val;
-                } else {
-                    PlaceholderInstruction *placeholder =
-                        new(args.size() + 1) IncompleteVirtualFunc(
-                            vtableBaseType,
-                            funcDef,
-                            receiver,
-                            args,
-                            llvmBuilder.block
-                        );
-                    type->addPlaceholder(placeholder);
-                    return placeholder;
-                }
-            }
-    };
-    
-    const Type *llvmIntType = 0;
-    
-    SPUG_RCPTR(BCleanupFrame)
-
-    class BCleanupFrame : public CleanupFrame {
-        public:
-            vector<ExprPtr> cleanups;
-    
-            BCleanupFrame(Context *context) : CleanupFrame(context) {}
-            
-            virtual void addCleanup(Expr *cleanup) {
-                cleanups.insert(cleanups.begin(), cleanup);
-            }
-            
-            virtual void close() {
-                context->emittingCleanups = true;
-                for (vector<ExprPtr>::iterator iter = cleanups.begin();
-                     iter != cleanups.end();
-                     ++iter)
-                    (*iter)->emit(*context);
-                context->emittingCleanups = false;
-            }
-    };            
-    
-    
-    class BFieldRef : public VarRef {
-        public:
-            ExprPtr aggregate;
-            BFieldRef(Expr *aggregate, VarDef *varDef) :
-                aggregate(aggregate),
-                VarRef(varDef) {
-            }
-
-            ResultExprPtr emit(Context &context) {
-                ResultExprPtr aggregateResult = aggregate->emit(context);
-                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
-
-                // narrow to the ancestor type where the variable is defined.
-                bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->owner));
-
-                unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
-                
-                // if the variable is from a complete type, we can emit it. 
-                //  Otherwise, we need to store a placeholder.
-                BTypeDef *owner = BTypeDefPtr::acast(def->owner);
-                if (owner->complete) {
-                    Value *fieldPtr = 
-                        bb.builder.CreateStructGEP(bb.lastValue, index);
-                    bb.lastValue = bb.builder.CreateLoad(fieldPtr);
-                } else {
-                    // create a fixup object for the reference
-                    BTypeDef *typeDef = 
-                        BTypeDefPtr::rcast(def->type);
-
-                    // stash the aggregate, emit a placeholder for the 
-                    // reference
-                    Value *aggregate = bb.lastValue;
-                    PlaceholderInstruction *placeholder =
-                        new IncompleteInstVarRef(typeDef->rep, aggregate,
-                                                 index,
-                                                 bb.block
-                                                 );
-                    bb.lastValue = placeholder;
-
-                    // store the placeholder
-                    owner->addPlaceholder(placeholder);
-                }
-                
-                // release the aggregate
-                aggregateResult->handleTransient(context);
-                
-                return new BResultExpr(this, bb.lastValue);
-            }
-    };
-
-    /**
-     * Instruction that does an un-GEP - widens from a base class to a 
-     * derived class.
-     */
-    class IncompleteSpecialize : public PlaceholderInstruction {
-        private:
-            Value *value;
-            TypeDef::AncestorPath ancestorPath;
-
-        public:
-            // allocate space for 1 operand
-            void *operator new(size_t s) {
-                return User::operator new(s, 1);
-            }
-
-            virtual Instruction *clone_impl() const {
-                return new IncompleteSpecialize(getType(), value, 
-                                                ancestorPath
-                                                );
-            }
-            
-            /**
-             * ancestorPath: path from the target class to the ancestor that 
-             *  value is referencing an instance of.
-             */
-            IncompleteSpecialize(const Type *type, Value *value, 
-                                 const TypeDef::AncestorPath &ancestorPath,
-                                 Instruction *insertBefore = 0
-                                 ) :
-                PlaceholderInstruction(
-                    type,
-                    insertBefore,
-                    OperandTraits<IncompleteSpecialize>::op_begin(this),
-                    OperandTraits<IncompleteSpecialize>::operands(this)
-                ),
-                value(value),
-                ancestorPath(ancestorPath) {
-                Op<0>() = value;
-            }
-            
-            IncompleteSpecialize(const Type *type, Value *value, 
-                                 const TypeDef::AncestorPath &ancestorPath,
-                                 BasicBlock *parent
-                                 ) :
-                PlaceholderInstruction(
-                    type,
-                    parent,
-                    OperandTraits<IncompleteSpecialize>::op_begin(this),
-                    OperandTraits<IncompleteSpecialize>::operands(this)
-                ),
-                value(value),
-                ancestorPath(ancestorPath) {
-                Op<0>() = value;
-            }
-            
-            static Value *emitSpecializeInner(
-                IRBuilder<> &builder,
-                const Type *type,
-                Value *value,
-                const TypeDef::AncestorPath &ancestorPath
-            ) {
-                // XXX won't work for virtual base classes
-                
-                // create a constant offset from the start of the derived 
-                // class to the start of the base class
-                Value *offset =
-                    narrowToAncestor(builder, 
-                                     Constant::getNullValue(type),
-                                     ancestorPath
-                                     );
-
-                // convert to an integer and subtract from the pointer to the 
-                // base class.
-                assert(llvmIntType && "integer type has not been initialized");
-                offset = builder.CreatePtrToInt(offset, llvmIntType);
-                value = builder.CreatePtrToInt(value, llvmIntType);
-                Value *derived = builder.CreateSub(value, offset);
-                Value *specialized = 
-                    builder.CreateIntToPtr(derived, type);
-                return specialized;
-            }
-            
-            virtual void insertInstructions(IRBuilder<> &builder) {
-                replaceAllUsesWith(emitSpecializeInner(builder,
-                                                       getType(),
-                                                       value,
-                                                       ancestorPath
-                                                       )
-                                   );
-            }
-            
-            // Utility function - emits the specialize instructions if the 
-            // target class is defined, emits a placeholder instruction if it 
-            // is not.
-            static Value *emitSpecialize(
-               Context &context, BTypeDef *type,
-               Value *value,
-               const TypeDef::AncestorPath &ancestorPath
-            ) {
-                LLVMBuilder &llvmBuilder = 
-                    dynamic_cast<LLVMBuilder &>(context.builder);
-                
-                if (type->complete) {
-                    return emitSpecializeInner(llvmBuilder.builder, type->rep,
-                                               value,
-                                               ancestorPath
-                                               );
-                } else {
-                    PlaceholderInstruction *placeholder =
-                        new IncompleteSpecialize(type->rep, value, 
-                                                 ancestorPath,
-                                                 llvmBuilder.block
-                                                 );
-                    type->addPlaceholder(placeholder);
-                    return placeholder;
-                }
-                    
-            }
-    };    
-
-    void addArrayMethods(Context &context, TypeDef *arrayType, 
-                         BTypeDef *elemType
-                         ) {
-        Context::GlobalData *gd = context.globalData;
-        FuncDefPtr arrayGetItem = 
-            new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method, 
-                                               "oper []",
-                                               1
-                                               );
-        arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arrayType->addDef(arrayGetItem.get());
-    
-        FuncDefPtr arraySetItem = 
-            new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method, 
-                                               "oper []=",
-                                               2
-                                               );
-        arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arraySetItem->args[1] = new ArgDef(elemType, "value");
-        arrayType->addDef(arraySetItem.get());
-        
-        FuncDefPtr arrayOffset =
-            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags, 
-                                              "oper +",
-                                              2
-                                              );
-        arrayOffset->args[0] = new ArgDef(arrayType, "base");
-        arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-        context.getDefContext()->ns->addDef(arrayOffset.get());
-        
-        FuncDefPtr arrayAlloc =
-            new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
-                                             "oper new",
-                                             1
-                                             );
-        arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
-        arrayType->addDef(arrayAlloc.get());
-    }
-
-    class ArrayTypeDef : public BTypeDef {
-        public:
-            ArrayTypeDef(TypeDef *metaType, const string &name,
-                         const Type *rep
-                         ) :
-                BTypeDef(metaType, name, rep) {
-                generic = new SpecializationCache();
-            }
-            
-            // specializations of array types actually create a new type 
-            // object.
-            virtual TypeDef *getSpecialization(Context &context, 
-                                               TypeVecObj *types
-                                               ) {
-                // see if it already exists
-                TypeDef *spec = findSpecialization(types);
-                if (spec)
-                    return spec;
-                
-                // create it.
-                
-                assert(types->size() == 1);
-                
-                BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
-                
-                Type *llvmType = PointerType::getUnqual(parmType->rep);
-                TypeDefPtr tempSpec = 
-                    new BTypeDef(type.get(),
-                                 SPUG_FSTR(name << "[" << parmType->name << 
-                                            "]"
-                                           ),
-                                 llvmType
-                                 );
-                                  
-                tempSpec->addDef(
-                    new VoidPtrOpDef(context.globalData->voidPtrType.get())
-                );
-                
-                // add all of the methods
-                addArrayMethods(context, tempSpec.get(), parmType);
-                (*generic)[types] = tempSpec;
-                return tempSpec.get();
-            }
-    };
+namespace {        
 
     void closeAllCleanupsStatic(Context &context) {
         BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
@@ -965,135 +116,6 @@ namespace {
             closeAllCleanupsStatic(context);
             emitCleanupsTo(*context.parent, bpos);
         }
-    }
-
-    // Create a new meta-class.
-    // context: enclosing context.
-    // name: the original class name.
-    // bases: the base classes.
-    // classImpl: returned impl object for the original class.
-    BTypeDefPtr createMetaClass(Context &context, 
-                                const string &name,
-                                vector<TypeDefPtr> bases,
-                                BGlobalVarDefImplPtr &classImpl
-                                ) {
-        LLVMBuilder &llvmBuilder = 
-            dynamic_cast<LLVMBuilder &>(context.builder);
-        LLVMContext &lctx = getGlobalContext();
-        
-        BTypeDefPtr metaType = 
-            new BTypeDef(context.globalData->classType.get(),
-                         SPUG_FSTR("Class[" << name << "]"),
-                         0,
-                         true,
-                         0
-                         );
-        BTypeDef *classType =
-            BTypeDefPtr::arcast(context.globalData->classType);
-        metaType->addBaseClass(classType);
-        const PointerType *classPtrType = cast<PointerType>(classType->rep);
-        const StructType *classStructType =
-            cast<StructType>(classPtrType->getElementType());
-        
-        // Create a struct representation of the meta class.  This just has the 
-        // Class class as its only field.
-        vector<const Type *> fields(1);
-        fields[0] = classStructType;
-        const StructType *metaClassStructType = StructType::get(lctx, fields);
-        const Type *metaClassPtrType =
-            PointerType::getUnqual(metaClassStructType);
-        metaType->rep = metaClassPtrType;
-        metaType->complete = true;
-        
-        // create a global variable holding the class object.
-        vector<Constant *> classStructVals(3);
-    
-        Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
-        Constant *index00[] = { zero, zero }; 
-        
-        // name
-        Constant *nameInit = ConstantArray::get(lctx, name, true);
-        GlobalVariable *nameGVar =
-            new GlobalVariable(*llvmBuilder.module,
-                               nameInit->getType(),
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               nameInit,
-                               name + ":name"
-                               );
-        classStructVals[0] =
-            ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
-        
-        // numBases
-        const Type *uintType =
-            BTypeDefPtr::arcast(context.globalData->uintType)->rep;
-        classStructVals[1] = ConstantInt::get(uintType, bases.size());
-        
-        // bases
-        vector<Constant *> basesVal(bases.size());
-        for (int i = 0; i < bases.size(); ++i) {
-            // get the pointer to the inner "Class" object of "Class[BaseName]"
-            BGlobalVarDefImplPtr impl =
-                BGlobalVarDefImplPtr::arcast(
-                    BTypeDefPtr::arcast(bases[i])->impl
-                );
-            
-            // extract the initializer from the rep (which is the global 
-            // variable for the _pointer_ to the class) and then GEP our way 
-            // into the base class (Class) instance.
-            Constant *baseClassPtr = impl->rep->getInitializer();
-            Constant *baseAsClass =
-                ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
-            basesVal[i] = baseAsClass;
-        }
-        const ArrayType *baseArrayType =
-            ArrayType::get(classType->rep, bases.size());
-        Constant *baseArrayInit = ConstantArray::get(baseArrayType, basesVal);
-        GlobalVariable *basesGVar =
-            new GlobalVariable(*llvmBuilder.module,
-                               baseArrayType,
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               baseArrayInit,
-                               name + ":bases"
-                               );
-        classStructVals[2] = ConstantExpr::getGetElementPtr(basesGVar, index00,
-                                                            2
-                                                            );
-        
-        // build the instance of Class
-        Constant *classStruct =
-            ConstantStruct::get(classStructType, classStructVals);
-        
-        // the new meta class's structure is another structure with only 
-        // Class as a member.
-        vector<Constant *> metaClassStructVals(1);
-        metaClassStructVals[0] = classStruct;
-        Constant *classObjVal =
-            ConstantStruct::get(metaClassStructType, metaClassStructVals);
-    
-        // Create the class global variable
-        GlobalVariable *classInst = 
-            new GlobalVariable(*llvmBuilder.module,
-                               metaClassStructType,
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               classObjVal,
-                               name + ":body"
-                               );
-        
-        // create the pointer to the class instance
-        GlobalVariable *classInstPtr =
-            new GlobalVariable(*llvmBuilder.module,
-                               metaClassPtrType,
-                               true, // is constant
-                               GlobalVariable::ExternalLinkage,
-                               classInst,
-                               name
-                               );
-    
-        classImpl = new BGlobalVarDefImpl(classInstPtr);
-        return metaType;
     }
 
     // Prepares a function "func" to act as an override for "override"
@@ -1122,6 +144,154 @@ namespace {
 
         funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
         return overriden->vtableSlot;
+    }
+
+    void finishClassType(Context &context, BTypeDef *classType) {
+        // for the kinds of things we're about to do, we need a global block
+        // for functions to restore to, and for that we need a function and
+        // module.
+        LLVMContext &lctx = getGlobalContext();
+        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+        builder.module = new Module("<builtin>", lctx);
+        vector<const Type *> argTypes;
+        FunctionType *voidFuncNoArgs =
+            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
+        Function *func = Function::Create(voidFuncNoArgs,
+                                          Function::ExternalLinkage,
+                                          "__builtin_init__",
+                                          builder.module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        builder.block =
+            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
+
+        // add "Class"
+        int lineNum = __LINE__ + 1;
+        string temp("    byteptr name;\n"
+                    "    uint numBases;\n"
+                    "    array[Class] bases = null;\n"
+                    "    bool isSubclass(Class other) {\n"
+                    "        if (this is other)\n"
+                    "            return (1==1);\n"
+                    "        uint i;\n"
+                    "        while (i < numBases) {\n"
+                    "            if (bases[i].isSubclass(other))\n"
+                    "                return (1==1);\n"
+                    "            i = i + uint(1);\n"
+                    "        }\n"
+                    "        return (1==0);\n"
+                    "    }\n"
+                    "}\n"
+                    );
+
+        // create the class context
+        ContextPtr classCtx = new Context(context.builder,
+                                          Context::instance,
+                                          &context,
+                                          classType
+                                          );
+
+        CompositeNamespacePtr ns = new CompositeNamespace(classType,
+                                                          context.ns.get()
+                                                          );
+        ContextPtr lexicalContext = new Context(context.builder,
+                                                Context::composite,
+                                                classCtx.get(),
+                                                ns.get()
+                                                );
+        BBuilderContextData *bdata;
+        lexicalContext->builderData = bdata = new BBuilderContextData();
+
+        istringstream src(temp);
+        try {
+            parser::Toker toker(src, "<builtin>", lineNum);
+            parser::Parser p(toker, lexicalContext.get());
+            p.parseClassBody();
+        } catch (parser::ParseError &ex) {
+            std::cerr << ex << endl;
+            assert(false);
+        }
+
+        // let the "end class" emitter handle the rest of this.
+        context.builder.emitEndClass(*classCtx);
+
+        // close off the block.
+        builder.builder.CreateRetVoid();
+    }
+
+    void fixMeta(Context &context, TypeDef *type) {
+        BTypeDefPtr metaType;
+        BGlobalVarDefImplPtr classImpl;
+        vector<TypeDefPtr> noBases;
+        type->type = metaType =
+            createMetaClass(context, type->name, noBases, classImpl);
+        metaType->meta = type;
+        type->impl = classImpl;
+    }
+
+    void addExplicitTruncate(BTypeDef *sourceType,
+                             BTypeDef *targetType
+                             ) {
+        FuncDefPtr func =
+            new GeneralOpDef<TruncOpCall>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->addDef(func.get());
+    }
+
+    template <typename opType>
+    void addExplicitFPTruncate(BTypeDef *sourceType,
+                               BTypeDef *targetType
+                               ) {
+        FuncDefPtr func =
+            new GeneralOpDef<opType>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->addDef(func.get());
+    }
+
+    BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
+                                const char *name
+                                ) {
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+                                         name,
+                                         llvmType
+                                         );
+        btype->defaultInitializer =
+            context.builder.createIntConst(context, 0, btype.get());
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                    "toBool"
+                                    )
+                      );
+
+        // if you remove this, for the love of god, change the return type so
+        // we don't leak the pointer.
+        context.ns->addDef(btype.get());
+        return btype.get();
+    }
+
+    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
+                             const char *name
+                             ) {
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+                                         name,
+                                         llvmType
+                                         );
+        btype->defaultInitializer =
+            context.builder.createFloatConst(context, 0.0, btype.get());
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                    "toBool"
+                                    )
+                      );
+
+        // if you remove this, for the love of god, change the return type so
+        // we don't leak the pointer.
+        context.ns->addDef(btype.get());
+        return btype.get();
     }
 
 } // anon namespace
@@ -1159,12 +329,6 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     
     return execEng;
 }
-
-int LLVMBuilder::argc = 1;
-namespace {
-    char *tempArgv[] = {const_cast<char *>("undefined")};
-}
-char **LLVMBuilder::argv = tempArgv;
 
 void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
@@ -2249,180 +1413,6 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     }
 
     return new BResultExpr(assign, lastValue);
-}
-
-extern "C" void printfloat(float val) {
-    std::cout << val << flush;
-}
-
-extern "C" void printint(int val) {
-    std::cout << val << flush;
-}
-
-extern "C" void __die(const char *message) {
-    std::cout << message << endl;
-    abort();
-}
-
-extern "C" char **__getArgv() {
-    return LLVMBuilder::argv;
-}
-
-extern "C" int __getArgc() {
-    return LLVMBuilder::argc;
-}
-
-namespace {
-    BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
-                                const char *name
-                                ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(), 
-                                         name, 
-                                         llvmType
-                                         );
-        btype->defaultInitializer =
-            context.builder.createIntConst(context, 0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(), 
-                                    "toBool"
-                                    )
-                      );
-        
-        // if you remove this, for the love of god, change the return type so 
-        // we don't leak the pointer.
-        context.ns->addDef(btype.get());
-        return btype.get();
-    }
-
-    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
-                             const char *name
-                             ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
-                                         name,
-                                         llvmType
-                                         );
-        btype->defaultInitializer =
-            context.builder.createFloatConst(context, 0.0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
-                                    "toBool"
-                                    )
-                      );
-
-        // if you remove this, for the love of god, change the return type so
-        // we don't leak the pointer.
-        context.ns->addDef(btype.get());
-        return btype.get();
-    }
-}
-
-namespace {
-    void finishClassType(Context &context, BTypeDef *classType) {
-        // for the kinds of things we're about to do, we need a global block 
-        // for functions to restore to, and for that we need a function and 
-        // module.
-        LLVMContext &lctx = getGlobalContext();
-        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-        builder.module = new Module("<builtin>", lctx);
-        vector<const Type *> argTypes;
-        FunctionType *voidFuncNoArgs =
-            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
-        Function *func = Function::Create(voidFuncNoArgs,
-                                          Function::ExternalLinkage,
-                                          "__builtin_init__",
-                                          builder.module
-                                          );
-        func->setCallingConv(llvm::CallingConv::C);
-        builder.block =
-            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
-
-        // add "Class"
-        int lineNum = __LINE__ + 1;
-        string temp("    byteptr name;\n"
-                    "    uint numBases;\n"
-                    "    array[Class] bases = null;\n"
-                    "    bool isSubclass(Class other) {\n"
-                    "        if (this is other)\n"
-                    "            return (1==1);\n"
-                    "        uint i;\n"
-                    "        while (i < numBases) {\n"
-                    "            if (bases[i].isSubclass(other))\n"
-                    "                return (1==1);\n"
-                    "            i = i + uint(1);\n"
-                    "        }\n"
-                    "        return (1==0);\n"
-                    "    }\n"
-                    "}\n"
-                    );
-
-        // create the class context
-        ContextPtr classCtx = new Context(context.builder,
-                                          Context::instance,
-                                          &context,
-                                          classType
-                                          );
-
-        CompositeNamespacePtr ns = new CompositeNamespace(classType, 
-                                                          context.ns.get()
-                                                          );
-        ContextPtr lexicalContext = new Context(context.builder, 
-                                                Context::composite,
-                                                classCtx.get(),
-                                                ns.get()
-                                                );
-        BBuilderContextData *bdata;
-        lexicalContext->builderData = bdata = new BBuilderContextData();
-        
-        istringstream src(temp);
-        try {
-            parser::Toker toker(src, "<builtin>", lineNum);
-            parser::Parser p(toker, lexicalContext.get());
-            p.parseClassBody();
-        } catch (parser::ParseError &ex) {
-            std::cerr << ex << endl;
-            assert(false);
-        }
-        
-        // let the "end class" emitter handle the rest of this.
-        context.builder.emitEndClass(*classCtx);
-        
-        // close off the block.
-        builder.builder.CreateRetVoid();
-    }
-
-    void fixMeta(Context &context, TypeDef *type) {
-        BTypeDefPtr metaType;
-        BGlobalVarDefImplPtr classImpl;
-        vector<TypeDefPtr> noBases;
-        type->type = metaType =
-            createMetaClass(context, type->name, noBases, classImpl);
-        metaType->meta = type;
-        type->impl = classImpl;
-    }
-
-    void addExplicitTruncate(BTypeDef *sourceType,
-                             BTypeDef *targetType
-                             ) {
-        FuncDefPtr func = 
-            new GeneralOpDef<TruncOpCall>(targetType, FuncDef::noFlags,
-                                          "oper new",
-                                          1
-                                          );
-        func->args[0] = new ArgDef(sourceType, "val");
-        targetType->addDef(func.get());
-    }
-
-    template <typename opType>
-    void addExplicitFPTruncate(BTypeDef *sourceType,
-                               BTypeDef *targetType
-                               ) {
-        FuncDefPtr func =
-            new GeneralOpDef<opType>(targetType, FuncDef::noFlags,
-                                          "oper new",
-                                          1
-                                          );
-        func->args[0] = new ArgDef(sourceType, "val");
-        targetType->addDef(func.get());
-    }
-
 }
 
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {

@@ -12,9 +12,7 @@
 using namespace std;
 using namespace llvm;
 using namespace model;
-
-namespace builder {
-namespace mvll {
+using namespace builder::mvll;
 
 #define UNOP(opCode) \
     model::ResultExprPtr opCode##OpCall::emit(model::Context &context) {    \
@@ -424,7 +422,3 @@ UnsafeCastDef::UnsafeCastDef(TypeDef *resultType) :
         OpDef(resultType, model::FuncDef::noFlags, "unsafeCast", 1) {
     args[0] = new ArgDef(resultType, "val");
 }
-
-
-} // end namespace builder::vmll
-} // end namespace builder

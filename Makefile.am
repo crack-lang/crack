@@ -3,13 +3,17 @@
 
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = \
+    builder/llvm/ArrayTypeDef.cc \
+    builder/llvm/BFieldRef.cc \
     builder/llvm/BFuncDef.cc \
     builder/llvm/BTypeDef.cc \
     builder/llvm/Consts.cc \
     builder/llvm/FuncBuilder.cc \
+    builder/llvm/Incompletes.cc \
     builder/llvm/LLVMBuilder.cc \
     builder/llvm/Ops.cc \
     builder/llvm/PlaceholderInstruction.cc \
+    builder/llvm/Utils.cc \
     builder/llvm/VTableBuilder.cc \
     builder/llvm/VarDefs.cc \
     parser/Token.cc \

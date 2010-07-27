@@ -14,6 +14,7 @@
 using namespace std;
 using namespace llvm;
 using namespace model;
+using namespace builder::mvll;
 
 namespace {
     // utility function to resize a vector to accomodate a new element, but
@@ -24,9 +25,6 @@ namespace {
             vec.resize(index + 1, 0);
     }
 }
-
-namespace builder {
-namespace mvll {
 
 void VTableInfo::dump() {
     std::cerr << name << ":\n";
@@ -159,7 +157,4 @@ void VTableBuilder::emit(Module *module, BTypeDef *type) {
 
     assert(type->firstVTableType);
 }
-
-} // end namespace builder::vmll
-} // end namespace builder
 

@@ -6,9 +6,7 @@
 
 using namespace llvm;
 using namespace model;
-
-namespace builder {
-namespace mvll {
+using namespace builder::mvll;
 
 BStrConst::BStrConst(TypeDef *type, const std::string &val) :
         StrConst(type, val),
@@ -25,5 +23,3 @@ BFloatConst::BFloatConst(BTypeDef *type, double val) :
         rep(ConstantFP::get(type->rep, val)) {
 }
 
-} // end namespace builder::vmll
-} // end namespace builder

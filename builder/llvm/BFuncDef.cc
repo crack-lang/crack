@@ -5,8 +5,7 @@
 
 #include <llvm/Function.h>
 
-namespace builder {
-namespace mvll {
+using namespace builder::mvll;
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
     if (rep->getParent() != builder.module)
@@ -14,7 +13,4 @@ llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
     return rep;
 }
 
-
-} // end namespace builder::vmll
-} // end namespace builder
 
