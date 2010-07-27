@@ -7,6 +7,7 @@ libcrack_la_SOURCES = \
     builder/llvm/BTypeDef.cc \
     builder/llvm/Consts.cc \
     builder/llvm/FuncBuilder.cc \
+    builder/llvm/Incompletes.cc \
     builder/llvm/LLVMBuilder.cc \
     builder/llvm/Ops.cc \
     builder/llvm/PlaceholderInstruction.cc \
