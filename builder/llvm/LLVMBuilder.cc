@@ -2,14 +2,33 @@
                 
 #include "LLVMBuilder.h"
 
-#include <dlfcn.h>
+#include "ArrayTypeDef.h"
+#include "BBuilderContextData.h"
+#include "BBranchPoint.h"
+#include "BCleanupFrame.h"
+#include "BFieldRef.h"
+#include "BFuncDef.h"
+#include "BModuleDef.h"
+#include "BResultExpr.h"
+#include "BTypeDef.h"
+#include "Consts.h"
+#include "FuncBuilder.h"
+#include "Incompletes.h"
+#include "Ops.h"
+#include "PlaceholderInstruction.h"
+#include "Utils.h"
+#include "VarDefs.h"
+#include "VTableBuilder.h"
 
-// LLVM includes
+#include "parser/Parser.h"
+#include "parser/ParseError.h"
+
+#include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
+
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Module.h>
-#include <llvm/Function.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
@@ -27,38 +46,12 @@
 
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
-#include <model/ArgDef.h>
-#include <model/BuilderContextData.h>
-#include <model/CleanupFrame.h>
 #include <model/CompositeNamespace.h>
-#include <model/VarDefImpl.h>
 #include <model/InstVarDef.h>
 #include <model/LocalNamespace.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
-#include <model/VarDef.h>
-#include <model/VarRef.h>
-
-#include "BBuilderContextData.h"
-#include "BBranchPoint.h"
-#include "BCleanupFrame.h"
-#include "BFieldRef.h"
-#include "BFuncDef.h"
-#include "BModuleDef.h"
-#include "BResultExpr.h"
-#include "BTypeDef.h"
-#include "Consts.h"
-#include "FuncBuilder.h"
-#include "Incompletes.h"
-#include "Ops.h"
-#include "PlaceholderInstruction.h"
-#include "VarDefs.h"
-#include "VTableBuilder.h"
-
-#include "parser/Parser.h"
-#include "parser/ParseError.h"
-
 
 using namespace std;
 using namespace llvm;
@@ -71,91 +64,39 @@ typedef model::FuncCall::ExprVec ExprVec;
 // XXX find a way to remove this? see Incompletes.cc
 const Type *llvmIntType = 0;
 
+int LLVMBuilder::argc = 1;
+
 namespace {
-        
-    void addArrayMethods(Context &context, TypeDef *arrayType, 
-                         BTypeDef *elemType
-                         ) {
-        Context::GlobalData *gd = context.globalData;
-        FuncDefPtr arrayGetItem = 
-            new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method, 
-                                               "oper []",
-                                               1
-                                               );
-        arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arrayType->addDef(arrayGetItem.get());
-    
-        FuncDefPtr arraySetItem = 
-            new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method, 
-                                               "oper []=",
-                                               2
-                                               );
-        arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arraySetItem->args[1] = new ArgDef(elemType, "value");
-        arrayType->addDef(arraySetItem.get());
-        
-        FuncDefPtr arrayOffset =
-            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags, 
-                                              "oper +",
-                                              2
-                                              );
-        arrayOffset->args[0] = new ArgDef(arrayType, "base");
-        arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-        context.getDefContext()->ns->addDef(arrayOffset.get());
-        
-        FuncDefPtr arrayAlloc =
-            new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
-                                             "oper new",
-                                             1
-                                             );
-        arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
-        arrayType->addDef(arrayAlloc.get());
+    char *tempArgv[] = {const_cast<char *>("undefined")};
+}
+char **LLVMBuilder::argv = tempArgv;
+
+extern "C" {
+
+    void printfloat(float val) {
+        std::cout << val << flush;
     }
 
-    class ArrayTypeDef : public BTypeDef {
-        public:
-            ArrayTypeDef(TypeDef *metaType, const string &name,
-                         const Type *rep
-                         ) :
-                BTypeDef(metaType, name, rep) {
-                generic = new SpecializationCache();
-            }
-            
-            // specializations of array types actually create a new type 
-            // object.
-            virtual TypeDef *getSpecialization(Context &context, 
-                                               TypeVecObj *types
-                                               ) {
-                // see if it already exists
-                TypeDef *spec = findSpecialization(types);
-                if (spec)
-                    return spec;
-                
-                // create it.
-                
-                assert(types->size() == 1);
-                
-                BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
-                
-                Type *llvmType = PointerType::getUnqual(parmType->rep);
-                TypeDefPtr tempSpec = 
-                    new BTypeDef(type.get(),
-                                 SPUG_FSTR(name << "[" << parmType->name << 
-                                            "]"
-                                           ),
-                                 llvmType
-                                 );
-                                  
-                tempSpec->addDef(
-                    new VoidPtrOpDef(context.globalData->voidPtrType.get())
-                );
-                
-                // add all of the methods
-                addArrayMethods(context, tempSpec.get(), parmType);
-                (*generic)[types] = tempSpec;
-                return tempSpec.get();
-            }
-    };
+    void printint(int val) {
+        std::cout << val << flush;
+    }
+
+    void __die(const char *message) {
+        std::cout << message << endl;
+        abort();
+    }
+
+    char **__getArgv() {
+        return LLVMBuilder::argv;
+    }
+
+    int __getArgc() {
+        return LLVMBuilder::argc;
+    }
+
+}
+
+namespace {        
 
     void closeAllCleanupsStatic(Context &context) {
         BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
@@ -175,135 +116,6 @@ namespace {
             closeAllCleanupsStatic(context);
             emitCleanupsTo(*context.parent, bpos);
         }
-    }
-
-    // Create a new meta-class.
-    // context: enclosing context.
-    // name: the original class name.
-    // bases: the base classes.
-    // classImpl: returned impl object for the original class.
-    BTypeDefPtr createMetaClass(Context &context, 
-                                const string &name,
-                                vector<TypeDefPtr> bases,
-                                BGlobalVarDefImplPtr &classImpl
-                                ) {
-        LLVMBuilder &llvmBuilder = 
-            dynamic_cast<LLVMBuilder &>(context.builder);
-        LLVMContext &lctx = getGlobalContext();
-        
-        BTypeDefPtr metaType = 
-            new BTypeDef(context.globalData->classType.get(),
-                         SPUG_FSTR("Class[" << name << "]"),
-                         0,
-                         true,
-                         0
-                         );
-        BTypeDef *classType =
-            BTypeDefPtr::arcast(context.globalData->classType);
-        metaType->addBaseClass(classType);
-        const PointerType *classPtrType = cast<PointerType>(classType->rep);
-        const StructType *classStructType =
-            cast<StructType>(classPtrType->getElementType());
-        
-        // Create a struct representation of the meta class.  This just has the 
-        // Class class as its only field.
-        vector<const Type *> fields(1);
-        fields[0] = classStructType;
-        const StructType *metaClassStructType = StructType::get(lctx, fields);
-        const Type *metaClassPtrType =
-            PointerType::getUnqual(metaClassStructType);
-        metaType->rep = metaClassPtrType;
-        metaType->complete = true;
-        
-        // create a global variable holding the class object.
-        vector<Constant *> classStructVals(3);
-    
-        Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
-        Constant *index00[] = { zero, zero }; 
-        
-        // name
-        Constant *nameInit = ConstantArray::get(lctx, name, true);
-        GlobalVariable *nameGVar =
-            new GlobalVariable(*llvmBuilder.module,
-                               nameInit->getType(),
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               nameInit,
-                               name + ":name"
-                               );
-        classStructVals[0] =
-            ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
-        
-        // numBases
-        const Type *uintType =
-            BTypeDefPtr::arcast(context.globalData->uintType)->rep;
-        classStructVals[1] = ConstantInt::get(uintType, bases.size());
-        
-        // bases
-        vector<Constant *> basesVal(bases.size());
-        for (int i = 0; i < bases.size(); ++i) {
-            // get the pointer to the inner "Class" object of "Class[BaseName]"
-            BGlobalVarDefImplPtr impl =
-                BGlobalVarDefImplPtr::arcast(
-                    BTypeDefPtr::arcast(bases[i])->impl
-                );
-            
-            // extract the initializer from the rep (which is the global 
-            // variable for the _pointer_ to the class) and then GEP our way 
-            // into the base class (Class) instance.
-            Constant *baseClassPtr = impl->rep->getInitializer();
-            Constant *baseAsClass =
-                ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
-            basesVal[i] = baseAsClass;
-        }
-        const ArrayType *baseArrayType =
-            ArrayType::get(classType->rep, bases.size());
-        Constant *baseArrayInit = ConstantArray::get(baseArrayType, basesVal);
-        GlobalVariable *basesGVar =
-            new GlobalVariable(*llvmBuilder.module,
-                               baseArrayType,
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               baseArrayInit,
-                               name + ":bases"
-                               );
-        classStructVals[2] = ConstantExpr::getGetElementPtr(basesGVar, index00,
-                                                            2
-                                                            );
-        
-        // build the instance of Class
-        Constant *classStruct =
-            ConstantStruct::get(classStructType, classStructVals);
-        
-        // the new meta class's structure is another structure with only 
-        // Class as a member.
-        vector<Constant *> metaClassStructVals(1);
-        metaClassStructVals[0] = classStruct;
-        Constant *classObjVal =
-            ConstantStruct::get(metaClassStructType, metaClassStructVals);
-    
-        // Create the class global variable
-        GlobalVariable *classInst = 
-            new GlobalVariable(*llvmBuilder.module,
-                               metaClassStructType,
-                               true, // is constant
-                               GlobalValue::ExternalLinkage,
-                               classObjVal,
-                               name + ":body"
-                               );
-        
-        // create the pointer to the class instance
-        GlobalVariable *classInstPtr =
-            new GlobalVariable(*llvmBuilder.module,
-                               metaClassPtrType,
-                               true, // is constant
-                               GlobalVariable::ExternalLinkage,
-                               classInst,
-                               name
-                               );
-    
-        classImpl = new BGlobalVarDefImpl(classInstPtr);
-        return metaType;
     }
 
     // Prepares a function "func" to act as an override for "override"
@@ -332,6 +144,154 @@ namespace {
 
         funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
         return overriden->vtableSlot;
+    }
+
+    void finishClassType(Context &context, BTypeDef *classType) {
+        // for the kinds of things we're about to do, we need a global block
+        // for functions to restore to, and for that we need a function and
+        // module.
+        LLVMContext &lctx = getGlobalContext();
+        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+        builder.module = new Module("<builtin>", lctx);
+        vector<const Type *> argTypes;
+        FunctionType *voidFuncNoArgs =
+            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
+        Function *func = Function::Create(voidFuncNoArgs,
+                                          Function::ExternalLinkage,
+                                          "__builtin_init__",
+                                          builder.module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        builder.block =
+            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
+
+        // add "Class"
+        int lineNum = __LINE__ + 1;
+        string temp("    byteptr name;\n"
+                    "    uint numBases;\n"
+                    "    array[Class] bases = null;\n"
+                    "    bool isSubclass(Class other) {\n"
+                    "        if (this is other)\n"
+                    "            return (1==1);\n"
+                    "        uint i;\n"
+                    "        while (i < numBases) {\n"
+                    "            if (bases[i].isSubclass(other))\n"
+                    "                return (1==1);\n"
+                    "            i = i + uint(1);\n"
+                    "        }\n"
+                    "        return (1==0);\n"
+                    "    }\n"
+                    "}\n"
+                    );
+
+        // create the class context
+        ContextPtr classCtx = new Context(context.builder,
+                                          Context::instance,
+                                          &context,
+                                          classType
+                                          );
+
+        CompositeNamespacePtr ns = new CompositeNamespace(classType,
+                                                          context.ns.get()
+                                                          );
+        ContextPtr lexicalContext = new Context(context.builder,
+                                                Context::composite,
+                                                classCtx.get(),
+                                                ns.get()
+                                                );
+        BBuilderContextData *bdata;
+        lexicalContext->builderData = bdata = new BBuilderContextData();
+
+        istringstream src(temp);
+        try {
+            parser::Toker toker(src, "<builtin>", lineNum);
+            parser::Parser p(toker, lexicalContext.get());
+            p.parseClassBody();
+        } catch (parser::ParseError &ex) {
+            std::cerr << ex << endl;
+            assert(false);
+        }
+
+        // let the "end class" emitter handle the rest of this.
+        context.builder.emitEndClass(*classCtx);
+
+        // close off the block.
+        builder.builder.CreateRetVoid();
+    }
+
+    void fixMeta(Context &context, TypeDef *type) {
+        BTypeDefPtr metaType;
+        BGlobalVarDefImplPtr classImpl;
+        vector<TypeDefPtr> noBases;
+        type->type = metaType =
+            createMetaClass(context, type->name, noBases, classImpl);
+        metaType->meta = type;
+        type->impl = classImpl;
+    }
+
+    void addExplicitTruncate(BTypeDef *sourceType,
+                             BTypeDef *targetType
+                             ) {
+        FuncDefPtr func =
+            new GeneralOpDef<TruncOpCall>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->addDef(func.get());
+    }
+
+    template <typename opType>
+    void addExplicitFPTruncate(BTypeDef *sourceType,
+                               BTypeDef *targetType
+                               ) {
+        FuncDefPtr func =
+            new GeneralOpDef<opType>(targetType, FuncDef::noFlags,
+                                          "oper new",
+                                          1
+                                          );
+        func->args[0] = new ArgDef(sourceType, "val");
+        targetType->addDef(func.get());
+    }
+
+    BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
+                                const char *name
+                                ) {
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+                                         name,
+                                         llvmType
+                                         );
+        btype->defaultInitializer =
+            context.builder.createIntConst(context, 0, btype.get());
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                    "toBool"
+                                    )
+                      );
+
+        // if you remove this, for the love of god, change the return type so
+        // we don't leak the pointer.
+        context.ns->addDef(btype.get());
+        return btype.get();
+    }
+
+    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
+                             const char *name
+                             ) {
+        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+                                         name,
+                                         llvmType
+                                         );
+        btype->defaultInitializer =
+            context.builder.createFloatConst(context, 0.0, btype.get());
+        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+                                    "toBool"
+                                    )
+                      );
+
+        // if you remove this, for the love of god, change the return type so
+        // we don't leak the pointer.
+        context.ns->addDef(btype.get());
+        return btype.get();
     }
 
 } // anon namespace
@@ -369,12 +329,6 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     
     return execEng;
 }
-
-int LLVMBuilder::argc = 1;
-namespace {
-    char *tempArgv[] = {const_cast<char *>("undefined")};
-}
-char **LLVMBuilder::argv = tempArgv;
 
 void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
@@ -1459,180 +1413,6 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     }
 
     return new BResultExpr(assign, lastValue);
-}
-
-extern "C" void printfloat(float val) {
-    std::cout << val << flush;
-}
-
-extern "C" void printint(int val) {
-    std::cout << val << flush;
-}
-
-extern "C" void __die(const char *message) {
-    std::cout << message << endl;
-    abort();
-}
-
-extern "C" char **__getArgv() {
-    return LLVMBuilder::argv;
-}
-
-extern "C" int __getArgc() {
-    return LLVMBuilder::argc;
-}
-
-namespace {
-    BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
-                                const char *name
-                                ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(), 
-                                         name, 
-                                         llvmType
-                                         );
-        btype->defaultInitializer =
-            context.builder.createIntConst(context, 0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(), 
-                                    "toBool"
-                                    )
-                      );
-        
-        // if you remove this, for the love of god, change the return type so 
-        // we don't leak the pointer.
-        context.ns->addDef(btype.get());
-        return btype.get();
-    }
-
-    BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
-                             const char *name
-                             ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
-                                         name,
-                                         llvmType
-                                         );
-        btype->defaultInitializer =
-            context.builder.createFloatConst(context, 0.0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
-                                    "toBool"
-                                    )
-                      );
-
-        // if you remove this, for the love of god, change the return type so
-        // we don't leak the pointer.
-        context.ns->addDef(btype.get());
-        return btype.get();
-    }
-}
-
-namespace {
-    void finishClassType(Context &context, BTypeDef *classType) {
-        // for the kinds of things we're about to do, we need a global block 
-        // for functions to restore to, and for that we need a function and 
-        // module.
-        LLVMContext &lctx = getGlobalContext();
-        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-        builder.module = new Module("<builtin>", lctx);
-        vector<const Type *> argTypes;
-        FunctionType *voidFuncNoArgs =
-            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
-        Function *func = Function::Create(voidFuncNoArgs,
-                                          Function::ExternalLinkage,
-                                          "__builtin_init__",
-                                          builder.module
-                                          );
-        func->setCallingConv(llvm::CallingConv::C);
-        builder.block =
-            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
-
-        // add "Class"
-        int lineNum = __LINE__ + 1;
-        string temp("    byteptr name;\n"
-                    "    uint numBases;\n"
-                    "    array[Class] bases = null;\n"
-                    "    bool isSubclass(Class other) {\n"
-                    "        if (this is other)\n"
-                    "            return (1==1);\n"
-                    "        uint i;\n"
-                    "        while (i < numBases) {\n"
-                    "            if (bases[i].isSubclass(other))\n"
-                    "                return (1==1);\n"
-                    "            i = i + uint(1);\n"
-                    "        }\n"
-                    "        return (1==0);\n"
-                    "    }\n"
-                    "}\n"
-                    );
-
-        // create the class context
-        ContextPtr classCtx = new Context(context.builder,
-                                          Context::instance,
-                                          &context,
-                                          classType
-                                          );
-
-        CompositeNamespacePtr ns = new CompositeNamespace(classType, 
-                                                          context.ns.get()
-                                                          );
-        ContextPtr lexicalContext = new Context(context.builder, 
-                                                Context::composite,
-                                                classCtx.get(),
-                                                ns.get()
-                                                );
-        BBuilderContextData *bdata;
-        lexicalContext->builderData = bdata = new BBuilderContextData();
-        
-        istringstream src(temp);
-        try {
-            parser::Toker toker(src, "<builtin>", lineNum);
-            parser::Parser p(toker, lexicalContext.get());
-            p.parseClassBody();
-        } catch (parser::ParseError &ex) {
-            std::cerr << ex << endl;
-            assert(false);
-        }
-        
-        // let the "end class" emitter handle the rest of this.
-        context.builder.emitEndClass(*classCtx);
-        
-        // close off the block.
-        builder.builder.CreateRetVoid();
-    }
-
-    void fixMeta(Context &context, TypeDef *type) {
-        BTypeDefPtr metaType;
-        BGlobalVarDefImplPtr classImpl;
-        vector<TypeDefPtr> noBases;
-        type->type = metaType =
-            createMetaClass(context, type->name, noBases, classImpl);
-        metaType->meta = type;
-        type->impl = classImpl;
-    }
-
-    void addExplicitTruncate(BTypeDef *sourceType,
-                             BTypeDef *targetType
-                             ) {
-        FuncDefPtr func = 
-            new GeneralOpDef<TruncOpCall>(targetType, FuncDef::noFlags,
-                                          "oper new",
-                                          1
-                                          );
-        func->args[0] = new ArgDef(sourceType, "val");
-        targetType->addDef(func.get());
-    }
-
-    template <typename opType>
-    void addExplicitFPTruncate(BTypeDef *sourceType,
-                               BTypeDef *targetType
-                               ) {
-        FuncDefPtr func =
-            new GeneralOpDef<opType>(targetType, FuncDef::noFlags,
-                                          "oper new",
-                                          1
-                                          );
-        func->args[0] = new ArgDef(sourceType, "val");
-        targetType->addDef(func.get());
-    }
-
 }
 
 void LLVMBuilder::registerPrimFuncs(model::Context &context) {
