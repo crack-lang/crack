@@ -40,7 +40,10 @@
 #include <model/VarDef.h>
 #include <model/VarRef.h>
 
+#include "BBuilderContextData.h"
 #include "BBranchPoint.h"
+#include "BCleanupFrame.h"
+#include "BFieldRef.h"
 #include "BFuncDef.h"
 #include "BModuleDef.h"
 #include "BResultExpr.h"
@@ -69,94 +72,7 @@ typedef model::FuncCall::ExprVec ExprVec;
 const Type *llvmIntType = 0;
 
 namespace {
-
-    SPUG_RCPTR(BBuilderContextData);
-
-    class BBuilderContextData : public BuilderContextData {
-        public:
-            Function *func;
-            BasicBlock *block;
-            
-            BBuilderContextData() :
-                func(0),
-                block(0) {
-            }
-    };
-    
-    
-    SPUG_RCPTR(BCleanupFrame)
-
-    class BCleanupFrame : public CleanupFrame {
-        public:
-            vector<ExprPtr> cleanups;
-    
-            BCleanupFrame(Context *context) : CleanupFrame(context) {}
-            
-            virtual void addCleanup(Expr *cleanup) {
-                cleanups.insert(cleanups.begin(), cleanup);
-            }
-            
-            virtual void close() {
-                context->emittingCleanups = true;
-                for (vector<ExprPtr>::iterator iter = cleanups.begin();
-                     iter != cleanups.end();
-                     ++iter)
-                    (*iter)->emit(*context);
-                context->emittingCleanups = false;
-            }
-    };            
-    
-    
-    class BFieldRef : public VarRef {
-        public:
-            ExprPtr aggregate;
-            BFieldRef(Expr *aggregate, VarDef *varDef) :
-                aggregate(aggregate),
-                VarRef(varDef) {
-            }
-
-            ResultExprPtr emit(Context &context) {
-                ResultExprPtr aggregateResult = aggregate->emit(context);
-                LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
-
-                // narrow to the ancestor type where the variable is defined.
-                bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->owner));
-
-                unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
-                
-                // if the variable is from a complete type, we can emit it. 
-                //  Otherwise, we need to store a placeholder.
-                BTypeDef *owner = BTypeDefPtr::acast(def->owner);
-                if (owner->complete) {
-                    Value *fieldPtr = 
-                        bb.builder.CreateStructGEP(bb.lastValue, index);
-                    bb.lastValue = bb.builder.CreateLoad(fieldPtr);
-                } else {
-                    // create a fixup object for the reference
-                    BTypeDef *typeDef = 
-                        BTypeDefPtr::rcast(def->type);
-
-                    // stash the aggregate, emit a placeholder for the 
-                    // reference
-                    Value *aggregate = bb.lastValue;
-                    PlaceholderInstruction *placeholder =
-                        new IncompleteInstVarRef(typeDef->rep, aggregate,
-                                                 index,
-                                                 bb.block
-                                                 );
-                    bb.lastValue = placeholder;
-
-                    // store the placeholder
-                    owner->addPlaceholder(placeholder);
-                }
-                
-                // release the aggregate
-                aggregateResult->handleTransient(context);
-                
-                return new BResultExpr(this, bb.lastValue);
-            }
-    };
-
+        
     void addArrayMethods(Context &context, TypeDef *arrayType, 
                          BTypeDef *elemType
                          ) {

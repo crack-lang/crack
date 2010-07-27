@@ -3,6 +3,7 @@
 
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = \
+    builder/llvm/BFieldRef.cc \
     builder/llvm/BFuncDef.cc \
     builder/llvm/BTypeDef.cc \
     builder/llvm/Consts.cc \

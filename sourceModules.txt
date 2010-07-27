@@ -23,6 +23,7 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
+builder/llvm/BFieldRef.cc
 builder/llvm/BFuncDef.cc
 builder/llvm/BTypeDef.cc
 builder/llvm/Consts.cc
