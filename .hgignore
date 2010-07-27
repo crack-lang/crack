@@ -21,3 +21,4 @@ configure
 missing
 .*~
 build/*
+doc/Manual.html
