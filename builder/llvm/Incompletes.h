@@ -59,12 +59,6 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
-// utility
-llvm::Value *narrowToAncestor(llvm::IRBuilder<> &builder,
-                              llvm::Value *receiver,
-                              const model::TypeDef::AncestorPath &path
-                              );
-
 /** an incomplete reference to an instance variable. */
 class IncompleteInstVarRef : public PlaceholderInstruction {
 private:

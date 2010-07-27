@@ -9,10 +9,7 @@
 
 using namespace llvm;
 using namespace model;
-
-namespace builder {
-namespace mvll {
-
+using namespace builder::mvll;
 
 // BArgVarDefImpl
 ResultExprPtr BArgVarDefImpl::emitRef(Context &context,
@@ -70,7 +67,3 @@ ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     b.lastValue = rep;
     return new BResultExpr((Expr*)var, b.lastValue);
 }
-
-
-} // end namespace builder::vmll
-} // end namespace builder

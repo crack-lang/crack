@@ -15,22 +15,22 @@ using namespace builder::mvll;
 // XXX defined in LLVMBuilder.cc
 extern const Type * llvmIntType;
 
-namespace builder { namespace mvll {
-// utility
-Value *narrowToAncestor(IRBuilder<> &builder,
-                        Value *receiver,
-                        const TypeDef::AncestorPath &path
-                        ) {
-    for (TypeDef::AncestorPath::const_iterator iter = path.begin();
-    iter != path.end();
-    ++iter
-            )
-        receiver =
-                builder.CreateStructGEP(receiver, iter->index);
+namespace {
+    // utility
+    Value *narrowToAncestor(IRBuilder<> &builder,
+                            Value *receiver,
+                            const TypeDef::AncestorPath &path
+                            ) {
+        for (TypeDef::AncestorPath::const_iterator iter = path.begin();
+        iter != path.end();
+        ++iter
+                )
+            receiver =
+                    builder.CreateStructGEP(receiver, iter->index);
 
-    return receiver;
-}
-}} // namespace
+        return receiver;
+    }
+} // namespace
 
 // IncompleteInstVarRef
  void * IncompleteInstVarRef::operator new(size_t s) {

@@ -11,9 +11,7 @@
 using namespace llvm;
 using namespace model;
 using namespace std;
-
-namespace builder {
-namespace mvll {
+using namespace builder::mvll;
 
 FuncBuilder::FuncBuilder(Context &context, FuncDef::Flags flags,
                              BTypeDef *returnType,
@@ -116,6 +114,3 @@ void FuncBuilder::setArgs(const vector<ArgDefPtr> &args) {
     funcDef->args = args;
 }
 
-
-} // end namespace builder::vmll
-} // end namespace builder

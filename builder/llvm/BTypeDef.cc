@@ -9,9 +9,7 @@
 
 using namespace model;
 using namespace std;
-
-namespace builder {
-namespace mvll {
+using namespace builder::mvll;
 
 // add all of my virtual functions to 'vtb'
 void BTypeDef::extendVTables(VTableBuilder &vtb) {
@@ -116,5 +114,3 @@ void BTypeDef::addPlaceholder(PlaceholderInstruction *inst) {
     placeholders.push_back(inst);
 }
 
-} // end namespace builder::vmll
-} // end namespace builder
