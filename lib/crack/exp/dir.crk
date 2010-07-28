@@ -7,9 +7,9 @@ import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
 
 import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
-                             _crack_fnmatch;
+                             _crack_fnmatch, _crack_getDirEntry;
 
-class _DIR: Opaque { }
+class _crackDir: Opaque { }
 
 class _DirEntry: FreeBase {
     byteptr _name;
@@ -21,9 +21,10 @@ int __CRACK_DTYPE_DIR   = 1;
 int __CRACK_DTYPE_FILE  = 2;
 int __CRACK_DTYPE_OTHER = 3;
 
-_DIR _crack_opendir(byteptr dirname);
-int _crack_closedir(_DIR d);
-int _crack_readdir(_DIR d, _DirEntry i);
+_crackDir _crack_opendir(byteptr dirname);
+_DirEntry _crack_getDirEntry(_crackDir d);
+int _crack_closedir(_crackDir d);
+int _crack_readdir(_crackDir d);
 int _crack_fnmatch(byteptr pattern, byteptr string);
 
 // XXX make portable
@@ -50,7 +51,7 @@ class Directory {
 
     String name;
 
-    _DIR _dir = null;
+    _crackDir _dir = null;
     bool _isValid = false; // implies isOpened
     bool _isOpened = false;
 
@@ -66,11 +67,10 @@ class Directory {
         if (!_isValid)
             return;
         
-        _DirEntry d;
-        int r;
+        _DirEntry d = _crack_getDirEntry(_dir);
         // note, this should be done lazily so we don't have to load
         // an entire directory structure on open
-        while (r = _crack_readdir(_dir, d)) {
+        while (_crack_readdir(_dir)) {
             if (d._type == __CRACK_DTYPE_DIR) {
                 // XXX should add a Directory when issue 5 is fixed
                 _dirList.append(String(d._name));
