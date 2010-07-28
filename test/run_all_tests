@@ -601,6 +601,10 @@ test_output 'errors get locations outside of the Parser class' \
     "${parseError}2: Cannot create a default constructor because base class \
 A has no default constructor."
 
+test_output '+/- parse' \
+    'int i=+1; int f=-1; i=i+1; f=f-1; puts("ok");' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

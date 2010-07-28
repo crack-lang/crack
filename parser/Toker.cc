@@ -119,7 +119,7 @@ Token Toker::readToken() {
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '+') {
-                    state = st_plus;
+                    return Token(Token::plus, "+", locationMap.getLocation());
                 } else if (ch == '-') {
                     state = st_minus;
                 } else if (ch == '&') {
@@ -200,26 +200,10 @@ Token Toker::readToken() {
                 }
                 break;
 
-            case st_plus:
-
-                if (isdigit(ch)) {
-                    // if numeric, omit unnecessary + char
-                    buf << ch;
-                    state = st_number;
-                } else {
-                    state = st_none;
-                    ungetChar(ch);
-                    return Token(Token::plus, "+", locationMap.getLocation());
-                }
-                break;
-
             case st_minus:
                 if (ch == '-') {
                     state = st_none;
                     return Token(Token::decr, "--", locationMap.getLocation());
-                } else if (isdigit(ch)) {
-                    buf << '-' << ch;
-                    state = st_number;
                 } else {
                     state = st_none;
                     ungetChar(ch);

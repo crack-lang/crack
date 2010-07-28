@@ -748,6 +748,20 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       expr = context->builder.createFloatConst(*context,
                                              atof(tok.getData().c_str())
                                              );
+
+   } else if (tok.isPlus()) {
+       // eat + if expression is a numeric constant and fail if it's not
+       tok = getToken();
+       if (tok.isInteger())
+           expr = context->builder.createIntConst(*context,
+                                                  atoi(tok.getData().c_str())
+                                                  );
+       else if(tok.isFloat())
+           expr = context->builder.createFloatConst(*context,
+                                                    atof(tok.getData().c_str())
+                                                    );
+       else
+           unexpected(tok, "unexpected unary +");
    // for the unary operators
    } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
               tok.isDecr()) {
