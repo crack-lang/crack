@@ -2,15 +2,39 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.lang die, exit, strcat;
-import crack.io cout, StringFormatter;
+import crack.io cout, StringFormatter, XWFormatter, XWriter;
 import crack.sys argv;
-import crack.container Iterator;
+import crack.container List, Iterator;
 import crack.exp.dir Directory, PATH_SEPARATOR, FileInfo;
+
+class Test {
+
+    FileInfo _fInfo = null;
+    String _name, _desc;
+
+    oper init(): _name("Unknown"), _desc("Unknown") { }
+
+    void loadTemplate() {
+        cout `>>>i should read the file: $(_fInfo.name)<<<\n`;
+    }
+
+    oper init(FileInfo info): _fInfo = info,
+                              _name("Unknown"),
+                              _desc("Unknown") {
+        loadTemplate();
+    }
+
+    void writeTo(XWriter out) {
+        XWFormatter(out) `[$_fInfo]: $_name - $_desc`;
+    }
+
+}
 
 class TestSuite {
 
     String _rootDir;
-    
+    List _testList;
+
     void usage() {
         cout `screen <dir>\n`;
         exit(1);
@@ -33,6 +57,8 @@ class TestSuite {
             curFile = FileInfo.cast(i.elem());
             if (curFile.matches("*.crkt")) {
                 cout `found test template file: $curFile\n`;
+                test := Test(curFile);
+                _testList.append(test);
             }
         }
 
@@ -51,6 +77,20 @@ class TestSuite {
 
     }
 
+    void runTests() {
+
+        cout `\nrunning tests...\n`;
+
+        Test curTest = null;
+
+        i := _testList.iter();
+        while (i.nx()) {
+            curTest = Test.cast(i.elem());
+            cout `$curTest\n`;
+        }
+
+    }
+
     oper init() {
         
         if (argv.count() <= 1) {
@@ -59,14 +99,10 @@ class TestSuite {
                 
         _rootDir = argv[1];
         scanForTests(_rootDir);
+
+        runTests();
         
     }
-
-}
-
-class Test {
-    
-    String _name, _desc;
 
 }
 

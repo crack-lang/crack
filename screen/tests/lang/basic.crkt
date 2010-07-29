@@ -1,0 +1,10 @@
+--TEST--
+test of very basic language constructs in crack
+--ARGS--
+-g -n
+--FILE--
+
+puts("hello world")
+
+--EXPECT--
+hello world

@@ -1,0 +1,26 @@
+--TEST--
+basic if blocks
+--ARGS--
+-g -n
+--FILE--
+
+if (1) puts("abcd");
+if (1) { puts("abcd"); }
+if (1) puts("abcd"); else puts("efgh");
+if (0) puts("abcd"); else puts("efgh");
+if (1) { puts("abcd"); } else { puts("efgh"); }
+if (0) { puts("abcd"); } else { puts("efgh"); }
+
+void f() {
+    if (1)
+        return;
+    else
+        if (0)
+            return;
+        else
+            return;
+}
+puts("ok");
+
+--EXPECT--
+abcdabcdabcdefghabcdefghok
