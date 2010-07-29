@@ -37,7 +37,12 @@ void ResultExpr::handleTransient(Context &context) {
     if (context.emittingCleanups || !sourceExpr->isProductive())
         return;
     
-    // the expression is productive - check for a release function
+    // the expression is productive - clean it up
+    forceCleanup(context);
+}
+
+void ResultExpr::forceCleanup(Context &context) {
+    // check for a release function
     FuncDefPtr releaseFunc = type->lookUpNoArgs("oper release", false);
     if (!releaseFunc)
         return;
