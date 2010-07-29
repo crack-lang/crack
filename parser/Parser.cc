@@ -1231,6 +1231,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    context->builder.emitEndFunc(*context, funcDef.get());
    cstack.restore();
+
+   // if this is an init function, and the user hasn't introduced an explicit
+   // "oper new", generate the corresponding "oper new".
+   if (inits && !classTypeDef->gotExplicitOperNew)
+      classTypeDef->createNewFunc(*classCtx, funcDef.get());
    
    return argDefs.size();
 }         

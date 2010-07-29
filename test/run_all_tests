@@ -601,6 +601,14 @@ test_output 'errors get locations outside of the Parser class' \
     "${parseError}2: Cannot create a default constructor because base class \
 A has no default constructor."
 
+test_output 'oper new generated immediately after init' \
+    'class Foo { byteptr val; oper init(byteptr val0) : val = val0 {}
+                 Foo clone() { return Foo(val); } }
+     Foo f = {"ok"};
+     g := f.clone();
+     puts(g.val)' \
+     ok
+
 test_output '+/- parse' \
     'int i=+1; int f=-1; i=i+1; f=f-1; puts("ok");' \
     ok

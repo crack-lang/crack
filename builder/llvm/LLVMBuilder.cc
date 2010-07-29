@@ -902,7 +902,6 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                     baseWithVTable ? 
                                         baseWithVTable->nextVTableSlot : 0
                                     );
-    type->defaultInitializer = new NullConst(type.get());
     
     // add all of the base classes to the type
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();

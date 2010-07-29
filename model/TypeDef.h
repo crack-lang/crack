@@ -104,6 +104,10 @@ class TypeDef : public VarDef, public Namespace {
         // now illegal to add instance variables.
         bool initializersEmitted;
         
+        // if true, the user has created an explicit "oper new" for the class, 
+        // so don't generate them for any more of the init methods.
+        bool gotExplicitOperNew;
+        
         TypeDef(TypeDef *metaType, const std::string &name, 
                 bool pointer = false
                 ) :
@@ -113,7 +117,8 @@ class TypeDef : public VarDef, public Namespace {
             hasVTable(false),
             meta(0),
             complete(false),
-            initializersEmitted(false) {
+            initializersEmitted(false),
+            gotExplicitOperNew(false) {
         }
         
         ~TypeDef() { if (generic) delete generic; }

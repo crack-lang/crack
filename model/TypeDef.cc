@@ -357,31 +357,9 @@ void TypeDef::createCast(Context &outer) {
 }
 
 void TypeDef::rectify(Context &classContext) {
-    // clear the default initializer
-    defaultInitializer = 0;
-    
-    // collect all of the init methods.
-    VarDefPtr initMethods = lookUp("oper init", false);
-    OverloadDef *overloads = OverloadDefPtr::rcast(initMethods);
-    FuncDef *funcDef;
-    bool gotInit = false;
-    if (overloads) {
-        // multiple init funcs: create new functions for all of them.
-        for (OverloadDef::FuncList::iterator iter = overloads->beginTopFuncs();
-             iter != overloads->endTopFuncs();
-             ++iter
-             ) {
-            createNewFunc(classContext, iter->get());
-            gotInit = true;
-        }
-    } else if (funcDef = FuncDefPtr::rcast(initMethods)) {
-        // all functions should now be wrapped in overloads
-        assert(false && "got plain func def for init");
-    }
-    
-    // if there are no init functions specific to this class, create a 
+    // if there are no init functions specific to this class, create a
     // default constructor and wrap it in a new function.
-    if (!gotInit)
+    if (!lookUp("oper init", false))
         createNewFunc(classContext, createDefaultInit(classContext).get());
     
     // if the class doesn't already define a delete operator specific to the 
