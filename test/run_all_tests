@@ -847,7 +847,7 @@ test_output 'arg index out of bounds' \
 
 test_output 'containers' 'import test.test_containers;' ok
 
-test_output 'reference counting of assignment values' \
+test_output 'reference counting of assigned variables' \
     'import crack.io cout;
      class A {
          String val;
