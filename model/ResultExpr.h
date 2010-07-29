@@ -40,6 +40,12 @@ class ResultExpr : public Expr {
          */
         void handleTransient(Context &context);
         
+        /**
+         * Forces the expression to be added to cleanups, whether it is 
+         * productive or not (but not if it has no 'oper release').
+         */
+        void forceCleanup(Context &context);
+        
         /** Overrides isProductive() to delegate to the source expr. */
         virtual bool isProductive() const;
 

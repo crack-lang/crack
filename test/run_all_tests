@@ -849,4 +849,21 @@ test_output 'arg index out of bounds' \
     'import crack.sys argv; argv[1];' \
     'Array index out of bounds'
 
+test_output 'containers' 'import test.test_containers;' ok
+
+test_output 'reference counting of assigned variables' \
+    'import crack.io cout;
+     class A {
+         String val;
+         A next = null;
+         oper init(String val0, A next0) : val = val0, next = next0 {}
+         oper del() { print(val); }
+     }
+     a := A("first", null);
+     a = A("second", a);
+     cout `done\n`;' \
+     'done
+second
+first'
+
 exit $rc

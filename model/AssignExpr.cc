@@ -45,16 +45,13 @@ AssignExprPtr AssignExpr::create(Context &context,
 }
 
 ResultExprPtr AssignExpr::emit(Context &context) {
-    // if the variable has a release function, call it for the existing value.
-    FuncDefPtr func = var->type->lookUpNoArgs("oper release", false);
-    FuncCallPtr releaseCall;
-    if (func)
-        releaseCall = context.builder.createFuncCall(func.get());
+    // see if the variable has a release function
+    bool gotReleaseFunc = var->type->lookUpNoArgs("oper release", false);
 
     if (aggregate) {
 
         ExprPtr agg = aggregate;
-        if (releaseCall) {
+        if (gotReleaseFunc) {
 
             // emit the aggregate, store the ResultExpr for use when we emit 
             // the field assignment.
@@ -65,17 +62,15 @@ ResultExprPtr AssignExpr::emit(Context &context) {
             // emit the release call on the result
             VarRefPtr varRef = 
                 context.builder.createFieldRef(aggregate.get(), var.get());
-            releaseCall->receiver = varRef;
-            releaseCall->emit(context);
+            varRef->emit(context)->forceCleanup(context);
         }
 
         return context.builder.emitFieldAssign(context, agg.get(), this);
     } else {
-        if (releaseCall) {
+        if (gotReleaseFunc) {
             // emit a release call on the existing value.
             VarRefPtr varRef = context.builder.createVarRef(var.get());
-            releaseCall->receiver = varRef;
-            releaseCall->emit(context);
+            varRef->emit(context)->forceCleanup(context);
         }
         return var->emitAssignment(context, value.get());
     }
