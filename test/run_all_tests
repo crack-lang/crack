@@ -613,6 +613,20 @@ test_output '+/- parse' \
     'int i=+1; int f=-1; i=i+1; f=f-1; puts("ok");' \
     ok
 
+test_output "variables in allocated loops don't eat the stack" \
+    'void foo() {
+         int x;
+         while (x < 100000000) {
+             int a, b, c, d, e, f, g, h = 3, i = 5, j = 10;
+             a = b + c + d + e + f + g + h + i + j;
+             b = c + d + e + f + g + h + i + j;
+             c = d + e + f + g + h + i + j;
+             x = x + 1;
+         }
+     }
+     foo();'
+
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

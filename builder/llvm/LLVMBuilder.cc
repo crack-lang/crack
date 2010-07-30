@@ -766,7 +766,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
     f.funcDef->vtableSlot = vtableSlot;
     func = f.funcDef->rep;
-    block = BasicBlock::Create(getGlobalContext(), name, func);
+    funcBlock = block = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(block);
     
     if (flags & FuncDef::virtualized) {
@@ -1123,10 +1123,22 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
             break;
         }
 
-        case Context::local:
-            var = builder.CreateAlloca(tp->rep, 0);
+        case Context::local: {
+            // insert an alloca into the first block of the function - we 
+            // define all of our allocas up front because if we do them in 
+            // loops they eat the stack.
+
+            // if the last instruction is terminal, we need to insert before it
+            BasicBlock::iterator i = funcBlock->end();
+            if (i != funcBlock->begin() && !(--i)->isTerminator())
+                // otherwise insert after it.
+                ++i;
+            
+            IRBuilder<> b(funcBlock, i);
+            var = b.CreateAlloca(tp->rep, 0);
             varDefImpl = new BHeapVarDefImpl(var);
             break;
+        }
         
         default:
             assert(false && "invalid context value!");

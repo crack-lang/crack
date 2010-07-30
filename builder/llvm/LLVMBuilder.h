@@ -64,7 +64,7 @@ class LLVMBuilder : public Builder {
         llvm::Type *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
-        llvm::BasicBlock *block;
+        llvm::BasicBlock *block, *funcBlock;
         static int argc;
         static char **argv;
 
