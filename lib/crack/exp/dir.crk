@@ -58,6 +58,14 @@ class Directory {
     List _dirList;
     List _fileList;
 
+    oper init(String name0/*, bool open=true*/): name(name0) {
+        // see issue #15
+        /*
+        if (open)
+            _openDir();
+        */
+    }
+
     void _openDir() {
 
         _dir = _crack_opendir(name.buffer);
@@ -66,14 +74,16 @@ class Directory {
 
         if (!_isValid)
             return;
-        
+
         _DirEntry d = _crack_getDirEntry(_dir);
         // note, this should be done lazily so we don't have to load
         // an entire directory structure on open
+        StaticString n = null;
         while (_crack_readdir(_dir)) {
             if (d._type == __CRACK_DTYPE_DIR) {
-                // XXX should add a Directory when issue 5 is fixed
-                _dirList.append(String(d._name));
+                n = StaticString(d._name);
+                if (n != '.' && n != '..')
+                    _dirList.append(Directory(name+PATH_SEPARATOR+n));
             }
             else {
                 _fileList.append(FileInfo(d._name));
@@ -82,18 +92,17 @@ class Directory {
 
     }
 
-    oper init(String name0, bool open/*=true*/): name(name0) {
-        if (open)
-            _openDir();
-    }
-    
     oper del() {
         if (_isValid)
             _crack_closedir(_dir);
     }
 
 
-    bool isValid() { return _isValid; }
+    bool isValid() {
+        if (!_isOpened)
+            _openDir();
+        return _isValid;
+    }
 
     bool isOpened() { return _isOpened; }
 

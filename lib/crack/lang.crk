@@ -2,8 +2,8 @@
 # Copyright 2010 Google Inc.
 
 import "libc.so.6" abort, free, strcpy, strlen, strdup, malloc, memcpy, memcmp, 
-                   memmove, realloc, exit, strcat;
-                   
+                   memmove, realloc, exit;
+
 byteptr malloc(uint size);
 byteptr realloc(byteptr buf, uint size);
 byteptr memcpy(byteptr dest, byteptr src, uint size);
@@ -12,7 +12,6 @@ int memcmp(byteptr a, byteptr b, uint size);
 void free(voidptr mem);
 byteptr strcpy(byteptr dest, byteptr src);
 uint strlen(byteptr buf);
-byteptr strcat(byteptr dest, byteptr src);
 byteptr strdup(byteptr buf);
 void abort();
 void exit(int status);
@@ -235,6 +234,27 @@ class String : Buffer {
         _freeBuffer();
     }
 
+    ## Concatenation
+    String oper +(String rhs) {
+        uint newBufferSize = this.size + rhs.size;
+        byteptr newRawBuffer = malloc(newBufferSize);
+        memcpy(newRawBuffer, this.buffer, this.size);
+        memcpy(newRawBuffer+this.size, rhs.buffer, rhs.size);
+        newRawBuffer[newBufferSize] = 0;
+        return String(newRawBuffer, newBufferSize, true);
+    }
+
+    # note, not binary safe
+    String oper +(byteptr rhs) {
+        uint rhs_size = strlen(rhs);
+        uint newBufferSize = this.size + rhs_size;
+        byteptr newRawBuffer = malloc(newBufferSize);
+        memcpy(newRawBuffer, this.buffer, this.size);
+        memcpy(newRawBuffer+this.size, rhs, rhs_size);
+        newRawBuffer[newBufferSize] = 0;
+        return String(newRawBuffer, newBufferSize, true);
+    }
+
     ## Override Object.cmp() to do string comparison.
     int cmp(Object other) {
         
@@ -256,18 +276,6 @@ class String : Buffer {
     }
 };
 
-
-    ## XXX this needs to be a method of String, when issue #5 is fixed
-    ## Concatenation
-    String strcat(String lhs, String rhs) {
-        uint newBufferSize = lhs.size + rhs.size + 1;
-        byteptr newRawBuffer = malloc(newBufferSize);
-        memcpy(newRawBuffer, lhs.buffer, lhs.size);
-        memcpy(newRawBuffer+lhs.size, rhs.buffer, rhs.size);
-        return String(newRawBuffer, newBufferSize, true);
-    }
-
-
 class StaticString : String {
 
     oper init(byteptr data, uint size0) : String(data, size0, true) {}
@@ -285,5 +293,8 @@ void print(String val) {
 
 void die(String message) {
     print(message);
+    abort();
+}
+void die() {
     abort();
 }

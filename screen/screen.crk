@@ -1,11 +1,11 @@
 // A test suite for crack
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.lang die, exit, strcat;
-import crack.io cout, StringFormatter, XWFormatter, XWriter;
+import crack.lang die, exit;
+import crack.io cout, cerr, XWFormatter, XWriter;
 import crack.sys argv;
 import crack.container List, Iterator;
-import crack.exp.dir Directory, PATH_SEPARATOR, FileInfo;
+import crack.exp.dir Directory, FileInfo;
 
 class Test {
 
@@ -40,19 +40,20 @@ class TestSuite {
         exit(1);
     }
     
-    void scanForTests(String dir) {
+    void scanForTests(Directory dir) {
     
-        d := Directory(dir, true);
-        if (!d.isValid())
-            die("invalid directory");
+        if (!dir.isValid()) {
+            cerr `skipping invalid directory: $dir\n`;
+            return;
+        }
         
-        cout `importing tests from $d ...\n`;
+        cout `importing tests from $dir ...\n`;
 
         Iterator i;
         
         // gather test files
         FileInfo curFile = null;
-        i = d.fileInfoIter();
+        i = dir.fileInfoIter();
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
             if (curFile.matches("*.crkt")) {
@@ -63,15 +64,11 @@ class TestSuite {
         }
 
         // recurse to directories
-        String nextDir = null;
-        StringFormatter f;
-        i = d.dirIter();
+        Directory nextDir = null;
+        i = dir.dirIter();
         while (i.nx()) {
-            nextDir = String.cast(i.elem());
-            if (nextDir != '.' && nextDir != '..') {
-                f `$dir$PATH_SEPARATOR$nextDir`;
-                scanForTests(f.createString());
-            }
+            nextDir = Directory.cast(i.elem());
+            scanForTests(nextDir);
         }
 
 
@@ -98,7 +95,7 @@ class TestSuite {
         }
                 
         _rootDir = argv[1];
-        scanForTests(_rootDir);
+        scanForTests(Directory(_rootDir));
 
         runTests();
         
