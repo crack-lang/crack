@@ -1275,7 +1275,7 @@ Module names correspond directly to directory and file names in the Crack
     the filename.  Example: "foo.bar.baz" -> path = "`foo/bar`", filename = 
     "baz"
 -   for every directory in the crack library path, search for a subdirectory 
-    matching the path and the filename with a ".crk" exception
+    matching the path and the filename with a ".crk" extention
 -   when we find it, compile it and then execute the module top-level code 
     (everything that's not in a function).
 
