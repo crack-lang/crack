@@ -6,6 +6,7 @@ import crack.io cout, cerr, XWFormatter, XWriter;
 import crack.sys argv;
 import crack.container List, Iterator;
 import crack.exp.dir Directory, FileInfo;
+import crack.exp.stream File;
 
 class Test {
 
@@ -15,7 +16,13 @@ class Test {
     oper init(): _name("Unknown"), _desc("Unknown") { }
 
     void loadTemplate() {
-        cout `>>>i should read the file: $(_fInfo.name)<<<\n`;
+        f := File(_fInfo.name, "r");
+        if (f.isValid()) {
+            cout `opened file: $(_fInfo.name)\n`;
+        }
+        else {
+            cout `file: $(_fInfo.name) could not be opened!\n`;
+        }
     }
 
     oper init(FileInfo info): _fInfo = info,

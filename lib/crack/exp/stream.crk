@@ -1,0 +1,118 @@
+# Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+# Classes for io streams
+
+import crack.io cerr, Writer, Reader;
+import crack.lang die, ManagedBuffer;
+import crack.exp.bindings Opaque;
+
+import "libc.so.6" fopen, fread, fclose;
+
+uint _READ_SIZE = 512;
+
+class FILE: Opaque { }
+
+FILE fopen(byteptr fn, byteptr mode);
+int fclose(FILE f);
+uint fread(voidptr buf, uint size, uint nmemb, FILE f);
+
+class Openable {
+
+    bool _isValid = false; // implies isOpened
+    bool _isOpened = false;
+
+    void _open() { }
+
+    bool isValid() {
+        if (!_isOpened)
+            _open();
+        return _isValid;
+    }
+
+    bool isOpened() { return _isOpened; }
+
+}
+
+class _StreamBase : Openable {
+
+    void close() { }
+
+    oper del() {
+        if (_isOpened && _isValid)
+            close();
+    }
+
+    void seek(uint64 offset, int whence) { }
+    uint64 tell() { return 0; }
+
+    bool seekable() { return false; }
+    bool writeable() { return false; }
+    bool readable() { return false; }
+
+}
+
+class _StreamReader : _StreamBase {
+
+    bool readable() { return true; }
+
+    String readline() {
+        die('_StreamReader.readline called');
+        return String(); // XXX
+    }
+
+}
+
+class _StreamWriter : _StreamBase {
+
+    void flush() { }
+
+    void write(byteptr b, uint size) {  }
+
+    bool writeable() { return true; }
+
+    void writeline(String line) { }
+
+    void truncate(uint size) { }
+
+}
+
+/*
+class UrlStream : _StreamReader {
+
+}
+*/
+
+
+class File : _StreamReader/*, _StreamWriter*/ {
+
+    String _name;
+    String _mode;
+    FILE _fd = null;
+
+    oper init(String name0, String mode0): _name(name0),
+                                           _mode(mode0) {
+        _fd = fopen(_name.buffer, _mode.buffer);
+        if (_fd is null) {
+            _isValid = false;
+            _isOpened = false;
+        }
+    }
+
+    String readline() {
+
+        if (!_isValid)
+            return null;
+
+        _buf := ManagedBuffer(_READ_SIZE);
+        len := fread(_buf.buffer, 1, _READ_SIZE, _fd);
+        return String(_buf);
+
+    }
+
+    void close() {
+        if (_isOpened)
+            fclose(_fd);
+    }
+
+}
+
+

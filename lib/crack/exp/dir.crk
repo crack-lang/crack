@@ -5,6 +5,7 @@ import crack.io cerr, StringFormatter, XWFormatter, XWriter;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
+import crack.exp.stream Openable;
 
 import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
                              _crack_fnmatch, _crack_getDirEntry;
@@ -28,7 +29,7 @@ int _crack_readdir(_crackDir d);
 int _crack_fnmatch(byteptr pattern, byteptr string);
 
 // XXX make portable
-StaticString PATH_SEPARATOR = "/";
+String PATH_SEPARATOR = "/";
 
 class FileInfo {
 
@@ -47,13 +48,11 @@ class FileInfo {
 
 }
 
-class Directory {
+class Directory : Openable {
 
     String name;
 
     _crackDir _dir = null;
-    bool _isValid = false; // implies isOpened
-    bool _isOpened = false;
 
     List _dirList;
     List _fileList;
@@ -62,11 +61,11 @@ class Directory {
         // see issue #15
         /*
         if (open)
-            _openDir();
+            _open();
         */
     }
 
-    void _openDir() {
+    void _open() {
 
         _dir = _crack_opendir(name.buffer);
         _isValid = !(_dir is null);
@@ -97,18 +96,9 @@ class Directory {
             _crack_closedir(_dir);
     }
 
-
-    bool isValid() {
-        if (!_isOpened)
-            _openDir();
-        return _isValid;
-    }
-
-    bool isOpened() { return _isOpened; }
-
     Iterator dirIter() { 
         if (!_isOpened)
-            _openDir();
+            _open();
         if (_isValid)
             return _dirList.iter(); 
         else
@@ -117,7 +107,7 @@ class Directory {
 
     Iterator fileInfoIter() {
         if (!_isOpened)
-            _openDir();
+            _open();
         if (_isValid)
             return _fileList.iter(); 
         else
