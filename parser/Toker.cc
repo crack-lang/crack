@@ -119,7 +119,7 @@ Token Toker::readToken() {
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '+') {
-                    return Token(Token::plus, "+", locationMap.getLocation());
+                    state = st_plus;
                 } else if (ch == '-') {
                     state = st_minus;
                 } else if (ch == '&') {
@@ -201,11 +201,10 @@ Token Toker::readToken() {
                 break;
 
             case st_minus:
+                state = st_none;
                 if (ch == '-') {
-                    state = st_none;
                     return Token(Token::decr, "--", locationMap.getLocation());
                 } else {
-                    state = st_none;
                     ungetChar(ch);
                     return Token(Token::minus, "-", locationMap.getLocation());
                 }
@@ -456,6 +455,16 @@ Token Toker::readToken() {
                     state = st_istrEscapeChar;
                 } else {
                     buf << ch;
+                }
+                break;
+            
+            case st_plus:
+                state = st_none;
+                if (ch == '+') {
+                    return Token(Token::decr, "++", locationMap.getLocation());
+                } else {
+                    ungetChar(ch);
+                    return Token(Token::plus, "+", locationMap.getLocation());
                 }
                 break;
             

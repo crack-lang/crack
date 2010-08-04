@@ -1,0 +1,102 @@
+# Copyright 2010 Google Inc.
+# tests of the increment/decrement operators.
+
+import crack.io cout;
+if (true) {
+    byte x = 100;
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+if (true) {
+    int32 x = 100;
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+if (true) {
+    uint32 x = 100;
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+if (true) {
+    int64 x = 100;
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+if (true) {
+    uint64 x = 100;
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+
+class A {
+    int val;
+    oper init(int val0) : val = val0 {} 
+    A oper ++x() {
+        ++val;
+        return this;
+    }
+    
+    A oper --x() {
+        --val;
+        return this;
+    }
+    
+    A oper x++() {
+        temp := A(val);
+        ++val;
+        return temp;
+    }
+
+    A oper x--() {
+        temp := A(val);
+        --val;
+        return temp;
+    }
+    
+    bool oper !=(int other) {
+        return val != other;
+    }
+}
+if (true) {
+    A x = {100};
+    if (++x != 101) cout `++x != 101\n`;
+    if (x != 101) cout `after ++x, x != 101\n`;
+    if (--x != 100) cout `--x != 100\n`;
+    if (x != 100) cout `after --x, x != 100\n`;
+    if (x++ != 100) cout `x++ != 100\n`;
+    if (x != 101) cout `after x++, x != 101\n`;
+    if (x-- != 101) cout `x-- != 101\n`;
+    if (x != 100) cout `after x--, x != 100\n`;
+}
+cout `ok\n`;
+

@@ -1656,6 +1656,28 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     uint32Type->addDef(new UIToFPOpDef(float64Type, "oper to float64"));
     float32Type->addDef(new FPExtOpDef(float64Type, "oper to float64"));
 
+    // add the increment and decrement operators
+    byteType->addDef(new PreIncrIntOpDef(byteType, "oper ++x"));
+    int32Type->addDef(new PreIncrIntOpDef(int32Type, "oper ++x"));
+    uint32Type->addDef(new PreIncrIntOpDef(uint32Type, "oper ++x"));
+    int64Type->addDef(new PreIncrIntOpDef(int64Type, "oper ++x"));
+    uint64Type->addDef(new PreIncrIntOpDef(uint64Type, "oper ++x"));
+    byteType->addDef(new PreDecrIntOpDef(byteType, "oper --x"));
+    int32Type->addDef(new PreDecrIntOpDef(int32Type, "oper --x"));
+    uint32Type->addDef(new PreDecrIntOpDef(uint32Type, "oper --x"));
+    int64Type->addDef(new PreDecrIntOpDef(int64Type, "oper --x"));
+    uint64Type->addDef(new PreDecrIntOpDef(uint64Type, "oper --x"));
+    byteType->addDef(new PostIncrIntOpDef(byteType, "oper x++"));
+    int32Type->addDef(new PostIncrIntOpDef(int32Type, "oper x++"));
+    uint32Type->addDef(new PostIncrIntOpDef(uint32Type, "oper x++"));
+    int64Type->addDef(new PostIncrIntOpDef(int64Type, "oper x++"));
+    uint64Type->addDef(new PostIncrIntOpDef(uint64Type, "oper x++"));
+    byteType->addDef(new PostDecrIntOpDef(byteType, "oper x--"));
+    int32Type->addDef(new PostDecrIntOpDef(int32Type, "oper x--"));
+    uint32Type->addDef(new PostDecrIntOpDef(uint32Type, "oper x--"));
+    int64Type->addDef(new PostDecrIntOpDef(int64Type, "oper x--"));
+    uint64Type->addDef(new PostDecrIntOpDef(uint64Type, "oper x--"));
+
     // explicit (loss of precision)
     addExplicitTruncate(int64Type, uint64Type);
     addExplicitTruncate(int64Type, int32Type);

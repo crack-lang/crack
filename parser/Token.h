@@ -16,7 +16,7 @@ class Token {
       typedef enum { breakKw, classKw, continueKw, elseKw, ifKw, importKw, 
                      isKw, nullKw, operKw, returnKw, whileKw, assign, 
                      asterisk, bang, colon, comma, decr, define, dot, end, 
-                     eq, ge, gt, ident, integer, lbracket, lcurly, le,
+                     eq, ge, gt, ident, incr, integer, lbracket, lcurly, le,
                      lparen, lt, minus, ne, percent, plus, rbracket, rcurly, 
                      rparen, semi, slash, string, tilde, istrBegin, istrEnd,
                      logicAnd, logicOr, floatLit
@@ -74,6 +74,7 @@ class Token {
       bool isDecr() const { return type == decr; }
       bool isDefine() const { return type == define; }
       bool isDot() const { return type == dot; }
+      bool isIncr() const { return type == incr; }
       bool isAssign() const { return type == assign; }
       bool isLParen() const { return type == lparen; }
       bool isRParen() const { return type == rparen; }

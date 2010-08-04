@@ -15,7 +15,7 @@ class Foo {
     int oper -(Foo other) { tester = 5; return 0; }
     int oper ~() { tester = 6; return 0; }
     int oper !() { tester = 7; return 0; }
-    int oper --() { tester = 8; return 0; }
+    int oper --x() { tester = 8; return 0; }
     int oper ==(Foo other) { tester = 9; return 0; }
     int oper !=(Foo other) { tester = 10; return 0; }
     int oper <(Foo other) { tester = 11; return 0; }
@@ -39,7 +39,7 @@ f.oper []=(100, 200); check(4, 'FAILED []=');
 f.oper -(f); check(5, 'FAILED minus');
 f.oper ~(); check(6, 'FAILED tilde');
 f.oper !(); check(7, 'FAILED bang');
-f.oper --(); check(8, 'FAILED decr');
+f.oper --x(); check(8, 'FAILED decr');
 f.oper ==(f); check(9, 'FAILED ==');
 f.oper !=(f); check(10, 'FAILED !=');
 f.oper <(f); check(11, 'FAILED <');

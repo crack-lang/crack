@@ -3,16 +3,21 @@
 #include "Ops.h"
 #include "LLVMBuilder.h"
 
-#include "BTypeDef.h"
-#include "BResultExpr.h"
 #include "BBranchPoint.h"
+#include "BFieldRef.h"
+#include "BResultExpr.h"
+#include "BTypeDef.h"
 #include "model/AllocExpr.h"
+#include "model/AssignExpr.h"
 #include "model/CleanupFrame.h"
+#include "model/VarRef.h"
 
 using namespace std;
 using namespace llvm;
 using namespace model;
 using namespace builder::mvll;
+
+typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
 
 #define UNOP(opCode) \
     model::ResultExprPtr opCode##OpCall::emit(model::Context &context) {    \
@@ -377,11 +382,11 @@ ResultExprPtr BoolOpCall::emit(Context &context) {
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    builder.lastValue =
-            builder.builder.CreateICmpNE(
-                    builder.lastValue,
-                    Constant::getNullValue(builder.lastValue->getType())
-                    );
+    builder.lastValue = 
+        builder.builder.CreateICmpNE(
+            builder.lastValue, 
+            Constant::getNullValue(builder.lastValue->getType())
+        );
 
     return new BResultExpr(this, builder.lastValue);
 }
@@ -393,10 +398,9 @@ ResultExprPtr VoidPtrOpCall::emit(Context &context) {
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    builder.lastValue =
-            builder.builder.CreateBitCast(builder.lastValue,
-                                          builder.llvmVoidPtrType
-                                          );
+    builder.lastValue = builder.builder.CreateBitCast(builder.lastValue, 
+                                                      builder.llvmVoidPtrType 
+                                                      );
 
     return new BResultExpr(this, builder.lastValue);
 }
@@ -421,4 +425,138 @@ ResultExprPtr UnsafeCastCall::emit(Context &context) {
 UnsafeCastDef::UnsafeCastDef(TypeDef *resultType) :
         OpDef(resultType, model::FuncDef::noFlags, "unsafeCast", 1) {
     args[0] = new ArgDef(resultType, "val");
+}
+
+namespace {
+    LLVMBuilder &beginIncrDecr(Expr *receiver, Context &context,
+                               VarRef *&ref,
+                               TypeDef *type,
+                               BTypeDef *&t,
+                               ResultExprPtr &receiverResult,
+                               Value *&receiverVal
+                               ) {
+        // the receiver needs to be a variable
+        ref = VarRefPtr::cast(receiver);
+        if (!ref)
+            context.error("Integer ++ operators can only be used on variables.");
+    
+        receiverResult = receiver->emit(context);
+        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+        receiverVal = builder.lastValue;
+        t = BTypeDefPtr::acast(type);
+        return builder;
+    }
+    
+    ResultExprPtr emitAssign(Context &context, VarRef *ref, 
+                             ResultExpr *mutated
+                             ) {
+        // create a field assignment or variable assignment expression, as 
+        // appropriate.
+        AssignExprPtr assign;
+        BFieldRef *fieldRef;
+        if (fieldRef = BFieldRefPtr::cast(ref))
+            assign = new AssignExpr(fieldRef->aggregate.get(),
+                                    fieldRef->def.get(),
+                                    mutated
+                                    );
+        else
+            assign = new AssignExpr(0, ref->def.get(), mutated);
+        return assign->emit(context);
+    }
+
+    inline ResultExprPtr endPreIncrDecr(Context &context, 
+                                        LLVMBuilder &builder,
+                                        VarRef *ref,
+                                        Expr *mutatedResult,
+                                        Value *mutatedVal
+                                        ) {
+        ResultExprPtr mutated = new BResultExpr(mutatedResult, mutatedVal);
+        mutated->handleTransient(context);
+        return emitAssign(context, ref, mutated.get());
+    }
+} // anon namespace
+        
+
+// PreIncrIntOpCall
+ResultExprPtr PreIncrIntOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t,
+                                         receiverResult, 
+                                         receiverVal
+                                         );
+    receiverResult->handleTransient(context);
+    builder.lastValue = builder.builder.CreateAdd(builder.lastValue, 
+                                                  ConstantInt::get(t->rep, 1)
+                                                  );
+    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+}
+
+// PreDecrIntOpCall
+ResultExprPtr PreDecrIntOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t, 
+                                         receiverResult, 
+                                         receiverVal
+                                         );
+    receiverResult->handleTransient(context);
+    builder.lastValue = builder.builder.CreateSub(builder.lastValue, 
+                                                  ConstantInt::get(t->rep, 1)
+                                                  );
+    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+}
+
+// PostIncrIntOpCall
+ResultExprPtr PostIncrIntOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(), 
+                                         t, 
+                                         receiverResult, 
+                                         receiverVal
+                                         );
+    Value *mutatedVal = builder.builder.CreateAdd(builder.lastValue, 
+                                                  ConstantInt::get(t->rep, 1)
+                                                  );
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this, 
+                                          mutatedVal
+                                          );
+    assign->handleTransient(context);
+    builder.lastValue = receiverVal;
+    return receiverResult;
+}
+
+// PostDecrIntOpCall
+ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t, 
+                                         receiverResult, 
+                                         receiverVal
+                                         );
+    Value *mutatedVal = builder.builder.CreateSub(builder.lastValue, 
+                                                 ConstantInt::get(t->rep, 1)
+                                                 );
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this, 
+                                          mutatedVal
+                                          );
+    assign->handleTransient(context);
+    builder.lastValue = receiverVal;
+    return receiverResult;
 }

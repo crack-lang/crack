@@ -356,6 +356,10 @@ UNOP_DEF(ZExt);
 UNOP_DEF(FPExt);
 UNOP_DEF(SIToFP);
 UNOP_DEF(UIToFP);
+UNOP_DEF(PreIncrInt);
+UNOP_DEF(PreDecrInt);
+UNOP_DEF(PostIncrInt);
+UNOP_DEF(PostDecrInt);
 
 #define FPTRUNCOP_DEF(opCode) \
     class opCode##OpCall : public model::FuncCall {                         \

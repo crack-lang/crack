@@ -336,15 +336,34 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
 string Parser::parseOperSpec() {
    Token tok = getToken();
    const string &ident = tok.getData();
-   if (tok.isMinus() || tok.isTilde() || tok.isBang() || tok.isDecr() ||
+   if (tok.isMinus() || tok.isTilde() || tok.isBang() ||
        tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
        tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
        tok.isAsterisk() || tok.isPercent() ||
        ident == "init" || ident == "release" || ident == "bind" ||
        ident == "del"
-       )
+       ) {
       return "oper " + ident;
-   else if (tok.isLBracket()) {
+   } else if (tok.isIncr() || tok.isDecr()) {
+      
+      // make sure the next token is an "x"
+      Token tok2 = getToken();
+      if (!tok2.isIdent() || tok2.getData() != "x")
+         unexpected(tok2, 
+                    SPUG_FSTR("expected an 'x' after oper " << ident).c_str()
+                    );
+
+      return "oper " + ident + "x";
+   } else if (ident == "x") {
+      tok = getToken();
+      if (tok.isIncr() || tok.isDecr())
+         return "oper x" + tok.getData();
+      else
+         unexpected(tok, 
+                    "Expected an increment or decrement operator after oper x."
+                    );
+                    
+   } else if (tok.isLBracket()) {
       tok = getToken();
       if (!tok.isRBracket())
          error(tok, "Expected right bracket in 'oper ['");
@@ -658,6 +677,24 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          }
          
          expr = funcCall;
+      
+      } else if (tok.isIncr() || tok.isDecr()) {
+         
+         FuncCall::ExprVec args;
+         string symbol = "oper x" + tok.getData();
+         FuncDefPtr funcDef = expr->type->lookUp(*context, symbol, args);
+         if (!funcDef) {
+            args.push_back(expr);
+            funcDef = context->ns->lookUp(*context, symbol, args);
+         }
+         if (!funcDef)
+            error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+   
+         FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+         funcCall->args = args;
+         if (funcDef->flags & FuncDef::method)
+            funcCall->receiver = expr;
+         expr = funcCall;
          
       } else if (tok.isBinOp()) {
          // get the precedence of the new operator, if it's lower than the 
@@ -746,8 +783,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
                                              );
    } else if (tok.isFloat()) {
       expr = context->builder.createFloatConst(*context,
-                                             atof(tok.getData().c_str())
-                                             );
+                                               atof(tok.getData().c_str())
+                                               );
 
    } else if (tok.isPlus()) {
        // eat + if expression is a numeric constant and fail if it's not
@@ -764,16 +801,16 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
            unexpected(tok, "unexpected unary +");
    // for the unary operators
    } else if (tok.isBang() || tok.isMinus() || tok.isTilde() ||
-              tok.isDecr()) {
+              tok.isDecr() || tok.isIncr()) {
       FuncCall::ExprVec args;
       string symbol = tok.getData();
 
       // try to look it up for the expression, then for the context.
       ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
       symbol = "oper " + symbol;
-      FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, 
-                                                          args
-                                                          );
+      if (tok.isIncr() || tok.isDecr())
+         symbol += "x";
+      FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, args);
       if (!funcDef) {
          args.push_back(operand);
          funcDef = context->ns->lookUp(*context, symbol, args);
@@ -1591,6 +1628,20 @@ void Parser::parsePostOper(TypeDef *returnType) {
          parseFuncDef(returnType, tok, "oper " + ident, flags, 
                       expectedArgCount
                       );
+      } else if (ident == "x") {
+         // "oper x++" or "oper x--"
+         if (!returnType)
+            error(tok, "operator requires a return type");
+         tok = getToken();
+         if (tok.isIncr() || tok.isDecr()) {
+            expectToken(Token::lparen, "expected argument list.");         
+            parseFuncDef(returnType, tok, "oper x" + tok.getData(),
+                         normal,
+                         (context->scope == Context::composite) ? 0 : 1
+                         );
+         } else {
+            error(tok, "++ or -- expected after 'oper x' definition");
+         }
       } else {
          unexpected(tok, "only 'oper init' honored at this time");
       }
@@ -1630,12 +1681,25 @@ void Parser::parsePostOper(TypeDef *returnType) {
                                  " arguments."
                                  )
                   );
-      } else if (tok.isTilde() || tok.isBang() || tok.isDecr()) {
+      } else if (tok.isTilde() || tok.isBang()) {
          expectToken(Token::lparen, "expected an argument list.");
          // in composite context, these should have no arguments.
          int numArgs = (context->scope == Context::composite) ? 0 : 1;
          parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
                       numArgs
+                      );
+      } else if (tok.isIncr() || tok.isDecr()) {
+         string sym = tok.getData();
+         tok = getToken();
+         if (!tok.isIdent() || tok.getData() != "x")
+            unexpected(tok, 
+                       "increment/decrement operators must include an 'x' "
+                        "token to indicate pre or post: ex: oper ++x()"
+                       );
+         expectToken(Token::lparen, "expected argument list.");
+         parseFuncDef(returnType, tok, "oper " + sym + "x",
+                      normal,
+                      (context->scope == Context::composite) ? 0 : 1
                       );
       } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
                  tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
@@ -1746,6 +1810,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
       {"!x", unaryPrec},
       {"-x", unaryPrec},
       {"--x", unaryPrec},
+      {"++x", unaryPrec},
       {"~x", unaryPrec},
 
       {"*", multPrec},
