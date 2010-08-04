@@ -428,6 +428,22 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
     return crkFuncType.get();
 }
 
+BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var) {
+    // insert an alloca into the first block of the function - we 
+    // define all of our allocas up front because if we do them in 
+    // loops they eat the stack.
+
+    // if the last instruction is terminal, we need to insert before it
+    BasicBlock::iterator i = funcBlock->end();
+    if (i != funcBlock->begin() && !(--i)->isTerminator())
+        // otherwise insert after it.
+        ++i;
+    
+    IRBuilder<> b(funcBlock, i);
+    var = b.CreateAlloca(tp->rep, 0);
+    return new BHeapVarDefImpl(var);
+}
+
 LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
@@ -1124,19 +1140,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
         }
 
         case Context::local: {
-            // insert an alloca into the first block of the function - we 
-            // define all of our allocas up front because if we do them in 
-            // loops they eat the stack.
-
-            // if the last instruction is terminal, we need to insert before it
-            BasicBlock::iterator i = funcBlock->end();
-            if (i != funcBlock->begin() && !(--i)->isTerminator())
-                // otherwise insert after it.
-                ++i;
-            
-            IRBuilder<> b(funcBlock, i);
-            var = b.CreateAlloca(tp->rep, 0);
-            varDefImpl = new BHeapVarDefImpl(var);
+            varDefImpl = createLocalVar(tp, var);
             break;
         }
         

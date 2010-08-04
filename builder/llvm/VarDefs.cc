@@ -1,7 +1,9 @@
 // Copyright 2010 Google Inc, Shannon Weyrick <weyrick@mozek.us>
 
 #include "VarDefs.h"
+
 #include "BResultExpr.h"
+#include "BTypeDef.h"
 
 #include "model/AssignExpr.h"
 
@@ -22,12 +24,19 @@ ResultExprPtr BArgVarDefImpl::emitRef(Context &context,
     return new BResultExpr((Expr*)var, b.lastValue);
 }
 
-ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context, AssignExpr *assign) {
-    // XXX implement argument assignment
-    assert(false && "can't assign arguments yet");
-    LLVMBuilder &b =
-            dynamic_cast<LLVMBuilder &>(context.builder);
-    //                b.emitArgVarAssgn(context, rep);
+ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context, 
+                                             AssignExpr *assign
+                                             ) {
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    
+    // we have to promote the argument to a local variable.
+    BTypeDef *varType = BTypeDefPtr::arcast(assign->var->type);
+    Value *var;
+    BHeapVarDefImplPtr localVar = b.createLocalVar(varType, var);
+    assign->var->impl = localVar;
+    
+    // then do the emitAssignment() on the local variable.
+    return localVar->emitAssignment(context, assign);
 }
 
 // BMemVarDefImpl

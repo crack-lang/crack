@@ -626,6 +626,10 @@ test_output "variables in allocated loops don't eat the stack" \
      }
      foo();'
 
+test_output 'assignment to function arguments' \
+    'void a(int x) { printint(x); x = 100; printint(x); x = 200; printint(x); }
+     a(0);' \
+    0100200
 
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"

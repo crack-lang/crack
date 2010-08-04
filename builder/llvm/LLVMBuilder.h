@@ -22,6 +22,9 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+SPUG_RCPTR(BHeapVarDefImpl);
+class BTypeDef;
+
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
@@ -85,6 +88,7 @@ class LLVMBuilder : public Builder {
         model::TypeDef *getFuncType(model::Context &context,
                                     const llvm::Type *llvmFuncType
                                     );
+        BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var);
 
         LLVMBuilder();
 

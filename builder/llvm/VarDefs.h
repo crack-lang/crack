@@ -56,6 +56,7 @@ public:
 
 };
 
+SPUG_RCPTR(BHeapVarDefImpl)
 class BHeapVarDefImpl : public BMemVarDefImpl {
 public:
     llvm::Value *rep;
