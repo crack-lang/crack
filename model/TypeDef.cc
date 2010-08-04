@@ -482,6 +482,19 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
                                      "constructor."
                                     )
                            );
+        
+        // verify that we can convert the initializer to the type of the 
+        // instance variable.
+        ExprPtr converted = initializer->convert(context, ivar->type.get());
+        if (!converted)
+            context.error(SPUG_FSTR("Invalid type " << 
+                                    initializer->type->name << 
+                                    " for initializer for instance variable "
+                                    << ivar->name << " of type " <<
+                                    ivar->type->name
+                                    )
+                          );
+                                    
 
         AssignExprPtr assign = new AssignExpr(thisRef.get(),
                                               ivar,
