@@ -895,6 +895,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     // create the meta-class
     BGlobalVarDefImplPtr classImpl;
     BTypeDefPtr metaType = createMetaClass(context, name, bases, classImpl);
+    module->addTypeName("struct.meta."+name, metaType->rep);
 
     // find the first base class with a vtable
     BTypeDef *baseWithVTable = 0;
@@ -1012,6 +1013,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
     
     // create the actual type
     Type *newType = StructType::get(getGlobalContext(), members);
+    module->addTypeName("struct."+type->name, newType);
     
     // refine the type and store the new pointer type (the existing pointer 
     // to opaque type may not end up getting changed)
@@ -1021,14 +1023,15 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // construct the vtable if necessary
     if (type->hasVTable) {
         VTableBuilder vtableBuilder(
-            BTypeDefPtr::arcast(context.globalData->vtableBaseType)
+            BTypeDefPtr::arcast(context.globalData->vtableBaseType),
+            module
         );
         type->createAllVTables(
             vtableBuilder, 
             ".vtable." + type->name,
             BTypeDefPtr::arcast(context.globalData->vtableBaseType)
         );
-        vtableBuilder.emit(module, type);
+        vtableBuilder.emit(type);
     }
 
     // fix-up all of the placeholder instructions
@@ -1756,7 +1759,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
         new BTypeDef(metaType.get(), "VTableBase", 
-                     PointerType::getUnqual(vtablePtrType), 
+                     PointerType::getUnqual(vtablePtrType),
                      true
                      );
     vtableBaseType->hasVTable = true;
@@ -1766,11 +1769,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createOperClassFunc(context, vtableBaseType, metaType.get());
 
     // build VTableBase's vtable
-    VTableBuilder vtableBuilder(vtableBaseType);
+    VTableBuilder vtableBuilder(vtableBaseType, module);
     vtableBaseType->createAllVTables(vtableBuilder, ".vtable.VTableBase", 
                                      vtableBaseType
                                      );
-    vtableBuilder.emit(module, vtableBaseType);
+    vtableBuilder.emit(vtableBaseType);
 
     // pointer equality check (to allow checking for None)
     context.ns->addDef(new IsOpDef(voidPtrType, boolType));

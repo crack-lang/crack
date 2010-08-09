@@ -6,6 +6,7 @@
 #include "BFuncDef.h"
 #include "model/Context.h"
 
+#include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/GlobalVariable.h>
 #include <vector>
@@ -109,7 +110,7 @@ void VTableBuilder::createVTable(BTypeDef *type, const std::string &name,
         firstVTable = info;
 }
 
-void VTableBuilder::emit(Module *module, BTypeDef *type) {
+void VTableBuilder::emit(BTypeDef *type) {
     for (VTableMap::iterator iter = vtables.begin();
     iter != vtables.end();
     ++iter
@@ -130,6 +131,7 @@ void VTableBuilder::emit(Module *module, BTypeDef *type) {
         // create a constant structure that actually is the vtable
         const StructType *vtableStructType =
                 StructType::get(getGlobalContext(), vtableTypes);
+        module->addTypeName("struct"+iter->second->name, vtableStructType);
         type->vtables[iter->first] =
                 new GlobalVariable(*module, vtableStructType,
                                    true, // isConstant

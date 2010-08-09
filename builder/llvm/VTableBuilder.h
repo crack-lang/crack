@@ -53,10 +53,14 @@ private:
 
     BTypeDef *vtableBaseType;
 
+    // used for emmission, but also IR type naming
+    llvm::Module *module;
+
 public:
-    VTableBuilder(BTypeDef *vtableBaseType) :
+    VTableBuilder(BTypeDef *vtableBaseType, llvm::Module *m) :
             firstVTable(0),
-            vtableBaseType(vtableBaseType) {
+            vtableBaseType(vtableBaseType),
+            module(m) {
     }
 
     void dump();
@@ -74,7 +78,7 @@ public:
                       bool first);
 
     // emit all of the VTable globals
-    void emit(llvm::Module *module, BTypeDef *type);
+    void emit(BTypeDef *type);
 
 };
 
