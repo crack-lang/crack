@@ -139,6 +139,19 @@ class TypeDef : public VarDef, public Namespace {
         static bool isImplicitFinal(const std::string &name);
         
         /**
+         * Adds the type and all of its ancestors to the ancestor list.  In 
+         * the process, verifies that the type can safely be added to the 
+         * existing set of ancestors.  Aborts with an error if verification 
+         * fails.
+         * 
+         * The current verifications are:
+         * - that the type is not a primitive class.
+         * - that neither the type nor any of its ancestors is already in 
+         *   'ancestors' (this check is ignored for the VTableBase class).
+         */ 
+        void addToAncestors(Context &context, TypeVec &ancestors);
+        
+        /**
          * Returns true if the type is derived from "other."
          */
         bool isDerivedFrom(const TypeDef *other) const;

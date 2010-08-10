@@ -648,6 +648,17 @@ test_output 'using instance variables from a nested function in a method' \
      printint(A().f());' \
     "${parseError}1: Variable 'this' is not accessible from within this context."
 
+test_output 'inheriting from a primitive class' \
+    'class A : int32 {}' \
+    "${parseError}1: You may not inherit from int32 because it's a primitive \
+class."
+
+test_output 'multiple inheritence from the same base class' \
+    'class A {}
+     class B : A {}
+     class C : B, A {}' \
+    "${parseError}3: Class A is already an ancestor."
+
 # this should still work
 #void f() {
 #    int g() { return 100; }
