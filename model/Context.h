@@ -30,6 +30,7 @@ SPUG_RCPTR(OverloadDef);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDef);
+SPUG_RCPTR(VarRef);
 
 SPUG_RCPTR(Context);
 
@@ -203,6 +204,24 @@ class Context : public spug::RCBase {
         void emitVarDef(TypeDef *type, const parser::Token &name, 
                         Expr *initializer
                         );
+
+        /**
+         * Returns true if the namespace is in the same function as the 
+         * context.
+         */
+        bool inSameFunc(Namespace *varNS);
+
+        /**
+         * Create a variable reference from the context and check that the 
+         * variable is actually reachable from the context.
+         */
+        VarRefPtr createVarRef(VarDef *def);
+        
+        /**
+         * Create a field reference and check that the variable is actually in 
+         * the aggregate.
+         */
+        VarRefPtr createFieldRef(Expr *aggregate, VarDef *var);
 
         /**
          * Set the branchpoint to be used for a break statement.

@@ -10,7 +10,12 @@ namespace model {
 
 SPUG_RCPTR(CompositeNamespace);
 
-/** A virtual namespace that delegates to several other namespaces. */
+/**
+ * A virtual namespace that delegates to several other namespaces.
+ *
+ * All new definitions added to the namespace will be stored in the first 
+ * parent.
+ */
 class CompositeNamespace : public Namespace {
     private:
         std::vector<NamespacePtr> parents;

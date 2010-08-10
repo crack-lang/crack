@@ -295,7 +295,7 @@ ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
                       )
             );
                       
-   return context->builder.createVarRef(thisVar.get());
+   return context->createVarRef(thisVar.get());
 }
 
 ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
@@ -326,9 +326,9 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      makeThisRef(ident, ident.getData());
-      return context->builder.createFieldRef(receiver.get(), var.get());
+      return context->createFieldRef(receiver.get(), var.get());
    } else {
-      return context->builder.createVarRef(var.get());
+      return context->createVarRef(var.get());
    }
 }
 
@@ -630,7 +630,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                tok = getToken();
             } else {
                // otherwise just create a reference to the type.
-               expr = context->builder.createVarRef(type);
+               expr = context->createVarRef(type);
             }
             continue;
          }
@@ -1118,8 +1118,14 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
-   // if this is a class context, we're defining a method.
-   ContextPtr classCtx = context->getClassContext();
+   // if this is a class context, we're defining a method.  We take the strict
+   // definition of "in a class context," only functions immediately in a 
+   // class context are methods of that class.
+   ContextPtr classCtx;
+   if (context->scope == Context::composite && context->parent &&
+       context->parent->scope == Context::instance
+       )
+      classCtx = context->parent;
    bool isMethod = classCtx ? true : false;
    TypeDef *classTypeDef = 0;
 
@@ -1136,7 +1142,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       classTypeDef = TypeDefPtr::arcast(classCtx->ns);
       ArgDefPtr argDef = context->builder.createArgDef(classTypeDef, "this");
       addDef(argDef.get());
-      receiver = context->builder.createVarRef(argDef.get());
+      receiver = context->createVarRef(argDef.get());
    }
 
    // parse the arguments

@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include "model/Context.h"
-#include "model/LocalNamespace.h"
+#include "model/GlobalNamespace.h"
 #include "model/ModuleDef.h"
 #include "model/TypeDef.h"
 #include "parser/Parser.h"
@@ -50,7 +50,7 @@ Crack::Crack() :
     useGlobalLibs(true) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
-                              new LocalNamespace(0)
+                              new GlobalNamespace(0)
                               );
 
     // register the primitives    
@@ -211,7 +211,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new LocalNamespace(rootContext->ns.get())
+                    new GlobalNamespace(rootContext->ns.get())
                     );
     ModuleDefPtr modDef = context->createModule(canonicalName);
     if (!modPath.isDir) {
@@ -304,7 +304,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new LocalNamespace(rootContext->ns.get())
+                    new GlobalNamespace(rootContext->ns.get())
                     );
 
     // XXX using the name as the canonical name which is not right, need to 

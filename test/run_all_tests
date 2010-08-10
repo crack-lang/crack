@@ -631,6 +631,34 @@ test_output 'assignment to function arguments' \
      a(0);' \
     0100200
 
+test_output 'error at attempts to use variables from enclosing functions' \
+    'void outer() { int a; int inner() { return a; } }' \
+    "${parseError}1: Variable 'a' is not accessible from within this context."
+
+test_output 'using variables from enclosing functions in methods' \
+    'void f() { int a; class A { int g() { return a; } } }' \
+    "${parseError}1: Variable 'a' is not accessible from within this context."
+
+test_output 'using instance variables from nested class methods.' \
+    'class A { int a; class B { int f() { return a; } } }' \
+    "${parseError}1: Variable 'a' is not accessible from within this context."
+
+test_output 'using instance variables from a nested function in a method' \
+    'class A { int a = 100; int f() { int g() { return a; } return g(); } }
+     printint(A().f());' \
+    "${parseError}1: Variable 'this' is not accessible from within this context."
+
+# this should still work
+#void f() {
+#    int g() { return 100; }
+#    class A {
+#        int h() {
+#            return g();
+#        }
+#    }
+#
+#}
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

@@ -11,6 +11,7 @@
 #include "CleanupFrame.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
+#include "GlobalNamespace.h"
 #include "IntConst.h"
 #include "LocalNamespace.h"
 #include "ModuleDef.h"
@@ -65,7 +66,22 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
 Context::~Context() {}
 
 ContextPtr Context::createSubContext(Scope newScope, Namespace *ns) {
-    if (!ns) ns = new LocalNamespace(this->ns.get());
+    if (!ns) {
+        switch (newScope) {
+            case local:
+                ns = new LocalNamespace(this->ns.get());
+                break;
+            case module:
+                ns = new GlobalNamespace(this->ns.get());
+                break;
+            case composite:
+            case instance:
+                assert(false && 
+                        "missing namespace when creating composite or instance "
+                        "context"
+                       );
+        }
+    }
     return new Context(builder, newScope, this, ns);
 }
 
@@ -178,6 +194,63 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
     closeCleanupFrame();
     defCtx->ns->addDef(varDef.get());
     cleanupFrame->addCleanup(varDef.get());
+}
+
+bool Context::inSameFunc(Namespace *varNS) {
+    if (scope != local)
+        // this is not a function.
+        return false;
+
+    // see if the namespace is our namespace
+    if (varNS == ns)
+        return true;
+        
+    // if this isn't the toplevel context, check the parent
+    else if (!toplevel)
+        return parent->inSameFunc(varNS);
+    else
+        return false;
+}
+    
+
+VarRefPtr Context::createVarRef(VarDef *varDef) {
+    // verify that the variable is reachable
+    
+    // if the variable is in a module context, it is accessible
+    if (ModuleDefPtr::cast(varDef->owner) || 
+        GlobalNamespacePtr::cast(varDef->owner)) {
+        return builder.createVarRef(varDef);
+    
+    // if it's in an instance context, verify that this is either the composite
+    // context of the class or a method of the class that contains the variable.
+    } else if (TypeDefPtr::cast(varDef->owner)) {
+        if (scope == composite && varDef->owner == parent->ns ||
+            getToplevel()->parent->ns
+            ) {
+            return builder.createVarRef(varDef);
+        }
+    
+    // if it's in a function context, make sure it's this function
+    } else if (inSameFunc(varDef->owner)) {
+        return builder.createVarRef(varDef);
+    }
+    
+    error(SPUG_FSTR("Variable '" << varDef->name << 
+                     "' is not accessible from within this context."
+                    )
+          );
+}
+
+VarRefPtr Context::createFieldRef(Expr *aggregate, VarDef *var) {
+    TypeDef *aggType = aggregate->type.get();
+    TypeDef *varNS = TypeDefPtr::cast(var->owner);
+    if (!varNS || !aggType->isDerivedFrom(varNS))
+        error(SPUG_FSTR("Variable '" << var->name <<
+                         "' is not accessible from within this context."
+                        )
+              );
+    
+    return builder.createFieldRef(aggregate, var);
 }
 
 void Context::setBreak(Branchpoint *branch) {
