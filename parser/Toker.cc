@@ -306,6 +306,8 @@ Token Toker::readToken() {
                                     st_istrHex;
                         codeChar = codeLen = 0;
                         break;
+                    case '\n':
+                        break;
                     default:
                         if (isdigit(ch) && ch < '8') {
                             codeChar = ch - '0';

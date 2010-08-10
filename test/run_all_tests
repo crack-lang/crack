@@ -941,5 +941,9 @@ test_output 'instance variable initializer typecheck' \
     "${parseError}2: Invalid type int32 for initializer for instance variable \
 a of type A"
 
+test_output 'escaped newline is ignored' \
+    'import crack.io cout; cout `o\
+k\n`;' \
+    ok
 
 exit $rc
