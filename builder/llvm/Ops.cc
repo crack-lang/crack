@@ -390,7 +390,23 @@ ResultExprPtr BoolOpCall::emit(Context &context) {
 
     return new BResultExpr(this, builder.lastValue);
 }
-    
+
+// FBoolOpCall
+ResultExprPtr FBoolOpCall::emit(Context &context) {
+    // emit the receiver
+    receiver->emit(context)->handleTransient(context);
+
+    LLVMBuilder &builder =
+            dynamic_cast<LLVMBuilder &>(context.builder);
+    builder.lastValue =
+        builder.builder.CreateFCmpONE(
+            builder.lastValue,
+            Constant::getNullValue(builder.lastValue->getType())
+        );
+
+    return new BResultExpr(this, builder.lastValue);
+}
+
 // VoidPtrOpCall
 ResultExprPtr VoidPtrOpCall::emit(Context &context) {
     // emit the receiver

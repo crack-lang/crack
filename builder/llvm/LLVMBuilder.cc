@@ -283,7 +283,7 @@ namespace {
                                          );
         btype->defaultInitializer =
             context.builder.createFloatConst(context, 0.0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+        btype->addDef(new FBoolOpDef(context.globalData->boolType.get(),
                                     "toBool"
                                     )
                       );

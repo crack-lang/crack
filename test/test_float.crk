@@ -78,6 +78,15 @@ if (f3 != (0.0 - f1))
 
 // conversions
 
+f3 = 1.0;
+if (!f3) {
+    puts("fail");
+}
+f3 = 0.0;
+if (f3) {
+    puts("fail");
+}
+
 // byte -> float32
 byte b = 1;
 f1 = b;

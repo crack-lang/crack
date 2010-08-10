@@ -214,6 +214,24 @@ public:
     }
 };
 
+class FBoolOpCall : public model::FuncCall {
+public:
+    FBoolOpCall(model::FuncDef *def) : FuncCall(def) {}
+
+    virtual model::ResultExprPtr emit(model::Context &context);
+};
+
+class FBoolOpDef : public UnOpDef {
+public:
+    FBoolOpDef(model::TypeDef *resultType, const std::string &name) :
+            UnOpDef(resultType, name) {
+    }
+
+    virtual model::FuncCallPtr createFuncCall() {
+        return new FBoolOpCall(this);
+    }
+};
+
 /** Operator to convert any pointer type to void. */
 class VoidPtrOpCall : public model::FuncCall {
 public:
