@@ -5,6 +5,7 @@
 #include "BTypeDef.h"
 #include "Ops.h"
 #include "LLVMBuilder.h"
+#include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/GlobalValue.h>
 #include <llvm/GlobalVariable.h>
@@ -82,12 +83,14 @@ BTypeDefPtr createMetaClass(Context &context,
     const PointerType *classPtrType = cast<PointerType>(classType->rep);
     const StructType *classStructType =
             cast<StructType>(classPtrType->getElementType());
+    llvmBuilder.module->addTypeName(".struct.metaBase", classStructType);
 
     // Create a struct representation of the meta class.  This just has the
     // Class class as its only field.
     vector<const Type *> fields(1);
     fields[0] = classStructType;
     const StructType *metaClassStructType = StructType::get(lctx, fields);
+    llvmBuilder.module->addTypeName(".struct.metaClass", metaClassStructType);
     const Type *metaClassPtrType =
             PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;

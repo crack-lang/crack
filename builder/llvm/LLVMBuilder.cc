@@ -1171,6 +1171,13 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
     block = BasicBlock::Create(lctx, "__main__", func);
     builder.SetInsertPoint(block);
 
+    // name some structs in this module
+    BTypeDef *classType = BTypeDefPtr::arcast(context.globalData->classType);
+    module->addTypeName(".struct.Class", classType->rep);
+    BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
+                                  context.globalData->vtableBaseType);
+    module->addTypeName(".struct.vtableBase", vtableBaseType->rep);
+
     // all of the "extern" primitive functions have to be created in each of 
     // the modules - we can not directly reference across modules.
     
