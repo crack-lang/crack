@@ -46,17 +46,23 @@ libcrack_la_LDFLAGS = -version-info 0:0:0
 
 noinst_HEADERS = \
     builder/Builder.h \
+    builder/llvm/ArrayTypeDef.h \
     builder/llvm/BBranchPoint.h \
+    builder/llvm/BBuilderContextData.h \
+    builder/llvm/BCleanupFrame.h \
+    builder/llvm/BFieldRef.h \
     builder/llvm/BFuncDef.h \
     builder/llvm/BModuleDef.h \
     builder/llvm/BResultExpr.h \
     builder/llvm/BTypeDef.h \
     builder/llvm/Consts.h \
     builder/llvm/FuncBuilder.h \
+    builder/llvm/Incompletes.h \
     builder/llvm/LLVMBuilder.h \
     builder/llvm/Ops.h \
     builder/llvm/PlaceholderInstruction.h \
     builder/llvm/VTableBuilder.h \
+    builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
     model/AllocExpr.h \
     model/ArgDef.h \
@@ -70,6 +76,7 @@ noinst_HEADERS = \
     model/FloatConst.h \
     model/FuncCall.h \
     model/FuncDef.h \
+    model/GlobalNamespace.h \
     model/Initializers.h \
     model/InstVarDef.h \
     model/IntConst.h \
