@@ -58,6 +58,41 @@ bool TypeDef::isImplicitFinal(const std::string &name) {
            name == "toBool";
 }
 
+void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
+    // ignore VTableBase
+    if (this == context.globalData->vtableBaseType)
+        return;
+
+    // make sure this isn't a primitive class (we use the "pointer" attribute 
+    // to make this determination)
+    if (!pointer)
+        context.error(SPUG_FSTR("You may not inherit from " << getFullName() <<
+                                 " because it's a primitive class."
+                                )
+                      );
+
+    // store the current endpoint so we don't bother checking against our own 
+    // ancestors.
+    size_t initAncSize = ancestors.size();
+
+    for (TypeVec::const_iterator iter = parents.begin();
+           iter != parents.end();
+           ++iter
+           )
+        (*iter)->addToAncestors(context, ancestors);
+
+    // make sure that we're not already in the ancestor list
+    for (size_t i = 0; i < initAncSize; ++i)
+        if (ancestors[i] == this)
+            context.error(SPUG_FSTR("Class " << getFullName() <<
+                                     " is already an ancestor."
+                                    )
+                          );
+
+    // add this to the ancestors.
+    ancestors.push_back(this);
+}
+
 bool TypeDef::isDerivedFrom(const TypeDef *other) const {
     if (this == other)
         return true;

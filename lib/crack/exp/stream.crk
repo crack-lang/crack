@@ -1,11 +1,12 @@
-# Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-# Classes for io streams
+// Classes for io streams
+// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, Writer, Reader;
-import crack.lang die, ManagedBuffer;
+import crack.io cerr, XWFormatter, XWriter;
+import crack.lang die, ManagedBuffer, FreeBase;
 import crack.exp.bindings Opaque;
 
 import "libc.so.6" fopen, fread, fclose;
+import "libcrack-runtime.so"  _crack_fnmatch;
 
 uint _READ_SIZE = 512;
 
@@ -14,8 +15,27 @@ class FILE: Opaque { }
 FILE fopen(byteptr fn, byteptr mode);
 int fclose(FILE f);
 uint fread(voidptr buf, uint size, uint nmemb, FILE f);
+int _crack_fnmatch(byteptr pattern, byteptr string);
 
-class Openable {
+class FileInfo: Object {
+
+    String name;
+
+    oper init(String name0): name(name0) { }
+    oper init(byteptr name0): name(name0) { }
+
+    bool matches(String pattern) {
+        return (_crack_fnmatch(pattern.buffer, name.buffer) == 0);
+    }
+
+    void writeTo(XWriter out) {
+        XWFormatter(out) `$name`;
+    }
+
+}
+
+// no memory management
+class Openable: VTableBase {
 
     bool _isValid = false; // implies isOpened
     bool _isOpened = false;
@@ -32,6 +52,7 @@ class Openable {
 
 }
 
+// interface
 class _StreamBase : Openable {
 
     void close() { }
@@ -50,7 +71,8 @@ class _StreamBase : Openable {
 
 }
 
-class _StreamReader : _StreamBase {
+// interface
+class _StreamReader: VTableBase {
 
     bool readable() { return true; }
 
@@ -61,7 +83,8 @@ class _StreamReader : _StreamBase {
 
 }
 
-class _StreamWriter : _StreamBase {
+// interface
+class _StreamWriter: VTableBase {
 
     void flush() { }
 
@@ -82,15 +105,17 @@ class UrlStream : _StreamReader {
 */
 
 
-class File : _StreamReader/*, _StreamWriter*/ {
+class File : _StreamBase, 
+             _StreamReader, 
+             _StreamWriter,
+             FileInfo {
 
-    String _name;
     String _mode;
     FILE _fd = null;
 
-    oper init(String name0, String mode0): _name(name0),
+    oper init(String name0, String mode0): FileInfo(name0),
                                            _mode(mode0) {
-        _fd = fopen(_name.buffer, _mode.buffer);
+        _fd = fopen(name.buffer, _mode.buffer);
         if (_fd is null) {
             _isValid = false;
             _isOpened = false;
@@ -104,7 +129,7 @@ class File : _StreamReader/*, _StreamWriter*/ {
 
         _buf := ManagedBuffer(_READ_SIZE);
         len := fread(_buf.buffer, 1, _READ_SIZE, _fd);
-        return String(_buf);
+        return String(_buf, len); // copies
 
     }
 

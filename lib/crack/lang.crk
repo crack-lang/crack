@@ -206,6 +206,12 @@ class String : Buffer {
         memcpy(buffer, buf.buffer, buf.size);
     }
 
+    ## Initialize from first len bytes of buffer.  This copies the buffer, it 
+    ## does not assume ownership.
+    oper init(Buffer buf, uint len) : Buffer(malloc(len), len) {
+        memcpy(buffer, buf.buffer, len);
+    }
+
     ## Initialize from a WriteBuffer and take ownership (the value of 
     ## takeOwnership is actually ignored).
     oper init(ManagedBuffer buf, bool takeOwnership) : 

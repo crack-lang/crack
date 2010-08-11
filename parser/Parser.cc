@@ -1739,10 +1739,14 @@ TypeDefPtr Parser::parseClassDef() {
 
    // parse base class list   
    vector<TypeDefPtr> bases;
+   vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
    tok = getToken();
    if (tok.isColon())
       while (true) {
+         // parse the base class name, make sure it's safe to add this as a 
+         // base class given the existing set, and add it to the list.
          TypeDefPtr baseClass = parseTypeSpec();
+         baseClass->addToAncestors(*context, ancestors);
          bases.push_back(baseClass);
          
          tok = getToken();

@@ -1,14 +1,14 @@
-# Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-# Classes for directory traversal
+// Classes for directory traversal
+// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, StringFormatter, XWFormatter, XWriter;
+import crack.io cerr, XWFormatter, XWriter;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
-import crack.exp.stream Openable;
+import crack.exp.stream Openable, FileInfo;
 
 import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
-                             _crack_fnmatch, _crack_getDirEntry;
+                             _crack_getDirEntry;
 
 class _crackDir: Opaque { }
 
@@ -26,29 +26,11 @@ _crackDir _crack_opendir(byteptr dirname);
 _DirEntry _crack_getDirEntry(_crackDir d);
 int _crack_closedir(_crackDir d);
 int _crack_readdir(_crackDir d);
-int _crack_fnmatch(byteptr pattern, byteptr string);
 
 // XXX make portable
 String PATH_SEPARATOR = "/";
 
-class FileInfo {
-
-    String name;
-
-    oper init(String name0): name(name0) { }
-    oper init(byteptr name0): name(name0) { }
-
-    bool matches(String pattern) {
-        return (_crack_fnmatch(pattern.buffer, name.buffer) == 0);
-    }
-
-    void writeTo(XWriter out) {
-        XWFormatter(out) `$name`;
-    }
-
-}
-
-class Directory : Openable {
+class Directory : Object, Openable {
 
     String name;
 
