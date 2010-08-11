@@ -50,11 +50,18 @@ file(STRINGS runtimeModules.txt RUNTIME_SRC_FILES)
 set_source_files_properties( ${CRACK_SRC_FILES}
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
+set_source_files_properties( crack.cc
+                             PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
+                            )
 
-add_executable( crack ${CRACK_SRC_FILES} )
+add_library(libcrack SHARED ${CRACK_SRC_FILES})
+set_target_properties(libcrack
+                      PROPERTIES
+                        OUTPUT_NAME crack)
 
 add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
 
+add_executable(crack crack.cc)
 set_target_properties( crack
                        PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
                        # test suite currently expects crack binary in project 
@@ -63,8 +70,9 @@ set_target_properties( crack
                      )
                      
 target_link_libraries( crack
+                        libcrack
 			${SPUG_LIBRARIES}
-            ${LLVM_LIBS}
+                        ${LLVM_LIBS}
                       ) 
 
 # install targets
