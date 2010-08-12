@@ -59,6 +59,11 @@ noinst_HEADERS = \
     parser/Parser.h \
     parser/Token.h \
     parser/Toker.h \
+    spug/Exception.h \
+    spug/RCBase.h \
+    spug/RCPtr.h \
+    spug/StringFmt.h \
+    spug/TypeInfo.h \
     Crack.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt cmake
@@ -73,8 +78,6 @@ AM_CXXFLAGS = @LLVM_CXXFLAGS@ -fexceptions
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = -DCRACKLIB=\"${cracklib}\"
-
-INCLUDES =  @SPUGPP_CXXFLAGS@
 
 TESTS = test/run_all_tests
 
