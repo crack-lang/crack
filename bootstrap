@@ -1,6 +1,27 @@
 #!/bin/sh
 # Copyright 2003 Michael A. Muller
 
+# --- embedded python ---
+# generate Makefile.am from Makefile.am.in
+python <<__eof__
+import re
+
+sourcesRx = re.compile(r'(.*)%libCrackSources%(.*)', re.DOTALL)
+
+# get the source files
+sourceModules = open('sourceModules.txt').read().strip().split('\n')
+
+src = file('Makefile.am.in')
+dst = file('Makefile.am', 'w')
+for line in src:
+    m = sourcesRx.match(line)
+    if m:
+        dst.write(m.group(1) + ' \\\\\n    '.join(sourceModules) + m.group(2))
+    else:
+        dst.write(line)
+__eof__
+# --- end of embedded python ---
+
 if [ ! -e ltmain.sh ]; then libtoolize; fi
 aclocal -I m4 -I /usr/local/share/aclocal
 autoconf

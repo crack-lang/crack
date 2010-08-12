@@ -2,46 +2,7 @@
 # Portions Copyright 2009 Google Inc.
 
 lib_LTLIBRARIES = libcrack.la
-libcrack_la_SOURCES = \
-    builder/llvm/ArrayTypeDef.cc \
-    builder/llvm/BFieldRef.cc \
-    builder/llvm/BFuncDef.cc \
-    builder/llvm/BTypeDef.cc \
-    builder/llvm/Consts.cc \
-    builder/llvm/FuncBuilder.cc \
-    builder/llvm/Incompletes.cc \
-    builder/llvm/LLVMBuilder.cc \
-    builder/llvm/Ops.cc \
-    builder/llvm/PlaceholderInstruction.cc \
-    builder/llvm/Utils.cc \
-    builder/llvm/VTableBuilder.cc \
-    builder/llvm/VarDefs.cc \
-    parser/Token.cc \
-    parser/Toker.cc \
-    parser/ParseError.cc \
-    parser/Parser.cc \
-    model/AllocExpr.cc \
-    model/AssignExpr.cc \
-    model/CleanupFrame.cc \
-    model/CompositeNamespace.cc \
-    model/Context.cc \
-    model/Expr.cc \
-    model/FuncCall.cc \
-    model/FuncDef.cc \
-    model/Initializers.cc \
-    model/IntConst.cc \
-    model/FloatConst.cc \
-    model/LocalNamespace.cc \
-    model/ModuleDef.cc \
-    model/Namespace.cc \
-    model/NullConst.cc \
-    model/OverloadDef.cc \
-    model/ResultExpr.cc \
-    model/StrConst.cc \
-    model/TypeDef.cc \
-    model/VarDef.cc \
-    model/VarRef.cc \
-    Crack.cc
+libcrack_la_SOURCES = %libCrackSources%
 libcrack_la_LDFLAGS = -version-info 0:0:0
 
 noinst_HEADERS = \
