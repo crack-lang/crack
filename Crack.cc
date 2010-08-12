@@ -46,6 +46,7 @@ Crack::Crack() :
     initialized(false),
     dump(false),
     optimizeLevel(0),
+    emitDebugInfo(false),
     noBootstrap(false),
     useGlobalLibs(true) {
 
@@ -213,7 +214,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
         new Context(*builder, Context::module, rootContext.get(),
                     new GlobalNamespace(rootContext->ns.get())
                     );
-    ModuleDefPtr modDef = context->createModule(canonicalName);
+    ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
     if (!modPath.isDir) {
         ifstream src(modPath.path.c_str());
         parseModule(*context, modDef.get(), modPath.path, src);
@@ -310,7 +311,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 
     // "foo.crk" -> foo, "anything weird" -> "__main__" or something.
-    ModuleDefPtr modDef = context->createModule(name);
+    ModuleDefPtr modDef = context->createModule(name, emitDebugInfo);
     try {
         parseModule(*context, modDef.get(), name, src);
         loadedModules.push_back(modDef);

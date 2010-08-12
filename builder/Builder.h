@@ -39,6 +39,8 @@ class Builder : public spug::RCBase {
         int optimizeLevel;
 
     public:
+        Builder(): optimizeLevel(0) { }
+
         /**
          * This gets called on the "root builder" everytime a new module gets 
          * loaded and the new builder .  Derived classes may either create a 
@@ -260,7 +262,8 @@ class Builder : public spug::RCBase {
                                                      ) = 0;
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
+                                                 const std::string &name,
+                                                 bool emitDebugInfo = false
                                                  ) = 0;
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *modDef

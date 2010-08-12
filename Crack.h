@@ -70,6 +70,9 @@ class Crack {
         // optimization level to pass to builder
         int optimizeLevel;
 
+        // if true, generate debug information suitable for a debugger
+        bool emitDebugInfo;
+
         // if true, don not load the bootstrapping modules before running a 
         // script.  This changes some of the language semantics: constant 
         // strings become byteptr's and classes without explicit ancestors

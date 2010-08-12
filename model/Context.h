@@ -172,7 +172,8 @@ class Context : public spug::RCBase {
          */
         bool encloses(const Context &other) const;
 
-        ModuleDefPtr createModule(const std::string &name);
+        ModuleDefPtr createModule(const std::string &name,
+                                  bool emitDebugInfo = false);
 
         /** 
          * Get or create a string constant.  This can be either a
