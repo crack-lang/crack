@@ -19,6 +19,7 @@
 #include "Utils.h"
 #include "VarDefs.h"
 #include "VTableBuilder.h"
+#include "DebugInfo.h"
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -445,13 +446,13 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var) {
 }
 
 LLVMBuilder::LLVMBuilder() :
+    debugInfo(0),
     module(0),
     builder(getGlobalContext()),
     func(0),
     execEng(0),
     block(0),
     lastValue(0) {
-
     InitializeNativeTarget();
 }
 
@@ -491,17 +492,23 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         narrow((*valIter)->type.get(), (*argIter)->type.get());
         valueArgs.push_back(lastValue);
     }
-    
+
     if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
                                                     valueArgs
                                                     );
-    else
+    else {
         lastValue =
             builder.CreateCall(funcDef->getRep(*this), valueArgs.begin(), 
                                valueArgs.end()
                                );
+        if (debugInfo) {
+            Instruction* i = dyn_cast<Instruction>(lastValue);
+            i->setMetadata("dbg",
+                           debugInfo->emitLocation(context.getLocation()));
+        }
+    }
     return new BResultExpr(funcCall, lastValue);
 }
 
@@ -776,7 +783,16 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
             }
         else
             f.setReceiverType(classType);
+        if (debugInfo) {
+            debugInfo->emitFunctionDef(classType->getFullName()+"::"+
+                                       name,
+                                       context.getLocation());
+        }
     }
+    else if (debugInfo) {
+        debugInfo->emitFunctionDef(name, context.getLocation());
+    }
+
 
     f.finish(false);
 
@@ -1160,10 +1176,18 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     return varDef;
 }
  
-ModuleDefPtr LLVMBuilder::createModule(Context &context, const string &name) {
+ModuleDefPtr LLVMBuilder::createModule(Context &context,
+                                       const string &name,
+                                       bool emitDebugInfo) {
+
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
+
+    if (emitDebugInfo) {
+        debugInfo = new DebugInfo(module, name);
+    }
+
     llvm::Constant *c =
         module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
@@ -1281,6 +1305,9 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.SetInsertPoint(block);
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
+
+    if (debugInfo)
+        delete debugInfo;
     
     // restore the main function
     func = mainFunc;

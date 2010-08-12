@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
             break;
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
+        } else if (!strcmp(*arg, "-g")) {
+            Crack::getInstance().emitDebugInfo = true;
         } else if (!strcmp(*arg, "-O0")) {
             Crack::getInstance().optimizeLevel = 0;
         } else if (!strcmp(*arg, "-O1")) {

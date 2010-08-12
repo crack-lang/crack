@@ -121,8 +121,10 @@ bool Context::encloses(const Context &other) const {
         return false;
 }
 
-ModuleDefPtr Context::createModule(const string &name) {
-    return builder.createModule(*this, name);
+ModuleDefPtr Context::createModule(const string &name,
+                                   bool emitDebugInfo
+                                   ) {
+    return builder.createModule(*this, name, emitDebugInfo);
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {

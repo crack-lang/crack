@@ -36,4 +36,5 @@ builder/llvm/PlaceholderInstruction.cc
 builder/llvm/Utils.cc
 builder/llvm/VarDefs.cc
 builder/llvm/VTableBuilder.cc
+builder/llvm/DebugInfo.cc
 Crack.cc

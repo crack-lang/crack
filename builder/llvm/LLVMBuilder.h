@@ -24,12 +24,13 @@ namespace mvll {
 
 SPUG_RCPTR(BHeapVarDefImpl);
 class BTypeDef;
-
+class DebugInfo;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
     private:
-        
+
+        DebugInfo* debugInfo;
         llvm::ExecutionEngine *execEng;
         
         // emit all cleanups for context and all parent contextts up to the 
@@ -217,7 +218,8 @@ class LLVMBuilder : public Builder {
                                                      );
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
+                                                 const std::string &name,
+                                                 bool emitDebugInfo = false
                                                  );
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
