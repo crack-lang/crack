@@ -1,8 +1,11 @@
 # Copyright 2010 Google Inc.
 # The Crack Container library.
 
-import crack.io cout, cerr, XWFormatter;
+import crack.io cout, cerr, Formatter, XWFormatter;
 import crack.lang die, free, XWriter;
+import "libc.so.6" memmove;
+
+void memmove(voidptr dst, voidptr src, uint size);
 
 ## Abstract base class of all iterators.
 class Iterator {
@@ -328,5 +331,568 @@ class Array : _ArrayIface {
     
     uint count() {
         return __size;
+    }
+    
+    ## delete the element at 'index'.
+    void delete(uint index) {
+        if (index > __size)
+            die('Index out of range in Array.delete()');
+        
+        # release the object at the index
+        __rep[index].oper release();
+        
+        # move everything else down one
+        uint i = index;
+        while (i < __size - 1) {
+            __rep[i] = __rep[i + 1];
+            ++i;
+        }
+#        memmove(__rep + index, __rep + index + 1, __size - index);
+        --__size;
+    }   
+}
+
+## Red-black tree node.
+class RBTreeNode {
+    
+    # if true, this is a red node
+    bool red;
+    RBTreeNode left = null, right = null, parent = null;
+    Object key, val = null;
+    
+    oper init(Object key0, Object val0, bool red0) :
+        red = red0,
+        key = key0,
+        val = val0 {
+    }
+    
+    void doIndent(uint indent) {
+        i := indent;
+        while (i) { i = i - 1; cout `  `; }
+    }
+    
+    void dump(uint indent) {
+        doIndent(indent);
+        String color;
+        if (red)
+            color = 'red';
+        else
+            color = 'black';
+        cout `$color, key = $key, val = $val\n`;
+        doIndent(indent);
+        cout `left:\n`;
+        if (left) {
+            left.dump(indent + 1);
+        } else {
+            doIndent(indent);
+            cout `  null\n`;
+        }
+        doIndent(indent);
+        cout `right:\n`;
+        if (right) {
+            right.dump(indent + 1);
+        } else {
+            doIndent(indent);
+            cout `  null\n`;
+        }
+    }
+
+    ## Find and return the node matching the key, returns null if the key is 
+    ## not found.
+    RBTreeNode find(Object targetKey) {
+        diff := targetKey.cmp(key);
+        if (!diff)
+            return this;
+        else if (diff > 0 && right)
+            return right.find(targetKey);
+        else if (diff < 0 && left)
+            return left.find(targetKey);
+        else
+            return null;
+    }
+    
+    RBTreeNode __grandparent() {
+        if (parent)
+	   return parent.parent;
+	else
+            return null;
+    }
+
+    RBTreeNode __uncle() {
+        g := __grandparent();
+        if (!g)
+            return null;
+        if (parent == g.left)
+            return g.right;
+        else
+            return g.left;
+    }
+
+    void __setLeft(RBTreeNode node) {
+        left = node;
+        if (node)
+            node.parent = this;
+    }
+    
+    void __setRight(RBTreeNode node) {
+        right = node;
+        if (node)
+            node.parent = this;
+    }
+
+    void __setParent(RBTreeNode newParent, bool isRightChild) {
+        if (newParent)
+            if (isRightChild)
+                newParent.__setRight(this);
+            else
+                newParent.__setLeft(this);
+        else
+            parent = null;
+    }
+
+    ## Returns the root of the nodes tree.
+    RBTreeNode getRoot() {
+        p := this;
+        while (p.parent)
+            p = p.parent;
+        return p;
+    }
+        
+    ## Rotate the node to the left so its new parent is its old right child.
+    void rotateLeft() {
+        newParent := right;
+        orgParent := parent;
+        isRight := parent && this is parent.right;
+        newRight := newParent.left;
+        newParent.__setLeft(this);
+        __setRight(newRight);
+        newParent.__setParent(orgParent, isRight);
+    }
+    
+    ## rotate the node to the right so its new parent is its old left node.
+    void rotateRight() {
+        newParent := left;
+        orgParent := parent;
+        isRight := parent && this is parent.right;
+        newLeft := newParent.right;
+        newParent.__setRight(this);
+        __setLeft(newLeft);
+        newParent.__setParent(orgParent, isRight);
+    }
+
+    void __rebalance() {
+        if (!parent) {
+            # this is the root node.  Mark it as black, root node is always 
+            # black. (we could actually omit this case, since we're dealing 
+            # with it externally).
+            red = false;
+        } else if (!parent.red) {
+            # parent is black, no rules are invalidated.
+            return;
+        } else {
+            # parent is red.
+            RBTreeNode uncle = __uncle(), gramps = null;
+ 
+            if (uncle && uncle.red) {
+                # both the parent and the uncle are red.  Paint them black, 
+                # paint gramps red and rebalance him.
+		parent.red = false;
+		uncle.red = false;
+		gramps = __grandparent();
+		gramps.red = true;
+                gramps.__rebalance();
+        	   } else {
+        	       # parent is red, uncle is black.
+        	       RBTreeNode node = null;
+        	       gramps = __grandparent();
+        	       if (this is parent.right && parent is gramps.left) {
+        	           # this is the right child of a left child.  Rotate left 
+        	           # and perform subsequent operations on what was my parent 
+        	           # (and is now my left child).
+                    parent.rotateLeft();
+                    root := parent;
+                    node = left;
+                    gramps = parent;
+                } else if (this is parent.left && parent is gramps.right) {
+                    # this is the left child of a right child.  Do the 
+                    # opposite of the last case.
+                    parent.rotateRight();
+                    node = right;
+                    gramps = parent;
+                } else {
+                    node = this;
+                }
+                
+                # the parent is red, the uncle is black, the node is a left 
+                # child of a left child or the right child of a right child.
+                node.parent.red = false;
+                gramps.red = true;
+                if (node is node.parent.left && node.parent is gramps.left)
+                    gramps.rotateRight();
+                else /* (n == n->parent->right) and (n->parent == g->right) */
+                    gramps.rotateLeft();
+            }
+        }
+    }
+
+    void insert(RBTreeNode newNode) {
+        # normal b-tree insert.  If the new node is greater than the current 
+        # node, look to the right.
+        if (newNode.key >= key) {
+            if (!right) {
+                right = newNode;
+                newNode.parent = this;
+                newNode.__rebalance();
+            } else {
+                right.insert(newNode);
+            }
+        } else {
+            if (!left) {
+                left = newNode;
+                newNode.parent = this;
+                newNode.__rebalance();
+            } else {
+                left.insert(newNode);
+            }
+        }
+    }
+    
+    ## Find the maximum node in the subtree.
+    RBTreeNode findMax() {
+        if (right)
+            return right.findMax();
+        else
+            return this;
+    }
+    
+    ## Returns the minimum node in the subtree.
+    RBTreeNode findMin() {
+        if (left)
+            return left.findMin();
+        else
+            return this;
+    }
+
+    ## Replace the node in its parent with the new child.
+    void __replaceMe(RBTreeNode child) {
+        if (this is parent.left)
+            parent.__setLeft(child);
+        else
+            parent.__setRight(child);
+    }
+
+    RBTreeNode __sibling() {
+        if (this is parent.left)
+            return parent.right;
+        else
+            return parent.left;
+    }
+
+    void __rebalanceAfterDelete() {
+        # case 1: if this is the root node, we're done.
+        if (parent is null)
+            return;
+        
+        sibling := __sibling();
+
+        # case 2: sibling is red.        
+        if (sibling.red) {
+            # reverse the colors of the parent and sibling
+            parent.red = true;
+            sibling.red = false;
+            
+            # rotate so that the sibling is the new parent
+            if (this is parent.left)
+                parent.rotateLeft();
+            else
+                parent.rotateRight();
+            
+            # find the new sibling
+            sibling = __sibling();
+        }
+        
+        # we now know the sibling is black.
+        # record whether the sibling and its children are black. (we already 
+        # know that sibling is black)
+        siblingAndChildrenBlack :=
+            (!sibling.left || !sibling.left.red) &&
+            (!sibling.right || !sibling.right.red)
+            ;
+        
+        # case 3: parent, sibling and all of the sibling's children are 
+        # black.
+        if (!parent.red && siblingAndChildrenBlack) {
+            sibling.red = true;
+            parent.__rebalanceAfterDelete();
+            return;
+        }
+        
+        # case 4: parent is red, sibling and all of its children are black.  
+        # We can just swap colors on parent and sibling.
+        if (siblingAndChildrenBlack) {
+            sibling.red = true;
+            parent.red = false;
+            return;
+        }
+        
+        # case 5: sibling is black (asserted by failure of case 2), 
+        # sibling's left child is red and this node is the left child of its 
+        # parent.
+        # We deal with case 5 by turning it into something that satisfies case
+        # 6 and then falling through to case 6 processing.
+        if ((sibling.left && sibling.left.red) &&
+            (!sibling.right || !sibling.right.red) &&
+            this is parent.left
+            ) {
+            # change the colors of the sibling and its child and fall through 
+            # to case 6.
+            sibling.red = true;
+            sibling.left.red = false;
+            sibling.rotateRight();
+            sibling = sibling.parent;
+        
+        # case 5, on the right side
+        } else if ((sibling.right && sibling.right.red) &&
+                   (!sibling.left || !sibling.left.red) &&
+                   this is parent.right
+                   ) {
+            sibling.red = true;
+            sibling.right.red = false;
+            sibling.rotateLeft();
+            sibling = sibling.parent;
+        }
+        
+        # case 6: sibling is black, sibling's right child is red and this node 
+        # is the left child node of its parent.
+        sibling.red = parent.red;
+        parent.red = false;
+        if (this is parent.left) {
+            sibling.right.red = false;
+            parent.rotateLeft();
+        
+        # case 6 on the right
+        } else {
+            sibling.left.red = false;
+            parent.rotateRight();
+        }
+    }
+
+    ## an "elbow node" is a node with at most one non-leaf child (keep in mind
+    ## that leaves are nulls in an rbtree, so a node with at most one non-null
+    ## child).
+    void __deleteElbowNode() {
+        child := left;
+        if (!child)
+            child = right;
+
+        # if the node is red we can just replace it with the child
+        if (red) {
+            __replaceMe(child);
+
+        # if the node is black but its child is red, we can replace it with 
+        # the child and paint the child black.
+        } else if (!red && child && child.red) {
+            __replaceMe(child);
+            child.red = false;
+
+        # both the node and child are black.
+        } else {
+            if (child)
+                die('child is supposed to be null!');
+            # replace the node with its child, then rebalance the child
+            
+            # XXX what we would do if we were not using null to represent a 
+            # leaf node.
+            #__replaceMe(child);
+            #child.__rebalanceAfterDelete();
+            __rebalanceAfterDelete();
+            __replaceMe(child);
+        }
+    }
+
+    ## delete the node.  Returns true if the node is the root node.
+    bool delete() {
+        # find either the minimum in the left or the maximum in the right
+        RBTreeNode node = null;
+        if (left) {
+            node = left.findMax();
+        } else if (right) {
+            node = right.findMin();
+        } else {
+            # we just have to delete this node.
+            if (parent)
+                node = this;
+            else
+                # no parent, this is the root node.
+                return true;
+        }
+        
+        # move the contents of the new node to this node
+        if (!(node is this)) {
+            key = node.key;
+            val = node.val;
+        }
+        
+        # really delete the new node
+        node.__deleteElbowNode();
+        return false;
+    }
+
+    ## Clear all parent pointers to remove cyclic references.
+    void _unhookParents() {
+        parent = null;
+        if (left)
+            left._unhookParents();
+        if (right)
+            right._unhookParents();
+    }  
+    
+    # constraint validation
+    
+    ## check that both children of a red node are black
+    bool checkRedChildrenBlack(Formatter report) {
+        if (red && (left && left.red || right && right.red)) {
+            report `RBTree.checkConstraints: red node $key has red child.\n`;
+            return false;
+        }
+        bool result = true;
+        if (left) {
+            if (left.key >= key) {
+                report `left key $(left.key) >= $key\n`;
+                result = false;
+            }
+            left.checkRedChildrenBlack(report);
+        }
+        if (right) {
+            if (right.key <= key) {
+                report `right key $(right.key) <= $key\n`;
+                result = false;
+            }
+            right.checkRedChildrenBlack(report);
+        }
+        return result;
+    }
+    
+    int checkBlackCounts(Formatter report) {
+        int leftCount, rightCount;
+        if (left)
+            leftCount = left.checkBlackCounts(report);
+        if (right)
+            rightCount = right.checkBlackCounts(report);
+        
+        # if we failed on either of the children, fail for the parent
+        if (leftCount == -1 || rightCount == -1)
+            return -1;
+        
+        if (leftCount != rightCount) {
+            report `RBTree.checkConstraints: imbalanced black count at node \
+$key\n`;
+            return -1;
+        }
+        
+        if (red)
+            return leftCount;
+        else
+            return leftCount + 1;
+    }
+}
+
+class TreeMap : Container {
+    
+    RBTreeNode __root = null;
+    uint __count;
+
+    void oper []=(Object key, Object val) {
+        if (__root) {
+            __root.insert(RBTreeNode(key, val, true));
+
+            # the root node may have changed due to rebalancing - find the new 
+            # root.
+            __root = __root.getRoot();
+        } else {
+            __root = RBTreeNode(key, val, false);
+        }
+
+        ++__count;
+    }
+    
+    ## Returns the object with the specified key, returns null if the key
+    ## is not in the tree.
+    Object get(Object key) {
+        if (__root) {
+            node := __root.find(key);
+            if (node)
+                return node.val;
+        }
+        
+        return null;
+    }
+    
+    void oper [](Object key) {
+        RBTreeNode node = null;
+        if (__root)
+            node = __root.find(key);
+        if (!node)
+            die('key not found.');
+    }
+    
+    void dump() {
+        if (__root)
+            __root.dump(0);
+        else
+            cout `root is null\n`;
+    }
+    
+    oper del() {
+        if (__root) __root._unhookParents();
+    }
+    
+    ## Delete the object with the specified key.
+    void delete(Object key) {
+        RBTreeNode node = null;
+        if (__root)
+            node = __root.find(key);
+        if (!node)
+            die('node not found in RBTree.delete()');
+
+        # delete the node
+        if (node.delete())
+           # set the root to null if it was the root node with no children
+            __root = null;
+        else
+            # find the new root node.
+            __root = __root.getRoot();
+        --__count;
+    }
+    
+    bool checkConstraints(Formatter report) {
+        # empty trees always pass.
+        if (!__root)
+            return true;
+            
+        result := true;
+
+        # 1: a node is either red or black (duh)
+        # 2: the root node is black
+        if (__root.red) {
+            report `RBTree.checkConstraints: The root is not black\n`;
+            result = false;
+        }
+        
+        # 3: all leaves are black is true because we define null as black
+        # 4: both children of every red node are black.
+        if (!__root.checkRedChildrenBlack(report))
+            result = false;
+        
+        # 5: every simple path to a leaf traverses the same number of black 
+        # nodes.
+        if (__root.checkBlackCounts(report) == -1)
+            result = false;
+        
+        return result;
+    }
+    
+    uint count() {
+        return __count;
     }
 }

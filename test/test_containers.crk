@@ -1,7 +1,11 @@
+# Copyright 2010 Google Inc.
 
-import crack.lang exit;
-import crack.io cout;
-import crack.container List, Array;
+import crack.lang die, exit, XWriter;
+import crack.io cout, Formatter, XWFormatter, StringFormatter;
+import crack.container Array, List, TreeMap;
+import 'libc.so.6' random;
+
+int random();
 
 List list;
 list.append('first');
@@ -44,6 +48,112 @@ a2.append('2');
 if (a2[0] != '1' || a2[1] != '2' || a2.count() != 2) {
     cout `$a2 is not ['1', '2']\n`;
     exit(1);
+}
+
+# set this to "cout" for debug info
+Formatter out = null;
+
+class Monitor {
+    bool deleted;
+}
+
+class TestObj {
+    Monitor mon;
+
+    oper init(Monitor mon0) : mon = mon0 {}
+
+    oper del() {
+        if (mon)
+            mon.deleted = true;
+    }
+}
+
+# array tests
+arr := Array();
+arr.append('first');
+arr.append('second');
+arr.append('third');
+if (arr[0] != 'first')
+    die('arr[0] != "first"');
+if (arr[1] != 'second')
+    die('arr[2] != "second"');
+if (arr[2] != 'third')
+    die('arr[2] != "third"');
+if (arr.count() != 3)
+    die('arr.count != 3');
+
+arr.delete(1);
+if (arr[1] != 'third')
+    die('arr[1] != "third" after delete');
+if (arr[0] != 'first')
+    die('arr[0] != "first" after delete');
+if (arr.count() != 2)
+    die('arr.count() != 2 after delete');
+
+class IntWrapper {
+    int val;
+    
+    oper init(int val0) : val = val0 {}
+    
+    int cmp(Object other) {
+        if (other.class.isSubclass(IntWrapper)) {
+            return val - IntWrapper.unsafeCast(other).val;
+        } else {
+            return Object.cmp(other);
+        }
+    }
+    
+    void writeTo(XWriter writer) {
+        XWFormatter fmt = {writer};
+        fmt `$(val / 1000000)`;
+    }
+        
+}
+
+tree := TreeMap();
+
+# add a node
+tree['val'] = 'test';
+if (tree.get('val') != 'test')
+    die('lookup of "val" failed');
+tree.delete('val');
+if (tree.count() != 0)
+    die('count != 0');
+if (tree.get('val'))
+    die('tree still contains "val"');
+
+a := Array(1024);
+
+int i;
+while (i < 10000) {
+    action := random() % 3;
+    if (action < 2) {
+        # insert a new random value
+        
+        # find an unused key
+        v := IntWrapper(random());
+        while (tree.get(v))
+            v.val = random();
+
+        out `$i: adding $v\n`;
+        tree[v] = v;
+        a.append(v);
+    } else if (action == 2 && a.count()) {
+        # delete key
+        index := uint(random()) % a.count();
+        out `$i: deleting a[$index]: $(a[index])\n`;
+        tree.delete(a[index]);
+        a.delete(index);
+    }
+    
+    StringFormatter report;
+    if (!tree.checkConstraints(report)) {
+        out `$(report.createString())\n`;
+        tree.dump();
+        break;
+    }
+        
+    ++i;
 }
 
 cout `ok\n`;
