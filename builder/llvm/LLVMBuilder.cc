@@ -331,6 +331,32 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
     return execEng;
 }
 
+void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
+                                       FuncDef *existing,
+                                       BTypeDef *&classType,
+                                       FuncBuilder &funcBuilder
+                                       ) {
+    ContextPtr classCtx = context.getClassContext();
+    assert(classCtx && "method is not nested in a class context.");
+    classType = BTypeDefPtr::arcast(classCtx->ns);
+
+    // create the vtable slot for a virtual function
+    if (flags & FuncDef::virtualized) {
+        // use the original's slot if this is an override.
+        if (existing) {
+            funcBuilder.funcDef->vtableSlot = 
+                wrapOverride(classType, BFuncDefPtr::acast(existing),
+                             funcBuilder
+                             );                
+        } else {
+            funcBuilder.funcDef->vtableSlot = classType->nextVTableSlot++;
+            funcBuilder.setReceiverType(classType);
+        }
+    } else {
+        funcBuilder.setReceiverType(classType);
+    }
+}
+
 void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
     if (curType == ancestor)
@@ -741,12 +767,34 @@ void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
     builder.CreateBr(bpos->block2);
 }
 
+FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
+                                          FuncDef::Flags flags,
+                                          const string &name,
+                                          TypeDef *returnType,
+                                          const vector<ArgDefPtr> &args,
+                                          FuncDef *override
+                                          ) {
+    assert(flags & FuncDef::forward);
+
+    // create the function
+    FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name,
+                  args.size()
+                  );
+    f.setArgs(args);
+    
+    BTypeDef *classType = 0;
+    if (flags & FuncDef::method)
+        initializeMethodInfo(context, flags, override, classType, f);
+    f.finish(false);
+    return f.funcDef;
+}
+
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef::Flags flags,
                                       const string &name,
                                       TypeDef *returnType,
                                       const vector<ArgDefPtr> &args,
-                                      FuncDef *override
+                                      FuncDef *existing
                                       ) {
     // store the current function and block in the context
     BBuilderContextData *contextData;
@@ -754,58 +802,54 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     contextData->func = func;
     contextData->block = block;
     
-    // create the function
-    FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name, 
-                  args.size()
-                  );
-    f.setArgs(args);
-    BFuncDef *funcDef = f.funcDef.get();
-    
-    // see if this is a method, if so store the class type as the receiver type
-    unsigned vtableSlot = 0;
+    // if we didn't get a forward declaration, create the function.
+    BFuncDefPtr funcDef;
     BTypeDef *classType = 0;
-    if (flags & FuncDef::method) {
-        ContextPtr classCtx = context.getClassContext();
-        assert(classCtx && "method is not nested in a class context.");
-        classType = BTypeDefPtr::arcast(classCtx->ns);
-
-        // create the vtable slot for a virtual function
-        if (flags & FuncDef::virtualized)
-            // use the original's slot if this is an override.
-            if (override) {
-                vtableSlot = wrapOverride(classType, 
-                                          BFuncDefPtr::acast(override), 
-                                          f
-                                          );                
-            } else {
-                vtableSlot = classType->nextVTableSlot++;
-                f.setReceiverType(classType);
-            }
-        else
-            f.setReceiverType(classType);
-        if (debugInfo) {
-            debugInfo->emitFunctionDef(classType->getFullName()+"::"+
-                                       name,
-                                       context.getLocation());
+    if (!existing || !(existing->flags & FuncDef::forward)) {
+    
+        // create the function
+        FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name, 
+                      args.size()
+                      );
+        f.setArgs(args);
+        
+        // see if this is a method, if so store the class type as the receiver type
+        if (flags & FuncDef::method) {
+            initializeMethodInfo(context, flags, existing, classType, f);
+            if (debugInfo)
+                debugInfo->emitFunctionDef(SPUG_FSTR(classType->getFullName() <<
+                                                    "::" <<
+                                                    name
+                                                    ),
+                                           context.getLocation()
+                                           );
+        } else if (debugInfo) {
+            debugInfo->emitFunctionDef(name, context.getLocation());
         }
+    
+    
+        f.finish(false);
+        funcDef = f.funcDef;
+    } else {
+        // 'existing' is a forward definition, fill it in.
+        funcDef = BFuncDefPtr::acast(existing);
+        classType = BTypeDefPtr::cast(funcDef->owner);
+        if (debugInfo)
+            debugInfo->emitFunctionDef(funcDef->getFullName(), 
+                                       context.getLocation()
+                                       );
     }
-    else if (debugInfo) {
-        debugInfo->emitFunctionDef(name, context.getLocation());
-    }
 
-
-    f.finish(false);
-
-    f.funcDef->vtableSlot = vtableSlot;
-    func = f.funcDef->rep;
+    func = funcDef->rep;
     funcBlock = block = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(block);
     
     if (flags & FuncDef::virtualized) {
         // emit code to convert from the first declaration base class 
         // instance to the method's class instance.
-        Value *inst = 
-            dynamic_cast<BArgVarDefImpl *>(f.receiver->impl.get())->rep;
+        ArgDefPtr thisVar = funcDef->thisArg;
+        BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
+        Value *inst = thisImpl->rep;
         Context *classCtx = context.getClassContext().get();
         Value *thisRep =
             IncompleteSpecialize::emitSpecialize(context,
@@ -814,12 +858,12 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                                  funcDef->pathToFirstDeclaration
                                                  );
         // lookup the "this" variable, and replace its rep
-        VarDefPtr thisVar = context.ns->lookUp("this");
-        BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
+//        VarDefPtr thisVar = context.ns->lookUp("this");
+//        BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
         thisImpl->rep = thisRep;
     }
     
-    return f.funcDef;
+    return funcDef;
 }    
 
 void LLVMBuilder::emitEndFunc(model::Context &context,

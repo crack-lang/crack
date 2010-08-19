@@ -25,6 +25,7 @@ namespace mvll {
 SPUG_RCPTR(BHeapVarDefImpl);
 class BTypeDef;
 class DebugInfo;
+class FuncBuilder;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
@@ -58,6 +59,13 @@ class LLVMBuilder : public Builder {
         LLVMBuilderPtr rootBuilder;
         
         llvm::ExecutionEngine *bindModule(llvm::Module *mp);
+
+        void initializeMethodInfo(model::Context &context, 
+                                  model::FuncDef::Flags flags,
+                                  model::FuncDef *existing,
+                                  BTypeDef *&classType,
+                                  FuncBuilder &funcBuilder
+                                  );
 
     public:
         // currently experimenting with making these public to give objects in 
@@ -161,12 +169,21 @@ class LLVMBuilder : public Builder {
                                   );
 
         virtual model::FuncDefPtr
+            createFuncForward(model::Context &context,
+                              model::FuncDef::Flags flags,
+                              const std::string &name,
+                              model::TypeDef *returnType,
+                              const std::vector<model::ArgDefPtr> &args,
+                              model::FuncDef *override
+                              );
+
+        virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,
                           const std::string &name,
                           model::TypeDef *returnType,
                           const std::vector<model::ArgDefPtr> &args,
-                          model::FuncDef *override
+                          model::FuncDef *existing
                           );
         
         virtual void emitEndFunc(model::Context &context,

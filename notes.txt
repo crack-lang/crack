@@ -598,3 +598,12 @@ Desired Grammer:
 Compatibility issues for 0.2:
     We're now checking for variable overrides in method arguments, and it's 
     really annoying.  Consider capping the redefinition check at Toplevel.
+
+Annotations:
+
+    Annotations should allow you to do manipulations on language objects 
+    during compile.  They are introduced by an "at" sign 
+    
+    Examples:
+    
+        

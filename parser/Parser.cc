@@ -1157,15 +1157,42 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                       )
             );
    
+   bool isVirtual = isMethod && classTypeDef->hasVTable && 
+                    !TypeDef::isImplicitFinal(name);
+
+   // If we're overriding/implementing a previously declared virtual 
+   // function, we'll store it here.
+   FuncDefPtr override;
+
+   // we now need to verify that the new definition doesn't hide an 
+   // existing definition.
+   FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
+   OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
+   if (existingOvldDef && 
+      (override = existingOvldDef->getSigMatch(argDefs)) &&
+      !override->isOverridable()
+      )
+      error(nameTok,
+            SPUG_FSTR("Definition of " << name <<
+                     " hides previous overload."
+                     )
+            );
+
+   // figure out what the flags are going to be.
+   FuncDef::Flags flags =
+      (isMethod ? FuncDef::method : FuncDef::noFlags) |
+      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
+   
    Token tok3 = getToken();
    InitializersPtr inits;
    if (tok3.isSemi()) {
-      // abstract or forward declaration - see if we've got a stub 
+      // forward declaration or stub - see if we've got a stub 
       // definition
       toker.putBack(tok3);
       StubDef *stub;
+      FuncDefPtr funcDef;
       if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
-         FuncDefPtr funcDef =
+         funcDef =
             context->builder.createExternFunc(*context, FuncDef::noFlags,
                                               name,
                                               returnType,
@@ -1173,14 +1200,20 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               stub->address
                                               );
          stub->owner->removeDef(stub);
-         cstack.restore();
-         addDef(funcDef.get());
-         return argDefs.size();
       } else {
-         // XXX forward declaration
-         error(tok3, 
-               "abstract/forward declarations are not supported yet");
+         // it's a forward declaration
+         funcDef = context->builder.createFuncForward(*context, 
+                                                      FuncDef::forward | 
+                                                       flags,
+                                                      name,
+                                                      returnType,
+                                                      argDefs,
+                                                      override.get()
+                                                      );
       }
+      cstack.restore();
+      addDef(funcDef.get());
+      return argDefs.size();
    } else if (funcFlags == hasMemberInits) {
       inits = new Initializers();
       if (tok3.isColon()) {
@@ -1193,54 +1226,16 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       unexpected(tok3, "expected '{' in function definition");
    }
 
-   bool isVirtual = isMethod && classTypeDef->hasVTable && 
-                    !TypeDef::isImplicitFinal(name);
-
-   // If we're overriding/implementing a previously declared virtual 
-   // function, we'll store it here.
-   FuncDefPtr override;
-
-   // XXX need to consolidate FuncDef and OverloadDef
-   // we now need to verify that the new definition doesn't hide an 
-   // existing definition.
-   FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
-   if (existingFuncDef && existingFuncDef->matches(argDefs)) {
-      if (!(context->getDefContext()->ns.get() == existingDef->owner) ||
-          !existingFuncDef->isOverridable()
-          )
-         override = existingFuncDef;
-      else
-         error(nameTok,
-               SPUG_FSTR("Definition of " << name <<
-                        "hides previous overload."
-                        )
-               );
-   } else {
-      OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-      if (existingOvldDef && 
-         (override = existingOvldDef->getSigMatch(argDefs)) &&
-         !override->isOverridable()
-         )
-         error(nameTok,
-               SPUG_FSTR("Definition of " << name <<
-                        " hides previous overload."
-                        )
-               );
-
-   }
-   
    // parse the body
-   FuncDef::Flags flags =
-      (isMethod ? FuncDef::method : FuncDef::noFlags) |
-      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
    FuncDefPtr funcDef =
       context->builder.emitBeginFunc(*context, flags, name, returnType,
                                      argDefs,
                                      override.get()
                                      );
 
-   // store the new definition in the parent context.
-   {
+   // store the new definition in the parent context if it's not already in 
+   // there (if there was a forward declaration)
+   if (!funcDef->owner) {
       ContextStackFrame cstack(*this, context->getParent().get());
       addDef(funcDef.get());
    }
@@ -1898,9 +1893,16 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
           )
          return existing;
 
-      // redefinition in the same context is an error
-      if (existingNS == context->ns.get())
-         redefineError(tok, existing.get());
+      if (existingNS == context->ns.get()) {
+         FuncDef *funcDef = FuncDefPtr::rcast(existing);
+         if (funcDef->flags & FuncDef::forward)
+            // treat a forward declaration the same as an overload.
+            return existing;
+         else
+            // redefinition in the same context is an error
+            redefineError(tok, existing.get());
+      }
+
       // redefinition in a derived context is fine, but if we're not in a 
       // derived context display a warning.  TODO: if this check doesn't need 
       // to be this way, replace it with something that makes sense.

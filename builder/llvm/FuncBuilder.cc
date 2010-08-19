@@ -72,6 +72,7 @@ void FuncBuilder::finish(bool storeDef) {
                "missing 'this' variable in the context of a "
                "function with a receiver"
                );
+        funcDef->thisArg = receiver;
         receiver->impl = new BArgVarDefImpl(llvmArg);
         ++llvmArg;
     }

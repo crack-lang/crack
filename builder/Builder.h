@@ -155,10 +155,23 @@ class Builder : public spug::RCBase {
                                   ) = 0;
 
         /**
+         * Returns a forward definition for a function.
+         */
+        virtual model::FuncDefPtr
+            createFuncForward(model::Context &context,
+                              model::FuncDef::Flags flags,
+                              const std::string &name,
+                              model::TypeDef *returnType,
+                              const std::vector<model::ArgDefPtr> &args,
+                              model::FuncDef *override
+                              ) = 0;
+
+        /**
          * Start a new function definition.
          * @param args the function argument list.
-         * @param override the virtual base function that we are overriding, 
-         *  null if this is not an override.
+         * @param existing either the virtual base function that we are 
+         * overriding or the forward declaration that we are implementing, 
+         * null if this is not an override or forward-declared.
          */
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
@@ -166,7 +179,7 @@ class Builder : public spug::RCBase {
                           const std::string &name,
                           model::TypeDef *returnType,
                           const std::vector<model::ArgDefPtr> &args,
-                          model::FuncDef *override
+                          model::FuncDef *existing
                           ) = 0;
         
         /**

@@ -670,6 +670,10 @@ test_output 'multiple inheritence from the same base class' \
 #
 #}
 
+test_output 'forward declarations' \
+    'import test.test_forward;' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

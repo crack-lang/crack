@@ -21,6 +21,7 @@ class FuncDef : public VarDef {
             noFlags =0,  // so we can specify this
             method = 1,  // function is a method (has a receiver)
             virtualized = 2, // function is virtual
+            forward = 4,  // this is a forward declaration
         } flags;
         
         // flag to tell us what to do about function arguments during matching.
@@ -34,6 +35,7 @@ class FuncDef : public VarDef {
         
         typedef std::vector<ArgDefPtr> ArgVec;
         ArgVec args;
+        ArgDefPtr thisArg;
         TypeDefPtr returnType;
 
         // for a virtual function, this is the path to the base class 
@@ -82,7 +84,6 @@ class FuncDef : public VarDef {
          * the receiver type or a specialization of it.
          */
         TypeDef *getThisType() const;
-        
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
