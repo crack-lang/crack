@@ -1,0 +1,40 @@
+# tests of forward declarations
+# Copyright 2009 Google Inc.
+
+
+bool true = 1==1;
+bool f_called;
+void f();
+void g() { f(); }
+void f() { f_called = true; }
+g();
+if (!f_called)
+    puts('failed to call f() function');
+
+bool ff_called;
+class A : VTableBase {
+    void ff(bool val);
+    void gg() { ff(true); }
+    void ff(bool val) { ff_called = val; }
+}
+
+A().gg();
+if (!ff_called)
+    puts('failed to call ff() method');
+
+class B {
+    int a = 1;
+    oper init();
+    int b = 1;
+#    void ff() { return B(); } # verify that "oper new" gets generated.
+    oper init() {}
+}
+
+# make sure initialization works
+b := B();
+if (b.a != 1)
+    puts('B.a not initialized');
+if (b.b != 1)
+    puts('B.b not initialized');
+
+puts('ok');
