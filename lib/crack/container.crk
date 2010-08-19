@@ -352,19 +352,33 @@ class Array : _ArrayIface {
     }   
 }
 
+## Holds a key/value pair.
+class KeyVal {
+    Object key, val;
+
+    oper init(Object key0, Object val0) : key = key0, val = val0 {}
+
+    int cmp(Object other) {
+        if (other.class.isSubclass(KeyVal))
+            return key.cmp(KeyVal.unsafeCast(other).key);
+        else
+            return key.cmp(other);
+    }
+    
+    void writeTo(XWriter out) {
+        XWFormatter(out) `$key: $val`;
+    }
+}
+
 ## Red-black tree node.
 class RBTreeNode {
     
     # if true, this is a red node
     bool red;
     RBTreeNode left = null, right = null, parent = null;
-    Object key, val = null;
+    Object val = null;
     
-    oper init(Object key0, Object val0, bool red0) :
-        red = red0,
-        key = key0,
-        val = val0 {
-    }
+    oper init(Object val0, bool red0) : red = red0, val = val0 {}
     
     void doIndent(uint indent) {
         i := indent;
@@ -378,7 +392,7 @@ class RBTreeNode {
             color = 'red';
         else
             color = 'black';
-        cout `$color, key = $key, val = $val\n`;
+        cout `$color, val = $val\n`;
         doIndent(indent);
         cout `left:\n`;
         if (left) {
@@ -397,16 +411,16 @@ class RBTreeNode {
         }
     }
 
-    ## Find and return the node matching the key, returns null if the key is 
-    ## not found.
-    RBTreeNode find(Object targetKey) {
-        diff := targetKey.cmp(key);
+    ## Find and return the node matching the target, returns null if the value
+    ## is not found.
+    RBTreeNode find(Object target) {
+        diff := -val.cmp(target);
         if (!diff)
             return this;
         else if (diff > 0 && right)
-            return right.find(targetKey);
+            return right.find(target);
         else if (diff < 0 && left)
-            return left.find(targetKey);
+            return left.find(target);
         else
             return null;
     }
@@ -536,9 +550,14 @@ class RBTreeNode {
     }
 
     void insert(RBTreeNode newNode) {
+        int diff = -val.cmp(newNode.val);
+        if (diff == 0) {
+            # we match - replace our value
+            val = newNode.val;
+
         # normal b-tree insert.  If the new node is greater than the current 
         # node, look to the right.
-        if (newNode.key >= key) {
+        } else if (diff > 0) {
             if (!right) {
                 right = newNode;
                 newNode.parent = this;
@@ -729,7 +748,6 @@ class RBTreeNode {
         
         # move the contents of the new node to this node
         if (!(node is this)) {
-            key = node.key;
             val = node.val;
         }
         
@@ -752,20 +770,20 @@ class RBTreeNode {
     ## check that both children of a red node are black
     bool checkRedChildrenBlack(Formatter report) {
         if (red && (left && left.red || right && right.red)) {
-            report `RBTree.checkConstraints: red node $key has red child.\n`;
+            report `RBTree.checkConstraints: red node $val has red child.\n`;
             return false;
         }
         bool result = true;
         if (left) {
-            if (left.key >= key) {
-                report `left key $(left.key) >= $key\n`;
+            if (left.val >= val) {
+                report `left value $(left.val) >= $val\n`;
                 result = false;
             }
             left.checkRedChildrenBlack(report);
         }
         if (right) {
-            if (right.key <= key) {
-                report `right key $(right.key) <= $key\n`;
+            if (right.val <= val) {
+                report `right value $(right.val) <= $val\n`;
                 result = false;
             }
             right.checkRedChildrenBlack(report);
@@ -786,7 +804,7 @@ class RBTreeNode {
         
         if (leftCount != rightCount) {
             report `RBTree.checkConstraints: imbalanced black count at node \
-$key\n`;
+$val\n`;
             return -1;
         }
         
@@ -797,6 +815,59 @@ $key\n`;
     }
 }
 
+class RBTreeIter : Iterator {
+    bool __first = true;
+    RBTreeNode __node = null;
+    
+    void __findMin() {
+        __node = __node.findMin();
+    }
+    
+    void __next() {
+        # if there's a right node, find its minimum.
+        if (__node.right) {
+            __node = __node.right.findMin();
+        } else {
+            # back up until we're either at the root or at the first parent 
+            # that we are the left child of.
+            while (__node.parent && __node is __node.parent.right)
+                __node = __node.parent;
+            
+            # at this point, either the parent is null (in which case we're 
+            # done) or we're at a left child.
+            __node = __node.parent;
+        }
+    }
+    
+    oper init(RBTreeNode root) {
+        if (root)
+            __node = root.findMin();
+    }
+    
+    bool next() {
+        __next();
+        return __node;
+    }
+    
+    bool nx() {
+        if (__first) {
+            __first = false;
+            return __node;
+        } else {
+            return next();
+        }
+    }
+    
+    Object elem() {
+        if (__node)
+            return __node.val;
+        else
+            return null;
+    }
+    
+    bool isTrue() { return __node; }
+}
+
 class TreeMap : Container {
     
     RBTreeNode __root = null;
@@ -804,13 +875,13 @@ class TreeMap : Container {
 
     void oper []=(Object key, Object val) {
         if (__root) {
-            __root.insert(RBTreeNode(key, val, true));
+            __root.insert(RBTreeNode(KeyVal(key, val), true));
 
             # the root node may have changed due to rebalancing - find the new 
             # root.
             __root = __root.getRoot();
         } else {
-            __root = RBTreeNode(key, val, false);
+            __root = RBTreeNode(KeyVal(key, val), false);
         }
 
         ++__count;
@@ -821,8 +892,10 @@ class TreeMap : Container {
     Object get(Object key) {
         if (__root) {
             node := __root.find(key);
-            if (node)
-                return node.val;
+            if (node) {
+                v := KeyVal.cast(node.val);
+                return v.val;
+            }
         }
         
         return null;
@@ -894,5 +967,9 @@ class TreeMap : Container {
     
     uint count() {
         return __count;
+    }
+    
+    Iterator iter() {
+        return RBTreeIter(__root);
     }
 }

@@ -2,7 +2,7 @@
 
 import crack.lang die, exit, XWriter;
 import crack.io cout, Formatter, XWFormatter, StringFormatter;
-import crack.container Array, List, TreeMap;
+import crack.container Array, KeyVal, List, TreeMap;
 import 'libc.so.6' random;
 
 int random();
@@ -105,7 +105,7 @@ class IntWrapper {
     
     void writeTo(XWriter writer) {
         XWFormatter fmt = {writer};
-        fmt `$(val / 1000000)`;
+        fmt `$val`; # `$(val / 1000000)`; # if you want to be able to debug
     }
         
 }
@@ -156,5 +156,28 @@ while (i < 10000) {
     ++i;
 }
 
-cout `ok\n`;
+# fill a tree with the numbers from 0 to 99 and iterate over it.
+i = 0;
+tree = TreeMap();
+while (i < 100) {
+    v := IntWrapper(i);
+    tree[v] = v;
+    ++i;
+}
+StringFormatter report;
+if (!tree.checkConstraints(report)) {
+    out `$(report.createString())\n`;
+}
 
+ti := tree.iter();
+i = 0;
+while (ti.nx()) {
+    actual := IntWrapper.cast(KeyVal.cast(ti.elem()).val).val;
+    if (actual != i) {
+        cout `at pos $i, got $actual\n`;
+        die('sucks');
+    }
+    ++i;
+}
+
+cout `ok\n`;
