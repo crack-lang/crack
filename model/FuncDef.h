@@ -12,6 +12,7 @@ namespace model {
 
 //SPUG_RCPTR(ArgDef);
 SPUG_RCPTR(Expr);
+SPUG_RCPTR(Namespace);
 
 SPUG_RCPTR(FuncDef);
 
@@ -37,6 +38,7 @@ class FuncDef : public VarDef {
         ArgVec args;
         ArgDefPtr thisArg;
         TypeDefPtr returnType;
+        NamespacePtr ns;
 
         // for a virtual function, this is the path to the base class 
         // where the vtable is defined

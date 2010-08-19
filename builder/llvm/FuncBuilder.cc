@@ -25,6 +25,7 @@ FuncBuilder::FuncBuilder(Context &context, FuncDef::Flags flags,
     linkage(linkage),
     argIndex(0) {
         funcDef->returnType = returnType;
+        funcDef->ns = context.ns;
 }
 
 void FuncBuilder::finish(bool storeDef) {

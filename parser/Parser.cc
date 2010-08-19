@@ -1177,6 +1177,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                      " hides previous overload."
                      )
             );
+   
+   // if we're "overriding" a forward declaration, use the namespace of the 
+   // forward declaration.
+   if (override && override->flags & FuncDef::forward)
+      context->ns = override->ns;
 
    // figure out what the flags are going to be.
    FuncDef::Flags flags =
