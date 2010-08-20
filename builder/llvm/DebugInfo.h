@@ -33,6 +33,8 @@ public:
 
     llvm::MDNode* emitLocation(const parser::Location &loc);
 
+    llvm::MDNode* emitLexicalBlock(const parser::Location &loc);
+
 };
 
 } // end namespace builder::vmll

@@ -314,7 +314,10 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
         if (rootBuilder) 
             execEng = rootBuilder->bindModule(mod);
         else {
-            llvm::JITEmitDebugInfo = true;
+
+            if (debugInfo)
+                llvm::JITEmitDebugInfo = true;
+
             // we have to specify all of the arguments for this so we can turn 
             // off "allocate globals with code."  In addition to being 
             // deprecated in the docs for this function, this option causes 
@@ -825,6 +828,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                            );
         } else if (debugInfo) {
             debugInfo->emitFunctionDef(name, context.getLocation());
+            debugInfo->emitLexicalBlock(context.getLocation());
         }
     
     
@@ -834,10 +838,12 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         // 'existing' is a forward definition, fill it in.
         funcDef = BFuncDefPtr::acast(existing);
         classType = BTypeDefPtr::cast(funcDef->owner);
-        if (debugInfo)
+        if (debugInfo) {
             debugInfo->emitFunctionDef(funcDef->getFullName(), 
                                        context.getLocation()
                                        );
+            debugInfo->emitLexicalBlock(context.getLocation());
+        }
     }
 
     func = funcDef->rep;
@@ -1349,14 +1355,13 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.SetInsertPoint(block);
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
-
-    if (debugInfo)
-        delete debugInfo;
     
     // restore the main function
     func = mainFunc;
-    
-    verifyModule(*module, llvm::PrintMessageAction);
+
+// XXX in the future, only verify if we're debugging
+//    if (debugInfo)
+        verifyModule(*module, llvm::PrintMessageAction);
     
     // bind the module to the execution engine
     bindModule(module);
@@ -1390,11 +1395,15 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
         passMan.run(*module);
     }
-    
+
     BModuleDefPtr::cast(moduleDef)->cleanup = 
         reinterpret_cast<void (*)()>(
             execEng->getPointerToFunction(module->getFunction("__del__"))
         );
+
+    if (debugInfo)
+        delete debugInfo;
+
 }    
 
 CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {

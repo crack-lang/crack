@@ -15,7 +15,7 @@ DebugInfo::DebugInfo(Module *m,
                         compileUnit(debugFactory.CreateCompileUnit(
                                 dwarf::DW_LANG_lo_user,
                                 file,
-                                "/",
+                                "./",
                                 "crack",
                                 false, // isMain
                                 false, // isOptimized
@@ -43,9 +43,18 @@ void DebugInfo::emitFunctionDef(const std::string &name,
 MDNode* DebugInfo::emitLocation(const parser::Location &loc) {
 
     DIDescriptor d = debugFactory.CreateLocation(loc.getLineNumber(),
-                                0,
+                                0, // col
                                 currentScope
                                 );
     return d.getNode();
+
+}
+
+MDNode* DebugInfo::emitLexicalBlock(const parser::Location &loc) {
+
+    currentScope = debugFactory.CreateLexicalBlock(currentScope,
+                                                   loc.getLineNumber(),
+                                                   0 // col
+                                                   );
 
 }

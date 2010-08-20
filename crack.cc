@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     }
 
     // default optimize
-    Crack::getInstance().optimizeLevel = 1;
+    Crack::getInstance().optimizeLevel = 2;
 
     // parse the main module
     char **arg = &argv[1];
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
             break;
         } else if (!strcmp(*arg, "-d")) {
             Crack::getInstance().dump = true;
-        } else if (!strcmp(*arg, "-g")) {
+        } else if (!strcmp(*arg, "-dg")) {
             Crack::getInstance().emitDebugInfo = true;
         } else if (!strcmp(*arg, "-O0")) {
             Crack::getInstance().optimizeLevel = 0;
