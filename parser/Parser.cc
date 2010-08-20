@@ -1205,6 +1205,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               stub->address
                                               );
          stub->owner->removeDef(stub);
+         cstack.restore();
+         addDef(funcDef.get());
       } else {
          // it's a forward declaration
          funcDef = context->builder.createFuncForward(*context, 
@@ -1215,9 +1217,15 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                                       argDefs,
                                                       override.get()
                                                       );
+
+         cstack.restore();
+         addDef(funcDef.get());
+
+         // if this is a constructor, and the user hasn't introduced their own 
+         // "oper new", generate one for the new constructor now.
+         if (funcFlags & hasMemberInits && !classTypeDef->gotExplicitOperNew)
+            classTypeDef->createNewFunc(*classCtx, funcDef.get());
       }
-      cstack.restore();
-      addDef(funcDef.get());
       return argDefs.size();
    } else if (funcFlags == hasMemberInits) {
       inits = new Initializers();
@@ -1276,8 +1284,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    cstack.restore();
 
    // if this is an init function, and the user hasn't introduced an explicit
-   // "oper new", generate the corresponding "oper new".
-   if (inits && !classTypeDef->gotExplicitOperNew)
+   // "oper new", and we haven't already done this for a forward declaration,
+   // generate the corresponding "oper new".
+   if (inits && !classTypeDef->gotExplicitOperNew && 
+       (!override || !(override->flags & FuncDef::forward))
+       )
       classTypeDef->createNewFunc(*classCtx, funcDef.get());
    
    return argDefs.size();

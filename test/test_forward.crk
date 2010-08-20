@@ -25,8 +25,8 @@ if (!ff_called)
 class B {
     int a = 1;
     oper init();
-    int b = 1;
-#    void ff() { return B(); } # verify that "oper new" gets generated.
+    int b = 2;
+    B ff() { return B(); } # verify that "oper new" gets generated.
     oper init() {}
 }
 
@@ -34,7 +34,11 @@ class B {
 b := B();
 if (b.a != 1)
     puts('B.a not initialized');
-if (b.b != 1)
+if (b.b != 2)
     puts('B.b not initialized');
+
+# make sure that the oper new mechanics worked
+if (b.ff().a != 1)
+    puts('failed to call B.ff()');
 
 puts('ok');
