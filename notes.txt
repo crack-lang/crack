@@ -607,3 +607,14 @@ Annotations:
     Examples:
     
         
+Forward Declarations:
+    Forward declarations of functions are currently legal with the following 
+    caveats: forward declarations must be in the same block context as the 
+    definition; forward declarations must be resolved by the close of their 
+    block context; in the interests of allowing keyword arguments, forward 
+    declarations must have the same argument names as their definitions.
+    
+    It's possible that rule 2 may be relaxed somewhat in the long term.  It's 
+    often useful to have a class method definition defined after the class 
+    definition ends (like when it makes use of another class that depends on 
+    the initial class).

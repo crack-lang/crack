@@ -67,6 +67,11 @@ class FuncDef : public VarDef {
         bool matches(const ArgVec &args);
         
         /**
+         * Returns true if 'args' matches the functions arg names and types.
+         */
+        bool matchesWithNames(const ArgVec &args);
+        
+        /**
          * Returns true if the function can be overriden.
          */
         bool isOverridable() const;
@@ -89,13 +94,23 @@ class FuncDef : public VarDef {
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
+
+        /** Allow us to write the argument list. */
+        static void dump(std::ostream &out, const ArgVec &args);
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
     return static_cast<FuncDef::Flags>(static_cast<int>(a) | 
                                        static_cast<int>(b));
 }
-        
+
+inline std::ostream &operator <<(std::ostream &out, 
+                                 const FuncDef::ArgVec &args
+                                 ) {
+    FuncDef::dump(out, args);
+    return out;
+}
+
 } // namespace model
 
 #endif

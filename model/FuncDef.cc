@@ -82,6 +82,29 @@ bool FuncDef::matches(const ArgVec &other_args) {
     return true;
 }
 
+bool FuncDef::matchesWithNames(const ArgVec &other_args) {
+    ArgVec::iterator arg;
+    ArgVec::const_iterator other_arg;
+    for (arg = args.begin(), other_arg = other_args.begin();
+         arg != args.end() && other_arg != other_args.end();
+         ++arg, ++other_arg
+         ) {
+        // if the types don't _exactly_ match, the signatures don't match.
+        if ((*arg)->type.get() != (*other_arg)->type.get())
+            return false;
+        
+        // if the arg names don't exactly match, the signatures don't match.
+        if ((*arg)->name != (*other_arg)->name)
+            return false;
+    }
+
+    // make sure that we checked everything in both lists   
+    if (arg != args.end() || other_arg != other_args.end())
+        return false;
+
+    return true;
+}
+
 bool FuncDef::isOverridable() const {
     return flags & virtualized || name == "oper init" || flags & forward;
 }
@@ -111,7 +134,12 @@ void FuncDef::dump(ostream &out, const string &prefix) const {
     else
         parent = "";
 
-    out << prefix << returnType->getFullName() << " " << parent << name << '(';
+    out << prefix << returnType->getFullName() << " " << parent << name <<
+        args << "\nw";
+}
+
+void FuncDef::dump(ostream &out, const ArgVec &args) {
+    out << '(';
     bool first = true;
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
          ++iter
@@ -122,5 +150,5 @@ void FuncDef::dump(ostream &out, const string &prefix) const {
             first = false;
         out << (*iter)->type->name << ' ' << (*iter)->name;
     }
-    out << ")\n";
+    out << ")";    
 }

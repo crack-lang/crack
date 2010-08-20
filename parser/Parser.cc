@@ -1238,6 +1238,18 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (!tok3.isLCurly()) {
       unexpected(tok3, "expected '{' in function definition");
    }
+   
+   // if we got a forward declaration, make sure the args are the same
+   if (override && override->flags & FuncDef::forward && 
+       !override->matchesWithNames(argDefs)
+       )
+      error(tok3, 
+            SPUG_FSTR("Argument list of function " << name << 
+                       " doesn't match the names of its forward "
+                       "declaration:\n    forward: " << override->args <<
+                       "\n    defined: " << argDefs
+                       )
+            );
 
    // parse the body
    FuncDefPtr funcDef =

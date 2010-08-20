@@ -674,6 +674,16 @@ test_output 'forward declarations' \
     'import test.test_forward;' \
     ok
 
+test_output 'forward declaration args must match' \
+    'void f(int a);
+     void f(int b) {
+         printint(b);
+     }' \
+    "${parseError}2: Argument list of function f doesn't match the names of \
+its forward declaration:
+    forward: (int32 a)
+    defined: (int32 b)"
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 
