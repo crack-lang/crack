@@ -172,6 +172,29 @@ void Context::closeCleanupFrame() {
     frame->close();
 }
 
+void Context::checkForUnresolvedForwards() {
+    for (Namespace::VarDefMap::iterator iter = ns->beginDefs();
+         iter != ns->endDefs();
+         ++iter
+         ) {
+        
+        // check for an overload
+        OverloadDef *overload;
+        if (overload = OverloadDefPtr::rcast(iter->second)) {
+            for (OverloadDef::FuncList::iterator fi = 
+                    overload->beginTopFuncs();
+                 fi != overload->endTopFuncs();
+                 ++fi
+                 )
+                if ((*fi)->flags & FuncDef::forward)
+                    error(SPUG_FSTR("Forward declared function not defined at "
+                                     "the end of the block: " << **fi
+                                    )
+                          );
+        }
+    }
+}
+
 void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
                          Expr *initializer
                          ) {

@@ -198,6 +198,12 @@ class Context : public spug::RCBase {
          * appropriate.
          */
         void closeCleanupFrame();
+
+        /**
+         * Checks for any forward declarations that have not been defined.
+         * Throws a ParseError if there are any.
+         */
+        void checkForUnresolvedForwards();
         
         /**
          * Emit a variable definition in the context.

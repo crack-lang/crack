@@ -684,6 +684,29 @@ its forward declaration:
     forward: (int32 a)
     defined: (int32 b)"
 
+test_output 'forward declarations must be in the same context as definition' \
+    'void f();
+     if (1) { void f() {} }' \
+    "${parseError}2: Function f can not be defined in a different namespace \
+from its forward declaration."
+
+test_output 'forward declarations must be resolved by the end of the block' \
+    'if (1==1) { void foo(); }' \
+    "${parseError}1: Forward declared function not defined at the end of the \
+block: void foo()"
+
+test_output "forward declarations in functions must be resolved by the end of \
+the block" \
+    'void outer() { void foo(); }' \
+    "${parseError}1: Forward declared function not defined at the end of the \
+block: void foo()"
+
+test_output "forward declarations in classes must be resolved by the end of \
+the block" \
+    'class A { void foo(); }' \
+    "${parseError}1: Forward declared function not defined at the end of the \
+block: void A.foo()"
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

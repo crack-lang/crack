@@ -135,7 +135,7 @@ void FuncDef::dump(ostream &out, const string &prefix) const {
         parent = "";
 
     out << prefix << returnType->getFullName() << " " << parent << name <<
-        args << "\nw";
+        args << "\n";
 }
 
 void FuncDef::dump(ostream &out, const ArgVec &args) {

@@ -838,6 +838,11 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         // 'existing' is a forward definition, fill it in.
         funcDef = BFuncDefPtr::acast(existing);
         classType = BTypeDefPtr::cast(funcDef->owner);
+        funcDef->flags =
+            static_cast<FuncDef::Flags>(
+                funcDef->flags & 
+                 static_cast<FuncDef::Flags>(~FuncDef::forward)
+            );
         if (debugInfo) {
             debugInfo->emitFunctionDef(funcDef->getFullName(), 
                                        context.getLocation()

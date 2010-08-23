@@ -259,6 +259,9 @@ ContextPtr Parser::parseBlock(bool nested) {
       }
       
       if (gotBlockTerminator) {
+         // make sure that the context contains no forward declarations
+         context->checkForUnresolvedForwards();
+
          // generate all of the cleanups, but not if we already did this (got 
          // a terminal statement) or we're at the top-level module (in which 
          // case we'll want to generate cleanups in a static cleanup function)
@@ -1239,17 +1242,26 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       unexpected(tok3, "expected '{' in function definition");
    }
    
-   // if we got a forward declaration, make sure the args are the same
-   if (override && override->flags & FuncDef::forward && 
-       !override->matchesWithNames(argDefs)
-       )
-      error(tok3, 
-            SPUG_FSTR("Argument list of function " << name << 
-                       " doesn't match the names of its forward "
-                       "declaration:\n    forward: " << override->args <<
-                       "\n    defined: " << argDefs
-                       )
-            );
+   // if we got a forward declaration, make sure the args and the context are 
+   // the same
+   if (override && override->flags & FuncDef::forward) {
+      if(!override->matchesWithNames(argDefs))
+         error(tok3, 
+               SPUG_FSTR("Argument list of function " << name << 
+                        " doesn't match the names of its forward "
+                        "declaration:\n    forward: " << override->args <<
+                        "\n    defined: " << argDefs
+                        )
+               );
+      
+      if (override->owner != context->getParent()->getDefContext()->ns.get())
+         error(tok3,
+               SPUG_FSTR("Function " << name << 
+                          " can not be defined in a different namespace from "
+                          "its forward declaration."
+                         )
+               );
+   }
 
    // parse the body
    FuncDefPtr funcDef =
@@ -1901,6 +1913,9 @@ void Parser::parseClassBody() {
       TypeDefPtr type = parseTypeSpec();
       parseDef(type.get());
    }
+   
+   // make sure all forward declarations have been defined.
+   context->parent->checkForUnresolvedForwards();
 }
 
 VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name, 
