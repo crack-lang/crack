@@ -326,6 +326,14 @@ b
 in c2
 c'
 
+test_output 'intermediate ancestor adds function to inherited vtable' \
+    'class A : VTableBase {}
+     class I : VTableBase {}
+     class I1 : I { void f() { puts("ok"); } }
+     class B : A, I1 {}
+     B().f();' \
+     ok
+
 test_output 'chaining placeholders' \
     'class Foo { int a; int b; void foo() { a = b; } }; 
      Foo f; f.b = 100; f.foo(); printint(f.a);' \

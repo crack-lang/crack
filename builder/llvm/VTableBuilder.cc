@@ -49,7 +49,7 @@ void VTableBuilder::addToAncestor(BTypeDef *ancestor, BFuncDef *func) {
     VTableMap::iterator iter = vtables.find(ancestor);
 
     // if we didn't find a vtable in the ancestors, append the
-    // function to the first vtable
+    // function to the first vtable (I don't think this can ever happen)
     VTableInfo *targetVTable;
     if (iter == vtables.end()) {
         assert(firstVTable && "no first vtable");
@@ -67,9 +67,9 @@ void VTableBuilder::addToAncestor(BTypeDef *ancestor, BFuncDef *func) {
 // add the function to all vtables.
 void VTableBuilder::addToAll(BFuncDef *func) {
     for (VTableMap::iterator iter = vtables.begin();
-    iter != vtables.end();
-    ++iter
-            ) {
+         iter != vtables.end();
+         ++iter
+         ) {
         vector<Constant *> &entries = iter->second->entries;
         accomodate(entries, func->vtableSlot);
         entries[func->vtableSlot] = (Constant*)func->rep;
@@ -87,6 +87,9 @@ void VTableBuilder::add(BFuncDef *func) {
         ancestor = BTypeDefPtr::arcast(path.back().ancestor);
     else
         ancestor = BTypeDefPtr::acast(func->owner);
+    
+    // now find the ancestor of "ancestor" with the first vtable
+    ancestor = ancestor->findFirstVTable(vtableBaseType);
 
     // if the function comes from VTableBase, we have to insert
     // the function into _all_ of the vtables - this is because
@@ -112,26 +115,26 @@ void VTableBuilder::createVTable(BTypeDef *type, const std::string &name,
 
 void VTableBuilder::emit(BTypeDef *type) {
     for (VTableMap::iterator iter = vtables.begin();
-    iter != vtables.end();
-    ++iter
-            ) {
+         iter != vtables.end();
+         ++iter
+         ) {
         // populate the types array
         vector<Constant *> &entries = iter->second->entries;
         vector<const Type *> vtableTypes(entries.size());
         int i = 0;
         for (vector<Constant *>::iterator entryIter =
              entries.begin();
-        entryIter != entries.end();
-        ++entryIter, ++i
-                ) {
+             entryIter != entries.end();
+             ++entryIter, ++i
+             ) {
             assert(*entryIter && "Null vtable entry.");
             vtableTypes[i] = (*entryIter)->getType();
         }
 
         // create a constant structure that actually is the vtable
         const StructType *vtableStructType =
-                StructType::get(getGlobalContext(), vtableTypes);
-        module->addTypeName("struct"+iter->second->name, vtableStructType);
+            StructType::get(getGlobalContext(), vtableTypes);
+        module->addTypeName("struct" + iter->second->name, vtableStructType);
         type->vtables[iter->first] =
                 new GlobalVariable(*module, vtableStructType,
                                    true, // isConstant
@@ -141,9 +144,9 @@ void VTableBuilder::emit(BTypeDef *type) {
                                    // provided or the global will be
                                    // treated as an extern.
                                    ConstantStruct::get(
-                                           vtableStructType,
-                                           iter->second->entries
-                                           ),
+                                       vtableStructType,
+                                       iter->second->entries
+                                   ),
                                    iter->second->name
                                    );
 
@@ -152,9 +155,9 @@ void VTableBuilder::emit(BTypeDef *type) {
         // VTableBase instances to)
         if (iter->second == firstVTable)
             type->firstVTableType =
-                    PointerType::getUnqual(
-                            PointerType::getUnqual(vtableStructType)
-                            );
+                PointerType::getUnqual(
+                    PointerType::getUnqual(vtableStructType)
+                );
     }
 
     assert(type->firstVTableType);

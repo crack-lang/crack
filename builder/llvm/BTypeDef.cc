@@ -114,3 +114,26 @@ void BTypeDef::addPlaceholder(PlaceholderInstruction *inst) {
     placeholders.push_back(inst);
 }
 
+BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
+
+    // special case - if this is VTableBase, it is its own first vtable 
+    // (normally it is the first class to derive from VTableBase that is the 
+    // first vtable).
+    if (this == vtableBaseType)
+        return this;
+
+    // check the parents
+    for (TypeVec::iterator parent = parents.begin();
+         parent != parents.end();
+         ++parent
+         )
+        if (parent->get() == vtableBaseType) {
+            return this;
+        } else if ((*parent)->hasVTable) {
+            BTypeDef *par = BTypeDefPtr::arcast(*parent);
+            return par->findFirstVTable(vtableBaseType);
+        }
+
+    cerr << "class is " << name << endl;
+    assert(false && "Failed to find first vtable");
+}

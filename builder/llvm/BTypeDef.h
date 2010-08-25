@@ -38,12 +38,12 @@ public:
              const llvm::Type *rep,
              bool pointer = false,
              unsigned nextVTableSlot = 0
-                                       ) :
-    model::TypeDef(metaType, name, pointer),
-    fieldCount(0),
-    rep(rep),
-    nextVTableSlot(nextVTableSlot),
-    firstVTableType(0) {
+             ) :
+        model::TypeDef(metaType, name, pointer),
+        fieldCount(0),
+        rep(rep),
+        nextVTableSlot(nextVTableSlot),
+        firstVTableType(0) {
     }
 
     // add all of my virtual functions to 'vtb'
@@ -73,6 +73,11 @@ public:
      * completed.
      */
     void addPlaceholder(PlaceholderInstruction *inst);
+    
+    /**
+     * Find the ancestor with our first vtable.
+     */
+    BTypeDef *findFirstVTable(BTypeDef *vtableBaseType);
 
 };
 
