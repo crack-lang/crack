@@ -1,0 +1,28 @@
+# Copyright 2010 Google Inc.
+
+import crack.lang die, MixIn;
+import crack.io cout;
+
+bool methodCalled, deleted;
+
+class I : MixIn { void f() { die('I.f() called'); } }
+class A : Object, I {
+    void f() { methodCalled = true; }
+    Object getObject() { return this; }
+    oper del() { deleted = true; }
+}
+
+if (true) {
+    I i = A();
+    i.f();
+    
+    if (deleted)
+        cout `instance destroyed prematurely\n`;
+}
+
+if (!methodCalled)
+    cout `method A.f() not called\n`;
+if (!deleted)
+    cout `instance not deleted\n`;
+
+cout `ok\n`;

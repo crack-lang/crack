@@ -991,4 +991,6 @@ test_output 'escaped newline is ignored' \
 k\n`;' \
     ok
 
+test_output 'mix-ins' 'import test.test_mixins;' ok
+
 exit $rc
