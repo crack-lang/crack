@@ -1,0 +1,65 @@
+# Classes for reading high-level stuff from Readers.
+# Copyright 2010 Google Inc.
+
+import crack.lang Buffer, ManagedBuffer, WriteBuffer;
+import crack.io FDReader, Reader;
+
+NEWLINE := '\n'[0];
+
+## Allows you to read one line at a time.
+class LineReader {
+    Reader r;
+    ManagedBuffer buffer = {1024};
+    uint start, end;
+    
+    oper init(Reader reader0) : r = reader0 {}
+    
+    String next() {
+        uint i = start;
+        
+        while (true) {
+            while (i < end) {
+                if (buffer.buffer[i] == NEWLINE) {
+                    tmp := Buffer(buffer.buffer + start, uint(i + 1 - start));
+                    start = i + 1;
+                    return String(tmp);
+                }
+                ++i;
+            }
+            
+            # we didn't find a newline, grow the buffer and read another block
+            
+            # compact the buffer
+            if (start) {
+                buffer.move(0, start, end - start);
+                end = end - start;
+                start = 0;
+            }
+            
+            # if there's less than 1K of space available, grow the buffer
+            if (buffer.size >= end + 1024)
+                buffer.grow(buffer.size + 1024);
+            
+            # read the next block
+            amtRead := r.read(WriteBuffer(buffer.buffer + end,
+                                          buffer.size - end
+                                          )
+                              );
+            end = end + amtRead;
+            
+            # if we are at the end of the file, either return the remaining 
+            # chunk or a null pointer if there is no remaining chunk
+            if (!amtRead)
+                if (start == end) {
+                    return null;
+                } else {
+                    result := String(Buffer(buffer.buffer + start, end - start));
+                    start = end;
+                    return result;
+                }
+        }
+        
+        // should never get here
+        return null;
+    }
+}
