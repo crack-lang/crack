@@ -483,7 +483,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
         if (!baseInit || baseInit->owner != base)
-            context.error(SPUG_FSTR("Cannot create a default constructor "
+            context.error(SPUG_FSTR("Cannot initialize base classes "
                                      "because base class " << 
                                      base->name <<
                                      " has no default constructor."

@@ -325,13 +325,12 @@ void IncompleteVTableInit::insertInstructions(IRBuilder<> &builder) {
 }
 
 // IncompleteVirtualFunc
-Value * IncompleteVirtualFunc::getVTableReference
-                  (IRBuilder<> &builder,
-                   BTypeDef *vtableBaseType,
-                   const Type *finalVTableType,
-                   BTypeDef *curType,
-                   Value *inst
-                   ) {
+Value * IncompleteVirtualFunc::getVTableReference(IRBuilder<> &builder,
+                                                  BTypeDef *vtableBaseType,
+                                                  const Type *finalVTableType,
+                                                  BTypeDef *curType,
+                                                  Value *inst
+                                                  ) {
 
     // (the logic here looks painfully like that of
     // emitVTableInit(), but IMO converting this to an internal
@@ -353,17 +352,15 @@ Value * IncompleteVirtualFunc::getVTableReference
         baseIter != parents.end();
         ++baseIter, ++i
                 ) {
-            BTypeDef *base =
-                    BTypeDefPtr::arcast(*baseIter);
+            BTypeDef *base = BTypeDefPtr::arcast(*baseIter);
             if (base->hasVTable) {
-                Value *baseInst =
-                        builder.CreateStructGEP(inst, i);
+                Value *baseInst = builder.CreateStructGEP(inst, i);
                 Value *vtable =
-                        getVTableReference(builder, vtableBaseType,
-                                           finalVTableType,
-                                           base,
-                                           baseInst
-                                           );
+                    getVTableReference(builder, vtableBaseType,
+                                       finalVTableType,
+                                       base,
+                                       baseInst
+                                       );
                 if (vtable)
                     return vtable;
             }
@@ -374,13 +371,12 @@ Value * IncompleteVirtualFunc::getVTableReference
     }
 }
 
-Value * IncompleteVirtualFunc::innerEmitCall
-                 (IRBuilder<> &builder,
-                  BTypeDef *vtableBaseType,
-                  BFuncDef *funcDef,
-                  Value *receiver,
-                  const vector<Value *> &args
-                  ) {
+Value * IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
+                                             BTypeDef *vtableBaseType,
+                                             BFuncDef *funcDef,
+                                             Value *receiver,
+                                             const vector<Value *> &args
+                                             ) {
 
     BTypeDef *receiverType =
             BTypeDefPtr::acast(funcDef->getReceiverType());
@@ -610,13 +606,14 @@ void IncompleteSpecialize::insertInstructions(IRBuilder<> &builder) {
 // Utility function - emits the specialize instructions if the
 // target class is defined, emits a placeholder instruction if it
 // is not.
-Value * IncompleteSpecialize::emitSpecialize(
-        Context &context, BTypeDef *type,
-        Value *value,
-        const TypeDef::AncestorPath &ancestorPath
-        ) {
+Value *IncompleteSpecialize::emitSpecialize(
+    Context &context,
+    BTypeDef *type,
+    Value *value,
+    const TypeDef::AncestorPath &ancestorPath
+) {
     LLVMBuilder &llvmBuilder =
-            dynamic_cast<LLVMBuilder &>(context.builder);
+        dynamic_cast<LLVMBuilder &>(context.builder);
 
     if (type->complete) {
         return emitSpecializeInner(llvmBuilder.builder, type->rep,
@@ -625,10 +622,10 @@ Value * IncompleteSpecialize::emitSpecialize(
                                    );
     } else {
         PlaceholderInstruction *placeholder =
-                new IncompleteSpecialize(type->rep, value,
-                                         ancestorPath,
-                                         llvmBuilder.block
-                                         );
+            new IncompleteSpecialize(type->rep, value,
+                                     ancestorPath,
+                                     llvmBuilder.block
+                                     );
         type->addPlaceholder(placeholder);
         return placeholder;
     }
