@@ -13,7 +13,9 @@ class A {
         out `init $val;`;
     }
     
-    oper init() : val('default') {}
+    oper init() : val('default') {
+        out `init $val;`;
+    }
     
     oper del() {
         out `delete $val;`;
@@ -60,6 +62,7 @@ class E {
     oper init() {}
 }
 out = StringFormatter();
+E();
 if (out.createString().cmp('init default;delete default;'))
     cout `FAILED init with no initializers\n`;
 
