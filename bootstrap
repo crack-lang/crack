@@ -6,17 +6,27 @@
 python <<__eof__
 import re
 
-sourcesRx = re.compile(r'(.*)%libCrackSources%(.*)', re.DOTALL)
+varRx = re.compile(r'(.*)%(\w+)%(.*)', re.DOTALL)
 
 # get the source files
 sourceModules = open('sourceModules.txt').read().strip().split('\n')
+runtimeModules = open('runtimeModules.txt').read().strip().split('\n')
+
+vars = {
+    'libCrackSources': sourceModules, 
+    'libRuntimeSources': runtimeModules
+}
+
+def expand(dst, m):
+    sources = vars[m.group(2)]
+    dst.write(m.group(1) + ' \\\\\n    '.join(sources) + m.group(3))
 
 src = file('Makefile.am.in')
 dst = file('Makefile.am', 'w')
 for line in src:
-    m = sourcesRx.match(line)
+    m = varRx.match(line)
     if m:
-        dst.write(m.group(1) + ' \\\\\n    '.join(sourceModules) + m.group(2))
+        expand(dst, m)
     else:
         dst.write(line)
 __eof__
