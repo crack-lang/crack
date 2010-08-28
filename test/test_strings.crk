@@ -1,0 +1,23 @@
+# Copyright 2010 Google Inc.
+
+import crack.lang die, ManagedBuffer;
+import crack.io cout;
+
+if ('test' >= 'test string')
+    die('test >= test string');
+
+if ('bad magic' <= 'bad')
+    die('bad magic <= bad');
+
+if ('foo' != 'foo')
+    die('foo != foo');
+
+buf := ManagedBuffer(10);
+buf.move(0, '1234567890');
+s := String(buf, true);
+if (s.size != 10)
+    die('sizeof string created from ManagedBuffer is wrong');
+if (s != '1234567890')
+    die("didn't copy from a ManagedBuffer correctly");
+
+cout `ok\n`;
