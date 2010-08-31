@@ -13,7 +13,7 @@ BStrConst::BStrConst(TypeDef *type, const std::string &val) :
         rep(0) {
 }
     
-BIntConst::BIntConst(BTypeDef *type, long val) :
+BIntConst::BIntConst(BTypeDef *type, int64_t val) :
         IntConst(type, val),
         rep(ConstantInt::get(type->rep, val)) {
 }

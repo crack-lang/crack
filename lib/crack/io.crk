@@ -34,6 +34,7 @@ class Writer : Object, XWriter {
 class FDWriter : Writer {
     int fd;
 
+    ## Constructs an FDWriter from a plain file descriptor.
     oper init(int fd0) : fd = fd0 {}
 
     void write(byteptr buf, uint size) {
@@ -41,8 +42,12 @@ class FDWriter : Writer {
     }
 };
 
+## Base class for all readers.  Readers support two flavors of read()
+## methods that allow you to read bytes from a stream.
 class Reader {
-    
+
+    ## Reads enough bytes to fill the buffer, or as many bytes as are 
+    ## available from the source.  Returns the number of bytes read.    
     uint read(WriteBuffer buffer) {
         die('Reader.read(uint,byteptr) called');
         return 0;
@@ -178,6 +183,8 @@ class Formatter : Writer {
             write('false');
     }
     
+    ## For general objects, format() just calls the object's writeTo()
+    ## method.
     void format(Object obj) {
         obj.writeTo(this);
     }
@@ -195,6 +202,8 @@ class XWriterWrapper : Writer {
     }
 }
 
+## XWFormatter allows us to format to an XWriter, which is something we
+## currently need to do quite often from the writeTo() method.
 class XWFormatter : Formatter {
     oper init(XWriter xwriter) : Formatter(XWriterWrapper(xwriter)) {}
 }    

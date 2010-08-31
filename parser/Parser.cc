@@ -782,7 +782,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    // for an integer constant
    } else if (tok.isInteger()) {
       expr = context->builder.createIntConst(*context, 
-                                             atoi(tok.getData().c_str())
+                                             atoll(tok.getData().c_str())
                                              );
    } else if (tok.isFloat()) {
       expr = context->builder.createFloatConst(*context,
@@ -1853,8 +1853,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
    context(context) {
    
    // build the precedence table
-   enum { noPrec, logOrPrec, logAndPrec, cmpPrec, addPrec, multPrec,
-          unaryPrec
+   enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, bitAndPrec, 
+          cmpPrec, shiftPrec, addPrec, multPrec, unaryPrec
          };
    struct { const char *op; unsigned prec; } map[] = {
       
@@ -1871,6 +1871,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
       {"%", multPrec},
       {"+", addPrec},
       {"-", addPrec},
+      {"<<", shiftPrec},
+      {">>", shiftPrec},
       {"==", cmpPrec},
       {"!=", cmpPrec},
       {"<", cmpPrec},
@@ -1878,6 +1880,9 @@ Parser::Parser(Toker &toker, model::Context *context) :
       {"<=", cmpPrec},
       {">=", cmpPrec},
       {"is", cmpPrec},
+      {"&", bitAndPrec},
+      {"^", bitXorPrec},
+      {"|", bitOrPrec},
       {"&&", logAndPrec},
       {"||", logOrPrec},
       

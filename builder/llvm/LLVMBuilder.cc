@@ -1440,7 +1440,7 @@ model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
     return new BStrConst(context.globalData->byteptrType.get(), val);
 }
 
-IntConstPtr LLVMBuilder::createIntConst(model::Context &context, long val,
+IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
                                         TypeDef *typeDef
                                         ) {
     // XXX probably need to consider the simplest type that the constant can 
@@ -1666,6 +1666,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.ns->addDef(new ICmpSLEOpDef(byteType, boolType));
     context.ns->addDef(new NegOpDef(byteType, "oper -"));
     context.ns->addDef(new BitNotOpDef(byteType, "oper ~"));
+    context.ns->addDef(new OrOpDef(byteType));
+    context.ns->addDef(new AndOpDef(byteType));
+    context.ns->addDef(new XorOpDef(byteType));
+    context.ns->addDef(new ShlOpDef(byteType));
+    context.ns->addDef(new LShrOpDef(byteType));
 
     context.ns->addDef(new AddOpDef(uint32Type));
     context.ns->addDef(new SubOpDef(uint32Type));
@@ -1680,6 +1685,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.ns->addDef(new ICmpULEOpDef(uint32Type, boolType));
     context.ns->addDef(new NegOpDef(uint32Type, "oper -"));
     context.ns->addDef(new BitNotOpDef(uint32Type, "oper ~"));
+    context.ns->addDef(new OrOpDef(uint32Type));
+    context.ns->addDef(new AndOpDef(uint32Type));
+    context.ns->addDef(new XorOpDef(uint32Type));
+    context.ns->addDef(new ShlOpDef(uint32Type));
+    context.ns->addDef(new LShrOpDef(uint32Type));
 
     context.ns->addDef(new AddOpDef(int32Type));
     context.ns->addDef(new SubOpDef(int32Type));
@@ -1694,6 +1704,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.ns->addDef(new ICmpSLEOpDef(int32Type, boolType));
     context.ns->addDef(new NegOpDef(int32Type, "oper -"));
     context.ns->addDef(new BitNotOpDef(int32Type, "oper ~"));
+    context.ns->addDef(new OrOpDef(int32Type));
+    context.ns->addDef(new AndOpDef(int32Type));
+    context.ns->addDef(new XorOpDef(int32Type));
+    context.ns->addDef(new ShlOpDef(int32Type));
+    context.ns->addDef(new AShrOpDef(int32Type));
 
     context.ns->addDef(new AddOpDef(uint64Type));
     context.ns->addDef(new SubOpDef(uint64Type));
@@ -1708,6 +1723,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.ns->addDef(new ICmpULEOpDef(uint64Type, boolType));
     context.ns->addDef(new NegOpDef(uint64Type, "oper -"));
     context.ns->addDef(new BitNotOpDef(uint64Type, "oper ~"));
+    context.ns->addDef(new OrOpDef(uint64Type));
+    context.ns->addDef(new AndOpDef(uint64Type));
+    context.ns->addDef(new XorOpDef(uint64Type));
+    context.ns->addDef(new ShlOpDef(uint64Type));
+    context.ns->addDef(new LShrOpDef(uint64Type));
 
     context.ns->addDef(new AddOpDef(int64Type));
     context.ns->addDef(new SubOpDef(int64Type));
@@ -1722,6 +1742,11 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.ns->addDef(new ICmpSLEOpDef(int64Type, boolType));
     context.ns->addDef(new NegOpDef(int64Type, "oper -"));
     context.ns->addDef(new BitNotOpDef(int64Type, "oper ~"));
+    context.ns->addDef(new OrOpDef(int64Type));
+    context.ns->addDef(new AndOpDef(int64Type));
+    context.ns->addDef(new XorOpDef(int64Type));
+    context.ns->addDef(new ShlOpDef(int64Type));
+    context.ns->addDef(new AShrOpDef(int64Type));
 
     // float operations
     context.ns->addDef(new FAddOpDef(float32Type));

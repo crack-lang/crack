@@ -20,7 +20,7 @@ bool true = (1 == 1);
 bool false = (1 == 0);
 
 void _die(byteptr message) {
-    puts("Object with non-zero ref count deleted!");
+    puts(message);
     abort();
 }
 
@@ -160,6 +160,40 @@ class Buffer : Object {
             _die('string index out of bounds');
         return buffer[index];
     }
+
+    ## Override Object.cmp() to do buffer comparison.
+    int cmp(Object other) {
+        
+        # deal with the simple case
+        if (this is other)
+            return 0;
+
+        # if the other object is a string, do string comparison.
+        if (other.class.isSubclass(Buffer)) {
+            os := Buffer.unsafeCast(other);
+            
+            # if both strings are the same size, this is just a straight 
+            # memcmp().
+            int rc;
+            if (size == os.size) {
+                return memcmp(buffer, os.buffer, size);
+            
+            # if one string is longer than the other, only compare the
+            # common-sized substring and if those are equal, the longer one is
+            # greater
+            } else if (size > os.size) {
+                rc = memcmp(buffer, os.buffer, os.size);
+                if (!rc) rc = 1;
+            } else {
+                rc = memcmp(buffer, os.buffer, size);
+                if (!rc) rc = -1;
+            }
+            return rc;
+        } else {
+            # if other is not a string, it is not equal.
+            return 1;
+        }
+    }
 };
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
@@ -184,6 +218,8 @@ class WriteBuffer : Buffer {
     
     ## move a buffer to a place in this buffer.
     void move(uint newStart, Buffer buf) {
+        if (newStart + buf.size > size)
+            _die('Move target out of bounds');
         move(newStart, buf.buffer, buf.size);
     }
 };
@@ -198,6 +234,7 @@ class ManagedBuffer : WriteBuffer {
     byteptr orphan() {
         temp := buffer;
         buffer = null;
+        size = 0;
         return temp;
     }
     
@@ -233,18 +270,26 @@ class String : Buffer {
         memcpy(buffer, buf.buffer, buf.size);
     }
 
+    ## Initialize from a WriteBuffer and optionally take ownership of the 
+    ## buffer.
+    oper init(ManagedBuffer buf, bool takeOwnership) : 
+        Buffer(null, 0) {
+        
+        if (takeOwnership) {
+            size = buf.size;
+            buffer = buf.orphan();
+        } else {
+            size = buf.size;
+            buffer = memcpy(malloc(buf.size), buf.buffer, buf.size);
+        }
+    }
+    
     ## Initialize from first len bytes of buffer.  This copies the buffer, it 
     ## does not assume ownership.
     oper init(Buffer buf, uint len) : Buffer(malloc(len), len) {
         memcpy(buffer, buf.buffer, len);
     }
 
-    ## Initialize from a WriteBuffer and take ownership (the value of 
-    ## takeOwnership is actually ignored).
-    oper init(ManagedBuffer buf, bool takeOwnership) : 
-        Buffer(buf.orphan(), size) {
-    }
-    
     ## Initialize from byte pointer and size and take ownership.
     oper init(byteptr buf, uint size0, bool takeOwnership) :
         Buffer(buf, size0) {
@@ -287,26 +332,6 @@ class String : Buffer {
         newRawBuffer[newBufferSize] = 0;
         return String(newRawBuffer, newBufferSize, true);
     }
-
-    ## Override Object.cmp() to do string comparison.
-    int cmp(Object other) {
-        
-        # deal with the simple case
-        if (this is other)
-            return 0;
-
-        # if the other object is a string, do string comparison.
-        if (other.class.isSubclass(String)) {
-            os := String.unsafeCast(other);
-            if (size > os.size)
-                return memcmp(buffer, os.buffer, os.size);
-            else
-                return memcmp(buffer, os.buffer, size);
-        } else {
-            # if other is not a string, it is not equal.
-            return 1;
-        }
-    }
 };
 
 class StaticString : String {
@@ -328,6 +353,7 @@ void die(String message) {
     print(message);
     abort();
 }
+
 void die() {
     abort();
 }

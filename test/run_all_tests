@@ -991,6 +991,9 @@ test_output 'escaped newline is ignored' \
 k\n`;' \
     ok
 
+test_output 'binary operators' 'import test.test_binops;' ok
+
 test_output 'mix-ins' 'import test.test_mixins;' ok
+test_output 'string tests' 'import test.test_strings;' ok
 
 exit $rc

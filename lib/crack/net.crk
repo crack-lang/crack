@@ -1,0 +1,159 @@
+# Copyright 2010 Google Inc.
+
+import crack.lang Buffer, die, FreeBase, WriteBuffer, XWriter;
+import crack.io Reader, Writer, XWFormatter;
+import crack.exp.bindings Opaque;
+import "libc.so.6" close, listen, send, socket, recv;
+import "libcrack-runtime.so" 
+    _crack_connect, 
+    _crack_get_constants,
+    _crack_make_ipv4,
+    _crack_setsockopt_int,
+    _crack_accept,
+    _crack_bind;
+
+int socket(int domain, int type, int protocol);
+int close(int fd);
+int listen(int fd, int backlog);
+int send(int fd, byteptr buf, uint size, int flags);
+int recv(int fd, byteptr buf, uint size, int flags);
+uint32 _crack_make_ipv4(byte a, byte b, byte c, byte d);
+int _crack_setsockopt_int(int fd, int level, int optval);
+
+class _Constants : FreeBase {
+    int AF_UNIX,
+        AF_LOCAL,
+        AF_INET,
+        AF_INET6,
+        AF_IPX,
+        AF_NETLINK,
+        AF_X25,
+        AF_AX25,
+        AF_ATMPVC,
+        AF_APPLETALK,
+        AF_PACKET,
+        SOCK_STREAM,
+        SOCK_DGRAM,
+        SOCK_SEQPACKET,
+        SOCK_RAW,
+        SOCK_RDM,
+        SOCK_PACKET,
+        SOCK_NONBLOCK,
+        SOCK_CLOEXEC,
+        SOL_SOCKET,
+        SO_REUSEADDR;
+    uint32 INADDR_ANY;
+}
+_Constants _crack_get_constants();
+sockconsts := _crack_get_constants();
+
+class SockAddr {}
+
+class SockAddrIn : SockAddr {
+    uint32 addr;
+    uint port;
+    
+    oper init(byte a, byte b, byte c, byte d, uint port0) :
+        addr = _crack_make_ipv4(a, b, c, d),
+        port = port0 {
+    }
+    
+    oper init(uint32 addr0, uint port0) : addr = addr0, port = port0 {}
+    
+    void writeTo(XWriter out) {
+        XWFormatter(out) `ip4:$addr:$port`;
+    }
+}
+
+int _crack_connect(int s, SockAddrIn addr);
+int _crack_accept(int s, SockAddrIn addr);
+int _crack_bind(int s, SockAddrIn addr);
+
+## Wrapper around a socket.
+class Socket {
+    int fd;
+    oper init(int domain, int type, int protocol) : 
+        fd = socket(domain, type, protocol) {
+    }
+    
+    oper init(int fd0) : fd = fd0 {}
+
+    void close() {
+        close(fd);
+        fd = -1;
+    }
+        
+    oper del() {
+        if (fd != -1)
+            close();
+    }
+    
+    ## Connect to the address.  Returns true on success, false on failure.
+    bool connect(SockAddrIn addr) {
+        return _crack_connect(fd, addr) == 0;
+    }
+
+    ## Bind to the address.  Returns true on success, false on failure.    
+    bool bind(SockAddrIn addr) {
+        return _crack_bind(fd, addr) == 0;
+    }
+    
+    bool listen(int backlog) {
+        return listen(fd, backlog) == 0;
+    }
+    
+    bool setReuseAddr(bool val) {
+        return _crack_setsockopt_int(fd, sockconsts.SOL_SOCKET,
+                                     sockconsts.SO_REUSEADDR
+                                     ) == 0;
+    }
+    
+    int send(Buffer data, int flags) {
+        return send(fd, data.buffer, data.size, flags);
+    }
+
+    int recv(WriteBuffer buf, int flags) {
+        return recv(fd, buf.buffer, buf.size, flags);
+    }
+
+    class Accepted {
+        Socket sock = null;
+        SockAddr addr = null;
+    
+        oper init(Socket sock0, SockAddr addr0) :
+            sock = sock0,
+            addr = addr0 {
+        }
+    }
+    
+    ## Returns null if there was an error, errno should contain the error.
+    Accepted accept() {
+        SockAddrIn addr = {0, 0};
+        rc := _crack_accept(fd, addr);
+        if (rc == -1)
+            return null;
+        return Accepted(Socket(rc), addr);
+    }
+}
+        
+class SockReader : Reader {
+    Socket sock = null;
+    oper init(Socket sock0) : sock = sock0 {}
+    uint read(WriteBuffer buffer) {
+        rc := sock.recv(buffer, 0);
+        if (rc < 0)
+            die('Error writing to socket');
+        return uint(rc);
+    }
+}
+
+class SockWriter : Writer {
+    Socket sock = null;
+    oper init(Socket sock0) : sock = sock0 {}
+    uint write(Buffer data) {
+        rc := sock.send(data, 0);
+        if (rc < 0)
+            die('Error writing to socket');
+        return uint(rc);
+    }
+}
