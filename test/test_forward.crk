@@ -41,4 +41,16 @@ if (b.b != 2)
 if (b.ff().a != 1)
     puts('failed to call B.ff()');
 
+# test class forwarding
+class C;
+void acceptC(C c);
+class C {}
+bool acceptC_called;
+void acceptC(C c) {
+    acceptC_called = true;
+}
+acceptC(C());
+if (!acceptC_called)
+    puts('failed to call acceptC');
+
 puts('ok');

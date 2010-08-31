@@ -172,6 +172,12 @@ void Context::closeCleanupFrame() {
     frame->close();
 }
 
+TypeDefPtr Context::createForwardClass(const string &name) {
+    TypeDefPtr type = builder.createClassForward(*this, name);
+    ns->addDef(type.get());
+    return type;
+}
+
 void Context::checkForUnresolvedForwards() {
     for (Namespace::VarDefMap::iterator iter = ns->beginDefs();
          iter != ns->endDefs();

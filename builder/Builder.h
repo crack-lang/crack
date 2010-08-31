@@ -165,6 +165,14 @@ class Builder : public spug::RCBase {
                               const std::vector<model::ArgDefPtr> &args,
                               model::FuncDef *override
                               ) = 0;
+        
+        /**
+         * Create a forward defintion for a class.
+         */
+        virtual model::TypeDefPtr
+            createClassForward(model::Context &context,
+                               const std::string &name
+                               ) = 0;
 
         /**
          * Start a new function definition.
@@ -207,7 +215,9 @@ class Builder : public spug::RCBase {
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
                            const std::string &name,
-                           const std::vector<model::TypeDefPtr> &bases) = 0;
+                           const std::vector<model::TypeDefPtr> &bases,
+                           model::TypeDef *forwardDef
+                           ) = 0;
 
         /**
          * Emit the end of a class definitiion.

@@ -95,10 +95,14 @@ class TypeDef : public VarDef, public Namespace {
         // meta-type of.
         TypeDef *meta;
 
-        // true if the types has been completely defined (so that we can 
+        // true if the type has been completely defined (so that we can 
         // determine whether to emit references or placeholders for instance 
         // variable references and assignments)
         bool complete;
+        
+        // true if the type has been forward declared but has not yet been
+        // defined.
+        bool forward;
                 
         // if true, the initializers for the type have been emitted and it is 
         // now illegal to add instance variables.
@@ -117,6 +121,7 @@ class TypeDef : public VarDef, public Namespace {
             hasVTable(false),
             meta(0),
             complete(false),
+            forward(false),
             initializersEmitted(false),
             gotExplicitOperNew(false) {
         }

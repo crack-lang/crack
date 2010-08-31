@@ -23,7 +23,7 @@ namespace builder {
 namespace mvll {
 
 SPUG_RCPTR(BHeapVarDefImpl);
-class BTypeDef;
+SPUG_RCPTR(BTypeDef);
 class DebugInfo;
 class FuncBuilder;
 SPUG_RCPTR(LLVMBuilder);
@@ -98,6 +98,11 @@ class LLVMBuilder : public Builder {
                                     const llvm::Type *llvmFuncType
                                     );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var);
+        
+        BTypeDefPtr createClass(model::Context &context,
+                                const std::string &name,
+                                unsigned int nextVTableSlot
+                                );
 
         LLVMBuilder();
 
@@ -177,6 +182,11 @@ class LLVMBuilder : public Builder {
                               model::FuncDef *override
                               );
 
+        virtual model::TypeDefPtr
+            createClassForward(model::Context &context,
+                               const std::string &name
+                               );
+
         virtual model::FuncDefPtr
             emitBeginFunc(model::Context &context,
                           model::FuncDef::Flags flags,
@@ -201,7 +211,9 @@ class LLVMBuilder : public Builder {
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
                            const std::string &name,
-                           const std::vector<model::TypeDefPtr> &bases);
+                           const std::vector<model::TypeDefPtr> &bases,
+                           model::TypeDef *forwardDef
+                           );
 
         virtual void emitEndClass(model::Context &context);
 

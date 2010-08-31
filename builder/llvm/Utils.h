@@ -19,10 +19,13 @@ void addArrayMethods(model::Context &context,
                      BTypeDef *elemType
                      );
 
+/**
+ * Create the implementation object for a class.
+ */
+void createClassImpl(model::Context &context, BTypeDef *type);
+
 BTypeDefPtr createMetaClass(model::Context &context,
-                            const std::string &name,
-                            std::vector<model::TypeDefPtr> bases,
-                            BGlobalVarDefImplPtr &classImpl
+                            const std::string &name
                             );
 
 } // end namespace builder::vmll

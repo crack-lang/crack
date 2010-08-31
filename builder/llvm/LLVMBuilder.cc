@@ -223,11 +223,9 @@ namespace {
     void fixMeta(Context &context, TypeDef *type) {
         BTypeDefPtr metaType;
         BGlobalVarDefImplPtr classImpl;
-        vector<TypeDefPtr> noBases;
-        type->type = metaType =
-            createMetaClass(context, type->name, noBases, classImpl);
+        type->type = metaType = createMetaClass(context, type->name);
         metaType->meta = type;
-        type->impl = classImpl;
+        createClassImpl(context, BTypeDefPtr::acast(type));
     }
 
     void addExplicitTruncate(BTypeDef *sourceType,
@@ -792,6 +790,40 @@ FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
     return f.funcDef;
 }
 
+BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
+                                     unsigned int nextVTableSlot
+                                     ) {
+    BTypeDefPtr type;
+    TypeDef::TypeVec bases;
+    BTypeDefPtr metaType = createMetaClass(context, name);
+    module->addTypeName("struct.meta." + name, metaType->rep);
+
+    const Type *opaque = OpaqueType::get(getGlobalContext());
+    type = new BTypeDef(metaType.get(), name, PointerType::getUnqual(opaque),
+                        true,
+                        nextVTableSlot
+                        );
+
+    // tie the meta-class to the class
+    metaType->meta = type.get();
+    
+    // create the unsafeCast() function.
+    metaType->addDef(new UnsafeCastDef(type.get()));
+    
+    // create function to convert to voidptr
+    type->addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
+
+    return type;
+}
+
+TypeDefPtr LLVMBuilder::createClassForward(Context &context,
+                                           const string &name
+                                           ) {
+    TypeDefPtr result = createClass(context, name, 0);
+    result->forward = true;
+    return result;
+}
+
 FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef::Flags flags,
                                       const string &name,
@@ -958,38 +990,38 @@ namespace {
 
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
-                                       const vector<TypeDefPtr> &bases) {
+                                       const vector<TypeDefPtr> &bases,
+                                       TypeDef *forwardDef
+                                       ) {
     assert(!context.builderData);
     BBuilderContextData *bdata;
     context.builderData = bdata = new BBuilderContextData();
 
-    // create the meta-class
-    BGlobalVarDefImplPtr classImpl;
-    BTypeDefPtr metaType = createMetaClass(context, name, bases, classImpl);
-    module->addTypeName("struct.meta."+name, metaType->rep);
-
     // find the first base class with a vtable
     BTypeDef *baseWithVTable = 0;
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
-         iter != bases.end();
-         ++iter
-         ) {
+        iter != bases.end();
+        ++iter
+        ) {
         BTypeDef *base = BTypeDefPtr::rcast(*iter);
         if (base->hasVTable) {
             baseWithVTable = base;
             break;
         }
     }
-    
-    // create the class definition (for classes with no bases, start with 
-    // vtable slot 1: slot 0 is the "oper class" function)
-    const Type *opaque = OpaqueType::get(getGlobalContext());
-    BTypeDefPtr type = new BTypeDef(metaType.get(), name, 
-                                    PointerType::getUnqual(opaque),
-                                    true,
-                                    baseWithVTable ? 
-                                        baseWithVTable->nextVTableSlot : 0
-                                    );
+
+    BTypeDefPtr type;
+    if (!forwardDef) {
+        type = createClass(context, name,
+                           baseWithVTable ? 
+                                baseWithVTable->nextVTableSlot : 0
+                           );
+    } else {
+        type = BTypeDefPtr::acast(forwardDef);
+        type->nextVTableSlot = 
+            baseWithVTable ? baseWithVTable->nextVTableSlot : 0;
+        type->forward = false;
+    }
     
     // add all of the base classes to the type
     for (vector<TypeDefPtr>::const_iterator iter = bases.begin();
@@ -1000,34 +1032,18 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
         type->addBaseClass(base);
     }
 
+    // create the class implementation.
+    createClassImpl(context, type.get());
+    
     // make the type the namespace of the context
     context.ns = type;
     
-    // tie the meta-class to the class
-    metaType->meta = type.get();
-    
-    // Make the pointer global variable our impl
-    type->impl = classImpl;
-
-    // create the unsafeCast() function.
-    metaType->addDef(new UnsafeCastDef(type.get()));
-    
-    // create function to convert to voidptr
-    context.ns->addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
-
     // create the "oper class" function - currently returns voidptr, but 
     // that's good enough for now.
     if (baseWithVTable)
-        createOperClassFunc(context, type.get(), metaType.get());
-
-#if 0
-    // create the safe cast function.
-    if (context.globalData->objectType)
-        metaType->context->addDef(new CastDef(type.get(), 
-                                              context.globalData->objectType
-                                              )
-                                  );
-#endif
+        createOperClassFunc(context, type.get(), 
+                            BTypeDefPtr::arcast(type->type)
+                            );
 
     return type.get();
 }
@@ -1542,8 +1558,6 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // some tools for creating meta-classes
     BTypeDefPtr metaType;           // storage for meta-types
-    BGlobalVarDefImplPtr classImpl; // storage for class impls
-    vector<TypeDefPtr> noBases;     // empty base class list
     
     BTypeDef *voidType;
     gd->voidType = voidType = new BTypeDef(context.globalData->classType.get(), 
@@ -1828,12 +1842,10 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     fixMeta(context, arrayType.get());
 
     // create OverloadDef's type
-    metaType = createMetaClass(context, "Overload", noBases, classImpl);
-    BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload",
-                                           0
-                                           );
+    metaType = createMetaClass(context, "Overload");
+    BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
-    metaType->impl = classImpl;
+    createClassImpl(context, overloadDef.get());
         
     // Give it a context and an "oper to voidptr" method.
     overloadDef->addDef(
@@ -1847,7 +1859,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vector<const Type *> members;
     Type *vtableType = StructType::get(getGlobalContext(), members);
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
-    metaType = createMetaClass(context, "VTableBase", noBases, classImpl);
+    metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
         new BTypeDef(metaType.get(), "VTableBase", 
@@ -1855,7 +1867,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      true
                      );
     vtableBaseType->hasVTable = true;
-    vtableBaseType->impl = classImpl;
+    createClassImpl(context, vtableBaseType);
     metaType->meta = vtableBaseType;
     context.ns->addDef(vtableBaseType);
     createOperClassFunc(context, vtableBaseType, metaType.get());

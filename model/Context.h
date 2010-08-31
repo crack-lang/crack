@@ -200,6 +200,11 @@ class Context : public spug::RCBase {
         void closeCleanupFrame();
 
         /**
+         * Create a forward declaration for the class and return it.
+         */
+        TypeDefPtr createForwardClass(const std::string &name);
+
+        /**
          * Checks for any forward declarations that have not been defined.
          * Throws a ParseError if there are any.
          */

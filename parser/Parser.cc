@@ -1763,6 +1763,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
 
 // class name : base, base { ... }
 //      ^                         ^
+// class name;
+//      ^     ^
 TypeDefPtr Parser::parseClassDef() {
    Token tok = getToken();
    if (!tok.isIdent())
@@ -1770,8 +1772,8 @@ TypeDefPtr Parser::parseClassDef() {
    string className = tok.getData();
    
    // check for an existing definition of the symbol
-   checkForExistingDef(tok, tok.getData());
-
+   TypeDefPtr existing = checkForExistingDef(tok, tok.getData());
+   
    // parse base class list   
    vector<TypeDefPtr> bases;
    vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
@@ -1790,6 +1792,9 @@ TypeDefPtr Parser::parseClassDef() {
          else if (!tok.isComma())
             unexpected(tok, "expected comma or opening brace");
       }
+   else if (tok.isSemi())
+      // forward declaration
+      return context->createForwardClass(className);
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
    
@@ -1808,8 +1813,11 @@ TypeDefPtr Parser::parseClassDef() {
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
    TypeDefPtr type =
-      context->builder.emitBeginClass(*classContext, className, bases);
-   context->ns->addDef(type.get());
+      context->builder.emitBeginClass(*classContext, className, bases,
+                                      existing.get()
+                                      );
+   if (!existing)
+      context->ns->addDef(type.get());
    
    // add the "cast" method
    if (type->hasVTable)
@@ -1936,16 +1944,28 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
           )
          return existing;
 
+      // check for forward declarations
       if (existingNS == context->ns.get()) {
-         FuncDef *funcDef = FuncDefPtr::rcast(existing);
-         if (funcDef->flags & FuncDef::forward)
+         
+         // forward function
+         FuncDef *funcDef;
+         if ((funcDef = FuncDefPtr::rcast(existing)) &&
+             funcDef->flags & FuncDef::forward
+             )
             // treat a forward declaration the same as an overload.
             return existing;
-         else
-            // redefinition in the same context is an error
-            redefineError(tok, existing.get());
-      }
+      
+         // forward class
+         TypeDef *typeDef;
+         if ((typeDef = TypeDefPtr::rcast(existing)) &&
+             typeDef->forward
+             )
+            return existing;
 
+         // redefinition in the same context is otherwise an error
+         redefineError(tok, existing.get());
+      }
+      
       // redefinition in a derived context is fine, but if we're not in a 
       // derived context display a warning.  TODO: if this check doesn't need 
       // to be this way, replace it with something that makes sense.
