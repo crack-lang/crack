@@ -42,7 +42,7 @@ class Toker {
          st_minus,
          st_plus,
          st_digram,
-         st_comment, 
+         st_comment,
          st_ccomment,
          st_ccomment2,
          st_string, 
@@ -57,7 +57,8 @@ class Toker {
          st_exponent,
          st_amp,
          st_istr,
-         st_pipe
+         st_pipe,
+         st_ltgt
       } state;
       
       // get the next character from the stream.

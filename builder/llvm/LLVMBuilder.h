@@ -247,7 +247,7 @@ class LLVMBuilder : public Builder {
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val);
         virtual model::IntConstPtr createIntConst(model::Context &context,
-                                                  long val,
+                                                  int64_t val,
                                                   model::TypeDef *type = 0
                                                   );
         virtual model::FloatConstPtr createFloatConst(model::Context &context,

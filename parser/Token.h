@@ -13,13 +13,14 @@ class Token {
    public:
 
       // the token types
-      typedef enum { breakKw, classKw, continueKw, elseKw, ifKw, importKw, 
-                     isKw, nullKw, operKw, returnKw, whileKw, assign, 
-                     asterisk, bang, colon, comma, decr, define, dot, end, 
-                     eq, ge, gt, ident, incr, integer, lbracket, lcurly, le,
-                     lparen, lt, minus, ne, percent, plus, rbracket, rcurly, 
-                     rparen, semi, slash, string, tilde, istrBegin, istrEnd,
-                     logicAnd, logicOr, floatLit
+      typedef enum { bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, classKw, 
+                     continueKw, elseKw, ifKw, importKw, isKw, nullKw, 
+                     operKw, returnKw, whileKw, assign, asterisk, bang, 
+                     colon, comma, decr, define, dot, end, eq, ge, gt, ident, 
+                     incr, integer, lbracket, lcurly, le, lparen, lt, minus, 
+                     ne, percent, plus, rbracket, rcurly, rparen, semi, slash,
+                     string, tilde, istrBegin, istrEnd, logicAnd, logicOr, 
+                     floatLit
 		    } Type;
 
    private:
@@ -54,6 +55,8 @@ class Token {
       /** Methods to check the token type */
       /** @{ */
 
+      bool isBoolAnd() const { return type == bitAnd; }
+      bool isBoolOr() const { return type == bitOr; }
       bool isIf() const { return type == ifKw; }
       bool isImport() const { return type == importKw; }
       bool isElse() const { return type == elseKw; }
@@ -118,6 +121,11 @@ class Token {
             case isKw:
             case logicAnd:
             case logicOr:
+            case bitAnd:
+            case bitOr:
+            case bitXor:
+            case bitLSh:
+            case bitRSh:
                return true;
             default:
                return false;

@@ -13,7 +13,7 @@
 using namespace model;
 using namespace parser;
 
-IntConst::IntConst(TypeDef *type, long val) :
+IntConst::IntConst(TypeDef *type, int64_t val) :
     Expr(type),
     val(val) {
 }

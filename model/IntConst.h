@@ -5,6 +5,7 @@
 
 #include "Context.h"
 #include "Expr.h"
+#include <stdint.h>
 
 namespace model {
 
@@ -14,9 +15,9 @@ SPUG_RCPTR(IntConst);
 // context - e.g. 32 bit, 64 bit, signed versus unsigned...
 class IntConst : public Expr {
     public:
-        long val;
+        int64_t val;
 
-        IntConst(TypeDef *type, long val);
+        IntConst(TypeDef *type, int64_t val);
         
         virtual ResultExprPtr emit(Context &context);
         virtual ExprPtr convert(Context &context, TypeDef *newType);

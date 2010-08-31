@@ -60,6 +60,12 @@ BINOP(SDiv, "/");
 BINOP(UDiv, "/");
 BINOP(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
 BINOP(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOP(Or, "|");
+BINOP(And, "&");
+BINOP(Xor, "^");
+BINOP(Shl, "<<");
+BINOP(LShr, ">>");
+BINOP(AShr, ">>");
 
 BINOP(ICmpEQ, "==");
 BINOP(ICmpNE, "!=");

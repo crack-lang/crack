@@ -341,6 +341,12 @@ BINOP_DEF(SDiv, "/");
 BINOP_DEF(UDiv, "/");
 BINOP_DEF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
 BINOP_DEF(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOP_DEF(Or, "|");
+BINOP_DEF(And, "&");
+BINOP_DEF(Xor, "^");
+BINOP_DEF(Shl, "<<");
+BINOP_DEF(LShr, ">>");
+BINOP_DEF(AShr, ">>");
 
 BINOP_DEF(ICmpEQ, "==");
 BINOP_DEF(ICmpNE, "!=");

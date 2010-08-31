@@ -59,7 +59,7 @@ Token Toker::readToken() {
     
     // information on the last character for digrams
     char ch1;
-    Token::Type t1, t2;
+    Token::Type t1, t2, t3;
     
     // for parsing octal and hex character code escape sequences.
     char codeChar;
@@ -97,11 +97,13 @@ Token Toker::readToken() {
                     ch1 = ch; t1 = Token::bang; t2 =Token::ne;
                     state = st_digram;
                 } else if (ch == '>') {
-                    ch1 = ch; t1 = Token::gt; t2 =Token::ge;
-                    state = st_digram;
+                    ch1 = ch; t1 = Token::gt; t2 = Token::ge; 
+                    t3 = Token::bitRSh;
+                    state = st_ltgt;
                 } else if (ch == '<') {
                     ch1 = ch; t1 = Token::lt; t2 =Token::le;
-                    state = st_digram;
+                    t3 = Token::bitLSh;
+                    state = st_ltgt;
                 } else if (ch == '(') {
                     return Token(Token::lparen, "(", locationMap.getLocation());
                 } else if (ch == ')') {
@@ -127,13 +129,19 @@ Token Toker::readToken() {
                 } else if (ch == '|') {
                     state = st_pipe;
                 } else if (ch == '*') {
-                    return Token(Token::asterisk, "*", locationMap.getLocation());
+                    return Token(Token::asterisk, "*",
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '%') {
                     return Token(Token::percent, "%", 
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '/') {
                     state = st_slash;
+                } else if (ch == '^') {
+                    return Token(Token::bitXor, "^",
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '"' || ch == '\'') {
                     terminator = ch;
                     state = st_string;
@@ -171,32 +179,30 @@ Token Toker::readToken() {
                 break;
 
             case st_amp:
+                state = st_none;
                 if (ch == '&') {
-                    state = st_none;
-                    return Token(Token::logicAnd, "&&", locationMap.getLocation());
-                }
-                else {
-                    // XXX until we have bitwise operators
-                    ParseError::abort(Token(Token::dot, "",
-                                            locationMap.getLocation()
-                                            ),
-                                      "unknown token, expected &&"
-                                      );
+                    return Token(Token::logicAnd, "&&",
+                                 locationMap.getLocation()
+                                 );
+                } else {
+                    ungetChar(ch);
+                    return Token(Token::bitAnd, "&", 
+                                 locationMap.getLocation()
+                                 );
                 }
                 break;
 
             case st_pipe:
+                state = st_none;
                 if (ch == '|') {
-                    state = st_none;
-                    return Token(Token::logicOr, "||", locationMap.getLocation());
-                }
-                else {
-                    // XXX until we have bitwise operators
-                    ParseError::abort(Token(Token::dot, "",
-                                            locationMap.getLocation()
-                                            ),
-                                      "unknown token, expected ||"
-                                      );
+                    return Token(Token::logicOr, "||",
+                                 locationMap.getLocation()
+                                 );
+                } else {
+                    ungetChar(ch);
+                    return Token(Token::bitOr, "|", 
+                                 locationMap.getLocation()
+                                 );
                 }
                 break;
 
@@ -209,7 +215,15 @@ Token Toker::readToken() {
                     return Token(Token::minus, "-", locationMap.getLocation());
                 }
                 break;
-            
+
+            case st_ltgt:
+                if (ch == ch1) {
+                    char all[3] = {ch1, ch1, 0};
+                    state = st_none;
+                    return Token(t3, all, locationMap.getLocation());
+                }
+                // fall through to digram
+
             case st_digram:
                 if (ch == '=') {
                     char all[3] = {ch1, ch, 0};
@@ -221,8 +235,7 @@ Token Toker::readToken() {
                     state = st_none;
                     return Token(t1, all, locationMap.getLocation());
                 }
-            
-
+                break;
    
             case st_ident:
    

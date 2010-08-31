@@ -34,7 +34,7 @@ public:
 class BIntConst : public model::IntConst {
 public:
     llvm::Value *rep;
-    BIntConst(BTypeDef *type, long val);
+    BIntConst(BTypeDef *type, int64_t val);
 };
 
 class BFloatConst : public model::FloatConst {

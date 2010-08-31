@@ -3,6 +3,7 @@
 #ifndef _builder_Builder_h_
 #define _builder_Builder_h_
 
+#include <stdint.h>
 #include <spug/RCPtr.h>
 
 #include "model/FuncCall.h" // for FuncCall::ExprVec
@@ -298,7 +299,7 @@ class Builder : public spug::RCBase {
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val) = 0;
         virtual model::IntConstPtr createIntConst(model::Context &context,
-                                                  long val,
+                                                  int64_t val,
                                                   model::TypeDef *type = 0
                                                   ) = 0;
         virtual model::FloatConstPtr createFloatConst(model::Context &context,
