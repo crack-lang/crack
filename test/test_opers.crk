@@ -29,6 +29,7 @@ class Foo {
     oper init() { tester = 19; }
     oper del() { tester = 20; }
     int oper -() { tester = 21; return 0; }
+    int oper >>=(int i) { tester = i; return 100; }
 }
 
 Foo f;
@@ -52,6 +53,8 @@ f.oper *(f); check(17, 'FAILED *');
 f.oper %(f); check(18, 'FAILED %');
 f.oper init(); check(19, 'FAILED init');
 f.oper del(); check(20, 'FAILED del');
+f.oper >>=(21); check(21, 'FAILED >>=');
+f >>= 22; check(22, 'FAILED >>= (normal syntax)');
 
 # we only need to check broad classes of the implicit operators - the logic is 
 # all the same.
@@ -59,5 +62,25 @@ f == f; check(9, 'FAILED implicit ==');
 !f; check(7, 'FAILED implicit !');
 -f; check(21, 'FAILED implicit unary -');
 f - f; check(5, 'FAILED implicit binary -');
+
+# test of integer augmented assignment
+int x;
+x += 1;
+if (x != 1) puts('+= failed');
+x -= 1;
+if (x != 0) puts('-= failed');
+x = 1;
+x *= 5 + 5;
+if (x != 10) puts('*= failed');
+x /= 5;
+if (x != 2) puts('/= failed');
+x = 10;
+if ((x %= 3) != 1) puts('%= failed');
+x = 3;
+if ((x &= 2) != 2) puts('&= failed');
+if ((x |= 1) != 3) puts('|= failed');
+if ((x ^= 6) != 5) puts('^= failed');
+if ((x <<= 2) != 20) puts('<<= failed');
+if ((x >>= 2) != 5) puts('>>= failed');
 
 puts('ok');

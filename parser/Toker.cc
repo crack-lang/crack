@@ -1,3 +1,4 @@
+
 // Copyright 2003 Michael A. Muller
 // Copyright 2009 Google Inc.
 
@@ -57,8 +58,9 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
 Token Toker::readToken() {
     char ch, terminator;
     
-    // information on the last character for digrams
-    char ch1;
+    // information on the preceeding characters for compound symbols
+    char symchars[4];
+    int sci = 0;
     Token::Type t1, t2, t3;
     
     // for parsing octal and hex character code escape sequences.
@@ -91,17 +93,17 @@ Token Toker::readToken() {
                 } else if (ch == ',') {
                     return Token(Token::comma, ",", locationMap.getLocation());
                 } else if (ch == '=') {
-                    ch1 = ch; t1 = Token::assign; t2 =Token::eq;
+                    symchars[sci++] = ch; t1 = Token::assign; t2 =Token::eq;
                     state = st_digram;
                 } else if (ch == '!') {
-                    ch1 = ch; t1 = Token::bang; t2 =Token::ne;
+                    symchars[sci++] = ch; t1 = Token::bang; t2 =Token::ne;
                     state = st_digram;
                 } else if (ch == '>') {
-                    ch1 = ch; t1 = Token::gt; t2 = Token::ge; 
+                    symchars[sci++] = ch; t1 = Token::gt; t2 = Token::ge; 
                     t3 = Token::bitRSh;
                     state = st_ltgt;
                 } else if (ch == '<') {
-                    ch1 = ch; t1 = Token::lt; t2 =Token::le;
+                    symchars[sci++] = ch; t1 = Token::lt; t2 =Token::le;
                     t3 = Token::bitLSh;
                     state = st_ltgt;
                 } else if (ch == '(') {
@@ -129,24 +131,27 @@ Token Toker::readToken() {
                 } else if (ch == '|') {
                     state = st_pipe;
                 } else if (ch == '*') {
-                    return Token(Token::asterisk, "*",
-                                 locationMap.getLocation()
-                                 );
+                    t1 = Token::asterisk;
+                    t2 = Token::assignAsterisk;
+                    symchars[sci++] = ch;
+                    state = st_postaug;
                 } else if (ch == '%') {
-                    return Token(Token::percent, "%", 
-                                 locationMap.getLocation()
-                                 );
+                    t1 = Token::percent; t2 = Token::assignPercent;
+                    symchars[sci++] = ch;
+                    state = st_postaug;
                 } else if (ch == '/') {
                     state = st_slash;
                 } else if (ch == '^') {
-                    return Token(Token::bitXor, "^",
-                                 locationMap.getLocation()
-                                 );
+                    t1 = Token::bitXor;
+                    t2 = Token::assignXor;
+                    symchars[sci++] = ch;
+                    state = st_postaug;
                 } else if (ch == '"' || ch == '\'') {
                     terminator = ch;
                     state = st_string;
                 } else if (ch == ':') {
-                    ch1 = ch; t1 = Token::colon; t2 = Token::define;
+                    symchars[sci++] = ch; t1 = Token::colon; 
+                    t2 = Token::define;
                     state = st_digram;
                 } else if (ch == '.') {
                     // check for float
@@ -184,6 +189,10 @@ Token Toker::readToken() {
                     return Token(Token::logicAnd, "&&",
                                  locationMap.getLocation()
                                  );
+                } else if (ch == '=') {
+                    return Token(Token::assignAnd, "&=",
+                                 locationMap.getLocation()
+                                 );
                 } else {
                     ungetChar(ch);
                     return Token(Token::bitAnd, "&", 
@@ -198,6 +207,10 @@ Token Toker::readToken() {
                     return Token(Token::logicOr, "||",
                                  locationMap.getLocation()
                                  );
+                } else if (ch == '=') {
+                    return Token(Token::assignOr, "|=",
+                                 locationMap.getLocation()
+                                 );
                 } else {
                     ungetChar(ch);
                     return Token(Token::bitOr, "|", 
@@ -210,6 +223,10 @@ Token Toker::readToken() {
                 state = st_none;
                 if (ch == '-') {
                     return Token(Token::decr, "--", locationMap.getLocation());
+                } else if (ch == '=') {
+                    return Token(Token::assignMinus, "-=",
+                                 locationMap.getLocation()
+                                 );
                 } else {
                     ungetChar(ch);
                     return Token(Token::minus, "-", locationMap.getLocation());
@@ -217,23 +234,26 @@ Token Toker::readToken() {
                 break;
 
             case st_ltgt:
-                if (ch == ch1) {
-                    char all[3] = {ch1, ch1, 0};
-                    state = st_none;
-                    return Token(t3, all, locationMap.getLocation());
+                if (ch == symchars[0]) {
+                    symchars[sci++] = ch;
+                    t1 = t3;
+                    t2 = (ch == '<') ? Token::assignLSh : Token::assignRSh;
+                    state = st_postaug;
+                    break;
                 }
                 // fall through to digram
 
             case st_digram:
                 if (ch == '=') {
-                    char all[3] = {ch1, ch, 0};
+                    symchars[sci++] = ch;
+                    symchars[sci++] = 0;
                     state = st_none;
-                    return Token(t2, all, locationMap.getLocation());
+                    return Token(t2, symchars, locationMap.getLocation());
                 } else {
-                    char all[2] = {ch1, 0};
+                    symchars[1] = 0;
                     ungetChar(ch);
                     state = st_none;
-                    return Token(t1, all, locationMap.getLocation());
+                    return Token(t1, symchars, locationMap.getLocation());
                 }
                 break;
    
@@ -252,6 +272,11 @@ Token Toker::readToken() {
             case st_slash:
                 if (ch == '/') {
                     state = st_comment;
+                } else if (ch == '=') {
+                    state = st_none;
+                    return Token(Token::assignSlash, "/=", 
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '*') {
                     state = st_ccomment;
                 } else {
@@ -477,12 +502,31 @@ Token Toker::readToken() {
                 state = st_none;
                 if (ch == '+') {
                     return Token(Token::decr, "++", locationMap.getLocation());
+                } else if (ch == '=') {
+                    return Token(Token::assignPlus, "+=", 
+                                 locationMap.getLocation()
+                                 );
                 } else {
                     ungetChar(ch);
                     return Token(Token::plus, "+", locationMap.getLocation());
                 }
                 break;
             
+            // we just scanned a sequence of characters that can be used for 
+            // augmented assignment.
+            case st_postaug:
+                state = st_none;
+                if (ch == '=') {
+                    symchars[sci++] = ch;
+                    symchars[sci++] = 0;
+                    return Token(t2, symchars, locationMap.getLocation());
+                } else {
+                    symchars[sci++] = 0;
+                    ungetChar(ch);
+                    return Token(t1, symchars, locationMap.getLocation());
+                }
+                break;   
+
             default:
                throw logic_error("tokenizer in illegal state");
         }

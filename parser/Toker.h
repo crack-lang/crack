@@ -58,7 +58,8 @@ class Toker {
          st_amp,
          st_istr,
          st_pipe,
-         st_ltgt
+         st_ltgt,
+         st_postaug
       } state;
       
       // get the next character from the stream.

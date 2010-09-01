@@ -11,11 +11,12 @@
 #include <spug/Exception.h>
 
 #include "Toker.h"
+#include "model/FuncCall.h"
 
 namespace model {
    SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(Context);
-   SPUG_RCPTR(FuncCall);
+   SPUG_RCPTR(FuncDef);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(Initializers);
    class Namespace;
@@ -102,6 +103,19 @@ class Parser {
        * unexpected(tok, error);
        */
       void expectToken(Token::Type type, const char *error);
+
+      /** Look up a binary operator, either as a stand-alone operator 
+       * defintiion with two args or a method with one arg.
+       * 
+       * @param name the operator name (e.g. "oper +")
+       * @param args a two element arg list, lhs and rhs values.  This will be 
+       *    modified on return to include the correct argument list for the 
+       *    function or method.
+       * @returns the function, null if there was no match.
+       */
+      model::FuncDefPtr lookUpBinOp(const std::string &name, 
+                                    model::FuncCall::ExprVec &args
+                                    );
 
       /**
        * Parse a single statement.

@@ -344,7 +344,7 @@ string Parser::parseOperSpec() {
        tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
        tok.isAsterisk() || tok.isPercent() ||
        ident == "init" || ident == "release" || ident == "bind" ||
-       ident == "del"
+       ident == "del" || tok.isAugAssign()
        ) {
       return "oper " + ident;
    } else if (tok.isIncr() || tok.isDecr()) {
@@ -453,14 +453,14 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
 
 ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    Namespace *ns = container ? container->type.get() : context->ns.get();
-   
-   // is it an assignment?
-   Token tok1 = getToken();
-   if (tok1.isAssign()) {
-      
-      if (ident.isOper())
-         error(tok1, "Expected operator identifier after 'oper' keyword");
 
+   Token tok1 = getToken();
+   if (ident.isOper() && tok1.isAssign())
+      error(tok1, "Expected operator identifier after 'oper' keyword");
+
+   // is it an assignment?
+   if ((tok1.isAssign() || tok1.isAugAssign()) && !ident.isOper()) {
+      
       VarDefPtr var = ns->lookUp(ident.getData());
       if (!var)
          error(tok1,
@@ -477,6 +477,52 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       if (!val) {
          tok1 = getToken();
          error(tok1, "expression expected");
+      }
+      
+      // check for augmented assignment
+      if (tok1.isAugAssign()) {
+         
+         // create a reference for the lvalue
+         ExprPtr varRef = context->createVarRef(var.get());
+         
+         // see if the variable's type has an augmented assignment operator
+         FuncCall::ExprVec args(2);
+         args[0] = varRef;
+         args[1] = val;
+         FuncDefPtr funcDef;
+         if (funcDef = lookUpBinOp("oper " + tok1.getData(), args)) {
+            FuncCallPtr funcCall =
+               context->builder.createFuncCall(funcDef.get());
+            funcCall->args = args;
+            if (funcDef->method)
+               funcCall->receiver = varRef;
+            return funcCall;
+         }
+         
+         // it doesn't.  verify that it has the plain version of the operator 
+         // and construct an assignment from it.
+         args[0] = varRef;
+         args[1] = val;
+         const string &tok1Data = tok1.getData();
+         const string &oper = tok1Data.substr(0, tok1Data.size() - 1);
+         if (funcDef = lookUpBinOp("oper " + oper, args)) {
+            FuncCallPtr funcCall = 
+               context->builder.createFuncCall(funcDef.get());
+            funcCall->args = args;
+            if (funcDef->method)
+               funcCall->receiver = varRef;
+            // XXX won't work for instance variables
+            return AssignExpr::create(*context, ident, var.get(), 
+                                      funcCall.get()
+                                      );
+         } else {
+            error(tok1, SPUG_FSTR("Neither " << oper << "=  nor " << oper << 
+                                  " is defined for types " << 
+                                  varRef->type->name << " and " <<
+                                  val->type->name
+                                  )
+                  );
+         }
       }
 
       // if this is an instance variable, emit a field assignment.  
@@ -587,6 +633,23 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
    
    return TypeDefPtr::rcast(ref->def);
 }
+
+FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
+   FuncCall::ExprVec exprs(1);
+   exprs[0] = args[1];
+   
+   // first try to find it in the type's context, then try to find it in 
+   // the current context.
+   FuncDefPtr func = args[0]->type->lookUp(*context, name, exprs);
+   if (!func) {
+      exprs[0] = args[0];
+      exprs.push_back(args[1]);
+      func = context->ns->lookUp(*context, name, exprs);
+   }
+
+   args = exprs;
+   return func;
+}   
 
 ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
    ExprPtr expr = expr0;
@@ -709,18 +772,12 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          // parse the right-hand-side expression
          ExprPtr rhs = parseExpression(newPrec);
          
-         FuncCall::ExprVec exprs(1);
-         exprs[0] = rhs;
+         FuncCall::ExprVec exprs(2);
+         exprs[0] = expr;
+         exprs[1] = rhs;
          std::string name = "oper " + tok.getData();
-         
-         // first try to find it in the type's context, then try to find it in 
-         // the current context.
-         FuncDefPtr func = expr->type->lookUp(*context, name, exprs);
-         if (!func) {
-            exprs[0] = expr;
-            exprs.push_back(rhs);
-            func = context->ns->lookUp(*context, name, exprs);
-         }
+
+         FuncDefPtr func = lookUpBinOp(name, exprs);
          if (!func)
             error(tok,
                   SPUG_FSTR("Operator " << expr->type->name << " " <<
@@ -1742,10 +1799,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
                       normal,
                       (context->scope == Context::composite) ? 0 : 1
                       );
-      } else if (tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
-                 tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
-                 tok.isAsterisk() || tok.isPercent()
-                 ) {
+      } else if (tok.isBinOp() || tok.isAugAssign()) {
          // binary operators
          
          // in composite context, these should have just one argument.
@@ -1853,8 +1907,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
    context(context) {
    
    // build the precedence table
-   enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, bitAndPrec, 
-          cmpPrec, shiftPrec, addPrec, multPrec, unaryPrec
+   enum {  noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, bitAndPrec, 
+           cmpPrec, shiftPrec, addPrec, multPrec, unaryPrec
          };
    struct { const char *op; unsigned prec; } map[] = {
       
@@ -1870,9 +1924,9 @@ Parser::Parser(Toker &toker, model::Context *context) :
       {"/", multPrec},
       {"%", multPrec},
       {"+", addPrec},
-      {"-", addPrec},
       {"<<", shiftPrec},
       {">>", shiftPrec},
+      {"-", addPrec},
       {"==", cmpPrec},
       {"!=", cmpPrec},
       {"<", cmpPrec},

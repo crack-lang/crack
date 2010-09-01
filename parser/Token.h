@@ -15,12 +15,14 @@ class Token {
       // the token types
       typedef enum { bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, classKw, 
                      continueKw, elseKw, ifKw, importKw, isKw, nullKw, 
-                     operKw, returnKw, whileKw, assign, asterisk, bang, 
-                     colon, comma, decr, define, dot, end, eq, ge, gt, ident, 
-                     incr, integer, lbracket, lcurly, le, lparen, lt, minus, 
-                     ne, percent, plus, rbracket, rcurly, rparen, semi, slash,
-                     string, tilde, istrBegin, istrEnd, logicAnd, logicOr, 
-                     floatLit
+                     operKw, returnKw, whileKw, assign, assignAnd, 
+                     assignAsterisk, assignLSh, assignOr, assignRSh, 
+                     assignXor, assignMinus, assignPercent, assignPlus, 
+                     assignSlash, asterisk, bang, colon, comma, decr, define, 
+                     dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
+                     lcurly, le, lparen, lt, minus, ne, percent, plus, 
+                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
+                     istrBegin, istrEnd, logicAnd, logicOr, floatLit
 		    } Type;
 
    private:
@@ -126,6 +128,24 @@ class Token {
             case bitXor:
             case bitLSh:
             case bitRSh:
+               return true;
+            default:
+               return false;
+         }
+      }
+
+      bool isAugAssign() const {
+         switch(type) {
+            case assignAnd:
+            case assignAsterisk:
+            case assignLSh:
+            case assignOr:
+            case assignRSh:
+            case assignXor:
+            case assignMinus: 
+            case assignPercent:
+            case assignPlus:
+            case assignSlash:
                return true;
             default:
                return false;
