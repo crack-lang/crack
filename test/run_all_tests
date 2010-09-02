@@ -715,6 +715,11 @@ the block" \
     "${parseError}1: Forward declared function not defined at the end of the \
 block: void A.foo()"
 
+test_output "no defining variables of forward declared types" \
+    'class A; A f(); void g() { A a = f(); } class A {} A f() { return A(); }
+     g();' \
+    "${parseError}1: You cannot define a variable of a forward declared type."
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

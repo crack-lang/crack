@@ -204,6 +204,14 @@ void Context::checkForUnresolvedForwards() {
 void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
                          Expr *initializer
                          ) {
+
+    // make sure we aren't using a forward declared type (we disallow this 
+    // because we don't know if oper release() is defined for the type)
+    if (type->forward)
+        error(SPUG_FSTR("You cannot define a variable of a forward declared "
+                         "type."
+                        )
+              );
     
     // if the definition context is an instance context, make sure that we 
     // haven't generated any constructors.
