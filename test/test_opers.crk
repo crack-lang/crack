@@ -30,57 +30,85 @@ class Foo {
     oper del() { tester = 20; }
     int oper -() { tester = 21; return 0; }
     int oper >>=(int i) { tester = i; return 100; }
+    bool toBool() { return 1; }
 }
 
-Foo f;
-f.oper bind(); check(1, 'FAILED bind');
-f.oper release(); check(2, 'FAILED release');
-f.oper [](100); check(3, 'FAILED []');
-f.oper []=(100, 200); check(4, 'FAILED []=');
-f.oper -(f); check(5, 'FAILED minus');
-f.oper ~(); check(6, 'FAILED tilde');
-f.oper !(); check(7, 'FAILED bang');
-f.oper --x(); check(8, 'FAILED decr');
-f.oper ==(f); check(9, 'FAILED ==');
-f.oper !=(f); check(10, 'FAILED !=');
-f.oper <(f); check(11, 'FAILED <');
-f.oper <=(f); check(12, 'FAILED <=');
-f.oper >=(f); check(13, 'FAILED >=');
-f.oper >(f); check(14, 'FAILED >');
-f.oper +(f); check(15, 'FAILED +');
-f.oper /(f); check(16, 'FAILED /');
-f.oper *(f); check(17, 'FAILED *');
-f.oper %(f); check(18, 'FAILED %');
-f.oper init(); check(19, 'FAILED init');
-f.oper del(); check(20, 'FAILED del');
-f.oper >>=(21); check(21, 'FAILED >>=');
-f >>= 22; check(22, 'FAILED >>= (normal syntax)');
+if (1) {
+    Foo f;
+    f.oper bind(); check(1, 'FAILED bind');
+    f.oper release(); check(2, 'FAILED release');
+    f.oper [](100); check(3, 'FAILED []');
+    f.oper []=(100, 200); check(4, 'FAILED []=');
+    f.oper -(f); check(5, 'FAILED minus');
+    f.oper ~(); check(6, 'FAILED tilde');
+    f.oper !(); check(7, 'FAILED bang');
+    f.oper --x(); check(8, 'FAILED decr');
+    f.oper ==(f); check(9, 'FAILED ==');
+    f.oper !=(f); check(10, 'FAILED !=');
+    f.oper <(f); check(11, 'FAILED <');
+    f.oper <=(f); check(12, 'FAILED <=');
+    f.oper >=(f); check(13, 'FAILED >=');
+    f.oper >(f); check(14, 'FAILED >');
+    f.oper +(f); check(15, 'FAILED +');
+    f.oper /(f); check(16, 'FAILED /');
+    f.oper *(f); check(17, 'FAILED *');
+    f.oper %(f); check(18, 'FAILED %');
+    f.oper init(); check(19, 'FAILED init');
+    f.oper del(); check(20, 'FAILED del');
+    f.oper >>=(21); check(21, 'FAILED >>=');
+    f >>= 22; check(22, 'FAILED >>= (normal syntax)');
 
-# we only need to check broad classes of the implicit operators - the logic is 
-# all the same.
-f == f; check(9, 'FAILED implicit ==');
-!f; check(7, 'FAILED implicit !');
--f; check(21, 'FAILED implicit unary -');
-f - f; check(5, 'FAILED implicit binary -');
+    # we only need to check broad classes of the implicit operators - the 
+    # logic is all the same.
+    f == f; check(9, 'FAILED implicit ==');
+    !f; check(7, 'FAILED implicit !');
+    -f; check(21, 'FAILED implicit unary -');
+    f - f; check(5, 'FAILED implicit binary -');
+}
 
 # test of integer augmented assignment
-int x;
-x += 1;
-if (x != 1) puts('+= failed');
-x -= 1;
-if (x != 0) puts('-= failed');
-x = 1;
-x *= 5 + 5;
-if (x != 10) puts('*= failed');
-x /= 5;
-if (x != 2) puts('/= failed');
-x = 10;
-if ((x %= 3) != 1) puts('%= failed');
-x = 3;
-if ((x &= 2) != 2) puts('&= failed');
-if ((x |= 1) != 3) puts('|= failed');
-if ((x ^= 6) != 5) puts('^= failed');
-if ((x <<= 2) != 20) puts('<<= failed');
-if ((x >>= 2) != 5) puts('>>= failed');
+if (1) {
+    int x;
+    x += 1;
+    if (x != 1) puts('+= failed');
+    x -= 1;
+    if (x != 0) puts('-= failed');
+    x = 1;
+    x *= 5 + 5;
+    if (x != 10) puts('*= failed');
+    x /= 5;
+    if (x != 2) puts('/= failed');
+    x = 10;
+    if ((x %= 3) != 1) puts('%= failed');
+    x = 3;
+    if ((x &= 2) != 2) puts('&= failed');
+    if ((x |= 1) != 3) puts('|= failed');
+    if ((x ^= 6) != 5) puts('^= failed');
+    if ((x <<= 2) != 20) puts('<<= failed');
+    if ((x >>= 2) != 5) puts('>>= failed');
+}
+
+# run ternary operator tests in their own namespace
+if (1) {
+    bool val;
+    x := val ? 100 : 200;
+    if (x != 200)
+        puts('failed on basic ternary operator usage');
+    
+    class Bar : Foo {}
+    
+    f := Foo();
+    b := Bar();
+    
+    val = 1;
+    g := val ? f : b;
+    if (g is b) puts('failed on type generalization');
+    if (!(g is f)) puts('WTF?');
+    
+    bool isBool(voidptr j) { return 1==0; }
+    bool isBool(bool j) { return 1==1; }
+    i := val ? f : (1==0);
+    if (!isBool(i)) puts('failed on type conversion');
+}
 
 puts('ok');

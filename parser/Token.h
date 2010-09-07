@@ -21,8 +21,8 @@ class Token {
                      assignSlash, asterisk, bang, colon, comma, decr, define, 
                      dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
                      lcurly, le, lparen, lt, minus, ne, percent, plus, 
-                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
-                     istrBegin, istrEnd, logicAnd, logicOr, floatLit
+                     quest, rbracket, rcurly, rparen, semi, slash, string,
+                     tilde, istrBegin, istrEnd, logicAnd, logicOr, floatLit
 		    } Type;
 
    private:
@@ -90,6 +90,7 @@ class Token {
       bool isInteger() const { return type == integer; }
       bool isFloat() const { return type == floatLit; }
       bool isPlus() const { return type == plus; }
+      bool isQuest() const { return type == quest; }
       bool isMinus() const { return type == minus; }
       bool isAsterisk() const { return type == asterisk; }
       bool isBang() const { return type == bang; }

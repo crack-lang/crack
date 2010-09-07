@@ -174,6 +174,8 @@ Token Toker::readToken() {
                     return Token(Token::istrBegin, "`", 
                                  locationMap.getLocation()
                                  );
+                } else if (ch == '?') {
+                    return Token(Token::quest, "?", locationMap.getLocation());
                 } else {
                     ParseError::abort(Token(Token::dot, "", 
                                             locationMap.getLocation()

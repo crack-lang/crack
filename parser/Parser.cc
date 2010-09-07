@@ -85,6 +85,23 @@ void Parser::expectToken(Token::Type type, const char *error) {
       unexpected(tok, error);
 }
 
+FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
+   FuncCall::ExprVec exprs(1);
+   exprs[0] = args[1];
+   
+   // first try to find it in the type's context, then try to find it in 
+   // the current context.
+   FuncDefPtr func = args[0]->type->lookUp(*context, name, exprs);
+   if (!func) {
+      exprs[0] = args[0];
+      exprs.push_back(args[1]);
+      func = context->ns->lookUp(*context, name, exprs);
+   }
+
+   args = exprs;
+   return func;
+}   
+
 void Parser::parseClause(bool defsAllowed) {
    Token tok = getToken();
    ExprPtr expr;
@@ -634,22 +651,16 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
    return TypeDefPtr::rcast(ref->def);
 }
 
-FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
-   FuncCall::ExprVec exprs(1);
-   exprs[0] = args[1];
-   
-   // first try to find it in the type's context, then try to find it in 
-   // the current context.
-   FuncDefPtr func = args[0]->type->lookUp(*context, name, exprs);
-   if (!func) {
-      exprs[0] = args[0];
-      exprs.push_back(args[1]);
-      func = context->ns->lookUp(*context, name, exprs);
-   }
-
-   args = exprs;
-   return func;
-}   
+// cond ? trueVal : falseVal
+//       ^                  ^
+ExprPtr Parser::parseTernary(Expr *cond) {
+   ExprPtr trueVal = parseExpression();
+   Token tok = getToken();
+   if (!tok.isColon())
+      unexpected(tok, "expected colon.");
+   ExprPtr falseVal = parseExpression();
+   return context->createTernary(cond, trueVal.get(), falseVal.get());
+}
 
 ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
    ExprPtr expr = expr0;
@@ -792,6 +803,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          expr = funcCall;
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
+      } else if (tok.isQuest()) {
+         expr = parseTernary(expr.get());
       } else {
 	 // next token is not part of the expression
 	 break;

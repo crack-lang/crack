@@ -53,6 +53,7 @@
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
+#include <model/TernaryExpr.h>
 
 using namespace std;
 using namespace llvm;
@@ -711,6 +712,69 @@ void LLVMBuilder::emitEndIf(Context &context,
     // block is the next block
     if (bpos->block)
         builder.SetInsertPoint(block = bpos->block);
+}
+
+TernaryExprPtr LLVMBuilder::createTernary(model::Context &context,
+                                          model::Expr *cond,
+                                          model::Expr *trueVal,
+                                          model::Expr *falseVal,
+                                          model::TypeDef *type
+                                          ) {
+    return new TernaryExpr(cond, trueVal, falseVal, type);
+}
+
+ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
+
+    // condition on first arg
+    BranchpointPtr pos = labeledIf(context, expr->cond.get(), "tern_T", 
+                                   "tern_F"
+                                   );
+    BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
+    Value *condVal = lastValue; // arg[0] condition value
+    BasicBlock *falseBlock = bpos->block; // false block
+    BasicBlock *oBlock = bpos->block2; // condition block
+
+    // now pointing to true block, save it for phi
+    BasicBlock *trueBlock = block;
+    
+    // create the block after the expression
+    LLVMContext &lctx = getGlobalContext();
+    BasicBlock *postBlock = BasicBlock::Create(lctx, "after_tern", func);
+    
+    // emit the true expression in its own cleanup frame
+    context.createCleanupFrame();
+    expr->trueVal->emit(context);
+    narrow(expr->trueVal->type.get(), expr->type.get());
+    Value *trueVal = lastValue;
+    context.closeCleanupFrame();
+    
+    // branch to the end
+    builder.CreateBr(postBlock);
+    
+    // pick up changes to the block
+    trueBlock = block;
+    
+    // emit the false expression 
+    builder.SetInsertPoint(block = falseBlock);
+    context.createCleanupFrame();
+    expr->falseVal->emit(context);
+    narrow(expr->falseVal->type.get(), expr->type.get());
+    Value *falseVal = lastValue;
+    context.closeCleanupFrame();
+    builder.CreateBr(postBlock);
+    falseBlock = block;
+
+    // emit the phi
+    builder.SetInsertPoint(block = postBlock);
+    PHINode *p = builder.CreatePHI(
+        BTypeDefPtr::arcast(expr->type)->rep,
+        "tern_R"
+    );
+    p->addIncoming(trueVal, trueBlock);
+    p->addIncoming(falseVal, falseBlock);
+    lastValue = p;
+    
+    return new BResultExpr(expr, lastValue);
 }
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 

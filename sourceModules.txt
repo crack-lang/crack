@@ -16,6 +16,7 @@ model/LocalNamespace.cc
 model/NullConst.cc
 model/Namespace.cc
 model/CleanupFrame.cc
+model/TernaryExpr.cc
 model/TypeDef.cc
 model/FuncDef.cc
 model/ModuleDef.cc

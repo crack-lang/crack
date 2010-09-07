@@ -188,6 +188,12 @@ class Parser {
       static model::TypeDef *convertTypeRef(model::Expr *expr);
 
       /**
+       * Parse the ternary operator's expression.
+       * @param cond the conditional expression.
+       */
+      model::ExprPtr parseTernary(model::Expr *cond);
+
+      /**
        * Parse a secondary expression.  Secondary expressions include a the 
        * dot operator, binary operators and the bracket operators and their 
        * associated expressions.

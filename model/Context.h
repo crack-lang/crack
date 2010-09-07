@@ -218,6 +218,11 @@ class Context : public spug::RCBase {
                         );
 
         /**
+         * Create a ternary expression.
+         */
+        ExprPtr createTernary(Expr *cond, Expr *trueVal, Expr *falseVal);
+
+        /**
          * Returns true if the namespace is in the same function as the 
          * context.
          */

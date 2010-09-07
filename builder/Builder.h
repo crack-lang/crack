@@ -23,6 +23,7 @@ namespace model {
     SPUG_RCPTR(FloatConst);
     class NullConst;
     SPUG_RCPTR(StrConst);
+    SPUG_RCPTR(TernaryExpr);
     SPUG_RCPTR(TypeDef);
     SPUG_RCPTR(VarDef);
     SPUG_RCPTR(VarRef);
@@ -118,6 +119,25 @@ class Builder : public spug::RCBase {
                                bool terminal
                                ) = 0;
         
+        /**
+         * Create a ternary expression object.
+         */
+        virtual model::TernaryExprPtr createTernary(model::Context &context,
+                                                    model::Expr *cond,
+                                                    model::Expr *trueVal,
+                                                    model::Expr *falseVal,
+                                                    model::TypeDef *type
+                                                    ) = 0;
+        
+        /**
+         * Emit a ternary operator expression.
+         * @param cond the conditional expression.
+         * @param expr the expression to emit.
+         */
+        virtual model::ResultExprPtr emitTernary(model::Context &context,
+                                                 model::TernaryExpr *expr
+                                                 ) = 0;
+
         /**
          * Emits a "while" statement.
          * @param cond the conditional expression.

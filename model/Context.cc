@@ -17,6 +17,7 @@
 #include "ModuleDef.h"
 #include "OverloadDef.h"
 #include "StrConst.h"
+#include "TernaryExpr.h"
 #include "TypeDef.h"
 #include "VarDef.h"
 #include "VarDefImpl.h"
@@ -233,6 +234,40 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
     closeCleanupFrame();
     defCtx->ns->addDef(varDef.get());
     cleanupFrame->addCleanup(varDef.get());
+}
+
+ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
+    // make sure the condition can be converted to bool
+    ExprPtr boolCond = cond->convert(*this, globalData->boolType.get());
+    if (!boolCond)
+        error("Condition in ternary operator is not boolean.");
+
+    ExprPtr converted;
+
+    // make sure the types are compatible
+    TypeDefPtr type;
+    if (trueVal->type != falseVal->type) {
+        if (trueVal->type->isDerivedFrom(falseVal->type.get())) {
+            type = falseVal->type;
+        } else if (falseVal->type->isDerivedFrom(trueVal->type.get())) {
+            type = trueVal->type;
+        } else if (converted = falseVal->convert(*this, trueVal->type.get())) {
+            type = trueVal->type;
+            falseVal = converted.get();
+        } else if (converted = trueVal->convert(*this, falseVal->type.get())) {
+            type = falseVal->type;
+            trueVal = converted.get();
+        } else {
+            error("Value types in ternary operator are not compatible.");
+        }
+    } else {
+        // the types are equal
+        type = trueVal->type;
+    }
+    
+    return builder.createTernary(*this, boolCond.get(), trueVal, falseVal, 
+                                 type.get()
+                                 );
 }
 
 bool Context::inSameFunc(Namespace *varNS) {

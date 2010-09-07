@@ -156,6 +156,17 @@ class LLVMBuilder : public Builder {
                                bool terminal
                                );
 
+        virtual model::TernaryExprPtr createTernary(model::Context &context,
+                                                    model::Expr *cond,
+                                                    model::Expr *trueVal,
+                                                    model::Expr *falseVal,
+                                                    model::TypeDef *type
+                                                    );
+
+        virtual model::ResultExprPtr emitTernary(model::Context &context,
+                                                 model::TernaryExpr *expr
+                                                 );
+
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
                            model::Expr *cond);
