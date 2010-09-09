@@ -720,6 +720,8 @@ test_output "no defining variables of forward declared types" \
      g();' \
     "${parseError}1: You cannot define a variable of a forward declared type."
 
+test_output "constants" "import test.test_constants;" ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

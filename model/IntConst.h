@@ -23,6 +23,9 @@ class IntConst : public Expr {
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;
         virtual bool isAdaptive() const;
+        
+        /** Return the default type for the value. */
+        static TypeDef *selectType(Context &context, int64_t val);
 };
 
 } // namespace parser

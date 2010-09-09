@@ -67,3 +67,12 @@ void IntConst::writeTo(std::ostream &out) const {
 bool IntConst::isAdaptive() const {
     return true;
 }
+
+TypeDef *IntConst::selectType(Context &context, int64_t val) {
+    if (val & 0x8000000000000000LL)
+        return context.globalData->uint64Type.get();
+    else if (val > (1L << 31 - 1))
+        return context.globalData->int64Type.get();
+    else
+        return context.globalData->intType.get();
+}

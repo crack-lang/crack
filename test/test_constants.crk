@@ -1,0 +1,9 @@
+
+void foo(int32 val) { puts('failed, matched int32 func'); }
+void foo(int64 val) {
+    if (val != 1234567890123 || val < 2147483647)
+        puts('failed, incorrect value passed');
+}
+
+foo(1234567890123);
+puts('ok');

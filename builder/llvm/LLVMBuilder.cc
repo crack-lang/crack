@@ -1511,7 +1511,10 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
     // fit into (compatibility rules will allow us to coerce it into another 
     // type)
     return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                          BTypeDefPtr::arcast(context.globalData->int32Type),
+                          BTypeDefPtr::acast(IntConst::selectType(context,
+                                                                  val
+                                                                  )
+                                              ),
                          val
                          );
 }

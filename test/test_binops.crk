@@ -1,5 +1,5 @@
 # Copyright 2010 Google Inc.
-# tests of binary operations.
+# tests of bitwise operations.
 
 import crack.io cout;
 
@@ -49,9 +49,9 @@ expect(uint64(1) << uint64(4), "uint64: 1 << 4", 16);
 expect(int32(-4) >> int32(1), "int32: -4 >> 1", -2);
 expect(uint32(-4) >> uint32(1), "-4 >> 1", 2147483646);
 
-# these fail because of broken integer constants
-#expect(int64(-4) >> int64(1), "int64: -4 >> 1", -2);
-#expect(uint64(-4) >> uint64(1), "uint64: -4 >> 1", 9223372036854775806);
+# this fails because of broken integer constants
+#expect(int64(-4) >> 1, "int64: -4 >> 1", -2);
+expect(uint64(-4) >> 1, "uint64: -4 >> 1", 9223372036854775806);
 
 expect(1 | 1 << 1, "1 | 1 << 1", 3);
 expect(1 & 1 << 1, "1 & 1 << 1", 0);
