@@ -146,6 +146,11 @@ ResultExprPtr TruncOpCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
+// NoOpCall
+ResultExprPtr NoOpCall::emit(Context &context) {
+    return args[0]->emit(context);
+}
+
 // BitNotOpCall
 ResultExprPtr BitNotOpCall::emit(Context &context) {
     args[0]->emit(context)->handleTransient(context);

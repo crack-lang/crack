@@ -240,6 +240,16 @@ namespace {
         func->args[0] = new ArgDef(sourceType, "val");
         targetType->addDef(func.get());
     }
+    
+    void addNopNew(BTypeDef *type) {
+        FuncDefPtr func =
+            new GeneralOpDef<NoOpCall>(type, FuncDef::noFlags,
+                                       "oper new",
+                                       1
+                                       );
+        func->args[0] = new ArgDef(type, "val");
+        type->addDef(func.get());
+    }
 
     template <typename opType>
     void addExplicitFPTruncate(BTypeDef *sourceType,
@@ -1882,6 +1892,13 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     uint32Type->addDef(new PostDecrIntOpDef(uint32Type, "oper x--"));
     int64Type->addDef(new PostDecrIntOpDef(int64Type, "oper x--"));
     uint64Type->addDef(new PostDecrIntOpDef(uint64Type, "oper x--"));
+
+    // explicit no-op construction
+    addNopNew(int64Type);
+    addNopNew(uint64Type);
+    addNopNew(int32Type);
+    addNopNew(uint32Type);
+    addNopNew(byteType);
 
     // explicit (loss of precision)
     addExplicitTruncate(int64Type, uint64Type);

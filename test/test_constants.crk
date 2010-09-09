@@ -7,25 +7,42 @@ void foo(int64 val) {
 
 foo(1234567890123);
 
-i := 0xa;
-if (i != 10)
-    puts("failed");
-i = +0xf;
-if (i != 15)
-    puts("failed");
-i = -0xff;
-if (i != -255)
-    puts("failed");
+if (1) {
+    i := 0xa;
+    if (i != 10)
+        puts("failed");
+    i = +0xf;
+    if (i != 15)
+        puts("failed");
+    i = -0xff;
+    if (i != -255)
+        puts("failed");
+    
+    o := 07;
+    if (o != 7)
+        puts("failed");
+    o = -05;
+    if (o != -5)
+        puts("failed");
+    o = 0777;
+    if (o != 511)
+        puts("failed");
+}
 
-o := 07;
-if (o != 7)
-    puts("failed");
-o = -05;
-if (o != -5)
-    puts("failed");
-o = 0777;
-if (o != 511)
-    puts("failed");
+if (1) {
+    i := int64(-4);
+    if (i != -4)
+        puts('failed negative conversion to int64');
+    
+    u := uint64(-1);
+    UINT64_MAX :=  (uint64(9223372036854775807) << 1) | 1;
+    if (u != UINT64_MAX)
+        puts('failed negative conversion to uint64');
+    
+    b := byte(-1);
+    if (b != 255)
+        puts('failed negative conversion to byte');
 
+}
 
 puts('ok');

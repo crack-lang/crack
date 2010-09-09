@@ -902,24 +902,34 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       FuncCall::ExprVec args;
       string symbol = tok.getData();
 
-      // try to look it up for the expression, then for the context.
+      // parse the expression
       ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
-      symbol = "oper " + symbol;
-      if (tok.isIncr() || tok.isDecr())
-         symbol += "x";
-      FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, args);
-      if (!funcDef) {
-         args.push_back(operand);
-         funcDef = context->ns->lookUp(*context, symbol, args);
-      }
-      if (!funcDef)
-         error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+      
+      // if this is a minus, see if the expression is an integer constant and 
+      // simply negate it if it is.
+      IntConst *ic;
+      if (tok.isMinus() && (ic = IntConstPtr::rcast(operand))) {
+         expr = context->builder.createIntConst(*context, -ic->val);
+      } else {
 
-      FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
-      funcCall->args = args;
-      if (funcDef->flags & FuncDef::method)
-         funcCall->receiver = operand;
-      expr = funcCall;
+         // try to look it up for the expression, then for the context.
+         symbol = "oper " + symbol;
+         if (tok.isIncr() || tok.isDecr())
+            symbol += "x";
+         FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, args);
+         if (!funcDef) {
+            args.push_back(operand);
+            funcDef = context->ns->lookUp(*context, symbol, args);
+         }
+         if (!funcDef)
+            error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+   
+         FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+         funcCall->args = args;
+         if (funcDef->flags & FuncDef::method)
+            funcCall->receiver = operand;
+         expr = funcCall;
+      }
    } else if (tok.isLCurly()) {
       assert(false);
    } else {

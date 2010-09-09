@@ -61,6 +61,15 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
+// No-op call returns its argument.  This is used for oper new's to avoid 
+// doing any conversions if the type is already correct.
+class NoOpCall : public model::FuncCall {
+public:
+    NoOpCall(model::FuncDef *def) : model::FuncCall(def) {}
+    
+    virtual model::ResultExprPtr emit(model::Context &context);
+};
+
 class BitNotOpCall : public model::FuncCall {
 public:
     BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}

@@ -69,9 +69,8 @@ bool IntConst::isAdaptive() const {
 }
 
 TypeDef *IntConst::selectType(Context &context, int64_t val) {
-    if (val & 0x8000000000000000LL)
-        return context.globalData->uint64Type.get();
-    else if (val > (1L << 31 - 1))
+    const int64_t maxint32 = (1L << 31 - 1);
+    if (val > maxint32 || val < -maxint32)
         return context.globalData->int64Type.get();
     else
         return context.globalData->intType.get();
