@@ -849,7 +849,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       // as the formatter.
 //      expr = parseIString(formatter);
    
-   // for an integer constant
+   // for a numeric constants
    } else if (tok.isInteger()) {
       expr = context->builder.createIntConst(*context, 
                                              atoll(tok.getData().c_str())
@@ -859,6 +859,18 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
                                                atof(tok.getData().c_str())
                                                );
 
+   } else if (tok.isOctal()) {
+      expr = context->builder.createIntConst(*context,
+                                             strtoll(tok.getData().c_str(),
+                                                     NULL,
+                                                     8)
+                                             );
+   } else if (tok.isHex()) {
+      expr = context->builder.createIntConst(*context,
+                                             strtoll(tok.getData().c_str(),
+                                                     NULL,
+                                                     16)
+                                             );
    } else if (tok.isPlus()) {
        // eat + if expression is a numeric constant and fail if it's not
        tok = getToken();
@@ -870,6 +882,18 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
            expr = context->builder.createFloatConst(*context,
                                                     atof(tok.getData().c_str())
                                                     );
+       else if (tok.isOctal())
+           expr = context->builder.createIntConst(*context,
+                                                  strtoll(tok.getData().c_str(),
+                                                          NULL,
+                                                          8)
+                                                  );
+       else if (tok.isHex())
+           expr = context->builder.createIntConst(*context,
+                                                  strtoll(tok.getData().c_str(),
+                                                          NULL,
+                                                          16)
+                                                  );
        else
            unexpected(tok, "unexpected unary +");
    // for the unary operators

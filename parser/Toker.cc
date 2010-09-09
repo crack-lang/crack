@@ -165,8 +165,32 @@ Token Toker::readToken() {
                         return Token(Token::dot, ".", locationMap.getLocation());
                     }
                 } else if (isdigit(ch)) {
-                    buf << ch;
-                    state = st_number;
+                    if (ch == '0') {
+                        // check for hex and octal constants
+                        getChar(ch);
+                        if (ch == 'x' || ch == 'X')
+                            state = st_hex; // eats the 'x', ready to parse
+                                            // first hex digit
+                        else if (ch == '.')
+                            state = st_float; // float
+                        else if (isdigit(ch)) {
+                            state = st_octal;
+                            ungetChar(ch); // need to read this in octal state
+                                           // will fail there if it's > 7
+                        }
+                        else {
+                            ungetChar(ch);
+                            return Token(Token::integer,
+                                         "0",
+                                         locationMap.getLocation()
+                                         );
+                        }
+                    }
+                    else {
+                        // [1-9]
+                        buf << ch;
+                        state = st_number;
+                    }
                 } else if (ch == '~') {
                     return Token(Token::tilde, "~", locationMap.getLocation());
                 } else if (ch == '`') {
@@ -408,6 +432,36 @@ Token Toker::readToken() {
                 }
                 break;
 
+            case st_octal:
+                if (ch >= '0' && ch <= '7')
+                    buf << ch;
+                else if (ch == '8' || ch == '9') {
+                    ParseError::abort(Token(Token::string, buf.str(),
+                                            locationMap.getLocation()
+                                            ),
+                                      "invalid octal constant");
+                }
+                else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::octalLit,
+                                 buf.str(),
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
+            case st_hex:
+                if (isxdigit(ch))
+                    buf << ch;
+                else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::hexLit,
+                                 buf.str(),
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
             case st_number:
             case st_float:
                 if (isdigit(ch))

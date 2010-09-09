@@ -6,4 +6,26 @@ void foo(int64 val) {
 }
 
 foo(1234567890123);
+
+i := 0xa;
+if (i != 10)
+    puts("failed");
+i = +0xf;
+if (i != 15)
+    puts("failed");
+i = -0xff;
+if (i != -255)
+    puts("failed");
+
+o := 07;
+if (o != 7)
+    puts("failed");
+o = -05;
+if (o != -5)
+    puts("failed");
+o = 0777;
+if (o != 511)
+    puts("failed");
+
+
 puts('ok');
