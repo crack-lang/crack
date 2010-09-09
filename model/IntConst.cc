@@ -36,7 +36,7 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
             // context.error = "Negative constant can not be converted to "
             //                  "uint64"
     } else if (newType == context.globalData->int32Type) {
-        if (val > (1L << 31 - 1) || val < -(1L << 31 - 1))
+        if (val > ((1L << 31) - 1) || val < -((1L << 31) - 1))
             return 0;
             // context.error = "Constant out of range of int32"
     } else if ((newType == context.globalData->float32Type) ||
@@ -44,11 +44,11 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
         // XXX range check?
         return context.builder.createFloatConst(context, (double)val, newType);
     } else if (newType == context.globalData->uint32Type) {
-        if (val < 0 || val > (1LL << 32 - 1))
+        if (val < 0 || val > ((1LL << 32) - 1))
             return 0;
             // context.error = "Constant out of range of uint32"
     } else if (newType == context.globalData->byteType) {
-        if (val < 0 || val > (1LL << 8 - 1)) {
+        if (val < 0 || val > ((1LL << 8) - 1)) {
             return 0;
             // context.error = "Constant out of range of byte"
         }
