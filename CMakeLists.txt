@@ -9,7 +9,7 @@ endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.1")
+set(CRACK_VERSION "0.2")
 
 set(LLVM_MIN_VERSION       "2007000")
 set(LLVM_MIN_VERSION_TEXT  "2.7")
@@ -24,12 +24,9 @@ MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
 MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
 
 Find_Package(LLVM REQUIRED)
-Find_Package(Spug REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR} 
-                    ${LLVM_INCLUDE_DIR} 
-                    ${SPUG_INCLUDE_DIR})
-#link_directories(${ICU_LIB_DIRS})
+                    ${LLVM_INCLUDE_DIR})
 
 IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
   MESSAGE(FATAL_ERROR "LLVM version ${LLVM_STRING_VERSION} is too old, 
@@ -38,7 +35,6 @@ ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
 add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
 add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
-
 
 # share this is autoconf
 file(STRINGS sourceModules.txt CRACK_SRC_FILES)
@@ -57,9 +53,15 @@ set_source_files_properties( crack.cc
 add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
-                        OUTPUT_NAME crack)
+                      OUTPUT_NAME crack
+                      VERSION ${CRACK_VERSION}
+                      )
 
 add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
+set_target_properties(crack-runtime
+                      PROPERTIES
+                      VERSION ${CRACK_VERSION}
+                      )
 
 add_executable(crack crack.cc)
 set_target_properties( crack
@@ -67,16 +69,16 @@ set_target_properties( crack
                        # test suite currently expects crack binary in project 
                        # source
                        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
+                       VERSION ${CRACK_VERSION}
                      )
                      
 target_link_libraries( crack
-                        libcrack
-			${SPUG_LIBRARIES}
-                        ${LLVM_LIBS}
-                      ) 
+                       libcrack
+                       ${LLVM_LIBS}
+                     )
 
 # install targets
-install(TARGETS crack
+install(TARGETS crack libcrack crack-runtime
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
