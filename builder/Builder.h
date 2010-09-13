@@ -332,6 +332,10 @@ class Builder : public spug::RCBase {
                                                   int64_t val,
                                                   model::TypeDef *type = 0
                                                   ) = 0;
+        virtual model::IntConstPtr createUIntConst(model::Context &context,
+                                                   uint64_t val,
+                                                   model::TypeDef *type = 0
+                                                   ) = 0;
         virtual model::FloatConstPtr createFloatConst(model::Context &context,
                                                     double val,
                                                     model::TypeDef *type = 0

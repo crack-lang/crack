@@ -83,6 +83,14 @@ extern "C" {
         std::cout << val << flush;
     }
 
+    void printint64(int64_t val) {
+        std::cout << val << flush;
+    }
+
+    void printuint64(uint64_t val) {
+        std::cout << val << flush;
+    }
+
     void __die(const char *message) {
         std::cout << message << endl;
         abort();
@@ -1351,6 +1359,8 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     // the modules - we can not directly reference across modules.
     
     BTypeDef *int32Type = BTypeDefPtr::arcast(context.globalData->int32Type);
+    BTypeDef *int64Type = BTypeDefPtr::arcast(context.globalData->int64Type);
+    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.globalData->uint64Type);
     BTypeDef *intType = BTypeDefPtr::arcast(context.globalData->intType);
     BTypeDef *voidType = BTypeDefPtr::arcast(context.globalData->int32Type);
     BTypeDef *float32Type = BTypeDefPtr::arcast(context.globalData->float32Type);
@@ -1383,6 +1393,20 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     {
         FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
         f.addArg("val", int32Type);
+        f.finish();
+    }
+
+    // create "void printint64(int64)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint64", 1);
+        f.addArg("val", int64Type);
+        f.finish();
+    }
+
+    // create "void printuint64(int64)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printuint64", 1);
+        f.addArg("val", uint64Type);
         f.finish();
     }
 
@@ -1525,6 +1549,17 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
                                                                   val
                                                                   )
                                               ),
+                         val
+                         );
+}
+// in this case, we know we have a constant big enough to require an unsigned
+// 64 bit int
+IntConstPtr LLVMBuilder::createUIntConst(model::Context &context, uint64_t val,
+                                         TypeDef *typeDef
+                                         ) {
+    return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
+                         BTypeDefPtr::acast(
+                             context.globalData->uint64Type.get()),
                          val
                          );
 }
@@ -1671,7 +1706,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            "bool", 
                                            llvmBoolType
                                            );
-    gd->boolType->defaultInitializer = new BIntConst(boolType, 0);
+    gd->boolType->defaultInitializer = new BIntConst(boolType, (int64_t)0);
     context.ns->addDef(boolType);
     
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),

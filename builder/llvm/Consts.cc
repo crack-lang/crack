@@ -17,6 +17,10 @@ BIntConst::BIntConst(BTypeDef *type, int64_t val) :
         IntConst(type, val),
         rep(ConstantInt::get(type->rep, val)) {
 }
+BIntConst::BIntConst(BTypeDef *type, uint64_t val) :
+        IntConst(type, val),
+        rep(ConstantInt::get(type->rep, val)) {
+}
 
 BFloatConst::BFloatConst(BTypeDef *type, double val) :
         FloatConst(type, val),

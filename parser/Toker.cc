@@ -166,14 +166,25 @@ Token Toker::readToken() {
                     }
                 } else if (isdigit(ch)) {
                     if (ch == '0') {
-                        // check for hex and octal constants
+                        // check for hex, octal, and binary constants
                         getChar(ch);
                         if (ch == 'x' || ch == 'X')
                             state = st_hex; // eats the 'x', ready to parse
                                             // first hex digit
+                        else if (ch == 'o' || ch == 'O') {
+                            state = st_octal; // eats the 'o', ready to parse
+                                              // first octal digit
+                            // since strtol expects old style of octal, we
+                            // add the leading 0
+                            buf << '0';
+                        }
+                        else if (ch == 'b' || ch == 'b')
+                            state = st_binary; // eats the 'b', ready to parse
+                                               // first binary digit
                         else if (ch == '.')
                             state = st_float; // float
                         else if (isdigit(ch)) {
+                            // old school style octal
                             state = st_octal;
                             ungetChar(ch); // need to read this in octal state
                                            // will fail there if it's > 7
@@ -432,17 +443,38 @@ Token Toker::readToken() {
                 }
                 break;
 
+            case st_binary:
+                if (ch == '0' || ch == '1')
+                    buf << ch;
+                else {
+                    ungetChar(ch);
+                    if (buf.str().size() == 0) {
+                        ParseError::abort(Token(Token::string, buf.str(),
+                                                locationMap.getLocation()
+                                                ),
+                                          "invalid binary constant"
+                                          );
+                    }
+                    state = st_none;
+                    return Token(Token::binLit,
+                                 buf.str(),
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
+
             case st_octal:
                 if (ch >= '0' && ch <= '7')
                     buf << ch;
-                else if (ch == '8' || ch == '9') {
-                    ParseError::abort(Token(Token::string, buf.str(),
-                                            locationMap.getLocation()
-                                            ),
-                                      "invalid octal constant");
-                }
                 else {
                     ungetChar(ch);
+                    if (buf.str().size() == 0) {
+                        ParseError::abort(Token(Token::string, buf.str(),
+                                                locationMap.getLocation()
+                                                ),
+                                          "invalid octal constant"
+                                          );
+                    }
                     state = st_none;
                     return Token(Token::octalLit,
                                  buf.str(),
@@ -455,6 +487,13 @@ Token Toker::readToken() {
                     buf << ch;
                 else {
                     ungetChar(ch);
+                    if (buf.str().size() == 0) {
+                        ParseError::abort(Token(Token::string, buf.str(),
+                                                locationMap.getLocation()
+                                                ),
+                                          "invalid hex constant"
+                                          );
+                    }
                     state = st_none;
                     return Token(Token::hexLit,
                                  buf.str(),

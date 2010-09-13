@@ -15,9 +15,16 @@ SPUG_RCPTR(IntConst);
 // context - e.g. 32 bit, 64 bit, signed versus unsigned...
 class IntConst : public Expr {
     public:
-        int64_t val;
+
+        union {
+             int64_t sval;
+            uint64_t uval;
+        } val;
+
+        bool reqUnsigned; // > INT64_MAX so requires unsigned 64
 
         IntConst(TypeDef *type, int64_t val);
+        IntConst(TypeDef *type, uint64_t val);
         
         virtual ResultExprPtr emit(Context &context);
         virtual ExprPtr convert(Context &context, TypeDef *newType);

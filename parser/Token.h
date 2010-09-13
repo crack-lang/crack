@@ -23,7 +23,7 @@ class Token {
                      lcurly, le, lparen, lt, minus, ne, percent, plus, 
                      quest, rbracket, rcurly, rparen, semi, slash, string,
                      tilde, istrBegin, istrEnd, logicAnd, logicOr, floatLit,
-                     octalLit, hexLit
+                     octalLit, hexLit, binLit
 		    } Type;
 
    private:
@@ -92,6 +92,7 @@ class Token {
       bool isFloat() const { return type == floatLit; }
       bool isOctal() const { return type == octalLit; }
       bool isHex() const { return type == hexLit; }
+      bool isBinary() const { return type == binLit; }
       bool isPlus() const { return type == plus; }
       bool isQuest() const { return type == quest; }
       bool isMinus() const { return type == minus; }

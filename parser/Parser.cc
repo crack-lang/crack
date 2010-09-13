@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2009 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
 #include "Parser.h"
 
@@ -32,6 +32,7 @@
 #include "Crack.h"
 #include "ParseError.h"
 #include <cstdlib>
+#include <stdint.h>
 
 using namespace std;
 using namespace parser;
@@ -818,7 +819,44 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
    return expr;
 }   
 
-ExprPtr Parser::parseExpression(unsigned precedence) {
+namespace {
+
+ ExprPtr parseConstInt(Context &context,
+                       bool negative,
+                       const string &val,
+                       int base) {
+     if (negative) {
+         // we need to give strtoll the - in the string, because otherwise the
+         // range is off and we can't parse LONG_MIN
+         string nval = "-"+val;
+         return context.builder.createIntConst(context,
+                                               strtoll(nval.c_str(),
+                                                       NULL,
+                                                       base));
+     }
+
+     // if it's not negative, we first try to parse it as unsigned
+     // if it's small enough to fit in a signed, we do that, otherwise
+     // we keep it unsigned
+     unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
+     if (bigcval <= INT64_MAX) {
+         // signed
+         return context.builder.createIntConst(context,
+                                               strtoll(val.c_str(),
+                                                       NULL,
+                                                       base));
+     }
+     else {
+         // unsigned
+         return context.builder.createUIntConst(context,
+                                                bigcval);
+     }
+
+ }
+
+} // anonymous namespace
+
+ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
 
    ExprPtr expr;
 
@@ -851,49 +889,34 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    
    // for a numeric constants
    } else if (tok.isInteger()) {
-      expr = context->builder.createIntConst(*context, 
-                                             atoll(tok.getData().c_str())
-                                             );
+      expr = parseConstInt(*context, unaryMinus, tok.getData(), 10);
    } else if (tok.isFloat()) {
+      // XXX use unaryMinus?
       expr = context->builder.createFloatConst(*context,
                                                atof(tok.getData().c_str())
                                                );
 
    } else if (tok.isOctal()) {
-      expr = context->builder.createIntConst(*context,
-                                             strtoll(tok.getData().c_str(),
-                                                     NULL,
-                                                     8)
-                                             );
+      expr = parseConstInt(*context, unaryMinus, tok.getData(), 8);
    } else if (tok.isHex()) {
-      expr = context->builder.createIntConst(*context,
-                                             strtoll(tok.getData().c_str(),
-                                                     NULL,
-                                                     16)
-                                             );
+      expr = parseConstInt(*context, unaryMinus, tok.getData(), 16);
+   } else if (tok.isBinary()) {
+      expr = parseConstInt(*context, unaryMinus, tok.getData(), 2);
    } else if (tok.isPlus()) {
        // eat + if expression is a numeric constant and fail if it's not
        tok = getToken();
        if (tok.isInteger())
-           expr = context->builder.createIntConst(*context,
-                                                  atoi(tok.getData().c_str())
-                                                  );
+           expr = parseConstInt(*context, unaryMinus, tok.getData(), 10);
        else if(tok.isFloat())
            expr = context->builder.createFloatConst(*context,
                                                     atof(tok.getData().c_str())
                                                     );
        else if (tok.isOctal())
-           expr = context->builder.createIntConst(*context,
-                                                  strtoll(tok.getData().c_str(),
-                                                          NULL,
-                                                          8)
-                                                  );
+           expr = parseConstInt(*context, unaryMinus, tok.getData(), 8);
        else if (tok.isHex())
-           expr = context->builder.createIntConst(*context,
-                                                  strtoll(tok.getData().c_str(),
-                                                          NULL,
-                                                          16)
-                                                  );
+           expr = parseConstInt(*context, unaryMinus, tok.getData(), 16);
+       else if (tok.isBinary())
+           expr = parseConstInt(*context, unaryMinus, tok.getData(), 2);
        else
            unexpected(tok, "unexpected unary +");
    // for the unary operators
@@ -903,13 +926,16 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       string symbol = tok.getData();
 
       // parse the expression
-      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
-      
+      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"),
+                                        tok.isMinus());
+
+
       // if this is a minus, see if the expression is an integer constant and 
       // simply negate it if it is.
       IntConst *ic;
       if (tok.isMinus() && (ic = IntConstPtr::rcast(operand))) {
-         expr = context->builder.createIntConst(*context, -ic->val);
+         // nop, handled above with unaryMinus in tok.isInteger() et al
+         expr = operand;
       } else {
 
          // try to look it up for the expression, then for the context.

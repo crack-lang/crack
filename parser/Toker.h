@@ -61,7 +61,8 @@ class Toker {
          st_ltgt,
          st_postaug,
          st_hex,
-         st_octal
+         st_octal,
+         st_binary
       } state;
       
       // get the next character from the stream.
