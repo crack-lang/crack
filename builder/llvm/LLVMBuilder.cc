@@ -332,8 +332,7 @@ ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
             execEng = rootBuilder->bindModule(mod);
         else {
 
-            if (debugInfo)
-                llvm::JITEmitDebugInfo = true;
+            llvm::JITEmitDebugInfo = true;
 
             // we have to specify all of the arguments for this so we can turn 
             // off "allocate globals with code."  In addition to being 
