@@ -3,7 +3,7 @@
 
 lib_LTLIBRARIES = libcrack.la libcrack-runtime.la
 libcrack_la_SOURCES = %libCrackSources%
-libcrack_la_LDFLAGS = -version-info 0:0:0
+libcrack_la_LDFLAGS = -version-info 1:0:0
 libcrack_runtime_la_SOURCES = %libRuntimeSources%
 libcrack_runtime_la_LDFLAGS = -version-info 0:0:0
 
@@ -19,6 +19,7 @@ noinst_HEADERS = \
     builder/llvm/BResultExpr.h \
     builder/llvm/BTypeDef.h \
     builder/llvm/Consts.h \
+    builder/llvm/DebugInfo.h \
     builder/llvm/FuncBuilder.h \
     builder/llvm/Incompletes.h \
     builder/llvm/LLVMBuilder.h \
@@ -51,6 +52,7 @@ noinst_HEADERS = \
     model/ResultExpr.h \
     model/StrConst.h \
     model/StubDef.h \
+    model/TernaryExpr.h \
     model/TypeDef.h \
     model/VarDef.h \
     model/VarDefImpl.h \
@@ -61,6 +63,7 @@ noinst_HEADERS = \
     parser/Parser.h \
     parser/Token.h \
     parser/Toker.h \
+    runtime/Dir.h \
     spug/Exception.h \
     spug/RCBase.h \
     spug/RCPtr.h \
@@ -91,7 +94,6 @@ doc/Manual.html: doc/Manual.nml
 	fi
 
 install-data-local: doc/Manual.html
-	ls -l $(prefix)/lib
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
 	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack
 	$(INSTALL) $(srcdir)/lib/crack/container.crk \
@@ -108,6 +110,10 @@ install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(docdir)
 	$(INSTALL) $(srcdir)/doc/Manual.html $(DESTDIR)$(docdir)
 
+install-exec-local:
+	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack$(VERSION)
+
 uninstall-local:
 	rm -r $(DESTDIR)$(cracklib)
 	rm -r $(DESTDIR)$(docdir)
+	rm $(DESTDIR)$(bindir)/crack$(VERSION)
