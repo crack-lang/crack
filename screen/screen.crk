@@ -5,8 +5,8 @@ import crack.lang die, exit;
 import crack.io cout, cerr, XWFormatter, XWriter;
 import crack.sys argv;
 import crack.container List, Iterator;
-import crack.exp.dir Directory, FileInfo;
-import crack.exp.stream File;
+import crack.exp.dir Directory;
+import crack.exp.stream File, FileInfo;
 
 class Test {
 

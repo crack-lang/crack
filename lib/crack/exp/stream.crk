@@ -1,20 +1,19 @@
 // Classes for io streams
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, XWFormatter, XWriter;
-import crack.lang die, ManagedBuffer, FreeBase;
+import crack.io cerr, XWFormatter, XWriter, FDReader;
+import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
+import crack.exp.readers LineReader;
 
-import "libc.so.6" fopen, fread, fclose;
+import "libc.so.6" fopen, fclose, fileno;
 import "libcrack-runtime.so"  _crack_fnmatch;
 
-uint _READ_SIZE = 512;
+class _FILE: Opaque { }
 
-class FILE: Opaque { }
-
-FILE fopen(byteptr fn, byteptr mode);
-int fclose(FILE f);
-uint fread(voidptr buf, uint size, uint nmemb, FILE f);
+_FILE fopen(byteptr fn, byteptr mode);
+int fclose(_FILE f);
+int fileno(_FILE f);
 int _crack_fnmatch(byteptr pattern, byteptr string);
 
 class FileInfo: Object {
@@ -52,66 +51,12 @@ class Openable: VTableBase {
 
 }
 
-// interface
-class _StreamBase : Openable {
-
-    void close() { }
-
-    oper del() {
-        if (_isOpened && _isValid)
-            close();
-    }
-
-    void seek(uint64 offset, int whence) { }
-    uint64 tell() { return 0; }
-
-    bool seekable() { return false; }
-    bool writeable() { return false; }
-    bool readable() { return false; }
-
-}
-
-// interface
-class _StreamReader: VTableBase {
-
-    bool readable() { return true; }
-
-    String readline() {
-        die('_StreamReader.readline called');
-        return String(); // XXX
-    }
-
-}
-
-// interface
-class _StreamWriter: VTableBase {
-
-    void flush() { }
-
-    void write(byteptr b, uint size) {  }
-
-    bool writeable() { return true; }
-
-    void writeline(String line) { }
-
-    void truncate(uint size) { }
-
-}
-
-/*
-class UrlStream : _StreamReader {
-
-}
-*/
-
-
-class File : _StreamBase, 
-             _StreamReader, 
-             _StreamWriter,
+class File : Openable,
              FileInfo {
 
     String _mode;
-    FILE _fd = null;
+    _FILE _fd = null;
+    LineReader _lReader = null;
 
     oper init(String name0, String mode0): FileInfo(name0),
                                            _mode(mode0) {
@@ -120,6 +65,9 @@ class File : _StreamBase,
             _isValid = false;
             _isOpened = false;
         }
+        else {
+            _lReader = LineReader(FDReader(fileno(_fd)));
+        }
     }
 
     String readline() {
@@ -127,9 +75,7 @@ class File : _StreamBase,
         if (!_isValid)
             return null;
 
-        _buf := ManagedBuffer(_READ_SIZE);
-        len := fread(_buf.buffer, 1, _READ_SIZE, _fd);
-        return String(_buf, len); // copies
+        return _lReader.next();
 
     }
 
