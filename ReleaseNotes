@@ -1,0 +1,16 @@
+
+0.2
+    -   Major code cleanups.
+    -   Added RBTree maps.
+    -   Numerous bug fixes and enhanced error checking.
+    -   Implemented the remaining C operators (pre/post increment/decrement, 
+        bitwise operators, augmented assignment, ternary operator).
+    -   Improved IR readability.
+    -   Added debug information (not currently usable for lack of a debugger)
+    -   Removed external dependency on spug++.
+    -   Implemented forward declarations of functions and classes.
+    -   Added the LineReader class
+    -   Added support for a socket API.
+    -   Added support for hex and octal integer constants (and fixed integer 
+        constants in general)
+    -   Added a File/Stream interface.
