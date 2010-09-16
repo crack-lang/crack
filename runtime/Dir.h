@@ -34,6 +34,8 @@ int _crack_readdir(_crackDir* d);
 
 int _crack_fnmatch(const char* pattern, const char* string); 
 
+char* _crack_strerror(void);
+
 }
 
 #endif // _runtime_Dir_h_

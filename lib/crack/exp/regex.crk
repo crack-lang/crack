@@ -39,7 +39,7 @@ class Match {
     String subject;
     _RegexBase regex = null;
     array[int] __captures = null;
-    int __captureCount;
+    uint __captureCount;
     
     oper init(_RegexBase regex0, String subject0, array[int] captures, 
               uint captureCount

@@ -2,37 +2,70 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.lang die, exit;
-import crack.io cout, cerr, XWFormatter, XWriter;
+import crack.io cout, cerr, XWFormatter, XWriter, StringWriter;
 import crack.sys argv;
-import crack.container List, Iterator;
+import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.stream File, FileInfo;
+import crack.exp.regex Regex;
 
 class Test {
 
     FileInfo _fInfo = null;
-    String _name, _desc;
+    String _desc;
+    TreeMap _testData;
 
-    oper init(): _name("Unknown"), _desc("Unknown") { }
+    oper init(): _desc("Unknown") { }
 
     void loadTemplate() {
+        
         f := File(_fInfo.name, "r");
-        if (f.isValid()) {
-            cout `opened file: $(_fInfo.name)\n`;
-        }
-        else {
+        if (!f.isValid()) {
             cout `file: $(_fInfo.name) could not be opened!\n`;
+            return;
         }
+        
+        // parse out sections
+        String lineBuf, curSection;
+        StringWriter dataBuf;
+        headerPat := Regex('^--(\\w+)--$');
+        while (lineBuf = f.nextLine()) {
+            //cerr `debug: $buf`;
+            // look for section change
+            m := headerPat.search(lineBuf);
+            if (m) {
+                if (!curSection.isEmpty())
+                    _testData[curSection] = dataBuf.createString();
+                curSection = m.group(1);
+                //cerr `debug: switching to group $curSection\n`;
+            }
+            else {
+                // add line to current section
+                dataBuf.write(lineBuf);
+                if (curSection == 'TEST')
+                    _desc = lineBuf;
+            }
+        }
+        
     }
 
     oper init(FileInfo info): _fInfo = info,
-                              _name("Unknown"),
                               _desc("Unknown") {
         loadTemplate();
     }
 
+    void _dump(XWriter out) {
+        ti := _testData.iter();
+        while (ti.nx()) {
+            section := String.cast(KeyVal.cast(ti.elem()).key);
+            data := String.cast(KeyVal.cast(ti.elem()).val);
+            XWFormatter(out) `[$section]:\n$data`;
+        }
+    }
+
     void writeTo(XWriter out) {
-        XWFormatter(out) `[$_fInfo]: $_name - $_desc`;
+        XWFormatter(out) `[$_fInfo]: $_desc\n`;
+        _dump(out);
     }
 
 }

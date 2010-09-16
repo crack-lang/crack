@@ -67,7 +67,7 @@ class Directory : Object, Openable {
                     _dirList.append(Directory(name+PATH_SEPARATOR+n));
             }
             else {
-                _fileList.append(FileInfo(d._name));
+                _fileList.append(FileInfo(name+PATH_SEPARATOR+d._name));
             }
         }
 

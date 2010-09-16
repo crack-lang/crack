@@ -151,6 +151,10 @@ class Buffer : Object {
         return size;
     }
     
+    bool isEmpty() {
+        return (size == 0);
+    }
+    
     void writeTo(XWriter writer) {
         writer.write(buffer, size);
     }

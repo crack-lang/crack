@@ -135,6 +135,11 @@ class Formatter : Writer {
 
     oper init(Writer rep0) : rep = rep0 {}
 
+    void write(byteptr data) {
+        // StaticString will construct with strlen
+        write(StaticString(data));
+    }
+
     void write(byteptr data, uint size) {
         rep.write(data, size);
     }
@@ -222,6 +227,10 @@ class StringWriter : Writer {
     
     oper init(uint initBufSize) : buf = ManagedBuffer(initBufSize) {}
     oper init() : buf = ManagedBuffer(1024) {}
+    
+    void write(String str) {
+        write(str.buffer, str.size);
+    }
     
     void write(byteptr data, uint size) {
         # reallocate if we overflow

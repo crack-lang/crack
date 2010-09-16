@@ -6,8 +6,8 @@ import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
 
-import "libc.so.6" fopen, fclose, fileno;
-import "libcrack-runtime.so"  _crack_fnmatch;
+import "libc.so.6" fopen, fclose, fileno, strerror;
+import "libcrack-runtime.so"  _crack_fnmatch, _crack_strerror;
 
 class _FILE: Opaque { }
 
@@ -15,6 +15,7 @@ _FILE fopen(byteptr fn, byteptr mode);
 int fclose(_FILE f);
 int fileno(_FILE f);
 int _crack_fnmatch(byteptr pattern, byteptr string);
+byteptr _crack_strerror();
 
 class FileInfo: Object {
 
@@ -51,8 +52,8 @@ class Openable: VTableBase {
 
 }
 
-class File : Openable,
-             FileInfo {
+class File : FileInfo,
+             Openable {
 
     String _mode;
     _FILE _fd = null;
@@ -60,19 +61,26 @@ class File : Openable,
 
     oper init(String name0, String mode0): FileInfo(name0),
                                            _mode(mode0) {
-        _fd = fopen(name.buffer, _mode.buffer);
+        _fd = fopen(name0.buffer, _mode.buffer);
         if (_fd is null) {
+            err := String(_crack_strerror());
+            cerr `$name0: $err\n`;
             _isValid = false;
             _isOpened = false;
         }
         else {
+            
+            // XXX parse mode, setup based on read/write modes
             _lReader = LineReader(FDReader(fileno(_fd)));
+            _isValid = true;
+            _isOpened = true;
+            
         }
     }
 
-    String readline() {
+    String nextLine() {
 
-        if (!_isValid)
+        if (!_isValid || !_isOpened)
             return null;
 
         return _lReader.next();
@@ -82,6 +90,11 @@ class File : Openable,
     void close() {
         if (_isOpened)
             fclose(_fd);
+    }
+
+    oper del() {
+        if (_isOpened)
+            close();
     }
 
 }

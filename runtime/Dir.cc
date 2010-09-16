@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fnmatch.h>
+#include <errno.h>
+#include <string.h>
 
 #include "Dir.h"
 
@@ -69,6 +71,10 @@ int _crack_readdir(_crackDir* d) {
 
 int _crack_fnmatch(const char* pattern, const char* string) {
     return fnmatch(pattern, string, 0);
+}
+
+char* _crack_strerror(void) {
+    return strerror(errno);
 }
 
 }
