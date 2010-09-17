@@ -296,9 +296,11 @@ class String : Buffer {
         memcpy(buffer, buf.buffer + pos, len);
     }
 
-    ## Initialize from byte pointer and size and take ownership.
+    ## Initialize from byte pointer and size and optionally take ownership.
     oper init(byteptr buf, uint size0, bool takeOwnership) :
-        Buffer(buf, size0) {
+        Buffer(takeOwnership ? buf : memcpy(malloc(size0), buf, size0), 
+               size0
+               ) {
     }
     
     ## Initialize from a null-terminated c-string
@@ -339,6 +341,20 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
 };
+
+## A substring of an existing string object.  Substrings are much
+## lighter weight than full String objects because SubString doesn't manage 
+## its own buffer.  It references the buffer of its underlying String.
+class SubString : String {
+    String __rep;
+
+    oper init(String target, uint pos, uint len) : 
+        String(target.buffer + pos, len, true),
+        __rep = target {
+    }
+
+    void _freeBuffer() {}
+}
 
 class StaticString : String {
 
