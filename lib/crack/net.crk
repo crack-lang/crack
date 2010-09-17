@@ -1,8 +1,10 @@
 # Copyright 2010 Google Inc.
 
 import crack.lang Buffer, die, FreeBase, WriteBuffer, XWriter;
-import crack.io Reader, Writer, XWFormatter;
+import crack.io Reader, Writer, XWFormatter, cout;
+import crack.container Array;
 import crack.exp.bindings Opaque;
+import crack.time TimeDelta;
 import "libc.so.6" close, listen, send, socket, recv;
 import "libcrack-runtime.so" 
     _crack_connect, 
@@ -10,7 +12,21 @@ import "libcrack-runtime.so"
     _crack_make_ipv4,
     _crack_setsockopt_int,
     _crack_accept,
-    _crack_bind;
+    _crack_bind,
+    _crack_pollset_create,
+    _crack_pollset_copy,
+    _crack_pollset_destroy,
+    _crack_pollset_set,
+    _crack_pollset_get,
+    _crack_pollset_next,
+    _crack_poll,
+    _crack_sigset_create,
+    _crack_sigset_destroy,
+    _crack_sigset_empty,
+    _crack_sigset_fill,
+    _crack_sigset_add,
+    _crack_sigset_del,
+    _crack_sigset_has;
 
 int socket(int domain, int type, int protocol);
 int close(int fd);
@@ -41,7 +57,13 @@ class _Constants : FreeBase {
         SOCK_NONBLOCK,
         SOCK_CLOEXEC,
         SOL_SOCKET,
-        SO_REUSEADDR;
+        SO_REUSEADDR,
+        POLLIN,
+        POLLPRI,
+        POLLOUT,
+        POLLERR,
+        POLLHUP,
+        POLLNVAL;
     uint32 INADDR_ANY;
 }
 _Constants _crack_get_constants();
@@ -69,14 +91,51 @@ int _crack_connect(int s, SockAddrIn addr);
 int _crack_accept(int s, SockAddrIn addr);
 int _crack_bind(int s, SockAddrIn addr);
 
+class PollFDs : Opaque {}
+
+PollFDs _crack_pollset_create(uint size);
+void _crack_pollset_destroy(PollFDs pollfds);
+void _crack_pollset_copy(PollFDs dst, PollFDs src, uint size);
+void _crack_pollset_set(PollFDs set, uint index, int fd, int events,
+                        int revents
+                        );
+
+class SigSet : Opaque {}
+
+SigSet _crack_sigset_create();
+void _crack_sigset_destroy(SigSet sigmask);
+int _crack_sigset_empty(SigSet sigmask);
+int _crack_sigset_fill(SigSet sigmask);
+int _crack_sigset_add(SigSet sigmask, int signum);
+int _crack_sigset_del(SigSet sigmask, int signum);
+int _crack_sigset_has(SigSet sigmask, int signum);
+
+int _crack_poll(PollFDs fds, uint nfds, TimeDelta tv, SigSet sigmask);
+
+## interface for all classes that can be polled.
+class Pollable {
+    int getFD() { die('Pollable.getFD() not defined.'); return 0; }
+}
+
+class PollFD {
+    int fd, events, revents;
+    Pollable pollable;
+}
+
+int _crack_pollset_next(PollFDs set, uint size, uint index,
+                        PollFD outputEntry
+                        );
+
 ## Wrapper around a socket.
-class Socket {
+class Socket : Pollable {
     int fd;
     oper init(int domain, int type, int protocol) : 
         fd = socket(domain, type, protocol) {
     }
     
     oper init(int fd0) : fd = fd0 {}
+
+    int getFD() { return fd; }
 
     void close() {
         close(fd);
@@ -134,6 +193,10 @@ class Socket {
             return null;
         return Accepted(Socket(rc), addr);
     }
+    
+    void writeTo(XWriter out) {
+        XWFormatter(out) `Socket(fd: $fd)`;
+    }
 }
         
 class SockReader : Reader {
@@ -155,5 +218,75 @@ class SockWriter : Writer {
         if (rc < 0)
             die('Error writing to socket');
         return uint(rc);
+    }
+}
+
+## A poller is a collection of Pollables that you can use to wait for an event
+## on any of the pollables and then iterate over the set of events that 
+## occurred.
+class Poller {
+    Array __pollables;
+    PollFDs __fds;
+    uint __nextIndex;
+    uint __capacity;
+    int __iter;
+    
+    oper init() : 
+        __pollables(256), 
+        __fds = _crack_pollset_create(256),
+        __capacity = 256 {
+    }
+    
+    void grow(uint newCapacity) {
+        if (newCapacity < __capacity)
+            die('cannot shrink');
+        
+        __pollables.realloc(newCapacity);
+        
+        # create a new pollset and copy the existing one.
+        newFDs := _crack_pollset_create(newCapacity);
+        _crack_pollset_copy(newFDs, __fds, __capacity);
+
+        __capacity = newCapacity;
+    }
+
+    void add(Pollable p, int events) {
+        
+        # grow if there's not enough space
+        if (__nextIndex == __capacity) grow(__capacity * 2);
+        
+        # add it to the pollables and to the fds.
+        __pollables.append(p);
+        _crack_pollset_set(__fds, __nextIndex, p.getFD(), events, 0);
+        
+        ++__nextIndex;
+    }
+
+    ## Wait for up to timeout or until the next event.  'timeout' may be null, 
+    ## in which case we wait indefinitely.
+    ## Calling wait() resets the internal iterator - the next call to nx() 
+    ## will return the first available event.
+    ## Returns the number of sockets selected, -1 if there was an error.  0 if 
+    ## there was a timeout.
+    int wait(TimeDelta timeout) {
+        __iter = 0;
+        return _crack_poll(__fds, __nextIndex, timeout, null);
+    }
+    
+    PollFD nx() {
+        if (__iter == -1)
+            return null;
+
+        PollFD result;
+        __iter = _crack_pollset_next(__fds, __nextIndex, uint(__iter), 
+                                     result
+                                     );
+        
+        if (__iter == -1)
+            return null;
+        
+        # store the pollable in the result and return it.
+        result.pollable = Pollable.cast(__pollables[uint(__iter++)]);
+        return result;   
     }
 }

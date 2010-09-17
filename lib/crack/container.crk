@@ -333,6 +333,10 @@ class Array : _ArrayIface {
         return __size;
     }
     
+    uint capacity() {
+        return __cap;
+    }
+    
     ## delete the element at 'index'.
     void delete(uint index) {
         if (index > __size)

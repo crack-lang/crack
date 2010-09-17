@@ -1,7 +1,8 @@
 
 import crack.lang die, ManagedBuffer;
 import crack.io cout;
-import crack.net sockconsts, SockAddrIn, Socket;
+import crack.net sockconsts, SockAddrIn, Socket, Poller, PollFD;
+import crack.time TimeDelta;
 import "libc.so.6" perror, sleep;
 
 void perror(byteptr s);
@@ -36,8 +37,52 @@ accepted.sock.send('another test string', 0);
 buf = ManagedBuffer(1024);
 buf.size = uint(cln.recv(buf, 0));
 
-fromServer := String(buf, true);
+fromServer := String(buf, false);
 if (fromServer != 'another test string')
     die('did not receive "another test string" from server');
+
+# test Pollers
+poller := Poller();
+poller.add(accepted.sock, sockconsts.POLLIN | sockconsts.POLLERR);
+poller.add(cln, sockconsts.POLLIN | sockconsts.POLLERR);
+cln.send('to server', 0);
+poller.wait(null);
+PollFD p = null;
+bool ok;
+while (p = poller.nx()) {
+    if (!(p.pollable is accepted.sock)) {
+        cout `fd = $(p.fd), events = $(p.events)\n`;
+        die("didn't poll the server");
+    } else {
+        ok = true;
+    }
+}
+
+if (!ok)
+    die("didn't get the server back");
+
+# clear the data from the accepted socket
+buf.size = 1024;
+accepted.sock.recv(buf, 0);
+
+accepted.sock.send('to client', 0);
+poller.wait(null);
+ok = false;
+while (p = poller.nx()) {
+    if (!(p.pollable is cln))
+        die("didn't poll the client");
+    else
+        ok = true;
+}
+
+if (!ok)
+    die("didn't get the client back");
+
+# clear the data
+cln.recv(buf, 0);
+
+# test an empty timeout
+if (poller.wait(TimeDelta(0, 0)) != 0)
+    die("waiting on a zero timeout did not return zero!");
 
 cout `ok\n`;
