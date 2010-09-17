@@ -7,10 +7,15 @@ rx := Regex('simple');
 m := rx.search('not simple');
 if (m.begin() != 4) die('begin failed');
 if (m.end() != 10) die('end failed');
-if (m.group().cmp('simple')) die('group failed');
-cout `simple search ok\n`;
+if (m.group() != 'simple') die('group failed');
 
 rx = Regex('blah{(.*)}');
 m = rx.search('this is blah{foo}');
-if (m.group(1).cmp('foo')) die('group(1) failed');
-cout `subgroups ok\n`;
+if (!m || m.group(1) != 'foo') die('group(1) failed');
+
+rx = Regex('^blah{(?P<stuff>.*)}');
+m = rx.search('blah{foo}');
+if (!m || m.group('stuff') != 'foo')
+    die('named groups failed');
+
+cout `ok\n`;

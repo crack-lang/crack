@@ -2,21 +2,17 @@
 The Crack Programming Language Guide
 ====================================
 
-If you're reading this, you're one of the intrepid folks who have downloaded 
-the Crack 0.1 programming language.  Thanks!  Before we get into telling you 
-about the language, there's something you need to be aware of:  Crack 0.1 is 
-very much alpha-quality code.  Lots of very basic language features haven't 
-been implemented yet.  There are lots of bugs, some known, some yet to be 
-discovered.  There's very little debug info or anything else that you might 
-use to make your life easier.  If you're looking for a language to do serious 
-development in, Crack 0.1 ain't it.
+This is the Manual for version 0.2 of the Crack Programming Language.  Version 
+0.2 is a fairly complete programming language - lots of bugs fixed, lots of 
+holes plugged since 0.1.  We believe the language to be usable for real work 
+at this time, but there are still a number of important features that remain 
+to be added (including generics, exceptions, annotations and partial closures).
+While the compiler is generating debug information at this time, only a 
+limited subset of it is currently usable (you can get a stack trace in gdb).
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
-is the language and this version is definitely the ground floor.  We're 
-releasing it mainly to get attention.  The language exists, we believe it 
-will (eventually) rock, and we'd love to have people banging on it and giving 
-us feedback.
+is the language and this version is still pretty close to the ground floor.
 
 So without further caveats - let's do some Crack!
 
@@ -220,6 +216,30 @@ Type names in Crack are very simple.  They are either a single word or
 for arrays, will eventually be expanded as the instantiation mechanism for 
 /generic types/, similar to generics in Java.
 
+Integer Constants
+'''''''''''''''''
+
+Integer constants can be defined as an integer value in the code:
+
+{{
+    int i = 100;
+    int j = -1;
+}}
+
+Integer constants are "adaptive", which means that they will convert to 
+whatever type is required by their usage as long as the value is within the 
+range of values for that type (for example, "uint u = -1" would be illegal).
+
+Integer constants can be defined using hexadecimal, octal and binary notation 
+as well as the default decimal notation.  Examples follow:
+
+{{
+    int x = 0x1AF;  # hex constant
+    int o1 = 0117, o2 = 0o117; # both the same octal constant, c-style and
+                               # normalized notation.
+    int b = 0b10110; # binary constant
+}}
+
 Implicit Conversion
 '''''''''''''''''''
 
@@ -290,11 +310,15 @@ already ("\\n").  The full list is:
     Two digit hex character value (examples: "#\\x1f#", "#\\x07#")
 *\\*/OOO/::
     1 to 3 character octal character value.  (examples: "#\\0#", "#\\141#")
+*\\*/literal-newline/::
+    If you put a backslash in front of the end of the line in a string, the 
+    newline is ignored.  This allows you to wrap large strings across multiple 
+    lines.
     
 Control Structures
 ------------------
 
-Crack 0.1 only supports two control structures: the "if\/else" statement and 
+Crack 0.2 only supports two control structures: the "if\/else" statement and 
 the "while" statement.  "if" runs code blocks depending on whether a condition 
 is true or false:
 
@@ -372,7 +396,7 @@ You can also chain if\/else blocks:
 
 Note that blocks of code in curly braces can include the definitions of new 
 variables that are only visible from within that block.  Each block is a 
-/namespace/ that inherets definitions from the outer namespace.  The top-level 
+/namespace/ that inherits definitions from the outer namespace.  The top-level 
 code in the file is the /module namespace/.
 
 The while statement
@@ -430,10 +454,9 @@ You can define a function that doesn't return a value by using the special
     }
 }}
 
-Primitive types are always passed "by value."  The system makes a copy of them 
-for the function.  This fact is academic in Crack 0.1, because parameter
-variables can't be assigned anyway (if they are high-level types, you can 
-modify the objects that they reference).
+Primitive types are always passed "by value."  The system makes a copy of them
+for the function.  If they are high-level types, you can modify the objects 
+that they reference.
 
 Multiple functions can share the same name as long as their arguments differ: 
 this feature is called /overloading/.  For example, rather than "#printInt#" 
@@ -497,8 +520,124 @@ function in the inner function:
     void outer() { int a; int inner() { return a; } } # DOESN'T WORK
 }}
 
-Due to a bug in the compiler, this will result in a lot of LLVM optimization 
-errors being output - try to avoid doing this.
+Attempting to do this will result in a compile-time error.
+
+[it should be noted that a future version of Crack will support this 
+partially, without assignment, and will also support a limited form of closure]
+
+Operators
+---------
+
+Crack supports the complete set of C operators.  As in C++, they can be used 
+with non-numeric types through \X(Operator Overloading).
+
+Comparison Operators
+''''''''''''''''''''
+
+Comparison operators compare two values and return a boolean.
+
+==::
+    True if the two values are equal.  #1 == 1# is true.
+!=::
+    True if the two values are not equal. #1 != 2#
+>::
+    True if the left value is greater than the right value. #2 > 1#
+<::
+    True if the left value is less than the right value. #1 < 2#
+>=::
+    True if the left value is greater than or equal to the right value. #2 >= 
+    2#
+<=::
+    True if the right value is greater than or equal to the left value. #2 <= 
+    2#.
+is::
+    True if the object on the left is identical to the object on the right.  
+    This isn't defined for numbers, only for aggregates and primitive pointer 
+    types.
+
+Basic Arithmetic
+''''''''''''''''
+
+All integer and floating point types support the basic arithmetic operators.
+
++::
+    Add two values.  #2 + 2 == 4#
+-::
+    Subtract two values. #4 - 2 == 2#
+\/::
+    Divide one value by another.  #6 / 3 == 2#
+\*::
+    Multiply one value by another
+
+Unary plus and minus are also supported, so we can say:
+
+{{
+    x := 2;
+    y := 10 + -x;  # y is 8
+    z := 10 - +x;  # z is also 8
+}}
+
+Unary plus and minus are special when applied to constants.  In this case, 
+they create a new constant, preserving their adaptiveness.
+
+Bitwise Operators
+'''''''''''''''''
+
+All of the integer types support the following bitwise operations:
+
+&::
+    Bitwise and.  #5 & 4 == 4#
+|::
+    Bitwise or.  #5 | 4 == 5#
+<<::
+    Shift all bits left by the amount specfied on the right.  #1 << 2 == 4#
+>>::
+    Shift all bits right by the amount specified on the right.  #4 >> 2 == 1# 
+    If this is done on a signed operator, this is an /arithmetic/ shift.  
+    Arithmetic shifts preserve the sign of the value shifted.
+^::
+    Exclusive or.  #5 ^ 6 == 3#
+
+Augmented Assignment
+''''''''''''''''''''
+
+All of the binary operators but the comparison operators can be used 
+with assignment to do C-like "augmented assignment."  In general, the 
+augmented expression #x /op/#= y# is equivalent to #x = x #/op/# y#.
+
+So specifically, the augmented assignment operators are: #+=#, #-=#, #\/=#,
+#\*=#, #&=#, #|=#, #>>=#, #<<=#, #^=#.
+
+The Ternary Operator
+''''''''''''''''''''
+
+Like the C family of languages, crack supports the "ternary operator."  The 
+ternary operator evaluates to one expression or another based on the results 
+of a boolean expression:
+
+{{
+    a = b ? c : d;
+}}
+
+If #b# is true, #a# will be set to #c# and #d# will not be evaluated.  If 
+false, #a# will be set to #d# and #c# will not be evaluated..
+
+#c# and #d# may be of different types.  If they are, the result will be of the 
+same type as #c# if #d# is of a type derived from #c#'s type (see 
+\X(Inheritence) below) and the same type as #d# if #c# is of a type derived 
+from #d#.
+
+If the types of #c# and #d# do not share a common ancestor, the compiler will 
+first attempt to convert #d# to the #c#'s type.  That failing, it will attempt 
+to convert #c# to #d#'s type.  If none of this works, it will finally give an 
+error.
+
+Precedence
+''''''''''
+
+Operator precedence is the same as in C.  So the rules are:
+
+XXX fill in precedence rules.
 
 Classes
 -------
@@ -934,9 +1073,9 @@ Multiple Inheritance
 ''''''''''''''''''''
 
 Crack supports /multiple inheritance/: you can have any number of base 
-classes.  But beware - it is illegal to inherit from the same base class 
-multiple times, and Crack 0.1 doesn't guard against this very well.  
-Eventually, Crack will support this using virtual base classes like in C++.  
+classes.  With the exception of the special #VTableBase# class, it is an error 
+to inherit from the same base class multiple times, even indirectly. 
+Eventually, Crack will support this using virtual base classes like in C++. 
 We'll talk more about multiple inheritance in the next section.
 
 Destructors
@@ -1192,8 +1331,31 @@ The following operators can be overloaded:
 #oper >=(#/type/ #other)#::
     Binary "greater than or equal to."  #Object# implements this as 
     "#cmp(other) >= 0#".
+#oper |(#/type/ #other)#::
+    Bitwise or.
+#oper &(#/type/ #other)#::
+    Bitwise and.
+#oper <<(#/type/ #other)#::
+    Left shift.
+#oper >>(#/type/ #other)#::
+    Right shift.
+#oper ^(#/type/ #other)#::
+    Exclusive or.
+#oper #/op/#=(#/type/ #other)#::
+    (all \X(Augmented Assignment) operators).  If these exist, they will be 
+    called when the augmented assignment operators are used.  If they are not 
+    defined, they can still be used if the type defines the simple operator 
+    that it is based on.  So for example, if a class defines "#oper +#", you 
+    can use the #+=# opertator on an instance without defining it.
     
 The primitive types mostly have intrinsic implementations of the operators.
+
+Certain operators can not be overloaded:
+
+-   The ternary operator.
+-   The short-circuit and and or operations ("#&&#" and "#||#")
+-   The assignment operator ("#=#").
+-   The define operator ("#:=#").
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -1584,7 +1746,7 @@ Crack's current approach to bindings is not without its problems:
 Threading
 ---------
 
-As it stands, Crack 0.1 is written with little regard for threads.  You can 
+As it stands, Crack 0.2 is written with little regard for threads.  You can 
 attempt to use the normal threading libraries, if you like, but you're likely 
 to run into some problems.  In particular, you should be aware that the 
 reference counting mechanism is not thread-safe, so memory management will 
@@ -1598,7 +1760,209 @@ implemented safely - with some cost to performance of threaded applications.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.1.  If your program 
+Crack has only minimal support for debugging in 0.2.  If your program 
 seg-faults or aborts, you can at least get a sparse stack-trace by running it 
 under a fairly recent version of GDB (7.0 or later).
 
+Appendices - Libraries
+======================
+
+Crack comes with its own (sparse but growing) set of standard libraries.  
+These are loosely organized as the modules under #crack# and #crack.exp#.  
+#crack.exp# includes modules that are designated as "experimental."  These 
+have interfaces that are likely to change as Crack matures.  The other 
+libraries are also changeable, but should be frozen by version 1.0.
+
+Special Language Types
+----------------------
+
+Strings and Buffer Types
+''''''''''''''''''''''''
+
+Strings are derived from #Buffer#.  A buffer is just a #byteptr# (stored in 
+the instance variable #buffer#) and a size (stored in the instance variable 
+#size#).
+
+The memory that a buffer references is presumed to be read-only, but nothing 
+in the language enforces this.  For cases where a writable buffer is desired, 
+use something derived from a #WriteBuffer# subclass.  #WriteBuffer# inherits 
+from #Buffer#, but the read-only  requirement is presumed to be relaxed.
+
+Most output functions accept a Buffer, most input functions accept a 
+#WriteBuffer#.  For cases where you want a #WriteBuffer# that cleans up after 
+itself, use a \X(ManagedBuffer).
+
+Constant strings are actually of type #StaticString#.  This is a class for 
+strings that are not to be deleted (because static strings can reference data 
+in read-only memory segments).
+
+Like any object, a buffer can be converted to a #bool#.  A buffer converts to 
+*true* if it has a non-zero size.
+
+Any two buffers can be compared - a byte-for-byte comparison is performed.
+If one buffer is identical to the beginning of the other, but is shorter, the 
+shorter buffer is "less than" the larger buffer.
+
+ManagedBuffer
+'''''''''''''
+
+A managed buffer is a #WriteBuffer# that manages its underlying buffer memory. 
+These are designed for use with IO operations.  The typical use case is to 
+read into it and then convert it to a string, either by copying the underlying 
+buffer or by passing ownership of it to the new string:
+
+{{
+    # create a 1K managed buffer.
+    ManagedBuffer buf = {1024};
+    
+    # read it, store the size of what we read
+    buf.size = cin.read(buf);
+    
+    # convert it to a string and take ownership of the buffer (the second 
+    # argument of the constructor is "takeOwnership")
+    String s = {buf, true};
+}}
+
+Note that #Reader# includes a utility method that does this more intelligently 
+(it only transfers ownership if the amount read is at least 0.75 of the buffer 
+size):
+
+{{
+    # 's' is a string.
+    s := cin.read(1024);
+}}
+
+
+Containers
+----------
+
+Containers provide support for the basic sequential and mapping datastructures 
+expected from a modern programming language.  Crack's container library is 
+#crack.container#  All container classes are derived from #Container#.
+
+Crack containers all store objects of type #Object#.  You can store derived 
+types, but in order to do anything useful with them after retrieval you pretty 
+much need to cast them to the type that you expect them to be.
+
+For example, if we have an array of objects of type #Foo# with method #bar()#, 
+we need to do something like this to call bar on the zeroth element:
+
+{{
+    Foo.cast(arr[0]).bar();
+}}
+
+Java-like generics will be supported in a later version of the language, and 
+you'll be able to have an #Array[Foo]#.
+
+Iterators
+'''''''''
+
+Iterators are like iterators in java.  All container types have an #iter()# 
+method which returns an #Iterator# object for the container.
+
+Iterators allow you to iterate over the set of objects in a container one at a 
+time.  As an example, consider an array:
+
+{{
+    Array arr = createArray();
+    
+    i := arr.iter();
+    while (i.nx())
+        cout `got $(i.elem())\n`;
+}}
+
+#arr.iter()# creates an iterator over the array initialized at the first item. 
+The #nx()# method forwards the iterator to the next element except when it is 
+called for the first time.  It returns true if the iterator is valid after 
+being forwarded.  #elem()# returns the element associated with the 
+iterator.
+
+The #nx()# method is a stop-gap solution - it exists because Crack doesn't 
+have a #for# statement yet.  #nx()# lets us do iteration in a while loop.  
+Don't expect it to stick around for very long.
+
+Arrays
+''''''
+
+Arrays are a collection that preserves element order with fast random-access 
+assignment and retrieval.  Unlike their low-level counterparts, the are safe 
+for general use.  They manage both the size of the underlying array and the 
+reference counts of the elements.
+
+Construct an array with the expected number of elements:
+
+{{
+    import crack.container Array;
+    Array arr = {10};  # 10 element array
+}}
+
+The number of elements specified is the array /capacity/ - this is the number 
+of elements that can be added before it is necessary for the array to 
+reallocate its underlying, low-level array.
+
+Like other containers, arrays have a #count()# method that returns the actual 
+number of elements in the array.  At the time of construction, the count is 
+zero.
+
+To add an element to an array, use the #append()# method:
+
+{{
+    arr.append('first element');
+    arr.append('second element');
+    cout `count = $(arr.count())\n`;  # writes "2"
+}}
+
+To get an element in an array, use the bracket operator:
+
+{{
+    cout `elems: $(arr[0]), $(arr[1])\n`;
+}}
+
+You can also replace an existing element in an array using element assignment:
+
+{{
+    arr[1] = 'new second element';
+}}
+
+Note that this only works to replace an element: #arr[2] = 'something'# would 
+result in a runtime error.
+
+Finally, like all containers, you can iterate over the elements of an array:
+
+{{
+    i := arr.iter();
+    while (i.nx())
+        cout `elem: $(i.elem())\n`;
+}}
+
+RBTree Maps
+'''''''''''
+
+A "map" or an "associative array" is a container that stores a set of values 
+each indexed by a key.  The only kind of map that Crack 0.2 supports is 
+red-black trees.  Red-black trees provide a natural sort order, and provide 
+O(log n) insertion and lookup with constant time rebalancing.
+
+To create an RBTree map:
+
+{{
+    import crack.container RBTree;
+    
+    map = RBTree();
+}}
+
+To add elements:
+
+{{
+    map['first'] = '1';
+    map['second'] = '2';
+    map['third'] = '3';
+}}
+
+To access them:
+
+{{
+    cout `$(map['first'])\n`;  # writes "1"
+}}
+
+Iteration is the same as for arrays:
