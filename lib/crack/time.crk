@@ -1,0 +1,13 @@
+# Copyright 2010 Google Inc.
+# Code for dealing with time.
+
+## A difference in time.
+class TimeDelta {
+    int32 secs, nsecs;
+    
+    oper init(int32 secs0, int32 nsecs0) : secs = secs0, nsecs = nsecs0 {}
+}
+
+TimeDelta seconds(int secs) {
+    return TimeDelta(secs, 0);
+}
