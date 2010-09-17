@@ -1,6 +1,6 @@
 ## Regular expressions (based on PCRE)
 
-import crack.lang Buffer, die, free;
+import crack.lang Buffer, die, free, SubString;
 import crack.io cerr, StringFormatter;
 import crack.exp.bindings ByteptrWrapper, IntWrapper, Opaque;
 
@@ -71,7 +71,7 @@ class Match {
         i := index * 2;
         start := __captures[i];
         end := __captures[i + 1];
-        return String(Buffer(subject.buffer + uint(start), uint(end - start)));
+        return SubString(subject, uint(start), uint(end - start));
     }
     
     String group() { return group(0); }
