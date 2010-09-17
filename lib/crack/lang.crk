@@ -288,10 +288,12 @@ class String : Buffer {
         }
     }
     
-    ## Initialize from first len bytes of buffer.  This copies the buffer, it 
-    ## does not assume ownership.
-    oper init(Buffer buf, uint len) : Buffer(malloc(len), len) {
-        memcpy(buffer, buf.buffer, len);
+    ## Initialize from a substring of buffer.  This copies the buffer from 
+    ## index pos to pos + len.  It does not assume ownership.
+    oper init(Buffer buf, uint pos, uint len) : Buffer(malloc(len), len) {
+        if (pos + len > buf.size)
+            _die('out of bounds copy');
+        memcpy(buffer, buf.buffer + pos, len);
     }
 
     ## Initialize from byte pointer and size and take ownership.

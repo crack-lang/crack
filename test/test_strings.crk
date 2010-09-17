@@ -20,4 +20,8 @@ if (s.size != 10)
 if (s != '1234567890')
     die("didn't copy from a ManagedBuffer correctly");
 
+s = String('test of copied substrings', 8, 6);
+if (s != 'copied')
+    die("didn't copy substring correctly.");
+
 cout `ok\n`;
