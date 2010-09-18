@@ -565,7 +565,7 @@ All integer and floating point types support the basic arithmetic operators.
 -::
     Subtract two values. #4 - 2 == 2#
 \/::
-    Divide one value by another.  #6 / 3 == 2#
+    Divide one value by another.  #6 \/ 3 == 2#
 \*::
     Multiply one value by another
 
@@ -603,7 +603,7 @@ Augmented Assignment
 
 All of the binary operators but the comparison operators can be used 
 with assignment to do C-like "augmented assignment."  In general, the 
-augmented expression #x /op/#= y# is equivalent to #x = x #/op/# y#.
+augmented expression #x #/op/#= y# is equivalent to #x = x #/op/# y#.
 
 So specifically, the augmented assignment operators are: #+=#, #-=#, #\/=#,
 #\*=#, #&=#, #|=#, #>>=#, #<<=#, #^=#.
