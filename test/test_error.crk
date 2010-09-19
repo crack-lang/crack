@@ -1,0 +1,41 @@
+# Copyright 2010 Google Inc.
+
+import crack.lang die;
+import crack.io cout;
+import crack.exp.error err, ErrorCatcher;
+
+void funcThatErrors() {
+    err.do() `error text`;
+}
+
+if (true) {
+    ErrorCatcher catcher;
+    
+    funcThatErrors();
+    
+    if (!catcher.gotError())
+        die("error wasn't recorded");
+    
+    if (catcher.getText() != 'error text')
+        die("didn't get 'error text'");
+    
+    # make sure reset does what it's supposed to
+    catcher.reset();
+    if (catcher.gotError())
+        die('gotError still set after reset');
+    if (catcher.getText())
+        die('still got error text after reset');
+    
+    # make sure that error handling works the same after a reset
+    funcThatErrors();
+    if (!catcher.gotError())
+        die("error wasn't recorded after reset.");
+    if (catcher.getText() != 'error text')
+        die("didn't get 'error text' after reset");
+}
+
+# after coming out of scope, err should get cleared
+if (err.gotError)
+    die('still got an error after coming out of a catcher');
+
+err.do() `ok`;
