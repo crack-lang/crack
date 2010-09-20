@@ -998,6 +998,12 @@ test_output 'escaped newline is ignored' \
 k\n`;' \
     ok
 
+test_output 'error if Object is not the first class' \
+    'class A : VTableBase { int i; }
+     class B : A, Object {}' \
+     "${parseError}2: If you directly or indirectly inherit from Object, \
+Object (or its derivative) must come first in the ancestor list."
+
 test_output 'binary operators' 'import test.test_binops;' ok
 
 test_output 'mix-ins' 'import test.test_mixins;' ok

@@ -74,6 +74,12 @@ void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     // store the current endpoint so we don't bother checking against our own 
     // ancestors.
     size_t initAncSize = ancestors.size();
+    
+    // if this is the object class, make sure that it's the first ancestor.
+    if (initAncSize && this == context.globalData->objectType)
+        context.error("If you directly or indirectly inherit from Object, "
+                       "Object (or its derivative) must come first in the "
+                       "ancestor list.");
 
     for (TypeVec::const_iterator iter = parents.begin();
            iter != parents.end();
