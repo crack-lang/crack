@@ -1,7 +1,12 @@
 ## This module provides access to system internals.
 ## Copyright 2010 Google Inc.
 
-import crack.lang die;
+import crack.exp.error err;
+import "libc.so.6" exit;
+
+## The standard library exit() function - call it with the exit code to be 
+## returned from the program.
+void exit(int status);
 
 class StringArray {
     
@@ -14,8 +19,10 @@ class StringArray {
     }
 
     void oper []=(uint i, String val) {
-        if (i >= __count)
-            die('Array index out of bounds');
+        if (i >= __count) {
+            err.do() `Array index $i out of bounds`;
+            return;
+        }
 
         # bind the new value, release the existing one
         val.oper bind();
@@ -24,8 +31,10 @@ class StringArray {
     }
     
     String oper [](uint i) {
-        if (i >= __count)
-            die('Array index out of bounds');
+        if (i >= __count) {
+            err.do() `Array index $i out of bounds`;
+            return null;
+        }
 
         result := __rep[i];
         return __rep[i];

@@ -1,6 +1,7 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang die, exit, XWriter;
+import crack.sys exit;
+import crack.lang die, XWriter;
 import crack.io cout, Formatter, XWFormatter, StringFormatter;
 import crack.container Array, KeyVal, List, TreeMap;
 import 'libc.so.6' random;
