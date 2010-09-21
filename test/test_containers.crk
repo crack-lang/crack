@@ -1,8 +1,8 @@
 # Copyright 2010 Google Inc.
 
 import crack.sys exit;
-import crack.lang die, XWriter;
-import crack.io cout, Formatter, XWFormatter, StringFormatter;
+import crack.lang die;
+import crack.io cout, Formatter, StringFormatter, Writer;
 import crack.container Array, KeyVal, List, TreeMap;
 import 'libc.so.6' random;
 
@@ -93,9 +93,9 @@ if (arr.count() != 2)
 
 class IntWrapper {
     int val;
-    
+
     oper init(int val0) : val = val0 {}
-    
+
     int cmp(Object other) {
         if (other.class.isSubclass(IntWrapper)) {
             return val - IntWrapper.unsafeCast(other).val;
@@ -103,12 +103,11 @@ class IntWrapper {
             return Object.cmp(other);
         }
     }
-    
-    void writeTo(XWriter writer) {
-        XWFormatter fmt = {writer};
+
+    void writeTo(Writer writer) {
+        Formatter fmt = {writer};
         fmt `$val`; # `$(val / 1000000)`; # if you want to be able to debug
     }
-        
 }
 
 tree := TreeMap();

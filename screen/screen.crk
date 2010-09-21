@@ -1,7 +1,7 @@
 // A test suite for crack
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cout, cerr, XWFormatter, XWriter, StringWriter;
+import crack.io cout, cerr, Formatter, Writer, StringWriter;
 import crack.sys argv, exit;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
@@ -53,17 +53,17 @@ class Test {
         loadTemplate();
     }
 
-    void _dump(XWriter out) {
+    void _dump(Writer out) {
         ti := _testData.iter();
         while (ti.nx()) {
             section := String.cast(KeyVal.cast(ti.elem()).key);
             data := String.cast(KeyVal.cast(ti.elem()).val);
-            XWFormatter(out) `[$section]:\n$data`;
+            Formatter(out) `[$section]:\n$data`;
         }
     }
 
-    void writeTo(XWriter out) {
-        XWFormatter(out) `[$_fInfo]: $_desc\n`;
+    void writeTo(Writer out) {
+        Formatter(out) `[$_fInfo]: $_desc\n`;
         _dump(out);
     }
 

@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang Buffer, die, FreeBase, WriteBuffer, XWriter;
-import crack.io Reader, Writer, XWFormatter, cout;
+import crack.lang Buffer, FreeBase, WriteBuffer;
+import crack.io Reader, Writer, Formatter, cout;
+import crack.exp.error err, strerror;
 import crack.container Array;
 import crack.exp.bindings Opaque;
 import crack.time TimeDelta;
@@ -82,8 +83,8 @@ class SockAddrIn : SockAddr {
     
     oper init(uint32 addr0, uint port0) : addr = addr0, port = port0 {}
     
-    void writeTo(XWriter out) {
-        XWFormatter(out) `ip4:$addr:$port`;
+    void writeTo(Writer out) {
+        Formatter(out) `ip4:$addr:$port`;
     }
 }
 
@@ -114,7 +115,7 @@ int _crack_poll(PollFDs fds, uint nfds, TimeDelta tv, SigSet sigmask);
 
 ## interface for all classes that can be polled.
 class Pollable {
-    int getFD() { die('Pollable.getFD() not defined.'); return 0; }
+    int getFD() { err.do() `Pollable.getFD() not defined.`; return 0; }
 }
 
 class PollFD {
@@ -127,7 +128,7 @@ int _crack_pollset_next(PollFDs set, uint size, uint index,
                         );
 
 ## Wrapper around a socket.
-class Socket : Pollable {
+class Socket : Pollable, Reader, Writer {
     int fd;
     oper init(int domain, int type, int protocol) : 
         fd = socket(domain, type, protocol) {
@@ -194,33 +195,32 @@ class Socket : Pollable {
         return Accepted(Socket(rc), addr);
     }
     
-    void writeTo(XWriter out) {
-        XWFormatter(out) `Socket(fd: $fd)`;
+    void writeTo(Writer out) {
+        Formatter(out) `Socket(fd: $fd)`;
     }
+    
+    # Reader interface
+    uint read(WriteBuffer buffer) {
+        rc := recv(buffer, 0);
+        if (rc < 0)
+            err.do() `Error writing to socket: $(strerror())`;
+        return uint(rc);
+    }
+    
+    Object getReaderObject() { return this; }
+    
+    # Writer interface
+    void write(Buffer data) {
+        rc := send(data, 0);
+        if (rc < 0)
+            err.do() `Error writing to socket: $(strerror())`;
+        if (rc != data.size)
+            err.do() `Incomplete write to socket`;
+    }
+
+    Object getWriterObject() { return this; }
 }
         
-class SockReader : Reader {
-    Socket sock = null;
-    oper init(Socket sock0) : sock = sock0 {}
-    uint read(WriteBuffer buffer) {
-        rc := sock.recv(buffer, 0);
-        if (rc < 0)
-            die('Error writing to socket');
-        return uint(rc);
-    }
-}
-
-class SockWriter : Writer {
-    Socket sock = null;
-    oper init(Socket sock0) : sock = sock0 {}
-    uint write(Buffer data) {
-        rc := sock.send(data, 0);
-        if (rc < 0)
-            die('Error writing to socket');
-        return uint(rc);
-    }
-}
-
 ## A poller is a collection of Pollables that you can use to wait for an event
 ## on any of the pollables and then iterate over the set of events that 
 ## occurred.
@@ -239,7 +239,7 @@ class Poller {
     
     void grow(uint newCapacity) {
         if (newCapacity < __capacity)
-            die('cannot shrink');
+            err.do() `cannot shrink`;
         
         __pollables.realloc(newCapacity);
         

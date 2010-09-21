@@ -1,8 +1,8 @@
 # Copyright 2010 Google Inc.
 # The Crack Container library.
 
-import crack.io cout, cerr, Formatter, XWFormatter;
-import crack.lang die, free, XWriter;
+import crack.io cout, cerr, Formatter, Writer;
+import crack.lang die, free;
 import "libc.so.6" memmove;
 
 void memmove(voidptr dst, voidptr src, uint size);
@@ -48,8 +48,8 @@ class Container {
         return null;
     }
 
-    void writeTo(XWriter writer) {
-        out := XWFormatter(writer);
+    void writeTo(Writer writer) {
+        out := Formatter(writer);
         i := iter();
         out `[`;
         if (i) out `$(i.elem())`;
@@ -369,8 +369,8 @@ class KeyVal {
             return key.cmp(other);
     }
     
-    void writeTo(XWriter out) {
-        XWFormatter(out) `$key: $val`;
+    void writeTo(Writer out) {
+        Formatter(out) `$key: $val`;
     }
 }
 

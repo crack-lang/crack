@@ -1,7 +1,7 @@
 # Copyright 2009, Google Inc.
 # Basic input/output classes.
 
-import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, XWriter;
+import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, Writer;
 
 import "libc.so.6" strlen, write, malloc, memcpy, free, read;
 
@@ -12,39 +12,25 @@ byteptr malloc(uint size);
 byteptr memcpy(byteptr dst, byteptr src, uint size);
 void free(byteptr mem);
 
-## Writer interface, for all objects that support "write()"
-## needs to use Object as a virtual base class.
-class Writer : Object, XWriter {
-    oper init() {}
-
-    ## Low level write method.  This is the only thing you need to implement.
-    void write(byteptr b, uint size) {
-        die('Writer.write(byteptr b, uint size) called');
-    }
-
-    void write(Buffer b) {
-        write(b.buffer, b.size);
-    }
-    
-    ## Flush any buffers and write through to the final consumer.
-    void flush() {}
-};
-
 ## Writer for a file descriptor.
-class FDWriter : Writer {
+class FDWriter : Object, Writer {
     int fd;
 
     ## Constructs an FDWriter from a plain file descriptor.
     oper init(int fd0) : fd = fd0 {}
 
-    void write(byteptr buf, uint size) {
-        write(fd, buf, size);
+    void write(Buffer buf) {
+        write(fd, buf.buffer, buf.size);
     }
+    
+    Object getWriterObject() { return this; }
 };
 
-## Base class for all readers.  Readers support two flavors of read()
+## Interface for all readers.  Readers support two flavors of read()
 ## methods that allow you to read bytes from a stream.
-class Reader {
+## This must be mixed in with something derived from Object, you must 
+## implement read(WriteBuffer) and getReaderObject().
+class Reader : VTableBase {
 
     ## Reads enough bytes to fill the buffer, or as many bytes as are 
     ## available from the source.  Returns the number of bytes read.    
@@ -70,10 +56,18 @@ class Reader {
             return String(b);
         }
     }
+
+    # MixIn stuff
+    Object getReaderObject() {
+        die('Reader.getReaderObject() not implemented.');
+        return null;
+    }
+    oper bind() { if (!(this is null)) getReaderObject().oper bind(); }
+    oper release() { if (!(this is null)) getReaderObject().oper release(); }
 };
 
 ## Reader to read from a file descriptor.
-class FDReader : Reader {
+class FDReader : Object, Reader {
     int fd;
     
     oper init(int fd0) : fd = fd0 {}
@@ -82,6 +76,8 @@ class FDReader : Reader {
     uint read(WriteBuffer buf) {
         return read(fd, buf.buffer, buf.size);
     }
+
+    Object getReaderObject() { return this; }
 };
 
 ## Format val into buf.  The number will be formatted into the _end_ of the 
@@ -129,7 +125,7 @@ uint _format(int64 val, byteptr buf, uint size) {
 }
 
 ## Formatter base class - got a format() method for anything.
-class Formatter : Writer {
+class Formatter : Object, Writer {
     
     Writer rep;
 
@@ -140,8 +136,8 @@ class Formatter : Writer {
         write(StaticString(data));
     }
 
-    void write(byteptr data, uint size) {
-        rep.write(data, size);
+    void write(Buffer data) {
+        rep.write(data);
     }
     
     void format(StaticString data) {
@@ -194,31 +190,15 @@ class Formatter : Writer {
         obj.writeTo(this);
     }
 
+    Object getWriterObject() { return this; }
 }
-
-## Adapter to allow us to use an XWriter as a Writer.
-class XWriterWrapper : Writer {
-    XWriter __xw;
-    
-    oper init(XWriter xw) : __xw = xw {}
-    
-    void write(byteptr data, uint size) {
-        __xw.write(data, size);
-    }
-}
-
-## XWFormatter allows us to format to an XWriter, which is something we
-## currently need to do quite often from the writeTo() method.
-class XWFormatter : Formatter {
-    oper init(XWriter xwriter) : Formatter(XWriterWrapper(xwriter)) {}
-}    
 
 cout := Formatter(FDWriter(1));
 cerr := Formatter(FDWriter(2));
 cin := FDReader(0);
 
 ## Allows you to construct a string by writing to it.
-class StringWriter : Writer {
+class StringWriter : Object, Writer {
     
     ManagedBuffer buf = null;
 
@@ -228,21 +208,17 @@ class StringWriter : Writer {
     oper init(uint initBufSize) : buf = ManagedBuffer(initBufSize) {}
     oper init() : buf = ManagedBuffer(1024) {}
     
-    void write(String str) {
-        write(str.buffer, str.size);
-    }
-    
-    void write(byteptr data, uint size) {
+    void write(Buffer data) {
         # reallocate if we overflow
-        if (pos + size > buf.size) {
+        if (pos + data.size > buf.size) {
             newSize := buf.size * 2;
-            while (pos + size > newSize)
+            while (pos + data.size > newSize)
                 newSize = newSize * 2;
             buf.grow(newSize);
         }
 
-        memcpy(buf.buffer + pos, data, size);
-        pos = pos + size;
+        memcpy(buf.buffer + pos, data.buffer, data.size);
+        pos = pos + data.size;
     }
     
     ## Return a string containing everything that has been written so far.
@@ -252,6 +228,8 @@ class StringWriter : Writer {
         b := Buffer(buf.buffer, pos);
         return String(b);
     }
+
+    Object getWriterObject() { return this; }
 };
 
 ## Convenience wrapper, equivalent to Formatter(StringWriter())

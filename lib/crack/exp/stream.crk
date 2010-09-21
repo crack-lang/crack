@@ -1,7 +1,7 @@
 // Classes for io streams
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, XWFormatter, XWriter, FDReader;
+import crack.io cerr, Formatter, Writer, FDReader;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
@@ -28,8 +28,8 @@ class FileInfo: Object {
         return (_crack_fnmatch(pattern.buffer, name.buffer) == 0);
     }
 
-    void writeTo(XWriter out) {
-        XWFormatter(out) `$name`;
+    void writeTo(Writer out) {
+        Formatter(out) `$name`;
     }
 
 }

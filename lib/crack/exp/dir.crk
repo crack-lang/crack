@@ -1,7 +1,7 @@
 // Classes for directory traversal
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, XWFormatter, XWriter;
+import crack.io cerr, Formatter, Writer;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
@@ -96,8 +96,8 @@ class Directory : Object, Openable {
             return null;        
     }
     
-    void writeTo(XWriter out) {
-        XWFormatter(out) `$name`;
+    void writeTo(Writer out) {
+        Formatter(out) `$name`;
     }
     
 }

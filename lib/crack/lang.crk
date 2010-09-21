@@ -23,12 +23,9 @@ void _die(byteptr message) {
     abort();
 }
 
-class XWriter : VTableBase {
-    void write(byteptr buf, uint size) {
-        puts("XWriter.write() called.");
-        abort();
-    }
-};
+class Writer;
+
+void _writeObject(Writer out);
 
 ## Base class for things that you don't want derived from object or VTableBase.
 class FreeBase {};
@@ -105,8 +102,8 @@ class Object : VTableBase {
             return isTrue();
     }
     
-    void writeTo(XWriter writer) {
-        writer.write("<Object>", 8);
+    void writeTo(Writer writer) {
+        _writeObject(writer);
     }
 };
 
@@ -137,6 +134,23 @@ class MixIn : VTableBase {
     oper release() { if (!(this is null)) getObject().oper release(); }
 }
 
+class Buffer;
+
+class Writer : VTableBase {
+    void write(Buffer data) {
+        puts(this.class.name);
+        _die("Writer.write() not implemented.");
+    }
+
+    # MixIn stuff
+    Object getWriterObject() {
+        _die('Writer.getWriterObject() not implemented.');
+        return null;
+    }
+    oper bind() { if (!(this is null)) getWriterObject().oper bind(); }
+    oper release() { if (!(this is null)) getWriterObject().oper release(); }
+}
+
 ## The buffer base class containing a bytebuf and size.
 class Buffer : Object {
 
@@ -154,8 +168,8 @@ class Buffer : Object {
         return (size == 0);
     }
     
-    void writeTo(XWriter writer) {
-        writer.write(buffer, size);
+    void writeTo(Writer writer) {
+        writer.write(this);
     }
 
     byte oper [](uint index) {
@@ -197,7 +211,11 @@ class Buffer : Object {
             return 1;
         }
     }
-};
+}
+
+void _writeObject(Writer out) {
+    out.write(Buffer('<Object>', 8));
+}
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
 class WriteBuffer : Buffer {
