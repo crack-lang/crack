@@ -55,7 +55,13 @@ bool TypeDef::isImplicitFinal(const std::string &name) {
     return name == "oper init" ||
            name == "oper bind" ||
            name == "oper release" ||
-           name == "toBool";
+           name == "toBool" ||
+           name == "oper <" ||
+           name == "oper >" ||
+           name == "oper <=" ||
+           name == "oper >=" ||
+           name == "oper ==" ||
+           name == "oper !=";
 }
 
 void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
