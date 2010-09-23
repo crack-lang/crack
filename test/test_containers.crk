@@ -116,6 +116,10 @@ tree := TreeMap();
 tree['val'] = 'test';
 if (tree.get('val') != 'test')
     die('lookup of "val" failed');
+if (tree.get('val') is null)
+    die('lookup of "val" failed');
+if (tree['val'] != 'test')
+    die('lookup of "val" failed');
 tree.delete('val');
 if (tree.count() != 0)
     die('count != 0');

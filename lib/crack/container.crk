@@ -905,12 +905,8 @@ class TreeMap : Container {
         return null;
     }
     
-    void oper [](Object key) {
-        RBTreeNode node = null;
-        if (__root)
-            node = __root.find(key);
-        if (!node)
-            die('key not found.');
+    Object oper [](Object key) {
+        return get(key);
     }
     
     void dump() {
