@@ -410,7 +410,7 @@ test_output 'no inheritence of oper new' \
 test_output 'constructor initializers' 'import test.test_init;' ok
 
 test_output 'narrowing field assignment' \
-    'class A {}; class B : A {}; class C { A a; }; C c; c.a = B();
+    'class A {}; class B : A {}; class C { A a = B(); }; C c; c.a = B();
      puts("ok");' \
     ok
 

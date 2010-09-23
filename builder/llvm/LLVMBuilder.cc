@@ -1614,7 +1614,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
                                            ) {
     aggregate->emit(context);
 
-    // narrow to the field type.
+    // narrow to the type of the ancestor that owns the field.
     BTypeDef *typeDef = BTypeDefPtr::acast(assign->var->owner);
     narrow(aggregate->type.get(), typeDef);
     Value *aggregateRep = lastValue;
@@ -1627,13 +1627,19 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     Value *temp = lastValue;
     resultExpr->handleAssignment(context);
     lastValue = temp;
+    
+    // narrow the value to the type of the variable (we do some funky checking 
+    // here because of constants, which can present a different type that they 
+    // match)
+    if (assign->value->type != assign->var->type &&
+        assign->value->type->isDerivedFrom(assign->var->type.get()))
+        narrow(assign->value->type.get(), assign->var->type.get());
 
     unsigned index = BInstVarDefImplPtr::rcast(assign->var->impl)->index;
     // if the variable is part of a complete context, just do the store.  
     // Otherwise create a fixup.
     if (typeDef->complete) {
         Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
-        narrow(assign->value->type.get(), assign->var->type.get());
         builder.CreateStore(lastValue, fieldRef);
     } else {
         // create a placeholder instruction
