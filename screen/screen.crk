@@ -5,14 +5,19 @@ import crack.io cout, cerr, Formatter, Writer, StringWriter;
 import crack.sys argv, exit;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
-import crack.exp.stream File, FileInfo;
+import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
+
+SCREEN_VERSION := ".2";
 
 class Test {
 
     FileInfo _fInfo = null;
-    String _desc;
+    String _desc = null;
     TreeMap _testData;
+    
+    bool _isValid = false;
+    String _isSkipped = null;
 
     oper init(): _desc("Unknown") { }
 
@@ -21,6 +26,7 @@ class Test {
         f := File(_fInfo.name, "r");
         if (!f.isValid()) {
             cout `file: $(_fInfo.name) could not be opened!\n`;
+            _isValid = false;
             return;
         }
         
@@ -42,15 +48,37 @@ class Test {
                 // add line to current section
                 dataBuf.write(lineBuf);
                 if (curSection == 'TEST')
-                    _desc = lineBuf;
+                    _desc = String(lineBuf, 0, lineBuf.size-1);
             }
         }
         
     }
 
+    /// ensure test has required sections and that they contain valid data
+    /// also check to see if we're skipping this test for some reason
+    void checkTemplate() {        
+        // XXX 09/10 - introduces bad IR!
+        //if (!_testData["FILE"]) {
+        //    _isSkipped = "the template was missing a FILE section";
+        //}
+        _isValid = true;
+    }
+
+    void run() {
+        
+        if (_isSkipped) {
+            cout `$_isSkipped\n`;
+            return;
+        }
+
+        cout `running [$_fInfo]\n`;
+
+    }
+
     oper init(FileInfo info): _fInfo = info,
                               _desc("Unknown") {
         loadTemplate();
+        checkTemplate();
     }
 
     void _dump(Writer out) {
@@ -64,7 +92,7 @@ class Test {
 
     void writeTo(Writer out) {
         Formatter(out) `[$_fInfo]: $_desc\n`;
-        _dump(out);
+        //_dump(out);
     }
 
 }
@@ -73,9 +101,9 @@ class TestSuite {
 
     String _rootDir;
     List _testList;
-
+    
     void usage() {
-        cout `screen <dir>\n`;
+        cout `screen <test dir> <output dir>\n`;
         exit(1);
     }
     
@@ -96,7 +124,7 @@ class TestSuite {
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
             if (curFile.matches("*.crkt")) {
-                cout `found test template file: $curFile\n`;
+                //cout `found test template file: $curFile\n`;
                 test := Test(curFile);
                 _testList.append(test);
             }
@@ -115,14 +143,14 @@ class TestSuite {
 
     void runTests() {
 
-        cout `\nrunning tests...\n`;
+        //cout `\nrunning tests...\n`;
 
         Test curTest = null;
 
         i := _testList.iter();
         while (i.nx()) {
             curTest = Test.cast(i.elem());
-            cout `$curTest\n`;
+            curTest.run();
         }
 
     }
@@ -132,7 +160,9 @@ class TestSuite {
         if (argv.count() <= 1) {
             usage();            
         }
-                
+
+        cout `screen v$(SCREEN_VERSION): now testing for crack\n`;
+
         _rootDir = argv[1];
         scanForTests(Directory(_rootDir));
 

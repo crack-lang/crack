@@ -1,13 +1,14 @@
-// Classes for io streams
+// Classes for interfaces files
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cerr, Formatter, Writer, FDReader;
+import crack.io Formatter, Writer, FDReader;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
+import crack.exp.error err;
 
-import "libc.so.6" fopen, fclose, fileno, strerror;
-import "libcrack-runtime.so"  _crack_fnmatch, _crack_strerror;
+import "libc.so.6" fopen, fclose, fileno;
+import "libcrack-runtime.so"  _crack_fnmatch;
 
 class _FILE: Opaque { }
 
@@ -15,7 +16,6 @@ _FILE fopen(byteptr fn, byteptr mode);
 int fclose(_FILE f);
 int fileno(_FILE f);
 int _crack_fnmatch(byteptr pattern, byteptr string);
-byteptr _crack_strerror();
 
 class FileInfo: Object {
 
@@ -63,10 +63,10 @@ class File : FileInfo,
                                            _mode(mode0) {
         _fd = fopen(name0.buffer, _mode.buffer);
         if (_fd is null) {
-            err := String(_crack_strerror());
-            cerr `$name0: $err\n`;
+            err.do() `strerror()`;
             _isValid = false;
             _isOpened = false;
+            return;
         }
         else {
             

@@ -5,7 +5,7 @@ import crack.io cerr, Formatter, Writer;
 import crack.lang die, FreeBase;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
-import crack.exp.stream Openable, FileInfo;
+import crack.exp.file Openable, FileInfo;
 
 import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
                              _crack_getDirEntry;
