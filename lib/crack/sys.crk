@@ -2,7 +2,9 @@
 ## Copyright 2010 Google Inc.
 
 import crack.exp.error err;
-import "libc.so.6" exit;
+import "libc.so.6" exit, free;
+
+void free(voidptr p);
 
 ## The standard library exit() function - call it with the exit code to be 
 ## returned from the program.
@@ -12,6 +14,7 @@ class StringArray {
     
     array[String] __rep = null;
     uint __count;
+    array[byteptr] __primArray = null;
     
     oper init(uint count) : 
         __rep = array[String](count),
@@ -47,11 +50,26 @@ class StringArray {
             __rep[i].oper release();
             i = i + 1;
         }
+        free(__rep);
+        if (!(__primArray is null)) free(__primArray);
     }
 
     ## Returns the number of elements in the array.    
     uint count() {
         return __count;
+    }
+    
+    ## Returns the primitive array (useful for communicating to C bindings)
+    array[byteptr] getPrimArray() {
+        if (__primArray is null) {
+            __primArray = array[byteptr](__count);
+            uint i;
+            while (i < __count) {
+                __primArray[i] = __rep[i].buffer;
+                ++i;
+            }
+        }
+        return __primArray;
     }
 }
 
