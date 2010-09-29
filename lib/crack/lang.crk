@@ -178,6 +178,12 @@ class Buffer : Object {
         return buffer[index];
     }
 
+    byte oper [](int index) {
+        if (index < 0 || index >= size)
+            _die('string index out of bounds');
+        return buffer[uint(index)];
+    }
+
     ## Override Object.cmp() to do buffer comparison.
     int cmp(Object other) {
         
@@ -282,7 +288,9 @@ class ManagedBuffer : WriteBuffer {
 };
 
 ## The string class.  Strings are immutable managed Buffer's - when they are 
-## deleted, their buffer goes away.
+## deleted, their buffer goes away. 
+## The buffers are not guaranteed to be null-terminated, use nullTerminated() 
+## if necessary
 class String : Buffer {
 
     ## Initialize from a buffer.  This copies the buffer, it does not assume 
@@ -337,13 +345,39 @@ class String : Buffer {
         _freeBuffer();
     }
 
+    ## Find the rightmost index of a character in a string
+    ## returns -1 if not found
+    ## note this function is not safe for strings larger than INT_MAX
+    int rfind(byte c) {
+        uint i = size; // loop start with decrement so we start one high
+        bool brk = false;
+        while (!brk) {
+            i--;
+            if (buffer[i] == c)
+                return int(i); // warning, possible truncate
+            brk = (i == 0);
+        }
+        return -1;
+    }
+
+    ## Find the leftmost index of a character in a string
+    ## returns -1 if not found
+    ## note this function is not safe for strings larger than INT_MAX
+    int lfind(byte c) {
+        uint i = 0;
+        while (i++ < size) {
+            if (buffer[i] == c)
+                return int(i); // warning, possible truncate
+        }
+        return -1;
+    }
+
     ## Concatenation
     String oper +(String rhs) {
         uint newBufferSize = this.size + rhs.size;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
         memcpy(newRawBuffer+this.size, rhs.buffer, rhs.size);
-        newRawBuffer[newBufferSize] = 0;
         return String(newRawBuffer, newBufferSize, true);
     }
 
@@ -354,7 +388,6 @@ class String : Buffer {
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
         memcpy(newRawBuffer+this.size, rhs, rhs_size);
-        newRawBuffer[newBufferSize] = 0;
         return String(newRawBuffer, newBufferSize, true);
     }
 };
@@ -371,6 +404,19 @@ class SubString : String {
     }
 
     void _freeBuffer() {}
+}
+
+## A string that is guaranteed to be null terminated. The trailing null is
+## not included in the size of the string.
+class CString : String {
+
+    oper init(String s0) {
+        size = s0.size;
+        buffer = malloc(s0.size+1);
+        memcpy(buffer, s0.buffer, s0.size);
+        buffer[size] = 0;
+    }
+
 }
 
 class StaticString : String {
