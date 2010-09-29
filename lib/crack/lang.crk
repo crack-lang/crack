@@ -289,8 +289,8 @@ class ManagedBuffer : WriteBuffer {
 
 ## The string class.  Strings are immutable managed Buffer's - when they are 
 ## deleted, their buffer goes away. 
-## The buffers are not guaranteed to be null-terminated, use nullTerminated() 
-## if necessary
+## The buffer is not guaranteed to be null-terminated, use CString if
+## that's a requirement
 class String : Buffer {
 
     ## Initialize from a buffer.  This copies the buffer, it does not assume 
