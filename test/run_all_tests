@@ -476,6 +476,19 @@ test_output 'break scope limited to loop' \
     "${parseError}2: Break can only be used in the body of a while, for or \
 switch statement."
 
+test_output 'while does boolean conversion' \
+    'class A {
+         int val; oper init(int val0) : val = val0 {} 
+         bool toBool() { return val; } 
+     }
+     a := A(3);
+     while (a) {
+         if (!a) { puts("failed"); break; }
+         --a.val;
+     };
+     puts("ok");' \
+    ok
+
 test_output 'error on dead code' \
     'while (1) { break; puts("fail"); }' \
     "${parseError}1: unreachable code"

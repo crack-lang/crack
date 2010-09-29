@@ -1621,12 +1621,16 @@ void Parser::parseWhileStmt() {
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
    
-   ExprPtr expr = parseExpression();
+   TypeDef *boolType = context->globalData->boolType.get();
+   ExprPtr cond = parseExpression()->convert(*context, boolType);
+   if (!cond)
+      error(tok, "Condition is not boolean.");
+
    tok = getToken();
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
-   BranchpointPtr pos = context->builder.emitBeginWhile(*context, expr.get());
+   BranchpointPtr pos = context->builder.emitBeginWhile(*context, cond.get());
    context->setBreak(pos.get());
    context->setContinue(pos.get());
    ContextPtr terminal = parseIfClause();
