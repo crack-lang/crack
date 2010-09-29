@@ -2,7 +2,7 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.io cerr, Formatter, Writer;
-import crack.lang die, FreeBase;
+import crack.lang die, FreeBase, CString, SubString;
 import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
 import crack.exp.file Openable, FileInfo;
@@ -39,17 +39,28 @@ class Directory : Object, Openable {
     List _dirList;
     List _fileList;
 
-    oper init(String name0/*, bool open=true*/): name(name0) {
-        // see issue #15
-        /*
+    void _open();
+    
+    oper init(String name0, bool open): name(name0) {
+        // possibly strip trailing delim
+        if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
+            name = SubString(name, 0, name.size-1);
         if (open)
             _open();
-        */
+    }
+
+    oper init(String name0): name(name0) {
+        // possibly strip trailing delim
+        if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
+            name = SubString(name, 0, name.size-1);
+        // default open
+        _open();
     }
 
     void _open() {
 
-        _dir = _crack_opendir(name.buffer);
+        cn := CString(name);
+        _dir = _crack_opendir(cn.buffer);
         _isValid = !(_dir is null);
         _isOpened = true;
 
@@ -76,6 +87,10 @@ class Directory : Object, Openable {
     oper del() {
         if (_isValid)
             _crack_closedir(_dir);
+    }
+
+    String nameWithTrailing() {
+        return name+PATH_SEPARATOR;
     }
 
     Iterator dirIter() { 

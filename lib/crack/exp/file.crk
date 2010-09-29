@@ -1,21 +1,24 @@
 // Classes for interfaces files
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io Formatter, Writer, FDReader;
-import crack.lang die, FreeBase;
+import crack.io Formatter, Writer, FDReader, FDWriter;
+import crack.lang die, FreeBase, SubString, CString;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
-import crack.exp.error err;
+import crack.exp.error err, strerror;
 
 import "libc.so.6" fopen, fclose, fileno;
-import "libcrack-runtime.so"  _crack_fnmatch;
+import "libcrack-runtime.so"  _crack_fnmatch, _crack_basename, _crack_dirname;
 
 class _FILE: Opaque { }
 
 _FILE fopen(byteptr fn, byteptr mode);
+
 int fclose(_FILE f);
 int fileno(_FILE f);
 int _crack_fnmatch(byteptr pattern, byteptr string);
+byteptr _crack_basename(byteptr path);
+byteptr _crack_dirname(byteptr path);
 
 class FileInfo: Object {
 
@@ -31,6 +34,27 @@ class FileInfo: Object {
     void writeTo(Writer out) {
         Formatter(out) `$name`;
     }
+    
+    String basename(bool stripExtension) {
+        path := CString(name); // copies for null termination
+        bname := String(_crack_basename(path.buffer)); // copies again
+        if (stripExtension) {
+            pos := bname.rfind(0x2e); // '.' (dot)
+            if (pos == -1)
+                return bname;
+            else
+                return SubString(bname, 0, uint(pos));
+        }
+        else {
+            return bname;
+        }
+    }
+
+    String dirname() {
+        path := CString(name); // copies for null termination
+        return String(_crack_dirname(path.buffer)); // copies again
+    }
+
 
 }
 
@@ -52,39 +76,61 @@ class Openable: VTableBase {
 
 }
 
+byte F_READ  = 0x72; // 'r'
+byte F_WRITE = 0x77; // 'w'
+
 class File : FileInfo,
              Openable {
 
     String _mode;
     _FILE _fd = null;
     LineReader _lReader = null;
+    FDWriter _writer = null;
+    
+    void _open() {
 
-    oper init(String name0, String mode0): FileInfo(name0),
-                                           _mode(mode0) {
-        _fd = fopen(name0.buffer, _mode.buffer);
+        n := CString(name);
+        _fd = fopen(n.buffer, _mode.buffer);
         if (_fd is null) {
-            err.do() `strerror()`;
-            _isValid = false;
+            err.do() `$name: $(strerror())`;
             _isOpened = false;
             return;
         }
-        else {
-            
-            // XXX parse mode, setup based on read/write modes
-            _lReader = LineReader(FDReader(fileno(_fd)));
-            _isValid = true;
-            _isOpened = true;
-            
-        }
+        
+        _isOpened = true;
+        
+    }
+    
+    void _initRead() {
+        
+        _open();
+        _lReader = LineReader(FDReader(fileno(_fd)));
+        _isValid = true;
+        
+    }
+
+    void _initWrite() {
+        _open();
+        _writer = FDWriter(fileno(_fd));
+        _isValid = true;
     }
 
     String nextLine() {
 
-        if (!_isValid || !_isOpened)
+        if (_lReader is null || !_isValid)
             return null;
 
         return _lReader.next();
 
+    }
+
+    void write(String data) {
+        
+        if (_writer is null || !_isValid)
+            return null;
+        
+        _writer.write(data);
+        
     }
 
     void close() {
@@ -95,6 +141,22 @@ class File : FileInfo,
     oper del() {
         if (_isOpened)
             close();
+    }
+
+    oper init(String name0, String mode0): FileInfo(name0),
+                                           _mode(mode0) {
+
+        // parse file mode
+        if (_mode.size != 1 ||
+            ((_mode[0] != F_READ) && 
+             (_mode[0] != F_WRITE)))
+            err.do() `$name: invalid file mode "$_mode", must be one of "r" or "w"`;
+        
+        if (_mode[0] == F_READ)
+            _initRead();
+        else
+            _initWrite();
+        
     }
 
 }

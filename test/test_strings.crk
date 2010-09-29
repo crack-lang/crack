@@ -1,6 +1,6 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang die, ManagedBuffer, SubString;
+import crack.lang die, ManagedBuffer, SubString, CString;
 import crack.io cout;
 
 if ('test' >= 'test string')
@@ -27,5 +27,22 @@ if (s != 'copied')
 s = SubString('test of referenced substring', 8, 10);
 if (s != 'referenced')
     die('failed to create substring reference.');
+
+cs := CString("test 123");
+if (cs.size != 8)
+    die('failed to create c string');
+if (cs.buffer[cs.size] != 0)
+    die('failed to null terminate');
+
+// string methods
+s = String("one.two.three");
+if (s.rfind("."[0]) != 7)
+    die('rfind failed');
+if (s.rfind("@"[0]) != -1)
+    die('rfind nofind failed');
+if (s.lfind("."[0]) != 3)
+    die('lfind failed');
+if (s.lfind("@"[0]) != -1)
+    die('lfind nofind failed');
 
 cout `ok\n`;

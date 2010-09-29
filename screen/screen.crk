@@ -16,7 +16,6 @@ class Test {
     String _desc = null;
     TreeMap _testData;
     
-    bool _isValid = false;
     String _isSkipped = null;
 
     oper init(): _desc("Unknown") { }
@@ -26,7 +25,7 @@ class Test {
         f := File(_fInfo.name, "r");
         if (!f.isValid()) {
             cout `file: $(_fInfo.name) could not be opened!\n`;
-            _isValid = false;
+            _isSkipped = "unable to open";
             return;
         }
         
@@ -35,7 +34,7 @@ class Test {
         StringWriter dataBuf;
         headerPat := Regex('^--(\\w+)--$');
         while (lineBuf = f.nextLine()) {
-            //cerr `debug: $buf`;
+            //cerr `debug: $lineBuf`;
             // look for section change
             m := headerPat.search(lineBuf);
             if (m) {
@@ -43,6 +42,7 @@ class Test {
                     _testData[curSection] = dataBuf.createString();
                 curSection = m.group(1);
                 //cerr `debug: switching to group $curSection\n`;
+                dataBuf = StringWriter();
             }
             else {
                 // add line to current section
@@ -57,21 +57,34 @@ class Test {
     /// ensure test has required sections and that they contain valid data
     /// also check to see if we're skipping this test for some reason
     void checkTemplate() {        
-        // XXX 09/10 - introduces bad IR!
-        //if (!_testData["FILE"]) {
-        //    _isSkipped = "the template was missing a FILE section";
-        //}
-        _isValid = true;
+        if (!_testData["FILE"]) {
+            _isSkipped = "the template was missing a FILE section";
+        }
     }
 
-    void run() {
+    void writeScript(Directory outDir) {
+        
+        outName := outDir.nameWithTrailing()+_fInfo.basename(true) + ".crk";
+        
+        //cout `writing: $outName\n`;
+        
+        out := File(outName,"w");        
+        out.write(String.cast(_testData["FILE"]));
+        
+    }
+
+    void run(Directory outDir) {
         
         if (_isSkipped) {
             cout `$_isSkipped\n`;
             return;
         }
 
-        cout `running [$_fInfo]\n`;
+        writeScript(outDir);
+
+        cout `[$_fInfo]: `;
+        
+        cout `\n`;
 
     }
 
@@ -99,7 +112,7 @@ class Test {
 
 class TestSuite {
 
-    String _rootDir;
+    String _rootDir, _outDir;
     List _testList;
     
     void usage() {
@@ -141,32 +154,39 @@ class TestSuite {
 
     }
 
-    void runTests() {
+    void runTests(Directory dir) {
 
-        //cout `\nrunning tests...\n`;
+        if (!dir.isValid()) {
+            cerr `invalid output directory: $dir\n`;
+            return;
+        }
+        
+        cout `\nrunning tests with output in $dir...\n`;
 
         Test curTest = null;
 
         i := _testList.iter();
         while (i.nx()) {
             curTest = Test.cast(i.elem());
-            curTest.run();
+            curTest.run(dir);
         }
 
     }
 
     oper init() {
         
-        if (argv.count() <= 1) {
+        if (argv.count() <= 2) {
             usage();            
         }
 
         cout `screen v$(SCREEN_VERSION): now testing for crack\n`;
 
         _rootDir = argv[1];
+        _outDir = argv[2];
+        
         scanForTests(Directory(_rootDir));
 
-        runTests();
+        runTests(Directory(_outDir, false));
         
     }
 

@@ -10,6 +10,7 @@
 #include <fnmatch.h>
 #include <errno.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "Dir.h"
 
@@ -75,6 +76,14 @@ int _crack_fnmatch(const char* pattern, const char* string) {
 
 char* _crack_strerror(void) {
     return strerror(errno);
+}
+
+char* _crack_basename(char* path) {
+    return basename(path);
+}
+
+char* _crack_dirname(char* path) {
+    return dirname(path);
 }
 
 }
