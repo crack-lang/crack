@@ -48,6 +48,8 @@ class Container {
         return null;
     }
 
+    uint count() { die('Container.count() not implemented.'); return 0; }
+
     void writeTo(Writer writer) {
         out := Formatter(writer);
         i := iter();
@@ -70,75 +72,92 @@ class ListNode {
 
 ## A linked list iterator.
 class ListIter : Iterator {
-    ListNode __node = null;
+    ListNode _node = null;
     bool __first;
-    oper init(ListNode node) : __node = node, __first = true {}
+    oper init(ListNode node) : _node = node, __first = true {}
     
     Object elem() {
-        if (__node)
-            return __node.elem;
+        if (_node)
+            return _node.elem;
         else
             return null;
     }
     
     bool next() {
-        if (!__node)
+        if (!_node)
             return false;
         
-        __node = __node.next;
-        return __node;
+        _node = _node.next;
+        return _node;
     }
 
     bool nx() {
-        if (!__node)
+        if (!_node)
             return false;
         
         if (__first)
             __first = false;
         else
-            __node = __node.next;
-        return __node;
+            _node = _node.next;
+        return _node;
     }
     
-    bool isTrue() { return __node; }
+    bool isTrue() { return _node; }
 }
 
 ## A singly-linked list.
 class List : Container {
     ListNode head = null;
     ListNode tail = null;
-    uint __count;
+    uint _count;
     
     Iterator iter() {
         return ListIter(head);
     }
+
+    ListNode _createNode(Object elem, ListNode prev) {
+        return ListNode(elem);
+    }
     
     void append(Object elem) {
         if (tail) {
-            temp := ListNode(elem);
+            temp := _createNode(elem, tail);
             tail.next = temp;
             tail = temp;
         } else {
-            head = tail = ListNode(elem);
+            head = tail = _createNode(elem, null);
         }
-        __count = __count + 1;
+        _count = _count + 1;
     }
     
-    void pushFront(Object elem) {
-        newNode := ListNode(elem);
+    void pushHead(Object elem) {
+        newNode := _createNode(elem, null);
         if (head) {
             newNode.next = head;
             head = newNode;
         } else {
             head = tail = newNode;
         }
-        __count = __count + 1;
+        _count = _count + 1;
+    }
+    
+    void pushTail(Object elem) {
+        append(elem);
+    }
+    
+    ## Remove the element from the front of the list and return it.
+    Object popHead() {
+        if (!head) die('popHead(): empty list');
+        elem := head.elem;
+        head = head.next;
+        --_count;
+        return elem;
     }
 
     void insert(uint index, Object elem) {
         # special-case inserting at the beginning
         if (!index) {
-            pushFront(elem);
+            pushHead(elem);
             return;
         }
 
@@ -152,14 +171,14 @@ class List : Container {
         if (!node) die('List index out of bounds.');
 
         # create a new node and append it to the node we found
-        newNode := ListNode(elem);
+        newNode := _createNode(elem, node);
         newNode.next = node.next;
         node.next = newNode;
         
         # see if we need to fix the tail
         if (node is tail)
             tail = newNode;
-        __count = __count + 1;
+        _count = _count + 1;
     }
 
     ListNode __findNode(uint index) {
@@ -174,7 +193,7 @@ class List : Container {
     }
     
     void delete(uint index) {
-        if (index > __count)
+        if (index > _count)
             die('List index out of range in delete()');
         if (index > 0) {
             # find the node before it.
@@ -193,17 +212,126 @@ class List : Container {
             head = tmp;
         }
         
-        __count = __count - 1;
+        _count = _count - 1;
     }
 
     Object oper [](uint index) {
-        if (index > __count)
-            die('List index out of range in delete()');
+        if (index > _count)
+            die('List index out of range in []');
         node := __findNode(index);
         return node.elem;
     }
     
-    uint count() { return __count; }
+    uint count() { return _count; }
+}
+
+class DListNode : ListNode {
+    DListNode _prev = null;
+
+    oper init(Object elem0, ListNode prev) :
+        ListNode(elem0), 
+        _prev = DListNode.unsafeCast(prev) {
+    }
+}
+
+class DListIter : ListIter {
+    oper init(DListNode node) : ListIter(node) {}
+    
+    bool last() { _node = DListNode.unsafeCast(_node)._prev; return _node; }
+}
+
+## Doubly-linked list
+class DList : List {
+    
+    oper del() {
+        # have to break the reference cycles
+        node := DListNode.unsafeCast(head);
+        while (node) {
+            node._prev = null;
+            node = DListNode.unsafeCast(node.next);
+        }
+    }
+
+    ListNode _createNode(Object elem, ListNode prev) {
+        return DListNode(elem, prev);
+    }
+
+    void insert(Iterator ix, Object elem) {
+        i := DListIter.cast(ix);
+        
+        # get what will be the next and previous node of the new node.
+        next := DListNode.unsafeCast(i._node);
+        prev := next._prev;
+        new := DListNode.unsafeCast(_createNode(elem, prev));
+        new.next = next;
+
+        if (prev)
+            prev.next = new;
+        else
+            head = new;
+
+        if (next)
+            next._prev = new;
+        else
+            tail = new;
+        
+        i._node = new;
+        ++_count;
+    }
+
+    ## Insert the object at the iterator (after insertion, the iterator will 
+    ## reference a new node with the element, the old node that
+    ## iterator referenced will be the next node)
+    void delete(Iterator ix) {
+        i := DListIter.cast(ix);
+        node := DListNode.unsafeCast(i._node);
+        if (node.next)
+            DListNode.unsafeCast(node.next)._prev = node._prev;
+        else
+            tail = node._prev;
+        
+        if (node._prev)
+            node._prev.next = node.next;
+        else
+            head = node.next;
+        
+        --_count;
+        i._node = node.next;
+    }
+
+    Object popHead() {
+        if (!head) die('popHead(): empty list');
+        elem := head.elem;
+        head = head.next;
+        DListNode.unsafeCast(head)._prev = null;
+        --_count;
+        return elem;
+    }
+    
+    ## Remove the element from the back of the list and return it.
+    Object popTail() {
+        if (!tail) die('popTail(): empty list');
+        elem := tail.elem;
+        node := DListNode.unsafeCast(tail);
+        tail = node._prev;
+        node._prev.next = null;
+        --_count;
+        return elem;
+    }
+
+    Iterator iter() {
+        return DListIter(DListNode.unsafeCast(head));
+    }
+    
+    ## Returns a bidirectional iterator.
+    ## if 'back' is true, initialize it to point to the last node on the list. 
+    ## Otherwise point it to the first node.
+    DListIter bidiIter(bool back) {
+        if (back)
+            return DListIter(DListNode.unsafeCast(tail));
+        else
+            return DListIter(DListNode.unsafeCast(head));
+    }    
 }
 
 class _ArrayIface : Container {
