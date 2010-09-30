@@ -12,10 +12,14 @@ if (m.group() != 'simple') die('group failed');
 rx = Regex('blah{(.*)}');
 m = rx.search('this is blah{foo}');
 if (!m || m.group(1) != 'foo') die('group(1) failed');
+if (m.begin(1) != 13) die('begin(1) failed');
+if (m.end(1) != 16) die('end(1) failed');
 
 rx = Regex('^blah{(?P<stuff>.*)}');
 m = rx.search('blah{foo}');
 if (!m || m.group('stuff') != 'foo')
     die('named groups failed');
+if (m.begin('stuff') != 5) die('begin(stuff) failed');
+if (m.end('stuff') != 8) die('end(stuff) failed');
 
 cout `ok\n`;

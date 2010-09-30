@@ -76,10 +76,24 @@ class Match {
     
     String group() { return group(0); }
 
+    uint __getIndex(String name) {
+        int i = pcre_get_stringnumber(regex._rx, name.buffer);
+        if (i < 0) {
+            death `undefined group name $name`;
+            die(death.createString());
+        }
+        return uint(i);
+    }
+
     ## Returns the index of the beginning of the indexed group.
     int begin(uint index) {
         __checkGroupIndex(index);
         return __captures[index * 2];
+    }
+    
+    ## Returns the index of the beginning of the named group.
+    int begin(String name) {
+        return begin(__getIndex(name));
     }
     
     int begin() { return begin(0); }
@@ -90,16 +104,16 @@ class Match {
         return __captures[index * 2 + 1];
     }
     
+    int end(String name) {
+        return end(__getIndex(name));
+    }
+    
     int end() { return end(0); }
 
     ## Returns the value of the named group.    
     String group(String name) {
-        int i = pcre_get_stringnumber(regex._rx, name.buffer);
-        if (i < 0) {
-            death `undefined group name $name`;
-            die(death.createString());
-        }
-        return group(uint(i));
+        i := __getIndex(name);
+        return group(i);
     }
 };
 
