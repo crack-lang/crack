@@ -1,7 +1,7 @@
 
 import crack.lang die, ManagedBuffer;
 import crack.io cout;
-import crack.net sockconsts, SockAddrIn, Socket, Poller, PollFD;
+import crack.net sockconsts, SockAddrIn, Socket, Poller, PollEvent;
 import crack.time TimeDelta;
 import "libc.so.6" perror, sleep;
 
@@ -47,7 +47,7 @@ poller.add(accepted.sock, sockconsts.POLLIN | sockconsts.POLLERR);
 poller.add(cln, sockconsts.POLLIN | sockconsts.POLLERR);
 cln.send('to server', 0);
 poller.wait(null);
-PollFD p = null;
+PollEvent p = null;
 bool ok;
 while (p = poller.nx()) {
     if (!(p.pollable is accepted.sock)) {

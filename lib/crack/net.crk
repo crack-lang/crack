@@ -118,13 +118,13 @@ class Pollable {
     int getFD() { err.do() `Pollable.getFD() not defined.`; return 0; }
 }
 
-class PollFD {
+class PollEvent {
     int fd, events, revents;
     Pollable pollable;
 }
 
 int _crack_pollset_next(PollFDs set, uint size, uint index,
-                        PollFD outputEntry
+                        PollEvent outputEntry
                         );
 
 ## Wrapper around a socket.
@@ -273,11 +273,11 @@ class Poller {
         return _crack_poll(__fds, __nextIndex, timeout, null);
     }
     
-    PollFD nx() {
+    PollEvent nx() {
         if (__iter == -1)
             return null;
 
-        PollFD result;
+        PollEvent result;
         __iter = _crack_pollset_next(__fds, __nextIndex, uint(__iter), 
                                      result
                                      );
