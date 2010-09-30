@@ -86,29 +86,29 @@ class Match {
     }
 
     ## Returns the index of the beginning of the indexed group.
-    int begin(uint index) {
+    uint begin(uint index) {
         __checkGroupIndex(index);
-        return __captures[index * 2];
+        return uint(__captures[index * 2]);
     }
     
     ## Returns the index of the beginning of the named group.
-    int begin(String name) {
+    uint begin(String name) {
         return begin(__getIndex(name));
     }
     
-    int begin() { return begin(0); }
+    uint begin() { return begin(0); }
     
     ## Returns the index of the end of the indexed group.
-    int end(uint index) {
+    uint end(uint index) {
         __checkGroupIndex(index);
-        return __captures[index * 2 + 1];
+        return uint(__captures[index * 2 + 1]);
     }
     
-    int end(String name) {
+    uint end(String name) {
         return end(__getIndex(name));
     }
     
-    int end() { return end(0); }
+    uint end() { return end(0); }
 
     ## Returns the value of the named group.    
     String group(String name) {
