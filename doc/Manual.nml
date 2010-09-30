@@ -648,8 +648,8 @@ simple example of a class, consider the representation of an x, y graphics
 coordinate:
 
 {{
-    import crack.lang XWriter;
-    import crack.io cout, XWFormatter;
+    import crack.lang Writer;
+    import crack.io cout, Formatter;
 
     class Coord {
         int x, y;
@@ -657,8 +657,8 @@ coordinate:
         oper init(int x0, int y0) : x = x0, y = y0 {}
         oper init() {}
 
-        void writeTo(XWriter out) {
-            XWFormatter(out) `Coord($x, $y)`;
+        void writeTo(Writer out) {
+            Formatter(out) `Coord($x, $y)`;
         }
     }
 }}
@@ -792,8 +792,8 @@ the square of the distance from the origin as follows:
 We could then add this information to our #writeTo()# method:
 
 {{
-    void writeTo(XWriter out) {
-        XWFormatter(out) `Coord($x, $y) [dist squared = $(distOrgSquared())]`;
+    void writeTo(Writer out) {
+        Formatter(out) `Coord($x, $y) [dist squared = $(distOrgSquared())]`;
     }
 }}
 
@@ -979,8 +979,8 @@ same bug in #NamedCoord#.  Inheritance provides a better way to reuse code:
         
         oper init(int x, int y, String name0) : Coord(x, y), name = name0 {}
         
-        void writeTo(XWriter out) {
-            XWFormatter(out) `NamedCoord($x, $y)`;
+        void writeTo(Writer out) {
+            Formatter(out) `NamedCoord($x, $y)`;
         }
     }
 }}
@@ -1048,8 +1048,8 @@ Going back to our #NamedCoord# example, we also defined another #writeTo()#
 method:
 
 {{
-    void writeTo(XWriter out) {
-        XWFormatter(out) `NamedCoord($x, $y)`;
+    void writeTo(Writer out) {
+        Formatter(out) `NamedCoord($x, $y)`;
     }
 }}
 
@@ -1063,8 +1063,8 @@ class name.  For example, we could have instead overridden #writeTo()#
 like this:
 
 {{
-    void writeTo(XWriter out) {
-        XWriterWrapper(out).write('Named');
+    void writeTo(Writer out) {
+        out.write('Named');
         Coord.writeTo(out);
     }
 }}
@@ -1277,7 +1277,7 @@ invoked on a #null# value.
     
     If you implement this, all of the normal comparison operators ("#==#", 
     "#!=#", "#<#", "#>#", "#<=#" and "#>=#") will work for you.
-#void writeTo(XWriter writer)#::
+#void writeTo(Writer writer)#::
     Write the receiver to #writer#.  This is used to allow the object to write 
     itself in its most natural representation - whatever that means for the 
     object type.
@@ -1552,10 +1552,6 @@ are already a few specializations of this class in the #crack.io# module.
     s := f.createString();  # s == "some text"
 }}
 
-#XWFormatter# lets you do high-level formatting given the low-level #XWriter# 
-object that gets passed to the #writeTo()# method (see the section on 
-\X(Inheritance) for an example).
-
 Reference Counting
 ------------------
 
@@ -1786,15 +1782,16 @@ the instance variable #buffer#) and a size (stored in the instance variable
 The memory that a buffer references is presumed to be read-only, but nothing 
 in the language enforces this.  For cases where a writable buffer is desired, 
 use something derived from a #WriteBuffer# subclass.  #WriteBuffer# inherits 
-from #Buffer#, but the read-only  requirement is presumed to be relaxed.
+from #Buffer#, but the read-only  requirement is relaxed: it is legal to 
+modify the buffer of a #WriteBuffer#.
 
-Most output functions accept a Buffer, most input functions accept a 
+Most output functions accept a #Buffer#, most input functions accept a 
 #WriteBuffer#.  For cases where you want a #WriteBuffer# that cleans up after 
 itself, use a \X(ManagedBuffer).
 
 Constant strings are actually of type #StaticString#.  This is a class for 
-strings that are not to be deleted (because static strings can reference data 
-in read-only memory segments).
+strings with buffers that are not to be deleted (because static strings can
+reference data in read-only memory segments).
 
 Like any object, a buffer can be converted to a #bool#.  A buffer converts to 
 *true* if it has a non-zero size.
@@ -1802,6 +1799,9 @@ Like any object, a buffer can be converted to a #bool#.  A buffer converts to
 Any two buffers can be compared - a byte-for-byte comparison is performed.
 If one buffer is identical to the beginning of the other, but is shorter, the 
 shorter buffer is "less than" the larger buffer.
+
+The #String# class is one of the few types that don't need to be imported.  
+#Buffer# and its other descendents can be imported from #crack.lang#.
 
 ManagedBuffer
 '''''''''''''
@@ -1824,7 +1824,7 @@ buffer or by passing ownership of it to the new string:
 }}
 
 Note that #Reader# includes a utility method that does this more intelligently 
-(it only transfers ownership if the amount read is at least 0.75 of the buffer 
+(it only transfers ownership if the amount read is at least 75% of the buffer
 size):
 
 {{
@@ -1832,6 +1832,95 @@ size):
     s := cin.read(1024);
 }}
 
+SubString
+'''''''''
+
+The SubString class provides a lightweight string that references the buffer 
+of an existing string.  You can create one by providing the constructor with 
+an existing string, a start position and a size:
+
+{{
+    import crack.lang SubString;
+    
+    s := SubString('this is a test', 10, 4);
+}}
+
+#SubString# is derived from #String#, so you can use it in the same way that 
+you would a string without the cost of managing and copying a portion of the 
+buffer.
+
+MixIn
+'''''
+
+The #MixIn# class allows you to do multiple inheritence safely - without risk 
+of breaking reference counting.  The #MixIn# approach is a stand-in for 
+virtual inheritence, which Crack 0.2 does not yet support.
+
+#MixIn# defines #bind# and #release# operators and a virtual function called 
+#getObject()# that knows how to get the #Object# instance that the class is 
+derived from.  This allows #bind# and #release# to operate on a reference to 
+the MixIn (which is not derived from Object) by convering it to an #Object# 
+with a #getObject()# method implemented by the concrete class.
+
+For example, we could use #MixIn# to define a pure interface like this:
+
+{{
+    import crack.lang MixIn;
+
+    class MyIface : MixIn {
+        void doSomething() { die('MyIface.doSomething() not implemented.'); }
+    }
+    
+    class MyConcrete : Object, MyIface {
+        
+        # we have to define getObject() to satisfy a MixIn.
+        Object getObject() { return this; }
+        
+        # implement the interface.
+        void doSomething() { cout `something happened\n`; }
+    }
+}}
+
+Unfortunately, because a class can only exist once in another class's 
+inheritence tree (except for VTableBase), you can only do this trick once in a 
+single class' ancestor list.  For example, if #Iface1# derives from #MixIn#, 
+and #Iface2# also derives from #MixIn#, it is illegal to define a #MyConcrete# 
+derived from both #Iface1# and #Iface2# because they share the #MixIn# ancestor.
+
+Because of this single-inheritence restriction, the #MixIn# strategy is really 
+more useful as a pattern than as a base class.  To make a class a MixIn, do 
+something like this:
+
+{{
+    class MyIface : VTableBase {
+        
+        Object getMyIfaceObject() {
+            _die('MixIn.getObject() not implemented.');
+            return null;
+        }
+    
+        oper bind() { if (!(this is null)) getMyIfaceObject().oper bind(); }
+        oper release() {
+            if (!(this is null)) getMyIfaceObject().oper release();
+        }
+        
+        void doSomething() { die('MyIface.doSomething() not implemented.'); }
+    }
+    
+    class MyConcrete : Object, MyIface {
+        
+        Object getMyIfaceObject() { return this; }
+        
+        void doSomething() { cout `something was done\n`; }
+    }
+}}
+
+This trick will allow you to define interfaces and other types of mix-ins 
+that can be safely inherited from in arbitrary ways.
+
+Note that all of this trickery is temporary: later versions of Crack will 
+support virtual base classes in a form that will make this functionality a 
+part of the language.
 
 Containers
 ----------
@@ -1853,6 +1942,18 @@ we need to do something like this to call bar on the zeroth element:
 
 Java-like generics will be supported in a later version of the language, and 
 you'll be able to have an #Array[Foo]#.
+
+All containers have a #count()# method that returns the number of elements in 
+the container.  They also convert to boolean based on whether or not they are 
+empty:
+
+{{
+    c := createContainer();
+    if (c)
+        cout `container has $(c.count()) elements\n`;
+    else
+        cout `container is empty\n`;
+}}
 
 Iterators
 '''''''''
@@ -1880,6 +1981,9 @@ iterator.
 The #nx()# method is a stop-gap solution - it exists because Crack doesn't 
 have a #for# statement yet.  #nx()# lets us do iteration in a while loop.  
 Don't expect it to stick around for very long.
+
+You can also use the more permanent #next()# method - this forwards the 
+iterator regardless of whether it is pointing to the first element or not.
 
 Arrays
 ''''''
@@ -1912,6 +2016,10 @@ To add an element to an array, use the #append()# method:
     cout `count = $(arr.count())\n`;  # writes "2"
 }}
 
+Note that #append()# will occasionally be an O(n) operation: if we don't have 
+capacity for a new element, #append()# will reallocate the array to one twice 
+as big.
+
 To get an element in an array, use the bracket operator:
 
 {{
@@ -1935,13 +2043,120 @@ Finally, like all containers, you can iterate over the elements of an array:
         cout `elem: $(i.elem())\n`;
 }}
 
+Linked Lists
+''''''''''''
+
+The #List# class implements a linked list.  Linked lists aren't very good for 
+random access, but they do support constant time insert and append, making 
+them preferrable to arrays in certain cases.
+
+The #List# interface looks very much like the #Array# interface:
+
+{{
+    import crack.container List;
+    
+    List l;
+    
+    # add some elements
+    l.append('first');
+    l.append('second');
+    
+    # iterate over them
+    i := l.iter();
+    while (i.nx())
+        cout `got element $(i.elem())\n`;
+}}
+
+Random access lookup, delete and insert are all available, although they are 
+all O(n) operations:
+
+{{
+    cout `$(l[1])\n`;       # prints "second"
+    l.delete(0);            # deletes 'first'
+    l.insert(0, 'first');   # reinserts 'first'
+}}
+
+You can also push a new element onto the front of the list (equivalent to 
+#insert(0, ...)# but terser and slightly faster):
+
+{{
+    l.pushHead('zero');
+}}
+
+#pushTail()# is also available as a synonym for #append()#.
+
+Likewise, you can pop items off the head of the list:
+
+{{
+    elem := l.popHead();  # after the last operation, elem == 'zero'
+}}
+
+#popTail()# can not be implemented efficiently: if you need this, use a 
+#DList#.
+
+Doubly-Linked Lists
+'''''''''''''''''''
+
+The #DList# class implements a doubly-linked list.  #DList# provides some 
+additional functionality over #List# and can facilitate faster operations, but 
+at the cost of higher memory usage (each #DList# element requires an 
+additional pointer).
+
+#DList# supports inserting and deleting the element referenced by an iterator:
+
+{{
+    DList dl;
+    fillList(dl);
+
+    i := dl.iter();
+    while (i.nx()) {
+    
+        # delete the 'delete me' string from the list
+        if (i.elem() == 'delete me')
+            dl.delete(i);
+        
+        # insert 'inserted' before 'before me'
+        else if (i.elem() == 'before me')
+            dl.insert(i, 'inserted');
+    }
+}}
+    
+After insert, the iterator points to the new element.  After delete, it points 
+to the element after the deleted element.
+
+#DList# also supports a bi-directional iterator:
+
+{{
+    # get a bi-directional iterator - an argument of "true" causes 
+    # the iterator to be initialized to the end of the list.  "false" would 
+    # start it at the beginning.
+    i := dl.bidiIter(true);
+    while (i) {
+        cout `$(i.elem())\n`;
+        i.last();
+    }
+}}
+
+You can use a bi-directional iterator everywhere you can use a normal iterator.
+
+In addition to the #popHead()# function, #DList# supports a #popTail()# 
+function:
+
+{{
+    DList dl;
+    dl.append('first');
+    dl.append('second');
+    elem := dl.popTail();  # elem == 'second'
+}}
+
 RBTree Maps
 '''''''''''
 
 A "map" or an "associative array" is a container that stores a set of values 
-each indexed by a key.  The only kind of map that Crack 0.2 supports is 
-red-black trees.  Red-black trees provide a natural sort order, and provide 
-O(log n) insertion and lookup with constant time rebalancing.
+each indexed by a key.  Both keys and values can be arbitrary objects.  The 
+only kind of map that Crack 0.2 supports is red-black trees.  Red-black trees 
+provide a natural sort order, and provide O(log n) insertion and lookup with 
+constant time rebalancing.
 
 To create an RBTree map:
 
@@ -1965,4 +2180,559 @@ To access them:
     cout `$(map['first'])\n`;  # writes "1"
 }}
 
-Iteration is the same as for arrays:
+Iteration is the same as for arrays, except that the elements are #KeyVal# 
+objects.  As their name suggests, #KeyVal# objects have a #key# and #val# 
+attribute:
+
+{{
+    i := map.iter();
+    while (i.nx()) {
+        kv := KeyVal.cast(i.elem());
+        cout `map[$(kv.key)] = $(kv.val)\n`;
+    }
+}}
+
+Error Handling
+--------------
+
+Future versions of crack will have real C++\/Java like exception handling.  
+But for version 0.2, we at least have the error module.  The error module lets 
+you record an error in a manner that can be controlled by the callers.  The 
+default action is to abort.
+
+Here's an example of how we might use it to verify a parameter:
+
+{{
+    import crack.exp.error err;
+    
+    Object checkForNull(String context, Object val) {
+        if (val is null)
+            err.do() `$context got a null argument`;
+        return val;
+    }
+}}
+
+#err.do()# returns a formatter that writes to a writer stored in the #err# 
+object.  When this formatter is destroyed, it will call #err.finish()# which 
+calls #abort()#, terminating the program, if #err.fatal# is true.  If 
+#err.fatal# is false, #err.gotError# is set to true and the program continues.
+
+To prevent a function from aborting the program when an error occurs, we can 
+use the #ErrorCatcher# class:
+
+{{
+    import crack.exp.error err, ErrorCatcher;
+    
+    void myFunc(Object arg) {
+        catcher := ErrorCatcher();
+        checkForNull("myFunc", arg);
+        if (catcher.gotError())
+            cout `We got a null and don't want to die: $(catcher.getText())\n`;
+    }
+}}
+
+When you create an #ErrorCatcher#, it sets #error.fatal# to false and sets 
+#error.writer# to an internal #StringWriter#, causing the error handler to 
+have no visible effect.  The caller can then check to see if there was an 
+error from the catcher, and obtain the error text from the catcher's 
+#getText()# method.  When the catcher is destroyed, it restores the error 
+handler to its previous state.
+
+It is not advisable to use this mechanism for errors that can conceivably 
+indicate something other than a programming error.  For example, it would not 
+be advisable for a file interface to call a fatal error for a file not found.  
+Better to use a lightweight return code and let the caller decide whether this 
+represents a programming error.
+
+As a convenience, the #crack.exp.error# module also provides a #strerror()# 
+method. #strerror()# returns the error text of the last error that occurred 
+in the C library.
+
+Program Control (sys)
+---------------------
+
+#crack.sys# contains symbols for interacting with the executable context.  It 
+defines the #exit()# function and #argv# variable.
+
+The #exit()# function can be used to terminate the program at any point with 
+the given exit code:
+
+{{
+    import crack.sys exit;
+
+    # terminate with the normal code.
+    exit(0);
+}}
+
+The #argv# variable is a #StringArray# instance that allows you to access the 
+command line arguments:
+
+{{
+    import crack.sys argv;
+
+    # write out all of the args except the program name (argv[0])
+    uint i = 1;
+    while (i < argv.count()) {
+        cout `arg $i = $(argv[i++])\n`;
+    }
+}}
+
+#StringArray# is a special purpose class just for storing arg lists without 
+having to do annoying casting.  You can use it as a general purpose string 
+sequence if you like, it will be supplanted by #Array[String]# once crack 
+supports generics (post 0.2).
+
+Input\/Output
+-------------
+
+The #crack.io# module contains crack's basic input\/output interfaces.  The 
+#Reader# and #Writer# classes are the core interfaces for reading and writing 
+data.  These make use of the #Buffer# hierarchy and are implemented using the 
+mix-in pattern so that they can be combined with each other and other classes.
+
+The #crack.io# module defines three global variables: #cin#, #cout#, and 
+#cerr#.  These are wrappers around the system standard input, output and error 
+streams.  #cin# is a kind of #Reader# (an #FDReader#, to be precise) and 
+#cout# and #cerr# are both #Formatter#s.  #Formatter#, in turn, implements 
+#Writer#, so we can use these streams to illustrate the #Reader# and #Writer# 
+interfaces.
+
+#Writer# has one salient method called #write()#.  This method writes a buffer 
+to the underlying output object:
+
+{{
+    cout.write('some data');
+}}
+
+Since #String# is derived from #Buffer#, we can use the #write()# method to 
+write a constant string.  Classes implementing #Writer# must implement the 
+#write()# method.
+
+#Reader# provides two methods: an efficient method that reads into a 
+#WriteBuffer# and a heavier form that reads a buffer of specified size 
+and returns a string.
+
+{{
+    ManagedBuffer buf = {1024};  # ManagedBuffer is derived from WriteBuffer
+    bytesRead = cin.read(buf);  # read up to 1024 bytes into 'buf'
+}}
+
+#read(WriteBuffer)# doesn't modify the size of its input buffer.  It does 
+return the number of bytes read.  It is the responsibility of the caller to 
+change the size of the buffer if desired.
+
+We could have done something similar with the heavy-weight form:
+
+{{
+    String data = cin.read(1024);
+}}
+
+This is more expensive than #read(WriteBuffer)# because it actually allocates 
+a buffer and a #String# object.
+
+We could implement the most basic functionality of the #cat# command like this:
+
+{{
+    ManagedBuffer data = {4096};
+    while (data.size = cin.read(data)) {
+        cout.write(data);
+        data.size = 4096;
+    }
+}}
+
+#cin#, #cout# and #cerr# are implemented using #FDReader# and #FDWriter#.  
+These classes implement #Reader# and #Writer# to read from and write to a file 
+descriptor.  You can obtain a file descriptor from any of the low-level IO 
+functions on your system ("#open()#", for example).
+
+The #crack.io# module also provides the #Formatter# class.  See \X(The 
+Formatter Interface) for details on how to use this.
+
+Line Readers
+------------
+
+The #crack.readers# module provides a #LineReader# class that lets you read 
+from a writer a line at a time:
+
+{{
+    import crack.readers LineReader;
+    
+    reader := LineReader(cin);
+    String line = null;
+    while (line = reader.next()) {
+        cout `got line: $line\n`;
+    }
+}}
+
+The #next()# method returns #null# when there is no more data to read.
+
+Regular Expressions
+-------------------
+
+Crack provides a regular expression library in the form of #crack.exp.regex#.  
+You use it by creating a #Regex# object:
+
+{{
+    import crack.io cin, cout;
+    import crack.exp.readers LineReader;
+    import crack.exp.regex Regex, Match;
+
+    rx := Regex('(\\w+)=(.*)');
+    String line = null;
+    LineReader src = {cin};
+    while (line = src.next()) {
+        Match m = rx.search(line);
+        if (m)
+            cout `got $(m.group(1)) = $(m.group(2))\n`;
+    }
+}}
+
+The #Regex.search()# method returns a #Match# object if there was a matching 
+substring and #null# if there wasn't.  The #Match# object allows you to get 
+the entire text of the matched substring, the start and end positions of it, 
+and also allows you to get this information for parenthesized subgroups
+(employed in the example above).
+
+We uses values of 1 and 2 to access the subgroups: the zeroth subgroup is the 
+text of the entire expression.
+
+To get the start and end position of the matched substring:
+
+{{
+    uint startPos = m.begin();
+    uint endPos = m.end();
+}}
+
+Likewise, we can do this with subgroups:
+
+{{
+    uint start1 = m.begin(1);
+    uint end1 = m.end(1);
+}}
+
+Note again that the zeroth subgroup (#m.begin(0)#) is equivalent to the entire 
+group, so we start with group 1.
+
+We can also use named subgroups.  For example, we could have written our 
+expression like this:
+
+{{
+    rx := Regex('(?P<var>\\w+)=(?P<val>.*)');
+}}
+
+And then the output statement would look like this:
+
+{{
+    cout `got $(m.group('var')) = $(m.group('val'))\n`;
+}}
+
+Likewise, the #begin()# and #end()# functions can be used with group names.
+
+Named subgroups can greatly enhance the readability of regular expression code.
+
+#crack.exp.regex# is a wrapper around the PCRE library (perl-compatible 
+regular expressions).  As the name suggests, the regular expression syntax 
+supported by this library is very close to the syntax supported by perl 5.
+
+Bindings
+--------
+
+The #crack.exp.bindings# library provides some facilities to ease integration 
+with C libraries.  It is often possible to model C types and functions using 
+Crack classes and functions providing that you can remove some of the crack 
+facilities (such as garbage collection and vtables).
+
+Opaque
+''''''
+
+The #Opaque# class is used as the base class for types that where the crack 
+code does not need to access instance variables.  In these cases, the C code 
+must define functions to obtain and manipulate the object.  More information 
+on #Opaque# can be found in \X(Primitive Bindings).
+
+Wrapper
+'''''''
+
+#Wrapper# is the base class for types where C code requires the address of a 
+primitive value (typically for an output parameter).
+
+The #crack.exp.bindings# module currently defines two wrappers:
+
+#IntWrapper#::
+    Used when C code calls for a pointer to a single integer.
+#ByteptrWrapper#::
+    Used when C code calls for the address of a #char \*# (or #byteptr# in 
+    Crack).
+
+You can also derive from Wrapper directly to implement your own pointer 
+functionality.
+
+It is important to note that #Wrapper# and #Opaque# are not derived from 
+#Object#, and as such they have no garbage collection.  #Opaque# objects 
+should be associated with real objects that know how to clean them up using 
+their low-level functions.  #Wrapper# objects must not be assigned to other 
+variables, otherwise they will be garbage collected twice.  Values referenced 
+by wrappers conform to whatever lifecycle arrangements are provided by the 
+low-level APIs that they are obtained from.
+
+Networking
+----------
+
+The #crack.net# module includes support for TCP\/IP socket level programming.
+
+A socket is a communication endpoint for TCP\/IP communications.  Sockets can 
+either be connection channels, allowing you to send data to a matching socket 
+elsewhere on the network, or listeners which wait for new connections.
+
+We create a socket as an instance of the #Socket# class:
+
+{{
+    import crack.net sockconsts, Socket;
+    
+    s := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
+}}
+
+This creates a "stream" (TCP) socket for a reliable connection over the INET 
+protocol.
+
+With a little more code, we can create a very basic server program:
+
+{{
+    import crack.net sockconsts, Socket, SockAddrIn;
+    
+    Socket srv = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    
+    # allow the socket's port to be immediately reused after the program 
+    # terminates (useful for debugging and server restarts)
+    srv.setReuseAddr(true);
+
+    # bind to port 1900 on all interfaces
+    if (!srv.bind(SockAddrIn(sockconsts.INADDR_ANY, 1900)))
+        err.do() `error binding socket`;
+    
+    # queue up to 5 connections
+    srv.listen(5);
+    
+    # accept loop
+    while (true) {
+        
+        # accept a new client connnection
+        accepted := srv.accept();
+        if (!accepted)
+            err.do() `error accepting new connection`;
+        
+        # read up to 1K from the new connection
+        data := accepted.sock.read(1024);
+        
+        # write it back to the new connection (we could have also used the 
+        # send() and recv() functions)
+        accepted.sock.write(data);
+    }
+}}
+
+A client script might look like this:
+
+{{
+    import crack.net sockconsts, SockAddrIn, Socket;
+    import crack.io cout, ManagedBuffer;
+    import crack.exp.error err, strerror;
+    
+    Socket s = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    
+    # connect to localhost (127.0.0.1)
+    if (!s.connect(SockAddrIn(127, 0, 0, 1, 1900)))
+        err.do() `error connecting: $(strerror())`;
+    
+    # this time, we'll use send and recv
+    if (s.send('some data', 0) < 0)
+        err.do() `error sending: $(strerror())`;
+    
+    # receive from the socket
+    ManagedBuffer buf = {1024};
+    int rc;
+    if ((rc = s.recv(buf, 0)) < 0)
+        err.do() `error receiving: $(strerror())`;
+    buf.size = uint(rc);
+        
+    cout `got $(String(buf))\n`;
+}}    
+
+When writing a server, you usually want to manage multiple connections.  You 
+can use the #Poller# class for this.  #Poller# wraps the POSIX poll interface, 
+which allows you to wait for an event on a set of #Pollable# objects (#Socket#
+is derived from #Pollable#, so you can use this to manage sockets).
+
+#Poller# allows you to add any number of #Pollable#s and the events you care 
+about on them.  You can then wait for an event (or a timeout) using the 
+#wait()# method.  Here is an example of a simple server program (it just echos 
+back whatever it reads from a client) written using #Poller#:
+
+{{
+    import crack.net sockconsts, Poller, PollEvent, Socket, SockAddrIn;
+    import crack.container DList;
+    import crack.exp.error err, strerror;
+    
+    Socket srv = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    
+    # allow the socket's port to be immediately reused after the program 
+    # terminates (useful for debugging and server restarts)
+    srv.setReuseAddr(true);
+
+    # bind to port 1900 on all interfaces
+    if (!srv.bind(SockAddrIn(sockconsts.INADDR_ANY, 1900)))
+        err.do() `error binding socket`;
+    
+    # queue up to 5 connections
+    srv.listen(5);
+
+    # our list of clients    
+    DList clients;
+
+    # remove a client from the list
+    void removeClient(Socket client) {
+        i := clients.iter();
+        while (!(client is i.elem()))
+            i.next();
+        
+        if (!i)
+            err.do() `unable to remove client: $(client.fd)\n`;
+        
+        clients.delete(i);
+    }
+    
+    # accept loop
+    while (true) {
+        Poller p;
+
+        # add the server socket and all of the client sockets        
+        events := sockconsts.POLLIN | sockconsts.POLLERR;
+        p.add(srv, events);
+        i := clients.iter();
+        while (i.nx())
+            p.add(Socket.cast(i.elem()), events);
+        
+        # wait indefinitely for the next event
+        rc := p.wait(null);
+        if (rc < 0)
+            err.do() `error during poll: $(strerror())`;
+        
+        PollEvent evt = null;
+        while (evt = p.nx()) {
+            cout `got event\n`;
+            # if this is the server, do an accept.  Otherwise do a read.
+            if (evt.pollable is srv) {
+                accepted := srv.accept();
+                if (!accepted)
+                    err.do() `error accepting new connection`;
+                
+                clients.append(accepted.sock);
+            } else {
+                # read some data, write it back (what we should really do is 
+                # add sockconsts.POLLOUT to the events that this client is 
+                # listening for, and then write when the socket becomes ready 
+                # to write, but in the interests of simplifying the example 
+                # we'll just write back to it)
+                client := Socket.cast(evt.pollable);
+                data := client.read(1024);
+                if (!data) {
+                    cout `removing client $(client.fd)\n`;
+                    removeClient(client);
+                } else {
+                    client.write(data);
+                }
+            }
+        }
+    }
+}}
+
+GTK
+---
+
+#crack.exp.gtk# is an experimental (and currently very minimal) GTK module.
+It currently provides classes for the following GTK objects:
+
+#Toplevel#::
+    A top-level (window manager level) window.
+#Tooltips#::
+    Used to tie fly-over help text to widgets.
+#Button#::
+    A pushbutton widget.
+#Entry#::
+    A single line text entryfield.
+#HBox#::
+    A container that arranges child widgets horizontally in a row.
+#VBox#::
+    A container that arranges child widgets vertically in a column.
+#App#::
+    Models an application with an init function and a main loop.
+    
+Here's a sample program:
+
+{{
+
+    import crack.exp.gtk App, Button, Entry, Handlers, HBox, Label, Toplevel,
+        VBox;
+    import crack.sys argv;
+    import crack.io cout;
+    
+    App app;
+    
+    # this is going to be our window.
+    class MyWindow : Toplevel {
+
+        # create a bunch of child widgets.        
+        Label lbl = {'Your Name:'};
+        Entry dataEnt;
+        Button doneBtn = {'Close'};
+        VBox v1 = {false, 10};
+        HBox h1 = {false, 10};
+
+        # print out all of the data collected by the window.
+        void getData() {
+            cout `Entry text: $(dataEnt.getText())\n`;
+        }
+        
+        # handler for the button class - print out the data and quit.
+        class DoneBtnHandler : Handlers {
+            # note that this creates a reference cycle - we need to do 
+            # something to break the cycle if we care about memory leaks.
+            MyWindow win = null;
+            oper init(MyWindow win0) : win = win0 {}
+            bool onClicked() {
+                win.getData();
+                app.quit();
+                return false;
+            }
+        }
+        
+        oper init() {
+            # arrange all of the widgets
+            add(v1);
+            v1.add(h1);
+            h1.add(lbl);
+            h1.add(dataEnt);
+            v1.add(doneBtn);
+
+            # set the done handler.            
+            doneBtn.setHandlers(DoneBtnHandler(this));
+            doneBtn.handleClicked();
+
+            # show all of the widgets            
+            lbl.show();
+            dataEnt.show();
+            doneBtn.show();
+            v1.show();
+            h1.show();
+            show()
+        }
+    }
+    
+    app.init(argv);
+    MyWindow win = {};
+    app.main();
+
+}}
+
+Crack's GTK libraries are really a toy implementation or proof of concept.  
+You can probably implement minimal programs with them, you can implement 
+larger programs if you care to augment the library.
