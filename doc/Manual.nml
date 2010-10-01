@@ -1318,18 +1318,22 @@ The following operators can be overloaded:
 #oper ~()#::
     Unary bitwise negate.
 #oper ==(#/type/ #other)#::
-    Binary "equals."  #Object# implements this as "#cmp(other) == 0#".
+    (*final*) Binary "equals."  #Object# implements this as "#cmp(other) == 
+    0#".
 #oper !=(#/type/ #other)#::
-    Binary "not equals."  #Object# implements this as "#cmp(other) != 0#".
+    (*final*) Binary "not equals."  #Object# implements this as "#cmp(other) 
+    != 0#".
 #oper <(#/type/ #other)#::
-    Binary "less than."  #Object# implements this as "#cmp(other) < 0#".
+    (*final*) Binary "less than."  #Object# implements this as "#cmp(other) < 
+    0#".
 #oper <=(#/type/ #other)#::
-    Binary "less than or equal to."  #Object# implements this as "#cmp(other) 
-    <= 0#".
+    (*final*) Binary "less than or equal to."  #Object# implements this as 
+    "#cmp(other) <= 0#".
 #oper >(#/type/ #other)#::
-    Binary "greater than."  #Object# implements this as "#cmp(other) > 0#".
+    (*final*) Binary "greater than."  #Object# implements this as 
+    "#cmp(other) > 0#".
 #oper >=(#/type/ #other)#::
-    Binary "greater than or equal to."  #Object# implements this as 
+    (*final*) Binary "greater than or equal to."  #Object# implements this as 
     "#cmp(other) >= 0#".
 #oper |(#/type/ #other)#::
     Bitwise or.
@@ -1347,7 +1351,10 @@ The following operators can be overloaded:
     defined, they can still be used if the type defines the simple operator 
     that it is based on.  So for example, if a class defines "#oper +#", you 
     can use the #+=# opertator on an instance without defining it.
-    
+
+As in the last section, *final* means the method is non-virtual and cannot be 
+overriden.
+
 The primitive types mostly have intrinsic implementations of the operators.
 
 Certain operators can not be overloaded:

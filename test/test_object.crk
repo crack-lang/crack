@@ -1,0 +1,44 @@
+# Copyright Google Inc. 2010
+# tests of basic Object stuff
+
+import crack.io cout;
+import crack.exp.error err;
+
+# test the use of nulls in the comparison operators.
+class Int {
+    int val;
+
+    oper init(int val0) : val = val0 {}
+    
+    int cmp(Object other) {
+        if (other.class.isSubclass(Int))
+            return val - Int.unsafeCast(other).val;
+        else
+            return Object.cmp(other);
+    }
+}
+
+Object n = null;
+Object o;
+Int a = {1}, b = {2};
+
+if (!(n < o)) err.do() `n < o failed\n`;
+if (n < n) err.do() `n < n failed\n`;
+if (b < a) err.do() `b < a failed\n`;
+if (!(n <= n)) err.do() `n <= n failed\n`;
+if (!(n <= o)) err.do() `n <= o failed\n`;
+if (b <= a) err.do() `b <= a failed\n`;
+if (!(n == n)) err.do() `n == n failed\n`;
+if (n == o) err.do() `n == o failed\n`;
+if (a == b) err.do() `a == b failed\n`;
+if (n != n) err.do() `n != n failed\n`;
+if (!(n != o)) err.do() `n != o failed\n`;
+if (!(a != b)) err.do() `a != b failed\n`;
+if (!(n >= n)) err.do() `n >= n failed\n`;
+if (n >= o) err.do() `n >= o failed\n`;
+if (a >= b) err.do() `a >= b failed\n`;
+if (n > n) err.do() `n > n failed\n`;
+if (n > o) err.do() `n > o failed\n`;
+if (a > b) err.do() `a > b failed\n`;
+
+cout `ok\n`;

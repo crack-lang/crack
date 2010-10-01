@@ -72,27 +72,27 @@ class Object : VTableBase {
     }
     
     bool oper <(Object other) {
-        return cmp(other) < 0;
+        return this is null ? !(other is null) : cmp(other) < 0;
     }
     
     bool oper <=(Object other) {
-        return cmp(other) <= 0;
+        return this is null ? true : cmp(other) <= 0;
     }
     
     bool oper ==(Object other) {
-        return cmp(other) == 0;
+        return this is null ? other is null : cmp(other) == 0;
     }
     
     bool oper !=(Object other) {
-        return cmp(other) != 0;
+        return this is null ? !(other is null) : cmp(other) != 0;
     }
 
     bool oper >=(Object other) {
-        return cmp(other) >= 0;
+        return this is null ? other is null : cmp(other) >= 0;
     }
 
     bool oper >(Object other) {
-        return cmp(other) > 0;
+        return this is null ? false : cmp(other) > 0;
     }
 
     bool toBool() {
