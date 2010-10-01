@@ -92,6 +92,10 @@ if (1) {
 
 # run ternary operator tests in their own namespace
 if (1) {
+    # test operator precedence (this would fail to compare 1 to 'b' if 
+    # precedence is wrong)
+    1 == 2 ? 'a' : 'b';
+
     bool val;
     x := val ? 100 : 200;
     if (x != 200)

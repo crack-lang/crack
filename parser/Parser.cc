@@ -805,6 +805,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
+         if (precedence >= logOrPrec)
+            break;
          expr = parseTernary(expr.get());
       } else {
 	 // next token is not part of the expression

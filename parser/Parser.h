@@ -30,6 +30,10 @@ class Parser {
 
    private:
 
+      enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, 
+             bitAndPrec, cmpPrec, shiftPrec, addPrec, multPrec, unaryPrec
+            };
+
       Toker &toker;
       
       // the module context, and the current context.
