@@ -551,9 +551,10 @@ Comparison operators compare two values and return a boolean.
     True if the right value is greater than or equal to the left value. #2 <= 
     2#.
 is::
-    True if the object on the left is identical to the object on the right.  
-    This isn't defined for numbers, only for aggregates and primitive pointer 
-    types.
+    True if the object on the left is identical (not merely equal) to the 
+    object on the right.  This isn't defined for numbers, only for aggregates 
+    and primitive pointer types.  It essentially checks for the equivalence of
+    the pointers.
 
 Basic Arithmetic
 ''''''''''''''''
@@ -2392,11 +2393,12 @@ existence, file information such as such as glob matching, basename, and dirname
 will be available.
 
 Currently, however, the only implemented methods are #matches#, for matching a 
-file name against a pattern such as '*.txt', #basename# to return the file name
+file name against a pattern such as '\*.txt', #basename# to return the file name
 portion of a full path (optionally stripping extension), and #dirname# for
 returning just the directory portion of a full path.
 
 Example:
+
 {{
     fi := FileInfo('/etc/resolv.conf');
     if (fi.matches('*.conf'))
@@ -2498,7 +2500,7 @@ void scanForScripts(Directory dir) {
 }}
 
 When a #Directory# object is created, it canonicalizes the name by stripping
-a trailing path separator (i.e. "/") if it exists. If you need a version with 
+a trailing path separator (i.e. "\/") if it exists. If you need a version with 
 the trailing separator (for example, to build a full path name with string 
 concatenation), you can call #nameWithTrailing#.
 
