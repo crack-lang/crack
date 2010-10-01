@@ -2373,6 +2373,135 @@ from a writer a line at a time:
 
 The #next()# method returns #null# when there is no more data to read.
 
+Files and Directories
+---------------------
+
+#crack.exp.file# contains two classes that provide a basic interface for 
+manipulating files as objects, including obtaining file information and 
+simple reading and writing.
+
+FileInfo
+''''''''
+
+A #FileInfo# object can be constructed from a #String#, which should contain a 
+full path name (where the file does not have to exist). The class will provide
+methods for obtaining information on a file (if it exists) and manipulating file
+and path information. If the file exists, information will include size, owner 
+and group information, file permissions, and the like. Regardless of file 
+existence, file information such as such as glob matching, basename, and dirname 
+will be available.
+
+Currently, however, the only implemented methods are #matches#, for matching a 
+file name against a pattern such as '*.txt', #basename# to return the file name
+portion of a full path (optionally stripping extension), and #dirname# for
+returning just the directory portion of a full path.
+
+Example:
+{{
+    fi := FileInfo('/etc/resolv.conf');
+    if (fi.matches('*.conf'))
+        cout `it's a conf file!\n`;
+    basename := fi.basename(true); // strip extension
+    // basename contains a string 'resolv'
+    basename := fi.basename(false); // don't strip extension
+    // basename contains a string 'resolv.conf'
+    dirname := fi.dirname();
+    // dirname contains '/etc';
+}}
+
+
+File
+''''
+
+The #File# object can be used for reading and writing to files on disk. It 
+extends #FileInfo# and so all informational functionality available with that 
+class is also available to #File#. 
+
+A #File# should be constructed with the full path to the file and the mode to
+open in, which is one of 'r' or 'w' for read or write, respectively. 
+If the file is opened in read mode, a #LineReader# is automatically created 
+which allows for reading the file line by line via the #nextLine#
+method. Note that the trailing newline is include in the return value.
+
+Read Example:
+
+{{
+ 
+    f := File('/etc/resolv.conf', 'r');
+    String lineBuf = null;
+    lineNum := 1;
+    while (lineBuf = f.nextLine()) {
+        cout `$lineNum: $lineBuf`;
+    }
+   
+}}
+
+When opened in write mode, a file may be written to by passing a #String# to
+the #write# method:
+
+{{
+    
+    f := File('/tmp/myfile.txt', 'w');
+    f.write("lorem ipsum rock");
+
+}}
+
+Note, there is currently no append mode; if the file already exist, it will be 
+overwritten upon opening in write mode.
+
+File objects may be closed with the #close# method. This is done automatically 
+when the File object destructor runs (if it hasn't been closed manually).
+
+
+Directory
+'''''''''
+
+#crack.exp.dir# contains the #Directory# class, used to iterate through a 
+directory hierarchy. A #Directory# object can be constructed by passing the full
+path of a directory to the constructor. If the path is valid, you can 
+iterate through the list of directories and files contained in the directory. 
+
+You do this by calling the #dirIter# and #fileInfoIter# methods. They will both
+return an #Iterator# object. A #dirIter# Iterator will iterate through 
+#Directory# objects, while a #fileInfoIter# will iterate through #FileInfo# 
+objects. Like all uses of #Iterator# currently, you must cast these objects 
+yourself in the calling code.
+
+For example, to recursively scan a directory for a file pattern:
+
+{{
+
+void scanForScripts(Directory dir) {
+
+    Iterator i;
+    pattern := "*.crk";
+    
+    FileInfo curFile = null;
+    i = dir.fileInfoIter();
+    while (i.nx()) {
+        curFile = FileInfo.cast(i.elem());
+        if (curFile.matches(pattern)) {
+            cout `found crack script file: $curFile\n`;
+        }
+    }
+
+    // recurse to directories
+    Directory nextDir = null;
+    i = dir.dirIter();
+    while (i.nx()) {
+        nextDir = Directory.cast(i.elem());
+        scanForScripts(nextDir);
+    }
+
+}
+  
+}}
+
+When a #Directory# object is created, it canonicalizes the name by stripping
+a trailing path separator (i.e. "/") if it exists. If you need a version with 
+the trailing separator (for example, to build a full path name with string 
+concatenation), you can call #nameWithTrailing#.
+
 Regular Expressions
 -------------------
 
