@@ -3,7 +3,7 @@
 
 lib_LTLIBRARIES = libcrack.la libcrack-runtime.la
 libcrack_la_SOURCES = %libCrackSources%
-libcrack_la_LDFLAGS = -version-info 1:0:0
+libcrack_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 libcrack_runtime_la_SOURCES = %libRuntimeSources%
 libcrack_runtime_la_LDFLAGS = -version-info 0:0:0
 
@@ -71,12 +71,13 @@ noinst_HEADERS = \
     spug/TypeInfo.h \
     Crack.h
 
-EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt cmake
+EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt \
+    runtimeModules.txt cmake
 
 bin_PROGRAMS = crack
 
 crack_SOURCES = crack.cc
-crack_LDADD = libcrack.la $(LDFLAGS) @LLVM_LDFLAGS@ @LLVM_LIBS@
+crack_LDADD = libcrack.la $(LDFLAGS)
 # use LLVM flags, but override their "--no-exceptions" flag.
 AM_CXXFLAGS = @LLVM_CXXFLAGS@ -fexceptions
 
