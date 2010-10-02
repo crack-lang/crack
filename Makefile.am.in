@@ -97,17 +97,14 @@ doc/Manual.html: doc/Manual.nml
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
 	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack
-	$(INSTALL) $(srcdir)/lib/crack/container.crk \
-	   $(DESTDIR)$(cracklib)/crack
-	$(INSTALL) $(srcdir)/lib/crack/lang.crk $(DESTDIR)$(cracklib)/crack
-	$(INSTALL) $(srcdir)/lib/crack/io.crk $(DESTDIR)$(cracklib)/crack
-	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack/exp
-	$(INSTALL) $(srcdir)/lib/crack/exp/bindings.crk \
-	   $(DESTDIR)$(cracklib)/crack/exp
-	$(INSTALL) $(srcdir)/lib/crack/exp/gtk.crk \
-	   $(DESTDIR)$(cracklib)/crack/exp
-	$(INSTALL) $(srcdir)/lib/crack/exp/regex.crk \
-	   $(DESTDIR)$(cracklib)/crack/exp
+	(cd $(srcdir)/lib; \
+	 for file in $$(find); do \
+	   if test -d $$file; then \
+	       $(MKDIR_P) $(DESTDIR)$(cracklib)/$$file; \
+	   else \
+	       $(INSTALL) $$file $(DESTDIR)$(cracklib)/$$file; \
+	   fi; \
+	 done)
 	$(MKDIR_P) $(DESTDIR)$(docdir)
 	$(INSTALL) $(srcdir)/doc/Manual.html $(DESTDIR)$(docdir)
 
