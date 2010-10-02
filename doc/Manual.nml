@@ -636,9 +636,22 @@ error.
 Precedence
 ''''''''''
 
-Operator precedence is the same as in C.  So the rules are:
+Operator precedence is the same as in C.  So the rules are (highest precedence 
+first):
 
-XXX fill in precedence rules.
+-   #() [] . ++ --# (right side operators)
+-   #++ -- + - ! ~# (left side operators)
+-   #\* \/ %# (binary operators)
+-   #+ -# (binary operators)
+-   #<< >># (binary shift operators)
+-   #< <= > >=# (binary comparison operators)
+-   #== !=# (binary equality check operators)
+-   #&# (bitwise and)
+-   #|# (bitwise or)
+-   #&&# (logical and)
+-   #||# (logical or)
+-   #?:# Ternary operator
+-   #= += -= \*= \/= %= &= |= <<= >>=# (assignment operators)
 
 Classes
 -------
