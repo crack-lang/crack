@@ -21,6 +21,7 @@ DebugInfo::DebugInfo(Module *m,
                                 false, // isOptimized
                                 "" // flags
                                 )),
+                        currentFile(compileUnit),
                         currentScope(compileUnit) { }
 
 void DebugInfo::emitFunctionDef(const std::string &name,
@@ -31,7 +32,7 @@ void DebugInfo::emitFunctionDef(const std::string &name,
             name,
             name,
             name,
-            compileUnit,
+            currentFile,
             loc.getLineNumber(),
             llvm::DIType(),
             false, // local to unit (i.e. like C static)
@@ -39,20 +40,21 @@ void DebugInfo::emitFunctionDef(const std::string &name,
     );
 
 }
+/*
+DILocation DebugInfo::emitLocation(const parser::Location &loc) {
 
-MDNode* DebugInfo::emitLocation(const parser::Location &loc) {
-
-    DIDescriptor d = debugFactory.CreateLocation(loc.getLineNumber(),
-                                0, // col
-                                currentScope
-                                );
-    return d.getNode();
+    return debugFactory.CreateLocation(loc.getLineNumber(),
+                                       0, // col
+                                       currentScope,
+                                       currentFile.
+                                       );
 
 }
-
+*/
 MDNode* DebugInfo::emitLexicalBlock(const parser::Location &loc) {
 
     currentScope = debugFactory.CreateLexicalBlock(currentScope,
+                                                   currentFile,
                                                    loc.getLineNumber(),
                                                    0 // col
                                                    );
