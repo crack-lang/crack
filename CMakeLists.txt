@@ -9,10 +9,10 @@ endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.2")
+set(CRACK_VERSION "0.2.1")
 
-set(LLVM_MIN_VERSION       "2007000")
-set(LLVM_MIN_VERSION_TEXT  "2.7")
+set(LLVM_MIN_VERSION       "2008000")
+set(LLVM_MIN_VERSION_TEXT  "2.8")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 

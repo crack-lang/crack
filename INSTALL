@@ -3,38 +3,30 @@ Installation
 ============
 
 Crack can be built using either autoconf or CMake.  In either case, you'll 
-need LLVM 2.7 built with RTTI support.
+need LLVM 2.8 built with RTTI support.
 
-LLVM 2.7 is available as a package in Ubuntu Lucid, and is built with RTTI 
+LLVM 2.7 was available as a package in Ubuntu Lucid, and was built with RTTI 
 support, but the configuration was broken for us.  It attempts to link in the 
-ffi library, which is does not exist.  Unless you want to try to hack around 
-this problem, we recommend that you rebuild LLVM from source.
+ffi library, which is does not exist.  You may have better luck with newer 
+versions of the package, but if you run into problems we recommend rebuilding 
+LLVM from source.
 
 Autoconf Install Instructions
 -----------------------------
 
-Build LLVM 2.7 (if it is available as a package on your distro, you can just 
+Build LLVM 2.8 (if it is available as a package on your distro, you can just 
 apt-get it):
 
-$ tar -xvzf llvm-2.7.tgz
-$ cd llvm-2.7
+$ tar -xvzf llvm-2.8.tgz
+$ cd llvm-2.8
 $ ./configure
 $ make REQUIRES_RTTI=1
 $ make install
 
-Build and install spug++:
-
-$ tar -xvzf spug++-0.8.tar.gz
-$ cd spug++-0.8
-$ ./configure
-$ make
-$ make check  # optional
-$ make install
-
 Build Crack:
 
-$ tar -xvzf crack-0.2.tar.gz
-$ cd crack-0.2
+$ tar -xvzf crack-0.2.1.tar.gz
+$ cd crack-0.2.1
 $ ./configure
 $ make
 $ make check  # optional
@@ -47,15 +39,15 @@ CMake Install Instructions
 --------------------------
 
 CMake version 2.6 or greater is required. We recommend an out-of-tree
-build. You should ensure llvm 2.7 and spug++ 0.8 are already installed 
-(see above) before running cmake.
+build. You should ensure llvm 2. is already installed (see above) before 
+running cmake.
 
 Quick Install:
 
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-0.2
+$ cd crack-0.2.1
 $ mkdir build; cd build
 $ cmake ..
 $ make
@@ -63,14 +55,6 @@ $ make check  # optional
 $ make install
 
 Details:
-
-If you need to specify a non-standard location for spug, then set the
-SPUG_DIR environment variable to the spug install directory (the one you 
-passed to --prefix during spug configure) when you call cmake. 
-
-For example:
-
-$ SPUG_DIR=/home/user/local cmake ..
 
 If your llvm is in a non-standard location, you'll have to specify the
 location of llvm-config via the LLVM_CONFIG_EXECUTABLE cmake variable. 
