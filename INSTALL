@@ -7,8 +7,8 @@ need LLVM 2.8 built with RTTI support.
 
 LLVM 2.7 was available as a package in Ubuntu Lucid, and was built with RTTI 
 support, but the configuration was broken for us.  It attempts to link in the 
-ffi library, which is does not exist.  You may have better luck with newer 
-versions of the package, but if you run into problems we recommend rebuilding 
+ffi library, which does not exist.  You may have better luck with newer 
+versions of the package, but if you run into problems we recommend rebuilding
 LLVM from source.
 
 Autoconf Install Instructions
@@ -56,11 +56,9 @@ $ make install
 
 Details:
 
-If your llvm is in a non-standard location, you'll have to specify the
-location of llvm-config via the LLVM_CONFIG_EXECUTABLE cmake variable. 
-If you would like to change the install location, set the 
-CMAKE_INSTALL_PREFIX variable. You can set these with -D on the command
-line, or use a tool like ccmake.
+If your LLVM libraries are installed in a non-standard location, set the 
+LLVM_DIR environment variable to the root of the install tree before running
+cmake.
 
 See cmake --help for more options.
 
