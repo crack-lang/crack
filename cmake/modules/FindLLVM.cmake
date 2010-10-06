@@ -19,8 +19,8 @@ else (LLVM_INCLUDE_DIR)
 
   find_program(LLVM_CONFIG_EXECUTABLE
       NAMES llvm-config
-      PATHS
-      /opt/local/bin
+      PATHS /opt/local/bin
+      HINTS "$ENV{LLVM_DIR}/bin"
   )
   
 #  find_program(LLVM_GXX_EXECUTABLE

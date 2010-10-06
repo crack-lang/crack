@@ -20,10 +20,11 @@ namespace mvll {
 class DebugInfo {
 
 private:
+    llvm::Module *module;
     llvm::DIFactory debugFactory;
     llvm::DICompileUnit compileUnit;
+    llvm::DIFile currentFile;
     llvm::DIScope currentScope;
-    llvm::Module *module;
 
 public:
     DebugInfo(llvm::Module *m, const std::string &file);
@@ -31,7 +32,7 @@ public:
     void emitFunctionDef(const std::string &name,
                          const parser::Location &loc);
 
-    llvm::MDNode* emitLocation(const parser::Location &loc);
+//    llvm::DILocation emitLocation(const parser::Location &loc);
 
     llvm::MDNode* emitLexicalBlock(const parser::Location &loc);
 

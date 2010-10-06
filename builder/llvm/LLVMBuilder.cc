@@ -548,11 +548,13 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
             builder.CreateCall(funcDef->getRep(*this), valueArgs.begin(), 
                                valueArgs.end()
                                );
+        /*
         if (debugInfo) {
-            Instruction* i = dyn_cast<Instruction>(lastValue);
-            i->setMetadata("dbg",
-                           debugInfo->emitLocation(context.getLocation()));
+            builder.SetCurrentDebugLocation(
+                    DebugLoc::getFromDILocation(debugInfo->emitLocation(
+                                             context.getLocation())));
         }
+        */
     }
     return new BResultExpr(funcCall, lastValue);
 }
