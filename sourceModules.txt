@@ -1,3 +1,5 @@
+ext/Module.cc
+ext/Func.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc

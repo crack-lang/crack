@@ -4,6 +4,7 @@
 
 #include <sys/stat.h>
 #include <fstream>
+#include <dlfcn.h>
 #include "model/Context.h"
 #include "model/GlobalNamespace.h"
 #include "model/ModuleDef.h"
@@ -13,12 +14,14 @@
 #include "parser/Toker.h"
 #include "builder/Builder.h"
 #include "builder/llvm/LLVMBuilder.h"
+#include "ext/Module.h"
 
 using namespace std;
 using namespace model;
 using namespace parser;
 using namespace builder;
 using namespace builder::mvll;
+using namespace crack::ext;
 
 Crack *Crack::theInstance = 0;
 
@@ -170,6 +173,54 @@ void Crack::parseModule(Context &context,
         context.builder.run();
 }
 
+ModuleDefPtr Crack::loadSharedLib(const string &path, 
+                                  Crack::StringVecIter moduleNameBegin,
+                                  Crack::StringVecIter moduleNameEnd,
+                                  string &canonicalName
+                                  ) {
+    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        cerr << "opening library " << path << ": " << dlerror() << endl;
+        return 0;
+    }
+    
+    // construct the full init function name XXX should do real name mangling
+    std::string initFuncName;
+    for (StringVecIter iter = moduleNameBegin;
+         iter != moduleNameEnd;
+         ++iter
+         )
+        initFuncName += *iter + '_';
+    
+    initFuncName += "init";
+
+    typedef void (*InitFunc)(Module *mod);
+
+    InitFunc func = (InitFunc)dlsym(handle, initFuncName.c_str());
+    
+    if (!func) {
+        cerr << "Error looking up function " << initFuncName
+            << " in extension library " << path << ": "
+            << dlerror() << endl;
+        return 0;
+    }
+
+    // create a new context
+    BuilderPtr builder = rootBuilder->createChildBuilder();
+    ContextPtr context =
+        new Context(*builder, Context::module, rootContext.get(),
+                    new GlobalNamespace(rootContext->ns.get())
+                    );
+
+    // create a module object
+    ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
+    Module mod(context.get());
+    func(&mod);
+    modDef->close(*context);
+    
+    return modDef;
+}
+
 ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                                Crack::StringVecIter moduleNameEnd,
                                string &canonicalName
@@ -200,11 +251,22 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                                          );
     }
     
-    // try to find the module on the source path
-    ModulePath modPath = searchPath(sourceLibPath, moduleNameBegin, 
+    // look for a shared library
+    ModulePath modPath = searchPath(sourceLibPath, moduleNameBegin,
                                     moduleNameEnd,
-                                    ".crk"
+                                    ".so"
                                     );
+    
+    if (modPath.found && !modPath.isDir)
+        return loadSharedLib(modPath.path, moduleNameBegin,
+                             moduleNameEnd,
+                             canonicalName
+                             );
+    
+    // try to find the module on the source path
+    modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
+                         ".crk"
+                         );
     if (!modPath.found)
         return 0;
 

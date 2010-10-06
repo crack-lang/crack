@@ -6,6 +6,9 @@ libcrack_la_SOURCES = %libCrackSources%
 libcrack_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 libcrack_runtime_la_SOURCES = %libRuntimeSources%
 libcrack_runtime_la_LDFLAGS = -version-info 0:0:0
+pkglib_LTLIBRARIES = test/testext.la
+test_testext_la_LDFLAGS = -avoid-version -module
+test_testext_la_SOURCES = test/testext.cc
 
 noinst_HEADERS = \
     builder/Builder.h \

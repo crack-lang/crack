@@ -145,7 +145,18 @@ class Crack {
                          const std::string &path,
                          std::istream &src
                          );
-        
+
+        /**
+         * Load a shared library.  Should conform to the crack extension 
+         * protocol and implement a module init method.
+         */
+        model::ModuleDefPtr
+            loadSharedLib(const std::string &path,
+                          StringVecIter moduleNameBegin,
+                          StringVecIter moduleNameEnd,
+                          std::string &canonicalName
+                          );
+
         /**
          * Load the named module and returns it.  Returns null if the module 
          * could not be found, raises an exception if there were errors 

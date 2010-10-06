@@ -23,6 +23,7 @@ AC_PROG_RANLIB
 
 # for my shared libs
 AC_PROG_LIBTOOL
+LT_INIT(dlopen)
 
 # external packages that we need
 AM_PATH_LLVM

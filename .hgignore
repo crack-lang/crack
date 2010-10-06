@@ -1,5 +1,5 @@
 .*\.o$
-.*\.lo$
+.*\.(lo|la)$
 ^\.deps/.*$
 ^crack$
 ^depcomp$
@@ -23,3 +23,6 @@
 ^.*~$
 ^build/.*$
 ^doc/Manual.html$
+^test/testext\.(so|la)$
+^test/\.libs/.*$
+^test/\.dirstamp$
