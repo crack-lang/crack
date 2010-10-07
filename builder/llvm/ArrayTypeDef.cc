@@ -44,7 +44,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
                          );
 
     tempSpec->addDef(
-            new VoidPtrOpDef(context.globalData->voidPtrType.get())
+            new VoidPtrOpDef(context.globalData->voidptrType.get())
             );
 
     // add all of the methods

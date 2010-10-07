@@ -92,7 +92,7 @@ class Context : public spug::RCBase {
             StrConstTable strConstTable;
             TypeDefPtr classType,
                        voidType,
-                       voidPtrType,
+                       voidptrType,
                        boolType,
                        byteptrType,
                        byteType,

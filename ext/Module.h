@@ -19,11 +19,11 @@ class ModuleImpl;
 class Module {
     friend class Func;
 
-    public:
+    private:
         enum BuiltinType {
             classType,
             voidType,
-            voidPtrType,
+            voidptrType,
             boolType,
             byteptrType,
             byteType,
@@ -43,8 +43,7 @@ class Module {
             overloadType,
             endSentinel
         };
-        
-    private:
+
         model::Context *context;
         Type *builtinTypes[endSentinel];
         std::vector<Func *> funcs;
@@ -52,8 +51,29 @@ class Module {
     public:
         Module(model::Context *context);
         ~Module();
+
+        // functions to get the primitive types
+        Type *getClassType();
+        Type *getVoidType();
+        Type *getVoidptrType();
+        Type *getBoolType();
+        Type *getByteptrType();
+        Type *getByteType();
+        Type *getInt32Type();
+        Type *getInt64Type();
+        Type *getUint32Type();
+        Type *getUint64Type();
+        Type *getIntType();
+        Type *getUintType();
+        Type *getFloat32Type();
+        Type *getFloat64Type();
+        Type *getFloatType();
+        Type *getVTableBaseType();
+        Type *getObjectType();
+        Type *getStringType();
+        Type *getStaticStringType();
+        Type *getOverloadType();
         
-        Type *getType(BuiltinType type);
         Type *getType(const char *name);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr);
 };

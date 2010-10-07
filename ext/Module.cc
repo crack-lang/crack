@@ -26,86 +26,31 @@ Module::~Module() {
         delete funcs[i];
 }
 
-Type *Module::getType(Module::BuiltinType type) {
-    
-    // check for an overload type before checking the cache array
-    if (type > overloadType)
-        return 0;
-    
-    // see if we've got it cached
-    if (builtinTypes[type])
-        return builtinTypes[type];
-    
-    TypeDef *typeDef;
-    switch (type) {
-        case classType:
-            typeDef = context->globalData->classType.get();
-            break;
-        case voidType:
-            typeDef = context->globalData->voidType.get();
-            break;
-        case voidPtrType:
-            typeDef = context->globalData->voidPtrType.get();
-            break;
-        case boolType:
-            typeDef = context->globalData->boolType.get();
-            break;
-        case byteptrType:
-            typeDef = context->globalData->byteptrType.get();
-            break;
-        case byteType:
-            typeDef = context->globalData->byteType.get();
-            break;
-        case int32Type:
-            typeDef = context->globalData->int32Type.get();
-            break;
-        case int64Type:
-            typeDef = context->globalData->int64Type.get();
-            break;
-        case uint32Type:
-            typeDef = context->globalData->uint32Type.get();
-            break;
-        case uint64Type:
-            typeDef = context->globalData->uint64Type.get();
-            break;
-        case intType:
-            typeDef = context->globalData->intType.get();
-            break;
-        case uintType:
-            typeDef = context->globalData->uintType.get();
-            break;
-        case float32Type:
-            typeDef = context->globalData->float32Type.get();
-            break;
-        case float64Type:
-            typeDef = context->globalData->float64Type.get();
-            break;
-        case floatType:
-            typeDef = context->globalData->floatType.get();
-            break;
-        case vtableBaseType:
-            typeDef = context->globalData->vtableBaseType.get();
-            break;
-        case objectType:
-            typeDef = context->globalData->objectType.get();
-            break;
-        case stringType:
-            typeDef = context->globalData->stringType.get();
-            break;
-        case staticStringType:
-            typeDef = context->globalData->staticStringType.get();
-            break;
-        case overloadType:
-            typeDef = context->globalData->overloadType.get();
-            break;
-        
-        default:
-            assert(0 && "illegal type referenced");
+#define GET_TYPE(capName, lowerName)                                    \
+    Type *Module::get##capName##Type() {                                \
+        return builtinTypes[lowerName##Type] ?                          \
+            builtinTypes[lowerName##Type] :                             \
+            (builtinTypes[lowerName##Type] =                            \
+              new Type(context->globalData->lowerName##Type.get()));    \
     }
-    
-    builtinTypes[type] = new Type(typeDef);
-    return builtinTypes[type];
-}
+
+
+GET_TYPE(Class, class)
+GET_TYPE(Void, void)
+GET_TYPE(Voidptr, voidptr)
+GET_TYPE(Bool, bool)
+GET_TYPE(Byteptr, byteptr)
+GET_TYPE(Byte, byte)
+GET_TYPE(Int32, int32)
+GET_TYPE(Int64, int64)
+GET_TYPE(Int, int)
+GET_TYPE(Float32, float32)
+GET_TYPE(Float64, float64)
+GET_TYPE(Float, float)
+GET_TYPE(VTableBase, vtableBase)
+GET_TYPE(Object, object)
+GET_TYPE(String, string)
+GET_TYPE(StaticString, staticString)
 
 Type *Module::getType(const char *name) {
     assert(0 && "not implemented");

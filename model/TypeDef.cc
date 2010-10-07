@@ -391,7 +391,7 @@ void TypeDef::createCast(Context &outer) {
     funcCtx->closeCleanupFrame();
     
     // need to "return null" to provide a terminator.
-    TypeDef *vp = outer.globalData->voidPtrType.get();
+    TypeDef *vp = outer.globalData->voidptrType.get();
     ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
     funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
 

@@ -865,7 +865,7 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
    // check for null
    Token tok = getToken();
    if (tok.isNull()) {
-      expr = new NullConst(context->globalData->voidPtrType.get());
+      expr = new NullConst(context->globalData->voidptrType.get());
    
    // check for a nested parenthesized expression
    } else if (tok.isLParen()) {

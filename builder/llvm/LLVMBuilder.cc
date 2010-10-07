@@ -468,7 +468,7 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
     
     // Give it an "oper to voidptr" method.
     crkFuncType->addDef(
-        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+        new VoidPtrOpDef(context.globalData->voidptrType.get())
     );
     
     return crkFuncType.get();
@@ -641,8 +641,8 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     // construct a call to the "calloc" function
     Function *callocFunc = module->getFunction("calloc");
     assert(callocFunc && "calloc function has not been defined");
-    BTypeDef *voidPtrType =
-        BTypeDefPtr::arcast(context.globalData->voidPtrType);
+    BTypeDef *voidptrType =
+        BTypeDefPtr::arcast(context.globalData->voidptrType);
     vector<Value *> callocArgs(2);
     callocArgs[0] = countVal;
     callocArgs[1] = size;
@@ -894,7 +894,7 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     metaType->addDef(new UnsafeCastDef(type.get()));
     
     // create function to convert to voidptr
-    type->addDef(new VoidPtrOpDef(context.globalData->voidPtrType.get()));
+    type->addDef(new VoidPtrOpDef(context.globalData->voidptrType.get()));
 
     return type;
 }
@@ -1368,7 +1368,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     BTypeDef *byteptrType = 
         BTypeDefPtr::arcast(context.globalData->byteptrType);
     BTypeDef *voidptrType = 
-        BTypeDefPtr::arcast(context.globalData->voidPtrType);
+        BTypeDefPtr::arcast(context.globalData->voidptrType);
 
     // create "int puts(String)"
     {
@@ -1685,14 +1685,14 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            );
     context.ns->addDef(voidType);
 
-    BTypeDef *voidPtrType;
+    BTypeDef *voidptrType;
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
-    gd->voidPtrType = voidPtrType = new BTypeDef(context.globalData->classType.get(), 
+    gd->voidptrType = voidptrType = new BTypeDef(context.globalData->classType.get(), 
                                                  "voidptr", 
                                                  llvmVoidPtrType
                                                  );
-    context.ns->addDef(voidPtrType);
+    context.ns->addDef(voidptrType);
     
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
@@ -1703,7 +1703,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  );
     byteptrType->defaultInitializer = createStrConst(context, "");
     byteptrType->addDef(
-        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+        new VoidPtrOpDef(context.globalData->voidptrType.get())
     );
     context.ns->addDef(byteptrType);
     
@@ -1983,7 +1983,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     // back-fill meta class and impls for the existing primitives
     fixMeta(context, voidType);
-    fixMeta(context, voidPtrType);
+    fixMeta(context, voidptrType);
     fixMeta(context, boolType);
     fixMeta(context, byteType);
     fixMeta(context, int32Type);
@@ -2000,7 +2000,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         
     // Give it a context and an "oper to voidptr" method.
     overloadDef->addDef(
-        new VoidPtrOpDef(context.globalData->voidPtrType.get())
+        new VoidPtrOpDef(context.globalData->voidptrType.get())
     );
     OverloadDef::overloadType = gd->overloadType = overloadDef;
     
@@ -2031,7 +2031,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vtableBuilder.emit(vtableBaseType);
 
     // pointer equality check (to allow checking for None)
-    context.ns->addDef(new IsOpDef(voidPtrType, boolType));
+    context.ns->addDef(new IsOpDef(voidptrType, boolType));
     context.ns->addDef(new IsOpDef(byteptrType, boolType));
     
     // boolean not
