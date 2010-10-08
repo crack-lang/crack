@@ -67,6 +67,16 @@ set_target_properties(crack-runtime
                       VERSION ${CRACK_VERSION}
                       )
 
+# test extension. we set this up to mirror the autoconf
+# build
+add_library(testext SHARED test/testext.cc)
+set_target_properties(testext
+                      PROPERTIES
+                      OUTPUT_NAME testext
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/test/.libs/"
+                      )
+
 add_executable(crack crack.cc)
 set_target_properties( crack
                        PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
