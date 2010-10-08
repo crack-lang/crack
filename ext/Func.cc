@@ -27,10 +27,16 @@ namespace crack { namespace ext {
 }}
 
 void Func::addArg(Type *type, const string &name) {
+    assert(!finished && 
+            "Attempted to add an argument to a finished function."
+           );
     args.push_back(new Arg(type, name));
 }
 
 void Func::finish() {
+    if (finished)
+        return;
+
     Builder &builder = module->context->builder;
     std::vector<ArgDefPtr> realArgs(args.size());
     for (int i = 0; i < args.size(); ++i)
@@ -46,5 +52,5 @@ void Func::finish() {
                                  funcPtr
                                  );
     module->context->ns->addDef(funcDef.get());
+    finished = true;
 }
-

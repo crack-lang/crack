@@ -216,6 +216,7 @@ ModuleDefPtr Crack::loadSharedLib(const string &path,
     ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
     Module mod(context.get());
     func(&mod);
+    mod.finish();
     modDef->close(*context);
     
     return modDef;

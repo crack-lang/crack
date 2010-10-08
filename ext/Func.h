@@ -19,6 +19,7 @@ class Func {
         std::string name;
         void *funcPtr;
         std::vector<Arg *> args;
+        bool finished;
 
     public:
         Func(Module *module, Type *returnType, std::string name, 
@@ -27,13 +28,15 @@ class Func {
             module(module),
             returnType(returnType),
             name(name),
-            funcPtr(funcPtr) {
+            funcPtr(funcPtr),
+            finished(false) {
         }
 
         // add a new argument to the function.
         void addArg(Type *type, const std::string &name);
 
-        // finish the definition of the function.
+        // finish the definition of the function (this will be called 
+        // automatically by Module::finish())
         void finish();
 };
 

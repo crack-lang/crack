@@ -47,6 +47,7 @@ class Module {
         model::Context *context;
         Type *builtinTypes[endSentinel];
         std::vector<Func *> funcs;
+        bool finished;
 
     public:
         Module(model::Context *context);
@@ -76,6 +77,12 @@ class Module {
         
         Type *getType(const char *name);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr);
+        
+        /**
+         * finish the module (extension init funcs need not call this, it will 
+         * be called automatically by the loader).
+         */
+        void finish();
 };
 
 
