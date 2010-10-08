@@ -127,7 +127,7 @@ class File : FileInfo,
     void write(String data) {
         
         if (_writer is null || !_isValid)
-            return null;
+            return;
         
         _writer.write(data);
         

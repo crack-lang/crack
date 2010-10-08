@@ -36,8 +36,6 @@ int _crack_fnmatch(const char* pattern, const char* string);
 char* _crack_basename(char* path); 
 char* _crack_dirname(char* path); 
 
-char* _crack_strerror(void);
-
 }
 
 #endif // _runtime_Dir_h_

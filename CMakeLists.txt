@@ -55,7 +55,11 @@ set_target_properties(libcrack
                       PROPERTIES
                       OUTPUT_NAME crack
                       VERSION ${CRACK_VERSION}
+                      LINK_FLAGS ${LLVM_LDFLAGS}
                       )
+target_link_libraries( libcrack
+                       ${LLVM_LIBS}
+                     )
 
 add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
 set_target_properties(crack-runtime
@@ -74,7 +78,6 @@ set_target_properties( crack
                      
 target_link_libraries( crack
                        libcrack
-                       ${LLVM_LIBS}
                      )
 
 # install targets
