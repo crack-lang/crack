@@ -1027,11 +1027,6 @@ test_output 'regex tests' 'import test.test_regex;' ok
 test_output 'sockets' 'import test.test_sockets;' ok
 ln -f test/.libs/testext.so test/testext.so || {
     echo "Unable to copy shared library"; exit 1; }
-test_output 'extension modules' \
-    'import test.testext echo;
-     import crack.io cout;
-     if (String(echo("hello".buffer)) != "hello") cout `failed\n`;
-     cout `ok\n`;' \
-     ok
+test_output 'extension modules' 'import test.test_extensions;' ok
 
 exit $rc

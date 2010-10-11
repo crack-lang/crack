@@ -1,0 +1,13 @@
+# Copyright 2010 Google Inc.
+# Extension tests.
+
+import test.testext echo, MyType;
+import crack.io cout;
+if (String(echo("hello".buffer)) != "hello")
+    cout `failed on function invocation\n`;
+
+t := MyType();
+if (String(t.echo('bite me'.buffer)) != 'bite me') 
+    cout `failed on method invocation\n`;
+
+cout `ok\n`;

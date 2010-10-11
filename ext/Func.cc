@@ -34,23 +34,23 @@ void Func::addArg(Type *type, const string &name) {
 }
 
 void Func::finish() {
-    if (finished)
+    if (finished || !context)
         return;
 
-    Builder &builder = module->context->builder;
+    Builder &builder = context->builder;
     std::vector<ArgDefPtr> realArgs(args.size());
     for (int i = 0; i < args.size(); ++i)
         realArgs[i] = builder.createArgDef(args[i]->type->typeDef, 
                                            args[i]->name
                                            );
     FuncDefPtr funcDef =
-        builder.createExternFunc(*module->context,
-                                 FuncDef::noFlags,
+        builder.createExternFunc(*context,
+                                 static_cast<FuncDef::Flags>(flags),
                                  name,
                                  returnType->typeDef,
                                  realArgs,
                                  funcPtr
                                  );
-    module->context->ns->addDef(funcDef.get());
+    context->ns->addDef(funcDef.get());
     finished = true;
 }

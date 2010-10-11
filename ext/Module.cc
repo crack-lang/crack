@@ -56,9 +56,21 @@ Type *Module::getType(const char *name) {
     assert(0 && "not implemented");
 }
 
+Type *Module::addType(const char *name) {
+    TypeMap::iterator i = types.find(name);
+    if (i != types.end()) {
+        std::cerr << "Type " << name << " already registered!" << std::endl;
+        assert(false);
+    }
+
+    Type *result;
+    types[name] = result = new Type(name, context);
+    return result;
+}
+
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr) {
     assert(!finished && "Attempting to add a function to a finished module.");
-    Func *f = new Func(this, returnType, name, funcPtr);
+    Func *f = new Func(context, returnType, name, funcPtr, Func::noFlags);
     funcs.push_back(f);
     return f;
 }

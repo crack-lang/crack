@@ -4,6 +4,8 @@
 #ifndef _crack_ext_Module_h_
 #define _crack_ext_Module_h_
 
+#include <map>
+#include <string>
 #include <vector>
 
 namespace model {
@@ -47,6 +49,8 @@ class Module {
         model::Context *context;
         Type *builtinTypes[endSentinel];
         std::vector<Func *> funcs;
+        typedef std::map<std::string, Type *> TypeMap;
+        TypeMap types;
         bool finished;
 
     public:
@@ -76,6 +80,7 @@ class Module {
         Type *getOverloadType();
         
         Type *getType(const char *name);
+        Type *addType(const char *name);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr);
         
         /**
