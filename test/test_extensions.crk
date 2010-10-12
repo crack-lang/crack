@@ -10,4 +10,10 @@ t := MyType();
 if (String(t.echo('bite me'.buffer)) != 'bite me') 
     cout `failed on method invocation\n`;
 
+if (t.a != 100)
+    cout `integer instance variable not set.\n`;
+
+if (String(t.b) != 'test')
+    cout `string instance variable not set.\n`;
+
 cout `ok\n`;

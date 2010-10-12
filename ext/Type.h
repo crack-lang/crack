@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "Var.h"
+
 namespace model {
     class Context;
     class TypeDef;
@@ -33,6 +35,7 @@ class Type {
             model::Context *context;
             TypeVec bases;
             FuncMap funcs;
+            VarMap instVars;
             
             Impl(const std::string &name, model::Context *context) :
                 name(name),
@@ -62,6 +65,11 @@ class Type {
          * The new base must not already be in the class' ancestry.
          */
         void addBase(Type *base);
+
+        /**
+         * Add an instance variable.
+         */
+        void addInstVar(Type *type, const std::string &name);
         
         /**
          * Add a new method to the class and returns it.
