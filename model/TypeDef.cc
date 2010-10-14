@@ -477,7 +477,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         TypeDef *base = ibase->get();
 
         // see if there's a constructor for the base class in our list of 
-        // initilaizers.
+        // initializers.
         FuncCallPtr initCall = inits->getBaseInitializer(base);
         if (initCall) {
             initCall->emit(context);
