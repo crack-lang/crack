@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 # Extension tests.
 
-import test.testext echo, MyType;
+import test.testext echo, MyType, MyAggType;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
@@ -15,5 +15,17 @@ if (t.a != 100)
 
 if (String(t.b) != 'test')
     cout `string instance variable not set.\n`;
+
+agg := MyAggType();
+if (agg.refCount != 1)
+    cout `bad reference count in MyAggType\n`;
+if (agg.a != 0)
+    cout `Instance variable "a" not initialized in MyAggType\n`;
+
+agg = MyAggType(100);
+if (agg.refCount != 1)
+    cout `bad reference count in MyAggType(100)\n`;
+if (agg.a != 0)
+    cout `Instance variable "a" not initialized in MyAggType(100)\n`;
 
 cout `ok\n`;

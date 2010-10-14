@@ -215,6 +215,7 @@ class LLVMBuilder : public Builder {
                              model::FuncDef::Flags flags,
                              const std::string &name,
                              model::TypeDef *returnType,
+                             model::TypeDef *receiverType,
                              const std::vector<model::ArgDefPtr> &args,
                              void *cfunc
                              );

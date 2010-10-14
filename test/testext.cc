@@ -2,6 +2,7 @@
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
+#include "ext/Object.h"
 
 #include <iostream>
 
@@ -22,6 +23,13 @@ class MyType {
         const char *echo(const char *data) { return data; }
 };
 
+class MyAggType : public Object {
+    public:
+        int a;
+
+        void init(int a0) { a = a0; }
+};    
+
 const char *echo(const char *data) { return data; }
 
 extern "C" void test_testext_init(Module *mod) {
@@ -35,5 +43,13 @@ extern "C" void test_testext_init(Module *mod) {
     type->addStaticMethod(type, "oper new", (void *)MyType::oper_new);
     f = type->addMethod(mod->getByteptrType(), "echo", (void *)&MyType::echo);
     f->addArg(mod->getByteptrType(), "data");
+    type->finish();
+    
+    type = mod->addType("MyAggType");
+    type->addBase(mod->getObjectType());
+    type->addInstVar(mod->getIntType(), "a"); 
+    f = type->addConstructor();
+    f = type->addConstructor("init", (void *)&MyAggType::init);
+    f->addArg(mod->getIntType(), "a");
     type->finish();
 }

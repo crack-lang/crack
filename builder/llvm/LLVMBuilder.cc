@@ -1010,13 +1010,28 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
                                          FuncDef::Flags flags,
                                          const string &name,
                                          TypeDef *returnType,
+                                         TypeDef *receiverType,
                                          const vector<ArgDefPtr> &args,
                                          void *cfunc
                                          ) {
-    FuncBuilder f(context, FuncDef::noFlags, BTypeDefPtr::cast(returnType),
+    ContextPtr funcCtx = 
+        context.createSubContext(Context::local, new 
+                                 LocalNamespace(context.ns.get())
+                                 );
+    FuncBuilder f(*funcCtx, flags, BTypeDefPtr::cast(returnType),
                   name,
                   args.size()
                   );
+    
+    // if we've got a receiver, add it to the func builder and store a "this"
+    // variable.
+    if (receiverType) {
+        f.setReceiverType(BTypeDefPtr::acast(receiverType));
+        ArgDefPtr thisDef = 
+            funcCtx->builder.createArgDef(receiverType, "this");
+        funcCtx->ns->addDef(thisDef.get());
+    }
+
     f.setArgs(args);
     f.finish(false);
     primFuncs[f.funcDef->rep] = cfunc;

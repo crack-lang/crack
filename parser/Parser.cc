@@ -1336,6 +1336,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
             context->builder.createExternFunc(*context, FuncDef::noFlags,
                                               name,
                                               returnType,
+                                              0,
                                               argDefs,
                                               stub->address
                                               );

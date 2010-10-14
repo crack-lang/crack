@@ -44,6 +44,9 @@ GET_TYPE(Byte, byte)
 GET_TYPE(Int32, int32)
 GET_TYPE(Int64, int64)
 GET_TYPE(Int, int)
+GET_TYPE(Uint32, uint32)
+GET_TYPE(Uint64, uint64)
+GET_TYPE(Uint, uint)
 GET_TYPE(Float32, float32)
 GET_TYPE(Float64, float64)
 GET_TYPE(Float, float)
@@ -64,12 +67,13 @@ Type *Module::addType(const char *name) {
     }
 
     Type *result;
-    types[name] = result = new Type(name, context);
+    types[name] = result = new Type(this, name, context);
     return result;
 }
 
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr) {
     assert(!finished && "Attempting to add a function to a finished module.");
+    returnType->checkFinished();
     Func *f = new Func(context, returnType, name, funcPtr, Func::noFlags);
     funcs.push_back(f);
     return f;

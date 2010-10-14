@@ -24,7 +24,13 @@ class Func {
         enum Flags {
             noFlags = 0,
             method = 1,
-            virtualized = 2
+            virtualized = 2,
+
+            // mask for flags that map to FuncDef flags.
+            funcDefFlags = 7,
+
+            // flags that don't map to FuncDef flags.
+            constructor = 1024
         };
 
     private:
@@ -60,8 +66,8 @@ class Func {
 };
 
 inline Func::Flags operator |(Func::Flags a, Func::Flags b) {
-    return static_cast<Func::Flags>(static_cast<Func::Flags>(a) |
-                                    static_cast<Func::Flags>(b)
+    return static_cast<Func::Flags>(static_cast<int>(a) |
+                                    static_cast<int>(b)
                                     );
 }
 

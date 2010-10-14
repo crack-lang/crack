@@ -8,6 +8,7 @@
 #include "model/Context.h"
 #include "model/TypeDef.h"
 #include "Func.h"
+#include "Module.h"
 
 using namespace crack::ext;
 using namespace model;
@@ -18,8 +19,8 @@ Type::Impl::~Impl() {
     // get cleaned up by the module.
     
     // clean up the funcs
-    for (FuncMap::iterator i = funcs.begin(); i != funcs.end(); ++i)
-        delete i->second;
+    for (FuncVec::iterator i = funcs.begin(); i != funcs.end(); ++i)
+        delete *i;
     
     // clean up the inst vars
     for (VarMap::iterator vi = instVars.begin(); vi != instVars.end(); ++vi)
@@ -57,7 +58,16 @@ Func *Type::addMethod(Type *returnType, const std::string &name,
                       void *funcPtr
                       ) {
     Func *result = new Func(0, returnType, name, funcPtr, Func::method);
-    impl->funcs[name] = result;
+    impl->funcs.push_back(result);
+    return result;
+}
+
+Func *Type::addConstructor(const char *name, void *funcPtr) {
+    Func *result = new Func(0, impl->module->getVoidType(), name ? name : "", 
+                            funcPtr,
+                            Func::constructor | Func::method
+                            );
+    impl->funcs.push_back(result);
     return result;
 }
 
@@ -65,7 +75,7 @@ Func *Type::addStaticMethod(Type *returnType, const std::string &name,
                             void *funcPtr
                             ) {
     Func *result = new Func(0, returnType, name, funcPtr, Func::noFlags);
-    impl->funcs[name] = result;
+    impl->funcs.push_back(result);
     return result;
 }
 
@@ -111,12 +121,12 @@ void Type::finish() {
     }
 
     // emit all of the method defs
-    for (FuncMap::iterator fi = impl->funcs.begin(); fi != impl->funcs.end();
+    for (FuncVec::iterator fi = impl->funcs.begin(); fi != impl->funcs.end();
          ++fi
          ) {
         // bind the class context to the function, then finish it.
-        fi->second->context = clsCtx.get();
-        fi->second->finish();
+        (*fi)->context = clsCtx.get();
+        (*fi)->finish();
     }
     
     ctx->builder.emitEndClass(*clsCtx);

@@ -3,7 +3,6 @@
 #ifndef _crack_ext_Type_h_
 #define _crack_ext_Type_h_
 
-#include <map>
 #include <string>
 #include <vector>
 
@@ -27,17 +26,21 @@ class Type {
         model::TypeDef *typeDef;
         
         typedef std::vector<Type *> TypeVec;
-        typedef std::map<std::string, Func *> FuncMap;
+        typedef std::vector<Func *> FuncVec;
         
         // Impl holds everything that we need to create a new type
         struct Impl {
+            Module *module;
             std::string name;
             model::Context *context;
             TypeVec bases;
-            FuncMap funcs;
+            FuncVec funcs;
             VarMap instVars;
             
-            Impl(const std::string &name, model::Context *context) :
+            Impl(Module *module, const std::string &name, 
+                 model::Context *context
+                 ) :
+                module(module),
                 name(name),
                 context(context) {
             }
@@ -48,9 +51,11 @@ class Type {
         Impl *impl;
 
         Type(model::TypeDef *typeDef) : typeDef(typeDef), impl(0) {}
-        Type(const std::string &name, model::Context *context) : 
+        Type(Module *module, const std::string &name, 
+             model::Context *context
+             ) : 
             typeDef(0),
-            impl(new Impl(name, context)) {
+            impl(new Impl(module, name, context)) {
         }
         ~Type();
 
@@ -83,6 +88,16 @@ class Type {
         Func *addMethod(Type *returnType, const std::string &name,
                         void *funcPtr
                         );
+
+        /**
+         * Add a new constructor.
+         * If 'name' and 'funcPtr' are not null, the should be the name and 
+         * function pointer of a function with args as those to be added to 
+         * the constructor.  This function will be called in the body of the 
+         * constructor with the constructor's arguments.
+         * Default initializers will be called prior to the function.
+         */
+        Func *addConstructor(const char *name = 0, void *funcPtr = 0);
         
         /**
          * Add a new static method to the class and returns it.  Static 
