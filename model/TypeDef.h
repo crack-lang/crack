@@ -116,6 +116,7 @@ class TypeDef : public VarDef, public Namespace {
                 bool pointer = false
                 ) :
             VarDef(metaType, name),
+            Namespace(name),
             generic(0),
             pointer(pointer),
             hasVTable(false),

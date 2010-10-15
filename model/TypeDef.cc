@@ -610,8 +610,8 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
          baseIter != parents.end();
          ++baseIter
          ) {
-        out << prefix << "parent" << endl;
-        (*baseIter)->dump(out, prefix);
+        out << childPrefix << "parent:" << endl;
+        (*baseIter)->dump(out, childPrefix+"  ");
     }
     
     for (VarDefMap::const_iterator iter = beginDefs(); iter != endDefs();

@@ -15,7 +15,10 @@ class LocalNamespace : public Namespace {
         NamespacePtr parent;
 
     public:
-        LocalNamespace(Namespace *parent) : parent(parent) {}
+        LocalNamespace(Namespace *parent, const std::string &cName) :
+                Namespace((parent)?parent->getName()+"."+cName:
+                                   cName),
+                parent(parent) {}
         virtual NamespacePtr getParent(unsigned index);
 };
 

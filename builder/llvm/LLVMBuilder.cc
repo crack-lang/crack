@@ -461,7 +461,8 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
         return TypeDefPtr::rcast(iter->second);
 
     // nope.  create a new type object and store it
-    BTypeDefPtr crkFuncType = new BTypeDef(context.globalData->classType.get(), "", 
+    BTypeDefPtr crkFuncType = new BTypeDef(context.globalData->classType.get(),
+                                           "",
                                            llvmFuncType
                                            );
     funcTypes[llvmFuncType] = crkFuncType;
@@ -882,7 +883,8 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     module->addTypeName("struct.meta." + name, metaType->rep);
 
     const Type *opaque = OpaqueType::get(getGlobalContext());
-    type = new BTypeDef(metaType.get(), name, PointerType::getUnqual(opaque),
+    type = new BTypeDef(metaType.get(), name,
+                        PointerType::getUnqual(opaque),
                         true,
                         nextVTableSlot
                         );
@@ -1016,7 +1018,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
                                          ) {
     ContextPtr funcCtx = 
         context.createSubContext(Context::local, new 
-                                 LocalNamespace(context.ns.get())
+                                 LocalNamespace(context.ns.get(), name)
                                  );
     FuncBuilder f(*funcCtx, flags, BTypeDefPtr::cast(returnType),
                   name,
@@ -1046,7 +1048,7 @@ namespace {
 
         // build a local context to hold the "this"
         Context localCtx(context.builder, Context::local, &context,
-                         new LocalNamespace(objClass)
+                         new LocalNamespace(objClass, objClass->name)
                          );
         localCtx.ns->addDef(new ArgDef(objClass, "this"));
 
@@ -1695,7 +1697,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     BTypeDef *voidType;
     gd->voidType = voidType = new BTypeDef(context.globalData->classType.get(), 
-                                           "void", 
+                                           "void",
                                            Type::getVoidTy(lctx)
                                            );
     context.ns->addDef(voidType);
@@ -1704,7 +1706,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
     gd->voidptrType = voidptrType = new BTypeDef(context.globalData->classType.get(), 
-                                                 "voidptr", 
+                                                 "voidptr",
                                                  llvmVoidPtrType
                                                  );
     context.ns->addDef(voidptrType);
@@ -1713,7 +1715,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
         PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
     gd->byteptrType = byteptrType = new BTypeDef(context.globalData->classType.get(), 
-                                                 "byteptr", 
+                                                 "byteptr",
                                                  llvmBytePtrType
                                                  );
     byteptrType->defaultInitializer = createStrConst(context, "");
@@ -1725,7 +1727,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
     gd->boolType = boolType = new BTypeDef(context.globalData->classType.get(), 
-                                           "bool", 
+                                           "bool",
                                            llvmBoolType
                                            );
     gd->boolType->defaultInitializer = new BIntConst(boolType, (int64_t)0);
@@ -2028,7 +2030,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
-        new BTypeDef(metaType.get(), "VTableBase", 
+        new BTypeDef(metaType.get(), "VTableBase",
                      PointerType::getUnqual(vtablePtrType),
                      true
                      );

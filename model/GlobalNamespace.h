@@ -11,7 +11,8 @@ SPUG_RCPTR(GlobalNamespace);
 
 class GlobalNamespace : public LocalNamespace {
     public:
-        GlobalNamespace(Namespace *parent) : LocalNamespace(parent) {}
+        GlobalNamespace(Namespace *parent, const std::string &cName) :
+                LocalNamespace(parent, cName) {}
 };
 
 } // namespace model

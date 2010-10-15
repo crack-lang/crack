@@ -54,7 +54,7 @@ Crack::Crack() :
     useGlobalLibs(true) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
-                              new GlobalNamespace(0)
+                              new GlobalNamespace(0,".builtin")
                               );
 
     // register the primitives    
@@ -167,8 +167,12 @@ void Crack::parseModule(Context &context,
     parser.parse();
     context.builder.setOptimize(optimizeLevel);
     module->close(context);
-    if (dump)
-        context.builder.dump();
+    if (dump) {
+        //context.builder.dump();
+        cerr<<"MODULE DUMP: " << module->name << "\n";
+        context.dump();
+        cerr<<"-------------------------------\n";
+    }
     else
         context.builder.run();
 }
@@ -209,7 +213,7 @@ ModuleDefPtr Crack::loadSharedLib(const string &path,
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get())
+                    new GlobalNamespace(rootContext->ns.get(), canonicalName)
                     );
 
     // create a module object
@@ -275,7 +279,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get())
+                    new GlobalNamespace(rootContext->ns.get(), canonicalName)
                     );
     ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
     if (!modPath.isDir) {
@@ -368,7 +372,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get())
+                    new GlobalNamespace(rootContext->ns.get(), name)
                     );
 
     // XXX using the name as the canonical name which is not right, need to 

@@ -36,6 +36,9 @@ class Namespace : public virtual spug::RCBase {
         // correct order.
         VarDefVec ordered;
 
+        // fully qualified namespace name, e.g. "crack.io"
+        std::string canonicalName;
+
         /**
          * Stores a definition, promoting it to an overload if necessary.
          */
@@ -43,6 +46,15 @@ class Namespace : public virtual spug::RCBase {
 
     public:
         
+        Namespace(const std::string &cName) :
+                canonicalName(cName)
+        {
+
+        }
+
+        // return the fully qualified name of the namespace
+        const std::string &getName() const { return canonicalName; }
+
         /** 
          * Returns the parent at the index, null if it is greater than 
          * the number of parents.

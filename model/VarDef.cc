@@ -29,6 +29,12 @@ bool VarDef::hasInstSlot() {
     return true;
 }
 
+std::string VarDef::getFullName() const {
+    return ((owner && owner->getName().length()) ?
+            (owner->getName()+"."+name) :
+            name);
+}
+
 void VarDef::dump(ostream &out, const string &prefix) const {
     out << prefix << type->getFullName() << " " << name << endl;
 }
