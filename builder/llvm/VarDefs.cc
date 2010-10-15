@@ -28,15 +28,25 @@ ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context,
                                              AssignExpr *assign
                                              ) {
     LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+
+    // first evaluate the expression (it could contain this argument, which 
+    // hasn't been initialized yet)
+    ResultExprPtr result = assign->value->emit(context);
+    b.narrow(assign->value->type.get(), assign->var->type.get());
+    Value *exprVal = b.lastValue;
     
     // we have to promote the argument to a local variable.
     BTypeDef *varType = BTypeDefPtr::arcast(assign->var->type);
     Value *var;
     BHeapVarDefImplPtr localVar = b.createLocalVar(varType, var);
     assign->var->impl = localVar;
-    
-    // then do the emitAssignment() on the local variable.
-    return localVar->emitAssignment(context, assign);
+
+    // now store the variable
+    b.builder.CreateStore(exprVal, localVar->getRep(b));
+    result->handleAssignment(context);
+    b.lastValue = exprVal;
+
+    return new BResultExpr(assign, exprVal);    
 }
 
 // BMemVarDefImpl

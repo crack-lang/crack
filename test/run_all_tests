@@ -649,8 +649,10 @@ test_output "variables in allocated loops don't eat the stack" \
 
 test_output 'assignment to function arguments' \
     'void a(int x) { printint(x); x = 100; printint(x); x = 200; printint(x); }
-     a(0);' \
-    0100200
+     a(0);
+     uint foo(uint v) { v >>= 1; return v; };
+     printint(int(foo(2)));' \
+    01002001
 
 test_output 'error at attempts to use variables from enclosing functions' \
     'void outer() { int a; int inner() { return a; } }' \
