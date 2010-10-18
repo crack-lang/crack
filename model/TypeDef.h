@@ -245,7 +245,17 @@ class TypeDef : public VarDef, public Namespace {
          * if necessary.
          */
         virtual TypeDef *getSpecialization(Context &context, TypeVecObj *types);
-        
+
+        /**
+         * Set namespace owner, and set our namespace name
+         */
+        virtual void setOwner(Namespace *o) {
+            owner = o;
+            canonicalName = (o->getName().length())?
+                                o->getName()+"."+name :
+                                name;
+        }
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 

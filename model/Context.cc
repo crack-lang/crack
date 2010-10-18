@@ -70,10 +70,10 @@ ContextPtr Context::createSubContext(Scope newScope, Namespace *ns) {
     if (!ns) {
         switch (newScope) {
             case local:
-                ns = new LocalNamespace(this->ns.get(), "local");
+                ns = new LocalNamespace(this->ns.get(), "");
                 break;
             case module:
-                ns = new GlobalNamespace(this->ns.get(), "module");
+                ns = new GlobalNamespace(this->ns.get(), "");
                 break;
             case composite:
             case instance:
@@ -291,21 +291,21 @@ VarRefPtr Context::createVarRef(VarDef *varDef) {
     // verify that the variable is reachable
     
     // if the variable is in a module context, it is accessible
-    if (ModuleDefPtr::cast(varDef->owner) || 
-        GlobalNamespacePtr::cast(varDef->owner)) {
+    if (ModuleDefPtr::cast(varDef->getOwner()) ||
+        GlobalNamespacePtr::cast(varDef->getOwner())) {
         return builder.createVarRef(varDef);
     
     // if it's in an instance context, verify that this is either the composite
     // context of the class or a method of the class that contains the variable.
-    } else if (TypeDefPtr::cast(varDef->owner)) {
-        if (scope == composite && varDef->owner == parent->ns ||
+    } else if (TypeDefPtr::cast(varDef->getOwner())) {
+        if (scope == composite && varDef->getOwner() == parent->ns ||
             getToplevel()->parent->ns
             ) {
             return builder.createVarRef(varDef);
         }
     
     // if it's in a function context, make sure it's this function
-    } else if (inSameFunc(varDef->owner)) {
+    } else if (inSameFunc(varDef->getOwner())) {
         return builder.createVarRef(varDef);
     }
     
@@ -317,7 +317,7 @@ VarRefPtr Context::createVarRef(VarDef *varDef) {
 
 VarRefPtr Context::createFieldRef(Expr *aggregate, VarDef *var) {
     TypeDef *aggType = aggregate->type.get();
-    TypeDef *varNS = TypeDefPtr::cast(var->owner);
+    TypeDef *varNS = TypeDefPtr::cast(var->getOwner());
     if (!varNS || !aggType->isDerivedFrom(varNS))
         error(SPUG_FSTR("Variable '" << var->name <<
                          "' is not accessible from within this context."

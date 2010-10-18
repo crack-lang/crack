@@ -53,9 +53,10 @@ void FuncBuilder::finish(bool storeDef) {
             FunctionType::get(rawRetType, llvmArgs, false);
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
+
     Function *func = Function::Create(llvmFuncType,
                                       linkage,
-                                      funcDef->name,
+                                      funcDef->getFullName(),
                                       builder.module
                                       );
     func->setCallingConv(llvm::CallingConv::C);

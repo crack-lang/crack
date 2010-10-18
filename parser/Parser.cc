@@ -123,7 +123,7 @@ void Parser::parseClause(bool defsAllowed) {
          // see if this is a define
          Token tok2 = getToken();
          if (tok2.isDefine()) {
-            if (def->owner == context->ns.get())
+            if (def->getOwner() == context->ns.get())
                redefineError(tok2, def.get());
             else
                warn(tok2, SPUG_FSTR("Redefining symbol " << def->name));
@@ -343,7 +343,7 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
-   if (TypeDefPtr::cast(var->owner)) {
+   if (TypeDefPtr::cast(var->getOwner())) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      makeThisRef(ident, ident.getData());
@@ -439,7 +439,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       // container _is_ a class but the function is a method of its 
       // meta-class, use the container as the receiver.
       if (container)
-         if (container->type->meta && !TypeDefPtr::acast(func->owner)->meta) {
+         if (container->type->meta && !TypeDefPtr::acast(func->getOwner())->meta) {
             // the container is a class and the function is an explicit 
             // call of a (presumably base class) method.
             squashVirtual = true;
@@ -545,7 +545,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 
       // if this is an instance variable, emit a field assignment.  
       // Otherwise emit a normal variable assignment.
-      if (TypeDefPtr::cast(var->owner)) {
+      if (TypeDefPtr::cast(var->getOwner())) {
          // if there's no container, try to use an implicit "this"
          ExprPtr receiver = container ? container : 
                                         makeThisRef(ident, ident.getData());
@@ -1158,7 +1158,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          // look up the appropriate constructor
          FuncDefPtr operInit = 
             base->lookUp(*context, "oper init", args);
-         if (!operInit || operInit->owner != base.get())
+         if (!operInit || operInit->getOwner() != base.get())
             error(tok, SPUG_FSTR("No matching constructor found for " <<
                                   base->getFullName()
                                  )
@@ -1175,7 +1175,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                   );
       
       // make sure that it is a direct member of this class.
-      } else if (varDef->owner != type.get()) {
+      } else if (varDef->getOwner() != type.get()) {
          error(tok,
                SPUG_FSTR(tok.getData() << " is not an immediate member of " <<
                          type->name
@@ -1340,7 +1340,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               argDefs,
                                               stub->address
                                               );
-         stub->owner->removeDef(stub);
+         stub->getOwner()->removeDef(stub);
          cstack.restore();
          addDef(funcDef.get());
       } else {
@@ -1387,7 +1387,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                         )
                );
       
-      if (override->owner != context->getParent()->getDefContext()->ns.get())
+      if (override->getOwner() != context->getParent()->getDefContext()->ns.get())
          error(tok3,
                SPUG_FSTR("Function " << name << 
                           " can not be defined in a different namespace from "
@@ -1405,7 +1405,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    // store the new definition in the parent context if it's not already in 
    // there (if there was a forward declaration)
-   if (!funcDef->owner) {
+   if (!funcDef->getOwner()) {
       ContextStackFrame cstack(*this, context->getParent().get());
       addDef(funcDef.get());
    }
@@ -2079,7 +2079,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
    ContextPtr classContext;
    VarDefPtr existing = context->ns->lookUp(name);
    if (existing) {
-      Namespace *existingNS = existing->owner;
+      Namespace *existingNS = existing->getOwner();
       TypeDef *existingClass = 0;
 
       // if it's ok to overload, make sure that the existing definition is a 

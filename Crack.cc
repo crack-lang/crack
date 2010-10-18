@@ -54,7 +54,7 @@ Crack::Crack() :
     useGlobalLibs(true) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
-                              new GlobalNamespace(0,".builtin")
+                              new GlobalNamespace(0,"")
                               );
 
     // register the primitives    
@@ -167,12 +167,8 @@ void Crack::parseModule(Context &context,
     parser.parse();
     context.builder.setOptimize(optimizeLevel);
     module->close(context);
-    if (dump) {
-        //context.builder.dump();
-        cerr<<"MODULE DUMP: " << module->name << "\n";
-        context.dump();
-        cerr<<"-------------------------------\n";
-    }
+    if (dump)
+        context.builder.dump();
     else
         context.builder.run();
 }

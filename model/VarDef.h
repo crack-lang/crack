@@ -20,8 +20,11 @@ SPUG_RCPTR(VarDef);
 // Variable definition.  All names in a context (including functions and 
 // types) are derived from VarDef's.
 class VarDef : public virtual spug::RCBase {
-    public:
+
+    protected:
         Namespace *owner;
+
+    public:
         TypeDefPtr type;
         std::string name;
         VarDefImplPtr impl;
@@ -42,6 +45,13 @@ class VarDef : public virtual spug::RCBase {
          */        
         std::string getFullName() const;
         
+        /**
+         * Set namespace owner
+         */
+        virtual void setOwner(Namespace *o) { owner = o; }
+
+        Namespace *getOwner(void) { return owner; }
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
         

@@ -127,14 +127,7 @@ TypeDef *FuncDef::getThisType() const {
 }
 
 void FuncDef::dump(ostream &out, const string &prefix) const {
-    string parent;
-    TypeDef *myClass;
-    if (myClass = TypeDefPtr::cast(owner))
-        parent = myClass->name + ".";
-    else
-        parent = "";
-
-    out << prefix << returnType->getFullName() << " " << parent << name <<
+    out << prefix << returnType->getFullName() << " " << getFullName() <<
         args << "\n";
 }
 
@@ -148,7 +141,7 @@ void FuncDef::dump(ostream &out, const ArgVec &args) {
             out << ", ";
         else
             first = false;
-        out << (*iter)->type->name << ' ' << (*iter)->name;
+        out << (*iter)->type->getFullName() << ' ' << (*iter)->name;
     }
     out << ")";    
 }

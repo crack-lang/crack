@@ -18,13 +18,13 @@ ResultExprPtr BFieldRef::emit(Context &context) {
     LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
 
     // narrow to the ancestor type where the variable is defined.
-    bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->owner));
+    bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->getOwner()));
 
     unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
 
     // if the variable is from a complete type, we can emit it.
     //  Otherwise, we need to store a placeholder.
-    BTypeDef *owner = BTypeDefPtr::acast(def->owner);
+    BTypeDef *owner = BTypeDefPtr::acast(def->getOwner());
     if (owner->complete) {
         Value *fieldPtr =
                 bb.builder.CreateStructGEP(bb.lastValue, index);

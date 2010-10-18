@@ -4,6 +4,7 @@
 #define _builder_llvm_BFuncDef_h_
 
 #include "model/FuncDef.h"
+#include "model/Namespace.h"
 #include "LLVMBuilder.h"
 #include "BTypeDef.h"
 
@@ -36,6 +37,13 @@ public:
     rep(0),
     vtableSlot(0) {
     }
+
+
+    /**
+     * If our owner gets set, update the LLVM symbol name to reflect
+     * the full canonical name
+     */
+    void setOwner(model::Namespace *o);
 
     /**
      * Returns the module-specific Function object for the function.

@@ -133,7 +133,7 @@ namespace {
                           FuncBuilder &funcBuilder
                           ) {
         // find the path to the overriden's class
-        BTypeDef *overridenClass = BTypeDefPtr::acast(overriden->owner);
+        BTypeDef *overridenClass = BTypeDefPtr::acast(overriden->getOwner());
         classType->getPathToAncestor(
             *overridenClass, 
             funcBuilder.funcDef->pathToFirstDeclaration
@@ -409,7 +409,7 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
                                           Function::ExternalLinkage,
-                                          bfuncDef->name,
+                                          bfuncDef->getFullName(),
                                           module
                                           );
         execEng->addGlobalMapping(func,
@@ -954,7 +954,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     } else {
         // 'existing' is a forward definition, fill it in.
         funcDef = BFuncDefPtr::acast(existing);
-        classType = BTypeDefPtr::cast(funcDef->owner);
+        classType = BTypeDefPtr::cast(funcDef->getOwner());
         funcDef->flags =
             static_cast<FuncDef::Flags>(
                 funcDef->flags & 
@@ -1634,7 +1634,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     aggregate->emit(context);
 
     // narrow to the type of the ancestor that owns the field.
-    BTypeDef *typeDef = BTypeDefPtr::acast(assign->var->owner);
+    BTypeDef *typeDef = BTypeDefPtr::acast(assign->var->getOwner());
     narrow(aggregate->type.get(), typeDef);
     Value *aggregateRep = lastValue;
     

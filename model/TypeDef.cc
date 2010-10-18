@@ -172,7 +172,7 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
         // base class (not inherited from an ancestor of the base class)
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
-        if (!baseInit || baseInit->owner != ibase->get())
+        if (!baseInit || baseInit->getOwner() != ibase->get())
             classContext.error(SPUG_FSTR("Cannot create a default constructor "
                                           "because base class " << 
                                           (*ibase)->name <<
@@ -412,7 +412,7 @@ void TypeDef::rectify(Context &classContext) {
     // if the class doesn't already define a delete operator specific to the 
     // class, generate one.
     FuncDefPtr operDel = lookUpNoArgs("oper del");
-    if (!operDel || operDel->owner != this)
+    if (!operDel || operDel->getOwner() != this)
         createDefaultDestructor(classContext);
 }
 
@@ -494,7 +494,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
         // base class (not inherited from an ancestor of the base class)
         FuncDef::ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
-        if (!baseInit || baseInit->owner != base)
+        if (!baseInit || baseInit->getOwner() != base)
             context.error(SPUG_FSTR("Cannot initialize base classes "
                                      "because base class " << 
                                      base->name <<

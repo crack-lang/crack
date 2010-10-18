@@ -149,7 +149,7 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
          ++iter
          )
         if ((*iter)->args.empty() && 
-            (acceptAlias || (*iter)->owner == owner)
+            (acceptAlias || (*iter)->getOwner() == owner)
             )
             return iter->get();
 

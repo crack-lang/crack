@@ -86,7 +86,7 @@ void VTableBuilder::add(BFuncDef *func) {
     if (path.size())
         ancestor = BTypeDefPtr::arcast(path.back().ancestor);
     else
-        ancestor = BTypeDefPtr::acast(func->owner);
+        ancestor = BTypeDefPtr::acast(func->getOwner());
     
     // now find the ancestor of "ancestor" with the first vtable
     ancestor = ancestor->findFirstVTable(vtableBaseType);

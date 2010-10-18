@@ -35,7 +35,7 @@ OverloadDefPtr Namespace::getOverload(const std::string &varName) {
 
     if (overloads) {
         defs[varName] = overloads;
-        overloads->owner = this;
+        overloads->setOwner(this);
     }
 
     return overloads;
@@ -83,7 +83,7 @@ FuncDefPtr Namespace::lookUp(Context &context,
             typeDef->lookUp(context, "oper new", args);
 
         // make sure we got it, and we didn't inherit it
-        if (!operNew || operNew->owner != typeDef)
+        if (!operNew || operNew->getOwner() != typeDef)
             return 0;
         
         return operNew;
@@ -108,10 +108,10 @@ FuncDefPtr Namespace::lookUpNoArgs(const std::string &name, bool acceptAlias) {
 }
 
 void Namespace::addDef(VarDef *def) {
-    assert(!def->owner);
+    assert(!def->getOwner());
 
     storeDef(def);
-    def->owner = this;
+    def->setOwner(this);
 }
 
 void Namespace::removeDef(VarDef *def) {
@@ -123,7 +123,7 @@ void Namespace::removeDef(VarDef *def) {
 
 void Namespace::addAlias(VarDef *def) {
     // make sure that the symbol is already bound to a context.
-    assert(def->owner);
+    assert(def->getOwner());
 
     // overloads should never be aliased - otherwise the new context could 
     // extend them.
@@ -136,17 +136,17 @@ void Namespace::addAlias(VarDef *def) {
 
 void Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
-    assert(def->owner);
+    assert(def->getOwner());
     defs[name] = def;
 }
 
 void Namespace::replaceDef(VarDef *def) {
-    assert(!def->owner);
+    assert(!def->getOwner());
     assert(!def->hasInstSlot() && 
            "Attempted to replace an instance variable, this doesn't work "
            "because it won't change the 'ordered' vector."
            );
-    def->owner = this;
+    def->setOwner(this);
     defs[def->name] = def;
 }
 

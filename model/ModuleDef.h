@@ -36,7 +36,15 @@ class ModuleDef : public VarDef, public Namespace {
         virtual void callDestructor() = 0;
         
         virtual bool hasInstSlot();
-        
+
+        /**
+         * Set namespace owner, and set our namespace name
+         */
+        virtual void setOwner(Namespace *o) {
+            owner = o;
+            canonicalName = o->getName()+"."+name;
+        }
+
         virtual NamespacePtr getParent(unsigned index);
 };
 
