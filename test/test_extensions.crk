@@ -25,7 +25,7 @@ if (agg.a != 0)
 agg = MyAggType(100);
 if (agg.refCount != 1)
     cout `bad reference count in MyAggType(100)\n`;
-if (agg.a != 0)
+if (agg.a != 100)
     cout `Instance variable "a" not initialized in MyAggType(100)\n`;
 
 cout `ok\n`;
