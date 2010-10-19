@@ -11,6 +11,7 @@ using namespace builder::mvll;
 
 void BFuncDef::setOwner(model::Namespace *o) {
     owner = o;
+    fullName.clear();
     rep->setName(getFullName());
 }
 
