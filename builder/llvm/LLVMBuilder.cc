@@ -232,7 +232,7 @@ namespace {
     void fixMeta(Context &context, TypeDef *type) {
         BTypeDefPtr metaType;
         BGlobalVarDefImplPtr classImpl;
-        type->type = metaType = createMetaClass(context, type->name);
+        type->type = metaType = createMetaClass(context, type->getFullName());
         metaType->meta = type;
         createClassImpl(context, BTypeDefPtr::acast(type));
     }
@@ -640,8 +640,6 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     }
     
     // construct a call to the "calloc" function
-    Function *callocFunc = module->getFunction("calloc");
-    assert(callocFunc && "calloc function has not been defined");
     BTypeDef *voidptrType =
         BTypeDefPtr::arcast(context.globalData->voidptrType);
     vector<Value *> callocArgs(2);
@@ -1441,6 +1439,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
         f.addArg("size", intType);
         f.addArg("size", intType);
         f.finish();
+        callocFunc = f.funcDef->getRep(*this);
     }
     
     // create "void __die(byteptr message)"
@@ -2010,7 +2009,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     fixMeta(context, arrayType.get());
 
     // create OverloadDef's type
-    metaType = createMetaClass(context, "Overload");
+    metaType = createMetaClass(context, ".builtin.Overload");
     BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
     createClassImpl(context, overloadDef.get());
@@ -2027,7 +2026,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vector<const Type *> members;
     Type *vtableType = StructType::get(getGlobalContext(), members);
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
-    metaType = createMetaClass(context, "VTableBase");
+    metaType = createMetaClass(context, ".builtin.VTableBase");
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
         new BTypeDef(metaType.get(), "VTableBase",

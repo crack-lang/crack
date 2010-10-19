@@ -37,7 +37,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
     Type *llvmType = PointerType::getUnqual(parmType->rep);
     TypeDefPtr tempSpec =
             new BTypeDef(type.get(),
-                         SPUG_FSTR(name << "[" << parmType->name <<
+                         SPUG_FSTR(name << "[" << parmType->getFullName() <<
                                    "]"
                                    ),
                          llvmType

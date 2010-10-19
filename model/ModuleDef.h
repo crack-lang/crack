@@ -43,6 +43,7 @@ class ModuleDef : public VarDef, public Namespace {
         virtual void setOwner(Namespace *o) {
             owner = o;
             canonicalName = o->getName()+"."+name;
+            fullName.clear();
         }
 
         virtual NamespacePtr getParent(unsigned index);

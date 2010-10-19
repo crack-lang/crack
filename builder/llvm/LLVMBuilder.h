@@ -31,7 +31,8 @@ SPUG_RCPTR(LLVMBuilder);
 class LLVMBuilder : public Builder {
     private:
 
-        DebugInfo* debugInfo;
+        llvm::Function *callocFunc;
+        DebugInfo *debugInfo;
         llvm::ExecutionEngine *execEng;
         
         // emit all cleanups for context and all parent contextts up to the 

@@ -23,6 +23,7 @@ class VarDef : public virtual spug::RCBase {
 
     protected:
         Namespace *owner;
+        mutable std::string fullName; // a cache, built in getFullName
 
     public:
         TypeDefPtr type;
@@ -48,7 +49,10 @@ class VarDef : public virtual spug::RCBase {
         /**
          * Set namespace owner
          */
-        virtual void setOwner(Namespace *o) { owner = o; }
+        virtual void setOwner(Namespace *o) {
+            owner = o;
+            fullName.clear(); // must recache since owner changed
+        }
 
         Namespace *getOwner(void) { return owner; }
 

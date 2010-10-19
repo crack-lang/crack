@@ -151,7 +151,7 @@ void Namespace::replaceDef(VarDef *def) {
 }
 
 void Namespace::dump(ostream &out, const string &prefix) {
-    out << canonicalName << "(0x" << this << ") {\n";
+    out << canonicalName << " (0x" << this << ") {\n";
     string childPfx = prefix + "  ";
     unsigned i = 0;
     Namespace *parent;

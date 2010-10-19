@@ -162,7 +162,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
 // Create a new meta-class.
 // context: enclosing context.
-// name: the original class name.
+// name: the original canonical class name.
 BTypeDefPtr createMetaClass(Context &context, const string &name) {
     LLVMBuilder &llvmBuilder =
             dynamic_cast<LLVMBuilder &>(context.builder);

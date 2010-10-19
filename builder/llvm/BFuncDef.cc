@@ -11,10 +11,7 @@ using namespace builder::mvll;
 
 void BFuncDef::setOwner(model::Namespace *o) {
     owner = o;
-    // XXX hack
-    std::string fn(getFullName());
-    if (rep->getNameStr() != "calloc")
-        rep->setName(fn);
+    rep->setName(getFullName());
 }
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {

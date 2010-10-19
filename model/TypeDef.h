@@ -247,13 +247,17 @@ class TypeDef : public VarDef, public Namespace {
         virtual TypeDef *getSpecialization(Context &context, TypeVecObj *types);
 
         /**
-         * Set namespace owner, and set our namespace name
+         * Set namespace owner, and set our namespace name, and meta class name
          */
         virtual void setOwner(Namespace *o) {
             owner = o;
-            canonicalName = (o->getName().length())?
+            canonicalName = (!o->getName().empty())?
                                 o->getName()+"."+name :
                                 name;
+            fullName.clear();
+            // we have to do this here because when the meta type is created,
+            // we don't have a full canonical name for the class yes
+            type->name = "Class[" + getFullName() + "]";
         }
 
         virtual
