@@ -36,6 +36,7 @@ class Type {
             TypeVec bases;
             FuncVec funcs;
             VarMap instVars;
+            VarVec instVarVec;
             
             Impl(Module *module, const std::string &name, 
                  model::Context *context
