@@ -6,130 +6,58 @@ import crack.exp.error err, strerror;
 import crack.container Array;
 import crack.exp.bindings Opaque;
 import crack.time TimeDelta;
-import "libc.so.6" close, listen, send, socket, recv;
-import "libcrack-runtime.so" 
-    _crack_connect, 
-    _crack_get_constants,
-    _crack_make_ipv4,
-    _crack_setsockopt_int,
-    _crack_accept,
-    _crack_bind,
-    _crack_pollset_create,
-    _crack_pollset_copy,
-    _crack_pollset_destroy,
-    _crack_pollset_set,
-    _crack_pollset_get,
-    _crack_pollset_next,
-    _crack_poll,
-    _crack_sigset_create,
-    _crack_sigset_destroy,
-    _crack_sigset_empty,
-    _crack_sigset_fill,
-    _crack_sigset_add,
-    _crack_sigset_del,
-    _crack_sigset_has;
+import crack.runtime connect, Constants, makeIPV4, setsockopt,
+    accept, bind, free, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, 
+    TimeVal, close, listen, send, socket, recv;
 
-int socket(int domain, int type, int protocol);
-int close(int fd);
-int listen(int fd, int backlog);
-int send(int fd, byteptr buf, uint size, int flags);
-int recv(int fd, byteptr buf, uint size, int flags);
-uint32 _crack_make_ipv4(byte a, byte b, byte c, byte d);
-int _crack_setsockopt_int(int fd, int level, int optval);
-
-class _Constants : FreeBase {
-    int AF_UNIX,
-        AF_LOCAL,
-        AF_INET,
-        AF_INET6,
-        AF_IPX,
-        AF_NETLINK,
-        AF_X25,
-        AF_AX25,
-        AF_ATMPVC,
-        AF_APPLETALK,
-        AF_PACKET,
-        SOCK_STREAM,
-        SOCK_DGRAM,
-        SOCK_SEQPACKET,
-        SOCK_RAW,
-        SOCK_RDM,
-        SOCK_PACKET,
-        SOCK_NONBLOCK,
-        SOCK_CLOEXEC,
-        SOL_SOCKET,
-        SO_REUSEADDR,
-        POLLIN,
-        POLLPRI,
-        POLLOUT,
-        POLLERR,
-        POLLHUP,
-        POLLNVAL;
-    uint32 INADDR_ANY;
-}
-_Constants _crack_get_constants();
-sockconsts := _crack_get_constants();
-
-class SockAddr {}
-
-class SockAddrIn : SockAddr {
-    uint32 addr;
-    uint port;
-    
-    oper init(byte a, byte b, byte c, byte d, uint port0) :
-        addr = _crack_make_ipv4(a, b, c, d),
-        port = port0 {
-    }
-    
-    oper init(uint32 addr0, uint port0) : addr = addr0, port = port0 {}
-    
-    void writeTo(Writer out) {
-        Formatter(out) `ip4:$addr:$port`;
-    }
-}
-
-int _crack_connect(int s, SockAddrIn addr);
-int _crack_accept(int s, SockAddrIn addr);
-int _crack_bind(int s, SockAddrIn addr);
-
-class PollFDs : Opaque {}
-
-PollFDs _crack_pollset_create(uint size);
-void _crack_pollset_destroy(PollFDs pollfds);
-void _crack_pollset_copy(PollFDs dst, PollFDs src, uint size);
-void _crack_pollset_set(PollFDs set, uint index, int fd, int events,
-                        int revents
-                        );
-
-class SigSet : Opaque {}
-
-SigSet _crack_sigset_create();
-void _crack_sigset_destroy(SigSet sigmask);
-int _crack_sigset_empty(SigSet sigmask);
-int _crack_sigset_fill(SigSet sigmask);
-int _crack_sigset_add(SigSet sigmask, int signum);
-int _crack_sigset_del(SigSet sigmask, int signum);
-int _crack_sigset_has(SigSet sigmask, int signum);
-
-int _crack_poll(PollFDs fds, uint nfds, TimeDelta tv, SigSet sigmask);
+sockconsts := Constants();
 
 ## interface for all classes that can be polled.
 class Pollable {
     int getFD() { err.do() `Pollable.getFD() not defined.`; return 0; }
 }
 
-class PollEvent {
-    int fd, events, revents;
-    Pollable pollable;
+class PollEvent : Object, PollEvt {
+    Pollable pollable = null;
 }
 
-int _crack_pollset_next(PollFDs set, uint size, uint index,
-                        PollEvent outputEntry
-                        );
+## base class for all kinds of socket addresses.
+class Address {
+    SockAddr _addr;
+
+    oper init(SockAddr addr) : _addr = addr {}
+    oper del() { free(_addr); }
+    
+    Address create() {
+        err.do() `Address.create() called\n`;
+        return null;
+    }
+}
+
+## IPv4 address.
+class InetAddress : Address {
+
+    oper init(byte a, byte b, byte c, byte d, int port) : 
+        Address(SockAddrIn(a, b, c, d, port)) {
+    }
+
+    oper init(uint32 addr, uint port) :
+        Address(SockAddrIn(addr, port)) {
+    }
+    
+    Address create() {
+        i := SockAddrIn.unsafeCast(_addr);
+        return InetAddress(i.addr, i.port);
+    }
+}
 
 ## Wrapper around a socket.
 class Socket : Pollable, Reader, Writer {
     int fd;
+    
+    # the address the socket is bound to.
+    Address __bound = null;
+
     oper init(int domain, int type, int protocol) : 
         fd = socket(domain, type, protocol) {
     }
@@ -149,13 +77,18 @@ class Socket : Pollable, Reader, Writer {
     }
     
     ## Connect to the address.  Returns true on success, false on failure.
-    bool connect(SockAddrIn addr) {
-        return _crack_connect(fd, addr) == 0;
+    bool connect(Address addr) {
+        return connect(fd, addr._addr) == 0;
     }
 
     ## Bind to the address.  Returns true on success, false on failure.    
-    bool bind(SockAddrIn addr) {
-        return _crack_bind(fd, addr) == 0;
+    bool bind(Address addr) {
+        if (bind(fd, addr._addr) == 0) {
+            __bound = addr;
+            return true;
+        } else {
+            return false;
+        }
     }
     
     bool listen(int backlog) {
@@ -163,9 +96,9 @@ class Socket : Pollable, Reader, Writer {
     }
     
     bool setReuseAddr(bool val) {
-        return _crack_setsockopt_int(fd, sockconsts.SOL_SOCKET,
-                                     sockconsts.SO_REUSEADDR
-                                     ) == 0;
+        return setsockopt(fd, sockconsts.SOL_SOCKET, sockconsts.SO_REUSEADDR, 
+                          1
+                          ) == 0;
     }
     
     int send(Buffer data, int flags) {
@@ -178,9 +111,9 @@ class Socket : Pollable, Reader, Writer {
 
     class Accepted {
         Socket sock = null;
-        SockAddr addr = null;
+        Address addr = null;
     
-        oper init(Socket sock0, SockAddr addr0) :
+        oper init(Socket sock0, Address addr0) :
             sock = sock0,
             addr = addr0 {
         }
@@ -188,8 +121,12 @@ class Socket : Pollable, Reader, Writer {
     
     ## Returns null if there was an error, errno should contain the error.
     Accepted accept() {
-        SockAddrIn addr = {0, 0};
-        rc := _crack_accept(fd, addr);
+        if (!__bound) {
+            err.do() `Attempting accept on socket that hasn't been "bind()ed"`;
+            return null;
+        }
+        Address addr = __bound.create();
+        rc := accept(fd, addr._addr);
         if (rc == -1)
             return null;
         return Accepted(Socket(rc), addr);
@@ -226,14 +163,14 @@ class Socket : Pollable, Reader, Writer {
 ## occurred.
 class Poller {
     Array __pollables;
-    PollFDs __fds;
+    PollSet __fds = null;
     uint __nextIndex;
     uint __capacity;
     int __iter;
     
     oper init() : 
-        __pollables(256), 
-        __fds = _crack_pollset_create(256),
+        __pollables(256),
+        __fds = PollSet(256),
         __capacity = 256 {
     }
     
@@ -244,8 +181,8 @@ class Poller {
         __pollables.realloc(newCapacity);
         
         # create a new pollset and copy the existing one.
-        newFDs := _crack_pollset_create(newCapacity);
-        _crack_pollset_copy(newFDs, __fds, __capacity);
+        newFDs := PollSet(newCapacity);
+        newFDs.copy(__fds, __capacity);
 
         __capacity = newCapacity;
     }
@@ -257,7 +194,7 @@ class Poller {
         
         # add it to the pollables and to the fds.
         __pollables.append(p);
-        _crack_pollset_set(__fds, __nextIndex, p.getFD(), events, 0);
+        __fds.set(__nextIndex, p.getFD(), events, 0);
         
         ++__nextIndex;
     }
@@ -270,7 +207,10 @@ class Poller {
     ## there was a timeout.
     int wait(TimeDelta timeout) {
         __iter = 0;
-        return _crack_poll(__fds, __nextIndex, timeout, null);
+        return __fds.poll(__nextIndex, 
+                          timeout ? TimeVal(timeout.secs, timeout.nsecs) : null,
+                          null
+                          );
     }
     
     PollEvent nx() {
@@ -278,13 +218,11 @@ class Poller {
             return null;
 
         PollEvent result;
-        __iter = _crack_pollset_next(__fds, __nextIndex, uint(__iter), 
-                                     result
-                                     );
-        
+        __iter = __fds.next(__nextIndex, uint(__iter), result);
+
         if (__iter == -1)
             return null;
-        
+
         # store the pollable in the result and return it.
         result.pollable = Pollable.cast(__pollables[uint(__iter++)]);
         return result;   

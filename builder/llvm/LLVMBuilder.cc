@@ -1394,17 +1394,6 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
         f.finish();
     }
     
-    // create "int write(int, String, int)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "write",
-                      3
-                      );
-        f.addArg("fd", int32Type);
-        f.addArg("buf", byteptrType);
-        f.addArg("n", int32Type);
-        f.finish();
-    }
-    
     // create "void printint(int32)"
     {
         FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);

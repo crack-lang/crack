@@ -1,5 +1,6 @@
 // Classes for directory traversal
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Portions Copyright 2010 Google Inc.
 
 import crack.io cerr, Formatter, Writer;
 import crack.lang die, FreeBase, CString, SubString;
@@ -7,25 +8,12 @@ import crack.exp.bindings Opaque;
 import crack.container List, Iterator;
 import crack.exp.file Openable, FileInfo;
 
-import "libcrack-runtime.so" _crack_opendir, _crack_closedir, _crack_readdir, 
-                             _crack_getDirEntry;
-
-class _crackDir: Opaque { }
-
-class _DirEntry: FreeBase {
-    byteptr _name;
-    int _type;
-}
+import crack.runtime opendir, closedir, readdir, getDirEntry, Dir, DirEntry;
 
 // must match Dir.h defines
 int __CRACK_DTYPE_DIR   = 1;
 int __CRACK_DTYPE_FILE  = 2;
 int __CRACK_DTYPE_OTHER = 3;
-
-_crackDir _crack_opendir(byteptr dirname);
-_DirEntry _crack_getDirEntry(_crackDir d);
-int _crack_closedir(_crackDir d);
-int _crack_readdir(_crackDir d);
 
 // XXX make portable
 String PATH_SEPARATOR = "/";
@@ -34,7 +22,7 @@ class Directory : Object, Openable {
 
     String name;
 
-    _crackDir _dir = null;
+    Dir _dir = null;
 
     List _dirList;
     List _fileList;
@@ -60,25 +48,25 @@ class Directory : Object, Openable {
     void _open() {
 
         cn := CString(name);
-        _dir = _crack_opendir(cn.buffer);
+        _dir = opendir(cn.buffer);
         _isValid = !(_dir is null);
         _isOpened = true;
 
         if (!_isValid)
             return;
 
-        _DirEntry d = _crack_getDirEntry(_dir);
+        DirEntry d = getDirEntry(_dir);
         // note, this should be done lazily so we don't have to load
         // an entire directory structure on open
         StaticString n = null;
-        while (_crack_readdir(_dir)) {
-            if (d._type == __CRACK_DTYPE_DIR) {
-                n = StaticString(d._name);
+        while (readdir(_dir)) {
+            if (d.type == __CRACK_DTYPE_DIR) {
+                n = StaticString(d.name);
                 if (n != '.' && n != '..')
                     _dirList.append(Directory(name+PATH_SEPARATOR+n));
             }
             else {
-                _fileList.append(FileInfo(name+PATH_SEPARATOR+d._name));
+                _fileList.append(FileInfo(name+PATH_SEPARATOR+d.name));
             }
         }
 
@@ -86,13 +74,14 @@ class Directory : Object, Openable {
 
     oper del() {
         if (_isValid)
-            _crack_closedir(_dir);
+            closedir(_dir);
     }
 
     String nameWithTrailing() {
         return name+PATH_SEPARATOR;
     }
 
+    /// Returns an iterator over the subdirectories (Iter[Directory]).
     Iterator dirIter() { 
         if (!_isOpened)
             _open();

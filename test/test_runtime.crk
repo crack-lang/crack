@@ -1,0 +1,15 @@
+# Copyright 2010 Google Inc.
+# test random stuff in the runtime extension.
+
+import crack.io cout;
+import crack.runtime SockAddrIn;
+
+s := SockAddrIn(100, 200);
+if (s.family != 2)
+    cout `FAIL family != 2: $(s.family)\n`;
+if (s.addr != 100)
+    cout `FAIL addr != 100: $(s.addr)\n`;
+if (s.port != 200)
+    cout `FAIL port != 200: $(s.port)\n`;
+
+cout `ok\n`;

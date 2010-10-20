@@ -26,6 +26,9 @@ function test_output {
     rm run_all_tests.tmp
 }
 
+# get a fresh copy of the runtime library
+ln -f .libs/runtime.so lib/crack
+
 # find the root of the source tree (should be my parent directory)
 root=$(cd $(dirname "$0")/..; pwd)
 echo "dirname = $0, root = $root"
@@ -649,10 +652,8 @@ test_output "variables in allocated loops don't eat the stack" \
 
 test_output 'assignment to function arguments' \
     'void a(int x) { printint(x); x = 100; printint(x); x = 200; printint(x); }
-     a(0);
-     uint foo(uint v) { v >>= 1; return v; };
-     printint(int(foo(2)));' \
-    01002001
+     a(0);' \
+    0100200
 
 test_output 'error at attempts to use variables from enclosing functions' \
     'void outer() { int a; int inner() { return a; } }' \
@@ -1027,6 +1028,7 @@ test_output 'string tests' 'import test.test_strings;' ok
 test_output 'error tests' 'import test.test_error;' ok
 test_output 'regex tests' 'import test.test_regex;' ok
 test_output 'sockets' 'import test.test_sockets;' ok
+test_output 'file api' 'import test.test_dir;' ok
 ln -f test/.libs/testext.so test/testext.so || {
     echo "Unable to copy shared library"; exit 1; }
 test_output 'extension modules' 'import test.test_extensions;' ok

@@ -1,14 +1,14 @@
 # Copyright 2003 Michael A. Muller
 # Portions Copyright 2009 Google Inc.
 
-lib_LTLIBRARIES = libcrack.la libcrack-runtime.la
+lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = %libCrackSources%
 libcrack_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
-libcrack_runtime_la_SOURCES = %libRuntimeSources%
-libcrack_runtime_la_LDFLAGS = -version-info 0:0:0
-pkglib_LTLIBRARIES = test/testext.la
+pkglib_LTLIBRARIES = test/testext.la runtime.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
+runtime_la_LDFLAGS = -avoid-version -module
+runtime_la_SOURCES = %libRuntimeSources%
 
 noinst_HEADERS = \
     builder/Builder.h \
@@ -73,6 +73,14 @@ noinst_HEADERS = \
     spug/StringFmt.h \
     spug/TypeInfo.h \
     Crack.h
+
+pkginclude_HEADERS = \
+    ext/Func.h \
+    ext/Module.h \
+    ext/Object.h \
+    ext/Type.h \
+    ext/Var.h \
+    ext/crack_config.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt \
     runtimeModules.txt cmake
