@@ -11,8 +11,9 @@ using namespace builder::mvll;
 
 void BFuncDef::setOwner(model::Namespace *o) {
     owner = o;
-    fullName.clear();
-    rep->setName(getFullName());
+    fullName.clear();    
+    if (!(flags & external))
+        rep->setName(getFullName());
 }
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {

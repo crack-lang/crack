@@ -23,6 +23,8 @@ class FuncDef : public VarDef {
             method = 1,  // function is a method (has a receiver)
             virtualized = 2, // function is virtual
             forward = 4,  // this is a forward declaration
+            external = 8  // this symbol has external linkage so don't
+                          // use a crack canonical name in low level IR
         } flags;
         
         // flag to tell us what to do about function arguments during matching.

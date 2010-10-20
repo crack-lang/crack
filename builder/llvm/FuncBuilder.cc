@@ -56,7 +56,9 @@ void FuncBuilder::finish(bool storeDef) {
 
     Function *func = Function::Create(llvmFuncType,
                                       linkage,
-                                      funcDef->getFullName(),
+                                      (funcDef->flags & FuncDef::external) ?
+                                         funcDef->name :
+                                         funcDef->getFullName(),
                                       builder.module
                                       );
     func->setCallingConv(llvm::CallingConv::C);

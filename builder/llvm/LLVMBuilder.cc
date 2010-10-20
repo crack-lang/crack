@@ -1387,7 +1387,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
 
     // create "int puts(String)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
+        FuncBuilder f(context, FuncDef::external, int32Type, "puts",
                       1
                       );
         f.addArg("text", byteptrType);
@@ -1396,7 +1396,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     
     // create "int write(int, String, int)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "write",
+        FuncBuilder f(context, FuncDef::external, int32Type, "write",
                       3
                       );
         f.addArg("fd", int32Type);
@@ -1407,35 +1407,35 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     
     // create "void printint(int32)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
+        FuncBuilder f(context, FuncDef::external, voidType, "printint", 1);
         f.addArg("val", int32Type);
         f.finish();
     }
 
     // create "void printint64(int64)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint64", 1);
+        FuncBuilder f(context, FuncDef::external, voidType, "printint64", 1);
         f.addArg("val", int64Type);
         f.finish();
     }
 
     // create "void printuint64(int64)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printuint64", 1);
+        FuncBuilder f(context, FuncDef::external, voidType, "printuint64", 1);
         f.addArg("val", uint64Type);
         f.finish();
     }
 
     // create "void printfloat(float32)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printfloat", 1);
+        FuncBuilder f(context, FuncDef::external, voidType, "printfloat", 1);
         f.addArg("val", float32Type);
         f.finish();
     }
 
     // create "void *calloc(uint size)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
+        FuncBuilder f(context, FuncDef::external, voidptrType, "calloc", 2);
         f.addArg("size", intType);
         f.addArg("size", intType);
         f.finish();
@@ -1444,7 +1444,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     
     // create "void __die(byteptr message)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "__die", 1);
+        FuncBuilder f(context, FuncDef::external, voidType, "__die", 1);
         f.addArg("message", byteptrType);
         f.finish();
     }
@@ -1456,7 +1456,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
         types->push_back(context.globalData->byteptrType.get());
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
-        FuncBuilder f(context, FuncDef::noFlags, 
+        FuncBuilder f(context, FuncDef::external,
                       BTypeDefPtr::arcast(arrayOfByteptr), 
                       "__getArgv", 
                       0
@@ -1466,7 +1466,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     
     // create "int __getArgc()"
     {
-        FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
+        FuncBuilder f(context, FuncDef::external, intType, "__getArgc", 0);
         f.finish();
     }
     
