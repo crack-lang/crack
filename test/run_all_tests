@@ -18,7 +18,7 @@ function test_output {
     if [ "$result" = "$expected" ]; then
         echo ok
     else
-        echo "\n"
+        echo ""
         echo "Expected: $expected"
         echo "Got     : $result"
         echo FAILED
@@ -676,8 +676,8 @@ test_output 'using instance variables from a nested function in a method' \
 
 test_output 'inheriting from a primitive class' \
     'class A : int32 {}' \
-    "${parseError}1: You may not inherit from .builtin.int32 because it's a primitive \
-class."
+    "${parseError}1: You may not inherit from .builtin.int32 because it's a \
+primitive class."
 
 test_output 'multiple inheritence from the same base class' \
     'class A {}
