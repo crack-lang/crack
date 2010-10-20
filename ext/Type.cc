@@ -51,7 +51,9 @@ void Type::addInstVar(Type *type, const std::string &name) {
         assert(false);
     }
 
-    impl->instVars[name] = new Var(type, name);
+    Var *var = new Var(type, name);
+    impl->instVars[name] = var;
+    impl->instVarVec.push_back(var);
 }
 
 Func *Type::addMethod(Type *returnType, const std::string &name,
@@ -105,16 +107,12 @@ void Type::finish() {
     typeDef = td.get();
 
     // emit the variables
-    for (VarMap::iterator vi = impl->instVars.begin();
-         vi != impl->instVars.end();
-         ++vi
-         ) {
-        Type *type = vi->second->type;
+    for (int vi = 0; vi < impl->instVarVec.size(); ++vi) {
+        Var *var = impl->instVarVec[vi];
+        Type *type = var->type;
         type->checkFinished();
         VarDefPtr varDef =
-            clsCtx->builder.emitVarDef(*clsCtx, type->typeDef, 
-                                       vi->second->name, 
-                                       0,
+            clsCtx->builder.emitVarDef(*clsCtx, type->typeDef, var->name, 0,
                                        false
                                        );
         clsCtx->ns->addDef(varDef.get());

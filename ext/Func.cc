@@ -34,7 +34,6 @@ void Func::addArg(Type *type, const string &name) {
     assert(!finished && 
             "Attempted to add an argument to a finished function."
            );
-    type->checkFinished();
     args.push_back(new Arg(type, name));
 }
 
@@ -44,10 +43,12 @@ void Func::finish() {
 
     Builder &builder = context->builder;
     std::vector<ArgDefPtr> realArgs(args.size());
-    for (int i = 0; i < args.size(); ++i)
+    for (int i = 0; i < args.size(); ++i) {
+        args[i]->type->checkFinished();
         realArgs[i] = builder.createArgDef(args[i]->type->typeDef, 
                                            args[i]->name
                                            );
+    }
 
     // if this is a constructor, there may not be a function
     FuncDefPtr funcDef;

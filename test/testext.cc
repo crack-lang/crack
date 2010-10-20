@@ -28,6 +28,13 @@ class MyAggType : public Object {
         int a;
 
         void init(int a0) { a = a0; }
+        void dump() { 
+            cout << "a = " << a << endl; 
+            char *c = (char *)this;
+            for (int i = 0; i < 32; ++i)
+                cout << hex << ((int)c[i] & 0xff) << " ";
+            cout << endl;
+        }
 };    
 
 const char *echo(const char *data) { return data; }
@@ -51,5 +58,6 @@ extern "C" void test_testext_init(Module *mod) {
     f = type->addConstructor();
     f = type->addConstructor("init", (void *)&MyAggType::init);
     f->addArg(mod->getIntType(), "a");
+    type->addMethod(mod->getVoidType(), "dump", (void *)&MyAggType::dump);
     type->finish();
 }

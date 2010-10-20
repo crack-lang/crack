@@ -27,6 +27,7 @@ class Var {
 };
 
 typedef std::map<std::string, Var *> VarMap;
+typedef std::vector<Var *> VarVec;
 
 }} // namespace crack::ext
 

@@ -26,3 +26,4 @@
 ^test/testext\.(so|la)$
 ^test/\.libs/.*$
 ^test/\.dirstamp$
+^ext/crack_config\.h$

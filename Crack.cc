@@ -220,6 +220,9 @@ ModuleDefPtr Crack::loadSharedLib(const string &path,
     mod.finish();
     modDef->close(*context);
     
+    if (dump)
+        builder->dump();
+    
     return modDef;
 }
 

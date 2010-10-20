@@ -39,10 +39,10 @@ void FuncBuilder::finish(bool storeDef) {
     int i = 0;
     if (receiverType)
         llvmArgs[i++] = receiverType->rep;
-    for (vector<ArgDefPtr>::iterator iter =
-         funcDef->args.begin();
-    iter != funcDef->args.end();
-    ++iter, ++i)
+    for (vector<ArgDefPtr>::iterator iter = funcDef->args.begin();
+         iter != funcDef->args.end();
+         ++iter, ++i
+         )
         llvmArgs[i] = BTypeDefPtr::rcast((*iter)->type)->rep;
 
     // register the function with LLVM
