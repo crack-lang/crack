@@ -67,11 +67,17 @@ set_target_properties(crack-runtime
                       VERSION ${CRACK_VERSION}
                       )
 
+# extension config, per autoconf
+set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P}) # doesn't do anything?
+configure_file("${PROJECT_SOURCE_DIR}/ext/crack_config.h.in"
+               "${PROJECT_SOURCE_DIR}/ext/crack_config.h")
+
 # test extension. we set this up to mirror the autoconf
 # build
 add_library(testext SHARED test/testext.cc)
 set_target_properties(testext
                       PROPERTIES
+                      COMPILE_FLAGS "-DSIZEOF_VOID_P=${CMAKE_SIZEOF_VOID_P}"
                       OUTPUT_NAME testext
                       PREFIX ""
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/test/.libs/"
