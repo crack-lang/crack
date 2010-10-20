@@ -10,6 +10,7 @@ endif(COMMAND cmake_policy)
 project (crack)
 
 set(CRACK_VERSION "0.2.1")
+set(API_VERSION   "0.0.0")
 
 set(LLVM_MIN_VERSION       "2008000")
 set(LLVM_MIN_VERSION_TEXT  "2.8")
@@ -55,20 +56,15 @@ set_target_properties(libcrack
                       PROPERTIES
                       OUTPUT_NAME crack
                       VERSION ${CRACK_VERSION}
+                      SOVERSION ${API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
                        ${LLVM_LIBS}
                      )
 
-add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
-set_target_properties(crack-runtime
-                      PROPERTIES
-                      VERSION ${CRACK_VERSION}
-                      )
-
 # extension config, per autoconf
-set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P}) # doesn't do anything?
+set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P})
 configure_file("${PROJECT_SOURCE_DIR}/ext/crack_config.h.in"
                "${PROJECT_SOURCE_DIR}/ext/crack_config.h")
 
@@ -77,11 +73,20 @@ configure_file("${PROJECT_SOURCE_DIR}/ext/crack_config.h.in"
 add_library(testext SHARED test/testext.cc)
 set_target_properties(testext
                       PROPERTIES
-                      COMPILE_FLAGS "-DSIZEOF_VOID_P=${CMAKE_SIZEOF_VOID_P}"
                       OUTPUT_NAME testext
                       PREFIX ""
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/test/.libs/"
                       )
+
+# runtime extension
+add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
+set_target_properties(crack-runtime
+                      PROPERTIES
+                      OUTPUT_NAME runtime
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+
 
 add_executable(crack crack.cc)
 set_target_properties( crack
