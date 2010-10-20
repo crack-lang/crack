@@ -2,13 +2,7 @@
 ## Copyright 2010 Google Inc.
 
 import crack.exp.error err;
-import "libc.so.6" exit, free;
-
-void free(voidptr p);
-
-## The standard library exit() function - call it with the exit code to be 
-## returned from the program.
-void exit(int status);
+import crack.runtime exit, free;
 
 class StringArray {
     

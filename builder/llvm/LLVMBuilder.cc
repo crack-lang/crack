@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2009 Google Inc., Shannon Weyrick <weyrick@mozek.us>
                 
 #include "LLVMBuilder.h"
 
@@ -1391,17 +1391,6 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
                       1
                       );
         f.addArg("text", byteptrType);
-        f.finish();
-    }
-    
-    // create "int write(int, String, int)"
-    {
-        FuncBuilder f(context, FuncDef::external, int32Type, "write",
-                      3
-                      );
-        f.addArg("fd", int32Type);
-        f.addArg("buf", byteptrType);
-        f.addArg("n", int32Type);
         f.finish();
     }
     

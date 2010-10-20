@@ -1,19 +1,8 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import "libc.so.6" abort, free, strcpy, strlen, strdup, malloc, memcpy, memcmp, 
-    memmove, realloc;
-
-byteptr malloc(uint size);
-byteptr realloc(byteptr buf, uint size);
-byteptr memcpy(byteptr dest, byteptr src, uint size);
-byteptr memmove(byteptr dest, byteptr src, uint size);
-int memcmp(byteptr a, byteptr b, uint size);
-void free(voidptr mem);
-byteptr strcpy(byteptr dest, byteptr src);
-uint strlen(byteptr buf);
-byteptr strdup(byteptr buf);
-void abort();
+import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp, 
+    memmove;
 
 bool true = (1 == 1);
 bool false = (1 == 0);

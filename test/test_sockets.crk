@@ -1,24 +1,20 @@
 
 import crack.lang die, ManagedBuffer;
 import crack.io cout;
-import crack.net sockconsts, SockAddrIn, Socket, Poller, PollEvent;
+import crack.net InetAddress, sockconsts, Socket, Poller, PollEvent;
 import crack.time TimeDelta;
-import "libc.so.6" perror, sleep;
-
-void perror(byteptr s);
-int sleep(int d);
 
 # create a server socket, bind to a port and listen.
 srv := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
 srv.setReuseAddr(true);
-if (!srv.bind(SockAddrIn(sockconsts.INADDR_ANY, 9923)))
+if (!srv.bind(InetAddress(sockconsts.INADDR_ANY, 9923)))
     die('bind failed');
 if (!srv.listen(5))
     die('listen failed');
 
 # create a client socket
 cln := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
-if (!cln.connect(SockAddrIn(127, 0, 0, 1, 9923)))
+if (!cln.connect(InetAddress(127, 0, 0, 1, 9923)))
     die('connect failed');
 
 # get the new connection on the server side.

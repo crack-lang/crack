@@ -1,0 +1,45 @@
+# Copyright 2010 Google Inc.
+# tests of crack.dir
+
+import crack.io cout, StringFormatter;
+import crack.exp.dir Directory;
+import crack.exp.file FileInfo;
+
+if (true) {
+    Directory d = {'lib'};
+    StringFormatter result;
+    
+    i := d.dirIter();
+    while (i.nx())
+        result `$(Directory.cast(i.elem()).name)`;
+    
+    s := result.createString();
+    if (s != 'lib/crack')
+        cout `failed to get lib/crack, got: $s\n`;
+}
+
+if (true) {
+    Directory d = {'lib/crack'};
+    
+    FileInfo target = null;
+    i := d.fileInfoIter();
+    while (i.nx()) {
+        info := FileInfo.cast(i.elem());
+        if (info.name == 'lib/crack/lang.crk')
+            target = info;
+    }
+    
+    if (!target)
+        cout `failed to find lib/crack/lang.crk\n`;
+    
+    if (target.basename(false) != 'lang.crk')
+        cout `basename with extension failed\n`;
+    
+    if (target.basename(true) != 'lang')
+        cout `basename without extension failed\n`;
+    
+    if (target.dirname() != 'lib/crack')
+        cout `dirname failed\n`;
+}
+
+cout `ok\n`;

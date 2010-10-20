@@ -1,12 +1,13 @@
 // Runtime support for directory access
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Portions Copyright 2010 Google Inc.
 
 #ifndef _runtime_Dir_h_
 #define _runtime_Dir_h_
 
 #include <dirent.h>
 
-extern "C" {
+namespace crack { namespace runtime {
 
 // needs to match dir.crk in runtime
 #define CRACK_DTYPE_DIR   1
@@ -17,25 +18,23 @@ extern "C" {
 typedef struct {
     const char* name;
     int type;
-} _crack_dirEntry;
+} DirEntry;
 
 // opaque to crack
 typedef struct {
     DIR* stream;
     dirent* lowLevelEntry;
-    _crack_dirEntry currentEntry;
-} _crackDir;
+    DirEntry currentEntry;
+} Dir;
 
 // exported interface
-_crackDir* _crack_opendir(const char* name);
-_crack_dirEntry* _crack_getDirEntry(_crackDir* d);
-int _crack_closedir(_crackDir* d);
-int _crack_readdir(_crackDir* d);
+Dir* opendir(const char* name);
+DirEntry* getDirEntry(Dir* d);
+int closedir(Dir* d);
+int readdir(Dir* d);
 
-int _crack_fnmatch(const char* pattern, const char* string); 
-char* _crack_basename(char* path); 
-char* _crack_dirname(char* path); 
+int fnmatch(const char* pattern, const char* string); 
 
-}
+}} // namespace crack::ext
 
 #endif // _runtime_Dir_h_

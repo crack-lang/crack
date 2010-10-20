@@ -2,19 +2,7 @@
 # Basic input/output classes.
 
 import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, Writer;
-
-import "libc.so.6" strlen, write, malloc, memcpy, free, read;
-import "libcrack-runtime.so"  _crack_float_str;
-
-uint strlen(byteptr string);
-uint write(int fd, byteptr buf, uint len);
-uint read(int fd, byteptr buf, uint size);
-byteptr malloc(uint size);
-byteptr memcpy(byteptr dst, byteptr src, uint size);
-void free(byteptr mem);
-
-# XXX temporary
-void _crack_float_str(float64 f, byteptr buf, uint size);
+import crack.runtime float_str, strlen, write, malloc, memcpy, free, read;
 
 ## Writer for a file descriptor.
 class FDWriter : Object, Writer {
@@ -78,7 +66,7 @@ class FDReader : Object, Reader {
     
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
-        return read(fd, buf.buffer, buf.size);
+        return uint(read(fd, buf.buffer, buf.size));
     }
 
     Object getReaderObject() { return this; }
@@ -185,7 +173,7 @@ class Formatter : Object, Writer {
     # printer in crack
     void format(float32 val) {
         buffer := ManagedBuffer(80);
-        _crack_float_str(val, buffer.buffer, buffer.size);
+        float_str(val, buffer.buffer, buffer.size);
         write(buffer.buffer);
     }
 
@@ -193,7 +181,7 @@ class Formatter : Object, Writer {
     # printer in crack
     void format(float64 val) {
         buffer := ManagedBuffer(80);
-        _crack_float_str(val, buffer.buffer, buffer.size);
+        float_str(val, buffer.buffer, buffer.size);
         write(buffer.buffer);
     }
 

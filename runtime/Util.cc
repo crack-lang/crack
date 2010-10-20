@@ -7,16 +7,16 @@
 
 #include "Util.h"
 
-extern "C" {
+namespace crack { namespace runtime {
 
-char* _crack_strerror(void) {
-    return strerror(errno);
+char* strerror(void) {
+    return ::strerror(errno);
 }
 
 // this is temporary until we implement float printing in crack
 // assumes caller allocates and owns buffer
-void _crack_float_str(double d, char* buf, unsigned int size) {
+void float_str(double d, char* buf, unsigned int size) {
     snprintf(buf, size, "%f", d);
 }
 
-}
+}}

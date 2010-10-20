@@ -28,8 +28,6 @@ import "libgtk-x11-2.0.so"
     gtk_window_new, 
     gtk_object_destroy;
 import "libgobject-2.0.so" g_list_append, g_signal_connect_data;
-#import "./wrapper.so" Object_signalConnect, Object_crazy;
-import "libc.so.6" printf;
 
 class _GtkObject : Opaque {};
 class GtkWidget : _GtkObject {};

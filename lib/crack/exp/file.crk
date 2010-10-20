@@ -7,18 +7,7 @@ import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
 import crack.exp.error err, strerror;
 
-import "libc.so.6" fopen, fclose, fileno;
-import "libcrack-runtime.so"  _crack_fnmatch, _crack_basename, _crack_dirname;
-
-class _FILE: Opaque { }
-
-_FILE fopen(byteptr fn, byteptr mode);
-
-int fclose(_FILE f);
-int fileno(_FILE f);
-int _crack_fnmatch(byteptr pattern, byteptr string);
-byteptr _crack_basename(byteptr path);
-byteptr _crack_dirname(byteptr path);
+import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile;
 
 class FileInfo: Object {
 
@@ -28,7 +17,7 @@ class FileInfo: Object {
     oper init(byteptr name0): name(name0) { }
 
     bool matches(String pattern) {
-        return (_crack_fnmatch(pattern.buffer, name.buffer) == 0);
+        return (fnmatch(pattern.buffer, name.buffer) == 0);
     }
 
     void writeTo(Writer out) {
@@ -37,7 +26,7 @@ class FileInfo: Object {
     
     String basename(bool stripExtension) {
         path := CString(name); // copies for null termination
-        bname := String(_crack_basename(path.buffer)); // copies again
+        bname := String(basename(path.buffer)); // copies again
         if (stripExtension) {
             pos := bname.rfind(0x2e); // '.' (dot)
             if (pos == -1)
@@ -52,7 +41,7 @@ class FileInfo: Object {
 
     String dirname() {
         path := CString(name); // copies for null termination
-        return String(_crack_dirname(path.buffer)); // copies again
+        return String(dirname(path.buffer)); // copies again
     }
 
 
@@ -83,7 +72,7 @@ class File : FileInfo,
              Openable {
 
     String _mode;
-    _FILE _fd = null;
+    CFile _fd = null;
     LineReader _lReader = null;
     FDWriter _writer = null;
     

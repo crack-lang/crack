@@ -1,5 +1,6 @@
 // Runtime support for directory access
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Portions Copyright 2010 Google Inc.
 
 #include <iostream>
 
@@ -13,15 +14,15 @@
 
 #include "Dir.h"
 
-extern "C" {
+namespace crack { namespace runtime {
 
 // XXX see http://womble.decadent.org.uk/readdir_r-advisory.html
 // for a warning on using readdir_r and how to calculate len
-_crackDir* _crack_opendir(const char* name) {
-    DIR* d = opendir(name);
+Dir* opendir(const char* name) {
+    DIR* d = ::opendir(name);
     if (!d)
         return NULL;
-    _crackDir* cd = (_crackDir*)malloc(sizeof(_crackDir));
+    Dir* cd = (Dir*)malloc(sizeof(Dir));
     assert(cd && "bad malloc");
     cd->stream = d;
     // this len calculation courtesy of linux readdir manpage
@@ -32,19 +33,19 @@ _crackDir* _crack_opendir(const char* name) {
     return cd;
 }
 
-_crack_dirEntry* _crack_getDirEntry(_crackDir* d) {
+DirEntry* getDirEntry(Dir* d) {
     assert(d && "null dir pointer");
     return &d->currentEntry;
 }
 
-int _crack_closedir(_crackDir* d) {
+int closedir(Dir* d) {
     assert(d && "null dir pointer");
-    closedir(d->stream);
+    ::closedir(d->stream);
     free(d->lowLevelEntry);
     free(d);
 }
 
-int _crack_readdir(_crackDir* d) {
+int readdir(Dir* d) {
 
     assert(d && "null dir pointer");
     
@@ -69,16 +70,8 @@ int _crack_readdir(_crackDir* d) {
     return 1;
 }
 
-int _crack_fnmatch(const char* pattern, const char* string) {
-    return fnmatch(pattern, string, 0);
+int fnmatch(const char* pattern, const char* string) {
+    return ::fnmatch(pattern, string, 0);
 }
 
-char* _crack_basename(char* path) {
-    return basename(path);
-}
-
-char* _crack_dirname(char* path) {
-    return dirname(path);
-}
-
-}
+}} // namespace crack::runtime
