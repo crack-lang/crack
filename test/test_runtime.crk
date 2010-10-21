@@ -2,7 +2,7 @@
 # test random stuff in the runtime extension.
 
 import crack.io cout;
-import crack.runtime SockAddrIn;
+import crack.runtime SockAddrIn, TimeVal;
 
 s := SockAddrIn(100, 200);
 if (s.family != 2)
@@ -11,5 +11,12 @@ if (s.addr != 100)
     cout `FAIL addr != 100: $(s.addr)\n`;
 if (s.port != 200)
     cout `FAIL port != 200: $(s.port)\n`;
+
+t := TimeVal(100, 200);
+if (t.secs != 100)
+    cout `FAIL tv.secs != 100\n`;
+if (t.nsecs != 200)
+    cout `FAIL tv.secs != 200\n`;
+
 
 cout `ok\n`;

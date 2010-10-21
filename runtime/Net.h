@@ -57,7 +57,7 @@ struct SockAddrIn : public SockAddr {
     void init2(uint32_t addr, unsigned int port);
 };
 
-struct TimeVal : public crack::ext::Object {
+struct TimeVal {
     int32_t secs, nsecs;
 
     void init(int32_t secs0, int32_t nsecs0);
