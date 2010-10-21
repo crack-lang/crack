@@ -98,7 +98,9 @@ class LLVMBuilder : public Builder {
         model::TypeDef *getFuncType(model::Context &context,
                                     const llvm::Type *llvmFuncType
                                     );
-        BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var);
+        BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var,
+                                          llvm::Value *initVal = 0
+                                          );
         
         BTypeDefPtr createClass(model::Context &context,
                                 const std::string &name,

@@ -14,9 +14,17 @@ using namespace model;
 using namespace builder::mvll;
 
 // BArgVarDefImpl
+
+VarDefImplPtr BArgVarDefImpl::promote(LLVMBuilder &builder, ArgDef *arg) {
+    Value *var;
+    BHeapVarDefImplPtr localVar =
+        builder.createLocalVar(BTypeDefPtr::arcast(arg->type), var, rep);
+    return localVar;
+}
+
 ResultExprPtr BArgVarDefImpl::emitRef(Context &context,
-                                VarRef *var
-                                ) {
+                                      VarRef *var
+                                      ) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
     b.emitArgVarRef(context, rep);
@@ -27,26 +35,9 @@ ResultExprPtr BArgVarDefImpl::emitRef(Context &context,
 ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context, 
                                              AssignExpr *assign
                                              ) {
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-
-    // first evaluate the expression (it could contain this argument, which 
-    // hasn't been initialized yet)
-    ResultExprPtr result = assign->value->emit(context);
-    b.narrow(assign->value->type.get(), assign->var->type.get());
-    Value *exprVal = b.lastValue;
-    
-    // we have to promote the argument to a local variable.
-    BTypeDef *varType = BTypeDefPtr::arcast(assign->var->type);
-    Value *var;
-    BHeapVarDefImplPtr localVar = b.createLocalVar(varType, var);
-    assign->var->impl = localVar;
-
-    // now store the variable
-    b.builder.CreateStore(exprVal, localVar->getRep(b));
-    result->handleAssignment(context);
-    b.lastValue = exprVal;
-
-    return new BResultExpr(assign, exprVal);    
+    // This should never happen - arguments except for "this" all get promoted 
+    // to local variables at the start of the function.
+    assert(0 && "attempting to emit an argument assignment");
 }
 
 // BMemVarDefImpl

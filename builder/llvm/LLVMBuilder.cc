@@ -475,7 +475,9 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
     return crkFuncType.get();
 }
 
-BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var) {
+BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
+                                               Value *initVal
+                                               ) {
     // insert an alloca into the first block of the function - we 
     // define all of our allocas up front because if we do them in 
     // loops they eat the stack.
@@ -488,6 +490,8 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var) {
     
     IRBuilder<> b(funcBlock, i);
     var = b.CreateAlloca(tp->rep, 0);
+    if (initVal)
+        b.CreateStore(initVal, var);
     return new BHeapVarDefImpl(var);
 }
 
@@ -923,6 +927,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     // if we didn't get a forward declaration, create the function.
     BFuncDefPtr funcDef;
     BTypeDef *classType = 0;
+    const vector<ArgDefPtr> *realArgs;
     if (!existing || !(existing->flags & FuncDef::forward)) {
     
         // create the function
@@ -949,6 +954,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     
         f.finish(false);
         funcDef = f.funcDef;
+        realArgs = &args;
     } else {
         // 'existing' is a forward definition, fill it in.
         funcDef = BFuncDefPtr::acast(existing);
@@ -964,6 +970,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                        );
             debugInfo->emitLexicalBlock(context.getLocation());
         }
+        realArgs = &existing->args;
     }
 
     func = funcDef->rep;
@@ -988,7 +995,13 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 //        BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
         thisImpl->rep = thisRep;
     }
-    
+
+    // promote all of the arguments to local variables.
+    const vector<ArgDefPtr> &a = *realArgs;
+    for (int i = 0; i < args.size(); ++i)
+        a[i]->impl =
+            BArgVarDefImplPtr::arcast(a[i]->impl)->promote(*this, a[i].get());
+
     return funcDef;
 }    
 

@@ -32,11 +32,12 @@ public:
     virtual model::ResultExprPtr emitRef(model::Context &context,
                                          model::VarRef *var
                                         );
-
+    
     virtual model::ResultExprPtr
             emitAssignment(model::Context &context,
                            model::AssignExpr *assign);
 
+    model::VarDefImplPtr promote(LLVMBuilder &builder, model::ArgDef *arg);
 };
 
 
