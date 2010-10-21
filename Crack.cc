@@ -169,7 +169,6 @@ void Crack::parseModule(Context &context,
     module->close(context);
     if (dump)
         context.builder.dump();
-        //context.dump();
     else
         context.builder.run();
 }

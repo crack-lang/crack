@@ -21,9 +21,9 @@ class LocalNamespace : public Namespace {
                 // though (think local subcontext in a module), we use
                 // just the parent name. if we don't have a parent,
                 // we just use cName
-                Namespace((parent && !parent->getName().empty())?
-                               ((cName.empty())?parent->getName() :
-                                                parent->getName()+"."+cName) :
+                Namespace((parent && !parent->getNamespaceName().empty())?
+                        ((cName.empty())?parent->getNamespaceName() :
+                                         parent->getNamespaceName()+"."+cName) :
                                cName),
                 parent(parent) {}
         virtual NamespacePtr getParent(unsigned index);

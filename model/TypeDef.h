@@ -250,9 +250,12 @@ class TypeDef : public VarDef, public Namespace {
          * Set namespace owner, and set our namespace name, and meta class name
          */
         virtual void setOwner(Namespace *o) {
+
             owner = o;
-            canonicalName = (!o->getName().empty())?
-                                o->getName()+"."+name :
+
+            // set the TypeDef namespace canonical name based on owner
+            canonicalName = (!o->getNamespaceName().empty())?
+                                o->getNamespaceName()+"."+name :
                                 name;
             fullName.clear();
             // we have to do this here because when the meta type is created,

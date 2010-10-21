@@ -37,8 +37,8 @@ std::string VarDef::getFullName() const {
     else if (!owner->getParent(0))
         // no grandparent, must be a builtin
         fullName = ".builtin."+name;
-    else if (!owner->getName().empty())
-        fullName = owner->getName()+"."+name;
+    else if (!owner->getNamespaceName().empty())
+        fullName = owner->getNamespaceName()+"."+name;
     else
         // ever?
         fullName = name;

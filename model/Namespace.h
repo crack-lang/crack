@@ -52,8 +52,10 @@ class Namespace : public virtual spug::RCBase {
 
         }
 
-        // return the fully qualified name of the namespace
-        const std::string &getName() const { return canonicalName; }
+        /**
+         * Returns the fully qualified name of the namespace
+         */
+        const std::string &getNamespaceName() const { return canonicalName; }
 
         /** 
          * Returns the parent at the index, null if it is greater than 
