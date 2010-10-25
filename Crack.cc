@@ -15,6 +15,7 @@
 #include "builder/Builder.h"
 #include "builder/llvm/LLVMBuilder.h"
 #include "ext/Module.h"
+#include "compiler/init.h"
 
 using namespace std;
 using namespace model;
@@ -54,7 +55,8 @@ Crack::Crack() :
     useGlobalLibs(true) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
-                              new GlobalNamespace(0,"")
+                              new GlobalNamespace(0, ""),
+                              new GlobalNamespace(0, "")
                               );
 
     // register the primitives    
@@ -69,6 +71,13 @@ bool Crack::init() {
         // finalize the search path
         if (useGlobalLibs)
             sourceLibPath.push_back(CRACKLIB);
+        
+        // initialize the built-in compiler extension and store the 
+        // CrackContext type in global data.
+        ModuleDefPtr ccMod = 
+            initExtensionModule("crack.compiler", &compiler::init);
+        rootContext->globalData->crackContext = ccMod->lookUp("CrackContext");
+        moduleCache["crack.compiler"] = ccMod;
 
         // load the bootstrapping modules - library files that are essential 
         // to the language, like the definitions of the Object and String 
@@ -173,6 +182,30 @@ void Crack::parseModule(Context &context,
         context.builder.run();
 }
 
+ModuleDefPtr Crack::initExtensionModule(const string &canonicalName,
+                                        Crack::InitFunc initFunc
+                                        ) {
+    // create a new context
+    BuilderPtr builder = rootBuilder->createChildBuilder();
+    ContextPtr context =
+        new Context(*builder, Context::module, rootContext.get(),
+                    new GlobalNamespace(rootContext->ns.get(), canonicalName),
+                    0 // we don't need a compile namespace
+                    );
+
+    // create a module object
+    ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
+    Module mod(context.get());
+    initFunc(&mod);
+    mod.finish();
+    modDef->close(*context);
+    
+    if (dump)
+        builder->dump();
+    
+    return modDef;
+}
+
 ModuleDefPtr Crack::loadSharedLib(const string &path, 
                                   Crack::StringVecIter moduleNameBegin,
                                   Crack::StringVecIter moduleNameEnd,
@@ -194,8 +227,6 @@ ModuleDefPtr Crack::loadSharedLib(const string &path,
     
     initFuncName += "init";
 
-    typedef void (*InitFunc)(Module *mod);
-
     InitFunc func = (InitFunc)dlsym(handle, initFuncName.c_str());
     
     if (!func) {
@@ -204,25 +235,8 @@ ModuleDefPtr Crack::loadSharedLib(const string &path,
             << dlerror() << endl;
         return 0;
     }
-
-    // create a new context
-    BuilderPtr builder = rootBuilder->createChildBuilder();
-    ContextPtr context =
-        new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), canonicalName)
-                    );
-
-    // create a module object
-    ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
-    Module mod(context.get());
-    func(&mod);
-    mod.finish();
-    modDef->close(*context);
     
-    if (dump)
-        builder->dump();
-    
-    return modDef;
+    return initExtensionModule(canonicalName, func);
 }
 
 ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
@@ -278,7 +292,10 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), canonicalName)
+                    new GlobalNamespace(rootContext->ns.get(), canonicalName),
+                    new GlobalNamespace(rootContext->compileNS.get(),
+                                        canonicalName
+                                        )
                     );
     ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
     if (!modPath.isDir) {
@@ -371,7 +388,8 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     BuilderPtr builder = rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), name)
+                    new GlobalNamespace(rootContext->ns.get(), name),
+                    new GlobalNamespace(rootContext->compileNS.get(), name)
                     );
 
     // XXX using the name as the canonical name which is not right, need to 

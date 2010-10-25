@@ -195,20 +195,14 @@ namespace {
                     );
 
         // create the class context
-        ContextPtr classCtx = new Context(context.builder,
-                                          Context::instance,
-                                          &context,
-                                          classType
-                                          );
+        ContextPtr classCtx =
+            context.createSubContext(Context::instance, classType);
 
         CompositeNamespacePtr ns = new CompositeNamespace(classType,
                                                           context.ns.get()
                                                           );
-        ContextPtr lexicalContext = new Context(context.builder,
-                                                Context::composite,
-                                                classCtx.get(),
-                                                ns.get()
-                                                );
+        ContextPtr lexicalContext = 
+            classCtx->createSubContext(Context::composite, ns.get());
         BBuilderContextData *bdata;
         lexicalContext->builderData = bdata = new BBuilderContextData();
 
@@ -903,6 +897,10 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     return type;
 }
 
+void *LLVMBuilder::getFuncAddr(llvm::Function *func) {
+    return execEng->getPointerToFunction(func);
+}
+
 TypeDefPtr LLVMBuilder::createClassForward(Context &context,
                                            const string &name
                                            ) {
@@ -1059,7 +1057,8 @@ namespace {
 
         // build a local context to hold the "this"
         Context localCtx(context.builder, Context::local, &context,
-                         new LocalNamespace(objClass, objClass->name)
+                         new LocalNamespace(objClass, objClass->name),
+                         context.compileNS.get()
                          );
         localCtx.ns->addDef(new ArgDef(objClass, "this"));
 

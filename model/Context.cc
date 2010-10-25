@@ -7,8 +7,10 @@
 #include "parser/Token.h"
 #include "parser/Location.h"
 #include "parser/ParseError.h"
+#include "Annotation.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
+#include "FuncAnnotation.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
 #include "GlobalNamespace.h"
@@ -34,11 +36,13 @@ Context::GlobalData::GlobalData() :
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
-                 Namespace *ns
+                 Namespace *ns,
+                 Namespace *compileNS
                  ) :
     loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
     ns(ns),
+    compileNS(parentContext ? parentContext->compileNS : NamespacePtr(0)),
     builder(builder),
     scope(scope),
     toplevel(false),
@@ -51,9 +55,11 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context::GlobalData *globalData,
-                 Namespace *ns
+                 Namespace *ns,
+                 Namespace *compileNS
                  ) :
     ns(ns),
+    compileNS(compileNS),
     builder(builder),
     scope(scope),
     toplevel(false),
@@ -83,7 +89,7 @@ ContextPtr Context::createSubContext(Scope newScope, Namespace *ns) {
                        );
         }
     }
-    return new Context(builder, newScope, this, ns);
+    return new Context(builder, newScope, this, ns, compileNS.get());
 }
 
 ContextPtr Context::getClassContext() {
@@ -357,6 +363,31 @@ Branchpoint *Context::getContinue() {
     } else {
         return 0;
     }
+}
+
+AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
+    // XXX should be compileNS
+    VarDefPtr result = ns->lookUp(name);
+    if (!result)
+        return 0;
+
+    // create the arg list for the signature of an annotation (we don't need 
+    // the builder to create an ArgDef here because it's just for a signature 
+    // match).
+    FuncDef::ArgVec args(1);
+    args[0] = new ArgDef(globalData->crackContext.get(), "context");
+
+    OverloadDef *ovld = OverloadDefPtr::rcast(result);
+    if (ovld) {
+        FuncDefPtr f = ovld->getSigMatch(args);
+        AnnotationPtr ann = new FuncAnnotation(f.get());
+        // XXX should be compileNS
+        ns->addDef(ann.get());
+        return ann;
+    }
+    
+    // XXX can't deal with variables yet
+    return 0;
 }
 
 void Context::error(const string &msg) {

@@ -13,16 +13,16 @@ class Token {
    public:
 
       // the token types
-      typedef enum { bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, classKw, 
-                     continueKw, elseKw, ifKw, importKw, isKw, nullKw, 
-                     operKw, returnKw, whileKw, assign, assignAnd, 
+      typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
+                     classKw, continueKw, elseKw, ifKw, importKw, isKw, 
+                     nullKw, operKw, returnKw, whileKw, assign, assignAnd, 
                      assignAsterisk, assignLSh, assignOr, assignRSh, 
                      assignXor, assignMinus, assignPercent, assignPlus, 
                      assignSlash, asterisk, bang, colon, comma, decr, define, 
                      dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
-                     lcurly, le, lparen, lt, minus, ne, percent, plus, 
-                     quest, rbracket, rcurly, rparen, semi, slash, string,
-                     tilde, istrBegin, istrEnd, logicAnd, logicOr, floatLit,
+                     lcurly, le, lparen, lt, minus, ne, percent, plus, quest, 
+                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
+                     istrBegin, istrEnd, logicAnd, logicOr, floatLit, 
                      octalLit, hexLit, binLit
 		    } Type;
 
@@ -58,6 +58,7 @@ class Token {
       /** Methods to check the token type */
       /** @{ */
 
+      bool isAnn() const { return type == ann; }
       bool isBoolAnd() const { return type == bitAnd; }
       bool isBoolOr() const { return type == bitOr; }
       bool isIf() const { return type == ifKw; }

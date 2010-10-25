@@ -1044,5 +1044,6 @@ test_output 'file api' 'import test.test_dir;' ok
 ln -f test/.libs/testext.so test/testext.so || {
     echo "Unable to copy shared library"; exit 1; }
 test_output 'extension modules' 'import test.test_extensions;' ok
+test_output 'annotations' 'import test.test_annotations emitOk; @emitOk' ok
 
 exit $rc

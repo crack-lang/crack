@@ -164,6 +164,8 @@ Token Toker::readToken() {
                         ungetChar(ch);
                         return Token(Token::dot, ".", locationMap.getLocation());
                     }
+                } else if (ch == '@') {
+                    return Token(Token::ann, "@", locationMap.getLocation());
                 } else if (isdigit(ch)) {
                     if (ch == '0') {
                         // check for hex, octal, and binary constants

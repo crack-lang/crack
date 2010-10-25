@@ -34,6 +34,10 @@ class OpDef : public model::FuncDef {
         }
         
         virtual model::FuncCallPtr createFuncCall() = 0;
+
+        virtual void *getFuncAddr(Builder &builder) {
+            return 0;
+        }
 };
 
 class BinOpDef : public OpDef {

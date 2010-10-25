@@ -8,6 +8,10 @@
 #include "VarDef.h"
 #include "ArgDef.h"
 
+namespace builder {
+    class Builder;
+}
+
 namespace model {
 
 //SPUG_RCPTR(ArgDef);
@@ -93,6 +97,14 @@ class FuncDef : public VarDef {
          * the receiver type or a specialization of it.
          */
         TypeDef *getThisType() const;
+        
+        /**
+         * Returns the address of the underlying compiled function, suitable 
+         * for use when directly calling a function from C.
+         * It is fair to assume that this will trigger an assertion failure if 
+         * called on an incomplete function.
+         */
+        virtual void *getFuncAddr(builder::Builder &builder) = 0;
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

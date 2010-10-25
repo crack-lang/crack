@@ -50,6 +50,8 @@ public:
      */
     llvm::Function *getRep(LLVMBuilder &builder);
 
+    virtual void *getFuncAddr(Builder &builder);
+
 };
 
 } // end namespace builder::vmll

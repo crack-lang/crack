@@ -16,6 +16,10 @@ namespace builder {
     SPUG_RCPTR(Builder);
 }
 
+namespace crack { namespace ext {
+    class Module;
+}}
+
 /**
  * High-level wrapper around the crack executor.  Use this whenever possible 
  * for embedding.
@@ -82,6 +86,9 @@ class Crack {
         // if true, add the global installed libary path to the library search 
         // path prior to running anything.
         bool useGlobalLibs;
+
+        typedef void (*InitFunc)(crack::ext::Module *mod);
+
         
 //        ~Crack();
         
@@ -145,6 +152,16 @@ class Crack {
                          const std::string &path,
                          std::istream &src
                          );
+
+        /**
+         * Initialize an extension module.  This only needs to be called for
+         * the internal extension modules - ones that are bundled with the 
+         * crack compiler shared library.
+         */
+        model::ModuleDefPtr
+            initExtensionModule(const std::string &canonicalName,
+                                InitFunc initFunc
+                                );
 
         /**
          * Load a shared library.  Should conform to the crack extension 

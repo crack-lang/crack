@@ -19,6 +19,7 @@ namespace parser {
 
 namespace model {
 
+SPUG_RCPTR(Annotation);
 SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
@@ -65,6 +66,9 @@ class Context : public spug::RCBase {
         
         // the context namespace.
         NamespacePtr ns;
+        
+        // the compile namespace (used to resolve annotations).
+        NamespacePtr compileNS;
 
         builder::Builder &builder;
         BuilderContextDataPtr builderData;
@@ -109,7 +113,8 @@ class Context : public spug::RCBase {
                        objectType,
                        stringType,
                        staticStringType,
-                       overloadType;
+                       overloadType,
+                       crackContext;
             
             // just make sure the bootstrapped types are null
             GlobalData();
@@ -117,12 +122,14 @@ class Context : public spug::RCBase {
     
         Context(builder::Builder &builder, Scope scope,
                 Context *parentContext,
-                Namespace *ns
+                Namespace *ns,
+                Namespace *compileNS
                 );
         
         Context(builder::Builder &builder, Scope scope,
                 GlobalData *globalData,
-                Namespace *ns
+                Namespace *ns,
+                Namespace *compileNS
                 );
         
         ~Context();
@@ -277,6 +284,12 @@ class Context : public spug::RCBase {
         const parser::Location &getLocation() const {
             return loc;
         }
+        
+        /**
+         * Look up the annotation in the compile namespace.  Returns null if 
+         * undefined.
+         */
+        AnnotationPtr lookUpAnnotation(const std::string &name);
         
         /**
          * Emit an error message (throws a ParseException).  If there is a 

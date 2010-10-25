@@ -122,6 +122,11 @@ class Parser {
                                     );
 
       /**
+       * Parse an annotation and execute it.
+       */
+      void parseAnnotation();
+
+      /**
        * Parse a single statement.
        * @param defsAllowed true if a definition may be provided instead of a 
        *    statement.  Statements in block contexts may be definitions, 

@@ -1,0 +1,7 @@
+# Copyright 2010 Google Inc.
+
+import crack.compiler CrackContext;
+
+void emitOk(CrackContext ctx) {
+    ctx.inject('import crack.io cout; cout `ok\n`;'.buffer);
+}

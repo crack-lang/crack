@@ -23,3 +23,7 @@ llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
 }
 
 
+void *BFuncDef::getFuncAddr(Builder &builder) {
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder&>(builder);
+    return b.getFuncAddr(getRep(b));
+}

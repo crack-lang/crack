@@ -107,6 +107,8 @@ class LLVMBuilder : public Builder {
                                 unsigned int nextVTableSlot
                                 );
 
+        void *getFuncAddr(llvm::Function *func);
+
         LLVMBuilder();
 
         virtual BuilderPtr createChildBuilder();

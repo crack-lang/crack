@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
+#include "model/Annotation.h"
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
@@ -59,6 +60,14 @@ void Parser::addDef(VarDef *varDef) {
 Token Parser::getToken() {
    Token tok = toker.getToken();
    context->setLocation(tok.getLocation());
+   
+   // short-circuit the parser for an annotation, which can occur anywhere.
+   while (tok.isAnn()) {
+      parseAnnotation();
+      tok = toker.getToken();
+      context->setLocation(tok.getLocation());
+   }
+
    return tok;
 }
 
@@ -181,6 +190,19 @@ void Parser::parseClause(bool defsAllowed) {
       toker.putBack(tok);
    else if (!tok.isSemi())
       unexpected(tok, "expected semicolon or a block terminator");
+}
+
+void Parser::parseAnnotation() {
+   Token tok = toker.getToken();
+   context->setLocation(tok.getLocation());
+   if (!tok.isIdent())
+      error(tok, "Identifier expected after '@' sign");
+   
+   // lookup the annotation
+   AnnotationPtr ann = context->lookUpAnnotation(tok.getData());
+   if (!ann)
+      error(tok, SPUG_FSTR("Undefined annotation " << tok.getData()));
+   ann->invoke(this, &toker, context.get());
 }
 
 ContextPtr Parser::parseStatement(bool defsAllowed) {
@@ -1946,11 +1968,7 @@ TypeDefPtr Parser::parseClassDef() {
       bases.push_back(context->globalData->objectType);
 
    // create a class context
-   ContextPtr classContext = new Context(context->builder, 
-                                         Context::instance,
-                                         context.get(),
-                                         0
-                                         );
+   ContextPtr classContext = context->createSubContext(Context::instance);
 
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
@@ -1969,11 +1987,8 @@ TypeDefPtr Parser::parseClassDef() {
    // the parent context.
    NamespacePtr lexicalNS =
       new CompositeNamespace(type.get(), context->ns.get());
-   ContextPtr lexicalContext = new Context(context->builder, 
-                                           Context::composite,
-                                           classContext.get(),
-                                           lexicalNS.get()
-                                           );
+   ContextPtr lexicalContext = 
+      classContext->createSubContext(Context::composite, lexicalNS.get());
 
    // push the new context
    ContextStackFrame cstack(*this, lexicalContext.get());
