@@ -291,7 +291,8 @@ class LLVMBuilder : public Builder {
         virtual void registerPrimFuncs(model::Context &context);
         virtual void loadSharedLibrary(const std::string &name,
                                        const std::vector<std::string> &symbols,
-                                       model::Context &context
+                                       model::Context &context,
+                                       model::Namespace *ns
                                        );
         virtual void registerImport(model::Context &context, 
                                     model::VarDef *varDef

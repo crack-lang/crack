@@ -350,7 +350,8 @@ class Builder : public spug::RCBase {
          */
         virtual void loadSharedLibrary(const std::string &name,
                                        const std::vector<std::string> &symbols,
-                                       model::Context &context
+                                       model::Context &context,
+                                       model::Namespace *ns
                                        ) = 0;
         
         /**

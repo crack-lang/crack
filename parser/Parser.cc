@@ -195,8 +195,15 @@ void Parser::parseClause(bool defsAllowed) {
 void Parser::parseAnnotation() {
    Token tok = toker.getToken();
    context->setLocation(tok.getLocation());
+
+   // if we get an import keyword, parse the import statement.   
+   if (tok.isImport()) {
+      parseImportStmt(context->compileNS.get());
+      return;
+   }
+   
    if (!tok.isIdent())
-      error(tok, "Identifier expected after '@' sign");
+      error(tok, "Identifier or import statement expected after '@' sign");
    
    // lookup the annotation
    AnnotationPtr ann = context->lookUpAnnotation(tok.getData());
@@ -229,7 +236,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       parseReturnStmt();
       return context->getToplevel()->getParent();
    } else if (tok.isImport()) {
-      parseImportStmt();
+      parseImportStmt(context->ns.get());
       return 0;
    } else if (tok.isClass()) {
       if (!defsAllowed)
@@ -1721,7 +1728,7 @@ void Parser::parseReturnStmt() {
 
 // import module-and-defs ;
 //       ^               ^
-void Parser::parseImportStmt() {
+void Parser::parseImportStmt(Namespace *ns) {
    ModuleDefPtr mod;
    string canonicalName;
    Token tok = getToken();
@@ -1759,7 +1766,7 @@ void Parser::parseImportStmt() {
 
    if (!mod) {
       try {
-         context->builder.loadSharedLibrary(name, syms, *context);
+         context->builder.loadSharedLibrary(name, syms, *context, ns);
       } catch (const spug::Exception &ex) {
          error(tok, ex.getMessage());
       }
@@ -1783,7 +1790,7 @@ void Parser::parseImportStmt() {
                                  )
                   );
          context->builder.registerImport(*context, symVal.get());
-         context->ns->addAlias(symVal.get());
+         ns->addAlias(symVal.get());
       }
    }
 }

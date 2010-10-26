@@ -2060,7 +2060,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
 void LLVMBuilder::loadSharedLibrary(const string &name,
                                     const vector<string> &symbols,
-                                    Context &context
+                                    Context &context,
+                                    Namespace *ns
                                     ) {
     // leak the handle so the library stays mapped for the life of the process.
     void *handle = dlopen(name.c_str(), RTLD_LAZY);
@@ -2075,11 +2076,11 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
             throw spug::Exception(dlerror());
 
         // store a stub for the symbol        
-        context.ns->addDef(new StubDef(context.globalData->voidType.get(), 
-                                       *iter,
-                                       sym
-                                       )
-                           );
+        ns->addDef(new StubDef(context.globalData->voidType.get(), 
+                               *iter,
+                               sym
+                               )
+                   );
     }
 }
 

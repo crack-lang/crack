@@ -42,7 +42,8 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
     ns(ns),
-    compileNS(parentContext ? parentContext->compileNS : NamespacePtr(0)),
+    compileNS(ns ? ns : 
+                (parentContext ? parentContext->compileNS : NamespacePtr(0))),
     builder(builder),
     scope(scope),
     toplevel(false),
@@ -366,8 +367,7 @@ Branchpoint *Context::getContinue() {
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
-    // XXX should be compileNS
-    VarDefPtr result = ns->lookUp(name);
+    VarDefPtr result = compileNS->lookUp(name);
     if (!result)
         return 0;
 
@@ -381,8 +381,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     if (ovld) {
         FuncDefPtr f = ovld->getSigMatch(args);
         AnnotationPtr ann = new FuncAnnotation(f.get());
-        // XXX should be compileNS
-        ns->addDef(ann.get());
+        compileNS->addDef(ann.get());
         return ann;
     }
     
