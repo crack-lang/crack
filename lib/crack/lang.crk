@@ -24,6 +24,11 @@ class FreeBase {};
 class Object : VTableBase {
     uint refCount;
 
+    # have to declare these before "oper init" otherwise it won't generate a 
+    # bind in "oper new"
+    oper bind();
+    oper release();
+
     oper init() : refCount = 0 {
     }
 
