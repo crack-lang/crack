@@ -1975,7 +1975,10 @@ TypeDefPtr Parser::parseClassDef() {
       bases.push_back(context->globalData->objectType);
 
    // create a class context
-   ContextPtr classContext = context->createSubContext(Context::instance);
+   ContextPtr classContext =
+      new Context(context->builder, Context::instance, context.get(), 0, 
+                  context->compileNS.get()
+                  );
 
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
