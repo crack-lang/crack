@@ -1722,6 +1722,13 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     byteptrType->addDef(
         new VoidPtrOpDef(context.globalData->voidptrType.get())
     );
+    FuncDefPtr funcDef =
+        new GeneralOpDef<UnsafeCastCall>(byteptrType, FuncDef::noFlags,
+                                         "oper new",
+                                         1
+                                         );
+    funcDef->args[0] = new ArgDef(voidptrType, "val");
+    byteptrType->addDef(funcDef.get());
     context.ns->addDef(byteptrType);
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
