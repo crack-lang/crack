@@ -1,0 +1,27 @@
+# Copyright 2010 Google Inc.
+
+import crack.io StringFormatter;
+import crack.compiler CrackContext;
+
+## increment everything but a constant zero.
+void incrButZero(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (tok.hasText('0'.buffer)) {
+        ctx.putBack(tok);
+    } else {
+        ctx.inject('+ 1 '.buffer);
+        ctx.putBack(tok);
+    }
+}
+
+void testIsChecks(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (tok.isIf())
+        ctx.inject('1 '.buffer);
+    else if (tok.isIdent())
+        ctx.inject('2 '.buffer);
+}
+
+void emitOk(CrackContext ctx) {
+    ctx.inject('cout `ok\n`;'.buffer);
+}

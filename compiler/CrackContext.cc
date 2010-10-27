@@ -5,11 +5,11 @@
 #include <list>
 #include <sstream>
 #include "parser/Toker.h"
+#include "Token.h"
 
 using namespace std;
 using namespace compiler;
 using namespace model;
-using namespace parser;
 
 CrackContext::CrackContext(parser::Parser *parser, parser::Toker *toker,
                            model::Context *context
@@ -21,9 +21,9 @@ CrackContext::CrackContext(parser::Parser *parser, parser::Toker *toker,
 
 void CrackContext::inject(char *code) {
     istringstream iss(code);
-    Toker tempToker(iss, "injected");
-    list<Token> tokens;
-    Token tok;
+    parser::Toker tempToker(iss, "injected");
+    list<parser::Token> tokens;
+    parser::Token tok;
     while (!(tok = tempToker.getToken()).isEnd())
         tokens.push_front(tok);
     
@@ -34,3 +34,10 @@ void CrackContext::inject(char *code) {
     }
 }
 
+Token *CrackContext::getToken() {
+    return new Token(toker->getToken());
+}
+
+void CrackContext::putBack(Token *tok) {
+    toker->putBack(*tok->rep);
+}

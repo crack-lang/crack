@@ -1,7 +1,16 @@
 # Copyright 2010 Google Inc.
 
-import crack.compiler CrackContext;
+import crack.io cout;
+@import test.testann emitOk, incrButZero, testIsChecks;
 
-void emitOk(CrackContext ctx) {
-    ctx.inject('import crack.io cout; cout `ok\n`;'.buffer);
-}
+if (@incrButZero 0 != 0)
+    cout `incrButZero 0 failed\n`;
+if (@incrButZero 1 != 2)
+    cout `incrButZero 1 failed\n`;
+
+if (@testIsChecks if != 1)
+    cout `checking 'if' token failed\n`;
+if (@testIsChecks foo != 2)
+    cout `checking identifier token failed\n`;
+
+@emitOk

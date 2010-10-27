@@ -1,5 +1,6 @@
 ext/Module.cc
 ext/Func.cc
+ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
 model/StrConst.cc
@@ -45,4 +46,5 @@ builder/llvm/VTableBuilder.cc
 builder/llvm/DebugInfo.cc
 compiler/init.cc
 compiler/CrackContext.cc
+compiler/Token2.cc
 Crack.cc

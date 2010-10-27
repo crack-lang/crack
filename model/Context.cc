@@ -371,6 +371,11 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     if (!result)
         return 0;
 
+    // if we've already got an annotation, we're done.
+    AnnotationPtr ann;
+    if (ann = AnnotationPtr::rcast(result))
+        return ann;
+
     // create the arg list for the signature of an annotation (we don't need 
     // the builder to create an ArgDef here because it's just for a signature 
     // match).
@@ -380,7 +385,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     OverloadDef *ovld = OverloadDefPtr::rcast(result);
     if (ovld) {
         FuncDefPtr f = ovld->getSigMatch(args);
-        AnnotationPtr ann = new FuncAnnotation(f.get());
+        ann = new FuncAnnotation(f.get());
         compileNS->addDef(ann.get());
         return ann;
     }
