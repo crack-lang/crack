@@ -164,7 +164,6 @@ namespace {
         LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
         // builder.module should already exist from .builtin module
         assert(builder.module);
-        //builder.module = new Module("<builtin>", lctx);
         vector<const Type *> argTypes;
         FunctionType *voidFuncNoArgs =
             FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
@@ -2014,7 +2013,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // initialize the body of Class.
     context.ns->addDef(new IsOpDef(classType, boolType));
 
-    // XXX NOTE llvm::Module builder.module is implicitly created here!
     finishClassType(context, classType);
     
     // back-fill meta class and impls for the existing primitives
