@@ -342,7 +342,12 @@ class Builder : public spug::RCBase {
                                                     model::TypeDef *type = 0
                                                     ) = 0;
         
-        virtual void registerPrimFuncs(model::Context &context) = 0;
+        /**
+         * register the primitive types and functions into a .builtin module,
+         * which is returned.
+         */
+        virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context
+                                                      ) = 0;
 
         /**
          * Load the named shared library, store the addresses for the symbols 

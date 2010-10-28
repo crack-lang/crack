@@ -288,7 +288,7 @@ class LLVMBuilder : public Builder {
                                                   model::TypeDef *type = 0
                                                   );
 
-        virtual void registerPrimFuncs(model::Context &context);
+        virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
         virtual void loadSharedLibrary(const std::string &name,
                                        const std::vector<std::string> &symbols,
                                        model::Context &context,

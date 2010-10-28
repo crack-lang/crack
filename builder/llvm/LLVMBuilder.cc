@@ -162,7 +162,9 @@ namespace {
         // module.
         LLVMContext &lctx = getGlobalContext();
         LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-        builder.module = new Module("<builtin>", lctx);
+        // builder.module should already exist from .builtin module
+        assert(builder.module);
+        //builder.module = new Module("<builtin>", lctx);
         vector<const Type *> argTypes;
         FunctionType *voidFuncNoArgs =
             FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
@@ -1453,6 +1455,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     // create "array[byteptr] __getArgv()"
     {
         TypeDefPtr array = context.ns->lookUp("array");
+        assert(array.get() && "array not defined in context");
         TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
         types->push_back(context.globalData->byteptrType.get());
         TypeDefPtr arrayOfByteptr =
@@ -1677,10 +1680,17 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     return new BResultExpr(assign, lastValue);
 }
 
-void LLVMBuilder::registerPrimFuncs(model::Context &context) {
-    
+ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
+
+    assert(!context.getParent()->getParent() && "parent context must be root");
+    assert(!module);
+
+    BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get());
+
     Context::GlobalData *gd = context.globalData;
     LLVMContext &lctx = getGlobalContext();
+
+    module = new llvm::Module(".builtin", lctx);
 
     // create the basic types
     
@@ -2003,6 +2013,8 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // now that we have byteptr and array and all of the integer types, we can
     // initialize the body of Class.
     context.ns->addDef(new IsOpDef(classType, boolType));
+
+    // XXX NOTE llvm::Module builder.module is implicitly created here!
     finishClassType(context, classType);
     
     // back-fill meta class and impls for the existing primitives
@@ -2017,7 +2029,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     fixMeta(context, arrayType.get());
 
     // create OverloadDef's type
-    metaType = createMetaClass(context, ".builtin.Overload");
+    metaType = createMetaClass(context, "Overload");
     BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
     createClassImpl(context, overloadDef.get());
@@ -2034,7 +2046,7 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vector<const Type *> members;
     Type *vtableType = StructType::get(getGlobalContext(), members);
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
-    metaType = createMetaClass(context, ".builtin.VTableBase");
+    metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;
     gd->vtableBaseType = vtableBaseType =
         new BTypeDef(metaType.get(), "VTableBase",
@@ -2063,6 +2075,12 @@ void LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     // byteptr array indexing
     addArrayMethods(context, byteptrType, byteType);    
+
+    // bind the module to the execution engine
+    bindModule(module);
+
+    return bMod;
+
 }
 
 void LLVMBuilder::loadSharedLibrary(const string &name,

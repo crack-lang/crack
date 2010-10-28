@@ -32,15 +32,9 @@ bool VarDef::hasInstSlot() {
 std::string VarDef::getFullName() const {
     if (!fullName.empty())
         return fullName;
-    if (!owner)
-        fullName = ".builtin."+name;
-    else if (!owner->getParent(0))
-        // no grandparent, must be a builtin
-        fullName = ".builtin."+name;
-    else if (!owner->getNamespaceName().empty())
+    if (owner && !owner->getNamespaceName().empty())
         fullName = owner->getNamespaceName()+"."+name;
     else
-        // ever?
         fullName = name;
     return fullName;
 }

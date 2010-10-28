@@ -59,9 +59,23 @@ Crack::Crack() :
                               new GlobalNamespace(0, "")
                               );
 
-    // register the primitives    
-    rootBuilder->registerPrimFuncs(*rootContext);
-    
+    // register the primitives into our builtin module
+    ContextPtr builtinContext =
+        new Context(*rootBuilder, Context::module, rootContext.get(),
+                    // NOTE we can't have rootContext namespace be the parent
+                    // here since we are adding the aliases into rootContext
+                    // and we get dependency issues
+                    new GlobalNamespace(0, ".builtin"),
+                    new GlobalNamespace(0, ".builtin"));
+    builtinMod = rootBuilder->registerPrimFuncs(*builtinContext);
+
+    // alias builtins to the root namespace
+    for (Namespace::VarDefMap::iterator i = builtinContext->ns->beginDefs();
+         i != builtinContext->ns->endDefs();
+         ++i) {
+         rootContext->ns->addAlias(i->first, i->second.get());
+    }
+
     // search for source files in the current directory
     sourceLibPath[0] = ".";
 }

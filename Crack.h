@@ -34,6 +34,9 @@ class Crack {
 
         // the toplevel builder        
         builder::BuilderPtr rootBuilder;
+
+        // .builtin module, containing primitive types and functions
+        model::ModuleDefPtr builtinMod;
         
         // mapping from the canonical name of the module to the module 
         // definition.
