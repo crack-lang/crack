@@ -25,10 +25,12 @@ class CrackContext {
         parser::Parser *parser;
         parser::Toker *toker;
         model::Context *context;
+        void *userData;
 
     public:
         CrackContext(parser::Parser *parser, parser::Toker *toker,
-                     model::Context *context
+                     model::Context *context,
+                     void *userData = 0
                      );
 
         /**
@@ -53,6 +55,27 @@ class CrackContext {
          * Returns the context scope.
          */
         int getScope();
+        
+        typedef void (*AnnotationFunc)(CrackContext *);
+
+        /**
+         * Stores a simple annotation function in the module context.
+         */
+        void storeAnnotation(const char *name, AnnotationFunc func);
+        
+        /**
+         * Stores an annotation and user data in the module context.
+         */
+        void storeAnnotation(const char *name, AnnotationFunc func,
+                             void *userData
+                             );
+        
+        /**
+         * Returns the user data associated with the annotation.  User data 
+         * can be stored in some types of Annotation objects and passed into 
+         * the CrackContext when it is created.
+         */
+        void *getUserData();
 };
 
 } // namespace compiler

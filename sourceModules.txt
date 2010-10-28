@@ -16,6 +16,7 @@ model/CompositeNamespace.cc
 model/IntConst.cc
 model/FloatConst.cc
 model/FuncAnnotation.cc
+model/PrimFuncAnnotation.cc
 model/VarDef.cc
 model/Context.cc
 model/LocalNamespace.cc

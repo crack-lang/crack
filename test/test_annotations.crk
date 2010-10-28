@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 
 import crack.io cout;
-@import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope;
+@import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope,
+    createAnnotations;
 
 if (@incrButZero 0 != 0)
     cout `incrButZero 0 failed\n`;
@@ -28,5 +29,12 @@ if (@getScope c != 3)
 class B { void x () { @storeScope d } }
 if (@getScope d != 2)
     cout `method scope failed\n`;
+
+@createAnnotations
+if (!@created)
+    cout `failed to create a new annotation\n`;
+
+if (@createdWithCallback != 100)
+    cout `failed to create an annotation with a callback\n`;
 
 @emitOk

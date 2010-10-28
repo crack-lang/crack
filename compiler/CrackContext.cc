@@ -6,6 +6,8 @@
 #include <sstream>
 #include "parser/Toker.h"
 #include "model/Context.h"
+#include "model/Namespace.h"
+#include "model/PrimFuncAnnotation.h"
 #include "Token.h"
 
 using namespace std;
@@ -13,11 +15,13 @@ using namespace compiler;
 using namespace model;
 
 CrackContext::CrackContext(parser::Parser *parser, parser::Toker *toker,
-                           model::Context *context
+                           Context *context,
+                           void *userData
                            ) :
     parser(parser),
     toker(toker),
-    context(context) {
+    context(context),
+    userData(userData) {
 }
 
 void CrackContext::inject(char *code) {
@@ -46,3 +50,21 @@ void CrackContext::putBack(Token *tok) {
 int CrackContext::getScope() {
     return context->scope;
 }
+
+void CrackContext::storeAnnotation(const char *name, AnnotationFunc func) {
+    context->compileNS->addDef(new PrimFuncAnnotation(name, func));
+}
+
+void CrackContext::storeAnnotation(const char *name, AnnotationFunc func,
+                                   void *userData
+                                   ) {
+    context->compileNS->addDef(new PrimFuncAnnotation(name, func,
+                                                      userData
+                                                      )
+                               );
+}
+
+void *CrackContext::getUserData() {
+    return userData;
+}
+

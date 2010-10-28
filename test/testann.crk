@@ -44,3 +44,22 @@ void getScope(CrackContext ctx) {
     fmt `$v \0`;
     ctx.inject(fmt.createString().buffer);
 }
+
+void createdAnnotation(CrackContext ctx) {
+    ctx.inject('true '.buffer);
+}
+
+void createdWithCallback(CrackContext ctx) {
+    StringFormatter fmt;
+    arg := IntWrapper.unsafeCast(ctx.getUserData());
+    fmt `$(arg.val) \0`;
+    ctx.inject(fmt.createString().buffer);
+}
+
+void createAnnotations(CrackContext ctx) {
+    ctx.storeAnnotation('created'.buffer, createdAnnotation);
+    ctx.storeAnnotation('createdWithCallback'.buffer, 
+                        createdWithCallback,
+                        IntWrapper(100)
+                        );
+}

@@ -110,7 +110,26 @@ void init(Module *mod) {
     cc->addMethod(mod->getIntType(), "getScope",
                   (void *)&CrackContext::getScope
                   );
-                      
+    
+    cc->addMethod(mod->getVoidptrType(), "getUserData",
+                  (void *)&CrackContext::getUserData
+                  );
+
+    typedef void (CrackContext::* G1)(const char *, void (*)(CrackContext *));
+    G1 g1 = &CrackContext::storeAnnotation;
+    f = cc->addMethod(mod->getVoidType(), "storeAnnotation", (void *)g1);
+    f->addArg(mod->getByteptrType(), "name");
+    f->addArg(mod->getVoidptrType(), "func");
+
+    typedef void (CrackContext::* G2)(const char *, void (*)(CrackContext *),
+                                      void *
+                                      );
+    G2 g2 = &CrackContext::storeAnnotation;
+    f = cc->addMethod(mod->getVoidType(), "storeAnnotation", (void *)g2);
+    f->addArg(mod->getByteptrType(), "name");
+    f->addArg(mod->getVoidptrType(), "func");
+    f->addArg(mod->getVoidptrType(), "userData");
+
     cc->finish();
     
 }
