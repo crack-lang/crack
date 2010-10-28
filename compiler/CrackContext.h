@@ -48,6 +48,11 @@ class CrackContext {
          * token returned by getToken().
          */
         void putBack(Token *tok);
+        
+        /**
+         * Returns the context scope.
+         */
+        int getScope();
 };
 
 } // namespace compiler

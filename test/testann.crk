@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 
-import crack.io StringFormatter;
+import crack.io StringFormatter, cout;
 import crack.compiler CrackContext;
+import crack.container TreeMap;
 
 ## increment everything but a constant zero.
 void incrButZero(CrackContext ctx) {
@@ -24,4 +25,22 @@ void testIsChecks(CrackContext ctx) {
 
 void emitOk(CrackContext ctx) {
     ctx.inject('cout `ok\n`;'.buffer);
+}
+
+TreeMap scopes;
+
+class IntWrapper {
+    int val;
+    oper init(int val0) : val = val0 {}
+}
+
+void storeScope(CrackContext ctx) {
+    scopes[String(ctx.getToken().getText())] = IntWrapper(ctx.getScope());
+}
+
+void getScope(CrackContext ctx) {
+    v := IntWrapper.cast(scopes[String(ctx.getToken().getText())]).val;
+    StringFormatter fmt;
+    fmt `$v \0`;
+    ctx.inject(fmt.createString().buffer);
 }

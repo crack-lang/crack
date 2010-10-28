@@ -16,6 +16,10 @@ bool Token::hasText(const char *text) {
     return rep->getData() == text;
 }
 
+const char *Token::getText() {
+    return rep->getData().c_str();
+}
+
 bool Token::isAnn() { return rep->isAnn(); }
 bool Token::isBoolAnd() { return rep->isBoolAnd(); }
 bool Token::isBoolOr() { return rep->isBoolOr(); }

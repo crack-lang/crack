@@ -23,6 +23,11 @@ class Token : public crack::ext::RCObj {
          * specified.
          */
         bool hasText(const char *text);
+        
+        /**
+         * Returns the text of the token.
+         */
+        const char *getText();
 
         bool isAnn();
         bool isBoolAnd();

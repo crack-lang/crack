@@ -5,6 +5,7 @@
 #include <list>
 #include <sstream>
 #include "parser/Toker.h"
+#include "model/Context.h"
 #include "Token.h"
 
 using namespace std;
@@ -40,4 +41,8 @@ Token *CrackContext::getToken() {
 
 void CrackContext::putBack(Token *tok) {
     toker->putBack(*tok->rep);
+}
+
+int CrackContext::getScope() {
+    return context->scope;
 }

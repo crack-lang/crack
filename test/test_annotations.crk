@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.io cout;
-@import test.testann emitOk, incrButZero, testIsChecks;
+@import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope;
 
 if (@incrButZero 0 != 0)
     cout `incrButZero 0 failed\n`;
@@ -12,5 +12,21 @@ if (@testIsChecks if != 1)
     cout `checking 'if' token failed\n`;
 if (@testIsChecks foo != 2)
     cout `checking identifier token failed\n`;
+
+@storeScope a
+if (@getScope a != 0)
+    cout `module scope failed\n`;
+
+void f() { @storeScope b }
+if (@getScope b != 2)
+    cout `function scope failed\n`;
+
+class A { @storeScope c }
+if (@getScope c != 3)
+    cout `class scope failed\n`;
+
+class B { void x () { @storeScope d } }
+if (@getScope d != 2)
+    cout `method scope failed\n`;
 
 @emitOk

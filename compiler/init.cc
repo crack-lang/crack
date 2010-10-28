@@ -24,6 +24,11 @@ void init(Module *mod) {
                                    (void *)&Token::hasText
                                    );
     f->addArg(mod->getByteptrType(), "text");
+    
+    tokenType->addMethod(mod->getByteptrType(), "getText",
+                         (void *)&Token::getText
+                         );
+    
     tokenType->addMethod(mod->getBoolType(), "isAnn", (void *)&Token::isAnn);
     tokenType->addMethod(mod->getBoolType(), "isBoolAnd", 
                          (void *)&Token::isBoolAnd
@@ -101,6 +106,10 @@ void init(Module *mod) {
                       (void *)&CrackContext::putBack
                       );
     f->addArg(tokenType, "tok");
+
+    cc->addMethod(mod->getIntType(), "getScope",
+                  (void *)&CrackContext::getScope
+                  );
                       
     cc->finish();
     
