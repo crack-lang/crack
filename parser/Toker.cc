@@ -158,6 +158,7 @@ Token Toker::readToken() {
                     getChar(ch);
                     if (isdigit(ch)) {
                         state = st_float;
+                        buf << ".";
                         ungetChar(ch);
                     }
                     else {
@@ -183,8 +184,10 @@ Token Toker::readToken() {
                         else if (ch == 'b' || ch == 'b')
                             state = st_binary; // eats the 'b', ready to parse
                                                // first binary digit
-                        else if (ch == '.')
+                        else if (ch == '.') {
+                            buf << ch;
                             state = st_float; // float
+                        }
                         else if (isdigit(ch)) {
                             // old school style octal
                             state = st_octal;

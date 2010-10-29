@@ -6,6 +6,16 @@ float32 f1 = 1234.56;
 float32 f2 = 2345.67;
 float64 d1 = 1.123456789;
 float64 d2 = 2.345678901;
+float v = 0.5;
+if (v != 5.0/10.0) {
+    puts("fail: ");
+    printfloat(v);
+}
+v = .5;
+if (v != 5.0/10.0) {
+    puts("fail: ");
+    printfloat(v);
+}
 
 // scientific notation
 float e = +1.23e10;
