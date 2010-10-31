@@ -197,6 +197,11 @@ class Formatter : Object, Writer {
     void format(Object obj) {
         obj.writeTo(this);
     }
+    
+    ## So we can deal with plain null-terminated strings.
+    void format(byteptr cstr) {
+        write(cstr);
+    }
 
     Object getWriterObject() { return this; }
 }
