@@ -1,0 +1,21 @@
+# Copyright 2010 Google Inc.
+
+import crack.io cout;
+@import crack.exp.ann define;
+
+@define oneHundred() { 100 }
+@define echo(x) { x }
+@define equals(a, b) { (a == b) }
+
+if (@oneHundred() != 100)
+    cout `macro with no args failed\n`;
+
+if (@echo(200) != 200)
+    cout `macro with one arg failed\n`;
+
+if (!@equals(1, 1)) 
+    cout `macro with two args failed\n`;
+
+cout `ok\n`;
+
+

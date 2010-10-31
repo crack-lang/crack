@@ -1061,5 +1061,6 @@ test_output 'annotation error with token function' '
     @errorTok
     XXX' \
     "${parseError}4: error with token"
+test_output 'standard annotations' 'import test.test_std_annotations;' ok
 
 exit $rc
