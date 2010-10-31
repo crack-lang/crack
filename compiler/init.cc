@@ -130,6 +130,29 @@ void init(Module *mod) {
     f->addArg(mod->getVoidptrType(), "func");
     f->addArg(mod->getVoidptrType(), "userData");
 
+    // error/warning functions
+
+    // error(byteptr text)
+    void (CrackContext::* g3)(const char *) = &CrackContext::error;
+    f = cc->addMethod(mod->getVoidType(), "error", (void *)g3);
+    f->addArg(mod->getByteptrType(), "text");
+    
+    // error(Token tok, byteptr text)
+    void (CrackContext::* g4)(Token *, const char *) = &CrackContext::error;
+    f = cc->addMethod(mod->getVoidType(), "error", (void *)g4);
+    f->addArg(tokenType, "tok");
+    f->addArg(mod->getByteptrType(), "text");
+
+    // warn(byteptr text)
+    g3 = &CrackContext::warn;
+    f = cc->addMethod(mod->getVoidType(), "warn", (void *)g3);
+    f->addArg(mod->getByteptrType(), "text");
+                      
+    g4 = &CrackContext::warn;
+    f = cc->addMethod(mod->getVoidType(), "warn", (void *)g4);
+    f->addArg(tokenType, "tok");
+    f->addArg(mod->getByteptrType(), "text");
+
     cc->finish();
     
 }

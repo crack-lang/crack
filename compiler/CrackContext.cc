@@ -2,8 +2,10 @@
 
 #include "CrackContext.h"
 
+#include <stdlib.h>
 #include <list>
 #include <sstream>
+#include "parser/Parser.h"
 #include "parser/Toker.h"
 #include "model/Context.h"
 #include "model/Namespace.h"
@@ -68,3 +70,24 @@ void *CrackContext::getUserData() {
     return userData;
 }
 
+void CrackContext::error(const char *text) {
+    const parser::Location &loc = context->getLocation();
+    cerr << "ParseError: " << loc.getName() << ':' << loc.getLineNumber() << 
+        ": " << text << endl;
+    exit(1);
+}
+
+void CrackContext::error(Token *tok, const char *text) {
+    const parser::Location &loc = tok->rep->getLocation();
+    cerr << "ParseError: " << loc.getName() << ':' << loc.getLineNumber() << 
+        ": " << text << endl;
+    exit(1);
+}
+
+void CrackContext::warn(const char *text) {
+    parser::Parser::warn(context->getLocation(), text);
+}
+
+void CrackContext::warn(Token *tok, const char *text) {
+    parser::Parser::warn(tok->rep->getLocation(), text);
+}

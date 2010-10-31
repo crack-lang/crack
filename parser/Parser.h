@@ -350,7 +350,10 @@ class Parser {
        * message text.
        */
       static void error(const Token &tok, const std::string &msg);
-      
+
+      /** Writes a warning message to standard error. */
+      static void warn(const Location &loc, const std::string &msg);
+
       /** Writes a warning message to standard error. */
       static void warn(const Token &tok, const std::string & msg);
 };

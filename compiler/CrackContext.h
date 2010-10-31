@@ -76,6 +76,30 @@ class CrackContext {
          * the CrackContext when it is created.
          */
         void *getUserData();
+        
+        /**
+         * Generate a compiler error, use the location of the last token as 
+         * the error location.
+         */
+        void error(const char *text);
+        
+        /**
+         * Generate a compiler error, use the location of the token as the 
+         * error location.
+         */
+        void error(Token *tok, const char *text);
+
+        /**
+         * Generate a compiler warning, use the location of the last token as 
+         * the error location.
+         */
+        void warn(const char *text);
+        
+        /**
+         * Generate a compiler warning, use the location of the token as the 
+         * error location.
+         */
+        void warn(Token *tok, const char *text);
 };
 
 } // namespace compiler

@@ -4,6 +4,7 @@
 rc=0
 
 parseError="ParseError: run_all_tests.tmp:"
+parseWarn="run_all_tests.tmp:"
 
 function test_output {
     text="$1"
@@ -1045,5 +1046,20 @@ ln -f test/.libs/testext.so test/testext.so || {
     echo "Unable to copy shared library"; exit 1; }
 test_output 'extension modules' 'import test.test_extensions;' ok
 test_output 'annotations' 'import test.test_annotations;' ok
+test_output 'annotation warnings plain error function' '
+    import test.testann error, warnTok, warn;
+    @warnTok
+        foo
+    @warn
+    @error
+    XXX' \
+    "${parseWarn}4: warning with token
+${parseWarn}5: plain warning
+${parseError}6: plain error"
+test_output 'annotation error with token function' '
+    import test.testann errorTok;
+    @errorTok
+    XXX' \
+    "${parseError}4: error with token"
 
 exit $rc

@@ -63,3 +63,22 @@ void createAnnotations(CrackContext ctx) {
                         IntWrapper(100)
                         );
 }
+
+void warnTok(CrackContext ctx) {
+    tok := ctx.getToken();
+    ctx.warn(tok, 'warning with token'.buffer);
+}
+
+void warn(CrackContext ctx) {
+    ctx.warn('plain warning'.buffer);
+}
+
+void errorTok(CrackContext ctx) {
+    tok := ctx.getToken();
+    ctx.error(tok, 'error with token'.buffer);
+}
+
+void error(CrackContext ctx) {
+    tok := ctx.getToken();
+    ctx.error('plain error'.buffer);
+}

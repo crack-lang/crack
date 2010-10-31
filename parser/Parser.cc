@@ -2172,7 +2172,10 @@ void Parser::error(const Token &tok, const std::string &msg) {
    throw ParseError(text.str().c_str());
 }
 
-void Parser::warn(const Token &tok, const std::string & msg) {
-   Location loc = tok.getLocation();
+void Parser::warn(const Location &loc, const std::string &msg) {
    cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << msg << endl;
+}
+
+void Parser::warn(const Token &tok, const std::string &msg) {
+   warn(tok.getLocation(), msg);
 }
