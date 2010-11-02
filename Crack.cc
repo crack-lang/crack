@@ -289,32 +289,35 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                                     ".so"
                                     );
     
-    if (modPath.found && !modPath.isDir)
-        return loadSharedLib(modPath.path, moduleNameBegin,
-                             moduleNameEnd,
-                             canonicalName
-                             );
+    ModuleDefPtr modDef;
+    if (modPath.found && !modPath.isDir) {
+        modDef = loadSharedLib(modPath.path, moduleNameBegin,
+                               moduleNameEnd,
+                               canonicalName
+                               );
+    } else {
+        
+        // try to find the module on the source path
+        modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
+                            ".crk"
+                            );
+        if (!modPath.found)
+            return 0;
     
-    // try to find the module on the source path
-    modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
-                         ".crk"
-                         );
-    if (!modPath.found)
-        return 0;
-
-    // create a new builder, context and module
-    BuilderPtr builder = rootBuilder->createChildBuilder();
-    ContextPtr context =
-        new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), canonicalName),
-                    new GlobalNamespace(rootContext->compileNS.get(),
-                                        canonicalName
-                                        )
-                    );
-    ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
-    if (!modPath.isDir) {
-        ifstream src(modPath.path.c_str());
-        parseModule(*context, modDef.get(), modPath.path, src);
+        // create a new builder, context and module
+        BuilderPtr builder = rootBuilder->createChildBuilder();
+        ContextPtr context =
+            new Context(*builder, Context::module, rootContext.get(),
+                        new GlobalNamespace(rootContext->ns.get(), canonicalName),
+                        new GlobalNamespace(rootContext->compileNS.get(),
+                                            canonicalName
+                                            )
+                        );
+        modDef = context->createModule(canonicalName, emitDebugInfo);
+        if (!modPath.isDir) {
+            ifstream src(modPath.path.c_str());
+            parseModule(*context, modDef.get(), modPath.path, src);
+        }
     }
 
     loadedModules.push_back(modDef);
