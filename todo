@@ -10,57 +10,13 @@ Copyright 2009 Google Inc.
 Unassigned
 ----------
 
--   make operator overloads internal to classes.
 -   allow explicit operators to be called without the "var." prefix.
--   need to be able to instantiate a class from within the class (generate the 
-    "new" operator as soon as an "init" is defined).
 -   implement inheritence from low-level types.
--   annotations
 -   Overrides should not be considered in method resolution order (see manual 
     on "Method Resolution in Classes")
 
 Roadmap
 -------
-
-for 0.1:
--   floating point types
-
-Completed for 0.1:
--   fix instance variable default initialization: 
-    class A { B b; oper init() {} } doesn't construct 'b'. DONE
--   The implicit "oper del" does not override correctly (see to_test.crk) DONE
--   type casting. DONE
--   short circuit logic operators DONE
--   global variables should not get cleaned up until the end of the program.
-    DONE.
--   fix cleanups during assignment (a = b does b.bind() but not a.release())
-    DONE
--   composition of constructors/destructors DONE
--   allow utf-8 chars for strings and identifiers.  DONE
--   the '`' operator DONE
--   multiple inheritence shouldn't cause bad errors (it need not work) DONE 
-    (it now works).
--   fix overload bug DONE
--   numeric negation: "int j = -i;" DONE
--   "Foo x = {1, 2}" construction syntax. DONE
--   break & continue DONE
--   explicit base class method invocation syntax (void foo() {Super.foo();}) 
-    DONE
--   empty statements should work: if (false) ; DONE
--   get rid of the semicolon after class definitions DONE
--   the "oper" keyword
-    -   general implementation DONE
-    -   oper init initializers, oper del cleanups
-        -   preserve order of definition during member initialization and 
-            destruction DONE
-    -   need syntax to allow calling "oper" functions from an expression, need 
-        to get rid of the __del() hack. DONE
--   need to define comparison operators for Object in crack.lang and make them 
-    part of the standard imports. DONE
--   fix numeric conversion. DONE
--   Should be able to do instance construction in a statement context without 
-    it being misinterpreted as a definition DONE
--   need access to argv DONE
 
 for 1.0:
 -   cleanup:
@@ -80,8 +36,6 @@ for 1.0:
             };
     
         
--   function arguments are currently SSA values, which means this won't work:
-    type func(int a) { a = 100; }
 -   doc-comments
 -   first class functions (including overload selection: func[Type1, Type2])
 -   keyword arguments
@@ -91,7 +45,7 @@ for 1.0:
 -   exceptions
 -   minor features
 -   string interpolation expressions: s := `some string $val`;
-    -   warn the user when an overload hides an earlier overload (foo(String) 
-        following foo(Object), for example).
+-   warn the user when an overload hides an earlier overload (foo(String) 
+    following foo(Object), for example).
 
 
