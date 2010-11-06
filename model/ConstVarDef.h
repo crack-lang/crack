@@ -19,6 +19,8 @@ class ConstVarDef : public VarDef {
             VarDef(type, name),
             expr(expr) {
         }
+        
+        virtual bool isConstant() { return true; }
 };
 
 } // namespace model

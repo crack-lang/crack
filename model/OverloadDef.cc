@@ -210,6 +210,10 @@ void OverloadDef::createImpl() {
     }
 }
 
+bool OverloadDef::isConstant() {
+    return true;
+}
+
 void OverloadDef::dump(ostream &out, const string &prefix) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();

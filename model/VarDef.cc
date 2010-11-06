@@ -39,6 +39,10 @@ std::string VarDef::getFullName() const {
     return fullName;
 }
 
+bool VarDef::isConstant() {
+    return false;
+}
+
 void VarDef::dump(ostream &out, const string &prefix) const {
     out << prefix << type->getFullName() << " " << name << endl;
 }

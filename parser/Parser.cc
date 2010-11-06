@@ -515,9 +515,10 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
                           ident.getData()
                          )
                );
-      
-      // XXX need to verify that it's not a constant (or at least not a 
-      // function)
+
+      // make sure the variable is not a constant.
+      if (var->isConstant())
+         error(tok1, "You cannot assign to a constant, class or function.");
 
       // parse an expression
       ExprPtr val = parseExpression();

@@ -55,6 +55,11 @@ class VarDef : public virtual spug::RCBase {
         }
 
         Namespace *getOwner(void) { return owner; }
+        
+        /**
+         * Return true if the variable is unassignable.
+         */
+        virtual bool isConstant();
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

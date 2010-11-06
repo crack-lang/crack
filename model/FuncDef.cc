@@ -126,6 +126,10 @@ TypeDef *FuncDef::getThisType() const {
     return TypeDefPtr::cast(owner);
 }
 
+bool FuncDef::isConstant() {
+    return true;
+}
+
 void FuncDef::dump(ostream &out, const string &prefix) const {
     out << prefix << returnType->getFullName() << " " << getFullName() <<
         args << "\n";

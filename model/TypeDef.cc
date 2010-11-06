@@ -602,6 +602,10 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     assert(false && "generics are not yet supported for normal types.");
 }
 
+bool TypeDef::isConstant() {
+    return true;
+}
+
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;
     string childPrefix = prefix + "  ";

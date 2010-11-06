@@ -97,6 +97,8 @@ class FuncDef : public VarDef {
          * the receiver type or a specialization of it.
          */
         TypeDef *getThisType() const;
+
+        virtual bool isConstant();
         
         /**
          * Returns the address of the underlying compiled function, suitable 

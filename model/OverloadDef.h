@@ -148,6 +148,8 @@ class OverloadDef : public VarDef {
          * Make sure we have an implementation object, create one if we don't.
          */
         void createImpl();
+        
+        virtual bool isConstant();
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

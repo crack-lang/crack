@@ -745,6 +745,13 @@ test_output "no defining variables of forward declared types" \
 
 test_output "constants" "import test.test_constants;" ok
 
+test_output "assignment to functions" "void f() {} f = 100;" \
+    "${parseError}1: You cannot assign to a constant, class or function."
+
+test_output "assignment to type" "class A {} A = 100;" \
+    "${parseError}1: You cannot assign to a constant, class or function."
+    
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

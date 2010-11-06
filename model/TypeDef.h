@@ -263,6 +263,8 @@ class TypeDef : public VarDef, public Namespace {
             type->name = "Class[" + getFullName() + "]";
         }
 
+        virtual bool isConstant();
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
