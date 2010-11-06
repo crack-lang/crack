@@ -239,7 +239,7 @@ class Context : public spug::RCBase {
          * Create a variable reference from the context and check that the 
          * variable is actually reachable from the context.
          */
-        VarRefPtr createVarRef(VarDef *def);
+        ExprPtr createVarRef(VarDef *def);
         
         /**
          * Create a field reference and check that the variable is actually in 

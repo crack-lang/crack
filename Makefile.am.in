@@ -38,6 +38,7 @@ noinst_HEADERS = \
     model/BuilderContextData.h \
     model/CleanupFrame.h \
     model/CompositeNamespace.h \
+    model/ConstVarDef.h \
     model/Context.h \
     model/Expr.h \
     model/FloatConst.h \

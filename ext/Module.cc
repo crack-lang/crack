@@ -3,7 +3,12 @@
 #include "Module.h"
 
 #include <string.h>
+#include "builder/Builder.h"
+#include "model/ConstVarDef.h"
 #include "model/Context.h"
+#include "model/FloatConst.h"
+#include "model/IntConst.h"
+#include "model/Namespace.h"
 #include "Type.h"
 #include "Func.h"
 
@@ -79,6 +84,20 @@ Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr) {
     return f;
 }
 
+void Module::addConstant(Type *type, const std::string &name, double val) {
+    type->checkFinished();
+    FloatConstPtr valObj =
+        context->builder.createFloatConst(*context, val, type->typeDef);
+    vars.push_back(new ConstVarDef(type->typeDef, name, valObj));
+}
+
+void Module::addConstant(Type *type, const std::string &name, int64_t val) {
+    type->checkFinished();
+    IntConstPtr valObj =
+        context->builder.createIntConst(*context, val, type->typeDef);
+    vars.push_back(new ConstVarDef(type->typeDef, name, valObj));
+}
+
 void Module::finish() {
     // no-op if this is already finished
     if (finished)
@@ -86,5 +105,10 @@ void Module::finish() {
 
     for (int i = 0; i < funcs.size(); ++i)
         funcs[i]->finish();
+    
+    // add the variable definitions to the context.
+    for (int i = 0; i < vars.size(); ++i)
+        context->ns->addDef(vars[i]);
+
     finished = true;
 }

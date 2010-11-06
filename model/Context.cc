@@ -10,6 +10,7 @@
 #include "Annotation.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
+#include "ConstVarDef.h"
 #include "FuncAnnotation.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
@@ -294,7 +295,13 @@ bool Context::inSameFunc(Namespace *varNS) {
 }
     
 
-VarRefPtr Context::createVarRef(VarDef *varDef) {
+ExprPtr Context::createVarRef(VarDef *varDef) {
+
+    // is the variable a constant?
+    ConstVarDefPtr constDef;
+    if (constDef = ConstVarDefPtr::cast(varDef))
+        return constDef->expr;
+    
     // verify that the variable is reachable
     
     // if the variable is in a module context, it is accessible

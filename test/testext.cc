@@ -60,4 +60,7 @@ extern "C" void test_testext_init(Module *mod) {
     f->addArg(mod->getIntType(), "a");
     type->addMethod(mod->getVoidType(), "dump", (void *)&MyAggType::dump);
     type->finish();
+
+    mod->addConstant(mod->getIntType(), "INT_CONST", 123);
+    mod->addConstant(mod->getFloatType(), "FLOAT_CONST", 1.23);                     
 }

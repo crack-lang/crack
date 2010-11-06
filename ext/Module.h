@@ -4,12 +4,14 @@
 #ifndef _crack_ext_Module_h_
 #define _crack_ext_Module_h_
 
+#include <stdint.h>
 #include <map>
 #include <string>
 #include <vector>
 
 namespace model {
     class Context;
+    class VarDef;
 };
 
 namespace crack { namespace ext {
@@ -49,6 +51,7 @@ class Module {
         model::Context *context;
         Type *builtinTypes[endSentinel];
         std::vector<Func *> funcs;
+        std::vector<model::VarDef *> vars;
         typedef std::map<std::string, Type *> TypeMap;
         TypeMap types;
         bool finished;
@@ -82,6 +85,11 @@ class Module {
         Type *getType(const char *name);
         Type *addType(const char *name);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr);
+        void addConstant(Type *type, const std::string &name, double val);
+        void addConstant(Type *type, const std::string &name, int64_t val);
+        void addConstant(Type *type, const std::string &name, int val) {
+            addConstant(type, name, static_cast<int64_t>(val));
+        }
         
         /**
          * finish the module (extension init funcs need not call this, it will 
