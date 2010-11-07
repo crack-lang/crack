@@ -1,0 +1,63 @@
+// Algorithms
+// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.container Array;
+import crack.io cout;
+import crack.runtime rand;
+
+uint _QuickPartition(Array A, uint p, uint r) {
+    Object x = A[r];
+    uint i = p-1; // note, underflows when p = 0
+    uint j = p;
+    while (j < r) {
+        if (A[j] <= x) {
+            i++;
+            A.swap(i, j);
+        }
+        j++;
+    }
+    A.swap(i+1, r);
+    return i+1;    
+}
+
+uint _QuickRandomPartition(Array A, uint p, uint r) {
+    i := rand(p,r);
+    A.swap(r,i);
+    return _QuickPartition(A, p, r);
+}
+
+void _QuickSort(Array A, uint p, uint r, bool randomize) {
+    if (p < r && r != 0-1) {
+        uint q;
+        if (randomize)
+            q = _QuickPartition(A, p, r);
+        else
+            q = _QuickRandomPartition(A, p, r);
+        _QuickSort(A, p, q-1, randomize);
+        _QuickSort(A, q+1, r, randomize);
+    }
+}
+
+void QuickSort(Array A) {
+    _QuickSort(A, 0, A.count()-1, false);
+}
+
+void QuickSortR(Array A) {
+    _QuickSort(A, 0, A.count()-1, true);
+}
+
+void InsertionSort(Array A) {
+    uint j = 1;
+    int i;
+    while (j < A.count()) {
+        Object key = A[j];
+        i = int(j)-1;
+        while (i >= 0 && A[uint(i)] > key) {
+            A.swap(uint(i)+1,uint(i));
+            i--;
+        }
+        A[uint(i)+1] = key;
+        j++;
+    }
+}
+

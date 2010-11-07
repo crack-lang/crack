@@ -65,6 +65,12 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(mod->getFloat64Type(), "val");
     f->addArg(byteptrType, "buf");
     f->addArg(mod->getUintType(), "size");
+
+    f = mod->addFunc(uintType, "rand", 
+                     (void *)crack::runtime::rand
+                     );
+    f->addArg(mod->getUintType(), "low");
+    f->addArg(mod->getUintType(), "high");
     
     // Net
     

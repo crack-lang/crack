@@ -1053,6 +1053,7 @@ ln -f test/.libs/testext.so test/testext.so || {
     echo "Unable to copy shared library"; exit 1; }
 test_output 'extension modules' 'import test.test_extensions;' ok
 test_output 'annotations' 'import test.test_annotations;' ok
+test_output 'algorithms' 'import test.test_algo;' ok
 test_output 'annotation warnings plain error function' '
     import test.testann error, warnTok, warn;
     @warnTok
