@@ -5,7 +5,7 @@ import crack.container Array;
 import crack.io cout;
 import crack.runtime rand;
 
-uint _QuickPartition(Array A, uint p, uint r) {
+uint _quickPartition(Array A, uint p, uint r) {
     Object x = A[r];
     uint i = p-1; // note, underflows when p = 0
     uint j = p;
@@ -20,33 +20,33 @@ uint _QuickPartition(Array A, uint p, uint r) {
     return i+1;    
 }
 
-uint _QuickRandomPartition(Array A, uint p, uint r) {
+uint _quickRandomPartition(Array A, uint p, uint r) {
     i := rand(p,r);
     A.swap(r,i);
-    return _QuickPartition(A, p, r);
+    return _quickPartition(A, p, r);
 }
 
-void _QuickSort(Array A, uint p, uint r, bool randomize) {
+void _quickSort(Array A, uint p, uint r, bool randomize) {
     if (p < r && r != 0-1) {
         uint q;
         if (randomize)
-            q = _QuickPartition(A, p, r);
+            q = _quickPartition(A, p, r);
         else
-            q = _QuickRandomPartition(A, p, r);
-        _QuickSort(A, p, q-1, randomize);
-        _QuickSort(A, q+1, r, randomize);
+            q = _quickRandomPartition(A, p, r);
+        _quickSort(A, p, q-1, randomize);
+        _quickSort(A, q+1, r, randomize);
     }
 }
 
-void QuickSort(Array A) {
-    _QuickSort(A, 0, A.count()-1, false);
+void quickSort(Array A) {
+    _quickSort(A, 0, A.count()-1, false);
 }
 
-void QuickSortR(Array A) {
-    _QuickSort(A, 0, A.count()-1, true);
+void quickSortR(Array A) {
+    _quickSort(A, 0, A.count()-1, true);
 }
 
-void InsertionSort(Array A) {
+void insertionSort(Array A) {
     uint j = 1;
     int i;
     while (j < A.count()) {
