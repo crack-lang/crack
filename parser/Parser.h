@@ -12,10 +12,10 @@
 
 #include "Toker.h"
 #include "model/FuncCall.h"
+#include "model/Context.h"
 
 namespace model {
    SPUG_RCPTR(ArgDef);
-   SPUG_RCPTR(Context);
    SPUG_RCPTR(FuncDef);
    SPUG_RCPTR(Expr);
    SPUG_RCPTR(Initializers);
@@ -26,8 +26,27 @@ namespace model {
 
 namespace parser {
 
+class Parser;
+
+// Callback interface.
+struct ParserCallback {
+   virtual void run(parser::Parser *parser, Toker *toker,
+                    model::Context *context
+                    ) = 0;
+};
+
 class Parser {
 
+   public:
+
+      // parse events that can be tied to a callback
+      enum Event {
+         funcEnter, // after first curly brace of the function block.
+         funcLeave, // before the last curly brace of the function block.
+         noCallbacks, // special event that you can't add callbacks to.
+         eventSentinel // MUST BE THE LAST SYMBOL IN THE ENUM.
+      };
+      
    private:
 
       enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, 
@@ -78,10 +97,14 @@ class Parser {
                return *context;
             }
       };
-      
+
       typedef std::map<std::string, unsigned> OpPrecMap;
       OpPrecMap opPrecMap;
       
+      // callbacks for each event type.
+      typedef std::vector<ParserCallback *> CallbackVec;
+      CallbackVec callbacks[eventSentinel];
+
       /**
        * Add a new definition to the current context or nearest definition 
        * context.
@@ -144,7 +167,7 @@ class Parser {
        * @returns the context that this statement terminates to.  See 
        *    parseStatement().
        */
-      model::ContextPtr parseBlock(bool nested);
+      model::ContextPtr parseBlock(bool nested, Event closeEvent);
 
       /** Create a reference to the "this" variable, error if there is none. */
       model::ExprPtr makeThisRef(const Token &ident,
@@ -329,6 +352,9 @@ class Parser {
                                            bool overloadOk = false);
 
    public:
+      // current parser state.      
+      enum State { st_base, st_notBase } state;
+      
       Parser(Toker &toker, model::Context *context);
 
       void parse();
@@ -356,6 +382,24 @@ class Parser {
 
       /** Writes a warning message to standard error. */
       static void warn(const Token &tok, const std::string & msg);
+      
+      /** 
+       * Add a new callback to the parser.  It is the responsibility of the 
+       * caller to manage the lifecycle of the callback and to insure that it 
+       * remains in existence until it is removed with removeCallback().
+       */
+      void addCallback(Event event, ParserCallback *callback);
+      
+      /**
+       * Remove an existing callback.  This removes only the first added
+       * instance of the callback, so if the same callback has been added N
+       * times, N - 1 instances will remain.
+       * Returns true if the callback was removed, false if it was not found.
+       */
+      bool removeCallback(Event event, ParserCallback *callback);
+      
+      /** Run all callbacks associated with the event. */
+      void runCallbacks(Event event);
 };
 
 } // namespace parser

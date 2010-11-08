@@ -2,6 +2,7 @@
 
 #include "init.h"
 
+#include "parser/Parser.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -94,6 +95,9 @@ void init(Module *mod) {
 
     tokenType->finish();
 
+    Type *opaqCallbackType = mod->addType("Callback");
+    opaqCallbackType->finish();
+
     Type *cc = mod->addType("CrackContext");
     f = cc->addMethod(mod->getVoidType(), "inject",
                       (void *)&CrackContext::inject
@@ -153,8 +157,34 @@ void init(Module *mod) {
     f->addArg(tokenType, "tok");
     f->addArg(mod->getByteptrType(), "text");
 
+    cc->addMethod(mod->getIntType(), "getParseState", 
+                  (void *)&CrackContext::getParseState
+                  );
+
+    f = cc->addMethod(opaqCallbackType, "addCallback",
+                      (void *)&CrackContext::addCallback
+                      );
+    f->addArg(mod->getIntType(), "event");
+    f->addArg(mod->getVoidptrType(), "callback");
+
+    f = cc->addMethod(mod->getVoidType(), "removeCallback",
+                      (void *)&CrackContext::removeCallback);
+    f->addArg(opaqCallbackType, "callback");
+
     cc->finish();
     
+    // constants
+    mod->addConstant(mod->getIntType(), "SCOPE_MODULE", 0);
+    mod->addConstant(mod->getIntType(), "SCOPE_FUNCTION", 2);
+    mod->addConstant(mod->getIntType(), "SCOPE_CLASS", 3);
+    mod->addConstant(mod->getIntType(), "STATE_BASE", parser::Parser::st_base);
+    mod->addConstant(mod->getIntType(), "FUNC_ENTER", 
+                     parser::Parser::funcEnter
+                     );
+    mod->addConstant(mod->getIntType(), "FUNC_LEAVE",
+                     parser::Parser::funcLeave
+                     );
+                    
 }
 
 } // namespace compiler

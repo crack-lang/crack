@@ -2,6 +2,7 @@
 
 #include "Parser.h"
 
+#include <assert.h>
 #include <sstream>
 #include <stdexcept>
 #include <spug/Exception.h>
@@ -114,6 +115,7 @@ FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
 
 void Parser::parseClause(bool defsAllowed) {
    Token tok = getToken();
+   state = st_notBase;
    ExprPtr expr;
    if (tok.isIdent()) {
       
@@ -215,6 +217,7 @@ void Parser::parseAnnotation() {
 ContextPtr Parser::parseStatement(bool defsAllowed) {
    // peek at the next token
    Token tok = getToken();
+   state = st_notBase;
 
    // check for statements
    if (tok.isSemi()) {
@@ -224,7 +227,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       return parseIfStmt();
    } else if (tok.isWhile()) {
       parseWhileStmt();
-      
+
       // while statements are never terminal, there's always the possibility 
       // that we could never execute the body.
       return 0;
@@ -274,12 +277,13 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
    }
 
    toker.putBack(tok);
+   state = st_base;
    parseClause(defsAllowed);
 
    return 0;
 }
 
-ContextPtr Parser::parseBlock(bool nested) {
+ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
    Token tok;
    ContextPtr terminal;
 
@@ -288,6 +292,7 @@ ContextPtr Parser::parseBlock(bool nested) {
    bool gotStuffAfterTerminalStatement = false;
 
    while (true) {
+      state = st_base;
 
       // peek at the next token
       tok = getToken();
@@ -306,6 +311,23 @@ ContextPtr Parser::parseBlock(bool nested) {
       }
       
       if (gotBlockTerminator) {
+         // if there are callbacks, we have to put the last token back and 
+         // then run the callbacks and then make sure that we got the same
+         // terminator again (since the callbacks can insert tokens into the 
+         // stream).
+         if (callbacks[closeEvent].size()) {
+            toker.putBack(tok);
+            runCallbacks(closeEvent);
+            Token tempTok = toker.getToken();
+            if (tempTok.getType() != tok.getType()) {
+               // if the token is not what it was before, one of the callbacks 
+               // has changed the token stream and we need to go back to the 
+               // loop.
+               toker.putBack(tempTok);
+               continue;
+            }
+         }
+
          // make sure that the context contains no forward declarations
          context->checkForUnresolvedForwards();
 
@@ -1444,6 +1466,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (inits)
       classTypeDef->emitInitializers(*context, inits.get());
    
+   // run begin function callbacks.
+   runCallbacks(funcEnter);
+
    // if this is an "oper del" with base & member cleanups, store them in the 
    // current cleanup frame
    if (funcFlags == hasMemberDels) {
@@ -1451,7 +1476,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       classTypeDef->addDestructorCleanups(*context);
    }
 
-   ContextPtr terminal = parseBlock(true);
+   ContextPtr terminal = parseBlock(true, funcLeave);
    
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
@@ -1585,7 +1610,7 @@ ContextPtr Parser::parseIfClause() {
    Token tok = getToken();
    if (tok.isLCurly()) {
       ContextStackFrame cstack(*this, context->createSubContext().get());
-      ContextPtr terminal = parseBlock(true);
+      ContextPtr terminal = parseBlock(true, noCallbacks);
       cstack.restore();
       return terminal;
    } else {
@@ -2063,7 +2088,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
 
 void Parser::parse() {
    // outer parser just parses an un-nested block
-   parseBlock(false);
+   parseBlock(false, noCallbacks);
 }
 
 // class name { ... }
@@ -2179,4 +2204,29 @@ void Parser::warn(const Location &loc, const std::string &msg) {
 
 void Parser::warn(const Token &tok, const std::string &msg) {
    warn(tok.getLocation(), msg);
+}
+
+void Parser::addCallback(Parser::Event event, ParserCallback *callback) {
+   assert(event < eventSentinel);
+   callbacks[event].push_back(callback);
+}
+
+bool Parser::removeCallback(Parser::Event event, ParserCallback *callback) {
+   assert(event < eventSentinel);
+   CallbackVec &cbs = callbacks[event];
+   for (CallbackVec::iterator iter = cbs.begin(); iter != cbs.end(); ++iter)
+      if (*iter == callback) {
+         cbs.erase(iter);
+         return true;
+      }
+   
+   // callback was not found
+   return false;
+}
+
+void Parser::runCallbacks(Event event) {
+   assert(event < eventSentinel);
+   CallbackVec &cbs = callbacks[event];
+   for (int i = 0; i < cbs.size(); ++i)
+      cbs[i]->run(this, &toker, context.get());
 }
