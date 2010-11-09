@@ -174,9 +174,24 @@ class Parser {
                                  const std::string &memberName
                                  );
 
+      /**
+       * Creates a variable reference complete with an implicit "this" if 
+       * necessary.
+       */
+      model::ExprPtr createVarRef(model::Expr *receiver, model::VarDef *var,
+                                  const Token &tok);
+
+      /**
+       * Create an assignment expression, complete with an implicit "this" if 
+       * necessary.
+       */
+      model::ExprPtr createAssign(model::Expr *container, const Token &ident,
+                                  model::VarDef *var,
+                                  model::Expr *val
+                                  );
       /** 
-       * Create a variable reference expression, complete with an implicit
-       * "this" if necessary.
+       * Create a variable reference expression for the identifier, complete 
+       * with an implicit "this" if necessary.
        */
       model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident);
 

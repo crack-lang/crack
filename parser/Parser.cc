@@ -362,12 +362,25 @@ ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
    VarDefPtr thisVar = context->ns->lookUp("this");
    if (!thisVar)
       error(ident,
-            SPUG_FSTR("instance member " << ident.getData() <<
+            SPUG_FSTR("instance member " << memberName <<
                        " may not be used in a static context."
                       )
             );
                       
    return context->createVarRef(thisVar.get());
+}
+
+ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
+   // if the definition is for an instance variable, emit an implicit 
+   // "this" dereference.  Otherwise just emit the variable
+   if (TypeDefPtr::cast(var->getOwner())) {
+      // if there's no container, try to use an implicit "this"
+      ExprPtr receiver = container ? container : 
+                                     makeThisRef(tok, tok.getData());
+      return context->createFieldRef(receiver.get(), var);
+   } else {
+      return context->createVarRef(var);
+   }
 }
 
 ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
@@ -392,15 +405,22 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
       ovld->createImpl();
    }
 
-   // if the definition is for an instance variable, emit an implicit 
-   // "this" dereference.  Otherwise just emit the variable
+   return createVarRef(container, var.get(), ident);
+}
+
+ExprPtr Parser::createAssign(Expr *container, const Token &ident,
+                             VarDef *var,
+                             Expr *val
+                             ) {
    if (TypeDefPtr::cast(var->getOwner())) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      makeThisRef(ident, ident.getData());
-      return context->createFieldRef(receiver.get(), var.get());
+      return AssignExpr::create(*context, ident, receiver.get(), var, 
+                                val
+                                );
    } else {
-      return context->createVarRef(var.get());
+      return AssignExpr::create(*context, ident, var, val);
    }
 }
 
@@ -553,8 +573,8 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       if (tok1.isAugAssign()) {
          
          // create a reference for the lvalue
-         ExprPtr varRef = context->createVarRef(var.get());
-         
+         ExprPtr varRef = createVarRef(container, var.get(), ident);
+
          // see if the variable's type has an augmented assignment operator
          FuncCall::ExprVec args(2);
          args[0] = varRef;
@@ -581,10 +601,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
             funcCall->args = args;
             if (funcDef->method)
                funcCall->receiver = varRef;
-            // XXX won't work for instance variables
-            return AssignExpr::create(*context, ident, var.get(), 
-                                      funcCall.get()
-                                      );
+            return createAssign(container, ident, var.get(), funcCall.get());
          } else {
             error(tok1, SPUG_FSTR("Neither " << oper << "=  nor " << oper << 
                                   " is defined for types " << 
@@ -597,16 +614,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 
       // if this is an instance variable, emit a field assignment.  
       // Otherwise emit a normal variable assignment.
-      if (TypeDefPtr::cast(var->getOwner())) {
-         // if there's no container, try to use an implicit "this"
-         ExprPtr receiver = container ? container : 
-                                        makeThisRef(ident, ident.getData());
-         return AssignExpr::create(*context, ident, receiver.get(), var.get(), 
-                                   val.get()
-                                   );
-      } else {
-         return AssignExpr::create(*context, ident, var.get(), val.get());
-      }
+      return createAssign(container, ident, var.get(), val.get());
    } // should not fall through - always returns or throws.
 
    // if this is an explicit operator call, give it special treatment.
