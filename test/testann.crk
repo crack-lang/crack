@@ -2,7 +2,7 @@
 
 import crack.io StringFormatter, cout;
 import crack.compiler CrackContext, Callback, FUNC_ENTER, FUNC_LEAVE, 
-    STATE_BASE;
+    STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL;
 import crack.container TreeMap;
 
 ## increment everything but a constant zero.
@@ -103,4 +103,12 @@ void wrap(CrackContext ctx) {
     
     enterCB = ctx.addCallback(FUNC_ENTER, enter);
     leaveCB = ctx.addCallback(FUNC_LEAVE, leave);
+}
+
+void user_static(CrackContext ctx) {
+    ctx.setNextFuncFlags(FUNCFLAG_STATIC);
+}
+
+void user_final(CrackContext ctx) {
+    ctx.setNextFuncFlags(FUNCFLAG_FINAL);
 }

@@ -2,6 +2,7 @@
 
 #include "init.h"
 
+#include "model/FuncDef.h"
 #include "parser/Parser.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
@@ -170,6 +171,11 @@ void init(Module *mod) {
     f = cc->addMethod(mod->getVoidType(), "removeCallback",
                       (void *)&CrackContext::removeCallback);
     f->addArg(opaqCallbackType, "callback");
+    
+    f = cc->addMethod(mod->getVoidType(), "setNextFuncFlags",
+                      (void *)&CrackContext::setNextFuncFlags
+                      );
+    f->addArg(mod->getIntType(), "flags");
 
     cc->finish();
     
@@ -183,6 +189,13 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "FUNC_LEAVE",
                      parser::Parser::funcLeave
+                     );
+    
+    mod->addConstant(mod->getIntType(), "FUNCFLAG_STATIC",
+                     model::FuncDef::explicitFlags
+                     );
+    mod->addConstant(mod->getIntType(), "FUNCFLAG_FINAL",
+                     model::FuncDef::explicitFlags | model::FuncDef::method
                      );
                     
 }

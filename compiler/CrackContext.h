@@ -119,6 +119,12 @@ class CrackContext {
          * addCallback().
          */
         void removeCallback(parser::ParserCallback *callback);
+        
+        /**
+         * Set the flags for the next function.  Valid values are 
+         * FUNCFLAG_STATIC and FUNCFLAG_FINAL.
+         */
+        void setNextFuncFlags(int nextFuncFlags);
 };
 
 } // namespace compiler

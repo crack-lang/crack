@@ -1313,6 +1313,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
+   FuncDef::Flags nextFuncFlags = context->nextFuncFlags;
+
    // if this is a class context, we're defining a method.  We take the strict
    // definition of "in a class context," only functions immediately in a 
    // class context are methods of that class.
@@ -1321,9 +1323,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
        context->parent->scope == Context::instance
        )
       classCtx = context->parent;
-   bool isMethod = classCtx ? true : false;
+   bool isMethod = classCtx && (!nextFuncFlags || 
+                                nextFuncFlags & FuncDef::method
+                                );
    TypeDef *classTypeDef = 0;
-
+   
    // push a new context, arg defs will be stored in the new context.
    ContextPtr subCtx = context->createSubContext(Context::local);
    ContextStackFrame cstack(*this, subCtx.get());
@@ -1352,8 +1356,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                       )
             );
    
+   // a function is virtual if a) it is a method, b) the class has a vtable 
+   // and c) it is neither implicitly or explicitly final.
    bool isVirtual = isMethod && classTypeDef->hasVTable && 
-                    !TypeDef::isImplicitFinal(name);
+                    !TypeDef::isImplicitFinal(name) &&
+                    (!nextFuncFlags || nextFuncFlags & FuncDef::virtualized);
 
    // If we're overriding/implementing a previously declared virtual 
    // function, we'll store it here.
@@ -1502,6 +1509,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    context->builder.emitEndFunc(*context, funcDef.get());
    cstack.restore();
+
+   // clear the next function flags (we're done with them)
+   context->nextFuncFlags = FuncDef::noFlags;
 
    // if this is an init function, and the user hasn't introduced an explicit
    // "oper new", and we haven't already done this for a forward declaration,

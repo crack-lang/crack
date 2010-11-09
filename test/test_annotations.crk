@@ -2,7 +2,7 @@
 
 import crack.io cout, StringFormatter;
 @import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope,
-    createAnnotations, wrap;
+    createAnnotations, wrap, user_static;
 
 if (@incrButZero 0 != 0)
     cout `incrButZero 0 failed\n`;
@@ -51,5 +51,13 @@ f2();
 if (result.createString() != '{in f}in g')
     cout `failed to install or remove callbacks, got: 
 $(result.createString())\n`;
+
+class C {
+    @user_static
+    bool works() { return true; }
+}
+
+if (!C().works())
+    cout `"static" annotation failed`;
 
 @emitOk

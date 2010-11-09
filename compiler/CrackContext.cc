@@ -138,3 +138,6 @@ void CrackContext::removeCallback(parser::ParserCallback *callback) {
         error("Attempted to remove a callback that wasn't registered.");
 }
 
+void CrackContext::setNextFuncFlags(int nextFuncFlags) {
+    context->nextFuncFlags = static_cast<FuncDef::Flags>(nextFuncFlags);
+}
