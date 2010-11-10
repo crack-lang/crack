@@ -57,11 +57,15 @@ void createdWithCallback(CrackContext ctx) {
     ctx.inject(fmt.createString().buffer);
 }
 
+IntWrapper iw = null;
+
 void createAnnotations(CrackContext ctx) {
     ctx.storeAnnotation('created'.buffer, createdAnnotation);
     ctx.storeAnnotation('createdWithCallback'.buffer, 
                         createdWithCallback,
-                        IntWrapper(100)
+                        # we have to store our userData in a global variable 
+                        # to keeps it from being GCed :-(
+                        iw = IntWrapper(100)
                         );
 }
 
