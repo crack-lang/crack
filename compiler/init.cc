@@ -2,6 +2,9 @@
 
 #include "init.h"
 
+#include "spug/StringFmt.h"
+#include "model/FuncDef.h"
+#include "parser/Parser.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -11,6 +14,29 @@
 using namespace crack::ext;
 
 namespace compiler {
+
+void funcAnnCheck(CrackContext *ctx, const char *name) {
+    if (ctx->getScope() != model::Context::composite ||
+        ctx->getParseState() != parser::Parser::st_base
+        )
+        ctx->error(SPUG_FSTR(name << " annotation can not be used in this "
+                                     "here (it must precede a function "
+                                     "definition in a class body)"
+                             ).c_str()
+                   );
+}
+
+void staticAnn(CrackContext *ctx) {
+    funcAnnCheck(ctx, "static");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
+}
+
+void finalAnn(CrackContext *ctx) {
+    funcAnnCheck(ctx, "final");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
+                          model::FuncDef::method
+                          );
+}
 
 void init(Module *mod) {
     Type *tokenType = mod->addType("Token");
@@ -94,6 +120,9 @@ void init(Module *mod) {
 
     tokenType->finish();
 
+    Type *opaqCallbackType = mod->addType("Callback");
+    opaqCallbackType->finish();
+
     Type *cc = mod->addType("CrackContext");
     f = cc->addMethod(mod->getVoidType(), "inject",
                       (void *)&CrackContext::inject
@@ -153,8 +182,52 @@ void init(Module *mod) {
     f->addArg(tokenType, "tok");
     f->addArg(mod->getByteptrType(), "text");
 
+    cc->addMethod(mod->getIntType(), "getParseState", 
+                  (void *)&CrackContext::getParseState
+                  );
+
+    f = cc->addMethod(opaqCallbackType, "addCallback",
+                      (void *)&CrackContext::addCallback
+                      );
+    f->addArg(mod->getIntType(), "event");
+    f->addArg(mod->getVoidptrType(), "callback");
+
+    f = cc->addMethod(mod->getVoidType(), "removeCallback",
+                      (void *)&CrackContext::removeCallback);
+    f->addArg(opaqCallbackType, "callback");
+    
+    f = cc->addMethod(mod->getVoidType(), "setNextFuncFlags",
+                      (void *)&CrackContext::setNextFuncFlags
+                      );
+    f->addArg(mod->getIntType(), "flags");
+
     cc->finish();
     
+    // our annotations
+    f = mod->addFunc(mod->getVoidType(), "static", (void *)staticAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getVoidType(), "final", (void *)finalAnn);
+    f->addArg(cc, "ctx");
+    
+    // constants
+    mod->addConstant(mod->getIntType(), "SCOPE_MODULE", 0);
+    mod->addConstant(mod->getIntType(), "SCOPE_FUNCTION", 2);
+    mod->addConstant(mod->getIntType(), "SCOPE_CLASS", 3);
+    mod->addConstant(mod->getIntType(), "STATE_BASE", parser::Parser::st_base);
+    mod->addConstant(mod->getIntType(), "FUNC_ENTER", 
+                     parser::Parser::funcEnter
+                     );
+    mod->addConstant(mod->getIntType(), "FUNC_LEAVE",
+                     parser::Parser::funcLeave
+                     );
+    
+    mod->addConstant(mod->getIntType(), "FUNCFLAG_STATIC",
+                     model::FuncDef::explicitFlags
+                     );
+    mod->addConstant(mod->getIntType(), "FUNCFLAG_FINAL",
+                     model::FuncDef::explicitFlags | model::FuncDef::method
+                     );
+                    
 }
 
 } // namespace compiler

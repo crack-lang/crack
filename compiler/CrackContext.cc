@@ -16,6 +16,28 @@ using namespace std;
 using namespace compiler;
 using namespace model;
 
+namespace {
+    // Implements parser callback to wrap raw functions.
+    struct Callback : parser::ParserCallback {
+        parser::Parser::Event event;
+        CrackContext::AnnotationFunc func;
+
+        Callback(parser::Parser::Event event,
+                 CrackContext::AnnotationFunc func
+                 ) :
+            event(event),
+            func(func) {
+        }
+
+        virtual void run(parser::Parser *parser, parser::Toker *toker, 
+                        model::Context *context
+                        ) {
+            CrackContext ctx(parser, toker, context);
+            func(&ctx);
+        }
+    };
+}
+
 CrackContext::CrackContext(parser::Parser *parser, parser::Toker *toker,
                            Context *context,
                            void *userData
@@ -90,4 +112,32 @@ void CrackContext::warn(const char *text) {
 
 void CrackContext::warn(Token *tok, const char *text) {
     parser::Parser::warn(tok->rep->getLocation(), text);
+}
+
+int CrackContext::getParseState() {
+    return parser->state;
+}
+
+parser::ParserCallback *CrackContext::addCallback(
+    int event,
+    CrackContext::AnnotationFunc func
+    ) {
+    parser::Parser::Event evt = static_cast<parser::Parser::Event>(event);
+    Callback *callback = new Callback(evt, func);
+    parser->addCallback(evt, callback);
+    return callback;
+}
+
+void CrackContext::removeCallback(parser::ParserCallback *callback) {
+    Callback *cb = dynamic_cast<Callback *>(callback);
+    parser::Parser::Event event =
+        static_cast<parser::Parser::Event>(cb->event);
+    if (parser->removeCallback(event, cb))
+        delete callback;
+    else
+        error("Attempted to remove a callback that wasn't registered.");
+}
+
+void CrackContext::setNextFuncFlags(int nextFuncFlags) {
+    context->nextFuncFlags = static_cast<FuncDef::Flags>(nextFuncFlags);
 }

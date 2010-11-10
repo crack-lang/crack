@@ -5,6 +5,7 @@
 
 namespace parser {
     class Parser;
+    class ParserCallback;
     class Toker;
 }
 
@@ -28,6 +29,8 @@ class CrackContext {
         void *userData;
 
     public:
+        enum Event { funcEnter, funcLeave };
+
         CrackContext(parser::Parser *parser, parser::Toker *toker,
                      model::Context *context,
                      void *userData = 0
@@ -100,6 +103,28 @@ class CrackContext {
          * error location.
          */
         void warn(Token *tok, const char *text);
+        
+        /**
+         * Returns the state of the parser.
+         */
+        int getParseState();
+        
+        /**
+         * Adds a callback for the specified event.  Returns the callback id.
+         */
+        parser::ParserCallback *addCallback(int event, AnnotationFunc func);
+        
+        /**
+         * Remove the specified callback.  "id" is the value returned from 
+         * addCallback().
+         */
+        void removeCallback(parser::ParserCallback *callback);
+        
+        /**
+         * Set the flags for the next function.  Valid values are 
+         * FUNCFLAG_STATIC and FUNCFLAG_FINAL.
+         */
+        void setNextFuncFlags(int nextFuncFlags);
 };
 
 } // namespace compiler

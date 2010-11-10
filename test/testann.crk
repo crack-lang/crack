@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 
 import crack.io StringFormatter, cout;
-import crack.compiler CrackContext;
+import crack.compiler CrackContext, Callback, FUNC_ENTER, FUNC_LEAVE, 
+    STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL;
 import crack.container TreeMap;
 
 ## increment everything but a constant zero.
@@ -85,4 +86,33 @@ void errorTok(CrackContext ctx) {
 void error(CrackContext ctx) {
     tok := ctx.getToken();
     ctx.error('plain error'.buffer);
+}
+
+Callback enterCB = null, leaveCB = null;
+
+void enter(CrackContext ctx) {
+    ctx.inject('result `{`;'.buffer);
+}
+
+void leave(CrackContext ctx) {
+    ctx.inject('result `}`;'.buffer);
+    ctx.removeCallback(enterCB);
+    ctx.removeCallback(leaveCB);
+}
+
+void wrap(CrackContext ctx) {
+    # verify that we're in a state where a definition can occur.
+    if (ctx.getParseState() != STATE_BASE)
+        ctx.error('You cannot place a function annotation here.'.buffer);
+    
+    enterCB = ctx.addCallback(FUNC_ENTER, enter);
+    leaveCB = ctx.addCallback(FUNC_LEAVE, leave);
+}
+
+void user_static(CrackContext ctx) {
+    ctx.setNextFuncFlags(FUNCFLAG_STATIC);
+}
+
+void user_final(CrackContext ctx) {
+    ctx.setNextFuncFlags(FUNCFLAG_FINAL);
 }

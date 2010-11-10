@@ -2,6 +2,7 @@
 
 #include "Parser.h"
 
+#include <assert.h>
 #include <sstream>
 #include <stdexcept>
 #include <spug/Exception.h>
@@ -114,6 +115,7 @@ FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
 
 void Parser::parseClause(bool defsAllowed) {
    Token tok = getToken();
+   state = st_notBase;
    ExprPtr expr;
    if (tok.isIdent()) {
       
@@ -215,6 +217,7 @@ void Parser::parseAnnotation() {
 ContextPtr Parser::parseStatement(bool defsAllowed) {
    // peek at the next token
    Token tok = getToken();
+   state = st_notBase;
 
    // check for statements
    if (tok.isSemi()) {
@@ -224,7 +227,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       return parseIfStmt();
    } else if (tok.isWhile()) {
       parseWhileStmt();
-      
+
       // while statements are never terminal, there's always the possibility 
       // that we could never execute the body.
       return 0;
@@ -274,12 +277,13 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
    }
 
    toker.putBack(tok);
+   state = st_base;
    parseClause(defsAllowed);
 
    return 0;
 }
 
-ContextPtr Parser::parseBlock(bool nested) {
+ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
    Token tok;
    ContextPtr terminal;
 
@@ -288,6 +292,7 @@ ContextPtr Parser::parseBlock(bool nested) {
    bool gotStuffAfterTerminalStatement = false;
 
    while (true) {
+      state = st_base;
 
       // peek at the next token
       tok = getToken();
@@ -306,6 +311,23 @@ ContextPtr Parser::parseBlock(bool nested) {
       }
       
       if (gotBlockTerminator) {
+         // if there are callbacks, we have to put the last token back and 
+         // then run the callbacks and then make sure that we got the same
+         // terminator again (since the callbacks can insert tokens into the 
+         // stream).
+         if (callbacks[closeEvent].size()) {
+            toker.putBack(tok);
+            runCallbacks(closeEvent);
+            Token tempTok = toker.getToken();
+            if (tempTok.getType() != tok.getType()) {
+               // if the token is not what it was before, one of the callbacks 
+               // has changed the token stream and we need to go back to the 
+               // loop.
+               toker.putBack(tempTok);
+               continue;
+            }
+         }
+
          // make sure that the context contains no forward declarations
          context->checkForUnresolvedForwards();
 
@@ -340,12 +362,25 @@ ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
    VarDefPtr thisVar = context->ns->lookUp("this");
    if (!thisVar)
       error(ident,
-            SPUG_FSTR("instance member " << ident.getData() <<
+            SPUG_FSTR("instance member " << memberName <<
                        " may not be used in a static context."
                       )
             );
                       
    return context->createVarRef(thisVar.get());
+}
+
+ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
+   // if the definition is for an instance variable, emit an implicit 
+   // "this" dereference.  Otherwise just emit the variable
+   if (TypeDefPtr::cast(var->getOwner())) {
+      // if there's no container, try to use an implicit "this"
+      ExprPtr receiver = container ? container : 
+                                     makeThisRef(tok, tok.getData());
+      return context->createFieldRef(receiver.get(), var);
+   } else {
+      return context->createVarRef(var);
+   }
 }
 
 ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
@@ -370,15 +405,22 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
       ovld->createImpl();
    }
 
-   // if the definition is for an instance variable, emit an implicit 
-   // "this" dereference.  Otherwise just emit the variable
+   return createVarRef(container, var.get(), ident);
+}
+
+ExprPtr Parser::createAssign(Expr *container, const Token &ident,
+                             VarDef *var,
+                             Expr *val
+                             ) {
    if (TypeDefPtr::cast(var->getOwner())) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      makeThisRef(ident, ident.getData());
-      return context->createFieldRef(receiver.get(), var.get());
+      return AssignExpr::create(*context, ident, receiver.get(), var, 
+                                val
+                                );
    } else {
-      return context->createVarRef(var.get());
+      return AssignExpr::create(*context, ident, var, val);
    }
 }
 
@@ -531,8 +573,8 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
       if (tok1.isAugAssign()) {
          
          // create a reference for the lvalue
-         ExprPtr varRef = context->createVarRef(var.get());
-         
+         ExprPtr varRef = createVarRef(container, var.get(), ident);
+
          // see if the variable's type has an augmented assignment operator
          FuncCall::ExprVec args(2);
          args[0] = varRef;
@@ -559,10 +601,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
             funcCall->args = args;
             if (funcDef->method)
                funcCall->receiver = varRef;
-            // XXX won't work for instance variables
-            return AssignExpr::create(*context, ident, var.get(), 
-                                      funcCall.get()
-                                      );
+            return createAssign(container, ident, var.get(), funcCall.get());
          } else {
             error(tok1, SPUG_FSTR("Neither " << oper << "=  nor " << oper << 
                                   " is defined for types " << 
@@ -575,16 +614,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 
       // if this is an instance variable, emit a field assignment.  
       // Otherwise emit a normal variable assignment.
-      if (TypeDefPtr::cast(var->getOwner())) {
-         // if there's no container, try to use an implicit "this"
-         ExprPtr receiver = container ? container : 
-                                        makeThisRef(ident, ident.getData());
-         return AssignExpr::create(*context, ident, receiver.get(), var.get(), 
-                                   val.get()
-                                   );
-      } else {
-         return AssignExpr::create(*context, ident, var.get(), val.get());
-      }
+      return createAssign(container, ident, var.get(), val.get());
    } // should not fall through - always returns or throws.
 
    // if this is an explicit operator call, give it special treatment.
@@ -1283,6 +1313,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
+   FuncDef::Flags nextFuncFlags = context->nextFuncFlags;
+
    // if this is a class context, we're defining a method.  We take the strict
    // definition of "in a class context," only functions immediately in a 
    // class context are methods of that class.
@@ -1291,9 +1323,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
        context->parent->scope == Context::instance
        )
       classCtx = context->parent;
-   bool isMethod = classCtx ? true : false;
+   bool isMethod = classCtx && (!nextFuncFlags || 
+                                nextFuncFlags & FuncDef::method
+                                );
    TypeDef *classTypeDef = 0;
-
+   
    // push a new context, arg defs will be stored in the new context.
    ContextPtr subCtx = context->createSubContext(Context::local);
    ContextStackFrame cstack(*this, subCtx.get());
@@ -1322,8 +1356,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                       )
             );
    
+   // a function is virtual if a) it is a method, b) the class has a vtable 
+   // and c) it is neither implicitly or explicitly final.
    bool isVirtual = isMethod && classTypeDef->hasVTable && 
-                    !TypeDef::isImplicitFinal(name);
+                    !TypeDef::isImplicitFinal(name) &&
+                    (!nextFuncFlags || nextFuncFlags & FuncDef::virtualized);
 
    // If we're overriding/implementing a previously declared virtual 
    // function, we'll store it here.
@@ -1444,6 +1481,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (inits)
       classTypeDef->emitInitializers(*context, inits.get());
    
+   // run begin function callbacks.
+   runCallbacks(funcEnter);
+
    // if this is an "oper del" with base & member cleanups, store them in the 
    // current cleanup frame
    if (funcFlags == hasMemberDels) {
@@ -1451,7 +1491,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       classTypeDef->addDestructorCleanups(*context);
    }
 
-   ContextPtr terminal = parseBlock(true);
+   ContextPtr terminal = parseBlock(true, funcLeave);
    
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
@@ -1469,6 +1509,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    context->builder.emitEndFunc(*context, funcDef.get());
    cstack.restore();
+
+   // clear the next function flags (we're done with them)
+   context->nextFuncFlags = FuncDef::noFlags;
 
    // if this is an init function, and the user hasn't introduced an explicit
    // "oper new", and we haven't already done this for a forward declaration,
@@ -1585,7 +1628,7 @@ ContextPtr Parser::parseIfClause() {
    Token tok = getToken();
    if (tok.isLCurly()) {
       ContextStackFrame cstack(*this, context->createSubContext().get());
-      ContextPtr terminal = parseBlock(true);
+      ContextPtr terminal = parseBlock(true, noCallbacks);
       cstack.restore();
       return terminal;
    } else {
@@ -2063,7 +2106,7 @@ Parser::Parser(Toker &toker, model::Context *context) :
 
 void Parser::parse() {
    // outer parser just parses an un-nested block
-   parseBlock(false);
+   parseBlock(false, noCallbacks);
 }
 
 // class name { ... }
@@ -2071,6 +2114,7 @@ void Parser::parse() {
 void Parser::parseClassBody() {
    // parse the class body   
    while (true) {
+      state = st_base;
       
       // check for a closing brace or a nested class definition
       Token tok = getToken();
@@ -2080,17 +2124,20 @@ void Parser::parseClassBody() {
          // ignore stray semicolons
          continue;
       } else if (tok.isClass()) {
+         state = st_notBase;
          TypeDefPtr newType = parseClassDef();
          continue;
 
       // check for "oper" keyword
       } else if (tok.isOper()) {
+         state = st_notBase;
          parsePostOper(0);
          continue;
       }
       
       // parse some other kind of definition
       toker.putBack(tok);
+      state = st_notBase;
       TypeDefPtr type = parseTypeSpec();
       parseDef(type.get());
    }
@@ -2179,4 +2226,29 @@ void Parser::warn(const Location &loc, const std::string &msg) {
 
 void Parser::warn(const Token &tok, const std::string &msg) {
    warn(tok.getLocation(), msg);
+}
+
+void Parser::addCallback(Parser::Event event, ParserCallback *callback) {
+   assert(event < eventSentinel);
+   callbacks[event].push_back(callback);
+}
+
+bool Parser::removeCallback(Parser::Event event, ParserCallback *callback) {
+   assert(event < eventSentinel);
+   CallbackVec &cbs = callbacks[event];
+   for (CallbackVec::iterator iter = cbs.begin(); iter != cbs.end(); ++iter)
+      if (*iter == callback) {
+         cbs.erase(iter);
+         return true;
+      }
+   
+   // callback was not found
+   return false;
+}
+
+void Parser::runCallbacks(Event event) {
+   assert(event < eventSentinel);
+   CallbackVec &cbs = callbacks[event];
+   for (int i = 0; i < cbs.size(); ++i)
+      cbs[i]->run(this, &toker, context.get());
 }

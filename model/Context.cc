@@ -43,7 +43,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
     ns(ns),
-    compileNS(ns ? ns : 
+    compileNS(compileNS ? compileNS : 
                 (parentContext ? parentContext->compileNS : NamespacePtr(0))),
     builder(builder),
     scope(scope),
@@ -51,6 +51,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     emittingCleanups(false),
     terminal(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
+    nextFuncFlags(FuncDef::noFlags),
     globalData(parentContext ? parentContext->globalData : new GlobalData()),
     cleanupFrame(builder.createCleanupFrame(*this)) {
 }
@@ -68,6 +69,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     emittingCleanups(false),
     terminal(false),
     returnType(TypeDefPtr(0)),
+    nextFuncFlags(FuncDef::noFlags),
     globalData(globalData),
     cleanupFrame(builder.createCleanupFrame(*this)) {
 }

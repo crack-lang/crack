@@ -750,7 +750,11 @@ test_output "assignment to functions" "void f() {} f = 100;" \
 
 test_output "assignment to type" "class A {} A = 100;" \
     "${parseError}1: You cannot assign to a constant, class or function."
-    
+
+test_output "augmented assignment to instance variables" \
+    "class Foo { int i; } Foo f; f.i += 1;
+     if (f.i == 1) puts('ok'); else puts('FAIL: did not increment');" \
+     ok
 
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
@@ -1055,7 +1059,7 @@ test_output 'extension modules' 'import test.test_extensions;' ok
 test_output 'annotations' 'import test.test_annotations;' ok
 test_output 'algorithms' 'import test.test_algo;' ok
 test_output 'annotation warnings plain error function' '
-    import test.testann error, warnTok, warn;
+    @import test.testann error, warnTok, warn;
     @warnTok
         foo
     @warn
@@ -1065,10 +1069,19 @@ test_output 'annotation warnings plain error function' '
 ${parseWarn}5: plain warning
 ${parseError}6: plain error"
 test_output 'annotation error with token function' '
-    import test.testann errorTok;
+    @import test.testann errorTok;
     @errorTok
     XXX' \
     "${parseError}4: error with token"
+test_output 'setting "final" attribute from an annotation' \
+    '@import test.testann user_final;
+     class A { @user_final void f() {} }
+     class B : A { void f() {} }' \
+    "${parseError}3: Definition of f hides previous overload."
+test_output 'built-in "final" annotation' \
+    'class A { @final void f() {} }
+     class B : A { void f() {} }' \
+    "${parseError}2: Definition of f hides previous overload."
 test_output 'standard annotations' 'import test.test_std_annotations;' ok
 
 exit $rc

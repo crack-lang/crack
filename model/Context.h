@@ -7,6 +7,7 @@
 #include <vector>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
+#include "FuncDef.h"
 #include "parser/Location.h"
 
 namespace builder {
@@ -24,7 +25,6 @@ SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
-SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(Namespace);
 SPUG_RCPTR(OverloadDef);
@@ -91,6 +91,9 @@ class Context : public spug::RCBase {
         
         // the current cleanup frame.
         CleanupFramePtr cleanupFrame;
+        
+        // flags to be injected into the next function
+        FuncDef::Flags nextFuncFlags;
 
         struct GlobalData {
             StrConstTable strConstTable;

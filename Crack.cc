@@ -92,6 +92,8 @@ bool Crack::init() {
             initExtensionModule("crack.compiler", &compiler::init);
         rootContext->globalData->crackContext = ccMod->lookUp("CrackContext");
         moduleCache["crack.compiler"] = ccMod;
+        rootContext->compileNS->addAlias(ccMod->lookUp("static").get());
+        rootContext->compileNS->addAlias(ccMod->lookUp("final").get());
 
         // load the bootstrapping modules - library files that are essential 
         // to the language, like the definitions of the Object and String 
@@ -206,6 +208,7 @@ ModuleDefPtr Crack::initExtensionModule(const string &canonicalName,
                     new GlobalNamespace(rootContext->ns.get(), canonicalName),
                     0 // we don't need a compile namespace
                     );
+    context->toplevel = true;
 
     // create a module object
     ModuleDefPtr modDef = context->createModule(canonicalName, emitDebugInfo);
@@ -308,11 +311,14 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
         BuilderPtr builder = rootBuilder->createChildBuilder();
         ContextPtr context =
             new Context(*builder, Context::module, rootContext.get(),
-                        new GlobalNamespace(rootContext->ns.get(), canonicalName),
+                        new GlobalNamespace(rootContext->ns.get(), 
+                                            canonicalName
+                                            ),
                         new GlobalNamespace(rootContext->compileNS.get(),
                                             canonicalName
                                             )
                         );
+        context->toplevel = true;
         modDef = context->createModule(canonicalName, emitDebugInfo);
         if (!modPath.isDir) {
             ifstream src(modPath.path.c_str());
@@ -408,6 +414,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
                     new GlobalNamespace(rootContext->ns.get(), name),
                     new GlobalNamespace(rootContext->compileNS.get(), name)
                     );
+    context->toplevel = true;
 
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 
