@@ -1075,9 +1075,13 @@ test_output 'annotation error with token function' '
     "${parseError}4: error with token"
 test_output 'setting "final" attribute from an annotation' \
     '@import test.testann user_final;
-    class A { @user_final void f() {} }
-    class B : A { void f() {} }' \
+     class A { @user_final void f() {} }
+     class B : A { void f() {} }' \
     "${parseError}3: Definition of f hides previous overload."
+test_output 'built-in "final" annotation' \
+    'class A { @final void f() {} }
+     class B : A { void f() {} }' \
+    "${parseError}2: Definition of f hides previous overload."
 test_output 'standard annotations' 'import test.test_std_annotations;' ok
 
 exit $rc

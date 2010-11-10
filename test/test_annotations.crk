@@ -57,7 +57,10 @@ class C {
     bool works() { return true; }
 }
 
-if (!C().works())
-    cout `"static" annotation failed`;
+if (!C.works())
+    cout `"user_static" annotation failed`;
+    
+class D { @static bool works() { return true; } }
+if (!D.works()) cout `"static" annotation failed\n`;
 
 @emitOk

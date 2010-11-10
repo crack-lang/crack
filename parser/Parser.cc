@@ -2114,6 +2114,7 @@ void Parser::parse() {
 void Parser::parseClassBody() {
    // parse the class body   
    while (true) {
+      state = st_base;
       
       // check for a closing brace or a nested class definition
       Token tok = getToken();
@@ -2123,17 +2124,20 @@ void Parser::parseClassBody() {
          // ignore stray semicolons
          continue;
       } else if (tok.isClass()) {
+         state = st_notBase;
          TypeDefPtr newType = parseClassDef();
          continue;
 
       // check for "oper" keyword
       } else if (tok.isOper()) {
+         state = st_notBase;
          parsePostOper(0);
          continue;
       }
       
       // parse some other kind of definition
       toker.putBack(tok);
+      state = st_notBase;
       TypeDefPtr type = parseTypeSpec();
       parseDef(type.get());
    }

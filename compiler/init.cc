@@ -2,6 +2,7 @@
 
 #include "init.h"
 
+#include "spug/StringFmt.h"
 #include "model/FuncDef.h"
 #include "parser/Parser.h"
 #include "ext/Func.h"
@@ -13,6 +14,29 @@
 using namespace crack::ext;
 
 namespace compiler {
+
+void funcAnnCheck(CrackContext *ctx, const char *name) {
+    if (ctx->getScope() != model::Context::composite ||
+        ctx->getParseState() != parser::Parser::st_base
+        )
+        ctx->error(SPUG_FSTR(name << " annotation can not be used in this "
+                                     "here (it must precede a function "
+                                     "definition in a class body)"
+                             ).c_str()
+                   );
+}
+
+void staticAnn(CrackContext *ctx) {
+    funcAnnCheck(ctx, "static");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
+}
+
+void finalAnn(CrackContext *ctx) {
+    funcAnnCheck(ctx, "final");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
+                          model::FuncDef::method
+                          );
+}
 
 void init(Module *mod) {
     Type *tokenType = mod->addType("Token");
@@ -178,6 +202,12 @@ void init(Module *mod) {
     f->addArg(mod->getIntType(), "flags");
 
     cc->finish();
+    
+    // our annotations
+    f = mod->addFunc(mod->getVoidType(), "static", (void *)staticAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getVoidType(), "final", (void *)finalAnn);
+    f->addArg(cc, "ctx");
     
     // constants
     mod->addConstant(mod->getIntType(), "SCOPE_MODULE", 0);
