@@ -1,0 +1,110 @@
+/*   The Computer Language Benchmarks Game
+   http://shootout.alioth.debian.org/
+
+   Adapted by Antti Lankila from the earlier Isaac Gouy's implementation
+   Add multithread & tweaks from C++ by The Anh Tran
+   Adapted from C# source by Conrad D. Steenberg <conrad.steenberg@gmail.com>
+   10/26/2010
+*/
+
+import crack.sys argv;
+import crack.io cout;
+
+// replace with this when we get it back
+//import crack.math atoi;
+import "libc.so.6" atoi;
+int atoi(byteptr arg);
+
+class MandelBrot{
+    uint N = 200;
+
+    array[array[byte]] data = null;
+    array[byte] nbyte_each_line = null;
+
+    oper init(uint in_N) : N = in_N {
+    }
+
+    void calculate() {
+        float64 inverse_n = 2.0 / N;
+        uint width_bytes = N / 8;
+        if (width_bytes * 8 < N)
+            width_bytes++;
+    
+        nbyte_each_line = array[byte](N);
+        data = array[array[byte]](N);
+        uint i=0;
+        while (i < N) {
+            data[i] = array[byte](width_bytes);
+            i+=1;
+        }
+
+
+        uint y = 0; // current line
+        while (y < N) {
+            array[byte] pdata = data[y];
+
+            byte byte_count = 0;
+            byte bit_num = 0;
+            byte byte_acc = 0;
+
+            float64 Civ = y * inverse_n - 1.0;
+
+            uint x = 0;
+            while (x < N) {
+                float64 Crv = x * inverse_n - 1.5;
+
+                float64 Zrv   = Crv;
+                float64 Ziv   = Civ;
+                float64 Trv   = Crv * Crv;
+                float64 Tiv   = Civ * Civ;
+
+                i = 49;
+
+                // We don't have a do...while loop yet, so this is a little 
+                // silly
+                Ziv = (Zrv*Ziv) + (Zrv*Ziv) + Civ;
+                Zrv = Trv - Tiv + Crv;
+
+                Trv = Zrv * Zrv;
+                Tiv = Ziv * Ziv;
+
+                while ( ((Trv + Tiv) <= 4.0) && (--i > 0) ) {
+                    Ziv = (Zrv*Ziv) + (Zrv*Ziv) + Civ;
+                    Zrv = Trv - Tiv + Crv;
+
+                    Trv = Zrv * Zrv;
+                    Tiv = Ziv * Ziv;
+                }
+
+                byte_acc <<= 1;
+                byte_acc |= (i == 0) ? byte(1) : byte(0);
+
+                if (++bit_num == 8) {
+                    pdata[byte_count] = byte_acc;
+                    byte_count++;
+                    bit_num = 0;
+                    byte_acc = 0;
+                }
+                
+                x += 1;
+            } // end while (column)
+
+            if (bit_num != 0) { // write left over bits
+                byte_acc = byte_acc << byte(8 - (N & 7));
+                pdata[byte_count] = byte_acc;
+                byte_count++;
+            }
+
+            nbyte_each_line[y] = byte_count;
+            y+=1;
+        }
+    }
+}
+
+uint N = 200;
+
+// Comment this out if you don't have the math module
+if (argv.count() > 1) N = uint(atoi(argv[1].buffer));
+
+mb := MandelBrot(N);
+mb.calculate()
