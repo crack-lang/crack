@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.io StringFormatter, cout;
-import crack.compiler CrackContext, Callback, FUNC_ENTER, FUNC_LEAVE, 
+import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE, 
     STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL;
 import crack.container TreeMap;
 
@@ -105,8 +105,8 @@ void wrap(CrackContext ctx) {
     if (ctx.getParseState() != STATE_BASE)
         ctx.error('You cannot place a function annotation here.'.buffer);
     
-    enterCB = ctx.addCallback(FUNC_ENTER, enter);
-    leaveCB = ctx.addCallback(FUNC_LEAVE, leave);
+    enterCB = ctx.addCallback(PCB_FUNC_ENTER, enter);
+    leaveCB = ctx.addCallback(PCB_FUNC_LEAVE, leave);
 }
 
 void user_static(CrackContext ctx) {

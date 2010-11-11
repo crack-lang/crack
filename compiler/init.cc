@@ -11,9 +11,22 @@
 #include "CrackContext.h"
 #include "Token.h"
 
+using namespace std;
 using namespace crack::ext;
 
 namespace compiler {
+
+vector<parser::ParserCallback *> callbacks;
+
+void cleanUpCallbacks(CrackContext *ctx) {
+    for (int i = 0; i < callbacks.size(); ++i)
+        ctx->removeCallback(callbacks[i]);
+    callbacks.clear();
+}
+
+void unexpectedElement(CrackContext *ctx) {
+    ctx->error("Function expected after annotation");
+}
 
 void funcAnnCheck(CrackContext *ctx, const char *name) {
     if (ctx->getScope() != model::Context::composite ||
@@ -24,6 +37,23 @@ void funcAnnCheck(CrackContext *ctx, const char *name) {
                                      "definition in a class body)"
                              ).c_str()
                    );
+    
+    callbacks.push_back(ctx->addCallback(parser::Parser::funcDef, 
+                                         cleanUpCallbacks
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::classDef,
+                                         unexpectedElement
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::exprBegin,
+                                         unexpectedElement
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::controlStmt,
+                                         unexpectedElement
+                                         )
+                        );
 }
 
 void staticAnn(CrackContext *ctx) {
@@ -214,12 +244,33 @@ void init(Module *mod) {
     mod->addConstant(mod->getIntType(), "SCOPE_FUNCTION", 2);
     mod->addConstant(mod->getIntType(), "SCOPE_CLASS", 3);
     mod->addConstant(mod->getIntType(), "STATE_BASE", parser::Parser::st_base);
-    mod->addConstant(mod->getIntType(), "FUNC_ENTER", 
+    mod->addConstant(mod->getIntType(), "PCB_FUNC_DEF", 
+                     parser::Parser::funcDef
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_FUNC_ENTER", 
                      parser::Parser::funcEnter
                      );
-    mod->addConstant(mod->getIntType(), "FUNC_LEAVE",
+    mod->addConstant(mod->getIntType(), "PCB_FUNC_LEAVE",
                      parser::Parser::funcLeave
                      );
+    mod->addConstant(mod->getIntType(), "PCB_CLASS_DEF",
+                     parser::Parser::classDef
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_CLASS_ENTER",
+                     parser::Parser::classEnter
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_CLASS_LEAVE",
+                     parser::Parser::classLeave
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_VAR_DEF",
+                     parser::Parser::variableDef
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_EXPR_BEGIN",
+                     parser::Parser::exprBegin
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_CONTROL_STMT",
+                     parser::Parser::controlStmt
+                     );                     
     
     mod->addConstant(mod->getIntType(), "FUNCFLAG_STATIC",
                      model::FuncDef::explicitFlags

@@ -41,8 +41,17 @@ class Parser {
 
       // parse events that can be tied to a callback
       enum Event {
+         funcDef, // after open paren for args in a functino def.
          funcEnter, // after first curly brace of the function block.
          funcLeave, // before the last curly brace of the function block.
+         classDef, // after "class" keyword in a class def
+         classEnter, // after opening brace at the beginning of a class def.
+         classLeave, // before closing brace at the end of a class def.
+         variableDef, // after the semicolon, assignment or comma of a variable
+                      // definition.
+         exprBegin, // beginning of an expression.
+         controlStmt, // after the starting keyword of a control statement 
+                      // (including "import" and the empty statement)
          noCallbacks, // special event that you can't add callbacks to.
          eventSentinel // MUST BE THE LAST SYMBOL IN THE ENUM.
       };
@@ -413,8 +422,12 @@ class Parser {
        */
       bool removeCallback(Event event, ParserCallback *callback);
       
-      /** Run all callbacks associated with the event. */
-      void runCallbacks(Event event);
+      /** 
+       * Run all callbacks associated with the event. 
+       * 
+       * Returns true if any callbacks were called.
+       */
+      bool runCallbacks(Event event);
 };
 
 } // namespace parser

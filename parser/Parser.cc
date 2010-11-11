@@ -171,11 +171,13 @@ void Parser::parseClause(bool defsAllowed) {
          }
       } else {
          toker.putBack(tok);
+         runCallbacks(exprBegin);
          expr = parseExpression();
       }
 
    } else {
       toker.putBack(tok);
+      runCallbacks(exprBegin);
       expr = parseExpression();
    }
 
@@ -222,10 +224,13 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
    // check for statements
    if (tok.isSemi()) {
       // null statement
+      runCallbacks(controlStmt);
       return 0;
    } else if (tok.isIf()) {
+      runCallbacks(controlStmt);
       return parseIfStmt();
    } else if (tok.isWhile()) {
+      runCallbacks(controlStmt);
       parseWhileStmt();
 
       // while statements are never terminal, there's always the possibility 
@@ -234,11 +239,13 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
    } else if (tok.isElse()) {
       unexpected(tok, "'else' with no matching 'if'");
    } else if (tok.isReturn()) {
+      runCallbacks(controlStmt);
       if (context->scope == Context::module)
          error(tok, "Return statement not allowed in module scope");
       parseReturnStmt();
       return context->getToplevel()->getParent();
    } else if (tok.isImport()) {
+      runCallbacks(controlStmt);
       parseImportStmt(context->ns.get());
       return 0;
    } else if (tok.isClass()) {
@@ -247,6 +254,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       parseClassDef();
       return 0;      
    } else if (tok.isBreak()) {
+      runCallbacks(controlStmt);
       Branchpoint *branch = context->getBreak();
       if (!branch)
          error(tok, 
@@ -261,6 +269,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       assert(branch->context);
       return branch->context;
    } else if (tok.isContinue()) {
+      runCallbacks(controlStmt);
       Branchpoint *branch = context->getContinue();
       if (!branch)
          error(tok,
@@ -319,7 +328,7 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
             toker.putBack(tok);
             runCallbacks(closeEvent);
             Token tempTok = toker.getToken();
-            if (tempTok.getType() != tok.getType()) {
+            if (!tempTok.isRCurly()) {
                // if the token is not what it was before, one of the callbacks 
                // has changed the token stream and we need to go back to the 
                // loop.
@@ -1310,6 +1319,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                          Parser::FuncFlags funcFlags,
                          int expectedArgCount
                          ) {
+   runCallbacks(funcDef);
+
    // check for an existing, non-function definition.
    VarDefPtr existingDef = checkForExistingDef(nameTok, name, true);
 
@@ -1546,6 +1557,7 @@ bool Parser::parseDef(TypeDef *type) {
          Token tok3 = getToken();
          if (tok3.isSemi() || tok3.isComma()) {
             // it's a variable.
+            runCallbacks(variableDef);
 
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
@@ -1565,6 +1577,7 @@ bool Parser::parseDef(TypeDef *type) {
                continue;
             }
          } else if (tok3.isAssign()) {
+            runCallbacks(variableDef);
             ExprPtr initializer;
    
             // make sure we're not hiding anything else
@@ -1981,6 +1994,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
 // class name;
 //      ^     ^
 TypeDefPtr Parser::parseClassDef() {
+   runCallbacks(classDef);
+
    Token tok = getToken();
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
@@ -2112,6 +2127,8 @@ void Parser::parse() {
 // class name { ... }
 //             ^     ^
 void Parser::parseClassBody() {
+   runCallbacks(classEnter);
+
    // parse the class body   
    while (true) {
       state = st_base;
@@ -2119,6 +2136,18 @@ void Parser::parseClassBody() {
       // check for a closing brace or a nested class definition
       Token tok = getToken();
       if (tok.isRCurly()) {
+         // run callbacks, this can change the token stream so make sure we've 
+         // still got an end curly
+         toker.putBack(tok);
+         if (runCallbacks(classLeave)) {
+            Token tok2 = toker.getToken();
+            if (!tok2.isRCurly()) {
+               toker.putBack(tok2);
+               continue;
+            }
+         } else {
+            toker.getToken();
+         }
          break;
       } else if (tok.isSemi()) {
          // ignore stray semicolons
@@ -2246,9 +2275,11 @@ bool Parser::removeCallback(Parser::Event event, ParserCallback *callback) {
    return false;
 }
 
-void Parser::runCallbacks(Event event) {
+bool Parser::runCallbacks(Event event) {
    assert(event < eventSentinel);
    CallbackVec &cbs = callbacks[event];
+   bool gotCallbacks = cbs.size();
    for (int i = 0; i < cbs.size(); ++i)
       cbs[i]->run(this, &toker, context.get());
+   return gotCallbacks;
 }
