@@ -174,9 +174,16 @@ class LLVMBuilder : public Builder {
 
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
-                           model::Expr *cond);
+                           model::Expr *cond,
+                           bool gotPostBlock
+                           );
 
         virtual void emitEndWhile(model::Context &context,
+                                  model::Branchpoint *pos,
+                                  bool isTerminal
+                                  );
+
+        virtual void emitPostLoop(model::Context &context,
                                   model::Branchpoint *pos,
                                   bool isTerminal
                                   );

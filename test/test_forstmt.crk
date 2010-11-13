@@ -1,0 +1,27 @@
+# Copyright 2010 Google Inc.
+# tests of the "for" statement
+
+sum := 0;
+
+for (int i = 0; i < 10; ++i)
+    sum += i;
+if (sum != 45)
+    puts('Failed on normal "for"');
+sum = 0;
+
+for (int i = 0; i < 10; ++i) {
+    if (i % 2)
+        continue;
+    sum += i;
+}
+if (sum != 20)
+    puts('Failed on continuing "for"');
+
+for (;;) {
+    sum = 100;
+    break;
+}
+if (sum != 100)
+    puts('Failed on empty "for"');
+
+puts('ok');

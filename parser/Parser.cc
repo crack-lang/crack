@@ -283,6 +283,11 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
          toker.putBack(tok);
       assert(branch->context);
       return branch->context;
+   } else if (tok.isFor()) {
+      parseForStmt();
+      
+      // for statements are like while - never terminal
+      return 0;
    }
 
    toker.putBack(tok);
@@ -1650,6 +1655,15 @@ ContextPtr Parser::parseIfClause() {
    }
 }
    
+ExprPtr Parser::parseCondExpr() {
+   TypeDef *boolType = context->globalData->boolType.get();
+   ExprPtr cond = parseExpression()->convert(*context, boolType);
+   if (!cond)
+      error(getToken(),  "Condition is not boolean.");
+   
+   return cond;
+}
+
 // clause := expr ;   (';' can be replaced with EOF)
 //        |  { block }
 // if ( expr ) clause
@@ -1661,10 +1675,7 @@ ContextPtr Parser::parseIfStmt() {
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
    
-   TypeDef *boolType = context->globalData->boolType.get();
-   ExprPtr cond = parseExpression()->convert(*context, boolType);
-   if (!cond)
-      error(tok, "Condition is not boolean.");
+   ExprPtr cond = parseCondExpr();
    
    tok = getToken();
    if (!tok.isRParen())
@@ -1709,20 +1720,112 @@ void Parser::parseWhileStmt() {
    Token tok = getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
-   
-   TypeDef *boolType = context->globalData->boolType.get();
-   ExprPtr cond = parseExpression()->convert(*context, boolType);
-   if (!cond)
-      error(tok, "Condition is not boolean.");
+
+   // parse the condition   
+   ExprPtr cond = parseCondExpr();
 
    tok = getToken();
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
-   BranchpointPtr pos = context->builder.emitBeginWhile(*context, cond.get());
+   BranchpointPtr pos =
+      context->builder.emitBeginWhile(*context, cond.get(), false);
    context->setBreak(pos.get());
    context->setContinue(pos.get());
    ContextPtr terminal = parseIfClause();
+   context->builder.emitEndWhile(*context, pos.get(), terminal);
+}
+
+// for ( ... ) { ... }
+//    ^               ^
+// for ( ... ) stmt ; (';' can be replaced with EOF)
+//    ^              ^
+void Parser::parseForStmt() {
+   // create a subcontext for the break and for variables defined in the 
+   // condition.
+   ContextStackFrame cstack(*this, context->createSubContext().get());
+
+   Token tok = getToken();
+   if (!tok.isLParen())
+      unexpected(tok, "expected left paren after for");
+   
+   // check for 'ident in' or 'ident :in'
+   tok = getToken();
+   if (tok.isIdent()) {
+      Token tok2 = getToken();
+      if (tok2.isIn()) {
+         assert(false && "not supposed to be here yet");
+      } else if (tok2.isColon()) {
+         Token tok3 = getToken();
+         if (tok3.isIn()) {
+            assert(false && "not supposed to be here yet");
+            // create a variable definition   
+            // parse the iterator expression
+         } else {
+            toker.putBack(tok3);
+         }
+      }
+      
+      toker.putBack(tok2);
+   }
+   
+   // if we fall through to here, this is a C-like for statement
+
+   toker.putBack(tok);
+
+   // parse the initialization clause (if any)
+   tok = getToken();
+   if (!tok.isSemi()) {
+      toker.putBack(tok);
+      parseClause(true);
+   }
+
+   // check for a conditional expression
+   ExprPtr cond;
+   tok = getToken();
+   if (tok.isSemi()) {
+      // no conditional, create one from a constant
+      TypeDef *boolType = context->globalData->boolType.get();
+      cond = context->builder.createIntConst(*context, 1)->convert(*context,
+                                                                   boolType
+                                                                   );
+   } else {
+      toker.putBack(tok);
+      cond = parseCondExpr();
+
+      tok = getToken();
+      if (!tok.isSemi())
+         unexpected(tok, "expected semicolon after condition");
+      
+   }
+
+   // check for an after-body expression
+   ExprPtr afterBody;
+   tok = getToken();
+   if (!tok.isRParen()) {
+      toker.putBack(tok);
+
+      afterBody = parseExpression();
+      tok = getToken();
+      if (!tok.isRParen())
+         unexpected(tok, "expected closing parenthesis");
+   }
+   
+   BranchpointPtr pos =
+      context->builder.emitBeginWhile(*context, cond.get(), afterBody);
+   context->setBreak(pos.get());
+   context->setContinue(pos.get());
+   ContextPtr terminal = parseIfClause();
+   
+   // emit the after-body expression if there was one.
+   if (afterBody) {
+      context->builder.emitPostLoop(*context, pos.get(), terminal);
+      context->createCleanupFrame();
+      afterBody->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+      terminal = false;
+   }
+
    context->builder.emitEndWhile(*context, pos.get(), terminal);
 }
 

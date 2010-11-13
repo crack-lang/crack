@@ -756,6 +756,8 @@ test_output "augmented assignment to instance variables" \
      if (f.i == 1) puts('ok'); else puts('FAIL: did not increment');" \
      ok
 
+test_output 'for statement' 'import test.test_forstmt;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

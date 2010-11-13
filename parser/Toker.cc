@@ -49,6 +49,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::whileKw, data, loc);
     else if (data == "oper")
         return Token(Token::operKw, data, loc);
+    else if (data == "for")
+        return Token(Token::forKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

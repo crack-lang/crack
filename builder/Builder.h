@@ -145,7 +145,8 @@ class Builder : public spug::RCBase {
          */
         virtual model::BranchpointPtr 
             emitBeginWhile(model::Context &context, 
-                           model::Expr *cond
+                           model::Expr *cond,
+                           bool gotPostLoop
                            ) = 0;
 
         /**
@@ -153,6 +154,19 @@ class Builder : public spug::RCBase {
          * @param pos the branchpoint object returned from the emitWhile().
          */        
         virtual void emitEndWhile(model::Context &context,
+                                  model::Branchpoint *pos,
+                                  bool isTerminal
+                                  ) = 0;
+
+        /**
+         * Emit code to be called at the end of the while loop.
+         * All code emitted after this will be called after the completion of 
+         * the body of the loop regardless of whether a continue statement was 
+         * invoked.
+         * This must be called between emitBeginWhile() and emitEndWhile().  
+         * The "gotPostLoop" argument to the emitBeginWhile() must be true.
+         */
+        virtual void emitPostLoop(model::Context &context,
                                   model::Branchpoint *pos,
                                   bool isTerminal
                                   ) = 0;

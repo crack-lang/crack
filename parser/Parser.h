@@ -348,6 +348,9 @@ class Parser {
        */
       model::ContextPtr parseIfClause();
 
+      /** Parse the condition in a 'while', 'for' or 'if' statement */
+      model::ExprPtr parseCondExpr();
+
       /*      
        * @returns the context that this statement terminates to.  See 
        *    parseStatement().
@@ -355,6 +358,7 @@ class Parser {
       model::ContextPtr parseIfStmt();
 
       void parseWhileStmt();
+      void parseForStmt();
       void parseReturnStmt();
       
       /**

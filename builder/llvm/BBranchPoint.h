@@ -17,9 +17,13 @@ SPUG_RCPTR(BBranchpoint);
 
 class BBranchpoint : public model::Branchpoint {
 public:
-    llvm::BasicBlock *block, *block2;
+    llvm::BasicBlock *block, *block2, *block3;
 
-    BBranchpoint(llvm::BasicBlock *block) : block(block), block2(0) {}
+    BBranchpoint(llvm::BasicBlock *block) :
+        block(block), 
+        block2(0),
+        block3(0) {
+    }
 };
 
 } // end namespace builder::vmll

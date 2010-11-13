@@ -795,7 +795,9 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
 }
 
 BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context, 
-                                           Expr *cond) {
+                                           Expr *cond,
+                                           bool gotPostBlock
+                                           ) {
     LLVMContext &lctx = getGlobalContext();
     BBranchpointPtr bpos = new BBranchpoint(BasicBlock::Create(lctx,
                                                                "while_end", 
@@ -804,8 +806,20 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
                                             );
     bpos->context = &context;
 
-    BasicBlock *whileCond = bpos->block2 =
+    BasicBlock *whileCond =
         BasicBlock::Create(lctx, "while_cond", func);
+    
+    // if there is a post-loop block, make it block2 (which gets branched to 
+    // at the end of the body and from continue) and make the the condition 
+    // block3.
+    if (gotPostBlock) {
+        bpos->block2 = BasicBlock::Create(lctx, "while_post", func);
+        bpos->block3 = whileCond;
+    } else {
+        // no post-loop: block2 is the condition
+        bpos->block2 = whileCond;
+    }
+    
     BasicBlock *whileBody = BasicBlock::Create(lctx, "while_body", func);
     builder.CreateBr(whileCond);
     builder.SetInsertPoint(block = whileCond);
@@ -829,12 +843,32 @@ void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos,
                                ) {
     BBranchpoint *bpos = BBranchpointPtr::cast(pos);
 
-    // emit the branch back to conditional expression in the block
+    // emit the branch back to the conditional
     if (!isTerminal)
-        builder.CreateBr(bpos->block2);
+        // if there's a post-block, jump to the conditional
+        if (bpos->block3)
+            builder.CreateBr(bpos->block3);
+        else
+            builder.CreateBr(bpos->block2);
 
     // new code goes to the following block
     builder.SetInsertPoint(block = bpos->block);
+}
+
+void LLVMBuilder::emitPostLoop(model::Context &context,
+                               model::Branchpoint *pos,
+                               bool isTerminal
+                               ) {
+    // block2 should be the post-loop code, block3 should be the condition
+    BBranchpoint *bpos = BBranchpointPtr::cast(pos);
+    assert(bpos->block3 && "attempted to emit undeclared post-loop");
+
+    if (!isTerminal)
+        // branch from the end of the body to the post-loop
+        builder.CreateBr(bpos->block2);
+
+    // set the new block to the post-loop
+    builder.SetInsertPoint(block = bpos->block2);
 }
 
 void LLVMBuilder::emitBreak(Context &context, Branchpoint *branch) {
