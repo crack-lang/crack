@@ -51,6 +51,12 @@ class Context : public spug::RCBase {
         // initializer for an empty location object
         static parser::Location emptyLoc;
 
+        // emit a variable definition with no error checking.
+        VarDefPtr emitVarDef(Context *defCtx, TypeDef *type, 
+                             const std::string &name, 
+                             Expr *initializer
+                             );
+
     public:
 
         // context scope - this is used to control how variables defined in 
@@ -273,6 +279,24 @@ class Context : public spug::RCBase {
          * returns null if there is none.
          */
         Branchpoint *getContinue();
+
+        /**
+         * Create a reference to the "this" variable, error if there is none.
+         */
+        model::ExprPtr makeThisRef(const std::string &memberName);
+
+        /**
+         * Expand an iterator style for loop into initialization, condition 
+         * and after-body.  The initialization will actually be emitted, 
+         * condition and after-body will be filled in.
+         */
+        void expandIteration(const std::string &name, bool defineVar,
+                             bool isIter, 
+                             Expr *seqExpr,
+                             ExprPtr &cond,
+                             ExprPtr &beforeBody,
+                             ExprPtr &afterBody
+                             );
 
         /**
          * Set the current source location.

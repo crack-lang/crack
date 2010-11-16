@@ -24,4 +24,37 @@ for (;;) {
 if (sum != 100)
     puts('Failed on empty "for"');
 
+class RangeIter {
+    int i, max;
+    
+    oper init(int start, int max0) : i = start, max = max0 {}
+
+    int elem() { return i; }
+    
+    bool next() { ++i; return i < max; }
+    
+    bool toBool() { return i < max; }
+}
+
+class Range {
+    int start, max;
+    oper init(int start0, int max0) : start = start0, max = max0 {}
+    RangeIter iter() { return RangeIter(start, max); }
+}   
+
+sum = 0;
+for (i :in Range(0, 10))
+    sum += i;
+if (sum != 45)
+    puts('Failed iteration with var def');
+
+if (1) {
+    sum = 0;
+    int i;
+    for (i in Range(0, 10))
+        sum += i;
+    if (sum != 45)
+        puts('Failed iteration over existing variable');
+}
+
 puts('ok');

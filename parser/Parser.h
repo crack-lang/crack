@@ -178,11 +178,6 @@ class Parser {
        */
       model::ContextPtr parseBlock(bool nested, Event closeEvent);
 
-      /** Create a reference to the "this" variable, error if there is none. */
-      model::ExprPtr makeThisRef(const Token &ident,
-                                 const std::string &memberName
-                                 );
-
       /**
        * Creates a variable reference complete with an implicit "this" if 
        * necessary.

@@ -24,7 +24,6 @@ AssignExpr::AssignExpr(Expr *aggregate, VarDef *var, Expr *value) :
 }
 
 AssignExprPtr AssignExpr::create(Context &context,
-                                 const Token &varName,
                                  Expr *aggregate,
                                  VarDef *var, 
                                  Expr *value
@@ -32,8 +31,7 @@ AssignExprPtr AssignExpr::create(Context &context,
     // check the types
     ExprPtr converted = value->convert(context, var->type.get());
     if (!converted)
-        Parser::error(varName,
-                      SPUG_FSTR("Assigning variable " << var->name <<
+        context.error(SPUG_FSTR("Assigning variable " << var->name <<
                                  " of type " << var->type->name <<
                                  " from value of type " <<
                                  value->type->name

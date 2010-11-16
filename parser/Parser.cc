@@ -372,25 +372,13 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
    }
 }
 
-ExprPtr Parser::makeThisRef(const Token &ident, const string &memberName) {
-   VarDefPtr thisVar = context->ns->lookUp("this");
-   if (!thisVar)
-      error(ident,
-            SPUG_FSTR("instance member " << memberName <<
-                       " may not be used in a static context."
-                      )
-            );
-                      
-   return context->createVarRef(thisVar.get());
-}
-
 ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
    if (TypeDefPtr::cast(var->getOwner())) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
-                                     makeThisRef(tok, tok.getData());
+                                     context->makeThisRef(tok.getData());
       return context->createFieldRef(receiver.get(), var);
    } else {
       return context->createVarRef(var);
@@ -429,12 +417,10 @@ ExprPtr Parser::createAssign(Expr *container, const Token &ident,
    if (TypeDefPtr::cast(var->getOwner())) {
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
-                                     makeThisRef(ident, ident.getData());
-      return AssignExpr::create(*context, ident, receiver.get(), var, 
-                                val
-                                );
+                                     context->makeThisRef(ident.getData());
+      return AssignExpr::create(*context, receiver.get(), var, val);
    } else {
-      return AssignExpr::create(*context, ident, var, val);
+      return AssignExpr::create(*context, var, val);
    }
 }
 
@@ -536,7 +522,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       // if we didn't get the receiver from the container, lookup the 
       // "this" variable.
       if (!receiver) {
-         receiver = makeThisRef(ident, funcName);
+         receiver = context->makeThisRef(funcName);
          if (verifyThisIsContainer && 
               !receiver->type->isDerivedFrom(container->type->meta))
             error(ident, SPUG_FSTR("'this' is not an instance of " <<
@@ -1748,73 +1734,107 @@ void Parser::parseForStmt() {
    Token tok = getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after for");
+
+   // the condition, before and after body expressions.
+   ExprPtr cond, beforeBody, afterBody;
+   bool iterForm = false;
    
    // check for 'ident in' or 'ident :in'
    tok = getToken();
    if (tok.isIdent()) {
       Token tok2 = getToken();
       if (tok2.isIn()) {
-         assert(false && "not supposed to be here yet");
+         ExprPtr expr = parseExpression();
+         context->expandIteration(tok.getData(), false, false, expr.get(),
+                                  cond,
+                                  beforeBody,
+                                  afterBody
+                                  );
+         iterForm = true;
       } else if (tok2.isColon()) {
          Token tok3 = getToken();
          if (tok3.isIn()) {
-            assert(false && "not supposed to be here yet");
-            // create a variable definition   
-            // parse the iterator expression
+
+            // parse the list expression
+            ExprPtr expr = parseExpression();
+
+            // let the context expand an iteration expression            
+            context->expandIteration(tok.getData(), true, false, expr.get(), 
+                                     cond, 
+                                     beforeBody,
+                                     afterBody
+                                     );
+            iterForm = true;
          } else {
             toker.putBack(tok3);
          }
       }
       
-      toker.putBack(tok2);
+      if (!iterForm) {
+         toker.putBack(tok2);
+      } else {
+         // check for a closing paren
+         tok = getToken();
+         if (!tok.isRParen())
+            unexpected(tok, "expected closing parenthesis");
+      }
    }
    
    // if we fall through to here, this is a C-like for statement
-
-   toker.putBack(tok);
-
-   // parse the initialization clause (if any)
-   tok = getToken();
-   if (!tok.isSemi()) {
+   if (!iterForm) {
       toker.putBack(tok);
-      parseClause(true);
-   }
-
-   // check for a conditional expression
-   ExprPtr cond;
-   tok = getToken();
-   if (tok.isSemi()) {
-      // no conditional, create one from a constant
-      TypeDef *boolType = context->globalData->boolType.get();
-      cond = context->builder.createIntConst(*context, 1)->convert(*context,
-                                                                   boolType
-                                                                   );
-   } else {
-      toker.putBack(tok);
-      cond = parseCondExpr();
-
-      tok = getToken();
-      if (!tok.isSemi())
-         unexpected(tok, "expected semicolon after condition");
-      
-   }
-
-   // check for an after-body expression
-   ExprPtr afterBody;
-   tok = getToken();
-   if (!tok.isRParen()) {
-      toker.putBack(tok);
-
-      afterBody = parseExpression();
-      tok = getToken();
-      if (!tok.isRParen())
-         unexpected(tok, "expected closing parenthesis");
-   }
    
+      // parse the initialization clause (if any)
+      tok = getToken();
+      if (!tok.isSemi()) {
+         toker.putBack(tok);
+         parseClause(true);
+      }
+   
+      // check for a conditional expression
+      tok = getToken();
+      if (tok.isSemi()) {
+         // no conditional, create one from a constant
+         TypeDef *boolType = context->globalData->boolType.get();
+         cond = context->builder.createIntConst(*context, 1)->convert(*context,
+                                                                     boolType
+                                                                     );
+      } else {
+         toker.putBack(tok);
+         cond = parseCondExpr();
+   
+         tok = getToken();
+         if (!tok.isSemi())
+            unexpected(tok, "expected semicolon after condition");
+         
+      }
+   
+      // check for an after-body expression
+      tok = getToken();
+      if (!tok.isRParen()) {
+         toker.putBack(tok);
+   
+         afterBody = parseExpression();
+         tok = getToken();
+         if (!tok.isRParen())
+            unexpected(tok, "expected closing parenthesis");
+      }
+   }
+
+   // emit the loop
    BranchpointPtr pos =
       context->builder.emitBeginWhile(*context, cond.get(), afterBody);
    context->setBreak(pos.get());
    context->setContinue(pos.get());
+   
+   // emit the before-body expression if there was one
+   if (beforeBody) {
+      context->createCleanupFrame();
+      beforeBody->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+   }
+   
+   // parse the loop body
    ContextPtr terminal = parseIfClause();
    
    // emit the after-body expression if there was one.

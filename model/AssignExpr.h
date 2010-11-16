@@ -30,13 +30,11 @@ class AssignExpr : public Expr {
 
         /**
          * Create a new AssignExpr, check for errors.
-         * @param varName the variable name token, used for error checking.
          * @param aggregate the aggregate that the variable is a member of
          * @param var the variable
          * @param value the value to be assigned to the variable.
          */
         static AssignExprPtr create(Context &context,
-                                    const parser::Token &varName,
                                     Expr *aggregate,
                                     VarDef *var, 
                                     Expr *value
@@ -47,16 +45,14 @@ class AssignExpr : public Expr {
          * create() method only for non-instance variables (statics, globals 
          * and locals)
          * 
-         * @param varName the variable name token, used for error checking.
          * @param var the variable
          * @param value the value to be assigned to the variable.
          */
         static AssignExprPtr create(Context &context,
-                                    const parser::Token &tok,
                                     VarDef *var, 
                                     Expr *value
                                     ) {
-            return create(context, tok, 0, var, value);
+            return create(context, 0, var, value);
         }
 
         /** Emit the expression in the given context. */

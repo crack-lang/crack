@@ -39,6 +39,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::ifKw, data, loc);
     else if (data == "import")
         return Token(Token::importKw, data, loc);
+    else if (data == "in")
+        return Token(Token::inKw, data, loc);
     else if (data == "is")
         return Token(Token::isKw, data, loc);
     else if (data == "null")
@@ -47,6 +49,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::returnKw, data, loc);
     else if (data == "while")
         return Token(Token::whileKw, data, loc);
+    else if (data == "on")
+        return Token(Token::onKw, data, loc);
     else if (data == "oper")
         return Token(Token::operKw, data, loc);
     else if (data == "for")

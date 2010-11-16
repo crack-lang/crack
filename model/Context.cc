@@ -8,6 +8,7 @@
 #include "parser/Location.h"
 #include "parser/ParseError.h"
 #include "Annotation.h"
+#include "AssignExpr.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ConstVarDef.h"
@@ -212,6 +213,18 @@ void Context::checkForUnresolvedForwards() {
     }
 }
 
+VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
+                              const std::string &name,
+                              Expr *initializer
+                              ) {
+    createCleanupFrame();
+    VarDefPtr varDef = type->emitVarDef(*this, name, initializer);
+    closeCleanupFrame();
+    defCtx->ns->addDef(varDef.get());
+    cleanupFrame->addCleanup(varDef.get());
+    return varDef;
+}
+
 void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
                          Expr *initializer
                          ) {
@@ -239,11 +252,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                          );
     }
 
-    createCleanupFrame();
-    VarDefPtr varDef = type->emitVarDef(*this, tok.getData(), initializer);
-    closeCleanupFrame();
-    defCtx->ns->addDef(varDef.get());
-    cleanupFrame->addCleanup(varDef.get());
+    emitVarDef(defCtx.get(), type, tok.getData(), initializer);
 }
 
 ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
@@ -373,6 +382,91 @@ Branchpoint *Context::getContinue() {
     } else {
         return 0;
     }
+}
+
+ExprPtr Context::makeThisRef(const string &memberName) {
+   VarDefPtr thisVar = ns->lookUp("this");
+   if (!thisVar)
+      error(SPUG_FSTR("instance member " << memberName <<
+                       " may not be used in a static context."
+                      )
+            );
+          
+   return createVarRef(thisVar.get());
+}
+
+void Context::expandIteration(const std::string &name, bool defineVar,
+                              bool isIter,
+                              Expr *seqExpr,
+                              ExprPtr &cond,
+                              ExprPtr &beforeBody,
+                              ExprPtr &afterBody
+                              ) {
+    // verify that the sequence has an "iter" method
+    FuncDefPtr iterFunc = seqExpr->type->lookUpNoArgs("iter");
+    if (!iterFunc)
+        error("iteration expression has no 'iter' method.");
+    
+    // create an expression from it
+    FuncCallPtr iterCall = builder.createFuncCall(iterFunc.get());
+    if (iterFunc->flags & FuncDef::method)
+        iterCall->receiver = seqExpr;
+    
+    // if the variable provided is an iterator, just use it and clear the 
+    // "var" argument as an indicator to later code.
+    VarDefPtr iterVar, var;
+    FuncDefPtr elemFunc;
+    if (isIter) {
+        assert(0);
+    } else {
+        // we're passing in "this" and assuming that the current context is a 
+        // definition context.
+        assert(scope != composite && 
+                "iteration expanded in a non-definition context"
+               );
+        iterVar = emitVarDef(this, iterCall->type.get(), ":iter", 
+                             iterCall.get()
+                             );
+
+        elemFunc = iterCall->type->lookUpNoArgs("elem");
+        
+        if (defineVar) {
+            var = emitVarDef(this, elemFunc->returnType.get(), name, 0);
+        } else {
+            var = ns->lookUp(name);
+            if (var->isConstant())
+                error("Cannot use a constant as a loop variable");
+            if (!var->type->matches(*elemFunc->returnType))
+                error("Loop variable type does not match the type of the "
+                       "return value of the iterator's elem() method."
+                      );
+        }
+    }
+    
+    // create a reference expression for the iterator
+    ExprPtr iterRef = createVarRef(iterVar.get());
+    
+    if (var) {
+        // assign the variable before the body
+        FuncCallPtr elemCall = builder.createFuncCall(elemFunc.get());
+        if (elemFunc->flags & FuncDef::method)
+            elemCall->receiver = iterRef;
+        beforeBody = AssignExpr::create(*this, var.get(), elemCall.get());
+    }
+    
+    // convert it to a boolean for the condition
+    cond = iterRef->convert(*this, globalData->boolType.get());
+    if (!cond)
+        error("The iterator in a 'for' loop must convert to boolean.");
+    
+    // create the "iter.next()" expression
+    FuncDefPtr nextFunc = iterRef->type->lookUpNoArgs("next");
+    if (!nextFunc)
+        error("The iterator in a 'for' loop must provide a 'next()' method");
+    FuncCallPtr nextCall = builder.createFuncCall(nextFunc.get());
+    if (nextFunc->flags & FuncDef::method)
+        nextCall->receiver = iterRef;
+    afterBody = nextCall;
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
