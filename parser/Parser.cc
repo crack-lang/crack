@@ -1739,44 +1739,54 @@ void Parser::parseForStmt() {
    ExprPtr cond, beforeBody, afterBody;
    bool iterForm = false;
    
-   // check for 'ident in' or 'ident :in'
+   // check for 'ident in', 'ident :in', 'ident on' or 'ident :on'
    tok = getToken();
    if (tok.isIdent()) {
+      bool definesVar, varIsIter;
       Token tok2 = getToken();
       if (tok2.isIn()) {
-         ExprPtr expr = parseExpression();
-         context->expandIteration(tok.getData(), false, false, expr.get(),
-                                  cond,
-                                  beforeBody,
-                                  afterBody
-                                  );
+         definesVar = false;
+         varIsIter = false;
          iterForm = true;
       } else if (tok2.isColon()) {
          Token tok3 = getToken();
+         definesVar = true;
          if (tok3.isIn()) {
-
-            // parse the list expression
-            ExprPtr expr = parseExpression();
-
-            // let the context expand an iteration expression            
-            context->expandIteration(tok.getData(), true, false, expr.get(), 
-                                     cond, 
-                                     beforeBody,
-                                     afterBody
-                                     );
+            varIsIter = false;
+            iterForm = true;
+         } else if (tok3.isOn()) {
+            varIsIter = true;
             iterForm = true;
          } else {
             toker.putBack(tok3);
          }
+      } else if (tok2.isOn()) {
+         definesVar = false;
+         varIsIter = true;
+         iterForm = true;
       }
       
-      if (!iterForm) {
-         toker.putBack(tok2);
-      } else {
+      if (iterForm) {
+         // got iteration - parse the expression that we're iterating over 
+         // and expand the iteration expressions.
+
+         // parse the list expression
+         ExprPtr expr = parseExpression();
+
+         // let the context expand an iteration expression            
+         context->expandIteration(tok.getData(), definesVar, varIsIter,
+                                  expr.get(), 
+                                  cond, 
+                                  beforeBody,
+                                  afterBody
+                                  );
+
          // check for a closing paren
          tok = getToken();
          if (!tok.isRParen())
             unexpected(tok, "expected closing parenthesis");
+      } else {
+         toker.putBack(tok2);
       }
    }
    

@@ -46,7 +46,7 @@ sum = 0;
 for (i :in Range(0, 10))
     sum += i;
 if (sum != 45)
-    puts('Failed iteration with var def');
+    puts('Failed iteration with element var def');
 
 if (1) {
     sum = 0;
@@ -55,6 +55,21 @@ if (1) {
         sum += i;
     if (sum != 45)
         puts('Failed iteration over existing variable');
+}
+
+sum = 0;
+for (i :on Range(0, 10))
+    sum += i.elem();
+if (sum != 45)
+    puts('Failed iteration with iterator var def');
+
+if (1) {
+    sum = 0;
+    RangeIter i = null;
+    for (i on Range(0, 10))
+        sum += i.elem();
+    if (sum != 45)
+        puts('Failed iteration with existing iterator');
 }
 
 puts('ok');

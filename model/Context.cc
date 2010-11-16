@@ -20,6 +20,7 @@
 #include "LocalNamespace.h"
 #include "ModuleDef.h"
 #include "OverloadDef.h"
+#include "ResultExpr.h"
 #include "StrConst.h"
 #include "TernaryExpr.h"
 #include "TypeDef.h"
@@ -417,7 +418,26 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     VarDefPtr iterVar, var;
     FuncDefPtr elemFunc;
     if (isIter) {
-        assert(0);
+        // this is a "for on" and the variable is an iterator.
+        if (defineVar) {
+            iterVar = 
+                emitVarDef(this, iterCall->type.get(), name, iterCall.get());
+        } else {
+            iterVar = ns->lookUp(name);
+            if (iterVar->isConstant())
+                error("Cannot use a constant as a loop iterator");
+            if (!iterVar->type->matches(*iterCall->type))
+                error("Loop iterator variable type does not match the type of "
+                       "the iterator."
+                      );
+
+            // emit code to assign the iterator
+            createCleanupFrame();
+            ExprPtr iterAssign =
+                AssignExpr::create(*this, iterVar.get(), iterCall.get());
+            iterAssign->emit(*this)->handleTransient(*this);
+            closeCleanupFrame();
+        }
     } else {
         // we're passing in "this" and assuming that the current context is a 
         // definition context.
