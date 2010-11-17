@@ -52,10 +52,14 @@ class Context : public spug::RCBase {
         static parser::Location emptyLoc;
 
         // emit a variable definition with no error checking.
-        VarDefPtr emitVarDef(Context *defCtx, TypeDef *type, 
-                             const std::string &name, 
+        VarDefPtr emitVarDef(Context *defCtx, TypeDef *type,
+                             const std::string &name,
                              Expr *initializer
                              );
+
+        // issue a warning if defining the variable would hide a symbol in an
+        // enclosing context.
+        void warnOnHide(const std::string &name);
 
     public:
 

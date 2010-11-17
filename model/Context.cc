@@ -19,6 +19,7 @@
 #include "IntConst.h"
 #include "LocalNamespace.h"
 #include "ModuleDef.h"
+#include "NullConst.h"
 #include "OverloadDef.h"
 #include "ResultExpr.h"
 #include "StrConst.h"
@@ -32,6 +33,13 @@ using namespace model;
 using namespace std;
 
 parser::Location Context::emptyLoc;
+
+void Context::warnOnHide(const string &name) {
+    if (ns->lookUp(name))
+        cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << 
+            "Symbol " << name << 
+            " hides another definition in an enclosing context." << endl;
+}
 
 Context::GlobalData::GlobalData() : 
     objectType(0), stringType(0), staticStringType(0) {
@@ -420,6 +428,10 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     if (isIter) {
         // this is a "for on" and the variable is an iterator.
         if (defineVar) {
+            assert(scope != composite && 
+                    "iteration expanded in a non-definition context"
+                );
+            warnOnHide(name);
             iterVar = 
                 emitVarDef(this, iterCall->type.get(), name, iterCall.get());
         } else {
@@ -451,7 +463,15 @@ void Context::expandIteration(const std::string &name, bool defineVar,
         elemFunc = iterCall->type->lookUpNoArgs("elem");
         
         if (defineVar) {
-            var = emitVarDef(this, elemFunc->returnType.get(), name, 0);
+            warnOnHide(name);
+            
+            ExprPtr initializer;
+            if (!elemFunc->returnType->defaultInitializer)
+                initializer = new NullConst(elemFunc->returnType.get());
+
+            var = emitVarDef(this, elemFunc->returnType.get(), name, 
+                             initializer.get()
+                             );
         } else {
             var = ns->lookUp(name);
             if (var->isConstant())

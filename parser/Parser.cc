@@ -1857,6 +1857,9 @@ void Parser::parseForStmt() {
    }
 
    context->builder.emitEndWhile(*context, pos.get(), terminal);
+   
+   // close any variables created for the loop context.
+   context->builder.closeAllCleanups(*context);
 }
 
 void Parser::parseReturnStmt() {
