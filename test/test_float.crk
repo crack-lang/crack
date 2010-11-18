@@ -17,6 +17,14 @@ if (v != 5.0/10.0) {
     printfloat(v);
 }
 
+// An explicit conversion
+v = float(.5);
+if (v != float(5.0/10.0)) {
+    puts("fail: ");
+    printfloat(v);
+}
+
+
 // scientific notation
 float e = +1.23e10;
 e = -1.23e10;
@@ -103,6 +111,12 @@ f1 = b;
 if (f1 != 1.0)
     puts("fail");
 
+// byte -> float32, explicit
+b = 1;
+f1 = float32(b);
+if (f1 != 1.0)
+    puts("fail");
+
 // byte -> float64
 d1 = b;
 if (d1 != 1.0)
@@ -119,9 +133,21 @@ d1 = i;
 if (d1 != -5.0)
     puts("fail");
 
+// int32 -> float64, explicit
+i = -5;
+d1 = int32(i);
+if (d1 != -5.0)
+    puts("fail");
+
 // uint32 -> float64
 uint32 ui = 5; 
 d1 = ui;
+if (d1 != 5.0)
+    puts("fail");
+
+// uint32 -> float64, explicit
+ui = 5;
+d1 = float64(ui);
 if (d1 != 5.0)
     puts("fail");
 
@@ -130,6 +156,12 @@ f1 = 5.0;
 d1 = f1;
 if (d1 != 5.0)
     puts("fail");
+
+// float32 -> float64, explicit
+d1 = float64(f1);
+if (d1 != 5.0)
+    puts("fail");
+
 
 // int constant -> float32, float64
 float32 fc = 5;
@@ -142,6 +174,19 @@ if (fc != 5)
     puts("fail");
 if (dc != 10)
     puts("fail");
+
+// int constant -> float32, float64, explicit
+fc = float32(5);
+dc = float64(10);
+if (fc != 5.0)
+    puts("fail");
+if (dc != 10.0)
+    puts("fail");
+if (fc != 5)
+    puts("fail");
+if (dc != 10)
+    puts("fail");
+
 
 // truncate (loss of precision)
 d1 = 1.234;

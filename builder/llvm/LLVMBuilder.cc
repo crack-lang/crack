@@ -2008,6 +2008,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addNopNew(int32Type);
     addNopNew(uint32Type);
     addNopNew(byteType);
+    addNopNew(float32Type);
+    addNopNew(float64Type);
 
     // explicit (loss of precision)
     addExplicitTruncate(int64Type, uint64Type);
