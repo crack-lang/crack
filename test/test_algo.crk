@@ -1,7 +1,6 @@
 // test algorithms
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.exp.bindings IntWrapper;
 import crack.exp.algorithm quickSort, quickSortR, insertionSort;
 import crack.container Array;
 import crack.io cout;
