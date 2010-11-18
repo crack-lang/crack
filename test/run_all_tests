@@ -126,8 +126,7 @@ test_output 'explicit this' \
 
 test_output 'bad func names' \
     'class Foo { void f() { this.g(); }};' \
-    "${parseError}1: No method exists matching g with these argument "\
-'types.'
+    "${parseError}1: No method exists matching g()"
 
 test_output 'using a classname with its definition' \
     'class C { void out() { puts("abcd"); } 
@@ -407,11 +406,11 @@ test_output 'base constructors are non-transitive' \
      class C : B { oper init() : B(100) {} };' \
     "${parseError}3: No matching constructor found for run_all_tests.tmp.B"
 
-test_output 'no inheritence of oper new' \
+test_output 'no inheritance of oper new' \
     'class A { oper init(int a0) {} };
      class B : A { oper init() : A(100) {} };
      b := B(100);' \
-    "${parseError}3: No method exists matching B with these argument types."
+    "${parseError}3: No method exists matching B(int32)"
 
 test_output 'constructor initializers' 'import test.test_init;' ok
 
@@ -443,7 +442,7 @@ test_output 'eol putbacks do not affect line numbers' \
 
 test_output 'errors on invalid constructors' \
     'class A {}; t := A(1, 2);' \
-    "${parseError}1: No method exists matching A with these argument types."
+    "${parseError}1: No method exists matching A(int32, int32)"
 
 test_output 'array generics' \
     'x := array[uint](100);
@@ -981,7 +980,7 @@ test_output 'operator overloading of unary operators' \
     ok
 
 test_output 'bootstrapped overloads' 'print()' \
-    "${parseError}1: No method exists matching print with these argument types."
+    "${parseError}1: No method exists matching print()"
 
 test_output 'order of initialization and destruction' \
     'import test.test_init_del_order;' ok

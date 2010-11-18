@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
+#include <spug/String.h>
 #include "model/Annotation.h"
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
@@ -490,12 +491,16 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    // lookup the method from the variable context's type context
    // XXX needs to handle callable objects.
    FuncDefPtr func = ns->lookUp(*context, funcName, args);
-   if (!func)
-      error(ident,
-            SPUG_FSTR("No method exists matching " << funcName <<
-                       " with these argument types."
-                      )
-            );
+   if (!func){
+      spug::String msg("No method exists matching " + funcName + "(");
+      for (int i=0;i<args.size();i++){
+         if (i>0) msg+=", ";
+         msg+=args[i]->type->name;
+      }
+      msg+=")";
+      error(ident, SPUG_FSTR(msg));
+   }
+
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
@@ -803,12 +808,16 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             toker.putBack(tok2);
             FuncDefPtr funcDef =
                expr->type->lookUp(*context, "oper []", args);
-            if (!funcDef)
-               error(tok, 
-                     SPUG_FSTR("'oper []' not defined for " <<
-                               expr->type->name  << " with these arguments."
-                               )
-                     );
+            if (!funcDef){
+               spug::String msg("'oper []=' not defined for " +
+                                 expr->type->name +" with these arguments: (");
+               for (int i=0;i<args.size();i++){
+                  if (i>0) msg+=", ";
+                  msg+=args[i]->type->name;
+               }
+               msg+=")";
+               error(tok, SPUG_FSTR(msg) );
+            }
             funcCall = context->builder.createFuncCall(funcDef.get());
             funcCall->receiver = expr;
             funcCall->args = args;
@@ -826,7 +835,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             funcDef = context->ns->lookUp(*context, symbol, args);
          }
          if (!funcDef)
-            error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+            error(tok, SPUG_FSTR(symbol << " is not defined for type "
+                                        << expr->type->name));
    
          FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
          funcCall->args = args;
@@ -1010,7 +1020,9 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
             funcDef = context->ns->lookUp(*context, symbol, args);
          }
          if (!funcDef)
-            error(tok, SPUG_FSTR(symbol << " is not defined for this type."));
+            error(tok, SPUG_FSTR(symbol << " is not defined for type "
+                                        << expr->type->name));
+
    
          FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
          funcCall->args = args;
@@ -1093,12 +1105,16 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    
    // look up the new operator for the class
    FuncDefPtr func = type->lookUp(*context, "oper new", args);
-   if (!func)
-      error(tok,
-            SPUG_FSTR("No constructor for " << type->name <<
-                       " with these argument types."
-                      )
-            );
+   if (!func){
+      spug::String msg("No constructor for " + type->name +
+                       " with these argument types: (");
+      for (int i=0;i<args.size();i++){
+         if (i>0) msg+=", ";
+         msg+=args[i]->type->name;
+      }
+      msg+=")";
+      error(tok, SPUG_FSTR(msg));
+   }
    
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
    funcCall->args = args;
