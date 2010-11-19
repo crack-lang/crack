@@ -2,6 +2,7 @@
 
 #include "ArrayTypeDef.h"
 
+#include "model/NullConst.h"
 #include "Ops.h"
 
 #include <spug/StringFmt.h>
@@ -13,8 +14,9 @@ using namespace builder::mvll;
 
 ArrayTypeDef::ArrayTypeDef(TypeDef *metaType, const std::string &name,
                            const Type *rep
-                           ) :
-BTypeDef(metaType, name, rep) {
+                           ) : BTypeDef(metaType, name, rep) {
+
+    defaultInitializer = new NullConst(this);
     generic = new SpecializationCache();
 }
 
@@ -46,6 +48,8 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
     tempSpec->addDef(
             new VoidPtrOpDef(context.globalData->voidptrType.get())
             );
+
+    tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
     // add all of the methods
     addArrayMethods(context, tempSpec.get(), parmType);

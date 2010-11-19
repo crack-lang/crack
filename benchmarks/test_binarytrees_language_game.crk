@@ -18,7 +18,7 @@ int atoi(byteptr s);
 class TreeNode {
 
     class Next {
-        TreeNode left = null, right = null;
+        TreeNode left, right;
     
         oper init(TreeNode in_left, TreeNode in_right) :
             left = in_left,
@@ -26,7 +26,7 @@ class TreeNode {
         }
     }
 
-    Next next = null;
+    Next next;
     int item = 0;
   
     oper init(int in_item) :

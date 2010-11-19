@@ -52,7 +52,8 @@ Crack::Crack() :
     optimizeLevel(0),
     emitDebugInfo(false),
     noBootstrap(false),
-    useGlobalLibs(true) {
+    useGlobalLibs(true),
+    emitMigrationWarnings(false) {
 
     rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
                               new GlobalNamespace(0, ""),
@@ -100,6 +101,9 @@ bool Crack::init() {
         // classes.
         if (!noBootstrap && !loadBootstrapModules())
             return false;
+
+        // pass the emitMigrationWarnings flag down to the global data.
+        rootContext->globalData->migrationWarnings = emitMigrationWarnings;
 
         initialized = true;
     }

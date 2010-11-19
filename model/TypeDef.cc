@@ -304,10 +304,6 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
 
     // register it in the class
     addDef(newFunc.get());
-
-    // if this is the default initializer, store a call to it
-    if (initFunc->args.size() == 0)
-        defaultInitializer = new FuncCall(newFunc.get());
 }
 
 void TypeDef::createCast(Context &outer) {

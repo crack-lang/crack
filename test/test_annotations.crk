@@ -37,7 +37,7 @@ if (!@created)
 if (@createdWithCallback != 100)
     cout `failed to create an annotation with a callback\n`;
 
-StringFormatter result;
+StringFormatter result = {};
 
 @wrap
 void f1() { result `in f`; }

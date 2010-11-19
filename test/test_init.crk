@@ -18,9 +18,9 @@ class C : A, B {
     oper init() : A(100), x(2), c = 1 {}
 };
 
-A a;
+A a = {};
 if (a.a) puts('failed default constructor/default initializer');
-C c;
+C c = {};
 if (c.a != 100) puts('failed base initializer/member initializer');
 if (c.c != 1) puts('failed member initializer');
 if (c.d != 3) puts('failed default initializer');

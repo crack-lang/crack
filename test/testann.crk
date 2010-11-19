@@ -28,7 +28,7 @@ void emitOk(CrackContext ctx) {
     ctx.inject('cout `ok\n`;'.buffer);
 }
 
-TreeMap scopes;
+TreeMap scopes = {};
 
 class IntWrapper {
     int val;
@@ -41,7 +41,7 @@ void storeScope(CrackContext ctx) {
 
 void getScope(CrackContext ctx) {
     v := IntWrapper.cast(scopes[String(ctx.getToken().getText())]).val;
-    StringFormatter fmt;
+    StringFormatter fmt = {};
     fmt `$v \0`;
     ctx.inject(fmt.createString().buffer);
 }
@@ -51,13 +51,13 @@ void createdAnnotation(CrackContext ctx) {
 }
 
 void createdWithCallback(CrackContext ctx) {
-    StringFormatter fmt;
+    StringFormatter fmt = {};
     arg := IntWrapper.unsafeCast(ctx.getUserData());
     fmt `$(arg.val) \0`;
     ctx.inject(fmt.createString().buffer);
 }
 
-IntWrapper iw = null;
+IntWrapper iw;
 
 void createAnnotations(CrackContext ctx) {
     ctx.storeAnnotation('created'.buffer, createdAnnotation);
@@ -88,7 +88,7 @@ void error(CrackContext ctx) {
     ctx.error('plain error'.buffer);
 }
 
-Callback enterCB = null, leaveCB = null;
+Callback enterCB, leaveCB;
 
 void enter(CrackContext ctx) {
     ctx.inject('result `{`;'.buffer);

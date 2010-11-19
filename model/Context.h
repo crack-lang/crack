@@ -128,6 +128,10 @@ class Context : public spug::RCBase {
                        staticStringType,
                        overloadType,
                        crackContext;
+
+            // if true, emit warnings about things that have changed since the 
+            // last version of the language.
+            bool migrationWarnings;
             
             // just make sure the bootstrapped types are null
             GlobalData();

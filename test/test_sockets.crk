@@ -43,7 +43,7 @@ poller.add(accepted.sock, sockconsts.POLLIN | sockconsts.POLLERR);
 poller.add(cln, sockconsts.POLLIN | sockconsts.POLLERR);
 cln.send('to server', 0);
 poller.wait(null);
-PollEvent p = null;
+PollEvent p;
 bool ok;
 while (p = poller.nx()) {
     if (!(p.pollable is accepted.sock)) {

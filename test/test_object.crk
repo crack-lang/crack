@@ -18,8 +18,8 @@ class Int {
     }
 }
 
-Object n = null;
-Object o;
+Object n;
+Object o = {};
 Int a = {1}, b = {2};
 
 if (!(n < o)) err.do() `n < o failed\n`;

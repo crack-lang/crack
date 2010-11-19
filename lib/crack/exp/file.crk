@@ -72,9 +72,9 @@ class File : FileInfo,
              Openable {
 
     String _mode;
-    CFile _fd = null;
-    LineReader _lReader = null;
-    FDWriter _writer = null;
+    CFile _fd;
+    LineReader _lReader;
+    FDWriter _writer;
     
     void _open() {
 

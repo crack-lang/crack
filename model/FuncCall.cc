@@ -38,3 +38,14 @@ void FuncCall::writeTo(std::ostream &out) const {
         out << **iter << ", ";
     out << ")";
 }
+
+std::ostream &model::operator <<(std::ostream &out, 
+                                 const FuncCall::ExprVec &args
+                                 ) {
+    for (int i = 0; i < args.size(); i++) {
+        if (i > 0) out << ", ";
+        out << args[i]->type->name;
+    }
+
+    return out;
+}

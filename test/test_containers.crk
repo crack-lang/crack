@@ -52,7 +52,7 @@ void ckseq(String context, Container cnt, Object a, Object b, Object c) {
     free(ref);
 }
 
-List list;
+List list = {};
 list.append('first');
 list.append('second');
 list.append('third');
@@ -123,13 +123,13 @@ $cnt`;
 
 # DList tests
 
-DList dl;
+DList dl = {};
 dl.append('first');
 dl.append('second');
 ckdl('DList append', dl, 'first', 'second', null);
 
 if (true) {
-    List tmp;
+    List tmp = {};
     bi := dl.bidiIter(false);
 
     while (bi.nx())
@@ -203,7 +203,7 @@ if (a1[0] != 'first' || a1[1] != 'second' || a1[2] != 'third' ||
     err.do() `$a1 is not ['first', 'second', 'third', 'fourth']`;
 }
 
-Array a2;
+Array a2 = {};
 a2.append('1');
 a2.append('2');
 if (a2[0] != '1' || a2[1] != '2' || a2.count() != 2) {
@@ -211,7 +211,7 @@ if (a2[0] != '1' || a2[1] != '2' || a2.count() != 2) {
 }
 
 # set this to "cout" for debug info
-Formatter out = null;
+Formatter out;
 
 class Monitor {
     bool deleted;
@@ -309,7 +309,7 @@ while (i < 10000) {
         a.delete(index);
     }
     
-    StringFormatter report;
+    StringFormatter report = {};
     if (!tree.checkConstraints(report)) {
         out `$(report.createString())\n`;
         tree.dump();
@@ -327,7 +327,7 @@ while (i < 100) {
     tree[v] = v;
     ++i;
 }
-StringFormatter report;
+StringFormatter report = {};
 if (!tree.checkConstraints(report)) {
     out `$(report.createString())\n`;
 }

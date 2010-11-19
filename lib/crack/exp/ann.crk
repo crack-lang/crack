@@ -17,8 +17,8 @@ class UInt {
 }
 
 class TokNode {
-    TokNode next = null;
-    Token tok = null;
+    TokNode next;
+    Token tok;
     uint argIndex;
     
     oper init(Token tok0) : tok = tok0 {}
@@ -29,7 +29,7 @@ class TokNode {
 ## actual order of the tokens so that they can be easily "put back" into the 
 ## token stream (after putBack() they will be in the correct order once again)
 class TokList {
-    TokNode first = null, last = null;
+    TokNode first, last;
     
     void pushHead(TokNode node) {
         if (first) {
@@ -103,8 +103,8 @@ $(mac.argCount), got $(args.count())\0`;
 }
 
 void define(CrackContext ctx) {
-    Macro mac;
-    TreeMap args;
+    Macro mac = {};
+    TreeMap args = {};
     uint index;
     tok := ctx.getToken();
     
@@ -145,7 +145,7 @@ void define(CrackContext ctx) {
     uint bracketCount = 1;
     while (true) {
         tok = ctx.getToken();
-        Object argIndex = null;
+        Object argIndex;
 
         if (tok.isEnd()) {
             ctx.error(

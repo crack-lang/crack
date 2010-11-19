@@ -12,11 +12,11 @@ SCREEN_VERSION := ".2";
 
 class Test {
 
-    FileInfo _fInfo = null;
-    String _desc = null;
-    TreeMap _testData;
+    FileInfo _fInfo;
+    String _desc;
+    TreeMap _testData = {};
     
-    String _isSkipped = null;
+    String _isSkipped;
 
     oper init(): _desc("Unknown") { }
 
@@ -31,14 +31,14 @@ class Test {
         
         // parse out sections
         String lineBuf, curSection;
-        StringWriter dataBuf;
+        StringWriter dataBuf = {};
         headerPat := Regex('^--(\\w+)--$');
         while (lineBuf = f.nextLine()) {
             //cerr `debug: $lineBuf`;
             // look for section change
             m := headerPat.search(lineBuf);
             if (m) {
-                if (!curSection.isEmpty())
+                if (curSection)
                     _testData[curSection] = dataBuf.createString();
                 curSection = m.group(1);
                 //cerr `debug: switching to group $curSection\n`;
@@ -113,7 +113,7 @@ class Test {
 class TestSuite {
 
     String _rootDir, _outDir;
-    List _testList;
+    List _testList = {};
     
     void usage() {
         cout `screen <test dir> <output dir>\n`;
@@ -132,7 +132,7 @@ class TestSuite {
         Iterator i;
         
         // gather test files
-        FileInfo curFile = null;
+        FileInfo curFile;
         i = dir.fileInfoIter();
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
@@ -144,14 +144,12 @@ class TestSuite {
         }
 
         // recurse to directories
-        Directory nextDir = null;
+        Directory nextDir;
         i = dir.dirIter();
         while (i.nx()) {
             nextDir = Directory.cast(i.elem());
             scanForTests(nextDir);
         }
-
-
     }
 
     void runTests(Directory dir) {
@@ -163,7 +161,7 @@ class TestSuite {
         
         cout `\nrunning tests with output in $dir...\n`;
 
-        Test curTest = null;
+        Test curTest;
 
         i := _testList.iter();
         while (i.nx()) {

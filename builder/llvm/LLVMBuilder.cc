@@ -1190,6 +1190,9 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                             BTypeDefPtr::arcast(type->type)
                             );
 
+    // make the class default to initializing to null
+    type->defaultInitializer = new NullConst(type.get());
+
     return type.get();
 }
         

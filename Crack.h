@@ -89,6 +89,10 @@ class Crack {
         // if true, add the global installed libary path to the library search 
         // path prior to running anything.
         bool useGlobalLibs;
+        
+        // if true, emit warnings when the code has elements with semantic
+        // differences from the last version of the language.
+        bool emitMigrationWarnings;
 
         typedef void (*InitFunc)(crack::ext::Module *mod);
 

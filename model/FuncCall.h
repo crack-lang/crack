@@ -38,6 +38,7 @@ class FuncCall : public Expr {
         virtual void writeTo(std::ostream &out) const;
 };
 
+std::ostream &operator <<(std::ostream &out, const FuncCall::ExprVec &args);
 
 } // namespace model
 

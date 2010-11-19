@@ -65,7 +65,7 @@ if (sum != 45)
 
 if (1) {
     sum = 0;
-    RangeIter i = null;
+    RangeIter i;
     for (i on Range(0, 10))
         sum += i.elem();
     if (sum != 45)

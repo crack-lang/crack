@@ -29,7 +29,7 @@ death := StringFormatter();
 
 ## regex base class that we can store in a Match object.
 class _RegexBase {
-    _PCRE _rx = null;
+    _PCRE _rx;
     
     oper init(_PCRE rx0) : _rx = rx0 {}
 };
@@ -37,8 +37,8 @@ class _RegexBase {
 ## A regular expression match.
 class Match {
     String subject;
-    _RegexBase regex = null;
-    array[int] __captures = null;
+    _RegexBase regex;
+    array[int] __captures;
     uint __captureCount;
     
     oper init(_RegexBase regex0, String subject0, array[int] captures, 
@@ -150,7 +150,7 @@ class Regex : _RegexBase {
     ## object if it is found or null if not.
     Match search(String subject) {
         captures := array[int](__captureCount * 3);
-        Match result = null;
+        Match result;
         rc := pcre_exec(_rx, null, subject.buffer, subject.size, 0, 0, 
                         captures,
                         __captureCount * 3

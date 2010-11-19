@@ -18,7 +18,7 @@ class Pollable {
 }
 
 class PollEvent : Object, PollEvt {
-    Pollable pollable = null;
+    Pollable pollable;
 }
 
 ## base class for all kinds of socket addresses.
@@ -56,7 +56,7 @@ class Socket : Pollable, Reader, Writer {
     int fd;
     
     # the address the socket is bound to.
-    Address __bound = null;
+    Address __bound;
 
     oper init(int domain, int type, int protocol) : 
         fd = socket(domain, type, protocol) {
@@ -110,8 +110,8 @@ class Socket : Pollable, Reader, Writer {
     }
 
     class Accepted {
-        Socket sock = null;
-        Address addr = null;
+        Socket sock;
+        Address addr;
     
         oper init(Socket sock0, Address addr0) :
             sock = sock0,
@@ -163,7 +163,7 @@ class Socket : Pollable, Reader, Writer {
 ## occurred.
 class Poller {
     Array __pollables;
-    PollSet __fds = null;
+    PollSet __fds;
     uint __nextIndex;
     uint __capacity;
     int __iter;
@@ -217,7 +217,7 @@ class Poller {
         if (__iter == -1)
             return null;
 
-        PollEvent result;
+        PollEvent result = {};
         __iter = __fds.next(__nextIndex, uint(__iter), result);
 
         if (__iter == -1)

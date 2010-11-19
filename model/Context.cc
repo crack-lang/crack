@@ -42,7 +42,10 @@ void Context::warnOnHide(const string &name) {
 }
 
 Context::GlobalData::GlobalData() : 
-    objectType(0), stringType(0), staticStringType(0) {
+    objectType(0), 
+    stringType(0), 
+    staticStringType(0), 
+    migrationWarnings(false) {
 }
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
@@ -237,6 +240,16 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
 void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
                          Expr *initializer
                          ) {
+
+    if (globalData->migrationWarnings) {
+        if (initializer && NullConstPtr::cast(initializer)) {
+            cerr << loc.getName() << ":" << loc.getLineNumber() << ": " <<
+                "unnecessary initialization to null" << endl;
+        } else if (!initializer && type->pointer) {
+            cerr << loc.getName() << ":" << loc.getLineNumber() << ": " <<
+                "default initializer is now null!" << endl;
+        }
+    }
 
     // make sure we aren't using a forward declared type (we disallow this 
     // because we don't know if oper release() is defined for the type)
@@ -465,6 +478,8 @@ void Context::expandIteration(const std::string &name, bool defineVar,
         if (defineVar) {
             warnOnHide(name);
             
+            // if the element type doesn't have a default initializer, we need 
+            // to create a null identifier for it so we don't seg-fault.
             ExprPtr initializer;
             if (!elemFunc->returnType->defaultInitializer)
                 initializer = new NullConst(elemFunc->returnType.get());

@@ -6,9 +6,9 @@ import crack.runtime exit, free;
 
 class StringArray {
     
-    array[String] __rep = null;
+    array[String] __rep;
     uint __count;
-    array[byteptr] __primArray = null;
+    array[byteptr] __primArray;
     
     oper init(uint count) : 
         __rep = array[String](count),

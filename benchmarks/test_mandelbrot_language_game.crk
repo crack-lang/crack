@@ -18,8 +18,8 @@ int atoi(byteptr arg);
 class MandelBrot{
     uint N = 200;
 
-    array[array[byte]] data = null;
-    array[byte] nbyte_each_line = null;
+    array[array[byte]] data;
+    array[byte] nbyte_each_line;
 
     oper init(uint in_N) : N = in_N {
     }

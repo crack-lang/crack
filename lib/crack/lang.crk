@@ -390,7 +390,7 @@ class String : Buffer {
 ## lighter weight than full String objects because SubString doesn't manage 
 ## its own buffer.  It references the buffer of its underlying String.
 class SubString : String {
-    String __rep;
+    String __rep = null;
 
     oper init(String target, uint pos, uint len) : 
         String(target.buffer + pos, len, true),

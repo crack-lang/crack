@@ -48,6 +48,8 @@ int main(int argc, char **argv) {
             Crack::getInstance().noBootstrap = true;
         } else if (!strcmp(*arg, "-g")) {
             Crack::getInstance().useGlobalLibs = false;
+        } else if (!strcmp(*arg, "-m")) {
+            Crack::getInstance().emitMigrationWarnings = true;
         } else if (!strcmp(*arg, "-l")) {
             ++arg;
             Crack::getInstance().addToSourceLibPath(*arg);

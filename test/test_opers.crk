@@ -35,7 +35,7 @@ class Foo {
 }
 
 if (1) {
-    Foo f;
+    Foo f = {};
     f.oper bind(); check(1, 'FAILED bind');
     f.oper release(); check(2, 'FAILED release');
     f.oper [](100); check(3, 'FAILED []');

@@ -97,14 +97,15 @@ test_output 'the "define" (":=") operator' \
     'x := 1234; printint(x)' \
     '1234'
 test_output 'basic methods' \
-    'class Foo { void p(byteptr data) { puts(data); } }; Foo f; f.p("abcd");' \
+    'class Foo { void p(byteptr data) { puts(data); } }; 
+     Foo f = {}; f.p("abcd");' \
     'abcd'
 
 test_output 'instance variables' \
     'class Foo {
         int32 val; void set() {val = 100;} int32 get() {return val;}
     };
-    Foo x; x.set(); printint(x.get());
+    Foo x = {}; x.set(); printint(x.get());
     x.val = 200; printint(x.val);' \
     '100200'
 
@@ -112,7 +113,7 @@ test_output 'implicit this' \
     'class Foo { int32 a; void g() { printint(a); }
                  void f() { a = 100; g(); } 
                  };
-     Foo foo; foo.f();' \
+     Foo foo = {}; foo.f();' \
      '100'
 
 test_output 'explicit this' \
@@ -121,7 +122,7 @@ test_output 'explicit this' \
         void g() { printint(this.a); }
         void f() { this.a = 100; this.g(); }
      };
-     Foo foo; foo.f();' \
+     Foo foo = {}; foo.f();' \
      '100'
 
 test_output 'bad func names' \
@@ -130,17 +131,18 @@ test_output 'bad func names' \
 
 test_output 'using a classname with its definition' \
     'class C { void out() { puts("abcd"); } 
-               C self() { return this; } }; C c; c.self().out();' \
+               C self() { return this; } }; C c = {}; c.self().out();' \
     'abcd'
 
 test_output 'external references of base inst vars' \
-    'class A { int32 v; }; class B : A {}; B b; b.v = 100; printint(b.v);' \
+    'class A { int32 v; }; class B : A {}; 
+     B b = {}; b.v = 100; printint(b.v);' \
     '100'
 
 test_output 'internal references of base class inst vars' \
     'class A { int32 val; };
-    class B : A { oper init() { val = 100; } int32 f() { return val; } };
-    B b; printint(b.f());' \
+     class B : A { oper init() { val = 100; } int32 f() { return val; } };
+     B b = {}; printint(b.f());' \
     100
 
 c='class A { int32 s; void i(int32 s0) {s=s0}
@@ -148,22 +150,22 @@ c='class A { int32 s; void i(int32 s0) {s=s0}
              oper release() {printint(s); puts("r");} };'
 
 test_output 'simple scope release' \
-    "$c void func() { A a; a.i(2); printint(1)} func()" \
+    "$c void func() { A a = {}; a.i(2); printint(1)} func()" \
     '0b
 12r'
 
 test_output 'release on return void' \
-    "$c void func() { A a; a.i(2); printint(1); return } func()" \
+    "$c void func() { A a = {}; a.i(2); printint(1); return } func()" \
     '0b
 12r'
 
 test_output 'release on return expr' \
-    "$c int32 func() { A a; a.i(2); printint(1); return 0} func()" \
+    "$c int32 func() { A a = {}; a.i(2); printint(1); return 0} func()" \
     '0b
 12r'
 
-f="void func(int32 val) { A a; a.i(5); printint(1); 
-                          if (val) { A b; b.i(4); printint(2); return; }
+f="void func(int32 val) { A a = {}; a.i(5); printint(1); 
+                          if (val) { A b = {}; b.i(4); printint(2); return; }
                           printint(3); }"
 test_output 'premature return in nested context' \
     "$c $f func(1)" \
@@ -179,11 +181,11 @@ test_output 'premature return bypassing nested context' \
 
 test_output 'explicit default constructor' \
     'class A { int32 val; oper init() { val = 100; } };
-     A a; printint(a.val);' \
+     A a = {}; printint(a.val);' \
     100
 
 test_output 'implicit default constructor' \
-    'class A { int32 val; }; A a; printint(a.val);' \
+    'class A { int32 val; }; A a = {}; printint(a.val);' \
     0
 
 test_output 'integer comparison operators' \
@@ -213,7 +215,7 @@ test_output 'Override of variable in global scope' \
 test_output 'method overloads' \
     'class A { void f(int32 v) { printint(v); }
                void f(byteptr v) { puts(v); } };
-     A a; a.f(100); a.f("test");' \
+     A a = {}; a.f(100); a.f("test");' \
     100test
 
 # see to_test.crk: this only works when we define f(bool) before f(int32)
@@ -235,7 +237,7 @@ test_output 'conversion of null during params and returns' \
     ok
 
 test_output 'conversion of null during assignment' \
-    'int32 i; byteptr b; class A {}; A a; i = null; b = null; a = null;
+    'int32 i; byteptr b; class A {}; A a = {}; i = null; b = null; a = null;
      puts("ok");' \
     ok
 
@@ -244,8 +246,8 @@ test_output 'tests against null' \
     if (0 == null) printint(1);
     byteptr b = null;
     if (b is null) printint(2);
-    A a = null;
-    A c;
+    A a;
+    A c = {};
     if (a is null) printint(3);
     if (c is null) puts("fail"); else printint(4);' \
     1234
@@ -341,7 +343,7 @@ test_output 'intermediate ancestor adds function to inherited vtable' \
 
 test_output 'chaining placeholders' \
     'class Foo { int a; int b; void foo() { a = b; } }; 
-     Foo f; f.b = 100; f.foo(); printint(f.a);' \
+     Foo f = {}; f.b = 100; f.foo(); printint(f.a);' \
     100
 
 test_output 'vtable init of top-level base classes' \
@@ -371,7 +373,7 @@ D'
 test_output 'instance narrowing works more than one level' \
     'class A { byteptr t; oper init() { t = "ok"; } oper bind() { puts(t); } };
      class B : A {};
-     class C : B {}; C c;'  \
+     class C : B {}; C c = {};'  \
      ok
 
 # voidptr conversion was returning a ResultExpr of the original type, which 
@@ -415,14 +417,14 @@ test_output 'no inheritance of oper new' \
 test_output 'constructor initializers' 'import test.test_init;' ok
 
 test_output 'narrowing field assignment' \
-    'class A {}; class B : A {}; class C { A a = B(); }; C c; c.a = B();
+    'class A {}; class B : A {}; class C { A a = B(); }; C c = {}; c.a = B();
      puts("ok");' \
     ok
 
 test_output 'overloading based on derived types' \
     'class A { void f(A a) { puts("A"); } };
      class B : A { void f(B b) { puts("B"); } };
-     B b; b.f(b);' \
+     B b = {}; b.f(b);' \
     B
 
 test_output 'overrides of globals' \
@@ -431,7 +433,7 @@ test_output 'overrides of globals' \
         void foo(int v) { puts("class foo"); }
         void bar() { foo(100); }
      };
-     A a;
+     A a = {};
      a.bar();' \
      'class foo'
 
@@ -515,7 +517,7 @@ test_output 'semicolons unnecessary after classes, null statements' \
 test_output 'explicit calls of base class functions' \
     'class A : VTableBase { void f() { puts("ok"); } }
      class B : A { void f() { (A.f()); } }
-     B b; b.f()' \
+     B b = {}; b.f()' \
      ok
 
 test_output 'error on explicit call to non-base class' \
@@ -573,14 +575,14 @@ test_output 'logical or' 'import test.test_logicalor;' ok
 test_output 'assigning a class' 'class A {} Class c = A; puts("ok");' ok
 
 test_output 'initialization from a non-productive expression' \
-    'class X { oper bind() {} } X x = null; y := x; puts("ok");' \
+    'class X { oper bind() {} } X x; y := x; puts("ok");' \
     ok
 
 test_output 'storing objects in an array' \
     'class Foo { oper bind() { puts("binding"); } 
                  oper release() { puts("releasing"); } };
      f := array[Foo](10);
-     Foo foo;
+     Foo foo = {};
      f[0] = foo;' \
      'binding
 releasing'
@@ -751,7 +753,7 @@ test_output "assignment to type" "class A {} A = 100;" \
     "${parseError}1: You cannot assign to a constant, class or function."
 
 test_output "augmented assignment to instance variables" \
-    "class Foo { int i; } Foo f; f.i += 1;
+    "class Foo { int i; } Foo f = {}; f.i += 1;
      if (f.i == 1) puts('ok'); else puts('FAIL: did not increment');" \
      ok
 
@@ -763,10 +765,6 @@ opts="-g -l $root -l $root/lib"
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \
     ok
-
-test_output 'error messsage on default init with no default constructor' \
-    'class Obj { oper init(int32 v) {} }; Obj o;' \
-    "${parseError}1: no default constructor"
 
 test_output 'bool construction' \
     'bool b; if (b) print("fail"); else print("pass")' \
@@ -795,7 +793,7 @@ test_output 'recursive methods' \
      55
 
 test_output 'multiple types with the same underlying structure' \
-    'class A {}; class B {}; B b; print("ok");' \
+    'class A {}; class B {}; B b = {}; print("ok");' \
     ok
 
 test_output 'virtual methods' \
@@ -859,7 +857,7 @@ test_output 'IO classes' \
      uint64 u64 = 123456789;
      u64 = u64 * u64;
      f.format(u64);
-     Object o;
+     Object o = {};
      f.format(o);
      ' \
      'string-100100-1524157875019052115241578750190521<Object>'
@@ -931,14 +929,14 @@ test_output 'oper init errors outside of class scope' \
     "${parseError}1: oper init can only be defined in a class scope."
 
 test_output 'typed opers' \
-    'class A { void oper init() { print("ok"); } }; A a;' \
+    'class A { void oper init() { print("ok"); } }; A a = {};' \
     ok
 
 test_output 'array operator overloading' \
     'import crack.io cout;
      class A { int oper [](int i) { return i; }
                int oper []=(int i, int v) { return i * v; } };
-     A a;
+     A a = {};
      cout `$(a[100]) $(a[100] = 2)`;' \
      '100 200'
 
@@ -947,14 +945,15 @@ test_output 'cleanup of temporarys in conditionals' \
     ok
 
 test_output 'binary operator overloading' \
-    'class A {}; A a; int oper +(A x, A y) { return 100; } printint(a + a);' \
+    'class A {}; A a = {}; int oper +(A x, A y) { return 100; } 
+     printint(a + a);' \
     100
 
 test_output 'order of destruction' \
     'class A { oper del() { printint(1); } };
      class B { oper del() { printint(2); } };
-     class C : A { B b; oper del() { printint(3); } };
-     C c;' \
+     class C : A { B b = {}; oper del() { printint(3); } };
+     C c = {};' \
      321
 
 test_output 'StringFormatter' \
@@ -1007,7 +1006,7 @@ test_output 'reference counting of assigned variables' \
     'import crack.io cout;
      class A {
          String val;
-         A next = null;
+         A next;
          oper init(String val0, A next0) : val = val0, next = next0 {}
          oper del() { print(val); }
      }

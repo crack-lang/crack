@@ -22,10 +22,10 @@ class Directory : Object, Openable {
 
     String name;
 
-    Dir _dir = null;
+    Dir _dir;
 
-    List _dirList;
-    List _fileList;
+    List _dirList = {};
+    List _fileList = {};
 
     void _open();
     
@@ -58,7 +58,7 @@ class Directory : Object, Openable {
         DirEntry d = getDirEntry(_dir);
         // note, this should be done lazily so we don't have to load
         // an entire directory structure on open
-        StaticString n = null;
+        StaticString n;
         while (readdir(_dir)) {
             if (d.type == __CRACK_DTYPE_DIR) {
                 n = StaticString(d.name);

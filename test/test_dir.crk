@@ -7,7 +7,7 @@ import crack.exp.file FileInfo;
 
 if (true) {
     Directory d = {'lib'};
-    StringFormatter result;
+    StringFormatter result = {};
     
     i := d.dirIter();
     while (i.nx())
@@ -21,7 +21,7 @@ if (true) {
 if (true) {
     Directory d = {'lib/crack'};
     
-    FileInfo target = null;
+    FileInfo target;
     i := d.fileInfoIter();
     while (i.nx()) {
         info := FileInfo.cast(i.elem());

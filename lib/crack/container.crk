@@ -61,15 +61,15 @@ class Container {
 # classes to support linked lists.
 
 class ListNode {
-    Object elem = null;
-    ListNode next = null;
+    Object elem;
+    ListNode next;
     
     oper init(Object elem0) : elem = elem0 {}
 }
 
 ## A linked list iterator.
 class ListIter : Iterator {
-    ListNode _node = null;
+    ListNode _node;
     bool __first;
     oper init(ListNode node) : _node = node, __first = true {}
     
@@ -104,8 +104,8 @@ class ListIter : Iterator {
 
 ## A singly-linked list.
 class List : Container {
-    ListNode head = null;
-    ListNode tail = null;
+    ListNode head;
+    ListNode tail;
     uint _count;
     
     Iterator iter() {
@@ -160,7 +160,7 @@ class List : Container {
 
         # find the node that's going to be before the new node
         i := index - 1;
-        ListNode node = head, lastNode = null;
+        ListNode node = head, lastNode;
         while (i && node) {
             i = i - 1;
             node = node.next;
@@ -223,7 +223,7 @@ class List : Container {
 }
 
 class DListNode : ListNode {
-    DListNode _prev = null;
+    DListNode _prev;
 
     oper init(Object elem0, ListNode prev) :
         ListNode(elem0), 
@@ -383,7 +383,7 @@ class ArrayIter : Iterator {
 ## bracket operators and adding items at the end.
 class Array : _ArrayIface {
     
-    array[Object] __rep = null;
+    array[Object] __rep;
     uint __cap, __size;
     
     oper init(uint initCapacity) :
@@ -513,8 +513,8 @@ class RBTreeNode {
     
     # if true, this is a red node
     bool red;
-    RBTreeNode left = null, right = null, parent = null;
-    Object val = null;
+    RBTreeNode left, right, parent;
+    Object val;
     
     oper init(Object val0, bool red0) : red = red0, val = val0 {}
     
@@ -643,7 +643,7 @@ class RBTreeNode {
             return;
         } else {
             # parent is red.
-            RBTreeNode uncle = __uncle(), gramps = null;
+            RBTreeNode uncle = __uncle(), gramps;
  
             if (uncle && uncle.red) {
                 # both the parent and the uncle are red.  Paint them black, 
@@ -655,7 +655,7 @@ class RBTreeNode {
                 gramps.__rebalance();
         	   } else {
         	       # parent is red, uncle is black.
-        	       RBTreeNode node = null;
+        	       RBTreeNode node;
         	       gramps = __grandparent();
         	       if (this is parent.right && parent is gramps.left) {
         	           # this is the right child of a left child.  Rotate left 
@@ -870,7 +870,7 @@ class RBTreeNode {
     ## delete the node.  Returns true if the node is the root node.
     bool delete() {
         # find either the minimum in the left or the maximum in the right
-        RBTreeNode node = null;
+        RBTreeNode node;
         if (left) {
             node = left.findMax();
         } else if (right) {
@@ -955,7 +955,7 @@ $val\n`;
 
 class RBTreeIter : Iterator {
     bool __first = true;
-    RBTreeNode __node = null;
+    RBTreeNode __node;
     
     void __findMin() {
         __node = __node.findMin();
@@ -1008,7 +1008,7 @@ class RBTreeIter : Iterator {
 
 class TreeMap : Container {
     
-    RBTreeNode __root = null;
+    RBTreeNode __root;
     uint __count;
 
     void oper []=(Object key, Object val) {
@@ -1056,7 +1056,7 @@ class TreeMap : Container {
     
     ## Delete the object with the specified key.
     void delete(Object key) {
-        RBTreeNode node = null;
+        RBTreeNode node;
         if (__root)
             node = __root.find(key);
         if (!node)

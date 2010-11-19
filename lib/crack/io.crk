@@ -213,7 +213,7 @@ cin := FDReader(0);
 ## Allows you to construct a string by writing to it.
 class StringWriter : Object, Writer {
     
-    ManagedBuffer buf = null;
+    ManagedBuffer buf;
 
     # write position within the buffer
     uint pos;
@@ -248,7 +248,7 @@ class StringWriter : Object, Writer {
 ## Convenience wrapper, equivalent to Formatter(StringWriter())
 class StringFormatter : Formatter {
 
-    StringWriter __writer;
+    StringWriter __writer = {};
 
     oper init(uint initBufSize) : Formatter(null), __writer(initBufSize) {
         rep = __writer;

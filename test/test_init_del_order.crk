@@ -58,7 +58,7 @@ if (out.createString().cmp('init z;init y;init x;delete x;delete y;delete z;'))
     cout `FAILED explicit initializers\n`;
 
 class E {
-    A x;
+    A x = {};
     oper init() {}
 }
 out = StringFormatter();

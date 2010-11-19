@@ -29,7 +29,7 @@ class Int {
 Array newRandomArray(uint n) {
     a := Array(n);
     uint i = 0;
-    Int rint = null;
+    Int rint;
     while (i < n) {
         rint = Int(rand(0,1000));
         a.append(rint);

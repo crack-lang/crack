@@ -45,7 +45,7 @@ class ErrorHandler {
     }
     
     class ErrorFormatter : Formatter {
-        ErrorHandler __handler = null;
+        ErrorHandler __handler;
 
         oper init(ErrorHandler handler) :
             Formatter(handler.writer),
@@ -69,7 +69,7 @@ err := ErrorHandler(cerr);
 ## This registers itself with the error handler when it is created and resets 
 ## the error handler to its original state when it is destroyed.
 class ErrorCatcher {
-    StringWriter __writer;
+    StringWriter __writer = {};
     Writer __lastWriter;
 
     oper init() : __lastWriter = err.writer {
