@@ -76,6 +76,9 @@ noinst_HEADERS = \
     Crack.h
 
 pkginclude_HEADERS = \
+    compiler/CrackContext.h \
+    compiler/Location.h \
+    compiler/Token.h \
     ext/Func.h \
     ext/Module.h \
     ext/Object.h \

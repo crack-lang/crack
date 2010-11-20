@@ -11,12 +11,18 @@ namespace parser {
 
 namespace compiler {
 
+class Location;
+
 class Token : public crack::ext::RCObj {
     public:
         parser::Token *rep;
+        Location *loc;
 
         Token(const parser::Token &tok);
+        Token(int type, char *text, Location *loc);
         ~Token();
+        
+        static Token *create(int type, char *text, Location *loc);
 
         /**
          * Returns true if the token's text form is the same as the string 
@@ -28,14 +34,18 @@ class Token : public crack::ext::RCObj {
          * Returns the text of the token.
          */
         const char *getText();
+        
+        Location *getLocation();
 
         bool isAnn();
         bool isBoolAnd();
         bool isBoolOr();
         bool isIf();
         bool isImport();
+        bool isIn();
         bool isElse();
         bool isOper();
+        bool isOn();
         bool isWhile();
         bool isReturn();
         bool isBreak();

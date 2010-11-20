@@ -10,6 +10,7 @@
 #include "ext/Type.h"
 #include "CrackContext.h"
 #include "Token.h"
+#include "Location.h"
 
 using namespace std;
 using namespace crack::ext;
@@ -69,20 +70,44 @@ void finalAnn(CrackContext *ctx) {
 }
 
 void init(Module *mod) {
+    Type *locationType = mod->addType("Location");
+    locationType->addMethod(mod->getByteptrType(), "getName",
+                            (void *)&Location::getName
+                            );
+    locationType->addMethod(mod->getIntType(), "getLineNumber",
+                            (void *)&Location::getLineNumber
+                            );
+    locationType->addMethod(mod->getVoidType(), "oper bind",
+                            (void *)&Location::bind
+                            );
+    locationType->addMethod(mod->getVoidType(), "oper release",
+                            (void *)&Location::release
+                            );
+    locationType->finish();
+
     Type *tokenType = mod->addType("Token");
+    Func *f = tokenType->addStaticMethod(tokenType, "oper new",
+                                         (void *)&Token::create
+                                         );
+    f->addArg(mod->getIntType(), "type");
+    f->addArg(mod->getByteptrType(), "text");
+    f->addArg(locationType, "loc");
     tokenType->addMethod(mod->getVoidType(), "oper bind",
                          (void *)&Token::bind
                          );
     tokenType->addMethod(mod->getVoidType(), "oper release",
                          (void *)&Token::release
                          );
-    Func *f = tokenType->addMethod(mod->getBoolType(), "hasText",
-                                   (void *)&Token::hasText
-                                   );
+    f = tokenType->addMethod(mod->getBoolType(), "hasText",
+                             (void *)&Token::hasText
+                             );
     f->addArg(mod->getByteptrType(), "text");
     
     tokenType->addMethod(mod->getByteptrType(), "getText",
                          (void *)&Token::getText
+                         );
+    tokenType->addMethod(locationType, "getLocation",
+                         (void *)&Token::getLocation
                          );
     
     tokenType->addMethod(mod->getBoolType(), "isAnn", (void *)&Token::isAnn);
@@ -93,11 +118,13 @@ void init(Module *mod) {
                          (void *)&Token::isBoolOr
                          );
     tokenType->addMethod(mod->getBoolType(), "isIf", (void *)&Token::isIf);
+    tokenType->addMethod(mod->getBoolType(), "isIn", (void *)&Token::isIn);
     tokenType->addMethod(mod->getBoolType(), "isImport",
                          (void *)&Token::isImport
                          );
     tokenType->addMethod(mod->getBoolType(), "isElse", (void *)&Token::isElse);
     tokenType->addMethod(mod->getBoolType(), "isOper", (void *)&Token::isOper);
+    tokenType->addMethod(mod->getBoolType(), "isOn", (void *)&Token::isOn);
     tokenType->addMethod(mod->getBoolType(), "isWhile", (void *)&Token::isWhile);
     tokenType->addMethod(mod->getBoolType(), "isReturn", (void *)&Token::isReturn);
     tokenType->addMethod(mod->getBoolType(), "isBreak", (void *)&Token::isBreak);
@@ -240,6 +267,129 @@ void init(Module *mod) {
     f->addArg(cc, "ctx");
     
     // constants
+    mod->addConstant(mod->getIntType(), "TOK_", 0); 
+    mod->addConstant(mod->getIntType(), "TOK_ANN", parser::Token::ann);
+    mod->addConstant(mod->getIntType(), "TOK_BITAND", parser::Token::bitAnd);
+    mod->addConstant(mod->getIntType(), "TOK_BITLSH", parser::Token::bitLSh);
+    mod->addConstant(mod->getIntType(), "TOK_BITOR", parser::Token::bitOr);
+    mod->addConstant(mod->getIntType(), "TOK_BITRSH", parser::Token::bitRSh);
+    mod->addConstant(mod->getIntType(), "TOK_BITXOR", parser::Token::bitXor);
+    mod->addConstant(mod->getIntType(), "TOK_BREAKKW", 
+                     parser::Token::breakKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_CLASSKW", 
+                     parser::Token::classKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_CONTINUEKW", 
+                     parser::Token::continueKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_FORKW", parser::Token::forKw);
+    mod->addConstant(mod->getIntType(), "TOK_ELSEKW", parser::Token::elseKw);
+    mod->addConstant(mod->getIntType(), "TOK_IFKW", parser::Token::ifKw);
+    mod->addConstant(mod->getIntType(), "TOK_IMPORTKW", 
+                     parser::Token::importKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_INKW", parser::Token::inKw);
+    mod->addConstant(mod->getIntType(), "TOK_ISKW", parser::Token::isKw);
+    mod->addConstant(mod->getIntType(), "TOK_NULLKW", parser::Token::nullKw);
+    mod->addConstant(mod->getIntType(), "TOK_ONKW", parser::Token::onKw);
+    mod->addConstant(mod->getIntType(), "TOK_OPERKW", parser::Token::operKw);
+    mod->addConstant(mod->getIntType(), "TOK_RETURNKW", 
+                     parser::Token::returnKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_WHILEKW", 
+                     parser::Token::whileKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGN", parser::Token::assign);
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNAND", 
+                     parser::Token::assignAnd
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNASTERISK", 
+                     parser::Token::assignAsterisk
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNLSH", 
+                     parser::Token::assignLSh
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNOR", 
+                     parser::Token::assignOr
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNRSH", 
+                     parser::Token::assignRSh
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNXOR", 
+                     parser::Token::assignXor
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNMINUS", 
+                     parser::Token::assignMinus
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNPERCENT", 
+                     parser::Token::assignPercent
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNPLUS", 
+                     parser::Token::assignPlus
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASSIGNSLASH", 
+                     parser::Token::assignSlash
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ASTERISK", 
+                     parser::Token::asterisk
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_BANG", parser::Token::bang);
+    mod->addConstant(mod->getIntType(), "TOK_COLON", parser::Token::colon);
+    mod->addConstant(mod->getIntType(), "TOK_COMMA", parser::Token::comma);
+    mod->addConstant(mod->getIntType(), "TOK_DECR", parser::Token::decr);
+    mod->addConstant(mod->getIntType(), "TOK_DEFINE", parser::Token::define);
+    mod->addConstant(mod->getIntType(), "TOK_DOT", parser::Token::dot);
+    mod->addConstant(mod->getIntType(), "TOK_END", parser::Token::end);
+    mod->addConstant(mod->getIntType(), "TOK_EQ", parser::Token::eq);
+    mod->addConstant(mod->getIntType(), "TOK_GE", parser::Token::ge);
+    mod->addConstant(mod->getIntType(), "TOK_GT", parser::Token::gt);
+    mod->addConstant(mod->getIntType(), "TOK_IDENT", parser::Token::ident);
+    mod->addConstant(mod->getIntType(), "TOK_INCR", parser::Token::incr);
+    mod->addConstant(mod->getIntType(), "TOK_INTEGER", 
+                     parser::Token::integer
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_LBRACKET", 
+                     parser::Token::lbracket
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_LCURLY", parser::Token::lcurly);
+    mod->addConstant(mod->getIntType(), "TOK_LE", parser::Token::le);
+    mod->addConstant(mod->getIntType(), "TOK_LPAREN", parser::Token::lparen);
+    mod->addConstant(mod->getIntType(), "TOK_LT", parser::Token::lt);
+    mod->addConstant(mod->getIntType(), "TOK_MINUS", parser::Token::minus);
+    mod->addConstant(mod->getIntType(), "TOK_NE", parser::Token::ne);
+    mod->addConstant(mod->getIntType(), "TOK_PERCENT", 
+                     parser::Token::percent
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_PLUS", parser::Token::plus);
+    mod->addConstant(mod->getIntType(), "TOK_QUEST", parser::Token::quest);
+    mod->addConstant(mod->getIntType(), "TOK_RBRACKET", 
+                     parser::Token::rbracket);
+    mod->addConstant(mod->getIntType(), "TOK_RCURLY", parser::Token::rcurly);
+    mod->addConstant(mod->getIntType(), "TOK_RPAREN", parser::Token::rparen);
+    mod->addConstant(mod->getIntType(), "TOK_SEMI", parser::Token::semi);
+    mod->addConstant(mod->getIntType(), "TOK_SLASH", parser::Token::slash);
+    mod->addConstant(mod->getIntType(), "TOK_STRING", parser::Token::string);
+    mod->addConstant(mod->getIntType(), "TOK_TILDE", parser::Token::tilde);
+    mod->addConstant(mod->getIntType(), "TOK_ISTRBEGIN", 
+                     parser::Token::istrBegin
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_ISTREND", parser::Token::istrEnd);
+    mod->addConstant(mod->getIntType(), "TOK_LOGICAND", 
+                     parser::Token::logicAnd
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_LOGICOR", 
+                     parser::Token::logicOr
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_FLOATLIT", 
+                     parser::Token::floatLit
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_OCTALLIT", 
+                     parser::Token::octalLit
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_HEXLIT", parser::Token::hexLit);
+    mod->addConstant(mod->getIntType(), "TOK_BINLIT", parser::Token::binLit);
+
     mod->addConstant(mod->getIntType(), "SCOPE_MODULE", 0);
     mod->addConstant(mod->getIntType(), "SCOPE_FUNCTION", 2);
     mod->addConstant(mod->getIntType(), "SCOPE_CLASS", 3);

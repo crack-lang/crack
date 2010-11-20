@@ -48,4 +48,5 @@ builder/llvm/DebugInfo.cc
 compiler/init.cc
 compiler/CrackContext.cc
 compiler/Token2.cc
+compiler/Location2.cc
 Crack.cc

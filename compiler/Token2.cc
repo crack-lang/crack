@@ -3,13 +3,30 @@
 #include "Token.h"
 
 #include "parser/Token.h"
+#include "Location.h"
 
 using namespace compiler;
 
-Token::Token(const parser::Token &tok) : rep(new parser::Token(tok)) {}
+Token::Token(const parser::Token &tok) : 
+    rep(new parser::Token(tok)),
+    loc(0) {
+}
+
+Token::Token(int type, char *text, Location *loc) : loc(loc) {
+    rep = new parser::Token(static_cast<parser::Token::Type>(type), text, 
+                            *loc->rep
+                            );
+    loc->bind();
+}
+
+Token *Token::create(int type, char *text, Location *loc) {
+    return new Token(type, text, loc);
+}
 
 Token::~Token() {
     delete rep;
+    if (loc)
+        loc->release();
 }
 
 bool Token::hasText(const char *text) {
@@ -20,13 +37,23 @@ const char *Token::getText() {
     return rep->getData().c_str();
 }
 
+Location *Token::getLocation() {
+    if (!loc) {
+        loc = new Location(rep->getLocation());
+        loc->bind();
+    }
+    return loc;
+}
+
 bool Token::isAnn() { return rep->isAnn(); }
 bool Token::isBoolAnd() { return rep->isBoolAnd(); }
 bool Token::isBoolOr() { return rep->isBoolOr(); }
 bool Token::isIf() { return rep->isIf(); }
+bool Token::isIn() { return rep->isIn(); }
 bool Token::isImport() { return rep->isImport(); }
 bool Token::isElse() { return rep->isElse(); }
 bool Token::isOper() { return rep->isOper(); }
+bool Token::isOn() { return rep->isOn(); }
 bool Token::isWhile() { return rep->isWhile(); }
 bool Token::isReturn() { return rep->isReturn(); }
 bool Token::isBreak() { return rep->isBreak(); }

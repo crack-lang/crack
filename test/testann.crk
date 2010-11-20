@@ -2,7 +2,7 @@
 
 import crack.io StringFormatter, cout;
 import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE, 
-    STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL;
+    STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL, TOK_STRING, Token;
 import crack.container TreeMap;
 
 ## increment everything but a constant zero.
@@ -115,4 +115,17 @@ void user_static(CrackContext ctx) {
 
 void user_final(CrackContext ctx) {
     ctx.setNextFuncFlags(FUNCFLAG_FINAL);
+}
+
+void getLocation(CrackContext ctx) {
+    tok := ctx.getToken();
+    loc := tok.getLocation();
+    StringFormatter fmt = {};
+    fmt `NAME := "$(loc.getName())"; LINE := $(loc.getLineNumber()); \0`;
+    ctx.inject(fmt.createString().buffer);
+}
+
+void stringify(CrackContext ctx) {
+    tok := ctx.getToken();
+    ctx.putBack(Token(TOK_STRING, tok.getText(), tok.getLocation()));
 }
