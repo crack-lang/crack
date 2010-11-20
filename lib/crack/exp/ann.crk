@@ -160,9 +160,7 @@ void define(CrackContext ctx) {
         }
 
         # replace arguments with indices
-        else if (tok.isIdent() && 
-                 (argIndex = args.get(String(tok.getText())))
-                 )
+        if (tok.isIdent() && (argIndex = args.get(String(tok.getText()))))
             mac.pushHead(TokNode(UInt.cast(argIndex).val));
         else
             mac.pushHead(TokNode(tok));

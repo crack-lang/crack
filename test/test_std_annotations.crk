@@ -6,6 +6,7 @@ import crack.io cout;
 @define oneHundred() { 100 }
 @define echo(x) { x }
 @define equals(a, b) { (a == b) }
+@define func(name) { int name() { return 300; } }
 
 if (@oneHundred() != 100)
     cout `macro with no args failed\n`;
@@ -15,6 +16,10 @@ if (@echo(200) != 200)
 
 if (!@equals(1, 1)) 
     cout `macro with two args failed\n`;
+
+@func(f);
+if (f() != 300)
+    cout `macro with function definition fails\n`;
 
 cout `ok\n`;
 
