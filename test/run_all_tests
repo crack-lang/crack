@@ -1046,6 +1046,13 @@ test_output "explicit conversion to byteptr" \
      puts(byteptr(a));' \
     ok
 
+test_output "error if return types don't match on an override" \
+    'class A { Object f() { return null; } }
+     class B : A { String f() { return 'test'; } }
+     B().f();' \
+    "${parseError}2: Function return type of crack.lang.String does not \
+match that of the function it overrides (crack.lang.Object)"
+
 test_output 'objects' 'import test.test_object;' ok
 test_output 'mix-ins' 'import test.test_mixins;' ok
 test_output 'string tests' 'import test.test_strings;' ok

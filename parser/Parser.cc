@@ -1383,6 +1383,16 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // forward declaration.
    if (override && override->flags & FuncDef::forward)
       context->ns = override->ns;
+   
+   // make sure that the return type is exactly the same as the override
+   if (override && override->returnType != returnType)
+      error(nameTok,
+            SPUG_FSTR("Function return type of " << 
+                       returnType->getFullName() <<
+                       " does not match that of the function it overrides (" <<
+                       override->returnType->getFullName() << ")"
+                       )
+            );
 
    // figure out what the flags are going to be.
    FuncDef::Flags flags =
