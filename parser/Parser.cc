@@ -938,7 +938,15 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
    
    // for a string constant
    } else if (tok.isString()) {
-      expr = context->getStrConst(tok.getData());
+      
+      // check for subsequent string constants, concatenate them.
+      ostringstream result;
+      while (tok.isString()) {
+         result << tok.getData();
+         tok = getToken();
+      }
+      toker.putBack(tok);
+      expr = context->getStrConst(result.str());
    
    // for an interpolated string
    } else if (tok.isIstrBegin()) {

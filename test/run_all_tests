@@ -759,6 +759,8 @@ test_output "augmented assignment to instance variables" \
 
 test_output 'for statement' 'import test.test_forstmt;' ok
 
+test_output 'string constant folding' 'puts("o" "k")' ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 
