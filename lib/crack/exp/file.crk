@@ -123,8 +123,10 @@ class File : FileInfo,
     }
 
     void close() {
-        if (_isOpened)
+        if (_isOpened) {
             fclose(_fd);
+            _isOpened = false;
+        }
     }
 
     oper del() {
