@@ -281,6 +281,33 @@ class ManagedBuffer : WriteBuffer {
     }
 };
 
+## AppendBuffer lets you add stuff onto the end of it.
+class AppendBuffer : ManagedBuffer {
+    uint pos;
+
+    oper init(uint size0) : ManagedBuffer(size0) {}
+
+    ## Append a single byte to the buffer, growing if necessary.
+    void append(byte c) {
+        if (pos >= size)
+            grow(size * 2);
+        buffer[pos++] = c;
+    }
+    
+    ## Extend the buffer with the other buffer.
+    void extend(Buffer other) {
+        uint newPos = pos + other.size;
+        if (newPos > size)
+            # grow to the larger of newPos and size * 2
+            if (newPos > size * 2)
+                grow(newPos);
+            else
+                grow(size * 2);
+        move(pos, other);
+        pos = newPos;
+    }
+}
+
 ## The string class.  Strings are immutable managed Buffer's - when they are 
 ## deleted, their buffer goes away. 
 ## The buffer is not guaranteed to be null-terminated, use CString if
@@ -383,6 +410,28 @@ class String : Buffer {
         memcpy(newRawBuffer, this.buffer, this.size);
         memcpy(newRawBuffer+this.size, rhs, rhs_size);
         return String(newRawBuffer, newBufferSize, true);
+    }
+
+    ## Returns a legal source representation of the string.
+    String getRepr() {
+        AppendBuffer buf = {size + 2};
+        
+        buf.append(39); # "'"
+        for (uint i = 0; i < size; ++i) {
+            ch := buffer[i];
+            if (ch < 32 || ch > 127 || ch == 39) {
+                buf.append(92); # '\'
+                buf.append(48 + (ch >> 6));
+                buf.append(48 + ((ch & 56) >> 3));
+                buf.append(48 + (ch & 3));
+            } else {
+                buf.append(ch)
+            }
+        }
+        buf.append(39);
+        
+        buf.size = buf.pos;
+        return String(buf, true);
     }
 };
 

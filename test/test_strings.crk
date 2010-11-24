@@ -45,4 +45,8 @@ if (s.lfind("."[0]) != 3)
 if (s.lfind("@"[0]) != -1)
     die('lfind nofind failed');
 
+s = 'test\'\0\223';
+if (s.getRepr() != "'test\\043\\000\\223'")
+    cout `bad value for s.getRepr(): $(s.getRepr())\n`;
+
 cout `ok\n`;
