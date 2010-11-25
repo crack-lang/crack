@@ -3,6 +3,7 @@
 
 import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp, 
     memmove;
+@import crack._poormac define;
 
 bool true = (1 == 1);
 bool false = (1 == 0);
@@ -308,6 +309,72 @@ class AppendBuffer : ManagedBuffer {
     }
 }
 
+# substring forward declarations - we need the full array to support doing 
+# these efficiently
+
+class SubString;
+class String;
+SubString _substr(SubString target, uint pos, uint len);
+SubString substr(SubString target, int pos, uint len);
+SubString substr(SubString target, int pos);
+SubString slice(SubString target, int start, int end);
+SubString slice(SubString target, int start);
+SubString _substr(String target, uint pos, uint len);
+SubString substr(String target, int pos, uint len);
+SubString substr(String target, int pos);
+SubString slice(String target, int start, int end);
+SubString slice(String target, int start);
+
+@define substr2 1 {
+
+        # adjust a negative position
+        if (pos < 0)
+            pos = int(@1 .size) + pos;
+
+        return _substr(@1, uint(pos), len);
+    }
+@@
+
+@define substr1 1 {
+
+        # adjust a negative position
+        if (pos < 0)
+            pos = int(@1 .size) + pos;
+
+        return _substr(@1, uint(pos), @1 .size - uint(pos));
+    }
+@@
+
+@define slice2 1 {
+
+        # adjust negative offsets    
+        if (start < 0)
+            start = int(@1 .size) + start;
+        if (end < 0)
+            end = int(@1 .size) + end;
+    
+        # bounds checking
+        if (end < start)
+            _die('Start of slice is after end.');
+    
+        return _substr(@1, uint(start), uint(end - start));
+    }
+@@
+
+@define slice1 1 {
+
+        # adjust negative offsets
+        if (start < 0)
+            start = int(@1 .size) + start;
+    
+        # bounds checking
+        if (uint(start) > @1 .size)
+            _die('Start of slice is after end.');
+    
+        return _substr(@1, uint(start), @1 .size - uint(start));
+    }
+@@
+
 ## The string class.  Strings are immutable managed Buffer's - when they are 
 ## deleted, their buffer goes away. 
 ## The buffer is not guaranteed to be null-terminated, use CString if
@@ -405,12 +472,31 @@ class String : Buffer {
     # note, not binary safe
     String oper +(byteptr rhs) {
         uint rhs_size = strlen(rhs);
-        uint newBufferSize = this.size + rhs_size;
+        uint newBufferSize = size + rhs_size;
         byteptr newRawBuffer = malloc(newBufferSize);
-        memcpy(newRawBuffer, this.buffer, this.size);
-        memcpy(newRawBuffer+this.size, rhs, rhs_size);
+        memcpy(newRawBuffer, buffer, size);
+        memcpy(newRawBuffer + size, rhs, rhs_size);
         return String(newRawBuffer, newBufferSize, true);
     }
+    
+    ## Create a substring.  This function is smart enough to know if the 
+    ## receiver is already a SubString, in which case it will translate to 
+    ## the underlying String to avoid creating a stack of SubStrings.
+    ## If 'pos' is negative, it is an offset from the end of the string.
+    SubString substr(int pos, uint len) @substr2 this
+    
+    ## Create a substring from 'pos' to the end of the string.
+    SubString substr(int pos) @substr1 this
+
+    ## Slice is similar to substr, except that it accepts a start and end 
+    ## position (instead of a start position and length).  Both the start 
+    ## and end positions can be negative, indicating that they are relative 
+    ## to the end of the string.
+    SubString slice(int start, int end) @slice2 this
+
+    # Another variation on slice(), this gives a slice from 'start' to the 
+    # end of the string.
+    SubString slice(int start) @slice1 this
 
     ## Returns a legal source representation of the string.
     String getRepr() {
@@ -439,14 +525,104 @@ class String : Buffer {
 ## lighter weight than full String objects because SubString doesn't manage 
 ## its own buffer.  It references the buffer of its underlying String.
 class SubString : String {
-    String __rep = null;
+    String _rep = null;
 
+    ## Create a stubstring 'target' starting from 'pos' and of length 'len'.
     oper init(String target, uint pos, uint len) : 
         String(target.buffer + pos, len, true),
-        __rep = target {
+        _rep = target {
     }
 
+    ## Create a substring from 'pos' to the end of the string.
+    oper init(String target, uint pos) : 
+        String(target.buffer + pos, target.size - pos, true),
+        _rep = target {
+    }
+    
+    oper init(String target, byteptr buf, uint len) :
+        String(buf, len, true),
+        _rep = target {
+    }
+
+    # duplicate the substring/slice interface since we can do them more 
+    # efficiently here
+
+    SubString substr(int pos, uint len) @substr2 this
+    SubString substr(int pos) @substr1 this
+    SubString slice(int start, int end) @slice2 this
+    SubString slice(int start) @slice1 this
+
     void _freeBuffer() {}
+}
+
+SubString _substr(SubString target, uint pos, uint len) {
+    # do bounds checking
+    if (pos > target.size || pos + len > target.size)
+        _die('Substring out of bounds');
+
+    byteptr buf = target.buffer + uint(pos);
+    return SubString(target._rep, buf, len);
+}
+
+SubString substr(SubString target, int pos, uint len) @substr2 target
+SubString substr(SubString target, int pos) @substr1 target
+SubString slice(SubString target, int start, int end) @slice2 target
+SubString slice(SubString target, int start) @slice1 target
+
+SubString _substr(String target, uint pos, uint len) {
+    # do bounds checking
+    if (pos > target.size || pos + len > target.size)
+        _die('Substring out of bounds');
+
+    byteptr buf = target.buffer + pos;
+    if (target.class.isSubclass(SubString))
+        target = SubString.cast(target)._rep;
+
+    return SubString(target, buf, len);
+}
+
+SubString substr(String target, int pos, uint len) {
+    # adjust a negative position
+    if (pos < 0)
+        pos = int(target.size) - pos;
+
+    return _substr(target, uint(pos), len);    
+}
+
+SubString substr(String target, int pos) {
+    # adjust a negative position
+    if (pos < 0)
+        pos = int(target.size) - pos;
+
+    return _substr(target, uint(pos), target.size - uint(pos));
+}
+
+SubString slice(String target, int start, int end) {
+
+    # adjust negative offsets    
+    if (start < 0)
+        start = int(target.size) + start;
+    if (end < 0)
+        end = int(target.size) + end;
+
+    # bounds checking
+    if (end < start)
+        _die('Start of slice is after end.');
+
+    return _substr(target, uint(start), uint(end - start));
+}
+
+SubString slice(String target, int start) {
+
+    # adjust negative offsets    
+    if (start < 0)
+        start = int(target.size) + start;
+
+    # bounds checking
+    if (uint(start) > target.size)
+        _die('Start of slice is after end.');
+
+    return _substr(target, uint(start), target.size - uint(start));
 }
 
 ## A string that is guaranteed to be null terminated. The trailing null is

@@ -1,6 +1,6 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang die, ManagedBuffer, SubString, CString;
+import crack.lang die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout;
 
 if ('test' >= 'test string')
@@ -27,6 +27,39 @@ if (s != 'copied')
 s = SubString('test of referenced substring', 8, 10);
 if (s != 'referenced')
     die('failed to create substring reference.');
+
+s = substr('this is foo', 5, 2);
+if (s != 'is')
+    die('normal substr() failed');
+
+s = substr('this is foo', 5);
+if (s != 'is foo')
+    die('substr() to end failed');
+
+if (slice('this is foo', 5, 7) != 'is')
+    die('normal slice() failed');
+
+if (slice('this is foo', -6, -4) != 'is')
+    die('slice() with negative offsets failed');
+
+if (slice('this is foo', -6) != 'is foo')
+    die('slice() to end failed');
+
+# same tests using the corresponding methods
+
+if ('this is foo'.substr(5, 2)  != 'is' ||
+    'this is foo'.substr(5) != 'is foo' ||
+    'this is foo'.slice(5, 7) != 'is' ||
+    'this is foo'.slice(-6) != 'is foo')
+    die('one of the substr/slice methods failed');
+
+# exercise the overrides in SubString
+ss := 'this is fox'.slice(-3);
+if (ss.substr(1, 1) != 'o' ||
+    ss.substr(1) != 'ox' ||
+    ss.slice(1, -1) != 'o' ||
+    ss.slice(-2) != 'ox')
+    die('one of the SubString substr/slice overrides failed');
 
 cs := CString("test 123");
 if (cs.size != 8)
