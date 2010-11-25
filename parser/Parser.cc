@@ -1644,11 +1644,10 @@ bool Parser::parseDef(TypeDef *type) {
 
 ContextPtr Parser::parseIfClause() {
    Token tok = getToken();
+   ContextPtr terminal;
+   ContextStackFrame cstack(*this, context->createSubContext().get());
    if (tok.isLCurly()) {
-      ContextStackFrame cstack(*this, context->createSubContext().get());
-      ContextPtr terminal = parseBlock(true, noCallbacks);
-      cstack.restore();
-      return terminal;
+      return parseBlock(true, noCallbacks);
    } else {
       toker.putBack(tok);
       return parseStatement(false);

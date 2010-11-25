@@ -164,6 +164,11 @@ test_output 'release on return expr' \
     '0b
 12r'
 
+test_output 'cleanup works in naked if clauses' \
+    'class A { A g() { return null; }  oper bind() {} oper release() {} }
+     A f() { if (1) return A().g(); return null; } puts("ok");' \
+    ok
+
 f="void func(int32 val) { A a = {}; a.i(5); printint(1); 
                           if (val) { A b = {}; b.i(4); printint(2); return; }
                           printint(3); }"
