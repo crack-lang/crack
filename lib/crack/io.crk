@@ -195,7 +195,10 @@ class Formatter : Object, Writer {
     ## For general objects, format() just calls the object's writeTo()
     ## method.
     void format(Object obj) {
-        obj.writeTo(this);
+        if (obj is null)
+            write('null');
+        else
+            obj.writeTo(this);
     }
     
     ## So we can deal with plain null-terminated strings.
@@ -244,6 +247,28 @@ class StringWriter : Object, Writer {
 
     Object getWriterObject() { return this; }
 };
+
+## Allows you to read from a string.
+class StringReader : Object, Reader {
+    
+    uint __pos;
+    String __src;
+    
+    oper init(String src) : __src = src {}
+    
+    uint read(WriteBuffer buf) {
+        if (__pos >= __src.size)
+            return 0;
+        
+        count := 
+            (__pos + buf.size > __src.size) ? __src.size - __pos : buf.size;
+        buf.move(0, __src.buffer + __pos, count);
+        __pos += count;
+        return count;
+    }
+    
+    Object getReaderObject() { return this; }
+}
 
 ## Convenience wrapper, equivalent to Formatter(StringWriter())
 class StringFormatter : Formatter {
