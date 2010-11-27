@@ -1,0 +1,107 @@
+# Poor man's macros - for use in lang.crk
+# Note that everything here is run in bootstrapping mode - Object, String and 
+# the like do not exist.
+#
+# These kinds of macros are used as follows:
+#   @poormac m 3 if ($1 == $2) $3('something is wrong'); $$
+#   @m 10 20 puts
+# Note: the dollar sign is supposed to be the escape character, but the dollar 
+# sign token hasn't been added yet - fix this when that change gets checked in.
+
+import crack.runtime free;
+import crack.compiler Token, CrackContext;
+
+# if you get an error here about "Incrrect type for initializer." then you are 
+# trying to use this after bootstrapping.  Silly programmer.  Use 
+# crack.exp.ann instead.
+byteptr test = 'test string';
+
+class TokNode {
+    Token tok;
+    uint arg;
+    
+    TokNode next;
+    
+    oper init(Token tok0, TokNode next0) : tok = tok0, next = next0 {}
+    oper init(uint arg0, TokNode next0) : arg = arg0, next = next0 {}
+}
+
+class Macro {
+    TokNode first;
+    uint numArgs;
+    
+    void put(uint arg) { first = TokNode(arg, first); }
+    void put(Token tok) { first = TokNode(tok, first); }
+}
+
+void expand(CrackContext ctx) {
+    m := Macro.unsafeCast(ctx.getUserData());
+    args := array[Token](m.numArgs);
+    
+    # read the args
+    for (uint i = 0; i < m.numArgs; ++i) {
+        args[i] = ctx.getToken();
+        args[i].oper bind();
+    }
+
+    # push the tokens back into the stream with argument replacement
+    for (TokNode elem = m.first; !(elem is null); elem = elem.next)
+        if (!(elem.tok is null))
+            ctx.putBack(elem.tok);
+        else
+            ctx.putBack(args[elem.arg]);
+    
+    # release the args
+    for (uint i = 0; i < m.numArgs; ++i)
+        args[i].oper release();
+}
+
+uint atoi(byteptr val) {
+    uint result = 0;
+    for (uint i; val[i]; ++i)
+        result = result * 10 + val[i] - 48;
+
+    return result;
+}
+
+void define(CrackContext ctx) {
+    Macro m = {};
+    
+    # get the macro name
+    Token tok = ctx.getToken();
+    name := tok.getText();
+    
+    # get the number of arguments
+    tok = ctx.getToken();
+    m.numArgs = atoi(tok.getText());
+    
+    # parse the body of the macro
+    tok = ctx.getToken();
+    bool gotDollar = 0;
+    while (!tok.isEnd()) {
+        if (gotDollar) {
+            if (tok.isInteger()) {
+                arg := atoi(tok.getText()) - 1;
+                if (arg < 0 || arg > m.numArgs)
+                    ctx.error(tok, 'argument index out of bounds');
+                m.put(arg);
+            } else if (tok.isAnn()) {
+                break;
+            } else {
+                ctx.error(tok, 'illegal token following dollar-sign');
+            }
+            
+            gotDollar = 0;
+        } else {
+            if (tok.isAnn())
+                gotDollar = 1;
+            else
+                m.put(tok);
+        }
+        tok = ctx.getToken();
+    }
+    
+    ctx.storeAnnotation(name, expand, m);
+}
+
+    
