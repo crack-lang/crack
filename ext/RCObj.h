@@ -11,6 +11,7 @@ class RCObj {
         unsigned int refCount;
 
     public:
+        RCObj() : refCount(1) {}
         virtual ~RCObj();
 
         /**

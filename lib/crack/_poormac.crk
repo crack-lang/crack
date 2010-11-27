@@ -40,7 +40,8 @@ void expand(CrackContext ctx) {
     
     # read the args
     for (uint i = 0; i < m.numArgs; ++i) {
-        args[i] = ctx.getToken();
+        Token tok = ctx.getToken();
+        args[i] = tok;
         args[i].oper bind();
     }
 
@@ -68,11 +69,10 @@ void define(CrackContext ctx) {
     Macro m = {};
     
     # get the macro name
-    Token tok = ctx.getToken();
-    name := tok.getText();
+    Token nameTok = ctx.getToken();
     
     # get the number of arguments
-    tok = ctx.getToken();
+    Token tok = ctx.getToken();
     m.numArgs = atoi(tok.getText());
     
     # parse the body of the macro
@@ -101,7 +101,7 @@ void define(CrackContext ctx) {
         tok = ctx.getToken();
     }
     
-    ctx.storeAnnotation(name, expand, m);
+    ctx.storeAnnotation(nameTok.getText(), expand, m);
 }
 
     
