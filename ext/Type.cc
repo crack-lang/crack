@@ -65,7 +65,7 @@ Func *Type::addMethod(Type *returnType, const std::string &name,
 }
 
 Func *Type::addConstructor(const char *name, void *funcPtr) {
-    Func *result = new Func(0, impl->module->getVoidType(), name ? name : "", 
+    Func *result = new Func(0, module->getVoidType(), name ? name : "", 
                             funcPtr,
                             Func::constructor | Func::method
                             );
@@ -79,6 +79,27 @@ Func *Type::addStaticMethod(Type *returnType, const std::string &name,
     Func *result = new Func(0, returnType, name, funcPtr, Func::noFlags);
     impl->funcs.push_back(result);
     return result;
+}
+
+Type *Type::getSpecialization(const vector<Type *> &params) {
+    checkFinished();
+    TypeDef::TypeVecObjPtr innerParams = new TypeDef::TypeVecObj;
+    for (int i = 0; i < params.size(); ++i) {
+        params[i]->checkFinished();
+        innerParams->push_back(params[i]->typeDef);
+    }
+
+    TypeDefPtr spec = typeDef->getSpecialization(*module->context, 
+                                                 innerParams.get());
+    
+    // see if it's cached in the module
+    Module::TypeMap::iterator iter = module->types.find(spec->getFullName());
+    if (iter != module->types.end())
+        return iter->second;
+    
+    Type *type = new Type(module, spec.get());
+    module->types[spec->getFullName()] = type;
+    return type;
 }
 
 void Type::finish() {

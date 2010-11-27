@@ -24,13 +24,13 @@ class Type {
 
     private:
         model::TypeDef *typeDef;
+        Module *module;
         
         typedef std::vector<Type *> TypeVec;
         typedef std::vector<Func *> FuncVec;
         
         // Impl holds everything that we need to create a new type
         struct Impl {
-            Module *module;
             std::string name;
             model::Context *context;
             TypeVec bases;
@@ -38,10 +38,9 @@ class Type {
             VarMap instVars;
             VarVec instVarVec;
             
-            Impl(Module *module, const std::string &name, 
+            Impl(const std::string &name, 
                  model::Context *context
                  ) :
-                module(module),
                 name(name),
                 context(context) {
             }
@@ -51,12 +50,18 @@ class Type {
 
         Impl *impl;
 
-        Type(model::TypeDef *typeDef) : typeDef(typeDef), impl(0) {}
+        Type(Module *module, model::TypeDef *typeDef) : 
+            module(module),
+            typeDef(typeDef), 
+            impl(0) {
+        }
+
         Type(Module *module, const std::string &name, 
              model::Context *context
              ) : 
             typeDef(0),
-            impl(new Impl(module, name, context)) {
+            module(module),
+            impl(new Impl(name, context)) {
         }
         ~Type();
 
@@ -113,6 +118,11 @@ class Type {
         Func *addStaticMethod(Type *returnType, const std::string &name,
                               void *funcPtr
                               );
+        
+        /**
+         * Returns a specialization of the type for the given parameters.
+         */
+        Type *getSpecialization(const std::vector<Type *> &params);
         
         /**
          * Mark the new type as "finished"

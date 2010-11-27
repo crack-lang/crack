@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 # Extension tests.
 
-import test.testext echo, MyType, MyAggType, INT_CONST, FLOAT_CONST;
+import test.testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
@@ -33,5 +33,13 @@ if (INT_CONST != 123)
 
 if (FLOAT_CONST != 1.23)
     cout `Constant $(FLOAT_CONST) != 1.23\n`;
+
+arr := array[int](10);
+for (int i = 0; i < 10; ++i)
+    arr[uint(i)] = i;
+arr2 := copyArray(10, arr);
+for (int i = 0; i < 10; ++i)
+    if (arr2[uint(i)] != i)
+        cout `Type specialization failed: arr2[$i] != $i\n`;
 
 cout `ok\n`;

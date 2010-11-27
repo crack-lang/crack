@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -39,6 +40,11 @@ class MyAggType : public Object {
 
 const char *echo(const char *data) { return data; }
 
+int *copyArray(int count, int *array) {
+    int *result = new int[count];
+    return (int *)memcpy(result, array, count * sizeof(int));
+}
+
 extern "C" void test_testext_init(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
@@ -62,5 +68,13 @@ extern "C" void test_testext_init(Module *mod) {
     type->finish();
 
     mod->addConstant(mod->getIntType(), "INT_CONST", 123);
-    mod->addConstant(mod->getFloatType(), "FLOAT_CONST", 1.23);                     
+    mod->addConstant(mod->getFloatType(), "FLOAT_CONST", 1.23);
+
+    Type *arrayType = mod->getType("array");
+    vector<Type *> params(1);
+    params[0] = mod->getIntType();
+    Type *intArrayType = arrayType->getSpecialization(params);
+    f = mod->addFunc(intArrayType, "copyArray", (void *)copyArray);
+    f->addArg(mod->getIntType(), "count");
+    f->addArg(intArrayType, "array");
 }

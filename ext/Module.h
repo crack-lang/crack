@@ -22,6 +22,7 @@ class ModuleImpl;
 
 class Module {
     friend class Func;
+    friend class Type;
 
     private:
         enum BuiltinType {

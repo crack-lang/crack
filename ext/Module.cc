@@ -26,17 +26,21 @@ Module::~Module() {
     for (i = 0; i < sizeof(builtinTypes) / sizeof(Type *); ++i)
         delete builtinTypes[i];
     
+    // cleanup new or looked up types
+    for (TypeMap::iterator iter = types.begin(); iter != types.end(); ++iter)
+         delete iter->second;
+    
     // cleanup the funcs
     for (i = 0; i < funcs.size(); ++i)
         delete funcs[i];
 }
 
-#define GET_TYPE(capName, lowerName)                                    \
-    Type *Module::get##capName##Type() {                                \
-        return builtinTypes[lowerName##Type] ?                          \
-            builtinTypes[lowerName##Type] :                             \
-            (builtinTypes[lowerName##Type] =                            \
-              new Type(context->globalData->lowerName##Type.get()));    \
+#define GET_TYPE(capName, lowerName)                                        \
+    Type *Module::get##capName##Type() {                                    \
+        return builtinTypes[lowerName##Type] ?                              \
+            builtinTypes[lowerName##Type] :                                 \
+            (builtinTypes[lowerName##Type] =                                \
+              new Type(this, context->globalData->lowerName##Type.get()));  \
     }
 
 
@@ -61,7 +65,20 @@ GET_TYPE(String, string)
 GET_TYPE(StaticString, staticString)
 
 Type *Module::getType(const char *name) {
-    assert(0 && "not implemented");
+    
+    // try looking it up in the map, first
+    TypeMap::iterator iter = types.find(name);
+    if (iter != types.end())
+        return iter->second;
+    
+    TypeDefPtr rawType = TypeDefPtr::rcast(context->ns->lookUp(name));
+    assert(rawType && "Requested type not found");
+    
+    // Create a new type, add it to the map.
+    Type *type = new Type(this, rawType.get());
+    types[name] = type;
+
+    return type;
 }
 
 Type *Module::addType(const char *name) {
