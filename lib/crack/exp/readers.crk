@@ -6,6 +6,10 @@ import crack.io FDReader, Reader;
 
 NEWLINE := '\n'[0];
 
+class LineIter;
+class LineReader;
+LineIter _createLineIter(LineReader reader);
+
 ## Allows you to read one line at a time.
 class LineReader {
     Reader r;
@@ -15,16 +19,13 @@ class LineReader {
     oper init(Reader reader0) : r = reader0 {}
     
     String next() {
-        uint i = start;
-        
         while (true) {
-            while (i < end) {
+            for (uint i = start; i < end; ++i) {
                 if (buffer.buffer[i] == NEWLINE) {
-                    tmp := Buffer(buffer.buffer + start, uint(i + 1 - start));
+                    tmp := Buffer(buffer.buffer + start, i + 1 - start);
                     start = i + 1;
                     return String(tmp);
                 }
-                ++i;
             }
             
             # we didn't find a newline, grow the buffer and read another block
@@ -37,14 +38,11 @@ class LineReader {
             }
             
             # if there's less than 1K of space available, grow the buffer
-            if (buffer.size >= end + 1024)
+            if (end + 1024 > buffer.size)
                 buffer.grow(buffer.size + 1024);
             
             # read the next block
-            amtRead := r.read(WriteBuffer(buffer.buffer + end,
-                                          buffer.size - end
-                                          )
-                              );
+            amtRead := r.read(WriteBuffer(buffer.buffer + end, 1024));
             end = end + amtRead;
             
             # if we are at the end of the file, either return the remaining 
@@ -62,4 +60,20 @@ class LineReader {
         // should never get here
         return null;
     }
+    
+    LineIter iter() { return _createLineIter(this); }
+}
+
+class LineIter {
+    String line;
+    LineReader reader;
+    
+    oper init(LineReader reader0) : line = reader0.next(), reader = reader0 {}
+    bool isTrue() { return !(line is null); }
+    String elem() { return line; }
+    void next() { line = reader.next(); }
+}
+
+LineIter _createLineIter(LineReader reader) {
+    return LineIter(reader);
 }
