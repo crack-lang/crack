@@ -53,8 +53,13 @@ class Toker {
          st_strHex,
          st_istrHex,
          st_number,
+         st_intdot,
+         st_period,
+         st_zero,
          st_float,
          st_exponent,
+         st_exponent2,
+         st_exponent3,
          st_amp,
          st_istr,
          st_pipe,
@@ -65,20 +70,16 @@ class Toker {
          st_binary
       } state;
       
+      // the putback queue
+      enum { putbackSize = 2 };
+      char putbackBuf[putbackSize];
+      int putbackIndex;
+      
       // get the next character from the stream.
-      bool getChar(char &ch) {
-         bool result = src.read(&ch, 1);
-         if (ch == '\n') 
-            locationMap.incrementLineNumber();
-         return result;
-      }
+      bool getChar(char &ch);
 
       // put back the character      
-      void ungetChar(char ch) {
-         src.putback(ch);
-         if (ch == '\n') 
-            locationMap.decrementLineNumber();
-      }
+      void ungetChar(char ch);
 
    public:
 

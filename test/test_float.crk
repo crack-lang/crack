@@ -26,15 +26,15 @@ if (v != float(5.0/10.0)) {
 
 
 // scientific notation
-float e = +1.23e10;
-e = -1.23e10;
-e = +1.23e-10;
-e = +1.23e+10;
-e = 1e2;
-e = 1e-5;
-e = -1e+10;
+if (+1.23e10 != 12300000000.0) puts('failed +1.23e10');
+if (-1.23e10 != -12300000000.0) puts('failed -1.23e10');
+if (+1.23e-10 != 0.000000000123) puts('failed +1.23e-10');
+if (+1.23e+10 != 12300000000.0) puts('failed +1.23e+10');
+if (1e2 != 100) puts('failed 1e2');
+if (1e-5 != 0.00001) puts('failed 1e-5');
+if (-1e+10 != -10000000000.0) puts('failed -1e+10');
 
-e = 12.34e-1;
+float e = 12.34e-1;
 float e2 = 123.4e-2;
 if (e != e2)
     puts("fail");

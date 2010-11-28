@@ -20,9 +20,30 @@ Location::Location(const char *name, int lineNumber) :
     lineNumber(lineNumber) {
 }
 
+bool Toker::getChar(char &ch) {
+    bool result;
+    if (putbackIndex < putbackSize) {
+        ch = putbackBuf[putbackIndex++];
+        result = true;
+    } else {
+        result = src.read(&ch, 1);
+    }
+    if (ch == '\n') 
+        locationMap.incrementLineNumber();
+    return result;
+}
+
+void Toker::ungetChar(char ch) {
+    assert(putbackIndex && "Toker putback overflow");
+    putbackBuf[--putbackIndex] = ch;
+    if (ch == '\n') 
+        locationMap.decrementLineNumber();
+}
+
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src),
-    state(st_none) {
+    state(st_none),
+    putbackIndex(putbackSize) {
     locationMap.setName(sourceName, lineNumber);
 }
 
@@ -160,55 +181,13 @@ Token Toker::readToken() {
                     t2 = Token::define;
                     state = st_digram;
                 } else if (ch == '.') {
-                    // check for float
-                    getChar(ch);
-                    if (isdigit(ch)) {
-                        state = st_float;
-                        buf << ".";
-                        ungetChar(ch);
-                    }
-                    else {
-                        ungetChar(ch);
-                        return Token(Token::dot, ".", locationMap.getLocation());
-                    }
+                    state = st_period;
                 } else if (ch == '@') {
                     return Token(Token::ann, "@", locationMap.getLocation());
                 } else if (isdigit(ch)) {
                     if (ch == '0') {
-                        // check for hex, octal, and binary constants
-                        getChar(ch);
-                        if (ch == 'x' || ch == 'X')
-                            state = st_hex; // eats the 'x', ready to parse
-                                            // first hex digit
-                        else if (ch == 'o' || ch == 'O') {
-                            state = st_octal; // eats the 'o', ready to parse
-                                              // first octal digit
-                            // since strtol expects old style of octal, we
-                            // add the leading 0
-                            buf << '0';
-                        }
-                        else if (ch == 'b' || ch == 'b')
-                            state = st_binary; // eats the 'b', ready to parse
-                                               // first binary digit
-                        else if (ch == '.') {
-                            buf << ch;
-                            state = st_float; // float
-                        }
-                        else if (isdigit(ch)) {
-                            // old school style octal
-                            state = st_octal;
-                            ungetChar(ch); // need to read this in octal state
-                                           // will fail there if it's > 7
-                        }
-                        else {
-                            ungetChar(ch);
-                            return Token(Token::integer,
-                                         "0",
-                                         locationMap.getLocation()
-                                         );
-                        }
-                    }
-                    else {
+                        state = st_zero;
+                    } else {
                         // [1-9]
                         buf << ch;
                         state = st_number;
@@ -292,16 +271,28 @@ Token Toker::readToken() {
                 // fall through to digram
 
             case st_digram:
+                state = st_none;
                 if (ch == '=') {
                     symchars[sci++] = ch;
                     symchars[sci++] = 0;
-                    state = st_none;
                     return Token(t2, symchars, locationMap.getLocation());
                 } else {
                     symchars[1] = 0;
                     ungetChar(ch);
-                    state = st_none;
                     return Token(t1, symchars, locationMap.getLocation());
+                }
+                break;
+            
+            case st_period:
+                // check for float
+                if (isdigit(ch)) {
+                    state = st_float;
+                    buf << "." << ch;
+                }
+                else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::dot, ".", locationMap.getLocation());
                 }
                 break;
    
@@ -493,6 +484,7 @@ Token Toker::readToken() {
                                  );
                 }
                 break;
+
             case st_hex:
                 if (isxdigit(ch))
                     buf << ch;
@@ -512,44 +504,80 @@ Token Toker::readToken() {
                                  );
                 }
                 break;
-            case st_number:
-            case st_float:
-                if (isdigit(ch))
+
+            case st_zero:
+                // got a zero, check for hex, octal, and binary constants
+                if (ch == 'x' || ch == 'X') {
+                    state = st_hex; // eats the 'x', ready to parse
+                                    // first hex digit
+                } else if (ch == 'o' || ch == 'O') {
+                    state = st_octal; // eats the 'o', ready to parse
+                                      // first octal digit
+                    // since strtol expects old style of octal, we
+                    // add the leading 0
+                    buf << '0';
+                } else if (ch == 'b' || ch == 'b') {
+                    state = st_binary; // eats the 'b', ready to parse
+                                       // first binary digit
+                } else if (ch == '.') {
                     buf << ch;
-                else if (ch == '.') {
-                    if (state == st_float) {
-                        // whoops, two decimal points
-                        ParseError::abort(Token(Token::string, buf.str(),
-                                                locationMap.getLocation()
-                                                ),
-                                          "invalid float (two decimal points)");
-                    }
-                    state = st_float;
-                    buf << ch;
+                    state = st_float; // float
+                } else if (isdigit(ch)) {
+                    // old school style octal
+                    state = st_octal;
+                    ungetChar(ch); // need to read this in octal state
+                                   // will fail there if it's > 7
+                } else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::integer, "0", 
+                                 locationMap.getLocation()
+                                 );
                 }
-                else if ((ch == 'e') || (ch == 'E')) {
+                break;
+
+            case st_number:
+                if (isdigit(ch)) {
+                    buf << ch;
+                } else if (ch == '.') {
+                    state = st_intdot;
+                } else if (ch == 'e' || ch == 'E') {
+                    buf << ch;
+                    state = st_exponent;
+                } else {
+                    ungetChar(ch);
+                    state = st_none;
+                    return Token(Token::integer, buf.str(), 
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
+
+            case st_intdot:
+                // integer followed by a period, could be a float if followed 
+                // by another digit...
+                if (isdigit(ch)) {
+                    buf << '.' << ch;
+                    state = st_float;
+                } else {
+                    // unget both the last character and the period since 
+                    // neither is part of this integer.
+                    ungetChar(ch);
+                    ungetChar('.');
+                    state = st_none;
+                    return Token(Token::integer, buf.str(), 
+                                 locationMap.getLocation()
+                                 );
+                }
+                break;
+
+            case st_float:
+                if (isdigit(ch)) {
+                    buf << ch;
+                } else if ((ch == 'e') || (ch == 'E')) {
                     state = st_exponent;
                     buf << ch;
-                    // eat possible + or - immediately and make sure
-                    // we have at least one digit in exponent
-                    getChar(ch);
-                    if ((ch == '+') || (ch == '-')) {
-                        buf << ch;
-                        getChar(ch);
-                    }
-
-                    if (isdigit(ch)) {
-                        buf << ch;
-                    }
-                    else {
-                        ParseError::abort(Token(Token::string, buf.str(),
-                                                locationMap.getLocation()
-                                                ),
-                                          "invalid float specification");
-                    }
-                    break;
-                }
-                else {
+                } else {
                     ungetChar(ch);
                     Token::Type tt = (state == st_float) ? Token::floatLit :
                               Token::integer;
@@ -562,14 +590,36 @@ Token Toker::readToken() {
                 break;
 
             case st_exponent:
+                // eat possible + or - immediately and make sure
+                // we have at least one digit in exponent
+                if ((ch == '+') || (ch == '-')) {
+                    buf << ch;
+                    state = st_exponent2;
+                    break;
+                }
+
+                // fall through to exponent2...
+
+            case st_exponent2:
+                // after E+/-, make sure we got at least one digit.
                 if (isdigit(ch)) {
                     buf << ch;
+                    state = st_exponent3;
+                } else {
+                    ParseError::abort(Token(Token::string, buf.str(),
+                                            locationMap.getLocation()
+                                            ),
+                                      "invalid float specification");
                 }
-                else {
+                break;
+
+            case st_exponent3:
+                if (isdigit(ch)) {
+                    buf << ch;
+                } else {
                     ungetChar(ch);
                     state = st_none;
-                    return Token(Token::floatLit,
-                                 buf.str(),
+                    return Token(Token::floatLit, buf.str(),
                                  locationMap.getLocation()
                                  );
                 }
@@ -640,15 +690,18 @@ Token Toker::readToken() {
  
     // if we got here, we got to the end of the stream, make sure it was
     // expected
-    if (state == st_none || state == st_comment)
+    if (state == st_none || state == st_comment) {
+        state = st_none;
         return Token(Token::end, "", locationMap.getLocation());
-    else if (state == st_ident)
+    } else if (state == st_ident) {
         // it's ok for identifiers to be up against the end of the stream
+        state = st_none;
         return Token(Token::ident, buf.str(), locationMap.getLocation());
-    else
+    } else {
         ParseError::abort(Token(Token::end, "", locationMap.getLocation()),
                           "End of stream in the middle of a token"
                           );
+    }
 }
 
 Token Toker::getToken() {
