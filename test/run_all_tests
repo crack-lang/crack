@@ -766,6 +766,9 @@ test_output 'for statement' 'import test.test_forstmt;' ok
 
 test_output 'string constant folding' 'puts("o" "k")' ok
 
+test_output 'invalid unary operator' 'class Foo {} !Foo();' \
+    "${parseError}1: oper ! is not defined for type Foo"
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 

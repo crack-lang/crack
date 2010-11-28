@@ -1017,7 +1017,7 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
          }
          if (!funcDef)
             error(tok, SPUG_FSTR(symbol << " is not defined for type "
-                                        << expr->type->name));
+                                        << operand->type->name));
 
    
          FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
