@@ -129,3 +129,8 @@ void stringify(CrackContext ctx) {
     tok := ctx.getToken();
     ctx.putBack(Token(TOK_STRING, tok.getText(), tok.getLocation()));
 }
+
+void nullTok(CrackContext ctx) {
+    Token tok;
+}
+
