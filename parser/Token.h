@@ -14,14 +14,14 @@ class Token {
 
       // the token types
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
-                     classKw, continueKw, forKw, elseKw, ifKw, importKw, inKw,
-                     isKw, nullKw, onKw, operKw, returnKw, whileKw, assign, 
-                     assignAnd, assignAsterisk, assignLSh, assignOr, 
-                     assignRSh, assignXor, assignMinus, assignPercent, 
-                     assignPlus, assignSlash, asterisk, bang, colon, comma, 
-                     decr, define, dot, end, eq, ge, gt, ident, incr, 
-                     integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
-                     percent, plus, quest, rbracket, rcurly, rparen, semi, 
+                     classKw, continueKw, dollar, forKw, elseKw, ifKw, 
+                     importKw, inKw, isKw, nullKw, onKw, operKw, returnKw, 
+                     whileKw, assign, assignAnd, assignAsterisk, assignLSh, 
+                     assignOr, assignRSh, assignXor, assignMinus, 
+                     assignPercent, assignPlus, assignSlash, asterisk, bang, 
+                     colon, comma, decr, define, dot, end, eq, ge, gt, ident, 
+                     incr, integer, lbracket, lcurly, le, lparen, lt, minus, 
+                     ne, percent, plus, quest, rbracket, rcurly, rparen, semi,
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
                      logicOr, floatLit, octalLit, hexLit, binLit
 		    } Type;
@@ -73,6 +73,7 @@ class Token {
       bool isBreak() const { return type == breakKw; }
       bool isClass() const { return type == classKw; }
       bool isContinue() const { return type == continueKw; }
+      bool isDollar() const { return type == dollar; }
       bool isNull() const { return type == nullKw; }
       bool isIdent() const { return type == ident; }
       bool isString() const { return type == string; }

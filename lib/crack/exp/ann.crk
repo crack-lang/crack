@@ -6,8 +6,9 @@
 #   as @name(args...))
 # I guess there's currently only one :-)
 
-import crack.io cout, StringFormatter;
-import crack.compiler CrackContext, Token;
+import crack.lang die;
+import crack.io cout, StringFormatter, Formatter, Writer;
+import crack.compiler CrackContext, Token, Location, TOK_STRING;
 import crack.container Array, TreeMap;
 
 class UInt {
@@ -16,22 +17,32 @@ class UInt {
     oper init(uint val0) : val = val0 {}
 }
 
-class TokNode {
-    TokNode next;
-    Token tok;
-    uint argIndex;
+class Node {
+    Node next;
     
-    oper init(Token tok0) : tok = tok0 {}
-    oper init(uint argIndex0) : argIndex = argIndex0 {}
+    void expand(CrackContext ctx, Array args) {}
+    String toString(Array args) {return null;}
+    Location getLocation() {
+        die('Node.getLocation() undefined');
+        return null;
+    }    
+}
+
+class NodeIter {
+    Node node;
+    oper init(Node node0) : node = node0 {}
+    void next() { node = node.next; }
+    bool isTrue() { return node; }
+    Node elem() { return node; }
 }
 
 ## A list of tokens.  These are typically stored in reverse order of the 
 ## actual order of the tokens so that they can be easily "put back" into the 
 ## token stream (after putBack() they will be in the correct order once again)
-class TokList {
-    TokNode first, last;
+class NodeList {
+    Node first, last;
     
-    void pushHead(TokNode node) {
+    void pushHead(Node node) {
         if (first) {
             node.next = first;
             first = node;
@@ -39,9 +50,155 @@ class TokList {
             first = last = node;
         }
     }    
+    
+    void append(Node node) {
+        if (last) {
+            last.next = node;
+            last = node;
+        } else {
+            first = last = node;
+        }
+    }
+    
+    Node popHead() {
+        if (first) {
+            if (last is first)
+                last = null;
+            result := first;
+            first = first.next;
+            return result;
+        } else {
+            return null;
+        }
+    }
+
+    NodeIter iter() { return NodeIter(first); }
+
+    ## Node lists are true if they have any contents.
+    bool isTrue() { return first; }
 }
 
-class Macro : TokList {
+class Tok : Node {
+    Token tok;
+
+    oper init(Token tok0) : tok = tok0 {}
+
+    void expand(CrackContext ctx, Array args) {
+        ctx.putBack(tok);
+    }
+    
+    String toString(Array args) {
+        if (tok.isString())
+            return String(tok.getText()).getRepr();
+        else
+            return String(tok.getText());
+    }
+    
+    Location getLocation() {
+        return tok.getLocation();
+    }
+    
+    void writeTo(Writer out) {
+        out.write('token: ' + String(tok.getText()));
+    }
+}
+
+class Arg : Node {
+    uint argIndex;
+    Location loc;
+    
+    oper init(Location loc0, uint argIndex0) : 
+        loc = loc0, 
+        argIndex = argIndex0 {
+    }
+
+    void expand(CrackContext ctx, Array args) {
+        for (node :in NodeList.cast(args[argIndex]))
+            node.expand(ctx, args);
+    }
+    
+    String toString(Array args) {
+        StringFormatter sf = {};
+        argVal := NodeList.cast(args[argIndex]);
+        
+        # do the last node so we can add a whitespace separator for every 
+        # subsequent node.
+        if (argVal.last)
+            sf.format(argVal.last.toString(args));
+        
+        # do the rest of the nodes
+        void reverseNodeList(Array args1, StringFormatter out, Node node) {
+            
+            # stop recursing before the last node
+            if (node.next) {
+                reverseNodeList(args1, out, node.next);
+                out ` $(node.toString(args1))`;
+            }
+        }
+
+        reverseNodeList(args, sf, argVal.first);
+        return sf.createString();
+    }
+    
+    void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }
+    Location getLocation() { return loc; }
+}
+
+## Concat nodes concatenate a set of tokens into a single token.  The type and 
+## location come from the first non-argument token.
+class Concat : Node {
+    NodeList list;
+    int type;
+    Location loc;
+
+    oper init(NodeList list0, Location loc0) : 
+        loc = loc0,
+        list = list0 {
+    }
+
+    void expand(CrackContext ctx, Array args) {
+        StringFormatter concat = {};
+        for (item :in list)
+            concat.format(item.toString(args));
+        concat.format(' \0');
+        
+        s := concat.createString();
+        ctx.inject(s.buffer);
+    }
+    
+    String toString(Array args) {
+        die('Concat.toString() called.');
+        return null;
+    }
+    
+    Location getLocation() {
+        return loc;
+    }
+}
+
+class Stringify : Node {
+    Node node;
+    
+    oper init(Node node0) : node = node0 {}
+    
+    void expand(CrackContext ctx, Array args) {
+        ctx.putBack(Token(TOK_STRING, node.toString(args).buffer, 
+                          node.getLocation()
+                          )
+                    );
+    }
+    
+    String toString(Array args) {
+        die('Stringify.toString called.');
+        return null;
+    }
+    
+    Location getLocation() {
+        return node.getLocation();
+    }
+}
+
+class Macro : NodeList {
     String name;
     uint argCount;
 }
@@ -56,20 +213,22 @@ void expand(CrackContext ctx) {
         ctx.error(tok, 'left paren expected in macro expansion'.buffer);
     
     uint nesting = 1;
-    argTokList := TokList();
+    argTokList := NodeList();
     Array args = {mac.argCount};
     while (true) {
         tok = ctx.getToken();
-        if (tok.isLParen()) {
-            ++nesting;
-        } else if (tok.isRParen()) {
-            if (!--nesting)
-                break;
-        } else if (nesting == 1 && tok.isComma()) {
+        if (nesting == 1 && tok.isComma()) {
             args.append(argTokList);
-            argTokList = TokList();
+            argTokList = NodeList();
         } else {
-            argTokList.pushHead(TokNode(tok));
+            if (tok.isLParen()) {
+                ++nesting;
+            } else if (tok.isRParen()) {
+                if (!--nesting)
+                    break;
+            }
+
+            argTokList.pushHead(Tok(tok));
         }
     }
     
@@ -86,21 +245,17 @@ $(mac.argCount), got $(args.count())\0`;
     }
 
     # expand the macro
-    TokNode node = mac.first;
+    Node node = mac.first;
     while (node) {
-        if (!(node.tok is null)) {
-            ctx.putBack(node.tok);
-        } else {
-            # this is an argument: expand the value of the argument.
-            argValNode := TokList.cast(args[node.argIndex]).first;
-            while (argValNode) {
-                ctx.putBack(argValNode.tok);
-                argValNode = argValNode.next;
-            }
-        }
+        node.expand(ctx, args);
         node = node.next;
     }
 }
+
+# macro parser states
+ST_NONE := 0;
+ST_ESC := 1;   # got a dollar-sign escape
+ST_CONCAT := 2;  # got a double-dollar-sign concatenation operator
 
 void define(CrackContext ctx) {
     Macro mac = {};
@@ -143,10 +298,13 @@ void define(CrackContext ctx) {
 
     # read everything until the end bracket
     uint bracketCount = 1;
+    int state = ST_NONE;
+    NodeList lastConcat = {};  # last concatenation sequence.
+    Node node;  # the last node
     while (true) {
         tok = ctx.getToken();
         Object argIndex;
-
+        
         if (tok.isEnd()) {
             ctx.error(
                 'End of file before the end of a macro definition'.buffer
@@ -157,13 +315,55 @@ void define(CrackContext ctx) {
                 break;
         } else if (tok.isLCurly()) {
             ++bracketCount;
+        } else if (tok.isDollar()) {
+            if (state == ST_NONE) {
+                state = ST_ESC;
+            } else if (state == ST_ESC) {
+                if (!node)
+                    ctx.error('The macro may not begin with a concatenation '
+                               'operator'.buffer
+                              );
+                
+                # if we're starting off a new concatenation sequence, add the 
+                # last node and store the sequence as a new node in the macro.
+                if (!lastConcat) {
+                    lastConcat.append(node);
+                    mac.popHead();
+                    mac.pushHead(Concat(lastConcat, tok.getLocation()));
+                }
+
+                state = ST_CONCAT;
+            } else {
+                ctx.error('One two many dollar signs\n'.buffer);
+            }
+            continue;
         }
 
         # replace arguments with indices
         if (tok.isIdent() && (argIndex = args.get(String(tok.getText()))))
-            mac.pushHead(TokNode(UInt.cast(argIndex).val));
+            node = Arg(tok.getLocation(), UInt.cast(argIndex).val);
         else
-            mac.pushHead(TokNode(tok));
+            node = Tok(tok);
+
+        # handle special states
+        if (state == ST_CONCAT) {
+            
+            # concatenation state - add the new node to the concatenation 
+            # sequence.
+            lastConcat.append(node);
+            state = ST_NONE;
+        } else if (state == ST_ESC) {
+            
+            # stringify state - add a stringify node.
+            mac.pushHead(Stringify(node));
+            state = ST_NONE;
+        } else {
+            mac.pushHead(node);
+            
+            # reset any last concatenation sequence that we've accumulated
+            if (lastConcat)
+                lastConcat = NodeList();
+        }
     }
     
     # store a new annotation for expanding the macro

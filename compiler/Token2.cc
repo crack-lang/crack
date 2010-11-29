@@ -37,6 +37,10 @@ const char *Token::getText() {
     return rep->getData().c_str();
 }
 
+size_t Token::getTextSize() {
+    return rep->getData().size();
+}
+
 Location *Token::getLocation() {
     if (!loc) {
         loc = new Location(rep->getLocation());
@@ -59,6 +63,7 @@ bool Token::isReturn() { return rep->isReturn(); }
 bool Token::isBreak() { return rep->isBreak(); }
 bool Token::isClass() { return rep->isClass(); }
 bool Token::isContinue() { return rep->isContinue(); }
+bool Token::isDollar() { return rep->isDollar(); }
 bool Token::isNull() { return rep->isNull(); }
 bool Token::isIdent() { return rep->isIdent(); }
 bool Token::isString() { return rep->isString(); }

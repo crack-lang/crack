@@ -149,6 +149,10 @@ Token Toker::readToken() {
                     return Token(Token::rbracket, "]",
                                  locationMap.getLocation()
                                  );
+                } else if (ch == '$') {
+                    return Token(Token::dollar, "$", 
+                                 locationMap.getLocation()
+                                 );
                 } else if (ch == '+') {
                     state = st_plus;
                 } else if (ch == '-') {

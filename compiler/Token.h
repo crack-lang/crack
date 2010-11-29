@@ -3,6 +3,7 @@
 #ifndef _crack_compiler_Token_h_
 #define _crack_compiler_Token_h_
 
+#include <stddef.h>
 #include "ext/RCObj.h"
 
 namespace parser {
@@ -31,10 +32,16 @@ class Token : public crack::ext::RCObj {
         bool hasText(const char *text);
         
         /**
-         * Returns the text of the token.
+         * Returns the text of the token.  For a string token, this will 
+         * return the string contents.
          */
         const char *getText();
         
+        /**
+         * Returns the total size of the text in bytes.
+         */        
+        size_t getTextSize();
+
         Location *getLocation();
 
         bool isAnn();
@@ -51,6 +58,7 @@ class Token : public crack::ext::RCObj {
         bool isBreak();
         bool isClass();
         bool isContinue();
+        bool isDollar();
         bool isNull();
         bool isIdent();
         bool isString();

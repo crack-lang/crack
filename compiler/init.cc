@@ -130,6 +130,9 @@ void init(Module *mod) {
     tokenType->addMethod(mod->getBoolType(), "isBreak", (void *)&Token::isBreak);
     tokenType->addMethod(mod->getBoolType(), "isClass", (void *)&Token::isClass);
     tokenType->addMethod(mod->getBoolType(), "isContinue", (void *)&Token::isContinue);
+    tokenType->addMethod(mod->getBoolType(), "isDollar", 
+                         (void *)&Token::isDollar
+                         );
     tokenType->addMethod(mod->getBoolType(), "isNull", (void *)&Token::isNull);
     tokenType->addMethod(mod->getBoolType(), "isIdent", (void *)&Token::isIdent);
     tokenType->addMethod(mod->getBoolType(), "isString", (void *)&Token::isString);
@@ -282,6 +285,9 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "TOK_CONTINUEKW", 
                      parser::Token::continueKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_DOLLAR", 
+                     parser::Token::dollar
                      );
     mod->addConstant(mod->getIntType(), "TOK_FORKW", parser::Token::forKw);
     mod->addConstant(mod->getIntType(), "TOK_ELSEKW", parser::Token::elseKw);

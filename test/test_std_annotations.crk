@@ -7,6 +7,8 @@ import crack.io cout;
 @define echo(x) { x }
 @define equals(a, b) { (a == b) }
 @define func(name) { int name() { return 300; } }
+@define concat(a, b) { a$$b }
+@define stringify(a) { $a }
 
 if (@oneHundred() != 100)
     cout `macro with no args failed\n`;
@@ -20,6 +22,16 @@ if (!@equals(1, 1))
 @func(f);
 if (f() != 300)
     cout `macro with function definition fails\n`;
+
+int @concat(i, x) = 400;
+if (ix != 400)
+    cout `concatenation failed\n`;
+
+if (@stringify(foo) != 'foo')
+    cout `stringification failed\n`;
+
+if (@stringify((x == 'test')) != "( x == 'test' )")
+    cout `stringification of multi-token value failed.\n`;
 
 cout `ok\n`;
 
