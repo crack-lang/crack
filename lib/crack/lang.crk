@@ -329,51 +329,51 @@ SubString slice(String target, int start);
 
         # adjust a negative position
         if (pos < 0)
-            pos = int(@1.size) + pos;
+            pos = int($1.size) + pos;
 
-        return _substr(@1, uint(pos), len);
+        return _substr($1, uint(pos), len);
     }
-@@
+$$
 
 @define substr1 1 {
 
         # adjust a negative position
         if (pos < 0)
-            pos = int(@1.size) + pos;
+            pos = int($1.size) + pos;
 
-        return _substr(@1, uint(pos), @1.size - uint(pos));
+        return _substr($1, uint(pos), $1.size - uint(pos));
     }
-@@
+$$
 
 @define slice2 1 {
 
         # adjust negative offsets    
         if (start < 0)
-            start = int(@1.size) + start;
+            start = int($1.size) + start;
         if (end < 0)
-            end = int(@1.size) + end;
+            end = int($1.size) + end;
     
         # bounds checking
         if (end < start)
             _die('Start of slice is after end.');
     
-        return _substr(@1, uint(start), uint(end - start));
+        return _substr($1, uint(start), uint(end - start));
     }
-@@
+$$
 
 @define slice1 1 {
 
         # adjust negative offsets
         if (start < 0)
-            start = int(@1.size) + start;
+            start = int($1.size) + start;
     
         # bounds checking
-        if (uint(start) > @1.size)
+        if (uint(start) > $1.size)
             _die('Start of slice is after end.');
     
-        return _substr(@1, uint(start), @1.size - uint(start));
+        return _substr($1, uint(start), $1.size - uint(start));
     }
-@@
+$$
 
 ## The string class.  Strings are immutable managed Buffer's - when they are 
 ## deleted, their buffer goes away. 

@@ -5,8 +5,6 @@
 # These kinds of macros are used as follows:
 #   @poormac m 3 if ($1 == $2) $3('something is wrong'); $$
 #   @m 10 20 puts
-# Note: the dollar sign is supposed to be the escape character, but the dollar 
-# sign token hasn't been added yet - fix this when that change gets checked in.
 
 import crack.runtime free;
 import crack.compiler Token, CrackContext;
@@ -85,7 +83,7 @@ void define(CrackContext ctx) {
                 if (arg < 0 || arg > m.numArgs)
                     ctx.error(tok, 'argument index out of bounds');
                 m.put(arg);
-            } else if (tok.isAnn()) {
+            } else if (tok.isDollar()) {
                 break;
             } else {
                 ctx.error(tok, 'illegal token following dollar-sign');
@@ -93,7 +91,7 @@ void define(CrackContext ctx) {
             
             gotDollar = 0;
         } else {
-            if (tok.isAnn())
+            if (tok.isDollar())
                 gotDollar = 1;
             else
                 m.put(tok);
