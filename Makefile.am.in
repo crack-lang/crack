@@ -32,6 +32,7 @@ noinst_HEADERS = \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
     model/AllocExpr.h \
+    model/Annotation.h \
     model/ArgDef.h \
     model/AssignExpr.h \
     model/Branchpoint.h \
@@ -42,6 +43,7 @@ noinst_HEADERS = \
     model/Context.h \
     model/Expr.h \
     model/FloatConst.h \
+    model/FuncAnnotation.h \
     model/FuncCall.h \
     model/FuncDef.h \
     model/GlobalNamespace.h \
@@ -53,6 +55,7 @@ noinst_HEADERS = \
     model/Namespace.h \
     model/NullConst.h \
     model/OverloadDef.h \
+    model/PrimFuncAnnotation.h \
     model/ResultExpr.h \
     model/StrConst.h \
     model/StubDef.h \
@@ -68,11 +71,14 @@ noinst_HEADERS = \
     parser/Token.h \
     parser/Toker.h \
     runtime/Dir.h \
+    runtime/Net.h \
+    runtime/Util.h \
     spug/Exception.h \
     spug/RCBase.h \
     spug/RCPtr.h \
     spug/StringFmt.h \
     spug/TypeInfo.h \
+    compiler/init.h \
     Crack.h
 
 pkginclude_HEADERS = \
@@ -82,12 +88,13 @@ pkginclude_HEADERS = \
     ext/Func.h \
     ext/Module.h \
     ext/Object.h \
+    ext/RCObj.h \
     ext/Type.h \
     ext/Var.h \
     ext/crack_config.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt \
-    runtimeModules.txt cmake
+    runtimeModules.txt cmake COPYING COPYING.Lesser
 
 bin_PROGRAMS = crack
 
