@@ -1,3 +1,4 @@
+
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
@@ -629,11 +630,25 @@ SubString slice(String target, int start) {
 ## not included in the size of the string.
 class CString : String {
 
-    oper init(String s0) {
-        size = s0.size;
-        buffer = malloc(s0.size+1);
-        memcpy(buffer, s0.buffer, s0.size);
+    @final void __copy(byteptr buf, uint size0) {
+        size = size0;
+        buffer = malloc(size0 + 1);
+        memcpy(buffer, buf, size0);
         buffer[size] = 0;
+    }
+
+    oper init(String s0) {
+        __copy(s0.buffer, s0.size);
+    }
+    
+    ## Initialize a the string from byteptr and size, take ownership of the 
+    ## memory if requested.
+    ## If takeOwnership is true, buf[size0] must be null.  This constructor 
+    ## will not verify that this is the case.
+    oper init(byteptr buf, uint size0, bool takeOwnership) :
+        String(buf, size0, true) {
+        if (!takeOwnership)
+            __copy(buf, size0);
     }
 
 }

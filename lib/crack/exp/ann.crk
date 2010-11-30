@@ -137,7 +137,7 @@ class Arg : Node {
         }
 
         reverseNodeList(args, sf, argVal.first);
-        return sf.createString();
+        return sf.createCString();
     }
     
     void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }

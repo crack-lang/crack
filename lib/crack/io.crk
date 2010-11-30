@@ -1,7 +1,8 @@
 # Copyright 2009, Google Inc.
 # Basic input/output classes.
 
-import crack.lang die, Buffer, WriteBuffer, ManagedBuffer, Writer;
+import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer, 
+    ManagedBuffer, Writer;
 import crack.runtime float_str, strlen, write, malloc, memcpy, free, read;
 
 ## Writer for a file descriptor.
@@ -214,35 +215,27 @@ cerr := Formatter(FDWriter(2));
 cin := FDReader(0);
 
 ## Allows you to construct a string by writing to it.
-class StringWriter : Object, Writer {
-    
-    ManagedBuffer buf;
+class StringWriter : AppendBuffer, Writer {
 
-    # write position within the buffer
-    uint pos;
-    
-    oper init(uint initBufSize) : buf = ManagedBuffer(initBufSize) {}
-    oper init() : buf = ManagedBuffer(1024) {}
+    oper init(uint initBufSize) : AppendBuffer(initBufSize) {}
+    oper init() : AppendBuffer(1024) {}
     
     void write(Buffer data) {
-        # reallocate if we overflow
-        if (pos + data.size > buf.size) {
-            newSize := buf.size * 2;
-            while (pos + data.size > newSize)
-                newSize = newSize * 2;
-            buf.grow(newSize);
-        }
-
-        memcpy(buf.buffer + pos, data.buffer, data.size);
-        pos = pos + data.size;
+        extend(data);
     }
     
     ## Return a string containing everything that has been written so far.
     String createString() {
         # store the info in a temporary buffer, if we create a string directly 
         # from buf the new String will steal the buffer from us.
-        b := Buffer(buf.buffer, pos);
-        return String(b);
+        return String(buffer, pos, false);
+    }
+    
+    ## Return a null terminated string containing everything that has been 
+    ## written so far.
+    CString createCString() {
+        append(0);
+        return CString(buffer, pos - 1, false);
     }
 
     Object getWriterObject() { return this; }
@@ -283,4 +276,7 @@ class StringFormatter : Formatter {
 
     ## see: StringWriter.createString()
     String createString() { return __writer.createString(); }
+
+    ## see: StringWriter.createCString()
+    String createCString() { return __writer.createCString(); }
 };
