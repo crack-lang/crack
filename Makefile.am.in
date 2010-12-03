@@ -82,6 +82,7 @@ noinst_HEADERS = \
     Crack.h
 
 pkginclude_HEADERS = \
+    compiler/Annotation.h \
     compiler/CrackContext.h \
     compiler/Location.h \
     compiler/Token.h \

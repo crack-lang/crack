@@ -650,6 +650,13 @@ class CString : String {
         if (!takeOwnership)
             __copy(buf, size0);
     }
+    
+    ## Initialize from a null-terminated byteptr, take ownership of the 
+    ## memory if requested.
+    oper init(byteptr buf, bool takeOwnership) :
+        String(buf, strlen(buf) + 1, takeOwnership) {
+        --size;
+    }
 
 }
 

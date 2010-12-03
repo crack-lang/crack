@@ -12,14 +12,14 @@ Token::Token(const parser::Token &tok) :
     loc(0) {
 }
 
-Token::Token(int type, char *text, Location *loc) : loc(loc) {
+Token::Token(int type, const char *text, Location *loc) : loc(loc) {
     rep = new parser::Token(static_cast<parser::Token::Type>(type), text, 
                             *loc->rep
                             );
     loc->bind();
 }
 
-Token *Token::create(int type, char *text, Location *loc) {
+Token *Token::create(int type, const char *text, Location *loc) {
     return new Token(type, text, loc);
 }
 
@@ -35,6 +35,10 @@ bool Token::hasText(const char *text) {
 
 const char *Token::getText() {
     return rep->getData().c_str();
+}
+
+int Token::getType() {
+    return rep->getType();
 }
 
 size_t Token::getTextSize() {

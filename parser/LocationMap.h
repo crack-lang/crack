@@ -35,6 +35,11 @@ class LocationMap {
       Location getLocation() const {
 	 return Location(name.c_str(), lineNumber);
       }
+      
+      /** Returns a Location object for the specified location */
+      Location getLocation(const char *name, int lineNumber) const {
+         return Location(name, lineNumber);
+      }
 
       /** increment the line number */
       void incrementLineNumber() {

@@ -11,7 +11,7 @@ void incrButZero(CrackContext ctx) {
     if (tok.hasText('0'.buffer)) {
         ctx.putBack(tok);
     } else {
-        ctx.inject('+ 1 '.buffer);
+        ctx.inject(@FILE.buffer, @LINE, '+ 1 '.buffer);
         ctx.putBack(tok);
     }
 }
@@ -19,13 +19,13 @@ void incrButZero(CrackContext ctx) {
 void testIsChecks(CrackContext ctx) {
     tok := ctx.getToken();
     if (tok.isIf())
-        ctx.inject('1 '.buffer);
+        ctx.inject(@FILE.buffer, @LINE, '1 '.buffer);
     else if (tok.isIdent())
-        ctx.inject('2 '.buffer);
+        ctx.inject(@FILE.buffer, @LINE, '2 '.buffer);
 }
 
 void emitOk(CrackContext ctx) {
-    ctx.inject('cout `ok\n`;'.buffer);
+    ctx.inject(@FILE.buffer, @LINE, 'cout `ok\n`;'.buffer);
 }
 
 TreeMap scopes = {};
@@ -43,18 +43,18 @@ void getScope(CrackContext ctx) {
     v := IntWrapper.cast(scopes[String(ctx.getToken().getText())]).val;
     StringFormatter fmt = {};
     fmt `$v \0`;
-    ctx.inject(fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
 }
 
 void createdAnnotation(CrackContext ctx) {
-    ctx.inject('true '.buffer);
+    ctx.inject(@FILE.buffer, @LINE, 'true '.buffer);
 }
 
 void createdWithCallback(CrackContext ctx) {
     StringFormatter fmt = {};
     arg := IntWrapper.unsafeCast(ctx.getUserData());
     fmt `$(arg.val) \0`;
-    ctx.inject(fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
 }
 
 IntWrapper iw;
@@ -91,11 +91,11 @@ void error(CrackContext ctx) {
 Callback enterCB, leaveCB;
 
 void enter(CrackContext ctx) {
-    ctx.inject('result `{`;'.buffer);
+    ctx.inject(@FILE.buffer, @LINE, 'result `{`;'.buffer);
 }
 
 void leave(CrackContext ctx) {
-    ctx.inject('result `}`;'.buffer);
+    ctx.inject(@FILE.buffer, @LINE, 'result `}`;'.buffer);
     ctx.removeCallback(enterCB);
     ctx.removeCallback(leaveCB);
 }
@@ -122,7 +122,7 @@ void getLocation(CrackContext ctx) {
     loc := tok.getLocation();
     StringFormatter fmt = {};
     fmt `NAME := "$(loc.getName())"; LINE := $(loc.getLineNumber()); \0`;
-    ctx.inject(fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
 }
 
 void stringify(CrackContext ctx) {

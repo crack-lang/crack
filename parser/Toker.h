@@ -107,6 +107,9 @@ class Toker {
          assert(state == st_none && "continueIString in invalid state");
          state = st_istr;
       }
+      
+      /** Returns the tokenizer's location map. */
+      LocationMap &getLocationMap() { return locationMap; }
 
 };
 

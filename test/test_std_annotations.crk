@@ -2,6 +2,7 @@
 
 import crack.io cout;
 @import crack.exp.ann define;
+@import test.testmac foo, bar, tm_concat, tm_stringify;
 
 @define oneHundred() { 100 }
 @define echo(x) { x }
@@ -32,6 +33,19 @@ if (@stringify(foo) != 'foo')
 
 if (@stringify((x == 'test')) != "( x == 'test' )")
     cout `stringification of multi-token value failed.\n`;
+
+if (@foo() != 'IAM not a crook')
+    cout `Failed to create a macro by hand\n`;
+
+@bar(Int, int);
+if (Int(100).val != 100)
+    cout `failed to export a macro\n`;
+
+if (@tm_concat(i, x) != 400)
+    cout `failed to export macro with a concatenation\n`;
+
+if (@tm_stringify(boyng) != 'boyng')
+    cout `failed to export a macro with stringification`;
 
 cout `ok\n`;
 

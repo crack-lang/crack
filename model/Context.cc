@@ -543,6 +543,8 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     OverloadDef *ovld = OverloadDefPtr::rcast(result);
     if (ovld) {
         FuncDefPtr f = ovld->getSigMatch(args);
+        if (!f)
+            return 0;
         ann = new FuncAnnotation(f.get());
         compileNS->addDef(ann.get());
         return ann;

@@ -20,10 +20,10 @@ class Token : public crack::ext::RCObj {
         Location *loc;
 
         Token(const parser::Token &tok);
-        Token(int type, char *text, Location *loc);
+        Token(int type, const char *text, Location *loc);
         ~Token();
         
-        static Token *create(int type, char *text, Location *loc);
+        static Token *create(int type, const char *text, Location *loc);
 
         /**
          * Returns true if the token's text form is the same as the string 
@@ -36,6 +36,11 @@ class Token : public crack::ext::RCObj {
          * return the string contents.
          */
         const char *getText();
+        
+        /**
+         * Returns the token type.
+         */
+        int getType();
         
         /**
          * Returns the total size of the text in bytes.

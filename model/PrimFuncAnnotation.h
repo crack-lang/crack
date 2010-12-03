@@ -36,6 +36,9 @@ class PrimFuncAnnotation : public Annotation {
         virtual void invoke(parser::Parser *parser, parser::Toker *toker, 
                             Context *context
                             );
+        
+        void *getUserData() { return userData; }
+        AnnotationFunc getFunc() { return func; }        
 };
 
 } // namespace model

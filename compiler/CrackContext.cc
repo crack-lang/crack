@@ -11,6 +11,8 @@
 #include "model/Namespace.h"
 #include "model/PrimFuncAnnotation.h"
 #include "Token.h"
+#include "Annotation.h"
+#include "Location.h"
 
 using namespace std;
 using namespace compiler;
@@ -30,8 +32,8 @@ namespace {
         }
 
         virtual void run(parser::Parser *parser, parser::Toker *toker, 
-                        model::Context *context
-                        ) {
+                         model::Context *context
+                         ) {
             CrackContext ctx(parser, toker, context);
             func(&ctx);
         }
@@ -48,9 +50,9 @@ CrackContext::CrackContext(parser::Parser *parser, parser::Toker *toker,
     userData(userData) {
 }
 
-void CrackContext::inject(char *code) {
+void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
     istringstream iss(code);
-    parser::Toker tempToker(iss, "injected");
+    parser::Toker tempToker(iss, sourceName, lineNumber);
     list<parser::Token> tokens;
     parser::Token tok;
     while (!(tok = tempToker.getToken()).isEnd())
@@ -77,6 +79,12 @@ int CrackContext::getScope() {
 
 void CrackContext::storeAnnotation(const char *name, AnnotationFunc func) {
     context->compileNS->addDef(new PrimFuncAnnotation(name, func));
+}
+
+compiler::Annotation *CrackContext::getAnnotation(const char *name) {
+    model::Annotation *ann = 
+        model::AnnotationPtr::rcast(context->compileNS->lookUp(name));
+    return ann ? new Annotation(ann) : 0;
 }
 
 void CrackContext::storeAnnotation(const char *name, AnnotationFunc func,
@@ -140,4 +148,12 @@ void CrackContext::removeCallback(parser::ParserCallback *callback) {
 
 void CrackContext::setNextFuncFlags(int nextFuncFlags) {
     context->nextFuncFlags = static_cast<FuncDef::Flags>(nextFuncFlags);
+}
+
+Location *CrackContext::getLocation(const char *name, int lineNumber) {
+    return new Location(toker->getLocationMap().getLocation(name, lineNumber));
+}
+
+Location *CrackContext::getLocation() {
+    return new Location(context->getLocation());
 }

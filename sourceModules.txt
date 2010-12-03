@@ -46,6 +46,7 @@ builder/llvm/VarDefs.cc
 builder/llvm/VTableBuilder.cc
 builder/llvm/DebugInfo.cc
 compiler/init.cc
+compiler/Annotation2.cc
 compiler/CrackContext.cc
 compiler/Token2.cc
 compiler/Location2.cc

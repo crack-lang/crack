@@ -8,6 +8,7 @@
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
+#include "Annotation.h"
 #include "CrackContext.h"
 #include "Token.h"
 #include "Location.h"
@@ -69,7 +70,27 @@ void finalAnn(CrackContext *ctx) {
                           );
 }
 
+void fileAnn(CrackContext *ctx) {
+    Location *loc = ctx->getLocation();
+    Token *newTok = new Token(parser::Token::string, loc->getName(), loc);
+    ctx->putBack(newTok);
+    loc->release();
+    newTok->release();
+}
+
+void lineAnn(CrackContext *ctx) {
+    Location *loc = ctx->getLocation();
+    Token *newTok = new Token(parser::Token::integer, 
+                              SPUG_FSTR(loc->getLineNumber()).c_str(), 
+                              loc
+                              );
+    ctx->putBack(newTok);
+    loc->release();
+    newTok->release();
+}
+
 void init(Module *mod) {
+    Func *f;
     Type *locationType = mod->addType("Location");
     locationType->addMethod(mod->getByteptrType(), "getName",
                             (void *)&Location::getName
@@ -86,9 +107,9 @@ void init(Module *mod) {
     locationType->finish();
 
     Type *tokenType = mod->addType("Token");
-    Func *f = tokenType->addStaticMethod(tokenType, "oper new",
-                                         (void *)&Token::create
-                                         );
+    f = tokenType->addStaticMethod(tokenType, "oper new",
+                                   (void *)&Token::create
+                                   );
     f->addArg(mod->getIntType(), "type");
     f->addArg(mod->getByteptrType(), "text");
     f->addArg(locationType, "loc");
@@ -105,6 +126,9 @@ void init(Module *mod) {
     
     tokenType->addMethod(mod->getByteptrType(), "getText",
                          (void *)&Token::getText
+                         );
+    tokenType->addMethod(mod->getIntType(), "getType",
+                         (void *)&Token::getType
                          );
     tokenType->addMethod(locationType, "getLocation",
                          (void *)&Token::getLocation
@@ -183,10 +207,24 @@ void init(Module *mod) {
     Type *opaqCallbackType = mod->addType("Callback");
     opaqCallbackType->finish();
 
+    Type *annotationType = mod->addType("Annotation");
+    annotationType->addMethod(mod->getVoidptrType(), "getUserData",
+                              (void *)&Annotation::getUserData
+                              );
+    annotationType->addMethod(mod->getVoidptrType(), "getFunc",
+                              (void *)&Annotation::getName
+                              );
+    annotationType->addMethod(mod->getVoidptrType(), "getName",
+                              (void *)&Annotation::getName
+                              );
+    annotationType->finish();
+
     Type *cc = mod->addType("CrackContext");
     f = cc->addMethod(mod->getVoidType(), "inject",
                       (void *)&CrackContext::inject
                       );
+    f->addArg(mod->getByteptrType(), "sourceName");
+    f->addArg(mod->getIntType(), "lineNumber");
     f->addArg(mod->getByteptrType(), "code");
     
     cc->addMethod(tokenType, "getToken", (void *)&CrackContext::getToken);
@@ -261,12 +299,32 @@ void init(Module *mod) {
                       );
     f->addArg(mod->getIntType(), "flags");
 
+    typedef Location *(CrackContext::* L1)();
+    typedef Location *(CrackContext::* L2)(const char *, int);
+    f = cc->addMethod(locationType, "getLocation",
+                      (void *)static_cast<L2>(&CrackContext::getLocation)
+                      );
+    f->addArg(mod->getByteptrType(), "name");
+    f->addArg(mod->getIntType(), "lineNumber");
+    cc->addMethod(locationType, "getLocation",
+                  (void *)static_cast<L2>(&CrackContext::getLocation)
+                  );
+
+    f = cc->addMethod(annotationType, "getAnnotation",
+                      (void *)&CrackContext::getAnnotation
+                      );
+    f->addArg(mod->getByteptrType(), "name");
+
     cc->finish();
     
     // our annotations
     f = mod->addFunc(mod->getVoidType(), "static", (void *)staticAnn);
     f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getVoidType(), "final", (void *)finalAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getByteptrType(), "FILE", (void *)fileAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getByteptrType(), "LINE", (void *)lineAnn);
     f->addArg(cc, "ctx");
     
     // constants

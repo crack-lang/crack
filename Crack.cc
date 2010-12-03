@@ -95,6 +95,8 @@ bool Crack::init() {
         moduleCache["crack.compiler"] = ccMod;
         rootContext->compileNS->addAlias(ccMod->lookUp("static").get());
         rootContext->compileNS->addAlias(ccMod->lookUp("final").get());
+        rootContext->compileNS->addAlias(ccMod->lookUp("FILE").get());
+        rootContext->compileNS->addAlias(ccMod->lookUp("LINE").get());
 
         // load the bootstrapping modules - library files that are essential 
         // to the language, like the definitions of the Object and String 

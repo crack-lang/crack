@@ -15,6 +15,8 @@ namespace model {
 
 namespace compiler {
 
+class Annotation;
+class Location;
 class Token;
 
 /**
@@ -41,7 +43,7 @@ class CrackContext {
          * The string will be tokenized and the tokens inserted into the 
          * stream before any existing tokens that have been pushed back.
          */
-        void inject(char *code);        
+        void inject(char *sourceName, int lineNumber, char *code);
         
         /**
          * Returns the next token from the tokenizer.
@@ -72,6 +74,11 @@ class CrackContext {
         void storeAnnotation(const char *name, AnnotationFunc func,
                              void *userData
                              );
+        
+        /**
+         * Returns the named annotation, null if not found.
+         */
+        Annotation *getAnnotation(const char *name);
         
         /**
          * Returns the user data associated with the annotation.  User data 
@@ -125,6 +132,12 @@ class CrackContext {
          * FUNCFLAG_STATIC and FUNCFLAG_FINAL.
          */
         void setNextFuncFlags(int nextFuncFlags);
+        
+        /** Create the specified location. */
+        Location *getLocation(const char *name, int lineNumber);
+        
+        /** Returns the location of the last processed token. */
+        Location *getLocation();
 };
 
 } // namespace compiler
