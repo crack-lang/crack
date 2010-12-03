@@ -390,21 +390,21 @@ class Parser {
        * @param tok the last parsed token
        * @param existing the existing variable definition.
        */
-      static void redefineError(const Token &tok, 
-                                const model::VarDef *existing
-                                );
+      void redefineError(const Token &tok, 
+                         const model::VarDef *existing
+                         );
 
       /** 
        * throws a ParseError, properly formatted with the location and
        * message text.
        */
-      static void error(const Token &tok, const std::string &msg);
+      void error(const Token &tok, const std::string &msg);
 
       /** Writes a warning message to standard error. */
-      static void warn(const Location &loc, const std::string &msg);
+      void warn(const Location &loc, const std::string &msg);
 
       /** Writes a warning message to standard error. */
-      static void warn(const Token &tok, const std::string & msg);
+      void warn(const Token &tok, const std::string & msg);
       
       /** 
        * Add a new callback to the parser.  It is the responsibility of the 

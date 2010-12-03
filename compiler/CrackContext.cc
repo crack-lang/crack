@@ -101,29 +101,31 @@ void *CrackContext::getUserData() {
 }
 
 void CrackContext::error(const char *text) {
-    const parser::Location &loc = context->getLocation();
-    cerr << "ParseError: " << loc.getName() << ':' << loc.getLineNumber() << 
-        ": " << text << endl;
-    exit(1);
+    context->error(text, false);
 }
 
 void CrackContext::error(Token *tok, const char *text) {
-    const parser::Location &loc = tok->rep->getLocation();
-    cerr << "ParseError: " << loc.getName() << ':' << loc.getLineNumber() << 
-        ": " << text << endl;
-    exit(1);
+    context->error(tok->rep->getLocation(), text, false);
 }
 
 void CrackContext::warn(const char *text) {
-    parser::Parser::warn(context->getLocation(), text);
+    context->warn(text);
 }
 
 void CrackContext::warn(Token *tok, const char *text) {
-    parser::Parser::warn(tok->rep->getLocation(), text);
+    context->warn(tok->rep->getLocation(), text);
 }
 
 int CrackContext::getParseState() {
     return parser->state;
+}
+
+void CrackContext::pushErrorContext(const char *text) {
+    context->pushErrorContext(text);
+}
+
+void CrackContext::popErrorContext() {
+    context->popErrorContext();
 }
 
 parser::ParserCallback *CrackContext::addCallback(

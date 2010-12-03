@@ -279,6 +279,15 @@ void init(Module *mod) {
     f = cc->addMethod(mod->getVoidType(), "warn", (void *)g4);
     f->addArg(tokenType, "tok");
     f->addArg(mod->getByteptrType(), "text");
+    
+    f = cc->addMethod(mod->getVoidType(), "pushErrorContext",
+                      (void *)&CrackContext::pushErrorContext
+                      );
+    f->addArg(mod->getByteptrType(), "text");
+    
+    cc->addMethod(mod->getVoidType(), "popErrorContext",
+                  (void *)&CrackContext::popErrorContext
+                  );
 
     cc->addMethod(mod->getIntType(), "getParseState", 
                   (void *)&CrackContext::getParseState
@@ -307,7 +316,7 @@ void init(Module *mod) {
     f->addArg(mod->getByteptrType(), "name");
     f->addArg(mod->getIntType(), "lineNumber");
     cc->addMethod(locationType, "getLocation",
-                  (void *)static_cast<L2>(&CrackContext::getLocation)
+                  (void *)static_cast<L1>(&CrackContext::getLocation)
                   );
 
     f = cc->addMethod(annotationType, "getAnnotation",
@@ -453,6 +462,9 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "TOK_HEXLIT", parser::Token::hexLit);
     mod->addConstant(mod->getIntType(), "TOK_BINLIT", parser::Token::binLit);
+    mod->addConstant(mod->getIntType(), "TOK_POPERRCTX", 
+                     parser::Token::popErrCtx
+                     );
 
     mod->addConstant(mod->getIntType(), "SCOPE_MODULE", 0);
     mod->addConstant(mod->getIntType(), "SCOPE_FUNCTION", 2);

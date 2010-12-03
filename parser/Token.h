@@ -23,7 +23,12 @@ class Token {
                      incr, integer, lbracket, lcurly, le, lparen, lt, minus, 
                      ne, percent, plus, quest, rbracket, rcurly, rparen, semi,
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
-                     logicOr, floatLit, octalLit, hexLit, binLit
+                     logicOr, floatLit, octalLit, hexLit, binLit,
+                     
+                     // these tokens are special - they are used to 
+                     // communicate actions that need to be performed in the 
+                     // token stream.
+                     popErrCtx, // pop error context
 		    } Type;
 
    private:

@@ -2,6 +2,7 @@
 
 #include "Context.h"
 
+#include <stdlib.h>
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
 #include "parser/Token.h"
@@ -554,12 +555,51 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     return 0;
 }
 
-void Context::error(const string &msg) {
-    throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
-                                       loc.getLineNumber() << ": " <<
-                                       msg
-                                       )
-                             );
+namespace {
+    struct ContextStack {
+        const list<string> &stack;
+        ContextStack(const list<string> &stack) : stack(stack) {}
+    };
+
+    ostream &operator <<(ostream &out, ContextStack a) {
+        for (list<string>::const_iterator iter = a.stack.begin(); 
+             iter != a.stack.end();
+             ++iter
+             )
+            out << "\n  " << *iter;
+        return out;
+    }
+}
+
+void Context::error(const parser::Location &loc, const string &msg, 
+                    bool throwException
+                    ) {
+    
+    if (throwException)
+        throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
+                                           loc.getLineNumber() << ": " <<
+                                           msg <<
+                                           ContextStack(errorContexts)
+                                           )
+                                );
+    else {
+        cerr << "ParseError: " << loc.getName() << ":" << 
+            loc.getLineNumber() << ": " << msg << ContextStack(errorContexts);
+        exit(1);
+    }
+    
+}
+
+void Context::warn(const parser::Location &loc, const string &msg) {
+    cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << msg << endl;
+}
+
+void Context::pushErrorContext(const string &msg) {
+    errorContexts.push_front(msg);
+}
+
+void Context::popErrorContext() {
+    errorContexts.pop_front();
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

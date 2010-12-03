@@ -5,6 +5,7 @@
 
 #include <map>
 #include <vector>
+#include <list>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 #include "FuncDef.h"
@@ -48,9 +49,12 @@ class Context : public spug::RCBase {
         // the current source location.
         parser::Location loc;
         
+        // the error context stack.
+        std::list<std::string> errorContexts;
+
         // initializer for an empty location object
         static parser::Location emptyLoc;
-
+        
         // emit a variable definition with no error checking.
         VarDefPtr emitVarDef(Context *defCtx, TypeDef *type,
                              const std::string &name,
@@ -325,12 +329,46 @@ class Context : public spug::RCBase {
          * undefined.
          */
         AnnotationPtr lookUpAnnotation(const std::string &name);
+
+        /**
+         * Emit an error message.  If 'throwException' is true, a 
+         * ParseException will be thrown.  Otherwise, exit() is called to 
+         * terminate the program.
+         */
+        void error(const parser::Location &loc, const std::string &msg, 
+                   bool throwException = true
+                   );
         
         /**
-         * Emit an error message (throws a ParseException).  If there is a 
-         * current Location, this is the location for the error.
+         * Emit an error message using the last recorded location.
          */
-        void error(const std::string &msg);
+        void error(const std::string &msg, bool throwException = true) {
+            error(loc, msg, throwException);
+        }
+        
+        /**
+         * Emit the warning.
+         */
+        void warn(const parser::Location &loc, const std::string &msg);
+        
+        /**
+         * Emit the warning using the last recorded location.
+         */
+        void warn(const std::string &msg) {
+            warn(loc, msg);
+        }
+        
+        /**
+         * Push an error context.  Error contexts will be displayed indented 
+         * under an error or warning in the reverse order in which they were 
+         * pushed.
+         */
+        void pushErrorContext(const std::string &msg);
+        
+        /**
+         * Pop and discard the last error context.
+         */
+        void popErrorContext();
         
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();

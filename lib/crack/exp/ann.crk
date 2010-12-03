@@ -8,7 +8,7 @@
 
 import crack.lang die, CString;
 import crack.io cout, StringFormatter, Formatter, Writer;
-import crack.compiler CrackContext, Token, Location, TOK_STRING;
+import crack.compiler CrackContext, Token, Location, TOK_STRING, TOK_POPERRCTX;
 import crack.container Array, TreeMap;
 
 class UInt {
@@ -320,8 +320,18 @@ class Macro : NodeList {
     uint argCount;
     
     void expand(CrackContext ctx) {
+        # hold onto the last location
+        loc := ctx.getLocation();
+        
         # parse the args.
         args := parseArgs(ctx, argCount);
+        
+        # install the "pop error context" token so that our error context only 
+        # shows up for the expansion of the macro.
+        ctx.putBack(Token(TOK_POPERRCTX, '[pop error context]'.buffer,
+                          loc
+                          )
+                    );
 
         # expand the macro
         Node node = first;
@@ -329,6 +339,11 @@ class Macro : NodeList {
             node.expand(ctx, args);
             node = node.next;
         }
+        
+        # push an error context
+        StringFormatter fmt = {};
+        fmt `expanded from macro at $(loc.getName()):$(loc.getLineNumber())`;
+        ctx.pushErrorContext(fmt.createCString().buffer);
     }    
 }
 

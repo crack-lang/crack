@@ -3,7 +3,8 @@
 
 rc=0
 
-parseError="ParseError: run_all_tests.tmp:"
+source=run_all_tests.tmp
+parseError="ParseError: $source:"
 parseWarn="run_all_tests.tmp:"
 
 function test_output {
@@ -1100,5 +1101,11 @@ test_output 'built-in "final" annotation' \
      class B : A { void f() {} }' \
     "${parseError}2: Definition of f hides previous overload."
 test_output 'standard annotations' 'import test.test_std_annotations;' ok
+
+test_output 'error contexts work' \
+    '@import crack.exp.ann define; @define fail() { bad; }
+     @fail()' \
+     "${parseError}1: Unknown identifier bad
+  expanded from macro at $source:2"
 
 exit $rc

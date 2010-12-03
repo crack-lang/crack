@@ -63,8 +63,11 @@ Token Parser::getToken() {
    context->setLocation(tok.getLocation());
    
    // short-circuit the parser for an annotation, which can occur anywhere.
-   while (tok.isAnn()) {
-      parseAnnotation();
+   while (tok.isAnn() || tok.getType() == Token::popErrCtx) {
+      if (tok.isAnn())
+         parseAnnotation();
+      else
+         context->popErrorContext();
       tok = toker.getToken();
       context->setLocation(tok.getLocation());
    }
@@ -2392,14 +2395,11 @@ void Parser::redefineError(const Token &tok, const VarDef *existing) {
 }
 
 void Parser::error(const Token &tok, const std::string &msg) {
-   Location loc = tok.getLocation();
-   stringstream text;
-   text << loc.getName() << ':' << loc.getLineNumber() << ": " << msg;
-   throw ParseError(text.str().c_str());
+   context->error(tok.getLocation(), msg);
 }
 
 void Parser::warn(const Location &loc, const std::string &msg) {
-   cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << msg << endl;
+   context->warn(loc, msg);
 }
 
 void Parser::warn(const Token &tok, const std::string &msg) {

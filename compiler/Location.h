@@ -12,6 +12,9 @@ namespace parser {
 namespace compiler {
 
 class Location : public crack::ext::RCObj {
+    private:
+        Location(const Location &other);
+
     public:
         parser::Location *rep;
 

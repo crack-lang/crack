@@ -112,6 +112,17 @@ class CrackContext {
         void warn(Token *tok, const char *text);
         
         /**
+         * Push the string onto the context stack to be displayed for any 
+         * error messages.
+         */
+        void pushErrorContext(const char *text);
+        
+        /**
+         * Pop the last string off of the error message context stack.
+         */
+        void popErrorContext();
+        
+        /**
          * Returns the state of the parser.
          */
         int getParseState();
