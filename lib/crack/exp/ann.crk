@@ -357,6 +357,8 @@ void expand(CrackContext ctx) {
 ST_NONE := 0;
 ST_ESC := 1;   # got a dollar-sign escape
 ST_CONCAT := 2;  # got a double-dollar-sign concatenation operator
+ST_ISTR := 3; # MUST BE THE HIGHEST VALUE STATE.  Values greater than this 
+              # indicate levels of nested parens in an i-string.
 
 void define(CrackContext ctx) {
     Macro mac = {};
@@ -410,6 +412,33 @@ void define(CrackContext ctx) {
             ctx.error(
                 'End of file before the end of a macro definition'.buffer
             );
+        } else if (state >= ST_ISTR) {
+            # keep track of the parens.
+            if (tok.isLParen())
+                ++state;
+            else if (tok.isRParen() && --state == ST_ISTR) 
+                # we have to tell the tokenizer to continue parsing the 
+                # i-string.
+                ctx.continueIString();
+            else if (tok.isIstrBegin())
+                ctx.error('Nested interpolation strings may not be used '
+                           'in macros.'.buffer
+                          );
+            else if (tok.isDollar())
+                ctx.error('Nested concatenations and stringifications may not '
+                           'be used in a macro.'.buffer
+                          );
+            else if (tok.isIstrEnd())
+                state = ST_NONE;
+            else if (state == ST_ISTR && tok.isIdent())
+                # an identifier takes us immediately back into the i-string
+                ctx.continueIString();
+        } else if (tok.isIstrBegin()) {
+            if (state != ST_NONE)
+                ctx.error('An interpolation string may not be used with '
+                           'stringification or concatenation.'.buffer
+                          );
+            state = ST_ISTR;
         # check for brackets, increment or decrement the bracket count.
         } else if (tok.isRCurly()) {
             if (!--bracketCount)
@@ -423,6 +452,12 @@ void define(CrackContext ctx) {
                 if (!node)
                     ctx.error('The macro may not begin with a concatenation '
                                'operator'.buffer
+                              );
+                else if (node.class.isSubclass(Tok) && 
+                         Tok.cast(node).tok.isIstrEnd()
+                         )
+                    ctx.error('An interpolation string may not be used with '
+                               'stringification or concatenation'.buffer
                               );
                 
                 # if we're starting off a new concatenation sequence, add the 

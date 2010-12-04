@@ -323,6 +323,10 @@ void init(Module *mod) {
                       (void *)&CrackContext::getAnnotation
                       );
     f->addArg(mod->getByteptrType(), "name");
+    
+    cc->addMethod(mod->getVoidType(), "continueIString",
+                  (void *)&CrackContext::continueIString
+                  );
 
     cc->finish();
     

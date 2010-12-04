@@ -714,6 +714,14 @@ Token Toker::getToken() {
     if (tokens.size()) {
         Token temp = tokens.back();
         tokens.pop_back();
+        
+        // if we're currently in the i-string state, leave it if we don't pass
+        // a string.  If we're not in it and we've got an i-string begin, get 
+        // in it.
+        if (state == st_istr && !temp.isString() && !temp.isIstrBegin())
+            state = st_none;
+        else if (temp.isIstrBegin())
+            state = st_istr;
         return temp;
     } else {
         return readToken();

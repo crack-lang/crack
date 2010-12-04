@@ -149,6 +149,9 @@ class CrackContext {
         
         /** Returns the location of the last processed token. */
         Location *getLocation();
+        
+        /** Tells the tokenizer to resume parsing an i-string. */
+        void continueIString();
 };
 
 } // namespace compiler

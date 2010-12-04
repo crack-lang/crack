@@ -159,3 +159,7 @@ Location *CrackContext::getLocation(const char *name, int lineNumber) {
 Location *CrackContext::getLocation() {
     return new Location(context->getLocation());
 }
+
+void CrackContext::continueIString() {
+    toker->continueIString();
+}

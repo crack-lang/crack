@@ -1,6 +1,6 @@
 # Copyright 2010 Google Inc.
 
-import crack.io cout;
+import crack.io cout, StringFormatter;
 @import crack.exp.ann define;
 @import test.testmac foo, bar, tm_concat, tm_stringify;
 
@@ -34,6 +34,17 @@ if (@stringify(foo) != 'foo')
 if (@stringify((x == 'test')) != "( x == 'test' )")
     cout `stringification of multi-token value failed.\n`;
 
+@define interp(out, a, b) {
+    (out) `This is $a\n`;
+    (out) `That was $(b)\n`;
+}
+
+StringFormatter result = {};
+String now() { return 'now'; }
+@interp(result, ('then'), now())
+if (result.createString() != 'This is then\nThat was now\n')
+    cout `Failed on macros with i-strings\n`;
+
 if (@foo() != 'IAM not a crook')
     cout `Failed to create a macro by hand\n`;
 
@@ -48,5 +59,3 @@ if (@tm_stringify(boyng) != 'boyng')
     cout `failed to export a macro with stringification`;
 
 cout `ok\n`;
-
-
