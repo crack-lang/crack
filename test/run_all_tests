@@ -1103,7 +1103,7 @@ test_output 'built-in "final" annotation' \
 test_output 'standard annotations' 'import test.test_std_annotations;' ok
 
 test_output 'error contexts work' \
-    '@import crack.exp.ann define; @define fail() { bad; }
+    '@import crack.exp.ann define; @define fail() { void f() { bad; } }
      @fail()' \
      "${parseError}1: Unknown identifier bad
   expanded from macro at $source:2"

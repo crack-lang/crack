@@ -575,16 +575,17 @@ void Context::error(const parser::Location &loc, const string &msg,
                     bool throwException
                     ) {
     
+    list<string> &ec = globalData->errorContexts;
     if (throwException)
         throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
                                            loc.getLineNumber() << ": " <<
                                            msg <<
-                                           ContextStack(errorContexts)
+                                           ContextStack(ec)
                                            )
                                 );
     else {
         cerr << "ParseError: " << loc.getName() << ":" << 
-            loc.getLineNumber() << ": " << msg << ContextStack(errorContexts);
+            loc.getLineNumber() << ": " << msg << ContextStack(ec);
         exit(1);
     }
     
@@ -595,11 +596,11 @@ void Context::warn(const parser::Location &loc, const string &msg) {
 }
 
 void Context::pushErrorContext(const string &msg) {
-    errorContexts.push_front(msg);
+    globalData->errorContexts.push_front(msg);
 }
 
 void Context::popErrorContext() {
-    errorContexts.pop_front();
+    globalData->errorContexts.pop_front();
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

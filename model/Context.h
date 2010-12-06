@@ -49,9 +49,6 @@ class Context : public spug::RCBase {
         // the current source location.
         parser::Location loc;
         
-        // the error context stack.
-        std::list<std::string> errorContexts;
-
         // initializer for an empty location object
         static parser::Location emptyLoc;
         
@@ -137,6 +134,10 @@ class Context : public spug::RCBase {
             // last version of the language.
             bool migrationWarnings;
             
+            // the error context stack.  This needs to be global because it is 
+            // managed by annotations and transcends local contexts.
+            std::list<std::string> errorContexts;
+
             // just make sure the bootstrapped types are null
             GlobalData();
         } *globalData;
