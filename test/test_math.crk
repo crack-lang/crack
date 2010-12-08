@@ -4,7 +4,7 @@
 // test of math library
 import crack.io cout, Formatter;
 import crack.exp.file File;
-import crack.math sin, cos, tan;
+import crack.math sin, cos, tan, PI;
 
 f := File('test/test_math.out', 'w');
 fout := Formatter(f.getWriterObject());
