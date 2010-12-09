@@ -137,6 +137,9 @@ class Writer : VTableBase {
         puts(this.class.name);
         _die("Writer.write() not implemented.");
     }
+    
+    ## Flush the contents of the buffer.
+    void flush() {}
 
     # MixIn stuff
     Object getWriterObject() {
@@ -506,11 +509,11 @@ class String : Buffer {
         buf.append(39); # "'"
         for (uint i = 0; i < size; ++i) {
             ch := buffer[i];
-            if (ch < 32 || ch > 127 || ch == 39) {
+            if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
                 buf.append(92); # '\'
                 buf.append(48 + (ch >> 6));
                 buf.append(48 + ((ch & 56) >> 3));
-                buf.append(48 + (ch & 3));
+                buf.append(48 + (ch & 7));
             } else {
                 buf.append(ch)
             }
