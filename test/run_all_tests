@@ -1113,4 +1113,6 @@ test_output 'error contexts work' \
      "${parseError}1: Unknown identifier bad
   expanded from macro at $source:2"
 
+test_output 'serial module' 'import test.test_serial;' ok
+
 exit $rc

@@ -1,0 +1,19 @@
+# Copyright 2010 Google Inc.
+
+import crack.io cout, StringWriter, StringReader;
+import crack.exp.serial SerialWriter, SerialReader;
+
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    w.write(1000);
+    w.write('test');
+    SerialReader r = {StringReader(sw.createString())};
+    if (r.readUInt() != 1000)
+        cout `Failed to write and read uint32\n`;
+    
+    if (r.readString() != 'test')
+        cout `Failed to write and read string\n`;
+}
+
+cout `ok\n`;

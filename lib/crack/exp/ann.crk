@@ -7,14 +7,67 @@
 # I guess there's currently only one :-)
 
 import crack.lang die, CString;
-import crack.io cout, StringFormatter, Formatter, Writer;
+import crack.exp.error err;
+import crack.io cout, StringFormatter, StringWriter, Formatter, Reader, Writer;
 import crack.compiler CrackContext, Token, Location, TOK_STRING, TOK_POPERRCTX;
 import crack.container Array, TreeMap;
+import crack.exp.serial SerialReader, SerialWriter;
 
 class UInt {
     uint val;
     
     oper init(uint val0) : val = val0 {}
+}
+
+class MacroSerializer : SerialWriter {
+    TreeMap sourceNames = {};
+    uint lastIdx;
+
+    oper init(Writer dst) : SerialWriter(dst) {}
+    
+    void writeSrcName(String name) {
+        idx := sourceNames.get(name);
+        if (idx) {
+            write(UInt.cast(idx).val);
+        } else {
+            # new name, write the index and the 
+            sourceNames[name] = UInt(lastIdx);
+            write(lastIdx++);
+            write(name);
+        }
+    }
+
+    void writeLocation(Location loc) {
+        writeSrcName(String(loc.getName()));
+        write(uint(loc.getLineNumber()));
+    }
+}
+
+class MacroDeserializer : SerialReader {
+    CrackContext ctx;
+    Array sourceNames = {};
+    
+    oper init(CrackContext ctx0, Reader src) : SerialReader(src), ctx = ctx0 {}
+    
+    String readSrcName() {
+        # read the index
+        idx := readUInt();
+        count := sourceNames.count();
+        if (idx > count) {
+            err.do() `Invalid source name index: $idx\n`;
+            return null;
+        } else if (idx == count) {
+            name := readString();
+            sourceNames.append(name);
+            return name;
+        } else {
+            return String.cast(sourceNames[idx]);
+        }
+    }
+
+    Location readLocation() {
+        return ctx.getLocation(readSrcName().buffer, int(readUInt()));
+    }
 }
 
 class Node {
@@ -30,6 +83,10 @@ class Node {
     void injectRepr(CrackContext ctx, int lvl) {
         die('Node.writeRepr() undefined');
     }
+    
+    void writeTo(MacroSerializer dst) {
+        die('Node.writeTo() undefined');
+    }
 }
 
 class NodeIter {
@@ -40,11 +97,15 @@ class NodeIter {
     Node elem() { return node; }
 }
 
+Node _readNode(MacroDeserializer src);
+
 ## A list of tokens.  These are typically stored in reverse order of the 
 ## actual order of the tokens so that they can be easily "put back" into the 
 ## token stream (after putBack() they will be in the correct order once again)
 class NodeList {
     Node first, last;
+    
+    oper init() {}
     
     void pushHead(Node node) {
         if (first) {
@@ -73,6 +134,35 @@ class NodeList {
             return result;
         } else {
             return null;
+        }
+    }
+
+    oper init(MacroDeserializer src) {
+        # get the number of nodes in the list
+        count := src.readUInt();
+        while (count--) {
+            append(_readNode(src));
+            #cout `remaining = $count\n`;
+        }
+    }
+    
+    void writeTo(MacroSerializer dst) {
+        
+        # count the nodes and write the count
+        node := first;
+        uint count;
+        while (node) {
+            ++count;
+            node = node.next;
+        }
+        #cout `writing count $count\n`;
+        dst.write(count);
+   
+        # write all of the nodes
+        node = first;
+        while (node) {
+            node.writeTo(dst);
+            node = node.next;
         }
     }
 
@@ -111,6 +201,8 @@ class Tok : Node {
 
     oper init(Token tok0) : tok = tok0 {}
 
+    oper init() {}
+
     void expand(CrackContext ctx, Array args) {
         ctx.putBack(tok);
     }
@@ -144,6 +236,32 @@ class Tok : Node {
                  );`;
         ctx.inject(f.buffer, l, out.createCString().buffer);
     }
+    
+    void writeTo(MacroSerializer dst) {
+        
+        TreeMap names = {};
+        
+        # my node type
+        dst.write(0);
+        
+        # the token
+        dst.write(uint(tok.getType()));
+        dst.write(String(tok.getText()));
+        
+        dst.writeLocation(tok.getLocation());
+    }
+    
+    oper init(MacroDeserializer src) {
+        type := int(src.readUInt());
+        text := src.readString();
+        locName := src.readSrcName();
+        locLineNum := src.readUInt();
+    
+        #cout `read token: $type, $text, $locName, $locLineNum\n`;    
+        tok = Token(type, text.buffer, 
+                    src.ctx.getLocation(locName.buffer, int(locLineNum))
+                    );
+    }
 }
 
 class Arg : Node {
@@ -151,9 +269,11 @@ class Arg : Node {
     Location loc;
     
     oper init(Location loc0, uint argIndex0) : 
-        loc = loc0, 
+        loc = loc0,
         argIndex = argIndex0 {
     }
+    
+    oper init() {}
 
     void expand(CrackContext ctx, Array args) {
         for (node :in NodeList.cast(args[argIndex]))
@@ -196,6 +316,22 @@ class Arg : Node {
                        );`;
         ctx.inject(f.buffer, l, out.createCString().buffer);
     }
+    
+    oper init(MacroDeserializer src) {
+        argIndex = src.readUInt();
+        loc = src.readLocation();
+        #cout `read arg $argIndex\n`;
+    }
+    
+    void writeTo(MacroSerializer dst) {
+        
+        # write my type id
+        dst.write(1);
+        
+        # write the arg id and location fields
+        dst.write(argIndex);
+        dst.writeLocation(loc);
+    }
 }
 
 ## Concat nodes concatenate a set of tokens into a single token.  The type and 
@@ -209,6 +345,8 @@ class Concat : Node {
         loc = loc0,
         list = list0 {
     }
+    
+    oper init() {}
 
     void expand(CrackContext ctx, Array args) {
         StringFormatter concat = {};
@@ -242,6 +380,20 @@ class Concat : Node {
         ctx.inject(f.buffer, l, out.createCString().buffer);
         list.injectRepr(ctx, lvl);
     }
+    
+    oper init(MacroDeserializer src) {
+        list = NodeList(src);
+        type = int(src.readUInt());
+        loc = src.readLocation();
+    }
+    
+    void writeTo(MacroSerializer dst) {
+        dst.write(2);
+        
+        list.writeTo(dst);
+        dst.write(uint(type));
+        dst.writeLocation(loc);
+    }
 }
 
 class Stringify : Node {
@@ -271,6 +423,35 @@ class Stringify : Node {
         ctx.inject(f.buffer, l, out.createCString().buffer);
         node.injectRepr(ctx, lvl);
     }
+    
+    oper init(MacroDeserializer src) {
+        node = _readNode(src);
+    }
+    
+    void writeTo(MacroSerializer dst) {
+        
+        # write my type id.
+        dst.write(3);
+        
+        node.writeTo(dst);
+    }
+}
+
+Node _readNode(MacroDeserializer src) {
+    type := src.readUInt();
+    Node node;
+    if (type == 0)
+        node = Tok(src);
+    else if (type == 1)
+        node = Arg(src);
+    else if (type == 2)
+        node = Concat(src);
+    else if (type == 3)
+        node = Stringify(src);
+    else
+        err.do() `bogus node $type\n`;
+    
+    return node;
 }
 
 ## Parse macro arguments, returns them as an array of NodeList objects.
@@ -318,7 +499,19 @@ $(argCount), got $(args.count())\0`;
 class Macro : NodeList {
     String name;
     uint argCount;
+
+    oper init() {}
+    oper init(MacroDeserializer src) : NodeList(src) {
+        name = src.readString();
+        argCount = src.readUInt();
+    }
     
+    void writeTo(MacroSerializer dst) {
+        NodeList.writeTo(dst);
+        dst.write(name);
+        dst.write(argCount);
+    }
+
     void expand(CrackContext ctx) {
         # hold onto the last location
         loc := ctx.getLocation();
@@ -508,7 +701,7 @@ void define(CrackContext ctx) {
 }
 
 ## Export a macro, making it visible from this module.
-void export(CrackContext ctx) {
+void old_export(CrackContext ctx) {
     
     # get the next token, make sure it's an annotation.
     tok := ctx.getToken();
@@ -570,12 +763,58 @@ void export(CrackContext ctx) {
     ctx.inject(f.buffer, l, t.buffer);
 }
 
+void export(CrackContext ctx) {
+    
+    # get the next token, make sure it's an annotation.
+    tok := ctx.getToken();
+    if (!tok.isIdent())
+        ctx.error(tok, 'Identifier expected'.buffer);
+    name := CString(tok.getText(), false);
+    ann := ctx.getAnnotation(name.buffer);
+    Macro mac;
+    if (ann is null) {
+        StringFormatter fmt = {};
+        fmt `$name is not an annotation.\0`;
+        ctx.error(tok, fmt.createString().buffer);
+    } else {
+        mac = Macro.unsafeCast(ann.getUserData());
+    }
+    
+    # serialize the macro into a string
+    flatMac := StringWriter();
+    mac.writeTo(MacroSerializer(flatMac));
+    
+    StringFormatter code = {};
+    f := @FILE; l := @LINE; code `
+    
+        void $name(CrackContext ctx) {
+            userData := 
+                ctx.getUserData();
+            Macro mac;
+            if (userData is null) {
+                StringReader reader = { $(flatMac.createString().getRepr()) };
+                mac = Macro(MacroDeserializer(ctx, reader));
+                ctx.storeAnnotation($(name.getRepr()).buffer, $name,
+                                    mac
+                                    );
+            } else {
+                mac = Macro.unsafeCast(userData);
+            }
+            
+            mac.expand(ctx);
+        }
+    \n\0`;
+    ctx.inject(f.buffer, l, code.createString().buffer);
+}
+
 ## Call this annotation at the top of your file if you want to export macros.  
 ## It will import everything you need.
 void exporter(CrackContext ctx) {
     StringFormatter f = {};
-    f `import crack.exp.ann Macro, Node, NodeList, Tok, Arg, Stringify, Concat;
-       import crack.compiler CrackContext, Token, TOK_STRING`;
+    f `import crack.exp.ann Macro, MacroDeserializer, Node, NodeList, Tok, Arg, 
+        Stringify, Concat;
+       import crack.compiler CrackContext, Token, TOK_STRING;
+       import crack.io StringReader;`;
     ctx.inject(@FILE.buffer, @LINE, 
                f.createCString().buffer);
 }
