@@ -23,6 +23,10 @@ class ModuleDef : public VarDef, public Namespace {
         // builtins are stored.
         NamespacePtr parent;
 
+        // this is true if the module has been completely parsed and the
+        // close() method has been called.
+        bool finished;
+
         ModuleDef(const std::string &name, Namespace *parent);
 
         /**

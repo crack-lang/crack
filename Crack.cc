@@ -93,6 +93,7 @@ bool Crack::init() {
             initExtensionModule("crack.compiler", &compiler::init);
         rootContext->globalData->crackContext = ccMod->lookUp("CrackContext");
         moduleCache["crack.compiler"] = ccMod;
+        ccMod->finished = true;
         rootContext->compileNS->addAlias(ccMod->lookUp("static").get());
         rootContext->compileNS->addAlias(ccMod->lookUp("final").get());
         rootContext->compileNS->addAlias(ccMod->lookUp("FILE").get());
@@ -304,6 +305,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                                moduleNameEnd,
                                canonicalName
                                );
+        moduleCache[canonicalName] = modDef;
     } else {
         
         // try to find the module on the source path
@@ -326,14 +328,15 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                         );
         context->toplevel = true;
         modDef = context->createModule(canonicalName, emitDebugInfo);
+        moduleCache[canonicalName] = modDef;
         if (!modPath.isDir) {
             ifstream src(modPath.path.c_str());
             parseModule(*context, modDef.get(), modPath.path, src);
         }
     }
 
+    modDef->finished = true;
     loadedModules.push_back(modDef);
-    moduleCache[canonicalName] = modDef;
     return modDef;
 }    
 

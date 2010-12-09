@@ -10,7 +10,8 @@ using namespace model;
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
     Namespace(name),
-    parent(parent) {
+    parent(parent),
+    finished(false) {
 }
 
 bool ModuleDef::hasInstSlot() {

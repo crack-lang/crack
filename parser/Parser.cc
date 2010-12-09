@@ -1948,6 +1948,15 @@ void Parser::parseImportStmt(Namespace *ns) {
       mod = Crack::loadModule(moduleName, canonicalName);
       if (!mod)
          error(tok, SPUG_FSTR("unable to find module " << canonicalName));
+      
+      // make sure the module is finished (no recursive imports)
+      else if (!mod->finished)
+         error(tok,
+               SPUG_FSTR("Attempting to import module " << canonicalName <<
+                          " recursively."
+                         )
+               );
+
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
    }
