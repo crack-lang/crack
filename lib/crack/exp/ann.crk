@@ -19,6 +19,8 @@ class UInt {
     oper init(uint val0) : val = val0 {}
 }
 
+## Serial writer with some additional facilities to simplify macro 
+## serialization.
 class MacroSerializer : SerialWriter {
     TreeMap sourceNames = {};
     uint lastIdx;
@@ -43,6 +45,8 @@ class MacroSerializer : SerialWriter {
     }
 }
 
+## Serial reader with some additional facilities to simplify macro 
+## deserialization.
 class MacroDeserializer : SerialReader {
     CrackContext ctx;
     Array sourceNames = {};
@@ -78,10 +82,6 @@ class Node {
     Location getLocation() {
         die('Node.getLocation() undefined');
         return null;
-    }
-    
-    void injectRepr(CrackContext ctx, int lvl) {
-        die('Node.writeRepr() undefined');
     }
     
     void writeTo(MacroSerializer dst) {
@@ -170,30 +170,6 @@ class NodeList {
 
     ## Node lists are true if they have any contents.
     bool isTrue() { return first; }
-    
-    void injectRepr(CrackContext ctx, int lvl) {
-        
-        # we should never end up here recursively because there cannot be 
-        # nested concats.  If this situation changes, we need to do something 
-        # more complicated here to allow nested list construction.
-        if (lvl) die('NodeList.injectRepr() called recursively');
-
-        StringFormatter out;
-
-        # inject the code to create the elements of the list.
-        for (node :in this) {
-            out = StringFormatter();
-            f := @FILE; l := @LINE; out `list.pushHead(node);`;
-            ctx.inject(f.buffer, l, out.createCString().buffer);
-            node.injectRepr(ctx, ++lvl);
-        }
-        
-        # inject the code to create the list.
-        out = StringFormatter();
-        f := @FILE; l := @LINE; out `list = NodeList();`;
-        ctx.inject(f.buffer, l, out.createCString().buffer);
-    }
-            
 }
 
 class Tok : Node {
@@ -222,21 +198,6 @@ class Tok : Node {
         out.write('token: ' + String(tok.getText()));
     }
 
-    void injectRepr(CrackContext ctx, int lvl) {
-        StringFormatter out = {};
-        loc := tok.getLocation();
-        f := @FILE; l := @LINE; out `
-            node = Tok(Token($(tok.getType()), 
-                       $(String(tok.getText()).getRepr()).buffer,
-                       ctx.getLocation(
-                            $(String(loc.getName()).getRepr()).buffer, 
-                            $(loc.getLineNumber())
-                            )
-                       )
-                 );`;
-        ctx.inject(f.buffer, l, out.createCString().buffer);
-    }
-    
     void writeTo(MacroSerializer dst) {
         
         TreeMap names = {};
@@ -306,17 +267,6 @@ class Arg : Node {
     void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }
     Location getLocation() { return loc; }
     
-    void injectRepr(CrackContext ctx, int lvl) {
-        StringFormatter out = {};
-        f := @FILE; l := @LINE; out `
-            node = Arg(ctx.getLocation($(String(loc.getName()).getRepr()).buffer,
-                                       $(loc.getLineNumber())
-                                       ),
-                       $argIndex
-                       );`;
-        ctx.inject(f.buffer, l, out.createCString().buffer);
-    }
-    
     oper init(MacroDeserializer src) {
         argIndex = src.readUInt();
         loc = src.readLocation();
@@ -367,20 +317,6 @@ class Concat : Node {
         return loc;
     }
 
-    void injectRepr(CrackContext ctx, int lvl) {
-        StringFormatter out = {};
-
-        f := @FILE; l := @LINE; out `
-            node = Concat(list,
-                          ctx.getLocation(
-                            $(String(loc.getName()).getRepr()).buffer,
-                            $(loc.getLineNumber())
-                            )
-                          );`;
-        ctx.inject(f.buffer, l, out.createCString().buffer);
-        list.injectRepr(ctx, lvl);
-    }
-    
     oper init(MacroDeserializer src) {
         list = NodeList(src);
         type = int(src.readUInt());
@@ -415,13 +351,6 @@ class Stringify : Node {
     
     Location getLocation() {
         return node.getLocation();
-    }
-    
-    void injectRepr(CrackContext ctx, int lvl) {
-        StringFormatter out = {};
-        f := @FILE; l := @LINE; out `node = Stringify(node);`;
-        ctx.inject(f.buffer, l, out.createCString().buffer);
-        node.injectRepr(ctx, lvl);
     }
     
     oper init(MacroDeserializer src) {
@@ -698,69 +627,6 @@ void define(CrackContext ctx) {
     # store a new annotation for expanding the macro
     ctx.storeAnnotation(mac.name.buffer, expand, mac);
     mac.oper bind();
-}
-
-## Export a macro, making it visible from this module.
-void old_export(CrackContext ctx) {
-    
-    # get the next token, make sure it's an annotation.
-    tok := ctx.getToken();
-    if (!tok.isIdent())
-        ctx.error(tok, 'Identifier expected'.buffer);
-    name := CString(tok.getText(), false);
-    ann := ctx.getAnnotation(name.buffer);
-    Macro mac;
-    if (ann is null) {
-        StringFormatter fmt = {};
-        fmt `$name is not an annotation.\0`;
-        ctx.error(tok, fmt.createString().buffer);
-    } else {
-        mac = Macro.unsafeCast(ann.getUserData());
-    }
-    
-    StringFormatter code = {};
-    # inject the bottom code first (the token stream is LIFO)
-
-    f := @FILE; l := @LINE; code `
-                ctx.storeAnnotation($(name.getRepr()).buffer, $name,
-                                    mac
-                                    );
-            } else {
-                mac = Macro.unsafeCast(userData);
-            }
-            
-            mac.expand(ctx);
-        }
-    \n\0`;
-    ctx.inject(f.buffer, l, code.createString().buffer);
-
-    # generate code for the tokens
-    for (node :in mac) {
-        
-        # inject the code to insert the node
-        code = StringFormatter();
-        f = @FILE; l = @LINE; code `mac.pushHead(node);\n`;
-        ctx.inject(f.buffer, l, code.createCString().buffer);
-        
-        # inject the code to generate the node.
-        node.injectRepr(ctx, 0);
-    }
-    
-    code = StringFormatter();
-    f = @FILE; l = @LINE; code `
-        void $name(CrackContext ctx) {
-            userData := 
-                ctx.getUserData();
-            Macro mac;
-            if (userData is null) {
-                mac = Macro();
-                mac.argCount = $(mac.argCount);
-                Node node;
-                NodeList list;
-    \n\0`;
-    
-    t := code.createString();
-    ctx.inject(f.buffer, l, t.buffer);
 }
 
 void export(CrackContext ctx) {
