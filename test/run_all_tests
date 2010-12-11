@@ -770,6 +770,11 @@ test_output 'string constant folding' 'puts("o" "k")' ok
 test_output 'invalid unary operator' 'class Foo {} !Foo();' \
     "${parseError}1: oper ! is not defined for type Foo"
 
+test_output 'recursive imports give an error' \
+    'import test.recursive_import;' \
+    "ParseError: ./test/recursive_import.crk:2: Attempting to import module \
+test.recursive_import recursively."
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 
@@ -1107,6 +1112,8 @@ test_output 'error contexts work' \
      @fail()' \
      "${parseError}1: Unknown identifier bad
   expanded from macro at $source:2"
+
+test_output 'serial module' 'import test.test_serial;' ok
 
 test_output 'math module' 'import test.test_math;' ok "" "" noredir
 

@@ -1,0 +1,131 @@
+# Copyright 2010 Google Inc.
+# minimal serialization system
+
+import crack.runtime free;
+import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer, WriteBuffer;
+import crack.exp.error err;
+import crack.io Formatter, Reader, Writer;
+
+BUFSIZE := uint(1024);
+
+class SerialReader {
+    
+    Reader __src;
+    ManagedBuffer buf = {BUFSIZE};
+    uint pos;
+
+    oper init(Reader src) : __src = src {
+        buf.size = 0;
+    }
+    
+    void underflow() {
+        err.do() `Ran out of data.\n`;
+    }
+
+    uint readUInt() {
+        byte b = 0x80;
+        uint val;
+        uint offset;
+        while (b & 0x80) {
+            # make sure we've got data
+            if (pos == buf.size) {
+                buf.size = BUFSIZE;
+                if (!(buf.size = __src.read(buf)))
+                    underflow();
+                pos = 0;
+            }
+
+            # see if we've got the last byte
+            b = buf[pos++];
+            val = val | ((b & 0x7f) << offset);
+            offset += 7;
+        }
+
+        return val;
+    }
+
+    CString readString() {
+        size := readUInt();
+        
+        # see if we've got enough space in the buffer, if so just copy the
+        # string.
+        if (buf.size - pos >= size) {
+            result := CString(buf.buffer + pos, size, false);
+            pos += size;
+            return result;
+        }
+        
+        # create a new managed buffer, copy the rest of the existing buffer 
+        # into it.
+        ManagedBuffer mbuf = {size + 1};
+        mpos := buf.size - pos;
+        mbuf.move(0, buf.buffer + pos, mpos);
+        
+        # read the rest of the string
+        while (mpos < size) {
+            amtRead := __src.read(WriteBuffer(mbuf.buffer + mpos,
+                                              size - mpos
+                                              )
+                                  );
+            if (!amtRead)
+                underflow();
+            mpos += amtRead;
+        }
+        
+        # add null terminator
+        mbuf.buffer[mbuf.size - 1] = 0;
+
+        # indicate that we've depleted the buffer
+        pos = buf.size;
+
+        size = mbuf.size - 1;
+        return CString(mbuf.orphan(), size, true);
+    }
+
+    void writeTo(Writer out) {
+        Formatter o = {out};
+        o `$(String(buf, 0, pos).getRepr())\n`;
+        o `$(String(buf, pos, buf.size - pos).getRepr())\n`;
+    }
+
+}
+
+class SerialWriter {
+    
+    Writer __dst;
+    AppendBuffer buf = {1024};
+    
+    oper init(Writer dst) : __dst = dst {}
+    
+    void write(uint val) {
+        
+        # special case 0
+        if (!val) {
+            buf.append(0);
+            return;
+        }
+
+        while (val) {
+            b := byte(val & 0x7f);
+            val >>= 7;
+            if (val)
+                b |= 0x80;
+            buf.append(b);
+        }
+
+        # write the temp buffer and reset it.
+        __dst.write(Buffer(buf.buffer, buf.pos));
+        buf.pos = 0;
+    }
+    
+    void write(String val) {
+        write(uint32(val.size));
+        __dst.write(val);
+    }
+    
+    void flush() {
+        __dst.flush();
+    }
+}
+
+
