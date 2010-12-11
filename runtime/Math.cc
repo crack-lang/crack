@@ -41,19 +41,19 @@ const char  *constant_names[]={ "HUGE_VAL",
 // Functions that take a single float argument
 const char  *one_names[]={"sin", "cos", "tan", "sinh", "cosh", "tanh",
                              "asin", "acos", "atan", "asinh", "acosh", "atanh",
-                             "exp", "exp2", "ilogb", "log", "log10", "log1p",
-                             "log2", "cbrt", "abs","hypot",  "sqrt", "erf",
+                             "exp", "exp2", "log", "abs", "log10", "log1p",
+                             "log2", "cbrt", "sqrt", "erf",
                              "erfc", "lgamma", "tgamma", "ceil", "floor",
                              "nearbyint", "rint", "round", "trunc", "expm1", NULL};
 
 // Functions that take 2 float arguments
 const char *two_names[]={"fmod", "remainder", "copysign", "nextafter",
-                           "dim", "pow", NULL};
+                           "hypot", "dim", "pow", NULL};
 
 
 // Macros that take a single argument
 const char *one_macro_names[]={"fpclassify", "isfinite", "isinf", "isnan",
-                                  "isnormal", "sign", NULL};
+                                  "isnormal", "sign", "ilogb", NULL};
 
 typedef float (OneFuncFloat)(float);
 OneFuncFloat *one_funcs[]={ sinf,   cosf,
