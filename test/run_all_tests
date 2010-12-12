@@ -1064,10 +1064,21 @@ test_output "explicit conversion to byteptr" \
 
 test_output "error if return types don't match on an override" \
     'class A { Object f() { return null; } }
-     class B : A { String f() { return 'test'; } }
+     class B : A { String f() { return "test"; } }
      B().f();' \
     "${parseError}2: Function return type of crack.lang.String does not \
 match that of the function it overrides (crack.lang.Object)"
+
+test_output 'defining a variable of an undefined type gives an error' \
+    'class A; A a;' \
+    "${parseError}1: You cannot define a variable of a forward declared type."
+
+test_output 'assignment operator type is consistent with the LLVM lastValue' \
+    'import crack.io cout;
+     void f(String s) {} String s; f(s = "test");
+     class Foo { String z; void g() { f(z = "test"); } }
+     cout `ok\n`;' \
+    ok
 
 test_output 'objects' 'import test.test_object;' ok
 test_output 'mix-ins' 'import test.test_mixins;' ok

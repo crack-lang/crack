@@ -52,9 +52,9 @@ ResultExprPtr BMemVarDefImpl::emitAssignment(Context &context, AssignExpr *assig
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
     ResultExprPtr result = assign->value->emit(context);
-    b.narrow(assign->value->type.get(), assign->var->type.get());
     Value *exprVal = b.lastValue;
-    b.builder.CreateStore(exprVal, getRep(b));
+    b.narrow(assign->value->type.get(), assign->var->type.get());
+    b.builder.CreateStore(b.lastValue, getRep(b));
     result->handleAssignment(context);
     b.lastValue = exprVal;
 

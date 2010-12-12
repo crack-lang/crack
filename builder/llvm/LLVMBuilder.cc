@@ -929,6 +929,9 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     // create function to convert to voidptr
     type->addDef(new VoidPtrOpDef(context.globalData->voidptrType.get()));
 
+    // make the class default to initializing to null
+    type->defaultInitializer = new NullConst(type.get());
+
     return type;
 }
 
@@ -1189,9 +1192,6 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
         createOperClassFunc(context, type.get(), 
                             BTypeDefPtr::arcast(type->type)
                             );
-
-    // make the class default to initializing to null
-    type->defaultInitializer = new NullConst(type.get());
 
     return type.get();
 }
@@ -1713,7 +1713,8 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
         typeDef->addPlaceholder(placeholder);
     }
 
-    return new BResultExpr(assign, lastValue);
+    lastValue = temp;
+    return new BResultExpr(assign, temp);
 }
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
