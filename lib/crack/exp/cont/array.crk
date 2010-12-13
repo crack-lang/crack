@@ -1,0 +1,190 @@
+# Copyright 2010 Google Inc
+# Generic array implementation
+# to use this macro, you must 'import crack.lang die, free;'
+# You must implement GenericArray and the specific macro for your needs 
+# (GenericObjArray for objects with oper bind and release, GenericPrimArray 
+# for primitive types).
+
+@import crack.exp.ann define, export, exporter;
+@exporter;
+
+@define GenericArray(Name, Elem, binder, releaser) {
+
+    ## An Array is a sequence backed by a low-level array.  It supports the 
+    ## bracket operators and adding items at the end.
+    class Name {
+        
+        array[Elem] __rep = null;
+        uint __cap, __size;
+
+        void oper []=(uint index, Elem elem) {
+            if (index > __size)
+                die('Index out of range in Array.oper []=');
+            
+            tmp := __rep[index];
+            __rep[index] = elem;
+            binder;
+            elem = tmp;
+            releaser;
+        }
+        
+        void oper []=(int index, Elem elem) {
+            uint i;
+            if (index < 0)
+                i = __size + uint(index);
+            else
+                i = uint(index);
+            
+            this[i] = elem;
+        }
+        
+        uint count() {
+            return __size;
+        }
+        
+        Elem oper [](uint index) {
+            if (index > __size)
+                die('Index out of range in Array.oper []');
+            
+            return __rep[index];
+        }
+        
+        Elem oper [](int index) {
+            uint i;
+            if (index < 0)
+                i = __size + uint(index);
+            else
+                i = uint(index);
+            
+            return this[i];
+        }
+        
+        Elem last() { return __rep[__size - 1]; }
+
+        class ArrayIter {
+            Name __arr;
+            uint __index;
+            bool __first = true;
+        
+            oper init(Name arr) : __arr = arr {}
+            
+            Elem elem() {
+                return __arr[__index];
+            }
+            
+            bool next() {
+                cnt := __arr.count();
+                if (__index < cnt) {
+                    __index = __index + 1;
+                    return __index < cnt;
+                } else {
+                    return false;
+                }
+            }
+        
+            bool nx() {
+                if (__first) {
+                    __first = false;
+                    return __index < __arr.count();
+                } else {
+                    return next();
+                }
+            }
+            
+            bool isTrue() {
+                return __index < __arr.count();
+            }
+        }
+        
+        oper init(uint initCapacity) :
+            __rep = array[Elem](initCapacity), 
+            __cap = initCapacity,
+            __size = 0 {
+        }
+        
+        oper init() : 
+            __rep = array[Elem](16), 
+            __cap = 16,
+            __size = 0 {
+        }
+        
+        oper del() {
+            uint i;
+            while (i < __size) {
+                elem := __rep[i];
+                releaser;
+                i = i + 1;
+            }
+            free(__rep);
+        }
+        
+        void realloc(uint newCapacity) {
+            if (newCapacity < __cap)
+                die('Array.realloc() - decreasing capacity');
+                
+            newRep := array[Elem](newCapacity);
+            
+            # move all of the entries to the new array.
+            uint i;
+            while (i < __size) {
+                newRep[i] = __rep[i];
+                i = i + 1;
+            }
+    
+            free(__rep);
+            __rep = newRep;
+            __cap = newCapacity;
+        }
+        
+        void append(Elem elem) {
+            if (__size == __cap)
+                realloc(__cap * 2);
+            
+            __rep[__size] = elem;
+            binder;
+            __size = __size + 1;
+        }
+    
+        ArrayIter iter() {
+            return ArrayIter(this);
+        }
+        
+        uint capacity() {
+            return __cap;
+        }
+        
+        ## delete the element at 'index'.
+        void delete(uint index) {
+            if (index > __size)
+                die('Index out of range in Array.delete()');
+            
+            # release the object at the index
+            elem := __rep[index];
+            releaser;
+            
+            # move everything else down one
+            uint i = index;
+            while (i < __size - 1) {
+                __rep[i] = __rep[i + 1];
+                ++i;
+            }
+    #        memmove(__rep + index, __rep + index + 1, __size - index);
+            --__size;
+        }   
+    }
+} # @define GenericArray
+
+@export GenericArray
+
+@define GenericObjArray(Name, Type) { 
+    @GenericArray(Name, Type, elem.oper bind(), elem.oper release())
+}
+
+@export GenericObjArray
+
+@define GenericPrimArray(Name, Type) {
+    @GenericArray(Name, Type, ;, ;)
+}
+
+@export GenericPrimArray
+

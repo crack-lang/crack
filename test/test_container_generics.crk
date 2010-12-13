@@ -1,0 +1,33 @@
+# Copyright 2010 Google Inc.
+
+import crack.lang die, free;
+import crack.io cout, Formatter, StringFormatter;
+@import crack.exp.cont.treemap GenericTreeMap;
+@import crack.exp.cont.array GenericArray, GenericObjArray;
+
+int cmp(String a, String b) { return a.cmp(b); }
+@GenericTreeMap(StringIntMap, String, int);
+
+StringIntMap m = {};
+m['first'] = 100;
+m['second'] = 200;
+if (m['first'] != 100 || m['second'] != 200)
+    cout `failed TreeMap access\n`;
+
+@GenericObjArray(StringArray, String);
+StringArray sa = {};
+
+for (item :in m) {
+    StringFormatter fmt = {};
+    fmt `$(item.key): $(item.val)`;
+    sa.append(fmt.createString());
+}
+
+if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
+    cout `string array or iteration failed\n`;
+
+# test a second invocation (uses a different code path)
+class Foo {}
+@GenericObjArray(FooArray, Foo);
+
+cout `ok\n`;
