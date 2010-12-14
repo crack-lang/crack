@@ -1,0 +1,43 @@
+// Copyright (C) 2010 Conrad D. Steenberg
+// Lincensed under LGPLv3
+
+// test of math library
+import crack.io cout, Formatter;
+import crack.exp.file File;
+import crack.math sin, cos, tan, PI;
+
+f := File('test/test_math.out', 'w');
+fout := Formatter(f.getWriterObject());
+
+// Generate using math module
+trig_inputs_float_32:=array[float32](41);
+trig_inputs_float_64:=array[float64](41);
+trig_inputs_float:=array[float](41);
+
+// Populate the arrays
+float32 val32=-2.0*PI;
+float32 delta32=0.1*PI;
+float64 val64=-2.0*PI;
+float64 delta64=0.1*PI;
+float val=-2.0*float(PI);
+float delta=0.1*float(PI);
+
+uint i=0;
+uint intervals=40;
+while (i<=intervals){
+  val=float(i)*delta;
+  trig_inputs_float[i]=val+float(i)*delta;
+  trig_inputs_float_32[i]=val32+float32(i)*delta32;
+  trig_inputs_float_64[i]=val64+float32(i)*delta64;
+  i++;
+}
+
+i=0;
+while (i<=intervals){
+  fout `f32[$i] = \t$(trig_inputs_float_32[i]): \t sin = $(sin(trig_inputs_float_32[i])) \t cos = $(cos(trig_inputs_float_32[i])) \t tan = $(tan(trig_inputs_float_32[i]))\n`;
+  fout `f64[$i] = \t$(trig_inputs_float_64[i]): \t sin = $(sin(trig_inputs_float_64[i])) \t cos = $(cos(trig_inputs_float_64[i])) \t tan = $(tan(trig_inputs_float_64[i]))\n`;
+  fout `fsys[$i] = \t$(trig_inputs_float[i]): \t sin = $(sin(trig_inputs_float[i])) \t cos = $(cos(trig_inputs_float[i])) \t tan = $(tan(trig_inputs_float[i]))\n`;
+  i++;
+}
+
+cout `ok\n`;

@@ -122,6 +122,12 @@ d1 = b;
 if (d1 != 1.0)
     puts("fail");
 
+// byte -> float64, explicit
+d1 = float64(b);
+if (d1 != 1.0)
+    puts("fail");
+
+
 // int16 -> float32
 // uint16 -> float32
 // int16 -> float64

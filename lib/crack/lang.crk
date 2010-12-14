@@ -678,6 +678,18 @@ void print(String val) {
     puts(val.buffer);
 }
 
+void print(StaticString val) {
+    puts(val.buffer);
+}
+
+void puts(StaticString val) {
+    puts(val.buffer);
+}
+
+void print(CString val) {
+    puts(val.buffer);
+}
+
 void die(String message) {
     print(message);
     abort();
