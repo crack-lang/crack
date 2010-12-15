@@ -656,6 +656,9 @@ ExprPtr Parser::parseIString(Expr *expr) {
    // put the whole thing in an "if"
    TypeDef *boolType = context->globalData->boolType.get();
    ExprPtr cond = result->convert(*context, boolType);
+   if (!cond)
+      context->error("interpolated string target can not be converted to a "
+                      "bool.");
    BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
    
    // parse all of the subtokens
