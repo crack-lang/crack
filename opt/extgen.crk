@@ -1,0 +1,355 @@
+# annotation that generates bindings.
+# This currently duplicates the parser logic - rewrite this once the 
+# annotation interface supports introspection of compile contexts.
+
+import crack.lang die, free, AppendBuffer;
+import crack.io cout, Formatter, StringFormatter, Writer;
+import crack.compiler CrackContext, Token;
+import crack.exp.file File;
+import crack.exp.error err;
+
+@import crack.exp.ann define;
+@import crack.exp.cont.treemap GenericTreeMap;
+@import crack.exp.cont.array GenericArray, GenericObjArray;
+
+class Func;
+
+class Type {
+    String getName() {
+        err.do() `$(this.class.name).getName() not implemented`;
+        return null;
+    }
+    
+    String emit() {
+        return getName();
+    }
+    
+    bool isBuiltIn() {
+        return false;
+    }
+}
+
+class Arg {
+    String name;
+    Type type;
+
+    oper init(Type type0, String name0) : type = type0, name = name0 {}
+}
+
+@GenericObjArray(ArgArray, Arg);
+ 
+class Func {
+    Type retType;
+    String name;
+    ArgArray args;
+
+    oper init(Type retType0, String name0) :
+        retType = retType0, 
+        name = name0,
+        args() {
+    }
+    
+    void addArg(Arg arg) {
+        args.append(arg);
+    }
+}
+
+@GenericObjArray(FuncArray, Func);
+
+class TypeImpl : Type {
+    String name;
+    String emitted;
+    FuncArray methods;
+    bool builtIn;
+    
+    String getName() { return name; }
+    
+    oper init(String name0, String emitted0, bool builtIn0) :
+        name = name0, 
+        emitted = emitted0,
+        builtIn = builtIn0 {
+    }
+    
+    String emit() { return emitted; }
+    
+    bool isBuiltIn() { return builtIn; }
+}
+
+int cmp(String a, String b) { return a.cmp(b); }
+@GenericTreeMap(TypeMap, String, Type);
+
+class Errors : StringFormatter {
+    
+    CrackContext ctx;
+    Token tok;
+    
+    oper init(CrackContext ctx0, Token tok0) : ctx = ctx0, tok = tok0 {}
+    oper init(CrackContext ctx0) : ctx = ctx0 {}
+    
+    oper del() {
+        if (!(tok is null))
+            ctx.error(tok, createString().buffer);
+        else
+            ctx.error(createString().buffer);
+    }
+}
+
+@define setBuiltinType(val, func) {
+    name = val;
+    types[name] = TypeImpl(name, 'mod->get' func 'Type()', true);
+}
+
+@define def_join(Iterable) {
+    String join(Iterable strings, String sep) {
+        
+        # figure out how much space we need
+        uint total;
+        for (elem :in strings)
+            total += elem.size + sep.size;
+        
+        # drop the last separator
+        total -= sep.size;
+        
+        AppendBuffer buf = {total};
+        first := true;
+        for (elem :in strings) {
+        
+            # add the separator for everything but the first string.
+            if (first)
+                first = false;
+            else
+                buf.extend(sep);
+
+            buf.extend(elem);
+        }
+        
+        return String(buf, true);
+    }
+}
+
+@GenericObjArray(StringArray, String)
+@def_join(StringArray);       
+
+class ExtensionData {
+    String filename;
+    TypeMap types;
+    FuncArray funcs;
+    StringArray module = {};  # module name
+    StringArray preamble = {};
+    
+    oper init() : types(), funcs() {
+        String name;
+        @setBuiltinType('Class', 'Class');
+        @setBuiltinType('void', 'Void');
+        @setBuiltinType('voidptr', 'Voidptr');
+        @setBuiltinType('bool', 'Bool');
+        @setBuiltinType('byteptr', 'Byteptr');
+        @setBuiltinType('byte', 'Byte');
+        @setBuiltinType('int32', 'Int32');
+        @setBuiltinType('int64', 'Int64');
+        @setBuiltinType('uint32', 'Uint32');
+        @setBuiltinType('uint64', 'Uint64');
+        @setBuiltinType('int', 'Int',);
+        @setBuiltinType('uint', 'Uint');
+        @setBuiltinType('float32', 'Float32');
+        @setBuiltinType('float64', 'Float64');
+        @setBuiltinType('float', 'Float');
+    }
+    
+    Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }
+    Errors error(CrackContext ctx) { return Errors(ctx); }
+ 
+    void _parseFuncDef(CrackContext ctx, String retTypeName) {
+        retType := types.get(retTypeName);
+        if (!retType)
+            error(ctx) `Unknown return type: $retTypeName`;
+        
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            error(ctx, tok) `Identifier expected`;
+        
+        f := Func(retType, String(tok.getText()));
+        funcs.append(f);
+
+        if (!(tok = ctx.getToken()).isLParen())
+            error(ctx, tok) `Left paren expected`;
+        
+        tok = ctx.getToken();
+        while (!tok.isRParen()) {
+            if (!tok.isIdent())
+                error(ctx, tok) `Type name expected`;
+
+            # make sure we got a valid type
+            typeName := String(tok.getText());
+            argType := types.get(typeName);
+            if (!argType)
+                error(ctx, tok) `Invalid arg type: $typeName`;
+            
+            # get the arg variable
+            tok = ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `argument name expected`;
+            
+            f.addArg(Arg(argType, String(tok.getText())));
+            
+            tok = ctx.getToken();
+            if (tok.isComma())
+                tok = ctx.getToken();
+            else if (!tok.isRParen())
+                error(ctx, tok) `Comma or right paren expected`;
+        }   
+    }
+
+    void _parseClassDef(CrackContext ctx) {
+        # get the type name.
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            error(ctx, tok) `Identifier expected after "class" keyword.`;
+        
+        String className = {tok.getText()};
+        
+        # get a semicolon
+        tok = ctx.getToken();
+        if (!tok.isSemi())
+            error(ctx, tok) `Semicolon expected after class declaration`;
+        
+        types[className] = TypeImpl(className, 'type_' + className, false);
+    }   
+
+    String _parseString(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (!tok.isString())
+            error(ctx, tok) `Expected string`;
+        return String(tok.getText());
+    }
+
+    void _parseAnnotation(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (tok.isIdent()) {
+            String ann = {tok.getText()};
+            if (ann == 'filename') {
+                filename = _parseString(ctx);
+            } else if (ann == 'inject') {
+                preamble.append(_parseString(ctx));
+            } else {
+                error(ctx, tok) `Unexpected annotation: $ann`;
+            }
+        } else {
+            error(ctx, tok) `Identifier expected after at sign`;
+        }
+    }
+
+    StringArray _parseExtensionName(CrackContext ctx) {
+        StringArray result = {};
+        while (true) {
+            tok := ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `Expected extension name.`;
+            
+            result.append(String(tok.getText()));
+            tok = ctx.getToken();
+            
+            if (!tok.isDot()) {
+                ctx.putBack(tok);
+                break;
+            }
+        }
+        
+        return result;
+    }
+ 
+    void parse(CrackContext ctx) {
+        
+        # get the extension module
+        module = _parseExtensionName(ctx);
+        
+        # expecting a '{'
+        tok := ctx.getToken();
+        if (!tok.isLCurly())
+            error(ctx, tok) `Opening curly bracket expected`;
+
+        # parse all definitions
+        while (true) {
+            tok = ctx.getToken();
+            
+            # check for a class definition
+            if (tok.isClass())
+                _parseClassDef(ctx);
+            else if (tok.isIdent()) 
+                _parseFuncDef(ctx, String(tok.getText()));
+            else if (tok.isRCurly())
+                break;
+            else if (tok.isSemi())
+                ;
+            else if (tok.isAnn())
+                _parseAnnotation(ctx);
+            else
+                error(ctx, tok)
+                    `expected class, function or right curly bracket.`;
+        }
+        
+    }
+
+    String header(String name) {
+        StringFormatter fmt = {};
+        fmt `"ext/$name.h"`;
+        return fmt.createString();
+    }
+
+    void emitCode(Writer out) {
+        o := Formatter(out);
+        
+        for (block :in preamble)
+            o `$block`;
+        
+        o `
+
+#include $(header('Module'))
+#include $(header('Type'))
+#include $(header('Func'))
+
+extern "C"
+void $(join(module, '_'))_init(crack::ext::Module *mod) {
+    crack::ext::Func *f;`;
+        
+        for (kv :in types) {
+            type := kv.val;
+            if (!type.isBuiltIn()) {
+                typeVar := type.emit();
+                o `
+    crack::ext::Type *$typeVar = mod->addType("$(type.getName())");
+    $typeVar->finish();
+`;
+            }
+        }
+        
+        for (func :in funcs) {
+            retTypeRepr := func.retType.emit();
+            o `
+    f = mod->addFunc($retTypeRepr, "$(func.name)",
+                     (void *)$(func.name)
+                     );
+`;
+            for (arg :in func.args)
+                o `    f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+        }
+        
+        o `}\n`;
+    }
+
+    void emit() {
+        # emit all of the code
+        cout `emitting $filename\n`;
+        out := Formatter(File(filename, 'w'));
+        emitCode(out);
+    }
+}
+
+void generateExtension(CrackContext ctx) {
+    ExtensionData ext = {};
+    ext.parse(ctx);
+    if (!ext.filename)
+        ctx.error('no filename specified'.buffer);
+    else
+        ext.emit();
+}
