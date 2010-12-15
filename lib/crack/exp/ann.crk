@@ -663,6 +663,7 @@ void export(CrackContext ctx) {
                 ctx.storeAnnotation($(name.getRepr()).buffer, $name,
                                     mac
                                     );
+                mac.oper bind();
             } else {
                 mac = Macro.unsafeCast(userData);
             }
