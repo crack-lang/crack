@@ -10,6 +10,13 @@ test_testext_la_SOURCES = test/testext.cc
 runtime_la_LDFLAGS = -avoid-version -module
 runtime_la_SOURCES = %libRuntimeSources%
 
+if HAVE_GTK
+pkglib_LTLIBRARIES += _gtk.la
+_gtk_la_LDFLAGS = -avoid-version -module @GTK_LIBS@ @GTK_CFLAGS@
+_gtk_la_CXXFLAGS = @GTK_CFLAGS@
+_gtk_la_SOURCES = opt/_gtk.cc
+endif
+
 noinst_HEADERS = \
     builder/Builder.h \
     builder/llvm/ArrayTypeDef.h \
@@ -120,6 +127,10 @@ doc/Manual.html: doc/Manual.nml
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
 	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack
+	(if test -e .libs/_gtk.so; then \
+	   mkdir -p lib/crack/ext; \
+	   ln .libs/_gtk.so lib/crack/ext; \
+	 fi)
 	(cd $(srcdir)/lib; \
 	 for file in $$(find); do \
 	   if test -d $$file; then \

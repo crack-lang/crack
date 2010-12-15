@@ -4,7 +4,7 @@ import crack.lang die, FreeBase, free;
 import crack.io cout;
 import crack.sys StringArray;
 import crack.exp.bindings IntWrapper, Opaque, Wrapper;
-import "libgtk-x11-2.0.so"
+import crack.ext._gtk
     gtk_box_pack_start,
     gtk_button_new_with_label,
     gtk_container_add,
@@ -26,74 +26,13 @@ import "libgtk-x11-2.0.so"
     gtk_widget_show,
     gtk_widget_destroy,
     gtk_window_new, 
-    gtk_object_destroy;
-import "libgobject-2.0.so" g_list_append, g_signal_connect_data;
-
-class _GtkObject : Opaque {};
-class GtkWidget : _GtkObject {};
-class GdkEvent : Opaque {};
-
-class GList : FreeBase {
-    voidptr data = null;
-    GList next = null;
-    GList prev = null;
-};
-
-GList g_list_append(GList list, voidptr data);
-void g_print(byteptr b);
-void gtk_init(voidptr argc, voidptr argv);
-void gtk_widget_destroy(GtkWidget widget);
-void gtk_widget_show(GtkWidget widget);
-void gtk_object_destroy(_GtkObject object);
-void gtk_main();
-void gtk_main_quit();
-void g_signal_connect_data(_GtkObject widget, byteptr signal, 
-                           voidptr callback,
-                           voidptr callbackArg,
-                           voidptr destroy_data, # set to null
-                           uint connect_flags    # set to zero
-                           );
-
-GtkWidget gtk_window_new(int val);
-void gtk_box_pack_start(GtkWidget box, GtkWidget child, bool expand, 
-                        bool fill,
-                        uint padding
-                        );
-GtkWidget gtk_button_new_with_label(byteptr label);
-void gtk_container_add(GtkWidget container, GtkWidget widget);
-void gtk_editable_select_region(GtkWidget entry,
-                                int start,
-                                int end
-                                );
-void gtk_editable_set_editable(GtkWidget entry,
-                               bool editable
-                               );
-byteptr gtk_entry_get_text(GtkWidget entry);
-GtkWidget gtk_entry_new();
-void gtk_entry_set_text(GtkWidget entry,
-                        byteptr text
-                        );
-void gtk_entry_set_visibility(GtkWidget entry,
-                              bool visible
-                              );
-GtkWidget gtk_hbox_new(bool homogenous, uint spacing);
-GtkWidget gtk_label_new(byteptr text);
-_GtkObject gtk_tooltips_new();
-void gtk_tooltips_set_tip(_GtkObject tooltips,
-                          GtkWidget widget,
-                          byteptr tip_text,
-                          byteptr tip_private
-                          );
-GtkWidget gtk_vbox_new(bool homogenous, uint spacing);
-
-void hello(GtkWidget widget, byteptr data) {
-    g_print("hello world\n".buffer);
-}
-
-bool delete_event(GtkWidget widget, GdkEvent event, byteptr data) {
-    g_print('got delete event\n'.buffer);
-    return true;
-}
+    gtk_object_destroy,
+    g_list_append, 
+    g_signal_connect_data,
+    GtkWidget,
+    GList,
+    GtkObject,
+    GtkObject_cast;
 
 void destroy(GtkWidget widget, byteptr data) {
     gtk_main_quit();
@@ -121,15 +60,15 @@ bool _handleClicked(GtkWidget widget, Handlers handlers) {
     return handlers.onClicked();
 }
 
-bool _handleDestroy(_GtkObject widget, Handlers handlers) {
+bool _handleDestroy(GtkObject widget, Handlers handlers) {
     if (handlers)
         return handlers.onDestroy();
     else
         return false;
 }
 
-class GtkObject : Handlers {
-    _GtkObject _rep = null;
+class GTKObject : Handlers {
+    GtkObject _rep = null;
     Handlers __handlers = null;
     
     void setHandlers(Handlers handlers) {
@@ -159,7 +98,7 @@ class GtkObject : Handlers {
         return result
     }
 
-    oper init(_GtkObject rep) : _rep = rep {
+    oper init(GtkObject rep) : _rep = rep {
         # connnect our destroy handler
         g_signal_connect_data(_rep, 'destroy'.buffer, _handleDestroy,
                               this, 
@@ -169,21 +108,21 @@ class GtkObject : Handlers {
     }
 
     oper del() {
-        if (_rep)
+        if (!(_rep is null))
             gtk_object_destroy(_rep); 
     }
 }
 
-class Widget : GtkObject {
+class Widget : GTKObject {
     
-    oper init(GtkWidget rep) : GtkObject(rep) {}
+    oper init(GtkWidget rep) : GTKObject(GtkObject_cast(rep)) {}
 
     void show() {
         gtk_widget_show(GtkWidget.unsafeCast(_rep));
     }
     
     void destroy() {
-        if (_rep)
+        if (!(_rep is null))
             # _rep gets set to null in onDestroy()
             gtk_widget_destroy(GtkWidget.unsafeCast(_rep));
     }
@@ -271,8 +210,8 @@ class Label : Widget {
     oper init(String text) : Widget(gtk_label_new(text.buffer)) {}
 };
 
-class Tooltips : GtkObject {
-    oper init() : GtkObject(gtk_tooltips_new()) {}
+class Tooltips : GTKObject {
+    oper init() : GTKObject(gtk_tooltips_new()) {}
     
     void setTip(Widget widget, String text) {
         gtk_tooltips_set_tip(_rep, GtkWidget.unsafeCast(widget._rep), 
