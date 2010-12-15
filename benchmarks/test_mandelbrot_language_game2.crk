@@ -5,31 +5,27 @@
 
 import crack.sys argv;
 import crack.io cout, cerr;
-// add this back when we get the math module
-//import crack.math atoi;
+import crack.math atoi, strtof;
 import crack.runtime write;
 
-import "libc.so.6" atoi;
-int atoi(byteptr val);
+uint32 N = 200;
 
-uint N = 200;
-
-uint rol(uint D, uint B) {
+uint32 rol(uint32 D, uint32 B) {
     return ((D << B) | (D >> (32-B)));
 }
 
-uint b = 0xFF000000;
+uint32 b = 0xFF000000;
 
 // Comment this out if you don't have the math module
-if (argv.count() > 1) N = uint(atoi(argv[1].buffer));
+if (argv.count() > 1) N = uint32(atoi(argv[1].buffer));
 float64 M = 2.0 / N;
-buf := array[uint](N);
+buf := array[uint32](N);
 bbuf := array[byte](N);
 bptr := byteptr(bbuf);
 
 
 cout `P4\n$N $N\n`;
-uint x, y = 0, p, i;
+uint32 x, y = 0, p, i;
 float64 Ci, Ciq, Cr, Zr, Zi, Zr2, Cr2, Zi2, Zrq, Ziq, Zrq2, Ziq2;
 
 while (y < N) {

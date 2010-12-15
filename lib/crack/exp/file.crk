@@ -136,6 +136,8 @@ class File : FileInfo,
             close();
     }
 
+    Object getWriterObject() { return this; }
+
     oper init(String name0, String mode0): FileInfo(name0),
                                            _mode(CString(mode0)) {
 
@@ -155,5 +157,3 @@ class File : FileInfo,
     Object getWriterObject() { return this; }
 
 }
-
-

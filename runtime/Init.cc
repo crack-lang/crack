@@ -10,7 +10,7 @@
 #include "Dir.h"
 #include "Util.h"
 #include "Net.h"
-
+#include "Math.h"
 using namespace crack::ext;
 
 extern "C" void crack_runtime_init(Module *mod) {
@@ -357,4 +357,7 @@ extern "C" void crack_runtime_init(Module *mod) {
 
     f = mod->addFunc(voidType, "exit", (void *)exit);
     f->addArg(intType, "status");
+
+    // Add math functions
+    crack::runtime::math_init(mod);
 }

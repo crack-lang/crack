@@ -1126,4 +1126,6 @@ test_output 'error contexts work' \
 
 test_output 'serial module' 'import test.test_serial;' ok
 
+test_output 'math module' 'import test.test_math;' ok "" "" noredir
+
 exit $rc

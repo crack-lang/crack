@@ -1,0 +1,67 @@
+// Binding of libm
+// Copyright (C) 2010 Conrad D. Steenberg
+// Lincensed under LGPLv3
+
+// See http://anubis.dkuug.dk/jtc1/sc22/wg14/www/docs/n869/ for libm reference
+// As a general rule, follow libm as well as GSL, without copying code.
+// For vector and matrix functions, try to stay close to numpy
+
+// import functions and some constants known at compile time
+import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
+                    acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
+                    ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
+                    erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
+                    round, trunc, fpclassify, isfinite, isinf, isnan,
+                    isnormal, sign, fmod, remainder, copysign, nextafter,
+                    dim, pow, HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
+                    FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN;
+
+// Calculated using GSL, double precision
+float E =            2.7182818284590452354;   // e
+float LOG2E =        1.4426950408889634074;   // base 2 log of e
+float LOG10E =       0.43429448190325182765;  // base log of e
+float LN2 =          0.69314718055994530942;  // base e log of 2
+float LN10 =         2.30258509299404568402;  // base e log of 10
+float LNPI =         1.14472988584940017414;  // ln(pi)
+float PI =           3.14159265358979323846;  // pi
+float PI_2 =         1.57079632679489661923;  // pi/2
+float PI_4 =         0.78539816339744830962;  // pi/4
+float PI1 =          0.31830988618379067154;  // 1/pi
+float PI2 =          0.63661977236758134308;  // 2/pi
+float SQRTPI2 =      1.12837916709551257390;  // 2/sqrt(pi)
+float SQRT2 =        1.41421356237309504880;  // sqrt(2)
+float SQRT3 =        1.73205080756887729353;  // sqrt(3)
+float SQRT1_2 =      0.70710678118654752440;  // 1/sqrt(2)
+float SQRTPI =       1.77245385090551602730;  // sqrt(pi)
+float GAMMA =        0.57721566490153286061;  // Euler's constant gamma
+
+// A few simple functions, overlaoded with various types
+// Generics will really help here
+int max(int v1, int v2){
+  if (v1>v2) return v1;
+  return v2;
+}
+
+float max(float v1, float v2){
+  if (v1>v2) return v1;
+  return v2;
+}
+
+int min(int v1, int v2){
+  if (v1<v2) return v1;
+  return v2;
+}
+
+float min(float v1, float v2){
+  if (v1<v2) return v1;
+  return v2;
+}
+
+// Augment the atoi(char*) imported from _math
+int atoi(StaticString s){
+  return atoi(s.buffer);
+}
+
+int atoi(String s){
+  return atoi(s.buffer);
+}
