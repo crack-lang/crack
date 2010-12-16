@@ -29,6 +29,14 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
     arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
     arrayType->addDef(arrayGetItem.get());
 
+    arrayGetItem =
+            new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method,
+                                               "oper []",
+                                               1
+                                               );
+    arrayGetItem->args[0] = new ArgDef(gd->intType.get(), "index");
+    arrayType->addDef(arrayGetItem.get());
+
     FuncDefPtr arraySetItem =
             new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method,
                                                "oper []=",
@@ -38,14 +46,30 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
     arraySetItem->args[1] = new ArgDef(elemType, "value");
     arrayType->addDef(arraySetItem.get());
 
+    arraySetItem =
+            new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method,
+                                               "oper []=",
+                                               2
+                                               );
+    arraySetItem->args[0] = new ArgDef(gd->intType.get(), "index");
+    arraySetItem->args[1] = new ArgDef(elemType, "value");
+    arrayType->addDef(arraySetItem.get());
+
     FuncDefPtr arrayOffset =
-            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::noFlags,
+            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::method,
                                               "oper +",
-                                              2
+                                              1
                                               );
-    arrayOffset->args[0] = new ArgDef(arrayType, "base");
-    arrayOffset->args[1] = new ArgDef(gd->uintType.get(), "offset");
-    context.getDefContext()->ns->addDef(arrayOffset.get());
+    arrayOffset->args[0] = new ArgDef(gd->uintType.get(), "offset");
+    arrayType->addDef(arrayOffset.get());
+
+    arrayOffset =
+            new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::method,
+                                              "oper +",
+                                              1
+                                              );
+    arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
+    arrayType->addDef(arrayOffset.get());
 
     FuncDefPtr arrayAlloc =
             new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,

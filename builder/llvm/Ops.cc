@@ -376,10 +376,10 @@ ResultExprPtr ArrayOffsetCall::emit(Context &context) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
-    args[0]->emit(context)->handleTransient(context);
+    receiver->emit(context)->handleTransient(context);
     Value *base = builder.lastValue;
 
-    args[1]->emit(context)->handleTransient(context);
+    args[0]->emit(context)->handleTransient(context);
     builder.lastValue =
             builder.builder.CreateGEP(base, builder.lastValue);
 
