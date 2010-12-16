@@ -1,0 +1,22 @@
+
+@import opt.extgen generateExtension;
+
+@generateExtension crack.ext._pcre  {
+    @filename 'opt/_pcre.cc'
+    @inject '#include <pcre.h>\n'
+
+    class PCRE;
+    PCRE pcre_compile2(byteptr pattern, int options, array[int] errorCode,
+                       array[byteptr] errorText,
+                       array[int] errorOffset,
+                       byteptr tablePtr
+                       );
+    int pcre_exec(PCRE pcre, voidptr extra, byteptr subject, uint subjectSize,
+                int startOffset,
+                int options,
+                array[int] outputVec,
+                uint outputVecSize
+                );
+    void pcre_fullinfo(PCRE pcre, voidptr extra, int param, array[int] result);
+    int pcre_get_stringnumber(PCRE pcre, byteptr name);
+}

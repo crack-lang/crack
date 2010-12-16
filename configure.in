@@ -37,4 +37,7 @@ AC_CHECK_SIZEOF([void *])
 AM_PATH_GTK_2_0(2.0.0, [got_gtk=yes])
 AM_CONDITIONAL(HAVE_GTK, [test "x$got_gtk" = xyes])
 
+AX_PATH_LIB_PCRE(got_pcre=yes)
+AM_CONDITIONAL(HAVE_PCRE, [test "x$got_pcre" = xyes])
+
 AC_OUTPUT

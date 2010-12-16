@@ -2,36 +2,22 @@
 
 import crack.lang Buffer, die, free, SubString;
 import crack.io cerr, StringFormatter;
-import crack.exp.bindings ByteptrWrapper, IntWrapper, Opaque;
+import crack.exp.bindings ByteptrWrapper, Opaque;
 
-import 'libpcre.so.3' pcre_compile2, pcre_exec, pcre_fullinfo, 
-                      pcre_get_stringnumber;
+import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
+                       pcre_get_stringnumber, PCRE;
 
-class _PCRE : Opaque {};
 
 int _PCRE_INFO_CAPTURECOUNT = 2;
-_PCRE pcre_compile2(byteptr pattern, int options, IntWrapper errorCode,
-                    ByteptrWrapper errorText,
-                    IntWrapper errorOffset,
-                    byteptr tablePtr
-                    );
-int pcre_exec(_PCRE pcre, voidptr extra, byteptr subject, uint subjectSize,
-              int startOffset,
-              int options,
-              array[int] outputVec,
-              uint outputVecSize
-              );
-void pcre_fullinfo(_PCRE pcre, voidptr extra, int param, IntWrapper result);
-int pcre_get_stringnumber(_PCRE pcre, byteptr name);
 
 # keep one of these around in case we want to format a death string.
 death := StringFormatter();
 
 ## regex base class that we can store in a Match object.
 class _RegexBase {
-    _PCRE _rx;
+    PCRE _rx;
     
-    oper init(_PCRE rx0) : _rx = rx0 {}
+    oper init(PCRE rx0) : _rx = rx0 {}
 };
 
 ## A regular expression match.
@@ -126,24 +112,26 @@ class Regex : _RegexBase {
     ## Compile a regular expression from 'pattern'.  The regex library uses 
     ## PCRE, see the 'pcresyntax' man page for regular expression syntax.
     oper init(String pattern) : _RegexBase(null) {
-        errorCode := IntWrapper(0);
-        errorText := ByteptrWrapper(null);
-        errorOffset := IntWrapper(0);
-        _rx = pcre_compile2(pattern.buffer, 0, errorCode, errorText,
-                             errorOffset,
-                             null
-                             );
+        array[int] intReturns = {2};
+        array[byteptr] errorText = {1};
+        _rx = pcre_compile2(pattern.buffer, 0, intReturns, errorText,
+                            intReturns + 1,
+                            null
+                            );
         if (_rx is null) {
             # error compiling the regex.
             f := StringFormatter();
-            f `Error compiling regular expression: $(String(errorText.val))`;
+            f `Error compiling regular expression: $(errorText[0])`;
+            free(errorText);
+            free(intReturns);
             die(f.createString());
         }
+        free(errorText);
         
         # figure out how many capturing sub-patterns there are
-        cc := IntWrapper(0);
-        pcre_fullinfo(_rx, null, _PCRE_INFO_CAPTURECOUNT, cc);
-        __captureCount = uint(cc.val) + 1;
+        pcre_fullinfo(_rx, null, _PCRE_INFO_CAPTURECOUNT, intReturns);
+        __captureCount = uint(intReturns[0]) + 1;
+        free(intReturns);
     }
     
     ## Search 'subject' for the regular expression.  Returns a Match 
