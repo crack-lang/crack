@@ -1133,6 +1133,13 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
    else
       toker.putBack(tok);
    
+   // make sure this isn't an unspecialized generic
+   if (typeDef->generic)
+      error(tok, SPUG_FSTR("Generic type " << typeDef->name << 
+                            " must be specialized to be used."
+                           )
+            );
+   
    return typeDef;
 }
 
@@ -1559,6 +1566,11 @@ bool Parser::parseDef(TypeDef *type) {
    if (tok2.isLBracket()) {
       type = parseSpecializer(tok2, type);
       tok2 = getToken();
+   } else if(type->generic) {
+      error(tok2, SPUG_FSTR("Generic type " << type->name << 
+                             " must be specialized to be used."
+                            )
+            );
    }
    
    while (true) {

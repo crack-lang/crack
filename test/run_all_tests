@@ -781,6 +781,10 @@ test.recursive_import recursively."
 
 test_output 'test array functions' 'import test.test_arrays;' ok
 
+test_output 'error on the use of unspecialized generics' \
+    'array x;' \
+    "${parseError}1: Generic type array must be specialized to be used."
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 
