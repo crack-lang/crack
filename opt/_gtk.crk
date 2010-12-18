@@ -1,0 +1,71 @@
+
+@import opt.extgen generateExtension;
+
+@generateExtension crack.ext._gtk  {
+    @filename 'opt/_gtk.cc'
+    @inject '#include <gtk/gtk.h>\n'
+    @inject 'GtkObject *GtkObject_cast(GtkWidget *widget) {\n'
+    @inject '    return GTK_OBJECT(widget);\n'
+    @inject '}\n';
+    
+    class GList;
+/*
+: FreeBase {
+    voidptr data = null;
+    GList next = null;
+    GList prev = null;
+};
+*/
+    class GtkWidget;
+    class GtkObject;
+
+    GList g_list_append(GList list, voidptr data);
+    void g_print(byteptr b);
+    void gtk_init(voidptr argc, voidptr argv);
+    void gtk_widget_destroy(GtkWidget widget);
+    void gtk_widget_show(GtkWidget widget);
+    void gtk_object_destroy(GtkObject object);
+    void gtk_main();
+    void gtk_main_quit();
+    void g_signal_connect_data(GtkObject widget, byteptr signal, 
+                               voidptr callback,
+                               voidptr callbackArg,
+                               voidptr destroy_data, # set to null
+                               uint connect_flags    # set to zero
+                               );
+
+    GtkWidget gtk_window_new(int val);
+    void gtk_box_pack_start(GtkWidget box, GtkWidget child, bool expand, 
+                            bool fill,
+                            uint padding
+                            );
+    GtkWidget gtk_button_new_with_label(byteptr label);
+    void gtk_container_add(GtkWidget container, GtkWidget widget);
+    void gtk_editable_select_region(GtkWidget entry,
+                                    int start,
+                                    int end
+                                    );
+    void gtk_editable_set_editable(GtkWidget entry,
+                                bool editable
+                                );
+    byteptr gtk_entry_get_text(GtkWidget entry);
+    GtkWidget gtk_entry_new();
+    void gtk_entry_set_text(GtkWidget entry,
+                            byteptr text
+                            );
+    void gtk_entry_set_visibility(GtkWidget entry,
+                                bool visible
+                                );
+    GtkWidget gtk_hbox_new(bool homogenous, uint spacing);
+    GtkWidget gtk_label_new(byteptr text);
+    GtkObject gtk_tooltips_new();
+    void gtk_tooltips_set_tip(GtkObject tooltips,
+                              GtkWidget widget,
+                              byteptr tip_text,
+                              byteptr tip_private
+                              );
+    GtkWidget gtk_vbox_new(bool homogenous, uint spacing);
+    
+    GtkObject GtkObject_cast(GtkWidget widget);
+}
+

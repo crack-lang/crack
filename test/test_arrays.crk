@@ -1,0 +1,20 @@
+# Copyright 2010 Google Inc.
+# Some basic tests of the primitive array generics.
+
+array[int32] a = {1};
+if (!(byteptr(a + int(1)) is byteptr(a) + int(4)))
+    puts('FAILED array integer offsets');
+
+if (!(byteptr(a + uint(1)) is byteptr(a) + uint(4)))
+    puts('FAILED array integer offsets');
+
+a[uint(0)] = 100;
+if (a[uint(0)] != 100)
+    puts('FAILED uint indexing');
+
+a[int(0)] = 100;
+if (a[int(0)] != 100)
+    puts('FAILED int indexing');
+
+puts('ok');
+

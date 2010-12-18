@@ -30,8 +30,12 @@ function test_output {
     rm run_all_tests.tmp
 }
 
-# get a fresh copy of the runtime library
+# get a fresh copy of the runtime library and the PCRE library
 ln -f .libs/runtime.so lib/crack
+if [ -e .libs/_pcre.so ]; then
+    mkdir -p lib/crack/ext; 
+    ln -f .libs/_pcre.so lib/crack/ext
+fi
 
 # find the root of the source tree (should be my parent directory)
 root=$(cd $(dirname "$0")/..; pwd)
@@ -775,6 +779,12 @@ test_output 'recursive imports give an error' \
     "ParseError: ./test/recursive_import.crk:2: Attempting to import module \
 test.recursive_import recursively."
 
+test_output 'test array functions' 'import test.test_arrays;' ok
+
+test_output 'error on the use of unspecialized generics' \
+    'array x;' \
+    "${parseError}1: Generic type array must be specialized to be used."
+
 # switch to full bootstrapping mode now that importing works
 opts="-g -l $root -l $root/lib"
 
@@ -1064,16 +1074,31 @@ test_output "explicit conversion to byteptr" \
 
 test_output "error if return types don't match on an override" \
     'class A { Object f() { return null; } }
-     class B : A { String f() { return 'test'; } }
+     class B : A { String f() { return "test"; } }
      B().f();' \
     "${parseError}2: Function return type of crack.lang.String does not \
 match that of the function it overrides (crack.lang.Object)"
+
+test_output 'defining a variable of an undefined type gives an error' \
+    'class A; A a;' \
+    "${parseError}1: You cannot define a variable of a forward declared type."
+
+test_output 'assignment operator type is consistent with the LLVM lastValue' \
+    'import crack.io cout;
+     void f(String s) {} String s; f(s = "test");
+     class Foo { String z; void g() { f(z = "test"); } }
+     cout `ok\n`;' \
+    ok
 
 test_output 'objects' 'import test.test_object;' ok
 test_output 'mix-ins' 'import test.test_mixins;' ok
 test_output 'string tests' 'import test.test_strings;' ok
 test_output 'error tests' 'import test.test_error;' ok
-test_output 'regex tests' 'import test.test_regex;' ok
+if [ -e .libs/_pcre.so ]; then
+    test_output 'regex tests' 'import test.test_regex;' ok
+else
+    echo 'Omitting regex tests (PCRE not installed)'
+fi
 test_output 'sockets' 'import test.test_sockets;' ok
 test_output 'file api' 'import test.test_dir;' ok
 ln -f test/.libs/testext.so test/testext.so || {

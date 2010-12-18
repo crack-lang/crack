@@ -4,6 +4,7 @@
 AC_INIT(crack, 0.2)
 AM_INIT_AUTOMAKE(crack, 0.2)
 AC_CONFIG_SRCDIR([parser/Token.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # include cppunit
 #AM_PATH_CPPUNIT(1.12.0)
@@ -31,5 +32,12 @@ AM_PATH_LLVM
 
 # determine if we're 64 bit.
 AC_CHECK_SIZEOF([void *])
+
+# optional libraries
+AM_PATH_GTK_2_0(2.0.0, [got_gtk=yes])
+AM_CONDITIONAL(HAVE_GTK, [test "x$got_gtk" = xyes])
+
+AX_PATH_LIB_PCRE(got_pcre=yes)
+AM_CONDITIONAL(HAVE_PCRE, [test "x$got_pcre" = xyes])
 
 AC_OUTPUT

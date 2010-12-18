@@ -7,7 +7,7 @@ import crack.exp.file File;
 import crack.math sin, cos, tan, PI;
 
 f := File('test/test_math.out', 'w');
-fout := Formatter(f.getWriterObject());
+fout := Formatter(f);
 
 // Generate using math module
 trig_inputs_float_32:=array[float32](41);

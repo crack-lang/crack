@@ -1,8 +1,9 @@
 // Classes for interfaces files
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Portions Copyright 2010 Google Inc.
 
 import crack.io Formatter, Writer, FDReader, FDWriter;
-import crack.lang die, FreeBase, SubString, CString;
+import crack.lang die, Buffer, FreeBase, SubString, CString;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
 import crack.exp.error err, strerror;
@@ -69,7 +70,8 @@ byte F_READ  = 0x72; // 'r'
 byte F_WRITE = 0x77; // 'w'
 
 class File : FileInfo,
-             Openable {
+             Openable,
+             Writer {
 
     String _mode;
     CFile _fd;
@@ -112,8 +114,8 @@ class File : FileInfo,
         return _lReader.next();
 
     }
-
-    void write(String data) {
+    
+    void write(Buffer data) {
         
         if (_writer is null || !_isValid)
             return;
@@ -134,10 +136,10 @@ class File : FileInfo,
             close();
     }
 
-   Writer getWriterObject() { return this._writer; }
+    Object getWriterObject() { return this; }
 
     oper init(String name0, String mode0): FileInfo(name0),
-                                           _mode(mode0) {
+                                           _mode(CString(mode0)) {
 
         // parse file mode
         if (_mode.size != 1 ||
@@ -151,5 +153,7 @@ class File : FileInfo,
             _initWrite();
         
     }
+
+    Object getWriterObject() { return this; }
 
 }

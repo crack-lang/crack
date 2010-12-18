@@ -1,0 +1,500 @@
+# annotation that generates bindings.
+# This currently duplicates the parser logic - rewrite this once the 
+# annotation interface supports introspection of compile contexts.
+
+import crack.lang die, free, AppendBuffer;
+import crack.io cout, Formatter, StringFormatter, Writer;
+import crack.compiler CrackContext, Token;
+import crack.exp.file File;
+import crack.exp.error err;
+
+@import crack.exp.ann define;
+@import crack.exp.cont.treemap GenericTreeMap;
+@import crack.exp.cont.array GenericArray, GenericObjArray;
+
+class Func;
+
+class Type {
+    String name;
+    String __emitName;
+    bool initialized;
+    
+    oper init(String name0) : name = name0, __emitName = 'type_' + name0 {}
+    oper init(String name0, String emitted0) :
+        name = name0,
+        __emitName = emitted0 {
+    }
+    
+    String emit() {
+        return __emitName;
+    }
+    
+    bool isBuiltIn() {
+        return false;
+    }
+
+    void emitInitializer(Formatter out) {
+        err.do() `$(this.class.name).emitInitializer() not implemented`;
+    }
+}
+
+class Arg {
+    String name;
+    Type type;
+
+    oper init(Type type0, String name0) : type = type0, name = name0 {}
+}
+
+@GenericObjArray(ArgArray, Arg);
+ 
+class Func {
+    Type retType;
+    String name;
+    ArgArray args;
+
+    oper init(Type retType0, String name0) :
+        retType = retType0, 
+        name = name0,
+        args() {
+    }
+    
+    void addArg(Arg arg) {
+        args.append(arg);
+    }
+}
+
+@GenericObjArray(FuncArray, Func);
+
+int cmp(String a, String b) { return a.cmp(b); }
+@GenericTreeMap(TypeMap, String, Type);
+
+class BuiltInType : Type {
+    String funcName;
+    oper init(String name0, String funcName0) : 
+        Type(name0), 
+        funcName = funcName0 {
+    }
+    
+    bool isBuiltIn() {
+        return true;
+    }
+    
+    void emitInitializer(Formatter out) {
+        if (initialized) 
+            return;
+        out `    crack::ext::Type *$(emit()) = mod->get$(funcName)Type();\n`;
+        initialized = true;
+    }
+}
+
+class TypeImpl : Type {
+    String emitted;
+    FuncArray methods;
+    
+    oper init(String name0) : Type(name0) {}
+    oper init(String name0, String emitted0) : Type(name0, emitted0) {}
+    
+    void emitInitializer(Formatter out) {
+        if (initialized)
+            return;
+
+        typeVar := emit();
+        out `
+    crack::ext::Type *$typeVar = mod->addType("$name");
+    $typeVar->finish();
+`;            
+        initialized = true;
+    }
+}
+
+class SpecializedType : TypeImpl {
+    
+    Type generic, specializer;
+    
+    @static String _mangle(String name0) {
+        # allocate a generous buffer
+        AppendBuffer result = {name0.size * 2};
+        for (uint i = 0; i < name0.size; ++i) {
+            ch := name0.buffer[i];
+            if (ch == 95)  # '_'
+                result.extend('__');
+            else if (ch == 91)
+                result.extend('_p');
+            else if (ch == 93)
+                result.extend('_q');
+            else
+                result.append(ch);
+        }
+        
+        result.size = result.pos;
+        return String(result, true);
+    }
+    
+    # specialized types look like builtins - we don't do the normal type 
+    # creation for them, instead we just get specializations for them.
+    oper init(String name0, Type generic0, Type specializer0) :
+        TypeImpl(name0, _mangle(name0)),
+        generic = generic0,
+        specializer = specializer0 {
+    }
+
+    void emitInitializer(Formatter out) {
+        if (initialized)
+            return;
+
+        # make sure that the types we depend on are initialized        
+        generic.emitInitializer(out);
+        specializer.emitInitializer(out);
+
+        typeName := emit();
+        out `
+    crack::ext::Type *$typeName;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = $(specializer.emit());
+        $typeName = $(generic.emit())->getSpecialization(params);
+    }
+`;
+    }
+}
+
+class GenericType : TypeImpl {
+    oper init(String name0, String emitted0) :
+        TypeImpl(name0, emitted0) {
+    }
+    
+    Type getSpecialization(TypeMap types, Type specializer) {
+        
+        # construct the specilization name
+        StringFormatter fmt = {};
+        fmt `$name[$(specializer.name)]`;
+        newName := fmt.createString();
+        
+        # see if there's an existing type, create a new one if not.
+        type := types.get(newName);
+        if (!type) {
+            type = SpecializedType(newName, this, specializer);
+            types[newName] = type;
+        }
+
+        return type;
+    }
+
+    void emitInitializer(Formatter out) {
+        if (initialized) return;
+        out `
+    crack::ext::Type $(emit()) = mod->addType("$name");
+`;
+    }
+}        
+
+class ArrayType : GenericType {
+
+    oper init() :
+        GenericType('array', 'array') {
+    }
+    
+    void emitInitializer(Formatter out) {
+        if (initialized) return;
+        out `
+    crack::ext::Type *$(emit()) = mod->getType("array");
+`;
+        initialized = true;
+    }
+}
+
+class Errors : StringFormatter {
+    
+    CrackContext ctx;
+    Token tok;
+    
+    oper init(CrackContext ctx0, Token tok0) : ctx = ctx0, tok = tok0 {}
+    oper init(CrackContext ctx0) : ctx = ctx0 {}
+    
+    oper del() {
+        if (!(tok is null))
+            ctx.error(tok, createString().buffer);
+        else
+            ctx.error(createString().buffer);
+    }
+}
+
+@define setBuiltinType(val, func) {
+    name = val;
+    types[name] = BuiltInType(name, func);
+}
+
+@define def_join(Iterable) {
+    String join(Iterable strings, String sep) {
+        
+        # figure out how much space we need
+        uint total;
+        for (elem :in strings)
+            total += elem.size + sep.size;
+        
+        # drop the last separator
+        total -= sep.size;
+        
+        AppendBuffer buf = {total};
+        first := true;
+        for (elem :in strings) {
+        
+            # add the separator for everything but the first string.
+            if (first)
+                first = false;
+            else
+                buf.extend(sep);
+
+            buf.extend(elem);
+        }
+        
+        return String(buf, true);
+    }
+}
+
+@GenericObjArray(StringArray, String)
+@def_join(StringArray);       
+
+class ExtensionData {
+    String filename;
+    TypeMap types;
+    FuncArray funcs;
+    StringArray module = {};  # module name
+    StringArray preamble = {};
+    
+    oper init() : types(), funcs() {
+        String name;
+        @setBuiltinType('Class', 'Class');
+        @setBuiltinType('void', 'Void');
+        @setBuiltinType('voidptr', 'Voidptr');
+        @setBuiltinType('bool', 'Bool');
+        @setBuiltinType('byteptr', 'Byteptr');
+        @setBuiltinType('byte', 'Byte');
+        @setBuiltinType('int32', 'Int32');
+        @setBuiltinType('int64', 'Int64');
+        @setBuiltinType('uint32', 'Uint32');
+        @setBuiltinType('uint64', 'Uint64');
+        @setBuiltinType('int', 'Int',);
+        @setBuiltinType('uint', 'Uint');
+        @setBuiltinType('float32', 'Float32');
+        @setBuiltinType('float64', 'Float64');
+        @setBuiltinType('float', 'Float');
+        
+        types['array'] = ArrayType();        
+    }
+    
+    Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }
+    Errors error(CrackContext ctx) { return Errors(ctx); }
+
+    Type _parseType(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            error(ctx, tok) `Type specifier expected`;
+        type := types.get(String(tok.getText()));
+        if (!type)
+            error(ctx, tok) `Unknown type $(tok.getText())`;
+        
+        # check for a specializer type
+        tok = ctx.getToken();
+        Type specializer;
+        if (tok.isLBracket()) {
+            specializer = _parseType(ctx);
+            tok = ctx.getToken();
+            if (!tok.isRBracket())
+                error(ctx, tok) `Right bracket expected`;
+            
+            if (!type.class.isSubclass(GenericType))
+                error(ctx, tok) `$(type.name) is not a generic type`;
+            
+            type = GenericType.unsafeCast(type).getSpecialization(types, 
+                                                                  specializer
+                                                                  );
+        } else {
+            ctx.putBack(tok);
+        }
+        
+        return type;
+    }
+        
+ 
+    void _parseFuncDef(CrackContext ctx) {
+        retType := _parseType(ctx);
+        
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            error(ctx, tok) `Identifier expected`;
+        
+        f := Func(retType, String(tok.getText()));
+        funcs.append(f);
+
+        if (!(tok = ctx.getToken()).isLParen())
+            error(ctx, tok) `Left paren expected`;
+        
+        tok = ctx.getToken();
+        while (!tok.isRParen()) {
+            # parse the argument type
+            ctx.putBack(tok);
+            argType := _parseType(ctx);
+            
+            # get the arg variable
+            tok = ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `argument name expected`;
+            
+            f.addArg(Arg(argType, String(tok.getText())));
+            
+            tok = ctx.getToken();
+            if (tok.isComma())
+                tok = ctx.getToken();
+            else if (!tok.isRParen())
+                error(ctx, tok) `Comma or right paren expected`;
+        }   
+    }
+
+    void _parseClassDef(CrackContext ctx) {
+        # get the type name.
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            error(ctx, tok) `Identifier expected after "class" keyword.`;
+        
+        String className = {tok.getText()};
+        
+        # get a semicolon
+        tok = ctx.getToken();
+        if (!tok.isSemi())
+            error(ctx, tok) `Semicolon expected after class declaration`;
+        
+        types[className] = TypeImpl(className);
+    }   
+
+    String _parseString(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (!tok.isString())
+            error(ctx, tok) `Expected string`;
+        return String(tok.getText());
+    }
+
+    void _parseAnnotation(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (tok.isIdent()) {
+            String ann = {tok.getText()};
+            if (ann == 'filename') {
+                filename = _parseString(ctx);
+            } else if (ann == 'inject') {
+                preamble.append(_parseString(ctx));
+            } else {
+                error(ctx, tok) `Unexpected annotation: $ann`;
+            }
+        } else {
+            error(ctx, tok) `Identifier expected after at sign`;
+        }
+    }
+
+    StringArray _parseExtensionName(CrackContext ctx) {
+        StringArray result = {};
+        while (true) {
+            tok := ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `Expected extension name.`;
+            
+            result.append(String(tok.getText()));
+            tok = ctx.getToken();
+            
+            if (!tok.isDot()) {
+                ctx.putBack(tok);
+                break;
+            }
+        }
+        
+        return result;
+    }
+ 
+    void parse(CrackContext ctx) {
+        
+        # get the extension module
+        module = _parseExtensionName(ctx);
+        
+        # expecting a '{'
+        tok := ctx.getToken();
+        if (!tok.isLCurly())
+            error(ctx, tok) `Opening curly bracket expected`;
+
+        # parse all definitions
+        while (true) {
+            tok = ctx.getToken();
+            
+            # check for a class definition
+            if (tok.isClass())
+                _parseClassDef(ctx);
+            else if (tok.isIdent()) {
+                ctx.putBack(tok);
+                _parseFuncDef(ctx);
+            } else if (tok.isRCurly())
+                break;
+            else if (tok.isSemi())
+                ;
+            else if (tok.isAnn())
+                _parseAnnotation(ctx);
+            else
+                error(ctx, tok)
+                    `expected class, function or right curly bracket.`;
+        }
+        
+    }
+
+    String header(String name) {
+        StringFormatter fmt = {};
+        fmt `"ext/$name.h"`;
+        return fmt.createString();
+    }
+
+    void emitCode(Writer out) {
+        o := Formatter(out);
+        
+        for (block :in preamble)
+            o `$block`;
+        
+        o `
+
+#include $(header('Module'))
+#include $(header('Type'))
+#include $(header('Func'))
+
+extern "C"
+void $(join(module, '_'))_init(crack::ext::Module *mod) {
+    crack::ext::Func *f;
+`;
+        
+        for (kv :in types)
+            kv.val.emitInitializer(o);
+        
+        for (func :in funcs) {
+            retTypeRepr := func.retType.emit();
+            o `
+    f = mod->addFunc($retTypeRepr, "$(func.name)",
+                     (void *)$(func.name)
+                     );
+`;
+            for (arg :in func.args)
+                o `    f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+        }
+        
+        o `}\n`;
+    }
+
+    void emit() {
+        # emit all of the code
+        cout `emitting $filename\n`;
+        out := Formatter(File(filename, 'w'));
+        emitCode(out);
+    }
+}
+
+void generateExtension(CrackContext ctx) {
+    ExtensionData ext = {};
+    ext.parse(ctx);
+    if (!ext.filename)
+        ctx.error('no filename specified'.buffer);
+    else
+        ext.emit();
+}
