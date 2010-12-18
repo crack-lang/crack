@@ -10,10 +10,39 @@
 
 using namespace crack::ext;
 
-// our exported functions
+
 namespace crack { namespace runtime {
 
+// Argument name definitions
+enum arg_values{ VALUE, ANGLE, ENUMERATOR, DIVISOR, POWER, SIGN, X, Y, DIRECTION};
+const char *arg_names[]={"value", "angle", "enumerator", "divisor", "power", 
+                          "sign", "x", "y", "direction"};
 
+// Function type definitions
+typedef float (OneFuncFloat)(float);
+typedef float (TwoFuncFloat)(float, float);
+typedef int (OneMacroFuncFloat)(float);
+
+#if FLT_EVAL_METHOD==0
+// double and float are distinct types
+typedef double (OneFuncDouble)(double);
+typedef double (TwoFuncDouble)(double, double);
+typedef int (OneMacroFuncDouble)(double);
+#endif
+
+typedef struct _one_name_struct{
+   const char *funcname;
+   arg_values *argname;
+} one_name_struct;
+
+typedef struct _two_name_struct{
+   const char *funcname;
+   arg_values *argname1;
+   arg_values *argname2;
+} two_name_struct;
+
+
+// -----------------------------------------------------------------------------
 const double constants[] = {
   HUGE_VAL,
   INFINITY,
@@ -24,7 +53,12 @@ const double constants[] = {
   FP_SUBNORMAL,
   FP_ZERO,
   FP_ILOGB0,
-  FP_ILOGBNAN
+  FP_ILOGBNAN,
+  FE_ALL_EXCEPT,
+  FE_INVALID,
+  FE_DIVBYZERO,
+  FE_OVERFLOW,
+  FE_UNDERFLOW
 };
 
 const char  *constant_names[]={ "HUGE_VAL",
@@ -36,26 +70,47 @@ const char  *constant_names[]={ "HUGE_VAL",
                                   "FP_SUBNORMAL",
                                   "FP_ZERO",
                                   "FP_ILOGB0",
-                                  "FP_ILOGBNAN", NULL};
+                                  "FP_ILOGBNAN", 
+                                  "ALL_EXCEPT",
+                                  "INVALID",
+                                  "DIVBYZERO",
+                                  "OVERFLOW",
+                                  "UNDERFLOW",
+                                  ,NULL};
 
 // Functions that take a single float argument
-const char  *one_names[]={"sin", "cos", "tan", "sinh", "cosh", "tanh",
-                             "asin", "acos", "atan", "asinh", "acosh", "atanh",
-                             "exp", "exp2", "log", "abs", "log10", "log1p",
-                             "log2", "cbrt", "sqrt", "erf",
-                             "erfc", "lgamma", "tgamma", "ceil", "floor",
-                             "nearbyint", "rint", "round", "trunc", "expm1", NULL};
+const one_name_struct  *one_names[]={{"sin", ANGLE}, {"cos", ANGLE},
+                                         {"tan", ANGLE}, {"sinh", ANGLE}, 
+                                         {"cosh", ANGLE}, {"tanh", ANGLE},
+                                         {"asin", VALUE}, {"acos", VALUE}, 
+                                         {"atan", VALUE}, {"asinh", VALUE},
+                                         {"acosh", VALUE}, {"atanh", VALUE},
+                                         {"exp", VALUE}, {"exp2", VALUE},
+                                         {"log", VALUE}, {"abs", VALUE},
+                                         {"log10", VALUE}, {"log1p", VALUE},
+                                         {"log2", VALUE}, {"cbrt", VALUE},
+                                         {"sqrt", VALUE}, {"erf", VALUE},
+                                         {"erfc", VALUE}, {"lgamma", VALUE},
+                                         {"tgamma", VALUE}, {"ceil", VALUE},
+                                         {"floor", VALUE}, {"nearbyint", VALUE},
+                                         { "rint", VALUE}, {"round", VALUE}, 
+                                         {"trunc", VALUE}, {"expm1", VALUE}, NULL};
 
 // Functions that take 2 float arguments
-const char *two_names[]={"fmod", "remainder", "copysign", "nextafter",
-                           "hypot", "dim", "pow", NULL};
+const two_name_struct *two_names[]={{"fmod", ENUMERATOR, DIVISOR}, 
+                                       {"remainder", ENUMERATOR, DIVISOR}, 
+                                       {"copysign", VALUE, SIGN},
+                                       {"nextafter", VALUE, DIRECTION},
+                                       {"hypot", X, Y}, 
+                                       {"dim", VALUE, DIRECTION},
+                                       {"pow", VALUE, POWER}, NULL};
 
 
 // Macros that take a single argument
 const char *one_macro_names[]={"fpclassify", "isfinite", "isinf", "isnan",
                                   "isnormal", "sign", "ilogb", NULL};
 
-typedef float (OneFuncFloat)(float);
+
 OneFuncFloat *one_funcs[]={ sinf,   cosf,
                               tanf,   sinhf,
                               coshf,  tanhf,
@@ -75,7 +130,7 @@ OneFuncFloat *one_funcs[]={ sinf,   cosf,
 
 // Functions that take two arguments
 // Some of these are already implemented by the compiler
-typedef float (TwoFuncFloat)(float, float);
+
 TwoFuncFloat *two_funcs[]= {fmodf,     remainderf,
                               copysignf, nextafterf, hypotf,
                               fdimf,     powf, NULL};
@@ -106,7 +161,6 @@ int crk_signbit(float x){
   return isinf(x);
 }
 
-typedef int (OneMacroFuncFloat)(float);
 OneMacroFuncFloat *one_macros[]={crk_fpclassify, crk_isfinite,
                                     crk_isinf, crk_isnan, 
                                     crk_isnormal,
@@ -114,8 +168,6 @@ OneMacroFuncFloat *one_macros[]={crk_fpclassify, crk_isfinite,
 
 
 #if FLT_EVAL_METHOD==0
-// double and float are distinct types
-typedef double (OneFuncDouble)(double);
 OneFuncDouble *one_funcs_double[]={  sin,   cos,
                                        tan,   sinh,
                                        cosh,  tanh,
@@ -133,7 +185,6 @@ OneFuncDouble *one_funcs_double[]={  sin,   cos,
                                        rint,  round,
                                        trunc, expm1, NULL};
 
-typedef double (TwoFuncDouble)(double, double);
 TwoFuncDouble *two_funcs_double[]={  fmod,     remainder,
                                        copysign, nextafter, hypot,
                                        fdim,     pow, NULL};
@@ -163,7 +214,6 @@ int crk_signbit_double(double x){
   return isinf(x);
 }
 
-typedef int (OneMacroFuncDouble)(double);
 OneMacroFuncDouble *one_macros_double[]={ crk_fpclassify_double, crk_isfinite_double,
                                              crk_isinf_double, crk_isinf_double,
                                              crk_isnan_double, crk_isnormal_double,
@@ -187,36 +237,43 @@ void math_init(Module *mod) {
   //~ }
 
   for(i=0;one_funcs[i];i++){
-    Func *func = mod->addFunc(mod->getFloatType(), one_names[i], (void *) one_funcs[i]);
-    func->addArg(mod->getFloatType(), "arg");
+    Func *func = mod->addFunc(mod->getFloatType(), one_names[i], (void *) one_funcs[i].funcname);
+      func->addArg(mod->getFloatType(), one_funcs[i].argname);
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i], (void *) one_funcs_double[i]);
-    funcd->addArg(mod->getFloat64Type(), "arg");
+    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i], (void *) one_funcs[i].funcname);
+    funcd->addArg(mod->getFloat64Type(), one_funcs[i].argname);
 #endif
   }
 
   for(i=0;one_macros[i];i++){
     Func *func = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros[i]);
-    func->addArg(mod->getFloatType(), "arg");
+    func->addArg(mod->getFloatType(), "value");
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
     Func *funcd = mod->addFunc(mod->getFloat64Type(), one_macro_names[i], (void *) one_macros_double[i]);
-    funcd->addArg(mod->getFloat64Type(), "arg");
+    funcd->addArg(mod->getFloat64Type(), "value");
 #endif
   }
 
   for(i=0;two_funcs[i];i++){
-    Func *func = mod->addFunc(mod->getFloatType(), two_names[i], (void *) two_funcs[i]);
-    func->addArg(mod->getFloatType(), "arg1");
-    func->addArg(mod->getFloatType(), "arg2");
+    Func *func = mod->addFunc(mod->getFloatType(), two_names[i].funcname, (void *) two_funcs[i]);
+    func->addArg(mod->getFloatType(), two_names[i].argname1);
+    func->addArg(mod->getFloatType(), two_names[i].argname2);
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), two_names[i], (void *) two_funcs_double[i]);
-    funcd->addArg(mod->getFloat64Type(), "arg1");
-    funcd->addArg(mod->getFloat64Type(), "arg2");
+    Func *funcd = mod->addFunc(mod->getFloat64Type(), two_names[i].funcname, (void *) two_funcs_double[i]);
+    funcd->addArg(mod->getFloat64Type(), two_names[i].argname1);
+    funcd->addArg(mod->getFloat64Type(), two_names[i].argname2);
 #endif
   }
+
+  // Math error handling
+  Func *funcd = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
+  funcd->addArg(mod->getIntType(), "errors");
+  Func *funcd = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
+  funcd->addArg(mod->getIntType(), "errors");
+
 
   // Add constants known at compile time
   for(i=0;constant_names[i];i++){
