@@ -102,11 +102,16 @@ target_link_libraries( crack
                      )
 
 # install targets
-install(TARGETS crack libcrack crack-runtime
+install(TARGETS crack libcrack
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
        )
+
+install(TARGETS crack-runtime
+        LIBRARY DESTINATION "lib/crack-${CRACK_VERSION}/crack"
+       )
+
 install(FILES doc/Manual.html DESTINATION share/doc/crack)
 # todo: a better scheme that saves directory structure of lib directory
 FILE(GLOB lib_files_root lib/crack/*.crk)
