@@ -2,6 +2,8 @@
 // Lincensed under LGPLv3
 
 #include <math.h>
+#include <errno.h>
+#include <fenv.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -32,13 +34,13 @@ typedef int (OneMacroFuncDouble)(double);
 
 typedef struct _one_name_struct{
    const char *funcname;
-   arg_values *argname;
+   arg_values argname;
 } one_name_struct;
 
 typedef struct _two_name_struct{
    const char *funcname;
-   arg_values *argname1;
-   arg_values *argname2;
+   arg_values argname1;
+   arg_values argname2;
 } two_name_struct;
 
 
@@ -76,10 +78,10 @@ const char  *constant_names[]={ "HUGE_VAL",
                                   "DIVBYZERO",
                                   "OVERFLOW",
                                   "UNDERFLOW",
-                                  ,NULL};
+                                  NULL};
 
 // Functions that take a single float argument
-const one_name_struct  *one_names[]={{"sin", ANGLE}, {"cos", ANGLE},
+const one_name_struct  one_names[]={{"sin", ANGLE}, {"cos", ANGLE},
                                          {"tan", ANGLE}, {"sinh", ANGLE}, 
                                          {"cosh", ANGLE}, {"tanh", ANGLE},
                                          {"asin", VALUE}, {"acos", VALUE}, 
@@ -94,16 +96,17 @@ const one_name_struct  *one_names[]={{"sin", ANGLE}, {"cos", ANGLE},
                                          {"tgamma", VALUE}, {"ceil", VALUE},
                                          {"floor", VALUE}, {"nearbyint", VALUE},
                                          { "rint", VALUE}, {"round", VALUE}, 
-                                         {"trunc", VALUE}, {"expm1", VALUE}, NULL};
+                                         {"trunc", VALUE}, {"expm1", VALUE}, 
+                                         {NULL, VALUE}};
 
 // Functions that take 2 float arguments
-const two_name_struct *two_names[]={{"fmod", ENUMERATOR, DIVISOR}, 
+const two_name_struct two_names[]={{"fmod", ENUMERATOR, DIVISOR}, 
                                        {"remainder", ENUMERATOR, DIVISOR}, 
                                        {"copysign", VALUE, SIGN},
                                        {"nextafter", VALUE, DIRECTION},
                                        {"hypot", X, Y}, 
                                        {"dim", VALUE, DIRECTION},
-                                       {"pow", VALUE, POWER}, NULL};
+                                       {"pow", VALUE, POWER}, {NULL, VALUE, VALUE}};
 
 
 // Macros that take a single argument
@@ -237,12 +240,13 @@ void math_init(Module *mod) {
   //~ }
 
   for(i=0;one_funcs[i];i++){
-    Func *func = mod->addFunc(mod->getFloatType(), one_names[i], (void *) one_funcs[i].funcname);
-      func->addArg(mod->getFloatType(), one_funcs[i].argname);
+    Func *func = mod->addFunc(mod->getFloatType(), one_names[i].funcname, (void *) one_funcs[i]);
+    func->addArg(mod->getFloatType(), arg_names[one_names[i].argname]);
+
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i], (void *) one_funcs[i].funcname);
-    funcd->addArg(mod->getFloat64Type(), one_funcs[i].argname);
+    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i].funcname, (void *) one_funcs[i]);
+    funcd->addArg(mod->getFloat64Type(), arg_names[one_names[i].argname]);
 #endif
   }
 
@@ -258,21 +262,21 @@ void math_init(Module *mod) {
 
   for(i=0;two_funcs[i];i++){
     Func *func = mod->addFunc(mod->getFloatType(), two_names[i].funcname, (void *) two_funcs[i]);
-    func->addArg(mod->getFloatType(), two_names[i].argname1);
-    func->addArg(mod->getFloatType(), two_names[i].argname2);
+    func->addArg(mod->getFloatType(), arg_names[two_names[i].argname1]);
+    func->addArg(mod->getFloatType(), arg_names[two_names[i].argname2]);
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
     Func *funcd = mod->addFunc(mod->getFloat64Type(), two_names[i].funcname, (void *) two_funcs_double[i]);
-    funcd->addArg(mod->getFloat64Type(), two_names[i].argname1);
-    funcd->addArg(mod->getFloat64Type(), two_names[i].argname2);
+    funcd->addArg(mod->getFloat64Type(), arg_names[two_names[i].argname1]);
+    funcd->addArg(mod->getFloat64Type(), arg_names[two_names[i].argname2]);
 #endif
   }
 
   // Math error handling
-  Func *funcd = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
-  funcd->addArg(mod->getIntType(), "errors");
-  Func *funcd = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
-  funcd->addArg(mod->getIntType(), "errors");
+  Func *func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
+  func->addArg(mod->getIntType(), "errors");
+  func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
+  func->addArg(mod->getIntType(), "errors");
 
 
   // Add constants known at compile time
