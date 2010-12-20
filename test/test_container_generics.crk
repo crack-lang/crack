@@ -1,11 +1,10 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang die, free;
+import crack.lang cmp, die, free;
 import crack.io cout, Formatter, StringFormatter;
 @import crack.exp.cont.treemap GenericTreeMap;
 @import crack.exp.cont.array GenericArray, GenericObjArray;
 
-int cmp(String a, String b) { return a.cmp(b); }
 @GenericTreeMap(StringIntMap, String, int);
 
 StringIntMap m = {};

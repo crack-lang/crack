@@ -1,13 +1,13 @@
 # Copyright 2010 Google Inc
 # Generic TreeMap implementation
-# To use this macro, you must 'import crack.lang die; 
+# To use this macro, you must 'import crack.lang die, cmp; 
 # import crack.io cout, Formatter;'
 
 @import crack.exp.ann define, export, exporter;
 @exporter;
 
 @define GenericTreeMap(Name, KeyT, ValT) {
-    
+
     class Name {
 
         ## Red-black tree node.
