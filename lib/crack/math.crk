@@ -8,6 +8,7 @@
 
 // import functions and some constants known at compile time
 @import crack.exp.ann define;
+import crack.lang CString;
 import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
                     ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
@@ -72,21 +73,30 @@ float GAMMA =        0.57721566490153286061;  // Euler's constant gamma
 // Augment the atoi(char*) imported from _math
 @define _atoi(Tpe){
    int atoi(Tpe s){
-     return atoi(s.buffer);
+     return atoi(CString(s.buffer, s.size, true).buffer);
    }
 }
 
 @_atoi(StaticString)
 @_atoi(String)
-//~ @_atoi(CString)
+
+// CString is already NULL terminated
+int atoi(CString s){
+  return atoi(s.buffer);
+}
+
 
 // Augment the atof(char*) imported from _math
 @define _atof(Tpe){
    float atof(Tpe s){
-     return atof(s.buffer);
+     return atof(CString(s.buffer, s.size, true).buffer);
    }
 }
 
 @_atof(StaticString)
 @_atof(String)
-//~ @_atof(CString)
+
+// CString is already NULL terminated
+float atof(CString s){
+  return atof(s.buffer);
+}
