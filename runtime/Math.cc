@@ -7,10 +7,12 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <string>
 #include "ext/Module.h"
 #include "ext/Func.h"
 
 using namespace crack::ext;
+using namespace std;
 
 
 namespace crack { namespace runtime {
@@ -32,6 +34,7 @@ typedef double (TwoFuncDouble)(double, double);
 typedef int (OneMacroFuncDouble)(double);
 #endif
 
+// Structs to hold function and constant info
 typedef struct _one_name_struct{
    const char *funcname;
    arg_values argname;
@@ -43,70 +46,71 @@ typedef struct _two_name_struct{
    arg_values argname2;
 } two_name_struct;
 
+typedef struct _double_constant_struct{
+   const char *name;
+   const double value;
+} double_constant_struct;
+
+typedef struct _int_constant_struct{
+   const char *name;
+   const int value;
+} int_constant_struct;
+
 
 // -----------------------------------------------------------------------------
-const double constants[] = {
-  HUGE_VAL,
-  INFINITY,
-  NAN,
-  FP_INFINITE,
-  FP_NAN,
-  FP_NORMAL,
-  FP_SUBNORMAL,
-  FP_ZERO,
-  FP_ILOGB0,
-  FP_ILOGBNAN,
-  FE_ALL_EXCEPT,
-  FE_INVALID,
-  FE_DIVBYZERO,
-  FE_OVERFLOW,
-  FE_UNDERFLOW
-};
+const double_constant_struct double_constants[] = {
+                                    {"HUGE_VAL",      HUGE_VAL},
+                                    {"INFINITY",      INFINITY},
+                                    {"NAN",           NAN},
+                                    {"FP_INFINITE",   FP_INFINITE},
+                                    {"FP_NAN",        FP_NAN},
+                                    {"FP_NORMAL",     FP_NORMAL},
+                                    {"FP_SUBNORMAL",  FP_SUBNORMAL},
+                                    {"FP_ZERO",       FP_ZERO},
+                                    {"FP_ILOGB0",     FP_ILOGB0},
+                                    {"FP_ILOGBNAN",   FP_ILOGBNAN},
+                                    {"ALL_EXCEPT",    FE_ALL_EXCEPT},
+                                    {"INVALID",       FE_INVALID},
+                                    {"DIVBYZERO",     FE_DIVBYZERO},
+                                    {"OVERFLOW",      FE_OVERFLOW},
+                                    {"UNDERFLOW",     FE_UNDERFLOW},
+                                    {NULL, 0}
+                                 };
 
-const char  *constant_names[]={ "HUGE_VAL",
-                                  "INFINITY",
-                                  "NAN",
-                                  "FP_INFINITE",
-                                  "FP_NAN",
-                                  "FP_NORMAL",
-                                  "FP_SUBNORMAL",
-                                  "FP_ZERO",
-                                  "FP_ILOGB0",
-                                  "FP_ILOGBNAN", 
-                                  "ALL_EXCEPT",
-                                  "INVALID",
-                                  "DIVBYZERO",
-                                  "OVERFLOW",
-                                  "UNDERFLOW",
-                                  NULL};
 
+const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, {NULL, 0}};
+// -----------------------------------------------------------------------------
 // Functions that take a single float argument
-const one_name_struct  one_names[]={{"sin", ANGLE}, {"cos", ANGLE},
-                                         {"tan", ANGLE}, {"sinh", ANGLE}, 
-                                         {"cosh", ANGLE}, {"tanh", ANGLE},
-                                         {"asin", VALUE}, {"acos", VALUE}, 
-                                         {"atan", VALUE}, {"asinh", VALUE},
-                                         {"acosh", VALUE}, {"atanh", VALUE},
-                                         {"exp", VALUE}, {"exp2", VALUE},
-                                         {"log", VALUE}, {"abs", VALUE},
-                                         {"log10", VALUE}, {"log1p", VALUE},
-                                         {"log2", VALUE}, {"cbrt", VALUE},
-                                         {"sqrt", VALUE}, {"erf", VALUE},
-                                         {"erfc", VALUE}, {"lgamma", VALUE},
-                                         {"tgamma", VALUE}, {"ceil", VALUE},
-                                         {"floor", VALUE}, {"nearbyint", VALUE},
-                                         { "rint", VALUE}, {"round", VALUE}, 
-                                         {"trunc", VALUE}, {"expm1", VALUE}, 
-                                         {NULL, VALUE}};
+const one_name_struct  one_names[]={ 
+                              {"sin", ANGLE}, {"cos", ANGLE},
+                              {"tan", ANGLE}, {"sinh", ANGLE}, 
+                              {"cosh", ANGLE}, {"tanh", ANGLE},
+                              {"asin", VALUE}, {"acos", VALUE}, 
+                              {"atan", VALUE}, {"asinh", VALUE},
+                              {"acosh", VALUE}, {"atanh", VALUE},
+                              {"exp", VALUE}, {"exp2", VALUE},
+                              {"log", VALUE}, {"abs", VALUE},
+                              {"log10", VALUE}, {"log1p", VALUE},
+                              {"log2", VALUE}, {"cbrt", VALUE},
+                              {"sqrt", VALUE}, {"erf", VALUE},
+                              {"erfc", VALUE}, {"lgamma", VALUE},
+                              {"tgamma", VALUE}, {"ceil", VALUE},
+                              {"floor", VALUE}, {"nearbyint", VALUE},
+                              { "rint", VALUE}, {"round", VALUE}, 
+                              {"trunc", VALUE}, {"expm1", VALUE}, 
+                              {NULL, VALUE}
+                           };
 
 // Functions that take 2 float arguments
-const two_name_struct two_names[]={{"fmod", ENUMERATOR, DIVISOR}, 
-                                       {"remainder", ENUMERATOR, DIVISOR}, 
-                                       {"copysign", VALUE, SIGN},
-                                       {"nextafter", VALUE, DIRECTION},
-                                       {"hypot", X, Y}, 
-                                       {"dim", VALUE, DIRECTION},
-                                       {"pow", VALUE, POWER}, {NULL, VALUE, VALUE}};
+const two_name_struct   two_names[]={
+                              {"fmod", ENUMERATOR, DIVISOR}, 
+                              {"remainder", ENUMERATOR, DIVISOR}, 
+                              {"copysign", VALUE, SIGN},
+                              {"nextafter", VALUE, DIRECTION},
+                              {"hypot", X, Y}, 
+                              {"dim", VALUE, DIRECTION},
+                              {"pow", VALUE, POWER}, {NULL, VALUE, VALUE}
+                           };
 
 
 // Macros that take a single argument
@@ -114,29 +118,31 @@ const char *one_macro_names[]={"fpclassify", "isfinite", "isinf", "isnan",
                                   "isnormal", "sign", "ilogb", NULL};
 
 
-OneFuncFloat *one_funcs[]={ sinf,   cosf,
-                              tanf,   sinhf,
-                              coshf,  tanhf,
-                              asinf,  acosf,
-                              atanf,  asinhf,
-                              acoshf, atanhf,
-                              expf,   exp2f,
-                              logf,   fabsf,
-                              log10f, log1pf,
-                              log2f,  cbrtf,
-                              sqrtf,  erff,
-                              erfcf,  lgammaf,
-                              tgammaf,ceilf,
-                              floorf,  nearbyintf,
-                              rintf,  roundf,
-                              truncf, expm1f, NULL};
+OneFuncFloat *one_funcs[]= { sinf,   cosf,
+                               tanf,   sinhf,
+                               coshf,  tanhf,
+                               asinf,  acosf,
+                               atanf,  asinhf,
+                               acoshf, atanhf,
+                               expf,   exp2f,
+                               logf,   fabsf,
+                               log10f, log1pf,
+                               log2f,  cbrtf,
+                               sqrtf,  erff,
+                               erfcf,  lgammaf,
+                               tgammaf,ceilf,
+                               floorf,  nearbyintf,
+                               rintf,  roundf,
+                               truncf, expm1f, NULL
+                              };
 
 // Functions that take two arguments
 // Some of these are already implemented by the compiler
 
-TwoFuncFloat *two_funcs[]= {fmodf,     remainderf,
-                              copysignf, nextafterf, hypotf,
-                              fdimf,     powf, NULL};
+TwoFuncFloat *two_funcs[]=  { fmodf,     remainderf,
+                                copysignf, nextafterf, hypotf,
+                                fdimf,     powf, NULL
+                              };
 
 
 // Bindings for macros that take one argument
@@ -169,9 +175,9 @@ OneMacroFuncFloat *one_macros[]={crk_fpclassify, crk_isfinite,
                                     crk_isnormal,
                                     crk_signbit, ilogbf, NULL};
 
-
+// -----------------------------------------------------------------------------
 #if FLT_EVAL_METHOD==0
-OneFuncDouble *one_funcs_double[]={  sin,   cos,
+OneFuncDouble *one_funcs_double[]= { sin,   cos,
                                        tan,   sinh,
                                        cosh,  tanh,
                                        asin,  acos,
@@ -186,7 +192,8 @@ OneFuncDouble *one_funcs_double[]={  sin,   cos,
                                        tgamma,ceil,
                                        floor, nearbyint,
                                        rint,  round,
-                                       trunc, expm1, NULL};
+                                       trunc, expm1, NULL
+                                     };
 
 TwoFuncDouble *two_funcs_double[]={  fmod,     remainder,
                                        copysign, nextafter, hypot,
@@ -217,10 +224,20 @@ int crk_signbit_double(double x){
   return isinf(x);
 }
 
+int crk_get_errno(){
+  return errno;
+}
+
+void crk_set_errno(int value){
+  errno=value;
+}
+
+
 OneMacroFuncDouble *one_macros_double[]={ crk_fpclassify_double, crk_isfinite_double,
                                              crk_isinf_double, crk_isinf_double,
                                              crk_isnan_double, crk_isnormal_double,
-                                             crk_signbit_double, ilogb, NULL};
+                                             crk_signbit_double, ilogb, NULL
+                                           };
 
 #endif
 
@@ -234,11 +251,7 @@ u_int64_t crk_gettimeofday(void){
 void math_init(Module *mod) {
   int i;
 
-  // Add constants to module - not supported yet
-  //~ for (i=0; constant_names[i];i++){
-    //~ mod->addInstVar(intType, constant_names[i])
-  //~ }
-
+  // One argument functions
   for(i=0;one_funcs[i];i++){
     Func *func = mod->addFunc(mod->getFloatType(), one_names[i].funcname, (void *) one_funcs[i]);
     func->addArg(mod->getFloatType(), arg_names[one_names[i].argname]);
@@ -260,6 +273,7 @@ void math_init(Module *mod) {
 #endif
   }
 
+   // Two argument functions
   for(i=0;two_funcs[i];i++){
     Func *func = mod->addFunc(mod->getFloatType(), two_names[i].funcname, (void *) two_funcs[i]);
     func->addArg(mod->getFloatType(), arg_names[two_names[i].argname1]);
@@ -272,6 +286,15 @@ void math_init(Module *mod) {
 #endif
   }
 
+  // Add constants to module
+  for (i=0; double_constants[i].name;i++){
+    mod->addConstant(mod->getFloat64Type(), double_constants[i].name, double_constants[i].value);
+  }
+
+  for (i=0; int_constants[i].name;i++){
+    mod->addConstant(mod->getFloat64Type(), int_constants[i].name, int_constants[i].value);
+  }
+
   // Math error handling
   Func *func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
   func->addArg(mod->getIntType(), "errors");
@@ -279,22 +302,23 @@ void math_init(Module *mod) {
   func->addArg(mod->getIntType(), "errors");
 
 
-  // Add constants known at compile time
-  for(i=0;constant_names[i];i++){
-    mod->addConstant(mod->getFloatType(), constant_names[i], constants[i]);
-  }
-
   // Some utility functions
+  // Get and set errno
+  Func *get_errno_func = mod->addFunc(mod->getIntType(), "errno", (void *)crk_get_errno);
+
+  Func *set_errno_func = mod->addFunc(mod->getVoidType(), "setErrno", (void *)crk_set_errno);
+  set_errno_func->addArg(mod->getIntType(), "value");
+
   // atoi
-  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (int *)atoi);
+  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi);
   atoi_func->addArg(mod->getByteptrType(), "str");
 
   // strtof
-  Func *strtof_func = mod->addFunc(mod->getFloatType(), "atof", (int *)atof);
+  Func *strtof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof);
   strtof_func->addArg(mod->getByteptrType(), "str");
 
   // atof like strtof, but no error checking
-  Func *atof_func = mod->addFunc(mod->getFloatType(), "strtof", (int *)strtof);
+  Func *atof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)strtof);
   atof_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
