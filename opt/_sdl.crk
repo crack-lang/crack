@@ -1,0 +1,62 @@
+# Crack SDL bindings.
+
+@import opt.extgen generateExtension;
+
+@generateExtension crack.ext._sdl {
+    @filename 'opt/_sdl.cc'
+    @inject '#include <SDL.h>\n'
+    @inject 'SDL_Event *SDL_EventNew() { return new SDL_Event; }\n'
+    @inject 'int SDL_Event_GetType(SDL_Event *evt) { return evt->type; }\n';
+    
+    const uint32 SDL_INIT_TIMER,
+                 SDL_INIT_AUDIO,
+                 SDL_INIT_VIDEO,
+                 SDL_INIT_CDROM,
+                 SDL_INIT_JOYSTICK,
+                 SDL_INIT_EVERYTHING,
+                 SDL_INIT_NOPARACHUTE,
+                 SDL_INIT_EVENTTHREAD;
+    
+    int SDL_Init(uint32 flags);
+    
+    int SDL_Quit();
+    
+    class SDL_Surface;
+
+    const uint32 SDL_SWSURFACE,
+                 SDL_HWSURFACE,
+                 SDL_ASYNCBLIT,
+                 SDL_ANYFORMAT,
+                 SDL_HWPALETTE,
+                 SDL_DOUBLEBUF,
+                 SDL_FULLSCREEN,
+                 SDL_OPENGL,
+                 SDL_OPENGLBLIT,
+                 SDL_RESIZABLE,
+                 SDL_NOFRAME;
+    
+    SDL_Surface SDL_SetVideoMode(int width, int height, int bpp, 
+                                 uint32 flags
+                                 );
+
+    class SDL_Event;
+
+    SDL_Event SDL_EventNew();
+    int SDL_Event_GetType(SDL_Event event);
+    
+    const uint32 SDL_KEYDOWN,
+                 SDL_KEYUP,
+                 SDL_MOUSEMOTION;
+
+    int SDL_PollEvent(SDL_Event event);
+    
+    const uint32 SDL_GL_RED_SIZE,
+                 SDL_GL_GREEN_SIZE,
+                 SDL_GL_BLUE_SIZE,
+                 SDL_GL_DEPTH_SIZE,
+                 SDL_GL_DOUBLEBUFFER;
+    
+    int SDL_GL_SetAttribute(uint32 attr, int value);
+    int SDL_GL_GetAttribute(uint32 attr, array[int] value);
+    void SDL_GL_SwapBuffers();
+}

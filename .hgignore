@@ -27,3 +27,7 @@
 ^test/\.libs/.*$
 ^test/\.dirstamp$
 ^ext/crack_config\.h$
+^lib/crack/ext/.*\.so$
+^run_all_tests.fail$
+^lib/crack/runtime.so$
+

@@ -33,6 +33,6 @@ __eof__
 # --- end of embedded python ---
 
 if [ ! -e ltmain.sh ]; then libtoolize; fi
-aclocal -I m4
+aclocal -I m4 --install
 autoconf
 automake --add-missing

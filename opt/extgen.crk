@@ -36,6 +36,8 @@ class Type {
     void emitInitializer(Formatter out) {
         err.do() `$(this.class.name).emitInitializer() not implemented`;
     }
+    
+    String getConstCast() { return null; }
 }
 
 class Arg {
@@ -85,6 +87,18 @@ class BuiltInType : Type {
         out `    crack::ext::Type *$(emit()) = mod->get$(funcName)Type();\n`;
         initialized = true;
     }
+}
+
+class ConstType : BuiltInType {
+    
+    String constCast;
+    
+    oper init(String name0, String funcName0, String constCast0) :
+        BuiltInType(name0, funcName0),
+        constCast = constCast0 {
+    }
+
+    String getConstCast() { return constCast; }
 }
 
 class TypeImpl : Type {
@@ -203,6 +217,23 @@ class ArrayType : GenericType {
     }
 }
 
+class Const {
+    Type type;
+    String ident, val;
+
+    oper init(Type type0, String ident0) :
+        type = type0,
+        ident = ident0,
+        val = ident0 {
+    }
+
+    oper init(Type type0, String ident0, String val0) :
+        type = type0,
+        ident = ident0,
+        val = val0 {
+    }    
+}
+
 class Errors : StringFormatter {
     
     CrackContext ctx;
@@ -222,6 +253,11 @@ class Errors : StringFormatter {
 @define setBuiltinType(val, func) {
     name = val;
     types[name] = BuiltInType(name, func);
+}
+
+@define setConstType(val, func, cast) {
+    name = val;
+    types[name] = ConstType(name, func, cast);
 }
 
 @define def_join(Iterable) {
@@ -254,6 +290,7 @@ class Errors : StringFormatter {
 
 @GenericObjArray(StringArray, String)
 @def_join(StringArray);       
+@GenericObjArray(ConstArray, Const);
 
 class ExtensionData {
     String filename;
@@ -261,6 +298,7 @@ class ExtensionData {
     FuncArray funcs;
     StringArray module = {};  # module name
     StringArray preamble = {};
+    ConstArray consts = {};
     
     oper init() : types(), funcs() {
         String name;
@@ -270,15 +308,15 @@ class ExtensionData {
         @setBuiltinType('bool', 'Bool');
         @setBuiltinType('byteptr', 'Byteptr');
         @setBuiltinType('byte', 'Byte');
-        @setBuiltinType('int32', 'Int32');
-        @setBuiltinType('int64', 'Int64');
-        @setBuiltinType('uint32', 'Uint32');
-        @setBuiltinType('uint64', 'Uint64');
-        @setBuiltinType('int', 'Int',);
-        @setBuiltinType('uint', 'Uint');
-        @setBuiltinType('float32', 'Float32');
-        @setBuiltinType('float64', 'Float64');
-        @setBuiltinType('float', 'Float');
+        @setConstType('int32', 'Int32', 'int');
+        @setConstType('int64', 'Int64', 'int64_t');
+        @setConstType('uint32', 'Uint32', 'int');
+        @setConstType('uint64', 'Uint64', 'int64_t');
+        @setConstType('int', 'Int', 'int');
+        @setConstType('uint', 'Uint', 'int');
+        @setConstType('float32', 'Float32', 'double');
+        @setConstType('float64', 'Float64', 'double');
+        @setConstType('float', 'Float', 'double');
         
         types['array'] = ArrayType();        
     }
@@ -408,6 +446,52 @@ class ExtensionData {
         
         return result;
     }
+    
+    void _parseConst(CrackContext ctx) {
+        Type type = _parseType(ctx);
+        
+        if (!type.getConstCast())
+            error(ctx) `$(type.name) is not a valid constant type.`;
+        
+        while (true) {
+            tok := ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `Identifier expected in constant definition`;
+            
+            ident := String(tok.getText());
+            
+            tok = ctx.getToken();
+            if (tok.isSemi()) {
+                consts.append(Const(type, ident));
+                break;
+            } else if (tok.isComma()) {
+                consts.append(Const(type, ident));
+                continue;
+            }
+            
+            # expecting assigning to a value
+            if (!tok.isAssign())
+                error(ctx, tok) `Assignment operator, comma or semicolon \
+expected after constant name.`;
+            
+            tok = ctx.getToken();
+            if (!(tok.isIdent() || tok.isString() || tok.isInteger() ||
+                  tok.isFloat()
+                  )
+                )
+                error(ctx, tok) `Constant value must be an identifier, number \
+or string.`;
+
+            consts.append(Const(type, ident, String(tok.getText())));
+            
+            tok = ctx.getToken();
+            if (tok.isSemi())
+                break;
+            else if (!tok.isComma())
+                error(ctx, tok) `comma or semicolon expected after constant \
+definition.`;
+        }
+    }
  
     void parse(CrackContext ctx) {
         
@@ -427,8 +511,12 @@ class ExtensionData {
             if (tok.isClass())
                 _parseClassDef(ctx);
             else if (tok.isIdent()) {
-                ctx.putBack(tok);
-                _parseFuncDef(ctx);
+                if (String(tok.getText()) == 'const') {
+                    _parseConst(ctx);
+                } else {
+                    ctx.putBack(tok);
+                    _parseFuncDef(ctx);
+                }
             } else if (tok.isRCurly())
                 break;
             else if (tok.isSemi())
@@ -477,6 +565,15 @@ void $(join(module, '_'))_init(crack::ext::Module *mod) {
 `;
             for (arg :in func.args)
                 o `    f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+        }
+
+        for (c :in consts) {
+            cast := c.type.getConstCast();
+            o `
+    mod->addConstant($(c.type.emit()), "$(c.ident)",
+                     static_cast<$cast>($(c.val))
+                     );
+`;
         }
         
         o `}\n`;
