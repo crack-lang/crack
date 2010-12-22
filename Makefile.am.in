@@ -1,9 +1,12 @@
 # Copyright 2003 Michael A. Muller
 # Portions Copyright 2009 Google Inc.
 
+# include macros from the m4 dir.
+ACLOCAL_AMFLAGS = -I m4 --install
+
 lib_LTLIBRARIES = libcrack.la
 libcrack_la_SOURCES = %libCrackSources%
-libcrack_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libcrack_la_LDFLAGS = -version-info 2:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 pkglib_LTLIBRARIES = test/testext.la runtime.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
@@ -22,6 +25,20 @@ pkglib_LTLIBRARIES += _pcre.la
 _pcre_la_LDFLAGS = -avoid-version -module @PCRE_LIBS@ @PCRE_CFLAGS@
 _pcre_la_CXXFLAGS = @PCRE_CFLAGS@
 _pcre_la_SOURCES = opt/_pcre.cc
+endif
+
+if HAVE_SDL
+pkglib_LTLIBRARIES += _sdl.la
+_sdl_la_LDFLAGS = -avoid-version -module @SDL_LIBS@
+_sdl_la_CXXFLAGS = @SDL_CFLAGS@
+_sdl_la_SOURCES = opt/_sdl.cc
+endif
+
+if HAVE_GL
+pkglib_LTLIBRARIES += _gl.la
+_gl_la_LDFLAGS = -avoid-version -module @GL_LIBS@
+_gl_la_CXXFLAGS = @GL_LIBS@
+_gl_la_SOURCES = opt/_gl.cc
 endif
 
 noinst_HEADERS = \
@@ -134,7 +151,7 @@ doc/Manual.html: doc/Manual.nml
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
 	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack
-	(for ext in _gtk _pcre; do \
+	(for ext in _gtk _pcre _sdl _gl; do \
 	   if test -e .libs/$$ext.so; then \
 	       mkdir -p lib/crack/ext; \
 	       ln .libs/$$ext.so lib/crack/ext; \

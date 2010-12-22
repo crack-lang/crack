@@ -1,0 +1,148 @@
+# Crack GL bindings.
+
+@import opt.extgen generateExtension;
+
+@generateExtension crack.ext._gl {
+    @filename 'opt/_gl.cc'
+    @inject '#include <GL/gl.h>\n'
+
+    const uint GL_PROJECTION,
+               GL_MODELVIEW;
+
+    void glMatrixMode(uint mode);
+    void glLoadIdentity();
+    void glFrustum(float64 left, float64 right, float64 bottom, float64 top, 
+                   float64 nearVal, 
+                   float64 farVal
+                   );
+    void glFlush();
+    void glMultMatrixd(float64 matrix);
+    void glMultMatrixf(float32 matrix);
+    void glTranslated(float64 x, float64 y, float64 z);
+    void glTranslatef(float32 x, float32 y, float32 z);
+
+    const uint GL_POINTS,
+               GL_LINES,
+               GL_LINE_LOOP,
+               GL_LINE_STRIP,
+               GL_TRIANGLES,
+               GL_TRIANGLE_STRIP,
+               GL_TRIANGLE_FAN,
+               GL_QUADS,
+               GL_QUAD_STRIP,
+               GL_POLYGON;
+    
+    void glBegin(uint mode);
+    void glEnd();
+
+    void  glVertex2d( float64 x, float64 y );
+    void  glVertex2f( float32 x, float32 y );
+    void  glVertex2i( int x, int y );
+   
+    void  glVertex3d( float64 x, float64 y, float64 z );
+    void  glVertex3f( float32 x, float32 y, float32 z );
+    void  glVertex3i( int x, int y, int z );
+   
+    void  glVertex4d( float64 x, float64 y, float64 z, float64 w );
+    void  glVertex4f( float32 x, float32 y, float32 z, float32 w );
+    void  glVertex4i( int x, int y, int z, int w );
+   
+    void  glVertex2dv( array[float64] v );
+    void  glVertex2fv( array[float32] v );
+    void  glVertex2iv( array[int] v );
+   
+    void  glVertex3dv( array[float64] v );
+    void  glVertex3fv( array[float32] v );
+    void  glVertex3iv( array[int] v );
+   
+    void  glVertex4dv( array[float64] v );
+    void  glVertex4fv( array[float32] v );
+    void  glVertex4iv( array[int] v );
+
+    void glColor3b( byte red, byte green, byte blue );
+    void glColor3d( float64 red, float64 green, float64 blue );
+    void glColor3f( float32 red, float32 green, float32 blue );
+    void glColor3i( int red, int green, int blue );
+    void glColor3ui( uint red, uint green, uint blue );
+    
+    void  glColor4b( byte red, byte green,
+                                    byte blue, byte alpha );
+    void  glColor4d(float64 red, float64 green, float64 blue, float64 alpha);
+    void  glColor4f(float32 red, float32 green, float32 blue, float32 alpha);
+    void  glColor4i( int red, int green, int blue, int alpha );
+    void  glColor4ui( uint red, uint green, uint blue, uint alpha );
+
+    void glColor3bv( array[byte] v );
+    void glColor3dv( array[float64] v );
+    void glColor3fv( array[float32] v );
+    void glColor3iv( array[int] v );
+    void glColor3uiv( array[uint] v );
+
+    void  glColor4bv( array[byte] v );
+    void  glColor4dv( array[float64] v );
+    void  glColor4fv( array[float32] v );
+    void  glColor4iv( array[int] v );
+    void  glColor4uiv( array[uint] v );
+
+    void glViewport(int x, int y, int width, int height);
+
+    void glClearColor(float32 red, float32 green, float32 blue, float32 alpha);
+    void glClearDepth(float32 depth);
+
+    const uint GL_CURRENT_BIT,
+               GL_POINT_BIT,
+               GL_LINE_BIT,
+               GL_POLYGON_BIT,
+               GL_POLYGON_STIPPLE_BIT,
+               GL_PIXEL_MODE_BIT,
+               GL_LIGHTING_BIT,
+               GL_FOG_BIT,
+               GL_DEPTH_BUFFER_BIT,
+               GL_ACCUM_BUFFER_BIT,
+               GL_STENCIL_BUFFER_BIT,
+               GL_VIEWPORT_BIT,
+               GL_TRANSFORM_BIT,
+               GL_ENABLE_BIT,
+               GL_COLOR_BUFFER_BIT,
+               GL_HINT_BIT,
+               GL_EVAL_BIT,
+               GL_LIST_BIT,
+               GL_TEXTURE_BIT,
+               GL_SCISSOR_BIT,
+               GL_ALL_ATTRIB_BITS;
+
+    void glClear(uint mask);
+    
+    # polygons
+    const uint GL_FILL;
+    
+    const uint GL_SMOOTH,
+               GL_FRONT_AND_BACK;
+    
+    void glShadeModel(uint mode);
+    
+    void glPolygonMode( uint face, uint mode );
+     
+    const uint GL_DEPTH_TEST, GL_TEXTURE_2D, GL_LIGHTING;
+     
+    void glEnable(uint cap);
+    void glDisable(uint cap);
+     
+    # depth stuff
+    const uint GL_LEQUAL;
+     
+    void glDepthFunc(uint func);
+    
+    # hints
+    const uint GL_PERSPECTIVE_CORRECTION_HINT,
+               GL_POINT_SMOOTH_HINT,
+               GL_LINE_SMOOTH_HINT,
+               GL_POLYGON_SMOOTH_HINT,
+               GL_FOG_HINT,
+               GL_DONT_CARE,
+               GL_FASTEST,
+               GL_NICEST;
+
+    
+    void glHint(uint target, uint mode);
+}

@@ -1,8 +1,8 @@
 # Copyright 2003 Michael A. Muller
 # Portions Copyright 2010 Google Inc
 
-AC_INIT(crack, 0.2)
-AM_INIT_AUTOMAKE(crack, 0.2)
+AC_INIT(crack, 0.3)
+AM_INIT_AUTOMAKE(crack, 0.3)
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -39,5 +39,11 @@ AM_CONDITIONAL(HAVE_GTK, [test "x$got_gtk" = xyes])
 
 AX_PATH_LIB_PCRE(got_pcre=yes)
 AM_CONDITIONAL(HAVE_PCRE, [test "x$got_pcre" = xyes])
+
+AM_PATH_SDL(1.2.14, [got_sdl=yes])
+AM_CONDITIONAL(HAVE_SDL, [test "x$got_sdl" = xyes])
+
+AM_PATH_GL
+AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
 
 AC_OUTPUT
