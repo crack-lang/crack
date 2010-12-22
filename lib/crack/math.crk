@@ -7,7 +7,7 @@
 // For vector and matrix functions, try to stay close to numpy
 
 // import functions and some constants known at compile time
-@import crack._poormac define;
+@import crack.exp.ann define;
 import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
                     ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
@@ -41,52 +41,52 @@ float GAMMA =        0.57721566490153286061;  // Euler's constant gamma
 
 // A few simple functions, overlaoded with various types
 // Generics really helps here
-@define _max 1
-int max($1 v1, $1 v2){
-  if (v1>v2) return v1;
-  return v2;
+@define _max(Tpe){
+   Tpe max(Tpe v1, Tpe v2){
+     if (v1>v2) return v1;
+     return v2;
+   }
 }
-@@
 
-@_max int32
-@_max uint32
-@_max float32
-@_max int64
-@_max uint64
-@_max float64
+@_max(int32)
+@_max(uint32)
+@_max(float32)
+@_max(int64)
+@_max(uint64)
+@_max(float64)
 
-@define _min 1
-int min($1 v1, $1 v2){
-  if (v1>v2) return v1;
-  return v2;
+@define _min(Tpe){
+   Tpe min(Tpe v1, Tpe v2){
+     if (v1>v2) return v1;
+     return v2;
+   }
 }
-@@
 
-@_min int32
-@_min uint32
-@_min float32
-@_min int64
-@_min uint64
-@_min float64
+@_min(int32)
+@_min(uint32)
+@_min(float32)
+@_min(int64)
+@_min(uint64)
+@_min(float64)
 
 // Augment the atoi(char*) imported from _math
-@define _atoi
-int atoi($1 s){
-  return atoi(s.buffer);
+@define _atoi(Tpe){
+   int atoi(Tpe s){
+     return atoi(s.buffer);
+   }
 }
-@@
 
-_atoi StaticString
-_atoi String
-_atoi CString
+@_atoi(StaticString)
+@_atoi(String)
+//~ @_atoi(CString)
 
 // Augment the atof(char*) imported from _math
-@define _atof
-float atof($1 s){
-  return atof(s.buffer);
+@define _atof(Tpe){
+   float atof(Tpe s){
+     return atof(s.buffer);
+   }
 }
-@@
 
-_atof StaticString
-_atof String
-_atof CString
+@_atof(StaticString)
+@_atof(String)
+//~ @_atof(CString)

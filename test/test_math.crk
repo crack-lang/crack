@@ -4,7 +4,26 @@
 // test of math library
 import crack.io cout, Formatter;
 import crack.exp.file File;
-import crack.math sin, cos, tan, PI;
+
+// import all the symbols in the module
+import crack.math  sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
+                    acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
+                    ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
+                    erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
+                    round, trunc, fpclassify, isfinite, isinf, isnan,
+                    isnormal, sign, fmod, remainder, copysign, nextafter,
+                    dim, pow, testexcept, clearexcept, errno, setErrno, 
+                    max, min,
+                    HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
+                    FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
+                    ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
+                    UNDERFLOW, ERANGE,  
+                    E, LOG2E, LOG10E, LN2, LN10, LNPI, PI, PI_2, PI_4, PI1, 
+                    PI2, SQRTPI2, SQRT2, SQRT3, SQRT1_2, SQRTPI, GAMMA;
+                    
+                    
+                    
+                    
 
 f := File('test/test_math.out', 'w');
 fout := Formatter(f);
