@@ -292,7 +292,7 @@ void math_init(Module *mod) {
   }
 
   for (i=0; int_constants[i].name;i++){
-    mod->addConstant(mod->getFloat64Type(), int_constants[i].name, int_constants[i].value);
+    mod->addConstant(mod->getIntType(), int_constants[i].name, int_constants[i].value);
   }
 
   // Math error handling
