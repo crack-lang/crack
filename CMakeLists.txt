@@ -119,7 +119,7 @@ install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/crack/exp
 add_custom_target(check 
                   ${PROJECT_SOURCE_DIR}/test/run_all_tests
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-		  )
+                  )
 
 add_custom_target(screen
                   ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests/
@@ -129,6 +129,7 @@ add_custom_target(screen
 
 # GTK
 find_package(GTK2 2.6 COMPONENTS gtk)
+find_package(GTK2_GDKPIXBUF)
 if(GTK2_FOUND)
    message(STATUS "Found GTK, will build extension")
    include_directories(${GTK2_INCLUDE_DIRS})
@@ -136,11 +137,13 @@ if(GTK2_FOUND)
    set_target_properties(gtk
                       PROPERTIES
                       OUTPUT_NAME _gtk
+                      COMPILE_FLAGS
+                      ${GTK2_GDKPIXBUF_INCLUDE_DIRS}
                       PREFIX ""
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                       )
    target_link_libraries( gtk
-                          ${GTK2_LIBRARIES}
+                          ${GTK2_LIBRARIES} ${GTK2_GDKPIXBUF_LDFLAGS}
                          )
 endif()
 
