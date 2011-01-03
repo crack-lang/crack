@@ -643,7 +643,7 @@ class CString : String {
     oper init(String s0) {
         __copy(s0.buffer, s0.size);
     }
-    
+
     ## Initialize a the string from byteptr and size, take ownership of the 
     ## memory if requested.
     ## If takeOwnership is true, buf[size0] must be null.  This constructor 
