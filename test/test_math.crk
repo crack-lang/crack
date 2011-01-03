@@ -2,14 +2,41 @@
 // Lincensed under LGPLv3
 
 // test of math library
-import crack.io cout, Formatter;
+@import crack.exp.ann define;
+import crack.io cout, StringFormatter, Formatter;
 import crack.exp.file File;
-import crack.math sin, cos, tan, PI;
+import crack.math sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
+                    acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
+                    ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
+                    erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
+                    round, trunc, fpclassify, isfinite, isinf, isnan,
+                    isnormal, sign, fmod, remainder, copysign, nextafter,
+                    dim, pow, HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
+                    FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN;
+import crack.math E, LOG2E, LOG10E, LN2, LN10, LNPI, PI, PI_2, PI_4, PI1, PI2,
+                   SQRTPI2, SQRT2, SQRT3, SQRT1_2, SQRTPI, GAMMA;
 
-f := File('test/test_math.out', 'w');
-fout := Formatter(f);
+fmt := StringFormatter();
 
-// Generate using math module
+@define createOutputValues3(name, func1, func2, func3){
+   void name(float32 input_float_32, float64 input_float_64, float input_float, Formatter out, uint i){
+      f1:=$func1;
+      f2:=$func2;
+      f3:=$func3;
+      out `f32[$i] = \t$(input_float_32): \t $f1 = $(func1(input_float_32)) \t $f2 = $(func2(input_float_32)) \t $f3 = $(func3(input_float_32))\n`;
+      out `f64[$i] = \t$(input_float_64): \t $f1 = $(func1(input_float_64)) \t $f2 = $(func2(input_float_64)) \t $f3 = $(func3(input_float_64))\n`;
+      out `fsys[$i] = \t$(input_float): \t $f1 = $(func1(input_float)) \t $f2 = $(func2(input_float)) \t $f3 = $(func3(input_float))\n`;
+   }
+}
+
+// instantiate test functions
+@createOutputValues3(SinCosTan, sin, cos, tan)
+@createOutputValues3(aSinaCosaTan, asin, acos, atan)
+@createOutputValues3(SinhCoshTanh, sinh, cosh, tanh)
+@createOutputValues3(aSinhaCoshaTanh, asinh, acosh, atanh)
+
+
+// Input arrays
 trig_inputs_float_32:=array[float32](41);
 trig_inputs_float_64:=array[float64](41);
 trig_inputs_float:=array[float](41);
@@ -24,6 +51,7 @@ float delta=0.1*float(PI);
 
 uint i=0;
 uint intervals=40;
+
 while (i<=intervals){
   val=float(i)*delta;
   trig_inputs_float[i]=val+float(i)*delta;
@@ -32,12 +60,16 @@ while (i<=intervals){
   i++;
 }
 
+// Call Trig functions
 i=0;
 while (i<=intervals){
-  fout `f32[$i] = \t$(trig_inputs_float_32[i]): \t sin = $(sin(trig_inputs_float_32[i])) \t cos = $(cos(trig_inputs_float_32[i])) \t tan = $(tan(trig_inputs_float_32[i]))\n`;
-  fout `f64[$i] = \t$(trig_inputs_float_64[i]): \t sin = $(sin(trig_inputs_float_64[i])) \t cos = $(cos(trig_inputs_float_64[i])) \t tan = $(tan(trig_inputs_float_64[i]))\n`;
-  fout `fsys[$i] = \t$(trig_inputs_float[i]): \t sin = $(sin(trig_inputs_float[i])) \t cos = $(cos(trig_inputs_float[i])) \t tan = $(tan(trig_inputs_float[i]))\n`;
+   SinCosTan(trig_inputs_float_32[i], trig_inputs_float_64[i], trig_inputs_float[i], fmt, i);
+   aSinaCosaTan(trig_inputs_float_32[i], trig_inputs_float_64[i], trig_inputs_float[i], fmt, i);
+   SinhCoshTanh(trig_inputs_float_32[i], trig_inputs_float_64[i], trig_inputs_float[i], fmt, i);
+   aSinhaCoshaTanh(trig_inputs_float_32[i], trig_inputs_float_64[i], trig_inputs_float[i], fmt, i);
   i++;
 }
+
+resultString:=fmt.createString();
 
 cout `ok\n`;
