@@ -12,9 +12,9 @@ void _quickSort3(Array A, int l, int r) {
     int j = r;
     int p = l-1;
     int q = r; 
-    Object v = A[uint(r)];
-    if (r <= l) 
+    if (r <= l)
         return;
+    Object v = A[uint(r)];
     while (true) {
         while (A[uint(++i)] < v);
         while (v < A[uint(--j)]) 
