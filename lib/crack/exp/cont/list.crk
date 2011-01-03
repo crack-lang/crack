@@ -1,0 +1,414 @@
+
+@import crack.exp.ann define, export, exporter;
+@exporter;
+
+@define GenericList(Name, Elem) {
+
+    ## A singly-linked list.
+    class Name {
+
+        class Node {
+            Elem elem;
+            Node next;
+            
+            oper init(Elem elem0) : elem = elem0 {}
+        }
+        
+        ## A linked list iterator.
+        class Iter {
+            Node _node;
+            bool __first;
+            oper init(Node node) : _node = node, __first = true {}
+            
+            Elem elem() {
+                if (_node)
+                    return _node.elem;
+                else
+                    return null;
+            }
+            
+            bool next() {
+                if (!_node)
+                    return false;
+                
+                _node = _node.next;
+                return _node;
+            }
+        
+            bool nx() {
+                if (!_node)
+                    return false;
+                
+                if (__first)
+                    __first = false;
+                else
+                    _node = _node.next;
+                return _node;
+            }
+            
+            bool isTrue() { return _node; }
+        }
+
+        Node head;
+        Node tail;
+        uint _count;
+        
+        oper init() {}
+        
+        Iter iter() {
+            return Iter(head);
+        }
+    
+        void append(Elem elem) {
+            if (tail) {
+                temp := Node(elem);
+                tail.next = temp;
+                tail = temp;
+            } else {
+                head = tail = Node(elem);
+            }
+            _count = _count + 1;
+        }
+        
+        void pushHead(Elem elem) {
+            newNode := Node(elem);
+            if (head) {
+                newNode.next = head;
+                head = newNode;
+            } else {
+                head = tail = newNode;
+            }
+            _count = _count + 1;
+        }
+        
+        void pushTail(Elem elem) {
+            append(elem);
+        }
+        
+        ## Remove the element from the front of the list and return it.
+        Elem popHead() {
+            if (!head) die('popHead(): empty list');
+            elem := head.elem;
+            head = head.next;
+            --_count;
+            return elem;
+        }
+    
+        Node __findNode(uint index) {
+            i := index;
+            node := head;
+            while (i && node) {
+                node = node.next;
+                i = i - 1;
+            }
+            if (!node) die('Assertion failed in oper []');
+            return node;
+        }
+        
+        void insert(uint index, Elem elem) {
+            # special-case inserting at the beginning
+            if (!index) {
+                pushHead(elem);
+                return;
+            }
+    
+            # find the node that's going to be before the new node
+            node := __findNode(index - 1);
+    
+            # create a new node and append it to the node we found
+            newNode := Node(elem);
+            newNode.next = node.next;
+            node.next = newNode;
+            
+            # see if we need to fix the tail
+            if (node is tail)
+                tail = newNode;
+            _count = _count + 1;
+        }
+    
+        void delete(uint index) {
+            if (index > _count)
+                die('List index out of range in delete()');
+            if (index > 0) {
+                # find the node before it.
+                node := __findNode(index - 1);
+                
+                # if the next node is the tail, reset the tail.
+                if (node.next is tail)
+                    tail = node;
+                
+                # drop the current next node.
+                tmp := node.next.next;
+                node.next = tmp;
+            } else {
+                # first node is special and easy
+                tmp := head.next;
+                head = tmp;
+            }
+            
+            _count = _count - 1;
+        }
+    
+        Elem oper [](uint index) {
+            if (index > _count)
+                die('List index out of range in []');
+            node := __findNode(index);
+            return node.elem;
+        }
+        
+        uint count() { return _count; }
+    }
+}
+
+@export GenericList;
+
+@define GenericDList(Name, Elem) {
+
+    ## Doubly-linked list
+    class Name {
+
+        class Node {
+            Elem elem;
+            Node next, prev;
+        
+            oper init(Elem elem0, Node prev0) :
+                elem = elem0,
+                prev = prev0 {
+            }
+        }
+        
+        class Iter {
+            Node _node;
+            bool __first;
+            oper init(Node node) : _node = node, __first = true {}
+            
+            Elem elem() {
+                if (_node)
+                    return _node.elem;
+                else
+                    return null;
+            }
+            
+            bool next() {
+                if (!_node)
+                    return false;
+                
+                _node = _node.next;
+                return _node;
+            }
+        
+            bool nx() {
+                if (!_node)
+                    return false;
+                
+                if (__first)
+                    __first = false;
+                else
+                    _node = _node.next;
+                return _node;
+            }
+            
+            bool isTrue() { return _node; }
+
+            ## The opposite of next(): Back-up the iterator to the last node, 
+            ## return true if it's valid.
+            bool last() { _node = _node.prev; return _node; }
+        }
+
+        Node head, tail;
+        uint _count;
+
+        oper init() {}
+
+        oper del() {
+            # have to break the reference cycles
+            node := head;
+            while (node) {
+                node.prev = null;
+                node = node.next;
+            }
+        }
+    
+        ## Insert the object at the iterator (after insertion, the iterator will 
+        ## reference the new node with the element, the old node that
+        ## iterator previously referenced will be the next node)
+        void insert(Iter ix, Elem elem) {
+            
+            # get what will be the next and previous node of the new node.
+            next := ix._node;
+            prev := next.prev;
+            new := Node(elem, prev);
+            new.next = next;
+    
+            if (prev)
+                prev.next = new;
+            else
+                head = new;
+    
+            if (next)
+                next.prev = new;
+            else
+                tail = new;
+
+            ix._node = new;
+            ++_count;
+        }
+    
+        ## Delete the object at the iterator.  After deletion, the iterator 
+        ## will refer to what was originally the subsequent node.
+        void delete(Iter ix) {
+            node := Node.unsafeCast(ix._node);
+            if (node.next)
+                node.next.prev = node.prev;
+            else
+                tail = node.prev;
+            
+            if (node.prev)
+                node.prev.next = node.next;
+            else
+                head = node.next;
+            
+            --_count;
+            ix._node = node.next;
+        }
+    
+        Iter iter() {
+            return Iter(head);
+        }
+        
+        ## Returns an iterator.
+        ## if 'back' is true, initialize it to point to the last node on the 
+        ## list. Otherwise point it to the first node.
+        Iter iter(bool back) {
+            if (back)
+                return Iter(tail);
+            else
+                return Iter(head);
+        }    
+
+        void append(Elem elem) {
+            if (tail) {
+                temp := Node(elem, tail);
+                tail.next = temp;
+                tail = temp;
+            } else {
+                head = tail = Node(elem, null);
+            }
+            _count = _count + 1;
+        }
+        
+        void pushHead(Elem elem) {
+            newNode := Node(elem, null);
+            if (head) {
+                newNode.next = head;
+                head.prev = newNode;
+                head = newNode;
+            } else {
+                head = tail = newNode;
+            }
+            _count = _count + 1;
+        }
+        
+        void pushTail(Elem elem) {
+            append(elem);
+        }
+        
+        Elem popHead() {
+            if (!head) die('popHead(): empty list');
+            elem := head.elem;
+            head = head.next;
+            if (head)
+                head.prev = null;
+            --_count;
+            return elem;
+        }
+        
+        ## Remove the element from the back of the list and return it.
+        Elem popTail() {
+            if (!tail) die('popTail(): empty list');
+            elem := tail.elem;
+            node := tail;
+            tail = node.prev;
+            if (tail)
+                tail.next = null;
+            else
+                head = null;
+            --_count;
+            return elem;
+        }
+    
+        Node __findNode(uint index) {
+            i := index;
+            node := head;
+            while (i && node) {
+                node = node.next;
+                i = i - 1;
+            }
+            if (!node) die('Assertion failed in oper []');
+            return node;
+        }
+        
+        void insert(uint index, Elem elem) {
+            # special-case inserting at the beginning
+            if (!index) {
+                pushHead(elem);
+                return;
+            }
+    
+            # find the node that's going to be before the new node
+            node := __findNode(index - 1);
+    
+            # create a new node and append it to the node we found
+            newNode := Node(elem, node);
+            newNode.next = node.next;
+            if (node.next)
+                node.next.prev = newNode;
+            node.next = newNode;
+            
+            # see if we need to fix the tail
+            if (node is tail)
+                tail = newNode;
+            _count = _count + 1;
+        }
+
+        void delete(uint index) {
+            if (index > _count)
+                die('List index out of range in delete()');
+            if (index > 0) {
+                # find the node before it.
+                node := __findNode(index - 1);
+                
+                # if the next node is the tail, reset the tail.
+                if (node.next is tail)
+                    tail = node;
+                
+                # drop the current next node.
+                tmp := node.next.next;
+                node.next = tmp;
+                if (tmp)
+                    tmp.prev = node;
+            } else {
+                # first node is special and easy
+                tmp := head.next;
+                if (head is tail)
+                    tail = tmp;
+                head = tmp;
+                if (tmp)
+                    tmp.prev = null;
+            }
+            
+            _count = _count - 1;
+        }
+    
+        Elem oper [](uint index) {
+            if (index > _count)
+                die('List index out of range in []');
+            node := __findNode(index);
+            return node.elem;
+        }
+        
+        uint count() { return _count; }
+    }   
+}
+
+@export GenericDList;

@@ -16,10 +16,24 @@
                    float64 farVal
                    );
     void glFlush();
-    void glMultMatrixd(float64 matrix);
-    void glMultMatrixf(float32 matrix);
+    void glMultMatrixd(array[float64] matrix);
+    void glMultMatrixf(array[float32] matrix);
     void glTranslated(float64 x, float64 y, float64 z);
     void glTranslatef(float32 x, float32 y, float32 z);
+
+    # data types
+    const uint GL_BYTE,
+               GL_UNSIGNED_BYTE,
+               GL_SHORT,
+               GL_UNSIGNED_SHORT,
+               GL_INT,
+               GL_UNSIGNED_INT,
+               GL_FLOAT,
+               GL_2_BYTES,
+               GL_3_BYTES,
+               GL_4_BYTES,
+               GL_DOUBLE;
+
 
     const uint GL_POINTS,
                GL_LINES,
@@ -145,4 +159,53 @@
 
     
     void glHint(uint target, uint mode);
+
+    # textures
+    void glGenTextures( int n, array[uint] textures );
+    void glDeleteTextures( int n, array[uint] textures);
+    void glBindTexture( uint target, uint texture );
+
+    # fog
+    const uint GL_FOG,
+               GL_FOG_MODE,
+               GL_FOG_DENSITY,
+               GL_FOG_COLOR,
+               GL_FOG_INDEX,
+               GL_FOG_START,
+               GL_FOG_END,
+               GL_LINEAR,
+               GL_EXP,
+               GL_EXP2;
+
+    # small subset of texture mapping stuff.
+    const uint GL_TEXTURE_MIN_FILTER,
+               GL_TEXTURE_MAG_FILTER;
+
+    void glTexImage2D( uint target, int level, int internalFormat,
+                       int width, int height,
+                       int border, 
+                       uint format, 
+                       uint type,
+                       voidptr pixels
+                       );
+
+    # small subset of buffers, pixel drawing/reading
+    const uint GL_RGB;
+
+    # small subset of OpenGL 1.1 stuff
+    const uint GL_RGB8;
+
+    void glTexParameterf( uint target, uint pname, float param );
+    void glTexParameteri( uint target, uint pname, int param );
+    void glTexParameterfv( uint target, uint pname, array[float] params );
+    void glTexParameteriv( uint target, uint pname, array[int] params );
+    void glGetTexParameterfv( uint target, uint pname, array[float] params);
+    void glGetTexParameteriv( uint target, uint pname, array[int] params );
+    void glGetTexLevelParameterfv( uint target, int level,
+                                   uint pname, array[float] params
+                                   );
+    void glGetTexLevelParameteriv( uint target, int level,
+                                   uint pname, array[int] params
+                                   );
+
 }

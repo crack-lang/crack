@@ -4,9 +4,9 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libcrack.la
-libcrack_la_SOURCES = %libCrackSources%
-libcrack_la_LDFLAGS = -version-info 2:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+lib_LTLIBRARIES = libCrackLang.la
+libCrackLang_la_SOURCES = %libCrackSources%
+libCrackLang_la_LDFLAGS = -version-info 0:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 pkglib_LTLIBRARIES = test/testext.la runtime.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
@@ -131,7 +131,7 @@ EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt \
 bin_PROGRAMS = crack
 
 crack_SOURCES = crack.cc
-crack_LDADD = libcrack.la $(LDFLAGS)
+crack_LDADD = libCrackLang.la $(LDFLAGS)
 # use LLVM flags, but override their "--no-exceptions" flag.
 AM_CXXFLAGS = @LLVM_CXXFLAGS@ -fexceptions
 

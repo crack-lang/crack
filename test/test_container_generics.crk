@@ -2,8 +2,10 @@
 
 import crack.lang cmp, die, free;
 import crack.io cout, Formatter, StringFormatter;
+@import crack.exp.ann define;
 @import crack.exp.cont.treemap GenericTreeMap;
 @import crack.exp.cont.array GenericArray, GenericObjArray;
+@import crack.exp.cont.list GenericList, GenericDList;
 
 @GenericTreeMap(StringIntMap, String, int);
 
@@ -29,4 +31,150 @@ if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
 class Foo {}
 @GenericObjArray(FooArray, Foo);
 
+@GenericList(StringList, String);
+
+@define concat(Type) {
+    String concat(Type list) {
+        StringFormatter result = {};
+        for (x :in list)
+            result `$x`;
+        return result.createString();
+    }
+}
+
+@concat(StringList);
+
+StringList s = {};
+s.append('1');
+s.append('2');
+if (concat(s) != '12' || s.count() != 2)
+    cout `Failed List appends\n`;
+s = StringList();
+s.pushHead('2');
+s.pushHead('1');
+if (concat(s) != '12' || s.count() != 2)
+    cout `failed List pushHeads\n`;
+
+s.popHead();
+if (concat(s) != '2' || s.count() != 1)
+    cout `failed List popHead\n`;
+s.popHead();
+if (concat(s) != '' || s.count() != 0)
+    cout `failed List popHead on empty list\n`;
+s = StringList();
+s.insert(0, 'first');
+s.insert(1, 'last');
+s.insert(1, 'middle');
+if (concat(s) != 'firstmiddlelast' || s.count() != 3)
+    cout `failed List inserts\n`;
+s.delete(0);
+if (concat(s) != 'middlelast' || s.count() != 2)
+    cout `failed List delete of first elem\n`;
+s.pushHead('first');
+s.delete(1);
+if (concat(s) != 'firstlast' || s.count() != 2)
+    cout `failed List delete of middle elem\n`;
+s.delete(1);
+if (concat(s) != 'first' || s.count() != 1)
+    cout `failed List delete of last elem\n`;
+
+if (s[0] != 'first')
+    cout `failed List [] access\n`;
+
+@GenericDList(StringDList, String);
+@concat(StringDList);
+
+void checkDList(StringDList list, String val, uint count, String message) {
+    # make sure that the list is properly terminated
+    revIter := list.iter(true);
+    if (revIter.next())
+        cout `$message: last element has non-null next\n`;
+
+    # verify that the list looks the same forwards as backwards
+    StringList temp = {};
+    for (revIter = list.iter(true); revIter; revIter.last())
+        temp.pushHead(revIter.elem());
+    
+    iter := list.iter();
+    listIter := temp.iter();
+    i := 0;
+    while (iter && listIter) {
+        
+        if (iter.elem() != listIter.elem())
+            cout `$message: reverse failure in node -$i, expected \
+$(listIter.elem()), got $(iter.elem())\n`;
+        
+        ++i;
+        listIter.next();
+        iter.next();
+    }
+    
+    # make sure the contents of the list from front to back are what we expect
+    flat := concat(list);
+    if (flat != val)
+        cout `$message: incorrect contents, expected $val, got $flat\n`;
+    if (count != list.count())
+        cout `$message: incorrect count, expected $count, got \
+$(list.count())\n`;
+}
+
+StringDList dl = {};
+
+dl.append('1');
+dl.append('2');
+checkDList(dl, '12', 2, 'Failed DList appends');
+
+dl = StringDList();
+dl.pushHead('2');
+dl.pushHead('1');
+checkDList(dl, '12', 2, 'Failed DList pushHeads');
+
+dl.popHead();
+checkDList(dl, '2', 1, 'Failed DList popHead');
+dl.popHead();
+checkDList(dl, '', 0, 'Failed DList popHead on empty list');
+
+dl = StringDList();
+dl.insert(0, 'first');
+dl.insert(1, 'last');
+dl.insert(1, 'middle');
+checkDList(dl, 'firstmiddlelast', 3, 'failed DList inserts');
+
+dl.delete(0);
+checkDList(dl, 'middlelast', 2, 'failed DList delete of first elem');
+
+dl.pushHead('first');
+dl.delete(1);
+checkDList(dl, 'firstlast', 2, 'failed DList delete of middle elem');
+dl.delete(1);
+checkDList(dl, 'first', 1, 'failed DList delete of last elem');
+dl.delete(0);
+checkDList(dl, '', 0, 'failed DList delete of only elem');
+
+dl.append('elem');
+checkDList(dl, 'elem', 1, 'failed DList append after deleting');
+if (dl[0] != 'elem')
+    cout `failed DList [] access\n`;
+
+dl.append('elem2');
+dl.popTail();
+checkDList(dl, 'elem', 1, 'failed DList append after popTail');
+dl.popTail();
+checkDList(dl, '', 0, 'failed DList append after popTail of last elem');
+
+dl = StringDList();
+dl.append('1');
+dl.append('2');
+iter := dl.iter();
+dl.insert(iter, '0');
+iter.next(); iter.next();
+dl.insert(iter, '1.5');
+checkDList(dl, '011.52', 4, 'failed DList iterator insert');
+dl.delete(iter);
+iter = dl.iter();
+dl.delete(iter);
+checkDList(dl, '12', 2, 'Failed DList iterator delete');
+dl.delete(iter);
+dl.delete(iter);
+checkDList(dl, '', 0, 'Failed DList iterator delete of last elements');
 cout `ok\n`;

@@ -35,6 +35,14 @@ void crack_ext__gl_init(crack::ext::Module *mod) {
         params[0] = type_float64;
         array_pfloat64_q = array->getSpecialization(params);
     }
+    crack::ext::Type *type_float = mod->getFloatType();
+
+    crack::ext::Type *array_pfloat_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float;
+        array_pfloat_q = array->getSpecialization(params);
+    }
     crack::ext::Type *type_int = mod->getIntType();
 
     crack::ext::Type *array_pint_q;
@@ -53,7 +61,6 @@ void crack_ext__gl_init(crack::ext::Module *mod) {
     }
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
-    crack::ext::Type *type_float = mod->getFloatType();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
@@ -87,12 +94,12 @@ void crack_ext__gl_init(crack::ext::Module *mod) {
     f = mod->addFunc(type_void, "glMultMatrixd",
                      (void *)glMultMatrixd
                      );
-    f->addArg(type_float64, "matrix");
+    f->addArg(array_pfloat64_q, "matrix");
 
     f = mod->addFunc(type_void, "glMultMatrixf",
                      (void *)glMultMatrixf
                      );
-    f->addArg(type_float32, "matrix");
+    f->addArg(array_pfloat32_q, "matrix");
 
     f = mod->addFunc(type_void, "glTranslated",
                      (void *)glTranslated
@@ -408,12 +415,145 @@ void crack_ext__gl_init(crack::ext::Module *mod) {
     f->addArg(type_uint, "target");
     f->addArg(type_uint, "mode");
 
+    f = mod->addFunc(type_void, "glGenTextures",
+                     (void *)glGenTextures
+                     );
+    f->addArg(type_int, "n");
+    f->addArg(array_puint_q, "textures");
+
+    f = mod->addFunc(type_void, "glDeleteTextures",
+                     (void *)glDeleteTextures
+                     );
+    f->addArg(type_int, "n");
+    f->addArg(array_puint_q, "textures");
+
+    f = mod->addFunc(type_void, "glBindTexture",
+                     (void *)glBindTexture
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "texture");
+
+    f = mod->addFunc(type_void, "glTexImage2D",
+                     (void *)glTexImage2D
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_int, "level");
+    f->addArg(type_int, "internalFormat");
+    f->addArg(type_int, "width");
+    f->addArg(type_int, "height");
+    f->addArg(type_int, "border");
+    f->addArg(type_uint, "format");
+    f->addArg(type_uint, "type");
+    f->addArg(type_voidptr, "pixels");
+
+    f = mod->addFunc(type_void, "glTexParameterf",
+                     (void *)glTexParameterf
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(type_float, "param");
+
+    f = mod->addFunc(type_void, "glTexParameteri",
+                     (void *)glTexParameteri
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(type_int, "param");
+
+    f = mod->addFunc(type_void, "glTexParameterfv",
+                     (void *)glTexParameterfv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pfloat_q, "params");
+
+    f = mod->addFunc(type_void, "glTexParameteriv",
+                     (void *)glTexParameteriv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pint_q, "params");
+
+    f = mod->addFunc(type_void, "glGetTexParameterfv",
+                     (void *)glGetTexParameterfv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pfloat_q, "params");
+
+    f = mod->addFunc(type_void, "glGetTexParameteriv",
+                     (void *)glGetTexParameteriv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pint_q, "params");
+
+    f = mod->addFunc(type_void, "glGetTexLevelParameterfv",
+                     (void *)glGetTexLevelParameterfv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_int, "level");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pfloat_q, "params");
+
+    f = mod->addFunc(type_void, "glGetTexLevelParameteriv",
+                     (void *)glGetTexLevelParameteriv
+                     );
+    f->addArg(type_uint, "target");
+    f->addArg(type_int, "level");
+    f->addArg(type_uint, "pname");
+    f->addArg(array_pint_q, "params");
+
     mod->addConstant(type_uint, "GL_PROJECTION",
                      static_cast<int>(GL_PROJECTION)
                      );
 
     mod->addConstant(type_uint, "GL_MODELVIEW",
                      static_cast<int>(GL_MODELVIEW)
+                     );
+
+    mod->addConstant(type_uint, "GL_BYTE",
+                     static_cast<int>(GL_BYTE)
+                     );
+
+    mod->addConstant(type_uint, "GL_UNSIGNED_BYTE",
+                     static_cast<int>(GL_UNSIGNED_BYTE)
+                     );
+
+    mod->addConstant(type_uint, "GL_SHORT",
+                     static_cast<int>(GL_SHORT)
+                     );
+
+    mod->addConstant(type_uint, "GL_UNSIGNED_SHORT",
+                     static_cast<int>(GL_UNSIGNED_SHORT)
+                     );
+
+    mod->addConstant(type_uint, "GL_INT",
+                     static_cast<int>(GL_INT)
+                     );
+
+    mod->addConstant(type_uint, "GL_UNSIGNED_INT",
+                     static_cast<int>(GL_UNSIGNED_INT)
+                     );
+
+    mod->addConstant(type_uint, "GL_FLOAT",
+                     static_cast<int>(GL_FLOAT)
+                     );
+
+    mod->addConstant(type_uint, "GL_2_BYTES",
+                     static_cast<int>(GL_2_BYTES)
+                     );
+
+    mod->addConstant(type_uint, "GL_3_BYTES",
+                     static_cast<int>(GL_3_BYTES)
+                     );
+
+    mod->addConstant(type_uint, "GL_4_BYTES",
+                     static_cast<int>(GL_4_BYTES)
+                     );
+
+    mod->addConstant(type_uint, "GL_DOUBLE",
+                     static_cast<int>(GL_DOUBLE)
                      );
 
     mod->addConstant(type_uint, "GL_POINTS",
@@ -598,5 +738,61 @@ void crack_ext__gl_init(crack::ext::Module *mod) {
 
     mod->addConstant(type_uint, "GL_NICEST",
                      static_cast<int>(GL_NICEST)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG",
+                     static_cast<int>(GL_FOG)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_MODE",
+                     static_cast<int>(GL_FOG_MODE)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_DENSITY",
+                     static_cast<int>(GL_FOG_DENSITY)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_COLOR",
+                     static_cast<int>(GL_FOG_COLOR)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_INDEX",
+                     static_cast<int>(GL_FOG_INDEX)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_START",
+                     static_cast<int>(GL_FOG_START)
+                     );
+
+    mod->addConstant(type_uint, "GL_FOG_END",
+                     static_cast<int>(GL_FOG_END)
+                     );
+
+    mod->addConstant(type_uint, "GL_LINEAR",
+                     static_cast<int>(GL_LINEAR)
+                     );
+
+    mod->addConstant(type_uint, "GL_EXP",
+                     static_cast<int>(GL_EXP)
+                     );
+
+    mod->addConstant(type_uint, "GL_EXP2",
+                     static_cast<int>(GL_EXP2)
+                     );
+
+    mod->addConstant(type_uint, "GL_TEXTURE_MIN_FILTER",
+                     static_cast<int>(GL_TEXTURE_MIN_FILTER)
+                     );
+
+    mod->addConstant(type_uint, "GL_TEXTURE_MAG_FILTER",
+                     static_cast<int>(GL_TEXTURE_MAG_FILTER)
+                     );
+
+    mod->addConstant(type_uint, "GL_RGB",
+                     static_cast<int>(GL_RGB)
+                     );
+
+    mod->addConstant(type_uint, "GL_RGB8",
+                     static_cast<int>(GL_RGB8)
                      );
 }

@@ -5,11 +5,12 @@ cmake_minimum_required(VERSION 2.6)
 # this policy warning is due to lib command lines arg output from llvm-config
 if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
+    cmake_policy(SET CMP0011 NEW)
 endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.2.1")
+set(CRACK_VERSION "0.3.0")
 set(API_VERSION   "0.0.0")
 
 set(LLVM_MIN_VERSION       "2008000")
@@ -54,7 +55,7 @@ set_source_files_properties( crack.cc
 add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
-                      OUTPUT_NAME crack
+                      OUTPUT_NAME CrackLang
                       VERSION ${CRACK_VERSION}
                       SOVERSION ${API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
@@ -109,8 +110,8 @@ install(TARGETS crack libcrack
        )
 
 install(TARGETS crack-runtime
-        LIBRARY DESTINATION "lib/crack-${CRACK_VERSION}/crack"
-       )
+         LIBRARY DESTINATION "lib/crack-${CRACK_VERSION}/crack"
+        )
 
 install(FILES doc/Manual.html DESTINATION share/doc/crack)
 # todo: a better scheme that saves directory structure of lib directory
@@ -123,8 +124,86 @@ install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/crack/exp
 add_custom_target(check 
                   ${PROJECT_SOURCE_DIR}/test/run_all_tests
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-		  )
+                  )
 
 add_custom_target(screen
                   ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests/
                   )
+
+# optional extensions
+
+# GTK
+find_package(GTK2 2.6 COMPONENTS gtk)
+find_package(GTK2_GDKPIXBUF)
+if(GTK2_FOUND)
+   message(STATUS "Found GTK, will build extension")
+   include_directories(${GTK2_INCLUDE_DIRS})
+   add_library(gtk SHARED opt/_gtk.cc)
+   set_target_properties(gtk
+                      PROPERTIES
+                      OUTPUT_NAME _gtk
+                      COMPILE_FLAGS
+                      ${GTK2_GDKPIXBUF_INCLUDE_DIRS}
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+   target_link_libraries( gtk
+                          ${GTK2_LIBRARIES} ${GTK2_GDKPIXBUF_LDFLAGS}
+                         )
+endif()
+
+# pcre
+find_library(PCRE_LIBRARY NAMES pcre)
+find_path(PCRE_INCLUDE_DIR NAMES pcre.h /usr/include /include)
+if(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
+  SET(PCRE_FOUND TRUE)
+endif(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
+if (PCRE_FOUND)
+   message(STATUS "Found pcre, will build extension")
+   include_directories(${PCRE_INCLUDE_DIR})
+   add_library(pcre SHARED opt/_pcre.cc)
+   set_target_properties(pcre
+                      PROPERTIES
+                      OUTPUT_NAME _pcre
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+   target_link_libraries( pcre
+                          ${PCRE_LIBRARY}
+                         )
+
+endif()
+
+# SDL
+find_package(SDL)
+if(SDL_FOUND)
+   message(STATUS "Found SDL, will build extension")
+   include_directories(${SDL_INCLUDE_DIR})
+   add_library(sdl SHARED opt/_sdl.cc)
+   set_target_properties(sdl
+                      PROPERTIES
+                      OUTPUT_NAME _sdl
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+   target_link_libraries( sdl
+                          ${SDL_LIBRARY}
+                         )
+endif()
+
+# OpenGL
+find_package(OpenGL)
+if(OPENGL_FOUND)
+   message(STATUS "Found OpenGL, will build extension")
+   include_directories(${OPENGL_INCLUDE_DIR})
+   add_library(gl SHARED opt/_gl.cc)
+   set_target_properties(gl
+                      PROPERTIES
+                      OUTPUT_NAME _gl
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+   target_link_libraries( gl
+                          ${OPENGL_LIBRARIES}
+                         )
+endif()

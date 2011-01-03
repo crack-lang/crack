@@ -1,7 +1,7 @@
 // test algorithms
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.exp.algorithm quickSort, quickSortR, insertionSort;
+import crack.exp.algorithm quickSort, insertionSort;
 import crack.container Array;
 import crack.io cout;
 import crack.runtime rand;
@@ -51,17 +51,12 @@ void checkArray(Array a) {
 
 ////////////////////////////////
 
-uint nsize = 100;
+uint nsize = 500;
 
 // QUICKSORT
 a := newRandomArray(nsize);
 quickSort(a);
 checkArray(a);
-
-// RANDOMIZED QUICKSORT
-b := newRandomArray(nsize);
-quickSortR(b);
-checkArray(b);
 
 // INSERTION SORT
 c := newRandomArray(nsize);
