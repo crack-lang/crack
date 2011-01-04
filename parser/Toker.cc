@@ -29,7 +29,7 @@ bool Toker::getChar(char &ch) {
     } else {
         result = src.read(&ch, 1);
     }
-    if (ch == '\n') 
+    if (result && ch == '\n') 
         locationMap.incrementLineNumber();
     return result;
 }
