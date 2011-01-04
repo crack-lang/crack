@@ -1,4 +1,8 @@
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -72,6 +76,28 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(mod->getUintType(), "low");
     f->addArg(mod->getUintType(), "high");
     
+    // normal file open and close.
+
+    f = mod->addFunc(intType, "open", (void *)open);
+    f->addArg(byteptrType, "pathname");
+    f->addArg(intType, "mode");
+
+    f = mod->addFunc(intType, "open", (void *)open);
+    f->addArg(byteptrType, "pathname");
+    f->addArg(intType, "flags");
+    f->addArg(intType, "mode");
+
+    f = mod->addFunc(intType, "creat", (void *)open);
+    f->addArg(byteptrType, "pathname");
+    f->addArg(intType, "mode");
+
+    mod->addConstant(intType, "O_RDONLY", O_RDONLY);
+    mod->addConstant(intType, "O_WRONLY", O_WRONLY);
+    mod->addConstant(intType, "O_RDWR", O_RDWR);
+    mod->addConstant(intType, "O_APPEND", O_APPEND);
+    mod->addConstant(intType, "O_ASYNC", O_ASYNC);
+    mod->addConstant(intType, "O_CREAT", O_CREAT);
+
     // Net
     
     Type *netConstantsType = mod->addType("Constants");
@@ -190,6 +216,11 @@ extern "C" void crack_runtime_init(Module *mod) {
                                     );
     f->addArg(int32Type, "secs");
     f->addArg(int32Type, "nsecs");
+    
+    f = timeValType->addMethod(voidType, "setToNow",
+                               (void *)gettimeofday
+                               );
+    f->addArg(voidptrType, "tz");
 
     timeValType->finish();
     // end TimeVal
