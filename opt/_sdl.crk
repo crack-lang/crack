@@ -7,6 +7,19 @@
     @inject '#include <SDL.h>\n'
     @inject 'SDL_Event *SDL_EventNew() { return new SDL_Event; }\n'
     @inject 'int SDL_Event_GetType(SDL_Event *evt) { return evt->type; }\n';
+    @inject 'SDL_KeyboardEvent *SDL_Event_GetKey(SDL_Event *evt) { return &evt->key; }\n';
+    @inject 'SDL_keysym *SDL_KeyboardEvent_GetKeysym(SDL_KeyboardEvent *evt) { return &evt->keysym; }\n';
+    @inject 'unsigned SDL_keysym_GetScancode(SDL_keysym *s) { return s->scancode; }\n';
+    @inject 'unsigned SDL_keysym_GetSym(SDL_keysym *s) { return s->sym; }\n';
+    @inject 'unsigned SDL_keysym_GetMod(SDL_keysym *s) { return s->mod; }\n';
+    @inject 'unsigned SDL_keysym_GetUnicode(SDL_keysym *s) { return s->unicode; }\n';
+    @inject 'uint8_t SDL_KeyboardEvent_GetType(SDL_KeyboardEvent *evt) { return evt->type; }\n';
+    @inject 'uint8_t SDL_KeyboardEvent_GetWhich(SDL_KeyboardEvent *evt) { return evt->which; }\n';
+    @inject 'uint8_t SDL_KeyboardEvent_GetState(SDL_KeyboardEvent *evt) { return evt->state; }\n';
+    @inject 'SDL_MouseMotionEvent *SDL_Event_GetMotion(SDL_Event *evt) { return &evt->motion; }\n';
+    @inject 'uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent *evt) { return evt->x; }\n';
+    @inject 'uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent *evt) { return evt->y; }\n';
+
     
     const uint32 SDL_INIT_TIMER,
                  SDL_INIT_AUDIO,
@@ -44,10 +57,42 @@
     SDL_Event SDL_EventNew();
     int SDL_Event_GetType(SDL_Event event);
     
-    const uint32 SDL_KEYDOWN,
-                 SDL_KEYUP,
-                 SDL_MOUSEMOTION;
+    class SDL_KeyboardEvent;
+    SDL_KeyboardEvent SDL_Event_GetKey(SDL_Event evt);
+    class SDL_keysym;
+    SDL_keysym SDL_KeyboardEvent_GetKeysym(SDL_KeyboardEvent evt);
+    uint SDL_keysym_GetScancode(SDL_keysym keysym);
+    uint SDL_keysym_GetSym(SDL_keysym keysym);
+    uint SDL_keysym_GetMod(SDL_keysym keysym);
+    uint SDL_keysym_GetUnicode(SDL_keysym keysym);
+    byte SDL_KeyboardEvent_GetType(SDL_KeyboardEvent evt);
+    byte SDL_KeyboardEvent_GetWhich(SDL_KeyboardEvent evt);
+    byte SDL_KeyboardEvent_GetState(SDL_KeyboardEvent evt);
+    class SDL_MouseMotionEvent;
+    SDL_MouseMotionEvent SDL_Event_GetMotion(SDL_Event evt);
+    uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent evt);
+    uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent evt);
+    
+    void SDL_WarpMouse(uint x, uint y);
 
+    const uint32 SDL_NOEVENT, 
+                 SDL_KEYDOWN,
+                 SDL_KEYUP, 
+                 SDL_MOUSEMOTION,
+                 SDL_MOUSEBUTTONDOWN,
+                 SDL_MOUSEBUTTONUP, 
+                 SDL_JOYAXISMOTION, 
+                 SDL_JOYBALLMOTION, 
+                 SDL_JOYHATMOTION, 
+                 SDL_JOYBUTTONDOWN, 
+                 SDL_JOYBUTTONUP, 
+                 SDL_QUIT, 
+                 SDL_SYSWMEVENT, 
+                 SDL_EVENT_RESERVED2, 
+                 SDL_EVENT_RESERVED3, 
+                 SDL_USEREVENT,
+                 SDL_NUMEVENTS;
+    
     int SDL_PollEvent(SDL_Event event);
     
     const uint32 SDL_GL_RED_SIZE,
