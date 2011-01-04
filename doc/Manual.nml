@@ -2,13 +2,13 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.2 of the Crack Programming Language.  Version 
-0.2 is a fairly complete programming language - lots of bugs fixed, lots of 
-holes plugged since 0.1.  We believe the language to be usable for real work 
-at this time, but there are still a number of important features that remain 
-to be added (including generics, exceptions, annotations and partial closures).
-While the compiler is generating debug information at this time, only a 
-limited subset of it is currently usable (you can get a stack trace in gdb).
+This is the Manual for version 0.3 of the Crack Programming Language.  Version 
+0.3 is a fairly complete programming language.  We believe the language to be 
+usable for real work at this time, but there are still a number of important 
+features that remain to be added (including generics, exceptions, annotations 
+and partial closures). While the compiler is generating debug information at 
+this time, only a limited subset of it is currently usable (you can get a 
+stack trace in gdb).
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
@@ -37,8 +37,9 @@ Garbage Collection::
 OO Features::
     Virtual functions, overloaded functions, multiple inheritance
 
-Crack has been developed on Linux x86 and x86-64. Portability will play
-a bigger role in future versions of the language.
+Crack has been developed on Linux x86 and x86-64. It is highly questionable 
+whether it will build under any other platform.  Portability will play a 
+bigger role in future versions of the language.
 
 Installation
 ------------
@@ -126,8 +127,7 @@ the type from that of the value:
 
 If you don't specify an initializer for a variable, the default initializer 
 will be used.  For the numeric types, this is zero.  For #bool#, it's #false#. 
-For complex types (which we'll discuss later), the default constructor is 
-used to create a new instance.
+For complex types (which we'll discuss later), a null pointer is used..
 
 Built-in Types
 ''''''''''''''
@@ -196,15 +196,16 @@ notable in that they are copy-by-value and consume no memory external to the
 scope in which they are defined.
 
 The #byteptr#, #voidptr# and #array# types are classified as /primitive 
-pointer/ types.  
+pointer/ types.  These are essentially memory addresses: they are copied by 
+value, but the memory they reference is not.
 
 Primitive types, primitive pointer types, and the #void# type are all 
 classified as /low-level/ types.  They are distinguished from the higher 
 level aggregate types by naming convention: low-level types will always be all 
 lower case (and digits), high-level types (at least the ones in the standard 
 libraries) will always begin with an upper-case character.  You may not 
-currently subclass low-level types, this restriction will be lifted in a 
-future version of Crack.
+currently subclass low-level types (see \X(Inheritence)), this restriction 
+will be lifted in a future version of Crack.
 
 /High level/ or /aggregate/ types are first class objects: variables of this 
 type are pointers to allocated regions of memory large enough to accommodate 
@@ -318,9 +319,9 @@ already ("\\n").  The full list is:
 Control Structures
 ------------------
 
-Crack 0.2 only supports two control structures: the "if\/else" statement and 
-the "while" statement.  "if" runs code blocks depending on whether a condition 
-is true or false:
+Crack 0.3 supports three control structures: the "if\/else" statement,
+the "while" statement and the "for" statement.  "if" runs code blocks 
+depending on whether a condition is true or false:
 
 {{
     import crack.io cout;
@@ -413,7 +414,7 @@ with the following code:
     uint i;
     while (i < argv.count()) {
         cout `argv $i: $(argv[i])\n`;
-        i = i + 1;
+        ++i;
     }
 }}
 
@@ -426,6 +427,96 @@ This example also introduces the primary feature of the back-tick operator:
 variable interpolation.  A dollar sign followed by a variable name formats the 
 variable.  A dollar sign followed by a parenthesized expression formats the 
 value of the expression.
+
+The for statement
+'''''''''''''''''
+
+Crack supports two different flavors of "for": C-style and "for-each" style 
+(as used in Python, Javascript, Java and Perl).
+
+The C-style for statement looks like a while statement, but the parenthesized 
+form at the beginning consists of three parts:
+
+-   an initializer, which is executed prior to anything else in the loop.
+-   a condition, used in the same way as the condition in a while loop.
+-   a post-loop clause, which is called at the end of every iteration before 
+    the condition is evaluated.
+
+So for example, the more concise way to express the loop above would be:
+
+{{
+    for (uint i; i < argv.count(); ++i)
+        cout `argv $i: $(argv[i])\n`;
+}}
+
+Notice that the first section is a variable definition.  This is allowed.  The 
+semantics are similar to C++: the variable is defined for the scope of the 
+loop.
+
+Any one (or all) of the sections of the parenthesized form after the "for" 
+keyword can be omitted.  So this would be the equivalent of a "while" 
+statement:
+
+[[
+    for (;/expr/;) /stmt/
+]]
+
+Likewise, an inifinite loop could be written as:
+
+[[
+    for (;;) /stmt/
+]]
+
+The for statement also supports a for-each style usage:
+
+{{
+    String argVal;
+    for (argVal in argv)
+        cout `arg is $argv\n`;
+}}
+
+In the example above, #argVal will be set to each element of argv in 
+succession.  There is also a "#:in#" variation on the "in" keyword that 
+defines the variable for the scope of the loop, so we could have omitted the 
+#argVal# definition and done this:
+
+{{
+    for (argVal :in argv)
+        cout `arg is $argv\n`;
+}}
+
+The value on the right side of the "in" keyword (in this case #argv#) must 
+conform to an iteration protocol:
+
+-   It must provide an #iter()# method that returns an object conforming to 
+    the iterator protocol (an "iterator type").
+-   The iterator type must have an #elem()# method that returns the element 
+    referenced by the iterator.
+-   The iterator type must have a #next()# method that forwards the iterator 
+    to the next element.
+-   The iterator type must convert to #bool#, converting to #true# if the 
+    iterator is valid, #false# if not (if it has run out of elements).
+
+There is no way to explicitly identify a pair of types as conforming to this 
+protocol: an object that implements all of these methods automatically 
+conforms and can be used as the target of a "for-in" statement.
+
+"for-in" creates an underlying iterator variable, but hides it.  It is often 
+desirable to have access to the iterator.  For example, you may want to modify 
+a sequence as you iterate over it and a the sequence might have a mutator that 
+accepts an iterator.
+
+For this use case, there is also a "for-on" variation of this statement:
+
+{{
+    for (iter :on argv) {
+        argVal := iter.elem();
+        cout `arg is $argv\n`;
+    }
+}}
+
+As the example suggests, the "on" keyword provides a ":on" variation which 
+defines the iterator variable for the scope of the loop.
 
 Functions
 ---------
@@ -454,9 +545,9 @@ You can define a function that doesn't return a value by using the special
     }
 }}
 
-Primitive types are always passed "by value."  The system makes a copy of them
-for the function.  If they are high-level types, you can modify the objects 
-that they reference.
+Primitive types (such as "int") are always passed "by value."  The system 
+makes a copy of them for the function.  If they are high-level types, you can 
+modify the objects that they reference from within the function.
 
 Multiple functions can share the same name as long as their arguments differ: 
 this feature is called /overloading/.  For example, rather than "#printInt#" 
@@ -510,10 +601,9 @@ block contexts, including within other functions:
 
 If there were another function, "#inner(uint u)#" defined in the same scope as 
 #outer()#, the resolver would consider #inner(int i)# prior to #inner(uint 
-u)#.  It would be an error to define an #inner(int i)# outside outer, because
-this would hide the definition in the parent scope.
+u)#.
 
-Note that it is currently an error to use instance variables from the outer 
+Note that it is currently an error to use variables defined in the outer 
 function in the inner function:
 
 {{
@@ -702,8 +792,8 @@ Alternately, we can use a more C-like syntax:
 }}
 
 Both of these are just different syntactic flavors of the same thing: in both 
-cases we're defining a variable "c" that is a /reference/ to a #Coord# object.
-The system initializes this variable by:
+cases we're defining a variable "c" that is a /reference/ to a #Coord# object 
+that is allocated on the heap. The system initializes this variable by:
 
 -   Allocating memory large enough to accommodate a Coord object
 -   calling the appropriate "oper init" function for the construction 
@@ -811,7 +901,7 @@ We could then add this information to our #writeTo()# method:
     }
 }}
 
-Methods also have a a special variable called "#this#".  Just as in C++, 
+Methods also have a special variable called "#this#".  Just as in C++, 
 #this# refers to the object that the method has been called on.  In 
 traditional Object-Oriented parlance, this object is called "the receiver."
 
@@ -869,7 +959,7 @@ The construction syntax can be used, too, but it has a different meaning.
 Construction syntax means "construct the variable with the given arguments."  
 Assignment syntax means "initialize the variable from the given value."
 
-So, for example, "x(x0)" would be equivalent to "x = int(x0)", which is 
+So, for example, "x(x0)" would be equivalent to "x = int(x0)", which is also 
 perfectly legal.  The uses for these two types of syntax becomes more obvious 
 when we deal with members that are themselves class instances.
 
@@ -931,7 +1021,7 @@ this:
 
 changing #c0.x# in this case also changes the value within #ls#
 because the #ls#'s #c0# is the same object as the caller's #c0#.
-If we had instead using the construction syntax, #ls# would have had its own 
+If we had instead used the construction syntax, #ls# would have had its own 
 copies of the #Coord# objects, and changing #c0#'s #x# value wouldn't have had 
 any effect on #ls#.
 
@@ -944,8 +1034,8 @@ class Coord {
     int x = -1, y = -1;
 }
 
-As with ordinary variables, the default constructor is used if no
-initializers are specified.
+As with ordinary variables, null or zero is used if no initializers are 
+specified (null for aggregate types, zero for primitive numeric types).
 
 Initializers are not necessarily run in the order that you specify them: they 
 are run in the order of member definition.  So in our examples above, if we 
@@ -1067,6 +1157,8 @@ method:
     }
 }}
 
+XXX finish proofreading from here
+
 We did this because #Coord#'s #writeTo()# method writes out "Coord($x, $y)".  
 We want to write "NamedCoord($x, $y)".
 
@@ -1135,6 +1227,56 @@ object will still be deleted and the external reference will be invalid.
 Future versions of Crack will have some degree of protection against this, but
 for now - don't do it.
 
+Static and Final Methods
+''''''''''''''''''''''''
+
+By default, all methods in a class derived from #VTableBase# are virtual.  Since 
+#Object# is derived from #VTableBase#, that means that in practice most of the 
+methods that you write are virtual.
+
+This isn't always what you want.  For one thing, virtual methods are 
+relatively expensive compared to normal functions.  Calling them involves 
+looking up their addresses at runtime from the vtable, which may be overkill 
+if you have no intention of ever overriding them.  Furthermore, because the 
+vtable is associated with an instnace, a virtual method can not be called on 
+a null value.  Finally, there are situations where you may want a function to 
+be scoped to a class, but it isn't really a method: it doesn't need to access 
+#this#.
+
+To deal with these cases, Crack defines two special built-in annotations: 
+#@static# and #@final#.  (See \X(Annotations) for a more general description 
+of this feature)
+
+#@static# and #@final# can be used in front of a method definition to give it 
+special status.  #@final# indicates that the method should not be virtual.  
+This makes the method more like a normal function: no vtable lookup is 
+required, and the receiver can be null.  Using #@final# prevents the method 
+from ever being overriden.  If you try to override it in a derived class, you 
+will get an error.
+
+#@static# effectively makes the method a normal function scoped to the class.  
+As a result, the function can be called without a receiver.
+
+For examples, let's return to our #Coord# class:
+
+{{
+    class Coord {
+        
+         # ... methods defined above omitted ...
+         
+         ## Returns true if the coordinate is non-null and not the origin.
+         @final bool isNonOrigin() {
+            return !(this is null) && (x || y);
+         }
+         
+         ## Returns the length of an x, y position, whether or not it's 
+         ## wrapped in a Coord object.
+         @static int length(int x, int y) {
+            # let's pretend we have an integer square root function
+            return squareRoot(x * x + y * y);
+        }
+    }
+}}
 
 The Special Base Classes
 ''''''''''''''''''''''''
@@ -1753,17 +1895,300 @@ Crack's current approach to bindings is not without its problems:
 -   This whole business is extremely platform dependent.  There's no guarantee 
     that the shared libraries that you're importing will have the same names 
     on other platforms, or that the functions you define will not be 
-    implemented as macros.  Eventually, Crack will have an extension API to 
-    allow you to write wrappers in C or C++.  To continue to facilitate the 
-    current mechanism, we will also probably include an installer that 
-    generates a custom binding script for a given platform.
+    implemented as macros.  See \X(Extensions) for information on a more 
+    portable approach.
 -   You can't currently import global variables.
 
+Annotations
+-----------
+
+Annotations are a /meta-programming/ mechanism: they essentially allow you to 
+extend the Crack compiler in Crack.  The annotation system is very much a work 
+in progress: much remains to be done with it.  That said, you can still use it 
+to do some very impressive things.
+
+As a simple example, lets say that we want to define a macro that expands to 
+write a marker to standard output.  In module #myann# we could define:
+
+{{
+    import crack.compiler CrackContext;
+
+    void writeMarker(CrackContext ctx) {
+        # the built-in annotations @FILE and @LINE refer to the current 
+        # filename and line number (something like "myann.crk" and 7, in this 
+        # case).
+        ctx.inject(@FILE.buffer, @LINE, 'cout `marker\\n`;'.buffer);
+    }
+}}
+
+From another module, we can use the macro by doing a /compile-time import/ of 
+it and invoking the annotation:
+
+{{
+    @import myann writeMarker;
+    
+    # equivalent to 'cout `marker\n`;'
+    @myann
+}}
+
+In #myann#, we define the #writeMarker()# function, which accepts a 
+#CrackContext# object as its sole argument.  #CrackContext# is an interface to 
+the compiler.  We can use it to inject text, read and inject tokens, set 
+callbacks from the compiler, emit errors and warnings and create other 
+annotations.
+
+#CrackContext# and all of the other objects defined in #crack.compiler# are 
+fairly primitive: they are defined before the basic types (#String# and 
+#Object#) even exist.  As such, all of these interfaces must be built up from 
+the primitive types.  That's why we pass #@FILE.buffer# and #'cout 
+`marker\\n`;'.buffer# to inject instead of just #@FILE# and #'cout 
+`marker\\n`;'#.  #CrackContext.inject()# accepts a #byteptr# argument.  The 
+#buffer# instance variable is a #byteptr# that points to the raw character 
+data of the string.
+
+The first and third arguments to #inject()# must also be /null terminated/.  
+That means that the data must end with a zero byte value (this is the native 
+way that strings are represented in C).  All static strings in Crack happen 
+to be null terminated, so we can easily do this with a static string.  If we 
+wanted to do the same with a constructed string we'd have to do something to 
+guarantee that the string were null terminated (converting it to a #CString# 
+would work, but there are often cheaper ways to accomplish this).
+
+Using an annotation requires some special syntax.  First, we import it using 
+the #@import# statement.  #@import# is just like #import# except that it 
+imports the module at compile time into the annotation namespace.  Symbols in 
+the annotation namespace can be invoked with the syntax "@" /symbol/.  
+/symbol/ must refer to a function accepting a #CrackContext# object as its 
+argument.
+
+An annotation is invoked at compile time immediately after tokenization of 
+the symbol.
+
+Here's a more complicated example involving reading tokens.  In this example, 
+we process a simple variable definition and generate a getter and a setter for 
+it:
+
+{{
+    import crack.compiler CrackContext;
+
+    void attr(CrackContext ctx) {
+        # get the next token, assume it is a type
+        type := ctx.getToken();
+        if (!type.isIdent()) ctx.error(tok, 'Identifier expected');
+        
+        # get the attribute
+        var := ctx.getToken();
+        if (!var.isIdent()) ctx.error(tok, 'Identifier expected');
+        
+        # get a closing semicolon
+        tok := ctx.getToken();
+        if (!tok.isSemi())
+            ctx.error(tok, 'semicolon expected after attribute definition');
+        
+        # get the token text - note that like all other strings in this 
+        # interface, these are of type byteptr, not String
+        typeText := type.getText();
+        varText := var.getText();
+        
+        # format and inject code (note that we add a null character at the end)
+        StringFormatter fmt = {};
+        fn := @FILE; ln := @LINE; fmt `
+            $typeText __$varText;
+            
+            $typeText get_$varText() { return __$varText; }
+            void set_$varText($typeText val) { __$varText = val; }
+\0`;
+        ctx.inject(fn, ln, fmt.createString().buffer);
+}}
+
+In addition to injecting full strings, you can also store single tokens: see 
+the documentation in the header files in the #compiler# directory of the 
+source tree for details.
+
+When doing injection, one thing to keep in mind is that single tokens and 
+blocks of injected text will be parsed in reverse order of how they were 
+inserted: so if we inject block A and then B, the parser will read the 
+contents of B and then of A.  The tokens /within/ an injected block are not in 
+reverse order (the inject function takes care of this) but the blocks 
+themselves are.
+
+Inspecting Parser State
+'''''''''''''''''''''''
+
+#CrackContext# provides two functions for inspecting parser state: these are 
+#getScope()# and #getParseState()#.  #getScope()# returns one of 
+#`SCOPE_MODULE`#, #`SCOPE_FUNCTION`# or #`SCOPE_CLASS`# depending on whether 
+the innermost enclosing context is within a module, function or class.
+
+#getState() currently only returns an indicator as to whether the parser is in 
+the "base state."  A return value of #`BASE_STATE`# indicates that we are not 
+currently in the middle of parsing a definition or statement.  For example, in 
+the following code:
+
+{{
+    int x;
+    for (x = 0; x < 100; ++x)
+        cout `$x\n`;
+}}
+
+Annotations found immediately before the #int#, #for# and #cout# words and 
+after the final semicolon would find the parser in the base state.  
+Annotations anywhere else would not be in the base state.
+
+These functions can be used in conjunction with parser callbacks to insure 
+that an annotation used to modify a definition or statement preceeds the right 
+kind of syntactic construct.
+
+Here's an example of an annotation that verifies that it has been used in the 
+base state of a class:
+
+{{
+    void checkBaseState(CrackContext ctx) {
+        if (ctx.getScope() != SCOPE_CLASS ||
+            ctx.getParseState() != STATE_BASE
+            )
+            ctx.error('checkBaseState can only be used in a class definition '
+                       'outside of a nested method or instance variable '
+                       'definition.'.buffer
+                      );
+    }
+}}
+
+Registering Parser Callbacks
+''''''''''''''''''''''''''''
+
+The #addCallback()# and #removeCallback()# methods allow you to register and 
+deregister parser callbacks.  The parser calls these callbacks at certain 
+points in the subsequent code.
+
+Like annotations, callbacks are called with a #CrackContext# object as their 
+only argument.
+
+The following callbacks are available:
+
+#`PCB_FUNC_DEF`#::
+    Called immediately after the opening parenthesis of the parameter list of
+    a function definition.
+#`PCB_FUNC_ENTER`#::
+    Called immediately after the opening curly brace of a function definition.
+#`PCB_FUNC_LEAVE`#::
+    Called immediately before the closing curly brace of a function definition.
+#`PCB_CLASS_DEF`#::
+    Called immediately after the "class" keyword in a class definition or 
+    forward declaration.
+#`PCB_CLASS_ENTER`#::
+    Called immediately after the opening brace of a class definition.
+#`PCB_CLASS_LEAVE`#::
+    Called immediately prior to the closing brace of a class definition.
+#`PCB_VAR_DEF`#::
+    Called immediately after the assignment operator, semicolon, or comma 
+    following a variable definition.
+#`PCB_EXPR_BEGIN`#::
+    Called immediately before parsing the outermost expression in a statement 
+    or the initialization clause of a for loop.
+#`PCB_CONTROL_STMT`#::
+    Called immediately after the keyword signifying a control statement 
+    (#while#, #for# or #if#).
+
+As stated earlier, we can combine parser state with a callback to insure that 
+an annotation is placed in a certain location in the code.  The following code 
+creates a #funcMod# annotation that can only be called prior to a function 
+definition:
+
+{{
+
+    @GenericObjArray(CallbackArray, Callback);
+    CallbackArray callbacks;
+
+    void deregisterCallbacks() {
+        for (cb :in callbacks)
+            removeCallback(cb);
+    }
+
+    void good(CrackContext ctx) {
+        deregisterCallbacks(ctx);
+    }
+    
+    void bad(CrackContext ctx) {
+        deregisterCallbacks(ctx);
+        ctx.error('@funcMod can only be used before a function '
+                   'definition'.buffer
+                  );
+    }
+    
+    void funcMod(CrackContext ctx) {
+
+        if (ctx.getScope() != SCOPE_CLASS ||
+            ctx.getParseState() != STATE_BASE
+            )
+        ctx.error(" annotation can not be used here (it must precede a "
+                   "function definition in a class body)".buffer
+                   );
+    
+        callbacks.append(ctx.addCallback(PCB_FUNC_DEF, good));
+        callbacks.append(ctx.addCallback(PCB_CLASS_DEF, bad));
+        callbacks.append(ctx.addCallback(PCB_EXPR_BEGIN, bad));
+        callbacks.append(ctx.addCallback(PCB_CONTROL_STMT, bad));
+    }
+}}
+
+Error Contexts
+''''''''''''''
+
+Sometimes it is useful to cause the parser to print additional information 
+with an error message.  For example, if you get a syntax error in a macro, you 
+would ideally like to see the location within the macro that caused the error 
+as well as the location where the macro was invoked.
+
+You can do this with error contexts.  Error contexts are string messages that 
+are printed on the line following the original error message.  There can be as 
+many lines of error context as you want, they are stored as a stack and 
+the last context is printed first.
+
+Error contexts are pushed using #CrackContext.pushErrorContext()#.  They can 
+be removed from the stack either by calling #CrackContext.popErrorContext()# 
+or by putting back a special token of type #`TOK_POPERRCTX`#.  The latter 
+causes the error context to be popped the next time the token is read, which 
+is useful if your annotation injects a sequence of tokens and then returns - 
+the error context will remain active until after your sequence of tokens is 
+parsed.
+
+As an example, let's say that we have registered #beginClass()# and 
+#endClass()# as the #`PCB_CLASS_ENTER`# and #`PCB_CLASS_LEAVE`# callbacks.  We 
+could add the message "in a class!" to the error message with the following 
+code:
+
+{{
+    void beginClass(CrackContext ctx) {
+        ctx.pushErrorContext('in a class!'.buffer);
+    }
+    
+    void endClass(CrackContext ctx) {
+        ctx.popError();
+    }
+}}
+
+xxx registering other annotations, user data
+    setting function flags
+
+Built-in Annotations
+''''''''''''''''''''
+
+Crack defines the following special built-in annotations:
+
+@final::
+    Marks a class method as final.
+@static::
+    Marks a class method as static. (See \X(Static and Final Methods) above)
+@FILE::
+    Expands to a string containing the current filename.
+@LINE::
+    Expands to an integer containing the current line number.
 
 Threading
 ---------
 
-As it stands, Crack 0.2 is written with little regard for threads.  You can 
+As it stands, Crack 0.3 is written with little regard for threads.  You can 
 attempt to use the normal threading libraries, if you like, but you're likely 
 to run into some problems.  In particular, you should be aware that the 
 reference counting mechanism is not thread-safe, so memory management will 
@@ -1777,7 +2202,7 @@ implemented safely - with some cost to performance of threaded applications.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.2.  If your program 
+Crack has only minimal support for debugging in 0.3.  If your program 
 seg-faults or aborts, you can at least get a sparse stack-trace by running it 
 under a fairly recent version of GDB (7.0 or later).
 
@@ -1823,6 +2248,8 @@ shorter buffer is "less than" the larger buffer.
 
 The #String# class is one of the few types that don't need to be imported.  
 #Buffer# and its other descendents can be imported from #crack.lang#.
+
+XXX include info on CString
 
 ManagedBuffer
 '''''''''''''
@@ -1875,7 +2302,7 @@ MixIn
 
 The #MixIn# class allows you to do multiple inheritence safely - without risk 
 of breaking reference counting.  The #MixIn# approach is a stand-in for 
-virtual inheritence, which Crack 0.2 does not yet support.
+virtual inheritence, which Crack 0.3 does not yet support.
 
 #MixIn# defines #bind# and #release# operators and a virtual function called 
 #getObject()# that knows how to get the #Object# instance that the class is 
@@ -2175,7 +2602,7 @@ RBTree Maps
 
 A "map" or an "associative array" is a container that stores a set of values 
 each indexed by a key.  Both keys and values can be arbitrary objects.  The 
-only kind of map that Crack 0.2 supports is red-black trees.  Red-black trees 
+only kind of map that Crack 0.3 supports is red-black trees.  Red-black trees 
 provide a natural sort order, and provide O(log n) insertion and lookup with 
 constant time rebalancing.
 
@@ -2217,7 +2644,7 @@ Error Handling
 --------------
 
 Future versions of crack will have real C++\/Java like exception handling.  
-But for version 0.2, we at least have the error module.  The error module lets 
+But for version 0.3, we at least have the error module.  The error module lets 
 you record an error in a manner that can be controlled by the callers.  The 
 default action is to abort.
 
@@ -2301,7 +2728,7 @@ command line arguments:
 #StringArray# is a special purpose class just for storing arg lists without 
 having to do annoying casting.  You can use it as a general purpose string 
 sequence if you like, it will be supplanted by #Array[String]# once crack 
-supports generics (post 0.2).
+supports generics (post 0.3).
 
 Input\/Output
 -------------
@@ -2887,3 +3314,5 @@ Here's a sample program:
 Crack's GTK libraries are really a toy implementation or proof of concept.  
 You can probably implement minimal programs with them, you can implement 
 larger programs if you care to augment the library.
+
+XXX cover standard annotations
