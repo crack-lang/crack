@@ -11,12 +11,34 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_Class = mod->getClassType();
 
     crack::ext::Type *array = mod->getType("array");
+    crack::ext::Type *type_float64 = mod->getFloat64Type();
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byte = mod->getByteType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
+
+    crack::ext::Type *type_cairo_device_t = mod->addType("cairo_device_t");
+    type_cairo_device_t->finish();
+
+    crack::ext::Type *type_cairo_matrix_t = mod->addType("cairo_matrix_t");
+    type_cairo_matrix_t->finish();
+
+    crack::ext::Type *type_cairo_pattern_t = mod->addType("cairo_pattern_t");
+    type_cairo_pattern_t->finish();
+
+    crack::ext::Type *type_cairo_surface_t = mod->addType("cairo_surface_t");
+    type_cairo_surface_t->finish();
+
+    crack::ext::Type *type_cairo_t = mod->addType("cairo_t");
+    type_cairo_t->finish();
     crack::ext::Type *type_float = mod->getFloatType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
-    crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_int = mod->getIntType();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
@@ -25,6 +47,424 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_void = mod->getVoidType();
     crack::ext::Type *type_voidptr = mod->getVoidptrType();
+
+    f = mod->addFunc(type_cairo_t, "cairo_create",
+                     (void *)cairo_create
+                     );
+    f->addArg(type_cairo_surface_t, "target");
+
+    f = mod->addFunc(type_cairo_t, "cairo_reference",
+                     (void *)cairo_reference
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_destroy",
+                     (void *)cairo_destroy
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_uint, "cairo_get_reference_count",
+                     (void *)cairo_get_reference_count
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_save",
+                     (void *)cairo_save
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_restore",
+                     (void *)cairo_restore
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_push_group",
+                     (void *)cairo_push_group
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_cairo_pattern_t, "cairo_pop_group",
+                     (void *)cairo_pop_group
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_pop_group_to_source",
+                     (void *)cairo_pop_group_to_source
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_set_operator",
+                     (void *)cairo_set_operator
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_uint32, "op");
+
+    f = mod->addFunc(type_void, "cairo_set_source",
+                     (void *)cairo_set_source
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_pattern_t, "source");
+
+    f = mod->addFunc(type_void, "cairo_set_source_rgb",
+                     (void *)cairo_set_source_rgb
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "red");
+    f->addArg(type_float64, "green");
+    f->addArg(type_float64, "blue");
+
+    f = mod->addFunc(type_void, "cairo_set_source_rgba",
+                     (void *)cairo_set_source_rgba
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "red");
+    f->addArg(type_float64, "green");
+    f->addArg(type_float64, "blue");
+    f->addArg(type_float64, "alpha");
+
+    f = mod->addFunc(type_void, "cairo_set_source_surface",
+                     (void *)cairo_set_source_surface
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_void, "cairo_set_tolerance",
+                     (void *)cairo_set_tolerance
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "tolerance");
+
+    f = mod->addFunc(type_void, "cairo_set_antialias",
+                     (void *)cairo_set_antialias
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_uint32, "antialias");
+
+    f = mod->addFunc(type_void, "cairo_set_fill_rule",
+                     (void *)cairo_set_fill_rule
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_uint32, "fill_rule");
+
+    f = mod->addFunc(type_void, "cairo_set_line_width",
+                     (void *)cairo_set_line_width
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "width");
+
+    f = mod->addFunc(type_void, "cairo_set_line_cap",
+                     (void *)cairo_set_line_cap
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_uint32, "line_cap");
+
+    f = mod->addFunc(type_void, "cairo_set_line_join",
+                     (void *)cairo_set_line_join
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_uint32, "line_join");
+
+    f = mod->addFunc(type_void, "cairo_set_dash",
+                     (void *)cairo_set_dash
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "dashes");
+    f->addArg(type_int, "num_dashes");
+    f->addArg(type_float64, "offset");
+
+    f = mod->addFunc(type_void, "cairo_set_miter_limit",
+                     (void *)cairo_set_miter_limit
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "limit");
+
+    f = mod->addFunc(type_void, "cairo_translate",
+                     (void *)cairo_translate
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "tx");
+    f->addArg(type_float64, "ty");
+
+    f = mod->addFunc(type_void, "cairo_scale",
+                     (void *)cairo_scale
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "sx");
+    f->addArg(type_float64, "sy");
+
+    f = mod->addFunc(type_void, "cairo_rotate",
+                     (void *)cairo_rotate
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "angle");
+
+    f = mod->addFunc(type_void, "cairo_transform",
+                     (void *)cairo_transform
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_matrix_t, "matrix");
+
+    f = mod->addFunc(type_void, "cairo_set_matrix",
+                     (void *)cairo_set_matrix
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_matrix_t, "matrix");
+
+    f = mod->addFunc(type_void, "cairo_identity_matrix",
+                     (void *)cairo_identity_matrix
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_user_to_device",
+                     (void *)cairo_user_to_device
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x");
+    f->addArg(array_pfloat64_q, "y");
+
+    f = mod->addFunc(type_void, "cairo_user_to_device_distance",
+                     (void *)cairo_user_to_device_distance
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "dx");
+    f->addArg(array_pfloat64_q, "dy");
+
+    f = mod->addFunc(type_void, "cairo_device_to_user",
+                     (void *)cairo_device_to_user
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x");
+    f->addArg(array_pfloat64_q, "y");
+
+    f = mod->addFunc(type_void, "cairo_device_to_user_distance",
+                     (void *)cairo_device_to_user_distance
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "dx");
+    f->addArg(array_pfloat64_q, "dy");
+
+    f = mod->addFunc(type_void, "cairo_new_path",
+                     (void *)cairo_new_path
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_move_to",
+                     (void *)cairo_move_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_void, "cairo_new_sub_path",
+                     (void *)cairo_new_sub_path
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_line_to",
+                     (void *)cairo_line_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_void, "cairo_curve_to",
+                     (void *)cairo_curve_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x1");
+    f->addArg(type_float64, "y1");
+    f->addArg(type_float64, "x2");
+    f->addArg(type_float64, "y2");
+    f->addArg(type_float64, "x3");
+    f->addArg(type_float64, "y3");
+
+    f = mod->addFunc(type_void, "cairo_arc",
+                     (void *)cairo_arc
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "xc");
+    f->addArg(type_float64, "yc");
+    f->addArg(type_float64, "radius");
+    f->addArg(type_float64, "angle1");
+    f->addArg(type_float64, "angle2");
+
+    f = mod->addFunc(type_void, "cairo_arc_negative",
+                     (void *)cairo_arc_negative
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "xc");
+    f->addArg(type_float64, "yc");
+    f->addArg(type_float64, "radius");
+    f->addArg(type_float64, "angle1");
+    f->addArg(type_float64, "angle2");
+
+    f = mod->addFunc(type_void, "cairo_rel_move_to",
+                     (void *)cairo_rel_move_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "dx");
+    f->addArg(type_float64, "dy");
+
+    f = mod->addFunc(type_void, "cairo_rel_line_to",
+                     (void *)cairo_rel_line_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "dx");
+    f->addArg(type_float64, "dy");
+
+    f = mod->addFunc(type_void, "cairo_rel_curve_to",
+                     (void *)cairo_rel_curve_to
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "dx1");
+    f->addArg(type_float64, "dy1");
+    f->addArg(type_float64, "dx2");
+    f->addArg(type_float64, "dy2");
+    f->addArg(type_float64, "dx3");
+    f->addArg(type_float64, "dy3");
+
+    f = mod->addFunc(type_void, "cairo_rectangle",
+                     (void *)cairo_rectangle
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+    f->addArg(type_float64, "width");
+    f->addArg(type_float64, "height");
+
+    f = mod->addFunc(type_void, "cairo_close_path",
+                     (void *)cairo_close_path
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_path_extents",
+                     (void *)cairo_path_extents
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x1");
+    f->addArg(array_pfloat64_q, "y1");
+    f->addArg(array_pfloat64_q, "x2");
+    f->addArg(array_pfloat64_q, "y2");
+
+    f = mod->addFunc(type_void, "cairo_paint",
+                     (void *)cairo_paint
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_paint_with_alpha",
+                     (void *)cairo_paint_with_alpha
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "alpha");
+
+    f = mod->addFunc(type_void, "cairo_mask",
+                     (void *)cairo_mask
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_pattern_t, "pattern");
+
+    f = mod->addFunc(type_void, "cairo_mask_surface",
+                     (void *)cairo_mask_surface
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_float64, "surface_x");
+    f->addArg(type_float64, "surface_y");
+
+    f = mod->addFunc(type_void, "cairo_stroke",
+                     (void *)cairo_stroke
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_stroke_preserve",
+                     (void *)cairo_stroke_preserve
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_fill",
+                     (void *)cairo_fill
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_fill_preserve",
+                     (void *)cairo_fill_preserve
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_copy_page",
+                     (void *)cairo_copy_page
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_show_page",
+                     (void *)cairo_show_page
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_bool, "cairo_in_stroke",
+                     (void *)cairo_in_stroke
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_bool, "cairo_in_fill",
+                     (void *)cairo_in_fill
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_bool, "cairo_in_clip",
+                     (void *)cairo_in_clip
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(type_float64, "x");
+    f->addArg(type_float64, "y");
+
+    f = mod->addFunc(type_void, "cairo_stroke_extents",
+                     (void *)cairo_stroke_extents
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x1");
+    f->addArg(array_pfloat64_q, "y1");
+    f->addArg(array_pfloat64_q, "x2");
+    f->addArg(array_pfloat64_q, "y2");
+
+    f = mod->addFunc(type_void, "cairo_fill_extents",
+                     (void *)cairo_fill_extents
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x1");
+    f->addArg(array_pfloat64_q, "y1");
+    f->addArg(array_pfloat64_q, "x2");
+    f->addArg(array_pfloat64_q, "y2");
+
+    f = mod->addFunc(type_void, "cairo_reset_clip",
+                     (void *)cairo_reset_clip
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_clip",
+                     (void *)cairo_clip
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_clip_preserve",
+                     (void *)cairo_clip_preserve
+                     );
+    f->addArg(type_cairo_t, "cr");
+
+    f = mod->addFunc(type_void, "cairo_clip_extents",
+                     (void *)cairo_clip_extents
+                     );
+    f->addArg(type_cairo_t, "cr");
+    f->addArg(array_pfloat64_q, "x1");
+    f->addArg(array_pfloat64_q, "y1");
+    f->addArg(array_pfloat64_q, "x2");
+    f->addArg(array_pfloat64_q, "y2");
 
     mod->addConstant(type_uint32, "CAIRO_STATUS_SUCCESS",
                      static_cast<int>(CAIRO_STATUS_SUCCESS)

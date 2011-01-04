@@ -239,5 +239,137 @@
       CAIRO_REGION_OVERLAP_OUT,
       CAIRO_REGION_OVERLAP_PART;
 
+   // Opaque types
+   class cairo_t;
+   class cairo_surface_t;
+   class cairo_device_t;
+   class cairo_matrix_t;
+   class cairo_pattern_t;
+  
+   // cairo_t
+   cairo_t cairo_create (cairo_surface_t target);
+   cairo_t cairo_reference (cairo_t cr);
+   void cairo_destroy (cairo_t cr);
+   uint cairo_get_reference_count (cairo_t cr);
 
+   void cairo_save (cairo_t cr);
+   void cairo_restore (cairo_t cr);
+   void cairo_push_group (cairo_t cr);
+
+   cairo_pattern_t cairo_pop_group (cairo_t cr);
+   void  cairo_pop_group_to_source (cairo_t cr);
+
+   // Modify state
+   void cairo_set_operator (cairo_t cr, uint32 op);
+   void cairo_set_source (cairo_t cr, cairo_pattern_t source);
+
+   void cairo_set_source_rgb (cairo_t cr, float64 red, float64 green, float64 blue);
+   void cairo_set_source_rgba (cairo_t cr,
+                float64 red, float64 green, float64 blue,
+                float64 alpha);
+
+   void cairo_set_source_surface (cairo_t  cr,
+              cairo_surface_t surface, 
+              float64   x, float64   y);
+
+   void cairo_set_tolerance (cairo_t cr, float64 tolerance);
+   void cairo_set_antialias (cairo_t cr, uint32 antialias);
+
+   void cairo_set_fill_rule (cairo_t cr, uint32 fill_rule);
+   void cairo_set_line_width (cairo_t cr, float64 width);
+   void cairo_set_line_cap (cairo_t cr, uint32 line_cap);
+
+   void cairo_set_line_join (cairo_t cr, uint32 line_join);
+
+   void cairo_set_dash (cairo_t cr, array[float64] dashes,
+                         int num_dashes, float64 offset);
+
+   void cairo_set_miter_limit (cairo_t cr, float64 limit);
+   void cairo_translate (cairo_t cr, float64 tx, float64 ty);
+   void cairo_scale (cairo_t cr, float64 sx, float64 sy);
+   void cairo_rotate (cairo_t cr, float64 angle);
+   void cairo_transform (cairo_t cr, cairo_matrix_t matrix);
+
+   void cairo_set_matrix (cairo_t  cr, cairo_matrix_t matrix);
+   void cairo_identity_matrix (cairo_t cr);
+   void cairo_user_to_device (cairo_t cr, array[float64] x, array[float64] y);
+   void cairo_user_to_device_distance (cairo_t cr, array[float64] dx, array[float64] dy);
+   void cairo_device_to_user (cairo_t cr, array[float64] x, array[float64] y);
+   void cairo_device_to_user_distance (cairo_t cr, array[float64] dx, array[float64] dy);
+
+   // Path creation functions
+   void cairo_new_path (cairo_t cr);
+   void cairo_move_to (cairo_t cr, float64 x, float64 y);
+   void cairo_new_sub_path (cairo_t cr);
+   void cairo_line_to (cairo_t cr, float64 x, float64 y);
+   void cairo_curve_to (cairo_t cr,
+                           float64 x1, float64 y1,
+                           float64 x2, float64 y2,
+                           float64 x3, float64 y3);
+
+   void cairo_arc (cairo_t cr,
+                     float64 xc, float64 yc,
+                     float64 radius,
+                     float64 angle1, float64 angle2);
+
+   void cairo_arc_negative (cairo_t cr,
+                              float64 xc, float64 yc,
+                              float64 radius,
+                              float64 angle1, float64 angle2);
+
+
+   void cairo_rel_move_to (cairo_t cr, float64 dx, float64 dy);
+   void cairo_rel_line_to (cairo_t cr, float64 dx, float64 dy);
+   void cairo_rel_curve_to (cairo_t cr,
+                               float64 dx1, float64 dy1,
+                               float64 dx2, float64 dy2,
+                               float64 dx3, float64 dy3);
+
+   void cairo_rectangle (cairo_t cr,
+                            float64 x, float64 y,
+                            float64 width, float64 height);
+
+   void cairo_close_path (cairo_t cr);
+   void cairo_path_extents (cairo_t cr,
+                               array[float64] x1, array[float64] y1,
+                               array[float64] x2, array[float64] y2);
+
+   // Painting functions
+   void cairo_paint (cairo_t cr);
+   void cairo_paint_with_alpha (cairo_t cr, float64   alpha);
+
+   void cairo_mask (cairo_t cr, cairo_pattern_t pattern);
+
+   void cairo_mask_surface (cairo_t cr, cairo_surface_t surface,
+                               float64 surface_x,
+                               float64 surface_y);
+
+   void cairo_stroke (cairo_t cr);
+   void cairo_stroke_preserve (cairo_t cr);
+   void cairo_fill (cairo_t cr);
+   void cairo_fill_preserve (cairo_t cr);
+   void cairo_copy_page (cairo_t cr);
+   void cairo_show_page (cairo_t cr);
+
+   // Insideness testing
+   bool cairo_in_stroke (cairo_t cr, float64 x, float64 y);
+   bool cairo_in_fill (cairo_t cr, float64 x, float64 y);
+   bool cairo_in_clip (cairo_t cr, float64 x, float64 y);
+
+   // Rectangular extents
+   void cairo_stroke_extents (cairo_t cr,
+                                 array[float64] x1, array[float64] y1,
+                                 array[float64] x2, array[float64] y2);
+
+   void cairo_fill_extents (cairo_t cr,
+                               array[float64] x1, array[float64] y1,
+                               array[float64] x2, array[float64] y2);
+
+   // Clipping
+   void cairo_reset_clip (cairo_t cr);
+   void cairo_clip (cairo_t cr);
+   void cairo_clip_preserve (cairo_t cr);
+   void cairo_clip_extents (cairo_t cr,
+                               array[float64] x1, array[float64] y1,
+                               array[float64] x2, array[float64] y2);
 }
