@@ -693,6 +693,23 @@ void exporter(CrackContext ctx) {
                f.createCString().buffer);
 }
 
+void readIStr(CrackContext ctx, NodeList nodes) {
+    depth := 0;
+    
+    while (true) {
+        tok := ctx.getToken();
+        nodes.pushHead(Tok(tok));
+        if (tok.isLParen())
+            ++depth;
+        else if (tok.isRParen() && !--depth)
+            ctx.continueIString();
+        else if (tok.isIdent() && !depth)
+            ctx.continueIString();
+        else if (tok.isIstrEnd())
+            return;
+    }
+}
+
 NodeList readBlock(CrackContext ctx) {
     NodeList result = {};
 
@@ -710,6 +727,8 @@ NodeList readBlock(CrackContext ctx) {
         else if (tok.isRCurly())
             --depth;
         result.pushHead(Tok(tok));
+        if (tok.isIstrBegin())
+            readIStr(ctx, result);
     }
     
     return result;
