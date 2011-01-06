@@ -1,5 +1,6 @@
 # Crack Cairo binding of cairo.h
 # Adapted from SDL binding
+# Conrad Steenberg <conrad.steenberg@gmail.com>
 
 @import opt.extgen generateExtension;
 
@@ -259,6 +260,7 @@
    class cairo_path_data_t;
    class cairo_path_t;
    class cairo_rectangle_int_t;
+   class cairo_region_t;
 
    // cairo_t
    cairo_t cairo_create (cairo_surface_t target);
@@ -400,7 +402,7 @@
    void cairo_text_cluster_free (cairo_text_cluster_t clusters);
 
    // Text options
-   cairo_font_options_t cairo_font_options_create (void);
+   cairo_font_options_t cairo_font_options_create ();
    cairo_font_options_t cairo_font_options_copy (cairo_font_options_t original);
    void cairo_font_options_destroy (cairo_font_options_t options);
    uint32 cairo_font_options_status (cairo_font_options_t options);
@@ -414,7 +416,7 @@
                                           uint32 antialias);
    uint32 cairo_font_options_get_antialias (cairo_font_options_t options);
    void cairo_font_options_set_subpixel_order (cairo_font_options_t options,
-                   cairo_subpixel_order_t  subpixel_order);
+                   uint32  subpixel_order);
    uint32 cairo_font_options_get_subpixel_order (cairo_font_options_t options);
    void cairo_font_options_set_hint_style (cairo_font_options_t options,
                                              uint32 hint_style);
@@ -476,8 +478,8 @@
    // Don't know how to translate the function pointer
    //~ uint32 cairo_font_face_set_user_data (cairo_font_face_t font_face,
                 //~ cairo_user_data_key_t key,
-                //~ byteptr          user_data,
-                //~ cairo_destroy_func_t  destroy);
+                //~ byteptr user_data,
+                //~ voidptr destroy);
 
    // Portable interface to general font features.
 
@@ -500,8 +502,8 @@
    //~ uint32 
       //~ cairo_scaled_font_set_user_data (cairo_scaled_font_t scaled_font,
                                         //~ cairo_user_data_key_t key,
-                                        //~ void                        user_data,
-                                        //~ cairo_destroy_func_t         destroy);
+                                        //~ void    user_data,
+                                        //~ voidptr destroy);
 
    void  cairo_scaled_font_extents (cairo_scaled_font_t  scaled_font,
                                        cairo_font_extents_t extents);
@@ -561,10 +563,10 @@
 
 
    // User fonts
-   cairo_font_face_t cairo_user_font_face_create (void);
+   cairo_font_face_t cairo_user_font_face_create ();
 
    // Query functions
-   cairo_operator_t cairo_get_operator (cairo_t cr)
+   uint32 cairo_get_operator (cairo_t cr)
    cairo_pattern_t cairo_get_source (cairo_t cr);
    float64 cairo_get_tolerance (cairo_t cr);
    uint32 cairo_get_antialias (cairo_t cr);
@@ -595,7 +597,7 @@
 
    // Backend device manipulation
    cairo_device_t cairo_device_reference (cairo_device_t device);
-   cairo_device_type_t cairo_device_get_type (cairo_device_t device);
+   uint32 cairo_device_get_type (cairo_device_t device);
    uint32 cairo_device_status (cairo_device_t device);
    uint32 cairo_device_acquire (cairo_device_t device);
    void cairo_device_release (cairo_device_t device);
@@ -612,7 +614,7 @@
       //~ cairo_device_set_user_data (cairo_device_t device,
              //~ cairo_user_data_key_t key,
              //~ array[byte] user_data,       // void * (TODO fix this)
-             //~ cairo_destroy_func_t     destroy);
+             //~ voidptr     destroy);
 
 
    // Surface manipulation
@@ -649,7 +651,7 @@
    //~ uint32 cairo_surface_set_user_data (cairo_surface_t surface,
                                        //~ cairo_user_data_key_t key,
                                        //~ voidptr user_data,
-                                       //~ cairo_destroy_func_t   destroy);
+                                       //~ voidptr   destroy);
 
    void
       cairo_surface_get_mime_data (cairo_surface_t surface,
@@ -657,13 +659,13 @@
                                    array[byteptr] data,
                                    array[uint64] length);
 
-   uint32
-      cairo_surface_set_mime_data (cairo_surface_t surface,
-                                   byteptr mime_type,
-                                   byteptr data,
-                                   uint64 length,
-                                   cairo_destroy_func_t   destroy,
-                                   voidptr closure);
+   //~ uint32
+      //~ cairo_surface_set_mime_data (cairo_surface_t surface,
+                                   //~ byteptr mime_type,
+                                   //~ byteptr data,
+                                   //~ uint64 length,
+                                   //~ voidptr   destroy,
+                                   //~ voidptr closure);
 
    void cairo_surface_get_font_options (cairo_surface_t surface,
                                         cairo_font_options_t options);
@@ -760,9 +762,9 @@
       cairo_pattern_set_user_data (cairo_pattern_t pattern,
                                    cairo_user_data_key_t key,
                                    voidptr user_data,
-                                   cairo_destroy_func_t    destroy);
+                                   voidptr destroy);
 
-   cairo_pattern_type_t cairo_pattern_get_type (cairo_pattern_t pattern);
+   uint32 cairo_pattern_get_type (cairo_pattern_t pattern);
 
    void 
       cairo_pattern_add_color_stop_rgb (cairo_pattern_t pattern,
@@ -782,8 +784,8 @@
                                    array[cairo_matrix_t] matrix);
 
    // Extend functions
-   void cairo_pattern_set_extend (cairo_pattern_t pattern, cairo_extend_t extend);
-   cairo_extend_t cairo_pattern_get_extend (cairo_pattern_t pattern);
+   void cairo_pattern_set_extend (cairo_pattern_t pattern, uint32 extend);
+   uint32 cairo_pattern_get_extend (cairo_pattern_t pattern);
    void cairo_pattern_set_filter (cairo_pattern_t pattern, uint32 filter);
 
    uint32 cairo_pattern_get_filter (cairo_pattern_t pattern);
@@ -853,7 +855,7 @@
                array[float64] x, array[float64] y);
 
    // Region functions
-   cairo_region_t cairo_region_create (void);
+   cairo_region_t cairo_region_create ();
    cairo_region_t 
       cairo_region_create_rectangle (cairo_rectangle_int_t rectangle);
 
@@ -912,7 +914,7 @@
 
    // Functions to be used while debugging 
    // (not intended for use in production code)
-   void cairo_debug_reset_static_data (void);
+   void cairo_debug_reset_static_data ();
 
 
 }
