@@ -427,7 +427,7 @@
 
    // This interface is for dealing with text as text, not caring about the
    // font object inside the the cairo_t
-   void cairo_select_font_face (cairo_t cr, array[byte] family,
+   void cairo_select_font_face (cairo_t cr, byteptr family,
                                  uint32  slant, uint32 weight);
    void cairo_set_font_size (cairo_t cr, float64 size);
    void cairo_set_font_matrix (cairo_t cr, cairo_matrix_t matrix);
@@ -438,11 +438,11 @@
    cairo_font_face_t cairo_get_font_face (cairo_t cr);
    void cairo_set_scaled_font (cairo_t cr, cairo_scaled_font_t scaled_font);
    cairo_scaled_font_t cairo_get_scaled_font (cairo_t cr);
-   void cairo_show_text (cairo_t cr, array[byte] utf8);
+   void cairo_show_text (cairo_t cr, byteptr utf8);
    void cairo_show_glyphs (cairo_t cr, cairo_glyph_t glyphs, int num_glyphs);
 
    void cairo_show_text_glyphs (cairo_t cr,
-                                 array[byte] utf8,
+                                 byteptr utf8,
                                  int utf8_len,
                                  cairo_glyph_t glyphs,
                                  int num_glyphs,
@@ -450,10 +450,10 @@
                                  int num_clusters,
                                  array[uint32] cluster_flags);
 
-   void cairo_text_path  (cairo_t cr, array[byte] utf8);
+   void cairo_text_path  (cairo_t cr, byteptr utf8);
    void cairo_glyph_path (cairo_t cr, cairo_glyph_t glyphs, int num_glyphs);
 
-   void cairo_text_extents (cairo_t cr, array[byte] utf8,
+   void cairo_text_extents (cairo_t cr, byteptr utf8,
                               cairo_text_extents_t extents);
 
    void cairo_glyph_extents (cairo_t cr,
@@ -510,7 +510,7 @@
 
    void
       cairo_scaled_font_text_extents (cairo_scaled_font_t    scaled_font,
-                                       array[byte]           utf8,
+                                       byteptr           utf8,
                                        cairo_text_extents_t  extents);
 
    void
@@ -523,7 +523,7 @@
       cairo_scaled_font_text_to_glyphs (cairo_scaled_font_t  scaled_font,
                                    float64                     x,
                                    float64                     y,
-                                   array[byte]                 utf8,
+                                   byteptr                 utf8,
                                    int                         utf8_len,
                                    array[cairo_glyph_t]        glyphs,
                                    int                         num_glyphs,
@@ -553,11 +553,11 @@
 
    // Toy fonts
    cairo_font_face_t
-      cairo_toy_font_face_create (array[byte] family,
+      cairo_toy_font_face_create (byteptr family,
                                   uint32    slant,
                                   uint32   weight);
 
-   array[byte] cairo_toy_font_face_get_family (cairo_font_face_t font_face);
+   byteptr cairo_toy_font_face_get_family (cairo_font_face_t font_face);
    uint32 cairo_toy_font_face_get_slant (cairo_font_face_t font_face);
    uint32 cairo_toy_font_face_get_weight (cairo_font_face_t font_face);
 
@@ -593,7 +593,7 @@
 
    // Error status queries
    uint32 cairo_status (cairo_t cr);
-   array[byte] cairo_status_to_string (uint32 status);
+   byteptr cairo_status_to_string (uint32 status);
 
    // Backend device manipulation
    cairo_device_t cairo_device_reference (cairo_device_t device);
@@ -613,7 +613,7 @@
    //~ uint32
       //~ cairo_device_set_user_data (cairo_device_t device,
              //~ cairo_user_data_key_t key,
-             //~ array[byte] user_data,       // void * (TODO fix this)
+             //~ byteptr user_data,       // void * (TODO fix this)
              //~ voidptr     destroy);
 
 
@@ -640,7 +640,7 @@
    uint32 cairo_surface_get_type (cairo_surface_t surface);
    uint32 cairo_surface_get_content (cairo_surface_t surface);
    uint32 cairo_surface_write_to_png (cairo_surface_t surface,
-                                      array[byte] filename);
+                                      byteptr filename);
 
    //~ uint32 cairo_surface_write_to_png_stream (cairo_surface_t surface,
                                              //~ cairo_write_func_t   write_func,
