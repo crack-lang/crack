@@ -1,0 +1,61 @@
+# Test cairo 2D drawing library binding
+# Conrad Steenberg <conrad.steenberg@gmail.com>
+#
+# This tests the translation of the C library
+# Follow example code at http://cairographics.org/tutorial/
+
+import crack.lang CString;
+import crack.io cout;
+import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
+                           CAIRO_FORMAT_ARGB32, cairo_create, cairo_move_to,
+                           cairo_line_to, cairo_rel_line_to,
+                           cairo_arc, cairo_rel_curve_to,
+                           cairo_close_path, cairo_surface_write_to_png,
+                           cairo_surface_flush, cairo_set_line_width,
+                           cairo_set_source_rgb, cairo_stroke, cairo_scale,
+                           cairo_destroy, cairo_surface_destroy, cairo_pattern_t,
+                           cairo_pattern_create_radial, cairo_pattern_add_color_stop_rgb,
+                           cairo_rectangle, cairo_set_source, cairo_fill,
+                           cairo_pattern_create_linear, cairo_pattern_add_color_stop_rgba;
+import crack.math PI, sqrt;
+
+// Create the surface and context
+cairo_surface_t surface;
+cairo_pattern_t radpat, linpat;
+cairo_t cr;
+uint32 status;
+
+surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 120, 120);
+cr = cairo_create (surface);
+cairo_scale (cr, 120, 120);
+
+// Drawing code goes here 
+radpat = cairo_pattern_create_radial (0.25, 0.25, 0.1,  0.5, 0.5, 0.5);
+cairo_pattern_add_color_stop_rgb (radpat, 0,  1.0, 0.8, 0.8);
+cairo_pattern_add_color_stop_rgb (radpat, 1,  0.9, 0.0, 0.0);
+
+int i, j;
+for (i=1; i<10; i++)
+   for (j=1; j<10; j++)
+      cairo_rectangle (cr, i/10.0 - 0.04, j/10.0 - 0.04, 0.08, 0.08);
+cairo_set_source (cr, radpat);
+cairo_fill (cr);
+
+linpat = cairo_pattern_create_linear (0.25, 0.35, 0.75, 0.65);
+cairo_pattern_add_color_stop_rgba (linpat, 0.00,  1, 1, 1, 0);
+cairo_pattern_add_color_stop_rgba (linpat, 0.25,  0, 1, 0, 0.5);
+cairo_pattern_add_color_stop_rgba (linpat, 0.50,  1, 1, 1, 0);
+cairo_pattern_add_color_stop_rgba (linpat, 0.75,  0, 0, 1, 0.5);
+cairo_pattern_add_color_stop_rgba (linpat, 1.00,  1, 1, 1, 0);
+
+cairo_rectangle (cr, 0.0, 0.0, 1, 1);
+cairo_set_source (cr, linpat);
+cairo_fill (cr);
+
+// Write surface to PNG file
+status = cairo_surface_write_to_png (surface, CString("setsourcegradient.png").buffer);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+cout `ok\n`;

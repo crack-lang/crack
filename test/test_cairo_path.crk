@@ -46,3 +46,4 @@ status = cairo_surface_write_to_png (surface, CString("path-close.png").buffer);
 // Clean up
 cairo_destroy (cr);
 cairo_surface_destroy (surface);
+cout `ok\n`;
