@@ -114,11 +114,13 @@ install(TARGETS crack-runtime
         )
 
 install(FILES doc/Manual.html DESTINATION share/doc/crack)
-# todo: a better scheme that saves directory structure of lib directory
-FILE(GLOB lib_files_root lib/crack/*.crk)
-install(FILES ${lib_files_root} DESTINATION "lib/crack-${CRACK_VERSION}/crack")
-FILE(GLOB lib_files_exp lib/crack/exp/*.crk)
-install(FILES ${lib_files_exp} DESTINATION "lib/crack-${CRACK_VERSION}/crack/exp")
+
+# install library modules and extensions
+install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
+        FILES_MATCHING PATTERN "*.crk")
+install(DIRECTORY .libs/ DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext"
+        FILES_MATCHING PATTERN "_*.so")
+
 
 # test suite
 add_custom_target(check 
