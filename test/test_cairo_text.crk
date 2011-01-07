@@ -16,24 +16,29 @@ import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
                            cairo_destroy, cairo_surface_destroy,
                            cairo_text_extents_t, cairo_select_font_face,
                            CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD,
-                           cairo_set_font_size,cairo_text_extents;
+                           cairo_set_font_size,cairo_text_extents, 
+                           cairo_text_extents_new, cairo_show_text;
 import crack.math PI, sqrt;
 
 // Create the surface and context
 cairo_surface_t surface;
 cairo_t cr;
-cairo_text_extents_t te = {};
+cairo_text_extents_t te = cairo_text_extents_new();
 uint32 status;
+surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 500, 120);
+cr = cairo_create (surface);
+//~ textbuf:=CString("Crack!").buffer;
+textbuf:=CString("a").buffer;
 
 cairo_scale (cr, 120, 120);
 cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
 cairo_select_font_face (cr, CString("Georgia").buffer,
       CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 cairo_set_font_size (cr, 1.2);
-cairo_text_extents (cr, CString("a").buffer, te);
-   cairo_move_to (cr, 0.5 - te.width / 2 - te.x_bearing,
+cairo_text_extents (cr, CString("crack!").buffer, te);
+   cairo_move_to (cr, 2.1 - te.width / 2 - te.x_bearing,
          0.5 - te.height / 2 - te.y_bearing);
-cairo_show_text (cr, CString("a").buffer);
+cairo_show_text (cr, CString("crack!").buffer);
 
 
 

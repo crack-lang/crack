@@ -23,7 +23,6 @@ extern "C"
 void crack_ext__sdl_init(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
-
     crack::ext::Type *type_SDL_Event = mod->addType("SDL_Event");
     type_SDL_Event->finish();
 
@@ -38,6 +37,7 @@ void crack_ext__sdl_init(crack::ext::Module *mod) {
 
     crack::ext::Type *type_SDL_keysym = mod->addType("SDL_keysym");
     type_SDL_keysym->finish();
+
 
     crack::ext::Type *array = mod->getType("array");
     crack::ext::Type *type_int = mod->getIntType();

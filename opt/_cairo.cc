@@ -1,4 +1,7 @@
 #include <cairo.h>
+cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
+cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
+cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }
 
 
 #include "ext/Module.h"
@@ -19,9 +22,9 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_byteptr;
         array_pbyteptr_q = array->getSpecialization(params);
     }
-
     crack::ext::Type *type_cairo_glyph_t = mod->addType("cairo_glyph_t");
     type_cairo_glyph_t->finish();
+
 
     crack::ext::Type *array_pcairo__glyph__t_q;
     {
@@ -29,9 +32,9 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_cairo_glyph_t;
         array_pcairo__glyph__t_q = array->getSpecialization(params);
     }
-
     crack::ext::Type *type_cairo_matrix_t = mod->addType("cairo_matrix_t");
     type_cairo_matrix_t->finish();
+
 
     crack::ext::Type *array_pcairo__matrix__t_q;
     {
@@ -39,9 +42,23 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_cairo_matrix_t;
         array_pcairo__matrix__t_q = array->getSpecialization(params);
     }
+    crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t");
+       type_cairo_rectangle_t->addInstVar(type_float64, "x");
+       type_cairo_rectangle_t->addInstVar(type_float64, "y");
+       type_cairo_rectangle_t->addInstVar(type_float64, "width");
+       type_cairo_rectangle_t->addInstVar(type_float64, "height");
+    type_cairo_rectangle_t->finish();
 
+
+    crack::ext::Type *array_pcairo__rectangle__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_rectangle_t;
+        array_pcairo__rectangle__t_q = array->getSpecialization(params);
+    }
     crack::ext::Type *type_cairo_text_cluster_t = mod->addType("cairo_text_cluster_t");
     type_cairo_text_cluster_t->finish();
+
 
     crack::ext::Type *array_pcairo__text__cluster__t_q;
     {
@@ -83,7 +100,6 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     }
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byte = mod->getByteType();
-
     crack::ext::Type *type_cairo_device_t = mod->addType("cairo_device_t");
     type_cairo_device_t->finish();
 
@@ -109,10 +125,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_rectangle_int_t->finish();
 
     crack::ext::Type *type_cairo_rectangle_list_t = mod->addType("cairo_rectangle_list_t");
+       type_cairo_rectangle_list_t->addInstVar(type_uint32, "status");
+       type_cairo_rectangle_list_t->addInstVar(array_pcairo__rectangle__t_q, "rectangles");
+       type_cairo_rectangle_list_t->addInstVar(type_int, "num_rectangles");
     type_cairo_rectangle_list_t->finish();
-
-    crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t");
-    type_cairo_rectangle_t->finish();
 
     crack::ext::Type *type_cairo_region_t = mod->addType("cairo_region_t");
     type_cairo_region_t->finish();
@@ -127,10 +143,17 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_t->finish();
 
     crack::ext::Type *type_cairo_text_extents_t = mod->addType("cairo_text_extents_t");
+       type_cairo_text_extents_t->addInstVar(type_float64, "x_bearing");
+       type_cairo_text_extents_t->addInstVar(type_float64, "y_bearing");
+       type_cairo_text_extents_t->addInstVar(type_float64, "width");
+       type_cairo_text_extents_t->addInstVar(type_float64, "height");
+       type_cairo_text_extents_t->addInstVar(type_float64, "x_advance");
+       type_cairo_text_extents_t->addInstVar(type_float64, "y_advance");
     type_cairo_text_extents_t->finish();
 
     crack::ext::Type *type_cairo_user_data_key_t = mod->addType("cairo_user_data_key_t");
     type_cairo_user_data_key_t->finish();
+
     crack::ext::Type *type_float = mod->getFloatType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
@@ -138,6 +161,14 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint = mod->getUintType();
     crack::ext::Type *type_void = mod->getVoidType();
     crack::ext::Type *type_voidptr = mod->getVoidptrType();
+
+    f = mod->addFunc(type_cairo_rectangle_list_t, "cairo_rectangle_list_new",
+                     (void *)cairo_rectangle_list_new
+                     );
+
+    f = mod->addFunc(type_cairo_text_extents_t, "cairo_text_extents_new",
+                     (void *)cairo_text_extents_new
+                     );
 
     f = mod->addFunc(type_cairo_t, "cairo_create",
                      (void *)cairo_create

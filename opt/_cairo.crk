@@ -2,7 +2,7 @@
 # Adapted from SDL binding
 # Conrad Steenberg <conrad.steenberg@gmail.com>
 
-@import opt.extgen generateExtension;
+@import crack.exp.extgen generateExtension;
 
 @generateExtension crack.ext._cairo {
    @filename 'opt/_cairo.cc'
@@ -246,15 +246,40 @@
    class cairo_device_t;
    class cairo_matrix_t;
    class cairo_pattern_t;
-   class cairo_rectangle_t;
-   class cairo_rectangle_list_t;
-   class cairo_glyph_t;
+   
+   // Rectangle
+   @inject 'cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }\n'
+   class cairo_rectangle_t{
+      float64 x, y, width, height;
+   }
+
+   // Rectangle list
+   @inject 'cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }\n'
+   class cairo_rectangle_list_t{
+      uint32                    status;
+      array[cairo_rectangle_t] rectangles;
+      int                      num_rectangles;
+   }
+   cairo_rectangle_list_t cairo_rectangle_list_new ();
+
    class cairo_scaled_font_t;
    class cairo_font_face_t;
+   
+
+   // Glyph
    class cairo_glyph_t;
+
+   // Text cluster
    class cairo_text_cluster_t;
    
-   class cairo_text_extents_t;
+   // Text extents
+   @inject 'cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }\n'
+   class cairo_text_extents_t{
+      float64 x_bearing, y_bearing;
+      float64 width, height;
+      float64 x_advance, y_advance;
+   }
+   cairo_text_extents_t cairo_text_extents_new ();
 
    class cairo_font_extents_t;
    class cairo_font_options_t;
