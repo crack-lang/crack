@@ -104,19 +104,28 @@ class ConstType : BuiltInType {
 class TypeImpl : Type {
     String emitted;
     FuncArray methods;
+    ArgArray members;
     
-    oper init(String name0) : Type(name0) {}
-    oper init(String name0, String emitted0) : Type(name0, emitted0) {}
+    oper init(String name0) : Type(name0), members() {}
+    oper init(String name0, String emitted0) : 
+       Type(name0, emitted0), 
+       members() {}
+
+    void addMember(Arg member) {
+        members.append(member);
+    }
+
     
     void emitInitializer(Formatter out) {
         if (initialized)
             return;
 
         typeVar := emit();
-        out `
-    crack::ext::Type *$typeVar = mod->addType("$name");
-    $typeVar->finish();
-`;            
+        out `    crack::ext::Type *$typeVar = mod->addType("$name");\n`;
+
+        for (member :in members)
+           out `       $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
+        out `    $typeVar->finish();\n\n`;
         initialized = true;
     }
 }
@@ -392,18 +401,57 @@ class ExtensionData {
     void _parseClassDef(CrackContext ctx) {
         # get the type name.
         tok := ctx.getToken();
+        TypeImpl ctype;
+
         if (!tok.isIdent())
             error(ctx, tok) `Identifier expected after "class" keyword.`;
         
         String className = {tok.getText()};
         
-        # get a semicolon
+        # get a semicolon or left curly
         tok = ctx.getToken();
-        if (!tok.isSemi())
-            error(ctx, tok) `Semicolon expected after class declaration`;
-        
-        types[className] = TypeImpl(className);
-    }   
+        if (tok.isSemi() || tok.isLCurly()){
+          ctype = TypeImpl(className);
+          types[className] = ctype;
+        }
+        else {
+           error(ctx, tok) `Semicolon or class definition expected after class declaration`;
+           return;
+        }
+
+        if (tok.isLCurly()){
+           tok = ctx.getToken();
+           while (!tok.isRCurly()) {
+               # parse the argument type
+               ctx.putBack(tok);
+               argType := _parseType(ctx);
+               
+               # get the arg variable
+               tok = ctx.getToken();
+               if (!tok.isIdent())
+                   error(ctx, tok) `argument name expected`;
+
+               ctype.addMember(Arg(argType, String(tok.getText())));
+               tok = ctx.getToken();
+
+               while (tok.isComma()){
+                  tok = ctx.getToken();
+                  if (!tok.isIdent())
+                      error(ctx, tok) `argument name expected`;
+
+                  ctype.addMember(Arg(argType, String(tok.getText())));
+                  tok = ctx.getToken();
+                  if (!tok.isSemi() && !tok.isComma())
+                    error(ctx, tok) `Semicolon or comma expected`;
+               }
+
+               if (tok.isSemi())
+                   tok = ctx.getToken();
+               else if (!tok.isRCurly())
+                   error(ctx, tok) `Semicolon or right curly brace expected`;
+           }
+        }
+    }
 
     String _parseString(CrackContext ctx) {
         tok := ctx.getToken();

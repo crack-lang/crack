@@ -1,0 +1,51 @@
+# Test cairo 2D drawing library binding
+# Conrad Steenberg <conrad.steenberg@gmail.com>
+#
+# This tests the translation of the C library
+# Follow example code at http://cairographics.org/tutorial/
+
+import crack.lang CString;
+import crack.io cout;
+import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
+                           CAIRO_FORMAT_ARGB32, cairo_create, cairo_move_to,
+                           cairo_line_to, cairo_rel_line_to,
+                           cairo_arc, cairo_rel_curve_to,
+                           cairo_close_path, cairo_surface_write_to_png,
+                           cairo_surface_flush, cairo_set_line_width,
+                           cairo_set_source_rgb, cairo_stroke, cairo_scale,
+                           cairo_destroy, cairo_surface_destroy,
+                           cairo_text_extents_t, cairo_select_font_face,
+                           CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD,
+                           cairo_set_font_size,cairo_text_extents, 
+                           cairo_text_extents_new, cairo_show_text;
+import crack.math PI, sqrt;
+
+// Create the surface and context
+cairo_surface_t surface;
+cairo_t cr;
+cairo_text_extents_t te = cairo_text_extents_new();
+uint32 status;
+surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 500, 120);
+cr = cairo_create (surface);
+//~ textbuf:=CString("Crack!").buffer;
+textbuf:=CString("a").buffer;
+
+cairo_scale (cr, 120, 120);
+cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
+cairo_select_font_face (cr, CString("Georgia").buffer,
+      CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+cairo_set_font_size (cr, 1.2);
+cairo_text_extents (cr, CString("crack!").buffer, te);
+   cairo_move_to (cr, 2.1 - te.width / 2 - te.x_bearing,
+         0.5 - te.height / 2 - te.y_bearing);
+cairo_show_text (cr, CString("crack!").buffer);
+
+
+
+// Write surface to PNG file
+status = cairo_surface_write_to_png (surface, CString("showtext.png").buffer);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+cout `ok\n`;

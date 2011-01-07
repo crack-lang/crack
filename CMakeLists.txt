@@ -207,3 +207,19 @@ if(OPENGL_FOUND)
                           ${OPENGL_LIBRARIES}
                          )
 endif()
+
+# Cairo
+find_package(Cairo)
+if(CAIRO_FOUND)
+   message(STATUS "Found Cairo, will build extension")
+   add_library(cairo SHARED opt/_cairo.cc)
+   set_target_properties(cairo
+                      PROPERTIES
+                      OUTPUT_NAME _cairo
+                      PREFIX ""
+                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
+                      )
+   target_link_libraries( cairo
+                          ${CAIRO_LDFLAGS} 
+                         )
+endif()
