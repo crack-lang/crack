@@ -253,7 +253,16 @@
    class cairo_font_face_t;
    class cairo_glyph_t;
    class cairo_text_cluster_t;
-   class cairo_text_extents_t;
+   
+   class cairo_text_extents_t{
+      float64 x_bearing;
+      float64 y_bearing;
+      float64 width;
+      float64 height;
+      float64 x_advance;
+      float64 y_advance;
+   }
+
    class cairo_font_extents_t;
    class cairo_font_options_t;
    class cairo_user_data_key_t;
