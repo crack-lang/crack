@@ -21,6 +21,8 @@ void crack_ext__gtk_init(crack::ext::Module *mod) {
 
     crack::ext::Type *type_GtkWidget = mod->addType("GtkWidget");
     type_GtkWidget->finish();
+
+    crack::ext::Type *array = mod->getType("array");
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byte = mod->getByteType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();

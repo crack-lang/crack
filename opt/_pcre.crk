@@ -1,5 +1,5 @@
 
-@import opt.extgen generateExtension;
+@import crack.exp.extgen generateExtension;
 
 @generateExtension crack.ext._pcre  {
     @filename 'opt/_pcre.cc'
