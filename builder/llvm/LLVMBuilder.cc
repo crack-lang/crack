@@ -1246,9 +1246,10 @@ void LLVMBuilder::emitEndClass(Context &context) {
     DerivedType *curType = 
         cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
     
-    // create the actual type
-    Type *newType = StructType::get(getGlobalContext(), members);
-    module->addTypeName("struct."+type->name, newType);
+    // create the actual type (store it in a type holder so that if the new 
+    // type gets replaced, we'll get the new type and not drop the old one)
+    PATypeHolder newType(StructType::get(getGlobalContext(), members));
+    module->addTypeName("struct." + type->name, newType);
     
     // refine the type and store the new pointer type (the existing pointer 
     // to opaque type may not end up getting changed)

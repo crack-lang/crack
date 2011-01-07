@@ -1,10 +1,12 @@
 # Crack GL bindings.
 
-@import opt.extgen generateExtension;
+@import crack.exp.extgen generateExtension;
 
 @generateExtension crack.ext._gl {
     @filename 'opt/_gl.cc'
     @inject '#include <GL/gl.h>\n'
+
+    uint glGetError();
 
     const uint GL_PROJECTION,
                GL_MODELVIEW;
@@ -73,6 +75,16 @@
     void  glVertex4fv( array[float32] v );
     void  glVertex4iv( array[int] v );
 
+    void glNormal3b( byte nx, byte ny, byte nz );
+    void glNormal3d( float64 nx, float64 ny, float64 nz );
+    void glNormal3f( float32 nx, float32 ny, float32 nz );
+    void glNormal3i( int nx, int ny, int nz );
+
+    void glNormal3bv( array[byte] v );
+    void glNormal3dv( array[float64] v );
+    void glNormal3fv( array[float32] v );
+    void glNormal3iv( array[int] v );
+
     void glColor3b( byte red, byte green, byte blue );
     void glColor3d( float64 red, float64 green, float64 blue );
     void glColor3f( float32 red, float32 green, float32 blue );
@@ -101,7 +113,7 @@
     void glViewport(int x, int y, int width, int height);
 
     void glClearColor(float32 red, float32 green, float32 blue, float32 alpha);
-    void glClearDepth(float32 depth);
+    void glClearDepth(float64 depth);
 
     const uint GL_CURRENT_BIT,
                GL_POINT_BIT,
@@ -134,9 +146,49 @@
                GL_FRONT_AND_BACK;
     
     void glShadeModel(uint mode);
+    void glPolygonMode( uint face, uint mode );     
+
+    const uint GL_LIGHTING,
+               GL_LIGHT0,
+               GL_LIGHT1,
+               GL_LIGHT2,
+               GL_LIGHT3,
+               GL_LIGHT4,
+               GL_LIGHT5,
+               GL_LIGHT6,
+               GL_LIGHT7,
+               GL_SPOT_EXPONENT,
+               GL_SPOT_CUTOFF,
+               GL_CONSTANT_ATTENUATION,
+               GL_LINEAR_ATTENUATION,
+               GL_QUADRATIC_ATTENUATION,
+               GL_AMBIENT,
+               GL_DIFFUSE,
+               GL_SPECULAR,
+               GL_SHININESS,
+               GL_EMISSION,
+               GL_POSITION,
+               GL_SPOT_DIRECTION,
+               GL_AMBIENT_AND_DIFFUSE,
+               GL_COLOR_INDEXES,
+               GL_LIGHT_MODEL_TWO_SIDE,
+               GL_LIGHT_MODEL_LOCAL_VIEWER,
+               GL_LIGHT_MODEL_AMBIENT,
+               GL_FRONT_AND_BACK,
+               GL_SHADE_MODEL,
+               GL_FLAT,
+               GL_SMOOTH,
+               GL_COLOR_MATERIAL,
+               GL_COLOR_MATERIAL_FACE,
+               GL_COLOR_MATERIAL_PARAMETER,
+               GL_NORMALIZE;
+
+
+    void glLightf( uint light, uint pname, float32 param );
+    void glLighti( uint light, uint pname, int param );
+    void glLightfv( uint light, uint pname, array[float32] params );
+    void glLightiv( uint light, uint pname, array[int] params );
     
-    void glPolygonMode( uint face, uint mode );
-     
     const uint GL_DEPTH_TEST, GL_TEXTURE_2D, GL_LIGHTING;
      
     void glEnable(uint cap);
@@ -146,6 +198,7 @@
     const uint GL_LEQUAL;
      
     void glDepthFunc(uint func);
+    void glDepthMask(bool flag);
     
     # hints
     const uint GL_PERSPECTIVE_CORRECTION_HINT,
@@ -190,10 +243,10 @@
                        );
 
     # small subset of buffers, pixel drawing/reading
-    const uint GL_RGB;
+    const uint GL_RGB, GL_RGBA;
 
     # small subset of OpenGL 1.1 stuff
-    const uint GL_RGB8;
+    const uint GL_RGB8, GL_RGBA8;
 
     void glTexParameterf( uint target, uint pname, float param );
     void glTexParameteri( uint target, uint pname, int param );
@@ -208,4 +261,53 @@
                                    uint pname, array[int] params
                                    );
 
+    void glTexCoord1d( float64 s );
+    void glTexCoord1f( float32 s );
+    void glTexCoord1i( int s );
+    
+    void glTexCoord2d( float64 s, float64 t );
+    void glTexCoord2f( float32 s, float32 t );
+    void glTexCoord2i( int s, int t );
+    
+    void glTexCoord3d( float64 s, float64 t, float64 r );
+    void glTexCoord3f( float32 s, float32 t, float32 r );
+    void glTexCoord3i( int s, int t, int r );
+    
+    void glTexCoord4d( float64 s, float64 t, float64 r, float64 q );
+    void glTexCoord4f( float32 s, float32 t, float32 r, float32 q );
+    void glTexCoord4i( int s, int t, int r, int q );
+    
+    void glTexCoord1dv( array[float64] v );
+    void glTexCoord1fv( array[float32] v );
+    void glTexCoord1iv( array[int] v );
+    
+    void glTexCoord2dv( array[float64] v );
+    void glTexCoord2fv( array[float32] v );
+    void glTexCoord2iv( array[int] v );
+    
+    void glTexCoord3dv( array[float64] v );
+    void glTexCoord3fv( array[float32] v );
+    void glTexCoord3iv( array[int] v );
+    
+    void glTexCoord4dv( array[float64] v );
+    void glTexCoord4fv( array[float32] v );
+    void glTexCoord4iv( array[int] v );
+
+    # Blending
+    const uint GL_BLEND,
+               GL_BLEND_SRC,
+               GL_BLEND_DST,
+               GL_ZERO,
+               GL_ONE,
+               GL_SRC_COLOR,
+               GL_ONE_MINUS_SRC_COLOR,
+               GL_SRC_ALPHA,
+               GL_ONE_MINUS_SRC_ALPHA,
+               GL_DST_ALPHA,
+               GL_ONE_MINUS_DST_ALPHA,
+               GL_DST_COLOR,
+               GL_ONE_MINUS_DST_COLOR,
+               GL_SRC_ALPHA_SATURATE;
+
+    void glBlendFunc(uint sfactor, uint dfactor);
 }

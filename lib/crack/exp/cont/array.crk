@@ -1,7 +1,10 @@
 # Copyright 2010 Google Inc
 # Generic array implementation
-# to use this macro, you must 'import crack.lang die, free;'
-# You must implement GenericArray and the specific macro for your needs 
+# to use this macro, you must:
+#   import crack.lang die, free;
+#   @import crack.exp.cont.array GenericArray, GenericObjArray, 
+#           GenericPrimArray;
+# You must import GenericArray and the specific macro for your needs 
 # (GenericObjArray for objects with oper bind and release, GenericPrimArray 
 # for primitive types).
 

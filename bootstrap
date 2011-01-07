@@ -35,4 +35,5 @@ __eof__
 if [ ! -e ltmain.sh ]; then libtoolize; fi
 aclocal -I m4 --install
 autoconf
+autoheader
 automake --add-missing

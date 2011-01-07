@@ -640,7 +640,7 @@ class CString : String {
         buffer[size] = 0;
     }
 
-    oper init(String s0) {
+    oper init(Buffer s0) {
         __copy(s0.buffer, s0.size);
     }
 

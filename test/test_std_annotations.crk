@@ -63,7 +63,12 @@ if (@tm_stringify(boyng) != 'boyng')
 }
 
 class Bar : Object @implements Foo {
-    void do() { result `interfaces work`; }
+    String y() { return 'nested parens work'; }
+
+    void do() { 
+        x := 'interp vars work';
+        result `interfaces work: $x, $(y())`; 
+    }
     
     oper del() { result `Bar deleted`; }
 }
@@ -71,7 +76,8 @@ class Bar : Object @implements Foo {
 result = StringFormatter();
 Foo b = Bar();
 b.do();
-if (result.createString() != 'interfaces work')
+if (result.createString() != 
+    'interfaces work: interp vars work, nested parens work')
     cout `Failed to implement interface implementation\n`;
 result = StringFormatter();
 b = null;

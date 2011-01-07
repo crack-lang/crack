@@ -7,35 +7,44 @@ ACLOCAL_AMFLAGS = -I m4 --install
 lib_LTLIBRARIES = libCrackLang.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_LDFLAGS = -version-info 0:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
-pkglib_LTLIBRARIES = test/testext.la runtime.la
+
+
+noinst_LTLIBRARIES = test/testext.la
+
+rtlibdir = $(libdir)/crack-$(VERSION)/crack
+rtlib_LTLIBRARIES = runtime.la
+
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 runtime_la_LDFLAGS = -avoid-version -module
 runtime_la_SOURCES = %libRuntimeSources%
 
+extlibdir = $(libdir)/crack-$(VERSION)/crack/ext
+extlib_LTLIBRARIES =
+
 if HAVE_GTK
-pkglib_LTLIBRARIES += _gtk.la
+extlib_LTLIBRARIES += _gtk.la
 _gtk_la_LDFLAGS = -avoid-version -module @GTK_LIBS@ @GTK_CFLAGS@
 _gtk_la_CXXFLAGS = @GTK_CFLAGS@
 _gtk_la_SOURCES = opt/_gtk.cc
 endif
 
 if HAVE_PCRE
-pkglib_LTLIBRARIES += _pcre.la
+extlib_LTLIBRARIES += _pcre.la
 _pcre_la_LDFLAGS = -avoid-version -module @PCRE_LIBS@ @PCRE_CFLAGS@
 _pcre_la_CXXFLAGS = @PCRE_CFLAGS@
 _pcre_la_SOURCES = opt/_pcre.cc
 endif
 
 if HAVE_SDL
-pkglib_LTLIBRARIES += _sdl.la
+extlib_LTLIBRARIES += _sdl.la
 _sdl_la_LDFLAGS = -avoid-version -module @SDL_LIBS@
 _sdl_la_CXXFLAGS = @SDL_CFLAGS@
 _sdl_la_SOURCES = opt/_sdl.cc
 endif
 
 if HAVE_GL
-pkglib_LTLIBRARIES += _gl.la
+extlib_LTLIBRARIES += _gl.la
 _gl_la_LDFLAGS = -avoid-version -module @GL_LIBS@
 _gl_la_CXXFLAGS = @GL_LIBS@
 _gl_la_SOURCES = opt/_gl.cc
@@ -112,11 +121,15 @@ noinst_HEADERS = \
     compiler/init.h \
     Crack.h
 
-pkginclude_HEADERS = \
+compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
+compilerinc_HEADERS = \
     compiler/Annotation.h \
     compiler/CrackContext.h \
     compiler/Location.h \
-    compiler/Token.h \
+    compiler/Token.h
+
+extincdir = $(includedir)/crack-$(VERSION)/crack/ext
+extinc_HEADERS = \
     ext/Func.h \
     ext/Module.h \
     ext/Object.h \
@@ -151,12 +164,6 @@ doc/Manual.html: doc/Manual.nml
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
 	$(MKDIR_P) $(DESTDIR)$(cracklib)/crack
-	(for ext in _gtk _pcre _sdl _gl; do \
-	   if test -e .libs/$$ext.so; then \
-	       mkdir -p lib/crack/ext; \
-	       ln .libs/$$ext.so lib/crack/ext; \
-	   fi;
-	 done)
 	(cd $(srcdir)/lib; \
 	 for file in $$(find); do \
 	   if test -d $$file; then \

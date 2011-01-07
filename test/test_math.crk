@@ -2,7 +2,8 @@
 // Lincensed under LGPLv3
 
 // test of math library
-import crack.io cout, StringFormatter;
+@import crack.exp.ann define;
+import crack.io cout, StringFormatter, Formatter;
 import crack.exp.file File;
 
 // import all the symbols in the module
