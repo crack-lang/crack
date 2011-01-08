@@ -45,7 +45,7 @@ int *copyArray(int count, int *array) {
     return (int *)memcpy(result, array, count * sizeof(int));
 }
 
-extern "C" void test_testext_init(Module *mod) {
+extern "C" void testext_init(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
     

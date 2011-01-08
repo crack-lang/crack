@@ -9,18 +9,19 @@ libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_LDFLAGS = -version-info 0:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 
-noinst_LTLIBRARIES = test/testext.la
-
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
 
-test_testext_la_LDFLAGS = -avoid-version -module
-test_testext_la_SOURCES = test/testext.cc
 runtime_la_LDFLAGS = -avoid-version -module
 runtime_la_SOURCES = %libRuntimeSources%
 
+# this is really annoying, testext needs to be installed in order to generate 
+# a .so file.
 extlibdir = $(libdir)/crack-$(VERSION)/crack/ext
-extlib_LTLIBRARIES =
+extlib_LTLIBRARIES = test/testext.la
+
+test_testext_la_LDFLAGS = -avoid-version -module
+test_testext_la_SOURCES = test/testext.cc
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -111,6 +112,7 @@ noinst_HEADERS = \
     parser/Token.h \
     parser/Toker.h \
     runtime/Dir.h \
+    runtime/Math.h \
     runtime/Net.h \
     runtime/Util.h \
     spug/Exception.h \
@@ -182,3 +184,6 @@ uninstall-local:
 	rm -r $(DESTDIR)$(cracklib)
 	rm -r $(DESTDIR)$(docdir)
 	rm $(DESTDIR)$(bindir)/crack$(VERSION)
+
+clean-local:
+	rm -f lib/crack/ext/_pcre.so
