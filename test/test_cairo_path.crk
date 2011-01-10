@@ -16,7 +16,9 @@ import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
                            cairo_destroy, cairo_surface_destroy,
                            cairo_pdf_surface_create, cairo_ps_surface_create,
                            cairo_ps_level_to_string,
-                           CAIRO_PS_LEVEL_2, CAIRO_PS_LEVEL_3;
+                           CAIRO_PS_LEVEL_2, CAIRO_PS_LEVEL_3,
+                           cairo_svg_surface_create, cairo_svg_version_to_string,
+                           CAIRO_SVG_VERSION_1_2;
 import crack.math PI, sqrt;
 
 void draw(cairo_t cr, cairo_surface_t surface){
@@ -63,8 +65,17 @@ cairo_surface_destroy (surface);
 
 // PS surface
 surface = cairo_ps_surface_create (CString("path-close.ps").buffer, 120, 120);
-level:=CString(cairo_ps_level_to_string (CAIRO_PS_LEVEL_2), false);
-cout `Postscript level=$(cairo_ps_level_to_string (CAIRO_PS_LEVEL_3))\n`;
+pslevel:=CString(cairo_ps_level_to_string (CAIRO_PS_LEVEL_2), false);
+cr = cairo_create (surface);
+draw(cr, surface);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+
+// SVG surface
+surface = cairo_svg_surface_create (CString("path-close.svg").buffer, 120, 120);
+svgversion:=CString(cairo_svg_version_to_string (CAIRO_SVG_VERSION_1_2),false);
 cr = cairo_create (surface);
 draw(cr, surface);
 
