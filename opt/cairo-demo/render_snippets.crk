@@ -1,0 +1,85 @@
+# Conrad Steenberg <conrad.steenberg@gmail.com>
+#
+# Render 
+
+import crack.lang CString, Buffer;
+import crack.io cout;
+import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
+                           CAIRO_FORMAT_ARGB32, cairo_create, cairo_move_to,
+                           cairo_line_to, cairo_rel_line_to,
+                           cairo_arc, cairo_rel_curve_to,
+                           cairo_close_path, cairo_surface_write_to_png,
+                           cairo_surface_flush, cairo_set_line_width,
+                           cairo_set_source_rgb, cairo_stroke, cairo_scale,
+                           cairo_destroy, cairo_surface_destroy,
+                           cairo_pdf_surface_create, cairo_ps_surface_create,
+                           cairo_ps_level_to_string,
+                           CAIRO_PS_LEVEL_2, CAIRO_PS_LEVEL_3,
+                           cairo_svg_surface_create, cairo_svg_version_to_string,
+                           CAIRO_SVG_VERSION_1_2;
+import crack.math PI, sqrt;
+
+void draw(cairo_t cr, cairo_surface_t surface){
+   cairo_scale (cr, 120, 120);
+
+   cairo_set_line_width (cr, 0.1);
+   cairo_set_source_rgb (cr, 0, 0, 0);
+
+   // Draw some lines and curves
+   cairo_move_to (cr, 0.25, 0.25);
+   cairo_line_to (cr, 0.5, 0.375);
+   cairo_rel_line_to (cr, 0.25, -0.125);
+   cairo_arc (cr, 0.5, 0.5, 0.25 * sqrt(2), -0.25 * PI, 0.25 * PI);
+   cairo_rel_curve_to (cr, -0.25, -0.125, -0.25, 0.125, -0.5, 0);
+   cairo_close_path (cr);
+   cairo_stroke (cr);
+   cairo_surface_flush (surface);
+}
+
+// Create the surface and context
+cairo_surface_t surface;
+cairo_t cr;
+uint32 status;
+
+// PNG surface
+surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 120, 120);
+cr = cairo_create (surface);
+draw(cr, surface);
+// Write surface to PNG file
+status = cairo_surface_write_to_png (surface, CString("path-close.png").buffer);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+
+// PDF surface
+surface = cairo_pdf_surface_create (CString("path-close.pdf").buffer, 120, 120);
+cr = cairo_create (surface);
+draw(cr, surface);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+
+// PS surface
+surface = cairo_ps_surface_create (CString("path-close.ps").buffer, 120, 120);
+pslevel:=CString(cairo_ps_level_to_string (CAIRO_PS_LEVEL_2), false);
+cr = cairo_create (surface);
+draw(cr, surface);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+
+// SVG surface
+surface = cairo_svg_surface_create (CString("path-close.svg").buffer, 120, 120);
+svgversion:=CString(cairo_svg_version_to_string (CAIRO_SVG_VERSION_1_2),false);
+cr = cairo_create (surface);
+draw(cr, surface);
+
+// Clean up
+cairo_destroy (cr);
+cairo_surface_destroy (surface);
+
+
+cout `ok\n`;
