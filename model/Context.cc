@@ -580,12 +580,13 @@ void Context::error(const parser::Location &loc, const string &msg,
         throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
                                            loc.getLineNumber() << ": " <<
                                            msg <<
-                                           ContextStack(ec)
+                                           ContextStack(ec) <<
+                                           endl
                                            )
                                 );
     else {
         cerr << "ParseError: " << loc.getName() << ":" << 
-            loc.getLineNumber() << ": " << msg << ContextStack(ec);
+            loc.getLineNumber() << ": " << msg << ContextStack(ec) << endl;
         exit(1);
     }
     
