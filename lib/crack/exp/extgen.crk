@@ -252,6 +252,8 @@ class Errors : StringFormatter {
     oper init(CrackContext ctx0) : ctx = ctx0 {}
     
     oper del() {
+        # null terminate
+        this `\0`;
         if (!(tok is null))
             ctx.error(tok, createString().buffer);
         else
