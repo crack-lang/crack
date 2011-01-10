@@ -111,20 +111,33 @@ class TypeImpl : Type {
        Type(name0, emitted0), 
        members() {}
 
+    // class members
     void addMember(Arg member) {
         members.append(member);
     }
 
-    
+   // class methods, emit not implemented
+    void addMethod(Arg method) {
+        // methods.append(method);
+    }
+
     void emitInitializer(Formatter out) {
         if (initialized)
             return;
 
         typeVar := emit();
+        
+        // emit initializer
         out `    crack::ext::Type *$typeVar = mod->addType("$name");\n`;
 
-        for (member :in members)
+        // emit member variables
+        for (member :in members){
+           if (member.type.isBuiltIn()) 
+              member.type.emitInitializer(out);
            out `       $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
+        }
+        
+        // finish type definition
         out `    $typeVar->finish();\n\n`;
         initialized = true;
     }
@@ -165,7 +178,7 @@ class SpecializedType : TypeImpl {
         if (initialized)
             return;
 
-        # make sure that the types we depend on are initialized        
+        # make sure that the types we depend on are initialized
         generic.emitInitializer(out);
         specializer.emitInitializer(out);
 
@@ -209,7 +222,7 @@ class GenericType : TypeImpl {
     crack::ext::Type $(emit()) = mod->addType("$name");
 `;
     }
-}        
+}
 
 class ArrayType : GenericType {
 
@@ -327,7 +340,7 @@ class ExtensionData {
         @setConstType('float64', 'Float64', 'double');
         @setConstType('float', 'Float', 'double');
         
-        types['array'] = ArrayType();        
+        types['array'] = ArrayType();
     }
     
     Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }

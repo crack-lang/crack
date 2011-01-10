@@ -1,4 +1,10 @@
 #include <cairo.h>
+#include <cairo-pdf.h>
+#include <cairo-ps.h>
+#include <cairo-svg.h>
+#include <cairo-xlib.h>
+#include <cairo-features.h>
+#include <X11/Xlib.h>
 cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
 cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
 cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }
@@ -12,6 +18,21 @@ extern "C"
 void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
+    crack::ext::Type *type_Display = mod->addType("Display");
+    type_Display->finish();
+
+    crack::ext::Type *type_Drawable = mod->addType("Drawable");
+    type_Drawable->finish();
+
+    crack::ext::Type *type_Pixmap = mod->addType("Pixmap");
+    type_Pixmap->finish();
+
+    crack::ext::Type *type_Screen = mod->addType("Screen");
+    type_Screen->finish();
+
+    crack::ext::Type *type_Visual = mod->addType("Visual");
+    type_Visual->finish();
+
 
     crack::ext::Type *array = mod->getType("array");
     crack::ext::Type *type_byteptr = mod->getByteptrType();
@@ -43,6 +64,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         array_pcairo__matrix__t_q = array->getSpecialization(params);
     }
     crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t");
+    crack::ext::Type *type_float64 = mod->getFloat64Type();
        type_cairo_rectangle_t->addInstVar(type_float64, "x");
        type_cairo_rectangle_t->addInstVar(type_float64, "y");
        type_cairo_rectangle_t->addInstVar(type_float64, "width");
@@ -66,7 +88,6 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_cairo_text_cluster_t;
         array_pcairo__text__cluster__t_q = array->getSpecialization(params);
     }
-    crack::ext::Type *type_float64 = mod->getFloat64Type();
 
     crack::ext::Type *array_pfloat64_q;
     {
@@ -1732,6 +1753,267 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_debug_reset_static_data
                      );
 
+    f = mod->addFunc(type_cairo_surface_t, "cairo_pdf_surface_create",
+                     (void *)cairo_pdf_surface_create
+                     );
+    f->addArg(type_byteptr, "filename");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_pdf_surface_create_for_stream",
+                     (void *)cairo_pdf_surface_create_for_stream
+                     );
+    f->addArg(type_voidptr, "write_func");
+    f->addArg(type_voidptr, "closure");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_void, "cairo_pdf_surface_restrict_to_version",
+                     (void *)cairo_pdf_surface_restrict_to_version
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_uint32, "version");
+
+    f = mod->addFunc(type_void, "cairo_pdf_get_versions",
+                     (void *)cairo_pdf_get_versions
+                     );
+    f->addArg(array_puint32_q, "versions");
+    f->addArg(array_pint_q, "num_versions");
+
+    f = mod->addFunc(type_byteptr, "cairo_pdf_version_to_string",
+                     (void *)cairo_pdf_version_to_string
+                     );
+    f->addArg(type_uint32, "version");
+
+    f = mod->addFunc(type_void, "cairo_pdf_surface_set_size",
+                     (void *)cairo_pdf_surface_set_size
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_svg_surface_create",
+                     (void *)cairo_svg_surface_create
+                     );
+    f->addArg(type_byteptr, "filename");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_svg_surface_create_for_stream",
+                     (void *)cairo_svg_surface_create_for_stream
+                     );
+    f->addArg(type_voidptr, "write_func");
+    f->addArg(type_voidptr, "closure");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_void, "cairo_svg_surface_restrict_to_version",
+                     (void *)cairo_svg_surface_restrict_to_version
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_uint32, "version");
+
+    f = mod->addFunc(type_void, "cairo_svg_get_versions",
+                     (void *)cairo_svg_get_versions
+                     );
+    f->addArg(array_puint32_q, "versions");
+    f->addArg(array_pint_q, "num_versions");
+
+    f = mod->addFunc(type_byteptr, "cairo_svg_version_to_string",
+                     (void *)cairo_svg_version_to_string
+                     );
+    f->addArg(type_uint32, "version");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_xlib_surface_create",
+                     (void *)cairo_xlib_surface_create
+                     );
+    f->addArg(type_Display, "dpy");
+    f->addArg(type_Drawable, "drawable");
+    f->addArg(type_Visual, "visual");
+    f->addArg(type_int, "width");
+    f->addArg(type_int, "height");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_xlib_surface_create_for_bitmap",
+                     (void *)cairo_xlib_surface_create_for_bitmap
+                     );
+    f->addArg(type_Display, "dpy");
+    f->addArg(type_Pixmap, "bitmap");
+    f->addArg(type_Screen, "screen");
+    f->addArg(type_int, "width");
+    f->addArg(type_int, "height");
+
+    f = mod->addFunc(type_void, "cairo_xlib_surface_set_size",
+                     (void *)cairo_xlib_surface_set_size
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_int, "width");
+    f->addArg(type_int, "height");
+
+    f = mod->addFunc(type_void, "cairo_xlib_surface_set_drawable",
+                     (void *)cairo_xlib_surface_set_drawable
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_Drawable, "drawable");
+    f->addArg(type_int, "width");
+    f->addArg(type_int, "height");
+
+    f = mod->addFunc(type_Display, "cairo_xlib_surface_get_display",
+                     (void *)cairo_xlib_surface_get_display
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_Drawable, "cairo_xlib_surface_get_drawable",
+                     (void *)cairo_xlib_surface_get_drawable
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_Screen, "cairo_xlib_surface_get_screen",
+                     (void *)cairo_xlib_surface_get_screen
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_Visual, "cairo_xlib_surface_get_visual",
+                     (void *)cairo_xlib_surface_get_visual
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_int, "cairo_xlib_surface_get_depth",
+                     (void *)cairo_xlib_surface_get_depth
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_int, "cairo_xlib_surface_get_width",
+                     (void *)cairo_xlib_surface_get_width
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_int, "cairo_xlib_surface_get_height",
+                     (void *)cairo_xlib_surface_get_height
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_ps_surface_create",
+                     (void *)cairo_ps_surface_create
+                     );
+    f->addArg(type_byteptr, "filename");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_cairo_surface_t, "cairo_ps_surface_create_for_stream",
+                     (void *)cairo_ps_surface_create_for_stream
+                     );
+    f->addArg(type_voidptr, "write_func");
+    f->addArg(type_voidptr, "closure");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_restrict_to_level",
+                     (void *)cairo_ps_surface_restrict_to_level
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_uint32, "level");
+
+    f = mod->addFunc(type_void, "cairo_ps_get_levels",
+                     (void *)cairo_ps_get_levels
+                     );
+    f->addArg(array_puint32_q, "levels");
+    f->addArg(type_int, "num_levels");
+
+    f = mod->addFunc(type_byteptr, "cairo_ps_level_to_string",
+                     (void *)cairo_ps_level_to_string
+                     );
+    f->addArg(type_uint32, "level");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_set_eps",
+                     (void *)cairo_ps_surface_set_eps
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_bool, "eps");
+
+    f = mod->addFunc(type_bool, "cairo_ps_surface_get_eps",
+                     (void *)cairo_ps_surface_get_eps
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_set_size",
+                     (void *)cairo_ps_surface_set_size
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_float64, "width_in_points");
+    f->addArg(type_float64, "height_in_points");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_dsc_comment",
+                     (void *)cairo_ps_surface_dsc_comment
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_byteptr, "comment");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_dsc_begin_setup",
+                     (void *)cairo_ps_surface_dsc_begin_setup
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    f = mod->addFunc(type_void, "cairo_ps_surface_dsc_begin_page_setup",
+                     (void *)cairo_ps_surface_dsc_begin_page_setup
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_FC_FONT",
+                     static_cast<int>(CAIRO_HAS_FC_FONT)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_FT_FONT",
+                     static_cast<int>(CAIRO_HAS_FT_FONT)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_GOBJECT_FUNCTIONS",
+                     static_cast<int>(CAIRO_HAS_GOBJECT_FUNCTIONS)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_IMAGE_SURFACE",
+                     static_cast<int>(CAIRO_HAS_IMAGE_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_PDF_SURFACE",
+                     static_cast<int>(CAIRO_HAS_PDF_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_PNG_FUNCTIONS",
+                     static_cast<int>(CAIRO_HAS_PNG_FUNCTIONS)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_PS_SURFACE",
+                     static_cast<int>(CAIRO_HAS_PS_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_RECORDING_SURFACE",
+                     static_cast<int>(CAIRO_HAS_RECORDING_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_SVG_SURFACE",
+                     static_cast<int>(CAIRO_HAS_SVG_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_USER_FONT",
+                     static_cast<int>(CAIRO_HAS_USER_FONT)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SHM_FUNCTIONS",
+                     static_cast<int>(CAIRO_HAS_XCB_SHM_FUNCTIONS)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SURFACE",
+                     static_cast<int>(CAIRO_HAS_XCB_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_SURFACE",
+                     static_cast<int>(CAIRO_HAS_XLIB_SURFACE)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_XRENDER_SURFACE",
+                     static_cast<int>(CAIRO_HAS_XLIB_XRENDER_SURFACE)
+                     );
+
     mod->addConstant(type_uint32, "CAIRO_STATUS_SUCCESS",
                      static_cast<int>(CAIRO_STATUS_SUCCESS)
                      );
@@ -2378,5 +2660,29 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 
     mod->addConstant(type_uint32, "CAIRO_REGION_OVERLAP_PART",
                      static_cast<int>(CAIRO_REGION_OVERLAP_PART)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_PDF_VERSION_1_4",
+                     static_cast<int>(CAIRO_PDF_VERSION_1_4)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_PDF_VERSION_1_5",
+                     static_cast<int>(CAIRO_PDF_VERSION_1_5)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_SVG_VERSION_1_1",
+                     static_cast<int>(CAIRO_SVG_VERSION_1_1)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_SVG_VERSION_1_2",
+                     static_cast<int>(CAIRO_SVG_VERSION_1_2)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_PS_LEVEL_2",
+                     static_cast<int>(CAIRO_PS_LEVEL_2)
+                     );
+
+    mod->addConstant(type_uint32, "CAIRO_PS_LEVEL_3",
+                     static_cast<int>(CAIRO_PS_LEVEL_3)
                      );
 }
