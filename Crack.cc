@@ -45,7 +45,6 @@ void Crack::addToSourceLibPath(const string &path) {
 }
 
 Crack::Crack() : 
-    sourceLibPath(1), 
     rootBuilder(new LLVMBuilder()), 
     initialized(false),
     dump(false),
@@ -76,16 +75,15 @@ Crack::Crack() :
          ++i) {
          rootContext->ns->addAlias(i->first, i->second.get());
     }
-
-    // search for source files in the current directory
-    sourceLibPath[0] = ".";
 }
 
 bool Crack::init() {
     if (!initialized) {
         // finalize the search path
-        if (useGlobalLibs)
+        if (useGlobalLibs) {
+            sourceLibPath.push_back(".");
             sourceLibPath.push_back(CRACKLIB);
+        }
         
         // initialize the built-in compiler extension and store the 
         // CrackContext type in global data.

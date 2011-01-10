@@ -776,8 +776,8 @@ test_output 'invalid unary operator' 'class Foo {} !Foo();' \
 
 test_output 'recursive imports give an error' \
     'import test.recursive_import;' \
-    "ParseError: ./test/recursive_import.crk:2: Attempting to import module \
-test.recursive_import recursively."
+    "ParseError: $root/test/recursive_import.crk:2: Attempting to import \
+module test.recursive_import recursively."
 
 test_output 'test array functions' 'import test.test_arrays;' ok
 
@@ -786,7 +786,7 @@ test_output 'error on the use of unspecialized generics' \
     "${parseError}1: Generic type array must be specialized to be used."
 
 # switch to full bootstrapping mode now that importing works
-opts="-g -l $root -l $root/lib"
+opts="-g -l $root -l $root/lib -l $root/test/.libs"
 
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \
@@ -1100,9 +1100,7 @@ else
     echo 'Omitting regex tests (PCRE not installed)'
 fi
 test_output 'sockets' 'import test.test_sockets;' ok
-test_output 'file api' 'import test.test_dir;' ok
-ln -f test/.libs/testext.so test/testext.so || {
-    echo "Unable to copy shared library"; exit 1; }
+test_output 'file api' 'import test.test_dir;' ok '' "$root"
 test_output 'extension modules' 'import test.test_extensions;' ok
 test_output 'annotations' 'import test.test_annotations;' ok
 test_output 'algorithms' 'import test.test_algo;' ok

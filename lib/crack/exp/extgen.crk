@@ -321,6 +321,7 @@ class ExtensionData {
     StringArray module = {};  # module name
     StringArray preamble = {};
     ConstArray consts = {};
+    bool inSrcDir;
     
     oper init() : types(), funcs() {
         String name;
@@ -481,6 +482,8 @@ class ExtensionData {
                 filename = _parseString(ctx);
             } else if (ann == 'inject') {
                 preamble.append(_parseString(ctx));
+            } else if (ann == 'crack_internal') {
+                inSrcDir = true;
             } else {
                 error(ctx, tok) `Unexpected annotation: $ann`;
             }
@@ -593,7 +596,8 @@ definition.`;
 
     String header(String name) {
         StringFormatter fmt = {};
-        fmt `"ext/$name.h"`;
+        pfx := inSrcDir ? '' : 'crack/';
+        fmt `"$(pfx)ext/$name.h"`;
         return fmt.createString();
     }
 

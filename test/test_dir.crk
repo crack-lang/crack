@@ -2,11 +2,18 @@
 # tests of crack.dir
 
 import crack.io cout, StringFormatter;
+import crack.sys argv;
 import crack.exp.dir Directory;
 import crack.exp.file FileInfo;
 
+String base;
+if (argv.count() > 1)
+    base = argv[1] + '/';
+else
+    base = '';
+
 if (true) {
-    Directory d = {'lib'};
+    Directory d = {base + 'lib'};
     StringFormatter result = {};
     
     i := d.dirIter();
@@ -14,23 +21,23 @@ if (true) {
         result `$(Directory.cast(i.elem()).name)`;
     
     s := result.createString();
-    if (s != 'lib/crack')
+    if (s != base + 'lib/crack')
         cout `failed to get lib/crack, got: $s\n`;
 }
 
 if (true) {
-    Directory d = {'lib/crack'};
+    Directory d = {base + 'lib/crack'};
     
     FileInfo target;
     i := d.fileInfoIter();
     while (i.nx()) {
         info := FileInfo.cast(i.elem());
-        if (info.name == 'lib/crack/lang.crk')
+        if (info.name == base + 'lib/crack/lang.crk')
             target = info;
     }
     
     if (!target)
-        cout `failed to find lib/crack/lang.crk\n`;
+        cout `failed to find $(base)lib/crack/lang.crk\n`;
     
     if (target.basename(false) != 'lang.crk')
         cout `basename with extension failed\n`;
@@ -38,7 +45,7 @@ if (true) {
     if (target.basename(true) != 'lang')
         cout `basename without extension failed\n`;
     
-    if (target.dirname() != 'lib/crack')
+    if (target.dirname() != base + 'lib/crack')
         cout `dirname failed\n`;
 }
 

@@ -14,6 +14,7 @@
 
    @inject '#include <cairo-features.h>\n'
    @inject '#include <X11/Xlib.h>\n'
+   @crack_internal
 
    // Features
    const uint32
@@ -406,6 +407,7 @@
    void cairo_paint_with_alpha (cairo_t cr, float64   alpha);
 
    void cairo_mask (cairo_t cr, cairo_pattern_t pattern);
+
    void cairo_mask_surface (cairo_t cr, cairo_surface_t surface,
                             float64 surface_x,
                             float64 surface_y);

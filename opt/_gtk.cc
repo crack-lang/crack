@@ -12,7 +12,6 @@ extern "C"
 void crack_ext__gtk_init(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
-
     crack::ext::Type *type_GList = mod->addType("GList");
     type_GList->finish();
 
@@ -21,6 +20,7 @@ void crack_ext__gtk_init(crack::ext::Module *mod) {
 
     crack::ext::Type *type_GtkWidget = mod->addType("GtkWidget");
     type_GtkWidget->finish();
+
 
     crack::ext::Type *array = mod->getType("array");
     crack::ext::Type *type_bool = mod->getBoolType();

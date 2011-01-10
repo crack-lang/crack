@@ -7,6 +7,7 @@
     @inject 'GtkObject *GtkObject_cast(GtkWidget *widget) {\n'
     @inject '    return GTK_OBJECT(widget);\n'
     @inject '}\n';
+    @crack_internal
     
     class GList;
 /*

@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 # Extension tests.
 
-import test.testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST;
+import testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
