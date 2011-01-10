@@ -1,8 +1,6 @@
-# Test cairo 2D drawing library binding
 # Conrad Steenberg <conrad.steenberg@gmail.com>
 #
-# This tests the translation of the C library
-# Follow example code at http://cairographics.org/tutorial/
+# Render 
 
 import crack.lang CString, Buffer;
 import crack.io cout;
