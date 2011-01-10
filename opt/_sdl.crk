@@ -19,6 +19,7 @@
     @inject 'SDL_MouseMotionEvent *SDL_Event_GetMotion(SDL_Event *evt) { return &evt->motion; }\n';
     @inject 'uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent *evt) { return evt->x; }\n';
     @inject 'uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent *evt) { return evt->y; }\n';
+    @crack_internal
 
     
     const uint32 SDL_INIT_TIMER,

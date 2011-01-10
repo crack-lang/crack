@@ -4,6 +4,7 @@
 @generateExtension crack.ext._pcre  {
     @filename 'opt/_pcre.cc'
     @inject '#include <pcre.h>\n'
+    @crack_internal
 
     class PCRE;
     PCRE pcre_compile2(byteptr pattern, int options, array[int] errorCode,

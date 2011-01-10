@@ -7,6 +7,7 @@
 @generateExtension crack.ext._cairo {
    @filename 'opt/_cairo.cc'
    @inject '#include <cairo.h>\n'
+   @crack_internal
 
    // Status constants
    const uint32 

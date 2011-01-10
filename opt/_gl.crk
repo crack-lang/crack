@@ -5,6 +5,7 @@
 @generateExtension crack.ext._gl {
     @filename 'opt/_gl.cc'
     @inject '#include <GL/gl.h>\n'
+    @crack_internal
 
     uint glGetError();
 
