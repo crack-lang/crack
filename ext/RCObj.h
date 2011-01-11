@@ -17,13 +17,13 @@ class RCObj {
         /**
          * Increments the reference count of the object.
          */
-        void bind();
+        void bind()  { if (this) ++refCount; }
         
         /**
          * Decrements the reference count of the object, deleting it if it 
          * drops to zero.
          */
-        void release();
+        void release() { if (this && !--refCount) delete this; }
 };
 
 }}

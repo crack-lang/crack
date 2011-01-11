@@ -50,17 +50,18 @@ struct SockAddrIn : public SockAddr {
     uint32_t addr;
     unsigned int port;
 
-    void init1(uint8_t a, uint8_t b, uint8_t c, uint8_t d, 
-               unsigned int port
-               );
+    static void init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c, 
+                      uint8_t d, 
+                      unsigned int port
+                      );
 
-    void init2(uint32_t addr, unsigned int port);
+    static void init2(SockAddrIn *inst, uint32_t addr, unsigned int port);
 };
 
 struct TimeVal {
     int32_t secs, nsecs;
 
-    void init(int32_t secs0, int32_t nsecs0);
+    static void init(TimeVal *inst, int32_t secs0, int32_t nsecs0);
 };
 
 struct PollEvt {

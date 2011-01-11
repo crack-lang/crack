@@ -5,5 +5,3 @@
 using namespace crack::ext;
 
 RCObj::~RCObj() {}
-void RCObj::bind() { if (this) ++refCount; }
-void RCObj::release() { if (this && !--refCount) delete this; }

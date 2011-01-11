@@ -26,3 +26,25 @@ void *Annotation::getFunc() {
     else
         return 0;
 }
+
+void *Annotation::_getUserData(Annotation *inst) {
+    model::PrimFuncAnnotation *pfa =
+        model::PrimFuncAnnotationPtr::cast(inst->rep);
+    if (pfa)
+        return pfa->getUserData();
+    else
+        return 0;
+}
+
+const char *Annotation::_getName(Annotation *inst) {
+    return inst->rep->name.c_str();
+}
+
+void *Annotation::_getFunc(Annotation *inst) {
+    model::PrimFuncAnnotation *pfa =
+        model::PrimFuncAnnotationPtr::cast(inst->rep);
+    if (pfa)
+        return reinterpret_cast<void *>(pfa->getFunc());
+    else
+        return 0;
+}

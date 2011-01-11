@@ -64,23 +64,24 @@ static Constants constants = {
     INADDR_ANY
 };
 
-void SockAddrIn::init1(uint8_t a, uint8_t b, uint8_t c, uint8_t d, 
+void SockAddrIn::init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c, 
+                       uint8_t d, 
                        unsigned int port0
                        ) {
-    family = AF_INET;
-    addr = makeIPV4(a, b, c, d);
-    port = port0;
+    inst->family = AF_INET;
+    inst->addr = makeIPV4(a, b, c, d);
+    inst->port = port0;
 }
 
-void SockAddrIn::init2(uint32_t addr0, unsigned int port0) {
-    family = AF_INET;
-    addr = addr0;
-    port = port0;
+void SockAddrIn::init2(SockAddrIn *inst, uint32_t addr0, unsigned int port0) {
+    inst->family = AF_INET;
+    inst->addr = addr0;
+    inst->port = port0;
 }
 
-void TimeVal::init(int32_t secs0, int32_t nsecs0) {
-    secs = secs0;
-    nsecs = nsecs0;
+void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
+    inst->secs = secs0;
+    inst->nsecs = nsecs0;
 }
 
 Constants *getConstants() { return &constants; }

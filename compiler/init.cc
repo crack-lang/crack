@@ -93,16 +93,16 @@ void init(Module *mod) {
     Func *f;
     Type *locationType = mod->addType("Location");
     locationType->addMethod(mod->getByteptrType(), "getName",
-                            (void *)&Location::getName
+                            (void *)Location::_getName
                             );
     locationType->addMethod(mod->getIntType(), "getLineNumber",
-                            (void *)&Location::getLineNumber
+                            (void *)Location::_getLineNumber
                             );
     locationType->addMethod(mod->getVoidType(), "oper bind",
-                            (void *)&Location::bind
+                            (void *)Location::_bind
                             );
     locationType->addMethod(mod->getVoidType(), "oper release",
-                            (void *)&Location::release
+                            (void *)Location::_release
                             );
     locationType->finish();
 
@@ -114,93 +114,101 @@ void init(Module *mod) {
     f->addArg(mod->getByteptrType(), "text");
     f->addArg(locationType, "loc");
     tokenType->addMethod(mod->getVoidType(), "oper bind",
-                         (void *)&Token::bind
+                         (void *)Token::_bind
                          );
     tokenType->addMethod(mod->getVoidType(), "oper release",
-                         (void *)&Token::release
+                         (void *)Token::_release
                          );
     f = tokenType->addMethod(mod->getBoolType(), "hasText",
-                             (void *)&Token::hasText
+                             (void *)Token::_hasText
                              );
     f->addArg(mod->getByteptrType(), "text");
     
     tokenType->addMethod(mod->getByteptrType(), "getText",
-                         (void *)&Token::getText
+                         (void *)Token::_getText
                          );
     tokenType->addMethod(mod->getIntType(), "getType",
-                         (void *)&Token::getType
+                         (void *)Token::_getType
                          );
     tokenType->addMethod(locationType, "getLocation",
-                         (void *)&Token::getLocation
+                         (void *)Token::_getLocation
                          );
     
-    tokenType->addMethod(mod->getBoolType(), "isAnn", (void *)&Token::isAnn);
+    tokenType->addMethod(mod->getBoolType(), "isAnn", (void *)Token::_isAnn);
     tokenType->addMethod(mod->getBoolType(), "isBoolAnd", 
-                         (void *)&Token::isBoolAnd
+                         (void *)Token::_isBoolAnd
                          );
     tokenType->addMethod(mod->getBoolType(), "isBoolOr", 
-                         (void *)&Token::isBoolOr
+                         (void *)Token::_isBoolOr
                          );
-    tokenType->addMethod(mod->getBoolType(), "isIf", (void *)&Token::isIf);
-    tokenType->addMethod(mod->getBoolType(), "isIn", (void *)&Token::isIn);
+    tokenType->addMethod(mod->getBoolType(), "isIf", (void *)Token::_isIf);
+    tokenType->addMethod(mod->getBoolType(), "isIn", (void *)Token::_isIn);
     tokenType->addMethod(mod->getBoolType(), "isImport",
-                         (void *)&Token::isImport
+                         (void *)Token::_isImport
                          );
-    tokenType->addMethod(mod->getBoolType(), "isElse", (void *)&Token::isElse);
-    tokenType->addMethod(mod->getBoolType(), "isOper", (void *)&Token::isOper);
-    tokenType->addMethod(mod->getBoolType(), "isOn", (void *)&Token::isOn);
-    tokenType->addMethod(mod->getBoolType(), "isWhile", (void *)&Token::isWhile);
-    tokenType->addMethod(mod->getBoolType(), "isReturn", (void *)&Token::isReturn);
-    tokenType->addMethod(mod->getBoolType(), "isBreak", (void *)&Token::isBreak);
-    tokenType->addMethod(mod->getBoolType(), "isClass", (void *)&Token::isClass);
-    tokenType->addMethod(mod->getBoolType(), "isContinue", (void *)&Token::isContinue);
+    tokenType->addMethod(mod->getBoolType(), "isElse", (void *)Token::_isElse);
+    tokenType->addMethod(mod->getBoolType(), "isOper", (void *)Token::_isOper);
+    tokenType->addMethod(mod->getBoolType(), "isOn", (void *)Token::_isOn);
+    tokenType->addMethod(mod->getBoolType(), "isWhile",
+                         (void *)Token::_isWhile);
+    tokenType->addMethod(mod->getBoolType(), "isReturn",
+                         (void *)Token::_isReturn);
+    tokenType->addMethod(mod->getBoolType(), "isBreak",
+                         (void *)Token::_isBreak
+                         );
+    tokenType->addMethod(mod->getBoolType(), "isClass", 
+                         (void *)Token::_isClass
+                         );
+    tokenType->addMethod(mod->getBoolType(), "isContinue",
+                         (void *)Token::_isContinue
+                         );
     tokenType->addMethod(mod->getBoolType(), "isDollar", 
-                         (void *)&Token::isDollar
+                         (void *)Token::_isDollar
                          );
-    tokenType->addMethod(mod->getBoolType(), "isNull", (void *)&Token::isNull);
-    tokenType->addMethod(mod->getBoolType(), "isIdent", (void *)&Token::isIdent);
-    tokenType->addMethod(mod->getBoolType(), "isString", (void *)&Token::isString);
-    tokenType->addMethod(mod->getBoolType(), "isIstrBegin", (void *)&Token::isIstrBegin);
-    tokenType->addMethod(mod->getBoolType(), "isIstrEnd", (void *)&Token::isIstrEnd);
-    tokenType->addMethod(mod->getBoolType(), "isSemi", (void *)&Token::isSemi);
-    tokenType->addMethod(mod->getBoolType(), "isComma", (void *)&Token::isComma);
-    tokenType->addMethod(mod->getBoolType(), "isColon", (void *)&Token::isColon);
-    tokenType->addMethod(mod->getBoolType(), "isDecr", (void *)&Token::isDecr);
-    tokenType->addMethod(mod->getBoolType(), "isDefine", (void *)&Token::isDefine);
-    tokenType->addMethod(mod->getBoolType(), "isDot", (void *)&Token::isDot);
-    tokenType->addMethod(mod->getBoolType(), "isIncr", (void *)&Token::isIncr);
-    tokenType->addMethod(mod->getBoolType(), "isAssign", (void *)&Token::isAssign);
-    tokenType->addMethod(mod->getBoolType(), "isLParen", (void *)&Token::isLParen);
-    tokenType->addMethod(mod->getBoolType(), "isRParen", (void *)&Token::isRParen);
-    tokenType->addMethod(mod->getBoolType(), "isLCurly", (void *)&Token::isLCurly);
-    tokenType->addMethod(mod->getBoolType(), "isRCurly", (void *)&Token::isRCurly);
-    tokenType->addMethod(mod->getBoolType(), "isLBracket", (void *)&Token::isLBracket);
-    tokenType->addMethod(mod->getBoolType(), "isRBracket", (void *)&Token::isRBracket);
-    tokenType->addMethod(mod->getBoolType(), "isInteger", (void *)&Token::isInteger);
-    tokenType->addMethod(mod->getBoolType(), "isFloat", (void *)&Token::isFloat);
-    tokenType->addMethod(mod->getBoolType(), "isOctal", (void *)&Token::isOctal);
-    tokenType->addMethod(mod->getBoolType(), "isHex", (void *)&Token::isHex);
-    tokenType->addMethod(mod->getBoolType(), "isBinary", (void *)&Token::isBinary);
-    tokenType->addMethod(mod->getBoolType(), "isPlus", (void *)&Token::isPlus);
-    tokenType->addMethod(mod->getBoolType(), "isQuest", (void *)&Token::isQuest);
-    tokenType->addMethod(mod->getBoolType(), "isMinus", (void *)&Token::isMinus);
-    tokenType->addMethod(mod->getBoolType(), "isAsterisk", (void *)&Token::isAsterisk);
-    tokenType->addMethod(mod->getBoolType(), "isBang", (void *)&Token::isBang);
-    tokenType->addMethod(mod->getBoolType(), "isSlash", (void *)&Token::isSlash);
-    tokenType->addMethod(mod->getBoolType(), "isPercent", (void *)&Token::isPercent);
-    tokenType->addMethod(mod->getBoolType(), "isNot", (void *)&Token::isNot);
-    tokenType->addMethod(mod->getBoolType(), "isTilde", (void *)&Token::isTilde);
-    tokenType->addMethod(mod->getBoolType(), "isGT", (void *)&Token::isGT);
-    tokenType->addMethod(mod->getBoolType(), "isLT", (void *)&Token::isLT);
-    tokenType->addMethod(mod->getBoolType(), "isEQ", (void *)&Token::isEQ);
-    tokenType->addMethod(mod->getBoolType(), "isNE", (void *)&Token::isNE);
-    tokenType->addMethod(mod->getBoolType(), "isGE", (void *)&Token::isGE);
-    tokenType->addMethod(mod->getBoolType(), "isLE", (void *)&Token::isLE);
-    tokenType->addMethod(mod->getBoolType(), "isEnd", (void *)&Token::isEnd);
-    tokenType->addMethod(mod->getBoolType(), "isLogicAnd", (void *)&Token::isLogicAnd);
-    tokenType->addMethod(mod->getBoolType(), "isLogicOr", (void *)&Token::isLogicOr);
-    tokenType->addMethod(mod->getBoolType(), "isBinOp", (void *)&Token::isBinOp);
-    tokenType->addMethod(mod->getBoolType(), "isAugAssign", (void *)&Token::isAugAssign);
+    tokenType->addMethod(mod->getBoolType(), "isNull", (void *)Token::_isNull);
+    tokenType->addMethod(mod->getBoolType(), "isIdent", (void *)Token::_isIdent);
+    tokenType->addMethod(mod->getBoolType(), "isString", (void *)Token::_isString);
+    tokenType->addMethod(mod->getBoolType(), "isIstrBegin", (void *)Token::_isIstrBegin);
+    tokenType->addMethod(mod->getBoolType(), "isIstrEnd", (void *)Token::_isIstrEnd);
+    tokenType->addMethod(mod->getBoolType(), "isSemi", (void *)Token::_isSemi);
+    tokenType->addMethod(mod->getBoolType(), "isComma", (void *)Token::_isComma);
+    tokenType->addMethod(mod->getBoolType(), "isColon", (void *)Token::_isColon);
+    tokenType->addMethod(mod->getBoolType(), "isDecr", (void *)Token::_isDecr);
+    tokenType->addMethod(mod->getBoolType(), "isDefine", (void *)Token::_isDefine);
+    tokenType->addMethod(mod->getBoolType(), "isDot", (void *)Token::_isDot);
+    tokenType->addMethod(mod->getBoolType(), "isIncr", (void *)Token::_isIncr);
+    tokenType->addMethod(mod->getBoolType(), "isAssign", (void *)Token::_isAssign);
+    tokenType->addMethod(mod->getBoolType(), "isLParen", (void *)Token::_isLParen);
+    tokenType->addMethod(mod->getBoolType(), "isRParen", (void *)Token::_isRParen);
+    tokenType->addMethod(mod->getBoolType(), "isLCurly", (void *)Token::_isLCurly);
+    tokenType->addMethod(mod->getBoolType(), "isRCurly", (void *)Token::_isRCurly);
+    tokenType->addMethod(mod->getBoolType(), "isLBracket", (void *)Token::_isLBracket);
+    tokenType->addMethod(mod->getBoolType(), "isRBracket", (void *)Token::_isRBracket);
+    tokenType->addMethod(mod->getBoolType(), "isInteger", (void *)Token::_isInteger);
+    tokenType->addMethod(mod->getBoolType(), "isFloat", (void *)Token::_isFloat);
+    tokenType->addMethod(mod->getBoolType(), "isOctal", (void *)Token::_isOctal);
+    tokenType->addMethod(mod->getBoolType(), "isHex", (void *)Token::_isHex);
+    tokenType->addMethod(mod->getBoolType(), "isBinary", (void *)Token::_isBinary);
+    tokenType->addMethod(mod->getBoolType(), "isPlus", (void *)Token::_isPlus);
+    tokenType->addMethod(mod->getBoolType(), "isQuest", (void *)Token::_isQuest);
+    tokenType->addMethod(mod->getBoolType(), "isMinus", (void *)Token::_isMinus);
+    tokenType->addMethod(mod->getBoolType(), "isAsterisk", (void *)Token::_isAsterisk);
+    tokenType->addMethod(mod->getBoolType(), "isBang", (void *)Token::_isBang);
+    tokenType->addMethod(mod->getBoolType(), "isSlash", (void *)Token::_isSlash);
+    tokenType->addMethod(mod->getBoolType(), "isPercent", (void *)Token::_isPercent);
+    tokenType->addMethod(mod->getBoolType(), "isNot", (void *)Token::_isNot);
+    tokenType->addMethod(mod->getBoolType(), "isTilde", (void *)Token::_isTilde);
+    tokenType->addMethod(mod->getBoolType(), "isGT", (void *)Token::_isGT);
+    tokenType->addMethod(mod->getBoolType(), "isLT", (void *)Token::_isLT);
+    tokenType->addMethod(mod->getBoolType(), "isEQ", (void *)Token::_isEQ);
+    tokenType->addMethod(mod->getBoolType(), "isNE", (void *)Token::_isNE);
+    tokenType->addMethod(mod->getBoolType(), "isGE", (void *)Token::_isGE);
+    tokenType->addMethod(mod->getBoolType(), "isLE", (void *)Token::_isLE);
+    tokenType->addMethod(mod->getBoolType(), "isEnd", (void *)Token::_isEnd);
+    tokenType->addMethod(mod->getBoolType(), "isLogicAnd", (void *)Token::_isLogicAnd);
+    tokenType->addMethod(mod->getBoolType(), "isLogicOr", (void *)Token::_isLogicOr);
+    tokenType->addMethod(mod->getBoolType(), "isBinOp", (void *)Token::_isBinOp);
+    tokenType->addMethod(mod->getBoolType(), "isAugAssign", (void *)Token::_isAugAssign);
 
     tokenType->finish();
 
@@ -209,49 +217,49 @@ void init(Module *mod) {
 
     Type *annotationType = mod->addType("Annotation");
     annotationType->addMethod(mod->getVoidptrType(), "getUserData",
-                              (void *)&Annotation::getUserData
+                              (void *)Annotation::_getUserData
                               );
     annotationType->addMethod(mod->getVoidptrType(), "getFunc",
-                              (void *)&Annotation::getName
+                              (void *)Annotation::_getName
                               );
     annotationType->addMethod(mod->getVoidptrType(), "getName",
-                              (void *)&Annotation::getName
+                              (void *)Annotation::_getName
                               );
     annotationType->finish();
 
     Type *cc = mod->addType("CrackContext");
     f = cc->addMethod(mod->getVoidType(), "inject",
-                      (void *)&CrackContext::inject
+                      (void *)CrackContext::_inject
                       );
     f->addArg(mod->getByteptrType(), "sourceName");
     f->addArg(mod->getIntType(), "lineNumber");
     f->addArg(mod->getByteptrType(), "code");
     
-    cc->addMethod(tokenType, "getToken", (void *)&CrackContext::getToken);
+    cc->addMethod(tokenType, "getToken", (void *)CrackContext::_getToken);
 
     f = cc->addMethod(mod->getVoidType(), "putBack", 
-                      (void *)&CrackContext::putBack
+                      (void *)CrackContext::_putBack
                       );
     f->addArg(tokenType, "tok");
 
     cc->addMethod(mod->getIntType(), "getScope",
-                  (void *)&CrackContext::getScope
+                  (void *)CrackContext::_getScope
                   );
     
     cc->addMethod(mod->getVoidptrType(), "getUserData",
-                  (void *)&CrackContext::getUserData
+                  (void *)CrackContext::_getUserData
                   );
 
-    typedef void (CrackContext::* G1)(const char *, void (*)(CrackContext *));
-    G1 g1 = &CrackContext::storeAnnotation;
+    typedef void (*G1)(CrackContext *, const char *, void (*)(CrackContext *));
+    G1 g1 = CrackContext::_storeAnnotation;
     f = cc->addMethod(mod->getVoidType(), "storeAnnotation", (void *)g1);
     f->addArg(mod->getByteptrType(), "name");
     f->addArg(mod->getVoidptrType(), "func");
 
-    typedef void (CrackContext::* G2)(const char *, void (*)(CrackContext *),
-                                      void *
-                                      );
-    G2 g2 = &CrackContext::storeAnnotation;
+    typedef void (*G2)(CrackContext *, const char *, void (*)(CrackContext *),
+                       void *
+                       );
+    G2 g2 = CrackContext::_storeAnnotation;
     f = cc->addMethod(mod->getVoidType(), "storeAnnotation", (void *)g2);
     f->addArg(mod->getByteptrType(), "name");
     f->addArg(mod->getVoidptrType(), "func");
@@ -260,72 +268,72 @@ void init(Module *mod) {
     // error/warning functions
 
     // error(byteptr text)
-    void (CrackContext::* g3)(const char *) = &CrackContext::error;
+    void (*g3)(CrackContext *, const char *) = CrackContext::_error;
     f = cc->addMethod(mod->getVoidType(), "error", (void *)g3);
     f->addArg(mod->getByteptrType(), "text");
     
     // error(Token tok, byteptr text)
-    void (CrackContext::* g4)(Token *, const char *) = &CrackContext::error;
+    void (*g4)(CrackContext *, Token *, const char *) = CrackContext::_error;
     f = cc->addMethod(mod->getVoidType(), "error", (void *)g4);
     f->addArg(tokenType, "tok");
     f->addArg(mod->getByteptrType(), "text");
 
     // warn(byteptr text)
-    g3 = &CrackContext::warn;
+    g3 = CrackContext::_warn;
     f = cc->addMethod(mod->getVoidType(), "warn", (void *)g3);
     f->addArg(mod->getByteptrType(), "text");
                       
-    g4 = &CrackContext::warn;
+    g4 = CrackContext::_warn;
     f = cc->addMethod(mod->getVoidType(), "warn", (void *)g4);
     f->addArg(tokenType, "tok");
     f->addArg(mod->getByteptrType(), "text");
     
     f = cc->addMethod(mod->getVoidType(), "pushErrorContext",
-                      (void *)&CrackContext::pushErrorContext
+                      (void *)CrackContext::_pushErrorContext
                       );
     f->addArg(mod->getByteptrType(), "text");
     
     cc->addMethod(mod->getVoidType(), "popErrorContext",
-                  (void *)&CrackContext::popErrorContext
+                  (void *)CrackContext::_popErrorContext
                   );
 
     cc->addMethod(mod->getIntType(), "getParseState", 
-                  (void *)&CrackContext::getParseState
+                  (void *)CrackContext::_getParseState
                   );
 
     f = cc->addMethod(opaqCallbackType, "addCallback",
-                      (void *)&CrackContext::addCallback
+                      (void *)CrackContext::_addCallback
                       );
     f->addArg(mod->getIntType(), "event");
     f->addArg(mod->getVoidptrType(), "callback");
 
     f = cc->addMethod(mod->getVoidType(), "removeCallback",
-                      (void *)&CrackContext::removeCallback);
+                      (void *)CrackContext::_removeCallback);
     f->addArg(opaqCallbackType, "callback");
     
     f = cc->addMethod(mod->getVoidType(), "setNextFuncFlags",
-                      (void *)&CrackContext::setNextFuncFlags
+                      (void *)CrackContext::_setNextFuncFlags
                       );
     f->addArg(mod->getIntType(), "flags");
 
-    typedef Location *(CrackContext::* L1)();
-    typedef Location *(CrackContext::* L2)(const char *, int);
+    typedef Location *(*L1)(CrackContext *);
+    typedef Location *(*L2)(CrackContext *, const char *, int);
     f = cc->addMethod(locationType, "getLocation",
-                      (void *)static_cast<L2>(&CrackContext::getLocation)
+                      (void *)static_cast<L2>(CrackContext::_getLocation)
                       );
     f->addArg(mod->getByteptrType(), "name");
     f->addArg(mod->getIntType(), "lineNumber");
     cc->addMethod(locationType, "getLocation",
-                  (void *)static_cast<L1>(&CrackContext::getLocation)
+                  (void *)static_cast<L1>(CrackContext::_getLocation)
                   );
 
     f = cc->addMethod(annotationType, "getAnnotation",
-                      (void *)&CrackContext::getAnnotation
+                      (void *)CrackContext::_getAnnotation
                       );
     f->addArg(mod->getByteptrType(), "name");
     
     cc->addMethod(mod->getVoidType(), "continueIString",
-                  (void *)&CrackContext::continueIString
+                  (void *)CrackContext::_continueIString
                   );
 
     cc->finish();

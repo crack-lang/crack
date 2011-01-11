@@ -3,6 +3,10 @@
 #ifndef _crack_compiler_CrackContext_h_
 #define _crack_compiler_CrackContext_h_
 
+namespace crack { namespace ext {
+    class Module;
+}}
+
 namespace parser {
     class Parser;
     class ParserCallback;
@@ -24,11 +28,52 @@ class Token;
  * access to the internals of the compiler and parser.
  */
 class CrackContext {
+    friend void compiler::init(crack::ext::Module *mod);
+    public:
+        typedef void (*AnnotationFunc)(CrackContext *);
+
     private:
         parser::Parser *parser;
         parser::Toker *toker;
         model::Context *context;
         void *userData;
+
+        static void _inject(CrackContext *inst, char *sourceName, 
+                            int lineNumber, 
+                            char *code
+                            );
+        static Token *_getToken(CrackContext *inst);
+        static void _putBack(CrackContext *inst, Token *tok);
+        static int _getScope(CrackContext *inst);
+        static void _storeAnnotation(CrackContext *inst, const char *name, 
+                                     AnnotationFunc func
+                                     );
+        static void _storeAnnotation(CrackContext *inst, const char *name, 
+                                     AnnotationFunc func,
+                                     void *userData
+                                     );
+        static Annotation *_getAnnotation(CrackContext *inst, const char *name);
+        static void *_getUserData(CrackContext *inst);
+        static void _error(CrackContext *inst, const char *text);
+        static void _error(CrackContext *inst, Token *tok, const char *text);
+        static void _warn(CrackContext *inst, const char *text);
+        static void _warn(CrackContext *inst, Token *tok, const char *text);
+        static void _pushErrorContext(CrackContext *inst, const char *text);
+        static void _popErrorContext(CrackContext *inst);
+        static int _getParseState(CrackContext *inst);
+        static parser::ParserCallback *_addCallback(CrackContext *inst, 
+                                                    int event, 
+                                                    AnnotationFunc func
+                                                    );
+        static void _removeCallback(CrackContext *inst, 
+                                    parser::ParserCallback *callback
+                                    );
+        static void _setNextFuncFlags(CrackContext *inst, int nextFuncFlags);
+        static Location *_getLocation(CrackContext *inst, const char *name, 
+                                      int lineNumber
+                                      );
+        static Location *_getLocation(CrackContext *inst);
+        static void _continueIString(CrackContext *inst);
 
     public:
         enum Event { funcEnter, funcLeave };
@@ -61,8 +106,6 @@ class CrackContext {
          */
         int getScope();
         
-        typedef void (*AnnotationFunc)(CrackContext *);
-
         /**
          * Stores a simple annotation function in the module context.
          */

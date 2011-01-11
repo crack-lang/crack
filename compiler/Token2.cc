@@ -53,62 +53,93 @@ Location *Token::getLocation() {
     return loc;
 }
 
-bool Token::isAnn() { return rep->isAnn(); }
-bool Token::isBoolAnd() { return rep->isBoolAnd(); }
-bool Token::isBoolOr() { return rep->isBoolOr(); }
-bool Token::isIf() { return rep->isIf(); }
-bool Token::isIn() { return rep->isIn(); }
-bool Token::isImport() { return rep->isImport(); }
-bool Token::isElse() { return rep->isElse(); }
-bool Token::isOper() { return rep->isOper(); }
-bool Token::isOn() { return rep->isOn(); }
-bool Token::isWhile() { return rep->isWhile(); }
-bool Token::isReturn() { return rep->isReturn(); }
-bool Token::isBreak() { return rep->isBreak(); }
-bool Token::isClass() { return rep->isClass(); }
-bool Token::isContinue() { return rep->isContinue(); }
-bool Token::isDollar() { return rep->isDollar(); }
-bool Token::isNull() { return rep->isNull(); }
-bool Token::isIdent() { return rep->isIdent(); }
-bool Token::isString() { return rep->isString(); }
-bool Token::isIstrBegin() { return rep->isIstrBegin(); }
-bool Token::isIstrEnd() { return rep->isIstrEnd(); }
-bool Token::isSemi() { return rep->isSemi(); }
-bool Token::isComma() { return rep->isComma(); }
-bool Token::isColon() { return rep->isColon(); }
-bool Token::isDecr() { return rep->isDecr(); }
-bool Token::isDefine() { return rep->isDefine(); }
-bool Token::isDot() { return rep->isDot(); }
-bool Token::isIncr() { return rep->isIncr(); }
-bool Token::isAssign() { return rep->isAssign(); }
-bool Token::isLParen() { return rep->isLParen(); }
-bool Token::isRParen() { return rep->isRParen(); }
-bool Token::isLCurly() { return rep->isLCurly(); }
-bool Token::isRCurly() { return rep->isRCurly(); }
-bool Token::isLBracket() { return rep->isLBracket(); }
-bool Token::isRBracket() { return rep->isRBracket(); }
-bool Token::isInteger() { return rep->isInteger(); }
-bool Token::isFloat() { return rep->isFloat(); }
-bool Token::isOctal() { return rep->isOctal(); }
-bool Token::isHex() { return rep->isHex(); }
-bool Token::isBinary() { return rep->isBinary(); }
-bool Token::isPlus() { return rep->isPlus(); }
-bool Token::isQuest() { return rep->isQuest(); }
-bool Token::isMinus() { return rep->isMinus(); }
-bool Token::isAsterisk() { return rep->isAsterisk(); }
-bool Token::isBang() { return rep->isBang(); }
-bool Token::isSlash() { return rep->isSlash(); }
-bool Token::isPercent() { return rep->isPercent(); }
-bool Token::isNot() { return rep->isNot(); }
-bool Token::isTilde() { return rep->isTilde(); }
-bool Token::isGT() { return rep->isGT(); }
-bool Token::isLT() { return rep->isLT(); }
-bool Token::isEQ() { return rep->isEQ(); }
-bool Token::isNE() { return rep->isNE(); }
-bool Token::isGE() { return rep->isGE(); }
-bool Token::isLE() { return rep->isLE(); }
-bool Token::isEnd() { return rep->isEnd(); }
-bool Token::isLogicAnd() { return rep->isLogicAnd(); }
-bool Token::isLogicOr() { return rep->isLogicOr(); }
-bool Token::isBinOp() { return rep->isBinOp(); }
-bool Token::isAugAssign() { return rep->isAugAssign(); }
+bool Token::_hasText(Token *inst, const char *text) {
+    return inst->rep->getData() == text;
+}
+
+const char *Token::_getText(Token *inst) {
+    return inst->rep->getData().c_str();
+}
+
+int Token::_getType(Token *inst) {
+    return inst->rep->getType();
+}
+
+size_t Token::_getTextSize(Token *inst) {
+    return inst->rep->getData().size();
+}
+
+Location *Token::_getLocation(Token *inst) {
+    if (!inst->loc) {
+        inst->loc = new Location(inst->rep->getLocation());
+        inst->loc->bind();
+    }
+    return inst->loc;
+}
+
+void Token::_bind(Token *inst) { inst->bind(); }
+void Token::_release(Token *inst) { inst->release(); }
+
+#define IS_FUNC(name) \
+    bool Token::name() { return rep->name(); } \
+    bool Token::_##name(Token *inst) { return inst->rep->name(); }
+
+IS_FUNC(isAnn)
+IS_FUNC(isBoolAnd)
+IS_FUNC(isBoolOr)
+IS_FUNC(isIf)
+IS_FUNC(isIn)
+IS_FUNC(isImport)
+IS_FUNC(isElse)
+IS_FUNC(isOper)
+IS_FUNC(isOn)
+IS_FUNC(isWhile)
+IS_FUNC(isReturn)
+IS_FUNC(isBreak)
+IS_FUNC(isClass)
+IS_FUNC(isContinue)
+IS_FUNC(isDollar)
+IS_FUNC(isNull)
+IS_FUNC(isIdent)
+IS_FUNC(isString)
+IS_FUNC(isIstrBegin)
+IS_FUNC(isIstrEnd)
+IS_FUNC(isSemi)
+IS_FUNC(isComma)
+IS_FUNC(isColon)
+IS_FUNC(isDecr)
+IS_FUNC(isDefine)
+IS_FUNC(isDot)
+IS_FUNC(isIncr)
+IS_FUNC(isAssign)
+IS_FUNC(isLParen)
+IS_FUNC(isRParen)
+IS_FUNC(isLCurly)
+IS_FUNC(isRCurly)
+IS_FUNC(isLBracket)
+IS_FUNC(isRBracket)
+IS_FUNC(isInteger)
+IS_FUNC(isFloat)
+IS_FUNC(isOctal)
+IS_FUNC(isHex)
+IS_FUNC(isBinary)
+IS_FUNC(isPlus)
+IS_FUNC(isQuest)
+IS_FUNC(isMinus)
+IS_FUNC(isAsterisk)
+IS_FUNC(isBang)
+IS_FUNC(isSlash)
+IS_FUNC(isPercent)
+IS_FUNC(isNot)
+IS_FUNC(isTilde)
+IS_FUNC(isGT)
+IS_FUNC(isLT)
+IS_FUNC(isEQ)
+IS_FUNC(isNE)
+IS_FUNC(isGE)
+IS_FUNC(isLE)
+IS_FUNC(isEnd)
+IS_FUNC(isLogicAnd)
+IS_FUNC(isLogicOr)
+IS_FUNC(isBinOp)
+IS_FUNC(isAugAssign)

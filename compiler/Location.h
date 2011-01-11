@@ -5,6 +5,10 @@
 
 #include "ext/RCObj.h"
 
+namespace crack { namespace ext {
+    class Module;
+}}
+
 namespace parser {
     class Location;
 }
@@ -12,8 +16,14 @@ namespace parser {
 namespace compiler {
 
 class Location : public crack::ext::RCObj {
+    friend void compiler::init(crack::ext::Module *mod);
     private:
         Location(const Location &other);
+
+        static const char *_getName(Location *inst);
+        static int _getLineNumber(Location *inst);
+        static void _bind(Location *inst);
+        static void _release(Location *inst);
 
     public:
         parser::Location *rep;
@@ -30,6 +40,7 @@ class Location : public crack::ext::RCObj {
          * Returns the line number of the location.
          */
         int getLineNumber();
+
 };
 
 } // namespace compiler
