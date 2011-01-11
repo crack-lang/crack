@@ -24,6 +24,7 @@ MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
 
 MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
+INCLUDE(FindPkgConfig)
 
 Find_Package(LLVM REQUIRED)
 
@@ -211,17 +212,19 @@ if(OPENGL_FOUND)
 endif()
 
 # Cairo
-find_package(Cairo)
-if(CAIRO_FOUND)
-   message(STATUS "Found Cairo, will build extension")
-   add_library(cairo SHARED opt/_cairo.cc)
-   set_target_properties(cairo
-                      PROPERTIES
-                      OUTPUT_NAME _cairo
-                      PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                      )
-   target_link_libraries( cairo
-                          ${CAIRO_LDFLAGS} 
+IF (PKG_CONFIG_FOUND)
+   pkg_check_modules(CAIRO cairo>=1.8)
+   if(CAIRO_FOUND)
+      message(STATUS "Found Cairo, will build extension")
+      add_library(cairo SHARED opt/_cairo.cc)
+      set_target_properties(cairo
+                         PROPERTIES
+                         OUTPUT_NAME _cairo
+                         PREFIX ""
+                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                          )
+      target_link_libraries( cairo
+                             ${CAIRO_LDFLAGS} 
+                            )
+   endif()
 endif()
