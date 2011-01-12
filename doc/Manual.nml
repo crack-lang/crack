@@ -204,7 +204,7 @@ classified as /low-level/ types.  They are distinguished from the higher
 level aggregate types by naming convention: low-level types will always be all 
 lower case (and digits), high-level types (at least the ones in the standard 
 libraries) will always begin with an upper-case character.  You may not 
-currently subclass low-level types (see \X(Inheritence)), this restriction 
+currently subclass low-level types (see \X(Inheritance)), this restriction 
 will be lifted in a future version of Crack.
 
 /High level/ or /aggregate/ types are first class objects: variables of this 
@@ -715,7 +715,7 @@ false, #a# will be set to #d# and #c# will not be evaluated..
 
 #c# and #d# may be of different types.  If they are, the result will be of the 
 same type as #c# if #d# is of a type derived from #c#'s type (see 
-\X(Inheritence) below) and the same type as #d# if #c# is of a type derived 
+\X(Inheritance) below) and the same type as #d# if #c# is of a type derived 
 from #d#.
 
 If the types of #c# and #d# do not share a common ancestor, the compiler will 
@@ -1448,7 +1448,7 @@ reference counting.  That is to say, we can do something like this:
     }
 }}
 
-Of course, we could do this with normal inheritence, too, but that doesn't 
+Of course, we could do this with normal inheritance, too, but that doesn't 
 solve the problem for classes that we don't control (like those provided by an 
 external module), or for cases where we want an object to implement more than 
 one interface.
@@ -1485,7 +1485,7 @@ These annotations are a very weak form of syntactic sugar, as such:
 
 Versions of Crack after 0.3 will most likely to continue to provide some form 
 of the #@interface# and #@implements# annotations (hopefully a refined form) 
-but will ultimately implement them in terms of virtual inheritence.
+but will ultimately implement them in terms of virtual inheritance.
 
 Special Methods
 '''''''''''''''
@@ -2668,9 +2668,9 @@ buffer.
 MixIn
 '''''
 
-The #MixIn# class allows you to do multiple inheritence safely - without risk 
+The #MixIn# class allows you to do multiple inheritance safely - without risk 
 of breaking reference counting.  The #MixIn# approach is a stand-in for 
-virtual inheritence, which Crack 0.3 does not yet support.
+virtual inheritance, which Crack 0.3 does not yet support.
 
 #MixIn# defines #bind# and #release# operators and a virtual function called 
 #getObject()# that knows how to get the #Object# instance that the class is 
@@ -2698,12 +2698,12 @@ For example, we could use #MixIn# to define a pure interface like this:
 }}
 
 Unfortunately, because a class can only exist once in another class's 
-inheritence tree (except for VTableBase), you can only do this trick once in a 
+inheritance tree (except for VTableBase), you can only do this trick once in a 
 single class' ancestor list.  For example, if #Iface1# derives from #MixIn#, 
 and #Iface2# also derives from #MixIn#, it is illegal to define a #MyConcrete# 
 derived from both #Iface1# and #Iface2# because they share the #MixIn# ancestor.
 
-Because of this single-inheritence restriction, the #MixIn# strategy is really 
+Because of this single-inheritance restriction, the #MixIn# strategy is really 
 more useful as a pattern than as a base class.  To make a class a MixIn, do 
 something like this:
 
@@ -3478,8 +3478,50 @@ supported by this library is very close to the syntax supported by perl 5.
 Math
 ----
 
-The #crack.math# library defines a standard set of math functions for integer 
-and floating point types.  Some examples follow:
+The #crack.math# library provides access to functions and constants from the C 
+standard math library. A description can be found on
+\ref(`http://en.wikipedia.org/wiki/Math.h` WikiPedia) or a more complete reference at
+\ref(`http://www.dinkumware.com/manuals/?manual=compleat&page=math.html` Dinkumware).
+
+Since Crack allows function overloading, only one function name exists for both 
+#float32# and #float64# values. E.g. there is no #sinf# function for #float32# 
+values. The #long double# type in C is not currently supported.
+
+The library provides:
+*trigonometric functions*::
+   #sin#, #cos#, #tan#, #asin#, #acos#, #atan#, #sinh#, #cosh#, #tanh#, #asinh#, 
+   #acosh#, #atanh#.
+
+*logarithmic\/exponential functions*::
+   #exp#, #exp2#, #expm1#, #log#, #log10#, #log1p#, #log2#, #logb#, #modf#, 
+   #hypot#.
+
+*power and absolute value functions*::
+   #pow#, #sqrt#, #cbrt#, #fabs#, #hypot#.
+   
+*gamma and error functions*::
+   #erf#, #erfc#, #lgamma#, #tgamma#,
+
+*integer functions*::
+   #ceil#, #floor#, #nearbyint#, #rint#, #round#, #trunc#, #nextafter#.
+
+*library error handling functions*::
+   #errno#, #setErrno#, #testexcept#, #clearexcept#. 
+
+*other functions*::
+   #fdim#, #fmod#, #remainder#, #copysign#, #fpclassify#, #isfinite#, #isinf#,
+   #isnan#, #isnormal#, #sign#, #atoi#, #atof#, #usecs#.
+
+*floating point classification and error condition constants*::
+   #HUGE\_VAL#, #INFINITY#, #NAN#, #FP\_INFINITE#, #FP\_NAN#, #FP\_NORMAL#, 
+   #FP\_SUBNORMAL#, #FP\_ZERO#, #FP\_ILOGB0#, #FP\_ILOGBNAN#, #ALL\_EXCEPT#, 
+   #INVALID#, #DIVBYZERO#, #OVERFLOW#, #UNDERFLOW#.
+
+*physical constants*::
+   #E#, #LOG2E#, #LOG10E#, #LN2#, #LN10#, #LNPI#, #PI#, #PI\_2#, #PI\_4#, #PI1#, 
+   #PI2#, #SQRTPI2#, #SQRT2#, #SQRT3#, #SQRT1\_2#, #SQRTPI#, #GAMMA#.
+
+Below is a simple example:
 
 {{
     import crack.math sqrt, pow, PI;

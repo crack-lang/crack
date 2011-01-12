@@ -97,7 +97,7 @@ const one_name_struct  one_names[]={
                               {"tgamma", VALUE}, {"ceil", VALUE},
                               {"floor", VALUE}, {"nearbyint", VALUE},
                               { "rint", VALUE}, {"round", VALUE}, 
-                              {"trunc", VALUE}, {"expm1", VALUE}, 
+                              {"trunc", VALUE}, {"expm1", VALUE},
                               {NULL, VALUE}
                            };
 
@@ -108,7 +108,7 @@ const two_name_struct   two_names[]={
                               {"copysign", VALUE, SIGN},
                               {"nextafter", VALUE, DIRECTION},
                               {"hypot", X, Y}, 
-                              {"dim", VALUE, DIRECTION},
+                              {"fdim", VALUE, DIRECTION},
                               {"pow", VALUE, POWER}, {NULL, VALUE, VALUE}
                            };
 
