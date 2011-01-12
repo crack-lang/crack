@@ -1,4 +1,19 @@
 
+0.3
+    -   Aggregate type variables now default to null if no initializer is 
+        given.
+    -   Implemented the "for" statement.
+    -   Added support for extensions.
+        -   Added a module to generate bindings for many C APIs.
+        -   Converted the runtime, GTK and PCRE modules to use the extension 
+            API.
+        -   Added undocumented support for SDL, OpenGL
+    -   Added the math module.
+    -   Added the annotations subsystem.
+        -   Used annotations to implement macros
+        -   Added the @static, @final, @FILE and @LINE builtin annotations.
+    -   Added macro-based generic containers
+
 0.2
     -   Major code cleanups.
     -   Added RBTree maps.

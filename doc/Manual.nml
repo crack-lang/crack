@@ -475,7 +475,7 @@ The for statement also supports a for-each style usage:
         cout `arg is $argv\n`;
 }}
 
-In the example above, #argVal will be set to each element of argv in 
+In the example above, #argVal# will be set to each element of argv in 
 succession.  There is also a "#:in#" variation on the "in" keyword that 
 defines the variable for the scope of the loop, so we could have omitted the 
 #argVal# definition and done this:
@@ -1157,8 +1157,6 @@ method:
     }
 }}
 
-XXX finish proofreading from here
-
 We did this because #Coord#'s #writeTo()# method writes out "Coord($x, $y)".  
 We want to write "NamedCoord($x, $y)".
 
@@ -1182,7 +1180,6 @@ Crack supports /multiple inheritance/: you can have any number of base
 classes.  With the exception of the special #VTableBase# class, it is an error 
 to inherit from the same base class multiple times, even indirectly. 
 Eventually, Crack will support this using virtual base classes like in C++. 
-We'll talk more about multiple inheritance in the next section.
 
 Destructors
 '''''''''''
@@ -1345,7 +1342,8 @@ directly because #Array# stores an array of objects:
 
 This is the same problem that early versions of Java had - it will be fixed 
 in a later version of Crack through the introduction of generics.  But for now 
-we can work around this with a type cast:
+we can work around this with a type cast (in Crack 0.3, we also have a weak 
+form of generics implemented using macros, see \X(Generic Containers)):
 
 {{
     drawLine(Coord.cast(coords[0]), Coord.cast(coords[1]));
@@ -1399,16 +1397,108 @@ because it's usually acceptable for the class to be either the same as the
 class you are checking for or /derived from/ the class you are checking for.  
 Use #isSubclass()# instead.
 
+Interfaces
+''''''''''
+
+As an interim solution to accomodate the lack of virtual base classes, Crack 
+0.3 provides an /interface/ concept similar to that of Java.  In fact, the 
+interface implementation makes it suitable for use as a limited form of 
+virtual base class, but we'll mainly focus on the interface use case.
+
+The #crack.exp.ann# module provides two special annotations: #@interface# and 
+#@implements# (for more general information see \X(Annotations)).
+
+To use them, define an interface class:
+
+{{
+    @import crack.exp.ann interface, implements;
+    import crack.exp.error err;
+    
+    @interface Drawable {
+        void draw(Canvas canvas) {
+            err.do()
+                'Drawable.draw() not implemented in $(this.class.name)\n`;
+        }
+    }
+}}
+
+In the example above, we're defining a Drawable interface that provides a 
+draw() method that generates a runtime error if called.
+
+Now lets create a flavor of our LineSegment class that implements it:
+
+{{
+    
+    class DrawableLineSegment : LineSegment @implements Drawable {
+        void draw(Canvas canvas) {
+            canvas.drawLine(c0, c1);
+        }
+        
+        oper init(Coord initC0, Coord initC1) : LineSegment(initC0, initC1) {}
+    }
+}}
+
+We can now pass DrawableLineSegment to any function that accepts Drawable 
+objects without having to worry about doing anything special to accomodate 
+reference counting.  That is to say, we can do something like this:
+
+{{
+    void myFunction(Drawable x) {
+        x.draw();
+    }
+}}
+
+Of course, we could do this with normal inheritence, too, but that doesn't 
+solve the problem for classes that we don't control (like those provided by an 
+external module), or for cases where we want an object to implement more than 
+one interface.
+
+This approach has some limitations.  The #@interface# and #@implementation# 
+annotations are really just syntactic sugar for class definitions.  
+#@interface# generates a class definition from the syntax that follows it and 
+injects three special methods: #oper bind()#, #oper release()# and 
+#get#/IFaceName/#Object()# (where /IFaceName/ is the name of the interface, 
+#Drawable# in the example above).  The #get#/IFaceName/#Object()# methods 
+have a return type of #Object# and they exist to provide an instance of 
+#Object# for the #oper bind()# and #oper release()# methods to delegate to.
+The #get#/IFaceName/#Object()# methods defined for an interface always return 
+null because interfaces are never derived from #Object#: they are derived from 
+#VTableBase#.
+
+#@implements# does something similar with the implementation class: 
+for every interface class name that follows it (you can have a comma 
+separated list of them) it generates a #get#/IFaceName/#Object()# method that 
+simply returns "this".  Impelementation classes must therefore derive from 
+Object, either indirectly or directly and they must do so explicitly (so 
+"#class A @implements IFace#" would be illegal, you'd have to use "#class A 
+: Object @implements IFace#" instead.
+
+These annotations are a very weak form of syntactic sugar, as such:
+
+-   errors are likely to be non-obvious
+-   there is no verification that all abstract methods are implemented at 
+    compile time (if we forgot to implement #draw()#, we wouldn't know about 
+    it until runtime)
+-   the methods that they rely on for obtaining an #Object# instance are 
+    constructed from the class name, and subject to non-obvious naming 
+    conflicts with similarly named methods defined by the programmer.
+
+Versions of Crack after 0.3 will most likely to continue to provide some form 
+of the #@interface# and #@implements# annotations (hopefully a refined form) 
+but will ultimately implement them in terms of virtual inheritence.
+
 Special Methods
 '''''''''''''''
 
 Certain methods have special meaning within the language or the standard 
 libraries.
 
-*final* is used to designate methods that are inherently non-virtual - even if 
+*final* is used to designate methods that are declared with the #@final# 
+annotation in #crack.lang.Object#.  As explained in \X(Static and Final 
+Methods), this indicates that the method is non-virtual - even if 
 the class derives from VTableBase, the method will not be turned into a 
 virtual method.  As such, the method can not be overloaded.  It may also be 
-invoked on a #null# value.
+invoked using a #null# value as the receiver.
 
 #oper init#::
     A constructor.
@@ -1508,8 +1598,8 @@ The following operators can be overloaded:
     that it is based on.  So for example, if a class defines "#oper +#", you 
     can use the #+=# opertator on an instance without defining it.
 
-As in the last section, *final* means the method is non-virtual and cannot be 
-overriden.
+As in the last section, *final* means the method is non-virtual for Object 
+derivatives and cannot be overriden.
 
 The primitive types mostly have intrinsic implementations of the operators.
 
@@ -1519,6 +1609,7 @@ Certain operators can not be overloaded:
 -   The short-circuit and and or operations ("#&&#" and "#||#")
 -   The assignment operator ("#=#").
 -   The define operator ("#:=#").
+-   The "is" operator.
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -1762,10 +1853,10 @@ cleaned up for the secondary expression prior to cleanup of outer expressions.
 There's one thing you need to be aware of about reference counting: the 
 mechanism is susceptible to the problem of reference cycles - this is when an 
 object directly or indirectly references itself.  When this happens, the 
-entire cycle of objects can become unfreeable, resulting in a memory leak.  
-This is because each object retains a reference from the last object in the 
-sequence, so even when all external references are removed, none of the 
-objects will drop to a reference count of zero.
+entire cycle of objects can become unfreeable, potentially resulting in a 
+memory leak. This is because each object retains a reference from the last 
+object in the sequence, so even when all external references are removed, 
+none of the objects will drop to a reference count of zero.
 
 There's currently no good way around this: you just have to be aware that if 
 you create a reference that can introduce a cycle, you'll need to take certain 
@@ -1801,10 +1892,8 @@ You can then use them like any other function:
     free(mem);
 }}
 
-Many C functions require special arguments like pointers to integers or 
-structures that are not natively supported in Crack.  However, we can often 
-get the effect of these kinds of things by making use of the fact that all 
-Crack objects are essentially pointers to the corresponding C structures:
+Many C functions require special arguments like pointers to integers.  These 
+can be passed using primitive arrays:
 
 {{
 
@@ -1812,54 +1901,22 @@ Crack objects are essentially pointers to the corresponding C structures:
     import "libc.so.6" free;
     void free(voidptr mem);
 
-    # define a wrapper around int
-    class IntWrapper {
-        int val;
-        
-        # free the structure's memory when we go out of scope.
-        oper release() { free(this); }
-    };
-
     # import C function "void doSomething(int *inOutVal)"
     import "somelib.so" doSomething;
-    void doSomething(IntWrapper inOutVal);
+    void doSomething(array[int] inOutVal);
     
     # call it
-    v := IntWrapper();
-    v.val = 100;
+    v := array[int](1);
+    v[0] = 100;
     doSomething(v);
+    
+    # clean up our array
+    free(v);
 }}
 
-A set of wrapper types for this sort of thing is already defined in 
-the #crack.exp.bindings# module.   Instead of defining our own IntWrapper, we 
-could have just done:
-
-{{
-    import crack.exp.bindings IntWrapper;
-    v := IntWrapper(100);
-}}
-
-All of the Wrapper classes in this module derive from the #Wrapper# base 
-class.  #Wrapper# has the #oper release()# method definition, which frees the 
-object when it goes out of scope.  Note that wrappers must not be passed out 
-of scope:
-
-{{
-    class Broken {
-        IntWrapper wrapper = null;
-        
-        IntWrapper bad() {
-            i := IntWrapper(100);
-            wrapper = i;           # BAD.  Instance variable will reference 
-                                   # a deleted object.
-            return i;              # BAD.  Caller will get a deleted object.
-        }
-    }
-}}
-            
-The #crack.exp.bindings# module also defines an #Opaque# class.  This can be 
-used for structures returned from C functions that contain no user-servicable 
-parts.  For example:
+The #crack.exp.bindings# defines an #Opaque# class.  This can be used for 
+structures returned from C functions that contain no user-servicable parts.  
+For example:
 
 {{
     import crack.exp.bindings Opaque;
@@ -1871,10 +1928,10 @@ parts.  For example:
     Foo_Destroy(foo);
 }}
 
-#Opaque# doesn't attempt to free the object like #Wrapper# derivatives, so it 
-is important that you manage the object correctly yourself.
+#Opaque# doesn't attempt to free the object, so it is important that you 
+manage the object correctly yourself.
 
-Some times C functions want to accept a function pointer to use as a callback.
+Sometimes C functions want to accept a function pointer to use as a callback.
 You can get this effect by defining a function and using a parameter type of 
 #voidptr# for the callback parameter:
 
@@ -2020,7 +2077,7 @@ Inspecting Parser State
 #`SCOPE_MODULE`#, #`SCOPE_FUNCTION`# or #`SCOPE_CLASS`# depending on whether 
 the innermost enclosing context is within a module, function or class.
 
-#getState() currently only returns an indicator as to whether the parser is in 
+#getState()# currently only returns an indicator as to whether the parser is in 
 the "base state."  A return value of #`BASE_STATE`# indicates that we are not 
 currently in the middle of parsing a definition or statement.  For example, in 
 the following code:
@@ -2132,6 +2189,23 @@ definition:
     }
 }}
 
+Function Flags
+''''''''''''''
+
+The parser contains a function flag register that can be used by an 
+annotation to set flags on function definitions that follow it.  For example, 
+we could implement the #@static# built-in annotation as follows:
+
+{{
+    import crack.compiler CrackContext, FUNCFLAG_STATIC;
+    
+    void static(CrackContext ctx) {
+        ctx.setNextFuncFlags(FUNCFLAG_STATIC);
+    }
+}}
+
+The only other function flag supported at this time is #`FUNCFLAG_FINAL`#.
+
 Error Contexts
 ''''''''''''''
 
@@ -2168,8 +2242,91 @@ code:
     }
 }}
 
-xxx registering other annotations, user data
-    setting function flags
+An annotation can register other annotations.  For example, if we wanted to 
+create an annotation to define our #beginClass()# and #endClass()# 
+annotations, we could do this:
+
+{{
+    void registerAnnotations(CrackContext ctx) {
+        ctx.storeAnnotation('beginClass'.buffer, beginClass);
+        ctx.storeAnnotation('beginClass'.buffer, endClass);
+    }
+}}
+
+Like all annotations, these will exist throughout the scope of the module.
+
+When registering an annotation, it is often useful to associate the annotation 
+with user data.  For example, the following example is a very weak macro 
+facility.  #@record# binds the next token to an identifier, when the 
+identifier is used as an annotation it expands to its value:
+
+{{
+    import crack.compiler CrackContext, Token;
+
+    void _playback(CrackContext ctx) {
+        tok := Token.unsafeCast(ctx.getUserData());
+        ctx.putBack(tok);
+    }
+    
+    void record(CrackContext ctx) {
+        # get the identifier (error checking omitted)
+        ident := ctx.getToken();
+        
+        # get the token to attach to it
+        val := ctx.getToken();
+
+        # register the identifier as an annotation, store 'val' as user data.        
+        ctx.storeAnnotation(ident.getText(), _playback, val);
+        
+        # VERY IMPORTANT: need to bind a reference to the user data so it 
+        # doesn't get deallocated
+        val.oper bind();
+    }
+}}
+
+We could use it like this:
+
+{{
+    @record var 'some string';
+    String x = @var;
+}}
+
+Note that we perform #oper bind()# on the value token after storing it with 
+the annotation.  This prevents the token from being garbage-collected when 
+#record()# terminates.  User data is a #voidptr#, not an object, and therefore 
+it can not be managed.  We also have to use an #unsafeCast()# to restore it to 
+a #Token#.
+
+We can access existing annotations with #CrackContext.getAnnotation()#.  
+Annotation objects contain the following access methods:
+
+{{
+    voidptr getUserData();
+    byteptr getName();
+    voidptr getFunc();
+}}        
+
+We've demonstrated obtaining and injecting tokens with the #getToken()# and 
+#putBack()# methods.  We can also create our own tokens:
+
+{{
+    import crack.compiler CrackContext, Token, TOK_STRING;
+
+    # annotation to convert the next token to a string
+    void stringify(CrackContext ctx) {
+        tok := ctx.getToken();
+        ctx.putBack(Token(TOK_STRING, tok.getText(), tok.getLocation()));
+    }
+}}
+
+Usage would be as follows:
+
+{{
+    String x = @stringify test;
+}}
+
+Details of the annotation interface can be found in the header files in the 
+#`crack/compiler`# directory installed in your include tree.
 
 Built-in Annotations
 ''''''''''''''''''''
@@ -2184,6 +2341,195 @@ Crack defines the following special built-in annotations:
     Expands to a string containing the current filename.
 @LINE::
     Expands to an integer containing the current line number.
+
+The Standard Annotations
+''''''''''''''''''''''''
+
+The #crack.exp.ann# module defines a set of standard annotations.  Two of them 
+are #@interface# and #@implements# where are documented above in 
+\X(Interfaces).  The others allow you to define macros.  Crack macros are 
+similar to C preprocessor macros with some improvements.
+
+To define a macro for use within a module, simply use the #@define# annotation:
+
+{{
+    @import crack.exp.ann define;
+    
+    @define max(Type) {
+        Type max(Type a, Type b) {
+            return a > b ? a : b;
+        }
+    }
+    
+    int a = 3, b = 5;
+    x := @max(a, b);   # x becomes 5
+}}
+
+When defining a macro, the identifier after the #@define# annotation is the 
+macro name.  The argument list follows, then the body of the macro enclosed in 
+curly braces.
+
+Defining a macro creates a new annotation with the macro name.  Macro 
+annotations parse an argument list that follows them and then expand the macro 
+with the arguments.
+
+When a macro is expanded, all of the tokens within the curly braces are 
+expanded into the location of the macro.  All macro arguments are expanded to 
+the values passed in for those arguments.
+
+Macros also set error contexts for the span of their expansion - if you get a 
+syntax error in the body of the macro, the error message will report the 
+location of the error within the definition of the macro, followed by the 
+location of the annotation that expanded the macro.
+
+As in C macros, you can do argument concatentation and stringification.  A 
+single dollar sign in a macro stringifies the following argument, a double 
+dollar sign concatenates the argument with the adjacent tokens.
+
+For example, if we wanted to define a macro to produce command-line flags, we 
+might do something like this:
+
+{{
+    @define flag(Type, name) {
+        Type flag_$$name = Type$$Flag($name);
+        flags.addFlag(flag_$$name);
+    }
+    
+    @flag(int, port);
+}}
+
+This would generate the following code:
+
+{{
+    Type flag_port = intFlag('port');
+    flags.addFlag(flag_port);
+}}
+
+By default, macros are limited to the modules that they are defined in.  To 
+make a macro available to other modules, you have to export it:
+
+{{
+    @import crack.exp.ann define, export, exporter;
+    
+    # Indicates that the module will be exporting macros.
+    # What this actually does is to import various utlity functions from 
+    # crack.exp.ann needed to do an export.
+    @exporter
+    
+    @define myMacro(a, b) { ... }
+    @export myMacro
+}}
+
+We can then import the macro as an annotation to another module:
+
+{{
+    @import mymodule myMacro;
+    
+    @myMacro(1, 2)
+}}
+
+Extensions
+----------
+
+In addition to the approach for calling C functions identified in \X(Primitive 
+Bindings), Crack supports a formal extension concept allowing you to load 
+specially crafted shared libraries as if they were Crack modules.
+
+When importing a module, if the executor is unable to find a native Crack 
+module in the search path, and if there is a shared library with that name on 
+the search path, and if the shared library defines an initialization function 
+corresponding to the module name, the shared library is loaded as an extension 
+module, and the initialization function is called at load time.
+
+Initialization functions must have a name corresponding to the canonical name 
+of the module.  The convention used is to join all of the elements of the 
+canonical name with underscores and then append "`_init`" to the result.  So 
+for the extension module #foo.bar.baz#, the initialization function would be 
+named #`foo_bar_baz_init`#.
+
+Initialization functions should be C++ functions declared as 'extern "C"'.  
+They accept a parameter of type #crack::ext::Module \*#.  The role of the 
+initialization function is to populate the module object with the module's 
+interface.  To describe it another way, the initialization function 
+configures everything that is necessary to import the module at compile time.
+
+For example, let's say that we want to provide a binding for a C function 
+called #myfunc()#:
+
+{{
+    void myfunc(char *data) { printf("my data: %s", data); }
+}}
+
+Our init function (again, assuming the module is #foo.bar.baz#) would be as 
+follows:
+
+{{
+    #include <crack/ext/Module.h>
+    #include <crack/ext/Type.h>
+    #include <crack/ext/Func.h>
+
+    extern "C" void foo_bar_baz_init(crack::ext
+    // define a function returning void
+    Func *func = mod->addFunc(mod->getVoidType(), "myfunc", (void *)myfunc);
+    // add the "data" argument, parameters are the type and the parameter name
+    func->addArg(mod->getByteptrType(), "data");
+}}
+
+The details of the extension interface are docummented in the header files in 
+the #`crack/ext`# directory installed with your distribution.  To compile your 
+extension, you'll want to:
+
+-   build it into a shared library, linked with whatever support code it needs 
+    (usually the code it's wrapping)
+-   Add the include directory for crack headers to the include path (usually 
+    something like #`/usr/local/include/crack-0.3`#)
+
+The Extension Generator
+'''''''''''''''''''''''
+
+Creating extensions by hand is way too much work.  In the interests of 
+simplifying it we have the #crack.exp.extgen# module.  This defines a 
+#@generateExtension# annotation that hijacks the compiler to generate a source 
+file defining the extension.  Its usage is best illustrated by example:
+
+{{
+    @import crack.exp.extgen generateExtension;
+    
+    # generate an extension that will be imported as 'foo.bar'
+    @generateExtension foo.bar {
+    
+        # name of the source file to generate.
+        @filename "foobar.cc"
+        
+        # code to inject into the extension source file
+        @inject '#include "FooBar.h"\n';
+        
+        # function accepting a char *
+        void puts(byteptr string);
+        
+        # function accepting a float and an integer pointer
+        int hairy(float val, array[int] result);
+
+        # opaque type and a function that uses it.        
+        class MyType;
+        void myFunc(MyType val);
+        
+        # constants (must be integer or float types)
+        const int
+            # with no value it will be set to the value of the C constant
+            SAME_NAME_AS_C_CONSTANT,
+            
+            # when defined from an identifier, the identifier is the C 
+            # constant
+            SIMPLE_NAME = LESS_AESTHETIC_NAME_OR_VALUE,
+            
+            # when assigned from an integer, the value is the integer
+            ONE_HUNDRED = 100,
+        
+            # a string value can be used to indicate a complex expression
+            SIMPLE_NAME = 'ONE_HUNDRED >> 1';
+    }
+}}
 
 Threading
 ---------
@@ -2237,7 +2583,10 @@ itself, use a \X(ManagedBuffer).
 
 Constant strings are actually of type #StaticString#.  This is a class for 
 strings with buffers that are not to be deleted (because static strings can
-reference data in read-only memory segments).
+reference data in read-only memory segments).  Constant strings are always 
+guaranteed to be null terminated, making them suitable for use with low-level 
+C functions defined in extensions and primitive bindings.  This is not true of 
+strings or buffers in general, see \X(CString) for a more general solution.
 
 Like any object, a buffer can be converted to a #bool#.  A buffer converts to 
 *true* if it has a non-zero size.
@@ -2249,7 +2598,26 @@ shorter buffer is "less than" the larger buffer.
 The #String# class is one of the few types that don't need to be imported.  
 #Buffer# and its other descendents can be imported from #crack.lang#.
 
-XXX include info on CString
+CString
+'''''''
+
+When dealing directly with C functions expecting null terminated strings, we 
+often need to convert a Crack string to a null-terminated value.  #CString# 
+is one way to do so.  Given an arbitrary buffer type, #CString# will create a 
+copy of the buffer and insure that there is a null terminator at 
+#buffer[size]# (note that the size of a #CString# excludes the byte for the 
+null terminator).
+
+This allows us to safely do something like this:
+
+{{
+    import runtime strcpy;
+    
+    String userInput = getUserInput();
+    data := byteptr(userInput.size + 1);
+    
+    strcpy(data.buffer, CString(userInput).buffer);
+}}
 
 ManagedBuffer
 '''''''''''''
@@ -2640,6 +3008,101 @@ attribute:
     }
 }}
 
+Generic Containers
+''''''''''''''''''
+
+"Generics" is a language feature that allows you to create classes that are 
+parameterized by other classes.  It is particularly useful for containers.  For 
+example, rather than just an "array", we typically want to be able to create 
+an "array of strings."  Generic containers have the following advantages over 
+standard containers:
+
+-   Type safety.  An "array of strings" will produce an error at compile time 
+    if you attempt to put something that's not a string in it.
+-   No need for typecasting.
+-   Improved performance.  A lot of things that standard containers need to do 
+    at runtime, through virtual functions, can instead be done at compile time.
+-   Support for primitive types.  All of the standard containers require you 
+    to wrap primitive values in aggregate types derived from #Object#.
+
+Crack 0.3 does not yet support generics.  However, it does provide a weak 
+substitute for generic containers in the form of container macros (see \X(The 
+Standard Annotations) for complete info on macros).  All of the standard 
+container types (#Array#, #List#, #DList# and #TreeMap#) have generic 
+implementations.
+
+For example, if we wanted to build a #TreeMap# allowing us to lookup strings 
+based on integer keys, we could do this:
+
+{{
+    import crack.lang die, cmp;
+    import crack.io cout, Formatter;
+    @import crack.exp.cont.treemap GenericTreeMap;
+    
+    int cmp(int a, int b) { return a - b; }
+    @GenericTreeMap(IntStringMap, int, String);
+    
+    IntStringMap vals = {};
+    vals[0] = 'test';
+    for (item :in vals)
+        cout `$(item.key): $(item.val)\n`;
+
+}}
+
+#@GenericTreeMap# is a macro that expands to a class definition for (in this 
+case) the #IntStringMap# class, which has keys of type #int# and values of 
+type #String#.  Note that we need to import some other things to be able to 
+use it (#die#, #cmp#, #cout# and #Formatter#).  The requirements of each of 
+the generic container types are identified in the comments at the beginning of
+their source files.
+
+Arrays are a little different in that there are primitive and object based 
+varieties.  Here's an example of the creation of an array of strings:
+
+{{
+    # imports required for generic arrays
+    import crack.lang die, free;
+    @import crack.exp.cont.array GenericArray, GenericObjArray;
+    
+    import crack.io cout;
+    
+    @GenericObjArray(StringArray, String);
+    
+    StringArray strings = {};
+    strings.append('first');
+    strings.append('second');
+    for (s :in strings)
+        cout `$s\n`;
+}}
+
+Note that we have to import both #GenericArray# and #GenericObjArray#.  
+#GenericObjArray# is actually implemented in terms of #GenericArray#.
+
+If we wanted to create an array of primitives (for example, of floating point 
+values), we would use #@GenericPrimArray#:
+
+{{
+    import crack.lang die, free;
+    @import crack.exp.cont.array GenericArray, GenericPrimArray;
+
+    @GenericPrimArray(FloatArray, float);
+}}
+
+#GenericList# and #GenericDList# are also provided in the 
+#crack.exp.cont.list# module.
+
+Macro-based generic containers are not as good as real generic containers:
+
+-   They require explicit import of support objects.
+-   They require explicit instantiation.  (With generic types, we could just 
+    use #Array[String]#, for example, instead of having to declare it 
+    somewhere).
+-   If the same container type is used in more than one module, the same code 
+    will be generated in multiple places, resulting in an unnecessarily large 
+    runtime footprint.
+
+Support for true generics is planned for Crack 0.4.
+
 Error Handling
 --------------
 
@@ -3012,6 +3475,27 @@ Named subgroups can greatly enhance the readability of regular expression code.
 regular expressions).  As the name suggests, the regular expression syntax 
 supported by this library is very close to the syntax supported by perl 5.
 
+Math
+----
+
+The #crack.math# library defines a standard set of math functions for integer 
+and floating point types.  Some examples follow:
+
+{{
+    import crack.math sqrt, pow, PI;
+    
+    float length(float x, float y) {
+        # x*x + y*y would perform better but would be less illustrative
+        return sqrt(pow(x, 2) + pow(y, 2));
+    }
+    
+    len := length(10, 5);
+    x = cos(30.0 / 180 * PI) * len;
+    y = sin(30.0 / 180 * PI) * len;
+}}
+
+See the source of the module itself for details of what is included.
+
 Bindings
 --------
 
@@ -3314,5 +3798,3 @@ Here's a sample program:
 Crack's GTK libraries are really a toy implementation or proof of concept.  
 You can probably implement minimal programs with them, you can implement 
 larger programs if you care to augment the library.
-
-XXX cover standard annotations
