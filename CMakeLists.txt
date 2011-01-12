@@ -157,7 +157,7 @@ endif()
 
 # pcre
 find_library(PCRE_LIBRARY NAMES pcre)
-find_path(PCRE_INCLUDE_DIR NAMES pcre.h /usr/include /include)
+find_path(PCRE_INCLUDE_DIR NAMES pcre.h)
 if(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
   SET(PCRE_FOUND TRUE)
 endif(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
