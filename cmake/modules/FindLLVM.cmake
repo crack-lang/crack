@@ -55,12 +55,9 @@ else (LLVM_INCLUDE_DIR)
   
   
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --cppflags  OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
-  MESSAGE(STATUS "LLVM CXX flags: " ${LLVM_COMPILE_FLAGS})
+  MESSAGE(STATUS "LLVM CPP flags: " ${LLVM_COMPILE_FLAGS})
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --ldflags   OUTPUT_VARIABLE LLVM_LDFLAGS )
 
-  # XXX terrible ubuntu 10.04 llvm hack  
-  STRING(REPLACE "-lffi" "" LLVM_LDFLAGS ${LLVM_LDFLAGS})
-  
   MESSAGE(STATUS "LLVM LD flags: " ${LLVM_LDFLAGS})
   
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core jit native instrumentation ipo OUTPUT_VARIABLE LLVM_LIBS )
