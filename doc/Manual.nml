@@ -3877,7 +3877,7 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
     this by adding the version number to the binary in your '`#!`' line:
 
     {{
-        #!/usr/local/bin/crack0.3
+        #!/usr/local/bin/crack-0.3
     }}
 
     You will want to install your own modules under the module tree for the 
