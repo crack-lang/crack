@@ -31,11 +31,12 @@ function test_output {
 }
 
 # get a fresh copy of the runtime library and the PCRE library
+mkdir -p lib/crack/ext
 ln -f .libs/runtime.so lib/crack
 if [ -e .libs/_pcre.so ]; then
-    mkdir -p lib/crack/ext; 
     ln -f .libs/_pcre.so lib/crack/ext
 fi
+ln test/.libs/testext.so lib
 
 # find the root of the source tree (should be my parent directory)
 root=$(cd $(dirname "$0")/..; pwd)
@@ -786,7 +787,7 @@ test_output 'error on the use of unspecialized generics' \
     "${parseError}1: Generic type array must be specialized to be used."
 
 # switch to full bootstrapping mode now that importing works
-opts="-g -l $root -l $root/lib -l $root/test/.libs"
+opts="-g -l $root -l $root/lib -l lib"
 
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \

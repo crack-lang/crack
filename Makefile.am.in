@@ -156,7 +156,7 @@ TESTS = test/run_all_tests
 
 doc/Manual.html: doc/Manual.nml
 	@if which nml2html >/dev/null; then \
-	   if [ ! -w $@ ]; then \
+	   if test -e "$@" -a ! -w $@; then \
 	       echo "Not generating $@: access denied."; \
 	   else \
                echo generating $@; \
@@ -190,4 +190,4 @@ uninstall-local:
 	rm $(DESTDIR)$(bindir)/crack-$(VERSION)
 
 clean-local:
-	rm -f lib/crack/ext/_pcre.so
+	rm -f lib/crack/ext/_pcre.so lib/crack/runtime.so lib/testext.so
