@@ -147,12 +147,10 @@ bin_PROGRAMS = crack
 
 crack_SOURCES = crack.cc
 crack_LDADD = libCrackLang.la $(LDFLAGS)
-# use LLVM flags, but override their "--no-exceptions" flag.
-AM_CXXFLAGS = @LLVM_CXXFLAGS@ -fexceptions
 
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
-AM_CPPFLAGS = -DCRACKLIB=\"${cracklib}\"
+AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
 TESTS = test/run_all_tests
 
