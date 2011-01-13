@@ -2552,7 +2552,7 @@ Crack has only minimal support for debugging in 0.3.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it 
 under a fairly recent version of GDB (7.0 or later).
 
-Appendices - Libraries
+Appendix 1 - Libraries
 ======================
 
 Crack comes with its own (sparse but growing) set of standard libraries.  
@@ -3007,6 +3007,25 @@ attribute:
         cout `map[$(kv.key)] = $(kv.val)\n`;
     }
 }}
+
+Algorithms (Sort Functions)
+'''''''''''''''''''''''''''
+
+The #crack.exp.algorithm# module includes two sorting algorithms for arrays.  
+For example:
+
+{{
+    import crack.containers Array;
+    import crack.exp.algorithm quickSort, insertionSort;
+    Array arr = getAnArray();
+    
+    # try out both kinds of sort
+    quickSort(arr);
+    insertionSort(arr);
+}}
+
+Sorting relies on the comparison functions of #Object#, which in turn rely on 
+the overridable #cmp()# method.
 
 Generic Containers
 ''''''''''''''''''
@@ -3488,6 +3507,7 @@ Since Crack allows function overloading, only one function name exists for both
 values. The #long double# type in C is not currently supported.
 
 The library provides:
+
 *trigonometric functions*::
    #sin#, #cos#, #tan#, #asin#, #acos#, #atan#, #sinh#, #cosh#, #tanh#, #asinh#, 
    #acosh#, #atanh#.
@@ -3535,8 +3555,6 @@ Below is a simple example:
     x = cos(30.0 / 180 * PI) * len;
     y = sin(30.0 / 180 * PI) * len;
 }}
-
-See the source of the module itself for details of what is included.
 
 Bindings
 --------
@@ -3840,3 +3858,65 @@ Here's a sample program:
 Crack's GTK libraries are really a toy implementation or proof of concept.  
 You can probably implement minimal programs with them, you can implement 
 larger programs if you care to augment the library.
+
+Appendix 2 - Migration
+======================
+
+Crack guarantees backwards compatibility between ternary release numbers (so 
+0.2.1 should be compatible with 0.2).  We will adhere to this policy until we 
+release 1.0, at which point we will begin guaranteeing backwards 
+compatibililty until the next major version number (2.0).
+
+Until this time, the language and all of its libraries are considered to be 
+"in flux:" anything can change between minor version numbers.
+
+That said, we want to make the prospect of early adoption to be tolerable.  If 
+you want to avoid code breakage when upgrading, we recommend two strategies:
+
+-   Bind your toplevel scripts to a specific version of crack.  You can do 
+    this by adding the version number to the binary in your '`#!`' line:
+
+    {{
+        #!/usr/local/bin/crack0.3
+    }}
+
+    You will want to install your own modules under the module tree for the 
+    version that they were developed for.  For example, if you create module 
+    "foo.bar", you would typically install it somewhere like 
+    #`/usr/local/lib/crack-0.3/foo/bar`#.
+
+-   Read the migration section of the manual for the changes involved in 
+    upgrading to the new version.
+
+    We will attempt to provide migration facilities, both in the form of 
+    documentation and migration warnings.
+
+The remainder of this appendix describes the things you need to know when 
+upgrading between versions.
+
+From 0.2 to 0.3
+---------------
+
+-   The following words are now keywords, and no longer available for use as 
+    identifiers: #in# #on# #for#
+-   The semantics of aggregate variable definitions without an explicit 
+    initializer have changed. Uninitialized variables use to initialize to an 
+    object created with the default constructor, they now initialize to null. 
+    So for example in this code:
+    
+    {{
+        class A {}
+        A x;
+    }}
+    
+    #x# would have been assigned to an instance of #A# in version 0.2, in 
+    version 0.3 it would be assigned to null.
+    
+    The -m flag can be used to help you identify instances where your code is 
+    likely to be confused by this.  It generates a warning for places where 
+    you are using default initialization (presumably expecting default 
+    initialization) and also where you are assigning the variable to null 
+    (since it is now the default and does not need to be specified explicitly).
+
+    We recommend that you run all code that you are upgrading with this option 
+    and audit all sites where one of these warnings are triggered.
