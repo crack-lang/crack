@@ -10,7 +10,7 @@ endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.3.0")
+set(CRACK_VERSION "0.3")
 set(API_VERSION   "0.0.0")
 
 set(LLVM_MIN_VERSION       "2008000")
@@ -57,7 +57,6 @@ add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
                       OUTPUT_NAME CrackLang
-                      VERSION ${CRACK_VERSION}
                       SOVERSION ${API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
@@ -110,11 +109,19 @@ install(TARGETS crack libcrack
         ARCHIVE DESTINATION lib
        )
 
+# runtime
 install(TARGETS crack-runtime
          LIBRARY DESTINATION "lib/crack-${CRACK_VERSION}/crack"
         )
 
+# manual
 install(FILES doc/Manual.html DESTINATION share/doc/crack)
+
+# header files
+install(DIRECTORY compiler/ DESTINATION "include/crack-${CRACK_VERSION}/crack/compiler"
+        FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/ext"
+        FILES_MATCHING PATTERN "*.h")
 
 # install library modules and extensions
 install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
