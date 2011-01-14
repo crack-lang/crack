@@ -4,6 +4,8 @@ tcmreastwood:
     GCC 4.4.2 fixes.
 Shannon Weyrick (weyrick@mozek.us):
     Floating point types.  Logical "&&" and "||" operators.  CMake support.
+Conrad Steenberg (conrad.steenberg@gmail.com):
+    The Math module.  Various improvements to CMake and the standard modules.
 Michael Muller (mmuller@google.com):
     Everything else.
 
