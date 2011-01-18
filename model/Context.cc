@@ -42,12 +42,7 @@ void Context::warnOnHide(const string &name) {
             " hides another definition in an enclosing context." << endl;
 }
 
-Context::GlobalData::GlobalData() : 
-    objectType(0), 
-    stringType(0), 
-    staticStringType(0), 
-    migrationWarnings(false) {
-}
+Context::GlobalData::GlobalData() : migrationWarnings(false) {}
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
@@ -156,7 +151,8 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
     
     // look up the raw string constant
     StrConstPtr strConst;
-    StrConstTable::iterator iter = globalData->strConstTable.find(value);
+    Construct::StrConstTable::iterator iter = 
+        globalData->strConstTable.find(value);
     if (iter != globalData->strConstTable.end()) {
         strConst = iter->second;
     } else {
@@ -261,7 +257,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
               );
     
     // if the definition context is an instance context, make sure that we 
-    // haven't generated any constructors.
+    // haven't generated any globalDataors.
     ContextPtr defCtx = getDefContext();
     if (defCtx->scope == Context::instance && 
         TypeDefPtr::arcast(defCtx->ns)->initializersEmitted) {

@@ -13,7 +13,6 @@
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
 #include "builder/Builder.h"
-#include "builder/llvm/LLVMBuilder.h"
 #include "ext/Module.h"
 #include "compiler/init.h"
 
@@ -21,15 +20,11 @@ using namespace std;
 using namespace model;
 using namespace parser;
 using namespace builder;
-using namespace builder::mvll;
 using namespace crack::ext;
 
 Crack *Crack::theInstance = 0;
 
 Crack &Crack::getInstance() {
-    if (!theInstance)
-        theInstance = new Crack();
-    
     return *theInstance;
 }
 
@@ -42,39 +37,6 @@ void Crack::addToSourceLibPath(const string &path) {
         i = path.find('.', pos);
     }
     sourceLibPath.push_back(path.substr(pos));
-}
-
-Crack::Crack() : 
-    rootBuilder(new LLVMBuilder()), 
-    initialized(false),
-    dump(false),
-    optimizeLevel(0),
-    emitDebugInfo(false),
-    noBootstrap(false),
-    useGlobalLibs(true),
-    emitMigrationWarnings(false) {
-
-    rootContext = new Context(*rootBuilder, Context::module, (Context *)0,
-                              new GlobalNamespace(0, ""),
-                              new GlobalNamespace(0, "")
-                              );
-
-    // register the primitives into our builtin module
-    ContextPtr builtinContext =
-        new Context(*rootBuilder, Context::module, rootContext.get(),
-                    // NOTE we can't have rootContext namespace be the parent
-                    // here since we are adding the aliases into rootContext
-                    // and we get dependency issues
-                    new GlobalNamespace(0, ".builtin"),
-                    new GlobalNamespace(0, ".builtin"));
-    builtinMod = rootBuilder->registerPrimFuncs(*builtinContext);
-
-    // alias builtins to the root namespace
-    for (Namespace::VarDefMap::iterator i = builtinContext->ns->beginDefs();
-         i != builtinContext->ns->endDefs();
-         ++i) {
-         rootContext->ns->addAlias(i->first, i->second.get());
-    }
 }
 
 bool Crack::init() {
@@ -90,7 +52,7 @@ bool Crack::init() {
         ModuleDefPtr ccMod = 
             initExtensionModule("crack.compiler", &compiler::init);
         rootContext->globalData->crackContext = ccMod->lookUp("CrackContext");
-        moduleCache["crack.compiler"] = ccMod;
+        construct->moduleCache["crack.compiler"] = ccMod;
         ccMod->finished = true;
         rootContext->compileNS->addAlias(ccMod->lookUp("static").get());
         rootContext->compileNS->addAlias(ccMod->lookUp("final").get());
@@ -110,6 +72,45 @@ bool Crack::init() {
     }
     
     return true;
+}
+
+Crack::Crack(Builder *builder) : 
+    initialized(false),
+    dump(false),
+    optimizeLevel(0),
+    emitDebugInfo(false),
+    noBootstrap(false),
+    useGlobalLibs(true),
+    emitMigrationWarnings(false) {
+
+    Context::GlobalData *globalData;
+    construct = globalData = new Context::GlobalData();
+    construct->rootBuilder = builder;
+
+    rootContext = new Context(*builder, Context::module, globalData,
+                              new GlobalNamespace(0, ""),
+                              new GlobalNamespace(0, "")
+                              );
+
+    // register the primitives into our builtin module
+    ContextPtr builtinContext =
+        new Context(*builder, Context::module, rootContext.get(),
+                    // NOTE we can't have rootContext namespace be the parent
+                    // here since we are adding the aliases into rootContext
+                    // and we get dependency issues
+                    new GlobalNamespace(0, ".builtin"),
+                    new GlobalNamespace(0, ".builtin"));
+    construct->builtinMod =
+        construct->rootBuilder->registerPrimFuncs(*builtinContext);
+
+    // alias builtins to the root namespace
+    for (Namespace::VarDefMap::iterator i = builtinContext->ns->beginDefs();
+         i != builtinContext->ns->endDefs();
+         ++i) {
+         rootContext->ns->addAlias(i->first, i->second.get());
+    }
+    
+    theInstance = this;
 }
 
 //Crack::~Crack() {}
@@ -207,7 +208,7 @@ ModuleDefPtr Crack::initExtensionModule(const string &canonicalName,
                                         Crack::InitFunc initFunc
                                         ) {
     // create a new context
-    BuilderPtr builder = rootBuilder->createChildBuilder();
+    BuilderPtr builder = construct->rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
                     new GlobalNamespace(rootContext->ns.get(), canonicalName),
@@ -276,8 +277,9 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
             canonicalName = *iter;
 
     // check to see if we have it in the cache
-    ModuleMap::iterator iter = moduleCache.find(canonicalName);
-    if (iter != moduleCache.end())
+    Construct::ModuleMap::iterator iter = 
+        construct->moduleCache.find(canonicalName);
+    if (iter != construct->moduleCache.end())
         return iter->second;
 
     // load the parent module
@@ -303,7 +305,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                                moduleNameEnd,
                                canonicalName
                                );
-        moduleCache[canonicalName] = modDef;
+        construct->moduleCache[canonicalName] = modDef;
     } else {
         
         // try to find the module on the source path
@@ -314,7 +316,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
             return 0;
     
         // create a new builder, context and module
-        BuilderPtr builder = rootBuilder->createChildBuilder();
+        BuilderPtr builder = construct->rootBuilder->createChildBuilder();
         ContextPtr context =
             new Context(*builder, Context::module, rootContext.get(),
                         new GlobalNamespace(rootContext->ns.get(), 
@@ -326,7 +328,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
                         );
         context->toplevel = true;
         modDef = context->createModule(canonicalName, emitDebugInfo);
-        moduleCache[canonicalName] = modDef;
+        construct->moduleCache[canonicalName] = modDef;
         if (!modPath.isDir) {
             ifstream src(modPath.path.c_str());
             parseModule(*context, modDef.get(), modPath.path, src);
@@ -334,7 +336,7 @@ ModuleDefPtr Crack::loadModule(Crack::StringVecIter moduleNameBegin,
     }
 
     modDef->finished = true;
-    loadedModules.push_back(modDef);
+    construct->loadedModules.push_back(modDef);
     return modDef;
 }    
 
@@ -406,7 +408,7 @@ bool Crack::loadBootstrapModules() {
 }
 
 void Crack::setArgv(int argc, char **argv) {
-    rootBuilder->setArgv(argc, argv);
+    construct->rootBuilder->setArgv(argc, argv);
 }
 
 int Crack::runScript(std::istream &src, const std::string &name) {
@@ -415,7 +417,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
         return 1;
 
     // create the builder and context for the script.
-    BuilderPtr builder = rootBuilder->createChildBuilder();
+    BuilderPtr builder = construct->rootBuilder->createChildBuilder();
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
                     new GlobalNamespace(rootContext->ns.get(), name),
@@ -429,7 +431,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     ModuleDefPtr modDef = context->createModule(name, emitDebugInfo);
     try {
         parseModule(*context, modDef.get(), name, src);
-        loadedModules.push_back(modDef);
+        construct->loadedModules.push_back(modDef);
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return 1;
@@ -450,8 +452,9 @@ void Crack::callModuleDestructors() {
     if (dump) return;
 
     // run through all of the destructors backwards.
-    for (vector<ModuleDefPtr>::reverse_iterator ri = loadedModules.rbegin();
-         ri != loadedModules.rend();
+    for (vector<ModuleDefPtr>::reverse_iterator ri = 
+            construct->loadedModules.rbegin();
+         ri != construct->loadedModules.rend();
          ++ri
          )
         (*ri)->callDestructor();

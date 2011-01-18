@@ -8,6 +8,7 @@
 #include <spug/RCPtr.h>
 
 namespace model {
+    SPUG_RCPTR(Construct);
     SPUG_RCPTR(Context);
     SPUG_RCPTR(ModuleDef);
 }
@@ -31,26 +32,13 @@ class Crack {
         // the root context contains all of the builtin types and functions
         // that are visible from all modules.
         model::ContextPtr rootContext;
-
-        // the toplevel builder        
-        builder::BuilderPtr rootBuilder;
-
-        // .builtin module, containing primitive types and functions
-        model::ModuleDefPtr builtinMod;
         
-        // mapping from the canonical name of the module to the module 
-        // definition.
-        typedef std::map<std::string, model::ModuleDefPtr> ModuleMap;
-        ModuleMap moduleCache;
-
-        // list of all modules in the order that they were loaded.
-        std::vector<model::ModuleDefPtr> loadedModules;
+        // the primary construct.
+        model::ConstructPtr construct;
 
         // keeps init() from doing its setup stuff twice.
         bool initialized;
 
-        Crack();
-        
         bool init();
 
     public:
@@ -97,6 +85,8 @@ class Crack {
         typedef void (*InitFunc)(crack::ext::Module *mod);
 
         
+        Crack(builder::Builder *rootBuilder);
+        
 //        ~Crack();
         
         /**
@@ -141,8 +131,13 @@ class Crack {
                                      );
 
     public:
-        
+
+        /**
+         * Singleton interface for Crack - this is just temporary until we 
+         * fully migrate everything into Construct, then this won't be needed.
+         */        
         static Crack &getInstance();
+        static void setInstance(Crack &instance);
 
         /**
          * Adds the given path to the source library path - 'path' is a 

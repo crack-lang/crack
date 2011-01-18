@@ -22,46 +22,48 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    Crack crack(new builder::mvll::LLVMBuilder());
+
     // default optimize
-    Crack::getInstance().optimizeLevel = 2;
+    crack.optimizeLevel = 2;
 
     // parse the main module
     char **arg = &argv[1];
     while (*arg) {
         if (!strcmp(*arg, "-")) {
-            Crack::getInstance().setArgv(argc - (arg - argv), arg);
-            Crack::getInstance().runScript(cin, "<stdin>");
+            crack.setArgv(argc - (arg - argv), arg);
+            crack.runScript(cin, "<stdin>");
             break;
         } else if (!strcmp(*arg, "-d")) {
-            Crack::getInstance().dump = true;
+            crack.dump = true;
         } else if (!strcmp(*arg, "-dg")) {
-            Crack::getInstance().emitDebugInfo = true;
+            crack.emitDebugInfo = true;
         } else if (!strcmp(*arg, "-O0")) {
-            Crack::getInstance().optimizeLevel = 0;
+            crack.optimizeLevel = 0;
         } else if (!strcmp(*arg, "-O1")) {
-            Crack::getInstance().optimizeLevel = 1;
+            crack.optimizeLevel = 1;
         } else if (!strcmp(*arg, "-O2")) {
-            Crack::getInstance().optimizeLevel = 2;
+            crack.optimizeLevel = 2;
         } else if (!strcmp(*arg, "-O3")) {
-            Crack::getInstance().optimizeLevel = 3;
+            crack.optimizeLevel = 3;
         } else if (!strcmp(*arg, "-n")) {
-            Crack::getInstance().noBootstrap = true;
+            crack.noBootstrap = true;
         } else if (!strcmp(*arg, "-g")) {
-            Crack::getInstance().useGlobalLibs = false;
+            crack.useGlobalLibs = false;
         } else if (!strcmp(*arg, "-m")) {
-            Crack::getInstance().emitMigrationWarnings = true;
+            crack.emitMigrationWarnings = true;
         } else if (!strcmp(*arg, "-l")) {
             ++arg;
-            Crack::getInstance().addToSourceLibPath(*arg);
+            crack.addToSourceLibPath(*arg);
         } else {
             // it's the script name - run it.
             ifstream src(*arg);
-            Crack::getInstance().setArgv(argc - (arg - argv), arg);
-            Crack::getInstance().runScript(src, *arg);
+            crack.setArgv(argc - (arg - argv), arg);
+            crack.runScript(src, *arg);
             break;
         }
         ++arg;
     }
     
-    Crack::getInstance().callModuleDestructors();
+    crack.callModuleDestructors();
 }

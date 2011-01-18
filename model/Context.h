@@ -8,6 +8,7 @@
 #include <list>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
+#include "Construct.h"
 #include "FuncDef.h"
 #include "parser/Location.h"
 
@@ -41,8 +42,6 @@ SPUG_RCPTR(Context);
  */
 class Context : public spug::RCBase {
     private:
-        typedef std::map<std::string, StrConstPtr> StrConstTable;
-        
         // break and continue branchpoints
         BranchpointPtr breakBranch, continueBranch;
         
@@ -106,30 +105,7 @@ class Context : public spug::RCBase {
         // flags to be injected into the next function
         FuncDef::Flags nextFuncFlags;
 
-        struct GlobalData {
-            StrConstTable strConstTable;
-            TypeDefPtr classType,
-                       voidType,
-                       voidptrType,
-                       boolType,
-                       byteptrType,
-                       byteType,
-                       int32Type,
-                       int64Type,
-                       uint32Type,
-                       uint64Type,
-                       intType,
-                       uintType,
-                       float32Type,
-                       float64Type,
-                       floatType,
-                       vtableBaseType,
-                       objectType,
-                       stringType,
-                       staticStringType,
-                       overloadType,
-                       crackContext;
-
+        struct GlobalData : public Construct {
             // if true, emit warnings about things that have changed since the 
             // last version of the language.
             bool migrationWarnings;
@@ -142,14 +118,12 @@ class Context : public spug::RCBase {
             GlobalData();
         } *globalData;
     
-        Context(builder::Builder &builder, Scope scope,
-                Context *parentContext,
+        Context(builder::Builder &builder, Scope scope, Context *parentContext,
                 Namespace *ns,
                 Namespace *compileNS
                 );
         
-        Context(builder::Builder &builder, Scope scope,
-                GlobalData *globalData,
+        Context(builder::Builder &builder, Scope scope, GlobalData *globalData,
                 Namespace *ns,
                 Namespace *compileNS
                 );
