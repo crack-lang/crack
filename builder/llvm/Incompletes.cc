@@ -495,7 +495,7 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
     LLVMBuilder &llvmBuilder =
             dynamic_cast<LLVMBuilder &>(context.builder);
     BTypeDef *vtableBaseType =
-            BTypeDefPtr::arcast(context.globalData->vtableBaseType);
+            BTypeDefPtr::arcast(context.construct->vtableBaseType);
     BTypeDef *type = BTypeDefPtr::acast(funcDef->getOwner());
 
     // if this is for a complete class, go ahead and emit the code.

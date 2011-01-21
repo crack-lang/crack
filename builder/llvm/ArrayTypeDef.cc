@@ -46,7 +46,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
                          );
 
     tempSpec->addDef(
-            new VoidPtrOpDef(context.globalData->voidptrType.get())
+            new VoidPtrOpDef(context.construct->voidptrType.get())
             );
 
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());

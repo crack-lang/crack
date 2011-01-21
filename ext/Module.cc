@@ -40,7 +40,7 @@ Module::~Module() {
         return builtinTypes[lowerName##Type] ?                              \
             builtinTypes[lowerName##Type] :                                 \
             (builtinTypes[lowerName##Type] =                                \
-              new Type(this, context->globalData->lowerName##Type.get()));  \
+              new Type(this, context->construct->lowerName##Type.get()));   \
     }
 
 

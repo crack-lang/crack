@@ -105,14 +105,14 @@ class Context : public spug::RCBase {
         FuncDef::Flags nextFuncFlags;
 
         // the construct
-        Construct *globalData;
+        Construct *construct;
     
         Context(builder::Builder &builder, Scope scope, Context *parentContext,
                 Namespace *ns,
                 Namespace *compileNS
                 );
         
-        Context(builder::Builder &builder, Scope scope, Construct *globalData,
+        Context(builder::Builder &builder, Scope scope, Construct *construct,
                 Namespace *ns,
                 Namespace *compileNS
                 );

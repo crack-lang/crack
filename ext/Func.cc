@@ -84,7 +84,7 @@ void Func::finish() {
         VarRefPtr thisRef = new VarRef(thisDef.get());
         
         // emit the function
-        TypeDef *voidType = context->globalData->voidType.get();
+        TypeDef *voidType = context->construct->voidType.get();
         FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
                                                             "oper init",

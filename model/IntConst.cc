@@ -36,32 +36,32 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
     if (newType == this->type)
         return this;
 
-    if (newType == context.globalData->int64Type)
+    if (newType == context.construct->int64Type)
         ; // nothing we can do about this right now
-    else if (newType == context.globalData->uint64Type) {
+    else if (newType == context.construct->uint64Type) {
         if (!reqUnsigned && val.sval < 0)
             return 0;
             // since we can't currently give these errors, at least record 
             // them in the comments.
             // context.error = "Negative constant can not be converted to "
             //                  "uint64"
-    } else if (newType == context.globalData->int32Type) {
+    } else if (newType == context.construct->int32Type) {
         if (reqUnsigned ||
             val.sval > INT32_MAX ||
             val.sval < INT32_MIN)
             return 0;
             // context.error = "Constant out of range of int32"
-    } else if ((newType == context.globalData->float32Type) ||
-               (newType == context.globalData->float64Type)) {
+    } else if ((newType == context.construct->float32Type) ||
+               (newType == context.construct->float64Type)) {
         // XXX range check?
         return context.builder.createFloatConst(context,
                                                 (double)val.sval,
                                                 newType);
-    } else if (newType == context.globalData->uint32Type) {
+    } else if (newType == context.construct->uint32Type) {
         if ((!reqUnsigned && val.sval < 0) || val.uval > UINT32_MAX)
             return 0;
             // context.error = "Constant out of range of uint32"
-    } else if (newType == context.globalData->byteType) {
+    } else if (newType == context.construct->byteType) {
         if ((!reqUnsigned && val.sval < 0) || val.uval > UINT8_MAX) {
             return 0;
             // context.error = "Constant out of range of byte"
@@ -88,7 +88,7 @@ TypeDef *IntConst::selectType(Context &context, int64_t val) {
     // this shouldn't be called if val > INT64_MAX, i.e. when it requires
     // unsigned int 64
     if (val > INT32_MAX || val < INT32_MIN)
-        return context.globalData->int64Type.get();
+        return context.construct->int64Type.get();
     else
-        return context.globalData->intType.get();
+        return context.construct->intType.get();
 }

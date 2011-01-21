@@ -59,7 +59,7 @@ bool TypeDef::isImplicitFinal(const std::string &name) {
 
 void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     // ignore VTableBase
-    if (this == context.globalData->vtableBaseType)
+    if (this == context.construct->vtableBaseType)
         return;
 
     // make sure this isn't a primitive class (we use the "pointer" attribute 
@@ -75,7 +75,7 @@ void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     size_t initAncSize = ancestors.size();
     
     // if this is the object class, make sure that it's the first ancestor.
-    if (initAncSize && this == context.globalData->objectType)
+    if (initAncSize && this == context.construct->objectType)
         context.error("If you directly or indirectly inherit from Object, "
                        "Object (or its derivative) must come first in the "
                        "ancestor list.");
@@ -141,7 +141,7 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     VarRefPtr thisRef = new VarRef(thisDef.get());
     
     FuncDef::ArgVec args(0);
-    TypeDef *voidType = classContext.globalData->voidType.get();
+    TypeDef *voidType = classContext.construct->voidType.get();
     FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
                                                             "oper init",
@@ -228,7 +228,7 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
     FuncDefPtr override = lookUpNoArgs("oper del");
     
     FuncDef::ArgVec args(0);
-    TypeDef *voidType = classContext.globalData->voidType.get();
+    TypeDef *voidType = classContext.construct->voidType.get();
     FuncDefPtr delFunc = classContext.builder.emitBeginFunc(*funcContext,
                                                             flags,
                                                             "oper del",
@@ -314,7 +314,7 @@ void TypeDef::createCast(Context &outer) {
     
     FuncDef::ArgVec args(1);
     args[0] = 
-        outer.builder.createArgDef(outer.globalData->vtableBaseType.get(),
+        outer.builder.createArgDef(outer.construct->vtableBaseType.get(),
                                    "val"
                                    );
     FuncDefPtr castFunc = outer.builder.emitBeginFunc(*funcCtx,
@@ -380,7 +380,7 @@ void TypeDef::createCast(Context &outer) {
     funcCtx->closeCleanupFrame();
     
     // need to "return null" to provide a terminator.
-    TypeDef *vp = outer.globalData->voidptrType.get();
+    TypeDef *vp = outer.construct->voidptrType.get();
     ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
     funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
 

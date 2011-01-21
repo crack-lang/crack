@@ -20,7 +20,7 @@ namespace builder { namespace mvll {
 void addArrayMethods(Context &context, TypeDef *arrayType,
                      BTypeDef *elemType
                      ) {
-    Construct *gd = context.globalData;
+    Construct *gd = context.construct;
     FuncDefPtr arrayGetItem =
             new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method,
                                                "oper []",
@@ -85,7 +85,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
 
     // get the LLVM class structure type from out of the meta class rep.
-    BTypeDef *classType = BTypeDefPtr::arcast(context.globalData->classType);
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     const PointerType *classPtrType = cast<PointerType>(classType->rep);
     const StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
@@ -111,7 +111,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
     // numBases
     const Type *uintType = 
-        BTypeDefPtr::arcast(context.globalData->uintType)->rep;
+        BTypeDefPtr::arcast(context.construct->uintType)->rep;
     classStructVals[1] = ConstantInt::get(uintType, type->parents.size());
 
     // bases
@@ -193,13 +193,13 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     LLVMContext &lctx = getGlobalContext();
 
     BTypeDefPtr metaType =
-        new BTypeDef(context.globalData->classType.get(),
+        new BTypeDef(context.construct->classType.get(),
                      SPUG_FSTR("Class[" << name << "]"),
                      0,
                      true,
                      0
                      );
-    BTypeDef *classType = BTypeDefPtr::arcast(context.globalData->classType);
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     metaType->addBaseClass(classType);
     const PointerType *classPtrType = cast<PointerType>(classType->rep);
     const StructType *classStructType =

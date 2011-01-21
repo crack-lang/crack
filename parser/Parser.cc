@@ -653,7 +653,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
    result->handleTransient(*context);
    
    // put the whole thing in an "if"
-   TypeDef *boolType = context->globalData->boolType.get();
+   TypeDef *boolType = context->construct->boolType.get();
    ExprPtr cond = result->convert(*context, boolType);
    if (!cond)
       context->error("interpolated string target can not be converted to a "
@@ -928,7 +928,7 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
    // check for null
    Token tok = getToken();
    if (tok.isNull()) {
-      expr = new NullConst(context->globalData->voidptrType.get());
+      expr = new NullConst(context->construct->voidptrType.get());
    
    // check for a nested parenthesized expression
    } else if (tok.isLParen()) {
@@ -1525,7 +1525,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
    if (!terminal)
-      if (context->globalData->voidType->matches(*context->returnType)) {
+      if (context->construct->voidType->matches(*context->returnType)) {
          // remove the cleanup stack - we have already done cleanups at 
          // the block level.
          context->cleanupFrame = 0;
@@ -1672,7 +1672,7 @@ ContextPtr Parser::parseIfClause() {
 }
    
 ExprPtr Parser::parseCondExpr() {
-   TypeDef *boolType = context->globalData->boolType.get();
+   TypeDef *boolType = context->construct->boolType.get();
    ExprPtr cond = parseExpression()->convert(*context, boolType);
    if (!cond)
       error(getToken(),  "Condition is not boolean.");
@@ -1835,7 +1835,7 @@ void Parser::parseForStmt() {
       tok = getToken();
       if (tok.isSemi()) {
          // no conditional, create one from a constant
-         TypeDef *boolType = context->globalData->boolType.get();
+         TypeDef *boolType = context->construct->boolType.get();
          cond = context->builder.createIntConst(*context, 1)->convert(*context,
                                                                      boolType
                                                                      );
@@ -1903,7 +1903,7 @@ void Parser::parseReturnStmt() {
       returnVoid = true;
    }
    if (returnVoid) {
-      if (!context->returnType->matches(*context->globalData->voidType))
+      if (!context->returnType->matches(*context->construct->voidType))
          error(tok,
                SPUG_FSTR("Missing return expression for function "
                           "returning " << context->returnType->name
@@ -1914,7 +1914,7 @@ void Parser::parseReturnStmt() {
    }
    // if return type is void, but they are trying to return an expression,
    // fail with message
-   else if (context->returnType == context->globalData->voidType) {
+   else if (context->returnType == context->construct->voidType) {
       error(tok,
             SPUG_FSTR("Cannot return expression from function "
                       "with return type void")
@@ -1932,7 +1932,7 @@ void Parser::parseReturnStmt() {
                       )
             );
    else if (!expr && 
-            !context->globalData->voidType->matches(*context->returnType))
+            !context->construct->voidType->matches(*context->returnType))
       error(tok,
             SPUG_FSTR("Missing return value for function returning " <<
                        context->returnType->name
@@ -1959,7 +1959,7 @@ void Parser::parseImportStmt(Namespace *ns) {
       toker.putBack(tok);
       vector<string> moduleName;
       parseModuleName(moduleName);
-      mod = context->globalData->loadModule(moduleName.begin(),
+      mod = context->construct->loadModule(moduleName.begin(),
                                             moduleName.end(),
                                             canonicalName
                                             );
@@ -2051,8 +2051,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
          // these opers must be of type "void"
          if (!returnType)
             context->returnType = returnType =
-               context->globalData->voidType.get();
-         else if (returnType != context->globalData->voidType.get())
+               context->construct->voidType.get();
+         else if (returnType != context->construct->voidType.get())
             error(tok, 
                   SPUG_FSTR("oper " << ident << 
                             " must be of return type 'void'"
@@ -2208,8 +2208,8 @@ TypeDefPtr Parser::parseClassDef() {
    
    // if no base classes were specified, and Object has been defined, make 
    // Object the implicit base class.
-   if (!bases.size() && context->globalData->objectType)
-      bases.push_back(context->globalData->objectType);
+   if (!bases.size() && context->construct->objectType)
+      bases.push_back(context->construct->objectType);
 
    // create a class context
    ContextPtr classContext =

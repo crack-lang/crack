@@ -271,13 +271,13 @@ namespace {
     BTypeDef *createIntPrimType(Context &context, const Type *llvmType,
                                 const char *name
                                 ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+        BTypeDefPtr btype = new BTypeDef(context.construct->classType.get(),
                                          name,
                                          llvmType
                                          );
         btype->defaultInitializer =
             context.builder.createIntConst(context, 0, btype.get());
-        btype->addDef(new BoolOpDef(context.globalData->boolType.get(),
+        btype->addDef(new BoolOpDef(context.construct->boolType.get(),
                                     "toBool"
                                     )
                       );
@@ -291,13 +291,13 @@ namespace {
     BTypeDef *createFloatPrimType(Context &context, const Type *llvmType,
                              const char *name
                              ) {
-        BTypeDefPtr btype = new BTypeDef(context.globalData->classType.get(),
+        BTypeDefPtr btype = new BTypeDef(context.construct->classType.get(),
                                          name,
                                          llvmType
                                          );
         btype->defaultInitializer =
             context.builder.createFloatConst(context, 0.0, btype.get());
-        btype->addDef(new FBoolOpDef(context.globalData->boolType.get(),
+        btype->addDef(new FBoolOpDef(context.construct->boolType.get(),
                                     "toBool"
                                     )
                       );
@@ -457,7 +457,7 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
         return TypeDefPtr::rcast(iter->second);
 
     // nope.  create a new type object and store it
-    BTypeDefPtr crkFuncType = new BTypeDef(context.globalData->classType.get(),
+    BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
                                            "",
                                            llvmFuncType
                                            );
@@ -465,7 +465,7 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
     
     // Give it an "oper to voidptr" method.
     crkFuncType->addDef(
-        new VoidPtrOpDef(context.globalData->voidptrType.get())
+        new VoidPtrOpDef(context.construct->voidptrType.get())
     );
     
     return crkFuncType.get();
@@ -645,7 +645,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     
     // construct a call to the "calloc" function
     BTypeDef *voidptrType =
-        BTypeDefPtr::arcast(context.globalData->voidptrType);
+        BTypeDefPtr::arcast(context.construct->voidptrType);
     vector<Value *> callocArgs(2);
     callocArgs[0] = countVal;
     callocArgs[1] = size;
@@ -932,7 +932,7 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     metaType->addDef(new UnsafeCastDef(type.get()));
     
     // create function to convert to voidptr
-    type->addDef(new VoidPtrOpDef(context.globalData->voidptrType.get()));
+    type->addDef(new VoidPtrOpDef(context.construct->voidptrType.get()));
 
     // make the class default to initializing to null
     type->defaultInitializer = new NullConst(type.get());
@@ -1119,7 +1119,7 @@ namespace {
         } else {
             // everything must have an override except for VTableBase::oper 
             // class.
-            assert(objClass == context.globalData->vtableBaseType);
+            assert(objClass == context.construct->vtableBaseType);
             funcBuilder.funcDef->vtableSlot = objClass->nextVTableSlot++;
             funcBuilder.setReceiverType(objClass);
         }
@@ -1264,13 +1264,13 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // construct the vtable if necessary
     if (type->hasVTable) {
         VTableBuilder vtableBuilder(
-            BTypeDefPtr::arcast(context.globalData->vtableBaseType),
+            BTypeDefPtr::arcast(context.construct->vtableBaseType),
             module
         );
         type->createAllVTables(
             vtableBuilder, 
             ".vtable." + type->name,
-            BTypeDefPtr::arcast(context.globalData->vtableBaseType)
+            BTypeDefPtr::arcast(context.construct->vtableBaseType)
         );
         vtableBuilder.emit(type);
     }
@@ -1421,25 +1421,25 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     builder.SetInsertPoint(block);
 
     // name some structs in this module
-    BTypeDef *classType = BTypeDefPtr::arcast(context.globalData->classType);
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     module->addTypeName(".struct.Class", classType->rep);
     BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
-                                  context.globalData->vtableBaseType);
+                                  context.construct->vtableBaseType);
     module->addTypeName(".struct.vtableBase", vtableBaseType->rep);
 
     // all of the "extern" primitive functions have to be created in each of 
     // the modules - we can not directly reference across modules.
     
-    BTypeDef *int32Type = BTypeDefPtr::arcast(context.globalData->int32Type);
-    BTypeDef *int64Type = BTypeDefPtr::arcast(context.globalData->int64Type);
-    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.globalData->uint64Type);
-    BTypeDef *intType = BTypeDefPtr::arcast(context.globalData->intType);
-    BTypeDef *voidType = BTypeDefPtr::arcast(context.globalData->int32Type);
-    BTypeDef *float32Type = BTypeDefPtr::arcast(context.globalData->float32Type);
+    BTypeDef *int32Type = BTypeDefPtr::arcast(context.construct->int32Type);
+    BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
+    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
+    BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
+    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
+    BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
     BTypeDef *byteptrType = 
-        BTypeDefPtr::arcast(context.globalData->byteptrType);
+        BTypeDefPtr::arcast(context.construct->byteptrType);
     BTypeDef *voidptrType = 
-        BTypeDefPtr::arcast(context.globalData->voidptrType);
+        BTypeDefPtr::arcast(context.construct->voidptrType);
 
     // create "int puts(String)"
     {
@@ -1499,7 +1499,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
         TypeDefPtr array = context.ns->lookUp("array");
         assert(array.get() && "array not defined in context");
         TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
-        types->push_back(context.globalData->byteptrType.get());
+        types->push_back(context.construct->byteptrType.get());
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
         FuncBuilder f(context, FuncDef::external,
@@ -1603,7 +1603,7 @@ void LLVMBuilder::closeAllCleanups(Context &context) {
 
 model::StrConstPtr LLVMBuilder::createStrConst(model::Context &context,
                                                const std::string &val) {
-    return new BStrConst(context.globalData->byteptrType.get(), val);
+    return new BStrConst(context.construct->byteptrType.get(), val);
 }
 
 IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
@@ -1627,7 +1627,7 @@ IntConstPtr LLVMBuilder::createUIntConst(model::Context &context, uint64_t val,
                                          ) {
     return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
                          BTypeDefPtr::acast(
-                             context.globalData->uint64Type.get()),
+                             context.construct->uint64Type.get()),
                          val
                          );
 }
@@ -1639,7 +1639,7 @@ FloatConstPtr LLVMBuilder::createFloatConst(model::Context &context, double val,
     // fit into (compatibility rules will allow us to coerce it into another
     // type)
     return new BFloatConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                          BTypeDefPtr::arcast(context.globalData->float32Type),
+                          BTypeDefPtr::arcast(context.construct->float32Type),
                          val
                          );
 }
@@ -1735,7 +1735,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get());
 
-    Construct *gd = context.globalData;
+    Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
 
     module = new llvm::Module(".builtin", lctx);
@@ -1754,7 +1754,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDefPtr metaType;           // storage for meta-types
     
     BTypeDef *voidType;
-    gd->voidType = voidType = new BTypeDef(context.globalData->classType.get(), 
+    gd->voidType = voidType = new BTypeDef(context.construct->classType.get(), 
                                            "void",
                                            Type::getVoidTy(lctx)
                                            );
@@ -1763,7 +1763,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDef *voidptrType;
     llvmVoidPtrType = 
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
-    gd->voidptrType = voidptrType = new BTypeDef(context.globalData->classType.get(), 
+    gd->voidptrType = voidptrType = new BTypeDef(context.construct->classType.get(), 
                                                  "voidptr",
                                                  llvmVoidPtrType
                                                  );
@@ -1772,13 +1772,13 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
     BTypeDef *byteptrType;
-    gd->byteptrType = byteptrType = new BTypeDef(context.globalData->classType.get(), 
+    gd->byteptrType = byteptrType = new BTypeDef(context.construct->classType.get(), 
                                                  "byteptr",
                                                  llvmBytePtrType
                                                  );
     byteptrType->defaultInitializer = createStrConst(context, "");
     byteptrType->addDef(
-        new VoidPtrOpDef(context.globalData->voidptrType.get())
+        new VoidPtrOpDef(context.construct->voidptrType.get())
     );
     FuncDefPtr funcDef =
         new GeneralOpDef<UnsafeCastCall>(byteptrType, FuncDef::noFlags,
@@ -1791,7 +1791,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     
     const Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
     BTypeDef *boolType;
-    gd->boolType = boolType = new BTypeDef(context.globalData->classType.get(), 
+    gd->boolType = boolType = new BTypeDef(context.construct->classType.get(), 
                                            "bool",
                                            llvmBoolType
                                            );
@@ -2054,7 +2054,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitFPTruncate<FPToUIOpCall>(float64Type, uint64Type);
 
     // create the array generic
-    TypeDefPtr arrayType = new ArrayTypeDef(context.globalData->classType.get(),
+    TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),
                                             "array", 
                                             0
                                             );
@@ -2085,7 +2085,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         
     // Give it a context and an "oper to voidptr" method.
     overloadDef->addDef(
-        new VoidPtrOpDef(context.globalData->voidptrType.get())
+        new VoidPtrOpDef(context.construct->voidptrType.get())
     );
     OverloadDef::overloadType = gd->overloadType = overloadDef;
     
@@ -2150,7 +2150,7 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
             throw spug::Exception(dlerror());
 
         // store a stub for the symbol        
-        ns->addDef(new StubDef(context.globalData->voidType.get(), 
+        ns->addDef(new StubDef(context.construct->voidType.get(), 
                                *iter,
                                sym
                                )
@@ -2189,7 +2189,7 @@ void LLVMBuilder::emitArgVarRef(Context &context, Value *val) {
 void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     BTypeDef *btype = BTypeDefPtr::cast(typeDef);
     BTypeDef *vtableBaseType = 
-        BTypeDefPtr::arcast(context.globalData->vtableBaseType);
+        BTypeDefPtr::arcast(context.construct->vtableBaseType);
     PlaceholderInstruction *vtableInit =
         new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
     // store it

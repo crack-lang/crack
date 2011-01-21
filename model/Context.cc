@@ -59,13 +59,13 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     terminal(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
-    globalData(parentContext->globalData),
+    construct(parentContext->construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
-    assert(globalData && "parent context must have global data");
+    assert(construct && "parent context must have a construct");
 }
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
-                 Construct *globalData,
+                 Construct *construct,
                  Namespace *ns,
                  Namespace *compileNS
                  ) :
@@ -78,7 +78,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     terminal(false),
     returnType(TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
-    globalData(globalData),
+    construct(construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
 }
 
@@ -149,29 +149,29 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
     // look up the raw string constant
     StrConstPtr strConst;
     Construct::StrConstTable::iterator iter = 
-        globalData->strConstTable.find(value);
-    if (iter != globalData->strConstTable.end()) {
+        construct->strConstTable.find(value);
+    if (iter != construct->strConstTable.end()) {
         strConst = iter->second;
     } else {
         // create a new one
         strConst = builder.createStrConst(*this, value);
-        globalData->strConstTable[value] = strConst;
+        construct->strConstTable[value] = strConst;
     }
     
     // if we don't have a StaticString type yet (or the caller wants a raw
     // bytestr), we're done.
-    if (raw || !globalData->staticStringType)
+    if (raw || !construct->staticStringType)
         return strConst;
     
     // create the "new" expression for the string.
     vector<ExprPtr> args;
     args.push_back(strConst);
     args.push_back(builder.createIntConst(*this, value.size(),
-                                          globalData->uintType.get()
+                                          construct->uintType.get()
                                           )
                    );
     FuncDefPtr newFunc =
-        globalData->staticStringType->lookUp(*this, "oper new", args);
+        construct->staticStringType->lookUp(*this, "oper new", args);
     FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
     funcCall->args = args;
     return funcCall;    
@@ -235,7 +235,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                          Expr *initializer
                          ) {
 
-    if (globalData->migrationWarnings) {
+    if (construct->migrationWarnings) {
         if (initializer && NullConstPtr::cast(initializer)) {
             cerr << loc.getName() << ":" << loc.getLineNumber() << ": " <<
                 "unnecessary initialization to null" << endl;
@@ -254,7 +254,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
               );
     
     // if the definition context is an instance context, make sure that we 
-    // haven't generated any globalDataors.
+    // haven't generated any constructors.
     ContextPtr defCtx = getDefContext();
     if (defCtx->scope == Context::instance && 
         TypeDefPtr::arcast(defCtx->ns)->initializersEmitted) {
@@ -273,7 +273,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
 
 ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
     // make sure the condition can be converted to bool
-    ExprPtr boolCond = cond->convert(*this, globalData->boolType.get());
+    ExprPtr boolCond = cond->convert(*this, construct->boolType.get());
     if (!boolCond)
         error("Condition in ternary operator is not boolean.");
 
@@ -504,7 +504,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     }
     
     // convert it to a boolean for the condition
-    cond = iterRef->convert(*this, globalData->boolType.get());
+    cond = iterRef->convert(*this, construct->boolType.get());
     if (!cond)
         error("The iterator in a 'for' loop must convert to boolean.");
     
@@ -532,7 +532,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     // the builder to create an ArgDef here because it's just for a signature 
     // match).
     FuncDef::ArgVec args(1);
-    args[0] = new ArgDef(globalData->crackContext.get(), "context");
+    args[0] = new ArgDef(construct->crackContext.get(), "context");
 
     OverloadDef *ovld = OverloadDefPtr::rcast(result);
     if (ovld) {
@@ -568,7 +568,7 @@ void Context::error(const parser::Location &loc, const string &msg,
                     bool throwException
                     ) {
     
-    list<string> &ec = globalData->errorContexts;
+    list<string> &ec = construct->errorContexts;
     if (throwException)
         throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
                                            loc.getLineNumber() << ": " <<
@@ -590,11 +590,11 @@ void Context::warn(const parser::Location &loc, const string &msg) {
 }
 
 void Context::pushErrorContext(const string &msg) {
-    globalData->errorContexts.push_front(msg);
+    construct->errorContexts.push_front(msg);
 }
 
 void Context::popErrorContext() {
-    globalData->errorContexts.pop_front();
+    construct->errorContexts.pop_front();
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

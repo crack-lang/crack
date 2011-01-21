@@ -26,7 +26,7 @@ ExprPtr FloatConst::convert(Context &context, TypeDef *newType) {
     if (newType == this->type)
          return this;
 
-    if (newType == context.globalData->float64Type)
+    if (newType == context.construct->float64Type)
         ; // nothing we can do about this right now
     else {
         // delegate all other conversions to the type

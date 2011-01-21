@@ -204,7 +204,7 @@ ResultExprPtr LogicAndOpCall::emit(Context &context) {
 
     // now we phi for result
     PHINode* p = builder.builder.CreatePHI(
-            BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+            BTypeDefPtr::arcast(context.construct->boolType)->rep,
             "and_R");
     p->addIncoming(oVal, oBlock);
     p->addIncoming(tVal, tBlock);
@@ -251,7 +251,7 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
     // now jump back to true and phi for result
     builder.builder.SetInsertPoint(builder.block = tBlock);
     PHINode *p = builder.builder.CreatePHI(
-            BTypeDefPtr::arcast(context.globalData->boolType)->rep,
+            BTypeDefPtr::arcast(context.construct->boolType)->rep,
             "or_R"
             );
     p->addIncoming(oVal, oBlock);
