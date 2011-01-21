@@ -38,6 +38,7 @@ bool Crack::init() {
             construct->addToSourceLibPath(CRACKLIB);
         }
         
+        construct->rootBuilder->setDumpMode(dump);
         construct->rootBuilder->setOptimize(optimizeLevel);
 
         // pass the emitMigrationWarnings flag down to the global data.
