@@ -57,6 +57,8 @@ class LLVMBuilder : public Builder {
         typedef std::map<model::VarDefImpl *, llvm::GlobalVariable *> ModVarMap;
         ModVarMap moduleVars;
 
+        bool dumpMode, debugMode;
+
         LLVMBuilderPtr rootBuilder;
         
         llvm::ExecutionEngine *bindModule(llvm::Module *mp);
@@ -271,8 +273,7 @@ class LLVMBuilder : public Builder {
                                                      );
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name,
-                                                 bool emitDebugInfo = false
+                                                 const std::string &name
                                                  );
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
@@ -319,6 +320,10 @@ class LLVMBuilder : public Builder {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     );
+
+        virtual void setDumpMode(bool dump);
+        
+        virtual void setDebug(bool debug);
 };
 
 } // namespace builder::mvll

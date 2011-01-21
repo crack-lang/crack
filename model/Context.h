@@ -5,7 +5,6 @@
 
 #include <map>
 #include <vector>
-#include <list>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 #include "Construct.h"
@@ -105,25 +104,15 @@ class Context : public spug::RCBase {
         // flags to be injected into the next function
         FuncDef::Flags nextFuncFlags;
 
-        struct GlobalData : public Construct {
-            // if true, emit warnings about things that have changed since the 
-            // last version of the language.
-            bool migrationWarnings;
-            
-            // the error context stack.  This needs to be global because it is 
-            // managed by annotations and transcends local contexts.
-            std::list<std::string> errorContexts;
-
-            // just make sure the bootstrapped types are null
-            GlobalData();
-        } *globalData;
+        // the construct
+        Construct *globalData;
     
         Context(builder::Builder &builder, Scope scope, Context *parentContext,
                 Namespace *ns,
                 Namespace *compileNS
                 );
         
-        Context(builder::Builder &builder, Scope scope, GlobalData *globalData,
+        Context(builder::Builder &builder, Scope scope, Construct *globalData,
                 Namespace *ns,
                 Namespace *compileNS
                 );
@@ -175,8 +164,7 @@ class Context : public spug::RCBase {
          */
         bool encloses(const Context &other) const;
 
-        ModuleDefPtr createModule(const std::string &name,
-                                  bool emitDebugInfo = false);
+        ModuleDefPtr createModule(const std::string &name);
 
         /** 
          * Get or create a string constant.  This can be either a

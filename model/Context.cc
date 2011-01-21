@@ -42,8 +42,6 @@ void Context::warnOnHide(const string &name) {
             " hides another definition in an enclosing context." << endl;
 }
 
-Context::GlobalData::GlobalData() : migrationWarnings(false) {}
-
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
                  Namespace *ns,
@@ -61,12 +59,13 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     terminal(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
-    globalData(parentContext ? parentContext->globalData : new GlobalData()),
+    globalData(parentContext->globalData),
     cleanupFrame(builder.createCleanupFrame(*this)) {
+    assert(globalData && "parent context must have global data");
 }
 
 Context::Context(builder::Builder &builder, Context::Scope scope,
-                 Context::GlobalData *globalData,
+                 Construct *globalData,
                  Namespace *ns,
                  Namespace *compileNS
                  ) :
@@ -141,10 +140,8 @@ bool Context::encloses(const Context &other) const {
         return false;
 }
 
-ModuleDefPtr Context::createModule(const string &name,
-                                   bool emitDebugInfo
-                                   ) {
-    return builder.createModule(*this, name, emitDebugInfo);
+ModuleDefPtr Context::createModule(const string &name) {
+    return builder.createModule(*this, name);
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {

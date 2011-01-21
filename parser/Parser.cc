@@ -31,7 +31,6 @@
 #include "model/VarDef.h"
 #include "model/VarRef.h"
 #include "builder/Builder.h"
-#include "Crack.h"
 #include "ParseError.h"
 #include <cstdlib>
 #include <stdint.h>
@@ -1960,7 +1959,10 @@ void Parser::parseImportStmt(Namespace *ns) {
       toker.putBack(tok);
       vector<string> moduleName;
       parseModuleName(moduleName);
-      mod = Crack::loadModule(moduleName, canonicalName);
+      mod = context->globalData->loadModule(moduleName.begin(),
+                                            moduleName.end(),
+                                            canonicalName
+                                            );
       if (!mod)
          error(tok, SPUG_FSTR("unable to find module " << canonicalName));
       

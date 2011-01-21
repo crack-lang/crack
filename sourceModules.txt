@@ -3,6 +3,7 @@ ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
+model/Construct.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc

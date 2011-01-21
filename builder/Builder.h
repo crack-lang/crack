@@ -321,9 +321,9 @@ class Builder : public spug::RCBase {
                                                      ) = 0;
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name,
-                                                 bool emitDebugInfo = false
+                                                 const std::string &name
                                                  ) = 0;
+
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *modDef
                                  ) = 0;
@@ -399,7 +399,18 @@ class Builder : public spug::RCBase {
 
         // implementation specific optimization level
         void setOptimize(int level) { optimizeLevel = level; }
-
+        
+        /**
+         * Sets the "dump" flag - if this is true, we don't execute modules on 
+         * close, just dump them in whatever format is appropriate for the 
+         * builder.
+         */
+        virtual void setDumpMode(bool dump) = 0;
+        
+        /**
+         * Enable/disable debugging information.
+         */
+        virtual void setDebug(bool debug) = 0;
 };
 
 } // namespace builder

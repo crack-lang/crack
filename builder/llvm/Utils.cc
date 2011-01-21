@@ -20,7 +20,7 @@ namespace builder { namespace mvll {
 void addArrayMethods(Context &context, TypeDef *arrayType,
                      BTypeDef *elemType
                      ) {
-    Context::GlobalData *gd = context.globalData;
+    Construct *gd = context.globalData;
     FuncDefPtr arrayGetItem =
             new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method,
                                                "oper []",

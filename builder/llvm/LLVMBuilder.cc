@@ -48,6 +48,7 @@
 #include <model/AllocExpr.h>
 #include <model/AssignExpr.h>
 #include <model/CompositeNamespace.h>
+#include <model/Construct.h>
 #include <model/InstVarDef.h>
 #include <model/LocalNamespace.h>
 #include <model/NullConst.h>
@@ -492,6 +493,8 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
 
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
+    dumpMode(false),
+    debugMode(false),
     module(0),
     builder(getGlobalContext()),
     func(0),
@@ -505,6 +508,8 @@ BuilderPtr LLVMBuilder::createChildBuilder() {
     LLVMBuilderPtr result = new LLVMBuilder();
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
+    result->dumpMode = dumpMode;
+    result->debugMode = debugMode;
     return result;
 }
 
@@ -1397,14 +1402,14 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
 }
  
 ModuleDefPtr LLVMBuilder::createModule(Context &context,
-                                       const string &name,
-                                       bool emitDebugInfo) {
+                                       const string &name
+                                       ) {
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
 
-    if (emitDebugInfo) {
+    if (debugMode) {
         debugInfo = new DebugInfo(module, name);
     }
 
@@ -1581,6 +1586,11 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     if (debugInfo)
         delete debugInfo;
 
+    // dump or run the module depending on the mode.
+    if (dumpMode)
+        dump();
+    else
+        run();
 }    
 
 CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
@@ -1725,7 +1735,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get());
 
-    Context::GlobalData *gd = context.globalData;
+    Construct *gd = context.globalData;
     LLVMContext &lctx = getGlobalContext();
 
     module = new llvm::Module(".builtin", lctx);
@@ -2184,4 +2194,12 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
         new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
     // store it
     btype->addPlaceholder(vtableInit);
+}
+
+void LLVMBuilder::setDumpMode(bool dump) {
+    dumpMode = dump;
+}
+
+void LLVMBuilder::setDebug(bool debug) {
+    debugMode = debug;
 }
