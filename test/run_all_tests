@@ -43,7 +43,7 @@ root=$(cd $(dirname "$0")/..; pwd)
 echo "dirname = $0, root = $root"
 
 # start with no bootstrapping
-opts="-g -n -l $root"   
+opts="-Gnl $root"   
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -787,7 +787,7 @@ test_output 'error on the use of unspecialized generics' \
     "${parseError}1: Generic type array must be specialized to be used."
 
 # switch to full bootstrapping mode now that importing works
-opts="-g -l $root -l $root/lib -l lib"
+opts="-Gl $root -l $root/lib -l lib"
 
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \

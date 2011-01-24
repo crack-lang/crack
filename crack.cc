@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <getopt.h>
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"
@@ -13,7 +14,16 @@
 
 using namespace std;
 
-bool dump = false;
+struct option longopts[] = {
+    {"dump", false, 0, 'd'},
+    {"debug", false, 0, 'g'},
+    {"optimize", true, 0, 'O'},
+    {"no-bootstrap", false, 0, 'n'},
+    {"no-default-paths", false, 0, 'G'},
+    {"migration-warnings", false, 0, 'm'},
+    {"lib", true, 0, 'l'},
+    {0, 0, 0, 0}
+};
 
 int main(int argc, char **argv) {
     if (argc < 2) {
@@ -28,41 +38,62 @@ int main(int argc, char **argv) {
     crack.optimizeLevel = 2;
 
     // parse the main module
-    char **arg = &argv[1];
-    while (*arg) {
-        if (!strcmp(*arg, "-")) {
-            crack.setArgv(argc - (arg - argv), arg);
-            crack.runScript(cin, "<stdin>");
-            break;
-        } else if (!strcmp(*arg, "-d")) {
-            crack.dump = true;
-        } else if (!strcmp(*arg, "-dg")) {
-            crack.emitDebugInfo = true;
-        } else if (!strcmp(*arg, "-O0")) {
-            crack.optimizeLevel = 0;
-        } else if (!strcmp(*arg, "-O1")) {
-            crack.optimizeLevel = 1;
-        } else if (!strcmp(*arg, "-O2")) {
-            crack.optimizeLevel = 2;
-        } else if (!strcmp(*arg, "-O3")) {
-            crack.optimizeLevel = 3;
-        } else if (!strcmp(*arg, "-n")) {
-            crack.noBootstrap = true;
-        } else if (!strcmp(*arg, "-g")) {
-            crack.useGlobalLibs = false;
-        } else if (!strcmp(*arg, "-m")) {
-            crack.emitMigrationWarnings = true;
-        } else if (!strcmp(*arg, "-l")) {
-            ++arg;
-            crack.addToSourceLibPath(*arg);
-        } else {
-            // it's the script name - run it.
-            ifstream src(*arg);
-            crack.setArgv(argc - (arg - argv), arg);
-            crack.runScript(src, *arg);
-            break;
+    int opt;
+    bool optionsError = false;
+    while ((opt = getopt_long(argc, argv, "dgO:nGml:", longopts, NULL)) != -1) {
+        switch (opt) {
+            case 0:
+                // long option tied to a flag variable
+                break;
+            case '?':
+                optionsError = true;
+                break;
+            case 'd':
+                crack.dump = true;
+                break;
+            case 'g':
+                crack.emitDebugInfo = true;
+                break;
+            case 'O':
+                if (!*optarg || *optarg > '3' || *optarg < '0' || optarg[1]) {
+                    cerr << "Bad value for -O/--optimize: " << optarg
+                        << "expected 0-3" << endl;
+                    exit(1);
+                }
+                
+                crack.optimizeLevel = atoi(optarg);
+                break;
+            case 'n':
+                crack.noBootstrap = true;
+                break;
+            case 'G':
+                crack.useGlobalLibs = false;
+                break;
+            case 'm':
+                crack.emitMigrationWarnings = true;
+                break;
+            case 'l':
+                crack.addToSourceLibPath(optarg);
+                break;
         }
-        ++arg;
+    }
+    
+    // check for options errors
+    if (optionsError)
+        exit(1);
+
+    // are there any more arguments?
+    if (optind == argc) {
+        cerr << "You need to define a script or the '-' option to read "
+                "from standard input." << endl;
+    } else if (!strcmp(argv[optind], "-")) {
+        crack.setArgv(argc - optind, &argv[optind]);
+        crack.runScript(cin, "<stdin>");
+    } else {
+        // it's the script name - run it.
+        ifstream src(argv[optind]);
+        crack.setArgv(argc - optind, &argv[optind]);
+        crack.runScript(src, argv[optind]);
     }
     
     crack.callModuleDestructors();
