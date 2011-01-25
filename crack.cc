@@ -9,7 +9,7 @@
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/TypeDef.h"
-#include "builder/llvm/LLVMBuilder.h"
+#include "builder/llvm/LLVMJitBuilder.h"
 #include "Crack.h"
 
 using namespace std;
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    Crack crack(new builder::mvll::LLVMBuilder());
+    Crack crack(new builder::mvll::LLVMJitBuilder());
 
     // default optimize
     crack.optimizeLevel = 2;

@@ -29,11 +29,10 @@ class FuncBuilder;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
-    private:
+    protected:
 
         llvm::Function *callocFunc;
         DebugInfo *debugInfo;
-        llvm::ExecutionEngine *execEng;
         
         // emit all cleanups for context and all parent contextts up to the 
         // level of the function
@@ -60,8 +59,6 @@ class LLVMBuilder : public Builder {
         bool dumpMode, debugMode;
 
         LLVMBuilderPtr rootBuilder;
-        
-        llvm::ExecutionEngine *bindModule(llvm::Module *mp);
 
         void initializeMethodInfo(model::Context &context, 
                                   model::FuncDef::Flags flags,
@@ -69,6 +66,30 @@ class LLVMBuilder : public Builder {
                                   BTypeDef *&classType,
                                   FuncBuilder &funcBuilder
                                   );
+
+        /**
+         * JIT builder uses this to map GlobalValue* to their JITed versions,
+         * Linked builder ignores this, as these are resolved during the link
+         * instead. It is called from getModFunc and getModVar
+         */
+        virtual void addGlobalFuncMapping(llvm::Function*,
+                                          llvm::Function*) { }
+        virtual void addGlobalFuncMapping(llvm::Function*,
+                                          void*) { }
+        virtual void addGlobalVarMapping(llvm::GlobalValue*,
+                                         llvm::GlobalValue*) { }
+
+        /**
+         * possibly bind the module to an execution engine. this is run
+         * immediately after the module is created in createModule
+         */
+        virtual void engineBindModule(model::ModuleDef *moduleDef) = 0;
+
+        /**
+         * let the engine "finish" a module before running/linking/dumping
+         * this is run immediately after closeModule and before run() or dump()
+         */
+        virtual void engineFinishModule(model::ModuleDef *moduleDef) = 0;
 
     public:
         // currently experimenting with making these public to give objects in 
@@ -109,11 +130,9 @@ class LLVMBuilder : public Builder {
                                 unsigned int nextVTableSlot
                                 );
 
-        void *getFuncAddr(llvm::Function *func);
+        virtual void *getFuncAddr(llvm::Function *func) = 0;
 
         LLVMBuilder();
-
-        virtual BuilderPtr createChildBuilder();
 
         virtual model::ResultExprPtr emitFuncCall(
             model::Context &context, 
@@ -307,7 +326,7 @@ class LLVMBuilder : public Builder {
                                     );
 
         virtual void setArgv(int argc, char **argv);        
-        virtual void run();
+        virtual void run() = 0;
         virtual void dump();
         
         // internal functions used by our VarDefImpl to generate the 

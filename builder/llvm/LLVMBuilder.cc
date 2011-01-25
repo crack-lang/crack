@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc., Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
                 
 #include "LLVMBuilder.h"
 
@@ -28,7 +28,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include <llvm/LinkAllPasses.h>
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
@@ -36,11 +35,6 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Target/TargetData.h>
-#include <llvm/Target/TargetSelect.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
@@ -320,31 +314,6 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
         emitFunctionCleanups(*context.parent);
 }
 
-ExecutionEngine *LLVMBuilder::bindModule(Module *mod) {
-    if (execEng) {
-        execEng->addModule(mod);
-    } else {
-        if (rootBuilder) 
-            execEng = rootBuilder->bindModule(mod);
-        else {
-
-            llvm::JITEmitDebugInfo = true;
-
-            // we have to specify all of the arguments for this so we can turn 
-            // off "allocate globals with code."  In addition to being 
-            // deprecated in the docs for this function, this option causes 
-            // seg-faults when we allocate globals under certain conditions.
-            execEng = ExecutionEngine::create(mod,
-                                              false, // force interpreter
-                                              0, // error string
-                                              CodeGenOpt::Default, // opt lvl
-                                              false // alloc globals with code
-                                              );
-        }
-    }
-    
-    return execEng;
-}
 
 void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
                                        FuncDef *existing,
@@ -408,9 +377,9 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
                                           bfuncDef->getFullName(),
                                           module
                                           );
-        execEng->addGlobalMapping(func,
-                                  execEng->getPointerToFunction(bfuncDef->rep)
-                                  );
+
+        // possibly do a global mapping (delegated to specific builder impl.)
+        addGlobalFuncMapping(func, bfuncDef->rep);
         
         // cache it in the map
         moduleFuncs[bfuncDef] = func;
@@ -436,10 +405,9 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
                                );
 
 
-        // do the global mapping
-        execEng->addGlobalMapping(global, 
-                                  execEng->getPointerToGlobal(bvar->rep)
-                                  );
+        // possibly do a global mapping (delegated to specific builder impl.)
+        addGlobalVarMapping(global, bvar->rep);
+
         moduleVars[varDefImpl] = global;
         return global;
     } else {
@@ -498,19 +466,9 @@ LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
     func(0),
-    execEng(0),
     block(0),
     lastValue(0) {
-    InitializeNativeTarget();
-}
 
-BuilderPtr LLVMBuilder::createChildBuilder() {
-    LLVMBuilderPtr result = new LLVMBuilder();
-    result->rootBuilder = rootBuilder ? rootBuilder : this;
-    result->llvmVoidPtrType = llvmVoidPtrType;
-    result->dumpMode = dumpMode;
-    result->debugMode = debugMode;
-    return result;
 }
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
@@ -938,10 +896,6 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     type->defaultInitializer = new NullConst(type.get());
 
     return type;
-}
-
-void *LLVMBuilder::getFuncAddr(llvm::Function *func) {
-    return execEng->getPointerToFunction(func);
 }
 
 TypeDefPtr LLVMBuilder::createClassForward(Context &context,
@@ -1515,11 +1469,12 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
         FuncBuilder f(context, FuncDef::external, intType, "__getArgc", 0);
         f.finish();
     }
-    
-    // bind the module to the execution engine
-    bindModule(module);
-    
-    return new BModuleDef(name, context.ns.get());
+
+    // possibly bind to execution engine
+    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
+    engineBindModule(moduleDef);
+
+    return moduleDef;
 }
 
 void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
@@ -1545,43 +1500,15 @@ void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
     
-    // bind the module to the execution engine
-    bindModule(module);
+    // let jit or linker finish module before run/link
+    engineFinishModule(moduleDef);
     
     // store primitive functions
     for (map<Function *, void *>::iterator iter = primFuncs.begin();
          iter != primFuncs.end();
          ++iter
          )
-        execEng->addGlobalMapping(iter->first, iter->second);
-
-    // XXX right now, only checking for > 0, later perhaps we can
-    // run specific optimizations at different levels
-    if (optimizeLevel) {
-        // optimize
-        llvm::PassManager passMan;
-    
-        // Set up the optimizer pipeline.  Start with registering info about how
-        // the target lays out data structures.
-        passMan.add(new llvm::TargetData(*execEng->getTargetData()));
-        // Promote allocas to registers.
-        passMan.add(createPromoteMemoryToRegisterPass());
-        // Do simple "peephole" optimizations and bit-twiddling optzns.
-        passMan.add(llvm::createInstructionCombiningPass());
-        // Reassociate expressions.
-        passMan.add(llvm::createReassociatePass());
-        // Eliminate Common SubExpressions.
-        passMan.add(llvm::createGVNPass());
-        // Simplify the control flow graph (deleting unreachable blocks, etc).
-        passMan.add(llvm::createCFGSimplificationPass());
-
-        passMan.run(*module);
-    }
-
-    BModuleDefPtr::cast(moduleDef)->cleanup = 
-        reinterpret_cast<void (*)()>(
-            execEng->getPointerToFunction(module->getFunction("__del__"))
-        );
+        addGlobalFuncMapping(iter->first, iter->second);
 
     if (debugInfo)
         delete debugInfo;
@@ -2126,7 +2053,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addArrayMethods(context, byteptrType, byteType);    
 
     // bind the module to the execution engine
-    bindModule(module);
+    engineBindModule(bMod);
+    engineFinishModule(bMod);
 
     return bMod;
 
@@ -2165,11 +2093,6 @@ void LLVMBuilder::registerImport(Context &context, VarDef *varDef) {
 void LLVMBuilder::setArgv(int newArgc, char **newArgv) {
     argc = newArgc;
     argv = newArgv;
-}
-
-void LLVMBuilder::run() {
-    int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
-    fptr();
 }
 
 void LLVMBuilder::dump() {
