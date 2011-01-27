@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
                 crack.addToSourceLibPath(optarg);
                 break;
             case doubleBuilder:
-                crack.setCompileTimeBuilder(new builder::mvll::LLVMBuilder());
+                crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
                 break;
         }
     }
