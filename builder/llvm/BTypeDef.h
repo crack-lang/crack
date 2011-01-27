@@ -5,6 +5,7 @@
 
 #include "model/TypeDef.h"
 #include "VTableBuilder.h"
+#include <llvm/Type.h>
 
 #include <map>
 #include <string>
@@ -32,7 +33,7 @@ public:
 
     // mapping from base types to their vtables.
     std::map<BTypeDef *, llvm::Constant *> vtables;
-    const llvm::Type *firstVTableType;
+    llvm::PATypeHolder firstVTableType;
 
     BTypeDef(TypeDef *metaType, const std::string &name,
              const llvm::Type *rep,

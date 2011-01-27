@@ -359,8 +359,8 @@ ResultExprPtr ArrayAllocCall::emit(Context &context) {
     // get the BTypeDef from the return type, then get the pointer
     // type out of that
     BTypeDef *retType = BTypeDefPtr::rcast(func->returnType);
-    PointerType *ptrType =
-            cast<PointerType>(const_cast<Type *>(retType->rep));
+    const PointerType *ptrType =
+            cast<const PointerType>(retType->rep);
 
     // malloc based on the element type
     builder.emitAlloc(context, new

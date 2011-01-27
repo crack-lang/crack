@@ -52,7 +52,7 @@ class Construct : public spug::RCBase {
         // if non-null, this is the alternate construct used for annotations.  
         // If it is null, either this _is_ the annotation construct or both 
         // the main program and its annotations use the same construct.
-        ConstructPtr annotationConstruct;
+        ConstructPtr compileTimeConstruct;
     
         // the toplevel builder        
         builder::BuilderPtr rootBuilder;
@@ -157,7 +157,7 @@ class Construct : public spug::RCBase {
                    overloadType,
                    crackContext;
 
-        Construct(builder::Builder *rootBuilder);
+        Construct(builder::Builder *rootBuilder, Construct *primary = 0);
 
         /**
          * Adds the given path to the source library path - 'path' is a 

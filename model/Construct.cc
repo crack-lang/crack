@@ -97,10 +97,14 @@ std::string Construct::joinName(const std::string &base,
     return result + ext;
 }
 
-Construct::Construct(Builder *builder) :
+Construct::Construct(Builder *builder, Construct *primary) :
     rootBuilder(builder) {
 
     createRootContext();
+    
+    // steal any stuff from the primary we want to use as a default.
+    if (primary)
+        sourceLibPath = primary->sourceLibPath;
 }
 
 void Construct::addToSourceLibPath(const string &path) {

@@ -574,8 +574,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     // XXX need to be able to do this for an incomplete class when we 
     // allow user defined oper new.
     BTypeDef *btype = BTypeDefPtr::arcast(allocExpr->type);
-    PointerType *tp =
-        cast<PointerType>(const_cast<Type *>(btype->rep));
+    const PointerType *tp = cast<const PointerType>(btype->rep);
     
     // XXX mega-hack, clear the contents of the allocated memory (this is to 
     // get around the temporary lack of automatic member initialization)
@@ -1200,8 +1199,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // refine the type to the actual type of the structure.
     
     // extract the opaque type out of the pointer type.
-    PointerType *ptrType =
-        cast<PointerType>(const_cast<Type *>(type->rep));
+    const PointerType *ptrType =
+        cast<PointerType>(type->rep);
     DerivedType *curType = 
         cast<DerivedType>(const_cast<Type*>(ptrType->getElementType()));
     

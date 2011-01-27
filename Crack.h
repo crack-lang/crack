@@ -77,6 +77,10 @@ class Crack {
          */
         void setArgv(int argc, char **argv);
 
+        /**
+         * Set the builder to be used by the compiler for annotation modules.
+         */
+        void setCompileTimeBuilder(builder::Builder *builder);
 
         /**
          * Run the specified script.  Catches all parse exceptions, returns 
@@ -94,7 +98,7 @@ class Crack {
          * order that they were loaded.  This should be done before
          * terminating.
          */
-        void callModuleDestructors();
+        void callModuleDestructors();        
 };
 
 #endif

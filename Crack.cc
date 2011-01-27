@@ -5,6 +5,7 @@
 #include "builder/Builder.h"
 #include "model/Construct.h"
 #include "model/Context.h"
+#include "model/OverloadDef.h"
 
 using namespace std;
 using namespace model;
@@ -24,26 +25,50 @@ Crack::Crack(Builder *builder) :
 
 void Crack::addToSourceLibPath(const string &path) {
     construct->addToSourceLibPath(path);
+    if (construct->compileTimeConstruct)
+        construct->compileTimeConstruct->addToSourceLibPath(path);
 }
 
 void Crack::setArgv(int argc, char **argv) {
     construct->rootBuilder->setArgv(argc, argv);
 }
 
+void Crack::setCompileTimeBuilder(Builder *builder) {
+    construct->compileTimeConstruct = new Construct(builder, construct.get());
+}
+
 bool Crack::init() {
     if (!initialized) {
+        Construct *ctc = construct->compileTimeConstruct.get();
+
         // finalize the search path
         if (useGlobalLibs) {
             construct->addToSourceLibPath(".");
             construct->addToSourceLibPath(CRACKLIB);
+            
+            // XXX please refactor me
+            if (ctc) {
+                ctc->addToSourceLibPath(".");
+                ctc->addToSourceLibPath(CRACKLIB);
+            }
         }
-        
+
+        // initialize the compile-time construct first
+        if (ctc) {
+            ctc->rootBuilder->setOptimize(optimizeLevel);
+            ctc->migrationWarnings = emitMigrationWarnings;
+            ctc->loadBuiltinModules();
+            if (!noBootstrap && !ctc->loadBootstrapModules())
+                return false;
+        }
+
         construct->rootBuilder->setDumpMode(dump);
         construct->rootBuilder->setOptimize(optimizeLevel);
 
         // pass the emitMigrationWarnings flag down to the global data.
         construct->migrationWarnings = emitMigrationWarnings;
 
+        OverloadDef::overloadType = construct->overloadType;
         construct->loadBuiltinModules();
         if (!noBootstrap && !construct->loadBootstrapModules())
             return false;

@@ -14,6 +14,10 @@
 
 using namespace std;
 
+enum {
+    doubleBuilder = 1001
+};
+
 struct option longopts[] = {
     {"dump", false, 0, 'd'},
     {"debug", false, 0, 'g'},
@@ -22,6 +26,7 @@ struct option longopts[] = {
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
     {"lib", true, 0, 'l'},
+    {"double-builder", false, 0, doubleBuilder},
     {0, 0, 0, 0}
 };
 
@@ -74,6 +79,9 @@ int main(int argc, char **argv) {
                 break;
             case 'l':
                 crack.addToSourceLibPath(optarg);
+                break;
+            case doubleBuilder:
+                crack.setCompileTimeBuilder(new builder::mvll::LLVMBuilder());
                 break;
         }
     }
