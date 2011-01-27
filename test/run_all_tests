@@ -6,6 +6,7 @@ rc=0
 source=run_all_tests.tmp
 parseError="ParseError: $source:"
 parseWarn="run_all_tests.tmp:"
+extra_opts="$*"
 
 function test_output {
     text="$1"
@@ -16,7 +17,8 @@ function test_output {
     
     echo -n "$text..."
     echo "$script" >run_all_tests.tmp
-    result="$(echo $stdin | ./crack $opts run_all_tests.tmp $args 2>&1)"
+    result="$(echo $stdin | ./crack $opts $extra_opts run_all_tests.tmp $args \
+        2>&1)"
     if [ "$result" = "$expected" ]; then
         echo ok
     else
