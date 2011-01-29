@@ -199,22 +199,33 @@ void Parser::parseClause(bool defsAllowed) {
 }
 
 void Parser::parseAnnotation() {
-   Token tok = toker.getToken();
-   context->setLocation(tok.getLocation());
-
-   // if we get an import keyword, parse the import statement.   
-   if (tok.isImport()) {
-      parseImportStmt(context->compileNS.get());
-      return;
+   AnnotationPtr ann;
+   {
+      // create a new context whose construct is tha annotation construct.
+      ContextPtr parentContext = context;
+      ContextPtr ctx = context->createSubContext(Context::module);
+      ContextStackFrame cstack(*this, ctx.get());
+      context->construct = context->getCompileTimeConstruct();
+   
+      Token tok = toker.getToken();
+      context->setLocation(tok.getLocation());
+   
+      // if we get an import keyword, parse the import statement.   
+      if (tok.isImport()) {
+         parseImportStmt(parentContext->compileNS.get());
+         return;
+      }
+      
+      if (!tok.isIdent())
+         error(tok, "Identifier or import statement expected after '@' sign");
+      
+      // lookup the annotation
+      ann = context->lookUpAnnotation(tok.getData());
+      if (!ann)
+         error(tok, SPUG_FSTR("Undefined annotation " << tok.getData()));
    }
    
-   if (!tok.isIdent())
-      error(tok, "Identifier or import statement expected after '@' sign");
-   
-   // lookup the annotation
-   AnnotationPtr ann = context->lookUpAnnotation(tok.getData());
-   if (!ann)
-      error(tok, SPUG_FSTR("Undefined annotation " << tok.getData()));
+   // invoke in the outer context
    ann->invoke(this, &toker, context.get());
 }
 
@@ -1959,10 +1970,11 @@ void Parser::parseImportStmt(Namespace *ns) {
       toker.putBack(tok);
       vector<string> moduleName;
       parseModuleName(moduleName);
-      mod = context->construct->loadModule(moduleName.begin(),
-                                            moduleName.end(),
-                                            canonicalName
-                                            );
+            
+      mod = context->construct->loadModule(moduleName.begin(), 
+                                           moduleName.end(),
+                                           canonicalName
+                                           );
       if (!mod)
          error(tok, SPUG_FSTR("unable to find module " << canonicalName));
       
@@ -2001,7 +2013,10 @@ void Parser::parseImportStmt(Namespace *ns) {
 
    if (!mod) {
       try {
-         context->builder.loadSharedLibrary(name, syms, *context, ns);
+         context->construct->rootBuilder->loadSharedLibrary(name, syms,
+                                                            *context,
+                                                            ns
+                                                            );
       } catch (const spug::Exception &ex) {
          error(tok, ex.getMessage());
       }
@@ -2012,7 +2027,7 @@ void Parser::parseImportStmt(Namespace *ns) {
            ++iter
            ) {
          // make sure we don't already have it
-         if (context->ns->lookUp(*iter))
+         if (ns->lookUp(*iter))
             error(tok, SPUG_FSTR("imported name " << *iter << 
                                   " hides existing definition."
                                  )

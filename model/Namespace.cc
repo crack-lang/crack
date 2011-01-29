@@ -128,10 +128,13 @@ void Namespace::addAlias(VarDef *def) {
     // overloads should never be aliased - otherwise the new context could 
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
-    if (overload)
-        storeDef(overload->createChild().get());
-    else
+    if (overload) {
+        OverloadDefPtr child = overload->createChild();
+        storeDef(child.get());
+        child->setOwner(this);
+    } else {
         storeDef(def);
+    }
 }
 
 void Namespace::addAlias(const string &name, VarDef *def) {

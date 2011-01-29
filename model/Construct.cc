@@ -146,17 +146,28 @@ ContextPtr Construct::createRootContext() {
 }
 
 void Construct::loadBuiltinModules() {
-    // initialize the built-in compiler extension and store the 
-    // CrackContext type in global data.
-    ModuleDefPtr ccMod = 
-        initExtensionModule("crack.compiler", &compiler::init);
-    rootContext->construct->crackContext = ccMod->lookUp("CrackContext");
-    moduleCache["crack.compiler"] = ccMod;
-    ccMod->finished = true;
-    rootContext->compileNS->addAlias(ccMod->lookUp("static").get());
-    rootContext->compileNS->addAlias(ccMod->lookUp("final").get());
-    rootContext->compileNS->addAlias(ccMod->lookUp("FILE").get());
-    rootContext->compileNS->addAlias(ccMod->lookUp("LINE").get());
+    // loads the compiler extension.  If we have a compile-time construct, 
+    // the extension belongs to him and we just want to steal his defines.
+    // Otherwise, we initialize them ourselves.
+    NamespacePtr ns;
+    if (compileTimeConstruct) {
+        ns = compileTimeConstruct->rootContext->compileNS;
+    } else {
+        // initialize the built-in compiler extension and store the 
+        // CrackContext type in global data.
+        ModuleDefPtr ccMod = 
+            initExtensionModule("crack.compiler", &compiler::init);
+        rootContext->construct->crackContext = ccMod->lookUp("CrackContext");
+        moduleCache["crack.compiler"] = ccMod;
+        ccMod->finished = true;
+        ns = ccMod;
+    }
+
+    // in either case, aliases get installed in the compiler namespace.
+    rootContext->compileNS->addAlias(ns->lookUp("static").get());
+    rootContext->compileNS->addAlias(ns->lookUp("final").get());
+    rootContext->compileNS->addAlias(ns->lookUp("FILE").get());
+    rootContext->compileNS->addAlias(ns->lookUp("LINE").get());
 }
 
 void Construct::parseModule(Context &context,

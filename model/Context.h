@@ -158,6 +158,17 @@ class Context : public spug::RCBase {
         }
 
         /**
+         * Returns the compile-time construct - this will revert to the 
+         * default construct if there is no compile-time construct.
+         */
+        Construct *getCompileTimeConstruct() {
+            if (construct->compileTimeConstruct.get())
+                return construct->compileTimeConstruct.get();
+            else
+                return construct;
+        }
+
+        /**
          * Returns true if the context encloses the "other" context - a 
          * context encloses another context if it is an ancestor of the other 
          * context.

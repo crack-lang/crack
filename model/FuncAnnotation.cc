@@ -19,5 +19,8 @@ FuncAnnotation::FuncAnnotation(FuncDef *func) :
 void FuncAnnotation::invoke(Parser *parser, Toker *toker, Context *context) {
     typedef void (*AnnotationFunc)(CrackContext *);
     CrackContext crackCtx(parser, toker, context);
-    ((AnnotationFunc)func->getFuncAddr(context->builder))(&crackCtx);
+    
+    // use the compile time construct's builder
+    Construct *construct = context->getCompileTimeConstruct();
+    ((AnnotationFunc)func->getFuncAddr(*construct->rootBuilder))(&crackCtx);
 }
