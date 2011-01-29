@@ -13,10 +13,11 @@
 ^Makefile(\.in|\.am)?$
 ^aclocal.m4$
 ^autom4te\.cache/.*$
-^config.log$
-^config.status$
-^config.guess$
-^config.sub$
+^config\.log$
+^config\.status$
+^config\.guess$
+^config\.sub$
+^config\.h(\.in)?$
 ^conf\d+.sh$
 ^configure$
 ^missing$
@@ -27,7 +28,10 @@
 ^test/\.libs/.*$
 ^test/\.dirstamp$
 ^ext/crack_config\.h$
+stamp-h[12]$
 ^lib/crack/ext/.*\.so$
 ^run_all_tests.fail$
+^test/run_all_tests.tmp$
 ^lib/crack/runtime.so$
+^lib/testext.so$
 
