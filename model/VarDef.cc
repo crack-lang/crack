@@ -44,7 +44,7 @@ bool VarDef::isConstant() {
 }
 
 void VarDef::dump(ostream &out, const string &prefix) const {
-    out << prefix << type->getFullName() << " " << name << endl;
+    out << prefix << (type ? type->getFullName() : string("<null>")) << " " << name << endl;
 }
 
 void VarDef::dump() const {
