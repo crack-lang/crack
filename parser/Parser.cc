@@ -212,7 +212,9 @@ void Parser::parseAnnotation() {
    
       // if we get an import keyword, parse the import statement.   
       if (tok.isImport()) {
+         OverloadDef::overloadType = context->construct->overloadType;
          parseImportStmt(parentContext->compileNS.get());
+         OverloadDef::overloadType = context->parent->construct->overloadType;
          return;
       }
       
