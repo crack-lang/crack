@@ -21,13 +21,6 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
-void LLVMLinkerBuilder::engineBindModule(ModuleDef *moduleDef) {
-    // no op
-}
-
-void LLVMLinkerBuilder::engineFinishModule(ModuleDef *moduleDef) {
-}
-
 Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
     if (linker) {
         string errMsg;
@@ -39,7 +32,8 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
         }
     } else {
         if (rootBuilder)
-            linker = LLVMLinkerBuilderPtr::cast(rootBuilder.get())->linkModule(mod);
+            linker = LLVMLinkerBuilderPtr::cast(
+                    rootBuilder.get())->linkModule(mod);
         else {
             linker = new Linker("crack",
                                 "main-module",
@@ -52,12 +46,32 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
     return linker;
 }
 
+// maintain a single list of modules throughout the compile in the root builder
+LLVMLinkerBuilder::moduleListType
+    *LLVMLinkerBuilder::addModule(ModuleDef *mod) {
+
+    if (moduleList) {
+        moduleList->push_back(mod);
+    } else {
+        if (rootBuilder)
+           moduleList = LLVMLinkerBuilderPtr::cast(
+                   rootBuilder.get())->addModule(mod);
+        else {
+            moduleList = new moduleListType();
+        }
+    }
+
+    return moduleList;
+}
+
 
 void *LLVMLinkerBuilder::getFuncAddr(llvm::Function *func) {
     assert("LLVMLinkerBuilder::getFuncAddr called");
 }
 
 void LLVMLinkerBuilder::run() {
+
+    assert(!rootBuilder && "run must be called from root builder");
 
     // final linked IR
     Module *finalir = linker->getModule();
@@ -237,7 +251,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 
     // add to module list
     ModuleDef *newModule = new BModuleDef(name, context.ns.get());
-    moduleList->push_back(newModule);
+    addModule(newModule);
 
     return newModule;
 }
