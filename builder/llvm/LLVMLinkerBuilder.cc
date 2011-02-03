@@ -280,3 +280,4 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         delete debugInfo;
 
 }
+

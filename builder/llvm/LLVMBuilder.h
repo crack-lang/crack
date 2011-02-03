@@ -216,6 +216,9 @@ class LLVMBuilder : public Builder {
                                   model::Branchpoint *branch
                                   );
 
+        virtual void emitAbort(model::Context &context,
+                               const std::string &msg);
+
         virtual model::FuncDefPtr
             createFuncForward(model::Context &context,
                               model::FuncDef::Flags flags,

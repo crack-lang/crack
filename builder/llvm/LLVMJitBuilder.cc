@@ -214,14 +214,6 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         callocFunc = f.funcDef->getRep(*this);
     }
 
-    // create "void __die(byteptr message)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "__die", 1);
-        f.addArg("message", byteptrType);
-        f.setSymbolName("__die");
-        f.finish();
-    }
-
     // create "array[byteptr] __getArgv()"
     {
         TypeDefPtr array = context.ns->lookUp("array");

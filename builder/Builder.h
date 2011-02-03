@@ -269,6 +269,14 @@ class Builder : public spug::RCBase {
         virtual void emitReturn(model::Context &context,
                                 model::Expr *expr) = 0;
 
+         /**
+         * Emit a runtime abort
+         * @param msg the message to show before calling abort()
+         */
+        virtual void emitAbort(model::Context &context,
+                               const std::string &msg) = 0;
+
+
         /**
          * Emits a variable definition and returns a new VarDef object for the 
          * variable.

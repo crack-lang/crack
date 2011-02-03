@@ -86,11 +86,6 @@ extern "C" {
         std::cout << val << flush;
     }
 
-    void __die(const char *message) {
-        std::cout << message << endl;
-        abort();
-    }
-
     char **__getArgv() {
         return LLVMBuilder::argv;
     }
@@ -365,11 +360,21 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
         // not found, create a new one and map it to the existing function 
         // pointer
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
-        Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
-                                          Function::ExternalLinkage,
-                                          bfuncDef->getFullName(),
-                                          module
-                                          );
+
+        Function *func(0);
+        if (bfuncDef->rep->getNameStr() == "abort") {
+            // special case for abort: since we may already have a definition
+            // for abort() from emitAbort(), we can't blindly make it here,
+            // we have to reuse it if it exists
+            func = module->getFunction("abort");
+        }
+
+        if (!func)
+          func = Function::Create(bfuncDef->rep->getFunctionType(),
+                                  Function::ExternalLinkage,
+                                  bfuncDef->getFullName(),
+                                  module
+                                  );
 
         // possibly do a global mapping (delegated to specific builder impl.)
         addGlobalFuncMapping(func, bfuncDef->rep);
@@ -1275,6 +1280,38 @@ void LLVMBuilder::emitReturn(model::Context &context,
         builder.CreateRetVoid();
     }
 }
+
+void LLVMBuilder::emitAbort(Context &context, const std::string &msg) {
+
+    BStrConstPtr m = context.getStrConst(msg, true);
+    m->emit(context);
+
+    // int puts(char *)
+    std::vector<const Type*>puts_args;
+    puts_args.push_back(PointerType::get(
+            IntegerType::get(module->getContext(), 8), 0));
+
+    FunctionType* puts_ty = FunctionType::get(
+            IntegerType::get(module->getContext(), 32),
+            puts_args, false);
+
+    llvm::Constant *c = module->getOrInsertFunction("puts", puts_ty);
+    Function *func = llvm::cast<llvm::Function>(c);
+
+    builder.CreateCall(func, m->rep);
+
+    // void abort(void)
+    FunctionType* abort_ty = FunctionType::get(
+            Type::getVoidTy(module->getContext()),
+            false);
+
+    c = module->getOrInsertFunction("abort", abort_ty);
+    func = llvm::cast<llvm::Function>(c);
+
+    builder.CreateCall(func);
+
+}
+
 
 VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                   const string &name,
