@@ -1,40 +1,37 @@
-// Copyright 2009 Google Inc., Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
-#ifndef _builder_LLVMJitBuilder_h_
-#define _builder_LLVMJitBuilder_h_
+#ifndef _builder_LLVMLinkerBuilder_h_
+#define _builder_LLVMLinkerBuilder_h_
 
 #include "LLVMBuilder.h"
+#include <vector>
 
 namespace llvm {
-    class ExecutionEngine;
+    class Linker;
+    class BasicBlock;
 }
 
 namespace builder {
 namespace mvll {
 
-SPUG_RCPTR(LLVMJitBuilder);
+SPUG_RCPTR(LLVMLinkerBuilder);
 
-class LLVMJitBuilder : public LLVMBuilder {
+class LLVMLinkerBuilder : public LLVMBuilder {
     private:
-        llvm::ExecutionEngine *execEng;
+        llvm::Linker *linker;
+        std::vector<model::ModuleDef *> *moduleList;
+        llvm::BasicBlock *mainInsert;
 
-        llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
+        llvm::Linker *linkModule(llvm::Module *mp);
 
     protected:
-        virtual void addGlobalFuncMapping(llvm::Function*,
-                                          llvm::Function*);
-        virtual void addGlobalFuncMapping(llvm::Function*,
-                                          void*);
-
-        virtual void addGlobalVarMapping(llvm::GlobalValue*,
-                                         llvm::GlobalValue*);
-
         virtual void engineBindModule(model::ModuleDef *moduleDef);
         virtual void engineFinishModule(model::ModuleDef *moduleDef);
 
-
     public:
-        LLVMJitBuilder(void) : execEng(0) { }
+        LLVMLinkerBuilder(void) : linker(0),
+                                  moduleList(0),
+                                  mainInsert(0) { }
 
         virtual void *getFuncAddr(llvm::Function *func);
 

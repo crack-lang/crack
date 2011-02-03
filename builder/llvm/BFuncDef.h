@@ -23,6 +23,15 @@ public:
     // it.
     llvm::Function *rep;
 
+    // low level symbol name as used by llvm::Function *rep
+    // this should be empty, unless it needs to link against an external symbol
+    // when it's empty, rep->name will default to the crack canonical name,
+    // which is the normal case for user defined functions in crack land
+    // when it's set, rep->name will always be equal to this. it should be
+    // set when we're pointing to e.g. a C function or C++ function from a
+    // loaded extension
+    std::string symbolName;
+
     // for a virtual function, this is the vtable slot position.
     unsigned vtableSlot;
 
@@ -35,6 +44,7 @@ public:
              ) :
     model::FuncDef(flags, name, argCount),
     rep(0),
+    symbolName(),
     vtableSlot(0) {
     }
 

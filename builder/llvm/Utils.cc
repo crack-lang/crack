@@ -5,6 +5,8 @@
 #include "BTypeDef.h"
 #include "Ops.h"
 #include "LLVMBuilder.h"
+#include "BCleanupFrame.h"
+
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/GlobalValue.h>
@@ -16,6 +18,14 @@ using namespace model;
 using namespace std;
 
 namespace builder { namespace mvll {
+
+void closeAllCleanupsStatic(Context &context) {
+    BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
+    while (frame) {
+        frame->close();
+        frame = BCleanupFramePtr::rcast(frame->parent);
+    }
+}
 
 void addArrayMethods(Context &context, TypeDef *arrayType,
                      BTypeDef *elemType

@@ -20,6 +20,7 @@ namespace mvll {
 
 class BTypeDef;
 class BFuncDef;
+class LLVMBuilder;
 
 SPUG_RCPTR(VTableInfo);
 
@@ -56,11 +57,17 @@ private:
     // used for emmission, but also IR type naming
     llvm::Module *module;
 
+    // used to get correct Function* for the builder's Module*
+    LLVMBuilder *builder;
+
 public:
-    VTableBuilder(BTypeDef *vtableBaseType, llvm::Module *m) :
+    VTableBuilder(LLVMBuilder *b,
+                  BTypeDef *vtableBaseType,
+                  llvm::Module *m) :
             firstVTable(0),
             vtableBaseType(vtableBaseType),
-            module(m) {
+            module(m),
+            builder(b) {
     }
 
     void dump();

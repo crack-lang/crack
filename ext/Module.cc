@@ -15,7 +15,9 @@
 using namespace crack::ext;
 using namespace model;
 
-Module::Module(Context *context)  : context(context), finished(false) {
+Module::Module(Context *context)  : context(context),
+                                    finished(false),
+                                    annotations(false) {
     memset(builtinTypes, 0, sizeof(builtinTypes));
 }
 
@@ -93,10 +95,13 @@ Type *Module::addType(const char *name) {
     return result;
 }
 
-Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr) {
+Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
+                      const char *symbolName) {
     assert(!finished && "Attempting to add a function to a finished module.");
     returnType->checkFinished();
     Func *f = new Func(context, returnType, name, funcPtr, Func::noFlags);
+    if (symbolName)
+        f->setSymbolName(symbolName);
     funcs.push_back(f);
     return f;
 }

@@ -241,7 +241,8 @@ class Builder : public spug::RCBase {
                              model::TypeDef *returnType,
                              model::TypeDef *receiverType,
                              const std::vector<model::ArgDefPtr> &args,
-                             void *cfunc
+                             void *cfunc,
+                             const char *symbolName=0
                              ) = 0;
         
         /**

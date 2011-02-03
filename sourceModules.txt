@@ -41,6 +41,7 @@ builder/llvm/Incompletes.cc
 builder/llvm/FuncBuilder.cc
 builder/llvm/LLVMBuilder.cc
 builder/llvm/LLVMJitBuilder.cc
+builder/llvm/LLVMLinkerBuilder.cc
 builder/llvm/Ops.cc
 builder/llvm/PlaceholderInstruction.cc
 builder/llvm/Utils.cc

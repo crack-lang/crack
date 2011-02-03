@@ -101,15 +101,8 @@ extern "C" {
 
 }
 
-namespace {        
 
-    void closeAllCleanupsStatic(Context &context) {
-        BCleanupFrame* frame = BCleanupFramePtr::rcast(context.cleanupFrame);
-        while (frame) {
-            frame->close();
-            frame = BCleanupFramePtr::rcast(frame->parent);
-        }
-    }
+namespace {
 
     // emit all cleanups from this context to that of the branchpoint.
     void emitCleanupsTo(Context &context, BBranchpoint *bpos) {
@@ -380,7 +373,11 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
 
         // possibly do a global mapping (delegated to specific builder impl.)
         addGlobalFuncMapping(func, bfuncDef->rep);
-        
+
+        // low level symbol name
+        if (!bfuncDef->symbolName.empty())
+            func->setName(bfuncDef->symbolName);
+
         // cache it in the map
         moduleFuncs[bfuncDef] = func;
         return func;
@@ -1019,8 +1016,23 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
                                          TypeDef *returnType,
                                          TypeDef *receiverType,
                                          const vector<ArgDefPtr> &args,
-                                         void *cfunc
+                                         void *cfunc,
+                                         const char *symbolName
                                          ) {
+
+    // XXX only needed for linker?
+    // if a symbol name wasn't given, we look it up from the dynamic library
+    string symName(symbolName?symbolName:"");
+    if (symName.empty()) {
+        Dl_info dinfo;
+        int rdl = dladdr(cfunc, &dinfo);
+        if (!rdl || !dinfo.dli_sname) {
+            throw spug::Exception(SPUG_FSTR("unable to locate symbol for "
+                                            "extern function: " << name));
+        }
+        symName = dinfo.dli_sname;
+    }
+
     ContextPtr funcCtx = 
         context.createSubContext(Context::local, new 
                                  LocalNamespace(context.ns.get(), name)
@@ -1029,7 +1041,10 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
                   name,
                   args.size()
                   );
-    
+
+    if (!symName.empty())
+        f.setSymbolName(symName);
+
     // if we've got a receiver, add it to the func builder and store a "this"
     // variable.
     if (receiverType) {
@@ -1217,6 +1232,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // construct the vtable if necessary
     if (type->hasVTable) {
         VTableBuilder vtableBuilder(
+            this,
             BTypeDefPtr::arcast(context.construct->vtableBaseType),
             module
         );
@@ -1354,170 +1370,6 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     return varDef;
 }
  
-ModuleDefPtr LLVMBuilder::createModule(Context &context,
-                                       const string &name
-                                       ) {
-
-    assert(!module);
-    LLVMContext &lctx = getGlobalContext();
-    module = new llvm::Module(name, lctx);
-
-    if (debugMode) {
-        debugInfo = new DebugInfo(module, name);
-    }
-
-    llvm::Constant *c =
-        module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create(lctx, "__main__", func);
-    builder.SetInsertPoint(block);
-
-    // name some structs in this module
-    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
-    module->addTypeName(".struct.Class", classType->rep);
-    BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
-                                  context.construct->vtableBaseType);
-    module->addTypeName(".struct.vtableBase", vtableBaseType->rep);
-
-    // all of the "extern" primitive functions have to be created in each of 
-    // the modules - we can not directly reference across modules.
-    
-    BTypeDef *int32Type = BTypeDefPtr::arcast(context.construct->int32Type);
-    BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
-    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
-    BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
-    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
-    BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
-    BTypeDef *byteptrType = 
-        BTypeDefPtr::arcast(context.construct->byteptrType);
-    BTypeDef *voidptrType = 
-        BTypeDefPtr::arcast(context.construct->voidptrType);
-
-    // create "int puts(String)"
-    {
-        FuncBuilder f(context, FuncDef::external, int32Type, "puts",
-                      1
-                      );
-        f.addArg("text", byteptrType);
-        f.finish();
-    }
-    
-    // create "void printint(int32)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidType, "printint", 1);
-        f.addArg("val", int32Type);
-        f.finish();
-    }
-
-    // create "void printint64(int64)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidType, "printint64", 1);
-        f.addArg("val", int64Type);
-        f.finish();
-    }
-
-    // create "void printuint64(int64)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidType, "printuint64", 1);
-        f.addArg("val", uint64Type);
-        f.finish();
-    }
-
-    // create "void printfloat(float32)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidType, "printfloat", 1);
-        f.addArg("val", float32Type);
-        f.finish();
-    }
-
-    // create "void *calloc(uint size)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidptrType, "calloc", 2);
-        f.addArg("size", intType);
-        f.addArg("size", intType);
-        f.finish();
-        callocFunc = f.funcDef->getRep(*this);
-    }
-    
-    // create "void __die(byteptr message)"
-    {
-        FuncBuilder f(context, FuncDef::external, voidType, "__die", 1);
-        f.addArg("message", byteptrType);
-        f.finish();
-    }
-    
-    // create "array[byteptr] __getArgv()"
-    {
-        TypeDefPtr array = context.ns->lookUp("array");
-        assert(array.get() && "array not defined in context");
-        TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
-        types->push_back(context.construct->byteptrType.get());
-        TypeDefPtr arrayOfByteptr =
-            array->getSpecialization(context, types.get());
-        FuncBuilder f(context, FuncDef::external,
-                      BTypeDefPtr::arcast(arrayOfByteptr), 
-                      "__getArgv", 
-                      0
-                      );
-        f.finish();
-    }
-    
-    // create "int __getArgc()"
-    {
-        FuncBuilder f(context, FuncDef::external, intType, "__getArgc", 0);
-        f.finish();
-    }
-
-    // possibly bind to execution engine
-    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
-    engineBindModule(moduleDef);
-
-    return moduleDef;
-}
-
-void LLVMBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
-    assert(module);
-    builder.CreateRetVoid();
-    
-    // emit the cleanup function
-    Function *mainFunc = func;
-    LLVMContext &lctx = getGlobalContext();
-    llvm::Constant *c =
-        module->getOrInsertFunction("__del__", Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create(lctx, "__del__", func);
-    builder.SetInsertPoint(block);
-    closeAllCleanupsStatic(context);
-    builder.CreateRetVoid();
-    
-    // restore the main function
-    func = mainFunc;
-
-// XXX in the future, only verify if we're debugging
-//    if (debugInfo)
-        verifyModule(*module, llvm::PrintMessageAction);
-    
-    // let jit or linker finish module before run/link
-    engineFinishModule(moduleDef);
-    
-    // store primitive functions
-    for (map<Function *, void *>::iterator iter = primFuncs.begin();
-         iter != primFuncs.end();
-         ++iter
-         )
-        addGlobalFuncMapping(iter->first, iter->second);
-
-    if (debugInfo)
-        delete debugInfo;
-
-    // dump or run the module depending on the mode.
-    if (dumpMode)
-        dump();
-    else
-        run();
-}    
 
 CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
     return new BCleanupFrame(&context);
@@ -2035,7 +1887,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createOperClassFunc(context, vtableBaseType, metaType.get());
 
     // build VTableBase's vtable
-    VTableBuilder vtableBuilder(vtableBaseType, module);
+    VTableBuilder vtableBuilder(this, vtableBaseType, module);
     vtableBaseType->createAllVTables(vtableBuilder, ".vtable.VTableBase", 
                                      vtableBaseType
                                      );
@@ -2065,7 +1917,7 @@ void LLVMBuilder::loadSharedLibrary(const string &name,
                                     Namespace *ns
                                     ) {
     // leak the handle so the library stays mapped for the life of the process.
-    void *handle = dlopen(name.c_str(), RTLD_LAZY);
+    void *handle = dlopen(name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
     if (!handle)
         throw spug::Exception(dlerror());
     for (vector<string>::const_iterator iter = symbols.begin();

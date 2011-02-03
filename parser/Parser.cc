@@ -1447,7 +1447,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               returnType,
                                               0,
                                               argDefs,
-                                              stub->address
+                                              stub->address,
+                                              name.c_str()
                                               );
          stub->getOwner()->removeDef(stub);
          cstack.restore();

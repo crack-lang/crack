@@ -6,6 +6,7 @@
 #include "model/VarDef.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
+#include "model/ResultExpr.h"
 #include "LLVMBuilder.h"
 
 namespace llvm {

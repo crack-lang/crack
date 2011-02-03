@@ -19,6 +19,8 @@ void addArrayMethods(model::Context &context,
                      BTypeDef *elemType
                      );
 
+void closeAllCleanupsStatic(model::Context &context);
+
 /**
  * Create the implementation object for a class.
  */

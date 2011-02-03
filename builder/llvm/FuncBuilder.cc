@@ -56,12 +56,12 @@ void FuncBuilder::finish(bool storeDef) {
 
     Function *func = Function::Create(llvmFuncType,
                                       linkage,
-                                      (funcDef->flags & FuncDef::external) ?
-                                         funcDef->name :
-                                         funcDef->getFullName(),
+                                      funcDef->getFullName(),
                                       builder.module
                                       );
     func->setCallingConv(llvm::CallingConv::C);
+    if (!funcDef->symbolName.empty())
+        func->setName(funcDef->symbolName);
 
     // back-fill builder data and set arg names
     Function::arg_iterator llvmArg = func->arg_begin();

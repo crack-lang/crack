@@ -2,8 +2,15 @@
 
 #include "LLVMJitBuilder.h"
 #include "BModuleDef.h"
+#include "DebugInfo.h"
+#include "BTypeDef.h"
+#include "model/Context.h"
+#include "FuncBuilder.h"
+#include "Utils.h"
 
+#include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
+#include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetSelect.h>
@@ -17,6 +24,7 @@ using namespace llvm;
 using namespace model;
 using namespace builder;
 using namespace builder::mvll;
+
 
 void LLVMJitBuilder::engineBindModule(ModuleDef *moduleDef) {
     bindJitModule(module);
@@ -112,4 +120,178 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
     result->dumpMode = dumpMode;
     result->debugMode = debugMode;
     return result;
+}
+
+ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
+                                       const string &name
+                                       ) {
+
+    assert(!module);
+    LLVMContext &lctx = getGlobalContext();
+    module = new llvm::Module(name, lctx);
+
+    if (debugMode) {
+        debugInfo = new DebugInfo(module, name);
+    }
+
+    llvm::Constant *c =
+        module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    block = BasicBlock::Create(lctx, "__main__", func);
+    builder.SetInsertPoint(block);
+
+    // name some structs in this module
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
+    module->addTypeName(".struct.Class", classType->rep);
+    BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
+                                  context.construct->vtableBaseType);
+    module->addTypeName(".struct.vtableBase", vtableBaseType->rep);
+
+    // all of the "extern" primitive functions have to be created in each of
+    // the modules - we can not directly reference across modules.
+
+    BTypeDef *int32Type = BTypeDefPtr::arcast(context.construct->int32Type);
+    BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
+    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
+    BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
+    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
+    BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
+    BTypeDef *byteptrType =
+        BTypeDefPtr::arcast(context.construct->byteptrType);
+    BTypeDef *voidptrType =
+        BTypeDefPtr::arcast(context.construct->voidptrType);
+
+    // create "int puts(String)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
+                      1
+                      );
+        f.addArg("text", byteptrType);
+        f.setSymbolName("puts");
+        f.finish();
+    }
+
+    // create "void printint(int32)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
+        f.addArg("val", int32Type);
+        f.setSymbolName("printint");
+        f.finish();
+    }
+
+    // create "void printint64(int64)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint64", 1);
+        f.addArg("val", int64Type);
+        f.setSymbolName("printint64");
+        f.finish();
+    }
+
+    // create "void printuint64(int64)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printuint64", 1);
+        f.addArg("val", uint64Type);
+        f.setSymbolName("printuint64");
+        f.finish();
+    }
+
+    // create "void printfloat(float32)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "printfloat", 1);
+        f.addArg("val", float32Type);
+        f.setSymbolName("printfloat");
+        f.finish();
+    }
+
+    // create "void *calloc(uint size)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
+        f.addArg("size", intType);
+        f.addArg("size", intType);
+        f.setSymbolName("calloc");
+        f.finish();
+        callocFunc = f.funcDef->getRep(*this);
+    }
+
+    // create "void __die(byteptr message)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "__die", 1);
+        f.addArg("message", byteptrType);
+        f.setSymbolName("__die");
+        f.finish();
+    }
+
+    // create "array[byteptr] __getArgv()"
+    {
+        TypeDefPtr array = context.ns->lookUp("array");
+        assert(array.get() && "array not defined in context");
+        TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
+        types->push_back(context.construct->byteptrType.get());
+        TypeDefPtr arrayOfByteptr =
+            array->getSpecialization(context, types.get());
+        FuncBuilder f(context, FuncDef::noFlags,
+                      BTypeDefPtr::arcast(arrayOfByteptr),
+                      "__getArgv",
+                      0
+                      );
+        f.setSymbolName("__getArgv");
+        f.finish();
+    }
+
+    // create "int __getArgc()"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
+        f.setSymbolName("__getArgc");
+        f.finish();
+    }
+
+    // possibly bind to execution engine
+    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
+    engineBindModule(moduleDef);
+
+    return moduleDef;
+}
+
+void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
+    assert(module);
+    builder.CreateRetVoid();
+
+    // emit the cleanup function
+    Function *mainFunc = func;
+    LLVMContext &lctx = getGlobalContext();
+    llvm::Constant *c =
+        module->getOrInsertFunction("__del__", Type::getVoidTy(lctx), NULL);
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    block = BasicBlock::Create(lctx, "__del__", func);
+    builder.SetInsertPoint(block);
+    closeAllCleanupsStatic(context);
+    builder.CreateRetVoid();
+
+    // restore the main function
+    func = mainFunc;
+
+// XXX in the future, only verify if we're debugging
+//    if (debugInfo)
+        verifyModule(*module, llvm::PrintMessageAction);
+
+    // let jit or linker finish module before run/link
+    engineFinishModule(moduleDef);
+
+    // store primitive functions
+    for (map<Function *, void *>::iterator iter = primFuncs.begin();
+         iter != primFuncs.end();
+         ++iter
+         )
+        addGlobalFuncMapping(iter->first, iter->second);
+
+    if (debugInfo)
+        delete debugInfo;
+
+    // dump or run the module depending on the mode.
+    if (dumpMode)
+        dump();
+    else
+        run();
 }

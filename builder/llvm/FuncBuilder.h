@@ -50,6 +50,11 @@ public:
 
     void finish(bool storeDef = true);
 
+    void setSymbolName(const std::string &sname) {
+        assert(funcDef);
+        funcDef->symbolName = sname;
+    }
+
     void addArg(const char *name, model::TypeDef *type);
 
     void setArgs(const std::vector<model::ArgDefPtr> &args);

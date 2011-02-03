@@ -37,6 +37,7 @@ class Func {
         model::Context *context;
         Type *returnType;
         std::string name;
+        std::string symbolName;
         void *funcPtr;
         std::vector<Arg *> args;
         
@@ -57,6 +58,13 @@ class Func {
         }
 
     public:
+
+        // specify a symbol name for this function, which will be used in
+        // low level IR to resolve calls to this function. if it's not
+        // specified, at attempt is made to reverse it from the function
+        // pointer
+        void setSymbolName(const std::string &name) { symbolName = name; }
+
         // add a new argument to the function.
         void addArg(Type *type, const std::string &name);
 

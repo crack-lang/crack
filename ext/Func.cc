@@ -68,7 +68,8 @@ void Func::finish() {
                                     returnType->typeDef,
                                     receiverType.get(),
                                     realArgs,
-                                    funcPtr
+                                    funcPtr,
+                                    (symbolName.empty())?0:symbolName.c_str()
                                     );
         context->ns->addDef(funcDef.get());
     }

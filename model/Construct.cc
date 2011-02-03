@@ -208,7 +208,7 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
                                       Construct::StringVecIter moduleNameEnd,
                                       string &canonicalName
                                       ) {
-    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    void *handle = dlopen(path.c_str(), RTLD_LAZY|RTLD_GLOBAL);
     if (!handle) {
         cerr << "opening library " << path << ": " << dlerror() << endl;
         return 0;

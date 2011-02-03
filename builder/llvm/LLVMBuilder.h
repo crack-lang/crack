@@ -16,7 +16,6 @@ namespace llvm {
     class Type;
     class Value;
     class Function;
-    class ExecutionEngine;
 };
 
 namespace builder {
@@ -250,7 +249,9 @@ class LLVMBuilder : public Builder {
                              model::TypeDef *returnType,
                              model::TypeDef *receiverType,
                              const std::vector<model::ArgDefPtr> &args,
-                             void *cfunc
+                             void *cfunc,
+                             const char *symbolName=0
+
                              );
 
         virtual model::TypeDefPtr
@@ -291,12 +292,6 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
-        virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
-                                                 );
-        virtual void closeModule(model::Context &context,
-                                 model::ModuleDef *module
-                                 );
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);
