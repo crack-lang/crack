@@ -38,7 +38,7 @@ ln -f .libs/runtime.so lib/crack
 if [ -e .libs/_pcre.so ]; then
     ln -f .libs/_pcre.so lib/crack/ext
 fi
-ln test/.libs/testext.so lib
+ln -f test/.libs/testext.so lib
 
 # find the root of the source tree (should be my parent directory)
 root=$(cd $(dirname "$0")/..; pwd)
