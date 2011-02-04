@@ -192,7 +192,8 @@ class TypeDef : public VarDef, public Namespace {
          * Return a function to convert to the specified type, if such a 
          * function exists.
          */
-        virtual FuncDefPtr getConverter(const TypeDef &other);
+        virtual FuncDefPtr getConverter(Context &context, 
+                                        const TypeDef &other);
 
         /**
          * Create a function to cast to the type (should only be used on a 

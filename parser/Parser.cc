@@ -57,6 +57,10 @@ void Parser::addDef(VarDef *varDef) {
    }
 }
 
+void Parser::addFuncDef(FuncDef *funcDef) {
+   addDef(funcDef);
+}
+
 Token Parser::getToken() {
    Token tok = toker.getToken();
    context->setLocation(tok.getLocation());
@@ -104,11 +108,11 @@ FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
    
    // first try to find it in the type's context, then try to find it in 
    // the current context.
-   FuncDefPtr func = args[0]->type->lookUp(*context, name, exprs);
+   FuncDefPtr func = context->lookUp(name, exprs, args[0]->type.get());
    if (!func) {
       exprs[0] = args[0];
       exprs.push_back(args[1]);
-      func = context->ns->lookUp(*context, name, exprs);
+      func = context->lookUp(name, exprs);
    }
 
    args = exprs;
@@ -504,7 +508,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    
    // lookup the method from the variable context's type context
    // XXX needs to handle callable objects.
-   FuncDefPtr func = ns->lookUp(*context, funcName, args);
+   FuncDefPtr func = context->lookUp(funcName, args, ns);
    if (!func)
       error(ident, SPUG_FSTR("No method exists matching " << funcName << 
                               "(" << args << ")"));
@@ -699,7 +703,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       // look up a format method for the argument
       FuncCall::ExprVec args(1);
       args[0] = arg;
-      FuncDefPtr func = expr->type->lookUp(*context, "format", args);
+      FuncDefPtr func = context->lookUp("format", args, expr->type.get());
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
@@ -748,7 +752,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 	 // if the next token is "class", this is the class operator.
 	 if (tok.isClass()) {
             FuncDefPtr funcDef = 
-               expr->type->lookUpNoArgs("oper class");
+               context->lookUpNoArgs("oper class", true, expr->type.get());
             if (!funcDef)
                error(tok, SPUG_FSTR("class operator not defined for " <<
                                     expr->type->name
@@ -803,7 +807,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             // this is "a[i] = v"
             args.push_back(parseExpression());
             FuncDefPtr funcDef =
-               expr->type->lookUp(*context, "oper []=", args);
+               context->lookUp("oper []=", args, expr->type.get());
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []=' not defined for " <<
@@ -817,7 +821,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             // this is "a[i]"
             toker.putBack(tok2);
             FuncDefPtr funcDef =
-               expr->type->lookUp(*context, "oper []", args);
+               context->lookUp("oper []", args, expr->type.get());
             if (!funcDef)
                error(tok, SPUG_FSTR("'oper []=' not defined for " <<
                                      expr->type->name << 
@@ -835,10 +839,10 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          
          FuncCall::ExprVec args;
          string symbol = "oper x" + tok.getData();
-         FuncDefPtr funcDef = expr->type->lookUp(*context, symbol, args);
+         FuncDefPtr funcDef = context->lookUp(symbol, args, expr->type.get());
          if (!funcDef) {
             args.push_back(expr);
-            funcDef = context->ns->lookUp(*context, symbol, args);
+            funcDef = context->lookUp(symbol, args);
          }
          if (!funcDef)
             error(tok, SPUG_FSTR(symbol << " is not defined for type "
@@ -1028,10 +1032,12 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
          symbol = "oper " + symbol;
          if (tok.isIncr() || tok.isDecr())
             symbol += "x";
-         FuncDefPtr funcDef = operand->type->lookUp(*context, symbol, args);
+         FuncDefPtr funcDef = context->lookUp(symbol, args, 
+                                              operand->type.get()
+                                              );
          if (!funcDef) {
             args.push_back(operand);
-            funcDef = context->ns->lookUp(*context, symbol, args);
+            funcDef = context->lookUp(symbol, args);
          }
          if (!funcDef)
             error(tok, SPUG_FSTR(symbol << " is not defined for type "
@@ -1118,7 +1124,7 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    parseMethodArgs(args, terminator);
    
    // look up the new operator for the class
-   FuncDefPtr func = type->lookUp(*context, "oper new", args);
+   FuncDefPtr func = context->lookUp("oper new", args, type);
    if (!func)
       error(tok, SPUG_FSTR("No constructor for " << type->name <<
                            " with these argument types: (" << args << ")"));
@@ -1246,8 +1252,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          parseMethodArgs(args);
          
          // look up the appropriate constructor
-         FuncDefPtr operInit = 
-            base->lookUp(*context, "oper init", args);
+         FuncDefPtr operInit = context->lookUp("oper init", args, base.get());
          if (!operInit || operInit->getOwner() != base.get())
             error(tok, SPUG_FSTR("No matching constructor found for " <<
                                   base->getFullName()
@@ -1293,7 +1298,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             
             // look up the appropriate constructor
             FuncDefPtr operNew = 
-               varDef->type->lookUp(*context, "oper new", args);
+               context->lookUp("oper new", args, varDef->type.get());
             if (!operNew)
                error(tok2,
                      SPUG_FSTR("No matching constructor found for instance "
@@ -1452,7 +1457,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               );
          stub->getOwner()->removeDef(stub);
          cstack.restore();
-         addDef(funcDef.get());
+         addFuncDef(funcDef.get());
       } else {
          // it's a forward declaration
          funcDef = context->builder.createFuncForward(*context, 
@@ -1465,7 +1470,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                                       );
 
          cstack.restore();
-         addDef(funcDef.get());
+         addFuncDef(funcDef.get());
 
          // if this is a constructor, and the user hasn't introduced their own 
          // "oper new", generate one for the new constructor now.
@@ -1517,7 +1522,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // there (if there was a forward declaration)
    if (!funcDef->getOwner()) {
       ContextStackFrame cstack(*this, context->getParent().get());
-      addDef(funcDef.get());
+      addFuncDef(funcDef.get());
    }
 
    // if there were initializers, emit them.

@@ -1086,7 +1086,9 @@ namespace {
                                 );
 
         // if this is an override, do the wrapping.
-        FuncDefPtr override = objClass->lookUpNoArgs("oper class");
+        FuncDefPtr override = context.lookUpNoArgs("oper class", true, 
+                                                   objClass
+                                                   );
         if (override) {
             wrapOverride(objClass, BFuncDefPtr::arcast(override), funcBuilder);
         } else {

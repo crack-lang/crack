@@ -225,7 +225,7 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
         (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
     
     // check for an override
-    FuncDefPtr override = lookUpNoArgs("oper del");
+    FuncDefPtr override = classContext.lookUpNoArgs("oper del", true, this);
     
     FuncDef::ArgVec args(0);
     TypeDef *voidType = classContext.construct->voidType.get();
@@ -333,7 +333,7 @@ void TypeDef::createCast(Context &outer) {
     
     // val.class
     VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
-    FuncDefPtr f = funcCtx->ns->lookUpNoArgs("oper class", false);
+    FuncDefPtr f = funcCtx->lookUpNoArgs("oper class", false);
     assert(f && "oper class missing");
 //  XXX this was trace code that mysteriously seg-faults: since I think there 
 //  might be some memory corruption happening, I'm leaving this until I can 
@@ -347,7 +347,7 @@ void TypeDef::createCast(Context &outer) {
     // $.isSubclass(ThisClass)
     FuncCall::ExprVec isSubclassArgs(1);
     isSubclassArgs[0] = funcCtx->builder.createVarRef(this);
-    f = type->lookUp(*funcCtx, "isSubclass", isSubclassArgs);
+    f = funcCtx->lookUp("isSubclass", isSubclassArgs, type.get());
     assert(f && "isSubclass missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = isSubclassArgs;
@@ -359,7 +359,7 @@ void TypeDef::createCast(Context &outer) {
     // return ThisClass.unsafeCast(val);
     FuncCall::ExprVec unsafeCastArgs(1);
     unsafeCastArgs[0] = valRef;
-    f = type->lookUp(*funcCtx, "unsafeCast", unsafeCastArgs);
+    f = funcCtx->lookUp("unsafeCast", unsafeCastArgs, type.get());
     assert(f && "unsafeCast missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = unsafeCastArgs;
@@ -391,7 +391,7 @@ void TypeDef::rectify(Context &classContext) {
     
     // if the class doesn't already define a delete operator specific to the 
     // class, generate one.
-    FuncDefPtr operDel = lookUpNoArgs("oper del");
+    FuncDefPtr operDel = classContext.lookUpNoArgs("oper del");
     if (!operDel || operDel->getOwner() != this)
         createDefaultDestructor(classContext);
 }
@@ -407,14 +407,14 @@ bool TypeDef::isParent(TypeDef *type) {
     return false;
 }
 
-FuncDefPtr TypeDef::getConverter(const TypeDef &other) {
+FuncDefPtr TypeDef::getConverter(Context &context, const TypeDef &other) {
     // XXX This is a half-assed general solution to the problem, we should 
     // really be using the canonical name of the type (and omitting the 
     // special case for bool).
     if (other.name == "bool") {
-        return lookUpNoArgs("toBool");
+        return context.lookUpNoArgs("toBool", true, this);
     } else {
-        return lookUpNoArgs("oper to " + other.name);
+        return context.lookUpNoArgs("oper to " + other.name, true, this);
     }
 }
 
@@ -552,7 +552,7 @@ void TypeDef::addDestructorCleanups(Context &context) {
         
         // check for a delete operator (the primitive base classes don't have 
         // them and don't need cleanup)
-        FuncDefPtr operDel = base->lookUpNoArgs("oper del");
+        FuncDefPtr operDel = context.lookUpNoArgs("oper del", true, base);
         if (!operDel)
             continue;
         

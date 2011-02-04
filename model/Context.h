@@ -284,6 +284,44 @@ class Context : public spug::RCBase {
                              ExprPtr &afterBody
                              );
 
+        // Function store/lookup methods (these are handled through a Context 
+        // instead of a namespace because Context can better do overload 
+        // management)
+    
+        /**
+         * Looks up a function matching the given expression list.
+         * 
+         * @param context the current context (distinct from the lookup 
+         *  context)
+         * @param varName the function name
+         * @param vals list of parameter expressions.  These will be converted 
+         *  to conversion expressions of the correct type for a match.
+         * @param srcNs if specified, the namespace to do the lookup in 
+         *  (default is the context's namespace)
+         */
+        FuncDefPtr lookUp(const std::string &varName,
+                          std::vector<ExprPtr> &vals,
+                          Namespace *srcNs = 0
+                          ) {
+            return (srcNs ? srcNs : ns)->_lookUp(*this, varName, vals);
+        }
+        
+        /**
+         * Look up a function with no arguments.  This is provided as a 
+         * convenience, as in this case we don't need to pass the call context.
+         * @param acceptAlias if false, ignore an alias.
+         * @param srcNs if specified, the namespace to do the lookup in 
+         *  (default is the context's namespace)
+         */
+        FuncDefPtr lookUpNoArgs(const std::string &varName, 
+                                bool acceptAlias = true,
+                                Namespace *srcNs = 0
+                                ) {
+            return (srcNs ? srcNs : ns)->_lookUpNoArgs(varName, acceptAlias);
+        }
+
+        // location management
+
         /**
          * Set the current source location.
          */        
@@ -298,11 +336,15 @@ class Context : public spug::RCBase {
             return loc;
         }
         
+        // annotation management
+
         /**
          * Look up the annotation in the compile namespace.  Returns null if 
          * undefined.
          */
         AnnotationPtr lookUpAnnotation(const std::string &name);
+
+        // error/warning handling
 
         /**
          * Emit an error message.  If 'throwException' is true, a 

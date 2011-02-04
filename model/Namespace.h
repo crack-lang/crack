@@ -82,19 +82,19 @@ class Namespace : public virtual spug::RCBase {
          * @param vals list of parameter expressions.  These will be converted 
          *  to conversion expressions of the correct type for a match.
          */
-        FuncDefPtr lookUp(Context &context,
-                          const std::string &varName,
-                          std::vector<ExprPtr> &vals
-                          );
+        FuncDefPtr _lookUp(Context &context,
+                           const std::string &varName,
+                           std::vector<ExprPtr> &vals
+                           );
         
         /**
          * Look up a function with no arguments.  This is provided as a 
          * convenience, as in this case we don't need to pass the call context.
          * @param acceptAlias if false, ignore an alias.
          */
-        FuncDefPtr lookUpNoArgs(const std::string &varName, 
-                                bool acceptAlias = true
-                                );
+        FuncDefPtr _lookUpNoArgs(const std::string &varName, 
+                                 bool acceptAlias = true
+                                 );
 
         virtual void addDef(VarDef *def);
         

@@ -120,6 +120,8 @@ class Parser {
        */
       void addDef(model::VarDef *context);
       
+      void addFuncDef(model::FuncDef *funcDef);
+      
       /**
        * Returns the next token from the tokenizer and stores its location in 
        * the current context.

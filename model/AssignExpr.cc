@@ -44,7 +44,9 @@ AssignExprPtr AssignExpr::create(Context &context,
 
 ResultExprPtr AssignExpr::emit(Context &context) {
     // see if the variable has a release function
-    bool gotReleaseFunc = var->type->lookUpNoArgs("oper release", false);
+    bool gotReleaseFunc = context.lookUpNoArgs("oper release", false,
+                                               var->type.get()
+                                               );
 
     if (aggregate) {
 

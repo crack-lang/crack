@@ -1,6 +1,8 @@
 
+
 #include "Namespace.h"
 
+#include "Context.h"
 #include "Expr.h"
 #include "OverloadDef.h"
 #include "VarDef.h"
@@ -9,13 +11,20 @@ using namespace std;
 using namespace model;
 
 void Namespace::storeDef(VarDef *def) {
+#ifdef NEW_ORDER
+    assert(!FuncDefPtr::cast(def) && 
+           "it is illegal to store a FuncDef directly (should be wrapped "
+           "in an OverloadDef)");
+    defs[def->name] = def;
+#else
     FuncDef *funcDef;
     if (funcDef = FuncDefPtr::cast(def)) {
         OverloadDefPtr overloads = getOverload(def->name);
         overloads->addFunc(funcDef);
     } else {        
         defs[def->name] = def;
-    }
+    }    
+#endif
 }
 
 OverloadDefPtr Namespace::getOverload(const std::string &varName) {
@@ -66,7 +75,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     return 0;
 }
 
-FuncDefPtr Namespace::lookUp(Context &context,
+FuncDefPtr Namespace::_lookUp(Context &context,
                              const std::string &varName,
                              vector<ExprPtr> &args
                              ) {
@@ -79,8 +88,7 @@ FuncDefPtr Namespace::lookUp(Context &context,
     // new" function on the class.
     TypeDef *typeDef = TypeDefPtr::rcast(var);
     if (typeDef) {
-        FuncDefPtr operNew =
-            typeDef->lookUp(context, "oper new", args);
+        FuncDefPtr operNew = context.lookUp("oper new", args, typeDef);
 
         // make sure we got it, and we didn't inherit it
         if (!operNew || operNew->getOwner() != typeDef)
@@ -96,7 +104,7 @@ FuncDefPtr Namespace::lookUp(Context &context,
     return overload->getMatch(context, args);
 }
 
-FuncDefPtr Namespace::lookUpNoArgs(const std::string &name, bool acceptAlias) {
+FuncDefPtr Namespace::_lookUpNoArgs(const std::string &name, bool acceptAlias) {
     OverloadDefPtr overload = getOverload(name);
     if (!overload)
         return 0;

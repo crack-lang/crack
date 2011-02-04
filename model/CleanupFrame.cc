@@ -15,7 +15,7 @@ using namespace model;
 void CleanupFrame::addCleanup(VarDef *varDef, Expr *aggregate) {
     // we only need to do cleanups for types with a "release" function
     FuncDefPtr releaseFunc =
-        varDef->type->lookUpNoArgs("oper release", false);
+        context->lookUpNoArgs("oper release", false, varDef->type.get());
     
     if (releaseFunc) {
         VarRefPtr varRef;

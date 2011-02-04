@@ -171,7 +171,7 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
                                           )
                    );
     FuncDefPtr newFunc =
-        construct->staticStringType->lookUp(*this, "oper new", args);
+        lookUp("oper new", args, construct->staticStringType.get());
     FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
     funcCall->args = args;
     return funcCall;    
@@ -419,7 +419,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                               ExprPtr &afterBody
                               ) {
     // verify that the sequence has an "iter" method
-    FuncDefPtr iterFunc = seqExpr->type->lookUpNoArgs("iter");
+    FuncDefPtr iterFunc = lookUpNoArgs("iter", true, seqExpr->type.get());
     if (!iterFunc)
         error("iteration expression has no 'iter' method.");
     
@@ -467,7 +467,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                              iterCall.get()
                              );
 
-        elemFunc = iterCall->type->lookUpNoArgs("elem");
+        elemFunc = lookUpNoArgs("elem", true, iterCall->type.get());
         
         if (defineVar) {
             warnOnHide(name);
@@ -509,7 +509,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
         error("The iterator in a 'for' loop must convert to boolean.");
     
     // create the "iter.next()" expression
-    FuncDefPtr nextFunc = iterRef->type->lookUpNoArgs("next");
+    FuncDefPtr nextFunc = lookUpNoArgs("next", true, iterRef->type.get());
     if (!nextFunc)
         error("The iterator in a 'for' loop must provide a 'next()' method");
     FuncCallPtr nextCall = builder.createFuncCall(nextFunc.get());
