@@ -60,6 +60,11 @@ class Context : public spug::RCBase {
         // enclosing context.
         void warnOnHide(const std::string &name);
 
+        // create a new overload for srcNs that correctly delegates to the 
+        // ancestor namespace.
+        OverloadDefPtr replicateOverload(const std::string &varName,
+                                         Namespace *srcNs
+                                         );
     public:
 
         // context scope - this is used to control how variables defined in 
@@ -287,6 +292,13 @@ class Context : public spug::RCBase {
         // Function store/lookup methods (these are handled through a Context 
         // instead of a namespace because Context can better do overload 
         // management)
+
+        /**
+         * Looks up a symbol in the context.  Use this when looking up an 
+         * overload definition if you care about it including all possible 
+         * overloads accessible from the scope.
+         */
+        VarDefPtr lookUp(const std::string &varName, Namespace *srcNs = 0);
     
         /**
          * Looks up a function matching the given expression list.
@@ -302,9 +314,7 @@ class Context : public spug::RCBase {
         FuncDefPtr lookUp(const std::string &varName,
                           std::vector<ExprPtr> &vals,
                           Namespace *srcNs = 0
-                          ) {
-            return (srcNs ? srcNs : ns)->_lookUp(*this, varName, vals);
-        }
+                          );
         
         /**
          * Look up a function with no arguments.  This is provided as a 
@@ -316,9 +326,16 @@ class Context : public spug::RCBase {
         FuncDefPtr lookUpNoArgs(const std::string &varName, 
                                 bool acceptAlias = true,
                                 Namespace *srcNs = 0
-                                ) {
-            return (srcNs ? srcNs : ns)->_lookUpNoArgs(varName, acceptAlias);
-        }
+                                );
+
+        /**
+         * Add a new variable definition to the context namespace.  This is 
+         * preferable to the Namespace::addDef() method in that it wraps 
+         * FuncDef objects in an OverloadDef.
+         * @returns the definition that was actually stored.  This could be 
+         *  varDef or 
+         */
+        VarDefPtr addDef(VarDef *varDef, Namespace *srcNs = 0);
 
         // location management
 

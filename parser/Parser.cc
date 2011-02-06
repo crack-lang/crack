@@ -41,7 +41,7 @@ using namespace model;
 
 void Parser::addDef(VarDef *varDef) {
    ContextPtr defContext = context->getDefContext();
-   defContext->ns->addDef(varDef);
+   VarDefPtr storedDef = defContext->addDef(varDef);
    
    // if the definition context is a class context and the definition is a 
    // function and this isn't the "Class" class (which is its own meta-class), 
@@ -53,7 +53,7 @@ void Parser::addDef(VarDef *varDef) {
        ) {
       type = TypeDefPtr::arcast(defContext->ns);
       if (type != type->type.get())
-         type->type->addAlias(varDef);
+         type->type->addAlias(storedDef.get());
    }
 }
 
@@ -2247,7 +2247,7 @@ TypeDefPtr Parser::parseClassDef() {
                                       existing.get()
                                       );
    if (!existing)
-      context->ns->addDef(type.get());
+      addDef(type.get());
    
    // add the "cast" method
    if (type->hasVTable)
@@ -2380,7 +2380,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
                                       bool overloadOk
                                       ) {
    ContextPtr classContext;
-   VarDefPtr existing = context->ns->lookUp(name);
+   VarDefPtr existing = context->lookUp(name);
    if (existing) {
       Namespace *existingNS = existing->getOwner();
       TypeDef *existingClass = 0;

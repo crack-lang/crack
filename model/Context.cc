@@ -42,6 +42,21 @@ void Context::warnOnHide(const string &name) {
             " hides another definition in an enclosing context." << endl;
 }
 
+OverloadDefPtr Context::replicateOverload(const std::string &varName,
+                                          Namespace *srcNs
+                                          ) {
+    OverloadDefPtr overloads = new OverloadDef(varName);
+    overloads->type = construct->overloadType;
+    
+    // merge in the overloads from the parents
+    NamespacePtr parent;
+    for (unsigned i = 0; parent = srcNs->getParent(i++);)
+        overloads->addParent(parent.get());
+
+    srcNs->addDef(overloads.get());
+    return overloads;
+}
+
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
                  Namespace *ns,
@@ -516,6 +531,89 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     if (nextFunc->flags & FuncDef::method)
         nextCall->receiver = iterRef;
     afterBody = nextCall;
+}
+
+VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
+    if (!srcNs)
+        srcNs = ns.get();
+    VarDefPtr def = srcNs->lookUp(varName);
+
+    // if we got an overload, we may need to create an overload in this
+    // context.
+    OverloadDef *overload = OverloadDefPtr::rcast(def);
+    if (overload && overload->getOwner() != srcNs)
+        return replicateOverload(varName, srcNs);
+    else
+        return def;
+}
+
+FuncDefPtr Context::lookUp(const std::string &varName,
+                           vector<ExprPtr> &args,
+                           Namespace *srcNs
+                           ) {
+    if (!srcNs)
+        srcNs = ns.get();
+
+    // do a lookup, if nothing was found no further action is necessary.
+    VarDefPtr var = lookUp(varName, srcNs);
+    if (!var)
+        return 0;
+    
+    // if "var" is a class definition, convert this to a lookup of the "oper 
+    // new" function on the class.
+    TypeDef *typeDef = TypeDefPtr::rcast(var);
+    if (typeDef) {
+        FuncDefPtr operNew = lookUp("oper new", args, typeDef);
+
+        // make sure we got it, and we didn't inherit it
+        if (!operNew || operNew->getOwner() != typeDef)
+            return 0;
+        
+        return operNew;
+    }
+    
+    // make sure we got an overload
+    OverloadDefPtr overload = OverloadDefPtr::rcast(var);
+    if (!overload)
+        return 0;
+    
+    // make sure the overload isn't inherited
+    if (overload->getOwner() != srcNs)
+        overload = replicateOverload(varName, srcNs);
+    
+    // look up the signature in the overload
+    return overload->getMatch(*this, args);
+}
+
+FuncDefPtr Context::lookUpNoArgs(const std::string &name, bool acceptAlias,
+                                 Namespace *srcNs
+                                 ) {
+    OverloadDefPtr overload = OverloadDefPtr::rcast(lookUp(name, srcNs));
+    if (!overload)
+        return 0;
+
+    // we can just check for a signature match here - cheaper and easier.
+    FuncDef::ArgVec args;
+    FuncDefPtr result = overload->getNoArgMatch(acceptAlias);
+    return result;
+}
+
+VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
+    if (!srcNs)
+        srcNs = ns.get();
+    FuncDef *funcDef = FuncDefPtr::cast(varDef);
+    if (funcDef) {
+        OverloadDefPtr overload = 
+            OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
+        if (!overload)
+            overload = replicateOverload(varDef->name, srcNs);
+        overload->addFunc(funcDef);
+        funcDef->setOwner(srcNs);
+        return overload;
+    } else {
+        srcNs->addDef(varDef);
+        return varDef;
+    }
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {

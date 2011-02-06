@@ -2,7 +2,9 @@
 
 #include "CompositeNamespace.h"
 
+#include "Expr.h"
 #include "VarDef.h"
+#include "OverloadDef.h"
 
 using namespace model;
 
@@ -23,27 +25,24 @@ NamespacePtr CompositeNamespace::getParent(unsigned index) {
 }
 
 void CompositeNamespace::addDef(VarDef *def) {
-    assert(parents.size());
-    parents[0]->addDef(def);
+    assert(OverloadDefPtr::cast(def) && 
+           "composite namespace addDef called on non-overload");
+    Namespace::addDef(def);
 }
 
 void CompositeNamespace::removeDef(VarDef *def) {
-    assert(parents.size());
-    parents[0]->removeDef(def);
+    assert(false && "composite namespace mutation removeDef called");
 }
 
 void CompositeNamespace::addAlias(VarDef *def) {
-    assert(parents.size());
-    parents[0]->addAlias(def);
+    assert(false && "composite namespace mutation addAlias(d) called");
 }
 
 void CompositeNamespace::addAlias(const std::string &name, VarDef *def) {
-    assert(parents.size());
-    parents[0]->addAlias(name, def);
+    assert(false && "composite namespace mutation addAlias(n,d) called");
 }
 
 void CompositeNamespace::replaceDef(VarDef *def) {
-    assert(parents.size());
-    parents[0]->replaceDef(def);
+    assert(false && "composite namespace mutation replaceDef called");
 }
 

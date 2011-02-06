@@ -133,11 +133,12 @@ bool TypeDef::matches(const TypeDef &other) const {
 }    
 
 FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
+    assert(classContext.ns.get() == this); // needed for final addDef()
     ContextPtr funcContext = classContext.createSubContext(Context::local);
 
     // create the "this" variable
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
-    funcContext->ns->addDef(thisDef.get());
+    funcContext->addDef(thisDef.get());
     VarRefPtr thisRef = new VarRef(thisDef.get());
     
     FuncDef::ArgVec args(0);
@@ -209,16 +210,17 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     
     classContext.builder.emitReturn(*funcContext, 0);
     classContext.builder.emitEndFunc(*funcContext, newFunc.get());
-    addDef(newFunc.get());
+    classContext.addDef(newFunc.get());
     return newFunc;
 }
 
 void TypeDef::createDefaultDestructor(Context &classContext) {
+    assert(classContext.ns.get() == this); // needed for final addDef()
     ContextPtr funcContext = classContext.createSubContext(Context::local);
 
     // create the "this" variable
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
-    funcContext->ns->addDef(thisDef.get());
+    funcContext->addDef(thisDef.get());
     
     FuncDef::Flags flags = 
         FuncDef::method | 
@@ -243,7 +245,7 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
     // ... and close off the function
     classContext.builder.emitReturn(*funcContext, 0);
     classContext.builder.emitEndFunc(*funcContext, delFunc.get());
-    addDef(delFunc.get());
+    classContext.addDef(delFunc.get());
 }
 
 void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
@@ -262,7 +264,7 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
                                               (*iter)->name
                                               );
         args.push_back(argDef);
-        funcContext->ns->addDef(argDef.get());
+        funcContext->addDef(argDef.get());
     }
     
     FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext, 
@@ -303,7 +305,7 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     classContext.builder.emitEndFunc(*funcContext, newFunc.get());
 
     // register it in the class
-    addDef(newFunc.get());
+    classContext.addDef(newFunc.get());
 }
 
 void TypeDef::createCast(Context &outer) {
@@ -380,7 +382,7 @@ void TypeDef::createCast(Context &outer) {
     funcCtx->builder.emitEndFunc(*funcCtx, castFunc.get());
     
     // add the cast function to the meta-class
-    type->addDef(castFunc.get());
+    outer.addDef(castFunc.get(), type.get());
 }
 
 void TypeDef::rectify(Context &classContext) {

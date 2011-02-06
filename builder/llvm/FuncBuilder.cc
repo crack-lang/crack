@@ -105,7 +105,7 @@ void FuncBuilder::finish(bool storeDef) {
 
     funcDef->rep = func;
     if (storeDef)
-        context.ns->addDef(funcDef.get());
+        context.addDef(funcDef.get());
 }
 
 void FuncBuilder::addArg(const char *name, TypeDef *type) {

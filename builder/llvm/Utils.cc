@@ -37,7 +37,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                                1
                                                );
     arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-    arrayType->addDef(arrayGetItem.get());
+    context.addDef(arrayGetItem.get(), arrayType);
 
     arrayGetItem =
             new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method,
@@ -45,7 +45,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                                1
                                                );
     arrayGetItem->args[0] = new ArgDef(gd->intType.get(), "index");
-    arrayType->addDef(arrayGetItem.get());
+    context.addDef(arrayGetItem.get(), arrayType);
 
     FuncDefPtr arraySetItem =
             new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method,
@@ -54,7 +54,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                                );
     arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
     arraySetItem->args[1] = new ArgDef(elemType, "value");
-    arrayType->addDef(arraySetItem.get());
+    context.addDef(arraySetItem.get(), arrayType);
 
     arraySetItem =
             new GeneralOpDef<ArraySetItemCall>(elemType, FuncDef::method,
@@ -63,7 +63,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                                );
     arraySetItem->args[0] = new ArgDef(gd->intType.get(), "index");
     arraySetItem->args[1] = new ArgDef(elemType, "value");
-    arrayType->addDef(arraySetItem.get());
+    context.addDef(arraySetItem.get(), arrayType);
 
     FuncDefPtr arrayOffset =
             new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::method,
@@ -71,7 +71,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                               1
                                               );
     arrayOffset->args[0] = new ArgDef(gd->uintType.get(), "offset");
-    arrayType->addDef(arrayOffset.get());
+    context.addDef(arrayOffset.get(), arrayType);
 
     arrayOffset =
             new GeneralOpDef<ArrayOffsetCall>(arrayType, FuncDef::method,
@@ -79,7 +79,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                               1
                                               );
     arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
-    arrayType->addDef(arrayOffset.get());
+    context.addDef(arrayOffset.get(), arrayType);
 
     FuncDefPtr arrayAlloc =
             new GeneralOpDef<ArrayAllocCall>(arrayType, FuncDef::noFlags,
@@ -87,7 +87,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                              1
                                              );
     arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
-    arrayType->addDef(arrayAlloc.get());
+    context.addDef(arrayAlloc.get(), arrayType);
 }
 
 void createClassImpl(Context &context, BTypeDef *type) {

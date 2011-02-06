@@ -80,7 +80,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
          ++parent
          ) {
         OverloadDef *parentOverload = parent->getOverload(this);
-        FuncDef *result = 
+        FuncDef *result =
             parentOverload ? parentOverload->getMatch(context, args, 
                                                       convertFlag
                                                       ) :
