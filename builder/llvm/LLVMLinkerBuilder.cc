@@ -7,6 +7,7 @@
 #include "BTypeDef.h"
 #include "FuncBuilder.h"
 #include "Utils.h"
+//#include "Native.h"
 
 #include <llvm/Support/StandardPasses.h>
 #include <llvm/LLVMContext.h>
@@ -113,21 +114,24 @@ void LLVMLinkerBuilder::finish() {
     Module *finalir = linker->getModule();
 
     // LTO optimizations
-    if (optimizeLevel) {
+    if (options->optimizeLevel) {
         PassManager passMan;
         createStandardLTOPasses(&passMan,
                                 true, // internalize
                                 true, // inline
-                                debugMode // verify each
+                                options->debugMode // verify each
                                 );
         passMan.run(*finalir);
     }
 
     emitAggregateCleanup(finalir);
 
-    PassManager passMan;
-    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
-    passMan.run(*finalir);
+    if (options->dumpMode) {
+        PassManager passMan;
+        passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+        passMan.run(*finalir);
+        return;
+    }
 
     //nativeCompile(finalir, options);
 
@@ -137,8 +141,7 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
     LLVMLinkerBuilder *result = new LLVMLinkerBuilder();
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
-    result->dumpMode = dumpMode;
-    result->debugMode = debugMode;
+    result->options = options;
     return result;
 }
 
@@ -149,7 +152,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
 
-    if (debugMode) {
+    if (options->debugMode) {
         debugInfo = new DebugInfo(module, name);
     }
 

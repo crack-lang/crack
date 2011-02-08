@@ -113,7 +113,7 @@ void Construct::addToSourceLibPath(const string &path) {
     while (i != -1) {
         sourceLibPath.push_back(path.substr(pos, i - pos));
         pos = i + 1;
-        i = path.find('.', pos);
+        i = path.find(':', pos);
     }
     sourceLibPath.push_back(path.substr(pos));
 }

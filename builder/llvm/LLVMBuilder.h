@@ -55,8 +55,6 @@ class LLVMBuilder : public Builder {
         typedef std::map<model::VarDefImpl *, llvm::GlobalVariable *> ModVarMap;
         ModVarMap moduleVars;
 
-        bool dumpMode, debugMode;
-
         LLVMBuilderPtr rootBuilder;
 
         void initializeMethodInfo(model::Context &context, 
@@ -336,9 +334,6 @@ class LLVMBuilder : public Builder {
                                     model::TypeDef *typeDef
                                     );
 
-        virtual void setDumpMode(bool dump);
-        
-        virtual void setDebug(bool debug);
 };
 
 } // namespace builder::mvll

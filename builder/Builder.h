@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
 #ifndef _builder_Builder_h_
 #define _builder_Builder_h_
@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <spug/RCPtr.h>
 
+#include "BuilderOptions.h"
 #include "model/FuncCall.h" // for FuncCall::ExprVec
 #include "model/FuncDef.h" // for FuncDef::Flags
 
@@ -37,11 +38,10 @@ SPUG_RCPTR(Builder);
 /** Abstract base class for builders.  Builders generate code. */
 class Builder : public spug::RCBase {
 
-    protected:
-        int optimizeLevel;
-
     public:
-        Builder(): optimizeLevel(0) { }
+        BuilderOptionsPtr options;
+
+        Builder(): options(0) { }
 
         /**
          * This gets called on the "root builder" everytime a new module gets 
@@ -408,26 +408,18 @@ class Builder : public spug::RCBase {
          */
         virtual void finish() { }
 
+        /**
+         * If a builder can directly execute functions from modules it builds,
+         * e.g. via JIT, then this will return true
+         */
+        virtual bool isExec() = 0;
+
         // XXX hack to emit all vtable initializers until we get constructor 
         // composition.
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     ) = 0;
 
-        // implementation specific optimization level
-        void setOptimize(int level) { optimizeLevel = level; }
-        
-        /**
-         * Sets the "dump" flag - if this is true, we don't execute modules on 
-         * close, just dump them in whatever format is appropriate for the 
-         * builder.
-         */
-        virtual void setDumpMode(bool dump) = 0;
-        
-        /**
-         * Enable/disable debugging information.
-         */
-        virtual void setDebug(bool debug) = 0;
 };
 
 } // namespace builder

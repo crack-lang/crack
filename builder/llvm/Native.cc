@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign.
  *
- * Other parts Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+ * Other parts Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
  *
  */
 

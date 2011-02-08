@@ -52,9 +52,6 @@ set_source_files_properties( ${CRACK_SRC_FILES}
 set_source_files_properties( crack.cc
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
-set_source_files_properties( crackc.cc
-                             PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
-                            )
 
 add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
@@ -101,24 +98,12 @@ set_target_properties( crack
                        VERSION ${CRACK_VERSION}
                      )
 
-add_executable(crackc crackc.cc)
-set_target_properties( crackc
-                       PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
-                       # test suite currently expects crack binary in project
-                       # source
-                       RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
-                       VERSION ${CRACK_VERSION}
-                     )
-
 target_link_libraries( crack
-                       libcrack
-                     )
-target_link_libraries( crackc
                        libcrack
                      )
 
 # install targets
-install(TARGETS crack crackc libcrack
+install(TARGETS crack libcrack
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

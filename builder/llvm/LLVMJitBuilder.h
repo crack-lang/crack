@@ -47,9 +47,12 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual model::ModuleDefPtr createModule(model::Context &context,
                                                  const std::string &name
                                                  );
+
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
                                  );
+
+        virtual bool isExec() { return true; }
 
 };
 

@@ -10,15 +10,19 @@
 #include "model/Context.h"
 #include "model/TypeDef.h"
 #include "builder/llvm/LLVMJitBuilder.h"
+#include "builder/llvm/LLVMLinkerBuilder.h"
 #include "Crack.h"
 
 using namespace std;
 
-enum {
-    doubleBuilder = 1001
-};
+typedef enum {
+    jitBuilder,
+    nativeBuilder
+} builderType;
 
 struct option longopts[] = {
+    {"builder", true, 0, 'B'},
+    {"builder-opts", true, 0, 'b'},
     {"dump", false, 0, 'd'},
     {"debug", false, 0, 'g'},
     {"optimize", true, 0, 'O'},
@@ -26,26 +30,29 @@ struct option longopts[] = {
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
     {"lib", true, 0, 'l'},
-    {"double-builder", false, 0, doubleBuilder},
     {0, 0, 0, 0}
 };
 
 int main(int argc, char **argv) {
+
     if (argc < 2) {
         cerr << "Usage:" << endl;
-        cerr << "  crack <script>" << endl;
+        cerr << "  crack [options] <script>" << endl;
         return 1;
     }
 
-    Crack crack(new builder::mvll::LLVMJitBuilder());
 
-    // default optimize
-    crack.optimizeLevel = 2;
+    // top level interface
+    Crack crack;
+    crack.options->optimizeLevel = 2;
+
+    builderType bType = jitBuilder;
+    string libPath;
 
     // parse the main module
     int opt;
     bool optionsError = false;
-    while ((opt = getopt_long(argc, argv, "dgO:nGml:", longopts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:", longopts, NULL)) != -1) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable
@@ -53,11 +60,17 @@ int main(int argc, char **argv) {
             case '?':
                 optionsError = true;
                 break;
+            case 'B':
+                cerr << "use builder: " << optarg << "\n";
+                break;
+            case 'b':
+                cerr << "use builder opts: " << optarg << "\n";
+                break;
             case 'd':
-                crack.dump = true;
+                crack.options->dumpMode = true;
                 break;
             case 'g':
-                crack.emitDebugInfo = true;
+                crack.options->debugMode = true;
                 break;
             case 'O':
                 if (!*optarg || *optarg > '3' || *optarg < '0' || optarg[1]) {
@@ -66,7 +79,7 @@ int main(int argc, char **argv) {
                     exit(1);
                 }
                 
-                crack.optimizeLevel = atoi(optarg);
+                crack.options->optimizeLevel = atoi(optarg);
                 break;
             case 'n':
                 crack.noBootstrap = true;
@@ -78,10 +91,13 @@ int main(int argc, char **argv) {
                 crack.emitMigrationWarnings = true;
                 break;
             case 'l':
-                crack.addToSourceLibPath(optarg);
-                break;
-            case doubleBuilder:
-                crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
+                if (libPath.empty()) {
+                    libPath = optarg;
+                }
+                else {
+                    libPath.push_back(':');
+                    libPath.append(optarg);
+                }
                 break;
         }
     }
@@ -89,6 +105,19 @@ int main(int argc, char **argv) {
     // check for options errors
     if (optionsError)
         exit(1);
+
+    if (bType == jitBuilder) {
+        // immediate execution in JIT
+        crack.setBuilder(new builder::mvll::LLVMJitBuilder());
+    }
+    else {
+        // compile to native binary
+        crack.setBuilder(new builder::mvll::LLVMLinkerBuilder());
+        crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
+    }
+
+    if (!libPath.empty())
+        crack.addToSourceLibPath(libPath);
 
     // are there any more arguments?
     if (optind == argc) {
@@ -104,5 +133,7 @@ int main(int argc, char **argv) {
         crack.runScript(src, argv[optind]);
     }
     
-    crack.callModuleDestructors();
+    if (bType == jitBuilder && !crack.options->dumpMode)
+        crack.callModuleDestructors();
+
 }

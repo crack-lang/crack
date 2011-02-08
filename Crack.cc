@@ -11,34 +11,42 @@ using namespace std;
 using namespace model;
 using namespace builder;
 
-Crack::Crack(Builder *builder) : 
-    initialized(false),
-    dump(false),
-    optimizeLevel(0),
-    emitDebugInfo(false),
+Crack::Crack(void) :
+    initialized(false),    
+    options(new builder::BuilderOptions()),
     noBootstrap(false),
     useGlobalLibs(true),
     emitMigrationWarnings(false) {
 
-    construct = new Construct(builder);
 }
 
 void Crack::addToSourceLibPath(const string &path) {
+    assert(construct && "no call to setBuilder");
     construct->addToSourceLibPath(path);
     if (construct->compileTimeConstruct)
         construct->compileTimeConstruct->addToSourceLibPath(path);
 }
 
 void Crack::setArgv(int argc, char **argv) {
+    assert(construct && "no call to setBuilder");
     construct->rootBuilder->setArgv(argc, argv);
 }
 
+void Crack::setBuilder(Builder *builder) {
+    builder->options = options;
+    construct = new Construct(builder);
+}
+
 void Crack::setCompileTimeBuilder(Builder *builder) {
+    assert(construct && "no call to setBuilder");
+    assert(builder->isExec() && "builder cannot be used compile time");
+    builder->options = options;
     construct->compileTimeConstruct = new Construct(builder, construct.get());
 }
 
 bool Crack::init() {
     if (!initialized) {
+        assert(construct && "no call to setBuilder");
         Construct *ctc = construct->compileTimeConstruct.get();
 
         // finalize the search path
@@ -55,15 +63,11 @@ bool Crack::init() {
 
         // initialize the compile-time construct first
         if (ctc) {
-            ctc->rootBuilder->setOptimize(optimizeLevel);
             ctc->migrationWarnings = emitMigrationWarnings;
             ctc->loadBuiltinModules();
             if (!noBootstrap && !ctc->loadBootstrapModules())
                 return false;
         }
-
-        construct->rootBuilder->setDumpMode(dump);
-        construct->rootBuilder->setOptimize(optimizeLevel);
 
         // pass the emitMigrationWarnings flag down to the global data.
         construct->migrationWarnings = emitMigrationWarnings;
@@ -85,8 +89,6 @@ int Crack::runScript(std::istream &src, const std::string &name) {
 }
 
 void Crack::callModuleDestructors() {
-    // if we're in dump mode, nothing got run and nothing needs cleanup.
-    if (dump) return;
 
     // run through all of the destructors backwards.
     for (vector<ModuleDefPtr>::reverse_iterator ri = 

@@ -461,8 +461,6 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
 
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
-    dumpMode(false),
-    debugMode(false),
     module(0),
     builder(getGlobalContext()),
     func(0),
@@ -1997,12 +1995,4 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
         new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
     // store it
     btype->addPlaceholder(vtableInit);
-}
-
-void LLVMBuilder::setDumpMode(bool dump) {
-    dumpMode = dump;
-}
-
-void LLVMBuilder::setDebug(bool debug) {
-    debugMode = debug;
 }

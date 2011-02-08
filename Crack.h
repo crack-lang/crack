@@ -3,6 +3,8 @@
 #ifndef _Crack_h_
 #define _Crack_h_
 
+#include "builder/BuilderOptions.h"
+
 #include <map>
 #include <vector>
 #include <spug/RCPtr.h>
@@ -36,14 +38,9 @@ class Crack {
         bool init();
 
     public:
-        // if true, do not execute anything, but rather dump modules.
-        bool dump;
 
-        // optimization level to pass to builder
-        int optimizeLevel;
-
-        // if true, generate debug information suitable for a debugger
-        bool emitDebugInfo;
+        // builder specific options
+        builder::BuilderOptionsPtr options;
 
         // if true, don not load the bootstrapping modules before running a 
         // script.  This changes some of the language semantics: constant 
@@ -59,11 +56,11 @@ class Crack {
         // differences from the last version of the language.
         bool emitMigrationWarnings;
         
-        Crack(builder::Builder *rootBuilder);
+        Crack(void);
         
 //        ~Crack();
         
-    public:
+    public:         
 
         /**
          * Adds the given path to the source library path - 'path' is a 
@@ -76,6 +73,11 @@ class Crack {
          * runScript()).
          */
         void setArgv(int argc, char **argv);
+
+        /**
+         * set the main builder for compiling runtime code
+         */
+        void setBuilder(builder::Builder *builder);
 
         /**
          * Set the builder to be used by the compiler for annotation modules.

@@ -35,7 +35,7 @@ void LLVMJitBuilder::engineBindModule(ModuleDef *moduleDef) {
 void LLVMJitBuilder::engineFinishModule(ModuleDef *moduleDef) {
     // XXX right now, only checking for > 0, later perhaps we can
     // run specific optimizations at different levels
-    if (optimizeLevel) {
+    if (options->optimizeLevel) {
         // optimize
         llvm::PassManager passMan;
 
@@ -119,8 +119,7 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
     LLVMJitBuilder *result = new LLVMJitBuilder();
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
-    result->dumpMode = dumpMode;
-    result->debugMode = debugMode;
+    result->options = options;
     return result;
 }
 
@@ -132,7 +131,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
 
-    if (debugMode) {
+    if (options->debugMode) {
         debugInfo = new DebugInfo(module, name);
     }
 
@@ -284,7 +283,7 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         delete debugInfo;
 
     // dump or run the module depending on the mode.
-    if (dumpMode)
+    if (options->dumpMode)
         dump();
     else
         run();
