@@ -33,20 +33,29 @@ struct option longopts[] = {
     {0, 0, 0, 0}
 };
 
+static std::string prog;
+
+void usage() {
+    cerr << "Usage:" << endl;
+    cerr << "  " << prog << " [options] <script>" << endl;
+    exit(1);
+}
+
 int main(int argc, char **argv) {
 
-    if (argc < 2) {
-        cerr << "Usage:" << endl;
-        cerr << "  crack [options] <script>" << endl;
-        return 1;
-    }
+    prog = basename(argv[0]);
 
+    if (argc < 2)
+        usage();
 
     // top level interface
     Crack crack;
     crack.options->optimizeLevel = 2;
 
-    builderType bType = jitBuilder;
+    builderType bType = (prog == "crackc") ?
+                                nativeBuilder:
+                                jitBuilder;
+
     string libPath;
 
     // parse the main module
@@ -61,7 +70,14 @@ int main(int argc, char **argv) {
                 optionsError = true;
                 break;
             case 'B':
-                cerr << "use builder: " << optarg << "\n";
+                if (strncmp("llvm-native",optarg,11) == 0)
+                    bType = nativeBuilder;
+                else if (strncmp("llvm-jit",optarg,8) == 0)
+                    bType = jitBuilder;
+                else {
+                    cerr << "Unknown builder: " << optarg << endl;
+                    exit(1);
+                }
                 break;
             case 'b':
                 cerr << "use builder opts: " << optarg << "\n";
@@ -104,7 +120,7 @@ int main(int argc, char **argv) {
     
     // check for options errors
     if (optionsError)
-        exit(1);
+        usage();
 
     if (bType == jitBuilder) {
         // immediate execution in JIT
