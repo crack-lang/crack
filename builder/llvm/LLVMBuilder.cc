@@ -32,8 +32,6 @@
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <spug/Exception.h>
@@ -1981,12 +1979,6 @@ void LLVMBuilder::registerImport(Context &context, VarDef *varDef) {
 void LLVMBuilder::setArgv(int newArgc, char **newArgv) {
     argc = newArgc;
     argv = newArgv;
-}
-
-void LLVMBuilder::dump() {
-    PassManager passMan;
-    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
-    passMan.run(*module);
 }
 
 void LLVMBuilder::emitMemVarRef(Context &context, Value *val) {

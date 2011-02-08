@@ -27,6 +27,8 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         llvm::Linker *linkModule(llvm::Module *mp);
         moduleListType *addModule(model::ModuleDef *mp);
 
+        llvm::Function *emitAggregateCleanup(llvm::Module *module);
+
     public:
         LLVMLinkerBuilder(void) : linker(0),
                                   moduleList(0),
@@ -34,7 +36,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         virtual void *getFuncAddr(llvm::Function *func);
 
-        virtual void run();
+        virtual void finish();
 
         virtual BuilderPtr createChildBuilder();
 

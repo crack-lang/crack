@@ -15,6 +15,8 @@
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
+#include <llvm/Analysis/Verifier.h>
+#include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 #include <llvm/Module.h>
@@ -286,4 +288,10 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         dump();
     else
         run();
+}
+
+void LLVMJitBuilder::dump() {
+    PassManager passMan;
+    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+    passMan.run(*module);
 }

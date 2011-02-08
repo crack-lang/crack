@@ -21,6 +21,40 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
+
+// emit the final cleanup function, a collection of calls
+// to the cleanup functions for the individual modules we have
+// included in this build
+// by convention, the name is "main:cleanup". this is used by Native.cc
+Function *LLVMLinkerBuilder::emitAggregateCleanup(Module *module) {
+
+    assert(!rootBuilder && "emitAggregateCleanup must be called from "
+                           "root builder");
+
+    LLVMContext &lctx = getGlobalContext();
+    llvm::Constant *c =
+            module->getOrInsertFunction("main:cleanup",
+                                        Type::getVoidTy(lctx), NULL);
+    Function *func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    BasicBlock *block = BasicBlock::Create(lctx, "", func);
+
+    for (vector<ModuleDef *>::const_iterator i =
+             moduleList->begin();
+         i != moduleList->end();
+         ++i) {
+         Function *dfunc = module->getFunction((*i)->name+":cleanup");
+         // missing a cleanup function isn't an error, because the moduleDef
+         // list currently includes modules that don't have any associated
+         // codegen, like "crack"
+         if (!dfunc)
+             continue;
+         CallInst::Create(dfunc, "", block);
+    }
+    ReturnInst::Create(lctx, block);
+    return func;
+}
+
 Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
     if (linker) {
         string errMsg;
@@ -40,6 +74,8 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
                                 getGlobalContext(),
                                 Linker::Verbose // flags
                                 );
+            assert(linker && "unable to create Linker");
+            linkModule(mod);
         }
     }
 
@@ -69,7 +105,7 @@ void *LLVMLinkerBuilder::getFuncAddr(llvm::Function *func) {
     assert("LLVMLinkerBuilder::getFuncAddr called");
 }
 
-void LLVMLinkerBuilder::run() {
+void LLVMLinkerBuilder::finish() {
 
     assert(!rootBuilder && "run must be called from root builder");
 
@@ -86,6 +122,12 @@ void LLVMLinkerBuilder::run() {
                                 );
         passMan.run(*finalir);
     }
+
+    emitAggregateCleanup(finalir);
+
+    PassManager passMan;
+    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+    passMan.run(*finalir);
 
     //nativeCompile(finalir, options);
 

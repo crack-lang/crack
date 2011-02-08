@@ -394,11 +394,19 @@ class Builder : public spug::RCBase {
          * Provides the builder with access to the program's argument list.
          */
         virtual void setArgv(int argc, char **argv) = 0;
-        
-        virtual void run() = 0;
-        
+
+        /**
+         * Called per module
+         */
+        virtual void run() { }
+
         /// Dump the compiled op-codes to standard output.
-        virtual void dump() = 0;
+        virtual void dump() { }
+
+        /**
+         * Called after all modules have been parsed/run
+         */
+        virtual void finish() { }
 
         // XXX hack to emit all vtable initializers until we get constructor 
         // composition.

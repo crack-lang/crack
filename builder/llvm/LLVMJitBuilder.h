@@ -40,6 +40,8 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void run();
 
+        virtual void dump();
+
         virtual BuilderPtr createChildBuilder();
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
