@@ -37,7 +37,25 @@ static std::string prog;
 
 void usage() {
     cerr << "Usage:" << endl;
-    cerr << "  " << prog << " [options] <script>" << endl;
+    cerr << "  " << prog << " [options] <source file>" << endl;
+    cerr << " -B <name>  --builder            Main builder to use (llvm-jit or"
+            " llvm-native)" << endl;
+    cerr << " -b <opts>  --builder-opts       Builder options in the form "
+            "foo=bar:baz=bip" << endl;
+    cerr << " -d         --dump               Dump IR to stdout instead of "
+            "running or compiling" << endl;
+    cerr << " -g         --debug              Generate DWARF debug information"
+            << endl;
+    cerr << " -O <N>     --optimize N         Use optimization level N (default"
+            " 2)" << endl;
+    cerr << " -n         --no-bootstrap       Do not load bootstrapping modules"
+            << endl;
+    cerr << " -G         --no-default-paths   Do not include default module"
+            " search paths" << endl;
+    cerr << " -m         --migration-warnings Include migration warnings"
+            << endl;
+    cerr << " -l <path>  --lib                Add directory to module search "
+            "path" << endl;
     exit(1);
 }
 
