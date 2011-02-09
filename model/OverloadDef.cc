@@ -10,18 +10,6 @@
 using namespace std;
 using namespace model;
 
-OverloadDef *OverloadDef::Parent::getOverload(const OverloadDef *owner) const {
-    
-    // if we don't currently have an overload, try to get one from the parent 
-    // context.
-    if (!overload) {
-        VarDefPtr varDef = ns->lookUp(owner->name);
-        if (varDef)
-            overload = OverloadDefPtr::rcast(varDef);
-    }
-    return overload.get();
-}
-
 void OverloadDef::setImpl(FuncDef *func) {
     type = func->type;
     impl = func->impl;
@@ -53,14 +41,9 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
-         ) {
-        OverloadDef *parentOverload = parent->getOverload(this);
-        if (parentOverload)
-            parentOverload->flatten(flatFuncs);
-    }
+         )
+        (*parent)->flatten(flatFuncs);
 }
-
-TypeDefPtr OverloadDef::overloadType;
 
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
                                FuncDef::Convert convertFlag
@@ -79,12 +62,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
          parent != parents.end();
          ++parent
          ) {
-        OverloadDef *parentOverload = parent->getOverload(this);
-        FuncDef *result =
-            parentOverload ? parentOverload->getMatch(context, args, 
-                                                      convertFlag
-                                                      ) :
-                             0;
+        FuncDef *result = (*parent)->getMatch(context, args, convertFlag);
         if (result)
             return result;
     }
@@ -131,9 +109,7 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
          parent != parents.end();
          ++parent
          ) {
-        OverloadDef *parentOverload = parent->getOverload(this);
-        FuncDef *result = 
-            parentOverload ? parentOverload->getSigMatch(args) : 0;
+        FuncDef *result = (*parent)->getSigMatch(args);
         if (result)
             return result;
     }
@@ -158,9 +134,7 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
          parent != parents.end();
          ++parent
          ) {
-        OverloadDef *parentOverload = parent->getOverload(this);
-        FuncDef *result = 
-            parentOverload ? parentOverload->getNoArgMatch(acceptAlias) : 0;
+        FuncDef *result = (*parent)->getNoArgMatch(acceptAlias);
         if (result)
             return result;
     }
@@ -168,13 +142,28 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
     return 0;
 }
 
+OverloadDefPtr OverloadDef::createAlias() {
+    OverloadDefPtr alias = new OverloadDef(name);
+    flatten(alias->funcs);
+    return alias;
+}
+
 void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
 }
 
-void OverloadDef::addParent(Namespace *ns) {
-    parents.push_back(ns);
+void OverloadDef::addParent(OverloadDef *parent) {
+    parents.push_back(parent);
+}
+
+bool OverloadDef::hasParent(OverloadDef *parent) {
+    for (ParentVec::iterator iter = parents.begin(); iter != parents.end();
+         ++iter
+         )
+        if (iter->get() == parent)
+            return true;
+    return false;
 }
 
 bool OverloadDef::hasInstSlot() {
@@ -196,13 +185,10 @@ void OverloadDef::createImpl() {
              parent != parents.end();
              ++parent
              ) {
-            OverloadDef *parentOverload = parent->getOverload(this);
-            if (parentOverload) {
-                parentOverload->createImpl();
-                if (parentOverload->impl) {
-                    impl = parentOverload->impl;
-                    break;
-                }
+            (*parent)->createImpl();
+            if ((*parent)->impl) {
+                impl = (*parent)->impl;
+                break;
             }
         }
     
@@ -224,9 +210,6 @@ void OverloadDef::dump(ostream &out, const string &prefix) const {
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
-         ) {
-        OverloadDef *parentOverload = parent->getOverload(this);
-        if (parentOverload)
-            parentOverload->dump(out, prefix);
-    }
+         )
+        (*parent)->dump(out, prefix);
 }

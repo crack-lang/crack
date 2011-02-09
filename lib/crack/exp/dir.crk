@@ -27,8 +27,6 @@ class Directory : Object, Openable {
     List _dirList = {};
     List _fileList = {};
 
-    void _open();
-    
     oper init(String name0, bool open): name(name0) {
         // possibly strip trailing delim
         if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))

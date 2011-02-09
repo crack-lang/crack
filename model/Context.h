@@ -128,7 +128,9 @@ class Context : public spug::RCBase {
          * Create a new subcontext with a different scope from the parent 
          * context.
          */
-        ContextPtr createSubContext(Scope newScope, Namespace *ns = 0);
+        ContextPtr createSubContext(Scope newScope, Namespace *ns = 0,
+                                    const std::string *name = 0
+                                    );
 
         /**
          * Create a new subcontext in the same scope.
@@ -336,6 +338,13 @@ class Context : public spug::RCBase {
          *  varDef or 
          */
         VarDefPtr addDef(VarDef *varDef, Namespace *srcNs = 0);
+
+        /**
+         * Insures that if there is a child overload definition for 'overload' 
+         * in the context's namespace, that it delegates to 'overload' in 
+         * 'ancestor's namespace.
+         */
+        void insureOverloadPath(Context *ancestor, OverloadDef *overload);
 
         // location management
 

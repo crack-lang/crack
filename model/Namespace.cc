@@ -58,7 +58,7 @@ void Namespace::addAlias(VarDef *def) {
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
-        OverloadDefPtr child = overload->createChild();
+        OverloadDefPtr child = overload->createAlias();
         storeDef(child.get());
         child->setOwner(this);
     } else {

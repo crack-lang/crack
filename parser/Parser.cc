@@ -40,17 +40,22 @@ using namespace parser;
 using namespace model;
 
 void Parser::addDef(VarDef *varDef) {
+   FuncDef *func = FuncDefPtr::cast(varDef);
    ContextPtr defContext = context->getDefContext();
    VarDefPtr storedDef = defContext->addDef(varDef);
+   
+   // if this was a function that was added to an ancestor context, we need to 
+   // rebuild any intermediate overload definitions.
+   if (func && defContext != context)
+      context->insureOverloadPath(defContext.get(), 
+                                  OverloadDefPtr::arcast(storedDef)
+                                  );
    
    // if the definition context is a class context and the definition is a 
    // function and this isn't the "Class" class (which is its own meta-class), 
    // add it to the meta-class.
-   FuncDef *func;
    TypeDef *type;
-   if (defContext->scope == Context::instance &&
-       (func = FuncDefPtr::cast(varDef))
-       ) {
+   if (defContext->scope == Context::instance && func) {
       type = TypeDefPtr::arcast(defContext->ns);
       if (type != type->type.get())
          type->type->addAlias(storedDef.get());
@@ -216,9 +221,7 @@ void Parser::parseAnnotation() {
    
       // if we get an import keyword, parse the import statement.   
       if (tok.isImport()) {
-         OverloadDef::overloadType = context->construct->overloadType;
          parseImportStmt(parentContext->compileNS.get());
-         OverloadDef::overloadType = context->parent->construct->overloadType;
          return;
       }
       
@@ -1366,7 +1369,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    TypeDef *classTypeDef = 0;
    
    // push a new context, arg defs will be stored in the new context.
-   ContextPtr subCtx = context->createSubContext(Context::local);
+   ContextPtr subCtx = context->createSubContext(Context::local, 0,
+                                                 &name
+                                                 );
    ContextStackFrame cstack(*this, subCtx.get());
    context->returnType = returnType;
    context->toplevel = true;
@@ -1405,7 +1410,6 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    // we now need to verify that the new definition doesn't hide an 
    // existing definition.
-   FuncDef *existingFuncDef = FuncDefPtr::rcast(existingDef);
    OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
    if (existingOvldDef && 
       (override = existingOvldDef->getSigMatch(argDefs)) &&
@@ -1458,6 +1462,15 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          stub->getOwner()->removeDef(stub);
          cstack.restore();
          addFuncDef(funcDef.get());
+      } else if (override) {
+         // forward declarations of overrides don't make any sense.
+         warn(tok3, SPUG_FSTR("Unnecessary forward declaration for overriden "
+                               "function " << name << " (defined in ancestor "
+                               "class " << 
+                               override->getOwner()->getNamespaceName() <<
+                               ")"
+                              )
+              );
       } else {
          // it's a forward declaration
          funcDef = context->builder.createFuncForward(*context, 

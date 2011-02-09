@@ -11,7 +11,7 @@ using namespace model;
 CompositeNamespace::CompositeNamespace(Namespace *parent0, 
                                        Namespace *parent1
                                        ) :
-        Namespace(parent0->getNamespaceName()),
+        Namespace(parent0->getNamespaceName() + ":composite"),
         parents(2) {
     parents[0] = parent0;
     parents[1] = parent1;
