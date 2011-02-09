@@ -35,9 +35,6 @@ using namespace std;
 
 parser::Location Context::emptyLoc;
 
-#define TRACE(msg) ;
-//#define TRACE(msg) cout << msg << endl;
-
 void Context::warnOnHide(const string &name) {
     if (ns->lookUp(name))
         cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << 
@@ -50,15 +47,11 @@ namespace {
                                   Namespace *srcNs
                                   ) {
         NamespacePtr parent;
-        TRACE("collecting ancestors for " << overload->name << 
-              " from parents of " << srcNs->getNamespaceName());
         for (unsigned i = 0; parent = srcNs->getParent(i++);) {
             VarDefPtr var = parent->lookUp(overload->name, false);
             OverloadDefPtr parentOvld;
             if (!var) {
                 // the parent does not have this overload.  Check the next level.
-                TRACE("none found for " << parent->getNamespaceName() <<
-                      " checking grandparents")
                 collectAncestorOverloads(overload, parent.get());
             } else {
                 parentOvld = OverloadDefPtr::rcast(var);
@@ -68,11 +61,8 @@ namespace {
                 // overloads in all derived namespaces.  This is a bad thing, 
                 // but not something we want to deal with here.
 
-                if (parentOvld) {
-                    TRACE("got overload from parent " << 
-                          parent->getNamespaceName())
+                if (parentOvld)
                     overload->addParent(parentOvld.get());
-                }
             }
         }
     }
@@ -85,7 +75,6 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
     overload->type = construct->overloadType;
     
     // merge in the overloads from the parents
-    TRACE("=== collecting ancestors for " << varName << " ===")
     collectAncestorOverloads(overload.get(), srcNs);
     srcNs->addDef(overload.get());
     return overload;
@@ -575,7 +564,8 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
     VarDefPtr def = srcNs->lookUp(varName);
 
     // if we got an overload, we may need to create an overload in this
-    // context.
+    // context.  (we can get away with checking the owner because overloads 
+    // are never aliased)
     OverloadDef *overload = OverloadDefPtr::rcast(def);
     if (overload && overload->getOwner() != srcNs)
         return replicateOverload(varName, srcNs);
@@ -587,8 +577,6 @@ FuncDefPtr Context::lookUp(const std::string &varName,
                            vector<ExprPtr> &args,
                            Namespace *srcNs
                            ) {
-    if (varName == "oper ==")
-        TRACE("looking up oper ==")
     if (!srcNs)
         srcNs = ns.get();
 
@@ -614,12 +602,6 @@ FuncDefPtr Context::lookUp(const std::string &varName,
     OverloadDefPtr overload = OverloadDefPtr::rcast(var);
     if (!overload)
         return 0;
-    
-    // make sure the overload isn't inherited
-    if (overload->getOwner() != srcNs) {
-        assert(false && "WTF??");
-        overload = replicateOverload(varName, srcNs);
-    }
     
     // look up the signature in the overload
     return overload->getMatch(*this, args);
