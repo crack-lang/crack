@@ -166,8 +166,8 @@ static int GenerateNative(const std::string &OutputFilename,
 void createMain(llvm::Module *mod, const BuilderOptions *o) {
 
     // script entry point we insert into main() function
-    BuilderOptions::stringMap::const_iterator i = o->strOptions.find("mainUnit");
-    assert(i != o->strOptions.end() && "no mainUnit");
+    BuilderOptions::stringMap::const_iterator i = o->optionMap.find("mainUnit");
+    assert(i != o->optionMap.end() && "no mainUnit");
 
     Function *scriptEntry = mod->getFunction(i->second+":main");
     assert(scriptEntry && "no main source file specified");
@@ -293,8 +293,8 @@ void nativeCompile(llvm::Module *module,
     if (o->dumpMode)
         return;
 
-    BuilderOptions::stringMap::const_iterator i = o->strOptions.find("outFile");
-    assert(i != o->strOptions.end() && "no outFile");
+    BuilderOptions::stringMap::const_iterator i = o->optionMap.find("outFile");
+    assert(i != o->optionMap.end() && "no outFile");
 
     sys::Path oFile(i->second);
     sys::Path binFile(i->second);
