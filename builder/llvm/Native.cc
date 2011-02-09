@@ -10,7 +10,7 @@
  */
 
 #include "Native.h"
-#include "builder/BuildOptions.h"
+#include "builder/BuilderOptions.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
@@ -163,10 +163,13 @@ static int GenerateNative(const std::string &OutputFilename,
   }
 
 */
-void createMain(llvm::Module *mod, const BuildOptions *o) {
+void createMain(llvm::Module *mod, const BuilderOptions *o) {
 
     // script entry point we insert into main() function
-    Function *scriptEntry = mod->getFunction(o->mainUnit+":main");
+    BuilderOptions::stringMap::const_iterator i = o->strOptions.find("mainUnit");
+    assert(i != o->strOptions.end() && "no mainUnit");
+
+    Function *scriptEntry = mod->getFunction(i->second+":main");
     assert(scriptEntry && "no main source file specified");
 
     // main cleanup function we insert into main() function, after script
@@ -278,16 +281,19 @@ void createMain(llvm::Module *mod, const BuildOptions *o) {
 
 }
 
-void nativeCompile(llvm::Module *module, const BuildOptions *o) {
+void nativeCompile(llvm::Module *module,
+                   const BuilderOptions *o,
+                   const vector<string> &sharedLibs,
+                   const vector<string> &libPaths) {
 
     // create int main(argc, argv) entry point
     createMain(module, o);
 
     // if we're dumping, return now that'd we've added main and finalized ir
-    if (o->dump)
+    if (o->dumpMode)
         return;
 
-    BuildOptions::stringMap::const_iterator i = o->strOptions.find("outFile");
+    BuilderOptions::stringMap::const_iterator i = o->strOptions.find("outFile");
     assert(i != o->strOptions.end() && "no outFile");
 
     sys::Path oFile(i->second);
@@ -373,9 +379,7 @@ void nativeCompile(llvm::Module *module, const BuildOptions *o) {
     sys::Path gcc = sys::Program::FindProgramByName("gcc");
     assert(!gcc.isEmpty() && "Failed to find gcc");
 
-    // libraries to link
-    std::vector<string> LibPaths;
-    LibPaths.assign(o->sourceLibPath.begin(), o->sourceLibPath.end());
+    vector<string> LibPaths(libPaths);
 
     // if CRACK_LIB_PATH is set, add that
     char *elp = getenv("CRACK_LIB_PATH");
@@ -389,8 +393,8 @@ void nativeCompile(llvm::Module *module, const BuildOptions *o) {
     // libcrack is required
     NativeLinkItems.push_back(pair<string,bool>("CrackLang",true));
 
-    for (vector<string>::const_iterator i = o->sharedLibs.begin();
-         i != o->sharedLibs.end();
+    for (vector<string>::const_iterator i = sharedLibs.begin();
+         i != sharedLibs.end();
          ++i) {
 
          // split out directories
@@ -413,7 +417,7 @@ void nativeCompile(llvm::Module *module, const BuildOptions *o) {
 
     GenerateNative(binFile.str(),
                    oFile.str(),
-                   LibPaths,
+                   libPaths,
                    NativeLinkItems,
                    gcc,
                    envp,

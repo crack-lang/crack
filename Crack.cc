@@ -2,6 +2,8 @@
 
 #include "Crack.h"
 
+#include <string.h>
+
 #include "builder/Builder.h"
 #include "model/Construct.h"
 #include "model/Context.h"
@@ -85,6 +87,8 @@ bool Crack::init() {
 int Crack::runScript(std::istream &src, const std::string &name) {
     if (!init())
         return 1;
+    options->optionMap["mainUnit"] = name;
+    options->optionMap["outFile"] = basename(name.c_str());
     construct->runScript(src, name);
 }
 

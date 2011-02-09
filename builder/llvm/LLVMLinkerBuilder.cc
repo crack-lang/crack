@@ -7,7 +7,7 @@
 #include "BTypeDef.h"
 #include "FuncBuilder.h"
 #include "Utils.h"
-//#include "Native.h"
+#include "Native.h"
 
 #include <llvm/Support/StandardPasses.h>
 #include <llvm/LLVMContext.h>
@@ -106,7 +106,7 @@ void *LLVMLinkerBuilder::getFuncAddr(llvm::Function *func) {
     assert("LLVMLinkerBuilder::getFuncAddr called");
 }
 
-void LLVMLinkerBuilder::finish() {
+void LLVMLinkerBuilder::finish(Context &context) {
 
     assert(!rootBuilder && "run must be called from root builder");
 
@@ -133,7 +133,11 @@ void LLVMLinkerBuilder::finish() {
         return;
     }
 
-    //nativeCompile(finalir, options);
+    nativeCompile(finalir,
+                  options.get(),
+                  sharedLibs,
+                  context.construct->sourceLibPath
+                  );
 
 }
 
@@ -326,3 +330,11 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 }
 
+void LLVMLinkerBuilder::loadSharedLibrary(const string &name,
+                                    const vector<string> &symbols,
+                                    Context &context,
+                                    Namespace *ns
+                                    ) {
+    sharedLibs.push_back(name);
+    LLVMBuilder::loadSharedLibrary(name, symbols, context, ns);
+}

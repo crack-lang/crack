@@ -406,7 +406,7 @@ class Builder : public spug::RCBase {
         /**
          * Called after all modules have been parsed/run
          */
-        virtual void finish() { }
+        virtual void finish(model::Context &context) { }
 
         /**
          * If a builder can directly execute functions from modules it builds,

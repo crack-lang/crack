@@ -26,6 +26,7 @@ struct option longopts[] = {
     {"dump", false, 0, 'd'},
     {"debug", false, 0, 'g'},
     {"optimize", true, 0, 'O'},
+    {"verbosity", true, 0, 'v'},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
@@ -44,18 +45,20 @@ void usage() {
             "foo=bar:baz=bip" << endl;
     cerr << " -d         --dump               Dump IR to stdout instead of "
             "running or compiling" << endl;
+    cerr << " -G         --no-default-paths   Do not include default module"
+            " search paths" << endl;
     cerr << " -g         --debug              Generate DWARF debug information"
             << endl;
     cerr << " -O <N>     --optimize N         Use optimization level N (default"
             " 2)" << endl;
-    cerr << " -n         --no-bootstrap       Do not load bootstrapping modules"
-            << endl;
-    cerr << " -G         --no-default-paths   Do not include default module"
-            " search paths" << endl;
-    cerr << " -m         --migration-warnings Include migration warnings"
-            << endl;
     cerr << " -l <path>  --lib                Add directory to module search "
             "path" << endl;
+    cerr << " -m         --migration-warnings Include migration warnings"
+            << endl;
+    cerr << " -n         --no-bootstrap       Do not load bootstrapping modules"
+            << endl;
+    cerr << " -v <N>     --verbosity N        Set output verbosity level to N"
+            " default 0)" << endl;
     exit(1);
 }
 
@@ -79,7 +82,7 @@ int main(int argc, char **argv) {
     // parse the main module
     int opt;
     bool optionsError = false;
-    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:", longopts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v:", longopts, NULL)) != -1) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable
@@ -114,6 +117,15 @@ int main(int argc, char **argv) {
                 }
                 
                 crack.options->optimizeLevel = atoi(optarg);
+                break;
+            case 'v':
+                if (!*optarg || *optarg < '0' || optarg[1]) {
+                    cerr << "Bad value for -v/--verbosity: " << optarg
+                        << "expected > 0" << endl;
+                    exit(1);
+                }
+
+                crack.options->verbosity = atoi(optarg);
                 break;
             case 'n':
                 crack.noBootstrap = true;
