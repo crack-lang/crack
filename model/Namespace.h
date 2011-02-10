@@ -63,39 +63,13 @@ class Namespace : public virtual spug::RCBase {
          */
         virtual NamespacePtr getParent(unsigned index) = 0;
 
-        /**
-         * Returns the Overload Definition for the given name for the current 
-         * context.  Creates an overload definition if one does not exist.
-         * 
-         * @param varName the overload name.
-         */
-        OverloadDefPtr getOverload(const std::string &varName);
-
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
-        
-        /**
-         * Looks up a function matching the given expression list.
-         * 
-         * @param context the current context (distinct from the lookup 
-         *  context)
-         * @param varName the function name
-         * @param vals list of parameter expressions.  These will be converted 
-         *  to conversion expressions of the correct type for a match.
-         */
-        FuncDefPtr lookUp(Context &context,
-                          const std::string &varName,
-                          std::vector<ExprPtr> &vals
-                          );
-        
-        /**
-         * Look up a function with no arguments.  This is provided as a 
-         * convenience, as in this case we don't need to pass the call context.
-         * @param acceptAlias if false, ignore an alias.
-         */
-        FuncDefPtr lookUpNoArgs(const std::string &varName, 
-                                bool acceptAlias = true
-                                );
 
+        /**
+         * Add a new definition to the namespace (this may not be used for 
+         * FuncDef's, these must be wrapped in an OverloadDef.  See Context 
+         * for an easy way to add FuncDef's)
+         */        
         virtual void addDef(VarDef *def);
         
         /** 

@@ -19,7 +19,7 @@ void ResultExpr::handleAssignment(Context &context) {
 
     // the expression is non-productive: check for a bind function
     FuncCall::ExprVec args;
-    FuncDefPtr bindFunc = type->lookUpNoArgs("oper bind", false);
+    FuncDefPtr bindFunc = context.lookUpNoArgs("oper bind", false, type.get());
     if (!bindFunc)
         return;
     
@@ -43,7 +43,9 @@ void ResultExpr::handleTransient(Context &context) {
 
 void ResultExpr::forceCleanup(Context &context) {
     // check for a release function
-    FuncDefPtr releaseFunc = type->lookUpNoArgs("oper release", false);
+    FuncDefPtr releaseFunc = context.lookUpNoArgs("oper release", false, 
+                                                  type.get()
+                                                  );
     if (!releaseFunc)
         return;
     

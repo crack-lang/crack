@@ -42,6 +42,44 @@ void Context::warnOnHide(const string &name) {
             " hides another definition in an enclosing context." << endl;
 }
 
+namespace {
+    void collectAncestorOverloads(OverloadDef *overload,
+                                  Namespace *srcNs
+                                  ) {
+        NamespacePtr parent;
+        for (unsigned i = 0; parent = srcNs->getParent(i++);) {
+            VarDefPtr var = parent->lookUp(overload->name, false);
+            OverloadDefPtr parentOvld;
+            if (!var) {
+                // the parent does not have this overload.  Check the next level.
+                collectAncestorOverloads(overload, parent.get());
+            } else {
+                parentOvld = OverloadDefPtr::rcast(var);
+                // if there is a variable of this name but it is not an overload, 
+                // we have a situation where there is a non-overload definition in 
+                // an ancestor namespace that will block resolution of the 
+                // overloads in all derived namespaces.  This is a bad thing, 
+                // but not something we want to deal with here.
+
+                if (parentOvld)
+                    overload->addParent(parentOvld.get());
+            }
+        }
+    }
+}
+
+OverloadDefPtr Context::replicateOverload(const std::string &varName,
+                                          Namespace *srcNs
+                                          ) {
+    OverloadDefPtr overload = new OverloadDef(varName);
+    overload->type = construct->overloadType;
+    
+    // merge in the overloads from the parents
+    collectAncestorOverloads(overload.get(), srcNs);
+    srcNs->addDef(overload.get());
+    return overload;
+}
+
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
                  Namespace *ns,
@@ -84,14 +122,16 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
 
 Context::~Context() {}
 
-ContextPtr Context::createSubContext(Scope newScope, Namespace *ns) {
+ContextPtr Context::createSubContext(Scope newScope, Namespace *ns,
+                                     const string *name
+                                     ) {
     if (!ns) {
         switch (newScope) {
             case local:
-                ns = new LocalNamespace(this->ns.get(), "");
+                ns = new LocalNamespace(this->ns.get(), name ? *name : "");
                 break;
             case module:
-                ns = new GlobalNamespace(this->ns.get(), "");
+                ns = new GlobalNamespace(this->ns.get(), name ? *name : "");
                 break;
             case composite:
             case instance:
@@ -171,7 +211,7 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
                                           )
                    );
     FuncDefPtr newFunc =
-        construct->staticStringType->lookUp(*this, "oper new", args);
+        lookUp("oper new", args, construct->staticStringType.get());
     FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
     funcCall->args = args;
     return funcCall;    
@@ -419,7 +459,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                               ExprPtr &afterBody
                               ) {
     // verify that the sequence has an "iter" method
-    FuncDefPtr iterFunc = seqExpr->type->lookUpNoArgs("iter");
+    FuncDefPtr iterFunc = lookUpNoArgs("iter", true, seqExpr->type.get());
     if (!iterFunc)
         error("iteration expression has no 'iter' method.");
     
@@ -467,7 +507,7 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                              iterCall.get()
                              );
 
-        elemFunc = iterCall->type->lookUpNoArgs("elem");
+        elemFunc = lookUpNoArgs("elem", true, iterCall->type.get());
         
         if (defineVar) {
             warnOnHide(name);
@@ -509,13 +549,119 @@ void Context::expandIteration(const std::string &name, bool defineVar,
         error("The iterator in a 'for' loop must convert to boolean.");
     
     // create the "iter.next()" expression
-    FuncDefPtr nextFunc = iterRef->type->lookUpNoArgs("next");
+    FuncDefPtr nextFunc = lookUpNoArgs("next", true, iterRef->type.get());
     if (!nextFunc)
         error("The iterator in a 'for' loop must provide a 'next()' method");
     FuncCallPtr nextCall = builder.createFuncCall(nextFunc.get());
     if (nextFunc->flags & FuncDef::method)
         nextCall->receiver = iterRef;
     afterBody = nextCall;
+}
+
+VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
+    if (!srcNs)
+        srcNs = ns.get();
+    VarDefPtr def = srcNs->lookUp(varName);
+
+    // if we got an overload, we may need to create an overload in this
+    // context.  (we can get away with checking the owner because overloads 
+    // are never aliased)
+    OverloadDef *overload = OverloadDefPtr::rcast(def);
+    if (overload && overload->getOwner() != srcNs)
+        return replicateOverload(varName, srcNs);
+    else
+        return def;
+}
+
+FuncDefPtr Context::lookUp(const std::string &varName,
+                           vector<ExprPtr> &args,
+                           Namespace *srcNs
+                           ) {
+    if (!srcNs)
+        srcNs = ns.get();
+
+    // do a lookup, if nothing was found no further action is necessary.
+    VarDefPtr var = lookUp(varName, srcNs);
+    if (!var)
+        return 0;
+    
+    // if "var" is a class definition, convert this to a lookup of the "oper 
+    // new" function on the class.
+    TypeDef *typeDef = TypeDefPtr::rcast(var);
+    if (typeDef) {
+        FuncDefPtr operNew = lookUp("oper new", args, typeDef);
+
+        // make sure we got it, and we didn't inherit it
+        if (!operNew || operNew->getOwner() != typeDef)
+            return 0;
+        
+        return operNew;
+    }
+    
+    // make sure we got an overload
+    OverloadDefPtr overload = OverloadDefPtr::rcast(var);
+    if (!overload)
+        return 0;
+    
+    // look up the signature in the overload
+    return overload->getMatch(*this, args);
+}
+
+FuncDefPtr Context::lookUpNoArgs(const std::string &name, bool acceptAlias,
+                                 Namespace *srcNs
+                                 ) {
+    OverloadDefPtr overload = OverloadDefPtr::rcast(lookUp(name, srcNs));
+    if (!overload)
+        return 0;
+
+    // we can just check for a signature match here - cheaper and easier.
+    FuncDef::ArgVec args;
+    FuncDefPtr result = overload->getNoArgMatch(acceptAlias);
+    return result;
+}
+
+VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
+    if (!srcNs)
+        srcNs = ns.get();
+    FuncDef *funcDef = FuncDefPtr::cast(varDef);
+    if (funcDef) {
+        OverloadDefPtr overload = 
+            OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
+        if (!overload)
+            overload = replicateOverload(varDef->name, srcNs);
+        overload->addFunc(funcDef);
+        funcDef->setOwner(srcNs);
+        return overload;
+    } else {
+        srcNs->addDef(varDef);
+        return varDef;
+    }
+}
+
+void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
+    // see if we define the overload, if not we're done.
+    OverloadDefPtr localOverload =
+        OverloadDefPtr::rcast(ns->lookUp(overload->name, false));
+    if (!localOverload)
+        return;
+
+    // this code assumes that 'ancestor' must always be a direct ancestor of 
+    // our namespace.  This isn't strictly essential, but it shouldn't be 
+    // necessary to support the general case.  If we change this assumption, 
+    // we'll get an assertion failure to warn us.
+
+    // see if the overload is one of our overload's parents, if so we're done.
+    if (localOverload->hasParent(overload))
+        return;
+
+    // verify that we are directly derived from the namespace.
+    NamespacePtr parentNs;
+    for (int i = 0; parentNs = ns->getParent(i++);)
+        if (parent.get() == ancestor)
+            break;
+    assert(parent && "insureOverloadPath(): parent is not a direct parent.");
+    
+    localOverload->addParent(overload);
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {

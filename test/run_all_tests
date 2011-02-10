@@ -1,11 +1,11 @@
 #!/bin/bash
-# Copyright 2009 Google Inc.
+# Copyright 2009, 2010 Google Inc.
 
 rc=0
 
 source=run_all_tests.tmp
 parseError="ParseError: $source:"
-parseWarn="run_all_tests.tmp:"
+parseWarn="$source:"
 extra_opts="$*"
 
 function test_output {
@@ -744,7 +744,7 @@ test_output "forward declarations in functions must be resolved by the end of \
 the block" \
     'void outer() { void foo(); }' \
     "${parseError}1: Forward declared function not defined at the end of the \
-block: .builtin.void run_all_tests.tmp.foo()"
+block: .builtin.void run_all_tests.tmp.outer.foo()"
 
 test_output "forward declarations in classes must be resolved by the end of \
 the block" \
@@ -787,6 +787,12 @@ test_output 'test array functions' 'import test.test_arrays;' ok
 test_output 'error on the use of unspecialized generics' \
     'array x;' \
     "${parseError}1: Generic type array must be specialized to be used."
+
+test_output 'warning on unnecessary forward declarations' \
+    'class A : VTableBase { void foo() {} }
+     class C : A { void foo(); void foo() {} }' \
+    "${parseWarn}2: Unnecessary forward declaration for overriden function \
+foo (defined in ancestor class $source.A)"
 
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib -l lib"

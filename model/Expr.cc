@@ -23,7 +23,7 @@ ExprPtr Expr::convert(Context &context, TypeDef *newType) {
         return this;
 
     // see if there's a converter
-    FuncDefPtr converter = type->getConverter(*newType);
+    FuncDefPtr converter = type->getConverter(context, *newType);
     if (converter) {
         FuncCallPtr convCall =
            context.builder.createFuncCall(converter.get());

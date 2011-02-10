@@ -74,7 +74,6 @@ bool Crack::init() {
         // pass the emitMigrationWarnings flag down to the global data.
         construct->migrationWarnings = emitMigrationWarnings;
 
-        OverloadDef::overloadType = construct->overloadType;
         construct->loadBuiltinModules();
         if (!noBootstrap && !construct->loadBootstrapModules())
             return false;

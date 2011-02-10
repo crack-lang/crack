@@ -20,15 +20,7 @@ SPUG_RCPTR(OverloadDef);
 class OverloadDef : public VarDef {
     public:
         typedef std::list<FuncDefPtr> FuncList;
-        struct Parent {
-            mutable OverloadDefPtr overload;
-            NamespacePtr ns;
-            
-            Parent(Namespace *ns) :  ns(ns) {}
-            Parent(OverloadDef *overload) : ns(0), overload(overload) {}
-            OverloadDef *getOverload(const OverloadDef *owner) const;
-        };
-        typedef std::vector<Parent> ParentVec;
+        typedef std::vector<OverloadDefPtr> ParentVec;
 
     private:
         FuncList funcs;
@@ -50,12 +42,6 @@ class OverloadDef : public VarDef {
         void flatten(FuncList &funcs) const;
 
     public:
-
-        // XXX this is a terrible hack that breaks re-entrancy of the 
-        // executor.  We need to store the overload class object so that we 
-        // can generated it from a Namespace without having to pass the 
-        // Context through all lookup funcs.
-        static TypeDefPtr overloadType;
 
         OverloadDef(const std::string &name) :
             // XXX need function types, but they'll probably be assigned after 
@@ -114,19 +100,20 @@ class OverloadDef : public VarDef {
         void addFunc(FuncDef *func);
         
         /**
-         * Adds the parent context to the overload set.  Lookups will be 
-         * delgated to parents in the order provided.
+         * Adds the parent overload.  Lookups will be delgated to parents in 
+         * the order provided.
          */
-        void addParent(Namespace *paren);
+        void addParent(OverloadDef *paren);
+        
+        /** Returns true if 'parent' is a parent of the overload. */
+        bool hasParent(OverloadDef *parent);
         
         /**
-         * Creates a new overload that is a child of this one.
+         * Create an alias overload - an alias overload is comprised of all 
+         * of the functions in the overload and its ancestors flattened.  It 
+         * has no ancestors of its own.
          */
-        OverloadDefPtr createChild() {
-            OverloadDefPtr def = new OverloadDef(name);
-            def->parents.push_back(Parent(this));
-            return def;
-        }
+        OverloadDefPtr createAlias();
         
         /**
          * Iterate over the funcs local to this context - do not iterate over 

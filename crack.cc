@@ -17,7 +17,8 @@ using namespace std;
 
 typedef enum {
     jitBuilder,
-    nativeBuilder
+    nativeBuilder,
+    doubleBuilder = 1001
 } builderType;
 
 struct option longopts[] = {
@@ -25,6 +26,7 @@ struct option longopts[] = {
     {"builder-opts", true, 0, 'b'},
     {"dump", false, 0, 'd'},
     {"debug", false, 0, 'g'},
+    {"double-builder", false, 0, doubleBuilder},
     {"optimize", true, 0, 'O'},
     {"verbosity", true, 0, 'v'},
     {"no-bootstrap", false, 0, 'n'},
@@ -45,6 +47,8 @@ void usage() {
             "foo=bar:baz=bip" << endl;
     cerr << " -d         --dump               Dump IR to stdout instead of "
             "running or compiling" << endl;
+    cerr << " --double-builder                Run multiple internal builders, "
+            "even in JIT mode." << endl;
     cerr << " -G         --no-default-paths   Do not include default module"
             " search paths" << endl;
     cerr << " -g         --debug              Generate DWARF debug information"
@@ -82,6 +86,7 @@ int main(int argc, char **argv) {
     // parse the main module
     int opt;
     bool optionsError = false;
+    bool useDoubleBuilder = false;
     while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v:", longopts, NULL)) != -1) {
         switch (opt) {
             case 0:
@@ -145,6 +150,9 @@ int main(int argc, char **argv) {
                     libPath.append(optarg);
                 }
                 break;
+            case doubleBuilder:
+                useDoubleBuilder = true;
+                break;
         }
     }
     
@@ -155,6 +163,8 @@ int main(int argc, char **argv) {
     if (bType == jitBuilder) {
         // immediate execution in JIT
         crack.setBuilder(new builder::mvll::LLVMJitBuilder());
+        if (useDoubleBuilder)
+            crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
     }
     else {
         // compile to native binary
