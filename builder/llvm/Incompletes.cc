@@ -515,7 +515,7 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
                         funcDef,
                         receiver,
                         args,
-                        llvmBuilder.block
+                        llvmBuilder.builder.GetInsertBlock()
                         );
         type->addPlaceholder(placeholder);
         return placeholder;
@@ -624,7 +624,7 @@ Value *IncompleteSpecialize::emitSpecialize(
         PlaceholderInstruction *placeholder =
             new IncompleteSpecialize(type->rep, value,
                                      ancestorPath,
-                                     llvmBuilder.block
+                                     llvmBuilder.builder.GetInsertBlock()
                                      );
         type->addPlaceholder(placeholder);
         return placeholder;

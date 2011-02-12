@@ -139,8 +139,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create(lctx, "__main__", func);
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(BasicBlock::Create(lctx, "__main__", func));
 
     // name some structs in this module
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
@@ -257,8 +256,7 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         module->getOrInsertFunction("__del__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create(lctx, "__del__", func);
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(BasicBlock::Create(lctx, "__del__", func));
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
 

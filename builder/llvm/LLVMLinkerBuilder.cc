@@ -165,8 +165,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
 
-    block = BasicBlock::Create(lctx, "initCheck", func);
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(BasicBlock::Create(lctx, "initCheck", func));
 
     // insert point is now at the begining of the :main function for
     // this module. this will run the top level code for the module
@@ -187,7 +186,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     // has been set to 1
     BasicBlock *alreadyInitBlock = BasicBlock::Create(lctx, "alreadyInit", func);
     assert(!mainInsert);
-    block = mainInsert = BasicBlock::Create(lctx, "topLevel", func);
+    mainInsert = BasicBlock::Create(lctx, "topLevel", func);
     Value* currentInitVal = builder.CreateLoad(moduleInit);
     builder.CreateCondBr(currentInitVal, alreadyInitBlock, mainInsert);
 
@@ -318,8 +317,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
                                     Type::getVoidTy(lctx), NULL);
     Function *dfunc = llvm::cast<llvm::Function>(c);
     dfunc->setCallingConv(llvm::CallingConv::C);
-    block = BasicBlock::Create(lctx, "", dfunc);
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(BasicBlock::Create(lctx, "", dfunc));
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
 
