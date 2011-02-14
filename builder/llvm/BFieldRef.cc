@@ -40,7 +40,7 @@ ResultExprPtr BFieldRef::emit(Context &context) {
         PlaceholderInstruction *placeholder =
                 new IncompleteInstVarRef(typeDef->rep, aggregate,
                                          index,
-                                         bb.block
+                                         bb.builder.GetInsertBlock()
                                          );
         bb.lastValue = placeholder;
 

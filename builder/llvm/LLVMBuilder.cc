@@ -154,8 +154,11 @@ namespace {
                                           builder.module
                                           );
         func->setCallingConv(llvm::CallingConv::C);
-        builder.block =
-            BasicBlock::Create(lctx, "__builtin_init__", builder.func);
+        builder.builder.SetInsertPoint(BasicBlock::Create(lctx, 
+                                                          "__builtin_init__", 
+                                                          builder.func
+                                                          )
+                                       );
 
         // add "Class"
         int lineNum = __LINE__ + 1;
@@ -346,7 +349,8 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         // create a placeholder instruction
         PlaceholderInstruction *placeholder =
             new IncompleteNarrower(lastValue, bcurType, bancestor,
-                                   block);
+                                   builder.GetInsertBlock()
+                                   );
         lastValue = placeholder;
 
         // store it
@@ -467,7 +471,6 @@ LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
     func(0),
-    block(0),
     lastValue(0) {
 
 }
@@ -643,14 +646,14 @@ BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
 
     context.createCleanupFrame();
     cond->emitCond(context);
-    result->block2 = block; // condition block
+    result->block2 = builder.GetInsertBlock(); // condition block
     Value *condVal = lastValue; // condition value
     context.closeCleanupFrame();
     lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);
     
     // repoint to the new ("if true") block
-    builder.SetInsertPoint(block = trueBlock);
+    builder.SetInsertPoint(trueBlock);
     return result;
 }
 
@@ -670,7 +673,7 @@ BranchpointPtr LLVMBuilder::emitElse(model::Context &context,
     }    
 
     // new block is the "false" condition
-    builder.SetInsertPoint(block = falseBlock);
+    builder.SetInsertPoint(falseBlock);
     return pos;
 }
         
@@ -692,7 +695,7 @@ void LLVMBuilder::emitEndIf(Context &context,
     // if we ended up with any non-terminal paths our of the if, the new 
     // block is the next block
     if (bpos->block)
-        builder.SetInsertPoint(block = bpos->block);
+        builder.SetInsertPoint(bpos->block);
 }
 
 TernaryExprPtr LLVMBuilder::createTernary(model::Context &context,
@@ -716,7 +719,7 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     BasicBlock *oBlock = bpos->block2; // condition block
 
     // now pointing to true block, save it for phi
-    BasicBlock *trueBlock = block;
+    BasicBlock *trueBlock = builder.GetInsertBlock();
     
     // create the block after the expression
     LLVMContext &lctx = getGlobalContext();
@@ -733,20 +736,20 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     builder.CreateBr(postBlock);
     
     // pick up changes to the block
-    trueBlock = block;
+    trueBlock = builder.GetInsertBlock();
     
     // emit the false expression 
-    builder.SetInsertPoint(block = falseBlock);
+    builder.SetInsertPoint(falseBlock);
     context.createCleanupFrame();
     expr->falseVal->emit(context);
     narrow(expr->falseVal->type.get(), expr->type.get());
     Value *falseVal = lastValue;
     context.closeCleanupFrame();
     builder.CreateBr(postBlock);
-    falseBlock = block;
+    falseBlock = builder.GetInsertBlock();
 
     // emit the phi
-    builder.SetInsertPoint(block = postBlock);
+    builder.SetInsertPoint(postBlock);
     PHINode *p = builder.CreatePHI(
         BTypeDefPtr::arcast(expr->type)->rep,
         "tern_R"
@@ -786,7 +789,7 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     
     BasicBlock *whileBody = BasicBlock::Create(lctx, "while_body", func);
     builder.CreateBr(whileCond);
-    builder.SetInsertPoint(block = whileCond);
+    builder.SetInsertPoint(whileCond);
 
     // XXX see notes above on a conditional type.
     context.createCleanupFrame();
@@ -797,7 +800,7 @@ BranchpointPtr LLVMBuilder::emitBeginWhile(Context &context,
     builder.CreateCondBr(lastValue, whileBody, bpos->block);
 
     // begin generating code in the while body    
-    builder.SetInsertPoint(block = whileBody);
+    builder.SetInsertPoint(whileBody);
 
     return bpos;
 }
@@ -816,7 +819,7 @@ void LLVMBuilder::emitEndWhile(Context &context, Branchpoint *pos,
             builder.CreateBr(bpos->block2);
 
     // new code goes to the following block
-    builder.SetInsertPoint(block = bpos->block);
+    builder.SetInsertPoint(bpos->block);
 }
 
 void LLVMBuilder::emitPostLoop(model::Context &context,
@@ -832,7 +835,7 @@ void LLVMBuilder::emitPostLoop(model::Context &context,
         builder.CreateBr(bpos->block2);
 
     // set the new block to the post-loop
-    builder.SetInsertPoint(block = bpos->block2);
+    builder.SetInsertPoint(bpos->block2);
 }
 
 void LLVMBuilder::emitBreak(Context &context, Branchpoint *branch) {
@@ -919,7 +922,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     BBuilderContextData *contextData;
     context.builderData = contextData = new BBuilderContextData();
     contextData->func = func;
-    contextData->block = block;
+    contextData->block = builder.GetInsertBlock();
     
     // if we didn't get a forward declaration, create the function.
     BFuncDefPtr funcDef;
@@ -971,8 +974,8 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     }
 
     func = funcDef->rep;
-    funcBlock = block = BasicBlock::Create(getGlobalContext(), name, func);
-    builder.SetInsertPoint(block);
+    funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
+    builder.SetInsertPoint(funcBlock);
     
     if (flags & FuncDef::virtualized) {
         // emit code to convert from the first declaration base class 
@@ -1006,6 +1009,7 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
                               FuncDef *funcDef) {
     // in certain conditions, (multiple terminating branches) we can end up 
     // with an empty block.  If so, remove.
+    BasicBlock *block = builder.GetInsertBlock();
     if (block->begin() == block->end())
         block->eraseFromParent();
 
@@ -1013,7 +1017,7 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     BBuilderContextData *contextData =
         BBuilderContextDataPtr::rcast(context.builderData);
     func = contextData->func;
-    builder.SetInsertPoint(block = contextData->block);
+    builder.SetInsertPoint(contextData->block);
 }
 
 FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
@@ -1535,7 +1539,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
                                         aggregateRep,
                                         index,
                                         lastValue,
-                                        block
+                                        builder.GetInsertBlock()
                                         );
 
         // store it
@@ -2005,7 +2009,9 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     BTypeDef *vtableBaseType = 
         BTypeDefPtr::arcast(context.construct->vtableBaseType);
     PlaceholderInstruction *vtableInit =
-        new IncompleteVTableInit(btype, lastValue, vtableBaseType, block);
+        new IncompleteVTableInit(btype, lastValue, vtableBaseType, 
+                                 builder.GetInsertBlock()
+                                 );
     // store it
     btype->addPlaceholder(vtableInit);
 }
