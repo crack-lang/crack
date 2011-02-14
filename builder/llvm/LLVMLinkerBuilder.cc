@@ -66,9 +66,13 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
             mod->dump();
         }
     } else {
-        if (rootBuilder)
+        if (rootBuilder) {
+            if (options->verbosity > 2)
+                std::cerr << "linking " << mod->getModuleIdentifier() <<
+                        std::endl;
             linker = LLVMLinkerBuilderPtr::cast(
                     rootBuilder.get())->linkModule(mod);
+        }
         else {
             linker = new Linker("crack",
                                 "main-module",
@@ -76,6 +80,9 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
                                 Linker::Verbose // flags
                                 );
             assert(linker && "unable to create Linker");
+            if (options->verbosity > 2)
+                std::cerr << "linking " << mod->getModuleIdentifier() <<
+                        std::endl;
             linkModule(mod);
         }
     }
@@ -126,18 +133,24 @@ void LLVMLinkerBuilder::finish(Context &context) {
 
     emitAggregateCleanup(finalir);
 
-    if (options->dumpMode) {
-        PassManager passMan;
-        passMan.add(llvm::createPrintModulePass(&llvm::outs()));
-        passMan.run(*finalir);
-        return;
-    }
+    // if we're not optimizing but we're doing debug, verify now
+    // if we are optimizing and we're doing debug, verify is done in the
+    // LTO passes above instead
+    if (!options->optimizeLevel && options->debugMode)
+        verifyModule(*finalir, llvm::PrintMessageAction);
 
     nativeCompile(finalir,
                   options.get(),
                   sharedLibs,
                   context.construct->sourceLibPath
                   );
+
+    if (options->dumpMode) {
+        PassManager passMan;
+        passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+        passMan.run(*finalir);
+        return;
+    }
 
 }
 
@@ -330,11 +343,41 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 }
 
-void LLVMLinkerBuilder::loadSharedLibrary(const string &name,
-                                    const vector<string> &symbols,
-                                    Context &context,
-                                    Namespace *ns
-                                    ) {
+void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     sharedLibs.push_back(name);
-    LLVMBuilder::loadSharedLibrary(name, symbols, context, ns);
+    LLVMBuilder::loadSharedLibrary(name);
+}
+
+void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
+                                         bool annotation) {
+
+
+    // if the module came from an extension, there's no top level to run
+    if (m->fromExtension || annotation)
+        return;
+
+    // we add a call into our module's :main function
+    // to run the top level function of the imported module
+    // each :main is only run once, however, so that a module imported
+    // from two different modules will have its top level code only
+    // run once. this is handled in the :main function itself.
+    BasicBlock *orig = block;
+    assert(mainInsert && "no main insert block");
+    builder.SetInsertPoint(mainInsert);
+
+    // declaration
+    Constant *fc = module->getOrInsertFunction(m->name+":main",
+                                              Type::getVoidTy(getGlobalContext()),
+                                              NULL);
+    Function *f = llvm::cast<llvm::Function>(fc);
+    vector<Value*> args;
+    builder.CreateCall(f, args.begin(), args.end());
+
+    builder.SetInsertPoint(orig);
+
+}
+
+void LLVMLinkerBuilder::engineFinishModule(ModuleDef *moduleDef) {
+    // XXX only called for builtin, refactor this
+    linkModule(module);
 }

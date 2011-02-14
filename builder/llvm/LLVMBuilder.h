@@ -312,7 +312,10 @@ class LLVMBuilder : public Builder {
                                                   );
 
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
-        virtual void loadSharedLibrary(const std::string &name,
+
+        virtual void *loadSharedLibrary(const std::string &name);
+
+        virtual void importSharedLibrary(const std::string &name,
                                        const std::vector<std::string> &symbols,
                                        model::Context &context,
                                        model::Namespace *ns
@@ -320,6 +323,8 @@ class LLVMBuilder : public Builder {
         virtual void registerImport(model::Context &context, 
                                     model::VarDef *varDef
                                     );
+
+        virtual void initializeImport(model::ModuleDefPtr, bool annotation) { }
 
         virtual void setArgv(int argc, char **argv);        
         

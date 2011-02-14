@@ -373,15 +373,21 @@ class Builder : public spug::RCBase {
                                                       ) = 0;
 
         /**
-         * Load the named shared library, store the addresses for the symbols 
+         * Load the named shared library, returning a handle suitable for
+         * retrieving symbols from the library using the local mechanism
+         */
+        virtual void *loadSharedLibrary(const std::string &name) = 0;
+
+        /**
+         * Load the named shared library, store the addresses for the symbols
          * as StubDef's in 'context'.
          */
-        virtual void loadSharedLibrary(const std::string &name,
-                                       const std::vector<std::string> &symbols,
-                                       model::Context &context,
-                                       model::Namespace *ns
-                                       ) = 0;
-        
+        virtual void importSharedLibrary(const std::string &name,
+                                         const std::vector<std::string> &symbols,
+                                         model::Context &context,
+                                         model::Namespace *ns
+                                         ) = 0;
+
         /**
          * This is called for every symbol that is imported into a module.  
          * Implementations should do whatever processing is necessary.
@@ -389,6 +395,13 @@ class Builder : public spug::RCBase {
         virtual void registerImport(model::Context &context, 
                                     model::VarDef *varDef
                                     ) = 0;
+
+        /**
+         * This is called once per imported module, to allow the builder
+         * to emit any required initialization instructions for the imported
+         * module, i.e. to emit a call to run its top level code
+         */
+        virtual void initializeImport(model::ModuleDefPtr, bool annotation) = 0;
 
         /**
          * Provides the builder with access to the program's argument list.

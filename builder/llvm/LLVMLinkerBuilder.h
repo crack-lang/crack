@@ -30,6 +30,9 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         llvm::Function *emitAggregateCleanup(llvm::Module *module);
 
+    protected:
+        virtual void engineFinishModule(model::ModuleDef *moduleDef);
+
     public:
         LLVMLinkerBuilder(void) : linker(0),
                                   moduleList(0),
@@ -46,11 +49,9 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                  const std::string &name
                                                  );
 
-        virtual void loadSharedLibrary(const std::string &name,
-                                       const std::vector<std::string> &symbols,
-                                       model::Context &context,
-                                       model::Namespace *ns
-                                       );
+        virtual void initializeImport(model::ModuleDefPtr, bool annotation);
+
+        virtual void *loadSharedLibrary(const std::string &name);
 
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module

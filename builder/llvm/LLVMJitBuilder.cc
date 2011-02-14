@@ -272,12 +272,14 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     // let jit or linker finish module before run/link
     engineFinishModule(moduleDef);
 
-    // store primitive functions
-    for (map<Function *, void *>::iterator iter = primFuncs.begin();
-         iter != primFuncs.end();
-         ++iter
-         )
-        addGlobalFuncMapping(iter->first, iter->second);
+    // store primitive functions from an extension
+    if (moduleDef->fromExtension) {
+        for (map<Function *, void *>::iterator iter = primFuncs.begin();
+        iter != primFuncs.end();
+        ++iter
+                )
+            addGlobalFuncMapping(iter->first, iter->second);
+    }
 
     if (debugInfo)
         delete debugInfo;

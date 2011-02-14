@@ -11,7 +11,8 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
     Namespace(name),
     parent(parent),
-    finished(false) {
+    finished(false),
+    fromExtension(false) {
 }
 
 bool ModuleDef::hasInstSlot() {

@@ -197,6 +197,7 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
     ModuleDefPtr modDef = context->createModule(canonicalName);
     Module mod(context.get());
     initFunc(&mod);
+    modDef->fromExtension = true;
     mod.finish();
     modDef->close(*context);
     
@@ -208,12 +209,9 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
                                       Construct::StringVecIter moduleNameEnd,
                                       string &canonicalName
                                       ) {
-    void *handle = dlopen(path.c_str(), RTLD_LAZY|RTLD_GLOBAL);
-    if (!handle) {
-        cerr << "opening library " << path << ": " << dlerror() << endl;
-        return 0;
-    }
-    
+
+    void *handle = rootBuilder->loadSharedLibrary(path);
+
     // construct the full init function name XXX should do real name mangling
     std::string initFuncName;
     for (StringVecIter iter = moduleNameBegin;

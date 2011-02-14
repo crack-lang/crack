@@ -2006,6 +2006,10 @@ void Parser::parseImportStmt(Namespace *ns) {
                           " recursively."
                          )
                );
+      else
+          context->builder.initializeImport(mod,
+                                            // HACK check for annotation?
+                                            ns == context->compileNS.get());
 
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
@@ -2034,7 +2038,7 @@ void Parser::parseImportStmt(Namespace *ns) {
 
    if (!mod) {
       try {
-         context->construct->rootBuilder->loadSharedLibrary(name, syms,
+         context->construct->rootBuilder->importSharedLibrary(name, syms,
                                                             *context,
                                                             ns
                                                             );

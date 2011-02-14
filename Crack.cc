@@ -41,8 +41,12 @@ void Crack::setBuilder(Builder *builder) {
 
 void Crack::setCompileTimeBuilder(Builder *builder) {
     assert(construct && "no call to setBuilder");
-    assert(builder->isExec() && "builder cannot be used compile time");
-    builder->options = options;
+    assert(builder->isExec() && "builder cannot be used compile time");    
+    // we make a new options here, because compile time dump should be turned
+    // off, because these modules need to run instead of dumping during compile
+    // so that the main builder and generate the correct ir.
+    builder->options = new BuilderOptions(*options.get());
+    builder->options->dumpMode = false;
     construct->compileTimeConstruct = new Construct(builder, construct.get());
 }
 

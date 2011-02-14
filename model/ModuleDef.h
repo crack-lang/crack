@@ -27,6 +27,10 @@ class ModuleDef : public VarDef, public Namespace {
         // close() method has been called.
         bool finished;
 
+        // true if this module was generated from an extension (as opposed
+        // to crack source)
+        bool fromExtension;
+
         ModuleDef(const std::string &name, Namespace *parent);
 
         /**
