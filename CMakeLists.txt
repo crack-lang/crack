@@ -135,6 +135,10 @@ add_custom_target(check
                   ${PROJECT_SOURCE_DIR}/test/run_all_tests
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                   )
+add_custom_target(checkc
+                  ${PROJECT_SOURCE_DIR}/test/run_all_tests crackc
+                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  )
 
 add_custom_target(screen
                   ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests/

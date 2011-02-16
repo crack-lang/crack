@@ -4,8 +4,20 @@
 rc=0
 
 source=run_all_tests.tmp
+binName=run_all_tests
 parseError="ParseError: $source:"
 parseWarn="$source:"
+builder="llvm-jit"
+runBinary=0
+
+if [ $1 = "crackc" ];
+then
+  builder="llvm-native"
+  shift
+  runBinary=1
+  echo "running in native binary mode"
+fi
+
 extra_opts="$*"
 
 function test_output {
@@ -17,8 +29,17 @@ function test_output {
     
     echo -n "$text..."
     echo "$script" >run_all_tests.tmp
-    result="$(echo $stdin | ./crack $opts $extra_opts run_all_tests.tmp $args \
-        2>&1)"
+    cmdline="./crack -B $builder $opts $extra_opts run_all_tests.tmp $args"
+    #echo ""
+    #echo "running $cmdline"
+    result="$(echo $stdin | $cmdline 2>&1)"
+    if [ "$runBinary" -eq 1 ] &&
+       # skip native test if checking for parse error
+       [ "${expected:0:${#parseError}}" != "$parseError" ]; then
+        cmdline="./$binName $args"
+        #echo "running $cmdline"
+        result="$(echo $stdin | $cmdline 2>&1)"
+    fi
     if [ "$result" = "$expected" ]; then
         echo ok
     else
