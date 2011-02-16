@@ -18,15 +18,15 @@ SPUG_RCPTR(LLVMLinkerBuilder);
 
 class LLVMLinkerBuilder : public LLVMBuilder {
     private:
-        typedef std::vector<model::ModuleDef *> moduleListType;
+        typedef std::vector<model::ModuleDef *> ModuleListType;
 
         llvm::Linker *linker;
-        moduleListType *moduleList;
+        ModuleListType *moduleList;
         llvm::BasicBlock *mainInsert;
         std::vector<std::string> sharedLibs;
 
         llvm::Linker *linkModule(llvm::Module *mp);
-        moduleListType *addModule(model::ModuleDef *mp);
+        ModuleListType *addModule(model::ModuleDef *mp);
 
         llvm::Function *emitAggregateCleanup(llvm::Module *module);
 

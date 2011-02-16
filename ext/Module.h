@@ -56,7 +56,6 @@ class Module {
         typedef std::map<std::string, Type *> TypeMap;
         TypeMap types;
         bool finished;
-        bool annotations;
 
     public:
         Module(model::Context *context);
@@ -93,13 +92,6 @@ class Module {
         void addConstant(Type *type, const std::string &name, int val) {
             addConstant(type, name, static_cast<int64_t>(val));
         }
-
-        /**
-         * declare that the module includes annotation definitions
-         */
-        void setHasAnnotations() { annotations = true; }
-        
-        bool hasAnnotations() const { return annotations; }
 
         /**
          * finish the module (extension init funcs need not call this, it will 

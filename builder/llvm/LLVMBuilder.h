@@ -339,6 +339,14 @@ class LLVMBuilder : public Builder {
                                     model::TypeDef *typeDef
                                     );
 
+        // these are implemented by Jit, but not Linker
+        virtual void run() { }
+        virtual void dump() { }
+
+        // this is implemented by Linker, but not Jit
+        virtual void finish(model::Context &context) { }
+
+
 };
 
 } // namespace builder::mvll

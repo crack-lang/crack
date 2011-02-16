@@ -25,6 +25,7 @@ struct option longopts[] = {
     {"builder", true, 0, 'B'},
     {"builder-opts", true, 0, 'b'},
     {"dump", false, 0, 'd'},
+    {"help", false, 0, 'h'},
     {"debug", false, 0, 'g'},
     {"double-builder", false, 0, doubleBuilder},
     {"optimize", true, 0, 'O'},
@@ -38,32 +39,32 @@ struct option longopts[] = {
 
 static std::string prog;
 
-void usage() {
-    cerr << "Usage:" << endl;
-    cerr << "  " << prog << " [options] <source file>" << endl;
-    cerr << " -B <name>  --builder            Main builder to use (llvm-jit or"
+void usage(int retval) {
+    cout << "Usage:" << endl;
+    cout << "  " << prog << " [options] <source file>" << endl;
+    cout << " -B <name>  --builder            Main builder to use (llvm-jit or"
             " llvm-native)" << endl;
-    cerr << " -b <opts>  --builder-opts       Builder options in the form "
+    cout << " -b <opts>  --builder-opts       Builder options in the form "
             "foo=bar:baz=bip" << endl;
-    cerr << " -d         --dump               Dump IR to stdout instead of "
+    cout << " -d         --dump               Dump IR to stdout instead of "
             "running or compiling" << endl;
-    cerr << " --double-builder                Run multiple internal builders, "
+    cout << " --double-builder                Run multiple internal builders, "
             "even in JIT mode." << endl;
-    cerr << " -G         --no-default-paths   Do not include default module"
+    cout << " -G         --no-default-paths   Do not include default module"
             " search paths" << endl;
-    cerr << " -g         --debug              Generate DWARF debug information"
+    cout << " -g         --debug              Generate DWARF debug information"
             << endl;
-    cerr << " -O <N>     --optimize N         Use optimization level N (default"
+    cout << " -O <N>     --optimize N         Use optimization level N (default"
             " 2)" << endl;
-    cerr << " -l <path>  --lib                Add directory to module search "
+    cout << " -l <path>  --lib                Add directory to module search "
             "path" << endl;
-    cerr << " -m         --migration-warnings Include migration warnings"
+    cout << " -m         --migration-warnings Include migration warnings"
             << endl;
-    cerr << " -n         --no-bootstrap       Do not load bootstrapping modules"
+    cout << " -n         --no-bootstrap       Do not load bootstrapping modules"
             << endl;
-    cerr << " -v <N>     --verbosity N        Set output verbosity level to N"
+    cout << " -v <N>     --verbosity N        Set output verbosity level to N"
             " default 0)" << endl;
-    exit(1);
+    exit(retval);
 }
 
 int main(int argc, char **argv) {
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
     prog = basename(argv[0]);
 
     if (argc < 2)
-        usage();
+        usage(0);
 
     // top level interface
     Crack crack;
@@ -110,6 +111,9 @@ int main(int argc, char **argv) {
                 break;
             case 'd':
                 crack.options->dumpMode = true;
+                break;
+            case 'h':
+                usage(0);
                 break;
             case 'g':
                 crack.options->debugMode = true;
@@ -158,7 +162,7 @@ int main(int argc, char **argv) {
     
     // check for options errors
     if (optionsError)
-        usage();
+        usage(1);
 
     if (bType == jitBuilder) {
         // immediate execution in JIT

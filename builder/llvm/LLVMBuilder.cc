@@ -164,7 +164,7 @@ namespace {
         int lineNum = __LINE__ + 1;
         string temp("    byteptr name;\n"
                     "    uint numBases;\n"
-                    "    array[Class] bases = null;\n"
+                    "    array[Class] bases;\n"
                     "    bool isSubclass(Class other) {\n"
                     "        if (this is other)\n"
                     "            return (1==1);\n"

@@ -77,7 +77,9 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
             linker = new Linker("crack",
                                 "main-module",
                                 getGlobalContext(),
-                                Linker::Verbose // flags
+                                (options->verbosity > 2) ?
+                                    Linker::Verbose :
+                                    0
                                 );
             assert(linker && "unable to create Linker");
             if (options->verbosity > 2)
@@ -91,7 +93,7 @@ Linker *LLVMLinkerBuilder::linkModule(Module *mod) {
 }
 
 // maintain a single list of modules throughout the compile in the root builder
-LLVMLinkerBuilder::moduleListType
+LLVMLinkerBuilder::ModuleListType
     *LLVMLinkerBuilder::addModule(ModuleDef *mod) {
 
     if (moduleList) {
@@ -101,7 +103,7 @@ LLVMLinkerBuilder::moduleListType
            moduleList = LLVMLinkerBuilderPtr::cast(
                    rootBuilder.get())->addModule(mod);
         else {
-            moduleList = new moduleListType();
+            moduleList = new ModuleListType();
         }
     }
 
@@ -110,7 +112,7 @@ LLVMLinkerBuilder::moduleListType
 
 
 void *LLVMLinkerBuilder::getFuncAddr(llvm::Function *func) {
-    assert("LLVMLinkerBuilder::getFuncAddr called");
+    assert(false && "LLVMLinkerBuilder::getFuncAddr called");
 }
 
 void LLVMLinkerBuilder::finish(Context &context) {

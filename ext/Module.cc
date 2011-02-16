@@ -16,8 +16,7 @@ using namespace crack::ext;
 using namespace model;
 
 Module::Module(Context *context)  : context(context),
-                                    finished(false),
-                                    annotations(false) {
+                                    finished(false) {
     memset(builtinTypes, 0, sizeof(builtinTypes));
 }
 

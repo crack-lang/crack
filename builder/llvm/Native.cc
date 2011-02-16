@@ -30,10 +30,13 @@
 #include <llvm/Support/IRBuilder.h>
 
 #include <iostream>
+#include <stdlib.h>
 
 using namespace llvm;
 using namespace builder;
 using namespace std;
+
+extern char **environ;
 
 namespace builder { namespace mvll {
 
@@ -50,21 +53,6 @@ static void PrintCommand(const std::vector<const char*> &args) {
 /// GenerateNative - generates a native object file from the
 /// specified bitcode file.
 ///
-/// Inputs:
-///  InputFilename   - The name of the input bitcode file.
-///  OutputFilename  - The name of the file to generate.
-///  NativeLinkItems - The native libraries, files, code with which to link
-///  LibPaths        - The list of directories in which to find libraries.
-///  FrameworksPaths - The list of directories in which to find frameworks.
-///  Frameworks      - The list of frameworks (dynamic libraries)
-///  gcc             - The pathname to use for GGC.
-///  envp            - A copy of the process's current environment.
-///
-/// Outputs:
-///  None.
-///
-/// Returns non-zero value on error.
-///
 static int GenerateNative(const std::string &OutputFilename,
                           const std::string &InputFilename,
                           const vector<std::string> &LibPaths,
@@ -72,7 +60,7 @@ static int GenerateNative(const std::string &OutputFilename,
                           const sys::Path &gcc, char ** const envp,
                           std::string& ErrMsg,
                           bool is64Bit,
-                          bool verbose) {
+                          int verbosity) {
 
   // Run GCC to assemble and link the program into native code.
   //
@@ -84,7 +72,6 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(gcc.c_str());
   args.push_back("-O3");
 
-
   if (is64Bit)
       args.push_back("-m64");
 
@@ -93,36 +80,26 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(InputFilename);
 
   // Add in the library and framework paths
+  if (verbosity > 2)
+      cerr << "Native link paths:" << endl;
   for (unsigned index = 0; index < LibPaths.size(); index++) {
-    args.push_back("-L" + LibPaths[index]);
+      if (verbosity > 2)
+          cerr << LibPaths[index] << endl;
+      args.push_back("-L" + LibPaths[index]);
   }
-
-  /*
-  for (unsigned index = 0; index < FrameworkPaths.size(); index++) {
-    args.push_back("-F" + FrameworkPaths[index]);
-  }
-
-  // Add the requested options
-  for (unsigned index = 0; index < XLinker.size(); index++)
-    args.push_back(XLinker[index]);
-    */
 
   // Add in the libraries to link.
+  if (verbosity > 2)
+      cerr << "Native link libraries:" << endl;
   for (unsigned index = 0; index < LinkItems.size(); index++)
     if (LinkItems[index].first != "crtend") {
+      if (verbosity > 2)
+          cerr << LinkItems[index].first << endl;
       if (LinkItems[index].second)
         args.push_back("-l" + LinkItems[index].first);
       else
         args.push_back(LinkItems[index].first);
     }
-
-  /*
-  // Add in frameworks to link.
-  for (unsigned index = 0; index < Frameworks.size(); index++) {
-    args.push_back("-framework");
-    args.push_back(Frameworks[index]);
-  }
-  */
 
   // Now that "args" owns all the std::strings for the arguments, call the c_str
   // method to get the underlying string array.  We do this game so that the
@@ -132,7 +109,7 @@ static int GenerateNative(const std::string &OutputFilename,
     Args.push_back(args[i].c_str());
   Args.push_back(0);
 
-  if (verbose) {
+  if (verbosity) {
       cerr << "Generating Native Executable With:\n";
       PrintCommand(Args);
   }
@@ -166,7 +143,7 @@ static int GenerateNative(const std::string &OutputFilename,
 void createMain(llvm::Module *mod, const BuilderOptions *o) {
 
     // script entry point we insert into main() function
-    BuilderOptions::stringMap::const_iterator i = o->optionMap.find("mainUnit");
+    BuilderOptions::StringMap::const_iterator i = o->optionMap.find("mainUnit");
     assert(i != o->optionMap.end() && "no mainUnit");
 
     Function *scriptEntry = mod->getFunction(i->second+":main");
@@ -293,7 +270,7 @@ void nativeCompile(llvm::Module *module,
     if (o->dumpMode)
         return;
 
-    BuilderOptions::stringMap::const_iterator i = o->optionMap.find("outFile");
+    BuilderOptions::StringMap::const_iterator i = o->optionMap.find("outFile");
     assert(i != o->optionMap.end() && "no outFile");
 
     sys::Path oFile(i->second);
@@ -417,13 +394,13 @@ void nativeCompile(llvm::Module *module,
 
     GenerateNative(binFile.str(),
                    oFile.str(),
-                   libPaths,
+                   LibPaths,
                    NativeLinkItems,
                    gcc,
                    envp,
                    ErrMsg,
                    is64Bit,
-                   (o->verbosity > 0)
+                   o->verbosity
                    );
 
 

@@ -16,7 +16,7 @@ SPUG_RCPTR(BuilderOptions);
 class BuilderOptions : public spug::RCBase {
     public:
 
-        typedef std::map<std::string, std::string> stringMap;
+        typedef std::map<std::string, std::string> StringMap;
 
         // Builder specific optimization aggresiveness
         int optimizeLevel;
@@ -27,7 +27,7 @@ class BuilderOptions : public spug::RCBase {
         // Generate debug information
         bool debugMode;
         // builder specific option strings
-        stringMap optionMap;
+        StringMap optionMap;
 
 };
 

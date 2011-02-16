@@ -411,15 +411,15 @@ class Builder : public spug::RCBase {
         /**
          * Called per module
          */
-        virtual void run() { }
+        virtual void run() = 0;
 
         /// Dump the compiled op-codes to standard output.
-        virtual void dump() { }
+        virtual void dump() = 0;
 
         /**
          * Called after all modules have been parsed/run
          */
-        virtual void finish(model::Context &context) { }
+        virtual void finish(model::Context &context) = 0;
 
         /**
          * If a builder can directly execute functions from modules it builds,
