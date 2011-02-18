@@ -14,16 +14,17 @@ class Token {
 
       // the token types
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
-                     classKw, continueKw, dollar, forKw, elseKw, ifKw, 
-                     importKw, inKw, isKw, nullKw, onKw, operKw, returnKw, 
-                     whileKw, assign, assignAnd, assignAsterisk, assignLSh, 
-                     assignOr, assignRSh, assignXor, assignMinus, 
-                     assignPercent, assignPlus, assignSlash, asterisk, bang, 
-                     colon, comma, decr, define, dot, end, eq, ge, gt, ident, 
-                     incr, integer, lbracket, lcurly, le, lparen, lt, minus, 
-                     ne, percent, plus, quest, rbracket, rcurly, rparen, semi,
-                     slash, string, tilde, istrBegin, istrEnd, logicAnd, 
-                     logicOr, floatLit, octalLit, hexLit, binLit,
+                     catchKw, classKw, continueKw, dollar, forKw, elseKw, 
+                     ifKw, importKw, inKw, isKw, nullKw, onKw, operKw, 
+                     returnKw, throwKw, tryKw, whileKw, assign, assignAnd, 
+                     assignAsterisk, assignLSh, assignOr, assignRSh, 
+                     assignXor, assignMinus, assignPercent, assignPlus, 
+                     assignSlash, asterisk, bang, colon, comma, decr, define, 
+                     dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
+                     lcurly, le, lparen, lt, minus, ne, percent, plus, quest, 
+                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
+                     istrBegin, istrEnd, logicAnd, logicOr, floatLit, 
+                     octalLit, hexLit, binLit,
                      
                      // these tokens are special - they are used to 
                      // communicate actions that need to be performed in the 
@@ -66,6 +67,7 @@ class Token {
       bool isAnn() const { return type == ann; }
       bool isBoolAnd() const { return type == bitAnd; }
       bool isBoolOr() const { return type == bitOr; }
+      bool isCatch() const { return type == catchKw; }
       bool isFor() const { return type == forKw; }
       bool isIf() const { return type == ifKw; }
       bool isIn() const { return type == inKw; }
@@ -75,6 +77,8 @@ class Token {
       bool isOper() const { return type == operKw; }
       bool isWhile() const { return type == whileKw; }
       bool isReturn() const { return type == returnKw; }
+      bool isThrow() const { return type == throwKw; }
+      bool isTry() const { return type == tryKw; }
       bool isBreak() const { return type == breakKw; }
       bool isClass() const { return type == classKw; }
       bool isContinue() const { return type == continueKw; }

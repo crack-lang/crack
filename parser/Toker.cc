@@ -51,6 +51,8 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
 Token Toker::fixIdent(const string &data, const Location &loc) {
     if (data == "break")
         return Token(Token::breakKw, data, loc);
+    else if (data == "catch")
+        return Token(Token::catchKw, data, loc);
     else if (data == "class")
         return Token(Token::classKw, data, loc);
     else if (data == "continue")
@@ -69,6 +71,10 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::nullKw, data, loc);
     else if (data == "return")
         return Token(Token::returnKw, data, loc);
+    else if (data == "throw")
+        return Token(Token::throwKw, data, loc);
+    else if (data == "try")
+        return Token(Token::tryKw, data, loc);
     else if (data == "while")
         return Token(Token::whileKw, data, loc);
     else if (data == "on")

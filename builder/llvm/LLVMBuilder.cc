@@ -97,15 +97,46 @@ extern "C" {
 
 namespace {
 
-    // emit all cleanups from this context to that of the branchpoint.
-    void emitCleanupsTo(Context &context, BBranchpoint *bpos) {
+    // emit all cleanups from this context to outerContext (non-inclusive)
+    void emitCleanupsTo(Context &context, Context &outerContext) {
         
         // unless we've reached our stop, emit for all parent contexts
-        if (!(bpos->context == &context)) {
+        if (&outerContext != &context) {
     
             // close all cleanups in thie context
             closeAllCleanupsStatic(context);
-            emitCleanupsTo(*context.parent, bpos);
+            emitCleanupsTo(*context.parent, outerContext);
+        }
+    }
+
+    BasicBlock *emitUnwindFrameCleanups(BCleanupFrame *frame, 
+                                        BasicBlock *next
+                                        ) {
+        if (frame->parent)
+            next = emitUnwindFrameCleanups(
+                BCleanupFramePtr::rcast(frame->parent),
+                next
+            );
+        return frame->emitUnwindCleanups(next);
+    }
+    
+    BasicBlock *emitUnwindCleanups(Context &context, Context &outerContext,
+                                   BasicBlock *finalBlock
+                                   ) {
+        
+        // unless we've reached our stop, emit for all parent contexts
+        if (&outerContext != &context) {
+            
+            // emit the cleanups in the parent block
+            BasicBlock *next =
+                emitUnwindCleanups(*context.parent, outerContext, finalBlock);
+    
+            // close all cleanups in thie context
+            BCleanupFrame *frame = 
+                BCleanupFramePtr::rcast(context.cleanupFrame);
+            return emitUnwindFrameCleanups(frame, next);
+        } else {
+            return finalBlock;
         }
     }
 
@@ -332,6 +363,53 @@ void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
     }
 }
 
+BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
+    // get the catch-level context and unwind block
+    ContextPtr outerContext = context.getCatch();
+    BBranchpointPtr bpos =
+        BBranchpointPtr::rcast(outerContext->getCatchBranchpoint());
+
+    BasicBlock *final;
+    if (bpos) {
+        final = bpos->block;
+    } else {
+        // no catch clause.  Find or create the unwind clause for the function 
+        // to continue the unwind.
+        ContextPtr funcCtx = context.getToplevel();
+        BBuilderContextData *bdata = 
+            BBuilderContextDataPtr::arcast(funcCtx->builderData);
+        if (!bdata->unwindBlock) {
+            bdata->unwindBlock = BasicBlock::Create(getGlobalContext(),
+                                                    "unwind",
+                                                    func
+                                                    );
+            IRBuilder<> b(bdata->unwindBlock);
+            b.CreateUnwind();
+        }
+        
+        // assertion to make sure this is the right unwind block
+        if (bdata->unwindBlock->getParent() != func) {
+            string bdataFunc = bdata->unwindBlock->getParent()->getName();
+            string curFunc = func->getName();
+            cerr << "bad function for unwind block, got " <<
+                bdataFunc << " expected " << curFunc << endl;
+            assert(false);
+        }
+
+        final = bdata->unwindBlock;
+    }
+    
+    return emitUnwindCleanups(context, *outerContext, final);
+}
+
+void LLVMBuilder::clearCachedCleanups(Context &context) {
+    BCleanupFrame *frame = BCleanupFramePtr::rcast(context.cleanupFrame);
+    if (frame)
+        frame->clearCachedCleanups();
+    BBuilderContextData *bdata = BBuilderContextData::get(&context);
+    bdata->unwindBlock = 0;
+}
+
 void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // quick short-circuit to deal with the trivial case
     if (curType == ancestor)
@@ -505,16 +583,39 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
 
+    // if we're already emitting cleanups for an unwind, both the normal 
+    // destination block and the cleanup block are the same.
+    BasicBlock *followingBlock = 0, *cleanupBlock;
+    BBuilderContextData *bdata;
+    if (context.emittingCleanups &&
+        (bdata = BBuilderContextDataPtr::rcast(context.builderData))
+        )
+        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
+
+    // otherwise, create a new normal destinatation block and get the cleanup 
+    // block.
+    if (!followingBlock) {
+        followingBlock = BasicBlock::Create(getGlobalContext(), "l", 
+                                            this->func
+                                            );
+        cleanupBlock = getUnwindBlock(context);
+    }
+
     if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
-                                                    valueArgs
+                                                    valueArgs,
+                                                    followingBlock,
+                                                    cleanupBlock
                                                     );
     else {
         lastValue =
-            builder.CreateCall(funcDef->getRep(*this), valueArgs.begin(), 
-                               valueArgs.end()
-                               );
+            builder.CreateInvoke(funcDef->getRep(*this), followingBlock, 
+                                 cleanupBlock,
+                                 valueArgs.begin(), 
+                                 valueArgs.end()
+                                 );
+
         /*
         if (debugInfo) {
             builder.SetCurrentDebugLocation(
@@ -523,6 +624,11 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         }
         */
     }
+
+    // continue emitting code into the new following block.
+    if (followingBlock != cleanupBlock)
+        builder.SetInsertPoint(followingBlock);
+
     return new BResultExpr(funcCall, lastValue);
 }
 
@@ -646,9 +752,9 @@ BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
 
     context.createCleanupFrame();
     cond->emitCond(context);
-    result->block2 = builder.GetInsertBlock(); // condition block
     Value *condVal = lastValue; // condition value
     context.closeCleanupFrame();
+    result->block2 = builder.GetInsertBlock(); // condition block
     lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);
     
@@ -840,14 +946,37 @@ void LLVMBuilder::emitPostLoop(model::Context &context,
 
 void LLVMBuilder::emitBreak(Context &context, Branchpoint *branch) {
     BBranchpoint *bpos = BBranchpointPtr::acast(branch);
-    emitCleanupsTo(context, bpos);
+    emitCleanupsTo(context, *bpos->context);
     builder.CreateBr(bpos->block);
 }
 
 void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
     BBranchpoint *bpos = BBranchpointPtr::acast(branch);
-    emitCleanupsTo(context, bpos);
+    emitCleanupsTo(context, *bpos->context);
     builder.CreateBr(bpos->block2);
+}
+
+BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
+    BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch");
+    BBranchpointPtr bpos = new BBranchpoint(catchBlock);
+    return bpos;
+}
+
+void LLVMBuilder::emitCatch(Context &context,
+                            Branchpoint *branchpoint,
+                            TypeDef *catchType
+                            ) {
+}
+
+void LLVMBuilder::emitEndTry(model::Context &context,
+                             Branchpoint *branchpoint
+                             ) {
+}
+
+void LLVMBuilder::emitThrow(Context &context,
+                            Expr *expr
+                            ) {
+    builder.CreateUnwind();
 }
 
 FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
@@ -974,8 +1103,19 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     }
 
     func = funcDef->rep;
+    
+    // create the "function block" (the first block in the function, will be 
+    // used to hold all local variable allocations)
     funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
     builder.SetInsertPoint(funcBlock);
+    
+    // since the function block can get appended to arbitrarily, create a 
+    // first block where it is safe for us to emit terminating instructions
+    BasicBlock *firstBlock = BasicBlock::Create(getGlobalContext(), "l",
+                                                func
+                                                );
+    builder.CreateBr(firstBlock);
+    builder.SetInsertPoint(firstBlock);
     
     if (flags & FuncDef::virtualized) {
         // emit code to convert from the first declaration base class 

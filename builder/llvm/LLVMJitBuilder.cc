@@ -7,6 +7,7 @@
 #include "model/Context.h"
 #include "FuncBuilder.h"
 #include "Utils.h"
+#include "BBuilderContextData.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -124,8 +125,8 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
 }
 
 ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
-                                       const string &name
-                                       ) {
+                                          const string &name
+                                          ) {
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
@@ -134,6 +135,9 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     if (options->debugMode) {
         debugInfo = new DebugInfo(module, name);
     }
+
+    // create a context data object
+    BBuilderContextData::get(&context);
 
     llvm::Constant *c =
         module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
@@ -250,6 +254,11 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.CreateRetVoid();
 
     // emit the cleanup function
+
+    // since the cleanups have to be emitted against the module context, clear 
+    // the unwind blocks so we generate them for the del function.
+    clearCachedCleanups(context);
+    
     Function *mainFunc = func;
     LLVMContext &lctx = getGlobalContext();
     llvm::Constant *c =
