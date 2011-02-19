@@ -130,6 +130,7 @@ test_output 'basic methods' \
     'class Foo { void p(byteptr data) { puts(data); } }; 
      Foo f = {}; f.p("abcd");' \
     'abcd'
+test_output 'voidptr default initializer' 'voidptr p; puts("ok");' ok
 
 test_output 'instance variables' \
     'class Foo {

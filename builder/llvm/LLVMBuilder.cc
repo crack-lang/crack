@@ -1729,6 +1729,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  "voidptr",
                                                  llvmVoidPtrType
                                                  );
+    voidptrType->defaultInitializer = new NullConst(voidptrType);
     context.addDef(voidptrType);
     
     llvm::Type *llvmBytePtrType = 
