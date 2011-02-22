@@ -135,6 +135,7 @@ bool TypeDef::matches(const TypeDef &other) const {
 FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     assert(classContext.ns.get() == this); // needed for final addDef()
     ContextPtr funcContext = classContext.createSubContext(Context::local);
+    funcContext->toplevel = true;
 
     // create the "this" variable
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
@@ -177,7 +178,7 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
         FuncCallPtr funcCall =
             classContext.builder.createFuncCall(baseInit.get());
         funcCall->receiver = thisRef;
-        funcCall->emit(classContext);
+        funcCall->emit(*funcContext);
     }
 
     // generate constructors for all of the instance variables in the order 
@@ -217,6 +218,7 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
 void TypeDef::createDefaultDestructor(Context &classContext) {
     assert(classContext.ns.get() == this); // needed for final addDef()
     ContextPtr funcContext = classContext.createSubContext(Context::local);
+    funcContext->toplevel = true;
 
     // create the "this" variable
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");

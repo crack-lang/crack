@@ -310,6 +310,10 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       
       // for statements are like while - never terminal
       return 0;
+   } else if (tok.isThrow()) {
+      return parseThrowStmt();
+   } else if (tok.isTry()) {
+      return parseTryStmt();
    }
 
    toker.putBack(tok);
@@ -2068,6 +2072,92 @@ void Parser::parseImportStmt(Namespace *ns) {
          ns->addAlias(symVal.get());
       }
    }
+}
+
+// try { ... } catch (...) { ... }
+//    ^                           ^
+ContextPtr Parser::parseTryStmt() {
+   Token tok = toker.getToken();
+   if (!tok.isLCurly())
+      unexpected(tok, "Curly bracket expected after try.");
+   
+   BranchpointPtr pos = context->builder.emitBeginTry(*context);
+   
+   context->setCatchBranchpoint(pos.get());
+   {
+      ContextStackFrame cstack(*this, context->createSubContext().get());
+      parseBlock(true, noCallbacks); // XXX add tryLeave callback
+   }
+   context->setCatchBranchpoint(0);
+   
+   tok = toker.getToken();
+   if (!tok.isCatch())
+      unexpected(tok, "catch expected after try block.");
+   
+   while (true) {
+      
+      // parse the exception specifier
+      tok = toker.getToken();
+      if (!tok.isLParen())
+         unexpected(tok, 
+                    "parenthesized catch expression expected after catch "
+                     "keyword."
+                    );
+
+      TypeDefPtr exceptionType = parseTypeSpec();
+      
+      // parse the exception variable
+      tok = toker.getToken();
+      if (!tok.isIdent())
+         unexpected(tok, "variable name expected after exception type.");
+
+      context->builder.emitCatch(*context, pos.get(), exceptionType.get());
+      
+      tok = toker.getToken();
+      if (!tok.isRParen())
+         unexpected(tok, 
+                    "closing parenthesis expected after exception variable."
+                    );
+      
+      // parse the catch body
+      tok = toker.getToken();
+      if (!tok.isLCurly())
+         unexpected(tok,
+                    "Curly bracket expected after catch clause."
+                    );
+      
+      {
+         ContextStackFrame cstack(*this, context->createSubContext().get());
+         parseBlock(true, noCallbacks); // XXX add catchLeave callback
+      }
+      
+      // see if there's another catch
+      tok = toker.getToken();
+      if (!tok.isCatch()) {
+         toker.putBack(tok);
+         context->builder.emitEndTry(*context, pos.get());
+         return 0;
+      }
+   }
+}
+
+ContextPtr Parser::parseThrowStmt() {
+   Token tok = toker.getToken();
+   if (tok.isSemi()) {
+      // XXX need to verify that we are in a catch
+      context->builder.emitThrow(*context, 0);
+   } else {
+      toker.putBack(tok);
+      ExprPtr expr = parseExpression();
+      
+      tok = toker.getToken();
+      if (!tok.isSemi())
+         unexpected(tok, "Semicolon expected after throw expression.");
+      
+      context->builder.emitThrow(*context, expr.get());
+   }
+
+   return context->getCatch();
 }
 
 // oper name ( args ) { ... }

@@ -7,6 +7,7 @@
 #include "BTypeDef.h"
 #include "FuncBuilder.h"
 #include "Utils.h"
+#include "BBuilderContextData.h"
 #include "Native.h"
 
 #include <llvm/Support/StandardPasses.h>
@@ -175,6 +176,8 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
         debugInfo = new DebugInfo(module, name);
     }
 
+    BBuilderContextData::get(&context);
+
     llvm::Constant *c =
         module->getOrInsertFunction(name+":main", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
@@ -282,15 +285,19 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
     builder.CreateRetVoid();
 
+    // since the cleanups have to be emitted against the module context, clear 
+    // the unwind blocks so we generate them for the del function.
+    clearCachedCleanups(context);
+
     // emit the cleanup function for this module
     // we will emit calls to these (for all modules) during run() in the finalir
     LLVMContext &lctx = getGlobalContext();
     llvm::Constant *c =
         module->getOrInsertFunction(moduleDef->name+":cleanup",
                                     Type::getVoidTy(lctx), NULL);
-    Function *dfunc = llvm::cast<llvm::Function>(c);
-    dfunc->setCallingConv(llvm::CallingConv::C);
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "", dfunc));
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+    builder.SetInsertPoint(BasicBlock::Create(lctx, "", func));
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
 

@@ -4,6 +4,7 @@
 #include "BTypeDef.h"
 #include "BFuncDef.h"
 #include "LLVMBuilder.h"
+#include "Utils.h"
 
 #include <map>
 
@@ -371,12 +372,14 @@ Value * IncompleteVirtualFunc::getVTableReference(IRBuilder<> &builder,
     }
 }
 
-Value * IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
-                                             BTypeDef *vtableBaseType,
-                                             BFuncDef *funcDef,
-                                             Value *receiver,
-                                             const vector<Value *> &args
-                                             ) {
+Value *IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
+                                            BTypeDef *vtableBaseType,
+                                            BFuncDef *funcDef,
+                                            Value *receiver,
+                                            const vector<Value *> &args,
+                                            BasicBlock *normalDest,
+                                            BasicBlock *unwindDest
+                                            ) {
 
     BTypeDef *receiverType =
             BTypeDefPtr::acast(funcDef->getReceiverType());
@@ -395,9 +398,10 @@ Value * IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
     Value *funcFieldRef =
             builder.CreateStructGEP(vtable, funcDef->vtableSlot);
     Value *funcPtr = builder.CreateLoad(funcFieldRef);
-    Value *result = builder.CreateCall(funcPtr, args.begin(),
-                                       args.end()
-                                       );
+    Value *result = builder.CreateInvoke(funcPtr, normalDest, unwindDest,
+                                         args.begin(), 
+                                         args.end()
+                                         );
     return result;
 }
 
@@ -409,13 +413,15 @@ void IncompleteVirtualFunc::init(Value *receiver, const vector<Value *> &args) {
         OperandList[i + 1] = args[i];
 }
 
-IncompleteVirtualFunc::IncompleteVirtualFunc
-                         (BTypeDef *vtableBaseType,
-                          BFuncDef *funcDef,
-                          Value *receiver,
-                          const vector<Value *> &args,
-                          BasicBlock *parent
-                          ) :
+IncompleteVirtualFunc::IncompleteVirtualFunc(
+    BTypeDef *vtableBaseType,
+    BFuncDef *funcDef,
+    Value *receiver,
+    const vector<Value *> &args,
+    BasicBlock *parent,
+    BasicBlock *normalDest,
+    BasicBlock *unwindDest
+) :
     PlaceholderInstruction(
             BTypeDefPtr::arcast(funcDef->returnType)->rep,
             parent,
@@ -424,17 +430,21 @@ IncompleteVirtualFunc::IncompleteVirtualFunc
             args.size() + 1
             ),
     vtableBaseType(vtableBaseType),
-    funcDef(funcDef) {
+    funcDef(funcDef),
+    normalDest(normalDest),
+    unwindDest(unwindDest) {
     init(receiver, args);
 }
 
-IncompleteVirtualFunc::IncompleteVirtualFunc
-            (BTypeDef *vtableBaseType,
-             BFuncDef *funcDef,
-             Value *receiver,
-             const vector<Value *> &args,
-             Instruction *insertBefore
-                                         ) :
+IncompleteVirtualFunc::IncompleteVirtualFunc(
+    BTypeDef *vtableBaseType,
+    BFuncDef *funcDef,
+    Value *receiver,
+    const vector<Value *> &args,
+    BasicBlock *normalDest,
+    BasicBlock *unwindDest,
+    Instruction *insertBefore
+) :
     PlaceholderInstruction(
             BTypeDefPtr::arcast(funcDef->returnType)->rep,
             insertBefore,
@@ -443,16 +453,21 @@ IncompleteVirtualFunc::IncompleteVirtualFunc
             args.size() + 1
             ),
     vtableBaseType(vtableBaseType),
-    funcDef(funcDef) {
+    funcDef(funcDef),
+    normalDest(normalDest),
+    unwindDest(unwindDest) {
 
     init(receiver, args);
 }
 
-IncompleteVirtualFunc::IncompleteVirtualFunc(BTypeDef *vtableBaseType,
+IncompleteVirtualFunc::IncompleteVirtualFunc(
+    BTypeDef *vtableBaseType,
     BFuncDef *funcDef,
     Use *operands,
-    unsigned numOperands
-    ) :
+    unsigned numOperands,
+    BasicBlock *normalDest,
+    BasicBlock *unwindDest
+) :
     PlaceholderInstruction(
             BTypeDefPtr::arcast(funcDef->returnType)->rep,
             static_cast<Instruction *>(0),
@@ -460,7 +475,9 @@ IncompleteVirtualFunc::IncompleteVirtualFunc(BTypeDef *vtableBaseType,
             numOperands
             ),
     vtableBaseType(vtableBaseType),
-    funcDef(funcDef) {
+    funcDef(funcDef),
+    normalDest(normalDest),
+    unwindDest(unwindDest) {
 
     for (int i = 0; i < numOperands; ++i)
         OperandList[i] = operands[i];
@@ -470,7 +487,9 @@ Instruction * IncompleteVirtualFunc::clone_impl() const {
     return new(NumOperands) IncompleteVirtualFunc(vtableBaseType,
                                                   funcDef,
                                                   OperandList,
-                                                  NumOperands
+                                                  NumOperands,
+                                                  normalDest,
+                                                  unwindDest
                                                   );
 }
 
@@ -481,15 +500,19 @@ void IncompleteVirtualFunc::insertInstructions(IRBuilder<> &builder) {
     Value *callInst =
             innerEmitCall(builder, vtableBaseType, funcDef,
                           OperandList[0],
-                          args
+                          args,
+                          normalDest,
+                          unwindDest
                           );
     replaceAllUsesWith(callInst);
 }
 
 Value * IncompleteVirtualFunc::emitCall(Context &context,
-                                               BFuncDef *funcDef,
-                                               Value *receiver,
-                                               const vector<Value *> &args
+                                        BFuncDef *funcDef,
+                                        Value *receiver,
+                                        const vector<Value *> &args,
+                                        BasicBlock *normalDest,
+                                        BasicBlock *unwindDest       
                                                ) {
     // do some conversions that we need to do either way.
     LLVMBuilder &llvmBuilder =
@@ -505,7 +528,9 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
                                    vtableBaseType,
                                    funcDef,
                                    receiver,
-                                   args
+                                   args,
+                                   normalDest,
+                                   unwindDest
                                    );
         return val;
     } else {
@@ -515,7 +540,9 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
                         funcDef,
                         receiver,
                         args,
-                        llvmBuilder.builder.GetInsertBlock()
+                        llvmBuilder.builder.GetInsertBlock(),
+                        normalDest,
+                        unwindDest
                         );
         type->addPlaceholder(placeholder);
         return placeholder;

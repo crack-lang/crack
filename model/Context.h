@@ -41,8 +41,8 @@ SPUG_RCPTR(Context);
  */
 class Context : public spug::RCBase {
     private:
-        // break and continue branchpoints
-        BranchpointPtr breakBranch, continueBranch;
+        // break, continue and catch branchpoints
+        BranchpointPtr breakBranch, continueBranch, catchBranch;
         
         // the current source location.
         parser::Location loc;
@@ -262,6 +262,12 @@ class Context : public spug::RCBase {
         void setContinue(Branchpoint *branch);
         
         /**
+         * Set the "catch" flag, indicating that this context is in a try 
+         * block.
+         */
+        void setCatchBranchpoint(Branchpoint *branch);
+        
+        /**
          * Obtains the branchpoint to be used for a break statement, returns 
          * null if there is none.
          */
@@ -272,6 +278,18 @@ class Context : public spug::RCBase {
          * returns null if there is none.
          */
         Branchpoint *getContinue();
+        
+        /**
+         * Returns the catch context - this is either the first enclosing 
+         * context with a try/catch statement or the parent of the toplevel 
+         * context.
+         */
+        ContextPtr getCatch();
+        
+        /**
+         * Returns the catch branchpoint for the context.
+         */
+        BranchpointPtr getCatchBranchpoint();
 
         /**
          * Create a reference to the "this" variable, error if there is none.

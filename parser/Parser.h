@@ -357,6 +357,8 @@ class Parser {
       void parseWhileStmt();
       void parseForStmt();
       void parseReturnStmt();
+      model::ContextPtr parseTryStmt();
+      model::ContextPtr parseThrowStmt();
       
       /**
        * Parse an import statement.  'ns' is the namespace in which to alias 

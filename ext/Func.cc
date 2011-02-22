@@ -77,6 +77,7 @@ void Func::finish() {
     if (flags & constructor) {
         TypeDefPtr myClass = TypeDefPtr::arcast(context->ns);
         ContextPtr funcContext = context->createSubContext(Context::local);
+        funcContext->toplevel = true;
     
         // create the "this" variable
         ArgDefPtr thisDef =

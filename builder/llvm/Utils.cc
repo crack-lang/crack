@@ -229,4 +229,4 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     return metaType;
 }
 
-} } // namespace builder::mvll
+}} // namespace builder::mvll

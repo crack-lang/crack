@@ -198,6 +198,7 @@ class IncompleteVirtualFunc : public PlaceholderInstruction {
 private:
     BTypeDef *vtableBaseType;
     BFuncDef *funcDef;
+    llvm::BasicBlock *normalDest, *unwindDest;
 
     /**
      * Returns the first vtable pointer in the instance layout, casted
@@ -222,7 +223,9 @@ private:
                                       BTypeDef *vtableBaseType,
                                       BFuncDef *funcDef,
                                       llvm::Value *receiver,
-                                      const std::vector<llvm::Value *> &args
+                                      const std::vector<llvm::Value *> &args,
+                                      llvm::BasicBlock *normalDest,
+                                      llvm::BasicBlock *unwindDest
                                       );
 
     void init(llvm::Value *receiver, const std::vector<llvm::Value *> &args);
@@ -231,20 +234,26 @@ private:
                           BFuncDef *funcDef,
                           llvm::Value *receiver,
                           const std::vector<llvm::Value *> &args,
-                          llvm::BasicBlock *parent
+                          llvm::BasicBlock *parent,
+                          llvm::BasicBlock *normalDest,
+                          llvm::BasicBlock *unwindDest
                           );
 
     IncompleteVirtualFunc(BTypeDef *vtableBaseType,
                           BFuncDef *funcDef,
                           llvm::Value *receiver,
                           const std::vector<llvm::Value *> &args,
+                          llvm::BasicBlock *normalDest,
+                          llvm::BasicBlock *unwindDest,
                           llvm::Instruction *insertBefore = 0
-                                                      );
+                          );
 
     IncompleteVirtualFunc(BTypeDef *vtableBaseType,
                           BFuncDef *funcDef,
                           llvm::Use *operands,
-                          unsigned numOperands
+                          unsigned numOperands,
+                          llvm::BasicBlock *normalDest,
+                          llvm::BasicBlock *unwindDest
                           );
 
 public:
@@ -256,7 +265,9 @@ public:
     static llvm::Value *emitCall(model::Context &context,
                                  BFuncDef *funcDef,
                                  llvm::Value *receiver,
-                                 const std::vector<llvm::Value *> &args
+                                 const std::vector<llvm::Value *> &args,
+                                 llvm::BasicBlock *normalDest,
+                                 llvm::BasicBlock *unwindDest
                                  );
 
 };

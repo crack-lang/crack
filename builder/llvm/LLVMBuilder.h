@@ -88,6 +88,19 @@ class LLVMBuilder : public Builder {
          */
         virtual void engineFinishModule(model::ModuleDef *moduleDef) { }
 
+        /**
+         * Gets the first unwind block for the context, emitting the whole 
+         * cleanup chain if necessary.
+         */
+        llvm::BasicBlock *getUnwindBlock(model::Context &context);
+        
+        /**
+         * Clears all cached cleanup blocks associated with the context (this 
+         * exists to deal with the module level init and delete functions, 
+         * which both run against the module context).
+         */
+        void clearCachedCleanups(model::Context &context);
+
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -216,6 +229,21 @@ class LLVMBuilder : public Builder {
 
         virtual void emitAbort(model::Context &context,
                                const std::string &msg);
+
+        virtual model::BranchpointPtr emitBeginTry(model::Context &context);
+        
+        virtual void emitCatch(model::Context &context,
+                               model::Branchpoint *branchpoint,
+                               model::TypeDef *catchType
+                               );
+        
+        virtual void emitEndTry(model::Context &context,
+                                model::Branchpoint *branchpoint
+                                );
+
+        virtual void emitThrow(model::Context &context,
+                               model::Expr *expr
+                               );
 
         virtual model::FuncDefPtr
             createFuncForward(model::Context &context,

@@ -278,6 +278,37 @@ class Builder : public spug::RCBase {
 
 
         /**
+         * Emit the beginning of a try block.  Try/catch statements are 
+         * roughly emitted as:
+         *  bpos = emitBeginTry()
+         *  emitCatch(bpos)
+         *  emitCatch(bpos)
+         *  emitEndTry(bpos);
+         */
+        virtual model::BranchpointPtr emitBeginTry(model::Context &context
+                                                   ) = 0;
+        
+        /**
+         * Emit a catch clause.
+         */
+        virtual void emitCatch(model::Context &context,
+                               model::Branchpoint *branchpoint,
+                               model::TypeDef *catchType
+                               ) = 0;
+        
+        /**
+         * Close off an existing try block.
+         */
+        virtual void emitEndTry(model::Context &context,
+                                model::Branchpoint *branchpoint
+                                ) = 0;
+    
+        /** Emit an exception "throw" */
+        virtual void emitThrow(model::Context &context,
+                               model::Expr *expr
+                               ) = 0;
+
+        /**
          * Emits a variable definition and returns a new VarDef object for the 
          * variable.
          * @param staticScope true if the "static" keyword was applied to the 

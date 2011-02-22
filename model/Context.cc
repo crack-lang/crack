@@ -416,6 +416,10 @@ void Context::setContinue(Branchpoint *branch) {
     continueBranch = branch;
 }
 
+void Context::setCatchBranchpoint(Branchpoint *branch) {
+    catchBranch = branch;
+}
+
 Branchpoint *Context::getBreak() {
     if (breakBranch)
         return breakBranch.get();
@@ -438,6 +442,19 @@ Branchpoint *Context::getContinue() {
     } else {
         return 0;
     }
+}
+
+ContextPtr Context::getCatch() {
+    if (catchBranch)
+        return this;
+    else if (toplevel)
+        return parent;
+    else if (parent)
+        return parent->getCatch();
+}
+
+BranchpointPtr Context::getCatchBranchpoint() {
+    return catchBranch;
 }
 
 ExprPtr Context::makeThisRef(const string &memberName) {
