@@ -368,8 +368,17 @@ void TypeDef::createCast(Context &outer) {
     // else    
     branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
 
-    funcCtx->builder.emitAbort(*funcCtx, "Invalid class cast.");
-
+    // __die() (we have to get it from the class's parent context)
+    FuncCall::ExprVec abortArgs(1);
+    abortArgs[0] = funcCtx->getStrConst("Invalid class cast.", true);
+    f = outer.getParent()->ns->lookUp(*funcCtx, "__die", abortArgs);
+    assert(f && "__die missing");
+    call = funcCtx->builder.createFuncCall(f.get());
+    call->args = abortArgs;
+    funcCtx->createCleanupFrame();
+    call->emit(*funcCtx)->handleTransient(*funcCtx);
+    funcCtx->closeCleanupFrame();
+    
     // need to "return null" to provide a terminator.
     TypeDef *vp = outer.construct->voidptrType.get();
     ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
