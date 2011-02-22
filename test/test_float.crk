@@ -1,5 +1,6 @@
 # test of float type and operators
 # NOTE: 6/2010 - this is inadequate
+import crack.runtime printfloat;
 
 // basic constants
 float32 f1 = 1234.56;

@@ -370,6 +370,7 @@ void TypeDef::createCast(Context &outer) {
     // else    
     branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
 
+
     funcCtx->builder.emitAbort(*funcCtx, "Invalid class cast.");
 
     // need to "return null" to provide a terminator.

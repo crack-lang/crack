@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <dlfcn.h>
+#include <stdlib.h>
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -27,7 +28,8 @@ Construct::ModulePath Construct::searchPath(
     const Construct::StringVec &path,
     Construct::StringVecIter moduleNameBegin,
     Construct::StringVecIter moduleNameEnd,
-    const std::string &extension
+    const std::string &extension,
+    int verbosity
 ) {
     // try to find a matching file.
     for (StringVecIter pathIter = path.begin();
@@ -37,6 +39,9 @@ Construct::ModulePath Construct::searchPath(
         string fullName = joinName(*pathIter, moduleNameBegin, moduleNameEnd,
                                    extension
                                    );
+        if (verbosity > 1) {
+            cerr << "search: " << fullName << endl;
+        }
         if (isFile(fullName))
             return ModulePath(fullName, true, false);
     }
@@ -168,6 +173,33 @@ void Construct::loadBuiltinModules() {
     rootContext->compileNS->addAlias(ns->lookUp("final").get());
     rootContext->compileNS->addAlias(ns->lookUp("FILE").get());
     rootContext->compileNS->addAlias(ns->lookUp("LINE").get());
+
+
+    // load the runtime extension
+    StringVec crackRuntimeName(2);
+    crackRuntimeName[0] = "crack";
+    crackRuntimeName[1] = "runtime";
+    string name;
+    ModuleDefPtr rtMod = rootContext->construct->loadModule(
+                                                     crackRuntimeName.begin(),
+                                                     crackRuntimeName.end(),
+                                                     name
+                                                     );
+    if (!rtMod) {
+        cerr << "failed to load crack runtime from module load path" << endl;
+        // XXX exception?
+        exit(1);
+    }
+    // alias some basic builtin aliases from runtime
+    // mostly for legacy reasons
+    VarDefPtr a = rtMod->lookUp("puts");
+    assert(a && "no puts in runtime");
+    rootContext->ns->addAlias("puts", a.get());
+    a = rtMod->lookUp("printint");
+    if (a)
+        rootContext->ns->addAlias("printint", a.get());
+    // XXX die
+
 }
 
 void Construct::parseModule(Context &context,
@@ -200,7 +232,7 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
     modDef->fromExtension = true;
     mod.finish();
     modDef->close(*context);
-    
+
     return modDef;
 }
 
@@ -267,7 +299,8 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
     // look for a shared library
     ModulePath modPath = searchPath(sourceLibPath, moduleNameBegin,
                                     moduleNameEnd,
-                                    ".so"
+                                    ".so",
+                                    rootBuilder->options->verbosity
                                     );
     
     ModuleDefPtr modDef;
@@ -281,7 +314,7 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         
         // try to find the module on the source path
         modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
-                            ".crk"
+                            ".crk", rootBuilder->options->verbosity
                             );
         if (!modPath.found)
             return 0;

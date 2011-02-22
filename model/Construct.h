@@ -92,7 +92,8 @@ class Construct : public spug::RCBase {
         static ModulePath searchPath(const StringVec &path, 
                                      StringVecIter moduleNameBegin,
                                      StringVecIter modulePathEnd,
-                                     const std::string &extension
+                                     const std::string &extension,
+                                     int verbosity=0
                                      );
 
         /**

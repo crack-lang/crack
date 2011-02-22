@@ -1,13 +1,14 @@
 // Runtime support
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
+#include "Util.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "Util.h"
+#include <iostream>
 
 namespace crack { namespace runtime {
 
@@ -31,6 +32,26 @@ unsigned int rand(unsigned int low, unsigned int high) {
 // assumes caller allocates and owns buffer
 void float_str(double d, char* buf, unsigned int size) {
     snprintf(buf, size, "%f", d);
+}
+
+void puts(char *str) {
+    ::puts(str);
+}
+
+void printfloat(float val) {
+    std::cout << val << std::flush;
+}
+
+void printint(int val) {
+    std::cout << val << std::flush;
+}
+
+void printint64(int64_t val) {
+    std::cout << val << std::flush;
+}
+
+void printuint64(uint64_t val) {
+    std::cout << val << std::flush;
 }
 
 }}

@@ -75,7 +75,32 @@ extern "C" void crack_runtime_init(Module *mod) {
                      );
     f->addArg(mod->getUintType(), "low");
     f->addArg(mod->getUintType(), "high");
-    
+
+    f = mod->addFunc(byteptrType, "puts",
+                     (void *)crack::runtime::puts
+                     );
+    f->addArg(mod->getByteptrType(), "str");
+
+    f = mod->addFunc(byteptrType, "printfloat",
+                     (void *)crack::runtime::printfloat
+                     );
+    f->addArg(mod->getFloatType(), "val");
+
+    f = mod->addFunc(byteptrType, "printint",
+                     (void *)crack::runtime::printint
+                     );
+    f->addArg(mod->getIntType(), "val");
+
+    f = mod->addFunc(byteptrType, "printint64",
+                     (void *)crack::runtime::printint
+                     );
+    f->addArg(mod->getInt64Type(), "val");
+
+    f = mod->addFunc(byteptrType, "printuint64",
+                     (void *)crack::runtime::printint
+                     );
+    f->addArg(mod->getUint64Type(), "val");
+
     // normal file open and close.
 
     f = mod->addFunc(intType, "open", (void *)open);

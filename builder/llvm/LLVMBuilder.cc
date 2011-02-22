@@ -68,22 +68,6 @@ char **LLVMBuilder::argv = tempArgv;
 
 extern "C" {
 
-    void printfloat(float val) {
-        std::cout << val << flush;
-    }
-
-    void printint(int val) {
-        std::cout << val << flush;
-    }
-
-    void printint64(int64_t val) {
-        std::cout << val << flush;
-    }
-
-    void printuint64(uint64_t val) {
-        std::cout << val << flush;
-    }
-
     char **__getArgv() {
         return LLVMBuilder::argv;
     }

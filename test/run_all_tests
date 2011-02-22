@@ -10,7 +10,7 @@ parseWarn="$source:"
 builder="llvm-jit"
 runBinary=0
 
-if [ $1 = "crackc" ];
+if [ "$1" = "crackc" ];
 then
   builder="llvm-native"
   shift
@@ -45,9 +45,10 @@ function test_output {
         echo ok
     else
         echo ""
+        echo FAILED
+        echo "$cmdline"
         echo "Expected: $expected"
         echo "Got     : $result"
-        echo FAILED
         cp run_all_tests.tmp run_all_tests.fail
         rc=1
     fi
@@ -67,7 +68,7 @@ root=$(cd $(dirname "$0")/..; pwd)
 echo "dirname = $0, root = $root"
 
 # start with no bootstrapping
-opts="-Gnl $root"   
+opts="-Gnl $root -l $root/lib -l lib"
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -88,7 +89,7 @@ test_output 'double if/else, all terminal' \
 test_output 'function with no args' \
     'void func() { puts("abcd"); } func()' "abcd"
 test_output 'double terminal "if"' \
-    'int32 function(int32 val) { if (val) return val; else return 0; } 
+    'int32 function(int32 val) { if (val) return val; else return 0; }
      printint(function(1)); printint(function(0));' \
      10
 test_output 'simple addition' \

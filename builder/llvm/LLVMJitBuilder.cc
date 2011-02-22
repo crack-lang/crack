@@ -162,48 +162,6 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     BTypeDef *voidptrType =
         BTypeDefPtr::arcast(context.construct->voidptrType);
 
-    // create "int puts(String)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, int32Type, "puts",
-                      1
-                      );
-        f.addArg("text", byteptrType);
-        f.setSymbolName("puts");
-        f.finish();
-    }
-
-    // create "void printint(int32)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint", 1);
-        f.addArg("val", int32Type);
-        f.setSymbolName("printint");
-        f.finish();
-    }
-
-    // create "void printint64(int64)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printint64", 1);
-        f.addArg("val", int64Type);
-        f.setSymbolName("printint64");
-        f.finish();
-    }
-
-    // create "void printuint64(int64)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printuint64", 1);
-        f.addArg("val", uint64Type);
-        f.setSymbolName("printuint64");
-        f.finish();
-    }
-
-    // create "void printfloat(float32)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "printfloat", 1);
-        f.addArg("val", float32Type);
-        f.setSymbolName("printfloat");
-        f.finish();
-    }
-
     // create "void *calloc(uint size)"
     {
         FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
