@@ -227,9 +227,6 @@ class LLVMBuilder : public Builder {
                                   model::Branchpoint *branch
                                   );
 
-        virtual void emitAbort(model::Context &context,
-                               const std::string &msg);
-
         virtual model::BranchpointPtr emitBeginTry(model::Context &context);
         
         virtual void emitCatch(model::Context &context,

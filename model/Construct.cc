@@ -190,15 +190,18 @@ void Construct::loadBuiltinModules() {
         // XXX exception?
         exit(1);
     }
-    // alias some basic builtin aliases from runtime
+    // alias some basic builtins from runtime
     // mostly for legacy reasons
     VarDefPtr a = rtMod->lookUp("puts");
     assert(a && "no puts in runtime");
     rootContext->ns->addAlias("puts", a.get());
+    a = rtMod->lookUp("__die");
+    assert(a && "no __die in runtime");
+    rootContext->ns->addAlias("__die", a.get());
+    rootContext->compileNS->addAlias("__die", a.get());
     a = rtMod->lookUp("printint");
     if (a)
         rootContext->ns->addAlias("printint", a.get());
-    // XXX die
 
 }
 

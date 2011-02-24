@@ -81,6 +81,11 @@ extern "C" void crack_runtime_init(Module *mod) {
                      );
     f->addArg(mod->getByteptrType(), "str");
 
+    f = mod->addFunc(byteptrType, "__die",
+                     (void *)crack::runtime::__die
+                     );
+    f->addArg(mod->getByteptrType(), "message");
+
     f = mod->addFunc(byteptrType, "printfloat",
                      (void *)crack::runtime::printfloat
                      );

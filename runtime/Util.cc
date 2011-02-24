@@ -38,6 +38,11 @@ void puts(char *str) {
     ::puts(str);
 }
 
+void __die(const char *message) {
+    std::cout << message << std::endl;
+    abort();
+}
+
 void printfloat(float val) {
     std::cout << val << std::flush;
 }
