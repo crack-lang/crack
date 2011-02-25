@@ -91,7 +91,8 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     if (!init())
         return 1;
     options->optionMap["mainUnit"] = name;
-    options->optionMap["outFile"] = basename(name.c_str());
+    if (options->optionMap.find("out") == options->optionMap.end())
+        options->optionMap["out"] = basename(name.c_str());
     construct->runScript(src, name);
 }
 

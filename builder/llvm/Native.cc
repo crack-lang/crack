@@ -270,8 +270,8 @@ void nativeCompile(llvm::Module *module,
     if (o->dumpMode)
         return;
 
-    BuilderOptions::StringMap::const_iterator i = o->optionMap.find("outFile");
-    assert(i != o->optionMap.end() && "no outFile");
+    BuilderOptions::StringMap::const_iterator i = o->optionMap.find("out");
+    assert(i != o->optionMap.end() && "no out");
 
     sys::Path oFile(i->second);
     sys::Path binFile(i->second);

@@ -29,7 +29,7 @@ struct option longopts[] = {
     {"debug", false, 0, 'g'},
     {"double-builder", false, 0, doubleBuilder},
     {"optimize", true, 0, 'O'},
-    {"verbosity", true, 0, 'v'},
+    {"verbosity", false, 0, 'v'},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
@@ -45,7 +45,7 @@ void usage(int retval) {
     cout << " -B <name>  --builder            Main builder to use (llvm-jit or"
             " llvm-native)" << endl;
     cout << " -b <opts>  --builder-opts       Builder options in the form "
-            "foo=bar:baz=bip" << endl;
+            "foo=bar,baz=bip" << endl;
     cout << " -d         --dump               Dump IR to stdout instead of "
             "running or compiling" << endl;
     cout << " --double-builder                Run multiple internal builders, "
@@ -62,8 +62,8 @@ void usage(int retval) {
             << endl;
     cout << " -n         --no-bootstrap       Do not load bootstrapping modules"
             << endl;
-    cout << " -v <N>     --verbosity N        Set output verbosity level to N"
-            " default 0)" << endl;
+    cout << " -v         --verbose            Verbose output, use more than once"
+            " for greater effect" << endl;
     exit(retval);
 }
 
@@ -86,9 +86,11 @@ int main(int argc, char **argv) {
 
     // parse the main module
     int opt;
+    char *subopts, *value;
+    char * const token[] = { NULL };
     bool optionsError = false;
     bool useDoubleBuilder = false;
-    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v:", longopts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v", longopts, NULL)) != -1) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable
@@ -107,7 +109,28 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'b':
-                cerr << "use builder opts: " << optarg << "\n";
+                if (!*optarg) {
+                    cerr << "Bad builder options, use the form: foo=bar,baz=bip"
+                         << endl;
+                    exit(1);
+                }
+                subopts = optarg;
+                while (*subopts != '\0') {
+                    switch (getsubopt(&subopts, token, &value)) {
+                        default:
+                        string v(value);
+                        string::size_type pos;
+                        if ((pos = v.find('=')) != string::npos) {
+                            // as key,val
+                            crack.options->optionMap[v.substr(0,pos)] =
+                                    v.substr(pos+1);
+                        }
+                        else {
+                            // as bool
+                            crack.options->optionMap[v] = "true";
+                        }
+                    }
+                }
                 break;
             case 'd':
                 crack.options->dumpMode = true;
@@ -128,13 +151,7 @@ int main(int argc, char **argv) {
                 crack.options->optimizeLevel = atoi(optarg);
                 break;
             case 'v':
-                if (!*optarg || *optarg < '0' || optarg[1]) {
-                    cerr << "Bad value for -v/--verbosity: " << optarg
-                        << "expected > 0" << endl;
-                    exit(1);
-                }
-
-                crack.options->verbosity = atoi(optarg);
+                crack.options->verbosity++;
                 break;
             case 'n':
                 crack.noBootstrap = true;
