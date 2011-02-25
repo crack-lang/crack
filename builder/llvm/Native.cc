@@ -28,6 +28,7 @@
 #include <llvm/Linker.h>
 #include <llvm/System/Program.h>
 #include <llvm/Support/IRBuilder.h>
+#include <llvm/Bitcode/ReaderWriter.h>
 
 #include <iostream>
 #include <stdlib.h>
@@ -277,9 +278,29 @@ void nativeCompile(llvm::Module *module,
     sys::Path binFile(i->second);
 
     oFile.eraseSuffix();
+    binFile.eraseSuffix();
+
+    // see if we should output an object file/native binary,
+    // native assembly, or llvm bitcode
+    TargetMachine::CodeGenFileType cgt = TargetMachine::CGFT_ObjectFile;
+    bool doBitcode(false);
     oFile.appendSuffix("o");
 
-    binFile.eraseSuffix();
+    i = o->optionMap.find("codeGen");
+    if (i != o->optionMap.end()) {
+        if (i->second == "llvm") {
+            // llvm bitcode
+            oFile.eraseSuffix();
+            oFile.appendSuffix("bc");
+            doBitcode = true;
+        }
+        else if (i->second == "asm") {
+            // native assembly
+            oFile.eraseSuffix();
+            oFile.appendSuffix("s");
+            cgt = TargetMachine::CGFT_AssemblyFile;
+        }
+    }
 
     // Initialize targets first, so that --version shows registered targets.
     InitializeNativeTarget();
@@ -299,14 +320,15 @@ void nativeCompile(llvm::Module *module,
 
     string FeaturesStr;
     std::auto_ptr<TargetMachine>
-     target(TheTarget->createTargetMachine(TheTriple.getTriple(), FeaturesStr));
+            target(TheTarget->createTargetMachine(TheTriple.getTriple(),
+                                                  FeaturesStr));
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();
 
     // Build up all of the passes that we want to do to the module.
     PassManager PM;
 
-    // Add the target data from the target machine, if it exists, or the module.
+    // Add the target data from the target machine or the module.
     if (const TargetData *TD = Target.getTargetData())
         PM.add(new TargetData(*TD));
     else
@@ -333,26 +355,38 @@ void nativeCompile(llvm::Module *module,
         // note, we expect optimizations to be done by now, so we don't do
         // any here
         if (o->verbosity)
-            cerr << "Generating native object file:\n" << oFile.str() << "\n";
+            cerr << "Generating file:\n" << oFile.str() << "\n";
 
-        // Ask the target to add backend passes as necessary.
-        if (Target.addPassesToEmitFile(PM,
-                                       FOS,
-                                       TargetMachine::CGFT_ObjectFile,
-                                       CodeGenOpt::None,
-                                       false // do verify
-                                       )) {
-            cerr << "target does not support generation of this"
-                    << " file type!\n";
-            return;
+        if (doBitcode) {
+            // llvm bitcode
+            WriteBitcodeToFile(module, FOS);
         }
+        else {
+            // native
+            if (Target.addPassesToEmitFile(PM,
+                                           FOS,
+                                           cgt,
+                                           CodeGenOpt::None,
+                                           o->debugMode // do verify
+                                           )) {
+                cerr << "target does not support generation of this"
+                        << " file type!\n";
+                return;
+            }
 
-        PM.run(*module);
+            PM.run(*module);
+        }
     }
 
     // note FOS needs to destruct before we can keep
     FDOut->keep();
 
+    // if we created llvm or native assembly file we're done
+    if (doBitcode ||
+        cgt == TargetMachine::CGFT_AssemblyFile)
+        return;
+
+    // if we reach here, we finish generating a native binary with gcc
     sys::Path gcc = sys::Program::FindProgramByName("gcc");
     assert(!gcc.isEmpty() && "Failed to find gcc");
 
