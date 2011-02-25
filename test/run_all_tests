@@ -51,7 +51,6 @@ function test_output {
         echo "Got     : $result"
         cp run_all_tests.tmp run_all_tests.fail
         rc=1
-        exit 1
     fi
     rm run_all_tests.tmp
 }

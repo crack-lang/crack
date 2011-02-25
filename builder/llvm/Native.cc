@@ -155,6 +155,8 @@ void createMain(llvm::Module *mod, const BuilderOptions *o) {
     Function *mainCleanup = mod->getFunction("main:cleanup");
     assert(mainCleanup && "no cleanup function");
 
+    Function *crackLangInit = mod->getFunction("crack.lang:main");
+
     // Type Definitions
 
     // argc
@@ -221,6 +223,12 @@ void createMain(llvm::Module *mod, const BuilderOptions *o) {
         new StoreInst(retValConst, ptr_14, false, label_13);
         new StoreInst(int32_argc, gargc, false, label_13);
         new StoreInst(ptr_argv, gargv, false, label_13);
+
+        // call crack.lang init function
+        // note if crackLangInit isn't set, we skip it. this happens for
+        // non bootstrapped scripts
+        if (crackLangInit)
+            CallInst::Create(crackLangInit, "", label_13);
 
         // call main script initialization function
         CallInst::Create(scriptEntry, "", label_13);
