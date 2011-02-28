@@ -36,7 +36,7 @@ function test_output {
     if [ "$runBinary" -eq 1 ] &&
        # skip native test if checking for parse error
        [ "${expected:0:${#source}}" != "$source" ] &&
-       [ "${expected:0:${#parseError}}" != "$parseError" ]; then
+       [ "${expected:0:10}" != "ParseError" ]; then
         cmdline="./$binName $args"
         #echo "running $cmdline"
         result="$(echo $stdin | $cmdline 2>&1)"
