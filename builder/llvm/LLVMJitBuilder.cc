@@ -200,10 +200,9 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         f.finish();
     }
 
-    // possibly bind to execution engine
-    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
-    engineBindModule(moduleDef);
+    bindJitModule(module);
 
+    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
     return moduleDef;
 }
 

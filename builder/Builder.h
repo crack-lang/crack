@@ -415,9 +415,9 @@ class Builder : public spug::RCBase {
          * This is called for every symbol that is imported into a module.  
          * Implementations should do whatever processing is necessary.
          */
-        virtual void registerImport(model::Context &context, 
-                                    model::VarDef *varDef
-                                    ) = 0;
+        virtual void registerImportedVar(model::Context &context,
+                                         model::VarDef *varDef
+                                         ) = 0;
 
         /**
          * This is called once per imported module, to allow the builder
@@ -432,17 +432,10 @@ class Builder : public spug::RCBase {
         virtual void setArgv(int argc, char **argv) = 0;
 
         /**
-         * Called per module
+         * Called after all modules have been parsed/run. Only called
+         * on root builder, not children
          */
-        virtual void run() = 0;
-
-        /// Dump the compiled op-codes to standard output.
-        virtual void dump() = 0;
-
-        /**
-         * Called after all modules have been parsed/run
-         */
-        virtual void finish(model::Context &context) = 0;
+        virtual void finishBuild(model::Context &context) = 0;
 
         /**
          * If a builder can directly execute functions from modules it builds,

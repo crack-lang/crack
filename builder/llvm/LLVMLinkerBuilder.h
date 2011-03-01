@@ -41,7 +41,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         virtual void *getFuncAddr(llvm::Function *func);
 
-        virtual void finish(model::Context &context);
+        virtual void finishBuild(model::Context &context);
 
         virtual BuilderPtr createChildBuilder();
 

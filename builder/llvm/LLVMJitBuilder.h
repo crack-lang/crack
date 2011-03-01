@@ -20,6 +20,10 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
 
+        virtual void run();
+
+        virtual void dump();
+
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
@@ -38,9 +42,6 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void *getFuncAddr(llvm::Function *func);
 
-        virtual void run();
-
-        virtual void dump();
 
         virtual BuilderPtr createChildBuilder();
 
@@ -53,6 +54,10 @@ class LLVMJitBuilder : public LLVMBuilder {
                                  );
 
         virtual bool isExec() { return true; }
+
+        virtual void finishBuild(model::Context &context) { }
+
+        virtual void initializeImport(model::ModuleDefPtr, bool annotation) { }
 
 };
 

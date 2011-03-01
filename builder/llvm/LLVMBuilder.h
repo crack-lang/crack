@@ -77,14 +77,14 @@ class LLVMBuilder : public Builder {
                                          llvm::GlobalValue*) { }
 
         /**
-         * possibly bind the module to an execution engine. this is run
-         * immediately after the module is created in createModule
+         * possibly bind the module to an execution engine
+         * called in base llvmbuilder only from registerPrimFuncs
          */
         virtual void engineBindModule(model::ModuleDef *moduleDef) { }
 
         /**
          * let the engine "finish" a module before running/linking/dumping
-         * this is run immediately after closeModule and before run() or dump()
+         * called in base llvmbuilder only from registerPrimFuncs
          */
         virtual void engineFinishModule(model::ModuleDef *moduleDef) { }
 
@@ -345,11 +345,9 @@ class LLVMBuilder : public Builder {
                                        model::Context &context,
                                        model::Namespace *ns
                                        );
-        virtual void registerImport(model::Context &context, 
-                                    model::VarDef *varDef
-                                    );
-
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation) { }
+        virtual void registerImportedVar(model::Context &context,
+                                         model::VarDef *varDef
+                                         );
 
         virtual void setArgv(int argc, char **argv);        
         
@@ -363,13 +361,6 @@ class LLVMBuilder : public Builder {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     );
-
-        // these are implemented by Jit, but not Linker
-        virtual void run() { }
-        virtual void dump() { }
-
-        // this is implemented by Linker, but not Jit
-        virtual void finish(model::Context &context) { }
 
 
 };

@@ -438,5 +438,5 @@ int Construct::runScript(istream &src, const string &name) {
         cerr << ex << endl;
         return 1;
     }
-    rootBuilder->finish(*context);
+    rootBuilder->finishBuild(*context);
 }

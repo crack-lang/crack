@@ -116,7 +116,7 @@ void *LLVMLinkerBuilder::getFuncAddr(llvm::Function *func) {
     assert(false && "LLVMLinkerBuilder::getFuncAddr called");
 }
 
-void LLVMLinkerBuilder::finish(Context &context) {
+void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     assert(!rootBuilder && "run must be called from root builder");
 
@@ -343,6 +343,6 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
 }
 
 void LLVMLinkerBuilder::engineFinishModule(ModuleDef *moduleDef) {
-    // XXX only called for builtin, refactor this
+    // only called from registerPrimFuncs in base LLVMBuilder
     linkModule(module);
 }
