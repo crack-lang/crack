@@ -258,7 +258,7 @@ void math_init(Module *mod) {
 
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i].funcname, (void *) one_funcs[i]);
+    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i].funcname, (void *) one_funcs_double[i]);
     funcd->addArg(mod->getFloat64Type(), arg_names[one_names[i].argname]);
 #endif
   }
