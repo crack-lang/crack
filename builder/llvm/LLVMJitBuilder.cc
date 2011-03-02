@@ -21,6 +21,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
 #include <llvm/Module.h>
+#include <llvm/Intrinsics.h>
 
 using namespace std;
 using namespace llvm;
@@ -74,6 +75,7 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
         else {
 
             llvm::JITEmitDebugInfo = true;
+            llvm::JITExceptionHandling = true;
 
             // we have to specify all of the arguments for this so we can turn
             // off "allocate globals with code."  In addition to being
@@ -130,7 +132,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
-    module = new llvm::Module(name, lctx);
+    createLLVMModule(name);
 
     if (options->debugMode) {
         debugInfo = new DebugInfo(module, name);
@@ -199,6 +201,16 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         f.setSymbolName("__getArgc");
         f.finish();
     }
+    
+    // create "__CrackThrow(VTableBase)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "__CrackThrow", 1);
+        f.addArg("exception", vtableBaseType);
+        f.setSymbolName("__CrackThrow");
+        f.finish();
+    }
+    
+    // possibly bind to execution engine
 
     bindJitModule(module);
 

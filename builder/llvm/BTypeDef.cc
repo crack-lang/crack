@@ -3,6 +3,8 @@
 #include "BFuncDef.h"
 #include "BTypeDef.h"
 
+#include <llvm/GlobalVariable.h>
+#include <llvm/Module.h>
 #include "model/Context.h"
 #include "model/OverloadDef.h"
 #include "PlaceholderInstruction.h"
@@ -10,6 +12,7 @@
 using namespace model;
 using namespace std;
 using namespace builder::mvll;
+using namespace llvm;
 
 // add all of my virtual functions to 'vtb'
 void BTypeDef::extendVTables(VTableBuilder &vtb) {
@@ -136,4 +139,15 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
 
     cerr << "class is " << name << endl;
     assert(false && "Failed to find first vtable");
+}
+
+GlobalVariable *BTypeDef::getClassInstRep(Module *module) {
+    if (classInst->getParent() == module)
+        return classInst;
+    else
+        return cast<GlobalVariable>(
+            module->getOrInsertGlobal(classInst->getName(),
+                                      classInst->getType()
+                                      )
+        );
 }

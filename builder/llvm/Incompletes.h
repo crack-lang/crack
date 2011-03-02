@@ -17,6 +17,7 @@ namespace builder { namespace mvll {
 
     class IncompleteInstVarRef;
     class IncompleteInstVarAssign;
+    class IncompleteCatchSelector;
     class IncompleteNarrower;
     class IncompleteVTableInit;
     class IncompleteSpecialize;
@@ -31,6 +32,10 @@ namespace llvm {
     template<>
     struct OperandTraits<builder::mvll::IncompleteInstVarAssign> :
         FixedNumOperandTraits<2> {
+    };
+    template<>
+    struct OperandTraits<builder::mvll::IncompleteCatchSelector> :
+        FixedNumOperandTraits<0> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteNarrower> :
@@ -107,6 +112,40 @@ public:
                             llvm::Value *rval,
                             llvm::Instruction *insertBefore = 0
                                                         );
+
+    virtual llvm::Instruction *clone_impl() const;
+
+    virtual void insertInstructions(llvm::IRBuilder<> &builder);
+};
+
+class IncompleteCatchSelector : public PlaceholderInstruction {
+private:
+    llvm::Value *ehSelector, *exception, *personalityFunc;
+    std::vector<llvm::Value *> &typeImpls;
+
+public:
+    // allocate space for 0 operands
+    // NOTE: We don't make use of any of the operand magic because none of the 
+    // associated value objects should be replacable.  If you start seeing 
+    // value breakage in the exception selectors, look here because that 
+    // assumption has probably been violated.
+    void *operator new(size_t s);
+
+    IncompleteCatchSelector(llvm::Value *ehSelector,
+                            llvm::Value *exception,
+                            llvm::Value *personalityFunc,
+                            std::vector<llvm::Value *> &typeImpls,
+                            llvm::BasicBlock *parent
+                            );
+
+    IncompleteCatchSelector(llvm::Value *ehSelector,
+                            llvm::Value *exception,
+                            llvm::Value *personalityFunc,
+                            std::vector<llvm::Value *> &typeImpls,
+                            llvm::Instruction *insertBefore = 0
+                            );
+
+    ~IncompleteCatchSelector();
 
     virtual llvm::Instruction *clone_impl() const;
 

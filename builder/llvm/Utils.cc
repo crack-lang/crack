@@ -173,7 +173,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
         ConstantStruct::get(metaClassStructType, metaClassStructVals);
 
     // Create the class global variable
-    GlobalVariable *classInst =
+    type->classInst =
         new GlobalVariable(*llvmBuilder.module, metaClassStructType,
                            true, // is constant
                            GlobalValue::ExternalLinkage,
@@ -186,7 +186,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
         new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
                            true, // is constant
                            GlobalVariable::ExternalLinkage,
-                           classInst,
+                           type->classInst,
                            type->name
                            );
 

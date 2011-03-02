@@ -33,6 +33,7 @@
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Intrinsics.h>
 
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
@@ -320,6 +321,27 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
         emitFunctionCleanups(*context.parent);
 }
 
+void LLVMBuilder::createLLVMModule(const string &name) {
+    LLVMContext &lctx = getGlobalContext();
+    module = new llvm::Module(name, lctx);
+    getDeclaration(module, Intrinsic::eh_selector);
+    getDeclaration(module, Intrinsic::eh_exception);
+    
+    // our exception personality function
+    vector<const Type *> args(5);;
+    args[0] = Type::getInt32Ty(lctx);
+    args[1] = args[0];
+    args[2] = Type::getInt64Ty(lctx);
+    args[3] = Type::getInt8Ty(lctx)->getPointerTo();
+    args[4] = args[3];
+    FunctionType *epType = FunctionType::get(Type::getVoidTy(lctx), args, 
+                                             false
+                                             );
+                                            
+    Constant *ep =
+        module->getOrInsertFunction("__CrackExceptionPersonality", epType);
+    exceptionPersonalityFunc = cast<Function>(ep);    
+}
 
 void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
                                        FuncDef *existing,
@@ -354,8 +376,15 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         BBranchpointPtr::rcast(outerContext->getCatchBranchpoint());
 
     BasicBlock *final;
+    BBuilderContextData::CatchData *cdata = 0;
     if (bpos) {
         final = bpos->block;
+
+        // get the "catch data" for the context so we can correctly store 
+        // placeholders instructions for the selector calls.
+        BBuilderContextData *outerBData = 
+            BBuilderContextData::get(outerContext.get());;
+        cdata = &outerBData->getCatchData();    
     } else {
         // no catch clause.  Find or create the unwind clause for the function 
         // to continue the unwind.
@@ -382,8 +411,11 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
 
         final = bdata->unwindBlock;
     }
-    
-    return emitUnwindCleanups(context, *outerContext, final);
+
+    BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);
+    BCleanupFrame *firstCleanupFrame = 
+        BCleanupFramePtr::rcast(context.cleanupFrame);
+    return firstCleanupFrame->getLandingPad(cleanups, cdata);
 }
 
 void LLVMBuilder::clearCachedCleanups(Context &context) {
@@ -931,26 +963,84 @@ void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
 }
 
 BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
-    BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch");
+    BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch",
+                                                func
+                                                );
     BBranchpointPtr bpos = new BBranchpoint(catchBlock);
     return bpos;
 }
 
 void LLVMBuilder::emitCatch(Context &context,
                             Branchpoint *branchpoint,
-                            TypeDef *catchType
+                            TypeDef *catchType,
+                            bool terminal
                             ) {
+    BBranchpoint *bpos = BBranchpointPtr::cast(branchpoint);
+
+    // if this is the first catch block (as indicated by the lack of a 
+    // "post-try" block in block2), create the post-try and create a branch to 
+    // it in the current block.
+    if (!bpos->block2) {
+        bpos->block2 = BasicBlock::Create(getGlobalContext(), "after_try",
+                                          func
+                                          );
+        if (!terminal)
+            builder.CreateBr(bpos->block2);
+    }
+
+    // emit code into the catch block
+    builder.SetInsertPoint(bpos->block);
+    
+    // store the class implementation
+    BBuilderContextData *bdata =
+        BBuilderContextData::get(&context);
+    BBuilderContextData::CatchData &cdata = bdata->getCatchData();
+    BTypeDef *btype = BTypeDefPtr::cast(catchType);
+    cdata.classImpls.push_back(btype->getClassInstRep(module));
 }
 
 void LLVMBuilder::emitEndTry(model::Context &context,
                              Branchpoint *branchpoint
                              ) {
+    BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
+    // XXX if the catch is non-terminal, create a branch to the next block
+    builder.CreateBr(nextBlock);
+
+    // emit subsequent code into the new block
+    builder.SetInsertPoint(nextBlock);
+    
+    // fix all of the incomplete selector functions now that we have all of 
+    // the catch clauses.
+    BBuilderContextData *bdata = BBuilderContextData::get(&context);
+    vector<IncompleteCatchSelector *> &ics = 
+        bdata->getCatchData().selectors;
+    for (vector<IncompleteCatchSelector *>::iterator iter = ics.begin();
+         iter != ics.end();
+         ++iter
+         ) {
+        (*iter)->fix();
+    }
+    
+    // free up the catch data associated with the context (a context can 
+    // include multiple try/catch blocks)
+    bdata->deleteCatchData();
 }
 
-void LLVMBuilder::emitThrow(Context &context,
-                            Expr *expr
-                            ) {
-    builder.CreateUnwind();
+void LLVMBuilder::emitThrow(Context &context, Expr *expr) {
+    Function *throwFunc = module->getFunction("__CrackThrow");
+    context.createCleanupFrame();
+    expr->emit(context);
+    narrow(expr->type.get(), context.construct->vtableBaseType.get());
+    BasicBlock *unwindBlock = getUnwindBlock(context),
+               *unreachableBlock = BasicBlock::Create(getGlobalContext(),
+                                                      "unreachable",
+                                                      func
+                                                      );
+    builder.CreateInvoke(throwFunc, unreachableBlock, unwindBlock, lastValue);
+    builder.SetInsertPoint(unreachableBlock);
+    builder.CreateUnreachable();
+    // XXX think I actually want to discard the cleanup frame
+    context.closeCleanupFrame();
 }
 
 FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
@@ -1637,12 +1727,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
+    createLLVMModule(".builtin");
     BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get());
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
-
-    module = new llvm::Module(".builtin", lctx);
 
     // create the basic types
     
@@ -1665,7 +1754,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(voidType);
 
     BTypeDef *voidptrType;
-    llvmVoidPtrType = 
+    llvmVoidPtrType = Type::getInt8Ty(lctx)->getPointerTo();
         PointerType::getUnqual(OpaqueType::get(getGlobalContext()));
     gd->voidptrType = voidptrType = new BTypeDef(context.construct->classType.get(), 
                                                  "voidptr",
@@ -1673,6 +1762,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  );
     voidptrType->defaultInitializer = new NullConst(voidptrType);
     context.addDef(voidptrType);
+
+    // now that we've got a voidptr type, give the class object a cast to it.
+    context.addDef(new VoidPtrOpDef(voidptrType), classType);
     
     llvm::Type *llvmBytePtrType = 
         PointerType::getUnqual(Type::getInt8Ty(lctx));
@@ -2098,3 +2190,4 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     // store it
     btype->addPlaceholder(vtableInit);
 }
+

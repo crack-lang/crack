@@ -1,0 +1,48 @@
+
+import crack.runtime registerHook, EXCEPTION_MATCH_FUNC;
+
+# temporary work-around for the problem of trying to use the special .class 
+# accessor from a VTableBase object.
+class Obj : VTableBase {}
+
+bool exceptionMatchFunc(Class classObj, Obj obj) {
+    return obj.class.isSubclass(classObj);
+}
+
+registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
+
+
+class Exception : VTableBase {}
+class FooError : Exception {}
+class NotException : VTableBase {}
+
+if (1) {
+    bool gotIt;
+    bool cleanedUp;
+    class Cleanup { oper release() { cleanedUp = 1; } }
+    try {
+        Cleanup c;
+        throw Exception();
+    } catch (Exception ex) {
+        gotIt = 1;
+    }
+    if (!gotIt)
+        puts('FAILED basic exception handling.');
+    
+    if (!cleanedUp)
+        puts('FAILED basic exception cleanup.');
+}
+
+puts('ok');
+
+// try block ends with a terminator
+#void func() {
+#    try {
+#        return;
+#    } catch (Exception ex) {
+#    }
+#}
+
+// test catching exceptions defined in other modules
+
+// test multiple try statements in the same context.

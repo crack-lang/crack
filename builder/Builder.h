@@ -282,14 +282,19 @@ class Builder : public spug::RCBase {
         
         /**
          * Emit a catch clause.
+         * 'context' should be a context that was marked as a catch 
+         * context using setCatchBranchpoint() for the code between 
+         * emitBeginTry() and the first emitCatch().
          */
         virtual void emitCatch(model::Context &context,
                                model::Branchpoint *branchpoint,
-                               model::TypeDef *catchType
+                               model::TypeDef *catchType,
+                               bool terminal
                                ) = 0;
         
         /**
          * Close off an existing try block.
+         * The rules for 'context' in emitCatch() apply.
          */
         virtual void emitEndTry(model::Context &context,
                                 model::Branchpoint *branchpoint

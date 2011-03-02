@@ -39,7 +39,9 @@ function test_output {
        [ "${expected:0:10}" != "ParseError" ]; then
         cmdline="./$binName $args"
         #echo "running $cmdline"
-        result="$(echo $stdin | $cmdline 2>&1)"
+        export LD_LIBRARY_PATH=.libs:test/.libs
+        result="$result$(echo $stdin | $cmdline 2>&1)"
+        rm -f "./$binName"
     fi
     if [ "$result" = "$expected" ]; then
         echo ok
@@ -68,7 +70,7 @@ root=$(cd $(dirname "$0")/..; pwd)
 echo "dirname = $0, root = $root"
 
 # start with no bootstrapping
-opts="-Gnl $root -l $root/lib -l lib"
+opts="-Gnl $root -l $root/lib:lib:.libs"
 
 test_output "hello world" 'puts("hello world")' 'hello world'
 test_output "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -818,8 +820,10 @@ test_output 'warning on unnecessary forward declarations' \
     "${parseWarn}2: Unnecessary forward declaration for overriden function \
 foo (defined in ancestor class $source.A)"
 
+test_output 'exceptions' 'import test.test_exceptions;' ok
+
 # switch to full bootstrapping mode now that importing works
-opts="-Gl $root -l $root/lib -l lib"
+opts="-Gl $root -l $root/lib:lib:.libs"
 
 test_output 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \

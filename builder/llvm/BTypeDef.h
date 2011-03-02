@@ -14,6 +14,7 @@
 namespace llvm {
     class Type;
     class Constant;
+    class GlobalVariable;
 }
 
 namespace builder {
@@ -27,6 +28,7 @@ SPUG_RCPTR(BTypeDef);
 class BTypeDef : public model::TypeDef {
 public:
     unsigned fieldCount;
+    llvm::GlobalVariable *classInst;
     const llvm::Type *rep;
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
@@ -42,6 +44,7 @@ public:
              ) :
         model::TypeDef(metaType, name, pointer),
         fieldCount(0),
+        classInst(0),
         rep(rep),
         nextVTableSlot(nextVTableSlot),
         firstVTableType(0) {
@@ -79,7 +82,12 @@ public:
      * Find the ancestor with our first vtable.
      */
     BTypeDef *findFirstVTable(BTypeDef *vtableBaseType);
-
+    
+    /**
+     * Get the global variable, creating an extern instance in the module if 
+     * it lives in another module.
+     */
+    llvm::GlobalVariable *getClassInstRep(llvm::Module *module);
 };
 
 } // end namespace builder::vmll

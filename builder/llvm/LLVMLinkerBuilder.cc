@@ -1,3 +1,4 @@
+
 // Copyright 2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
 #include "LLVMLinkerBuilder.h"
@@ -128,7 +129,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
         PassManager passMan;
         createStandardLTOPasses(&passMan,
                                 true, // internalize
-                                true, // inline
+                                false, // inline
                                 options->debugMode // verify each
                                 );
         passMan.run(*finalir);
@@ -170,7 +171,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
-    module = new llvm::Module(name, lctx);
+    createLLVMModule(name);
 
     if (options->debugMode) {
         debugInfo = new DebugInfo(module, name);
@@ -273,6 +274,14 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
         f.finish();
     }
 
+    // create "__CrackThrow(VTableBase)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType, "__CrackThrow", 1);
+        f.addArg("exception", vtableBaseType);
+        f.setSymbolName("__CrackThrow");
+        f.finish();
+    }
+    
     // add to module list
     ModuleDef *newModule = new BModuleDef(name, context.ns.get());
     addModule(newModule);

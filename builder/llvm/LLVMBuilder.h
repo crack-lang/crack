@@ -57,6 +57,13 @@ class LLVMBuilder : public Builder {
 
         LLVMBuilderPtr rootBuilder;
 
+        /**
+         * Creates a new LLVM module and initializes all of the exception 
+         * handling declarations that need to be present.  Assigns the 
+         * 'module' instance variable to the new module.
+         */
+        void createLLVMModule(const std::string &name);
+
         void initializeMethodInfo(model::Context &context, 
                                   model::FuncDef::Flags flags,
                                   model::FuncDef *existing,
@@ -107,10 +114,11 @@ class LLVMBuilder : public Builder {
         // seems to be cutting down on the amount of code necessary to do this.
         llvm::Module *module;
         llvm::Function *func;
-        llvm::Type *llvmVoidPtrType;
+        const llvm::Type *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *funcBlock;
+        llvm::Function *exceptionPersonalityFunc;
         static int argc;
         static char **argv;
 
@@ -231,7 +239,8 @@ class LLVMBuilder : public Builder {
         
         virtual void emitCatch(model::Context &context,
                                model::Branchpoint *branchpoint,
-                               model::TypeDef *catchType
+                               model::TypeDef *catchType,
+                               bool terminal
                                );
         
         virtual void emitEndTry(model::Context &context,
@@ -368,4 +377,3 @@ class LLVMBuilder : public Builder {
 } // namespace builder::mvll
 } // namespace builder
 #endif
-

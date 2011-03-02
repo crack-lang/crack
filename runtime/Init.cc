@@ -15,6 +15,7 @@
 #include "Util.h"
 #include "Net.h"
 #include "Math.h"
+#include "Exceptions.h"
 using namespace crack::ext;
 
 extern "C" void crack_runtime_init(Module *mod) {
@@ -421,4 +422,14 @@ extern "C" void crack_runtime_init(Module *mod) {
 
     // Add math functions
     crack::runtime::math_init(mod);
+    
+    // add exception functions
+    mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 
+                     crack::runtime::exceptionMatchFuncHook
+                     );
+    f = mod->addFunc(voidType, "registerHook", 
+                     (void *)crack::runtime::registerHook
+                     );
+    f->addArg(intType, "hookId");
+    f->addArg(voidptrType, "hook");
 }

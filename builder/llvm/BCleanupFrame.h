@@ -9,6 +9,7 @@
 #include <spug/RCPtr.h>
 #include <llvm/Support/IRBuilder.h>
 #include <list>
+#include "BBuilderContextData.h"
 
 namespace builder {
 namespace mvll {
@@ -19,20 +20,24 @@ class BCleanupFrame : public model::CleanupFrame {
 private:
     struct Cleanup {
         model::ExprPtr action;
-        llvm::BasicBlock *unwindBlock;
+        llvm::BasicBlock *unwindBlock, *landingPad;
         
         Cleanup(model::ExprPtr action) : 
             action(action),
-            unwindBlock(0) {
+            unwindBlock(0),
+            landingPad(0) {
         }
     };
-        
+
+    llvm::BasicBlock *landingPad;
+
 public:
     typedef std::list<Cleanup> CleanupList;
     CleanupList cleanups;
 
     BCleanupFrame(model::Context *context) :
-        CleanupFrame(context) {
+        CleanupFrame(context),
+        landingPad(0) {
     }
 
     virtual void addCleanup(model::Expr *cleanup) {
@@ -50,6 +55,15 @@ public:
     }
     
     llvm::BasicBlock *emitUnwindCleanups(llvm::BasicBlock *next);
+    
+    /** 
+     * Returns a cached landing pad for the cleanup.   LLVM requires a call to 
+     * the selector to be in the unwind block for an invoke, so we have to 
+     * keep one of these for every cleanup block that needs one.
+     */
+    llvm::BasicBlock *getLandingPad(llvm::BasicBlock *block, 
+                                    BBuilderContextData::CatchData *cdata
+                                    );
     
     void clearCachedCleanups();
 };

@@ -2084,9 +2084,10 @@ ContextPtr Parser::parseTryStmt() {
    BranchpointPtr pos = context->builder.emitBeginTry(*context);
    
    context->setCatchBranchpoint(pos.get());
+   ContextPtr terminal;
    {
       ContextStackFrame cstack(*this, context->createSubContext().get());
-      parseBlock(true, noCallbacks); // XXX add tryLeave callback
+      terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
    context->setCatchBranchpoint(0);
    
@@ -2111,7 +2112,9 @@ ContextPtr Parser::parseTryStmt() {
       if (!tok.isIdent())
          unexpected(tok, "variable name expected after exception type.");
 
-      context->builder.emitCatch(*context, pos.get(), exceptionType.get());
+      context->builder.emitCatch(*context, pos.get(), exceptionType.get(),
+                                 terminal
+                                 );
       
       tok = toker.getToken();
       if (!tok.isRParen())
@@ -2136,7 +2139,7 @@ ContextPtr Parser::parseTryStmt() {
       if (!tok.isCatch()) {
          toker.putBack(tok);
          context->builder.emitEndTry(*context, pos.get());
-         return 0;
+         return terminal;
       }
    }
 }
