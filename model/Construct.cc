@@ -340,6 +340,10 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
             ifstream src(modPath.path.c_str());
             parseModule(*context, modDef.get(), modPath.path, src);
         }
+        else {
+            // directory
+            modDef->close(*context);
+        }
     }
 
     modDef->finished = true;

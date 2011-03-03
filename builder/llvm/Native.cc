@@ -18,7 +18,9 @@
 #include <llvm/Pass.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/System/Host.h>
+#include <llvm/Support/StandardPasses.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/LinkAllPasses.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetRegistry.h>
@@ -267,17 +269,85 @@ void createMain(llvm::Module *mod, const BuilderOptions *o) {
 
 }
 
+void optimizeLink(llvm::Module *module, bool verify) {
+
+    // see llvm's opt tool
+
+    // module pass manager
+    PassManager Passes;
+
+    // Add an appropriate TargetData instance for this module...
+    TargetData *TD = 0;
+    const std::string &ModuleDataLayout = module->getDataLayout();
+    if (!ModuleDataLayout.empty())
+        TD = new TargetData(ModuleDataLayout);
+
+    if (TD)
+        Passes.add(TD);
+
+    createStandardLTOPasses(&Passes, /*Internalize=*/ false,
+                                     /*RunInliner=*/ false, // XXX breaks exceptions
+                                     /*VerifyEach=*/ verify);
+    Passes.run(*module);
+
+}
+
+// optimize
+void optimizeUnit(llvm::Module *module, int optimizeLevel) {
+
+    // see llvm's opt tool
+
+    // module pass manager
+    PassManager Passes;
+
+    // Add an appropriate TargetData instance for this module...
+    TargetData *TD = 0;
+    const std::string &ModuleDataLayout = module->getDataLayout();
+    if (!ModuleDataLayout.empty())
+        TD = new TargetData(ModuleDataLayout);
+
+    if (TD)
+        Passes.add(TD);
+
+    // function pass manager
+    OwningPtr<PassManager> FPasses;
+    FPasses.reset(new PassManager());
+    if (TD)
+        FPasses->add(new TargetData(*TD));
+
+    createStandardFunctionPasses(FPasses.get(), optimizeLevel);
+
+    llvm::Pass *InliningPass = 0;
+
+    /*
+    // XXX inlining currently breaks exceptions
+    if (optimizeLevel > 1) {
+        unsigned Threshold = 200;
+        if (optimizeLevel > 2)
+            Threshold = 250;
+        InliningPass = createFunctionInliningPass(Threshold);
+    } else {
+        InliningPass = createAlwaysInlinerPass();
+    }
+    */
+
+    createStandardModulePasses(&Passes, optimizeLevel,
+                               /*OptimizeSize=*/ false,
+                               /*UnitAtATime*/ true,
+                               /*UnrollLoops=*/ optimizeLevel > 1,
+                               /*SimplifyLibCalls*/ true,
+                               /*HaveExceptions=*/ true,
+                               InliningPass);
+
+    FPasses->run(*module);
+    Passes.run(*module);
+
+}
+
 void nativeCompile(llvm::Module *module,
                    const BuilderOptions *o,
                    const vector<string> &sharedLibs,
                    const vector<string> &libPaths) {
-
-    // create int main(argc, argv) entry point
-    createMain(module, o);
-
-    // if we're dumping, return now that'd we've added main and finalized ir
-    if (o->dumpMode)
-        return;
 
     BuilderOptions::StringMap::const_iterator i = o->optionMap.find("out");
     assert(i != o->optionMap.end() && "no out");
@@ -310,7 +380,6 @@ void nativeCompile(llvm::Module *module,
         }
     }
 
-    // Initialize targets first, so that --version shows registered targets.
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
 
@@ -324,6 +393,7 @@ void nativeCompile(llvm::Module *module,
     TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Err);
     assert(TheTarget && "unable to select target machine");
 
+    // XXX insufficient
     bool is64Bit(TheTriple.getArch() == Triple::x86_64);
 
     string FeaturesStr;

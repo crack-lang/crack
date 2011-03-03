@@ -14,24 +14,23 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+class BModuleDef;
 SPUG_RCPTR(LLVMLinkerBuilder);
 
 class LLVMLinkerBuilder : public LLVMBuilder {
     private:
-        typedef std::vector<model::ModuleDef *> ModuleListType;
+        typedef std::vector<builder::mvll::BModuleDef *> ModuleListType;
 
         llvm::Linker *linker;
         ModuleListType *moduleList;
         llvm::BasicBlock *mainInsert;
         std::vector<std::string> sharedLibs;
 
-        llvm::Linker *linkModule(llvm::Module *mp);
-        ModuleListType *addModule(model::ModuleDef *mp);
-
+        ModuleListType *addModule(BModuleDef *mp);
         llvm::Function *emitAggregateCleanup(llvm::Module *module);
 
     protected:
-        virtual void engineFinishModule(model::ModuleDef *moduleDef);
+        virtual void engineFinishModule(BModuleDef *moduleDef);
 
     public:
         LLVMLinkerBuilder(void) : linker(0),

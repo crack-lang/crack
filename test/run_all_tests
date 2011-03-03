@@ -39,7 +39,7 @@ function test_output {
        [ "${expected:0:10}" != "ParseError" ]; then
         cmdline="./$binName $args"
         #echo "running $cmdline"
-        export LD_LIBRARY_PATH=.libs:test/.libs
+        export LD_LIBRARY_PATH=".libs:test/.libs:$LD_LIBRARY_PATH"
         result="$result$(echo $stdin | $cmdline 2>&1)"
         rm -f "./$binName"
     fi

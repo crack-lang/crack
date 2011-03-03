@@ -1728,7 +1728,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!module);
 
     createLLVMModule(".builtin");
-    BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get());
+    BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get(), module);
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();

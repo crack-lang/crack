@@ -12,6 +12,7 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+class BModuleDef;
 SPUG_RCPTR(LLVMJitBuilder);
 
 class LLVMJitBuilder : public LLVMBuilder {
@@ -33,8 +34,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void addGlobalVarMapping(llvm::GlobalValue*,
                                          llvm::GlobalValue*);
 
-        virtual void engineBindModule(model::ModuleDef *moduleDef);
-        virtual void engineFinishModule(model::ModuleDef *moduleDef);
+        virtual void engineBindModule(BModuleDef *moduleDef);
+        virtual void engineFinishModule(BModuleDef *moduleDef);
 
 
     public:

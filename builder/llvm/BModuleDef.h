@@ -11,6 +11,10 @@ namespace model {
     class Context;
 }
 
+namespace llvm {
+    class Module;
+}
+
 namespace builder {
 namespace mvll {
 
@@ -21,10 +25,13 @@ class BModuleDef : public model::ModuleDef {
 public:
     // primitive cleanup function
     void (*cleanup)();
+    llvm::Module *rep;
 
-    BModuleDef(const std::string &canonicalName, model::Namespace *parent) :
+    BModuleDef(const std::string &canonicalName,
+               model::Namespace *parent,
+               llvm::Module *rep0) :
             ModuleDef(canonicalName, parent),
-            cleanup(0) {
+            cleanup(0), rep(rep0) {
     }
 
     void callDestructor() {

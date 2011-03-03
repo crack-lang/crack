@@ -25,6 +25,7 @@ SPUG_RCPTR(BHeapVarDefImpl);
 SPUG_RCPTR(BTypeDef);
 class DebugInfo;
 class FuncBuilder;
+class BModuleDef;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
@@ -87,13 +88,13 @@ class LLVMBuilder : public Builder {
          * possibly bind the module to an execution engine
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineBindModule(model::ModuleDef *moduleDef) { }
+        virtual void engineBindModule(BModuleDef *moduleDef) { }
 
         /**
          * let the engine "finish" a module before running/linking/dumping
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineFinishModule(model::ModuleDef *moduleDef) { }
+        virtual void engineFinishModule(BModuleDef *moduleDef) { }
 
         /**
          * Gets the first unwind block for the context, emitting the whole 

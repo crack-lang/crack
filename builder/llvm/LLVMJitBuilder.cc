@@ -30,11 +30,14 @@ using namespace builder;
 using namespace builder::mvll;
 
 
-void LLVMJitBuilder::engineBindModule(ModuleDef *moduleDef) {
-    bindJitModule(module);
+void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
+    // note, this->module and moduleDef->rep should be ==
+    bindJitModule(moduleDef->rep);
 }
 
-void LLVMJitBuilder::engineFinishModule(ModuleDef *moduleDef) {
+void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
+    // note, this->module and moduleDef->rep should be ==
+
     // XXX right now, only checking for > 0, later perhaps we can
     // run specific optimizations at different levels
     if (options->optimizeLevel) {
@@ -55,14 +58,13 @@ void LLVMJitBuilder::engineFinishModule(ModuleDef *moduleDef) {
         // Simplify the control flow graph (deleting unreachable blocks, etc).
         passMan.add(llvm::createCFGSimplificationPass());
 
-        passMan.run(*module);
+        passMan.run(*moduleDef->rep);
     }
     Function *delFunc = module->getFunction("__del__");
     if (delFunc) {
-        BModuleDefPtr::cast(moduleDef)->cleanup =
-                reinterpret_cast<void (*)()>(
-                        execEng->getPointerToFunction(delFunc)
-                        );
+        moduleDef->cleanup = reinterpret_cast<void (*)()>(
+                                execEng->getPointerToFunction(delFunc)
+                             );
     }
 }
 
@@ -214,7 +216,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 
     bindJitModule(module);
 
-    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get());
+    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get(), module);
     return moduleDef;
 }
 
@@ -246,7 +248,7 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         verifyModule(*module, llvm::PrintMessageAction);
 
     // let jit or linker finish module before run/link
-    engineFinishModule(moduleDef);
+    engineFinishModule(BModuleDefPtr::cast(moduleDef));
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
