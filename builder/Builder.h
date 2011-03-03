@@ -285,6 +285,8 @@ class Builder : public spug::RCBase {
          * 'context' should be a context that was marked as a catch 
          * context using setCatchBranchpoint() for the code between 
          * emitBeginTry() and the first emitCatch().
+         * @param terminal true if the last catch block (or try block for the 
+         *  first catch) is terminal.
          */
         virtual void emitCatch(model::Context &context,
                                model::Branchpoint *branchpoint,
@@ -295,9 +297,12 @@ class Builder : public spug::RCBase {
         /**
          * Close off an existing try block.
          * The rules for 'context' in emitCatch() apply.
+         * @param terminal true if the last catch block (or try block for the 
+         *  first catch) is terminal.
          */
         virtual void emitEndTry(model::Context &context,
-                                model::Branchpoint *branchpoint
+                                model::Branchpoint *branchpoint,
+                                bool terminal
                                 ) = 0;
     
         /** Emit an exception "throw" */

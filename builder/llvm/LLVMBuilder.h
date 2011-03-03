@@ -109,6 +109,10 @@ class LLVMBuilder : public Builder {
          */
         void clearCachedCleanups(model::Context &context);
 
+        /** Creates special hidden variables used by the generated code. */
+        void createSpecialVar(model::Namespace *ns, model::TypeDef *type, 
+                              const std::string &name
+                              );
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -245,7 +249,8 @@ class LLVMBuilder : public Builder {
                                );
         
         virtual void emitEndTry(model::Context &context,
-                                model::Branchpoint *branchpoint
+                                model::Branchpoint *branchpoint,
+                                bool terminal
                                 );
 
         virtual void emitThrow(model::Context &context,

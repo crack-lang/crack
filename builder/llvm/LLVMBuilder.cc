@@ -391,25 +391,9 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         ContextPtr funcCtx = context.getToplevel();
         BBuilderContextData *bdata = 
             BBuilderContextDataPtr::arcast(funcCtx->builderData);
-        if (!bdata->unwindBlock) {
-            bdata->unwindBlock = BasicBlock::Create(getGlobalContext(),
-                                                    "unwind",
-                                                    func
-                                                    );
-            IRBuilder<> b(bdata->unwindBlock);
-            b.CreateUnwind();
-        }
-        
-        // assertion to make sure this is the right unwind block
-        if (bdata->unwindBlock->getParent() != func) {
-            string bdataFunc = bdata->unwindBlock->getParent()->getName();
-            string curFunc = func->getName();
-            cerr << "bad function for unwind block, got " <<
-                bdataFunc << " expected " << curFunc << endl;
-            assert(false);
-        }
+        BasicBlock *unwindBlock = bdata->getUnwindBlock(func);
 
-        final = bdata->unwindBlock;
+        final = unwindBlock;
     }
 
     BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);
@@ -962,11 +946,33 @@ void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
     builder.CreateBr(bpos->block2);
 }
 
+void LLVMBuilder::createSpecialVar(Namespace *ns, TypeDef *type, 
+                                   const string &name
+                                   ) {
+    Value *ptr;
+    BTypeDef *tp = BTypeDefPtr::cast(type);
+    VarDefPtr varDef = new VarDef(tp, name);
+    varDef->impl = createLocalVar(tp, ptr);
+    ns->addDef(varDef.get());
+}
+
 BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
-    BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch",
-                                                func
-                                                );
-    BBranchpointPtr bpos = new BBranchpoint(catchBlock);
+    // make sure we have the special exception variables installed in the 
+    // context.
+    if (!context.ns->lookUp(":exceptionSelector")) {
+        createSpecialVar(context.ns.get(), context.construct->int32Type.get(), 
+                         ":exceptionSelector"
+                         );
+        createSpecialVar(context.ns.get(), context.construct->voidptrType.get(), 
+                         ":exceptionObject"
+                         );
+    }
+
+    BasicBlock *catchSwitch = BasicBlock::Create(getGlobalContext(), 
+                                                 "catch_switch",
+                                                 func
+                                                 );
+    BBranchpointPtr bpos = new BBranchpoint(catchSwitch);
     return bpos;
 }
 
@@ -977,6 +983,11 @@ void LLVMBuilder::emitCatch(Context &context,
                             ) {
     BBranchpoint *bpos = BBranchpointPtr::cast(branchpoint);
 
+    // get the catch data
+    BBuilderContextData *bdata =
+        BBuilderContextData::get(&context);
+    BBuilderContextData::CatchData &cdata = bdata->getCatchData();
+
     // if this is the first catch block (as indicated by the lack of a 
     // "post-try" block in block2), create the post-try and create a branch to 
     // it in the current block.
@@ -986,25 +997,45 @@ void LLVMBuilder::emitCatch(Context &context,
                                           );
         if (!terminal)
             builder.CreateBr(bpos->block2);
+        
+        // generate a switch instruction based on the value of 
+        // :exceptionSelector, we'll fill it in with values later.
+        builder.SetInsertPoint(bpos->block);
+        VarDefPtr sel = context.ns->lookUp(":exceptionSelector");
+        BHeapVarDefImplPtr selImpl = BHeapVarDefImplPtr::rcast(sel->impl);
+        Value *selVal = builder.CreateLoad(selImpl->rep);
+        cdata.switchInst =
+            builder.CreateSwitch(selVal, bdata->getUnwindBlock(func), 3);
+
+    // if the last catch block was not terminal, branch to after_try
+    } else if (!terminal) {
+        builder.CreateBr(bpos->block2);
     }
 
-    // emit code into the catch block
-    builder.SetInsertPoint(bpos->block);
+    // create a catch block, store it in the switch instruction and make it 
+    // the new insert point.
+    BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch",
+                                                func
+                                                );
+    cdata.switchInst->addCase(ConstantInt::get(builder.getInt32Ty(), 
+                                               cdata.switchInst->getNumCases()
+                                               ), 
+                              catchBlock
+                              );
+    builder.SetInsertPoint(catchBlock);
     
     // store the class implementation
-    BBuilderContextData *bdata =
-        BBuilderContextData::get(&context);
-    BBuilderContextData::CatchData &cdata = bdata->getCatchData();
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
     cdata.classImpls.push_back(btype->getClassInstRep(module));
 }
 
 void LLVMBuilder::emitEndTry(model::Context &context,
-                             Branchpoint *branchpoint
+                             Branchpoint *branchpoint,
+                             bool terminal
                              ) {
     BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
-    // XXX if the catch is non-terminal, create a branch to the next block
-    builder.CreateBr(nextBlock);
+    if (!terminal)
+        builder.CreateBr(nextBlock);
 
     // emit subsequent code into the new block
     builder.SetInsertPoint(nextBlock);
@@ -1221,6 +1252,7 @@ void LLVMBuilder::emitEndFunc(model::Context &context,
     BBuilderContextData *contextData =
         BBuilderContextDataPtr::rcast(context.builderData);
     func = contextData->func;
+    funcBlock = func ? &func->front() : 0;
     builder.SetInsertPoint(contextData->block);
 }
 

@@ -33,6 +33,42 @@ if (1) {
         puts('FAILED basic exception cleanup.');
 }
 
+# exception discrimination
+if (1) {
+    bool gotIt;
+    try {
+        throw Exception();
+    } catch (FooError ex) {
+        puts('FAILED exception discrimination: wrong exception chosen');
+    } catch (Exception ex) {
+        gotIt = 1;
+    }
+    if (!gotIt)
+        puts('FAILED exception discrimination: correct catch not chosen');
+}
+
+#if (1) {
+#    bool gotIt;
+#    bool cleanedUp;
+#    class Cleanup { oper release() { cleanedUp = 1; } }
+#    try {
+#        try {
+#            Cleanup c;
+#            throw Exception();
+#        } catch (FooError ex) {
+#            gotIt = 1;
+#        }
+#        puts ('passed catch');
+#    } catch (Exception ex) {
+#        puts('in exception handler');
+#    }
+#    if (gotIt)
+#        puts('FAILED nested exception handling.');
+#    
+#    if (!cleanedUp)
+#        puts('FAILED nested exception cleanup.');
+#}
+
 puts('ok');
 
 // try block ends with a terminator

@@ -3,12 +3,16 @@
 #ifndef _builder_llvm_BBuilderContextData_h_
 #define _builder_llvm_BBuilderContextData_h_
 
+#include <vector>
 #include "model/BuilderContextData.h"
+#include "model/Context.h"
 #include <spug/RCPtr.h>
 
 namespace llvm {
     class Function;
     class BasicBlock;
+    class SwitchInst;
+    class Value;
 }
 
 namespace builder { namespace mvll {
@@ -26,6 +30,9 @@ public:
         
         // list of the incomplete catch selectors for the block.
         std::vector<IncompleteCatchSelector *> selectors;
+        
+        // the switch instruction for the catch blocks
+        llvm::SwitchInst *switchInst;
     };
 
     llvm::Function *func;
@@ -44,7 +51,7 @@ public:
     ~BBuilderContextData() {
         delete catchData;
     }
-    
+
     static BBuilderContextData *get(model::Context *context) {
         if (!context->builderData)
             context->builderData = new BBuilderContextData();
@@ -62,6 +69,8 @@ public:
         delete catchData;
         catchData = 0;
     }
+
+    llvm::BasicBlock *getUnwindBlock(llvm::Function *func);
 
 private:
     CatchData *catchData;

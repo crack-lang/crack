@@ -2090,6 +2090,7 @@ ContextPtr Parser::parseTryStmt() {
       terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
    context->setCatchBranchpoint(0);
+   bool lastWasTerminal = terminal;
    
    tok = toker.getToken();
    if (!tok.isCatch())
@@ -2113,7 +2114,7 @@ ContextPtr Parser::parseTryStmt() {
          unexpected(tok, "variable name expected after exception type.");
 
       context->builder.emitCatch(*context, pos.get(), exceptionType.get(),
-                                 terminal
+                                 lastWasTerminal
                                  );
       
       tok = toker.getToken();
@@ -2131,14 +2132,26 @@ ContextPtr Parser::parseTryStmt() {
       
       {
          ContextStackFrame cstack(*this, context->createSubContext().get());
-         parseBlock(true, noCallbacks); // XXX add catchLeave callback
+         // XXX add catchLeave callback
+         ContextPtr terminalCatch = parseBlock(true, noCallbacks); 
+         lastWasTerminal = terminalCatch;
+         if (terminalCatch) {
+            if (terminal && terminal->encloses(*terminalCatch))
+               // need to replace the terminal context to the closer terminal 
+               // context for the catch
+               terminal = terminalCatch;
+         } else {
+            // non-terminal catch, therefore the entire try/catch statement 
+            // is not terminal.
+            terminal = 0;
+         }
       }
       
       // see if there's another catch
       tok = toker.getToken();
       if (!tok.isCatch()) {
          toker.putBack(tok);
-         context->builder.emitEndTry(*context, pos.get());
+         context->builder.emitEndTry(*context, pos.get(), lastWasTerminal);
          return terminal;
       }
    }

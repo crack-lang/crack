@@ -2,15 +2,18 @@
 
 #include "BCleanupFrame.h"
 
-#include "BBuilderContextData.h"
-#include "Incompletes.h"
-#include "model/ResultExpr.h"
-#include "LLVMBuilder.h"
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
+#include "model/ResultExpr.h"
+#include "model/VarDef.h"
+#include "BBuilderContextData.h"
+#include "VarDefs.h"
+#include "Incompletes.h"
+#include "LLVMBuilder.h"
 
 using namespace std;
 using namespace llvm;
+using namespace model;
 using namespace builder::mvll;
 
 BasicBlock *BCleanupFrame::emitUnwindCleanups(BasicBlock *next) {
@@ -86,30 +89,37 @@ BasicBlock *BCleanupFrame::getLandingPad(
             llvmBuilder.module->getFunction("llvm.eh.selector");
         
         if (cdata) {
-            // We're in a try/catch.  create the incomplete selector function call
-            // (class impls will get filled in later)
-            cdata->selectors.push_back(
+            // We're in a try/catch.  create the incomplete selector function 
+            // call (class impls will get filled in later)
+            IncompleteCatchSelector *selectorValue =
                 new IncompleteCatchSelector(selectorFunc, exceptionValue,
                                             personality,
                                             cdata->classImpls,
                                             b.GetInsertBlock()
-                                            )
-            );
+                                            );
+            cdata->selectors.push_back(selectorValue);
+
+            // store the exception selector
+            VarDefPtr vd = context->ns->lookUp(":exceptionSelector");
+            BMemVarDefImpl *impl = BMemVarDefImplPtr::rcast(vd->impl);
+            b.CreateStore(selectorValue, impl->getRep(llvmBuilder));
+            
+            // store the exception object
+            vd = context->ns->lookUp(":exceptionObject");
+            impl = BMemVarDefImplPtr::rcast(vd->impl);
+            b.CreateStore(exceptionValue, impl->getRep(llvmBuilder));
+
         } else {
             // cleanups only
             vector<Value *> args(3);
             args[0] = exceptionValue;
             args[1] = personality;
             args[2] = Constant::getNullValue(i8PtrType);
-            Value *selectorValue = b.CreateCall(selectorFunc, args.begin(), 
-                                                args.end()
-                                                );
+            b.CreateCall(selectorFunc, args.begin(), args.end());
         }
 
-        // XXX need to hold onto this selection value for the catch 
-        // determination.
-        
-        b.CreateBr(next);        
+
+        b.CreateBr(next);
     }
     
     return lp;

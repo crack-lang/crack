@@ -190,7 +190,9 @@ void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
     for (i = 0; i < typeImpls.size(); ++i)
         args[i + 2] = typeImpls[i];
     args[i + 2] = Constant::getNullValue(builder.getInt8Ty()->getPointerTo());
-    builder.CreateCall(ehSelector, args.begin(), args.end());
+    replaceAllUsesWith(
+        builder.CreateCall(ehSelector, args.begin(), args.end())
+    );
 }    
 
 // IncompleteNarrower
@@ -724,4 +726,3 @@ Value *IncompleteSpecialize::emitSpecialize(
     }
 
 }
-
