@@ -7,7 +7,7 @@
 using namespace llvm;
 using namespace std;
 using namespace builder::mvll;
-
+/*
 DebugInfo::DebugInfo(Module *m,
                      const string &file
                      ): module(m),
@@ -23,10 +23,10 @@ DebugInfo::DebugInfo(Module *m,
                                 )),
                         currentFile(compileUnit),
                         currentScope(compileUnit) { }
-
+*/
 void DebugInfo::emitFunctionDef(const std::string &name,
                                 const parser::Location &loc) {
-
+/*
     currentScope = debugFactory.CreateSubprogram(
             currentScope,
             name,
@@ -38,7 +38,7 @@ void DebugInfo::emitFunctionDef(const std::string &name,
             false, // local to unit (i.e. like C static)
             true // is definition
     );
-
+*/
 }
 /*
 DILocation DebugInfo::emitLocation(const parser::Location &loc) {
@@ -52,11 +52,11 @@ DILocation DebugInfo::emitLocation(const parser::Location &loc) {
 }
 */
 MDNode* DebugInfo::emitLexicalBlock(const parser::Location &loc) {
-
+/*
     currentScope = debugFactory.CreateLexicalBlock(currentScope,
                                                    currentFile,
                                                    loc.getLineNumber(),
                                                    0 // col
                                                    );
-
+*/
 }

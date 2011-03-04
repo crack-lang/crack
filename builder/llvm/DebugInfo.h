@@ -21,13 +21,13 @@ class DebugInfo {
 
 private:
     llvm::Module *module;
-    llvm::DIFactory debugFactory;
+    //llvm::DIFactory debugFactory;
     llvm::DICompileUnit compileUnit;
     llvm::DIFile currentFile;
     llvm::DIScope currentScope;
 
 public:
-    DebugInfo(llvm::Module *m, const std::string &file);
+    DebugInfo(llvm::Module *m, const std::string &file) { }
 
     void emitFunctionDef(const std::string &name,
                          const parser::Location &loc);

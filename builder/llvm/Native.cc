@@ -17,7 +17,6 @@
 #include <llvm/PassManager.h>
 #include <llvm/Pass.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/System/Host.h>
 #include <llvm/Support/StandardPasses.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/LinkAllPasses.h>
@@ -28,8 +27,10 @@
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/Linker.h>
-#include <llvm/System/Program.h>
+#include <llvm/Support/Program.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Support/IRBuilder.h>
+#include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
 #include <iostream>
