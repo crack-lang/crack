@@ -2083,6 +2083,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint64Type);
 
+    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uint32Type);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), int32Type);
+
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),
                                             "array", 
