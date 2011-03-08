@@ -11,6 +11,7 @@
 namespace llvm {
     class Function;
     class BasicBlock;
+    class Module;
     class SwitchInst;
     class Value;
 }
@@ -20,19 +21,54 @@ namespace builder { namespace mvll {
 class IncompleteCatchSelector;
 
 SPUG_RCPTR(BBuilderContextData);
+SPUG_RCPTR(BTypeDef);
 
 class BBuilderContextData : public model::BuilderContextData {
 public:
+
+    // stores the type to catch and the block to branch to if the type is 
+    // caught.
+    struct CatchBranch {
+        BTypeDefPtr type;
+        llvm::BasicBlock *block;
+        
+        CatchBranch(BTypeDef *type, llvm::BasicBlock *block) :
+            type(type),
+            block(block) {
+        }
+    };
+
     // state information on the current try/catch block.
-    struct CatchData {
-        // list of the implementation values of the classes in "catch" clauses
-        std::vector<llvm::Value *> classImpls;
+    SPUG_RCPTR(CatchData);
+    struct CatchData : spug::RCBase {
+        // all of the type/branch combinations in the catch clauses (this will 
+        // be augmented with all of the combos for statements that this is 
+        // nested in)
+        std::vector<CatchBranch> catches;
         
         // list of the incomplete catch selectors for the block.
         std::vector<IncompleteCatchSelector *> selectors;
         
         // the switch instruction for the catch blocks
         llvm::SwitchInst *switchInst;
+        
+        // catch data for nested catches.
+        std::vector<CatchDataPtr> nested;
+
+        /**
+         * Populate the 'values' array with the implementations of the types 
+         * in 'types'.
+         */
+        void populateClassImpls(std::vector<llvm::Value *> &values,
+                                llvm::Module *module
+                                );
+
+        /** 
+         * Fix all of the selectors in the context by filling in the class 
+         * implementation objects and calling Incomplete::fix() on them to 
+         * convert them to calls to llvm.eh.selector().
+         */
+        void fixAllSelectors(llvm::Module *module);
     };
 
     llvm::Function *func;
@@ -44,36 +80,30 @@ public:
             func(0),
             block(0),
             unwindBlock(0),
-            nextCleanupBlock(0),
-            catchData(0) {
+            nextCleanupBlock(0) {
     }
     
-    ~BBuilderContextData() {
-        delete catchData;
-    }
-
     static BBuilderContextData *get(model::Context *context) {
         if (!context->builderData)
             context->builderData = new BBuilderContextData();
         return BBuilderContextDataPtr::rcast(context->builderData);
     }
     
-    CatchData &getCatchData() {
+    CatchDataPtr getCatchData() {
         if (!catchData)
             catchData = new CatchData();
-        return *catchData;
+        return catchData;
     }
     
     void deleteCatchData() {
         assert(catchData);
-        delete catchData;
         catchData = 0;
     }
 
     llvm::BasicBlock *getUnwindBlock(llvm::Function *func);
 
 private:
-    CatchData *catchData;
+    CatchDataPtr catchData;
     BBuilderContextData(const BBuilderContextData &);
 };
 

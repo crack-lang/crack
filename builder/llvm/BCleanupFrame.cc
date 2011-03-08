@@ -7,6 +7,7 @@
 #include "model/ResultExpr.h"
 #include "model/VarDef.h"
 #include "BBuilderContextData.h"
+#include "BTypeDef.h"
 #include "VarDefs.h"
 #include "Incompletes.h"
 #include "LLVMBuilder.h"
@@ -94,7 +95,6 @@ BasicBlock *BCleanupFrame::getLandingPad(
             IncompleteCatchSelector *selectorValue =
                 new IncompleteCatchSelector(selectorFunc, exceptionValue,
                                             personality,
-                                            cdata->classImpls,
                                             b.GetInsertBlock()
                                             );
             cdata->selectors.push_back(selectorValue);

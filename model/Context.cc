@@ -448,7 +448,7 @@ ContextPtr Context::getCatch() {
     if (catchBranch)
         return this;
     else if (toplevel)
-        return parent;
+        return this;
     else if (parent)
         return parent->getCatch();
 }

@@ -47,27 +47,28 @@ if (1) {
         puts('FAILED exception discrimination: correct catch not chosen');
 }
 
-#if (1) {
-#    bool gotIt;
-#    bool cleanedUp;
-#    class Cleanup { oper release() { cleanedUp = 1; } }
-#    try {
-#        try {
-#            Cleanup c;
-#            throw Exception();
-#        } catch (FooError ex) {
-#            gotIt = 1;
-#        }
-#        puts ('passed catch');
-#    } catch (Exception ex) {
-#        puts('in exception handler');
-#    }
-#    if (gotIt)
-#        puts('FAILED nested exception handling.');
-#    
-#    if (!cleanedUp)
-#        puts('FAILED nested exception cleanup.');
-#}
+if (1) {
+    bool gotFoo, gotEx, cleanedUp;
+    class Cleanup { oper release() { cleanedUp = 1; } }
+    try {
+        try {
+            Cleanup c;
+            throw Exception();
+        } catch (FooError ex) {
+            gotFoo = 1;
+        }
+    } catch (Exception ex) {
+        gotEx = 1;
+    }
+    if (gotFoo)
+        puts('FAILED nested exception handling (matched inner catch).');
+    
+    if (!gotEx)
+        puts('FAILED nested exception handling (missed catch).');
+    
+    if (!cleanedUp)
+        puts('FAILED nested exception cleanup.');
+}
 
 puts('ok');
 

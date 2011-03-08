@@ -2082,14 +2082,16 @@ ContextPtr Parser::parseTryStmt() {
       unexpected(tok, "Curly bracket expected after try.");
    
    BranchpointPtr pos = context->builder.emitBeginTry(*context);
-   
+
+   // create a subcontext for the try statement
+   ContextStackFrame cstack(*this, context->createSubContext().get());
    context->setCatchBranchpoint(pos.get());
+
    ContextPtr terminal;
    {
       ContextStackFrame cstack(*this, context->createSubContext().get());
       terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
-   context->setCatchBranchpoint(0);
    bool lastWasTerminal = terminal;
    
    tok = toker.getToken();
