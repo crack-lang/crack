@@ -13,7 +13,10 @@ registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 
 
 class Exception : VTableBase {}
-class FooError : Exception {}
+class FooError : Exception {
+    int val;
+    oper init(int val0) : val = val0 {}
+}
 class NotException : VTableBase {}
 
 if (1) {
@@ -83,6 +86,17 @@ if (1) {
     foo();
     if (!didBreak)
         puts('FAILED terminality check.');
+}
+
+if (1) {
+    int val;
+    try {
+        throw FooError(1010);
+    } catch (FooError ex) {
+        val = ex.val;
+    }
+    if (val != 1010)
+        puts('FAILED getting the exception object');
 }
 
 puts('ok');

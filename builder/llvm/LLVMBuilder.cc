@@ -14,6 +14,7 @@
 #include "Consts.h"
 #include "FuncBuilder.h"
 #include "Incompletes.h"
+#include "LLVMValueExpr.h"
 #include "Ops.h"
 #include "PlaceholderInstruction.h"
 #include "Utils.h"
@@ -977,11 +978,11 @@ BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
     return bpos;
 }
 
-void LLVMBuilder::emitCatch(Context &context,
-                            Branchpoint *branchpoint,
-                            TypeDef *catchType,
-                            bool terminal
-                            ) {
+ExprPtr LLVMBuilder::emitCatch(Context &context,
+                               Branchpoint *branchpoint,
+                               TypeDef *catchType,
+                               bool terminal
+                               ) {
     BBranchpoint *bpos = BBranchpointPtr::cast(branchpoint);
 
     // get the catch data
@@ -1020,15 +1021,25 @@ void LLVMBuilder::emitCatch(Context &context,
     builder.SetInsertPoint(catchBlock);
     
     // store the type and the catch block for later fixup
+    BTypeDef *btype = BTypeDefPtr::cast(catchType);
     cdata->catches.push_back(
-        BBuilderContextData::CatchBranch(BTypeDefPtr::cast(catchType),
-                                         catchBlock
-                                         )
+        BBuilderContextData::CatchBranch(btype, catchBlock)
     );
     
-    // record it if the catch has non-terminal blocks
+    // record it if the last block was non-terminal
     if (!terminal)
         cdata->nonTerminal = true;
+    
+    // emit an expression to get the exception object
+    VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
+    BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
+    Value *exObjVal = builder.CreateLoad(exObjImpl->rep);
+    Function *getExFunc = module->getFunction("__CrackGetException");
+    vector<Value *> parms(1);
+    parms[0] = exObjVal;
+    lastValue = builder.CreateCall(getExFunc, parms.begin(), parms.end());
+    lastValue = builder.CreateBitCast(lastValue, btype->rep);
+    return new LLVMValueExpr(catchType, lastValue);
 }
 
 void LLVMBuilder::emitEndTry(model::Context &context,
