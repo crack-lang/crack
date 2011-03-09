@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc
+// Copyright 2009-2011 Google Inc, Shannon Weyrick <weyrick@mozek.us>
 
 #include <iostream>
 #include <fstream>
@@ -9,6 +9,7 @@
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/TypeDef.h"
+#include "builder/BuilderOptions.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
 #include "Crack.h"
@@ -202,6 +203,12 @@ int main(int argc, char **argv) {
                 "from standard input." << endl;
     } else if (!strcmp(argv[optind], "-")) {
         crack.setArgv(argc - optind, &argv[optind]);
+        // ensure a reasonable output file name in native mode
+        if (bType == nativeBuilder &&
+            crack.options->optionMap.find("out") ==
+              crack.options->optionMap.end()) {
+            crack.options->optionMap["out"] = "crack_output";
+        }
         crack.runScript(cin, "<stdin>");
     } else {
         // it's the script name - run it.
