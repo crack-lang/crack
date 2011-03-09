@@ -21,8 +21,8 @@ def expand(dst, m):
     sources = vars[m.group(2)]
     dst.write(m.group(1) + ' \\\\\n    '.join(sources) + m.group(3))
 
-src = file('Makefile.am.in')
-dst = file('Makefile.am', 'w')
+src = open('Makefile.am.in')
+dst = open('Makefile.am', 'w')
 for line in src:
     m = varRx.match(line)
     if m:

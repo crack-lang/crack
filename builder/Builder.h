@@ -287,12 +287,14 @@ class Builder : public spug::RCBase {
          * emitBeginTry() and the first emitCatch().
          * @param terminal true if the last catch block (or try block for the 
          *  first catch) is terminal.
+         * @returns an expression that can be used to initialize the exception 
+         *  variable.
          */
-        virtual void emitCatch(model::Context &context,
-                               model::Branchpoint *branchpoint,
-                               model::TypeDef *catchType,
-                               bool terminal
-                               ) = 0;
+        virtual model::ExprPtr emitCatch(model::Context &context,
+                                         model::Branchpoint *branchpoint,
+                                         model::TypeDef *catchType,
+                                         bool terminal
+                                         ) = 0;
         
         /**
          * Close off an existing try block.

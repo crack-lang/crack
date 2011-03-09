@@ -14,6 +14,7 @@
 #include "Consts.h"
 #include "FuncBuilder.h"
 #include "Incompletes.h"
+#include "LLVMValueExpr.h"
 #include "Ops.h"
 #include "PlaceholderInstruction.h"
 #include "Utils.h"
@@ -376,7 +377,7 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         BBranchpointPtr::rcast(outerContext->getCatchBranchpoint());
 
     BasicBlock *final;
-    BBuilderContextData::CatchData *cdata = 0;
+    BBuilderContextData::CatchDataPtr cdata;
     if (bpos) {
         final = bpos->block;
 
@@ -384,7 +385,7 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         // placeholders instructions for the selector calls.
         BBuilderContextData *outerBData = 
             BBuilderContextData::get(outerContext.get());;
-        cdata = &outerBData->getCatchData();    
+        cdata = outerBData->getCatchData();    
     } else {
         // no catch clause.  Find or create the unwind clause for the function 
         // to continue the unwind.
@@ -399,7 +400,7 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
     BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);
     BCleanupFrame *firstCleanupFrame = 
         BCleanupFramePtr::rcast(context.cleanupFrame);
-    return firstCleanupFrame->getLandingPad(cleanups, cdata);
+    return firstCleanupFrame->getLandingPad(cleanups, cdata.get());
 }
 
 void LLVMBuilder::clearCachedCleanups(Context &context) {
@@ -953,6 +954,7 @@ void LLVMBuilder::createSpecialVar(Namespace *ns, TypeDef *type,
     BTypeDef *tp = BTypeDefPtr::cast(type);
     VarDefPtr varDef = new VarDef(tp, name);
     varDef->impl = createLocalVar(tp, ptr);
+    ptr->setName(name);
     ns->addDef(varDef.get());
 }
 
@@ -976,17 +978,17 @@ BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
     return bpos;
 }
 
-void LLVMBuilder::emitCatch(Context &context,
-                            Branchpoint *branchpoint,
-                            TypeDef *catchType,
-                            bool terminal
-                            ) {
+ExprPtr LLVMBuilder::emitCatch(Context &context,
+                               Branchpoint *branchpoint,
+                               TypeDef *catchType,
+                               bool terminal
+                               ) {
     BBranchpoint *bpos = BBranchpointPtr::cast(branchpoint);
 
     // get the catch data
     BBuilderContextData *bdata =
         BBuilderContextData::get(&context);
-    BBuilderContextData::CatchData &cdata = bdata->getCatchData();
+    BBuilderContextData::CatchDataPtr cdata = bdata->getCatchData();
 
     // if this is the first catch block (as indicated by the lack of a 
     // "post-try" block in block2), create the post-try and create a branch to 
@@ -1004,7 +1006,7 @@ void LLVMBuilder::emitCatch(Context &context,
         VarDefPtr sel = context.ns->lookUp(":exceptionSelector");
         BHeapVarDefImplPtr selImpl = BHeapVarDefImplPtr::rcast(sel->impl);
         Value *selVal = builder.CreateLoad(selImpl->rep);
-        cdata.switchInst =
+        cdata->switchInst =
             builder.CreateSwitch(selVal, bdata->getUnwindBlock(func), 3);
 
     // if the last catch block was not terminal, branch to after_try
@@ -1012,49 +1014,68 @@ void LLVMBuilder::emitCatch(Context &context,
         builder.CreateBr(bpos->block2);
     }
 
-    // create a catch block, store it in the switch instruction and make it 
-    // the new insert point.
+    // create a catch block and make it the new insert point.
     BasicBlock *catchBlock = BasicBlock::Create(getGlobalContext(), "catch",
                                                 func
                                                 );
-    cdata.switchInst->addCase(ConstantInt::get(builder.getInt32Ty(), 
-                                               cdata.switchInst->getNumCases()
-                                               ), 
-                              catchBlock
-                              );
     builder.SetInsertPoint(catchBlock);
     
-    // store the class implementation
+    // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
-    cdata.classImpls.push_back(btype->getClassInstRep(module));
+    cdata->catches.push_back(
+        BBuilderContextData::CatchBranch(btype, catchBlock)
+    );
+    
+    // record it if the last block was non-terminal
+    if (!terminal)
+        cdata->nonTerminal = true;
+    
+    // emit an expression to get the exception object
+    VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
+    BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
+    Value *exObjVal = builder.CreateLoad(exObjImpl->rep);
+    Function *getExFunc = module->getFunction("__CrackGetException");
+    vector<Value *> parms(1);
+    parms[0] = exObjVal;
+    lastValue = builder.CreateCall(getExFunc, parms.begin(), parms.end());
+    lastValue = builder.CreateBitCast(lastValue, btype->rep);
+    return new LLVMValueExpr(catchType, lastValue);
 }
 
 void LLVMBuilder::emitEndTry(model::Context &context,
                              Branchpoint *branchpoint,
                              bool terminal
                              ) {
-    BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
-    if (!terminal)
-        builder.CreateBr(nextBlock);
-
-    // emit subsequent code into the new block
-    builder.SetInsertPoint(nextBlock);
-    
-    // fix all of the incomplete selector functions now that we have all of 
-    // the catch clauses.
+    // get the catch-data
     BBuilderContextData *bdata = BBuilderContextData::get(&context);
-    vector<IncompleteCatchSelector *> &ics = 
-        bdata->getCatchData().selectors;
-    for (vector<IncompleteCatchSelector *>::iterator iter = ics.begin();
-         iter != ics.end();
-         ++iter
-         ) {
-        (*iter)->fix();
+    BBuilderContextData::CatchDataPtr cdata = bdata->getCatchData();
+
+    BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
+    if (!terminal) {
+        builder.CreateBr(nextBlock);
+        cdata->nonTerminal = true;
     }
-    
-    // free up the catch data associated with the context (a context can 
-    // include multiple try/catch blocks)
-    bdata->deleteCatchData();
+
+    if (!cdata->nonTerminal) {
+        // all blocks are terminal - delete the after_try block
+        nextBlock->eraseFromParent();
+    } else {
+        // emit subsequent code into the new block
+        builder.SetInsertPoint(nextBlock);
+    }
+
+    // if this is a nested try/catch block, add it to the catch data for its 
+    // parent.
+    ContextPtr outer = context.getParent()->getCatch();
+    if (!outer->toplevel) {
+        // this isn't a toplevel, therefore it is a try/catch statement
+        BBuilderContextData::CatchDataPtr enclosingCData =
+            BBuilderContextData::get(outer.get())->getCatchData();
+        enclosingCData->nested.push_back(cdata);
+        
+    } else {
+        cdata->fixAllSelectors(module);
+    }
 }
 
 void LLVMBuilder::emitThrow(Context &context, Expr *expr) {
@@ -2082,6 +2103,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint32Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint64Type);
+
+    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uint32Type);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), int32Type);
 
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),

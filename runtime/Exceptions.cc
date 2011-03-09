@@ -59,6 +59,14 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
     _Unwind_RaiseException(uex);
 }
 
+/** 
+ * Function called to obtain the original crack exception object from the 
+ * ABI's exception object.
+ */
+extern "C" void *__CrackGetException(_Unwind_Exception *uex) {
+    return uex->user_data;
+} 
+
 extern "C" void __CrackPrintPointer(void *pointer) {
     cerr << "pointer is: " << pointer << endl;
 }

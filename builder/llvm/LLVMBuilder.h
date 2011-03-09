@@ -242,11 +242,11 @@ class LLVMBuilder : public Builder {
 
         virtual model::BranchpointPtr emitBeginTry(model::Context &context);
         
-        virtual void emitCatch(model::Context &context,
-                               model::Branchpoint *branchpoint,
-                               model::TypeDef *catchType,
-                               bool terminal
-                               );
+        virtual model::ExprPtr emitCatch(model::Context &context,
+                                         model::Branchpoint *branchpoint,
+                                         model::TypeDef *catchType,
+                                         bool terminal
+                                         );
         
         virtual void emitEndTry(model::Context &context,
                                 model::Branchpoint *branchpoint,

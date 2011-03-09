@@ -212,6 +212,17 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         f.finish();
     }
     
+    // create "__CrackGetException(voidptr)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidptrType,
+                      "__CrackGetException", 
+                      1
+                      );
+        f.addArg("exceptionObject", voidptrType);
+        f.setSymbolName("__CrackGetException");
+        f.finish();
+    }
+    
     // possibly bind to execution engine
 
     bindJitModule(module);

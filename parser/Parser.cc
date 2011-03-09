@@ -2082,14 +2082,16 @@ ContextPtr Parser::parseTryStmt() {
       unexpected(tok, "Curly bracket expected after try.");
    
    BranchpointPtr pos = context->builder.emitBeginTry(*context);
-   
+
+   // create a subcontext for the try statement
+   ContextStackFrame cstack(*this, context->createSubContext().get());
    context->setCatchBranchpoint(pos.get());
+
    ContextPtr terminal;
    {
       ContextStackFrame cstack(*this, context->createSubContext().get());
       terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
-   context->setCatchBranchpoint(0);
    bool lastWasTerminal = terminal;
    
    tok = toker.getToken();
@@ -2109,13 +2111,14 @@ ContextPtr Parser::parseTryStmt() {
       TypeDefPtr exceptionType = parseTypeSpec();
       
       // parse the exception variable
-      tok = toker.getToken();
-      if (!tok.isIdent())
+      Token varTok = toker.getToken();
+      if (!varTok.isIdent())
          unexpected(tok, "variable name expected after exception type.");
 
-      context->builder.emitCatch(*context, pos.get(), exceptionType.get(),
-                                 lastWasTerminal
-                                 );
+      ExprPtr exceptionObj =
+         context->builder.emitCatch(*context, pos.get(), exceptionType.get(),
+                                    lastWasTerminal
+                                    );
       
       tok = toker.getToken();
       if (!tok.isRParen())
@@ -2132,6 +2135,10 @@ ContextPtr Parser::parseTryStmt() {
       
       {
          ContextStackFrame cstack(*this, context->createSubContext().get());
+         
+         // create a variable definition for the exception variable
+         context->emitVarDef(exceptionType.get(), varTok, exceptionObj.get());
+         
          // XXX add catchLeave callback
          ContextPtr terminalCatch = parseBlock(true, noCallbacks); 
          lastWasTerminal = terminalCatch;

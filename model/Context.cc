@@ -174,8 +174,8 @@ ContextPtr Context::getToplevel() {
 bool Context::encloses(const Context &other) const {
     if (this == &other)
         return true;
-    else if (parent)
-        return encloses(*parent);
+    else if (other.parent)
+        return encloses(*other.parent);
     else
         return false;
 }
@@ -448,7 +448,7 @@ ContextPtr Context::getCatch() {
     if (catchBranch)
         return this;
     else if (toplevel)
-        return parent;
+        return this;
     else if (parent)
         return parent->getCatch();
 }

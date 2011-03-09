@@ -283,6 +283,17 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
         f.finish();
     }
     
+    // create "__CrackGetException(voidptr)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidptrType,
+                      "__CrackGetException", 
+                      1
+                      );
+        f.addArg("exceptionObject", voidptrType);
+        f.setSymbolName("__CrackGetException");
+        f.finish();
+    }
+    
     // add to module list
     BModuleDef *newModule = new BModuleDef(name, context.ns.get(), module);
     addModule(newModule);

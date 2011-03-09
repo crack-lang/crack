@@ -144,7 +144,6 @@ void *IncompleteCatchSelector::operator new(size_t s) {
 IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
                                                  Value *exception, 
                                                  Value *personalityFunc,
-                                                 vector<Value *> &typeImpls,
                                                  BasicBlock *parent
                                                  ) :
     PlaceholderInstruction(
@@ -156,13 +155,12 @@ IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
     ehSelector(ehSelector),
     exception(exception),
     personalityFunc(personalityFunc),
-    typeImpls(typeImpls) {
+    typeImpls(0) {
 }
 
 IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
                                                  Value *exception,
                                                  Value *personalityFunc,
-                                                 vector<Value *> &typeImpls,
                                                  Instruction *insertBefore
                                                  ) :
     PlaceholderInstruction(
@@ -174,25 +172,23 @@ IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
     ehSelector(ehSelector),
     exception(exception),
     personalityFunc(personalityFunc),
-    typeImpls(typeImpls) {
+    typeImpls(0) {
 }
 
 IncompleteCatchSelector::~IncompleteCatchSelector() {
 }
 
 Instruction *IncompleteCatchSelector::clone_impl() const {
-    return new IncompleteCatchSelector(ehSelector, exception, personalityFunc,
-                                       typeImpls
-                                       );
+    return new IncompleteCatchSelector(ehSelector, exception, personalityFunc);
 }
 
 void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
-    vector<Value *> args(3 + typeImpls.size());
+    vector<Value *> args(3 + typeImpls->size());
     args[0] = exception;
     args[1] = personalityFunc;
     int i;
-    for (i = 0; i < typeImpls.size(); ++i)
-        args[i + 2] = typeImpls[i];
+    for (i = 0; i < typeImpls->size(); ++i)
+        args[i + 2] = (*typeImpls)[i];
     args[i + 2] = Constant::getNullValue(builder.getInt8Ty()->getPointerTo());
     replaceAllUsesWith(
         builder.CreateCall(ehSelector, args.begin(), args.end())

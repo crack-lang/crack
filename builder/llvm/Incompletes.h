@@ -143,9 +143,12 @@ public:
 class IncompleteCatchSelector : public PlaceholderInstruction {
 private:
     llvm::Value *ehSelector, *exception, *personalityFunc;
-    std::vector<llvm::Value *> &typeImpls;
 
 public:
+    // pointers to the type implementation globals, which are set on 
+    // completion of the catch clause.
+    std::vector<llvm::Value *> *typeImpls;
+
     // allocate space for 0 operands
     // NOTE: We don't make use of any of the operand magic because none of the 
     // associated value objects should be replacable.  If you start seeing 
@@ -156,14 +159,12 @@ public:
     IncompleteCatchSelector(llvm::Value *ehSelector,
                             llvm::Value *exception,
                             llvm::Value *personalityFunc,
-                            std::vector<llvm::Value *> &typeImpls,
                             llvm::BasicBlock *parent
                             );
 
     IncompleteCatchSelector(llvm::Value *ehSelector,
                             llvm::Value *exception,
                             llvm::Value *personalityFunc,
-                            std::vector<llvm::Value *> &typeImpls,
                             llvm::Instruction *insertBefore = 0
                             );
 
