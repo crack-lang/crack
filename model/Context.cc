@@ -174,8 +174,8 @@ ContextPtr Context::getToplevel() {
 bool Context::encloses(const Context &other) const {
     if (this == &other)
         return true;
-    else if (parent)
-        return encloses(*parent);
+    else if (other.parent)
+        return encloses(*other.parent);
     else
         return false;
 }

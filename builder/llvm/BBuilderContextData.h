@@ -54,6 +54,11 @@ public:
         
         // catch data for nested catches.
         std::vector<CatchDataPtr> nested;
+        
+        // true if some of the blocks in the try statement are non-terminal
+        bool nonTerminal;
+        
+        CatchData() : nonTerminal(false) {}
 
         /**
          * Populate the 'values' array with the implementations of the types 

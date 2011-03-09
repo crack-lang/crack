@@ -1025,22 +1025,33 @@ void LLVMBuilder::emitCatch(Context &context,
                                          catchBlock
                                          )
     );
+    
+    // record it if the catch has non-terminal blocks
+    if (!terminal)
+        cdata->nonTerminal = true;
 }
 
 void LLVMBuilder::emitEndTry(model::Context &context,
                              Branchpoint *branchpoint,
                              bool terminal
                              ) {
-    BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
-    if (!terminal)
-        builder.CreateBr(nextBlock);
-
-    // emit subsequent code into the new block
-    builder.SetInsertPoint(nextBlock);
-
     // get the catch-data
     BBuilderContextData *bdata = BBuilderContextData::get(&context);
     BBuilderContextData::CatchDataPtr cdata = bdata->getCatchData();
+
+    BasicBlock *nextBlock = BBranchpointPtr::cast(branchpoint)->block2;
+    if (!terminal) {
+        builder.CreateBr(nextBlock);
+        cdata->nonTerminal = true;
+    }
+
+    if (!cdata->nonTerminal) {
+        // all blocks are terminal - delete the after_try block
+        nextBlock->eraseFromParent();
+    } else {
+        // emit subsequent code into the new block
+        builder.SetInsertPoint(nextBlock);
+    }
 
     // if this is a nested try/catch block, add it to the catch data for its 
     // parent.

@@ -70,6 +70,21 @@ if (1) {
         puts('FAILED nested exception cleanup.');
 }
 
+if (1) {
+    bool didBreak;
+    void foo() {
+        while (1) {
+            try { throw Exception(); }
+            catch (FooError ex) { return; }
+            catch (Exception ex) { break; }
+        }
+        didBreak = 1;
+    }
+    foo();
+    if (!didBreak)
+        puts('FAILED terminality check.');
+}
+
 puts('ok');
 
 // try block ends with a terminator
