@@ -607,13 +607,6 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
                                  valueArgs.end()
                                  );
 
-        /*
-        if (debugInfo) {
-            builder.SetCurrentDebugLocation(
-                    DebugLoc::getFromDILocation(debugInfo->emitLocation(
-                                             context.getLocation())));
-        }
-        */
     }
 
     // continue emitting code into the new following block.

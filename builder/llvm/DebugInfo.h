@@ -9,6 +9,7 @@
 #include "parser/Location.h"
 #include <string>
 #include <llvm/Analysis/DebugInfo.h>
+#include <llvm/Analysis/DIBuilder.h>
 
 namespace llvm {
     class Module;
@@ -21,18 +22,18 @@ class DebugInfo {
 
 private:
     llvm::Module *module;
-    //llvm::DIFactory debugFactory;
-    llvm::DICompileUnit compileUnit;
+    llvm::DIBuilder builder;
     llvm::DIFile currentFile;
-    llvm::DIScope currentScope;
+    llvm::DIDescriptor currentScope;
 
 public:
-    DebugInfo(llvm::Module *m, const std::string &file) { }
+
+    static const unsigned CRACK_LANG_ID = llvm::dwarf::DW_LANG_lo_user + 50;
+
+    DebugInfo(llvm::Module *m, const std::string &file);
 
     void emitFunctionDef(const std::string &name,
                          const parser::Location &loc);
-
-//    llvm::DILocation emitLocation(const parser::Location &loc);
 
     llvm::MDNode* emitLexicalBlock(const parser::Location &loc);
 
