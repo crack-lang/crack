@@ -97,6 +97,13 @@ class LLVMBuilder : public Builder {
         virtual void engineFinishModule(BModuleDef *moduleDef) { }
 
         /**
+         * common module initialization that happens in all builders
+         * during createModule. includes some functions that need to be
+         * defined in each module.
+         */
+        void createModuleCommon(model::Context &context);
+
+        /**
          * Gets the first unwind block for the context, emitting the whole 
          * cleanup chain if necessary.
          */

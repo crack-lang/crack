@@ -2180,7 +2180,12 @@ ContextPtr Parser::parseThrowStmt() {
       context->builder.emitThrow(*context, expr.get());
    }
 
-   return context->getCatch();
+   // get the terminal context - if it's a toplevel context, we actually want 
+   // to go one step further up.
+   ContextPtr terminal = context->getCatch();
+   if (terminal->toplevel)
+      terminal = terminal->parent;
+   return terminal;
 }
 
 // oper name ( args ) { ... }

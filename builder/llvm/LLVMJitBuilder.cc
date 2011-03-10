@@ -149,82 +149,8 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     func->setCallingConv(llvm::CallingConv::C);
     builder.SetInsertPoint(BasicBlock::Create(lctx, "__main__", func));
 
-    // name some structs in this module
-    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
-    module->addTypeName(".struct.Class", classType->rep);
-    BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
-                                  context.construct->vtableBaseType);
-    module->addTypeName(".struct.vtableBase", vtableBaseType->rep);
-
-    // all of the "extern" primitive functions have to be created in each of
-    // the modules - we can not directly reference across modules.
-
-    BTypeDef *int32Type = BTypeDefPtr::arcast(context.construct->int32Type);
-    BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
-    BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
-    BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
-    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
-    BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
-    BTypeDef *byteptrType =
-        BTypeDefPtr::arcast(context.construct->byteptrType);
-    BTypeDef *voidptrType =
-        BTypeDefPtr::arcast(context.construct->voidptrType);
-
-    // create "void *calloc(uint size)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
-        f.addArg("size", intType);
-        f.addArg("size", intType);
-        f.setSymbolName("calloc");
-        f.finish();
-        callocFunc = f.funcDef->getRep(*this);
-    }
-
-    // create "array[byteptr] __getArgv()"
-    {
-        TypeDefPtr array = context.ns->lookUp("array");
-        assert(array.get() && "array not defined in context");
-        TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
-        types->push_back(context.construct->byteptrType.get());
-        TypeDefPtr arrayOfByteptr =
-            array->getSpecialization(context, types.get());
-        FuncBuilder f(context, FuncDef::noFlags,
-                      BTypeDefPtr::arcast(arrayOfByteptr),
-                      "__getArgv",
-                      0
-                      );
-        f.setSymbolName("__getArgv");
-        f.finish();
-    }
-
-    // create "int __getArgc()"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
-        f.setSymbolName("__getArgc");
-        f.finish();
-    }
+    createModuleCommon(context);
     
-    // create "__CrackThrow(VTableBase)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "__CrackThrow", 1);
-        f.addArg("exception", vtableBaseType);
-        f.setSymbolName("__CrackThrow");
-        f.finish();
-    }
-    
-    // create "__CrackGetException(voidptr)"
-    {
-        FuncBuilder f(context, FuncDef::noFlags, voidptrType,
-                      "__CrackGetException", 
-                      1
-                      );
-        f.addArg("exceptionObject", voidptrType);
-        f.setSymbolName("__CrackGetException");
-        f.finish();
-    }
-    
-    // possibly bind to execution engine
-
     bindJitModule(module);
 
     BModuleDef *moduleDef = new BModuleDef(name, context.ns.get(), module);

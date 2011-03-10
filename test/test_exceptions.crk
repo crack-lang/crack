@@ -99,6 +99,26 @@ if (1) {
         puts('FAILED getting the exception object');
 }
 
+if (1) {
+    void f() { throw Exception(); }
+}
+
+if (1) {
+    bool cleanedUp;
+    class Cleanup { oper release() { cleanedUp = 1; } }
+    void f() {
+        Cleanup c;
+//        throw Exception();
+    }
+    try {
+        f();
+    } catch (Exception ex) {
+        puts('test');
+    }
+    if (!cleanedUp)
+        puts('FAILED cleanup in nested contexts');
+}
+
 puts('ok');
 
 // try block ends with a terminator
