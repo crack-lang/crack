@@ -36,6 +36,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void engineBindModule(BModuleDef *moduleDef);
         virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void fixClassInstRep(BTypeDef *type);
 
 
     public:

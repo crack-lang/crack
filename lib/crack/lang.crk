@@ -3,7 +3,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp, 
-    memmove;
+    memmove, registerHook, EXCEPTION_MATCH_FUNC;
 @import crack._poormac define;
 
 bool true = (1 == 1);
@@ -673,6 +673,20 @@ class StaticString : String {
     # override _freeBuffer so we don't...
     void _freeBuffer() {}
 };
+
+## Base exception class.
+class Exception : Object {
+    String text;
+    oper init(String text0) : text = text0 {}
+}
+
+bool exceptionMatchFunc(Class classObj, Object obj) {
+    return obj.class.isSubclass(classObj);
+}
+
+registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
+
+# misc functions
 
 void print(String val) {
     puts(val.buffer);

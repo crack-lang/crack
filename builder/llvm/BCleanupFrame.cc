@@ -17,6 +17,18 @@ using namespace llvm;
 using namespace model;
 using namespace builder::mvll;
 
+void BCleanupFrame::close() {
+    if (dynamic_cast<LLVMBuilder &>(context->builder).suppressCleanups())
+        return;
+    context->emittingCleanups = true;
+    for (CleanupList::iterator iter = cleanups.begin();
+         iter != cleanups.end();
+         ++iter
+         )
+        iter->action->emit(*context);
+    context->emittingCleanups = false;
+}
+
 BasicBlock *BCleanupFrame::emitUnwindCleanups(BasicBlock *next) {
     context->emittingCleanups = true;
     BBuilderContextData *bdata = BBuilderContextData::get(context);

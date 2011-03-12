@@ -180,12 +180,13 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 
     BBuilderContextData::get(&context);
 
+    string funcName = name + ":main";
     llvm::Constant *c =
-        module->getOrInsertFunction(name+":main", Type::getVoidTy(lctx), NULL);
+        module->getOrInsertFunction(funcName, Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
 
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "initCheck", func));
+    createFuncStartBlocks(funcName);
 
     // insert point is now at the begining of the :main function for
     // this module. this will run the top level code for the module
@@ -233,7 +234,11 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
-    builder.CreateRetVoid();
+    
+    // if there was a top-level throw, we could already have a terminator.  
+    // Generate a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator())
+        builder.CreateRetVoid();
 
     // since the cleanups have to be emitted against the module context, clear 
     // the unwind blocks so we generate them for the del function.
@@ -293,4 +298,8 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
 void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
+}
+
+void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
+    type->getClassInstRep(module, 0);
 }

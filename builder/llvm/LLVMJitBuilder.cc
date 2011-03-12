@@ -68,6 +68,10 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
     }
 }
 
+void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
+    type->getClassInstRep(module, execEng);
+}
+
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
     if (execEng) {
         execEng->addModule(mod);
@@ -147,7 +151,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "__main__", func));
+    createFuncStartBlocks("__main__");
 
     createModuleCommon(context);
     
@@ -159,7 +163,11 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
-    builder.CreateRetVoid();
+
+    // if there was a top-level throw, we could already have a terminator.  
+    // Generate a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator())
+        builder.CreateRetVoid();
 
     // emit the cleanup function
 

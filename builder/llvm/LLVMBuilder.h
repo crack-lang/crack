@@ -120,6 +120,15 @@ class LLVMBuilder : public Builder {
         void createSpecialVar(model::Namespace *ns, model::TypeDef *type, 
                               const std::string &name
                               );
+
+        /** Creates the "start blocks" for the current function. */
+        void createFuncStartBlocks(const std::string &name);
+
+        /** 
+         * Insures that the class body global is present in the current module.
+         */
+        virtual void fixClassInstRep(BTypeDef *type) = 0;
+        
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -133,6 +142,11 @@ class LLVMBuilder : public Builder {
         llvm::Function *exceptionPersonalityFunc;
         static int argc;
         static char **argv;
+
+        /** 
+         * Returns true if cleanups should be suppressed (i.e. after a throw) 
+         */
+        bool suppressCleanups();
 
         void narrow(model::TypeDef *curType, model::TypeDef *ancestor);
 

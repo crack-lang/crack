@@ -925,6 +925,8 @@ test_output 'IO classes' \
      ' \
      'string-100100-1524157875019052115241578750190521<Object>'
 
+test_output 'bootstrapped exception tests' 'import test.test_exceptions2;' ok
+
 test_output 'C Comments' \
     '/* comment text */print("ok");' \
     ok

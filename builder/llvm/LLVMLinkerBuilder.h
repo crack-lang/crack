@@ -31,6 +31,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
     protected:
         virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void fixClassInstRep(BTypeDef *type);
 
     public:
         LLVMLinkerBuilder(void) : linker(0),

@@ -14,6 +14,7 @@
 namespace llvm {
     class Type;
     class Constant;
+    class ExecutionEngine;
     class GlobalVariable;
 }
 
@@ -86,8 +87,12 @@ public:
     /**
      * Get the global variable, creating an extern instance in the module if 
      * it lives in another module.
+     * @param execEng the execution engine (may be null if this is unknown or 
+     *  there is no execution engine)
      */
-    llvm::GlobalVariable *getClassInstRep(llvm::Module *module);
+    llvm::GlobalVariable *getClassInstRep(llvm::Module *module,
+                                          llvm::ExecutionEngine *execEng
+                                          );
 };
 
 } // end namespace builder::vmll

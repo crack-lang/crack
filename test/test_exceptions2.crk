@@ -1,0 +1,18 @@
+# Copyright 2011 Google Inc.
+# test of bootstrapped exception classes
+
+import crack.lang Exception;
+import crack.io cout;
+
+String exText;
+try {
+    throw Exception('this is a test');
+} catch (Exception ex) {
+    exText = ex.text;
+}
+
+if (exText != 'this is a test')
+    cout `FAIL: incorrect exception value: $exText\n`;
+
+cout `ok\n`;
+

@@ -958,6 +958,30 @@ void LLVMBuilder::createSpecialVar(Namespace *ns, TypeDef *type,
     ns->addDef(varDef.get());
 }
 
+void LLVMBuilder::createFuncStartBlocks(const std::string &name) {
+    // create the "function block" (the first block in the function, will be 
+    // used to hold all local variable allocations)
+    funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
+    builder.SetInsertPoint(funcBlock);
+    
+    // since the function block can get appended to arbitrarily, create a 
+    // first block where it is safe for us to emit terminating instructions
+    BasicBlock *firstBlock = BasicBlock::Create(getGlobalContext(), "l",
+                                                func
+                                                );
+    builder.CreateBr(firstBlock);
+    builder.SetInsertPoint(firstBlock);
+}
+
+bool LLVMBuilder::suppressCleanups() {
+    // only ever want to do this if the last instruction is unreachable.
+    BasicBlock *block = builder.GetInsertBlock();
+    BasicBlock::iterator i = block->end();
+    return i != block->begin() &&
+           (--i)->getOpcode() == Instruction::Unreachable;
+}
+        
+
 BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
     // make sure we have the special exception variables installed in the 
     // context.
@@ -1022,6 +1046,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
     
     // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
+    fixClassInstRep(btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
     );
@@ -1220,18 +1245,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
     func = funcDef->rep;
     
-    // create the "function block" (the first block in the function, will be 
-    // used to hold all local variable allocations)
-    funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
-    builder.SetInsertPoint(funcBlock);
-    
-    // since the function block can get appended to arbitrarily, create a 
-    // first block where it is safe for us to emit terminating instructions
-    BasicBlock *firstBlock = BasicBlock::Create(getGlobalContext(), "l",
-                                                func
-                                                );
-    builder.CreateBr(firstBlock);
-    builder.SetInsertPoint(firstBlock);
+    createFuncStartBlocks(name);
     
     if (flags & FuncDef::virtualized) {
         // emit code to convert from the first declaration base class 

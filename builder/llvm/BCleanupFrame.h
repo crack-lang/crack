@@ -44,15 +44,7 @@ public:
         cleanups.push_front(Cleanup(cleanup));
     }
 
-    virtual void close() {
-        context->emittingCleanups = true;
-        for (CleanupList::iterator iter = cleanups.begin();
-             iter != cleanups.end();
-             ++iter
-             )
-            iter->action->emit(*context);
-        context->emittingCleanups = false;
-    }
+    virtual void close();
     
     llvm::BasicBlock *emitUnwindCleanups(llvm::BasicBlock *next);
     
