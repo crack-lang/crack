@@ -257,6 +257,19 @@ test_output 'method overloads' \
      A a = {}; a.f(100); a.f("test");' \
     100test
 
+test_output 'overrides ignored in overload search' \
+    'class A {} class B : A {}
+     class X : VTableBase {
+        void f(B v) { puts("ok"); }
+        void f(A v) { puts("FAILED virtual functions altogether!!"); }
+     }
+     class Y : X {
+        void f(A v) { puts("FAILED called override"); }
+     }
+     Y y = {};
+     y.f(B());' \
+     ok
+
 # see to_test.crk: this only works when we define f(bool) before f(int32)
 test_output 'function overloads' \
     'void f(bool b) {if (b) puts("true"); else puts("false")}

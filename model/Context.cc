@@ -592,7 +592,8 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
 
 FuncDefPtr Context::lookUp(const std::string &varName,
                            vector<ExprPtr> &args,
-                           Namespace *srcNs
+                           Namespace *srcNs,
+                           bool allowOverrides
                            ) {
     if (!srcNs)
         srcNs = ns.get();
@@ -621,7 +622,7 @@ FuncDefPtr Context::lookUp(const std::string &varName,
         return 0;
     
     // look up the signature in the overload
-    return overload->getMatch(*this, args);
+    return overload->getMatch(*this, args, allowOverrides);
 }
 
 FuncDefPtr Context::lookUpNoArgs(const std::string &name, bool acceptAlias,

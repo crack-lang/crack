@@ -514,8 +514,14 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    // look up the variable
    
    // lookup the method from the variable context's type context
+   // if the container is a class, assume that this is a lookup in a specific 
+   // base class and allow looking up overrides for it (this won't work if we 
+   // ever give class objects a vtable because it will break meta-class 
+   // methods, but we need to replace the specific lookup syntax anyway)
    // XXX needs to handle callable objects.
-   FuncDefPtr func = context->lookUp(funcName, args, ns);
+   FuncDefPtr func = context->lookUp(funcName, args, ns, 
+                                     container && container->type->meta
+                                     );
    if (!func)
       error(ident, SPUG_FSTR("No method exists matching " << funcName << 
                               "(" << args << ")"));

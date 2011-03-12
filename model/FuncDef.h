@@ -82,6 +82,12 @@ class FuncDef : public VarDef {
         bool isOverridable() const;
         
         virtual bool hasInstSlot();
+        
+        /**
+         * Returns true if the function is an override of a virtual method
+         * in an ancestor class.
+         */
+        bool isVirtualOverride() const;
 
         /**
          * Returns the "receiver type."  For a non-virtual function, this 
