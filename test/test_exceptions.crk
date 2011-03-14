@@ -1,12 +1,12 @@
 
 import crack.runtime registerHook, EXCEPTION_MATCH_FUNC;
 
-# temporary work-around for the problem of trying to use the special .class 
+# temporary work-around for the problem of trying to use the special .class
 # accessor from a VTableBase object.
 class Obj : VTableBase {}
 
-bool exceptionMatchFunc(Class classObj, Obj obj) {
-    return obj.class.isSubclass(classObj);
+int exceptionMatchFunc(Class classObj, Obj obj) {
+    return obj.class.isSubclass(classObj) ? 1 : 0;
 }
 
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
@@ -31,7 +31,7 @@ if (1) {
     }
     if (!gotIt)
         puts('FAILED basic exception handling.');
-    
+
     if (!cleanedUp)
         puts('FAILED basic exception cleanup.');
 }
@@ -65,10 +65,10 @@ if (1) {
     }
     if (gotFoo)
         puts('FAILED nested exception handling (matched inner catch).');
-    
+
     if (!gotEx)
         puts('FAILED nested exception handling (missed catch).');
-    
+
     if (!cleanedUp)
         puts('FAILED nested exception cleanup.');
 }

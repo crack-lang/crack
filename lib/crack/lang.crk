@@ -2,7 +2,7 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp, 
+import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp,
     memmove, registerHook, EXCEPTION_MATCH_FUNC;
 @import crack._poormac define;
 
@@ -21,12 +21,12 @@ void _writeObject(Writer out);
 ## Base class for things that you don't want derived from object or VTableBase.
 class FreeBase {};
 
-## The Object base class.  Object provides the basic reference counting 
+## The Object base class.  Object provides the basic reference counting
 ## mechanism, and most user classes should be derived from it.
 class Object : VTableBase {
     uint refCount;
 
-    # have to declare these before "oper init" otherwise it won't generate a 
+    # have to declare these before "oper init" otherwise it won't generate a
     # bind in "oper new"
     oper bind();
     oper release();
@@ -35,7 +35,7 @@ class Object : VTableBase {
     }
 
     # delete virtual function
-    oper del() { 
+    oper del() {
         if (refCount) {
             _die("Object with non-zero ref count deleted!");
         }
@@ -45,7 +45,7 @@ class Object : VTableBase {
         if (!(this is null))
             refCount = refCount + 1;
     }
-    
+
     oper release() {
         if (this is null)
             return;
@@ -56,29 +56,29 @@ class Object : VTableBase {
             free(this);
         }
     }
-    
+
     bool isTrue() {
         return true;
     }
-    
-    ## Comparison function - returns a value < 0 if this < other, 0 if this is 
+
+    ## Comparison function - returns a value < 0 if this < other, 0 if this is
     ## equal to other, > 0 if this > other.
     int cmp(Object other) {
         if (this is other) return 0; else return 1;
     }
-    
+
     @final bool oper <(Object other) {
         return this is null ? !(other is null) : cmp(other) < 0;
     }
-    
+
     @final bool oper <=(Object other) {
         return this is null ? true : cmp(other) <= 0;
     }
-    
+
     @final bool oper ==(Object other) {
         return this is null ? other is null : cmp(other) == 0;
     }
-    
+
     @final bool oper !=(Object other) {
         return this is null ? !(other is null) : cmp(other) != 0;
     }
@@ -97,33 +97,33 @@ class Object : VTableBase {
         else
             return isTrue();
     }
-    
+
     void writeTo(Writer writer) {
         _writeObject(writer);
     }
 };
 
-## Base class for interfaces - these are classes that are not derived from 
-## Object but must be mixed in with classes derived from Object.  You can use 
-## them to define a interfaces and functionality that a derived class must 
+## Base class for interfaces - these are classes that are not derived from
+## Object but must be mixed in with classes derived from Object.  You can use
+## them to define a interfaces and functionality that a derived class must
 ## conform to without limiting the inheritence of the derived class.
 ##
-## Unfortunately, this pattern only allows a single MixIn since you cannot 
+## Unfortunately, this pattern only allows a single MixIn since you cannot
 ## inherit from the mixin class more than once.
 ##
 ## Derived classes must implement the getObject() method.
 class MixIn : VTableBase {
-    
+
     ## Returns the underlying Object of the concrete class derived from the
-    ## mix-in.  This is used by our bind and release operators to allow 
+    ## mix-in.  This is used by our bind and release operators to allow
     ## mix-ins to work with Object's reference counting.
     Object getObject() {
         _die('MixIn.getObject() not implemented.');
         return null;
     }
 
-    # defining bind and release here takes advantage of the fact that the 
-    # same final functions can be inherited from multiple ancestors.  This is 
+    # defining bind and release here takes advantage of the fact that the
+    # same final functions can be inherited from multiple ancestors.  This is
     # arguably a bug, but we're going to exploit it for now.
 
     oper bind() { if (!(this is null)) getObject().oper bind(); }
@@ -137,7 +137,7 @@ class Writer : VTableBase {
         puts(this.class.name);
         _die("Writer.write() not implemented.");
     }
-    
+
     ## Flush the contents of the buffer.
     void flush() {}
 
@@ -154,19 +154,19 @@ class Writer : VTableBase {
 class Buffer : Object {
 
     // buffer and size.
-    uint size;    
+    uint size;
     byteptr buffer;
 
     oper init(byteptr buffer0, uint size0) : buffer = buffer0, size = size0 {}
-    
+
     bool isTrue() {
         return size;
     }
-    
+
     bool isEmpty() {
         return (size == 0);
     }
-    
+
     void writeTo(Writer writer) {
         writer.write(this);
     }
@@ -185,7 +185,7 @@ class Buffer : Object {
 
     ## Override Object.cmp() to do buffer comparison.
     int cmp(Object other) {
-        
+
         # deal with the simple case
         if (this is other)
             return 0;
@@ -193,13 +193,13 @@ class Buffer : Object {
         # if the other object is a string, do string comparison.
         if (other.class.isSubclass(Buffer)) {
             os := Buffer.unsafeCast(other);
-            
-            # if both strings are the same size, this is just a straight 
+
+            # if both strings are the same size, this is just a straight
             # memcmp().
             int rc;
             if (size == os.size) {
                 return memcmp(buffer, os.buffer, size);
-            
+
             # if one string is longer than the other, only compare the
             # common-sized substring and if those are equal, the longer one is
             # greater
@@ -241,7 +241,7 @@ class WriteBuffer : Buffer {
             _die('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
     }
-    
+
     ## move a buffer to a place in this buffer.
     void move(uint newStart, Buffer buf) {
         if (newStart + buf.size > size)
@@ -255,7 +255,7 @@ class ManagedBuffer : WriteBuffer {
 
     oper init(uint size0) : WriteBuffer(malloc(size0), size0) {}
 
-    ## Orphan's the byte buffer, returning it for use by the caller.  The 
+    ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
     byteptr orphan() {
         temp := buffer;
@@ -263,14 +263,14 @@ class ManagedBuffer : WriteBuffer {
         size = 0;
         return temp;
     }
-    
+
     ## Grow the buffer to the new size.
     void grow(uint newSize) {
         if (newSize <= size) {
             puts('attempt to grow to a smaller or same size.');
             abort();
         }
-        
+
         newBuffer := malloc(newSize);
         if (!(buffer is null)) {
             memcpy(newBuffer, buffer, size);
@@ -279,7 +279,7 @@ class ManagedBuffer : WriteBuffer {
         buffer = newBuffer;
         size = newSize;
     }
-    
+
     oper del() {
         if (!(buffer is null))
             free(buffer);
@@ -298,7 +298,7 @@ class AppendBuffer : ManagedBuffer {
             grow(size * 2);
         buffer[pos++] = c;
     }
-    
+
     ## Extend the buffer with the other buffer.
     void extend(Buffer other) {
         uint newPos = pos + other.size;
@@ -313,7 +313,7 @@ class AppendBuffer : ManagedBuffer {
     }
 }
 
-# substring forward declarations - we need the full array to support doing 
+# substring forward declarations - we need the full array to support doing
 # these efficiently
 
 class SubString;
@@ -351,16 +351,16 @@ $$
 
 @define slice2 1 {
 
-        # adjust negative offsets    
+        # adjust negative offsets
         if (start < 0)
             start = int($1.size) + start;
         if (end < 0)
             end = int($1.size) + end;
-    
+
         # bounds checking
         if (end < start)
             _die('Start of slice is after end.');
-    
+
         return _substr($1, uint(start), uint(end - start));
     }
 $$
@@ -370,32 +370,32 @@ $$
         # adjust negative offsets
         if (start < 0)
             start = int($1.size) + start;
-    
+
         # bounds checking
         if (uint(start) > $1.size)
             _die('Start of slice is after end.');
-    
+
         return _substr($1, uint(start), $1.size - uint(start));
     }
 $$
 
-## The string class.  Strings are immutable managed Buffer's - when they are 
-## deleted, their buffer goes away. 
+## The string class.  Strings are immutable managed Buffer's - when they are
+## deleted, their buffer goes away.
 ## The buffer is not guaranteed to be null-terminated, use CString if
 ## that's a requirement
 class String : Buffer {
 
-    ## Initialize from a buffer.  This copies the buffer, it does not assume 
+    ## Initialize from a buffer.  This copies the buffer, it does not assume
     ## ownership.
     oper init(Buffer buf) : Buffer(malloc(buf.size), buf.size) {
         memcpy(buffer, buf.buffer, buf.size);
     }
 
-    ## Initialize from a WriteBuffer and optionally take ownership of the 
+    ## Initialize from a WriteBuffer and optionally take ownership of the
     ## buffer.
-    oper init(ManagedBuffer buf, bool takeOwnership) : 
+    oper init(ManagedBuffer buf, bool takeOwnership) :
         Buffer(null, 0) {
-        
+
         if (takeOwnership) {
             size = buf.size;
             buffer = buf.orphan();
@@ -404,8 +404,8 @@ class String : Buffer {
             buffer = memcpy(malloc(buf.size), buf.buffer, buf.size);
         }
     }
-    
-    ## Initialize from a substring of buffer.  This copies the buffer from 
+
+    ## Initialize from a substring of buffer.  This copies the buffer from
     ## index pos to pos + len.  It does not assume ownership.
     oper init(Buffer buf, uint pos, uint len) : Buffer(malloc(len), len) {
         if (pos + len > buf.size)
@@ -415,11 +415,11 @@ class String : Buffer {
 
     ## Initialize from byte pointer and size and optionally take ownership.
     oper init(byteptr buf, uint size0, bool takeOwnership) :
-        Buffer(takeOwnership ? buf : memcpy(malloc(size0), buf, size0), 
+        Buffer(takeOwnership ? buf : memcpy(malloc(size0), buf, size0),
                size0
                ) {
     }
-    
+
     ## Initialize from a null-terminated c-string
     oper init(byteptr cString) : Buffer(null, strlen(cString)) {
         buffer = malloc(size + 1);
@@ -428,11 +428,11 @@ class String : Buffer {
 
     ## Create an empty string.
     oper init() : Buffer(malloc(0), 0) {}
-    
+
     void _freeBuffer() {
         free(buffer);
     }
-    
+
     oper del() {
         _freeBuffer();
     }
@@ -482,30 +482,30 @@ class String : Buffer {
         memcpy(newRawBuffer + size, rhs, rhs_size);
         return String(newRawBuffer, newBufferSize, true);
     }
-    
-    ## Create a substring.  This function is smart enough to know if the 
-    ## receiver is already a SubString, in which case it will translate to 
+
+    ## Create a substring.  This function is smart enough to know if the
+    ## receiver is already a SubString, in which case it will translate to
     ## the underlying String to avoid creating a stack of SubStrings.
     ## If 'pos' is negative, it is an offset from the end of the string.
     SubString substr(int pos, uint len) @substr2 this
-    
+
     ## Create a substring from 'pos' to the end of the string.
     SubString substr(int pos) @substr1 this
 
-    ## Slice is similar to substr, except that it accepts a start and end 
-    ## position (instead of a start position and length).  Both the start 
-    ## and end positions can be negative, indicating that they are relative 
+    ## Slice is similar to substr, except that it accepts a start and end
+    ## position (instead of a start position and length).  Both the start
+    ## and end positions can be negative, indicating that they are relative
     ## to the end of the string.
     SubString slice(int start, int end) @slice2 this
 
-    # Another variation on slice(), this gives a slice from 'start' to the 
+    # Another variation on slice(), this gives a slice from 'start' to the
     # end of the string.
     SubString slice(int start) @slice1 this
 
     ## Returns a legal source representation of the string.
     String getRepr() {
         AppendBuffer buf = {size + 2};
-        
+
         buf.append(39); # "'"
         for (uint i = 0; i < size; ++i) {
             ch := buffer[i];
@@ -519,36 +519,36 @@ class String : Buffer {
             }
         }
         buf.append(39);
-        
+
         buf.size = buf.pos;
         return String(buf, true);
     }
 };
 
 ## A substring of an existing string object.  Substrings are much
-## lighter weight than full String objects because SubString doesn't manage 
+## lighter weight than full String objects because SubString doesn't manage
 ## its own buffer.  It references the buffer of its underlying String.
 class SubString : String {
     String _rep = null;
 
     ## Create a stubstring 'target' starting from 'pos' and of length 'len'.
-    oper init(String target, uint pos, uint len) : 
+    oper init(String target, uint pos, uint len) :
         String(target.buffer + pos, len, true),
         _rep = target {
     }
 
     ## Create a substring from 'pos' to the end of the string.
-    oper init(String target, uint pos) : 
+    oper init(String target, uint pos) :
         String(target.buffer + pos, target.size - pos, true),
         _rep = target {
     }
-    
+
     oper init(String target, byteptr buf, uint len) :
         String(buf, len, true),
         _rep = target {
     }
 
-    # duplicate the substring/slice interface since we can do them more 
+    # duplicate the substring/slice interface since we can do them more
     # efficiently here
 
     SubString substr(int pos, uint len) @substr2 this
@@ -590,7 +590,7 @@ SubString substr(String target, int pos, uint len) {
     if (pos < 0)
         pos = int(target.size) - pos;
 
-    return _substr(target, uint(pos), len);    
+    return _substr(target, uint(pos), len);
 }
 
 SubString substr(String target, int pos) {
@@ -603,7 +603,7 @@ SubString substr(String target, int pos) {
 
 SubString slice(String target, int start, int end) {
 
-    # adjust negative offsets    
+    # adjust negative offsets
     if (start < 0)
         start = int(target.size) + start;
     if (end < 0)
@@ -618,7 +618,7 @@ SubString slice(String target, int start, int end) {
 
 SubString slice(String target, int start) {
 
-    # adjust negative offsets    
+    # adjust negative offsets
     if (start < 0)
         start = int(target.size) + start;
 
@@ -644,17 +644,17 @@ class CString : String {
         __copy(s0.buffer, s0.size);
     }
 
-    ## Initialize a the string from byteptr and size, take ownership of the 
+    ## Initialize a the string from byteptr and size, take ownership of the
     ## memory if requested.
-    ## If takeOwnership is true, buf[size0] must be null.  This constructor 
+    ## If takeOwnership is true, buf[size0] must be null.  This constructor
     ## will not verify that this is the case.
     oper init(byteptr buf, uint size0, bool takeOwnership) :
         String(buf, size0, true) {
         if (!takeOwnership)
             __copy(buf, size0);
     }
-    
-    ## Initialize from a null-terminated byteptr, take ownership of the 
+
+    ## Initialize from a null-terminated byteptr, take ownership of the
     ## memory if requested.
     oper init(byteptr buf, bool takeOwnership) :
         String(buf, strlen(buf) + 1, takeOwnership) {
@@ -666,10 +666,10 @@ class CString : String {
 class StaticString : String {
 
     oper init(byteptr data, uint size0) : String(data, size0, true) {}
-    
+
     ## Initialize from a null terminated string.
     oper init(byteptr data) : String(data, strlen(data), true) {}
-    
+
     # override _freeBuffer so we don't...
     void _freeBuffer() {}
 };
@@ -680,8 +680,8 @@ class Exception : Object {
     oper init(String text0) : text = text0 {}
 }
 
-bool exceptionMatchFunc(Class classObj, Object obj) {
-    return obj.class.isSubclass(classObj);
+int exceptionMatchFunc(Class classObj, Object obj) {
+    return obj.class.isSubclass(classObj) ? 1 : 0;
 }
 
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
@@ -724,7 +724,7 @@ int cmp(Object a, Object b) {
     else
         return 1;
 }
-    
+
 @define lightcmp 1 int cmp($1 a, $1 b) { return a - b; } $$
 @define heavycmp 1 int cmp($1 a, $1 b) {
     if (a > b)
