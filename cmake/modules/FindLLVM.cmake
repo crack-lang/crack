@@ -18,7 +18,7 @@ if (LLVM_INCLUDE_DIR)
 else (LLVM_INCLUDE_DIR)
 
   find_program(LLVM_CONFIG_EXECUTABLE
-      NAMES llvm-config llvm-config-${LLVM_MIN_VERSION_TEXT}
+      NAMES llvm-config-${LLVM_MIN_VERSION_TEXT} llvm-config
       PATHS /opt/local/bin
       HINTS "$ENV{LLVM_DIR}/bin"
   )
