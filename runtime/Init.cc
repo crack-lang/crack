@@ -427,6 +427,9 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 
                      crack::runtime::exceptionMatchFuncHook
                      );
+    mod->addConstant(intType, "BAD_CAST_FUNC",
+                     crack::runtime::badCastFuncHook
+                     );
     f = mod->addFunc(voidType, "registerHook", 
                      (void *)crack::runtime::registerHook
                      );

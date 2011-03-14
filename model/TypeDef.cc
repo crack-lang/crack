@@ -333,7 +333,7 @@ void TypeDef::createCast(Context &outer) {
     //  if (val.class.isSubclass(ThisClass);
     //      return ThisClass.unsafeCast(val);
     //  else
-    //      __die("Invalid class cast");
+    //      __CrackBadCast(val.class, ThisClass);
     
     // val.class
     VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
@@ -347,6 +347,7 @@ void TypeDef::createCast(Context &outer) {
     FuncCallPtr call = funcCtx->builder.createFuncCall(f.get());
     call->receiver = valRef;
     ExprPtr valClass = call;
+    valClass = valClass->emit(*funcCtx);
     
     // $.isSubclass(ThisClass)
     FuncCall::ExprVec isSubclassArgs(1);
@@ -372,13 +373,14 @@ void TypeDef::createCast(Context &outer) {
     // else    
     branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
 
-    // __die()
-    FuncCall::ExprVec abortArgs(1);
-    abortArgs[0] = funcCtx->getStrConst("Invalid class cast.", true);
-    f = outer.getParent()->lookUp("__die", abortArgs);
-    assert(f && "__die missing");
+    // __CrackBadCast(val.class, ThisClass);
+    FuncCall::ExprVec badCastArgs(2);
+    badCastArgs[0] = valClass;
+    badCastArgs[1] = funcCtx->builder.createVarRef(this);
+    f = outer.getParent()->lookUp("__CrackBadCast", badCastArgs);
+    assert(f && "__CrackBadCast missing");
     call = funcCtx->builder.createFuncCall(f.get());
-    call->args = abortArgs;
+    call->args = badCastArgs;
     funcCtx->createCleanupFrame();
     call->emit(*funcCtx)->handleTransient(*funcCtx);
     funcCtx->closeCleanupFrame();

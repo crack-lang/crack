@@ -14,5 +14,17 @@ try {
 if (exText != 'this is a test')
     cout `FAIL: incorrect exception value: $exText\n`;
 
+class A {}
+class B : A {}
+
+try {
+    B.cast(A());
+} catch (Exception ex) {
+    exText = ex.text;
+}
+
+if (exText != 'Unable to cast object of type A to B')
+    cout `FAIL: bad cast exception failed, current text: $exText\n`;
+
 cout `ok\n`;
 

@@ -3,7 +3,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp,
-    memmove, registerHook, EXCEPTION_MATCH_FUNC;
+    memmove, registerHook, BAD_CAST_FUNC, EXCEPTION_MATCH_FUNC;
 @import crack._poormac define;
 
 bool true = (1 == 1);
@@ -680,11 +680,23 @@ class Exception : Object {
     oper init(String text0) : text = text0 {}
 }
 
-int exceptionMatchFunc(Class classObj, Object obj) {
-    return obj.class.isSubclass(classObj) ? 1 : 0;
+class BadCastError : Exception {
+    oper init(String text0) : Exception(text0) {}
+}
+
+bool exceptionMatchFunc(Class classObj, Object obj) {
+    return obj.class.isSubclass(classObj);
+}
+
+void badClassFunc(Class curType, Class newType) {
+    throw BadCastError(String('Unable to cast object of type ') + 
+                        curType.name + 
+                        ' to ' + newType.name
+                       );
 }
 
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
+registerHook(BAD_CAST_FUNC, badClassFunc);
 
 # misc functions
 

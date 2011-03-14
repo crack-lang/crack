@@ -3,6 +3,7 @@
 
 #include "Exceptions.h"
 
+#include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
 #include <iostream>
@@ -71,6 +72,15 @@ extern "C" void __CrackPrintPointer(void *pointer) {
     cerr << "pointer is: " << pointer << endl;
 }
 
+extern "C" void __CrackBadCast(void *curType, void *newType) {
+    if (runtimeHooks.badCastFunc) {
+        runtimeHooks.badCastFunc(curType, newType);
+    } else {
+        cerr << "Invalid class cast." << endl;
+        abort();
+    }
+}
+
 namespace crack { namespace runtime {
 
 RuntimeHooks runtimeHooks = {0};
@@ -79,7 +89,10 @@ void registerHook(HookId hookId, void *hook) {
     switch (hookId) {
         case exceptionMatchFuncHook:
             runtimeHooks.exceptionMatchFunc =
-                reinterpret_cast<ExceptionMatchFunc>(hook);\
+                reinterpret_cast<ExceptionMatchFunc>(hook);
+            break;
+        case badCastFuncHook:
+            runtimeHooks.badCastFunc = reinterpret_cast<BadCastFunc>(hook);
             break;
         default:
             cerr << "Unknown runtime hook specified: " << hookId << endl;

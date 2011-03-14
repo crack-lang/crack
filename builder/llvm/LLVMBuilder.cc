@@ -2277,6 +2277,17 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.finish();
     }
 
+    // create "__CrackBadCast(Class a, Class b)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType,
+                      "__CrackBadCast",
+                      2
+                      );
+        f.addArg("curType", classType);
+        f.addArg("newType", classType);
+        f.setSymbolName("__CrackBadCast");
+        f.finish();
+    }        
 
 }
 

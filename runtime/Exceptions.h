@@ -12,8 +12,15 @@ namespace crack { namespace runtime {
  */
 typedef int (*ExceptionMatchFunc)(void *exceptionType, void *exceptionObject);
 
+/**
+ * The bad cast function is called when a typecast is called on an object that 
+ * is not an instance of the type we're casting it to.
+ */
+typedef void (*BadCastFunc)(void *curClass, void *newClass);
+
 enum HookId {
     exceptionMatchFuncHook,
+    badCastFuncHook,
     numHooks
 };
 
@@ -23,6 +30,7 @@ enum HookId {
  */
 struct RuntimeHooks {
     ExceptionMatchFunc exceptionMatchFunc;
+    BadCastFunc badCastFunc;
 };
 
 extern RuntimeHooks runtimeHooks;
