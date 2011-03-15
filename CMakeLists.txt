@@ -53,6 +53,7 @@ set_source_files_properties( crack.cc
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
 
+# libCrackLang
 add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
@@ -61,6 +62,18 @@ set_target_properties(libcrack
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
+                       ${LLVM_LIBS}
+                     )
+
+# libCrackExtStub
+add_library(libcrackextstub SHARED ext/Stub.cc)
+set_target_properties(libcrackextstub
+                      PROPERTIES
+                      OUTPUT_NAME CrackExtStub
+                      SOVERSION ${API_VERSION}
+                      LINK_FLAGS ${LLVM_LDFLAGS}
+                      )
+target_link_libraries( libcrackextstub
                        ${LLVM_LIBS}
                      )
 
