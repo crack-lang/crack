@@ -395,6 +395,10 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         BasicBlock *unwindBlock = bdata->getUnwindBlock(func);
 
         final = unwindBlock;
+        
+        // move the outer context back one level so we get cleanups for the 
+        // function scope.
+        outerContext = outerContext->getParent();
     }
 
     BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);

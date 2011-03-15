@@ -19,10 +19,12 @@ class FooError : Exception {
 }
 class NotException : VTableBase {}
 
+bool cleanedUp;
+class Cleanup { oper release() { cleanedUp = 1; } }
+
 if (1) {
     bool gotIt;
-    bool cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    cleanedUp = 0;
     try {
         Cleanup c;
         throw Exception();
@@ -51,8 +53,8 @@ if (1) {
 }
 
 if (1) {
-    bool gotFoo, gotEx, cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    bool gotFoo, gotEx;
+    cleanedUp = 0;
     try {
         try {
             Cleanup c;
@@ -104,20 +106,59 @@ if (1) {
 }
 
 if (1) {
-    bool cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    cleanedUp = 0;
     void f() {
         Cleanup c;
-//        throw Exception();
+        throw Exception();
     }
     try {
         f();
     } catch (Exception ex) {
-        puts('test');
     }
     if (!cleanedUp)
         puts('FAILED cleanup in nested contexts');
 }
+
+if (1) {
+    cleanedUp = 0;
+    void g() {
+        throw Exception();
+    }
+
+    void f() {
+        Cleanup c;;
+        g();
+    }
+
+    try {
+        f();
+    } catch (Exception ex) {
+    }
+
+    if (!cleanedUp)
+        puts('FAILED pass-through cleanup never got called');
+}
+
+/*
+if (1) {
+    cleanedUp = 0;
+    void f() {
+        Cleanup c;
+        try {
+            throw Exception();
+        } catch (FooError ex) {
+        }
+    }
+    
+    try {
+        f();
+    } catch (Exception ex) {
+    }
+    
+    if (!cleanedUp)
+        puts('FAILED cleanup outside of try/catch');
+}
+*/
 
 puts('ok');
 
