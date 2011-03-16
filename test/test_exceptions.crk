@@ -139,7 +139,6 @@ if (1) {
         puts('FAILED pass-through cleanup never got called');
 }
 
-/*
 if (1) {
     cleanedUp = 0;
     void f() {
@@ -158,7 +157,7 @@ if (1) {
     if (!cleanedUp)
         puts('FAILED cleanup outside of try/catch');
 }
-*/
+
 
 puts('ok');
 

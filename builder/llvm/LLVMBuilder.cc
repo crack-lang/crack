@@ -1028,6 +1028,15 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         if (!terminal)
             builder.CreateBr(bpos->block2);
         
+        // get the cleanup blocks for the contexts in the function outside of 
+        // the catch
+        ContextPtr outsideFunction = context.getToplevel()->getParent();
+        BasicBlock *funcUnwindBlock = bdata->getUnwindBlock(func);
+        BasicBlock *outerCleanups = emitUnwindCleanups(*context.getParent(),
+                                                       *outsideFunction,
+                                                       funcUnwindBlock
+                                                       );
+        
         // generate a switch instruction based on the value of 
         // :exceptionSelector, we'll fill it in with values later.
         builder.SetInsertPoint(bpos->block);
@@ -1035,7 +1044,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         BHeapVarDefImplPtr selImpl = BHeapVarDefImplPtr::rcast(sel->impl);
         Value *selVal = builder.CreateLoad(selImpl->rep);
         cdata->switchInst =
-            builder.CreateSwitch(selVal, bdata->getUnwindBlock(func), 3);
+            builder.CreateSwitch(selVal, outerCleanups, 3);
 
     // if the last catch block was not terminal, branch to after_try
     } else if (!terminal) {
