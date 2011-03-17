@@ -160,10 +160,10 @@ add_custom_target(screen
 # optional extensions
 
 # GTK
-find_package(GTK2 2.6 COMPONENTS gtk)
-find_package(GTK2_GDKPIXBUF)
+find_package(GTK2 QUIET 2.6 COMPONENTS gtk)
 if(GTK2_FOUND)
    message(STATUS "Found GTK, will build extension")
+   find_package(GTK2_GDKPIXBUF QUIET)
    include_directories(${GTK2_INCLUDE_DIRS})
    add_library(gtk SHARED opt/_gtk.cc)
    set_target_properties(gtk
@@ -202,7 +202,7 @@ if (PCRE_FOUND)
 endif()
 
 # SDL
-find_package(SDL)
+find_package(SDL QUIET)
 if(SDL_FOUND)
    message(STATUS "Found SDL, will build extension")
    include_directories(${SDL_INCLUDE_DIR})
@@ -219,7 +219,7 @@ if(SDL_FOUND)
 endif()
 
 # OpenGL
-find_package(OpenGL)
+find_package(OpenGL QUIET)
 if(OPENGL_FOUND)
    message(STATUS "Found OpenGL, will build extension")
    include_directories(${OPENGL_INCLUDE_DIR})
