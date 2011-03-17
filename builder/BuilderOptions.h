@@ -29,6 +29,12 @@ class BuilderOptions : public spug::RCBase {
         // builder specific option strings
         StringMap optionMap;
 
+        BuilderOptions(void): optimizeLevel(0),
+                              verbosity(0),
+                              dumpMode(false),
+                              debugMode(false),
+                              optionMap() { }
+
 };
 
 } // namespace builder
