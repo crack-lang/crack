@@ -1,0 +1,87 @@
+## This module provides a Process class for managing sub processes
+## Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.sys StringArray;
+import crack.runtime runChildProcess, waitProcess, signalProcess, SIGKILL,
+                     SIGTERM, pollProcess;
+
+// see Process.h in  runtime
+int CRK_PROC_STILL_RUNNING = 0x100;
+int CRK_PROC_KILLED        = 0x200;
+int CRK_PROC_STOPPED       = 0x400;
+int CRK_PROC_EXITED        = 0x800;
+
+class Process {
+
+    int _pid = -1;
+    int _stdin = -1;
+    int _stdout = -1;
+    int _stderr = -1;
+    int _returnCode = CRK_PROC_STILL_RUNNING;
+
+    oper init(String cmd) {
+        args := StringArray(1);
+        args[0] = cmd;
+        array[byteptr] env = null;
+        _pid = runChildProcess(args.getPrimArray(), env);
+    }
+
+    oper init(StringArray args) {
+        array[byteptr] env;
+        _pid = runChildProcess(args.getPrimArray(), env);
+    }
+
+    oper init(StringArray args, StringArray env) {
+        _pid = runChildProcess(args.getPrimArray(),
+                              env.getPrimArray());
+    }
+
+    int getPid() { return _pid; }
+
+    int getReturnCode() { return _returnCode & 0xff; }
+
+    int poll() {
+        _returnCode = pollProcess(_pid);
+        return getReturnCode();
+    }
+
+    int wait() {
+        _returnCode = waitProcess(_pid);
+        return getReturnCode();
+    }
+
+    bool killed() {
+        return (_returnCode & CRK_PROC_KILLED);
+    }
+
+    bool stopped() {
+        return (_returnCode & CRK_PROC_STOPPED);
+    }
+
+    bool isRunning() {
+        if (_returnCode & CRK_PROC_KILLED ||
+            _returnCode & CRK_PROC_STOPPED ||
+            _returnCode & CRK_PROC_EXITED
+            )
+            return false;
+        poll();
+        return (_returnCode & CRK_PROC_STILL_RUNNING);
+    }
+
+    void sendSignal(int sig) {
+        signalProcess(_pid, sig);
+    }
+
+    void terminate() {
+        // XXX this needs to be a runtime call, as on Windows it will do
+        // something different
+        signalProcess(_pid, SIGTERM);
+    }
+
+    void kill() {
+        // XXX this needs to be a runtime call, as on Windows it will do
+        // something different
+        signalProcess(_pid, SIGKILL);
+    }
+
+}
