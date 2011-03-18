@@ -40,6 +40,7 @@ builder/llvm/BFuncDef.cc
 builder/llvm/BTypeDef.cc
 builder/llvm/Consts.cc
 builder/llvm/Incompletes.cc
+builder/llvm/ExceptionCleanupExpr.cc
 builder/llvm/FuncBuilder.cc
 builder/llvm/LLVMBuilder.cc
 builder/llvm/LLVMJitBuilder.cc

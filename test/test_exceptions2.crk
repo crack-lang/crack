@@ -14,6 +14,7 @@ try {
 if (exText != 'this is a test')
     cout `FAIL: incorrect exception value: $exText\n`;
 
+# bad cast exceptions
 class A {}
 class B : A {}
 
@@ -25,6 +26,30 @@ try {
 
 if (exText != 'Unable to cast object of type A to B')
     cout `FAIL: bad cast exception failed, current text: $exText\n`;
+
+if (1) {
+    int cleanups;
+    class MyException {
+        oper del() {
+            cleanups |= 1;
+        }
+    }
+
+    try {
+        throw MyException();
+    } catch (MyException ex) {
+        if (cleanups)
+            cout `FAILED exception object cleaned before catch\n`;
+        cleanups |= 2;
+    }
+
+    if (!(cleanups & 1))
+        cout `FAILED exception object cleanup (missed cleanup)\n`;
+    
+    if (!(cleanups & 2))
+        cout `FAILED excepton object cleanup (catch not called)\n`;
+}
+
 
 cout `ok\n`;
 

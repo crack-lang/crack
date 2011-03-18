@@ -2145,6 +2145,9 @@ ContextPtr Parser::parseTryStmt() {
          // create a variable definition for the exception variable
          context->emitVarDef(exceptionType.get(), varTok, exceptionObj.get());
          
+         // give the builder an opportunity to add an exception cleanup
+         context->builder.emitExceptionCleanup(*context);
+         
          // XXX add catchLeave callback
          ContextPtr terminalCatch = parseBlock(true, noCallbacks); 
          lastWasTerminal = terminalCatch;

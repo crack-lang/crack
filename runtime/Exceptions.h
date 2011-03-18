@@ -18,9 +18,16 @@ typedef int (*ExceptionMatchFunc)(void *exceptionType, void *exceptionObject);
  */
 typedef void (*BadCastFunc)(void *curClass, void *newClass);
 
+/**
+ * The exception release function is called during exception cleanup to allow 
+ * the library to do an "oper release" on the exception object.
+ */
+typedef void (*ExceptionReleaseFunc)(void *crackExceptionObj);
+
 enum HookId {
     exceptionMatchFuncHook,
     badCastFuncHook,
+    exceptionReleaseFuncHook,
     numHooks
 };
 
@@ -31,6 +38,7 @@ enum HookId {
 struct RuntimeHooks {
     ExceptionMatchFunc exceptionMatchFunc;
     BadCastFunc badCastFunc;
+    ExceptionReleaseFunc exceptionReleaseFunc;
 };
 
 extern RuntimeHooks runtimeHooks;

@@ -3,7 +3,8 @@
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp,
-    memmove, registerHook, BAD_CAST_FUNC, EXCEPTION_MATCH_FUNC;
+    memmove, registerHook, BAD_CAST_FUNC, EXCEPTION_MATCH_FUNC, 
+    EXCEPTION_RELEASE_FUNC;
 @import crack._poormac define;
 
 bool true = (1 == 1);
@@ -695,8 +696,13 @@ void badClassFunc(Class curType, Class newType) {
                        );
 }
 
+void exceptionReleaseFunc(Object ex) {
+    ex.oper release();
+}
+
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 registerHook(BAD_CAST_FUNC, badClassFunc);
+registerHook(EXCEPTION_RELEASE_FUNC, exceptionReleaseFunc);
 
 # misc functions
 

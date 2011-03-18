@@ -45,9 +45,8 @@ extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
 static void __CrackExceptionCleanup(_Unwind_Reason_Code reason,
                                     struct _Unwind_Exception *exc
                                     ) {
-    cerr << "doing exception cleanup" << endl;
-// XXX need to free user data
-//    delete exc->user_data;
+    if (runtimeHooks.exceptionReleaseFunc)
+        runtimeHooks.exceptionReleaseFunc(exc->user_data);
     delete exc;
 }
 
@@ -67,6 +66,10 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
 extern "C" void *__CrackGetException(_Unwind_Exception *uex) {
     return uex->user_data;
 } 
+
+extern "C" void __CrackCleanupException(_Unwind_Exception *uex) {
+    _Unwind_DeleteException(uex);
+}
 
 extern "C" void __CrackPrintPointer(void *pointer) {
     cerr << "pointer is: " << pointer << endl;
@@ -90,6 +93,10 @@ void registerHook(HookId hookId, void *hook) {
         case exceptionMatchFuncHook:
             runtimeHooks.exceptionMatchFunc =
                 reinterpret_cast<ExceptionMatchFunc>(hook);
+            break;
+        case exceptionReleaseFuncHook:
+            runtimeHooks.exceptionReleaseFunc =
+                reinterpret_cast<ExceptionReleaseFunc>(hook);
             break;
         case badCastFuncHook:
             runtimeHooks.badCastFunc = reinterpret_cast<BadCastFunc>(hook);

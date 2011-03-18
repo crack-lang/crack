@@ -58,6 +58,7 @@ extern "C" void _Unwind_SetIP(struct _Unwind_Context *context,
                               uint64_t new_value
                               );
 extern "C" void _Unwind_RaiseException(_Unwind_Exception *ex);
+extern "C" void _Unwind_DeleteException (_Unwind_Exception *ex);
 
 // end of borrowed exception API
 

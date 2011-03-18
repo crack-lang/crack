@@ -12,6 +12,7 @@
 #include "BResultExpr.h"
 #include "BTypeDef.h"
 #include "Consts.h"
+#include "ExceptionCleanupExpr.h"
 #include "FuncBuilder.h"
 #include "Incompletes.h"
 #include "LLVMValueExpr.h"
@@ -310,6 +311,12 @@ namespace {
         return btype.get();
     }
 
+    Value *getExceptionObjectValue(Context &context, IRBuilder<> &builder) {
+        VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
+        BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
+        return builder.CreateLoad(exObjImpl->rep);
+    }
+
 } // anon namespace
 
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
@@ -539,6 +546,16 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
     return new BHeapVarDefImpl(var);
 }
 
+void LLVMBuilder::emitExceptionCleanup(Context &context) {
+    ExprPtr cleanup = 
+        new ExceptionCleanupExpr(context.construct->voidType.get());
+
+    // we don't need to close this cleanup frame, these cleanups get generated
+    // at the close of the context.
+    context.createCleanupFrame();
+    context.cleanupFrame->addCleanup(cleanup.get());
+}
+
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
     module(0),
@@ -578,23 +595,11 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
 
+
     // if we're already emitting cleanups for an unwind, both the normal 
     // destination block and the cleanup block are the same.
     BasicBlock *followingBlock = 0, *cleanupBlock;
-    BBuilderContextData *bdata;
-    if (context.emittingCleanups &&
-        (bdata = BBuilderContextDataPtr::rcast(context.builderData))
-        )
-        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
-
-    // otherwise, create a new normal destinatation block and get the cleanup 
-    // block.
-    if (!followingBlock) {
-        followingBlock = BasicBlock::Create(getGlobalContext(), "l", 
-                                            this->func
-                                            );
-        cleanupBlock = getUnwindBlock(context);
-    }
+    getInvokeBlocks(context, followingBlock, cleanupBlock);
 
     if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
@@ -977,6 +982,40 @@ void LLVMBuilder::createFuncStartBlocks(const std::string &name) {
     builder.SetInsertPoint(firstBlock);
 }
 
+void LLVMBuilder::getInvokeBlocks(Context &context, 
+                                  BasicBlock *&followingBlock,
+                                  BasicBlock *&cleanupBlock
+                                  ) {
+    followingBlock = 0;
+    BBuilderContextData *bdata;
+    if (context.emittingCleanups &&
+        (bdata = BBuilderContextDataPtr::rcast(context.builderData))
+        )
+        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
+
+    // otherwise, create a new normal destinatation block and get the cleanup 
+    // block.
+    if (!followingBlock) {
+        followingBlock = BasicBlock::Create(getGlobalContext(), "l", 
+                                            this->func
+                                            );
+        cleanupBlock = getUnwindBlock(context);
+    }
+}
+
+void LLVMBuilder::emitExceptionCleanupExpr(Context &context) {
+    Value *exObjVal = getExceptionObjectValue(context, builder);
+    Function *cleanupExceptionFunc =
+        module->getFunction("__CrackCleanupException");
+    BasicBlock *followingBlock, *cleanupBlock;
+    getInvokeBlocks(context, followingBlock, cleanupBlock);
+    builder.CreateInvoke(cleanupExceptionFunc, followingBlock, cleanupBlock,
+                         exObjVal
+                         );
+    if (followingBlock != cleanupBlock)
+        builder.SetInsertPoint(followingBlock);
+}
+
 bool LLVMBuilder::suppressCleanups() {
     // only ever want to do this if the last instruction is unreachable.
     BasicBlock *block = builder.GetInsertBlock();
@@ -1069,9 +1108,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         cdata->nonTerminal = true;
     
     // emit an expression to get the exception object
-    VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
-    BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
-    Value *exObjVal = builder.CreateLoad(exObjImpl->rep);
+    Value *exObjVal = getExceptionObjectValue(context, builder);
     Function *getExFunc = module->getFunction("__CrackGetException");
     vector<Value *> parms(1);
     parms[0] = exObjVal;
@@ -2301,6 +2338,17 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.setSymbolName("__CrackBadCast");
         f.finish();
     }        
+
+    // create "__CrackCleanupException(voidptr exceptionObject)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType,
+                      "__CrackCleanupException",
+                      1
+                      );
+        f.addArg("exceptionObject", voidptrType);
+        f.setSymbolName("__CrackCleanupException");
+        f.finish();
+    }
 
 }
 

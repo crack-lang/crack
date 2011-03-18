@@ -125,6 +125,14 @@ class LLVMBuilder : public Builder {
         void createFuncStartBlocks(const std::string &name);
 
         /** 
+         * Create a following block and cleanup block for an Invoke 
+         * instruction given the context.
+         */
+        void getInvokeBlocks(model::Context &context, 
+                             llvm::BasicBlock *&followingBlock,
+                             llvm::BasicBlock *&cleanupBlock
+                             );
+        /** 
          * Insures that the class body global is present in the current module.
          */
         virtual void fixClassInstRep(BTypeDef *type) = 0;
@@ -175,6 +183,9 @@ class LLVMBuilder : public Builder {
                                 );
 
         virtual void *getFuncAddr(llvm::Function *func) = 0;
+
+        /** Creates an expresion to cleanup the current exception. */
+        void emitExceptionCleanupExpr(model::Context &context);
 
         LLVMBuilder();
 
@@ -273,6 +284,8 @@ class LLVMBuilder : public Builder {
                                 model::Branchpoint *branchpoint,
                                 bool terminal
                                 );
+
+        virtual void emitExceptionCleanup(model::Context &context);
 
         virtual void emitThrow(model::Context &context,
                                model::Expr *expr
