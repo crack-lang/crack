@@ -11,9 +11,7 @@ namespace crack { namespace runtime {
 int runChildProcess(const char **argv,
                     const char **env);
 
-int waitProcess(int pid);
-
-int pollProcess(int pid);
+int waitProcess(int pid, int noHang);
 
 void signalProcess(int pid, int sig);
 

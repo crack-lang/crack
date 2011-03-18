@@ -3,7 +3,7 @@
 
 import crack.sys StringArray;
 import crack.runtime runChildProcess, waitProcess, signalProcess, SIGKILL,
-                     SIGTERM, pollProcess;
+                     SIGTERM;
 
 // see Process.h in  runtime
 int CRK_PROC_STILL_RUNNING = 0x100;
@@ -41,12 +41,12 @@ class Process {
     int getReturnCode() { return _returnCode & 0xff; }
 
     int poll() {
-        _returnCode = pollProcess(_pid);
+        _returnCode = waitProcess(_pid, 1);
         return getReturnCode();
     }
 
     int wait() {
-        _returnCode = waitProcess(_pid);
+        _returnCode = waitProcess(_pid, 0);
         return getReturnCode();
     }
 

@@ -20,37 +20,13 @@ namespace crack { namespace runtime {
 
 // returns the exit status if exited, or the signal that killed or stopped
 // the process in the most sig byte with a bit flag set in 9 or 10 depending
-// on how it was signaled
-int waitProcess(int pid) {
-
-// UNIX
-    int status;
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status)) {
-        return CRK_PROC_EXITED | WEXITSTATUS(status);
-    }
-    else if (WIFSIGNALED(status)) {
-        return CRK_PROC_KILLED | WTERMSIG(status);
-    }
-    else if (WIFSTOPPED(status)) {
-        return CRK_PROC_STOPPED | WSTOPSIG(status);
-    }
-    else {
-        // ??
-        return -1;
-    }
-// END UNIX
-
-}
-
-// returns the exit status if exited, or the signal that killed or stopped
-// the process in the most sig byte with a bit flag set in 9 or 10 depending
 // on how it was signaled, or bit 8 set for "still running"
-int pollProcess(int pid) {
+int waitProcess(int pid, int noHang) {
 
 // UNIX
-    int status;
-    if (waitpid(pid, &status, WNOHANG) == 0)
+    int status, retPid;
+    retPid = waitpid(pid, &status, (noHang)?WNOHANG:0);
+    if (noHang && retPid == 0)
         return CRK_PROC_STILL_RUNNING;
     if (WIFEXITED(status)) {
         return CRK_PROC_EXITED | WEXITSTATUS(status);

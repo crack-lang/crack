@@ -493,10 +493,7 @@ extern "C" void crack_runtime_init(Module *mod) {
     f = mod->addFunc(intType, "waitProcess",
                      (void *)&crack::runtime::waitProcess);
     f->addArg(intType, "pid");
-
-    f = mod->addFunc(intType, "pollProcess",
-                     (void *)&crack::runtime::pollProcess);
-    f->addArg(intType, "pid");
+    f->addArg(intType, "noHang");
 
     f = mod->addFunc(voidType, "signalProcess",
                      (void *)&crack::runtime::signalProcess);
