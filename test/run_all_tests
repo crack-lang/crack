@@ -246,10 +246,10 @@ test_output 'implicit conversion from int to bool in condition' \
     'if (1) puts("yes"); if (0) puts("no");' \
     yes
 
-# this was causing seg-faults at one point
-test_output 'Override of variable in global scope' \
-    'int32 a; class X { void b(int32 a) {} };' \
-    'run_all_tests.tmp:1: Symbol a hides another definition in an enclosing context.'
+test_output 'Initialization of instance variables from similarly named args' \
+    'int32 a; class X { int a; oper init(int32 a) : a = a {} };
+     X x = {100}; if (x.a == 100) puts("ok"); else puts("FAILED");' \
+    'ok'
 
 test_output 'method overloads' \
     'class A { void f(int32 v) { printint(v); }

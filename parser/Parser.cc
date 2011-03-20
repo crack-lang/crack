@@ -147,8 +147,6 @@ void Parser::parseClause(bool defsAllowed) {
          if (tok2.isDefine()) {
             if (def->getOwner() == context->ns.get())
                redefineError(tok2, def.get());
-            else
-               warn(tok2, SPUG_FSTR("Redefining symbol " << def->name));
             
             expr = parseExpression();
             context->emitVarDef(expr->type.get(), tok, expr.get());
@@ -1283,11 +1281,18 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                   );
       
       // make sure that it is a direct member of this class.
-      } else if (varDef->getOwner() != type.get()) {
+      } else if (varDef->getOwner() != type.get() &&
+                 // it's likely that this is just a case of a parameter 
+                 // shadowing an instance veriable, which is legal.  Try 
+                 // looking up the variable at class scope.
+                 (!(varDef = type->lookUp(tok.getData())) ||
+                  varDef->getOwner() != type.get()
+                  )
+                 ) {
          error(tok,
                SPUG_FSTR(tok.getData() << " is not an immediate member of " <<
-                         type->name
-                         )
+                        type->name
+                        )
                );
 
       // make sure that it's an instance variable
@@ -2558,22 +2563,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
 
          // redefinition in the same context is otherwise an error
          redefineError(tok, existing.get());
-      }
-      
-      // redefinition in a derived context is fine, but if we're not in a 
-      // derived context display a warning.  TODO: if this check doesn't need 
-      // to be this way, replace it with something that makes sense.
-      else if (!(classContext = context->getClassContext()) ||
-               !classContext->returnType || 
-               !(existingClass = TypeDefPtr::cast(existingNS)) ||
-               !existingClass->matches(*classContext->returnType)
-               ) {
-         warn(tok,
-              SPUG_FSTR("Symbol " << name << 
-                         " hides another definition in an enclosing context."
-                        )
-              );
-      }
+      }      
    }
    
    return 0;
