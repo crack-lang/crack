@@ -158,6 +158,34 @@ if (1) {
         puts('FAILED cleanup outside of try/catch');
 }
 
+# exceptions raised from cleanups to the next cleanup
+if (1) {
+    int cleanupA, cleanupB;
+    bool caughtException;
+    class A { oper release() { ++cleanupA; } }
+    class B { oper release() { ++cleanupB; throw Exception(); } }
+    try {
+        A a;
+        B b;
+    } catch (Exception ex) {
+        caughtException = 1;
+    }
+    
+    if (cleanupB < 1)
+        puts('FAILED exceptions from cleanups: B cleanup not called.');
+    else if (cleanupB > 1)
+        puts('FAILED exceptions from cleanups: B cleanup called multiple '
+              'times'
+             );
+    
+    if (cleanupA != 1)
+        puts('FAILED exceptions from cleanups: A cleanup not called once');
+    
+    if (!caughtException)
+        puts('FAILED exceptions from cleanups: exception not raised or '
+              'caught'
+             );
+}
 
 puts('ok');
 

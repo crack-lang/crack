@@ -24,8 +24,11 @@ void BCleanupFrame::close() {
     for (CleanupList::iterator iter = cleanups.begin();
          iter != cleanups.end();
          ++iter
-         )
+         ) {
+        iter->emittingCleanups = true;
         iter->action->emit(*context);
+        iter->emittingCleanups = false;
+    }
     context->emittingCleanups = false;
 }
 
@@ -46,6 +49,11 @@ BasicBlock *BCleanupFrame::emitUnwindCleanups(BasicBlock *next) {
          iter != cleanups.rend();
          ++iter
          ) {
+        // if we're already emitting this cleanup in a normal context, stop 
+        // here
+        if (iter->emittingCleanups)
+            break;
+
         if (!iter->unwindBlock) {
             iter->unwindBlock = BasicBlock::Create(getGlobalContext(),
                                                    "cleanup",
