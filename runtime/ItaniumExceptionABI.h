@@ -42,7 +42,9 @@ struct _Unwind_Exception {
     _Unwind_Exception_Cleanup_Fn exception_cleanup;
     uint64_t private_1, private_2;
     
-    // crack-specific user data (points to the exception object).
+    // crack-specific reference count and user data (points to the exception 
+    // object).
+    unsigned int ref_count;
     void *user_data;
 };
 

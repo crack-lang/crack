@@ -187,6 +187,27 @@ if (1) {
              );
 }
 
+# throwing a new exception from a catch
+if (1) {
+    bool didInner, didOuter;
+    
+    try {
+        try {
+            throw Exception();
+        } catch (Exception ex) {
+            didInner = 1;
+            throw Exception();
+        }
+    } catch (Exception ex) {
+        didOuter = 1;
+    }
+    
+    if (!didInner)
+        puts('FAILED exceptions from a catch: missed inner catch');
+    if (!didOuter)
+        puts('FAILED exceptions from a catch: missed outer catch');
+}
+
 puts('ok');
 
 // try block ends with a terminator
@@ -196,7 +217,5 @@ puts('ok');
 #    } catch (Exception ex) {
 #    }
 #}
-
-// test catching exceptions defined in other modules
 
 // test multiple try statements in the same context.
