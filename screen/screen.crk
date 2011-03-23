@@ -2,11 +2,12 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.io cout, cerr, Formatter, Writer, StringWriter;
-import crack.sys argv, exit;
+import crack.sys argv, exit, StringArray;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
+import crack.exp.process Process;
 
 SCREEN_VERSION := ".2";
 
@@ -62,7 +63,7 @@ class Test {
         }
     }
 
-    void writeScript(Directory outDir) {
+    String writeScript(Directory outDir) {
         
         outName := outDir.nameWithTrailing()+_fInfo.basename(true) + ".crk";
         
@@ -70,6 +71,8 @@ class Test {
         
         out := File(outName,"w");        
         out.write(String.cast(_testData["FILE"]));
+
+        return outName;
         
     }
 
@@ -80,10 +83,18 @@ class Test {
             return;
         }
 
-        writeScript(outDir);
+        outName := writeScript(outDir);
 
         cout `[$_fInfo]: `;
-        
+
+        args := StringArray(3);
+        args[0] = "crack";
+        args[2] = "-n";
+        args[1] = outName;
+
+        p := Process(args);
+        p.wait();
+
         cout `\n`;
 
     }

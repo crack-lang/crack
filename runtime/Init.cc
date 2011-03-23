@@ -485,10 +485,18 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "SIGXCPU", SIGXCPU);
     mod->addConstant(intType, "SIGXFSZ", SIGXFSZ);
 
+    Type *cpipeType = mod->addType("PipeDesc");
+    cpipeType->addInstVar(intType, "stdin");
+    cpipeType->addInstVar(intType, "stdout");
+    cpipeType->addInstVar(intType, "stderr");
+    cpipeType->addConstructor();
+    cpipeType->finish();
+
     f = mod->addFunc(intType, "runChildProcess",
                      (void *)&crack::runtime::runChildProcess);
     f->addArg(byteptrArrayType, "argv");
     f->addArg(byteptrArrayType, "env");
+    f->addArg(cpipeType, "pipes");
 
     f = mod->addFunc(intType, "waitProcess",
                      (void *)&crack::runtime::waitProcess);

@@ -3,37 +3,47 @@
 
 import crack.sys StringArray;
 import crack.runtime runChildProcess, waitProcess, signalProcess, SIGKILL,
-                     SIGTERM;
+                     SIGTERM, PipeDesc;
 
 // see Process.h in  runtime
 int CRK_PROC_STILL_RUNNING = 0x100;
 int CRK_PROC_KILLED        = 0x200;
 int CRK_PROC_STOPPED       = 0x400;
 int CRK_PROC_EXITED        = 0x800;
+int CRK_PROC_FAILED        = 0x1000;
 
 class Process {
 
     int _pid = -1;
-    int _stdin = -1;
-    int _stdout = -1;
-    int _stderr = -1;
+    PipeDesc _pd;
     int _returnCode = CRK_PROC_STILL_RUNNING;
 
-    oper init(String cmd) {
+    oper init(String cmd): _pd() {
+        // XXX split on space?
         args := StringArray(1);
         args[0] = cmd;
         array[byteptr] env = null;
-        _pid = runChildProcess(args.getPrimArray(), env);
+        _pid = runChildProcess(args.getPrimArray(), env, _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
     }
 
-    oper init(StringArray args) {
+    oper init(StringArray args): _pd() {
         array[byteptr] env;
-        _pid = runChildProcess(args.getPrimArray(), env);
+        _pid = runChildProcess(args.getPrimArray(), env, _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
     }
 
-    oper init(StringArray args, StringArray env) {
+    oper init(StringArray args, StringArray env): _pd() {
         _pid = runChildProcess(args.getPrimArray(),
-                              env.getPrimArray());
+                               env.getPrimArray(),
+                               _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
     }
 
     int getPid() { return _pid; }
@@ -41,13 +51,19 @@ class Process {
     int getReturnCode() { return _returnCode & 0xff; }
 
     int poll() {
-        _returnCode = waitProcess(_pid, 1);
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            _returnCode = waitProcess(_pid, 1);
         return getReturnCode();
     }
 
     int wait() {
-        _returnCode = waitProcess(_pid, 0);
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            _returnCode = waitProcess(_pid, 0);
         return getReturnCode();
+    }
+
+    bool failed() {
+        return (_returnCode & CRK_PROC_FAILED);
     }
 
     bool killed() {
@@ -61,7 +77,8 @@ class Process {
     bool isRunning() {
         if (_returnCode & CRK_PROC_KILLED ||
             _returnCode & CRK_PROC_STOPPED ||
-            _returnCode & CRK_PROC_EXITED
+            _returnCode & CRK_PROC_EXITED ||
+            _returnCode & CRK_PROC_FAILED
             )
             return false;
         poll();
@@ -69,19 +86,22 @@ class Process {
     }
 
     void sendSignal(int sig) {
-        signalProcess(_pid, sig);
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, sig);
     }
 
     void terminate() {
         // XXX this needs to be a runtime call, as on Windows it will do
         // something different
-        signalProcess(_pid, SIGTERM);
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, SIGTERM);
     }
 
     void kill() {
         // XXX this needs to be a runtime call, as on Windows it will do
         // something different
-        signalProcess(_pid, SIGKILL);
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, SIGKILL);
     }
 
 }

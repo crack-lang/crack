@@ -20,7 +20,11 @@ void f() {
         else
             return;
 }
-puts("ok");
 
 --EXPECT--
-abcdabcdabcdefghabcdefghok
+abcd
+abcd
+abcd
+efgh
+abcd
+efgh

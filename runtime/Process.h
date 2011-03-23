@@ -8,8 +8,15 @@ namespace crack { namespace runtime {
 #define CRK_PROC_STOPPED       1 << 10
 #define CRK_PROC_EXITED        1 << 11
 
+typedef struct {
+    int stdin;
+    int stdout;
+    int stderr;
+} PipeDesc;
+
 int runChildProcess(const char **argv,
-                    const char **env);
+                    const char **env,
+                    PipeDesc *pd);
 
 int waitProcess(int pid, int noHang);
 
