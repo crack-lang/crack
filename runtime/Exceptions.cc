@@ -14,6 +14,32 @@
 using namespace std;
 using namespace crack::runtime;
 
+namespace crack { namespace runtime {
+
+// per-thread exception object variable and a "once" variable to allow us to 
+// initialize it.
+static pthread_key_t exceptionObjectKey;
+static pthread_once_t exceptionObjectKeyOnce = PTHREAD_ONCE_INIT;
+
+void deleteException(_Unwind_Exception *exc) {
+    if (runtimeHooks.exceptionReleaseFunc)
+        runtimeHooks.exceptionReleaseFunc(exc->user_data);
+    delete exc;
+    pthread_setspecific(crack::runtime::exceptionObjectKey, 0);
+}
+
+void initExceptionObjectKey() {
+    assert(pthread_key_create(
+                &exceptionObjectKey,
+                reinterpret_cast<void (*)(void *)>(deleteException)
+           ) == 0 &&
+            "Unable to create pthread key for exception object."
+        );
+}
+
+}} // namespace crack::runtime
+
+
 extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
     int version,
     _Unwind_Action actions,
@@ -45,16 +71,37 @@ extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
 static void __CrackExceptionCleanup(_Unwind_Reason_Code reason,
                                     struct _Unwind_Exception *exc
                                     ) {
-    if (runtimeHooks.exceptionReleaseFunc)
-        runtimeHooks.exceptionReleaseFunc(exc->user_data);
-    delete exc;
+    if (--exc->ref_count == 0) {
+        crack::runtime::deleteException(exc);
+    }
 }
+
 
 /** Function called by the "throw" statement. */
 extern "C" void __CrackThrow(void *crackExceptionObject) {
-    _Unwind_Exception *uex = new _Unwind_Exception();
-    uex->exception_class = crackClassId;
-    uex->exception_cleanup = __CrackExceptionCleanup;
+    pthread_once(&exceptionObjectKeyOnce, 
+                 crack::runtime::initExceptionObjectKey
+                 );
+    _Unwind_Exception *uex =
+        reinterpret_cast<_Unwind_Exception *>(
+            pthread_getspecific(crack::runtime::exceptionObjectKey)
+        );
+    if (uex) {
+        // we don't need an atomic reference count for these, they are thread 
+        // specific.
+        ++uex->ref_count;
+        
+        // release the original exception object XXX need to give the crack 
+        // library the option to associate the old exception with the new one.
+        if (runtimeHooks.exceptionReleaseFunc)
+            runtimeHooks.exceptionReleaseFunc(uex->user_data);
+    } else {
+        uex = new _Unwind_Exception();
+        uex->exception_class = crackClassId;
+        uex->exception_cleanup = __CrackExceptionCleanup;
+        uex->ref_count = 1;
+        pthread_setspecific(crack::runtime::exceptionObjectKey, uex);
+    }
     uex->user_data = crackExceptionObject;
     _Unwind_RaiseException(uex);
 }

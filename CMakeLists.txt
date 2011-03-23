@@ -100,6 +100,8 @@ set_target_properties(crack-runtime
                       PREFIX ""
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                       )
+target_link_libraries(crack-runtime
+                      pthread)
 
 
 add_executable(crack crack.cc)

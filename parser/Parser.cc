@@ -2105,6 +2105,10 @@ ContextPtr Parser::parseTryStmt() {
    }
    bool lastWasTerminal = terminal;
    
+   // strip the catch branchpoint so that exceptions thrown in the 
+   // finally/catch clauses are thrown to outer contexts. 
+   context->setCatchBranchpoint(0);
+   
    tok = toker.getToken();
    if (!tok.isCatch())
       unexpected(tok, "catch expected after try block.");

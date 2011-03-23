@@ -14,7 +14,7 @@ libCrackExtStub_la_LDFLAGS = -version-info 0:0:0
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
 
-runtime_la_LDFLAGS = -avoid-version -module
+runtime_la_LDFLAGS = -avoid-version -module -lpthread
 runtime_la_SOURCES = %libRuntimeSources%
 
 # this is really annoying, testext needs to be installed in order to generate 
