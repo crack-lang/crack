@@ -46,7 +46,7 @@ struct _Unwind_Exception {
     // object).
     unsigned int ref_count;
     void *user_data;
-};
+} __attribute__((__aligned__));
 
 struct _Unwind_Context;
 
