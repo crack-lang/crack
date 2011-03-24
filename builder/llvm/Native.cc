@@ -143,7 +143,9 @@ static int GenerateNative(const std::string &OutputFilename,
   }
 
 */
-void createMain(llvm::Module *mod, const BuilderOptions *o) {
+void createMain(llvm::Module *mod, const BuilderOptions *o,
+                llvm::Value *vtableBaseTypeBody
+                ) {
 
     // script entry point we insert into main() function
     BuilderOptions::StringMap::const_iterator i = o->optionMap.find("mainUnit");
@@ -217,6 +219,22 @@ void createMain(llvm::Module *mod, const BuilderOptions *o) {
 
         BasicBlock* label_13 = BasicBlock::Create(mod->getContext(), "entry",
                                                   func_main,0);
+        BasicBlock *cleanupBlock = BasicBlock::Create(mod->getContext(),
+                                                      "cleanup",
+                                                      func_main
+                                                      ),
+                   *lpBlock = BasicBlock::Create(mod->getContext(),
+                                                 "lp",
+                                                 func_main
+                                                 ),
+                   *endBlock = BasicBlock::Create(mod->getContext(),
+                                                  "end",
+                                                  func_main
+                                                  ),
+                   *lpPostCleanupBlock = BasicBlock::Create(mod->getContext(),
+                                                            "lp",
+                                                            func_main
+                                                            );
 
         // alloc return value, argc, argv
         AllocaInst* ptr_14 = new AllocaInst(
@@ -225,22 +243,60 @@ void createMain(llvm::Module *mod, const BuilderOptions *o) {
         new StoreInst(retValConst, ptr_14, false, label_13);
         new StoreInst(int32_argc, gargc, false, label_13);
         new StoreInst(ptr_argv, gargv, false, label_13);
+        
+        IRBuilder<> builder(label_13);
 
         // call crack.lang init function
         // note if crackLangInit isn't set, we skip it. this happens for
         // non bootstrapped scripts
-        if (crackLangInit)
-            CallInst::Create(crackLangInit, "", label_13);
+        if (crackLangInit) {
+            BasicBlock *block = BasicBlock::Create(mod->getContext(),
+                                                   "main",
+                                                   func_main
+                                                   );
+            builder.CreateInvoke(crackLangInit, block, lpBlock);
+            builder.SetInsertPoint(block);
+        }
 
         // call main script initialization function
-        CallInst::Create(scriptEntry, "", label_13);
+        builder.CreateInvoke(scriptEntry, cleanupBlock, lpBlock);
 
         // cleanup function
-        CallInst::Create(mainCleanup, "", label_13);
+        builder.SetInsertPoint(cleanupBlock);
+        builder.CreateInvoke(mainCleanup, endBlock, lpPostCleanupBlock);
+        
+        // exception handling stuff
+        Function *ehExFunc = mod->getFunction("llvm.eh.exception"),
+                 *ehSelFunc = mod->getFunction("llvm.eh.selector"),
+                 *crkExFunc = mod->getFunction("__CrackExceptionPersonality");
+        const Type *i8PtrType = builder.getInt8Ty()->getPointerTo();
+        
+        // first landing pad does cleanups
+        builder.SetInsertPoint(lpBlock);
+        Value *ex = builder.CreateCall(ehExFunc);
+        Value *sel = builder.CreateCall4(ehSelFunc, ex,
+                                         builder.CreateBitCast(crkExFunc, 
+                                                               i8PtrType
+                                                               ),
+                                         vtableBaseTypeBody,
+                                         Constant::getNullValue(i8PtrType)
+                                         );
+        builder.CreateInvoke(mainCleanup, endBlock, lpPostCleanupBlock);
+
+        // post cleanup landing pad        
+        builder.SetInsertPoint(lpPostCleanupBlock);
+        ex = builder.CreateCall(ehExFunc);
+        sel = builder.CreateCall4(ehSelFunc, ex, 
+                                  builder.CreateBitCast(crkExFunc, i8PtrType),
+                                  vtableBaseTypeBody,
+                                  Constant::getNullValue(i8PtrType)
+                                  );
+        builder.CreateBr(endBlock);
 
         // return value
-        LoadInst* int32_21 = new LoadInst(ptr_14, "", false, label_13);
-        ReturnInst::Create(mod->getContext(), int32_21, label_13);
+        builder.SetInsertPoint(endBlock);
+        LoadInst* int32_21 = builder.CreateLoad(ptr_14);
+        builder.CreateRet(int32_21);
 
     }
 

@@ -127,7 +127,10 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     // final IR generation: cleanup and main
     emitAggregateCleanup(finalir);
-    createMain(finalir, options.get());
+    BTypeDef *vtableType = 
+        BTypeDefPtr::rcast(context.construct->vtableBaseType);
+    Value *vtableTypeBody = vtableType->getClassInstRep(finalir, 0);
+    createMain(finalir, options.get(), vtableTypeBody);
 
     // possible LTO optimizations
     if (options->optimizeLevel) {
@@ -288,8 +291,7 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
                                               Type::getVoidTy(getGlobalContext()),
                                               NULL);
     Function *f = llvm::cast<llvm::Function>(fc);
-    vector<Value*> args;
-    builder.CreateCall(f, args.begin(), args.end());
+    builder.CreateCall(f);
 
     builder.SetInsertPoint(orig);
 

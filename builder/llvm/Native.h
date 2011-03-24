@@ -8,6 +8,7 @@
 
 namespace llvm {
     class Module;
+    class Value;
 }
 
 namespace builder {
@@ -17,7 +18,9 @@ class BuilderOptions;
 namespace mvll {
 
 // create main entry IR
-void createMain(llvm::Module *mod, const BuilderOptions *o);
+void createMain(llvm::Module *mod, const BuilderOptions *o,
+                llvm::Value *vtableBaseTypeBody
+                );
 
 // optimize a single unit (module)
 void optimizeUnit(llvm::Module *module, int optimizeLevel);

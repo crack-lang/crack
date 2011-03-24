@@ -415,6 +415,8 @@ bool Construct::loadBootstrapModules() {
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return false;
+    } catch (...) {
+        cerr << "Unknown exception caught (Crack exception?)" << endl;
     }
         
     
@@ -441,6 +443,8 @@ int Construct::runScript(istream &src, const string &name) {
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return 1;
+    } catch (...) {
+        cerr << "Unknown exception caught (Crack exception?)" << endl;
     }
     rootBuilder->finishBuild(*context);
 }

@@ -208,6 +208,38 @@ if (1) {
         puts('FAILED exceptions from a catch: missed outer catch');
 }
 
+# throwing from a cleanup handler
+if (1) {
+    int cleanupA, cleanupB, exceptionVal;
+    bool caughtException;
+    class A { oper release() { ++cleanupA; } }
+    class B { oper release() { ++cleanupB; throw FooError(2); } }
+    void f() {
+        throw FooError(1);
+    }
+    
+    try {
+        A a;
+        B foo;
+        f();
+    } catch (FooError ex) {
+        caughtException = 1;
+        exceptionVal = ex.val;
+    }
+    
+    if (!cleanupB)
+        puts('FAILED throwing from a cleanup: cleanup not released');
+    
+    if (!cleanupA)
+        puts('FAILED throwing from a cleanup: subsequent cleanup not called');
+    
+    if (!caughtException)
+        puts('FAILED throwing from a cleanup: exception not caught');
+    
+    if (exceptionVal != 2)
+        puts('FAILED throwing from a cleanup: exception object not converted');
+}
+
 puts('ok');
 
 // try block ends with a terminator
