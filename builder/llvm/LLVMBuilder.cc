@@ -1968,6 +1968,15 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         llvmIntType = int64Type->rep;
     }
 
+    // conversion from voidptr to integer
+    funcDef =
+        new GeneralOpDef<PtrToIntOpCall>(uint64Type, FuncDef::noFlags,
+                                         "oper new",
+                                         1
+                                         );
+    funcDef->args[0] = new ArgDef(voidptrType, "val");
+    context.addDef(funcDef.get(), uint64Type);
+    
     // create integer operations
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));

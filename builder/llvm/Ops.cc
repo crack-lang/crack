@@ -432,6 +432,19 @@ ResultExprPtr VoidPtrOpCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
+// PtrToIntOpCall
+ResultExprPtr PtrToIntOpCall::emit(Context &context) {
+    args[0]->emit(context)->handleTransient(context);
+    
+    LLVMBuilder &builder =
+        dynamic_cast<LLVMBuilder &>(context.builder);
+    BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
+    builder.lastValue = builder.builder.CreatePtrToInt(builder.lastValue,
+                                                       type->rep
+                                                       );
+    return new BResultExpr(this, builder.lastValue);
+}  
+
 // UnsafeCastCall
 ResultExprPtr UnsafeCastCall::emit(Context &context) {
     // emit the argument
