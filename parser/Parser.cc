@@ -914,38 +914,61 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 
 namespace {
 
- ExprPtr parseConstInt(Context &context,
-                       bool negative,
-                       const string &val,
-                       int base) {
-     if (negative) {
+   ExprPtr parseConstInt(Context &context,
+                        bool negative,
+                        const string &val,
+                        int base) {
+      if (negative) {
          // we need to give strtoll the - in the string, because otherwise the
          // range is off and we can't parse LONG_MIN
          string nval = "-"+val;
          return context.builder.createIntConst(context,
-                                               strtoll(nval.c_str(),
-                                                       NULL,
-                                                       base));
-     }
+                                               strtoll(nval.c_str(), NULL,
+                                                       base
+                                                       )
+                                               );
+      }
+      
+      // if the constant starts with an 'i' or 'b', this is a string whose 
+      // bytes comprise the integer value.
+      if (val[0] == 'b') {
+         if (val.size() != 2)
+            context.error("Byte constants from strings must be exactly one "
+                           "byte long."
+                          );
+         TypeDef *byteType = context.construct->byteType.get();
+         return context.builder.createIntConst(context, val[1], byteType);
+      } else if (val[0] == 'i') {
+         if (val.size() < 2 || val.size() > 9)
+            context.error("Integer constants from strings must be between one "
+                           "and 8 bytes long"
+                          );
 
-     // if it's not negative, we first try to parse it as unsigned
-     // if it's small enough to fit in a signed, we do that, otherwise
-     // we keep it unsigned
-     unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
-     if (bigcval <= INT64_MAX) {
+         // construct an integer from the bytes in the string
+         int64_t n = 0;
+         for (int i = 1; i < val.size(); ++i)
+            n = n << 8 | val[i];
+
+         return context.builder.createIntConst(context, n);
+      }
+   
+      // if it's not negative, we first try to parse it as unsigned
+      // if it's small enough to fit in a signed, we do that, otherwise
+      // we keep it unsigned
+      unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
+      if (bigcval <= INT64_MAX) {
          // signed
          return context.builder.createIntConst(context,
                                                strtoll(val.c_str(),
                                                        NULL,
-                                                       base));
-     }
-     else {
+                                                       base
+                                                       )
+                                               );
+      } else {
          // unsigned
-         return context.builder.createUIntConst(context,
-                                                bigcval);
-     }
-
- }
+         return context.builder.createUIntConst(context, bigcval);
+      }
+   }
 
 } // anonymous namespace
 

@@ -67,7 +67,8 @@ class Toker {
          st_postaug,
          st_hex,
          st_octal,
-         st_binary
+         st_binary,
+         st_strint
       } state;
       
       // the putback queue

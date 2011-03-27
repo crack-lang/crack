@@ -241,6 +241,21 @@ as well as the default decimal notation.  Examples follow:
     int b = 0b10110; # binary constant
 }}
 
+You can also specify integer constants as the byte values in strings by 
+specifying a "b" (for byte) or "i" (for integer) prefix to a constant string 
+(either single or double-quoted).  For example:
+
+{{
+    b := b'A';  # b is set to 65, the ascii value of A
+    int n = i'\001\0';  # i is set to 256
+    int magic = i"SpugCrak";  # magic = 6012434588913262955
+}}
+
+This usage helps to make up for the fact that Crack uses the single quote as 
+an alternate string delimiter, making it otherwise impossible to define single 
+character constants as you would in C.  As the example suggests, the more 
+general integer form is useful for specifying magic numbers.
+
 Implicit Conversion
 '''''''''''''''''''
 

@@ -117,6 +117,10 @@ Token Toker::readToken() {
             case st_none:
                 if (isspace(ch)) {
                    ;
+                } else if (ch == 'i' || ch == 'b') {
+                    // deal with i'str' and b'c' tokens
+                    buf << ch;
+                    state = st_strint;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
@@ -187,6 +191,7 @@ Token Toker::readToken() {
                 } else if (ch == '"' || ch == '\'') {
                     terminator = ch;
                     state = st_string;
+                    t1 = Token::string;
                 } else if (ch == ':') {
                     symchars[sci++] = ch; t1 = Token::colon; 
                     t2 = Token::define;
@@ -306,7 +311,19 @@ Token Toker::readToken() {
                     return Token(Token::dot, ".", locationMap.getLocation());
                 }
                 break;
-   
+
+            // integer or byte coded as a string
+            case st_strint:
+                if (ch == '"' || ch == '\'') {
+                    state = st_string;
+                    t1 = Token::integer;
+                    terminator = ch;
+                    break;
+                } else {
+                    state = st_ident;
+                }
+                // fall through to ident processing
+
             case st_ident:
    
                 // if we got a non-alphanumeric, non-underscore we're done
@@ -358,9 +375,7 @@ Token Toker::readToken() {
                 // check for the terminator
                 if (ch == terminator) {
                     state = st_none;
-                    return Token(Token::string, buf.str(), 
-                                 locationMap.getLocation()
-                                 );
+                    return Token(t1, buf.str(), locationMap.getLocation());
                 } else if (ch == '\\') {
                     state = st_strEscapeChar;
                 } else {
@@ -692,8 +707,8 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     return Token(t1, symchars, locationMap.getLocation());
                 }
-                break;   
-
+                break;
+            
             default:
                throw logic_error("tokenizer in illegal state");
         }
