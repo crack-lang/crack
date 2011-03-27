@@ -11,7 +11,7 @@
             Elem elem;
             Node next;
             
-            oper init(Elem elem0) : elem = elem0 {}
+            oper init(Elem elem) : elem = elem {}
         }
         
         ## A linked list iterator.
@@ -171,9 +171,9 @@
             Elem elem;
             Node next, prev;
         
-            oper init(Elem elem0, Node prev0) :
-                elem = elem0,
-                prev = prev0 {
+            oper init(Elem elem, Node prev) :
+                elem = elem,
+                prev = prev {
             }
         }
         

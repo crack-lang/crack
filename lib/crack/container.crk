@@ -26,7 +26,7 @@ class Iterator {
 
 class MapElem {
     Object key, val;
-    oper init(Object key0, Object val0) : key = key0, val = val0 {}
+    oper init(Object key, Object val) : key = key, val = val {}
 }
 
 ## Base class for map iterators - maps are collections stored by key and value.
@@ -64,7 +64,7 @@ class ListNode {
     Object elem;
     ListNode next;
     
-    oper init(Object elem0) : elem = elem0 {}
+    oper init(Object elem) : elem = elem {}
 }
 
 ## A linked list iterator.
@@ -225,8 +225,8 @@ class List : Container {
 class DListNode : ListNode {
     DListNode _prev;
 
-    oper init(Object elem0, ListNode prev) :
-        ListNode(elem0), 
+    oper init(Object elem, ListNode prev) :
+        ListNode(elem), 
         _prev = DListNode.unsafeCast(prev) {
     }
 }
@@ -494,7 +494,7 @@ class Array : _ArrayIface {
 class KeyVal {
     Object key, val;
 
-    oper init(Object key0, Object val0) : key = key0, val = val0 {}
+    oper init(Object key, Object val) : key = key, val = val {}
 
     int cmp(Object other) {
         if (other.class.isSubclass(KeyVal))
@@ -516,7 +516,7 @@ class RBTreeNode {
     RBTreeNode left, right, parent;
     Object val;
     
-    oper init(Object val0, bool red0) : red = red0, val = val0 {}
+    oper init(Object val, bool red) : red = red, val = val {}
     
     void doIndent(uint indent) {
         i := indent;

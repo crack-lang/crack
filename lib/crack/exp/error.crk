@@ -33,7 +33,7 @@ class ErrorHandler {
     ## if fatal is false, this flag will be set when there was an error.
     bool gotError = false;
     
-    oper init(Writer writer0) : writer = writer0 {}
+    oper init(Writer writer) : writer = writer {}
     
     void finish() {
         if (fatal) {

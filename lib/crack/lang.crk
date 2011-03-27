@@ -158,7 +158,7 @@ class Buffer : Object {
     uint size;
     byteptr buffer;
 
-    oper init(byteptr buffer0, uint size0) : buffer = buffer0, size = size0 {}
+    oper init(byteptr buffer, uint size) : buffer = buffer, size = size {}
 
     bool isTrue() {
         return size;
@@ -227,7 +227,7 @@ void _writeObject(Writer out) {
 class WriteBuffer : Buffer {
 
     ## constructor inheritence would be nice
-    oper init(byteptr buffer0, uint size0) : Buffer(buffer0, size0) {}
+    oper init(byteptr buffer, uint size) : Buffer(buffer, size) {}
 
     ## Move data from an arbitrary byteptr into the buffer.
     void move(uint start, byteptr ptr, uint count) {
@@ -254,7 +254,7 @@ class WriteBuffer : Buffer {
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
 
-    oper init(uint size0) : WriteBuffer(malloc(size0), size0) {}
+    oper init(uint size) : WriteBuffer(malloc(size), size) {}
 
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
@@ -291,7 +291,7 @@ class ManagedBuffer : WriteBuffer {
 class AppendBuffer : ManagedBuffer {
     uint pos;
 
-    oper init(uint size0) : ManagedBuffer(size0) {}
+    oper init(uint size) : ManagedBuffer(size) {}
 
     ## Append a single byte to the buffer, growing if necessary.
     void append(byte c) {
@@ -415,9 +415,9 @@ class String : Buffer {
     }
 
     ## Initialize from byte pointer and size and optionally take ownership.
-    oper init(byteptr buf, uint size0, bool takeOwnership) :
-        Buffer(takeOwnership ? buf : memcpy(malloc(size0), buf, size0),
-               size0
+    oper init(byteptr buf, uint size, bool takeOwnership) :
+        Buffer(takeOwnership ? buf : memcpy(malloc(size), buf, size),
+               size
                ) {
     }
 
@@ -634,25 +634,25 @@ SubString slice(String target, int start) {
 ## not included in the size of the string.
 class CString : String {
 
-    @final void __copy(byteptr buf, uint size0) {
-        size = size0;
-        buffer = malloc(size0 + 1);
-        memcpy(buffer, buf, size0);
+    @final void __copy(byteptr buf, uint newSize) {
+        size = newSize;
+        buffer = malloc(size + 1);
+        memcpy(buffer, buf, size);
         buffer[size] = 0;
     }
 
-    oper init(Buffer s0) {
-        __copy(s0.buffer, s0.size);
+    oper init(Buffer buf) {
+        __copy(buf.buffer, buf.size);
     }
 
     ## Initialize a the string from byteptr and size, take ownership of the
     ## memory if requested.
-    ## If takeOwnership is true, buf[size0] must be null.  This constructor
+    ## If takeOwnership is true, buf[size] must be null.  This constructor
     ## will not verify that this is the case.
-    oper init(byteptr buf, uint size0, bool takeOwnership) :
-        String(buf, size0, true) {
+    oper init(byteptr buf, uint size, bool takeOwnership) :
+        String(buf, size, true) {
         if (!takeOwnership)
-            __copy(buf, size0);
+            __copy(buf, size);
     }
 
     ## Initialize from a null-terminated byteptr, take ownership of the
@@ -666,7 +666,7 @@ class CString : String {
 
 class StaticString : String {
 
-    oper init(byteptr data, uint size0) : String(data, size0, true) {}
+    oper init(byteptr data, uint size) : String(data, size, true) {}
 
     ## Initialize from a null terminated string.
     oper init(byteptr data) : String(data, strlen(data), true) {}
@@ -678,11 +678,11 @@ class StaticString : String {
 ## Base exception class.
 class Exception : Object {
     String text;
-    oper init(String text0) : text = text0 {}
+    oper init(String text) : text = text {}
 }
 
 class BadCastError : Exception {
-    oper init(String text0) : Exception(text0) {}
+    oper init(String text) : Exception(text) {}
 }
 
 bool exceptionMatchFunc(Class classObj, Object obj) {

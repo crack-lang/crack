@@ -10,7 +10,7 @@ class FDWriter : Object, Writer {
     int fd;
 
     ## Constructs an FDWriter from a plain file descriptor.
-    oper init(int fd0) : fd = fd0 {}
+    oper init(int fd) : fd = fd {}
 
     void write(Buffer buf) {
         write(fd, buf.buffer, buf.size);
@@ -63,7 +63,7 @@ class Reader : VTableBase {
 class FDReader : Object, Reader {
     int fd;
     
-    oper init(int fd0) : fd = fd0 {}
+    oper init(int fd) : fd = fd {}
     
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
@@ -122,7 +122,7 @@ class Formatter : Object, Writer {
     
     Writer rep;
 
-    oper init(Writer rep0) : rep = rep0 {}
+    oper init(Writer rep) : rep = rep {}
 
     void write(byteptr data) {
         // StaticString will construct with strlen

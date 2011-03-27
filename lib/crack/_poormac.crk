@@ -20,8 +20,8 @@ class TokNode {
     
     TokNode next;
     
-    oper init(Token tok0, TokNode next0) : tok = tok0, next = next0 {}
-    oper init(uint arg0, TokNode next0) : arg = arg0, next = next0 {}
+    oper init(Token tok, TokNode next) : tok = tok, next = next {}
+    oper init(uint arg, TokNode next) : arg = arg, next = next {}
 }
 
 class Macro {

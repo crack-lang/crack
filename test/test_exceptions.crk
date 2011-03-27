@@ -15,7 +15,7 @@ registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 class Exception : VTableBase {}
 class FooError : Exception {
     int val;
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
 }
 class NotException : VTableBase {}
 

@@ -27,7 +27,7 @@ class Directory : Object, Openable {
     List _dirList = {};
     List _fileList = {};
 
-    oper init(String name0, bool open): name(name0) {
+    oper init(String name, bool open): name(name) {
         // possibly strip trailing delim
         if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
             name = SubString(name, 0, name.size-1);
@@ -35,7 +35,7 @@ class Directory : Object, Openable {
             _open();
     }
 
-    oper init(String name0): name(name0) {
+    oper init(String name): name(name) {
         // possibly strip trailing delim
         if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
             name = SubString(name, 0, name.size-1);

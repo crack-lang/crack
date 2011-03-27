@@ -17,11 +17,11 @@ class Wrapper : FreeBase {
 ## Equivalent to "int *" in C code
 class IntWrapper : Wrapper {
     int val;
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
 };
 
 ## Equivalent to "char **" in C code.
 class ByteptrWrapper : Wrapper {
     byteptr val;
-    oper init(byteptr val0) : val = val0 {}
+    oper init(byteptr val) : val = val {}
 };

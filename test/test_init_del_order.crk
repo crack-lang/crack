@@ -9,7 +9,7 @@ out := StringFormatter();
 class A {
     String val;
 
-    oper init(String val0) : val(val0) {
+    oper init(String val) : val(val) {
         out `init $val;`;
     }
     

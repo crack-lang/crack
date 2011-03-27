@@ -34,7 +34,7 @@ void foo(CrackContext ctx) {
     class Name {
         T val;
         
-        oper init(T val0) : val = val0 {}
+        oper init(T val) : val = val {}
     }
 }
 @export bar

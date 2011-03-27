@@ -220,7 +220,7 @@ class Monitor {
 class TestObj {
     Monitor mon;
 
-    oper init(Monitor mon0) : mon = mon0 {}
+    oper init(Monitor mon) : mon = mon {}
 
     oper del() {
         if (mon)
@@ -253,7 +253,7 @@ if (arr.count() != 2)
 class IntWrapper {
     int val;
 
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
 
     int cmp(Object other) {
         if (other.class.isSubclass(IntWrapper)) {

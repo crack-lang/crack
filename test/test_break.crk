@@ -10,7 +10,7 @@ void put(int i) {
 # keep track of when an object is released
 class X {
     int i; 
-    oper init(int i0) : i = i0 {}
+    oper init(int i) : i = i {}
     oper release() {
         put(i);
     }

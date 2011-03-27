@@ -32,7 +32,7 @@ TreeMap scopes = {};
 
 class IntWrapper {
     int val;
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
 }
 
 void storeScope(CrackContext ctx) {

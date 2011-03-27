@@ -3,7 +3,7 @@
 class A { 
     int a;
     oper init() {}
-    oper init(int a0) : a = a0 {}
+    oper init(int a) : a = a {}
 };
 
 class B {
