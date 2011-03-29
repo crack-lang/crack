@@ -1,0 +1,65 @@
+
+import crack.lang die, free;
+import crack.io cout, StringFormatter;
+@import crack.exp.cont.array GenericArray, GenericObjArray, GenericPrimArray;
+
+array[int] intVals = [1, 2, 3];
+for (int i = 0; i < 3; ++i)
+     if (i != intVals[i] - 1)
+          cout `FAILED index $i of test array not $(i - 1), but \
+$(intVals[i])\n`;
+
+@GenericPrimArray(IntArray, int);
+@GenericObjArray(StringArray, String);
+
+if (1) {
+     IntArray arr = [1, 2, 3];
+     if (arr.count() != 3)
+          cout `FAILED high-level object init: count != 3\n`;
+     int i;
+     for (elem :in arr)
+          if (intVals[i] != arr[i])
+               cout `FAILED high-level object init: index $i: \
+$(arr[i]) != $(intVals[i])\n`;
+}
+
+if (1) {
+     StringArray arr = ['first', 'second', 'third',];
+     StringFormatter f = {};
+     for (elem :in arr)
+          f `$elem`;
+     result := f.createString();
+     if (result != 'firstsecondthird')
+          cout `FAILED string array: concatenated = $result\n`;
+}
+
+if (1) {
+     StringArray arr = [];
+     if (arr.count() != 0)
+          cout `FAILED empty sequence\n`;
+}
+
+# tests garbage collection
+if (1) {
+     int deleted;
+     class GCTester {
+          oper del() { ++deleted; }
+          void append(Object any) {}
+     }
+     
+     int gcObjDeleted;
+     class GCObj { oper del() { ++gcObjDeleted; } }
+
+     GCTester tester = ['first', 'second', GCObj()];
+     if (gcObjDeleted != 1)
+          cout `FAILED cleanup: element leaked\n`;
+     
+     if (deleted)
+          cout `FAILED cleanup: collection deleted prematurely\n`;
+     
+     tester = null;
+     if (deleted != 1)
+          cout `FAILED cleanup: collection leaked\n`;
+}
+
+cout `ok\n`;

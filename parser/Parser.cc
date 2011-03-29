@@ -734,6 +734,27 @@ ExprPtr Parser::parseIString(Expr *expr) {
    return result;
 }
 
+// [ expr, expr, ... ]
+//  ^                 ^
+ExprPtr Parser::parseConstSequence(TypeDef *containerType) {
+   vector<ExprPtr> elems;
+   Token tok = toker.getToken();
+   while (!tok.isRBracket()) {
+      // parse the next element
+      toker.putBack(tok);
+      elems.push_back(parseExpression());
+
+      tok = toker.getToken();
+      if (tok.isComma())
+         tok = toker.getToken();
+      else if (!tok.isRBracket())
+         unexpected(tok, "Expected comma or right bracket after element");
+   }
+   
+   return context->emitConstSequence(containerType, elems);
+}
+   
+
 TypeDef *Parser::convertTypeRef(Expr *expr) {
    VarRef *ref = VarRefPtr::cast(expr);
    if (!ref)
@@ -1681,6 +1702,8 @@ bool Parser::parseDef(TypeDef *type) {
                // got constructor args, parse an arg list terminated by a right 
                // curly.
                initializer = parseConstructor(tok4, type, Token::rcurly);
+            } else if (tok4.isLBracket()) {
+               initializer = parseConstSequence(type);
             } else {
                toker.putBack(tok4);
                initializer = parseExpression();
@@ -1690,7 +1713,7 @@ bool Parser::parseDef(TypeDef *type) {
             initializer = initializer->convert(*context, type);
             if (!initializer)
                error(tok4, "Incorrect type for initializer.");
-            
+
             context->emitVarDef(type, tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 

@@ -232,6 +232,13 @@ class Context : public spug::RCBase {
         ExprPtr createTernary(Expr *cond, Expr *trueVal, Expr *falseVal);
 
         /**
+         * Emit a sequence initializer.
+         */
+        ExprPtr emitConstSequence(TypeDef *type, 
+                                  const std::vector<ExprPtr> &elems
+                                  );
+
+        /**
          * Returns true if the namespace is in the same function as the 
          * context.
          */

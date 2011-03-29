@@ -4,6 +4,7 @@ ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
 model/Construct.cc
+model/ConstSequenceExpr.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc

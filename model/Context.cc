@@ -13,6 +13,7 @@
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ConstVarDef.h"
+#include "ConstSequenceExpr.h"
 #include "FuncAnnotation.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
@@ -343,6 +344,81 @@ ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
     return builder.createTernary(*this, boolCond.get(), trueVal, falseVal, 
                                  type.get()
                                  );
+}
+
+ExprPtr Context::emitConstSequence(TypeDef *type, 
+                                   const std::vector<ExprPtr> &elems
+                                   ) {
+    // see if there is a new function for the type that accepts an element 
+    // count.
+    OverloadDefPtr ovld = lookUp("oper new", type);
+    if (!ovld)
+        error(SPUG_FSTR("Cannot construct an instance of type " << 
+                        type->name
+                        )
+              );
+    
+    FuncDef *cons;
+    TypeDef *uintType = construct->uintType.get();
+    vector<ExprPtr> consArgs(1);
+    consArgs[0] = builder.createIntConst(*this, elems.size());
+    cons = ovld->getMatch(*this, consArgs, false);
+    ConstSequenceExprPtr expr = new ConstSequenceExpr(type);
+    
+    if (cons) {
+        expr->container = builder.createFuncCall(cons);
+        expr->container->args = consArgs;
+
+    // no 'oper new(uint)', try to find a default constructor.
+    } else {
+        consArgs.clear();
+        cons = ovld->getMatch(*this, consArgs, false);
+        if (!cons)
+            error(SPUG_FSTR(type->name << " has neither a constructor "
+                             "accepting a uint nor a default constructor."
+                            )
+                  );
+        
+        expr->container = builder.createFuncCall(cons);
+    }
+    
+    // create append calls for each of the elements
+    for (int i = 0; i < elems.size(); ++i) {
+        ExprPtr elem = elems[i];
+        
+        vector<ExprPtr> args(1);
+        args[0] = elem;
+        FuncDefPtr appender = lookUp("append", args, type);
+        
+        FuncCallPtr appendCall;
+        if (appender && appender->flags & FuncDef::method) {
+            appendCall = builder.createFuncCall(appender.get());
+            appendCall->args = args;
+
+        // if there's no appender, try looking up index assignment
+        } else {
+            args.insert(args.begin(),
+                        builder.createIntConst(*this, i, uintType)
+                        );
+            
+            appender = lookUp("oper []=", args, type);
+            if (!appender || !(appender->flags & FuncDef::method))
+                error(SPUG_FSTR(type->name << 
+                                 " has neither an append() nor an oper []= "
+                                 " method accepting " << elem->type->name <<
+                                 " for element at index " << i
+                                )
+                      );
+            
+            appendCall = builder.createFuncCall(appender.get());
+            appendCall->args = args;
+        }
+        
+        // add the append to the sequence expression
+        expr->elems.push_back(appendCall);
+    }
+    
+    return expr;
 }
 
 bool Context::inSameFunc(Namespace *varNS) {
