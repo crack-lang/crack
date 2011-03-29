@@ -920,6 +920,22 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          if (precedence >= logOrPrec)
             break;
          expr = parseTernary(expr.get());
+      } else if (tok.isBang()) {
+         // this is special wacky collection syntax Type![1, 2, 3]
+         TypeDef *type = convertTypeRef(expr.get());
+         if (!type)
+            error(tok, 
+                  "Exclamation point can not follow a non-type expression"
+                  );
+         
+         // check for a square bracket
+         tok = toker.getToken();
+         if (!tok.isLBracket())
+            error(tok,
+                  "Sequence initializer ('[ ... ]') expected after "
+                   "'type!'"
+                  );
+         expr = parseConstSequence(type);
       } else {
 	 // next token is not part of the expression
 	 break;

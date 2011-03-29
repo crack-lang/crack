@@ -12,6 +12,14 @@ $(intVals[i])\n`;
 @GenericPrimArray(IntArray, int);
 @GenericObjArray(StringArray, String);
 
+String strcat(StringArray elems) {
+    StringFormatter f = {};
+    for (elem :in elems)
+         f `$elem`;
+    return f.createString();
+}
+
+
 if (1) {
      IntArray arr = [1, 2, 3];
      if (arr.count() != 3)
@@ -24,13 +32,10 @@ $(arr[i]) != $(intVals[i])\n`;
 }
 
 if (1) {
-     StringArray arr = ['first', 'second', 'third',];
-     StringFormatter f = {};
-     for (elem :in arr)
-          f `$elem`;
-     result := f.createString();
-     if (result != 'firstsecondthird')
-          cout `FAILED string array: concatenated = $result\n`;
+    StringArray arr = ['first', 'second', 'third',];
+    result := strcat(arr);
+    if (result != 'firstsecondthird')
+         cout `FAILED string array: concatenated = $result\n`;
 }
 
 if (1) {
@@ -60,6 +65,22 @@ if (1) {
      tester = null;
      if (deleted != 1)
           cout `FAILED cleanup: collection leaked\n`;
+}
+
+# check expression syntax
+if (1) {
+    a := array[int]![1, 2, 3];
+    for (int i = 0; i < 3; ++i)
+        if (a[i] != i + 1)
+            cout `FAILED expression array syntax: a[$i] != $(i + 1) (got \
+$(a[i])\n`;
+}
+
+if (1) {
+    a := StringArray!['first', 'second', 'third'];
+    result := strcat(a);
+    if (result != 'firstsecondthird')
+        cout `FAILED expression container syntax: got $result\n`;
 }
 
 cout `ok\n`;
