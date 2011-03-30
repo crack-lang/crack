@@ -341,6 +341,7 @@ ResultExprPtr ArraySetItemCall::emit(Context &context) {
 
     // emit the rhs value
     args[1]->emit(context)->handleTransient(context);
+    builder.narrow(args[1]->type.get(), func->args[1]->type.get());
     Value *v = builder.lastValue;
 
     // get the address of the index, store the value in it.

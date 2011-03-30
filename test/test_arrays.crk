@@ -16,5 +16,9 @@ a[int(0)] = 100;
 if (a[int(0)] != 100)
     puts('FAILED int indexing');
 
+class A {} class B : A {}
+aa := array[A](1);
+aa[0] = B();
+
 puts('ok');
 
