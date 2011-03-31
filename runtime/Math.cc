@@ -322,7 +322,7 @@ void math_init(Module *mod) {
   atof_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
-  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (u_int64_t *)crk_gettimeofday);
+  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
 }
 
 
