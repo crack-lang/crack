@@ -27,6 +27,7 @@ class FuncDef : public VarDef {
             method = 1,  // function is a method (has a receiver)
             virtualized = 2, // function is virtual
             forward = 4,  // this is a forward declaration
+            variadic = 8,  // this is a variadic function
             explicitFlags = 256  // these flags were set by an annotation
         } flags;
         

@@ -37,6 +37,20 @@ void Func::addArg(Type *type, const string &name) {
     args.push_back(new Arg(type, name));
 }
 
+void Func::setIsVariadic(bool isVariadic)
+{
+    if (isVariadic) {
+        flags = static_cast<Func::Flags>(flags | Func::variadic);
+    } else {
+        flags = static_cast<Func::Flags>(flags & ~Func::variadic);
+    }
+}
+
+bool crack::ext::Func::isVariadic()
+{
+    return flags & Func::variadic;
+}
+
 void Func::finish() {
     if (finished || !context)
         return;
