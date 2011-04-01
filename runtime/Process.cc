@@ -63,7 +63,6 @@ int runChildProcess(const char **argv,
 
 // UNIX
     int pipes[3][2]; // 0,1,2 (in,out,err) x 0,1 (read,write)
-    pid_t p = fork();
 
     for (int i = 0; i < 3; i++) {
         if (pipe(pipes[i]) == -1) {
@@ -71,6 +70,8 @@ int runChildProcess(const char **argv,
             return -1;
         }
     }
+
+    pid_t p = fork();
 
     switch (p) {
     case -1:

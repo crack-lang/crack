@@ -1,13 +1,13 @@
 // A test suite for crack
-// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.io cout, cerr, Formatter, Writer, StringWriter;
-import crack.sys argv, exit, StringArray;
+import crack.sys argv, exit;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
-import crack.exp.process Process;
+import crack.exp.process Process, Args;
 
 SCREEN_VERSION := ".2";
 
@@ -87,13 +87,12 @@ class Test {
 
         cout `[$_fInfo]: `;
 
-        args := StringArray(3);
-        args[0] = "crack";
-        args[2] = "-n";
-        args[1] = outName;
-
-        p := Process(args);
+        p := Process("crack -n "+outName);
         p.wait();
+        out := p.getStdOut();
+        err := p.getStdErr();
+        cout `out: [$out]\n`;
+        cout `err: [$err]\n`;
 
         cout `\n`;
 
