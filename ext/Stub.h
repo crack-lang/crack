@@ -29,6 +29,8 @@ class Func {
 
     public:
 
+        void setIsVariadic(bool isVariadic);
+        bool isVariadic();
         void setSymbolName(const std::string &name);
         void addArg(Type *type, const std::string &name);
         void finish();
@@ -71,7 +73,10 @@ class Module {
 };
 
 class Type {
-    
+    private:
+
+        void checkFinished();
+
     public:
         
         void addBase(Type *base);

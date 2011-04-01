@@ -118,7 +118,7 @@ target_link_libraries( crack
                      )
 
 # install targets
-install(TARGETS crack libcrack
+install(TARGETS crack libcrack libcrackextstub
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

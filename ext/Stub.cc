@@ -5,6 +5,8 @@
 using namespace crack::ext;
 
 // Func
+void Func::setIsVariadic(bool isVariadic) { }
+bool Func::isVariadic() { return false; }
 void Func::setSymbolName(const std::string &name) { }
 void Func::addArg(Type *type, const std::string &name) { }
 void Func::finish() { }
@@ -42,6 +44,7 @@ void Module::addConstant(Type *type, const std::string &name, int val)  { }
 void Module::finish()  { }
 
 // Type
+void Type::checkFinished() { };
 void Type::addBase(Type *base) { };
 void Type::addInstVar(Type *type, const std::string &name) { };
 
