@@ -23,9 +23,10 @@ class Args {
     uint __count;
     array[byteptr] __primArray;
 
-    ### split the string on delim
-    oper init(String str, byte delim) {
+    ### split the string on space. quotes are not handled.
+    oper init(String str) {
 
+        delim := b' ';
         if (str.size == 0) {
             // emptry string, one blank element
             __rep = array[CString](1);
@@ -114,7 +115,7 @@ class Process {
 
     ## splits on space, quotes are NOT accounted for
     oper init(String cmd): _pd() {
-        args := Args(cmd, b" ");
+        args := Args(cmd);
         array[byteptr] env = null;
         _pid = runChildProcess(args.getPrimArray(), env, _pd);
         if (_pid == -1) {

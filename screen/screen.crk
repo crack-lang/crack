@@ -7,7 +7,7 @@ import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
-import crack.exp.process Process, Args;
+import crack.exp.process Process;
 
 SCREEN_VERSION := ".2";
 
@@ -35,7 +35,6 @@ class Test {
         StringWriter dataBuf = {};
         headerPat := Regex('^--(\\w+)--$');
         while (lineBuf = f.nextLine()) {
-            //cerr `debug: $lineBuf`;
             // look for section change
             m := headerPat.search(lineBuf);
             if (m) {
@@ -52,7 +51,9 @@ class Test {
                     _desc = String(lineBuf, 0, lineBuf.size-1);
             }
         }
-        
+        if (curSection)
+            _testData[curSection] = dataBuf.createString();
+
     }
 
     /// ensure test has required sections and that they contain valid data
@@ -79,22 +80,42 @@ class Test {
     void run(Directory outDir) {
         
         if (_isSkipped) {
-            cout `$_isSkipped\n`;
+            cout `[$_fInfo]: $_isSkipped\n`;
             return;
         }
 
         outName := writeScript(outDir);
 
+        String args = {};
+        if (_testData["ARGS"]) {
+            args = String.cast(_testData["ARGS"]);
+        }
+
+        cmd := "crack "+args.rtrim()+" "+outName;
         cout `[$_fInfo]: `;
 
-        p := Process("crack -n "+outName);
+        p := Process(cmd);
         p.wait();
         out := p.getStdOut();
         err := p.getStdErr();
+
+        /*
         cout `out: [$out]\n`;
         cout `err: [$err]\n`;
+        */
 
-        cout `\n`;
+        if (!_testData["EXPECT"]) {
+           cout `no valid EXPECT section\n`;
+           return;
+        }
+
+        expect := String.cast(_testData["EXPECT"]);
+        if (expect == out) {
+            cout `JIT: PASS\n`;
+        }
+        else {
+            cout `JIT: FAIL\n`;
+        }
 
     }
 
