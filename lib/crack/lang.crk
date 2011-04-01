@@ -300,7 +300,7 @@ class AppendBuffer : ManagedBuffer {
         buffer[pos++] = c;
     }
 
-    ## Extend the buffer with the other buffer.
+    ## Extend the buffer with the (entire) other buffer.
     void extend(Buffer other) {
         uint newPos = pos + other.size;
         if (newPos > size)
@@ -312,6 +312,22 @@ class AppendBuffer : ManagedBuffer {
         move(pos, other);
         pos = newPos;
     }
+
+    ## Extend the buffer with a portion of the other buffer.
+    void extend(Buffer other, uint len) {
+        if (len > other.size)
+            _die('Extend length out of bounds');
+        uint newPos = pos + len;
+        if (newPos > size)
+            # grow to the larger of newPos and size * 2
+            if (newPos > size * 2)
+                grow(newPos);
+            else
+                grow(size * 2);
+        move(pos, other.buffer, len);
+        pos = newPos;
+    }
+
 }
 
 # substring forward declarations - we need the full array to support doing
@@ -406,6 +422,22 @@ class String : Buffer {
         }
     }
 
+    ## Initialize from a portion of a WriteBuffer and optionally take ownership
+    ## of the buffer.
+    oper init(ManagedBuffer buf, uint len, bool takeOwnership) :
+        Buffer(null, 0) {
+
+        if (takeOwnership) {
+            ## NOTE if len < buf.size, the space is wasted.
+            ## realloc if len << buf.size?
+            size = len;
+            buffer = buf.orphan();
+        } else {
+            size = len;
+            buffer = memcpy(malloc(buf.size), buf.buffer, len);
+        }
+    }
+
     ## Initialize from a substring of buffer.  This copies the buffer from
     ## index pos to pos + len.  It does not assume ownership.
     oper init(Buffer buf, uint pos, uint len) : Buffer(malloc(len), len) {
@@ -438,32 +470,53 @@ class String : Buffer {
         _freeBuffer();
     }
 
+    ## Find the rightmost index of a character in a string, starting at
+    ## index idx
+    ## returns -1 if not found
+    int rfind(byte c, uint idx) {
+        if (idx >= size)
+            return -1;
+        for (uint i = idx; i != 0; i--) {
+            if (buffer[i] == c)
+                return int(i); // warning, possible truncate
+        }
+        if (buffer[0] == c)
+            return 0;
+        else
+            return -1;
+    }
     ## Find the rightmost index of a character in a string
     ## returns -1 if not found
     ## note this function is not safe for strings larger than INT_MAX
     int rfind(byte c) {
-        uint i = size; // loop start with decrement so we start one high
-        bool brk = false;
-        while (!brk) {
-            i--;
+        if (size == 0)
+            return -1;
+        else
+            return rfind(c, size-1);
+    }
+
+    ## Find the leftmost index of a character in a string, starting at
+    ## index idx
+    ## returns -1 if not found
+    int lfind(byte c, uint idx) {
+        if (idx >= size)
+            return -1;
+        for (uint i = idx; i < size; i++) {
             if (buffer[i] == c)
                 return int(i); // warning, possible truncate
-            brk = (i == 0);
         }
         return -1;
     }
-
     ## Find the leftmost index of a character in a string
     ## returns -1 if not found
     ## note this function is not safe for strings larger than INT_MAX
     int lfind(byte c) {
-        uint i = 0;
-        while (i++ < size) {
-            if (buffer[i] == c)
-                return int(i); // warning, possible truncate
-        }
-        return -1;
+        if (size == 0)
+            return -1;
+        else
+            return lfind(c, 0);
     }
+
 
     ## Concatenation
     String oper +(String rhs) {
@@ -643,6 +696,10 @@ class CString : String {
 
     oper init(Buffer buf) {
         __copy(buf.buffer, buf.size);
+    }
+
+    oper init(SubString str) {
+        __copy(str.buffer, str.size);
     }
 
     ## Initialize a the string from byteptr and size, take ownership of the
