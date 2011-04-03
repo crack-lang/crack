@@ -169,30 +169,6 @@ d1 = float64(f1);
 if (d1 != 5.0)
     puts("fail float32 -> float64, explicit");
 
-// int32 -> float32
-i = -5; 
-f1 = i;
-if (f1 != -5.0)
-    puts("fail int32 -> float32");
-
-// int32 -> float32, explicit
-i = -5;
-f1 = int32(i);
-if (f1 != -5.0)
-    puts("fail int32 -> float32, explicit");
-
-// uint32 -> float32
-ui = 5; 
-f1 = ui;
-if (f1 != 5.0)
-    puts("fail uint32 -> float32");
-
-// uint32 -> float32, explicit
-ui = 5;
-f1 = float32(ui);
-if (f1 != 5.0)
-    puts("fail uint32 -> float32, explicit");
-
 // int constant -> float32, float64
 float32 fc = 5;
 float64 dc = 10;
