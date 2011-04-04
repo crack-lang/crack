@@ -2084,7 +2084,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                          )
                );
       else
-          context->builder.initializeImport(mod,
+          context->builder.initializeImport(mod.get(),
                                             // HACK check for annotation?
                                             ns == context->compileNS.get());
 

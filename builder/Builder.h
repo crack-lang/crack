@@ -444,7 +444,7 @@ class Builder : public spug::RCBase {
          * to emit any required initialization instructions for the imported
          * module, i.e. to emit a call to run its top level code
          */
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation) = 0;
+        virtual void initializeImport(model::ModuleDef*, bool annotation) = 0;
 
         /**
          * Provides the builder with access to the program's argument list.

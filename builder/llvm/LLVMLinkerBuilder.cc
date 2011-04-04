@@ -269,12 +269,13 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     LLVMBuilder::loadSharedLibrary(name);
 }
 
-void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
+void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
                                          bool annotation) {
 
+    assert(!annotation && "annotation given to linker builder");
 
     // if the module came from an extension, there's no top level to run
-    if (m->fromExtension || annotation)
+    if (m->fromExtension)
         return;
 
     // we add a call into our module's :main function

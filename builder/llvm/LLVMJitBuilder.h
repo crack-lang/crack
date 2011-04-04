@@ -59,7 +59,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void finishBuild(model::Context &context) { }
 
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation) { }
+        virtual void initializeImport(model::ModuleDef*, bool annotation) { }
 
 };
 

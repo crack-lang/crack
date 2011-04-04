@@ -49,7 +49,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                  const std::string &name
                                                  );
 
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation);
+        virtual void initializeImport(model::ModuleDef*, bool annotation);
 
         virtual void *loadSharedLibrary(const std::string &name);
 

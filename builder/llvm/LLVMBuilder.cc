@@ -1679,7 +1679,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                    // provided or the global will be 
                                    // treated as an extern.
                                    Constant::getNullValue(tp->rep),
-                                   module->getModuleIdentifier()+":"+name
+                                   module->getModuleIdentifier()+"."+name
                                    );
             varDefImpl = new BGlobalVarDefImpl(gvar);
             break;
