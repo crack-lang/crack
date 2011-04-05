@@ -52,10 +52,12 @@ else (LLVM_INCLUDE_DIR)
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libdir OUTPUT_VARIABLE LLVM_LIB_DIR )
   #MESSAGE(STATUS "LLVM lib dir: " ${LLVM_LIB_DIR})
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --includedir OUTPUT_VARIABLE LLVM_INCLUDE_DIR )
-  
-  
+      
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --cppflags  OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
+  # strip this from llvm's version, we should add this ourselves in production mode to main CFLAGS
+  STRING(REPLACE "-DNDEBUG" "" LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS})
   MESSAGE(STATUS "LLVM CPP flags: " ${LLVM_COMPILE_FLAGS})
+
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --ldflags   OUTPUT_VARIABLE LLVM_LDFLAGS )
 
   MESSAGE(STATUS "LLVM LD flags: " ${LLVM_LDFLAGS})
