@@ -5,6 +5,7 @@
 
 #include "ModuleDef.h"
 #include <list>
+#include <stack>
 
 namespace builder {
     SPUG_RCPTR(Builder);
@@ -47,7 +48,10 @@ class Construct : public spug::RCBase {
         };
 
         typedef void (*InitFunc)(crack::ext::Module *mod);
-        
+    
+    private:
+        std::stack<builder::BuilderPtr> builderStack;
+
     public: // XXX should be private
         // if non-null, this is the alternate construct used for annotations.  
         // If it is null, either this _is_ the annotation construct or both 
@@ -225,7 +229,12 @@ class Construct : public spug::RCBase {
          * @param name the script's name (for use in error reporting and 
          *  script module creation).
          */
-        int runScript(std::istream &src, const std::string &name);        
+        int runScript(std::istream &src, const std::string &name);
+
+        /**
+         * Returns the current builder.
+         */        
+        builder::Builder &getCurBuilder();
 };
 
 } // namespace model
