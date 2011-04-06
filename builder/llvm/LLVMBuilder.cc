@@ -2400,7 +2400,7 @@ void LLVMBuilder::importSharedLibrary(const string &name,
     }
 }
 
-void LLVMBuilder::registerImportedVar(Context &context, VarDef *varDef) {
+void LLVMBuilder::registerImportedDef(Context &context, VarDef *varDef) {
     // no-op for LLVM builder.
 }
 

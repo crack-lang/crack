@@ -435,7 +435,7 @@ class Builder : public spug::RCBase {
          * This is called for every symbol that is imported into a module.  
          * Implementations should do whatever processing is necessary.
          */
-        virtual void registerImportedVar(model::Context &context,
+        virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          ) = 0;
 

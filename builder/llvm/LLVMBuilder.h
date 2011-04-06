@@ -394,7 +394,7 @@ class LLVMBuilder : public Builder {
                                        model::Context &context,
                                        model::Namespace *ns
                                        );
-        virtual void registerImportedVar(model::Context &context,
+        virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          );
 

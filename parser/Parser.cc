@@ -2141,7 +2141,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                                   canonicalName
                                  )
                   );
-         builder.registerImportedVar(*context, symVal.get());
+         builder.registerImportedDef(*context, symVal.get());
          ns->addAlias(symVal.get());
       }
    }
