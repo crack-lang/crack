@@ -6,10 +6,12 @@ ACLOCAL_AMFLAGS = -I m4 --install
 
 lib_LTLIBRARIES = libCrackLang.la libCrackExtStub.la
 libCrackLang_la_SOURCES = %libCrackSources%
-libCrackLang_la_LDFLAGS = -version-info 0:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
+libCrackLang_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
 
-libCrackExtStub_la_SOURCES = ext/Stub.cc
-libCrackExtStub_la_LDFLAGS = -version-info 0:0:0
+libCrackExtStub_la_SOURCES = ext/Stub.cc debug/NativeDebugTools.cc
+libCrackExtStub_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
+libCrackExtStub_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la

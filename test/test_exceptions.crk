@@ -1,5 +1,6 @@
 
-import crack.runtime registerHook, EXCEPTION_MATCH_FUNC;
+import crack.runtime free, getLocation, registerHook, strlen, 
+    EXCEPTION_MATCH_FUNC, EXCEPTION_FRAME_FUNC;
 
 # temporary work-around for the problem of trying to use the special .class
 # accessor from a VTableBase object.
@@ -10,7 +11,6 @@ int exceptionMatchFunc(Class classObj, Obj obj) {
 }
 
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
-
 
 class Exception : VTableBase {}
 class FooError : Exception {
@@ -238,6 +238,59 @@ if (1) {
     
     if (exceptionVal != 2)
         puts('FAILED throwing from a cleanup: exception object not converted');
+}
+
+# verify that exception frame callbacks are correctly called.
+if (1) {
+    
+    # array of single character function names
+    funcs := byteptr(100);
+    cur := 0;
+    funcs[0] = 0;
+    
+    void exceptionFrame(Exception obj, voidptr addr) {
+        info := array[byteptr](3);
+        getLocation(addr, info);
+        
+        # store the last character of the function name in our array
+        # (this will break at some point because we're counting on a two digit 
+        # numeric uniquifier at the end of the number, hence the "- 3".  
+        # Revisit this when we have proper canonical names)
+        funcs[cur++] = info[0][strlen(info[0]) - 3];
+        funcs[cur] = 0;
+        free(info);
+    }
+    
+    registerHook(EXCEPTION_FRAME_FUNC, exceptionFrame);
+    
+    int cmp(byteptr a, byteptr b) {
+        uint i;
+        for (i = 0; a[i] && a[i] == b[i]; ++i);
+        return a[i] - b[i];
+    }
+    
+    void f() {
+        throw Exception();
+    }
+    
+    void g() {
+        f();
+    }
+    
+    bool gotEx;
+    try {
+        g();
+    } catch (Exception ex) {
+        if (cmp(funcs, 'fg')) {
+            puts('FAILED exception frame info: invalid function sequence:');
+            puts(funcs);
+        }
+        gotEx = 1;
+    }
+    
+    if (!gotEx)
+        puts('FAILED exception frame info: did not get the exception');
+    
 }
 
 puts('ok');

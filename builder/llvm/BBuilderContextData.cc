@@ -20,6 +20,10 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
+        Module *mod = func->getParent();
+        Function *f = mod->getFunction("__CrackExceptionFrame");
+        if (f)
+            b.CreateCall(f);
         b.CreateUnwind();
     }
 

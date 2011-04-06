@@ -855,7 +855,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             FuncDefPtr funcDef =
                context->lookUp("oper []", args, expr->type.get());
             if (!funcDef)
-               error(tok, SPUG_FSTR("'oper []=' not defined for " <<
+               error(tok, SPUG_FSTR("'oper []' not defined for " <<
                                      expr->type->name << 
                                      " with these arguments: (" << args << ")"
                                     )

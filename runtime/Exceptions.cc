@@ -7,7 +7,9 @@
 #include <assert.h>
 #include <stdint.h>
 #include <iostream>
+#include <dlfcn.h>
 
+#include "debug/DebugTools.h"
 #include "ItaniumExceptionABI.h"
 #include "BorrowedExceptions.h"
 
@@ -39,7 +41,6 @@ void initExceptionObjectKey() {
 
 }} // namespace crack::runtime
 
-
 extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
     int version,
     _Unwind_Action actions,
@@ -53,6 +54,15 @@ extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
     cerr << "Exception API, got actions = " << actions <<
         " exception class: " << exceptionClass << endl;
 #endif
+
+    exceptionObject->last_ip = 
+        reinterpret_cast<void *>(_Unwind_GetIP(context));
+    if (runtimeHooks.exceptionPersonalityFunc)
+        runtimeHooks.exceptionPersonalityFunc(exceptionObject->user_data,
+                                              exceptionObject->last_ip,
+                                              exceptionClass,
+                                              actions
+                                              );
 
     _Unwind_Reason_Code result;
     result =  handleLsda(version, _Unwind_GetLanguageSpecificData(context),
@@ -87,6 +97,8 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
             pthread_getspecific(crack::runtime::exceptionObjectKey)
         );
     if (uex) {
+        // XXX what if the exception isn't a crack exception?
+
         // we don't need an atomic reference count for these, they are thread 
         // specific.
         ++uex->ref_count;
@@ -131,6 +143,17 @@ extern "C" void __CrackBadCast(void *curType, void *newType) {
     }
 }
 
+/** Called at every stack frame during an exception unwind. */
+extern "C" void __CrackExceptionFrame() {
+    if (runtimeHooks.exceptionFrameFunc) {
+        _Unwind_Exception *uex =
+            reinterpret_cast<_Unwind_Exception *>(
+                pthread_getspecific(crack::runtime::exceptionObjectKey)
+            );
+        runtimeHooks.exceptionFrameFunc(uex->user_data, uex->last_ip);
+    }
+}                               
+
 namespace crack { namespace runtime {
 
 RuntimeHooks runtimeHooks = {0};
@@ -147,6 +170,14 @@ void registerHook(HookId hookId, void *hook) {
             break;
         case badCastFuncHook:
             runtimeHooks.badCastFunc = reinterpret_cast<BadCastFunc>(hook);
+            break;
+        case exceptionPersonalityFuncHook:
+            runtimeHooks.exceptionPersonalityFunc =
+                reinterpret_cast<ExceptionPersonalityFunc>(hook);
+            break;
+        case exceptionFrameFuncHook:
+            runtimeHooks.exceptionFrameFunc =
+                reinterpret_cast<ExceptionFrameFunc>(hook);
             break;
         default:
             cerr << "Unknown runtime hook specified: " << hookId << endl;

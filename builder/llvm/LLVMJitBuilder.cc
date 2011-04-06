@@ -8,6 +8,7 @@
 #include "FuncBuilder.h"
 #include "Utils.h"
 #include "BBuilderContextData.h"
+#include "debug/DebugTools.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -205,6 +206,22 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     if (debugInfo)
         delete debugInfo;
+    
+    // build the debug tables
+    Module::FunctionListType &funcList = module->getFunctionList();
+    for (Module::FunctionListType::iterator funcIter = funcList.begin();
+         funcIter != funcList.end();
+         ++funcIter
+         ) {
+        string name = funcIter->getName();
+        if (!funcIter->isDeclaration())
+            crack::debug::registerDebugInfo(
+                execEng->getPointerToGlobal(funcIter),
+                name,
+                "",   // file name
+                0     // line number
+            );
+    }
 
     // dump or run the module depending on the mode.
     if (options->dumpMode)

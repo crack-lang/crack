@@ -46,6 +46,10 @@ struct _Unwind_Exception {
     // object).
     unsigned int ref_count;
     void *user_data;
+    
+    // the last IP address that the exception personality function got called 
+    // for.
+    void *last_ip;
 } __attribute__((__aligned__));
 
 struct _Unwind_Context;

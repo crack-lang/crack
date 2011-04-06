@@ -67,7 +67,7 @@ target_link_libraries( libcrack
                      )
 
 # libCrackExtStub
-add_library(libcrackextstub SHARED ext/Stub.cc)
+add_library(libcrackextstub SHARED ext/Stub.cc debug/NativeDebugTools.cc)
 set_target_properties(libcrackextstub
                       PROPERTIES
                       OUTPUT_NAME CrackExtStub

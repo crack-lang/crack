@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include "debug/DebugTools.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -88,6 +89,11 @@ extern "C" void crack_runtime_init(Module *mod) {
                      );
     f->addArg(mod->getUintType(), "low");
     f->addArg(mod->getUintType(), "high");
+    
+    f = mod->addFunc(intType, "random", (void *)random);
+
+    f = mod->addFunc(voidType, "srandom", (void *)srandom);
+    f->addArg(uintType, "seed");
 
     f = mod->addFunc(byteptrType, "puts",
                      (void *)crack::runtime::puts
@@ -445,6 +451,12 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "EXCEPTION_RELEASE_FUNC",
                      crack::runtime::exceptionReleaseFuncHook
                      );
+    mod->addConstant(intType, "EXCEPTION_PERSONALITY_FUNC",
+                     crack::runtime::exceptionPersonalityFuncHook
+                     );
+    mod->addConstant(intType, "EXCEPTION_FRAME_FUNC",
+                     crack::runtime::exceptionFrameFuncHook
+                     );
     f = mod->addFunc(voidType, "registerHook", 
                      (void *)crack::runtime::registerHook
                      );
@@ -508,4 +520,10 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(intType, "pid");
     f->addArg(intType, "sig");
 
+    // debug support
+    f = mod->addFunc(voidType, "getLocation", 
+                     (void *)&crack::debug::getLocation
+                     );
+    f->addArg(voidptrType, "address");
+    f->addArg(byteptrArrayType, "info");
 }
