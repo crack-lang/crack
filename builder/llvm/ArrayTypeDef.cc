@@ -44,6 +44,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
                                    ),
                          llvmType
                          );
+    tempSpec->setOwner(this);
 
     context.addDef(new VoidPtrOpDef(context.construct->voidptrType.get()),
                    tempSpec.get()

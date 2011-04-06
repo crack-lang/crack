@@ -241,6 +241,21 @@ as well as the default decimal notation.  Examples follow:
     int b = 0b10110; # binary constant
 }}
 
+You can also specify integer constants as the byte values in strings by 
+specifying a "b" (for byte) or "i" (for integer) prefix to a constant string 
+(either single or double-quoted).  For example:
+
+{{
+    b := b'A';  # b is set to 65, the ascii value of A
+    int n = i'\001\0';  # i is set to 256
+    int magic = i"SpugCrak";  # magic = 6012434588913262955
+}}
+
+This usage helps to make up for the fact that Crack uses the single quote as 
+an alternate string delimiter, making it otherwise impossible to define single 
+character constants as you would in C.  As the example suggests, the more 
+general integer form is useful for specifying magic numbers.
+
 Implicit Conversion
 '''''''''''''''''''
 
@@ -1617,7 +1632,8 @@ Method Resolution in Classes
 When resolving an overloaded method, Crack uses the same rules as for normal 
 function resolution: check each method in each namespace in the order defined, 
 then do the same in the parent namespaces.  If no result is found, repeat with 
-conversions.
+conversions.  The only exception is that overrides or implementations of 
+virtual functions are not considered in the method resolution order.
 
 For classes, "parent namespaces" are the base classes.  So if we have:
 
@@ -1628,34 +1644,24 @@ For classes, "parent namespaces" are the base classes.  So if we have:
     }
     
     class Derived : Base {
+        void func(C c) {}
         void func(A a) {}
     }
 }}
 
 when we try to resolve #func(val)#, the compiler will check:
 
--   #Derived.func(A a)#
+-   #Derived.func(C c)#
 -   #Base.func(B b)#
 -   #Base.func(A a)#
 
-This is somewhat problematic because, in the case above, if B is derived from 
-A we probably don't want to override the more specific #func(B)# when we 
-override the more general #func(A)#, but that's what will happen because 
-#Derived.func(A)# will match calls to #func# with #B# as an argument.
-
-This results in even more weirdness when we deal with Base as an abstract 
-interface:
-
-{{
-    Derived().func(B());   # calls Derived.func(A)
-    Base base = Derived();
-    base.func(B());        # calls Base.func(B)!
-}}
-
-For these reasons, method resolution will change in a future version of crack 
-so that overrides will not be checked as part of the method set in the 
-override's context - they will only be checked in the base class where they 
-were first defined.
+Note that #Derived.func(A a)# is not checked: this is because it is just an 
+override of #Base.func(A a)#.  Crack ignores overrides when considering method 
+resolution.  If it didn't, it would be impossible to override a function 
+without also matching more specific overloads defined in the base class.  For 
+example, imagine that if, in the example above, B were derived from A. 
+Matching #Derived.func(A a)# would hide the more specific #Base.func(B b)# 
+which is probably not what you want.
 
 Modules
 -------

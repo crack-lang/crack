@@ -62,7 +62,7 @@ class Socket : Pollable, Reader, Writer {
         fd = socket(domain, type, protocol) {
     }
     
-    oper init(int fd0) : fd = fd0 {}
+    oper init(int fd) : fd = fd {}
 
     int getFD() { return fd; }
 
@@ -113,9 +113,9 @@ class Socket : Pollable, Reader, Writer {
         Socket sock;
         Address addr;
     
-        oper init(Socket sock0, Address addr0) :
-            sock = sock0,
-            addr = addr0 {
+        oper init(Socket sock, Address addr) :
+            sock = sock,
+            addr = addr {
         }
     }
     

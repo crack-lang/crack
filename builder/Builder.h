@@ -295,7 +295,7 @@ class Builder : public spug::RCBase {
                                          model::TypeDef *catchType,
                                          bool terminal
                                          ) = 0;
-        
+
         /**
          * Close off an existing try block.
          * The rules for 'context' in emitCatch() apply.
@@ -307,6 +307,14 @@ class Builder : public spug::RCBase {
                                 bool terminal
                                 ) = 0;
     
+        /**
+         * Called in a catch block to give the builder the opportunity to add 
+         * an exception cleanup to the cleanup frame for the block.  Builders 
+         * can use this to cleanup whatever special housekeeping data they 
+         * need for the exception.
+         */
+        virtual void emitExceptionCleanup(model::Context &context) = 0;
+        
         /** Emit an exception "throw" */
         virtual void emitThrow(model::Context &context,
                                model::Expr *expr
@@ -427,7 +435,7 @@ class Builder : public spug::RCBase {
          * This is called for every symbol that is imported into a module.  
          * Implementations should do whatever processing is necessary.
          */
-        virtual void registerImportedVar(model::Context &context,
+        virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          ) = 0;
 
@@ -436,7 +444,7 @@ class Builder : public spug::RCBase {
          * to emit any required initialization instructions for the imported
          * module, i.e. to emit a call to run its top level code
          */
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation) = 0;
+        virtual void initializeImport(model::ModuleDef*, bool annotation) = 0;
 
         /**
          * Provides the builder with access to the program's argument list.

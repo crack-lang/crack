@@ -18,7 +18,8 @@ set(LLVM_MIN_VERSION_TEXT  "2.9")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 
-#set(CMAKE_CXX_FLAGS_DEBUG "-fexceptions -g -Wall -Winline -W -Wwrite-strings -Wno-unused")
+set(CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g")#-Wall -Winline -W -Wwrite-strings -Wno-unused")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3")
 
 MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
@@ -53,6 +54,7 @@ set_source_files_properties( crack.cc
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
 
+# libCrackLang
 add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
@@ -61,6 +63,18 @@ set_target_properties(libcrack
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
+                       ${LLVM_LIBS}
+                     )
+
+# libCrackExtStub
+add_library(libcrackextstub SHARED ext/Stub.cc debug/NativeDebugTools.cc)
+set_target_properties(libcrackextstub
+                      PROPERTIES
+                      OUTPUT_NAME CrackExtStub
+                      SOVERSION ${API_VERSION}
+                      LINK_FLAGS ${LLVM_LDFLAGS}
+                      )
+target_link_libraries( libcrackextstub
                        ${LLVM_LIBS}
                      )
 
@@ -87,6 +101,8 @@ set_target_properties(crack-runtime
                       PREFIX ""
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                       )
+target_link_libraries(crack-runtime
+                      pthread)
 
 
 add_executable(crack crack.cc)
@@ -103,7 +119,7 @@ target_link_libraries( crack
                      )
 
 # install targets
-install(TARGETS crack libcrack
+install(TARGETS crack libcrack libcrackextstub
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
@@ -141,16 +157,19 @@ add_custom_target(checkc
                   )
 
 add_custom_target(screen
-                  ${PROJECT_SOURCE_DIR}/crack ${PROJECT_SOURCE_DIR}/screen/screen.crk ${PROJECT_SOURCE_DIR}/screen/tests/
+                  ${PROJECT_SOURCE_DIR}/crack
+                    ${PROJECT_SOURCE_DIR}/screen/screen.crk
+                    ${PROJECT_SOURCE_DIR}/screen/tests/
+                    ${PROJECT_SOURCE_DIR}/screen/output/
                   )
 
 # optional extensions
 
 # GTK
-find_package(GTK2 2.6 COMPONENTS gtk)
-find_package(GTK2_GDKPIXBUF)
+find_package(GTK2 QUIET 2.6 COMPONENTS gtk)
 if(GTK2_FOUND)
    message(STATUS "Found GTK, will build extension")
+   find_package(GTK2_GDKPIXBUF QUIET)
    include_directories(${GTK2_INCLUDE_DIRS})
    add_library(gtk SHARED opt/_gtk.cc)
    set_target_properties(gtk
@@ -189,7 +208,7 @@ if (PCRE_FOUND)
 endif()
 
 # SDL
-find_package(SDL)
+find_package(SDL QUIET)
 if(SDL_FOUND)
    message(STATUS "Found SDL, will build extension")
    include_directories(${SDL_INCLUDE_DIR})
@@ -206,7 +225,7 @@ if(SDL_FOUND)
 endif()
 
 # OpenGL
-find_package(OpenGL)
+find_package(OpenGL QUIET)
 if(OPENGL_FOUND)
    message(STATUS "Found OpenGL, will build extension")
    include_directories(${OPENGL_INCLUDE_DIR})

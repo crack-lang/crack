@@ -42,9 +42,15 @@ struct _Unwind_Exception {
     _Unwind_Exception_Cleanup_Fn exception_cleanup;
     uint64_t private_1, private_2;
     
-    // crack-specific user data (points to the exception object).
+    // crack-specific reference count and user data (points to the exception 
+    // object).
+    unsigned int ref_count;
     void *user_data;
-};
+    
+    // the last IP address that the exception personality function got called 
+    // for.
+    void *last_ip;
+} __attribute__((__aligned__));
 
 struct _Unwind_Context;
 
@@ -58,6 +64,7 @@ extern "C" void _Unwind_SetIP(struct _Unwind_Context *context,
                               uint64_t new_value
                               );
 extern "C" void _Unwind_RaiseException(_Unwind_Exception *ex);
+extern "C" void _Unwind_DeleteException (_Unwind_Exception *ex);
 
 // end of borrowed exception API
 

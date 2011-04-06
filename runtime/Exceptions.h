@@ -1,6 +1,8 @@
 // Copyright 2011 Google Inc.
 // header for the exceptions subsystem of the runtime
 
+#include <stdint.h>
+
 namespace crack { namespace runtime {
 
 /**
@@ -12,8 +14,51 @@ namespace crack { namespace runtime {
  */
 typedef int (*ExceptionMatchFunc)(void *exceptionType, void *exceptionObject);
 
+/**
+ * The bad cast function is called when a typecast is called on an object that 
+ * is not an instance of the type we're casting it to.
+ */
+typedef void (*BadCastFunc)(void *curClass, void *newClass);
+
+/**
+ * The exception release function is called during exception cleanup to allow 
+ * the library to do an "oper release" on the exception object.
+ */
+typedef void (*ExceptionReleaseFunc)(void *crackExceptionObj);
+
+/**
+ * This function is called when the runtime's exception personality function 
+ * is called on a crack exception during a cleanup or exception handler action.
+ * It is used to give the library a chance to attach stack trace information 
+ * to the exception.
+ * @param address the IP address in the current exception frame that the
+ *          was passed to the original personality function.
+ * @param itaniumExceptionClass an identifier defining the language that raised 
+ *          the exception
+ * @param actions the set of actions that the personality function was called 
+ *          with.
+ */
+typedef void (*ExceptionPersonalityFunc)(void *crackExceptionObj,
+                                         void *address,
+                                         uint64_t itaniumExceptionClass,
+                                         int actions
+                                         );
+
+/**
+ * This function is called when we the system leaves a frame during exception 
+ * processing.  Unlike the exception personality function, it is guaranteed to 
+ * be called only once per frame.
+ */
+typedef void (*ExceptionFrameFunc)(void *crackExceptionObj,
+                                   void *adddress
+                                   );
+
 enum HookId {
     exceptionMatchFuncHook,
+    badCastFuncHook,
+    exceptionReleaseFuncHook,
+    exceptionPersonalityFuncHook,
+    exceptionFrameFuncHook,
     numHooks
 };
 
@@ -23,6 +68,10 @@ enum HookId {
  */
 struct RuntimeHooks {
     ExceptionMatchFunc exceptionMatchFunc;
+    BadCastFunc badCastFunc;
+    ExceptionReleaseFunc exceptionReleaseFunc;
+    ExceptionPersonalityFunc exceptionPersonalityFunc;
+    ExceptionFrameFunc exceptionFrameFunc;
 };
 
 extern RuntimeHooks runtimeHooks;

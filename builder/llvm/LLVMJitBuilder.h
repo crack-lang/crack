@@ -36,6 +36,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void engineBindModule(BModuleDef *moduleDef);
         virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void fixClassInstRep(BTypeDef *type);
 
 
     public:
@@ -58,7 +59,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void finishBuild(model::Context &context) { }
 
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation) { }
+        virtual void initializeImport(model::ModuleDef*, bool annotation) { }
 
 };
 

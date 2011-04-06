@@ -14,8 +14,8 @@ class FileInfo: Object {
 
     String name;
 
-    oper init(String name0): name(name0) { }
-    oper init(byteptr name0): name(name0) { }
+    oper init(String name): name(name) { }
+    oper init(byteptr name): name(name) { }
 
     bool matches(String pattern) {
         return (fnmatch(pattern.buffer, name.buffer) == 0);
@@ -138,8 +138,8 @@ class File : FileInfo,
 
     Object getWriterObject() { return this; }
 
-    oper init(String name0, String mode0): FileInfo(name0),
-                                           _mode(CString(mode0)) {
+    oper init(String name, String mode): FileInfo(name),
+                                         _mode(CString(mode)) {
 
         // parse file mode
         if (_mode.size != 1 ||

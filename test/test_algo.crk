@@ -9,7 +9,7 @@ import crack.runtime rand;
 // a place to put random integers
 class Int {
     uint val;
-    oper init(uint val0) : val = val0 {}
+    oper init(uint val) : val = val {}
     int cmp(Object other) {
         if (other.class is Int) {
             uint ov = Int.unsafeCast(other).val;

@@ -23,7 +23,7 @@ import crack.exp.serial SerialReader, SerialWriter;
 class UInt {
     uint val;
     
-    oper init(uint val0) : val = val0 {}
+    oper init(uint val) : val = val {}
 }
 
 ## Serial writer with some additional facilities to simplify macro 
@@ -58,7 +58,7 @@ class MacroDeserializer : SerialReader {
     CrackContext ctx;
     Array sourceNames = {};
     
-    oper init(CrackContext ctx0, Reader src) : SerialReader(src), ctx = ctx0 {}
+    oper init(CrackContext ctx, Reader src) : SerialReader(src), ctx = ctx {}
     
     String readSrcName() {
         # read the index
@@ -98,7 +98,7 @@ class Node {
 
 class NodeIter {
     Node node;
-    oper init(Node node0) : node = node0 {}
+    oper init(Node node) : node = node {}
     void next() { node = node.next; }
     bool isTrue() { return node; }
     Node elem() { return node; }
@@ -182,7 +182,7 @@ class NodeList {
 class Tok : Node {
     Token tok;
 
-    oper init(Token tok0) : tok = tok0 {}
+    oper init(Token tok) : tok = tok {}
 
     oper init() {}
 
@@ -236,9 +236,9 @@ class Arg : Node {
     uint argIndex;
     Location loc;
     
-    oper init(Location loc0, uint argIndex0) : 
-        loc = loc0,
-        argIndex = argIndex0 {
+    oper init(Location loc, uint argIndex) : 
+        loc = loc,
+        argIndex = argIndex {
     }
     
     oper init() {}
@@ -298,9 +298,9 @@ class Concat : Node {
     int type;
     Location loc;
 
-    oper init(NodeList list0, Location loc0) : 
-        loc = loc0,
-        list = list0 {
+    oper init(NodeList list, Location loc) : 
+        loc = loc,
+        list = list {
     }
     
     oper init() {}
@@ -342,7 +342,7 @@ class Concat : Node {
 class Stringify : Node {
     Node node;
     
-    oper init(Node node0) : node = node0 {}
+    oper init(Node node) : node = node {}
     
     void expand(CrackContext ctx, Array args) {
         ctx.putBack(Token(TOK_STRING, node.toString(args).buffer, 

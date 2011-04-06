@@ -19,10 +19,12 @@ SPUG_RCPTR(BCleanupFrame)
 class BCleanupFrame : public model::CleanupFrame {
 private:
     struct Cleanup {
+        bool emittingCleanups;
         model::ExprPtr action;
         llvm::BasicBlock *unwindBlock, *landingPad;
         
-        Cleanup(model::ExprPtr action) : 
+        Cleanup(model::ExprPtr action) :
+            emittingCleanups(false),
             action(action),
             unwindBlock(0),
             landingPad(0) {
@@ -44,15 +46,7 @@ public:
         cleanups.push_front(Cleanup(cleanup));
     }
 
-    virtual void close() {
-        context->emittingCleanups = true;
-        for (CleanupList::iterator iter = cleanups.begin();
-             iter != cleanups.end();
-             ++iter
-             )
-            iter->action->emit(*context);
-        context->emittingCleanups = false;
-    }
+    virtual void close();
     
     llvm::BasicBlock *emitUnwindCleanups(llvm::BasicBlock *next);
     

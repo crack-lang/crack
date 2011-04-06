@@ -235,6 +235,14 @@ class Parser {
       model::ExprPtr parseIString(model::Expr *expr);
 
       /**
+       * Parse a sequence constant.
+       * 
+       * @param containerType the type of the sequence that we are 
+       * initializing.
+       */
+      model::ExprPtr parseConstSequence(model::TypeDef *containerType);
+
+      /**
        * If the expression is a VarRef referencing a TypeDef, return the 
        * TypeDef.  Otherwise returns null.
        */

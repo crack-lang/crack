@@ -31,6 +31,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
     protected:
         virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void fixClassInstRep(BTypeDef *type);
 
     public:
         LLVMLinkerBuilder(void) : linker(0),
@@ -48,7 +49,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                  const std::string &name
                                                  );
 
-        virtual void initializeImport(model::ModuleDefPtr, bool annotation);
+        virtual void initializeImport(model::ModuleDef*, bool annotation);
 
         virtual void *loadSharedLibrary(const std::string &name);
 

@@ -19,10 +19,10 @@
             KeyT key;
             ValT val;
             
-            oper init(KeyT key0, ValT val0, bool red0) :
-                red = red0,
-                key = key0,
-                val = val0 {
+            oper init(KeyT key, ValT val, bool red) :
+                red = red,
+                key = key,
+                val = val {
             }
             
             void doIndent(uint indent) {

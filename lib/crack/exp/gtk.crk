@@ -247,7 +247,7 @@ class Entry : Widget {
 
 class _ArgvWrapper : Wrapper {
     array[byteptr] val = null;
-    oper init(array[byteptr] val0) : val = val0 {}
+    oper init(array[byteptr] val) : val = val {}
 }
 
 class App {

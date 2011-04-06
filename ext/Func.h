@@ -25,9 +25,10 @@ class Func {
             noFlags = 0,
             method = 1,
             virtualized = 2,
+            variadic = 8,
 
             // mask for flags that map to FuncDef flags.
-            funcDefFlags = 7,
+            funcDefFlags = 15,
 
             // flags that don't map to FuncDef flags.
             constructor = 1024
@@ -67,6 +68,12 @@ class Func {
 
         // add a new argument to the function.
         void addArg(Type *type, const std::string &name);
+
+        // sets whether the Func maps to a variadic function
+        void setIsVariadic(bool isVariadic);
+
+        // gets whether the Func maps to a variadic function
+        bool isVariadic();
 
         // finish the definition of the function (this will be called 
         // automatically by Module::finish())

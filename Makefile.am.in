@@ -4,15 +4,19 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libCrackLang.la
+lib_LTLIBRARIES = libCrackLang.la libCrackExtStub.la
 libCrackLang_la_SOURCES = %libCrackSources%
-libCrackLang_la_LDFLAGS = -version-info 0:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
+libCrackLang_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
 
+libCrackExtStub_la_SOURCES = ext/Stub.cc debug/NativeDebugTools.cc
+libCrackExtStub_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
+libCrackExtStub_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
 
-runtime_la_LDFLAGS = -avoid-version -module
+runtime_la_LDFLAGS = -avoid-version -module -lpthread
 runtime_la_SOURCES = %libRuntimeSources%
 
 # this is really annoying, testext needs to be installed in order to generate 

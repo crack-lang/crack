@@ -16,7 +16,7 @@ class LineReader {
     ManagedBuffer buffer = {1024};
     uint start, end;
     
-    oper init(Reader reader0) : r = reader0 {}
+    oper init(Reader reader) : r = reader {}
     
     String next() {
         while (true) {
@@ -65,10 +65,10 @@ class LineReader {
 }
 
 class LineIter {
-    String line;
     LineReader reader;
+    String line;
     
-    oper init(LineReader reader0) : line = reader0.next(), reader = reader0 {}
+    oper init(LineReader reader) : reader = reader, line = reader.next() {}
     bool isTrue() { return !(line is null); }
     String elem() { return line; }
     void next() { line = reader.next(); }

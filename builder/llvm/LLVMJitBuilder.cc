@@ -8,6 +8,7 @@
 #include "FuncBuilder.h"
 #include "Utils.h"
 #include "BBuilderContextData.h"
+#include "debug/DebugTools.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -66,6 +67,10 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
                                 execEng->getPointerToFunction(delFunc)
                              );
     }
+}
+
+void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
+    type->getClassInstRep(module, execEng);
 }
 
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
@@ -147,7 +152,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "__main__", func));
+    createFuncStartBlocks("__main__");
 
     createModuleCommon(context);
     
@@ -159,7 +164,11 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
-    builder.CreateRetVoid();
+
+    // if there was a top-level throw, we could already have a terminator.  
+    // Generate a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator())
+        builder.CreateRetVoid();
 
     // emit the cleanup function
 
@@ -190,14 +199,29 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
         for (map<Function *, void *>::iterator iter = primFuncs.begin();
-        iter != primFuncs.end();
-        ++iter
-                )
+             iter != primFuncs.end();
+             ++iter)
             addGlobalFuncMapping(iter->first, iter->second);
     }
 
     if (debugInfo)
         delete debugInfo;
+    
+    // build the debug tables
+    Module::FunctionListType &funcList = module->getFunctionList();
+    for (Module::FunctionListType::iterator funcIter = funcList.begin();
+         funcIter != funcList.end();
+         ++funcIter
+         ) {
+        string name = funcIter->getName();
+        if (!funcIter->isDeclaration())
+            crack::debug::registerDebugInfo(
+                execEng->getPointerToGlobal(funcIter),
+                name,
+                "",   // file name
+                0     // line number
+            );
+    }
 
     // dump or run the module depending on the mode.
     if (options->dumpMode)

@@ -60,7 +60,7 @@ if (true) {
 
 class A {
     int val;
-    oper init(int val0) : val = val0 {} 
+    oper init(int val) : val = val {} 
     A oper ++x() {
         ++val;
         return this;

@@ -5,8 +5,8 @@ import crack.runtime TimeVal;
 
 ## A difference in time.
 class TimeDelta : Object, TimeVal {
-    oper init(int32 secs0, int32 nsecs0) : 
-        TimeVal(secs0, nsecs0) {
+    oper init(int32 secs, int32 nsecs) : 
+        TimeVal(secs, nsecs) {
     }
 }
 

@@ -104,7 +104,8 @@ std::string Construct::joinName(const std::string &base,
 
 Construct::Construct(Builder *builder, Construct *primary) :
     rootBuilder(builder) {
-
+        
+    builderStack.push(builder);
     createRootContext();
     
     // steal any stuff from the primary we want to use as a default.
@@ -221,6 +222,7 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
                                             ) {
     // create a new context
     BuilderPtr builder = rootBuilder->createChildBuilder();
+    builderStack.push(builder);
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
                     new GlobalNamespace(rootContext->ns.get(), canonicalName),
@@ -235,6 +237,7 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
     modDef->fromExtension = true;
     mod.finish();
     modDef->close(*context);
+    builderStack.pop();
 
     return modDef;
 }
@@ -324,6 +327,7 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
     
         // create a new builder, context and module
         BuilderPtr builder = rootBuilder->createChildBuilder();
+        builderStack.push(builder);
         ContextPtr context =
             new Context(*builder, Context::module, rootContext.get(),
                         new GlobalNamespace(rootContext->ns.get(), 
@@ -344,6 +348,8 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
             // directory
             modDef->close(*context);
         }
+        
+        builderStack.pop();
     }
 
     modDef->finished = true;
@@ -415,6 +421,8 @@ bool Construct::loadBootstrapModules() {
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return false;
+    } catch (...) {
+        cerr << "Unknown exception caught (Crack exception?)" << endl;
     }
         
     
@@ -424,6 +432,7 @@ bool Construct::loadBootstrapModules() {
 int Construct::runScript(istream &src, const string &name) {
     // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
+    builderStack.push(builder);
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
                     new GlobalNamespace(rootContext->ns.get(), name),
@@ -441,6 +450,13 @@ int Construct::runScript(istream &src, const string &name) {
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return 1;
+    } catch (...) {
+        cerr << "Unknown exception caught (Crack exception?)" << endl;
     }
+    builderStack.pop();
     rootBuilder->finishBuild(*context);
+}
+
+builder::Builder &Construct::getCurBuilder() {
+    return *builderStack.top();
 }

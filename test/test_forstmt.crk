@@ -27,7 +27,7 @@ if (sum != 100)
 class RangeIter {
     int i, max;
     
-    oper init(int start, int max0) : i = start, max = max0 {}
+    oper init(int start, int max) : i = start, max = max {}
 
     int elem() { return i; }
     
@@ -38,7 +38,7 @@ class RangeIter {
 
 class Range {
     int start, max;
-    oper init(int start0, int max0) : start = start0, max = max0 {}
+    oper init(int start, int max) : start = start, max = max {}
     RangeIter iter() { return RangeIter(start, max); }
 }   
 

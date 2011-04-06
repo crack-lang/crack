@@ -252,6 +252,13 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
+/** Operator to convert a pointer to an integer. */
+class PtrToIntOpCall : public model::FuncCall {
+public:
+    PtrToIntOpCall(model::FuncDef *def) : FuncCall(def) {}
+    virtual model::ResultExprPtr emit(model::Context &context);
+};
+
 class VoidPtrOpDef : public UnOpDef {
 public:
     VoidPtrOpDef(model::TypeDef *resultType) :

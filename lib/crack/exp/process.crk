@@ -1,0 +1,218 @@
+## This module provides a Process class for managing sub processes
+## Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.runtime runChildProcess, waitProcess, signalProcess, SIGKILL,
+                     SIGTERM, PipeDesc, free;
+
+import crack.io FDReader, FDWriter, StringFormatter;
+import crack.lang ManagedBuffer, AppendBuffer, CString;
+
+// see Process.h in  runtime
+int CRK_PROC_STILL_RUNNING = 0x100;
+int CRK_PROC_KILLED        = 0x200;
+int CRK_PROC_STOPPED       = 0x400;
+int CRK_PROC_EXITED        = 0x800;
+int CRK_PROC_FAILED        = 0x1000;
+
+import crack.io cout;
+
+# this is a stand in until we get generics
+class Args {
+
+    array[CString] __rep;
+    uint __count;
+    array[byteptr] __primArray;
+
+    ### split the string on space. quotes are not handled.
+    oper init(String str) {
+
+        delim := b' ';
+        if (str.size == 0) {
+            // emptry string, one blank element
+            __rep = array[CString](1);
+            __count = 1;
+            __rep[0] = null;
+            return;
+        }
+
+        i := 0;
+
+        // loop once for count
+        while ( (i = str.lfind(delim, uint(i+1))) != -1) {
+            __count++;
+        }
+
+        // __count holds the delimiter count currently. we increment
+        // it to account for the split. if there were no delimiters,
+        // __count will be 1 with a single string (handled below)
+        __count++;
+
+        __rep = array[CString](__count);
+
+        // if no delimiter, one string
+        if (__count == 1) {
+            __rep[0] = CString(str);
+            return;
+        }
+
+        // loop again for substrings
+        i = 0;
+        li := 0;
+        ss := 0;
+        CString val;
+        while ( (i = str.lfind(delim, uint(i+1))) != -1) {
+            val = CString(str.slice(li, i));
+            val.oper bind();
+            __rep[ss].oper release();
+            __rep[ss++] = val;
+            li = i+1;
+        }
+        // end of string from last delim
+        val = CString(str.slice(li, int(str.size)));
+        val.oper bind();
+        __rep[ss].oper release();
+        __rep[ss++] = val;
+    }
+
+    oper init(uint count) :
+        __rep = array[CString](count),
+        __count = count {
+    }
+
+    oper del() {
+        # release all of the elements
+        uint i;
+        while (i < __count) {
+            __rep[i].oper release();
+            i = i + 1;
+        }
+        free(__rep);
+        if (!(__primArray is null)) free(__primArray);
+    }
+
+    ## Returns the primitive array (useful for communicating to C bindings)
+    ## all strings are terminatd with null, and the array is as well
+    array[byteptr] getPrimArray() {
+        if (__primArray is null) {
+            size := __count+1;
+            __primArray = array[byteptr](size);
+            uint i;
+            while (i < __count) {
+                __primArray[i] = __rep[i].buffer;
+                ++i;
+            }
+            __primArray[__count] = null;
+        }
+        return __primArray;
+    }
+}
+
+class Process {
+
+    int _pid = -1;
+    PipeDesc _pd;
+    int _returnCode = CRK_PROC_STILL_RUNNING;
+
+    ## splits on space, quotes are NOT accounted for
+    oper init(String cmd): _pd() {
+        args := Args(cmd);
+        array[byteptr] env = null;
+        _pid = runChildProcess(args.getPrimArray(), env, _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
+    }
+
+    oper init(Args args): _pd() {
+        array[byteptr] env;
+        _pid = runChildProcess(args.getPrimArray(), env, _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
+    }
+
+    oper init(Args args, Args env): _pd() {
+        _pid = runChildProcess(args.getPrimArray(),
+                               env.getPrimArray(),
+                               _pd);
+        if (_pid == -1) {
+            _returnCode = CRK_PROC_FAILED;
+        }
+    }
+
+    String _readPipe(int pipe) {
+        // paged reads
+        buf := ManagedBuffer(1024);
+        // extendable buffer used for final string
+        wr := AppendBuffer(1024);
+        rd := FDReader(pipe);
+        uint size, totalSize;
+        while ((size = rd.read(buf)) != 0) {
+            wr.extend(buf, size);
+            totalSize += size;
+        }
+        return String(wr, totalSize, true); // takes ownership of appendbuffer
+    }
+
+    String getStdOut() { return _readPipe(_pd.stdout); }
+    String getStdErr() { return _readPipe(_pd.stderr); }
+
+    int getPid() { return _pid; }
+
+    int getReturnCode() { return _returnCode & 0xff; }
+
+    int poll() {
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            _returnCode = waitProcess(_pid, 1);
+        return getReturnCode();
+    }
+
+    int wait() {
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            _returnCode = waitProcess(_pid, 0);
+        return getReturnCode();
+    }
+
+    bool failed() {
+        return (_returnCode & CRK_PROC_FAILED);
+    }
+
+    bool killed() {
+        return (_returnCode & CRK_PROC_KILLED);
+    }
+
+    bool stopped() {
+        return (_returnCode & CRK_PROC_STOPPED);
+    }
+
+    bool isRunning() {
+        if (_returnCode & CRK_PROC_KILLED ||
+            _returnCode & CRK_PROC_STOPPED ||
+            _returnCode & CRK_PROC_EXITED ||
+            _returnCode & CRK_PROC_FAILED
+            )
+            return false;
+        poll();
+        return (_returnCode & CRK_PROC_STILL_RUNNING);
+    }
+
+    void sendSignal(int sig) {
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, sig);
+    }
+
+    void terminate() {
+        // XXX this needs to be a runtime call, as on Windows it will do
+        // something different
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, SIGTERM);
+    }
+
+    void kill() {
+        // XXX this needs to be a runtime call, as on Windows it will do
+        // something different
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, SIGKILL);
+    }
+
+}

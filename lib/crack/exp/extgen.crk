@@ -19,10 +19,10 @@ class Type {
     String __emitName;
     bool initialized;
     
-    oper init(String name0) : name = name0, __emitName = 'type_' + name0 {}
-    oper init(String name0, String emitted0) :
-        name = name0,
-        __emitName = emitted0 {
+    oper init(String name) : name = name, __emitName = 'type_' + name {}
+    oper init(String name, String emitted) :
+        name = name,
+        __emitName = emitted {
     }
     
     String emit() {
@@ -44,7 +44,7 @@ class Arg {
     String name;
     Type type;
 
-    oper init(Type type0, String name0) : type = type0, name = name0 {}
+    oper init(Type type, String name) : type = type, name = name {}
 }
 
 @GenericObjArray(ArgArray, Arg);
@@ -54,9 +54,9 @@ class Func {
     String name;
     ArgArray args;
 
-    oper init(Type retType0, String name0) :
-        retType = retType0, 
-        name = name0,
+    oper init(Type retType, String name) :
+        retType = retType, 
+        name = name,
         args() {
     }
     
@@ -72,9 +72,9 @@ int cmp(String a, String b) { return a.cmp(b); }
 
 class BuiltInType : Type {
     String funcName;
-    oper init(String name0, String funcName0) : 
-        Type(name0), 
-        funcName = funcName0 {
+    oper init(String name, String funcName) : 
+        Type(name), 
+        funcName = funcName {
     }
     
     bool isBuiltIn() {
@@ -93,9 +93,9 @@ class ConstType : BuiltInType {
     
     String constCast;
     
-    oper init(String name0, String funcName0, String constCast0) :
-        BuiltInType(name0, funcName0),
-        constCast = constCast0 {
+    oper init(String name, String funcName, String constCast) :
+        BuiltInType(name, funcName),
+        constCast = constCast {
     }
 
     String getConstCast() { return constCast; }
@@ -106,8 +106,8 @@ class TypeImpl : Type {
     FuncArray methods;
     ArgArray members = {};
     
-    oper init(String name0) : Type(name0) {}
-    oper init(String name0, String emitted0) : Type(name0, emitted0) {}
+    oper init(String name) : Type(name) {}
+    oper init(String name, String emitted) : Type(name, emitted) {}
 
     // class members
     void addMember(Arg member) {
@@ -146,11 +146,11 @@ class SpecializedType : TypeImpl {
     
     Type generic, specializer;
     
-    @static String _mangle(String name0) {
+    @static String _mangle(String name) {
         # allocate a generous buffer
-        AppendBuffer result = {name0.size * 2};
-        for (uint i = 0; i < name0.size; ++i) {
-            ch := name0.buffer[i];
+        AppendBuffer result = {name.size * 2};
+        for (uint i = 0; i < name.size; ++i) {
+            ch := name.buffer[i];
             if (ch == 95)  # '_'
                 result.extend('__');
             else if (ch == 91)
@@ -167,10 +167,10 @@ class SpecializedType : TypeImpl {
     
     # specialized types look like builtins - we don't do the normal type 
     # creation for them, instead we just get specializations for them.
-    oper init(String name0, Type generic0, Type specializer0) :
-        TypeImpl(name0, _mangle(name0)),
-        generic = generic0,
-        specializer = specializer0 {
+    oper init(String name, Type generic, Type specializer) :
+        TypeImpl(name, _mangle(name)),
+        generic = generic,
+        specializer = specializer {
     }
 
     void emitInitializer(Formatter out) {
@@ -194,8 +194,8 @@ class SpecializedType : TypeImpl {
 }
 
 class GenericType : TypeImpl {
-    oper init(String name0, String emitted0) :
-        TypeImpl(name0, emitted0) {
+    oper init(String name, String emitted) :
+        TypeImpl(name, emitted) {
     }
     
     Type getSpecialization(TypeMap types, Type specializer) {
@@ -242,16 +242,16 @@ class Const {
     Type type;
     String ident, val;
 
-    oper init(Type type0, String ident0) :
-        type = type0,
-        ident = ident0,
-        val = ident0 {
+    oper init(Type type, String ident) :
+        type = type,
+        ident = ident,
+        val = ident {
     }
 
-    oper init(Type type0, String ident0, String val0) :
-        type = type0,
-        ident = ident0,
-        val = val0 {
+    oper init(Type type, String ident, String val) :
+        type = type,
+        ident = ident,
+        val = val {
     }    
 }
 
@@ -260,8 +260,8 @@ class Errors : StringFormatter {
     CrackContext ctx;
     Token tok;
     
-    oper init(CrackContext ctx0, Token tok0) : ctx = ctx0, tok = tok0 {}
-    oper init(CrackContext ctx0) : ctx = ctx0 {}
+    oper init(CrackContext ctx, Token tok) : ctx = ctx, tok = tok {}
+    oper init(CrackContext ctx) : ctx = ctx {}
     
     oper del() {
         # null terminate

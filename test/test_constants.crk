@@ -116,4 +116,10 @@ i2--;
 if (i2 != 9223372036854775807)
    puts("fail4");
 
+if (b'A' != 65)
+    puts('FAILED byte constants');
+
+if (i'\001\0' != 256 || i"SpugCrak" != 6012434588913262955)
+    puts('FAILED integer string constants');
+
 puts('ok');

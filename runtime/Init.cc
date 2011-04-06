@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <signal.h>
+#include "debug/DebugTools.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -16,6 +18,7 @@
 #include "Net.h"
 #include "Math.h"
 #include "Exceptions.h"
+#include "Process.h"
 using namespace crack::ext;
 
 extern "C" void crack_runtime_init(Module *mod) {
@@ -27,6 +30,16 @@ extern "C" void crack_runtime_init(Module *mod) {
     Type *byteType = mod->getByteType();
     Type *voidType = mod->getVoidType();
     Type *voidptrType = mod->getVoidptrType();
+
+    Type *baseArrayType = mod->getType("array");
+    // array[byteptr]
+    Type *byteptrArrayType;
+    {
+        std::vector<Type *> params(1);
+        params[0] = byteptrType;
+        byteptrArrayType = baseArrayType->getSpecialization(params);
+    }
+    byteptrArrayType->finish();
 
     Type *cdentType = mod->addType("DirEntry");
     cdentType->addInstVar(byteptrType, "name");
@@ -76,6 +89,11 @@ extern "C" void crack_runtime_init(Module *mod) {
                      );
     f->addArg(mod->getUintType(), "low");
     f->addArg(mod->getUintType(), "high");
+    
+    f = mod->addFunc(intType, "random", (void *)random);
+
+    f = mod->addFunc(voidType, "srandom", (void *)srandom);
+    f->addArg(uintType, "seed");
 
     f = mod->addFunc(byteptrType, "puts",
                      (void *)crack::runtime::puts
@@ -427,9 +445,85 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 
                      crack::runtime::exceptionMatchFuncHook
                      );
+    mod->addConstant(intType, "BAD_CAST_FUNC",
+                     crack::runtime::badCastFuncHook
+                     );
+    mod->addConstant(intType, "EXCEPTION_RELEASE_FUNC",
+                     crack::runtime::exceptionReleaseFuncHook
+                     );
+    mod->addConstant(intType, "EXCEPTION_PERSONALITY_FUNC",
+                     crack::runtime::exceptionPersonalityFuncHook
+                     );
+    mod->addConstant(intType, "EXCEPTION_FRAME_FUNC",
+                     crack::runtime::exceptionFrameFuncHook
+                     );
     f = mod->addFunc(voidType, "registerHook", 
                      (void *)crack::runtime::registerHook
                      );
     f->addArg(intType, "hookId");
     f->addArg(voidptrType, "hook");
+
+    // Process support
+    mod->addConstant(intType, "SIGABRT", SIGABRT);
+    mod->addConstant(intType, "SIGALRM", SIGALRM);
+    mod->addConstant(intType, "SIGBUS" , SIGBUS);
+    mod->addConstant(intType, "SIGCHLD", SIGCHLD);
+    mod->addConstant(intType, "SIGCLD" , SIGCLD);
+    mod->addConstant(intType, "SIGCONT", SIGCONT);
+    mod->addConstant(intType, "SIGFPE" , SIGFPE);
+    mod->addConstant(intType, "SIGHUP" , SIGHUP);
+    mod->addConstant(intType, "SIGILL" , SIGILL);
+    mod->addConstant(intType, "SIGINT" , SIGINT);
+    mod->addConstant(intType, "SIGIO"  , SIGIO);
+    mod->addConstant(intType, "SIGIOT" , SIGIOT);
+    mod->addConstant(intType, "SIGKILL", SIGKILL);
+    mod->addConstant(intType, "SIGPIPE", SIGPIPE);
+    mod->addConstant(intType, "SIGPOLL", SIGPOLL);
+    mod->addConstant(intType, "SIGPROF", SIGPROF);
+    mod->addConstant(intType, "SIGPWF" , SIGPWR);
+    mod->addConstant(intType, "SIGQUIT", SIGQUIT);
+    mod->addConstant(intType, "SIGSEGV", SIGSEGV);
+    mod->addConstant(intType, "SIGSTOP", SIGSTOP);
+    mod->addConstant(intType, "SIGSYS" , SIGSYS);
+    mod->addConstant(intType, "SIGTERM", SIGTERM);
+    mod->addConstant(intType, "SIGTRAP", SIGTRAP);
+    mod->addConstant(intType, "SIGTSTP", SIGTSTP);
+    mod->addConstant(intType, "SIGTTIN", SIGTTIN);
+    mod->addConstant(intType, "SIGURG" , SIGURG);
+    mod->addConstant(intType, "SIGUSR1", SIGUSR1);
+    mod->addConstant(intType, "SIGUSR2", SIGUSR2);
+    mod->addConstant(intType, "SIGVTALRM", SIGVTALRM);
+    mod->addConstant(intType, "SIGWINCH" , SIGWINCH);
+    mod->addConstant(intType, "SIGXCPU", SIGXCPU);
+    mod->addConstant(intType, "SIGXFSZ", SIGXFSZ);
+
+    Type *cpipeType = mod->addType("PipeDesc");
+    cpipeType->addInstVar(intType, "stdin");
+    cpipeType->addInstVar(intType, "stdout");
+    cpipeType->addInstVar(intType, "stderr");
+    cpipeType->addConstructor();
+    cpipeType->finish();
+
+    f = mod->addFunc(intType, "runChildProcess",
+                     (void *)&crack::runtime::runChildProcess);
+    f->addArg(byteptrArrayType, "argv");
+    f->addArg(byteptrArrayType, "env");
+    f->addArg(cpipeType, "pipes");
+
+    f = mod->addFunc(intType, "waitProcess",
+                     (void *)&crack::runtime::waitProcess);
+    f->addArg(intType, "pid");
+    f->addArg(intType, "noHang");
+
+    f = mod->addFunc(voidType, "signalProcess",
+                     (void *)&crack::runtime::signalProcess);
+    f->addArg(intType, "pid");
+    f->addArg(intType, "sig");
+
+    // debug support
+    f = mod->addFunc(voidType, "getLocation", 
+                     (void *)&crack::debug::getLocation
+                     );
+    f->addArg(voidptrType, "address");
+    f->addArg(byteptrArrayType, "info");
 }

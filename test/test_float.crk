@@ -38,54 +38,54 @@ if (-1e+10 != -10000000000.0) puts('failed -1e+10');
 float e = 12.34e-1;
 float e2 = 123.4e-2;
 if (e != e2)
-    puts("fail");
+    puts("fail constants");
 
 // operators
 if (f1 != 1234.56)
-    puts("fail");
+    puts("fail !=");
 
 if (!(f1 == 1234.56))
-    puts("fail");
+    puts("fail ==");
 
 if (f1 == f2)
-    puts("fail");
+    puts("fail == other var");
 
 if (!(f1 != f2))
-    puts("fail");
+    puts("fail != other value");
 
 if (f1 > f2)
-   puts("fail");
+   puts("fail >");
    
 if (!(f1 < f2))
-   puts("fail");
+   puts("fail <");
 
 if (!(f1 <= 1234.56))
-   puts("fail");
+   puts("fail <=");
 
  if (!(f1 <= f2))
-   puts("fail");
+   puts("fail <=");
 
 if (!(f2 >= 1234.56))
-   puts("fail");
+   puts("fail !(f2 >= 1234.56)");
 
- if (!(f2 >= f1))
-   puts("fail");
+if (!(f2 >= f1))
+   puts("fail !(f2 >= f1)");
 
 float f3 = f1 + f2;
 if (f3 != 3580.23)
-   puts("fail");
+   puts("fail f3 != 3580.23");
 
 f3 = f3 - f1;
 if (f3 != f2)
-   puts("fail");
+   puts("fail f3 != f2");
 
 f3 = f1 * 2.0;
 if (f3 != 2469.12)
-   puts("fail");
+   puts("fail f3 != 2469.12");
 
 f3 = f3 / 2.0;
 if (f3 != f1)
-   puts("fail");
+   puts("fail f3 != f1");
 
 f3 = f1 % 2.0;
 //if (f3 != 0.560059)
@@ -93,40 +93,40 @@ f3 = f1 % 2.0;
 
 f3 = -f1;
 if (f3 != (0.0 - f1))
-    puts("fail");
+    puts("fail f3 != (0.0 - f1)");
 
 // conversions
 
 f3 = 1.0;
 if (!f3) {
-    puts("fail");
+    puts("fail !f3");
 }
 f3 = 0.0;
 if (f3) {
-    puts("fail");
+    puts("fail f3");
 }
 
 // byte -> float32
 byte b = 1;
 f1 = b;
 if (f1 != 1.0)
-    puts("fail");
+    puts("fail byte -> float32");
 
 // byte -> float32, explicit
 b = 1;
 f1 = float32(b);
 if (f1 != 1.0)
-    puts("fail");
+    puts("fail byte -> float32, explicit");
 
 // byte -> float64
 d1 = b;
 if (d1 != 1.0)
-    puts("fail");
+    puts("fail byte -> float64");
 
 // byte -> float64, explicit
 d1 = float64(b);
 if (d1 != 1.0)
-    puts("fail");
+    puts("fail byte -> float64, explicit");
 
 
 // int16 -> float32
@@ -138,130 +138,106 @@ if (d1 != 1.0)
 int32 i = -5; 
 d1 = i;
 if (d1 != -5.0)
-    puts("fail");
+    puts("fail int32 -> float64");
 
 // int32 -> float64, explicit
 i = -5;
 d1 = int32(i);
 if (d1 != -5.0)
-    puts("fail");
+    puts("fail int32 -> float64, explicit");
 
 // uint32 -> float64
 uint32 ui = 5; 
 d1 = ui;
 if (d1 != 5.0)
-    puts("fail");
+    puts("fail uint32 -> float64");
 
 // uint32 -> float64, explicit
 ui = 5;
 d1 = float64(ui);
 if (d1 != 5.0)
-    puts("fail");
+    puts("fail uint32 -> float64, explicit");
 
 // float32 -> float64
 f1 = 5.0;
 d1 = f1;
 if (d1 != 5.0)
-    puts("fail");
+    puts("fail float32 -> float64");
 
 // float32 -> float64, explicit
 d1 = float64(f1);
 if (d1 != 5.0)
-    puts("fail");
-
-// int32 -> float32
-i = -5; 
-f1 = i;
-if (f1 != -5.0)
-    puts("fail");
-
-// int32 -> float32, explicit
-i = -5;
-f1 = int32(i);
-if (f1 != -5.0)
-    puts("fail");
-
-// uint32 -> float32
-ui = 5; 
-f1 = ui;
-if (f1 != 5.0)
-    puts("fail");
-
-// uint32 -> float32, explicit
-ui = 5;
-f1 = float32(ui);
-if (f1 != 5.0)
-    puts("fail");
+    puts("fail float32 -> float64, explicit");
 
 // int constant -> float32, float64
 float32 fc = 5;
 float64 dc = 10;
 if (fc != 5.0)
-    puts("fail");
+    puts("fail int constant -> float32");
 if (dc != 10.0)
-    puts("fail");
+    puts("fail int constant -> float64");
 if (fc != 5)
-    puts("fail");
+    puts("fail int constant -> float32 compared to int const");
 if (dc != 10)
-    puts("fail");
+    puts("fail int constant -> float64 compared to int const");
 
 // int constant -> float32, float64, explicit
 fc = float32(5);
 dc = float64(10);
 if (fc != 5.0)
-    puts("fail");
+    puts("fail int constant -> float32 explicit");
 if (dc != 10.0)
-    puts("fail");
+    puts("fail int constant -> float64 explicit");
 if (fc != 5)
-    puts("fail");
+    puts("fail int constant -> float32 explicit compared to int const");
 if (dc != 10)
-    puts("fail");
+    puts("fail int constant -> float64 explicit compared to int const");
 
 
 // truncate (loss of precision)
 d1 = 1.234;
 f1 = float32(d1);
 if (f1 != 1.234)
-    puts("fail");
+    puts("fail truncate to float32");
 
 f1 = 1.234;
 i = int32(f1);
 if (i != 1)
-    puts("fail");
+    puts("fail truncate to int32");
 
 f1 = 2.234;
 ui = uint32(f1);
 if (ui != 2)
-    puts("fail");
+    puts("fail truncate to uint32");
 
 d1 = 1.234;
 i = int32(d1);
 if (i != 1)
-    puts("fail");
+    puts("fail truncate double to int32");
 
 d1 = 2.234;
 ui = uint32(d1);
 if (ui != 2)
-    puts("fail");
+    puts("fail truncate double to uint32");
 
 f1 = 1.234;
 int64 i64 = int64(f1);
 if (i64 != 1)
-    puts("fail");
+    puts("fail truncate float to int64");
 
 f1 = 2.234;
 uint64 ui64 = uint64(f1);
 if (ui64 != 2)
-    puts("fail");
+    puts("fail truncate float to uint64");
 
 d1 = 1.234;
 i64 = int64(d1);
 if (i != 1)
-    puts("fail");
+    puts("fail truncate double to int64");
 
 d1 = 2.234;
 ui64 = uint64(d1);
 if (ui64 != 2)
-    puts("fail");
+    puts("fail truncate double to uint64");
 
 puts("ok");

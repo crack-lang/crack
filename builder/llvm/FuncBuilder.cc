@@ -50,7 +50,7 @@ void FuncBuilder::finish(bool storeDef) {
             returnType->rep ? returnType->rep :
             Type::getVoidTy(getGlobalContext());
     FunctionType *llvmFuncType =
-            FunctionType::get(rawRetType, llvmArgs, false);
+            FunctionType::get(rawRetType, llvmArgs, funcDef->flags & FuncDef::variadic);
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 

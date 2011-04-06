@@ -232,6 +232,13 @@ class Context : public spug::RCBase {
         ExprPtr createTernary(Expr *cond, Expr *trueVal, Expr *falseVal);
 
         /**
+         * Emit a sequence initializer.
+         */
+        ExprPtr emitConstSequence(TypeDef *type, 
+                                  const std::vector<ExprPtr> &elems
+                                  );
+
+        /**
          * Returns true if the namespace is in the same function as the 
          * context.
          */
@@ -330,10 +337,16 @@ class Context : public spug::RCBase {
          *  to conversion expressions of the correct type for a match.
          * @param srcNs if specified, the namespace to do the lookup in 
          *  (default is the context's namespace)
+         * @param allowOverrides by default, this function will ignore 
+         *  overrides of a virtual function in considering a match - this is 
+         *  to provide the correct method resolution order.  Setting this flag 
+         *  to true causes it to return the first matching function, 
+         *  regardless of whether it is an override.
          */
         FuncDefPtr lookUp(const std::string &varName,
                           std::vector<ExprPtr> &vals,
-                          Namespace *srcNs = 0
+                          Namespace *srcNs = 0,
+                          bool allowOverrides = false
                           );
         
         /**

@@ -17,7 +17,7 @@ death := StringFormatter();
 class _RegexBase {
     PCRE _rx;
     
-    oper init(PCRE rx0) : _rx = rx0 {}
+    oper init(PCRE rx) : _rx = rx {}
 };
 
 ## A regular expression match.
@@ -27,11 +27,11 @@ class Match {
     array[int] __captures;
     uint __captureCount;
     
-    oper init(_RegexBase regex0, String subject0, array[int] captures, 
+    oper init(_RegexBase regex, String subject, array[int] captures, 
               uint captureCount
               ) : 
-        regex = regex0,
-        subject = subject0,
+        regex = regex,
+        subject = subject,
         __captures = captures,
         __captureCount = captureCount {
     }

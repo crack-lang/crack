@@ -39,6 +39,7 @@ class MyAggType : public Object {
 };    
 
 const char *echo(const char *data) { return data; }
+extern "C" const char *cecho(const char *data) { return data; }
 
 int *copyArray(int count, int *array) {
     int *result = new int[count];

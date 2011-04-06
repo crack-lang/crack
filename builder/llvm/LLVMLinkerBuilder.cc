@@ -127,7 +127,10 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     // final IR generation: cleanup and main
     emitAggregateCleanup(finalir);
-    createMain(finalir, options.get());
+    BTypeDef *vtableType = 
+        BTypeDefPtr::rcast(context.construct->vtableBaseType);
+    Value *vtableTypeBody = vtableType->getClassInstRep(finalir, 0);
+    createMain(finalir, options.get(), vtableTypeBody);
 
     // possible LTO optimizations
     if (options->optimizeLevel) {
@@ -180,12 +183,13 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 
     BBuilderContextData::get(&context);
 
+    string funcName = name + ":main";
     llvm::Constant *c =
-        module->getOrInsertFunction(name+":main", Type::getVoidTy(lctx), NULL);
+        module->getOrInsertFunction(funcName, Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
 
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "initCheck", func));
+    createFuncStartBlocks(funcName);
 
     // insert point is now at the begining of the :main function for
     // this module. this will run the top level code for the module
@@ -233,7 +237,11 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
-    builder.CreateRetVoid();
+    
+    // if there was a top-level throw, we could already have a terminator.  
+    // Generate a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator())
+        builder.CreateRetVoid();
 
     // since the cleanups have to be emitted against the module context, clear 
     // the unwind blocks so we generate them for the del function.
@@ -257,16 +265,21 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 }
 
 void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
-    sharedLibs.push_back(name);
-    LLVMBuilder::loadSharedLibrary(name);
+    if (rootBuilder) {
+        rootBuilder->loadSharedLibrary(name);
+    } else {
+        sharedLibs.push_back(name);
+        LLVMBuilder::loadSharedLibrary(name);
+    }
 }
 
-void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
+void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
                                          bool annotation) {
 
+    assert(!annotation && "annotation given to linker builder");
 
     // if the module came from an extension, there's no top level to run
-    if (m->fromExtension || annotation)
+    if (m->fromExtension)
         return;
 
     // we add a call into our module's :main function
@@ -283,8 +296,7 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
                                               Type::getVoidTy(getGlobalContext()),
                                               NULL);
     Function *f = llvm::cast<llvm::Function>(fc);
-    vector<Value*> args;
-    builder.CreateCall(f, args.begin(), args.end());
+    builder.CreateCall(f);
 
     builder.SetInsertPoint(orig);
 
@@ -293,4 +305,8 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDefPtr m,
 void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
+}
+
+void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
+    type->getClassInstRep(module, 0);
 }

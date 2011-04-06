@@ -1,5 +1,5 @@
 // Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
-                
+
 #include "LLVMBuilder.h"
 
 #include "ArrayTypeDef.h"
@@ -12,6 +12,7 @@
 #include "BResultExpr.h"
 #include "BTypeDef.h"
 #include "Consts.h"
+#include "ExceptionCleanupExpr.h"
 #include "FuncBuilder.h"
 #include "Incompletes.h"
 #include "LLVMValueExpr.h"
@@ -310,6 +311,12 @@ namespace {
         return btype.get();
     }
 
+    Value *getExceptionObjectValue(Context &context, IRBuilder<> &builder) {
+        VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
+        BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
+        return builder.CreateLoad(exObjImpl->rep);
+    }
+
 } // anon namespace
 
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
@@ -395,6 +402,10 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         BasicBlock *unwindBlock = bdata->getUnwindBlock(func);
 
         final = unwindBlock;
+        
+        // move the outer context back one level so we get cleanups for the 
+        // function scope.
+        outerContext = outerContext->getParent();
     }
 
     BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);
@@ -535,6 +546,16 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
     return new BHeapVarDefImpl(var);
 }
 
+void LLVMBuilder::emitExceptionCleanup(Context &context) {
+    ExprPtr cleanup = 
+        new ExceptionCleanupExpr(context.construct->voidType.get());
+
+    // we don't need to close this cleanup frame, these cleanups get generated
+    // at the close of the context.
+    context.createCleanupFrame();
+    context.cleanupFrame->addCleanup(cleanup.get());
+}
+
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
     module(0),
@@ -574,23 +595,11 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
         valueArgs.push_back(lastValue);
     }
 
+
     // if we're already emitting cleanups for an unwind, both the normal 
     // destination block and the cleanup block are the same.
     BasicBlock *followingBlock = 0, *cleanupBlock;
-    BBuilderContextData *bdata;
-    if (context.emittingCleanups &&
-        (bdata = BBuilderContextDataPtr::rcast(context.builderData))
-        )
-        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
-
-    // otherwise, create a new normal destinatation block and get the cleanup 
-    // block.
-    if (!followingBlock) {
-        followingBlock = BasicBlock::Create(getGlobalContext(), "l", 
-                                            this->func
-                                            );
-        cleanupBlock = getUnwindBlock(context);
-    }
+    getInvokeBlocks(context, followingBlock, cleanupBlock);
 
     if (funcCall->virtualized)
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
@@ -951,6 +960,64 @@ void LLVMBuilder::createSpecialVar(Namespace *ns, TypeDef *type,
     ns->addDef(varDef.get());
 }
 
+void LLVMBuilder::createFuncStartBlocks(const std::string &name) {
+    // create the "function block" (the first block in the function, will be 
+    // used to hold all local variable allocations)
+    funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
+    builder.SetInsertPoint(funcBlock);
+    
+    // since the function block can get appended to arbitrarily, create a 
+    // first block where it is safe for us to emit terminating instructions
+    BasicBlock *firstBlock = BasicBlock::Create(getGlobalContext(), "l",
+                                                func
+                                                );
+    builder.CreateBr(firstBlock);
+    builder.SetInsertPoint(firstBlock);
+}
+
+void LLVMBuilder::getInvokeBlocks(Context &context, 
+                                  BasicBlock *&followingBlock,
+                                  BasicBlock *&cleanupBlock
+                                  ) {
+    followingBlock = 0;
+    BBuilderContextData *bdata;
+    if (context.emittingCleanups &&
+        (bdata = BBuilderContextDataPtr::rcast(context.builderData))
+        )
+        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
+
+    // otherwise, create a new normal destinatation block and get the cleanup 
+    // block.
+    if (!followingBlock) {
+        followingBlock = BasicBlock::Create(getGlobalContext(), "l", 
+                                            this->func
+                                            );
+        cleanupBlock = getUnwindBlock(context);
+    }
+}
+
+void LLVMBuilder::emitExceptionCleanupExpr(Context &context) {
+    Value *exObjVal = getExceptionObjectValue(context, builder);
+    Function *cleanupExceptionFunc =
+        module->getFunction("__CrackCleanupException");
+    BasicBlock *followingBlock, *cleanupBlock;
+    getInvokeBlocks(context, followingBlock, cleanupBlock);
+    builder.CreateInvoke(cleanupExceptionFunc, followingBlock, cleanupBlock,
+                         exObjVal
+                         );
+    if (followingBlock != cleanupBlock)
+        builder.SetInsertPoint(followingBlock);
+}
+
+bool LLVMBuilder::suppressCleanups() {
+    // only ever want to do this if the last instruction is unreachable.
+    BasicBlock *block = builder.GetInsertBlock();
+    BasicBlock::iterator i = block->end();
+    return i != block->begin() &&
+           (--i)->getOpcode() == Instruction::Unreachable;
+}
+        
+
 BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
     // make sure we have the special exception variables installed in the 
     // context.
@@ -993,6 +1060,15 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         if (!terminal)
             builder.CreateBr(bpos->block2);
         
+        // get the cleanup blocks for the contexts in the function outside of 
+        // the catch
+        ContextPtr outsideFunction = context.getToplevel()->getParent();
+        BasicBlock *funcUnwindBlock = bdata->getUnwindBlock(func);
+        BasicBlock *outerCleanups = emitUnwindCleanups(*context.getParent(),
+                                                       *outsideFunction,
+                                                       funcUnwindBlock
+                                                       );
+        
         // generate a switch instruction based on the value of 
         // :exceptionSelector, we'll fill it in with values later.
         builder.SetInsertPoint(bpos->block);
@@ -1000,7 +1076,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         BHeapVarDefImplPtr selImpl = BHeapVarDefImplPtr::rcast(sel->impl);
         Value *selVal = builder.CreateLoad(selImpl->rep);
         cdata->switchInst =
-            builder.CreateSwitch(selVal, bdata->getUnwindBlock(func), 3);
+            builder.CreateSwitch(selVal, outerCleanups, 3);
 
     // if the last catch block was not terminal, branch to after_try
     } else if (!terminal) {
@@ -1015,6 +1091,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
     
     // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
+    fixClassInstRep(btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
     );
@@ -1024,9 +1101,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
         cdata->nonTerminal = true;
     
     // emit an expression to get the exception object
-    VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
-    BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
-    Value *exObjVal = builder.CreateLoad(exObjImpl->rep);
+    Value *exObjVal = getExceptionObjectValue(context, builder);
     Function *getExFunc = module->getFunction("__CrackGetException");
     vector<Value *> parms(1);
     parms[0] = exObjVal;
@@ -1213,18 +1288,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
     func = funcDef->rep;
     
-    // create the "function block" (the first block in the function, will be 
-    // used to hold all local variable allocations)
-    funcBlock = BasicBlock::Create(getGlobalContext(), name, func);
-    builder.SetInsertPoint(funcBlock);
-    
-    // since the function block can get appended to arbitrarily, create a 
-    // first block where it is safe for us to emit terminating instructions
-    BasicBlock *firstBlock = BasicBlock::Create(getGlobalContext(), "l",
-                                                func
-                                                );
-    builder.CreateBr(firstBlock);
-    builder.SetInsertPoint(firstBlock);
+    createFuncStartBlocks(name);
     
     if (flags & FuncDef::virtualized) {
         // emit code to convert from the first declaration base class 
@@ -1608,7 +1672,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                    // provided or the global will be 
                                    // treated as an extern.
                                    Constant::getNullValue(tp->rep),
-                                   module->getModuleIdentifier()+":"+name
+                                   module->getModuleIdentifier()+"."+name
                                    );
             varDefImpl = new BGlobalVarDefImpl(gvar);
             break;
@@ -1897,6 +1961,15 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         llvmIntType = int64Type->rep;
     }
 
+    // conversion from voidptr to integer
+    funcDef =
+        new GeneralOpDef<PtrToIntOpCall>(uint64Type, FuncDef::noFlags,
+                                         "oper new",
+                                         1
+                                         );
+    funcDef->args[0] = new ArgDef(voidptrType, "val");
+    context.addDef(funcDef.get(), uint64Type);
+    
     // create integer operations
     context.addDef(new AddOpDef(byteType));
     context.addDef(new SubOpDef(byteType));
@@ -2097,9 +2170,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint64Type);
 
-    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uint32Type);
-    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), int32Type);
-
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),
                                             "array", 
@@ -2256,6 +2326,38 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.finish();
     }
 
+    // create "__CrackBadCast(Class a, Class b)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType,
+                      "__CrackBadCast",
+                      2
+                      );
+        f.addArg("curType", classType);
+        f.addArg("newType", classType);
+        f.setSymbolName("__CrackBadCast");
+        f.finish();
+    }        
+
+    // create "__CrackCleanupException(voidptr exceptionObject)"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType,
+                      "__CrackCleanupException",
+                      1
+                      );
+        f.addArg("exceptionObject", voidptrType);
+        f.setSymbolName("__CrackCleanupException");
+        f.finish();
+    }
+    
+    // create "__CrackExceptionFrame()"
+    {
+        FuncBuilder f(context, FuncDef::noFlags, voidType,
+                      "__CrackExceptionFrame",
+                      0
+                      );
+        f.setSymbolName("__CrackExceptionFrame");
+        f.finish();
+    }
 
 }
 
@@ -2291,7 +2393,7 @@ void LLVMBuilder::importSharedLibrary(const string &name,
     }
 }
 
-void LLVMBuilder::registerImportedVar(Context &context, VarDef *varDef) {
+void LLVMBuilder::registerImportedDef(Context &context, VarDef *varDef) {
     // no-op for LLVM builder.
 }
 

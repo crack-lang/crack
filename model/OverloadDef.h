@@ -58,9 +58,15 @@ class OverloadDef : public VarDef {
          * @param args the argument list.  This will be modified if 'convert' 
          *        is not "noConvert".
          * @param convertFlag defines whether and when conversions are done.
+         * @param allowOverrides by default, this function will ignore 
+         *        overrides of a virtual function in considering a match - 
+         *        this is to provide the correct method resolution order.  
+         *        Setting this flag to true causes it to return the first 
+         *        matching function, regardless of whether it is an override.
          */
         FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
-                          FuncDef::Convert convertFlag
+                          FuncDef::Convert convertFlag,
+                          bool allowOverrides
                           );
  
         /**
@@ -69,7 +75,9 @@ class OverloadDef : public VarDef {
          * conversions and then applying conversions.  As such, it will modify
          * "args" if there are conversions to be applied.
          */
-        FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args);
+        FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
+                          bool allowOverrides
+                          );
         
         /**
          * Returns the overload with the matching signature if there is one, 

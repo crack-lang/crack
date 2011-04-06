@@ -1,28 +1,30 @@
 
-import crack.runtime registerHook, EXCEPTION_MATCH_FUNC;
+import crack.runtime free, getLocation, registerHook, strlen, 
+    EXCEPTION_MATCH_FUNC, EXCEPTION_FRAME_FUNC;
 
-# temporary work-around for the problem of trying to use the special .class 
+# temporary work-around for the problem of trying to use the special .class
 # accessor from a VTableBase object.
 class Obj : VTableBase {}
 
-bool exceptionMatchFunc(Class classObj, Obj obj) {
-    return obj.class.isSubclass(classObj);
+int exceptionMatchFunc(Class classObj, Obj obj) {
+    return obj.class.isSubclass(classObj) ? 1 : 0;
 }
 
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 
-
 class Exception : VTableBase {}
 class FooError : Exception {
     int val;
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
 }
 class NotException : VTableBase {}
 
+bool cleanedUp;
+class Cleanup { oper release() { cleanedUp = 1; } }
+
 if (1) {
     bool gotIt;
-    bool cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    cleanedUp = 0;
     try {
         Cleanup c;
         throw Exception();
@@ -31,7 +33,7 @@ if (1) {
     }
     if (!gotIt)
         puts('FAILED basic exception handling.');
-    
+
     if (!cleanedUp)
         puts('FAILED basic exception cleanup.');
 }
@@ -51,8 +53,8 @@ if (1) {
 }
 
 if (1) {
-    bool gotFoo, gotEx, cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    bool gotFoo, gotEx;
+    cleanedUp = 0;
     try {
         try {
             Cleanup c;
@@ -65,10 +67,10 @@ if (1) {
     }
     if (gotFoo)
         puts('FAILED nested exception handling (matched inner catch).');
-    
+
     if (!gotEx)
         puts('FAILED nested exception handling (missed catch).');
-    
+
     if (!cleanedUp)
         puts('FAILED nested exception cleanup.');
 }
@@ -104,19 +106,191 @@ if (1) {
 }
 
 if (1) {
-    bool cleanedUp;
-    class Cleanup { oper release() { cleanedUp = 1; } }
+    cleanedUp = 0;
     void f() {
         Cleanup c;
-//        throw Exception();
+        throw Exception();
     }
     try {
         f();
     } catch (Exception ex) {
-        puts('test');
     }
     if (!cleanedUp)
         puts('FAILED cleanup in nested contexts');
+}
+
+if (1) {
+    cleanedUp = 0;
+    void g() {
+        throw Exception();
+    }
+
+    void f() {
+        Cleanup c;;
+        g();
+    }
+
+    try {
+        f();
+    } catch (Exception ex) {
+    }
+
+    if (!cleanedUp)
+        puts('FAILED pass-through cleanup never got called');
+}
+
+if (1) {
+    cleanedUp = 0;
+    void f() {
+        Cleanup c;
+        try {
+            throw Exception();
+        } catch (FooError ex) {
+        }
+    }
+    
+    try {
+        f();
+    } catch (Exception ex) {
+    }
+    
+    if (!cleanedUp)
+        puts('FAILED cleanup outside of try/catch');
+}
+
+# exceptions raised from cleanups to the next cleanup
+if (1) {
+    int cleanupA, cleanupB;
+    bool caughtException;
+    class A { oper release() { ++cleanupA; } }
+    class B { oper release() { ++cleanupB; throw Exception(); } }
+    try {
+        A a;
+        B b;
+    } catch (Exception ex) {
+        caughtException = 1;
+    }
+    
+    if (cleanupB < 1)
+        puts('FAILED exceptions from cleanups: B cleanup not called.');
+    else if (cleanupB > 1)
+        puts('FAILED exceptions from cleanups: B cleanup called multiple '
+              'times'
+             );
+    
+    if (cleanupA != 1)
+        puts('FAILED exceptions from cleanups: A cleanup not called once');
+    
+    if (!caughtException)
+        puts('FAILED exceptions from cleanups: exception not raised or '
+              'caught'
+             );
+}
+
+# throwing a new exception from a catch
+if (1) {
+    bool didInner, didOuter;
+    
+    try {
+        try {
+            throw Exception();
+        } catch (Exception ex) {
+            didInner = 1;
+            throw Exception();
+        }
+    } catch (Exception ex) {
+        didOuter = 1;
+    }
+    
+    if (!didInner)
+        puts('FAILED exceptions from a catch: missed inner catch');
+    if (!didOuter)
+        puts('FAILED exceptions from a catch: missed outer catch');
+}
+
+# throwing from a cleanup handler
+if (1) {
+    int cleanupA, cleanupB, exceptionVal;
+    bool caughtException;
+    class A { oper release() { ++cleanupA; } }
+    class B { oper release() { ++cleanupB; throw FooError(2); } }
+    void f() {
+        throw FooError(1);
+    }
+    
+    try {
+        A a;
+        B foo;
+        f();
+    } catch (FooError ex) {
+        caughtException = 1;
+        exceptionVal = ex.val;
+    }
+    
+    if (!cleanupB)
+        puts('FAILED throwing from a cleanup: cleanup not released');
+    
+    if (!cleanupA)
+        puts('FAILED throwing from a cleanup: subsequent cleanup not called');
+    
+    if (!caughtException)
+        puts('FAILED throwing from a cleanup: exception not caught');
+    
+    if (exceptionVal != 2)
+        puts('FAILED throwing from a cleanup: exception object not converted');
+}
+
+# verify that exception frame callbacks are correctly called.
+if (1) {
+    
+    # array of single character function names
+    funcs := byteptr(100);
+    cur := 0;
+    funcs[0] = 0;
+    
+    void exceptionFrame(Exception obj, voidptr addr) {
+        info := array[byteptr](3);
+        getLocation(addr, info);
+        
+        # store the last character of the function name in our array
+        # (this will break at some point because we're counting on a two digit 
+        # numeric uniquifier at the end of the number, hence the "- 3".  
+        # Revisit this when we have proper canonical names)
+        funcs[cur++] = info[0][strlen(info[0]) - 3];
+        funcs[cur] = 0;
+        free(info);
+    }
+    
+    registerHook(EXCEPTION_FRAME_FUNC, exceptionFrame);
+    
+    int cmp(byteptr a, byteptr b) {
+        uint i;
+        for (i = 0; a[i] && a[i] == b[i]; ++i);
+        return a[i] - b[i];
+    }
+    
+    void f() {
+        throw Exception();
+    }
+    
+    void g() {
+        f();
+    }
+    
+    bool gotEx;
+    try {
+        g();
+    } catch (Exception ex) {
+        if (cmp(funcs, 'fg')) {
+            puts('FAILED exception frame info: invalid function sequence:');
+            puts(funcs);
+        }
+        gotEx = 1;
+    }
+    
+    if (!gotEx)
+        puts('FAILED exception frame info: did not get the exception');
+    
 }
 
 puts('ok');
@@ -128,7 +302,5 @@ puts('ok');
 #    } catch (Exception ex) {
 #    }
 #}
-
-// test catching exceptions defined in other modules
 
 // test multiple try statements in the same context.

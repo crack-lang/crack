@@ -147,8 +147,6 @@ void Parser::parseClause(bool defsAllowed) {
          if (tok2.isDefine()) {
             if (def->getOwner() == context->ns.get())
                redefineError(tok2, def.get());
-            else
-               warn(tok2, SPUG_FSTR("Redefining symbol " << def->name));
             
             expr = parseExpression();
             context->emitVarDef(expr->type.get(), tok, expr.get());
@@ -514,8 +512,14 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    // look up the variable
    
    // lookup the method from the variable context's type context
+   // if the container is a class, assume that this is a lookup in a specific 
+   // base class and allow looking up overrides for it (this won't work if we 
+   // ever give class objects a vtable because it will break meta-class 
+   // methods, but we need to replace the specific lookup syntax anyway)
    // XXX needs to handle callable objects.
-   FuncDefPtr func = context->lookUp(funcName, args, ns);
+   FuncDefPtr func = context->lookUp(funcName, args, ns, 
+                                     container && container->type->meta
+                                     );
    if (!func)
       error(ident, SPUG_FSTR("No method exists matching " << funcName << 
                               "(" << args << ")"));
@@ -730,6 +734,27 @@ ExprPtr Parser::parseIString(Expr *expr) {
    return result;
 }
 
+// [ expr, expr, ... ]
+//  ^                 ^
+ExprPtr Parser::parseConstSequence(TypeDef *containerType) {
+   vector<ExprPtr> elems;
+   Token tok = toker.getToken();
+   while (!tok.isRBracket()) {
+      // parse the next element
+      toker.putBack(tok);
+      elems.push_back(parseExpression());
+
+      tok = toker.getToken();
+      if (tok.isComma())
+         tok = toker.getToken();
+      else if (!tok.isRBracket())
+         unexpected(tok, "Expected comma or right bracket after element");
+   }
+   
+   return context->emitConstSequence(containerType, elems);
+}
+   
+
 TypeDef *Parser::convertTypeRef(Expr *expr) {
    VarRef *ref = VarRefPtr::cast(expr);
    if (!ref)
@@ -830,7 +855,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             FuncDefPtr funcDef =
                context->lookUp("oper []", args, expr->type.get());
             if (!funcDef)
-               error(tok, SPUG_FSTR("'oper []=' not defined for " <<
+               error(tok, SPUG_FSTR("'oper []' not defined for " <<
                                      expr->type->name << 
                                      " with these arguments: (" << args << ")"
                                     )
@@ -895,6 +920,22 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          if (precedence >= logOrPrec)
             break;
          expr = parseTernary(expr.get());
+      } else if (tok.isBang()) {
+         // this is special wacky collection syntax Type![1, 2, 3]
+         TypeDef *type = convertTypeRef(expr.get());
+         if (!type)
+            error(tok, 
+                  "Exclamation point can not follow a non-type expression"
+                  );
+         
+         // check for a square bracket
+         tok = toker.getToken();
+         if (!tok.isLBracket())
+            error(tok,
+                  "Sequence initializer ('[ ... ]') expected after "
+                   "'type!'"
+                  );
+         expr = parseConstSequence(type);
       } else {
 	 // next token is not part of the expression
 	 break;
@@ -910,38 +951,61 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 
 namespace {
 
- ExprPtr parseConstInt(Context &context,
-                       bool negative,
-                       const string &val,
-                       int base) {
-     if (negative) {
+   ExprPtr parseConstInt(Context &context,
+                        bool negative,
+                        const string &val,
+                        int base) {
+      if (negative) {
          // we need to give strtoll the - in the string, because otherwise the
          // range is off and we can't parse LONG_MIN
          string nval = "-"+val;
          return context.builder.createIntConst(context,
-                                               strtoll(nval.c_str(),
-                                                       NULL,
-                                                       base));
-     }
+                                               strtoll(nval.c_str(), NULL,
+                                                       base
+                                                       )
+                                               );
+      }
+      
+      // if the constant starts with an 'i' or 'b', this is a string whose 
+      // bytes comprise the integer value.
+      if (val[0] == 'b') {
+         if (val.size() != 2)
+            context.error("Byte constants from strings must be exactly one "
+                           "byte long."
+                          );
+         TypeDef *byteType = context.construct->byteType.get();
+         return context.builder.createIntConst(context, val[1], byteType);
+      } else if (val[0] == 'i') {
+         if (val.size() < 2 || val.size() > 9)
+            context.error("Integer constants from strings must be between one "
+                           "and 8 bytes long"
+                          );
 
-     // if it's not negative, we first try to parse it as unsigned
-     // if it's small enough to fit in a signed, we do that, otherwise
-     // we keep it unsigned
-     unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
-     if (bigcval <= INT64_MAX) {
+         // construct an integer from the bytes in the string
+         int64_t n = 0;
+         for (int i = 1; i < val.size(); ++i)
+            n = n << 8 | val[i];
+
+         return context.builder.createIntConst(context, n);
+      }
+   
+      // if it's not negative, we first try to parse it as unsigned
+      // if it's small enough to fit in a signed, we do that, otherwise
+      // we keep it unsigned
+      unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
+      if (bigcval <= INT64_MAX) {
          // signed
          return context.builder.createIntConst(context,
                                                strtoll(val.c_str(),
                                                        NULL,
-                                                       base));
-     }
-     else {
+                                                       base
+                                                       )
+                                               );
+      } else {
          // unsigned
-         return context.builder.createUIntConst(context,
-                                                bigcval);
-     }
-
- }
+         return context.builder.createUIntConst(context, bigcval);
+      }
+   }
 
 } // anonymous namespace
 
@@ -1277,11 +1341,18 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                   );
       
       // make sure that it is a direct member of this class.
-      } else if (varDef->getOwner() != type.get()) {
+      } else if (varDef->getOwner() != type.get() &&
+                 // it's likely that this is just a case of a parameter 
+                 // shadowing an instance veriable, which is legal.  Try 
+                 // looking up the variable at class scope.
+                 (!(varDef = type->lookUp(tok.getData())) ||
+                  varDef->getOwner() != type.get()
+                  )
+                 ) {
          error(tok,
                SPUG_FSTR(tok.getData() << " is not an immediate member of " <<
-                         type->name
-                         )
+                        type->name
+                        )
                );
 
       // make sure that it's an instance variable
@@ -1647,6 +1718,8 @@ bool Parser::parseDef(TypeDef *type) {
                // got constructor args, parse an arg list terminated by a right 
                // curly.
                initializer = parseConstructor(tok4, type, Token::rcurly);
+            } else if (tok4.isLBracket()) {
+               initializer = parseConstSequence(type);
             } else {
                toker.putBack(tok4);
                initializer = parseExpression();
@@ -1656,7 +1729,7 @@ bool Parser::parseDef(TypeDef *type) {
             initializer = initializer->convert(*context, type);
             if (!initializer)
                error(tok4, "Incorrect type for initializer.");
-            
+
             context->emitVarDef(type, tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 
@@ -1990,6 +2063,8 @@ void Parser::parseReturnStmt() {
 void Parser::parseImportStmt(Namespace *ns) {
    ModuleDefPtr mod;
    string canonicalName;
+   builder::Builder &builder = context->construct->getCurBuilder();
+
    Token tok = getToken();
    if (tok.isIdent()) {
       toker.putBack(tok);
@@ -2011,9 +2086,10 @@ void Parser::parseImportStmt(Namespace *ns) {
                          )
                );
       else
-          context->builder.initializeImport(mod,
-                                            // HACK check for annotation?
-                                            ns == context->compileNS.get());
+         builder.initializeImport(mod.get(),
+                                  // HACK check for annotation?
+                                  ns == context->compileNS.get()
+                                  );
 
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
@@ -2042,10 +2118,7 @@ void Parser::parseImportStmt(Namespace *ns) {
 
    if (!mod) {
       try {
-         context->construct->rootBuilder->importSharedLibrary(name, syms,
-                                                            *context,
-                                                            ns
-                                                            );
+         builder.importSharedLibrary(name, syms, *context, ns);
       } catch (const spug::Exception &ex) {
          error(tok, ex.getMessage());
       }
@@ -2068,7 +2141,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                                   canonicalName
                                  )
                   );
-         context->builder.registerImportedVar(*context, symVal.get());
+         builder.registerImportedDef(*context, symVal.get());
          ns->addAlias(symVal.get());
       }
    }
@@ -2093,6 +2166,10 @@ ContextPtr Parser::parseTryStmt() {
       terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
    bool lastWasTerminal = terminal;
+   
+   // strip the catch branchpoint so that exceptions thrown in the 
+   // finally/catch clauses are thrown to outer contexts. 
+   context->setCatchBranchpoint(0);
    
    tok = toker.getToken();
    if (!tok.isCatch())
@@ -2138,6 +2215,9 @@ ContextPtr Parser::parseTryStmt() {
          
          // create a variable definition for the exception variable
          context->emitVarDef(exceptionType.get(), varTok, exceptionObj.get());
+         
+         // give the builder an opportunity to add an exception cleanup
+         context->builder.emitExceptionCleanup(*context);
          
          // XXX add catchLeave callback
          ContextPtr terminalCatch = parseBlock(true, noCallbacks); 
@@ -2549,22 +2629,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
 
          // redefinition in the same context is otherwise an error
          redefineError(tok, existing.get());
-      }
-      
-      // redefinition in a derived context is fine, but if we're not in a 
-      // derived context display a warning.  TODO: if this check doesn't need 
-      // to be this way, replace it with something that makes sense.
-      else if (!(classContext = context->getClassContext()) ||
-               !classContext->returnType || 
-               !(existingClass = TypeDefPtr::cast(existingNS)) ||
-               !existingClass->matches(*classContext->returnType)
-               ) {
-         warn(tok,
-              SPUG_FSTR("Symbol " << name << 
-                         " hides another definition in an enclosing context."
-                        )
-              );
-      }
+      }      
    }
    
    return 0;

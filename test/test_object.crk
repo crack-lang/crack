@@ -8,7 +8,7 @@ import crack.exp.error err;
 class Int {
     int val;
 
-    oper init(int val0) : val = val0 {}
+    oper init(int val) : val = val {}
     
     int cmp(Object other) {
         if (other.class.isSubclass(Int))

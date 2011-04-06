@@ -113,6 +113,10 @@ bool FuncDef::hasInstSlot() {
     return false;
 }
 
+bool FuncDef::isVirtualOverride() const {
+    return flags & virtualized && pathToFirstDeclaration.size();
+}
+
 TypeDef *FuncDef::getReceiverType() const {
     TypeDef *result;
     if (pathToFirstDeclaration.size())

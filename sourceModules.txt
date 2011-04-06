@@ -1,9 +1,11 @@
+debug/DebugTools.cc
 ext/Module.cc
 ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
 model/Construct.cc
+model/ConstSequenceExpr.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
@@ -40,6 +42,7 @@ builder/llvm/BFuncDef.cc
 builder/llvm/BTypeDef.cc
 builder/llvm/Consts.cc
 builder/llvm/Incompletes.cc
+builder/llvm/ExceptionCleanupExpr.cc
 builder/llvm/FuncBuilder.cc
 builder/llvm/LLVMBuilder.cc
 builder/llvm/LLVMJitBuilder.cc

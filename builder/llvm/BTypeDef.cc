@@ -3,6 +3,7 @@
 #include "BFuncDef.h"
 #include "BTypeDef.h"
 
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/GlobalVariable.h>
 #include <llvm/Module.h>
 #include "model/Context.h"
@@ -141,13 +142,31 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
     assert(false && "Failed to find first vtable");
 }
 
-GlobalVariable *BTypeDef::getClassInstRep(Module *module) {
-    if (classInst->getParent() == module)
+GlobalVariable *BTypeDef::getClassInstRep(Module *module,
+                                          ExecutionEngine *execEng
+                                          ) {
+    if (classInst->getParent() == module) {
         return classInst;
-    else
-        return cast<GlobalVariable>(
-            module->getOrInsertGlobal(classInst->getName(),
-                                      classInst->getType()
-                                      )
-        );
+    } else {
+        GlobalVariable *gvar = 
+            cast<GlobalVariable>(
+                module->getGlobalVariable(classInst->getName())
+            );
+        if (!gvar) {
+            gvar = new GlobalVariable(*module, classInst->getType(), 
+                                      true, // is constant
+                                      GlobalValue::ExternalLinkage,
+                                      0, // initializer: null for externs
+                                      classInst->getName()
+                                      );
+
+            // if there's an execution engine, do the pointer hookup
+            if (execEng) {
+                void *p = execEng->getPointerToGlobal(classInst);
+                execEng->addGlobalMapping(gvar, p);
+            }
+        }
+        
+        return gvar;
+    }
 }

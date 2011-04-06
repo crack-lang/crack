@@ -20,6 +20,10 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
+        Module *mod = func->getParent();
+        Function *f = mod->getFunction("__CrackExceptionFrame");
+        if (f)
+            b.CreateCall(f);
         b.CreateUnwind();
     }
 
@@ -40,7 +44,7 @@ void BBuilderContextData::CatchData::populateClassImpls(
     Module *module
 ) {
     for (int i = 0; i < catches.size(); ++i)
-        values.push_back(catches[i].type->getClassInstRep(module));
+        values.push_back(catches[i].type->getClassInstRep(module, 0));
 }
 
 void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {

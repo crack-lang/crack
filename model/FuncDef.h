@@ -27,6 +27,7 @@ class FuncDef : public VarDef {
             method = 1,  // function is a method (has a receiver)
             virtualized = 2, // function is virtual
             forward = 4,  // this is a forward declaration
+            variadic = 8,  // this is a variadic function
             explicitFlags = 256  // these flags were set by an annotation
         } flags;
         
@@ -82,6 +83,12 @@ class FuncDef : public VarDef {
         bool isOverridable() const;
         
         virtual bool hasInstSlot();
+        
+        /**
+         * Returns true if the function is an override of a virtual method
+         * in an ancestor class.
+         */
+        bool isVirtualOverride() const;
 
         /**
          * Returns the "receiver type."  For a non-virtual function, this 

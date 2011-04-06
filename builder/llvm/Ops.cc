@@ -341,6 +341,7 @@ ResultExprPtr ArraySetItemCall::emit(Context &context) {
 
     // emit the rhs value
     args[1]->emit(context)->handleTransient(context);
+    builder.narrow(args[1]->type.get(), func->args[1]->type.get());
     Value *v = builder.lastValue;
 
     // get the address of the index, store the value in it.
@@ -431,6 +432,19 @@ ResultExprPtr VoidPtrOpCall::emit(Context &context) {
 
     return new BResultExpr(this, builder.lastValue);
 }
+
+// PtrToIntOpCall
+ResultExprPtr PtrToIntOpCall::emit(Context &context) {
+    args[0]->emit(context)->handleTransient(context);
+    
+    LLVMBuilder &builder =
+        dynamic_cast<LLVMBuilder &>(context.builder);
+    BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
+    builder.lastValue = builder.builder.CreatePtrToInt(builder.lastValue,
+                                                       type->rep
+                                                       );
+    return new BResultExpr(this, builder.lastValue);
+}  
 
 // UnsafeCastCall
 ResultExprPtr UnsafeCastCall::emit(Context &context) {
