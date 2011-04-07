@@ -8,7 +8,8 @@ import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
 import crack.exp.error err, strerror;
 
-import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile;
+import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile,
+                     is_file;
 
 class FileInfo: Object {
 
@@ -24,7 +25,11 @@ class FileInfo: Object {
     void writeTo(Writer out) {
         Formatter(out) `$name`;
     }
-    
+  
+    bool exists() {
+        return is_file(CString(name).buffer);
+    }
+  
     String basename(bool stripExtension) {
         path := CString(name); // copies for null termination
         bname := String(basename(path.buffer)); // copies again

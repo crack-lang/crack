@@ -8,7 +8,12 @@ namespace crack { namespace runtime {
 #define CRK_PROC_STOPPED       1 << 10
 #define CRK_PROC_EXITED        1 << 11
 
+#define PIPE_STDIN             1
+#define PIPE_STDOUT            1 << 1
+#define PIPE_STDERR            1 << 2
+
 typedef struct {
+    int flags;
     int stdin;
     int stdout;
     int stderr;

@@ -19,6 +19,8 @@ void printint(int val);
 void printint64(int64_t val);
 void printuint64(uint64_t val);
 
+int is_file(const char *path);
+
 }}
 
 #endif // _runtime_Util_h_

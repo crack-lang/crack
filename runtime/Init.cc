@@ -72,7 +72,10 @@ extern "C" void crack_runtime_init(Module *mod) {
     
     f = mod->addFunc(byteptrType, "dirname", (void *)dirname, "dirname");
     f->addArg(byteptrType, "path");
-    
+
+    f = mod->addFunc(intType, "is_file", (void *)crack::runtime::is_file);
+    f->addArg(byteptrType, "path");
+
     f = mod->addFunc(byteptrType, "c_strerror",
                      (void *)crack::runtime::strerror
                      );
@@ -498,6 +501,7 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "SIGXFSZ", SIGXFSZ);
 
     Type *cpipeType = mod->addType("PipeDesc");
+    cpipeType->addInstVar(intType, "flags");
     cpipeType->addInstVar(intType, "stdin");
     cpipeType->addInstVar(intType, "stdout");
     cpipeType->addInstVar(intType, "stderr");

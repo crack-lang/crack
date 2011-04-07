@@ -159,8 +159,9 @@ add_custom_target(checkc
 add_custom_target(screen
                   ${PROJECT_SOURCE_DIR}/crack
                     ${PROJECT_SOURCE_DIR}/screen/screen.crk
-                    ${PROJECT_SOURCE_DIR}/screen/tests/
-                    ${PROJECT_SOURCE_DIR}/screen/output/
+                    ${PROJECT_SOURCE_DIR}/crack
+                    ${PROJECT_SOURCE_DIR}/screen/tests
+                    ${PROJECT_SOURCE_DIR}/screen/output
                   )
 
 # optional extensions

@@ -14,6 +14,8 @@
 #include <assert.h>
 
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 using namespace crack::ext;
 
@@ -64,6 +66,19 @@ int runChildProcess(const char **argv,
 // UNIX
     int pipes[3][2]; // 0,1,2 (in,out,err) x 0,1 (read,write)
 
+    // verify the binary exists, otherwise we fail before fork
+    struct stat sb;
+    if (stat(argv[0], &sb) == -1)
+        return -1;
+    if (!S_ISREG(sb.st_mode) ||
+        sb.st_size == 0 ||
+        ((sb.st_mode & S_IXUSR == 0) ||
+         (sb.st_mode & S_IXGRP == 0) ||
+         (sb.st_mode & S_IXOTH == 0)))
+        return -1;
+
+    // create pipes
+    // XXX check pd to see which pipes we should make, if any
     for (int i = 0; i < 3; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("pipe failed");
@@ -113,7 +128,9 @@ int runChildProcess(const char **argv,
         else {
             execvp(argv[0], const_cast<char* const*>(argv));
         }
-        exit(0);
+
+        // if we get here, exec failed
+        exit(-1);
 
     default:
         // parent

@@ -9,7 +9,13 @@ import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
 import crack.exp.process Process;
 
-SCREEN_VERSION := ".2";
+SCREEN_VERSION := ".4";
+
+class Config {
+    String crackBin, rootDir, outDir;  
+    bool verbose;
+}
+Config config = {};
 
 class Test {
 
@@ -77,32 +83,46 @@ class Test {
         
     }
 
-    void run(Directory outDir) {
+    void compareOutput(String nick, String expected, String actual) {
         
-        if (_isSkipped) {
-            cout `[$_fInfo]: $_isSkipped\n`;
-            return;
+        if (expected == actual) {
+            cout `$nick: PASS\n`;
         }
+        else {
+            cout `$nick: FAIL\n`;
+            // XXX check config object
+            // XXX optionally show diff, or fail after failed test
+        }
+        
+    }
 
-        outName := writeScript(outDir);
-
+    void execCrackWithBuilder(String builder, String nick, 
+                              Directory outDir, bool nativeRun) {
+        
+        testScript := writeScript(outDir);
+        String testBinary;
+        
         String args = {};
         if (_testData["ARGS"]) {
-            args = String.cast(_testData["ARGS"]);
+            args = String.cast(_testData["ARGS"]).rtrim();            
         }
 
-        cmd := "crack "+args.rtrim()+" "+outName;
-        cout `[$_fInfo]: `;
+        if (nativeRun) {
+            // we need to output a binary, then run it after for the final results
+            testBinary = outDir.nameWithTrailing()+_fInfo.basename(true);
+            args = args+" -b out="+testBinary;
+        }
 
+        // XXX script argv
+        cmd := config.crackBin+" -B "+builder+" "+args+" "+testScript;
+        if (config.verbose)
+            cout `(running: $cmd])\n`;
+
+        // XXX stdin
         p := Process(cmd);
         p.wait();
-        out := p.getStdOut();
-        err := p.getStdErr();
-
-        /*
-        cout `out: [$out]\n`;
-        cout `err: [$err]\n`;
-        */
+        compileOut := p.getStdOut();
+        compileErr := p.getStdErr();
 
         if (!_testData["EXPECT"]) {
            cout `no valid EXPECT section\n`;
@@ -110,12 +130,47 @@ class Test {
         }
 
         expect := String.cast(_testData["EXPECT"]);
-        if (expect == out) {
-            cout `JIT: PASS\n`;
+        if (nativeRun) {
+            // native: run binary to get final results for comparison
+            bfi := FileInfo(testBinary);
+            if (!bfi.exists()) {
+                cout `$nick: FAIL: binary ($testBinary) wasn't created, check compile output\n`;
+                return;
+            }
+            // XXX binary args (script argv)
+            if (config.verbose)
+                cout `(running: $testBinary)\n`;
+            b := Process(testBinary);
+            b.wait();
+            if (b.failed()) {
+            cout `$nick: FAIL: binary failed to run\n`;
+            }
+            else {
+                nativeOut := b.getStdOut();
+                nativeErr := b.getStdErr();
+                compareOutput(nick, expect, nativeOut);
+                // XXX err output EXPECTERR ?
+            }
         }
         else {
-            cout `JIT: FAIL\n`;
+            // JIT, interpreted, etc
+            compareOutput(nick, expect, compileOut);
+            // XXX err output EXPECTERR ?
         }
+        
+    }
+
+    void run(Directory outDir) {
+        
+        if (_isSkipped) {
+            cout `[$_fInfo]: $_isSkipped\n`;
+            return;
+        }
+        
+        cout `[$_fInfo]:\n`;
+        
+        execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
+        execCrackWithBuilder("llvm-native", "NATIVE", outDir, true);
 
     }
 
@@ -143,11 +198,10 @@ class Test {
 
 class TestSuite {
 
-    String _rootDir, _outDir;
     List _testList = {};
     
     void usage() {
-        cout `screen <test dir> <output dir>\n`;
+        cout `screen <crack binary> <test dir> <output dir>\n`;
         exit(1);
     }
     
@@ -158,9 +212,10 @@ class TestSuite {
             return;
         }
         
-        cout `importing tests from $dir ...\n`;
+        cout `importing tests from $dir ... `;
 
         Iterator i;
+        cnt := 0;
         
         // gather test files
         FileInfo curFile;
@@ -168,11 +223,13 @@ class TestSuite {
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
             if (curFile.matches("*.crkt")) {
-                //cout `found test template file: $curFile\n`;
+                cnt++;
                 test := Test(curFile);
                 _testList.append(test);
             }
         }
+
+        cout `found $cnt\n`;
 
         // recurse to directories
         Directory nextDir;
@@ -204,18 +261,46 @@ class TestSuite {
 
     oper init() {
         
-        if (argv.count() <= 2) {
+        if (argv.count() <= 3) {
             usage();            
         }
 
-        cout `screen v$(SCREEN_VERSION): now testing for crack\n`;
+        cout `screen v$(SCREEN_VERSION)\n`;
 
-        _rootDir = argv[1];
-        _outDir = argv[2];
+        config.crackBin = argv[1];
+        config.rootDir = argv[2];
+        config.outDir = argv[3];
+ 
+        // XXX
+        //config.verbose = 1;
         
-        scanForTests(Directory(_rootDir));
+        // check binary
+        cfi := FileInfo(config.crackBin);
+        if (!cfi.exists()) {
+            cout `crack binary [$(config.crackBin)] not found\n`;
+            exit(1);            
+        }
+        
+        p := Process(config.crackBin+" --version");
+        p.wait();
+        String out = {};
+        if (!p.failed())
+            out = p.getStdOut();        
+        if (p.failed() || p.getReturnCode() != 0) {
+            cout `crack binary [$(config.crackBin)] not found\n`;
+            exit(1);
+        }
+        else if (out.size < 5 || out.slice(0,5) != "crack") {
+            cout `crack binary [$(config.crackBin)] invalid version response: $(out.slice(0,5))\n`;
+            exit(1);
+        }
+        else {
+            cout `using binary: $out\n`;
+        }
+        
+        scanForTests(Directory(config.rootDir));
 
-        runTests(Directory(_outDir, false));
+        runTests(Directory(config.outDir, false));
         
     }
 
