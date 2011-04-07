@@ -35,12 +35,18 @@ struct option longopts[] = {
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
     {"lib", true, 0, 'l'},
+    {"version", false, 0, 0},
     {0, 0, 0, 0}
 };
 
 static std::string prog;
 
+void version() {
+    cout << prog << " " << CRACK_VERSION_STRING << endl;
+}
+
 void usage(int retval) {
+    version();
     cout << "Usage:" << endl;
     cout << "  " << prog << " [options] <source file>" << endl;
     cout << " -B <name>  --builder            Main builder to use (llvm-jit or"
@@ -65,6 +71,8 @@ void usage(int retval) {
             << endl;
     cout << " -v         --verbose            Verbose output, use more than once"
             " for greater effect" << endl;
+    cout << "            --version            Emit the version number and exit"
+            << endl;
     exit(retval);
 }
 
@@ -86,15 +94,19 @@ int main(int argc, char **argv) {
     string libPath;
 
     // parse the main module
-    int opt;
+    int opt, idx;
     char *subopts, *value;
     char * const token[] = { NULL };
     bool optionsError = false;
-    bool useDoubleBuilder = false;
-    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v", longopts, NULL)) != -1) {
+    bool useDoubleBuilder = false;    
+    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v", longopts, &idx)) != -1) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable
+                if (strcmp(longopts[idx].name,"version") == 0) {
+                    version();
+                    exit(0);
+                }
                 break;
             case '?':
                 optionsError = true;
