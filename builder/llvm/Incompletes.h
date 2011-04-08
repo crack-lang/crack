@@ -27,31 +27,31 @@ namespace builder { namespace mvll {
 namespace llvm {
     template<>
     struct OperandTraits<builder::mvll::IncompleteInstVarRef> :
-        FixedNumOperandTraits<1> {
+        FixedNumOperandTraits<builder::mvll::IncompleteInstVarRef, 1> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteInstVarAssign> :
-        FixedNumOperandTraits<2> {
+        FixedNumOperandTraits<builder::mvll::IncompleteInstVarAssign, 2> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteCatchSelector> :
-        FixedNumOperandTraits<0> {
+        FixedNumOperandTraits<builder::mvll::IncompleteCatchSelector, 0> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteNarrower> :
-        FixedNumOperandTraits<1> {
+        FixedNumOperandTraits<builder::mvll::IncompleteNarrower, 1> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteVTableInit> :
-        FixedNumOperandTraits<1> {
+        FixedNumOperandTraits<builder::mvll::IncompleteVTableInit, 1> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteSpecialize> :
-        FixedNumOperandTraits<1> {
+        FixedNumOperandTraits<builder::mvll::IncompleteSpecialize, 1> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteVirtualFunc> :
-        VariadicOperandTraits<1> {
+        VariadicOperandTraits<builder::mvll::IncompleteVirtualFunc, 1> {
     };
 
     class BasicBlock;
@@ -60,6 +60,23 @@ namespace llvm {
     class Use;
     class Instruction;
 }
+
+// This is from llvm/OperandTraits.h. It's reproduced here because that
+// version assumes use within the llvm namespace
+#define CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(VALUECLASS) \
+  public: \
+  inline VALUECLASS *getOperand(unsigned) const; \
+  inline void setOperand(unsigned, VALUECLASS*); \
+  inline op_iterator op_begin(); \
+  inline const_op_iterator op_begin() const; \
+  inline op_iterator op_end(); \
+  inline const_op_iterator op_end() const; \
+  protected: \
+  template <int> inline llvm::Use &Op(); \
+  template <int> inline const llvm::Use &Op() const; \
+  public: \
+  inline unsigned getNumOperands() const
+
 
 namespace builder {
 namespace mvll {
@@ -89,6 +106,8 @@ public:
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
 
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
 };
 
 class IncompleteInstVarAssign : public PlaceholderInstruction {
@@ -116,6 +135,9 @@ public:
     virtual llvm::Instruction *clone_impl() const;
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
 };
 
 class IncompleteCatchSelector : public PlaceholderInstruction {
@@ -151,6 +173,9 @@ public:
     virtual llvm::Instruction *clone_impl() const;
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
 };
 
 /**
@@ -190,6 +215,8 @@ public:
                                 );
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
 };
 
@@ -231,6 +258,8 @@ public:
                         );
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
 };
 
@@ -310,6 +339,8 @@ public:
                                  llvm::BasicBlock *unwindDest
                                  );
 
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
 };
 
 /**
@@ -361,6 +392,9 @@ public:
             llvm::Value *value,
             const model::TypeDef::AncestorPath &ancestorPath
             );
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
 };
 
 

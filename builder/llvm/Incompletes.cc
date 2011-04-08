@@ -39,6 +39,8 @@ namespace {
 } // namespace
 
 // IncompleteInstVarRef
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarRef, Value);
+
  void * IncompleteInstVarRef::operator new(size_t s) {
      return User::operator new(s, 1);
  }
@@ -83,6 +85,7 @@ namespace {
  }
 
 // IncompleteInstVarAssign
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
  void * IncompleteInstVarAssign::operator new(size_t s) {
      return User::operator new(s, 2);
  }
@@ -133,6 +136,7 @@ void IncompleteInstVarAssign::insertInstructions(IRBuilder<> &builder) {
 }
 
 // IncompleteCatchSelector
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteCatchSelector, Value);
 void *IncompleteCatchSelector::operator new(size_t s) {
     return User::operator new(s, 0);
 }
@@ -192,6 +196,7 @@ void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
 }    
 
 // IncompleteNarrower
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteNarrower, Value);
 void * IncompleteNarrower::operator new(size_t s) {
     return User::operator new(s, 1);
 }
@@ -262,6 +267,7 @@ void IncompleteNarrower::insertInstructions(IRBuilder<> &builder) {
 }
 
 // IncompleteVTableInit
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteVTableInit, Value);
 void * IncompleteVTableInit::operator new(size_t s) {
     return User::operator new(s, 1);
 }
@@ -390,6 +396,7 @@ void IncompleteVTableInit::insertInstructions(IRBuilder<> &builder) {
 }
 
 // IncompleteVirtualFunc
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteVirtualFunc, Value);
 Value * IncompleteVirtualFunc::getVTableReference(IRBuilder<> &builder,
                                                   BTypeDef *vtableBaseType,
                                                   const Type *finalVTableType,
@@ -614,6 +621,7 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
 }
 
 // IncompleteSpecialize
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteSpecialize, Value);
 void * IncompleteSpecialize::operator new(size_t s) {
     return User::operator new(s, 1);
 }
