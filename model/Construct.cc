@@ -103,7 +103,8 @@ std::string Construct::joinName(const std::string &base,
 }
 
 Construct::Construct(Builder *builder, Construct *primary) :
-    rootBuilder(builder) {
+    rootBuilder(builder),
+    uncaughtExceptionFunc(0) {
         
     builderStack.push(builder);
     createRootContext();
@@ -203,7 +204,22 @@ void Construct::loadBuiltinModules() {
     a = rtMod->lookUp("printint");
     if (a)
         rootContext->ns->addAlias("printint", a.get());
-
+    
+    // for jit builders, get the uncaught exception handler
+    if (rootBuilder->isExec()) {
+        FuncDefPtr uncaughtExceptionFuncDef =
+            rootContext->lookUpNoArgs("__CrackUncaughtException", true,
+                                    rtMod.get()
+                                    );
+        if (uncaughtExceptionFuncDef)
+            uncaughtExceptionFunc = 
+                reinterpret_cast<bool (*)()>(
+                    uncaughtExceptionFuncDef->getFuncAddr(*rootBuilder)
+                );
+        else
+            cerr << "Uncaught exception function not found in runtime!" << 
+                endl;
+    }
 }
 
 void Construct::parseModule(Context &context,
@@ -422,7 +438,11 @@ bool Construct::loadBootstrapModules() {
         cerr << ex << endl;
         return false;
     } catch (...) {
-        cerr << "Unknown exception caught (Crack exception?)" << endl;
+        if (!uncaughtExceptionFunc)
+            cerr << "Uncaught exception, no uncaught exception handler!" << 
+                endl;
+        else if (!uncaughtExceptionFunc())
+            cerr << "Unknown exception caught." << endl;
     }
         
     
@@ -451,7 +471,11 @@ int Construct::runScript(istream &src, const string &name) {
         cerr << ex << endl;
         return 1;
     } catch (...) {
-        cerr << "Unknown exception caught (Crack exception?)" << endl;
+        if (!uncaughtExceptionFunc)
+            cerr << "Uncaught exception, no uncaught exception handler!" << 
+                endl;
+        else if (!uncaughtExceptionFunc())
+            cerr << "Unknown exception caught." << endl;
     }
     builderStack.pop();
     rootBuilder->finishBuild(*context);

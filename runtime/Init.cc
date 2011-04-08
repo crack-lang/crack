@@ -21,6 +21,8 @@
 #include "Process.h"
 using namespace crack::ext;
 
+extern "C" bool __CrackUncaughtException();
+
 extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *intType = mod->getIntType();
@@ -460,11 +462,21 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "EXCEPTION_FRAME_FUNC",
                      crack::runtime::exceptionFrameFuncHook
                      );
+    mod->addConstant(intType, "EXCEPTION_UNCAUGHT_FUNC",
+                     crack::runtime::exceptionUncaughtFuncHook
+                     );
     f = mod->addFunc(voidType, "registerHook", 
                      (void *)crack::runtime::registerHook
                      );
     f->addArg(intType, "hookId");
     f->addArg(voidptrType, "hook");
+    
+    // This shouldn't need to be registered, but as it stands, runtime just 
+    // gets loaded like any other module in JIT mode and this is resolved at 
+    // runtime.
+    mod->addFunc(mod->getBoolType(), "__CrackUncaughtException",
+                 (void *)__CrackUncaughtException
+                 );
 
     // Process support
     mod->addConstant(intType, "SIGABRT", SIGABRT);

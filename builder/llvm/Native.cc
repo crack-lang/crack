@@ -271,6 +271,11 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
                  *crkExFunc = mod->getFunction("__CrackExceptionPersonality");
         const Type *i8PtrType = builder.getInt8Ty()->getPointerTo();
         
+        BasicBlock *uncaughtHandlerBlock =
+            BasicBlock::Create(mod->getContext(), "uncaught_exception",
+                               func_main
+                               );
+        
         // first landing pad does cleanups
         builder.SetInsertPoint(lpBlock);
         Value *ex = builder.CreateCall(ehExFunc);
@@ -281,7 +286,17 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
                                          vtableBaseTypeBody,
                                          Constant::getNullValue(i8PtrType)
                                          );
-        builder.CreateInvoke(mainCleanup, endBlock, lpPostCleanupBlock);
+        builder.CreateInvoke(mainCleanup, uncaughtHandlerBlock, 
+                             lpPostCleanupBlock
+                             );
+
+        // get our uncaught exception function (for some reason this doesn't 
+        // work when we do it from anywhere else)
+        FunctionType *funcType = 
+            FunctionType::get(Type::getInt1Ty(mod->getContext()), false);
+        Constant *uncaughtFuncConst =
+            mod->getOrInsertFunction("__CrackUncaughtException", funcType);
+        Function *uncaughtFunc = cast<Function>(uncaughtFuncConst);
 
         // post cleanup landing pad        
         builder.SetInsertPoint(lpPostCleanupBlock);
@@ -291,6 +306,11 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
                                   vtableBaseTypeBody,
                                   Constant::getNullValue(i8PtrType)
                                   );
+        builder.CreateBr(uncaughtHandlerBlock);
+        
+        // uncaught exception handler
+        builder.SetInsertPoint(uncaughtHandlerBlock);
+        builder.CreateCall(uncaughtFunc);
         builder.CreateBr(endBlock);
 
         // return value

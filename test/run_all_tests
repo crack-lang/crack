@@ -941,6 +941,18 @@ test_output 'sequence constants' 'import test.test_seqconsts;' ok
 
 test_output 'bootstrapped exception tests' 'import test.test_exceptions2;' ok
 
+if [ "$builder" = "llvm-native" ]; then
+    mainFunc="${source}_3A_main"
+else
+    mainFunc=__main__
+fi
+test_output 'uncaught exceptions' \
+    'import crack.lang Exception;
+     throw Exception("badness transpired");' \
+    "Uncaught Exception:
+$mainFunc
+Exception: badness transpired"
+
 test_output 'C Comments' \
     '/* comment text */print("ok");' \
     ok

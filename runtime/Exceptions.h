@@ -53,12 +53,19 @@ typedef void (*ExceptionFrameFunc)(void *crackExceptionObj,
                                    void *adddress
                                    );
 
+/**
+ * Called by the toplevel exception handler for an exception that was not 
+ * caught.
+ */
+typedef void (*ExceptionUncaughtFunc)(void *crackExceptionObj);
+
 enum HookId {
     exceptionMatchFuncHook,
     badCastFuncHook,
     exceptionReleaseFuncHook,
     exceptionPersonalityFuncHook,
     exceptionFrameFuncHook,
+    exceptionUncaughtFuncHook,
     numHooks
 };
 
@@ -72,6 +79,7 @@ struct RuntimeHooks {
     ExceptionReleaseFunc exceptionReleaseFunc;
     ExceptionPersonalityFunc exceptionPersonalityFunc;
     ExceptionFrameFunc exceptionFrameFunc;
+    ExceptionUncaughtFunc exceptionUncaughtFunc;
 };
 
 extern RuntimeHooks runtimeHooks;

@@ -3,8 +3,9 @@
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
-    memcpy, memcmp, memmove, registerHook, BAD_CAST_FUNC, EXCEPTION_FRAME_FUNC,
-    EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC;
+    memcpy, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
+    EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC, 
+    EXCEPTION_UNCAUGHT_FUNC;
 @import crack._poormac define;
 
 bool true = (1 == 1);
@@ -805,6 +806,7 @@ class Exception : Object {
         out.write(StaticString(this.class.name));
         out.write(StaticString(': '));
         out.write(text);
+        out.write(StaticString('\n'));
     }
 }
 
@@ -841,10 +843,32 @@ void exceptionFrameFunc(Object ex, voidptr last_ip) {
     }
 }
 
+## gets called at the toplevel exception handler when an exception is not 
+## caught
+void uncaughtExceptionHandler(Object ex) {
+    class StdErr : Object, Writer {
+        void write(Buffer buf) { write(2, buf.buffer, buf.size); }
+        void write(byteptr string) { write(2, string, strlen(string)); }
+        Object getWriterObject() { return this; }
+    }
+
+    # this can run after cleanups, so we can't use cerr here...
+    writer := StdErr();
+    writer.write('Uncaught Exception:\n');
+    if (ex.class.isSubclass(Exception)) {
+        Exception.cast(ex).writeTo(writer);
+    } else {
+        writer.write('  ');
+        writer.write(StaticString(ex.class.name));
+        writer.write('\n');
+    }
+}
+
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 registerHook(BAD_CAST_FUNC, badClassFunc);
 registerHook(EXCEPTION_RELEASE_FUNC, exceptionReleaseFunc);
 registerHook(EXCEPTION_FRAME_FUNC, exceptionFrameFunc);
+registerHook(EXCEPTION_UNCAUGHT_FUNC, uncaughtExceptionHandler);
 
 # misc functions
 
