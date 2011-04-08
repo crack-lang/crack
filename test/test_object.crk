@@ -41,4 +41,12 @@ if (n > n) err.do() `n > n failed\n`;
 if (n > o) err.do() `n > o failed\n`;
 if (a > b) err.do() `a > b failed\n`;
 
+# verify that comparison falls through to pointer comparison.
+if (1) {
+    x := Object();
+    y := Object();
+    if (x > y && y > x || y > x && x > y)
+        cout `FAILED default Object compare.\n`;
+}
+
 cout `ok\n`;
