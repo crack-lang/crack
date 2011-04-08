@@ -479,6 +479,7 @@ int Construct::runScript(istream &src, const string &name) {
     }
     builderStack.pop();
     rootBuilder->finishBuild(*context);
+    return 0;
 }
 
 builder::Builder &Construct::getCurBuilder() {

@@ -83,13 +83,28 @@ class Test {
         
     }
 
-    void compareOutput(String nick, String expected, String actual) {
+    void _colorMsg(String c, String msg) {
+        cout `\033[$(c);1m$(msg)\033[0m`;
+    }
+    void _pass() {
+        _colorMsg("32", "PASS");
+        cout ` `;
+    }
+    void _fail() {
+        _colorMsg("31", "FAIL");
+        cout ` `;
+    }
+
+    void compareOutput(String expected, String actual) {
         
         if (expected == actual) {
-            cout `$nick: PASS\n`;
+            _pass();
         }
         else {
-            cout `$nick: FAIL\n`;
+            _fail();
+            if (config.verbose) {
+                cout `Expected:\n[$expected]\nActual:\n[$actual]\n`;
+            }
             // XXX check config object
             // XXX optionally show diff, or fail after failed test
         }
@@ -118,12 +133,27 @@ class Test {
         if (config.verbose)
             cout `(running: $cmd])\n`;
 
+        if (nativeRun)
+            cout `COMPILE: `;
+        else
+            cout `$nick: `;
+        
         // XXX stdin
         p := Process(cmd);
         p.wait();
         compileOut := p.getStdOut();
         compileErr := p.getStdErr();
 
+        if (p.getReturnCode() != 0) {
+            // compile failed
+            _fail();
+            cout `[$(p.getReturnCode())]\n$compileErr`;
+            return;
+        }
+        else if (nativeRun) {
+            _pass();
+        }
+        
         if (!_testData["EXPECT"]) {
            cout `no valid EXPECT section\n`;
            return;
@@ -134,27 +164,31 @@ class Test {
             // native: run binary to get final results for comparison
             bfi := FileInfo(testBinary);
             if (!bfi.exists()) {
-                cout `$nick: FAIL: binary ($testBinary) wasn't created, check compile output\n`;
+                cout `$nick: `;
+                _fail();
+                cout `: binary ($testBinary) wasn't created, check compile output\n`;
                 return;
             }
             // XXX binary args (script argv)
             if (config.verbose)
                 cout `(running: $testBinary)\n`;
+            cout `$nick: `;
             b := Process(testBinary);
             b.wait();
             if (b.failed()) {
-            cout `$nick: FAIL: binary failed to run\n`;
+                _fail();
+                cout `: binary failed to run\n`;
             }
             else {
                 nativeOut := b.getStdOut();
                 nativeErr := b.getStdErr();
-                compareOutput(nick, expect, nativeOut);
+                compareOutput(expect, nativeOut);
                 // XXX err output EXPECTERR ?
             }
         }
         else {
             // JIT, interpreted, etc
-            compareOutput(nick, expect, compileOut);
+            compareOutput(expect, compileOut);
             // XXX err output EXPECTERR ?
         }
         
@@ -167,10 +201,12 @@ class Test {
             return;
         }
         
-        cout `[$_fInfo]:\n`;
+        cout `[$_fInfo]: $_desc\n`;
         
         execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
         execCrackWithBuilder("llvm-native", "NATIVE", outDir, true);
+        
+        cout `\n`;
 
     }
 
@@ -287,7 +323,7 @@ class TestSuite {
         if (!p.failed())
             out = p.getStdOut();        
         if (p.failed() || p.getReturnCode() != 0) {
-            cout `crack binary [$(config.crackBin)] not found\n`;
+            cout `crack binary [$(config.crackBin)] failed to run, or unexpected result\n`;
             exit(1);
         }
         else if (out.size < 5 || out.slice(0,5) != "crack") {

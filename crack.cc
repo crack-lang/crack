@@ -78,6 +78,7 @@ void usage(int retval) {
 
 int main(int argc, char **argv) {
 
+    int rc = 0;
     prog = basename(argv[0]);
 
     if (argc < 2)
@@ -221,15 +222,17 @@ int main(int argc, char **argv) {
               crack.options->optionMap.end()) {
             crack.options->optionMap["out"] = "crack_output";
         }
-        crack.runScript(cin, "<stdin>");
+        rc = crack.runScript(cin, "<stdin>");
     } else {
         // it's the script name - run it.
         ifstream src(argv[optind]);
         crack.setArgv(argc - optind, &argv[optind]);
-        crack.runScript(src, argv[optind]);
+        rc = crack.runScript(src, argv[optind]);
     }
     
     if (bType == jitBuilder && !crack.options->dumpMode)
         crack.callModuleDestructors();
+
+    return rc;
 
 }

@@ -64,9 +64,14 @@ int runChildProcess(const char **argv,
     assert(pd && "no PipeDesc passed");
 
 // UNIX
+    // set to unreadable initially
+    pd->stdin = -1;
+    pd->stdout = -1;
+    pd->stderr = -1;
+
     int pipes[3][2]; // 0,1,2 (in,out,err) x 0,1 (read,write)
 
-    // verify the binary exists, otherwise we fail before fork
+    // verify the binary exists and is executable, otherwise we fail before fork
     struct stat sb;
     if (stat(argv[0], &sb) == -1)
         return -1;
