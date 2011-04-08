@@ -52,6 +52,9 @@ class Construct : public spug::RCBase {
     private:
         std::stack<builder::BuilderPtr> builderStack;
 
+        // hook into the runtime module's uncaught exception function.        
+        bool (*uncaughtExceptionFunc)();
+
     public: // XXX should be private
         // if non-null, this is the alternate construct used for annotations.  
         // If it is null, either this _is_ the annotation construct or both 

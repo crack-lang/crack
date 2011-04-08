@@ -2247,11 +2247,18 @@ ContextPtr Parser::parseTryStmt() {
 ContextPtr Parser::parseThrowStmt() {
    Token tok = toker.getToken();
    if (tok.isSemi()) {
-      // XXX need to verify that we are in a catch
-      context->builder.emitThrow(*context, 0);
+      // XXX need to get this working and to verify that we are in a catch
+      error(tok, "Rethrowing exceptions not supported yet.");
+//      context->builder.emitThrow(*context, 0);
    } else {
       toker.putBack(tok);
       ExprPtr expr = parseExpression();
+
+      if (!expr->type->isDerivedFrom(context->construct->vtableBaseType.get()))
+         error(tok, SPUG_FSTR("Object of type " << expr->type->getFullName() <<
+                               " is not derived from VTableBase."
+                              )
+               );
       
       tok = toker.getToken();
       if (!tok.isSemi())

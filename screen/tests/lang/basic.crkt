@@ -1,5 +1,5 @@
 --TEST--
-test of very basic language constructs in crack
+test of very basic language constructs
 --ARGS--
 -g -n
 --FILE--

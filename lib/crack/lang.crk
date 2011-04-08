@@ -2,9 +2,10 @@
 #!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
-import crack.runtime abort, free, strcpy, strlen, malloc, memcpy, memcmp,
-    memmove, registerHook, BAD_CAST_FUNC, EXCEPTION_MATCH_FUNC, 
-    EXCEPTION_RELEASE_FUNC;
+import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
+    memcpy, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
+    EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC, 
+    EXCEPTION_UNCAUGHT_FUNC;
 @import crack._poormac define;
 
 bool true = (1 == 1);
@@ -754,10 +755,59 @@ class StaticString : String {
     void _freeBuffer() {}
 };
 
+class StackFrame : Object {
+    String func, file;
+    uint lineNumber;
+    
+    oper init(String func, String file, uint lineNumber) :
+        func = func,
+        file = file,
+        lineNumber = lineNumber {
+    }
+}
+
 ## Base exception class.
 class Exception : Object {
     String text;
+    array[StackFrame] __stackTrace = array[StackFrame](16);
+    uint __stackTraceSize = 0, __stackTraceCap = 16;
+
     oper init(String text) : text = text {}
+    
+    oper del() {
+        for (int i; i < __stackTraceSize; ++i)
+            __stackTrace[i].oper release();
+        free(__stackTrace);
+    }
+    
+    void append(StackFrame frame) {
+        if (__stackTraceSize == __stackTraceCap) {
+            
+            # out of room, reallocate.
+            __stackTraceCap *= 2;
+            temp := array[StackFrame](__stackTraceCap);
+            
+            # move everything to the new array
+            for (int i; i < __stackTraceSize; ++i)
+                temp[i] = __stackTrace[i];
+            free(__stackTrace);
+            __stackTrace = temp;
+        }
+        
+        __stackTrace[__stackTraceSize++] = frame;
+        frame.oper bind();
+    }
+    
+    void writeTo(Writer out) {
+        for (int i = int(__stackTraceSize - 1); i >= 0; --i) {
+            out.write(__stackTrace[i].func);
+            out.write(StaticString('\n'));
+        }
+        out.write(StaticString(this.class.name));
+        out.write(StaticString(': '));
+        out.write(text);
+        out.write(StaticString('\n'));
+    }
 }
 
 class BadCastError : Exception {
@@ -779,9 +829,46 @@ void exceptionReleaseFunc(Object ex) {
     ex.oper release();
 }
 
+void exceptionFrameFunc(Object ex, voidptr last_ip) {
+    if (ex.class.isSubclass(Exception)) {
+        e := Exception.cast(ex);
+        
+        info := array[byteptr](3);
+        getLocation(last_ip, info);
+        
+        e.append(StackFrame(StaticString(info[0]), StaticString(info[1]), 
+                            uint(uint64(info[2]))
+                            )
+                 );
+    }
+}
+
+## gets called at the toplevel exception handler when an exception is not 
+## caught
+void uncaughtExceptionHandler(Object ex) {
+    class StdErr : Object, Writer {
+        void write(Buffer buf) { write(2, buf.buffer, buf.size); }
+        void write(byteptr string) { write(2, string, strlen(string)); }
+        Object getWriterObject() { return this; }
+    }
+
+    # this can run after cleanups, so we can't use cerr here...
+    writer := StdErr();
+    writer.write('Uncaught Exception:\n');
+    if (ex.class.isSubclass(Exception)) {
+        Exception.cast(ex).writeTo(writer);
+    } else {
+        writer.write('  ');
+        writer.write(StaticString(ex.class.name));
+        writer.write('\n');
+    }
+}
+
 registerHook(EXCEPTION_MATCH_FUNC, exceptionMatchFunc);
 registerHook(BAD_CAST_FUNC, badClassFunc);
 registerHook(EXCEPTION_RELEASE_FUNC, exceptionReleaseFunc);
+registerHook(EXCEPTION_FRAME_FUNC, exceptionFrameFunc);
+registerHook(EXCEPTION_UNCAUGHT_FUNC, uncaughtExceptionHandler);
 
 # misc functions
 

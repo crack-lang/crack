@@ -348,7 +348,7 @@ void LLVMBuilder::createLLVMModule(const string &name) {
                                             
     Constant *ep =
         module->getOrInsertFunction("__CrackExceptionPersonality", epType);
-    exceptionPersonalityFunc = cast<Function>(ep);    
+    exceptionPersonalityFunc = cast<Function>(ep);
 }
 
 void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,

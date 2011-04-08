@@ -10,6 +10,10 @@
 #include <time.h>
 #include <iostream>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace crack { namespace runtime {
 
 static bool rseeded = false;
@@ -57,6 +61,13 @@ void printint64(int64_t val) {
 
 void printuint64(uint64_t val) {
     std::cout << val << std::flush;
+}
+
+int is_file(const char *path) {
+    struct stat sb;
+    if (stat(path, &sb) == -1)
+        return 0;
+    return S_ISREG(sb.st_mode);
 }
 
 }}

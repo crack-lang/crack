@@ -9,6 +9,8 @@
 #include <vector>
 #include <spug/RCPtr.h>
 
+#define CRACK_VERSION_STRING  "0.4"
+
 namespace model {
     SPUG_RCPTR(Construct);
     SPUG_RCPTR(Context);

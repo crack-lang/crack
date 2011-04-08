@@ -14,6 +14,10 @@ int CRK_PROC_STOPPED       = 0x400;
 int CRK_PROC_EXITED        = 0x800;
 int CRK_PROC_FAILED        = 0x1000;
 
+int CRK_PIPE_STDIN         = 0x1;
+int CRK_PIPE_STDOUT        = 0x2;
+int CRK_PIPE_STDERR        = 0x4;
+
 import crack.io cout;
 
 # this is a stand in until we get generics
@@ -51,7 +55,10 @@ class Args {
 
         // if no delimiter, one string
         if (__count == 1) {
-            __rep[0] = CString(str);
+            val := CString(str);
+            val.oper bind();
+            __rep[0].oper release();
+            __rep[0] = val;
             return;
         }
 
@@ -141,7 +148,9 @@ class Process {
     }
 
     String _readPipe(int pipe) {
-        // paged reads
+        if (pipe < 0)
+            return "";
+        // paged reads        
         buf := ManagedBuffer(1024);
         // extendable buffer used for final string
         wr := AppendBuffer(1024);
@@ -154,8 +163,19 @@ class Process {
         return String(wr, totalSize, true); // takes ownership of appendbuffer
     }
 
-    String getStdOut() { return _readPipe(_pd.stdout); }
-    String getStdErr() { return _readPipe(_pd.stderr); }
+    String getStdOut() { 
+        if (_returnCode != CRK_PROC_FAILED)
+            return _readPipe(_pd.stdout);
+        else
+            return "";
+    }
+    
+    String getStdErr() { 
+        if (_returnCode != CRK_PROC_FAILED)        
+            return _readPipe(_pd.stderr);
+        else
+            return "";
+    }
 
     int getPid() { return _pid; }
 
@@ -172,27 +192,34 @@ class Process {
             _returnCode = waitProcess(_pid, 0);
         return getReturnCode();
     }
+    
+    void _maybePoll() {
+        if (_returnCode & CRK_PROC_KILLED ||
+            _returnCode & CRK_PROC_STOPPED ||
+            _returnCode & CRK_PROC_EXITED ||
+            _returnCode == CRK_PROC_FAILED
+            )
+            return;
+        poll();
+    }
 
     bool failed() {
-        return (_returnCode & CRK_PROC_FAILED);
+        _maybePoll();
+        return (_returnCode == CRK_PROC_FAILED);
     }
 
     bool killed() {
+        _maybePoll();
         return (_returnCode & CRK_PROC_KILLED);
     }
 
     bool stopped() {
+        _maybePoll();
         return (_returnCode & CRK_PROC_STOPPED);
     }
 
     bool isRunning() {
-        if (_returnCode & CRK_PROC_KILLED ||
-            _returnCode & CRK_PROC_STOPPED ||
-            _returnCode & CRK_PROC_EXITED ||
-            _returnCode & CRK_PROC_FAILED
-            )
-            return false;
-        poll();
+        _maybePoll();
         return (_returnCode & CRK_PROC_STILL_RUNNING);
     }
 

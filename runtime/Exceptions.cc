@@ -154,6 +154,23 @@ extern "C" void __CrackExceptionFrame() {
     }
 }                               
 
+/** Called from the toplevel when there is an uncaught exception. 
+ * Returns true if the exception was a crack exception.
+ */
+extern "C" bool __CrackUncaughtException() {
+    _Unwind_Exception *uex =
+        reinterpret_cast<_Unwind_Exception *>(
+            pthread_getspecific(crack::runtime::exceptionObjectKey)
+        );
+    if (uex->exception_class = crackClassId) {
+        if (runtimeHooks.exceptionUncaughtFunc)
+            runtimeHooks.exceptionUncaughtFunc(uex->user_data);
+        return true;
+    }
+    
+    return false;
+}
+
 namespace crack { namespace runtime {
 
 RuntimeHooks runtimeHooks = {0};
@@ -178,6 +195,10 @@ void registerHook(HookId hookId, void *hook) {
         case exceptionFrameFuncHook:
             runtimeHooks.exceptionFrameFunc =
                 reinterpret_cast<ExceptionFrameFunc>(hook);
+            break;
+        case exceptionUncaughtFuncHook:
+            runtimeHooks.exceptionUncaughtFunc =
+                reinterpret_cast<ExceptionUncaughtFunc>(hook);
             break;
         default:
             cerr << "Unknown runtime hook specified: " << hookId << endl;
