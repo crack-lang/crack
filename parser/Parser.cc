@@ -2253,6 +2253,12 @@ ContextPtr Parser::parseThrowStmt() {
    } else {
       toker.putBack(tok);
       ExprPtr expr = parseExpression();
+
+      if (!expr->type->isDerivedFrom(context->construct->vtableBaseType.get()))
+         error(tok, SPUG_FSTR("Object of type " << expr->type->getFullName() <<
+                               " is not derived from VTableBase."
+                              )
+               );
       
       tok = toker.getToken();
       if (!tok.isSemi())

@@ -838,6 +838,11 @@ test_output 'lack of rethrow gives a sane error' \
     'throw;' \
     "${parseError}1: Rethrowing exceptions not supported yet."
 
+test_output 'expression in throw must derive from VTableBase' \
+    'class Foo {} throw Foo();' \
+    "${parseError}1: Object of type $source.Foo is not derived from \
+VTableBase."
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 
