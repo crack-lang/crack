@@ -834,6 +834,10 @@ foo (defined in ancestor class $source.A)"
 
 test_output 'exceptions' 'import test.test_exceptions;' ok
 
+test_output 'lack of rethrow gives a sane error' \
+    'throw;' \
+    "${parseError}1: Rethrowing exceptions not supported yet."
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 
