@@ -254,7 +254,7 @@ class IntWrapper {
     oper init(int val) : val = val {}
 
     int cmp(Object other) {
-        if (other.class.isSubclass(IntWrapper)) {
+        if (other.isa(IntWrapper)) {
             return val - IntWrapper.unsafeCast(other).val;
         } else {
             return Object.cmp(other);

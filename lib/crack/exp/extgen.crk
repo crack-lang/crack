@@ -365,7 +365,7 @@ class ExtensionData {
             if (!tok.isRBracket())
                 error(ctx, tok) `Right bracket expected`;
             
-            if (!type.class.isSubclass(GenericType))
+            if (!type.isai(GenericType))
                 error(ctx, tok) `$(type.name) is not a generic type`;
             
             type = GenericType.unsafeCast(type).getSpecialization(types, 

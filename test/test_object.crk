@@ -11,7 +11,7 @@ class Int {
     oper init(int val) : val = val {}
     
     int cmp(Object other) {
-        if (other.class.isSubclass(Int))
+        if (other.isa(Int))
             return val - Int.unsafeCast(other).val;
         else
             return Object.cmp(other);
