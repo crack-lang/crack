@@ -1,0 +1,125 @@
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 
+//     * Redistributions of source code must retain the above copyright
+//     notice, this list of conditions and the following disclaimer.
+// 
+//     * Redistributions in binary form must reproduce the above copyright
+//     notice, this list of conditions and the following disclaimer in the
+//     documentation and/or other materials provided with the distribution.
+// 
+//     * Neither the name of "The Computer Language Benchmarks Game" nor the
+//     name of "The Computer Language Shootout Benchmarks" nor the names of
+//     its contributors may be used to endorse or promote products derived
+//     from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+
+// 
+// The Computer Language Benchmarks Game
+// http://shootout.alioth.debian.org/
+// 
+// contributed by The Go Authors.
+// Based on fannkuch.c by Heiner Marxen
+//  Modified from the Go version by Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+
+import crack.sys argv;
+import crack.math atoi;
+import crack.io cout;
+
+uint fannkuch(uint n) {
+   if (n < 1) return 0;
+
+   n1 := n - 1;
+   
+   perm := array[uint](n);
+   perm1 := array[uint](n);
+   count := array[uint](n);
+
+   for(uint i = 0; i < n; i++) {
+      perm1[i] = i; // initial (trivial) permutation
+   }
+
+   r := n;
+   uint didpr = 0;
+   uint flipsMax = 0;
+
+   while (true) {
+      uint flips, i, j, k, perm0, tmp;
+
+
+      if (didpr < 30) {
+         for (i = 0; i < n; i++) {
+            cout `$(1+perm1[i])`;
+         }
+         cout `\n`;
+         didpr++;
+      }
+
+      for (; r != 1; r--) count[r-1] = r;
+
+      if (perm1[0] != 0 && perm1[n1] != n1) {
+         flips = 0;
+         for (i = 1; i < n; i++) { // perm = perm1
+            perm[i] = perm1[i];
+         }
+
+         k = perm1[0];         // cache perm[0] in k
+         while (true) {         // k!=0 ==> k>0
+
+            j = k - 1;
+            for (i =1; i < j; i++) {
+               tmp = perm[i];
+               perm[i] = perm[j];
+               perm[j] = tmp;
+               j--;
+            }
+
+            flips++;
+            // Now exchange k (caching perm[0]) and perm[k]... with care!
+            j = perm[k];
+            perm[k] = k;
+            k = j;
+            if (k == 0) break;
+
+         }
+         if (flipsMax < flips) flipsMax = flips;
+      }
+
+      for (; r < n; r++) {
+         // rotate down perm[0..r] by one
+         perm0 = perm1[0];
+         for (i = 0; i < r; i++) {
+            perm1[i] = perm1[i+1];
+         }
+
+         perm1[r] = perm0;
+         tmp = count[r]-1;
+         count[r] = tmp;
+         if (tmp > 0) break;
+      }
+
+      if (r == n) return flipsMax;
+   }
+
+   return 0;
+}
+
+int N = 0;
+if (argv.count() > 1) N = atoi(argv[1].buffer);
+
+uint pf = fannkuch(uint(N));
+cout `Pfannkuchen($N) = $pf\n`;
