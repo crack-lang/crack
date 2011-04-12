@@ -37,6 +37,7 @@
 #include <stdlib.h>
 
 using namespace llvm;
+using namespace llvm::sys;
 using namespace builder;
 using namespace std;
 
@@ -563,19 +564,15 @@ void nativeCompile(llvm::Module *module,
          i != sharedLibs.end();
          ++i) {
 
-         // split out directories
-         sys::Path lib(*i);
-
-         if (!lib.getDirname().empty()) {
-             LibPaths.push_back(lib.getDirname());
+         if (path::has_parent_path(*i)) {
+             LibPaths.push_back(path::parent_path(*i));
          }
 
          NativeLinkItems.push_back(pair<string,bool>(":"+
-                                                     string(lib.getBasename())+
-                                                     "."+
-                                                     string(lib.getSuffix()),
-                                                     true // .so
-                                                     ));
+                                                    string(path::stem(*i))+
+                                                    string(path::extension(*i)),
+                                                    true // .so
+                                                    ));
     }
 
     string ErrMsg;
