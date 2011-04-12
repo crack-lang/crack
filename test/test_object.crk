@@ -11,7 +11,7 @@ class Int {
     oper init(int val) : val = val {}
     
     int cmp(Object other) {
-        if (other.class.isSubclass(Int))
+        if (other.isa(Int))
             return val - Int.unsafeCast(other).val;
         else
             return Object.cmp(other);
@@ -40,5 +40,13 @@ if (a >= b) err.do() `a >= b failed\n`;
 if (n > n) err.do() `n > n failed\n`;
 if (n > o) err.do() `n > o failed\n`;
 if (a > b) err.do() `a > b failed\n`;
+
+# verify that comparison falls through to pointer comparison.
+if (1) {
+    x := Object();
+    y := Object();
+    if (x > y && y > x || y > x && x > y)
+        cout `FAILED default Object compare.\n`;
+}
 
 cout `ok\n`;

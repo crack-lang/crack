@@ -66,7 +66,8 @@ class Object : VTableBase {
     ## Comparison function - returns a value < 0 if this < other, 0 if this is
     ## equal to other, > 0 if this > other.
     int cmp(Object other) {
-        if (this is other) return 0; else return 1;
+        if (this is other) return 0;
+        else return uint64(this) > uint64(other) ? 1 : -1;
     }
 
     @final bool oper <(Object other) {
@@ -98,6 +99,12 @@ class Object : VTableBase {
             return false;
         else
             return isTrue();
+    }
+    
+    ## Returns true if the object is a direct or indirect instance of the 
+    ## class.
+    @final bool isa(Class cls) {
+        return this.class.isSubclass(cls);
     }
 
     void writeTo(Writer writer) {
@@ -193,7 +200,7 @@ class Buffer : Object {
             return 0;
 
         # if the other object is a string, do string comparison.
-        if (other.class.isSubclass(Buffer)) {
+        if (other.isa(Buffer)) {
             os := Buffer.unsafeCast(other);
 
             # if both strings are the same size, this is just a straight
@@ -638,7 +645,7 @@ SubString _substr(String target, uint pos, uint len) {
         _die('Substring out of bounds');
 
     byteptr buf = target.buffer + pos;
-    if (target.class.isSubclass(SubString))
+    if (target.isa(SubString))
         target = SubString.cast(target)._rep;
 
     return SubString(target, buf, len);
@@ -690,7 +697,7 @@ SubString slice(String target, int start) {
 
 SubString rtrim(String target) {
 
-    if (target.class.isSubclass(SubString))
+    if (target.isa(SubString))
         target = SubString.cast(target)._rep;
 
     len := target.size;
@@ -815,7 +822,7 @@ class BadCastError : Exception {
 }
 
 bool exceptionMatchFunc(Class classObj, Object obj) {
-    return obj.class.isSubclass(classObj);
+    return obj.isa(classObj);
 }
 
 void badClassFunc(Class curType, Class newType) {
@@ -830,7 +837,7 @@ void exceptionReleaseFunc(Object ex) {
 }
 
 void exceptionFrameFunc(Object ex, voidptr last_ip) {
-    if (ex.class.isSubclass(Exception)) {
+    if (ex.isa(Exception)) {
         e := Exception.cast(ex);
         
         info := array[byteptr](3);
@@ -846,16 +853,17 @@ void exceptionFrameFunc(Object ex, voidptr last_ip) {
 ## gets called at the toplevel exception handler when an exception is not 
 ## caught
 void uncaughtExceptionHandler(Object ex) {
+    
+    # this can run after cleanups, so we can't use cerr here...
     class StdErr : Object, Writer {
         void write(Buffer buf) { write(2, buf.buffer, buf.size); }
         void write(byteptr string) { write(2, string, strlen(string)); }
         Object getWriterObject() { return this; }
     }
-
-    # this can run after cleanups, so we can't use cerr here...
     writer := StdErr();
+
     writer.write('Uncaught Exception:\n');
-    if (ex.class.isSubclass(Exception)) {
+    if (ex.isa(Exception)) {
         Exception.cast(ex).writeTo(writer);
     } else {
         writer.write('  ');

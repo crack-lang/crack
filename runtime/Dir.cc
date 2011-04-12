@@ -11,6 +11,7 @@
 #include <fnmatch.h>
 #include <string.h>
 #include <libgen.h>
+#include <stddef.h>
 
 #include "Dir.h"
 

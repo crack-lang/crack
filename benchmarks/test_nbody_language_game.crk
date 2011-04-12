@@ -93,6 +93,7 @@ Body sun = { 0, 0, 0, 0, 0, 0, solarMass};
 // System class, an array of bodies
 class System {
    BodyArray bodies;
+   uint syslen;
 
    oper init(BodyArray inbodies): 
       bodies(inbodies.count()) {
@@ -111,13 +112,14 @@ class System {
       }
 
       bodies[0].offsetMomentum(px, py, pz);
+      syslen = bodies.count();
    }
 
    // Calculate energy of the system
    @final
    float64 energy() {
       float64 e;
-      uint i =0, syslen = bodies.count();
+      uint i = 0;
       Body body2;
       
       for (body :in bodies) {
@@ -140,7 +142,7 @@ class System {
    // Advance system at time step dt
    @final
    void advance(float64 dt) {
-      uint i =0, syslen = bodies.count();
+      uint i = 0;
       Body body2;
       
       // Update velocities

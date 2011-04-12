@@ -582,7 +582,7 @@ void define(CrackContext ctx) {
                     ctx.error('The macro may not begin with a concatenation '
                                'operator'.buffer
                               );
-                else if (node.class.isSubclass(Tok) && 
+                else if (node.isa(Tok) && 
                          Tok.cast(node).tok.isIstrEnd()
                          )
                     ctx.error('An interpolation string may not be used with '

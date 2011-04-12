@@ -497,7 +497,7 @@ class KeyVal {
     oper init(Object key, Object val) : key = key, val = val {}
 
     int cmp(Object other) {
-        if (other.class.isSubclass(KeyVal))
+        if (other.isa(KeyVal))
             return key.cmp(KeyVal.unsafeCast(other).key);
         else
             return key.cmp(other);
