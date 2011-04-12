@@ -20,6 +20,7 @@
         array[Elem] __rep = null;
         uint __cap, __size;
 
+        @final
         void oper []=(uint index, Elem elem) {
             if (index > __size)
                 die('Index out of range in Array.oper []=');
@@ -30,7 +31,8 @@
             elem = tmp;
             releaser;
         }
-        
+
+        @final
         void oper []=(int index, Elem elem) {
             uint i;
             if (index < 0)
@@ -40,18 +42,21 @@
             
             this[i] = elem;
         }
-        
+
+        @final
         uint count() {
             return __size;
         }
-        
+
+        @final
         Elem oper [](uint index) {
             if (index > __size)
                 die('Index out of range in Array.oper []');
             
             return __rep[index];
         }
-        
+
+        @final
         Elem oper [](int index) {
             uint i;
             if (index < 0)
@@ -61,7 +66,8 @@
             
             return this[i];
         }
-        
+
+        @final
         Elem last() { return __rep[__size - 1]; }
 
         class ArrayIter {
@@ -71,10 +77,12 @@
         
             oper init(Name arr) : __arr = arr {}
             
+
             Elem elem() {
                 return __arr[__index];
             }
-            
+
+            @final
             bool next() {
                 cnt := __arr.count();
                 if (__index < cnt) {
@@ -84,7 +92,8 @@
                     return false;
                 }
             }
-        
+
+            @final
             bool nx() {
                 if (__first) {
                     __first = false;
@@ -93,7 +102,7 @@
                     return next();
                 }
             }
-            
+
             bool isTrue() {
                 return __index < __arr.count();
             }
@@ -104,7 +113,7 @@
             __cap = initCapacity,
             __size = 0 {
         }
-        
+
         oper init() : 
             __rep = array[Elem](16), 
             __cap = 16,
@@ -120,7 +129,7 @@
             }
             free(__rep);
         }
-        
+
         void realloc(uint newCapacity) {
             if (newCapacity < __cap)
                 die('Array.realloc() - decreasing capacity');
@@ -138,7 +147,8 @@
             __rep = newRep;
             __cap = newCapacity;
         }
-        
+
+        @final
         void append(Elem elem) {
             if (__size == __cap)
                 realloc(__cap * 2);
@@ -147,11 +157,12 @@
             binder;
             __size = __size + 1;
         }
-    
+
+        @final
         ArrayIter iter() {
             return ArrayIter(this);
         }
-        
+
         uint capacity() {
             return __cap;
         }

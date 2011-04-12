@@ -30,6 +30,7 @@ class Body {
       x(x), y(y), z(z), vx(vx), vy(vy), vz(vz), mass(mass)
    {}
    
+   @final
    void offsetMomentum(float64 px, float64 py, float64 pz){
       vx = -px / solarMass;
       vy = -py / solarMass;
@@ -143,27 +144,31 @@ class System {
    @final
    void advance(float64 dt) {
       uint i = 0;
+      float64 dSquared, distance, mag, body_mass, body2_mass;
       Body body2;
       
       // Update velocities
       for (body :in bodies) {
+         body_mass = body.mass;
          for (uint j = i + 1; j < syslen; j++) {
             body2 = bodies[j];
+            body2_mass = body2.mass;
+
             dx := body.x - body2.x;
             dy := body.y - body2.y;
             dz := body.z - body2.z;
 
-            dSquared := dx*dx + dy*dy + dz*dz;
-            distance := sqrt(dSquared);
-            mag := dt / (dSquared * distance);
+            dSquared = dx*dx + dy*dy + dz*dz;
+            distance = sqrt(dSquared);
+            mag = dt / (dSquared * distance);
 
-            body.vx -= dx * body2.mass * mag;
-            body.vy -= dy * body2.mass * mag;
-            body.vz -= dz * body2.mass * mag;
+            body.vx -= dx * body2_mass * mag;
+            body.vy -= dy * body2_mass * mag;
+            body.vz -= dz * body2_mass * mag;
 
-            body2.vx += dx * body.mass * mag;
-            body2.vy += dy * body.mass * mag;
-            body2.vz += dz * body.mass * mag;
+            body2.vx += dx * body_mass * mag;
+            body2.vy += dy * body_mass * mag;
+            body2.vz += dz * body_mass * mag;
          }
          i++;
       }

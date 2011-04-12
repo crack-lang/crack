@@ -167,6 +167,7 @@ add_custom_target(screen
 # optional extensions
 
 # GTK
+SET(GTK2_ADDITIONAL_SUFFIXES x86_64-linux-gnu/glib-2.0 gdk-pixbuf-2.0)
 find_package(GTK2 QUIET 2.6 COMPONENTS gtk)
 if(GTK2_FOUND)
    message(STATUS "Found GTK, will build extension")
@@ -182,16 +183,20 @@ if(GTK2_FOUND)
                       LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                       )
    target_link_libraries( gtk
-                          ${GTK2_LIBRARIES} ${GTK2_GDKPIXBUF_LDFLAGS}
+                          ${GTK2_LIBRARIES}
                          )
+else()
+   message(STATUS "Gtk+2 not found, skipping")
 endif()
 
 # pcre
 find_library(PCRE_LIBRARY NAMES pcre)
 find_path(PCRE_INCLUDE_DIR NAMES pcre.h)
+
 if(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
   SET(PCRE_FOUND TRUE)
 endif(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
+
 if (PCRE_FOUND)
    message(STATUS "Found pcre, will build extension")
    include_directories(${PCRE_INCLUDE_DIR})
@@ -205,48 +210,75 @@ if (PCRE_FOUND)
    target_link_libraries( pcre
                           ${PCRE_LIBRARY}
                          )
-
+else()
+   message(STATUS "PCRE not found, skipping")
 endif()
 
 # SDL
-find_package(SDL QUIET)
+find_package(SDL)
 if(SDL_FOUND)
-   message(STATUS "Found SDL, will build extension")
-   include_directories(${SDL_INCLUDE_DIR})
-   add_library(sdl SHARED opt/_sdl.cc)
-   set_target_properties(sdl
-                      PROPERTIES
-                      OUTPUT_NAME _sdl
-                      PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                      )
-   target_link_libraries( sdl
-                          ${SDL_LIBRARY}
+   find_library(SDL_LIBRARY NAMES SDL)
+   find_path(SDL_INCLUDE_DIR NAMES SDL.h)
+
+   if(SDL_LIBRARY AND SDL_INCLUDE_DIR)
+     SET(SDL_FOUND_PRELIM TRUE)
+   endif(SDL_LIBRARY AND SDL_INCLUDE_DIR)
+
+   if (SDL_FOUND_PRELIM)
+      message(STATUS "Found SDL, will build extension")
+      include_directories(${SDL_INCLUDE_DIR})
+      add_library(sdl SHARED opt/_sdl.cc)
+      set_target_properties(sdl
+                         PROPERTIES
+                         OUTPUT_NAME _sdl
+                         PREFIX ""
+                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                          )
+      target_link_libraries( sdl
+                             ${SDL_LIBRARY}
+                            )
+   endif()
+else()
+   message(STATUS "SDL not found, skipping")
 endif()
 
 # OpenGL
 find_package(OpenGL QUIET)
 if(OPENGL_FOUND)
-   message(STATUS "Found OpenGL, will build extension")
-   include_directories(${OPENGL_INCLUDE_DIR})
-   add_library(gl SHARED opt/_gl.cc)
-   set_target_properties(gl
-                      PROPERTIES
-                      OUTPUT_NAME _gl
-                      PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                      )
-   target_link_libraries( gl
-                          ${OPENGL_LIBRARIES}
+   find_path(OPENGL_INCLUDE_DIR NAMES gl.h)
+   if(OPENGL_INCLUDE_DIR)
+     SET(OPENGL_FOUND_PRELIM TRUE)
+   endif(OPENGL_INCLUDE_DIR)
+   
+   if (OPENGL_FOUND_PRELIM)
+      message(STATUS "Found OpenGL, will build extension")
+      include_directories(${OPENGL_INCLUDE_DIR})
+      add_library(gl SHARED opt/_gl.cc)
+      set_target_properties(gl
+                         PROPERTIES
+                         OUTPUT_NAME _gl
+                         PREFIX ""
+                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                          )
+      target_link_libraries( gl
+                             ${OPENGL_LIBRARIES}
+                            )
+   endif()
+else()
+   message(STATUS "OpenGL not found, skipping")
 endif()
 
 # Cairo
-IF (PKG_CONFIG_FOUND)
-   pkg_check_modules(CAIRO cairo>=1.8)
-   if(CAIRO_FOUND)
-      message(STATUS "Found Cairo, will build extension")
+find_package(Cairo QUIET)
+IF (CAIRO_FOUND)
+   pkg_check_modules(CAIRO cairo>=1.8 QUIET)
+   find_path(CAIRO_INCLUDE_DIR NAMES cairo.h PATH_SUFFIXES cairo)
+   if(CAIRO_INCLUDE_DIR)
+     SET(CAIRO_FOUND_PRELIM TRUE)
+     #~ SET(CAIRO_INCLUDE_DIR ${CAIRO_INCLUDE_DIR}/cairo)
+   endif(CAIRO_INCLUDE_DIR)
+
+   if(CAIRO_FOUND_PRELIM)
       add_library(cairo SHARED opt/_cairo.cc)
       set_target_properties(cairo
                          PROPERTIES
@@ -257,5 +289,9 @@ IF (PKG_CONFIG_FOUND)
       target_link_libraries( cairo
                              ${CAIRO_LDFLAGS} 
                             )
+   else()
+      message(STATUS "Cairo not found, skipping")
    endif()
+else()
+   message(STATUS "Cairo not found, skipping")
 endif()
