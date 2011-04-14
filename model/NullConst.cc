@@ -20,3 +20,7 @@ ExprPtr NullConst::convert(Context &context, TypeDef *newType) {
 void NullConst::writeTo(ostream &out) const {
     out << "null";
 }
+
+bool NullConst::isProductive() const {
+    return false;
+}
