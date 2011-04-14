@@ -728,12 +728,14 @@ void LLVMBuilder::emitTest(Context &context, Expr *expr) {
 }
 
 BranchpointPtr LLVMBuilder::emitIf(Context &context, Expr *cond) {
-    return labeledIf(context, cond, "true", "false");
+    return labeledIf(context, cond, "true", "false", true);
 }
 
 BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
                                       const char* tLabel,
-                                      const char* fLabel) {
+                                      const char* fLabel,
+                                      bool condInCleanupFrame
+                                      ) {
 
     // create blocks for the true and false conditions
     LLVMContext &lctx = getGlobalContext();
@@ -743,10 +745,10 @@ BranchpointPtr LLVMBuilder::labeledIf(Context &context, Expr *cond,
         BasicBlock::Create(lctx, fLabel, func)
     );
 
-    context.createCleanupFrame();
+    if (condInCleanupFrame) context.createCleanupFrame();
     cond->emitCond(context);
     Value *condVal = lastValue; // condition value
-    context.closeCleanupFrame();
+    if (condInCleanupFrame) context.closeCleanupFrame();
     result->block2 = builder.GetInsertBlock(); // condition block
     lastValue = condVal;
     builder.CreateCondBr(lastValue, trueBlock, result->block);
@@ -810,7 +812,8 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
 
     // condition on first arg
     BranchpointPtr pos = labeledIf(context, expr->cond.get(), "tern_T", 
-                                   "tern_F"
+                                   "tern_F",
+                                   false
                                    );
     BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
     Value *condVal = lastValue; // arg[0] condition value
@@ -826,9 +829,14 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     
     // emit the true expression in its own cleanup frame
     context.createCleanupFrame();
-    expr->trueVal->emit(context);
+    ResultExprPtr tempResult = expr->trueVal->emit(context);
     narrow(expr->trueVal->type.get(), expr->type.get());
     Value *trueVal = lastValue;
+    
+    // if the false expression is productive and this one isn't, make it 
+    // productive
+    if (expr->falseVal->isProductive() && !expr->trueVal->isProductive())
+        tempResult->handleAssignment(context);
     context.closeCleanupFrame();
     
     // branch to the end
@@ -840,9 +848,14 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     // emit the false expression 
     builder.SetInsertPoint(falseBlock);
     context.createCleanupFrame();
-    expr->falseVal->emit(context);
+    tempResult = expr->falseVal->emit(context);
     narrow(expr->falseVal->type.get(), expr->type.get());
     Value *falseVal = lastValue;
+    
+    // if the true expression was productive, and this one isn't, make it 
+    // productive
+    if (expr->trueVal->isProductive() && !expr->falseVal->isProductive())
+        tempResult->handleAssignment(context);
     context.closeCleanupFrame();
     builder.CreateBr(postBlock);
     falseBlock = builder.GetInsertBlock();
@@ -1550,10 +1563,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
     PATypeHolder newType(StructType::get(getGlobalContext(), members));
     module->addTypeName("struct." + type->name, newType);
     
-    // refine the type and store the new pointer type (the existing pointer 
-    // to opaque type may not end up getting changed)
+    // refine the type
     curType->refineAbstractTypeTo(newType);
-    type->rep = PointerType::getUnqual(newType);
 
     // construct the vtable if necessary
     if (type->hasVTable) {

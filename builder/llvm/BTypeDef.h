@@ -30,7 +30,7 @@ class BTypeDef : public model::TypeDef {
 public:
     unsigned fieldCount;
     llvm::GlobalVariable *classInst;
-    const llvm::Type *rep;
+    llvm::PATypeHolder rep;
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
 

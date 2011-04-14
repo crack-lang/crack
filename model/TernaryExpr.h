@@ -21,6 +21,7 @@ class TernaryExpr : public Expr {
 
         virtual ResultExprPtr emit(Context &context);
         virtual void writeTo(std::ostream &out) const;
+        virtual bool isProductive() const;
 };
 
 } // namespace model

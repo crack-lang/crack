@@ -224,7 +224,9 @@ class LLVMBuilder : public Builder {
         model::BranchpointPtr labeledIf(model::Context &context,
                                         model::Expr *cond,
                                         const char* tLabel=0,
-                                        const char* fLabel=0);
+                                        const char* fLabel=0,
+                                        bool condInCleanupFrame=true
+                                        );
         
         virtual model::BranchpointPtr
             emitElse(model::Context &context,

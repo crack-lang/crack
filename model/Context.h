@@ -102,6 +102,10 @@ class Context : public spug::RCBase {
         // this is the return type for a function context, and the class type 
         // for a class context.
         TypeDefPtr returnType;
+
+        // a register used to store results passed between different parts of 
+        // complex expressions (see SetRegisterExpr and GetRegisterExpr).
+        ResultExprPtr reg;
         
         // the current cleanup frame.
         CleanupFramePtr cleanupFrame;

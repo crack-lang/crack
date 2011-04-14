@@ -20,6 +20,7 @@ class NullConst : public Expr {
         
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;        
+        virtual bool isProductive() const;
 };
 
 } // namespace parser

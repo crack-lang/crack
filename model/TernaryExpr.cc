@@ -21,3 +21,7 @@ void TernaryExpr::writeTo(ostream &out) const {
     falseVal->writeTo(out);
     out << ")";
 }
+
+bool TernaryExpr::isProductive() const {
+    return trueVal->isProductive() || falseVal->isProductive();
+}
