@@ -266,17 +266,39 @@ class StringReader : Object, Reader {
 ## Convenience wrapper, equivalent to Formatter(StringWriter())
 class StringFormatter : Formatter {
 
-    StringWriter __writer = {};
+    StringWriter _writer = {};
 
-    oper init(uint initBufSize) : Formatter(null), __writer(initBufSize) {
-        rep = __writer;
+    oper init(uint initBufSize) : Formatter(null), _writer(initBufSize) {
+        rep = _writer;
     }
 
-    oper init() : Formatter(null) { rep = __writer; }
+    oper init() : Formatter(null) { rep = _writer; }
 
     ## see: StringWriter.createString()
-    String createString() { return __writer.createString(); }
+    String createString() { return _writer.createString(); }
 
     ## see: StringWriter.createCString()
-    String createCString() { return __writer.createCString(); }
+    String createCString() { return _writer.createCString(); }
 };
+
+## Instances of this class let you create a string from IString syntax.  
+## Sample usage:
+##   String v = FStr() `variable x = $x`;
+class FStr : StringFormatter {
+    oper init() {}
+    
+    void enter() {
+        if (!_writer)
+            rep = _writer = StringWriter();
+    }
+    
+    void format(StaticString val) {
+        Formatter.format(val);
+    }
+    
+    String leave() {
+        result := _writer.createString();
+        _writer = null;
+        return result;
+    }
+}

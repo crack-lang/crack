@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.lang die, ManagedBuffer, SubString, CString, substr, slice;
-import crack.io cout;
+import crack.io cout, FStr;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -85,5 +85,16 @@ if (s.rtrim() != "foo")
 s = 'test\'\0\223';
 if (s.getRepr() != "'test\\047\\000\\223'")
     cout `bad value for s.getRepr(): $(s.getRepr())\n`;
+
+if (FStr() `awesome` != 'awesome')
+    cout `FAILED FStr formatting\n`;
+
+if (1) {
+    FStr temp = {};
+    if (temp `first` != 'first')
+        cout `FAILED simple local FStr variable\n`;
+    if (temp `second` != 'second')
+        cout `FAILED reuse of local FStr variable\n`;
+}
 
 cout `ok\n`;
