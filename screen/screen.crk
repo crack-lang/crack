@@ -1,7 +1,7 @@
 // A test suite for crack
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cout, cerr, Formatter, Writer, StringWriter;
+import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter;
 import crack.sys argv, exit;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
@@ -83,25 +83,25 @@ class Test {
         
     }
 
-    void _colorMsg(String c, String msg) {
-        cout `\033[$(c);1m$(msg)\033[0m`;
+    String _colorMsg(String c, String msg) {
+        sw := StringFormatter(128);        
+        sw `\033[$(c);1m$(msg)\033[0m`;
+        return sw.createString();
     }
-    void _pass() {
-        _colorMsg("32", "PASS");
-        cout ` `;
+    String _pass() {
+        return _colorMsg("32", "PASS");
     }
-    void _fail() {
-        _colorMsg("31", "FAIL");
-        cout ` `;
+    String _fail() {
+        return _colorMsg("31", "FAIL");
     }
 
     void compareOutput(String expected, String actual) {
         
         if (expected == actual) {
-            _pass();
+            cout `$(_pass())`;
         }
         else {
-            _fail();
+            cout `$(_fail())`;
             if (config.verbose) {
                 cout `Expected:\n[$expected]\nActual:\n[$actual]\n`;
             }
@@ -133,10 +133,9 @@ class Test {
         if (config.verbose)
             cout `(running: $cmd])\n`;
 
+        cout `$nick: `;
         if (nativeRun)
-            cout `COMPILE: `;
-        else
-            cout `$nick: `;
+            cout `(Compile: `;
         
         // XXX stdin
         p := Process(cmd);
@@ -146,12 +145,12 @@ class Test {
 
         if (p.getReturnCode() != 0) {
             // compile failed
-            _fail();
+            cout `$(_fail()) `;
             cout `[$(p.getReturnCode())]\n$compileErr`;
             return;
         }
         else if (nativeRun) {
-            _pass();
+            cout `$(_pass()) `;
         }
         
         if (!_testData["EXPECT"]) {
@@ -172,11 +171,11 @@ class Test {
             // XXX binary args (script argv)
             if (config.verbose)
                 cout `(running: $testBinary)\n`;
-            cout `$nick: `;
+            cout `Run: `;
             b := Process(testBinary);
             b.wait();
             if (b.failed()) {
-                _fail();
+                cout `$(_fail())`;
                 cout `: binary failed to run\n`;
             }
             else {
@@ -185,10 +184,12 @@ class Test {
                 compareOutput(expect, nativeOut);
                 // XXX err output EXPECTERR ?
             }
+            cout `) `;
         }
         else {
             // JIT, interpreted, etc
             compareOutput(expect, compileOut);
+            cout `  `;
             // XXX err output EXPECTERR ?
         }
         
@@ -204,7 +205,7 @@ class Test {
         cout `[$_fInfo]: $_desc\n`;
         
         execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
-        execCrackWithBuilder("llvm-native", "NATIVE", outDir, true);
+        execCrackWithBuilder("llvm-native", "Native", outDir, true);
         
         cout `\n`;
 
