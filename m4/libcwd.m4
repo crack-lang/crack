@@ -23,6 +23,8 @@ AC_DEFUN([AM_PATH_CWD], [dnl
         AC_SUBST(CWD_CPPFLAGS)
     ], [
         AC_MSG_RESULT(no)
+        CWD_LIBS=
+        CWD_CPPFLAGS=
     ])
     AC_LANG_POP
     LIBS="$ac_save_LIBS"
