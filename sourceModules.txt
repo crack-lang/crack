@@ -6,9 +6,11 @@ ext/Type.cc
 model/Annotation.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
+model/GetRegisterExpr.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
+model/SetRegisterExpr.cc
 model/FuncCall.cc
 model/Expr.cc
 model/OverloadDef.cc
@@ -23,6 +25,7 @@ model/PrimFuncAnnotation.cc
 model/VarDef.cc
 model/Context.cc
 model/LocalNamespace.cc
+model/MultiExpr.cc
 model/NullConst.cc
 model/Namespace.cc
 model/CleanupFrame.cc

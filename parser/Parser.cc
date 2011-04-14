@@ -17,13 +17,16 @@
 #include "model/Context.h"
 #include "model/FuncDef.h"
 #include "model/FuncCall.h"
+#include "model/GetRegisterExpr.h"
 #include "model/Expr.h"
 #include "model/Initializers.h"
 #include "model/IntConst.h"
+#include "model/MultiExpr.h"
 #include "model/FloatConst.h"
 #include "model/ModuleDef.h"
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
+#include "model/SetRegisterExpr.h"
 #include "model/StrConst.h"
 #include "model/StubDef.h"
 #include "model/TypeDef.h"
@@ -673,20 +676,25 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
 }
 
 // ` ... `
-//  ^
+//  ^     ^
 ExprPtr Parser::parseIString(Expr *expr) {
-   // emit the expression, all subsequent invocations will use the result
-   ResultExprPtr result = expr->emit(*context);
-   context->createCleanupFrame();
-   result->handleTransient(*context);
    
-   // put the whole thing in an "if"
-   TypeDef *boolType = context->construct->boolType.get();
-   ExprPtr cond = result->convert(*context, boolType);
-   if (!cond)
-      context->error("interpolated string target can not be converted to a "
-                      "bool.");
-   BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
+   // wrap the formatter expression in a register setter so it will get stored 
+   // for reuse.
+   ExprPtr formatter = new SetRegisterExpr(expr);
+   ExprPtr reg = new GetRegisterExpr(expr->type.get());
+   
+   // create an expression sequence for the formatter
+   MultiExprPtr seq = new MultiExpr();
+   
+   // look up an "enter()" function
+   FuncDefPtr func = context->lookUpNoArgs("enter", true, expr->type.get());
+   if (func) {
+      FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      if (func->flags & FuncDef::method)
+         funcCall->receiver = reg;
+      seq->add(funcCall.get());
+   }
    
    // parse all of the subtokens
    Token tok;
@@ -714,7 +722,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       // look up a format method for the argument
       FuncCall::ExprVec args(1);
       args[0] = arg;
-      FuncDefPtr func = context->lookUp("format", args, expr->type.get());
+      func = context->lookUp("format", args, expr->type.get());
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
@@ -724,14 +732,26 @@ ExprPtr Parser::parseIString(Expr *expr) {
       
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
       funcCall->args = args;
-      funcCall->receiver = result;
-      funcCall->emit(*context);
+      if (func->flags & FuncDef::method)
+         funcCall->receiver = reg;
+      seq->add(funcCall.get());
+   }
+
+   func = context->lookUpNoArgs("leave", true, expr->type.get());
+   if (func) {
+      FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      if (func->flags & FuncDef::method)
+         funcCall->receiver = reg;
+      seq->add(funcCall.get());
+      seq->type = funcCall->type;
+   } else {
+      seq->add(reg.get());
+      seq->type = reg->type;
    }
    
-   context->closeCleanupFrame();
-   context->builder.emitEndIf(*context, pos.get(), false);
-   
-   return result;
+   return context->createTernary(formatter.get(), seq.get(), 
+                                 new NullConst(seq->type.get())
+                                 );
 }
 
 // [ expr, expr, ... ]
