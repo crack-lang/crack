@@ -47,7 +47,7 @@ void FuncBuilder::finish(bool storeDef) {
 
     // register the function with LLVM
     const Type *rawRetType =
-            returnType->rep ? returnType->rep :
+            returnType->rep ? returnType->rep.get() :
             Type::getVoidTy(getGlobalContext());
     FunctionType *llvmFuncType =
             FunctionType::get(rawRetType, llvmArgs, funcDef->flags & FuncDef::variadic);
