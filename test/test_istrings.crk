@@ -1,0 +1,22 @@
+# Copyright 2011 Google Inc.
+# tests of string interpolation
+
+# verify that a formatter is released exactly once.
+if (1) {
+    int releaseCount;
+    class A {
+        void format(byteptr val) {}
+        void format(int i) {}
+        oper release() { ++releaseCount; }
+        bool toBool() { return 1; }
+    }
+    
+    int i;
+    A() `first test $i, second test $i\n`;
+    if (releaseCount != 1) {
+        puts('FAILED istring formatter release count != 1:');
+        printint(releaseCount);
+    }
+}
+
+puts('ok');

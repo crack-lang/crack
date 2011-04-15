@@ -8,8 +8,7 @@
 using namespace model;
 
 ResultExprPtr GetRegisterExpr::emit(Context &context) {
-    context.reg->emit(context);
-    return context.reg;
+    return context.reg->emit(context);
 }
 
 void GetRegisterExpr::writeTo(std::ostream &out) const {

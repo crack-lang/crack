@@ -843,6 +843,8 @@ test_output 'expression in throw must derive from VTableBase' \
     "${parseError}1: Object of type $source.Foo is not derived from \
 VTableBase."
 
+test_output 'istring tests' 'import test.test_istrings;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 
