@@ -6,14 +6,10 @@
 // flag.Arg hack by Isaac Gouy
 // Modified from the Go version by Conrad Steenberg <conrad.steenberg@gmail.com>
 
-
-
 import crack.sys argv;
 import crack.math sqrt, PI, atoi;
+import crack.lang FreeBase;
 import crack.io cout;
-import crack.lang cmp, free, die;
-@import crack.exp.ann define, export, exporter, implements, interface;
-@import crack.exp.cont.array GenericObjArray, GenericArray;
 
 // Some constants
 float64 solarMass   = 4 * PI *PI;
@@ -39,6 +35,10 @@ class Body {
    
    Body copy(){
       return Body(x, y, z, vx, vy, vz, mass);
+   }
+   
+   void write(){
+      cout `x: $x, y: $y, z: $z\nvx: $vx, vy: $vy, vz: $vz\n`;
    }
 
 }
@@ -87,55 +87,50 @@ Body neptune = {
 
 Body sun = { 0, 0, 0, 0, 0, 0, solarMass};
 
-// Array of bodies
-@GenericObjArray(BodyArray, Body)
-
 // -----------------------------------------------------------------------------
 // System class, an array of bodies
-class System {
-   BodyArray bodies;
+class System: FreeBase {
+   array[Body] bodies;
    uint syslen;
+   Body body;
+   float64 dx, dy, dz, distance;
 
-   oper init(BodyArray inbodies): 
-      bodies(inbodies.count()) {
-      
-      // Copy over given body array
-      for (body :in inbodies){
-         bodies.append(body.copy());
-      }
-      
+   oper init(array[Body] inbodies, uint nbodies): 
+      syslen(nbodies) {
+      bodies = inbodies;
+
       // Do initial iteration
       float64 px = 0, py = 0, pz = 0;
-      for (body :in bodies) {
+      for (uint i=0; i< syslen; i++) {
+         body = bodies[i];
          px += body.vx * body.mass;
          py += body.vy * body.mass;
          pz += body.vz * body.mass;
       }
 
       bodies[0].offsetMomentum(px, py, pz);
-      syslen = bodies.count();
    }
 
    // Calculate energy of the system
    @final
    float64 energy() {
-      float64 e;
+      float64 e = 0;
       uint i = 0;
       Body body2;
       
-      for (body :in bodies) {
+      for (uint i=0; i< syslen; i++) {
+         body = bodies[i];
          e += 0.5 * body.mass *
             (body.vx*body.vx + body.vy*body.vy + body.vz*body.vz);
 
          for (uint j = i + 1; j < syslen; j++) {
             body2 = bodies[j];
-            dx := body.x - body2.x;
-            dy := body.y - body2.y;
-            dz := body.z - body2.z;
-            distance := sqrt(dx*dx + dy*dy + dz*dz);
+            dx = body.x - body2.x;
+            dy = body.y - body2.y;
+            dz = body.z - body2.z;
+            distance = sqrt(dx*dx + dy*dy + dz*dz);
             e -= (body.mass * body2.mass) / distance;
          }
-         i++;
       }
       return e;
    }
@@ -144,19 +139,20 @@ class System {
    @final
    void advance(float64 dt) {
       uint i = 0;
-      float64 dSquared, distance, mag, body_mass, body2_mass;
+      float64 dSquared, mag, body_mass, body2_mass;
       Body body2;
       
       // Update velocities
-      for (body :in bodies) {
+      for (uint i=0; i< syslen; i++) {
+         body = bodies[i];
          body_mass = body.mass;
          for (uint j = i + 1; j < syslen; j++) {
             body2 = bodies[j];
             body2_mass = body2.mass;
 
-            dx := body.x - body2.x;
-            dy := body.y - body2.y;
-            dz := body.z - body2.z;
+            dx = body.x - body2.x;
+            dy = body.y - body2.y;
+            dz = body.z - body2.z;
 
             dSquared = dx*dx + dy*dy + dz*dz;
             distance = sqrt(dSquared);
@@ -170,11 +166,11 @@ class System {
             body2.vy += dy * body_mass * mag;
             body2.vz += dz * body_mass * mag;
          }
-         i++;
       }
 
       // Update positions
-      for (body :in bodies) {
+      for (uint i=0; i< syslen; i++) {
+         body = bodies[i];
          body.x += dt * body.vx;
          body.y += dt * body.vy;
          body.z += dt * body.vz;
@@ -188,8 +184,8 @@ int N = 0;
 if (argv.count() > 1) N = atoi(argv[1].buffer);
 
 // Initialize system of planets
-BodyArray planets = [sun, jupiter, saturn, uranus, neptune];
-System system = { planets };
+array[Body] planets = [sun, jupiter, saturn, uranus, neptune];
+System system = { planets, 5 };
 
 cout `$(system.energy())\n`;
 
