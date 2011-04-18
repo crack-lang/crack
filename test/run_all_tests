@@ -1099,8 +1099,11 @@ c' \
     'a b c'
 
 test_output 'arg index out of bounds' \
-    'import crack.sys argv; argv[1];' \
-    'Array index 1 out of bounds'
+    'import crack.sys argv;
+     import crack.lang IndexError;
+     import crack.io cout;
+     try { argv[1]; } catch (IndexError ex) { cout `ok`; }' \
+    ok
 
 test_output 'containers' 'import test.test_containers;' ok
 
