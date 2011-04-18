@@ -1,8 +1,9 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang Buffer, FreeBase, WriteBuffer;
-import crack.io Reader, Writer, Formatter, cout;
-import crack.exp.error err, strerror;
+import crack.lang Buffer, Exception, FreeBase, InvalidStateError, 
+    NotImplementedError, WriteBuffer;
+import crack.io FStr, Reader, Writer, Formatter, cout;
+import crack.exp.error strerror;
 import crack.container Array;
 import crack.exp.bindings Opaque;
 import crack.time TimeDelta;
@@ -14,7 +15,7 @@ sockconsts := Constants();
 
 ## interface for all classes that can be polled.
 class Pollable {
-    int getFD() { err.do() `Pollable.getFD() not defined.`; return 0; }
+    int getFD() { throw NotImplementedError('Pollable.getFD() not defined.'); }
 }
 
 class PollEvent : Object, PollEvt {
@@ -29,8 +30,7 @@ class Address {
     oper del() { free(_addr); }
     
     Address create() {
-        err.do() `Address.create() called\n`;
-        return null;
+        throw NotImplementedError('Address.create() not defined');
     }
 }
 
@@ -121,10 +121,10 @@ class Socket : Pollable, Reader, Writer {
     
     ## Returns null if there was an error, errno should contain the error.
     Accepted accept() {
-        if (!__bound) {
-            err.do() `Attempting accept on socket that hasn't been "bind()ed"`;
-            return null;
-        }
+        if (!__bound)
+            throw InvalidStateError("Attempting accept on socket that hasn't "
+                                     'been \"bind()ed"'
+                                    );
         Address addr = __bound.create();
         rc := accept(fd, addr._addr);
         if (rc == -1)
@@ -140,7 +140,7 @@ class Socket : Pollable, Reader, Writer {
     uint read(WriteBuffer buffer) {
         rc := recv(buffer, 0);
         if (rc < 0)
-            err.do() `Error writing to socket: $(strerror())`;
+            throw Exception(FStr() `Error writing to socket: $(strerror())`);
         return uint(rc);
     }
     
@@ -150,9 +150,9 @@ class Socket : Pollable, Reader, Writer {
     void write(Buffer data) {
         rc := send(data, 0);
         if (rc < 0)
-            err.do() `Error writing to socket: $(strerror())`;
+            throw Exception(FStr() `Error writing to socket: $(strerror())`);
         if (rc != data.size)
-            err.do() `Incomplete write to socket`;
+            throw Exception('Incomplete write to socket');
     }
 
     Object getWriterObject() { return this; }
@@ -176,7 +176,7 @@ class Poller {
     
     void grow(uint newCapacity) {
         if (newCapacity < __capacity)
-            err.do() `cannot shrink`;
+            throw Exception('cannot shrink');
         
         __pollables.realloc(newCapacity);
         

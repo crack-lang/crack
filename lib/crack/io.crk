@@ -226,8 +226,6 @@ class StringWriter : AppendBuffer, Writer {
     
     ## Return a string containing everything that has been written so far.
     String createString() {
-        # store the info in a temporary buffer, if we create a string directly 
-        # from buf the new String will steal the buffer from us.
         return String(buffer, pos, false);
     }
     
@@ -291,14 +289,11 @@ class FStr : StringFormatter {
         if (!_writer)
             rep = _writer = StringWriter();
     }
-    
-    void format(StaticString val) {
-        Formatter.format(val);
-    }
-    
+
     String leave() {
         result := _writer.createString();
         _writer = null;
+        rep = null;
         return result;
     }
 }

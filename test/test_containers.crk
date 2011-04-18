@@ -1,9 +1,9 @@
 # Copyright 2010 Google Inc.
 
 import crack.sys exit;
-import crack.lang free;
+import crack.lang Exception, free;
 import crack.exp.error err;
-import crack.io cout, Formatter, StringFormatter, Writer;
+import crack.io cout, Formatter, FStr, StringFormatter, Writer;
 import crack.container Array, Container, DList, Iterator, KeyVal, List, TreeMap;
 import crack.runtime random;
 
@@ -30,14 +30,16 @@ uint _ckseq(array[Object] ref, String context, Container cnt, Object a,
     }
     // verify the count
     if (cnt.count() != count)
-        err.do() `In $context: container count != $count: \
+        cout `FAILED: In $context: container count != $count: \
 count = $(cnt.count()) $c`;
     
     i := cnt.iter();
     j := uint(0);
     while (i) {
         if (i.elem() != ref[j])
-            err.do() `elem[$j] != $(ref[j]): elem = $(i.elem()), $cnt`;
+            throw Exception(
+                FStr()`elem[$j] != $(ref[j]): elem = $(i.elem()), $cnt`
+            );
         i.next();
         ++j;
     }
@@ -67,7 +69,7 @@ list.delete(6);
 if (list[0] != 'zeroth' || list[1] != 'first' || list[2] != 'second' ||
     list[3] != '2.5' || list[4] != 'third' || list[5] != 'fourth' ||
     list.count() != 6) {
-    err.do() `$list is not \
+    cout `FAILED: $list is not \
         ['zeroth', 'first', 'second', '2.5', 'third', 'fourth']`;
 }
 
@@ -98,7 +100,7 @@ if (true) {
     ckseq('List pushHead()', list, 'zero', 'first', 'second');
     elem := list.popHead();
     if (elem != 'zero')
-        err.do() `List.popHead() returned $elem, expected 'zero'`;
+        cout `FAILED: List.popHead() returned $elem, expected 'zero'`;
     ckseq('List.popHead()', list, 'first', 'second', null);
 }
 
@@ -111,12 +113,12 @@ void ckdl(String context, DList cnt, Object a, Object b, Object c) {
     while (bi.nx() && count) {
         --count;
         if (bi.elem() != ref[count])
-            err.do() `elem[$count] != $(ref[count]): elem = $(bi.elem()), \
+            cout `FAILED: elem[$count] != $(ref[count]): elem = $(bi.elem()), \
 $cnt`;
     }
     
     if (bi)
-        err.do() `reverse iter overflow: $cnt`;
+        cout `FAILED reverse iter overflow: $cnt`;
 }
 
 # DList tests
@@ -155,19 +157,19 @@ if (true) {
     ckdl('Iterator insert head', dl, 'zero', 'first', 'second');
     dl.delete(i);
     if (i.elem() != 'first')
-        err.do() `iterator not correctly positioned after delete`;
+        cout `FAILED: iterator not correctly positioned after delete`;
     
     dl.pushHead('zero');
     ckdl('dl.pushHead()', dl, 'zero', 'first', 'second');
     elem := dl.popHead();
     if (elem != 'zero')
-        err.do() `popHead() returned $elem instead of "zero"`;
+        cout `FAILED: popHead() returned $elem instead of "zero"`;
     ckdl('dl.popHead()', dl, 'first', 'second', null);
     
     dl.append('third');
     elem = dl.popTail();
     if (elem != 'third')
-        err.do() `popTail() returned $elem instead of "third"`;
+        cout `FAILED: popTail() returned $elem instead of "third"`;
 }
 
 # memory leak test
@@ -184,7 +186,7 @@ if (true) {
     dl = null;
     
     if (deleteCount != 2)
-        err.do() `objects in DList not cleaned up: $deleteCount\n`;
+        cout `FAILED: objects in DList not cleaned up: $deleteCount\n`;
 }
 
 # array tests
@@ -198,14 +200,14 @@ a1[2] = 'third';
 
 if (a1[0] != 'first' || a1[1] != 'second' || a1[2] != 'third' ||
     a1[3] != 'fourth' || a1.count() != 4) {
-    err.do() `$a1 is not ['first', 'second', 'third', 'fourth']`;
+    cout `FAILED: $a1 is not ['first', 'second', 'third', 'fourth']`;
 }
 
 Array a2 = {};
 a2.append('1');
 a2.append('2');
 if (a2[0] != '1' || a2[1] != '2' || a2.count() != 2) {
-    err.do() `$a2 is not ['1', '2']`;
+    cout `FAILED: $a2 is not ['1', '2']`;
 }
 
 # set this to "cout" for debug info
@@ -232,21 +234,21 @@ arr.append('first');
 arr.append('second');
 arr.append('third');
 if (arr[0] != 'first')
-    err.do() `arr[0] != "first"'`;
+    cout `FAILED: arr[0] != "first"`;
 if (arr[1] != 'second')
-    err.do() `arr[2] != "second"`;
+    cout `FAILED: arr[2] != "second"`;
 if (arr[2] != 'third')
-    err.do() `arr[2] != "third"`;
+    cout `FAILED: arr[2] != "third"`;
 if (arr.count() != 3)
-    err.do() `arr.count != 3`;
+    cout `FAILED: arr.count != 3`;
 
 arr.delete(1);
 if (arr[1] != 'third')
-    err.do() `arr[1] != "third" after delete`;
+    cout `FAILED: arr[1] != "third" after delete`;
 if (arr[0] != 'first')
-    err.do() `arr[0] != "first" after delete`;
+    cout `FAILED: arr[0] != "first" after delete`;
 if (arr.count() != 2)
-    err.do() `arr.count() != 2 after delete`;
+    cout `FAILED: arr.count() != 2 after delete`;
 
 class IntWrapper {
     int val;
@@ -272,16 +274,16 @@ tree := TreeMap();
 # add a node
 tree['val'] = 'test';
 if (tree.get('val') != 'test')
-    err.do() `lookup of "val" failed`;
+    cout `FAILED: lookup of "val" failed`;
 if (tree.get('val') is null)
-    err.do() `lookup of "val" failed`;
+    cout `FAILED: lookup of "val" failed`;
 if (tree['val'] != 'test')
-    err.do() `lookup of "val" failed`;
+    cout `FAILED: lookup of "val" failed`;
 tree.delete('val');
 if (tree.count() != 0)
-    err.do() `count != 0`;
+    cout `FAILED: count != 0`;
 if (tree.get('val'))
-    err.do() `tree still contains "val"`;
+    cout `FAILED: tree still contains "val"`;
 
 a := Array(1024);
 
@@ -336,7 +338,7 @@ while (ti.nx()) {
     actual := IntWrapper.cast(KeyVal.cast(ti.elem()).val).val;
     if (actual != i) {
         cout `at pos $i, got $actual\n`;
-        err.do() `sucks`;
+        break;
     }
     ++i;
 }

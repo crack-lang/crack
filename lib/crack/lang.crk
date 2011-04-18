@@ -11,14 +11,12 @@ import crack.runtime abort, free, getLocation, strcpy, strlen, malloc,
 bool true = (1 == 1);
 bool false = (1 == 0);
 
-void _die(byteptr message) {
-    puts(message);
-    abort();
-}
-
 class Writer;
 
 void _writeObject(Writer out);
+void _throwAssertionError(byteptr text);
+void _throwIndexError(byteptr text);
+void _throwNotImplementedError(byteptr text);
 
 ## Base class for things that you don't want derived from object or VTableBase.
 class FreeBase {};
@@ -38,9 +36,8 @@ class Object : VTableBase {
 
     # delete virtual function
     oper del() {
-        if (refCount) {
-            _die("Object with non-zero ref count deleted!");
-        }
+        if (refCount)
+            _throwAssertionError("Object with non-zero ref count deleted!");
     }
 
     oper bind() {
@@ -127,7 +124,7 @@ class MixIn : VTableBase {
     ## mix-in.  This is used by our bind and release operators to allow
     ## mix-ins to work with Object's reference counting.
     Object getObject() {
-        _die('MixIn.getObject() not implemented.');
+        _throwNotImplementedError('MixIn.getObject() not implemented.');
         return null;
     }
 
@@ -144,7 +141,7 @@ class Buffer;
 class Writer : VTableBase {
     void write(Buffer data) {
         puts(this.class.name);
-        _die("Writer.write() not implemented.");
+        _throwNotImplementedError("Writer.write() not implemented.");
     }
 
     ## Flush the contents of the buffer.
@@ -152,7 +149,7 @@ class Writer : VTableBase {
 
     # MixIn stuff
     Object getWriterObject() {
-        _die('Writer.getWriterObject() not implemented.');
+        _throwNotImplementedError('Writer.getWriterObject() not implemented.');
         return null;
     }
     oper bind() { if (!(this is null)) getWriterObject().oper bind(); }
@@ -182,13 +179,13 @@ class Buffer : Object {
 
     byte oper [](uint index) {
         if (index >= size)
-            _die('string index out of bounds');
+            _throwIndexError('string index out of bounds');
         return buffer[index];
     }
 
     byte oper [](int index) {
         if (index < 0 || index >= size)
-            _die('string index out of bounds');
+            _throwIndexError('string index out of bounds');
         return buffer[uint(index)];
     }
 
@@ -240,21 +237,21 @@ class WriteBuffer : Buffer {
     ## Move data from an arbitrary byteptr into the buffer.
     void move(uint start, byteptr ptr, uint count) {
         if (start + count > size)
-            _die('Move target out of bounds');
+            _throwIndexError('Move target out of bounds');
         memmove(buffer + start, ptr, count);
     }
 
     ## move data from one place in the buffer to another place in the buffer.
     void move(uint newStart, uint oldStart, uint count) {
         if (oldStart + count > size)
-            _die('Move source out of bounds');
+            _throwIndexError('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
     }
 
     ## move a buffer to a place in this buffer.
     void move(uint newStart, Buffer buf) {
         if (newStart + buf.size > size)
-            _die('Move target out of bounds');
+            _throwIndexError('Move target out of bounds');
         move(newStart, buf.buffer, buf.size);
     }
 };
@@ -324,7 +321,7 @@ class AppendBuffer : ManagedBuffer {
     ## Extend the buffer with a portion of the other buffer.
     void extend(Buffer other, uint len) {
         if (len > other.size)
-            _die('Extend length out of bounds');
+            _throwIndexError('Extend length out of bounds');
         uint newPos = pos + len;
         if (newPos > size)
             # grow to the larger of newPos and size * 2
@@ -385,7 +382,7 @@ $$
 
         # bounds checking
         if (end < start)
-            _die('Start of slice is after end.');
+            _throwIndexError('Start of slice is after end.');
 
         return _substr($1, uint(start), uint(end - start));
     }
@@ -399,7 +396,7 @@ $$
 
         # bounds checking
         if (uint(start) > $1.size)
-            _die('Start of slice is after end.');
+            _throwIndexError('Start of slice is after end.');
 
         return _substr($1, uint(start), $1.size - uint(start));
     }
@@ -451,7 +448,7 @@ class String : Buffer {
     ## index pos to pos + len.  It does not assume ownership.
     oper init(Buffer buf, uint pos, uint len) : Buffer(malloc(len), len) {
         if (pos + len > buf.size)
-            _die('out of bounds copy');
+            _throwIndexError('out of bounds copy');
         memcpy(buffer, buf.buffer + pos, len);
     }
 
@@ -628,7 +625,7 @@ class SubString : String {
 SubString _substr(SubString target, uint pos, uint len) {
     # do bounds checking
     if (pos > target.size || pos + len > target.size)
-        _die('Substring out of bounds');
+        _throwIndexError('Substring out of bounds');
 
     byteptr buf = target.buffer + uint(pos);
     return SubString(target._rep, buf, len);
@@ -642,7 +639,7 @@ SubString slice(SubString target, int start) @slice1 target
 SubString _substr(String target, uint pos, uint len) {
     # do bounds checking
     if (pos > target.size || pos + len > target.size)
-        _die('Substring out of bounds');
+        _throwIndexError('Substring out of bounds');
 
     byteptr buf = target.buffer + pos;
     if (target.isa(SubString))
@@ -677,7 +674,7 @@ SubString slice(String target, int start, int end) {
 
     # bounds checking
     if (end < start)
-        _die('Start of slice is after end.');
+        _throwIndexError('Start of slice is after end.');
 
     return _substr(target, uint(start), uint(end - start));
 }
@@ -690,7 +687,7 @@ SubString slice(String target, int start) {
 
     # bounds checking
     if (uint(start) > target.size)
-        _die('Start of slice is after end.');
+        _throwIndexError('Start of slice is after end.');
 
     return _substr(target, uint(start), target.size - uint(start));
 }
@@ -780,6 +777,7 @@ class Exception : Object {
     uint __stackTraceSize = 0, __stackTraceCap = 16;
 
     oper init(String text) : text = text {}
+    oper init() {}
     
     oper del() {
         for (int i; i < __stackTraceSize; ++i)
@@ -877,6 +875,44 @@ registerHook(BAD_CAST_FUNC, badClassFunc);
 registerHook(EXCEPTION_RELEASE_FUNC, exceptionReleaseFunc);
 registerHook(EXCEPTION_FRAME_FUNC, exceptionFrameFunc);
 registerHook(EXCEPTION_UNCAUGHT_FUNC, uncaughtExceptionHandler);
+
+# other standard exceptions
+
+@define except 1
+    class $1 : Exception {
+        oper init(String text) : Exception(text) {}
+        oper init() {}
+    }
+$$
+
+## Raised on an assertion failure.
+@except AssertionError
+
+void _throwAssertionError(byteptr text) {
+    throw AssertionError(StaticString(text));
+}
+
+## Raise when a caller references an out of bound index.
+@except IndexError
+
+void _throwIndexError(byteptr text) {
+    throw IndexError(StaticString(text));
+}
+
+## Raised when we call a virtual function that is supposed to be implemented 
+## by a derived class but has not been (this will be replaced by abstract/pure 
+## virtual functions)
+@except NotImplementedError
+
+void _throwNotImplementedError(byteptr text) {
+    throw NotImplementedError(StaticString(text));
+}
+
+@except InvalidResourceError
+
+## Raised when an operation is performed on an object that is not in a state 
+## appropriate for that operation (like reading from a closed file).
+@except InvalidStateError
 
 # misc functions
 

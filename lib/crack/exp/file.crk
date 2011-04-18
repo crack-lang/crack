@@ -2,11 +2,11 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Portions Copyright 2010 Google Inc.
 
-import crack.io Formatter, Writer, FDReader, FDWriter;
-import crack.lang die, Buffer, FreeBase, SubString, CString;
+import crack.io FStr, Formatter, Writer, FDReader, FDWriter;
+import crack.lang die, Buffer, Exception, FreeBase, SubString, CString;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
-import crack.exp.error err, strerror;
+import crack.exp.error strerror;
 
 import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile,
                      is_file;
@@ -88,9 +88,8 @@ class File : FileInfo,
         n := CString(name);
         _fd = fopen(n.buffer, _mode.buffer);
         if (_fd is null) {
-            err.do() `$name: $(strerror())`;
             _isOpened = false;
-            return;
+            throw Exception(FStr() `$name: $(strerror())`);
         }
         
         _isOpened = true;
@@ -150,7 +149,10 @@ class File : FileInfo,
         if (_mode.size != 1 ||
             ((_mode[0] != F_READ) && 
              (_mode[0] != F_WRITE)))
-            err.do() `$name: invalid file mode "$_mode", must be one of "r" or "w"`;
+            throw Exception(
+                FStr() `$name: invalid file mode "$_mode", must be one of \
+"r" or "w"`
+            );
         
         if (_mode[0] == F_READ)
             _initRead();

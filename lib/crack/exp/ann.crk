@@ -12,9 +12,9 @@
 #   mainly entails doing normal class derivation and implementing the 
 #   'get<interface>Object()' method.
 
-import crack.lang die, CString;
-import crack.exp.error err;
-import crack.io cout, StringFormatter, StringWriter, Formatter, Reader, Writer;
+import crack.lang die, CString, IndexError, AssertionError;
+import crack.io cout, FStr, StringFormatter, StringWriter, Formatter, Reader, 
+    Writer;
 import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING, 
     TOK_POPERRCTX;
 import crack.container Array, TreeMap;
@@ -65,8 +65,7 @@ class MacroDeserializer : SerialReader {
         idx := readUInt();
         count := sourceNames.count();
         if (idx > count) {
-            err.do() `Invalid source name index: $idx\n`;
-            return null;
+            throw IndexError(FStr() `Invalid source name index: $idx\n`);
         } else if (idx == count) {
             name := readString();
             sourceNames.append(name);
@@ -385,7 +384,7 @@ Node _readNode(MacroDeserializer src) {
     else if (type == 3)
         node = Stringify(src);
     else
-        err.do() `bogus node $type\n`;
+        throw AssertionError(FStr() `bogus node $type\n`);
     
     return node;
 }

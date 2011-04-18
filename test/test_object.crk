@@ -22,24 +22,24 @@ Object n;
 Object o = {};
 Int a = {1}, b = {2};
 
-if (!(n < o)) err.do() `n < o failed\n`;
-if (n < n) err.do() `n < n failed\n`;
-if (b < a) err.do() `b < a failed\n`;
-if (!(n <= n)) err.do() `n <= n failed\n`;
-if (!(n <= o)) err.do() `n <= o failed\n`;
-if (b <= a) err.do() `b <= a failed\n`;
-if (!(n == n)) err.do() `n == n failed\n`;
-if (n == o) err.do() `n == o failed\n`;
-if (a == b) err.do() `a == b failed\n`;
-if (n != n) err.do() `n != n failed\n`;
-if (!(n != o)) err.do() `n != o failed\n`;
-if (!(a != b)) err.do() `a != b failed\n`;
-if (!(n >= n)) err.do() `n >= n failed\n`;
-if (n >= o) err.do() `n >= o failed\n`;
-if (a >= b) err.do() `a >= b failed\n`;
-if (n > n) err.do() `n > n failed\n`;
-if (n > o) err.do() `n > o failed\n`;
-if (a > b) err.do() `a > b failed\n`;
+if (!(n < o)) cout `FAILED: n < o failed\n`;
+if (n < n) cout `FAILED: n < n failed\n`;
+if (b < a) cout `FAILED: b < a failed\n`;
+if (!(n <= n)) cout `FAILED: n <= n failed\n`;
+if (!(n <= o)) cout `FAILED: n <= o failed\n`;
+if (b <= a) cout `FAILED: b <= a failed\n`;
+if (!(n == n)) cout `FAILED: n == n failed\n`;
+if (n == o) cout `FAILED: n == o failed\n`;
+if (a == b) cout `FAILED: a == b failed\n`;
+if (n != n) cout `FAILED: n != n failed\n`;
+if (!(n != o)) cout `FAILED: n != o failed\n`;
+if (!(a != b)) cout `FAILED: a != b failed\n`;
+if (!(n >= n)) cout `FAILED: n >= n failed\n`;
+if (n >= o) cout `FAILED: n >= o failed\n`;
+if (a >= b) cout `FAILED: a >= b failed\n`;
+if (n > n) cout `FAILED: n > n failed\n`;
+if (n > o) cout `FAILED: n > o failed\n`;
+if (a > b) cout `FAILED: a > b failed\n`;
 
 # verify that comparison falls through to pointer comparison.
 if (1) {

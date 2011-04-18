@@ -1,7 +1,8 @@
 ## This module provides access to system internals.
 ## Copyright 2010 Google Inc.
 
-import crack.exp.error err;
+import crack.lang IndexError;
+import crack.io FStr;
 import crack.runtime exit, free;
 
 class StringArray {
@@ -16,10 +17,8 @@ class StringArray {
     }
 
     void oper []=(uint i, String val) {
-        if (i >= __count) {
-            err.do() `Array index $i out of bounds`;
-            return;
-        }
+        if (i >= __count)
+            throw IndexError(FStr() `Array index $i out of bounds`);
 
         # bind the new value, release the existing one
         val.oper bind();
@@ -28,10 +27,8 @@ class StringArray {
     }
     
     String oper [](uint i) {
-        if (i >= __count) {
-            err.do() `Array index $i out of bounds`;
-            return null;
-        }
+        if (i >= __count)
+            throw IndexError(FStr() `Array index $i out of bounds`);
 
         result := __rep[i];
         return __rep[i];
