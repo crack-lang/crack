@@ -10,8 +10,9 @@ endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.3")
-set(API_VERSION   "0.0.0")
+set(CRACK_VERSION "0.4")
+set(CRACKLANG_API_VERSION "1.0.0")
+set(EXTSTUB_API_VERSION "0.0.0")
 
 set(LLVM_MIN_VERSION       "2009000")
 set(LLVM_MIN_VERSION_TEXT  "2.9")
@@ -59,7 +60,7 @@ add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
                       OUTPUT_NAME CrackLang
-                      SOVERSION ${API_VERSION}
+                      SOVERSION ${CRACKLIB_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
@@ -71,7 +72,7 @@ add_library(libcrackextstub SHARED ext/Stub.cc debug/NativeDebugTools.cc)
 set_target_properties(libcrackextstub
                       PROPERTIES
                       OUTPUT_NAME CrackExtStub
-                      SOVERSION ${API_VERSION}
+                      SOVERSION ${EXTSTUB_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrackextstub

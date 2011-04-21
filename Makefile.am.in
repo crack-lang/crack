@@ -7,7 +7,7 @@ ACLOCAL_AMFLAGS = -I m4 --install
 lib_LTLIBRARIES = libCrackLang.la libCrackExtStub.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
-libCrackLang_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LDFLAGS = -version-info 1:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackExtStub_la_SOURCES = ext/Stub.cc debug/NativeDebugTools.cc
 libCrackExtStub_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
@@ -57,6 +57,7 @@ endif
 
 noinst_HEADERS = \
     builder/Builder.h \
+    builder/BuilderOptions.h \
     builder/llvm/ArrayTypeDef.h \
     builder/llvm/BBranchPoint.h \
     builder/llvm/BBuilderContextData.h \
@@ -68,14 +69,21 @@ noinst_HEADERS = \
     builder/llvm/BTypeDef.h \
     builder/llvm/Consts.h \
     builder/llvm/DebugInfo.h \
+    builder/llvm/ExceptionCleanupExpr.h \
     builder/llvm/FuncBuilder.h \
+    builder/llvm/LLVMJitBuilder.h \
+    builder/llvm/LLVMLinkerBuilder.h \
+    builder/llvm/LLVMValueExpr.h \
     builder/llvm/Incompletes.h \
     builder/llvm/LLVMBuilder.h \
+    builder/llvm/Native.h \
     builder/llvm/Ops.h \
     builder/llvm/PlaceholderInstruction.h \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
+    debug/DebugTools.h \
+    ext/Stub.h \
     model/AllocExpr.h \
     model/Annotation.h \
     model/ArgDef.h \
@@ -84,6 +92,8 @@ noinst_HEADERS = \
     model/BuilderContextData.h \
     model/CleanupFrame.h \
     model/CompositeNamespace.h \
+    model/Construct.h \
+    model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
     model/Expr.h \
@@ -91,21 +101,25 @@ noinst_HEADERS = \
     model/FuncAnnotation.h \
     model/FuncCall.h \
     model/FuncDef.h \
+    model/GetRegisterExpr.h \
     model/GlobalNamespace.h \
     model/Initializers.h \
     model/InstVarDef.h \
     model/IntConst.h \
     model/LocalNamespace.h \
     model/ModuleDef.h \
+    model/MultiExpr.h \
     model/Namespace.h \
     model/NullConst.h \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \
     model/ResultExpr.h \
+    model/SetRegisterExpr.h \
     model/StrConst.h \
     model/StubDef.h \
     model/TernaryExpr.h \
     model/TypeDef.h \
+    model/VarAnnotation.h \
     model/VarDef.h \
     model/VarDefImpl.h \
     model/VarRef.h \
@@ -115,9 +129,13 @@ noinst_HEADERS = \
     parser/Parser.h \
     parser/Token.h \
     parser/Toker.h \
+    runtime/BorrowedExceptions.h \
     runtime/Dir.h \
+    runtime/Exceptions.h \
+    runtime/ItaniumExceptionABI.h \
     runtime/Math.h \
     runtime/Net.h \
+    runtime/Process.h \
     runtime/Util.h \
     spug/Exception.h \
     spug/RCBase.h \
@@ -185,8 +203,9 @@ install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(docdir)
 	$(INSTALL) $(srcdir)/doc/Manual.html $(DESTDIR)$(docdir)
 
-install-exec-local:
+install-exec-local: install-binPROGRAMS
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
+	ln -sf $(DESTDIR)$(bindir)/crack-$(VERSION) $(DESTDIR)$(bindir)/crackc
 
 uninstall-local:
 	rm -r $(DESTDIR)$(cracklib)
