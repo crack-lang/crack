@@ -60,7 +60,7 @@ add_library(libcrack SHARED ${CRACK_SRC_FILES})
 set_target_properties(libcrack
                       PROPERTIES
                       OUTPUT_NAME CrackLang
-                      SOVERSION ${CRACKLIB_API_VERSION}
+                      SOVERSION ${CRACKLANG_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
