@@ -55,7 +55,7 @@ function test_output {
         rc=1
     fi
     rm run_all_tests.tmp
-    rm core  # tests with abort() can dump core
+    rm -f core  # tests with abort() can dump core
 }
 
 # get a fresh copy of the runtime library and the PCRE library
