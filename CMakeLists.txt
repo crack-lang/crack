@@ -20,7 +20,9 @@ set(LLVM_MIN_VERSION_TEXT  "2.9")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 
 set(CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g")#-Wall -Winline -W -Wwrite-strings -Wno-unused")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3")
+set(RELFLAGS "-DNDEBUG -O3")
+set(CMAKE_CXX_FLAGS ${RELFLAGS})
+set(CMAKE_CXX_FLAGS_RELEASE ${RELFLAGS})
 
 MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
@@ -29,6 +31,7 @@ MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
 INCLUDE(FindPkgConfig)
 
 Find_Package(LLVM REQUIRED)
+Find_Package(CWD)
 
 include_directories(${PROJECT_SOURCE_DIR} 
                     ${LLVM_INCLUDE_DIR})
@@ -40,6 +43,10 @@ ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
 add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
 add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
+IF (CWD_FOUND)
+  add_definitions(-DGOT_CWD)
+  set(CWD_LIBS ${CWD_LIBRARIES})
+ENDIF (CWD_FOUND)
 
 # share this is autoconf
 file(STRINGS sourceModules.txt CRACK_SRC_FILES)
@@ -64,6 +71,8 @@ set_target_properties(libcrack
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrack
+                       ${CWD_LIBS}
+                       dl
                        ${LLVM_LIBS}
                      )
 
@@ -76,6 +85,8 @@ set_target_properties(libcrackextstub
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrackextstub
+                       ${CWD_LIBS}
+                       dl
                        ${LLVM_LIBS}
                      )
 

@@ -60,20 +60,13 @@ else (LLVM_INCLUDE_DIR)
 
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --ldflags   OUTPUT_VARIABLE LLVM_LDFLAGS )
 
+  # strip -ldl this is due to order of link with libcwd
+  STRING(REPLACE "-ldl" "" LLVM_LDFLAGS ${LLVM_LDFLAGS})
   MESSAGE(STATUS "LLVM LD flags: " ${LLVM_LDFLAGS})
   
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core jit native bitwriter instrumentation ipo linker OUTPUT_VARIABLE LLVM_LIBS )
   MESSAGE(STATUS "LLVM libs: " ${LLVM_LIBS})
 
-  #exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core bitreader bitwriter linker OUTPUT_VARIABLE LLVM_LIBS_CORE )
-  #MESSAGE(STATUS "LLVM core libs: " ${LLVM_LIBS_CORE})
-  #exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs support OUTPUT_VARIABLE LLVM_LIBS_SUPPORT )
-  #MESSAGE(STATUS "LLVM support libs: " ${LLVM_LIBS_SUPPORT})
-  #FIND_LLVM_LIBS( ${LLVM_CONFIG_EXECUTABLE} "jit native linker bitwriter" LLVM_LIBS_JIT LLVM_LIBS_JIT_OBJECTS )
-  ##STRING(REPLACE " -lLLVMCore -lLLVMSupport -lLLVMSystem" "" LLVM_LIBS_JIT ${LLVM_LIBS_JIT})
-  #MESSAGE(STATUS "LLVM JIT libs: " ${LLVM_LIBS_JIT})
-  #MESSAGE(STATUS "LLVM JIT objs: " ${LLVM_LIBS_JIT_OBJECTS})
-  
   if(LLVM_INCLUDE_DIR)
     set(LLVM_FOUND TRUE)
   endif(LLVM_INCLUDE_DIR)
