@@ -5,6 +5,9 @@
 
 puts('testmod');
 
+class TestmodMarker { oper release() { puts('cleanup testmod'); } }
+TestmodMarker marker;
+
 # a function to import
 void func() {
     puts('in test func');
