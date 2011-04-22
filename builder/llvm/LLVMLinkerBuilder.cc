@@ -41,9 +41,9 @@ Function *LLVMLinkerBuilder::emitAggregateCleanup(Module *module) {
     func->setCallingConv(llvm::CallingConv::C);
     BasicBlock *block = BasicBlock::Create(lctx, "", func);
 
-    for (ModuleListType::const_iterator i =
-             moduleList->begin();
-         i != moduleList->end();
+    for (ModuleListType::reverse_iterator i =
+             moduleList->rbegin();
+         i != moduleList->rend();
          ++i) {
          Function *dfunc = module->getFunction((*i)->name+":cleanup");
          // missing a cleanup function isn't an error, because the moduleDef
@@ -223,20 +223,24 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     builder.CreateStore(Constant::getIntegerValue(
                           Type::getInt1Ty(lctx),APInt(1,1,false)),
                         moduleInit);
-
+    
+    // branch to the actual first block of the function
+    BasicBlock *temp = BasicBlock::Create(lctx, "moduleBody", func);
+    builder.CreateBr(temp);
+    builder.SetInsertPoint(temp);
 
     createModuleCommon(context);
 
-    // add to module list
     BModuleDef *newModule = new BModuleDef(name, context.ns.get(), module);
-    addModule(newModule);
-
     return newModule;
 }
 
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
+
+    // add the module to the list
+    addModule(BModuleDefPtr::cast(moduleDef));
     
     // if there was a top-level throw, we could already have a terminator.  
     // Generate a return instruction if not.
@@ -289,17 +293,21 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
     // run once. this is handled in the :main function itself.
     BasicBlock *orig = builder.GetInsertBlock();
     assert(mainInsert && "no main insert block");
-    builder.SetInsertPoint(mainInsert);
+
+    // if the last instruction is terminal, we need to insert before it
+    // TODO: reuse createFuncStartBlock for this
+    BasicBlock::iterator i = mainInsert->end();
+    if (i != mainInsert->begin() && !(--i)->isTerminator())
+        // otherwise insert after it.
+        ++i;
+    IRBuilder<> b(mainInsert, i);
 
     // declaration
     Constant *fc = module->getOrInsertFunction(m->name+":main",
                                               Type::getVoidTy(getGlobalContext()),
                                               NULL);
     Function *f = llvm::cast<llvm::Function>(fc);
-    builder.CreateCall(f);
-
-    builder.SetInsertPoint(orig);
-
+    b.CreateCall(f);
 }
 
 void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {

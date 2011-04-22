@@ -323,7 +323,8 @@ test_output 'temporary object construction' \
 test_output 'execution of imports' \
     'import test.testmod func; puts("main")' \
     'testmod
-main'
+main
+cleanup testmod'
 
 test_output 'full import functionality' \
     'import test.testmod func, A, aImportVar;
@@ -334,7 +335,20 @@ test_output 'full import functionality' \
      'testmod
 in test func
 imported var
-local inst of imported class'
+local inst of imported class
+cleanup testmod'
+
+test_output 'order of import and cleanup' \
+    'puts("in toplevel");
+     import test.testmod;
+     puts("still in toplevel");
+     import test.testmod_nbs2;' \
+    'testmod
+testmod_nbs2
+in toplevel
+still in toplevel
+cleanup testmod_nbs2
+cleanup testmod'
 
 test_output 'byteptr array access' \
     'import crack.runtime malloc, strcpy;

@@ -1,0 +1,6 @@
+# non-bootstrapped secondary test module
+
+class ANBS { oper release() { puts('cleanup testmod_nbs2'); } }
+ANBS a;
+
+puts('testmod_nbs2');
