@@ -91,6 +91,12 @@ static int GenerateNative(const std::string &OutputFilename,
       if (verbosity > 2)
           cerr << LibPaths[index] << endl;
       args.push_back("-L" + LibPaths[index]);
+      // XXX we add all lib paths as rpaths as well. this can potentially
+      // cause conflicts where foo/baz.so and bar/baz.so exist as crack
+      // extensions, but the runtime loader loads foo/baz.so for both since
+      // it shows up first matching the rpath. this needs a better fix.
+      if (path::is_absolute(LibPaths[index]))
+          args.push_back("-Wl,-rpath=" + LibPaths[index]);
   }
 
   // Add in the libraries to link.
