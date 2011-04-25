@@ -12,7 +12,7 @@ project (crack)
 
 set(CRACK_VERSION "0.4")
 set(CRACKLANG_API_VERSION "1.0.0")
-set(EXTSTUB_API_VERSION "0.0.0")
+set(NATRUN_API_VERSION "0.0.0")
 
 set(LLVM_MIN_VERSION       "2009000")
 set(LLVM_MIN_VERSION_TEXT  "2.9")
@@ -76,12 +76,12 @@ target_link_libraries( libcrack
                        ${LLVM_LIBS}
                      )
 
-# libCrackExtStub
+# libCrackNativeRuntime
 add_library(libcrackextstub SHARED ext/Stub.cc debug/NativeDebugTools.cc)
 set_target_properties(libcrackextstub
                       PROPERTIES
-                      OUTPUT_NAME CrackExtStub
-                      SOVERSION ${EXTSTUB_API_VERSION}
+                      OUTPUT_NAME CrackNativeRuntime
+                      SOVERSION ${NATRUN_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       )
 target_link_libraries( libcrackextstub
