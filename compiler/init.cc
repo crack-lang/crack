@@ -89,6 +89,13 @@ void lineAnn(CrackContext *ctx) {
     newTok->release();
 }
 
+void encodingAnn(CrackContext *ctx) {
+    Token *tok = ctx->getToken();
+    bool isString = tok->isString();
+    if (!isString)
+        ctx->error("String expected after 'encoding' annotation");
+}
+
 void init(Module *mod) {
     Func *f;
     Type *locationType = mod->addType("Location");
@@ -346,6 +353,8 @@ void init(Module *mod) {
     f = mod->addFunc(mod->getByteptrType(), "FILE", (void *)fileAnn);
     f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getByteptrType(), "LINE", (void *)lineAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getVoidType(), "encoding", (void *)encodingAnn);
     f->addArg(cc, "ctx");
     
     // constants

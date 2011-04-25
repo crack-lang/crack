@@ -175,7 +175,7 @@ void Construct::loadBuiltinModules() {
     rootContext->compileNS->addAlias(ns->lookUp("final").get());
     rootContext->compileNS->addAlias(ns->lookUp("FILE").get());
     rootContext->compileNS->addAlias(ns->lookUp("LINE").get());
-
+    rootContext->compileNS->addAlias(ns->lookUp("encoding").get());
 
     // load the runtime extension
     StringVec crackRuntimeName(2);
