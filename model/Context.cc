@@ -264,6 +264,9 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
                               const std::string &name,
                               Expr *initializer
                               ) {
+    // make sure the type isn't void
+    if (construct->voidType->matches(*type))
+        error("Can not create a variable of type 'void'");
     createCleanupFrame();
     VarDefPtr varDef = type->emitVarDef(*this, name, initializer);
     closeCleanupFrame();

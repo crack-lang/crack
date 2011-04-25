@@ -1712,8 +1712,10 @@ bool Parser::parseDef(TypeDef *type) {
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
             
-            // we should now _always_ have a default constructor.
-            assert(type->defaultInitializer);
+            // we should now _always_ have a default constructor (unless the 
+            // type is void).
+            assert(type->defaultInitializer ||
+                   type == context->construct->voidType.get());
             
             // Emit a variable definition and store it in the context (in a 
             // cleanup frame so transient initializers get destroyed here)
