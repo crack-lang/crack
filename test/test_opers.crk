@@ -117,4 +117,64 @@ if (1) {
     if (!isBool(i)) puts('failed on type conversion');
 }
 
+if (1) {
+    bool t = 1;
+    int released;
+    class Marker {
+        oper release() { ++released; }
+        bool toBool() { return 1; }
+    }
+    
+    Marker() ? 1 : 2;
+    if (released != 1)
+        puts('failed ternary cleanup of expression');
+    
+    released = 0;
+    1 ? Marker() : t;
+    if (released != 1)
+        puts('failed ternary cleanup of 1 clause');
+    
+    released = 0;
+    0 ? t : Marker();
+    if (released != 1)
+        puts('failed ternary cleanup of false clause');
+    
+    released = 0;
+    1 ? t : Marker();
+    if (released)
+        puts('failed ternary cleanup unused true clause cleaned up');
+
+    released = 0;
+    0 ? Marker() : t;
+    if (released)
+        puts('failed ternary cleanup unused false clause cleaned up');
+    
+    # formatters do crazy stuff with the ternary operator implementation
+    class Formatter {
+        oper release() { ++released; }
+        void format(byteptr b) {
+            if (released)
+                puts('formatter released prior to format(byteptr)');
+        }
+        void format(int i) {
+            if (released)
+                puts('formatter released prior to format(int)');
+        }
+        void enter() {
+            if (released)
+                puts('formatter released prior to enter()');
+        }
+        int leave() {
+            if (released)
+                puts('formatter released prior to leave()');
+            return 0;
+        }
+        
+        bool toBool() { return 1; }
+    }
+    Formatter() `test of $(1) other`;
+    if (released != 1)
+        puts('formatter not released');
+}    
+
 puts('ok');
