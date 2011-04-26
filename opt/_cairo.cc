@@ -1958,58 +1958,100 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      );
     f->addArg(type_cairo_surface_t, "surface");
 
+#ifndef CAIRO_HAS_FC_FONT
+#define CAIRO_HAS_FC_FONT 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_FC_FONT",
                      static_cast<int>(CAIRO_HAS_FC_FONT)
                      );
 
+#ifndef CAIRO_HAS_FT_FONT
+#define CAIRO_HAS_FT_FONT 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_FT_FONT",
                      static_cast<int>(CAIRO_HAS_FT_FONT)
                      );
 
+#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS
+#define CAIRO_HAS_GOBJECT_FUNCTIONS 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_GOBJECT_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_GOBJECT_FUNCTIONS)
                      );
 
+#ifndef CAIRO_HAS_IMAGE_SURFACE
+#define CAIRO_HAS_IMAGE_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_IMAGE_SURFACE",
                      static_cast<int>(CAIRO_HAS_IMAGE_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_PDF_SURFACE
+#define CAIRO_HAS_PDF_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PDF_SURFACE",
                      static_cast<int>(CAIRO_HAS_PDF_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_PNG_FUNCTIONS
+#define CAIRO_HAS_PNG_FUNCTIONS 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PNG_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_PNG_FUNCTIONS)
                      );
 
+#ifndef CAIRO_HAS_PS_SURFACE
+#define CAIRO_HAS_PS_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PS_SURFACE",
                      static_cast<int>(CAIRO_HAS_PS_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_RECORDING_SURFACE
+#define CAIRO_HAS_RECORDING_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_RECORDING_SURFACE",
                      static_cast<int>(CAIRO_HAS_RECORDING_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_SVG_SURFACE
+#define CAIRO_HAS_SVG_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_SVG_SURFACE",
                      static_cast<int>(CAIRO_HAS_SVG_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_USER_FONT
+#define CAIRO_HAS_USER_FONT 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_USER_FONT",
                      static_cast<int>(CAIRO_HAS_USER_FONT)
                      );
 
+#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS
+#define CAIRO_HAS_XCB_SHM_FUNCTIONS 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SHM_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_XCB_SHM_FUNCTIONS)
                      );
 
+#ifndef CAIRO_HAS_XCB_SURFACE
+#define CAIRO_HAS_XCB_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SURFACE",
                      static_cast<int>(CAIRO_HAS_XCB_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_XLIB_SURFACE
+#define CAIRO_HAS_XLIB_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_SURFACE",
                      static_cast<int>(CAIRO_HAS_XLIB_SURFACE)
                      );
 
+#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE
+#define CAIRO_HAS_XLIB_XRENDER_SURFACE 0
+#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_XRENDER_SURFACE",
                      static_cast<int>(CAIRO_HAS_XLIB_XRENDER_SURFACE)
                      );
