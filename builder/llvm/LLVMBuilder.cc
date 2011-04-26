@@ -229,7 +229,7 @@ namespace {
     void fixMeta(Context &context, TypeDef *type) {
         BTypeDefPtr metaType;
         BGlobalVarDefImplPtr classImpl;
-        type->type = metaType = createMetaClass(context, type->getFullName());
+        type->type = metaType = createMetaClass(context, type->name);
         metaType->meta = type;
         createClassImpl(context, BTypeDefPtr::acast(type));
     }
@@ -1204,7 +1204,6 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     BTypeDefPtr type;
     TypeDef::TypeVec bases;
     BTypeDefPtr metaType = createMetaClass(context, name);
-    module->addTypeName("struct.meta." + name, metaType->rep);
 
     const Type *opaque = OpaqueType::get(getGlobalContext());
     type = new BTypeDef(metaType.get(), name,
@@ -1417,6 +1416,12 @@ namespace {
                                 0
                                 );
 
+        // ensure canonicalized symbol names for link
+        if (context.parent->ns) {
+            funcBuilder.setSymbolName(context.parent->ns->getNamespaceName()+
+                                      ":oper class");
+        }
+
         // if this is an override, do the wrapping.
         FuncDefPtr override = context.lookUpNoArgs("oper class", true, 
                                                    objClass
@@ -1561,7 +1566,8 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // create the actual type (store it in a type holder so that if the new 
     // type gets replaced, we'll get the new type and not drop the old one)
     PATypeHolder newType(StructType::get(getGlobalContext(), members));
-    module->addTypeName("struct." + type->name, newType);
+    module->addTypeName("struct."+context.parent->ns->getNamespaceName()+
+                        "."+type->name, newType);
     
     // refine the type
     curType->refineAbstractTypeTo(newType);
@@ -1575,7 +1581,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
         );
         type->createAllVTables(
             vtableBuilder, 
-            ".vtable." + type->name,
+            ".vtable."+context.parent->ns->getNamespaceName()+"."+type->name,
             BTypeDefPtr::arcast(context.construct->vtableBaseType)
         );
         vtableBuilder.emit(type);

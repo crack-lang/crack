@@ -863,6 +863,11 @@ test_output 'istring tests' 'import test.test_istrings;' ok
 test_output 'no void variables' 'void v;' \
     "${parseError}1: Can not create a variable of type 'void'"
 
+test_output 'no class symbol collisions on link' \
+    'import test.testmod; class A {}; ' \
+    'testmod
+cleanup testmod'
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 

@@ -90,7 +90,18 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
     context.addDef(arrayAlloc.get(), arrayType);
 }
 
+namespace {
+    string earlyCanonicalize(Context &context, const string &name) {
+        string canonicalName(context.parent->ns->getNamespaceName());
+        if (canonicalName.empty())
+            canonicalName = "builtin";
+        canonicalName.append("."+name);
+        return canonicalName;
+    }
+}
+
 void createClassImpl(Context &context, BTypeDef *type) {
+
     LLVMContext &lctx = getGlobalContext();
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
 
@@ -106,6 +117,12 @@ void createClassImpl(Context &context, BTypeDef *type) {
     Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
     Constant *index00[] = { zero, zero };
 
+    // build the unique canonical name we need to ensure unique symbols
+    // normally type->getFullName() would do this, but at this stage
+    // the type itself doesn't have an owner yet, so we build it from
+    // context
+    string canonicalName(earlyCanonicalize(context, type->name));
+
     // name
     Constant *nameInit = ConstantArray::get(lctx, type->name, true);
     GlobalVariable *nameGVar =
@@ -114,7 +131,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
                                true, // is constant
                                GlobalValue::ExternalLinkage,
                                nameInit,
-                               type->name + ":name"
+                               canonicalName + ":name"
                                );
     classStructVals[0] =
             ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
@@ -150,7 +167,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
                            true, // is constant
                            GlobalValue::ExternalLinkage,
                            baseArrayInit,
-                           type->name + ":bases"
+                           canonicalName +  ":bases"
                            );
     classStructVals[2] = 
         ConstantExpr::getGetElementPtr(basesGVar, index00, 2);
@@ -178,7 +195,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
                            true, // is constant
                            GlobalValue::ExternalLinkage,
                            classObjVal,
-                           type->name + ":body"
+                           canonicalName +  ":body"
                            );
 
     // create the pointer to the class instance
@@ -187,7 +204,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
                            true, // is constant
                            GlobalVariable::ExternalLinkage,
                            type->classInst,
-                           type->name
+                           canonicalName
                            );
 
     // store the impl object in the class
@@ -196,15 +213,19 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
 // Create a new meta-class.
 // context: enclosing context.
-// name: the original canonical class name.
+// name: the original non-canonical class name.
 BTypeDefPtr createMetaClass(Context &context, const string &name) {
     LLVMBuilder &llvmBuilder =
             dynamic_cast<LLVMBuilder &>(context.builder);
     LLVMContext &lctx = getGlobalContext();
 
+    // we canonicalize locally here with context because a canonical
+    // name for the type is not always available yet
+    string canonicalName(earlyCanonicalize(context, name));
+
     BTypeDefPtr metaType =
         new BTypeDef(context.construct->classType.get(),
-                     SPUG_FSTR("Class[" << name << "]"),
+                     SPUG_FSTR("Class[" << canonicalName << "]"),
                      0,
                      true,
                      0
@@ -214,14 +235,16 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     const PointerType *classPtrType = cast<PointerType>(classType->rep);
     const StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
-    llvmBuilder.module->addTypeName(".struct.metaBase", classStructType);
+    llvmBuilder.module->addTypeName(".struct.metaBase."+canonicalName,
+                                    classStructType);
 
     // Create a struct representation of the meta class.  This just has the
     // Class class as its only field.
     vector<const Type *> fields(1);
     fields[0] = classStructType;
     const StructType *metaClassStructType = StructType::get(lctx, fields);
-    llvmBuilder.module->addTypeName(".struct.metaClass", metaClassStructType);
+    llvmBuilder.module->addTypeName(".struct.metaClass."+canonicalName,
+                                    metaClassStructType);
     const Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
