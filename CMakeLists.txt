@@ -291,6 +291,7 @@ IF (CAIRO_FOUND)
    endif(CAIRO_INCLUDE_DIR)
 
    if(CAIRO_FOUND_PRELIM)
+      message(STATUS "Found Cairo, will build extension")
       add_library(cairo SHARED opt/_cairo.cc)
       set_target_properties(cairo
                          PROPERTIES
