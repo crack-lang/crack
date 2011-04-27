@@ -7,6 +7,11 @@
 
 namespace model {
 
+/**
+ * A ternary expression.
+ * As a special case to accomodate void-typed interpolated strings, the 
+ * "false" expression pointer may be null.
+ */
 class TernaryExpr : public Expr {
     public:
         ExprPtr cond, trueVal, falseVal;

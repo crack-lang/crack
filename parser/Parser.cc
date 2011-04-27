@@ -749,9 +749,13 @@ ExprPtr Parser::parseIString(Expr *expr) {
       seq->type = reg->type;
    }
    
-   return context->createTernary(formatter.get(), seq.get(), 
-                                 new NullConst(seq->type.get())
-                                 );
+   // we're going to create a ternary, use a null value as the false clause if 
+   // the type is not void, otherwise omit the false clause
+   ExprPtr falseClause;
+   if (seq->type != context->construct->voidType)
+      falseClause = new NullConst(seq->type.get());
+   
+   return context->createTernary(formatter.get(), seq.get(), falseClause.get());
 }
 
 // [ expr, expr, ... ]

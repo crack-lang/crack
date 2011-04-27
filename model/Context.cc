@@ -325,7 +325,7 @@ ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
 
     // make sure the types are compatible
     TypeDefPtr type;
-    if (trueVal->type != falseVal->type) {
+    if (falseVal && trueVal->type != falseVal->type) {
         if (trueVal->type->isDerivedFrom(falseVal->type.get())) {
             type = falseVal->type;
         } else if (falseVal->type->isDerivedFrom(trueVal->type.get())) {

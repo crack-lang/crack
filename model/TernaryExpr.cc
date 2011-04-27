@@ -18,10 +18,13 @@ void TernaryExpr::writeTo(ostream &out) const {
     out << " ? ";
     trueVal->writeTo(out);
     out << " : ";
-    falseVal->writeTo(out);
+    if (falseVal)
+        falseVal->writeTo(out);
+    else
+        out << "void";
     out << ")";
 }
 
 bool TernaryExpr::isProductive() const {
-    return trueVal->isProductive() || falseVal->isProductive();
+    return trueVal->isProductive() || falseVal && falseVal->isProductive();
 }

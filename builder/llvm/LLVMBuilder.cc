@@ -817,15 +817,18 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
                                    );
     BBranchpoint *bpos = BBranchpointPtr::arcast(pos);
     Value *condVal = lastValue; // arg[0] condition value
-    BasicBlock *falseBlock = bpos->block; // false block
+    BasicBlock *falseBlock = expr->falseVal ? bpos->block : 0; // false block
     BasicBlock *oBlock = bpos->block2; // condition block
-
+    
     // now pointing to true block, save it for phi
     BasicBlock *trueBlock = builder.GetInsertBlock();
     
-    // create the block after the expression
+    // create the block after the expression (use the "false" block if there 
+    // is no false value)
     LLVMContext &lctx = getGlobalContext();
-    BasicBlock *postBlock = BasicBlock::Create(lctx, "after_tern", func);
+    BasicBlock *postBlock =
+        expr->falseVal ? BasicBlock::Create(lctx, "after_tern", func) :
+                         bpos->block;
     
     // emit the true expression in its own cleanup frame
     context.createCleanupFrame();
@@ -835,7 +838,9 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     
     // if the false expression is productive and this one isn't, make it 
     // productive
-    if (expr->falseVal->isProductive() && !expr->trueVal->isProductive())
+    if (expr->falseVal && expr->falseVal->isProductive() && 
+        !expr->trueVal->isProductive()
+        )
         tempResult->handleAssignment(context);
     context.closeCleanupFrame();
     
@@ -846,29 +851,34 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     trueBlock = builder.GetInsertBlock();
     
     // emit the false expression 
-    builder.SetInsertPoint(falseBlock);
-    context.createCleanupFrame();
-    tempResult = expr->falseVal->emit(context);
-    narrow(expr->falseVal->type.get(), expr->type.get());
-    Value *falseVal = lastValue;
-    
-    // if the true expression was productive, and this one isn't, make it 
-    // productive
-    if (expr->trueVal->isProductive() && !expr->falseVal->isProductive())
-        tempResult->handleAssignment(context);
-    context.closeCleanupFrame();
-    builder.CreateBr(postBlock);
-    falseBlock = builder.GetInsertBlock();
+    Value *falseVal;
+    if (expr->falseVal) {
+        builder.SetInsertPoint(falseBlock);
+        context.createCleanupFrame();
+        tempResult = expr->falseVal->emit(context);
+        narrow(expr->falseVal->type.get(), expr->type.get());
+        falseVal = lastValue;
+        
+        // if the true expression was productive, and this one isn't, make it 
+        // productive
+        if (expr->trueVal->isProductive() && !expr->falseVal->isProductive())
+            tempResult->handleAssignment(context);
+        context.closeCleanupFrame();
+        builder.CreateBr(postBlock);
+        falseBlock = builder.GetInsertBlock();
+    }
 
     // emit the phi
     builder.SetInsertPoint(postBlock);
-    PHINode *p = builder.CreatePHI(
-        BTypeDefPtr::arcast(expr->type)->rep,
-        "tern_R"
-    );
-    p->addIncoming(trueVal, trueBlock);
-    p->addIncoming(falseVal, falseBlock);
-    lastValue = p;
+    if (expr->falseVal) {
+        PHINode *p = builder.CreatePHI(
+            BTypeDefPtr::arcast(expr->type)->rep,
+            "tern_R"
+        );
+        p->addIncoming(trueVal, trueBlock);
+        p->addIncoming(falseVal, falseBlock);
+        lastValue = p;
+    }
     
     return new BResultExpr(expr, lastValue);
 }
