@@ -171,7 +171,8 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
 }
 
 ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
-                                       const string &name) {
+                                             const string &name
+                                             ) {
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
@@ -218,17 +219,12 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     builder.SetInsertPoint(alreadyInitBlock);
     builder.CreateRetVoid();
 
-    // do init, set global to 1, continue top level..
-    builder.SetInsertPoint(mainInsert);
-    builder.CreateStore(Constant::getIntegerValue(
-                          Type::getInt1Ty(lctx),APInt(1,1,false)),
-                        moduleInit);
-    
     // branch to the actual first block of the function
+    builder.SetInsertPoint(mainInsert);
     BasicBlock *temp = BasicBlock::Create(lctx, "moduleBody", func);
     builder.CreateBr(temp);
     builder.SetInsertPoint(temp);
-
+    
     createModuleCommon(context);
 
     BModuleDef *newModule = new BModuleDef(name, context.ns.get(), module);
@@ -238,14 +234,28 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
+    LLVMContext &lctx = getGlobalContext();
 
     // add the module to the list
     addModule(BModuleDefPtr::cast(moduleDef));
+
+    // get the "initialized" flag
+    GlobalVariable *moduleInit = module->getNamedGlobal(moduleDef->name + 
+                                                         ":initialized"
+                                                        );
     
     // if there was a top-level throw, we could already have a terminator.  
-    // Generate a return instruction if not.
-    if (!builder.GetInsertBlock()->getTerminator())
+    // Generate the code to set the init flag and a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        // at the end of the code for the module, set the "initialized" flag.
+        builder.CreateStore(Constant::getIntegerValue(
+                                Type::getInt1Ty(lctx),APInt(1,1,false)
+                             ),
+                            moduleInit
+                            );
+
         builder.CreateRetVoid();
+    }
 
     // since the cleanups have to be emitted against the module context, clear 
     // the unwind blocks so we generate them for the del function.
@@ -253,14 +263,24 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     // emit the cleanup function for this module
     // we will emit calls to these (for all modules) during run() in the finalir
-    LLVMContext &lctx = getGlobalContext();
     llvm::Constant *c =
         module->getOrInsertFunction(moduleDef->name+":cleanup",
                                     Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
     builder.SetInsertPoint(BasicBlock::Create(lctx, "", func));
+    
+    // if the initialization flag is not set, branch to return
+    BasicBlock *cleanupBlock = BasicBlock::Create(lctx, "cleanups", func),
+               *retBlock = BasicBlock::Create(lctx, "done", func);
+    Value *initVal = builder.CreateLoad(moduleInit);
+    builder.CreateCondBr(initVal, cleanupBlock, retBlock);
+    
+    builder.SetInsertPoint(cleanupBlock);
     closeAllCleanupsStatic(context);
+    builder.CreateBr(retBlock);
+    
+    builder.SetInsertPoint(retBlock);
     builder.CreateRetVoid();
 
     if (debugInfo)
