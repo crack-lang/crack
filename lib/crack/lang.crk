@@ -807,12 +807,16 @@ class Exception : Object {
             out.write(StaticString('\n'));
         }
         out.write(StaticString(this.class.name));
-        out.write(StaticString(': '));
-        out.write(text);
+        if (text) {
+            out.write(StaticString(': '));
+            out.write(text);
+        }
         out.write(StaticString('\n'));
     }
 }
 
+## Thrown when you attempt to cast an object to a type that it is not an 
+## instance of.
 class BadCastError : Exception {
     oper init(String text) : Exception(text) {}
 }
@@ -906,6 +910,8 @@ void _throwNotImplementedError(byteptr text) {
     throw NotImplementedError(StaticString(text));
 }
 
+## Raised when code attempts to use a resource that doesn't exist or is 
+## inappropriate for the use.
 @except InvalidResourceError
 
 ## Raised when an operation is performed on an object that is not in a state 
