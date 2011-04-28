@@ -1,10 +1,52 @@
-#include <cairo.h>
-#include <cairo-pdf.h>
-#include <cairo-ps.h>
-#include <cairo-svg.h>
-#include <cairo-xlib.h>
-#include <cairo-features.h>
+#include <cairo/cairo.h>
+#include <cairo/cairo-pdf.h>
+#include <cairo/cairo-ps.h>
+#include <cairo/cairo-svg.h>
+#include <cairo/cairo-xlib.h>
+#include <cairo/cairo-features.h>
 #include <X11/Xlib.h>
+#ifndef CAIRO_HAS_FC_FONT
+#define CAIRO_HAS_FC_FONT 0
+#endif
+#ifndef CAIRO_HAS_FT_FONT
+#define CAIRO_HAS_FT_FONT 0
+#endif
+#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS
+#define CAIRO_HAS_GOBJECT_FUNCTIONS 0
+#endif
+#ifndef CAIRO_HAS_IMAGE_SURFACE
+#define CAIRO_HAS_IMAGE_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_PDF_SURFACE
+#define CAIRO_HAS_PDF_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_PNG_FUNCTIONS
+#define CAIRO_HAS_PNG_FUNCTIONS 0
+#endif
+#ifndef CAIRO_HAS_PS_SURFACE
+#define CAIRO_HAS_PS_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_RECORDING_SURFACE
+#define CAIRO_HAS_RECORDING_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_SVG_SURFACE
+#define CAIRO_HAS_SVG_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_USER_FONT
+#define CAIRO_HAS_USER_FONT 0
+#endif
+#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS
+#define CAIRO_HAS_XCB_SHM_FUNCTIONS 0
+#endif
+#ifndef CAIRO_HAS_XCB_SURFACE
+#define CAIRO_HAS_XCB_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_XLIB_SURFACE
+#define CAIRO_HAS_XLIB_SURFACE 0
+#endif
+#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE
+#define CAIRO_HAS_XLIB_XRENDER_SURFACE 0
+#endif
 cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
 cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
 cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }
@@ -43,6 +85,16 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_byteptr;
         array_pbyteptr_q = array->getSpecialization(params);
     }
+    crack::ext::Type *type_cairo_font_options_t = mod->addType("cairo_font_options_t");
+    type_cairo_font_options_t->finish();
+
+
+    crack::ext::Type *array_pcairo__font__options__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_font_options_t;
+        array_pcairo__font__options__t_q = array->getSpecialization(params);
+    }
     crack::ext::Type *type_cairo_glyph_t = mod->addType("cairo_glyph_t");
     type_cairo_glyph_t->finish();
 
@@ -65,10 +117,14 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     }
     crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t");
     crack::ext::Type *type_float64 = mod->getFloat64Type();
-       type_cairo_rectangle_t->addInstVar(type_float64, "x");
-       type_cairo_rectangle_t->addInstVar(type_float64, "y");
-       type_cairo_rectangle_t->addInstVar(type_float64, "width");
-       type_cairo_rectangle_t->addInstVar(type_float64, "height");
+       type_cairo_rectangle_t->addInstVar(type_float64,
+                                            "x");
+       type_cairo_rectangle_t->addInstVar(type_float64,
+                                            "y");
+       type_cairo_rectangle_t->addInstVar(type_float64,
+                                            "width");
+       type_cairo_rectangle_t->addInstVar(type_float64,
+                                            "height");
     type_cairo_rectangle_t->finish();
 
 
@@ -130,9 +186,6 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_cairo_font_face_t = mod->addType("cairo_font_face_t");
     type_cairo_font_face_t->finish();
 
-    crack::ext::Type *type_cairo_font_options_t = mod->addType("cairo_font_options_t");
-    type_cairo_font_options_t->finish();
-
     crack::ext::Type *type_cairo_path_data_t = mod->addType("cairo_path_data_t");
     type_cairo_path_data_t->finish();
 
@@ -146,9 +199,12 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_rectangle_int_t->finish();
 
     crack::ext::Type *type_cairo_rectangle_list_t = mod->addType("cairo_rectangle_list_t");
-       type_cairo_rectangle_list_t->addInstVar(type_uint32, "status");
-       type_cairo_rectangle_list_t->addInstVar(array_pcairo__rectangle__t_q, "rectangles");
-       type_cairo_rectangle_list_t->addInstVar(type_int, "num_rectangles");
+       type_cairo_rectangle_list_t->addInstVar(type_uint32,
+                                            "status");
+       type_cairo_rectangle_list_t->addInstVar(array_pcairo__rectangle__t_q,
+                                            "rectangles");
+       type_cairo_rectangle_list_t->addInstVar(type_int,
+                                            "num_rectangles");
     type_cairo_rectangle_list_t->finish();
 
     crack::ext::Type *type_cairo_region_t = mod->addType("cairo_region_t");
@@ -164,12 +220,18 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_t->finish();
 
     crack::ext::Type *type_cairo_text_extents_t = mod->addType("cairo_text_extents_t");
-       type_cairo_text_extents_t->addInstVar(type_float64, "x_bearing");
-       type_cairo_text_extents_t->addInstVar(type_float64, "y_bearing");
-       type_cairo_text_extents_t->addInstVar(type_float64, "width");
-       type_cairo_text_extents_t->addInstVar(type_float64, "height");
-       type_cairo_text_extents_t->addInstVar(type_float64, "x_advance");
-       type_cairo_text_extents_t->addInstVar(type_float64, "y_advance");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "x_bearing");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "y_bearing");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "width");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "height");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "x_advance");
+       type_cairo_text_extents_t->addInstVar(type_float64,
+                                            "y_advance");
     type_cairo_text_extents_t->finish();
 
     crack::ext::Type *type_cairo_user_data_key_t = mod->addType("cairo_user_data_key_t");
@@ -948,6 +1010,30 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      );
     f->addArg(type_cairo_scaled_font_t, "scaled_font");
 
+    f = mod->addFunc(type_void, "cairo_scaled_font_get_font_matrix",
+                     (void *)cairo_scaled_font_get_font_matrix
+                     );
+    f->addArg(type_cairo_scaled_font_t, "scaled_font");
+    f->addArg(array_pcairo__matrix__t_q, "font_matrix");
+
+    f = mod->addFunc(type_void, "cairo_scaled_font_get_ctm",
+                     (void *)cairo_scaled_font_get_ctm
+                     );
+    f->addArg(type_cairo_scaled_font_t, "scaled_font");
+    f->addArg(array_pcairo__matrix__t_q, "ctm");
+
+    f = mod->addFunc(type_void, "cairo_scaled_font_get_scale_matrix",
+                     (void *)cairo_scaled_font_get_scale_matrix
+                     );
+    f->addArg(type_cairo_scaled_font_t, "scaled_font");
+    f->addArg(array_pcairo__matrix__t_q, "scale_matrix");
+
+    f = mod->addFunc(type_void, "cairo_scaled_font_get_font_options",
+                     (void *)cairo_scaled_font_get_font_options
+                     );
+    f->addArg(type_cairo_scaled_font_t, "scaled_font");
+    f->addArg(array_pcairo__font__options__t_q, "options");
+
     f = mod->addFunc(type_cairo_font_face_t, "cairo_toy_font_face_create",
                      (void *)cairo_toy_font_face_create
                      );
@@ -1047,7 +1133,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_get_matrix
                      );
     f->addArg(type_cairo_t, "cr");
-    f->addArg(type_cairo_matrix_t, "matrix");
+    f->addArg(array_pcairo__matrix__t_q, "matrix");
 
     f = mod->addFunc(type_cairo_surface_t, "cairo_get_target",
                      (void *)cairo_get_target
@@ -1204,11 +1290,26 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     f->addArg(type_cairo_surface_t, "surface");
     f->addArg(type_byteptr, "filename");
 
+    f = mod->addFunc(type_uint32, "cairo_surface_write_to_png_stream",
+                     (void *)cairo_surface_write_to_png_stream
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_voidptr, "write_func");
+    f->addArg(type_voidptr, "closure");
+
     f = mod->addFunc(type_voidptr, "cairo_surface_get_user_data",
                      (void *)cairo_surface_get_user_data
                      );
     f->addArg(type_cairo_surface_t, "surface");
     f->addArg(type_cairo_user_data_key_t, "key");
+
+    f = mod->addFunc(type_uint32, "cairo_surface_set_user_data",
+                     (void *)cairo_surface_set_user_data
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_cairo_user_data_key_t, "key");
+    f->addArg(type_voidptr, "user_data");
+    f->addArg(type_voidptr, "destroy");
 
     f = mod->addFunc(type_void, "cairo_surface_get_mime_data",
                      (void *)cairo_surface_get_mime_data
@@ -1217,6 +1318,16 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     f->addArg(type_byteptr, "mime_type");
     f->addArg(array_pbyteptr_q, "data");
     f->addArg(array_puint64_q, "length");
+
+    f = mod->addFunc(type_uint32, "cairo_surface_set_mime_data",
+                     (void *)cairo_surface_set_mime_data
+                     );
+    f->addArg(type_cairo_surface_t, "surface");
+    f->addArg(type_byteptr, "mime_type");
+    f->addArg(type_byteptr, "data");
+    f->addArg(type_uint64, "length");
+    f->addArg(type_voidptr, "destroy");
+    f->addArg(type_voidptr, "closure");
 
     f = mod->addFunc(type_void, "cairo_surface_get_font_options",
                      (void *)cairo_surface_get_font_options
@@ -1958,100 +2069,58 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      );
     f->addArg(type_cairo_surface_t, "surface");
 
-#ifndef CAIRO_HAS_FC_FONT
-#define CAIRO_HAS_FC_FONT 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_FC_FONT",
                      static_cast<int>(CAIRO_HAS_FC_FONT)
                      );
 
-#ifndef CAIRO_HAS_FT_FONT
-#define CAIRO_HAS_FT_FONT 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_FT_FONT",
                      static_cast<int>(CAIRO_HAS_FT_FONT)
                      );
 
-#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS
-#define CAIRO_HAS_GOBJECT_FUNCTIONS 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_GOBJECT_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_GOBJECT_FUNCTIONS)
                      );
 
-#ifndef CAIRO_HAS_IMAGE_SURFACE
-#define CAIRO_HAS_IMAGE_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_IMAGE_SURFACE",
                      static_cast<int>(CAIRO_HAS_IMAGE_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_PDF_SURFACE
-#define CAIRO_HAS_PDF_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PDF_SURFACE",
                      static_cast<int>(CAIRO_HAS_PDF_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_PNG_FUNCTIONS
-#define CAIRO_HAS_PNG_FUNCTIONS 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PNG_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_PNG_FUNCTIONS)
                      );
 
-#ifndef CAIRO_HAS_PS_SURFACE
-#define CAIRO_HAS_PS_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_PS_SURFACE",
                      static_cast<int>(CAIRO_HAS_PS_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_RECORDING_SURFACE
-#define CAIRO_HAS_RECORDING_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_RECORDING_SURFACE",
                      static_cast<int>(CAIRO_HAS_RECORDING_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_SVG_SURFACE
-#define CAIRO_HAS_SVG_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_SVG_SURFACE",
                      static_cast<int>(CAIRO_HAS_SVG_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_USER_FONT
-#define CAIRO_HAS_USER_FONT 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_USER_FONT",
                      static_cast<int>(CAIRO_HAS_USER_FONT)
                      );
 
-#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS
-#define CAIRO_HAS_XCB_SHM_FUNCTIONS 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SHM_FUNCTIONS",
                      static_cast<int>(CAIRO_HAS_XCB_SHM_FUNCTIONS)
                      );
 
-#ifndef CAIRO_HAS_XCB_SURFACE
-#define CAIRO_HAS_XCB_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XCB_SURFACE",
                      static_cast<int>(CAIRO_HAS_XCB_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_XLIB_SURFACE
-#define CAIRO_HAS_XLIB_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_SURFACE",
                      static_cast<int>(CAIRO_HAS_XLIB_SURFACE)
                      );
 
-#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE
-#define CAIRO_HAS_XLIB_XRENDER_SURFACE 0
-#endif
     mod->addConstant(type_uint32, "CAIRO_HAS_XLIB_XRENDER_SURFACE",
                      static_cast<int>(CAIRO_HAS_XLIB_XRENDER_SURFACE)
                      );

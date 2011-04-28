@@ -51,4 +51,7 @@ AM_CONDITIONAL(HAVE_SDL, [test "x$got_sdl" = xyes])
 AM_PATH_GL
 AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
 
+AM_PATH_CAIRO
+AM_CONDITIONAL(HAVE_CAIRO, [test "x$got_cairo" = xyes])
+
 AC_OUTPUT
