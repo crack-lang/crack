@@ -115,7 +115,7 @@ class File : FileInfo,
         if (_lReader is null || !_isValid)
             return null;
 
-        return _lReader.next();
+        return _lReader.readLine();
 
     }
     

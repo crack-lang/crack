@@ -1,0 +1,116 @@
+## Copyright 2011 Google Inc.
+## Crack Virtual Filesystem
+
+import crack.runtime errno, fileExists, fileRemove, open, O_CREAT, O_RDONLY, 
+    O_WRONLY;
+import crack.exp.error strerror;
+import crack.io FDReader, FDWriter, FStr, Reader, Writer;
+import crack.lang Exception, InvalidArgumentError, NotImplementedError;
+import crack.exp.readers FullReader;
+
+## This gets raised when referencing a path that doesn't exist.
+class NoEntryError : Exception {
+    oper init(String text) : Exception(text) {}
+}
+
+## This gets raise when the process doesn't have the authority to perform the 
+## request operation.
+class AccessDeniedError : Exception {   
+    oper init(String text) : Exception(text) {}
+}
+
+## This gets thrown when there was an operating system error that doesn't 
+## cleanly map to a Crack exception.  Try to reserve throwing this for that 
+## case, because processing this error will be platform dependent.
+class SystemError : Exception {
+    int __errno;
+    
+    oper init(String context, int _errno) : 
+        Exception(FStr() `$context: $(strerror())`),
+        __errno = _errno {
+    }
+}
+
+
+## A path is a node in a virtual filesystem.  It can correspond to a 
+## directory, a file, or the root of the filesystem.
+class Path {
+
+    ## Returns a reader for the path.  The path must be readable.
+    Reader reader() { throw NotImplementedError(); }
+    
+    Writer writer() { throw NotImplementedError(); }
+    
+    FullReader makeFullReader() { 
+        return FullReader(reader());
+    }
+    
+    String readAll() {
+        src := FullReader(reader());
+        return src.readAll();
+    }
+
+    Path oper [](String child) { throw NotImplementedError(); }
+
+    Path _createNode(String path) { throw NotImplementedError(); }
+
+    Path oper /(String other) {
+        # XXX actually, we should implement this in terms of oper [].
+        throw NotImplementedError();
+    }
+    
+    ## Returns true if the object exists, false if not.
+    bool exists() { throw NotImplementedError(); }
+    
+    ## Creates a reader for the path.
+    Reader reader() { throw NotImplementedError(); }
+
+    ## Creates a writer for the path.
+    Writer writer() { throw NotImplementedError(); }
+    
+    ## Deletes the object at the path.
+    void delete() { throw NotImplementedError(); }
+}
+
+## A real filesystem path.
+class RealPath : Path {
+
+    String __path;
+
+    oper init(String realPath) : __path = realPath {}
+
+    Path oper [](String child) {
+        if (child == '..' || child == '.')
+            throw InvalidArgumentError(
+                'Parent directory access not supported'
+            );
+        return RealPath(__path + '/' + child);
+    }
+
+    bool exists() {
+        return fileExists(__path.buffer);
+    }
+
+    Reader reader() {
+        fd := open(__path.buffer, O_RDONLY);
+        if (fd == -1)
+            throw SystemError('Opening ' + __path, errno());
+        return FDReader(fd);
+    }
+    
+    Writer writer() {
+        fd := open(__path.buffer, O_CREAT | O_WRONLY, 0777);
+        if (fd == -1)
+            throw SystemError(FStr() `opening $__path: $(strerror())`, 
+                              errno()
+                              );
+        return FDWriter(fd);
+    }
+    
+    void delete() {
+        if (fileRemove(__path.buffer))
+            throw SystemError(FStr() `Removing $__path: $(strerror())`, 
+                              errno()
+                              );
+    }
+}

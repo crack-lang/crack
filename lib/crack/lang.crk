@@ -305,32 +305,30 @@ class AppendBuffer : ManagedBuffer {
         buffer[pos++] = c;
     }
 
-    ## Extend the buffer with the (entire) other buffer.
-    void extend(Buffer other) {
-        uint newPos = pos + other.size;
+    ## Extend the buffer from the pointer and size
+    #unsafe
+    @final void extend(byteptr buf, uint bufSize) {
+        uint newPos = pos + bufSize;
         if (newPos > size)
             # grow to the larger of newPos and size * 2
             if (newPos > size * 2)
                 grow(newPos);
             else
                 grow(size * 2);
-        move(pos, other);
+        move(pos, buf, bufSize);
         pos = newPos;
     }
 
+    ## Extend the buffer with the (entire) other buffer.
+    @final void extend(Buffer other) {
+        extend(other.buffer, other.size);
+    }
+
     ## Extend the buffer with a portion of the other buffer.
-    void extend(Buffer other, uint len) {
+    @final void extend(Buffer other, uint len) {
         if (len > other.size)
             _throwIndexError('Extend length out of bounds');
-        uint newPos = pos + len;
-        if (newPos > size)
-            # grow to the larger of newPos and size * 2
-            if (newPos > size * 2)
-                grow(newPos);
-            else
-                grow(size * 2);
-        move(pos, other.buffer, len);
-        pos = newPos;
+        extend(other.buffer, len);
     }
 
 }
@@ -913,6 +911,9 @@ void _throwNotImplementedError(byteptr text) {
 ## Raised when an operation is performed on an object that is not in a state 
 ## appropriate for that operation (like reading from a closed file).
 @except InvalidStateError
+
+## Raised when a user specifies an invalid argument to a function.
+@except InvalidArgumentError
 
 # misc functions
 

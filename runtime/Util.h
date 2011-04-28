@@ -20,6 +20,7 @@ void printint64(int64_t val);
 void printuint64(uint64_t val);
 
 int is_file(const char *path);
+bool fileExists(const char *path);
 
 }}
 

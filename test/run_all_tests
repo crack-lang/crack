@@ -1242,4 +1242,8 @@ test_output 'serial module' 'import test.test_serial;' ok
 
 test_output 'math module' 'import test.test_math;' ok "" "" noredir
 
+test_output 'test readers' 'import test.test_readers;' ok
+
+test_output 'test fs' 'import test.test_fs;' ok
+
 exit $rc

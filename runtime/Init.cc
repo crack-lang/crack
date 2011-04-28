@@ -25,6 +25,7 @@ extern "C" bool __CrackUncaughtException();
 
 extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
+    Type *boolType = mod->getBoolType();
     Type *intType = mod->getIntType();
     Type *uint32Type = mod->getUint32Type();
     Type *int32Type = mod->getInt32Type();
@@ -76,6 +77,14 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(byteptrType, "path");
 
     f = mod->addFunc(intType, "is_file", (void *)crack::runtime::is_file);
+    f->addArg(byteptrType, "path");
+    
+    f = mod->addFunc(boolType, "fileExists",
+                     (void *)crack::runtime::fileExists
+                     );
+    f->addArg(byteptrType, "path");
+
+    f = mod->addFunc(intType, "fileRemove", (void *)remove);
     f->addArg(byteptrType, "path");
 
     f = mod->addFunc(byteptrType, "c_strerror",

@@ -70,4 +70,9 @@ int is_file(const char *path) {
     return S_ISREG(sb.st_mode);
 }
 
+bool fileExists(const char *path) {
+    struct stat st;
+    return stat(path, &st) == 0;
+}
+
 }}

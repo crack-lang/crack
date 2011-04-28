@@ -1,8 +1,8 @@
 # Classes for reading high-level stuff from Readers.
 # Copyright 2010 Google Inc.
 
-import crack.lang Buffer, ManagedBuffer, WriteBuffer;
-import crack.io FDReader, Reader;
+import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
+import crack.io cout, FDReader, Reader;
 
 NEWLINE := '\n'[0];
 
@@ -18,7 +18,7 @@ class LineReader {
     
     oper init(Reader reader) : r = reader {}
     
-    String next() {
+    String readLine() {
         while (true) {
             for (uint i = start; i < end; ++i) {
                 if (buffer.buffer[i] == NEWLINE) {
@@ -68,12 +68,44 @@ class LineIter {
     LineReader reader;
     String line;
     
-    oper init(LineReader reader) : reader = reader, line = reader.next() {}
+    oper init(LineReader reader) : reader = reader, line = reader.readLine() {}
     bool isTrue() { return !(line is null); }
     String elem() { return line; }
-    void next() { line = reader.next(); }
+    void next() { line = reader.readLine(); }
 }
 
 LineIter _createLineIter(LineReader reader) {
     return LineIter(reader);
+}
+
+## A FullReader is a Reader that supports line reads, and complete reads of 
+## its underlying reader.
+class FullReader : LineReader, Reader {
+    
+    oper init(Reader reader) : LineReader(reader) {}
+
+    ## Read the entire remaining contents of the underlying reader and return 
+    ## it as a string.
+    String readAll() {
+        # start with the current contents of the buffer
+        AppendBuffer result = {end - start};
+        result.extend(buffer.buffer + start, end - start);
+        
+        # reset the buffer
+        start = 0;
+        end = 0;
+        
+        # use a temporary write buffer so we read in chunks
+        buf := WriteBuffer(buffer.buffer, 1024);
+        
+        # read in the remainder of the file
+        amtRead := r.read(buf);
+        while (amtRead) {
+            result.extend(buf.buffer, amtRead);
+            amtRead = r.read(buf);
+        }
+        
+        result.size = result.pos;
+        return String(result, true);
+    }
 }

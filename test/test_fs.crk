@@ -1,0 +1,18 @@
+
+
+import crack.io cout;
+import crack.exp.fs RealPath;
+
+tempFile := RealPath('writer.out');
+tempFile.writer().write('this is a test');
+
+if (!RealPath('writer.out').exists())
+    cout `FAILED exists check for written file\n`;
+
+if (tempFile.makeFullReader().readAll() != 'this is a test')
+    cout `FAILED full reader readAll()\n`;
+tempFile.delete();
+if (tempFile.exists())
+    cout `FAILED file delete\n`;
+
+cout `ok\n`;
