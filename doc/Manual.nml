@@ -2,13 +2,13 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.3 of the Crack Programming Language.  Version 
-0.3 is a fairly complete programming language.  We believe the language to be 
-usable for real work at this time, but there are still a number of important 
-features that remain to be added (including generics, exceptions, annotations 
-and partial closures). While the compiler is generating debug information at 
-this time, only a limited subset of it is currently usable (you can get a 
-stack trace in gdb).
+This is the Manual for version 0.4 of the Crack Programming Language.  Version 
+0.4 is a fairly complete programming language.  We believe the language to be 
+usable for real work at this time, but there are still a few key features to 
+be added before we release 1.0 (including generics and first class 
+functions). While the compiler is generating debug information at this time, 
+only a limited subset of it is currently usable (you can get a stack trace in 
+gdb or from an exception).
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
@@ -29,7 +29,7 @@ Syntax::
 Typing::
     Static, strong (with some implicit conversion)
 Compiler::
-    JIT native compiled (at runtime)
+    JIT native compiled (at runtime) or compiled to a native binary.
 Paradigms::
     Object oriented, procedural
 Garbage Collection::
@@ -77,6 +77,15 @@ character, character code 10).
 
 Expressions consisting of a value followed by back-tick quoted text and code 
 are called "interpolation expressions."
+
+We could compile our script to a standalone executable by running the "crackc" 
+program:
+
+{{
+    $ crackc hello.crk
+}}
+
+This would produce a normal native binary file named "hello."
 
 Comments
 --------
@@ -207,8 +216,8 @@ libraries) will always begin with an upper-case character.  You may not
 currently subclass low-level types (see \X(Inheritance)), this restriction 
 will be lifted in a future version of Crack.
 
-/High level/ or /aggregate/ types are first class objects: variables of this 
-type are pointers to allocated regions of memory large enough to accommodate 
+/High level/ or /aggregate/ types are first class objects: variables of these
+types are pointers to allocated regions of memory large enough to accommodate 
 the state data defined for the type.  They can be extended to create other 
 high-level types through sub-classing (more on this later).
 
@@ -254,7 +263,9 @@ specifying a "b" (for byte) or "i" (for integer) prefix to a constant string
 This usage helps to make up for the fact that Crack uses the single quote as 
 an alternate string delimiter, making it otherwise impossible to define single 
 character constants as you would in C.  As the example suggests, the more 
-general integer form is useful for specifying magic numbers.
+general integer form is useful for specifying magic numbers.  The bytes in a 
+string integer constant are ordered from high-byte to low-byte on any 
+architecture, regardless of how integers are stored.
 
 Implicit Conversion
 '''''''''''''''''''
@@ -330,13 +341,42 @@ already ("\\n").  The full list is:
     If you put a backslash in front of the end of the line in a string, the 
     newline is ignored.  This allows you to wrap large strings across multiple 
     lines.
-    
+
+Sequence Constants
+''''''''''''''''''
+
+Most modern languages provide some syntax for defining entire datastructures 
+in the code.  This is a nice convenience in that the alternative is usually to 
+write a lot of tedious code to compose them.
+
+Crack supports this feature in the form of sequence constants.  For example, 
+to define a low-level array of integers we could do this:
+
+{{
+    array[int] a = [1, 2, 3, 4];
+}}
+
+Sometimes it's useful to be able to do this sort of thing in an expression, 
+for example to pass a sequence argument to a function.  Since the compiler 
+doesn't know the type in these cases, we have to specify it expclitly by 
+preceeding the list with the type followed by an exclamation point.
+
+For example, we could have used the define operator in conjunction with this 
+notation to write the definition above as follows:
+
+{{
+    a := array[int]![1, 2, 3, 4];
+}}
+
+Sequence constants can also be used with aggregate types.  Types need only 
+implement \X(The Sequence Constant Protocol) as defined below.
+
 Control Structures
 ------------------
 
-Crack 0.3 supports three control structures: the "if\/else" statement,
-the "while" statement and the "for" statement.  "if" runs code blocks 
-depending on whether a condition is true or false:
+Crack 0.4 supports four control structures: the "if\/else" statement,
+the "while" statement, the "for" statement and the "try\/catch" statement.  
+"if" runs code blocks depending on whether a condition is true or false:
 
 {{
     import crack.io cout;
@@ -398,7 +438,7 @@ sequence of statements enclosed in curly braces:
     }
 }}
 
-You can also chain if\/else blocks:
+You can also chain if\/else statements:
 
 {{
     argCount := argv.count();
@@ -501,20 +541,9 @@ defines the variable for the scope of the loop, so we could have omitted the
 }}
 
 The value on the right side of the "in" keyword (in this case #argv#) must 
-conform to an iteration protocol:
-
--   It must provide an #iter()# method that returns an object conforming to 
-    the iterator protocol (an "iterator type").
--   The iterator type must have an #elem()# method that returns the element 
-    referenced by the iterator.
--   The iterator type must have a #next()# method that forwards the iterator 
-    to the next element.
--   The iterator type must convert to #bool#, converting to #true# if the 
-    iterator is valid, #false# if not (if it has run out of elements).
-
-There is no way to explicitly identify a pair of types as conforming to this 
-protocol: an object that implements all of these methods automatically 
-conforms and can be used as the target of a "for-in" statement.
+conform to \X(The Iteration Protocol) as documented below.  All high-level
+container types implement this protocol.  Sadly, arrays can not because there 
+is no way to specify a length for them.
 
 "for-in" creates an underlying iterator variable, but hides it.  It is often 
 desirable to have access to the iterator.  For example, you may want to modify 
@@ -532,6 +561,60 @@ For this use case, there is also a "for-on" variation of this statement:
 
 As the example suggests, the "on" keyword provides a ":on" variation which 
 defines the iterator variable for the scope of the loop.
+
+The try\/catch and throw Statements (Exceptions)
+''''''''''''''''''''''''''''''''''''''''''''''''
+
+Like many modern languages, Crack supports /exceptions/.  Exceptions provide a 
+means for consolidating all of your error handling in one place, so it doesn't 
+have to be scattered throughout the code.
+
+Crack exceptions are syntactically similar to C++ and Java exceptions.  They 
+are implemented using the #try\/catch# and #throw# statements:
+
+{{
+    try {
+        throw Exception('badness occured');
+    } catch (Exception ex) {
+        cout `exception caught: $ex\n`;
+    }
+}}
+
+In the trivial example above, the throw statement transfers control to the 
+subsequent catch statement, aborting all processing and cleaning up all 
+variables up to the catch.  The "ex" variable would be set to the value of the 
+expression in the throw statement.
+
+Expression handling is most often used across function calls.  For example, 
+lets say we have a function that creates file objects:
+
+{{
+    FileObj open(String filename) {
+        if (!exists(filename))
+            throw InvalidResourceError(filename);
+        else
+            return FileObj(lowLeveOpen(filename));
+    }
+}}
+
+Control would be transferred to the first catch in the call stack matching 
+InvalidResourceError (by specifiying either that class or a base class).
+
+The expressions in a throw clause can not be of arbitrary type.  In 
+particular, they must be a type derived from VTableBase.  In general, you also 
+want to use types derived from #crack.lang.Exception# in order to get stack 
+traces recorded in the exception.
+
+Certain parts of the exception handling system haven't been implemented yet.  
+If you throw an exception from a constructor or a destructor, instance 
+variables and the object itself will not get cleaned up properly.  Also, 
+rethrowing the current exception from a catch clause is not yet implemented.
+
+Having an exception handler doesn't impose any runtime performance penalty.  
+However, throwing an exception is very costly.  For this reason, we recommend 
+against using exceptions as a form of general flow control for frequently 
+executed code paths.
+
 
 Functions
 ---------
@@ -1357,7 +1440,7 @@ directly because #Array# stores an array of objects:
 
 This is the same problem that early versions of Java had - it will be fixed 
 in a later version of Crack through the introduction of generics.  But for now 
-we can work around this with a type cast (in Crack 0.3, we also have a weak 
+we can work around this with a type cast (in Crack 0.4, we also have a weak 
 form of generics implemented using macros, see \X(Generic Containers)):
 
 {{
@@ -1416,7 +1499,7 @@ Interfaces
 ''''''''''
 
 As an interim solution to accomodate the lack of virtual base classes, Crack 
-0.3 provides an /interface/ concept similar to that of Java.  In fact, the 
+0.4 provides an /interface/ concept similar to that of Java.  In fact, the 
 interface implementation makes it suitable for use as a limited form of 
 virtual base class, but we'll mainly focus on the interface use case.
 
@@ -1498,7 +1581,7 @@ These annotations are a very weak form of syntactic sugar, as such:
     constructed from the class name, and subject to non-obvious naming 
     conflicts with similarly named methods defined by the programmer.
 
-Versions of Crack after 0.3 will most likely to continue to provide some form 
+Versions of Crack after 0.4 will most likely to continue to provide some form 
 of the #@interface# and #@implements# annotations (hopefully a refined form) 
 but will ultimately implement them in terms of virtual inheritance.
 
@@ -1519,6 +1602,11 @@ invoked using a #null# value as the receiver.
     A constructor.
 #oper del#::
     The destructor.
+#oper bind#::
+    (*final*) Called when an instance of the type is created or assigned to a 
+    varialble.
+#oper release#::
+    (*final*) Called when a variable of the type goes out of scope.
 #bool toBool()#::
     (*final*) If this method is defined, instances of the class can be implicitly 
     converted to null (see \X(Implicit Conversion)).  #Object# implements this.
@@ -1544,7 +1632,10 @@ invoked using a #null# value as the receiver.
     object type.
 #void format(#/type/ #object)#::
     This method is used by the back-tick operator to format objects of 
-    specific types in specific ways.  See \X(The Formatter Interface).
+    specific types in specific ways.  See \X(The Formatter Protocol).
+#void append(#/type/ #object)#::
+    This method is used to construct a sequence constant if it is available.
+    See \X(Sequence Constants) and \X(The Sequence Constant Protocol).
 
 Operator Overloading
 ''''''''''''''''''''
@@ -1714,8 +1805,61 @@ and the current directory into the beginning of the search path.
 Variables defined in the module top-level are not released until program 
 termination.  Cleanups are called in the reverse order of definition.
 
-The Formatter Interface
------------------------
+Protocols
+---------
+
+There are certain syntactic conventions in crack that map to specific compile 
+time interfaces - that is, the compiler will translate these kinds of 
+statements or expressions into a set of method calls, partially depending on 
+whether these methods are defined.  These special methods are similar to 
+\X(Interfaces) but they are strictly relevant at compile time and as such do 
+not rely on virtual methods for their implementation.  We call these method 
+sets /protocols/.
+
+The language elements that currently make use of protocols are the 
+#for#\/#in# statement, the string interpolation expression and sequence 
+construction.
+
+At this time, there is no way to formally indicate that a type implements a 
+protocol: if a type provides the necessary methods, it is considered to 
+implement the protocol and can be used in the relevant context.
+
+The Iteration Protocol
+''''''''''''''''''''''
+
+The following #for#\/#in# statement:
+
+{{
+    for (x in container)
+        cout `$x\n`;
+}}
+
+translates to roughly the following code:
+
+{{
+    for (tempIter := container.iter(); tempIter; tempIter.next()) {
+        x := tempIter.elem();
+        cout `$x\n`;
+    }
+}}
+
+Note that the tempIter variable is purely illustrative.  There is an iterator 
+variable generated, but it is hidden so as not to clash with any user defined 
+variables.
+
+For a class to be iterable using #for#\/#in#:
+
+-   It must provide an #iter()# method that returns an object conforming to 
+    the iterator protocol (an "iterator type").
+-   The iterator type must have an #elem()# method that returns the element 
+    referenced by the iterator.
+-   The iterator type must have a #next()# method that forwards the iterator 
+    to the next element.
+-   The iterator type must convert to #bool#, converting to #true# if the 
+    iterator is valid, #false# if not (if it has run out of elements).
+
+The Formatter Protocol
+''''''''''''''''''''''
 
 As we've shown, the back-tick operator allows us to do formatted output of 
 static data, variables and expression values:
@@ -1731,13 +1875,20 @@ is equivalent to the following code:
 
 {{
     if (cout) {
+        cout.enter();
         cout.format('a = ');
         cout.format(a);
         cout.format(', a + 1 = ');
         cout.format(a + 1);
         cout.format('\n');
+        cout.leave()
     }
 }}
+
+The #enter()# and #leave()# methods are optional - they are called if they are 
+present.  If the #leave()# method exists, its return value is the result 
+value of the interpolation expression.  If not, the original target (cout, in 
+this case) is the result.
 
 The #cout# variable is defined in #crack.io# as an instance of #Formatter#.  
 Interpolation expressions are not limited to use with #Formatter#, they can 
@@ -1754,12 +1905,18 @@ create our own formatter that could be used in the expression above:
         
         ## make integer formatting add the value to the sum.
         void format(int val) { total = total + val; }
+        
+        ## initialize to zero
+        void enter() { total = 0; }
+        
+        ## return the total
+        int leave() { return total; }
     }
     
     SumOfInts sum;
-    sum `a = $a, a + 1 = $(a + 1)\n`;
+    result = sum `a = $a, a + 1 = $(a + 1)\n`;
     
-    # sum.total is 2a + 1
+    # result is 2a + 1
 }}
 
 More often when doing this, you'll want to derive from formatter and extend 
@@ -1811,6 +1968,85 @@ are already a few specializations of this class in the #crack.io# module.
     f `some text`;
     s := f.createString();  # s == "some text"
 }}
+
+It's often useful to be able to format a string in an expression.  For 
+example, throwing an exception like this would be unwieldly:
+
+{{
+    if (foo > MAX_FOO) {
+        StringFormatter out = {};
+        out `Value of foo out of bounds: $foo`;
+        throw AssertionError(out.createString());
+    }
+}}
+
+It would be much cleaner to format and generate the string within the 
+argument list of #AssertionError#.  #FStr# allows us to do this.  #FStr# 
+creates a new string formatter for every interpolation expression and returns 
+the created string from its "leave()" method.  So we could replace the code 
+above with:
+
+{{
+    if (foo > MAX_FOO)
+        throw AssertionError(FStr() `Value of foo out of bounds: $foo`);
+}}
+
+The Sequence Constant Protocol
+''''''''''''''''''''''''''''''
+
+Defining a sequence constant translates to the construction of an object and 
+the insertion of a set of elements into that object.  For example, the 
+definition:
+
+{{
+    array[int] a = [1, 2, 3];
+}}
+
+Is equivalent to the following code:
+
+{{
+    array[int] a = array[int](3);
+    a[0] = 1;
+    a[1] = 2;
+    a[2] = 3;
+}}
+
+Likewise, this code generates a linked list and iterates over it:
+
+{{
+    for (elem :in List!['foo', 'bar'])
+        cout `got $elem\n`;
+}}
+
+is roughly equivalent to this:
+
+{{
+    List temp = {};
+    temp.append('foo');
+    temp.append('bar');
+    for (elem :in temp)
+        cout `got $elem\n`;
+}}
+
+The "temp" variable is here for purely illustrative purposes, no named 
+variable is actually defined.
+
+When a sequence constant is defined, the compiler does the following:
+
+-   Searches for a constructor for the type that can accept an unsigned 
+    integer value (as of 0.4 - we will eventually be switching to an integer 
+    type large enough to accommodate a memory size).  This #uint# value is 
+    assumed to be the number of elements in the sequence.
+-   That failing, it searches for a default constructor for the type.
+
+For each element between the brackets, the compiler:
+
+-   Searches for an #append()# method that will accept the element type as an 
+    argument.
+-   That failing, it searches for an array assignment method (#oper []=()#) 
+    that assigns that element (using an integer index).
+
+This approach allows all sequence types to easily implement sequence constants.
 
 Reference Counting
 ------------------
@@ -2488,7 +2724,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs 
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually 
-    something like #`/usr/local/include/crack-0.3`#)
+    something like #`/usr/local/include/crack-0.4`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -2540,7 +2776,7 @@ file defining the extension.  Its usage is best illustrated by example:
 Threading
 ---------
 
-As it stands, Crack 0.3 is written with little regard for threads.  You can 
+As it stands, Crack 0.4 is written with little regard for threads.  You can 
 attempt to use the normal threading libraries, if you like, but you're likely 
 to run into some problems.  In particular, you should be aware that the 
 reference counting mechanism is not thread-safe, so memory management will 
@@ -2554,9 +2790,40 @@ implemented safely - with some cost to performance of threaded applications.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.3.  If your program 
+Crack has only minimal support for debugging in 0.4.  If your program 
 seg-faults or aborts, you can at least get a sparse stack-trace by running it 
 under a fairly recent version of GDB (7.0 or later).
+
+Encoding
+--------
+
+Crack scripts are essentially ASCII-compatible binary data.  Symbols, keywords 
+numerics and whitespace are ASCII characters, other elements can utilize byte 
+values from 0x80 to 0xFF.  Specifically, comments, and all types of strings 
+can contain any bytes whatsoever (of course, the delimiter and escape character 
+have special meanings, as does the dollar sign for interpolated strings).  
+Identifiers treat the high byte values 0x80-0xFF in the same way as alphabetic 
+characters - an identifier may include these at any position.
+
+These features allow you to use any ASCII compatible encoding for Crack 
+scripts.  To identify the encoding for tools like editors and web browsers 
+that care about encodings, the language features a built-in "encoding" 
+annotation.  This annotation has no meaning to the compiler, it is simply a 
+formal declaration of the encoding.  It must be followed by a string 
+identifying the name of the encoding.  For example, to indicate that a script 
+uses UTF-8 encoding, one might begin the script like this:
+
+{{
+    #!/usr/bin/env crack
+    @encoding 'utf8'
+    
+    // script contents...
+}}
+
+The #encoding# annotation should be either the first or second line of the 
+script.  If a script or module doesn't specify an encoding, tools are free to 
+attempt to infer it from the contents of the script.  In the absence of 
+high-byte values, the encoding is implicitly ASCII.
 
 Appendix 1 - Libraries
 ======================
@@ -2676,7 +2943,7 @@ MixIn
 
 The #MixIn# class allows you to do multiple inheritance safely - without risk 
 of breaking reference counting.  The #MixIn# approach is a stand-in for 
-virtual inheritance, which Crack 0.3 does not yet support.
+virtual inheritance, which Crack 0.4 does not yet support.
 
 #MixIn# defines #bind# and #release# operators and a virtual function called 
 #getObject()# that knows how to get the #Object# instance that the class is 
@@ -2743,6 +3010,40 @@ that can be safely inherited from in arbitrary ways.
 Note that all of this trickery is temporary: later versions of Crack will 
 support virtual base classes in a form that will make this functionality a 
 part of the language.
+
+Standard Exceptions
+'''''''''''''''''''
+
+The following standard exception types are defined in #crack.lang#:
+
+#Exception#::
+    The exception base class.  Generally all exception types should derive 
+    from this.  It provides stack trace functionality.
+
+#BadCastError#::
+    Thrown by the #cast()# function when used on an object that is not of the 
+    specified type.
+
+#AssertionError#::
+    Thrown when an internal invariant is broken.  This should generally 
+    indicate a bug in the module that throws it.
+
+#IndexError#::
+    Thrown when an array operation is passed an invalid index (greater than or 
+    less than the number of elements).
+
+#InvalidResourceError#::
+    Thrown when an operation is performed on a resource that does not exist or 
+    is not appropriate for this kind of action (such as trying to open a 
+    directory for read).
+
+#InvalidStateError#::
+    Thrown when an operation is performed on an object that is not in an 
+    appropriate state for the operation (such as trying to write to a closed 
+    file).
+
+#InvalidArgumentError#::
+    Thrown when a function is passed an invalid argument.
 
 Containers
 ----------
@@ -2976,7 +3277,7 @@ RBTree Maps
 
 A "map" or an "associative array" is a container that stores a set of values 
 each indexed by a key.  Both keys and values can be arbitrary objects.  The 
-only kind of map that Crack 0.3 supports is red-black trees.  Red-black trees 
+only kind of map that Crack 0.4 supports is red-black trees.  Red-black trees 
 provide a natural sort order, and provide O(log n) insertion and lookup with 
 constant time rebalancing.
 
@@ -3050,7 +3351,7 @@ standard containers:
 -   Support for primitive types.  All of the standard containers require you 
     to wrap primitive values in aggregate types derived from #Object#.
 
-Crack 0.3 does not yet support generics.  However, it does provide a weak 
+Crack 0.4 does not yet support generics.  However, it does provide a weak 
 substitute for generic containers in the form of container macros (see \X(The 
 Standard Annotations) for complete info on macros).  All of the standard 
 container types (#Array#, #List#, #DList# and #TreeMap#) have generic 
@@ -3131,10 +3432,12 @@ Support for true generics is planned for Crack 0.4.
 Error Handling
 --------------
 
-Future versions of crack will have real C++\/Java like exception handling.  
-But for version 0.3, we at least have the error module.  The error module lets 
-you record an error in a manner that can be controlled by the callers.  The 
-default action is to abort.
+Crack 0.4 continues to provide an error handling module (#crack.exp.error#).  
+However, this interface is deprecated in favor of exceptions.  This 
+documentation should be regarded as purely of historical inteterest.
+
+The error module lets you record an error in a manner that can be controlled 
+by the callers.  The default action is to abort.
 
 Here's an example of how we might use it to verify a parameter:
 
@@ -3216,7 +3519,7 @@ command line arguments:
 #StringArray# is a special purpose class just for storing arg lists without 
 having to do annoying casting.  You can use it as a general purpose string 
 sequence if you like, it will be supplanted by #Array[String]# once crack 
-supports generics (post 0.3).
+supports generics (post 0.4).
 
 Input\/Output
 -------------
@@ -3883,13 +4186,13 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
     this by adding the version number to the binary in your '`#!`' line:
 
     {{
-        #!/usr/local/bin/crack-0.3
+        #!/usr/local/bin/crack-0.4
     }}
 
     You will want to install your own modules under the module tree for the 
     version that they were developed for.  For example, if you create module 
     "foo.bar", you would typically install it somewhere like 
-    #`/usr/local/lib/crack-0.3/foo/bar`#.
+    #`/usr/local/lib/crack-0.4/foo/bar`#.
 
 -   Read the migration section of the manual for the changes involved in 
     upgrading to the new version.
@@ -3899,6 +4202,13 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 
 The remainder of this appendix describes the things you need to know when 
 upgrading between versions.
+
+From 0.3 to 0.4
+---------------
+
+-   The #enter()# and #leave()# methods are now called from a string 
+    interpolation expression if they exist.  This could present a problem if 
+    a formatter had them defined for some other purpose.
 
 From 0.2 to 0.3
 ---------------
