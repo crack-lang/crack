@@ -92,7 +92,7 @@ class RealPath : Path {
     }
 
     Reader reader() {
-        fd := open(__path.buffer, O_RDONLY);
+        fd := open(__path.buffer, O_RDONLY, 0);
         if (fd == -1)
             throw SystemError('Opening ' + __path, errno());
         return FDReader(fd);
