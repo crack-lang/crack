@@ -69,9 +69,7 @@ extern "C" void _Unwind_DeleteException (_Unwind_Exception *ex);
 // end of borrowed exception API
 
 // some crack-specific stuff put here out of laziness.
-enum {
-    crackClassId = 0x537075674372616b // "SpugCrak"
-};
+const uint64_t crackClassId = UINT64_C(0x537075674372616b); // "SpugCrak"
 
 }} // namespace crack::runtime
 
