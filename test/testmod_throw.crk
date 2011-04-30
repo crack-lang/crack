@@ -1,0 +1,22 @@
+# Copyright 2011 Google Inc.
+
+import crack.runtime registerHook, EXCEPTION_UNCAUGHT_FUNC;
+import crack.lang Exception, FreeBase;
+import crack.io cout;
+
+# causes us to print out "releasing" when this module is cleaned up.
+class Marker : FreeBase {
+    oper release() {
+        cout `releasing\n`;
+    }
+}
+
+Marker m;
+
+# replace the uncaught exception handler with a no-op handler so we don't have 
+# to deal with discrepancies in the way exception functions are formatted 
+# between jit and native.
+void nopHandler(Object ex) {}
+registerHook(EXCEPTION_UNCAUGHT_FUNC, nopHandler);
+
+throw Exception();

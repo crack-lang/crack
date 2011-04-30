@@ -1,4 +1,16 @@
 
+0.4
+    -   Added support for exception handling, converted the library to use 
+        exceptions instead of the crack.exp.error module.
+    -   Added support for compiling scripts to native binaries.
+    -   Added syntax to allow initialization of sequence types, e.g. 
+        array[int] a = [1, 2, 3];
+    -   Improved string interpolation, added calls to enter() and leave() and
+        made it a true expression returning the return value of leave() or the 
+        target object if leave() is undefined.  Implemented a StringFormatter 
+        variation that can be used in an expression context.
+    -   Added the "encoding" annotation, allowing users to declare a script's 
+        encoding.
 0.3
     -   Aggregate type variables now default to null if no initializer is 
         given.

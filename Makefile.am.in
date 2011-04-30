@@ -55,6 +55,13 @@ _gl_la_CXXFLAGS = @GL_LIBS@
 _gl_la_SOURCES = opt/_gl.cc
 endif
 
+if HAVE_CAIRO
+extlib_LTLIBRARIES += _cairo.la
+_cairo_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@
+_cairo_la_CPPFLAGS = @CAIRO_CPPFLAGS@
+_cairo_la_SOURCES = opt/_cairo.cc
+endif
+
 noinst_HEADERS = \
     builder/Builder.h \
     builder/BuilderOptions.h \

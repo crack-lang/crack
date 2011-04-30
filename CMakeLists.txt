@@ -283,7 +283,7 @@ endif()
 # Cairo
 find_package(Cairo QUIET)
 IF (CAIRO_FOUND)
-   pkg_check_modules(CAIRO cairo>=1.8 QUIET)
+   pkg_check_modules(CAIRO cairo>=1.10 QUIET)
    find_path(CAIRO_INCLUDE_DIR NAMES cairo.h PATH_SUFFIXES cairo)
    if(CAIRO_INCLUDE_DIR)
      SET(CAIRO_FOUND_PRELIM TRUE)
