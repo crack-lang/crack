@@ -102,7 +102,7 @@
                     return next();
                 }
             }
-
+            
             bool isTrue() {
                 return __index < __arr.count();
             }
@@ -113,7 +113,7 @@
             __cap = initCapacity,
             __size = 0 {
         }
-
+        
         oper init() : 
             __rep = array[Elem](16), 
             __cap = 16,
@@ -129,7 +129,7 @@
             }
             free(__rep);
         }
-
+        
         void realloc(uint newCapacity) {
             if (newCapacity < __cap)
                 die('Array.realloc() - decreasing capacity');
@@ -158,15 +158,77 @@
             __size = __size + 1;
         }
 
-        @final
+        Elem pop() {
+           if (__size>0)
+              return __rep[--__size];
+           else
+              return null;
+        }
+
+      @final
         ArrayIter iter() {
             return ArrayIter(this);
         }
-
+        
         uint capacity() {
             return __cap;
         }
-        
+
+        Name rest(uint i){
+            result := Name(__size - i);
+            for (j := i; j < __size; j++)
+            result.append(__rep[j]);
+            return result;
+        }
+
+        Name _merge(Name left, Name right){
+            result := Name(left.count()*2);
+            while (left.count() > 0 || right.count() > 0){
+            if (left.count() > 0 && right.count() > 0){
+                if (left[0] <= right[0]){
+                    result.append(left[0]);
+                    left = left.rest(1);
+                }
+                else{
+                    result.append(right[0]);
+                    right = right.rest(1);
+                }
+            }
+            else if (left.count() > 0){
+                    result.append(left[0]);
+                    left = left.rest(1);
+                }
+            else if (right.count() > 0){
+                    result.append(right[0]);
+                    right = right.rest(1);
+                }
+            }
+            return result
+        }
+
+        Name _merge_sort(Name m, uint depth){
+            if (m.count() <= 1) return m;
+
+            middle := m.count() / 2;
+            left := Name(middle);
+            right := Name(middle);
+            result := Name(middle * 2);
+            if (depth>10) return result;
+
+            for (x:=0; x < middle; x++) left.append(m[x]);
+
+            for (x:=middle; x < m.count(); x++) right.append(m[x]);
+
+            left = _merge_sort(left, depth+1);
+            right = _merge_sort(right, depth+1);
+            result = _merge(left, right);
+            return result;
+        }
+
+        Name sort(){
+            return _merge_sort(this, 0);
+        }
+
         ## delete the element at 'index'.
         void delete(uint index) {
             if (index > __size)

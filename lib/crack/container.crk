@@ -451,6 +451,14 @@ class Array : _ArrayIface {
         return __rep[index];
     }
 
+    Object pop() {
+        if (__size>0)
+           return __rep[--__size];
+        else
+           return null;
+    }
+
+
     void oper []=(uint index, Object elem) {
         if (index > __size)
             die('Index out of range in Array.oper []=');
@@ -752,7 +760,7 @@ class RBTreeNode {
         
         sibling := __sibling();
 
-        # case 2: sibling is red.        
+        # case 2: sibling is red.
         if (sibling.red) {
             # reverse the colors of the parent and sibling
             parent.red = true;
