@@ -123,7 +123,7 @@ class Func {
     oper init(Type retType, String name) :
         retType = retType, 
         name = name,
-		initialized = false,
+        initialized = false,
         args() {
     }
     

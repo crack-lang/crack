@@ -6,6 +6,7 @@
 
 @generateExtension crack.ext._cairo {
    @filename 'opt/_cairo.cc'
+   @dumpsymbols 'opt/_cairo.txt'
    @inject '#include <cairo/cairo.h>\n'
    @inject '#include <cairo/cairo-pdf.h>\n'
    @inject '#include <cairo/cairo-ps.h>\n'
@@ -17,20 +18,21 @@
    @crack_internal
 
    # make sure defines for our constants exist
-   @inject '#ifndef CAIRO_HAS_FC_FONT\n#define CAIRO_HAS_FC_FONT 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_FT_FONT\n#define CAIRO_HAS_FT_FONT 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS\n#define CAIRO_HAS_GOBJECT_FUNCTIONS 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_IMAGE_SURFACE\n#define CAIRO_HAS_IMAGE_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_PDF_SURFACE\n#define CAIRO_HAS_PDF_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_PNG_FUNCTIONS\n#define CAIRO_HAS_PNG_FUNCTIONS 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_PS_SURFACE\n#define CAIRO_HAS_PS_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_RECORDING_SURFACE\n#define CAIRO_HAS_RECORDING_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_SVG_SURFACE\n#define CAIRO_HAS_SVG_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_USER_FONT\n#define CAIRO_HAS_USER_FONT 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS\n#define CAIRO_HAS_XCB_SHM_FUNCTIONS 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_XCB_SURFACE\n#define CAIRO_HAS_XCB_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_XLIB_SURFACE\n#define CAIRO_HAS_XLIB_SURFACE 0\n#endif\n'
-   @inject '#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE\n#define CAIRO_HAS_XLIB_XRENDER_SURFACE 0\n#endif\n'
+   @ifdef CAIRO_HAS_FC_FONT
+   @inject '#ifndef CAIRO_HAS_FC_FONT\n #define CAIRO_HAS_FC_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_FT_FONT\n #define CAIRO_HAS_FT_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS\n #define CAIRO_HAS_GOBJECT_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_IMAGE_SURFACE\n #define CAIRO_HAS_IMAGE_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PDF_SURFACE\n #define CAIRO_HAS_PDF_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PNG_FUNCTIONS\n #define CAIRO_HAS_PNG_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PS_SURFACE\n #define CAIRO_HAS_PS_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_RECORDING_SURFACE\n #define CAIRO_HAS_RECORDING_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_SVG_SURFACE\n #define CAIRO_HAS_SVG_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_USER_FONT\n #define CAIRO_HAS_USER_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS\n #define CAIRO_HAS_XCB_SHM_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XCB_SURFACE\n #define CAIRO_HAS_XCB_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XLIB_SURFACE\n #define CAIRO_HAS_XLIB_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE\n #define CAIRO_HAS_XLIB_XRENDER_SURFACE 0\n#endif\n'
 
    // Features
    const uint32
@@ -51,7 +53,7 @@
 
    // Status constants
    const uint32 
-      CAIRO_STATUS_SUCCESS,
+      CAIRO_STATUS_SUCCESS, 
       CAIRO_STATUS_NO_MEMORY,
       CAIRO_STATUS_INVALID_RESTORE,
       CAIRO_STATUS_INVALID_POP_GROUP,
@@ -285,7 +287,11 @@
    class cairo_t;
    class cairo_surface_t;
    class cairo_device_t;
+   
+   // Matrix
+   @inject 'cairo_matrix_t *cairo_matrix_new() { return new cairo_matrix_t; }\n'
    class cairo_matrix_t;
+   cairo_matrix_t cairo_matrix_new();
    class cairo_pattern_t;
    
    // Rectangle
@@ -293,6 +299,7 @@
    class cairo_rectangle_t{
       float64 x, y, width, height;
    }
+   cairo_rectangle_t cairo_rectangle_new();
 
    // Rectangle list
    @inject 'cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }\n'
@@ -707,12 +714,16 @@
    uint32 cairo_surface_status (cairo_surface_t surface);
    uint32 cairo_surface_get_type (cairo_surface_t surface);
    uint32 cairo_surface_get_content (cairo_surface_t surface);
+
+@ifdef CAIRO_HAS_PNG_FUNCTIONS {
+   class myClass;
    uint32 cairo_surface_write_to_png (cairo_surface_t surface,
                                       byteptr filename);
 
    uint32 cairo_surface_write_to_png_stream (cairo_surface_t surface,
                                              voidptr         write_func,
                                              voidptr         closure);
+}
 
    voidptr cairo_surface_get_user_data (cairo_surface_t surface,
                                         cairo_user_data_key_t key);
@@ -787,7 +798,10 @@
    int cairo_image_surface_get_width (cairo_surface_t surface);
    int cairo_image_surface_get_height (cairo_surface_t surface);
    int cairo_image_surface_get_stride (cairo_surface_t surface);
+
+@ifdef CAIRO_HAS_PNG_FUNCTIONS {
    cairo_surface_t cairo_image_surface_create_from_png (byteptr filename);
+}
 
    //~ cairo_surface_t 
       //~ cairo_image_surface_create_from_png_stream (cairo_read_func_t  read_func,
