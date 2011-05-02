@@ -18,21 +18,20 @@
    @crack_internal
 
    # make sure defines for our constants exist
-   @ifdef CAIRO_HAS_FC_FONT
-   @inject '#ifndef CAIRO_HAS_FC_FONT\n #define CAIRO_HAS_FC_FONT 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_FT_FONT\n #define CAIRO_HAS_FT_FONT 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS\n #define CAIRO_HAS_GOBJECT_FUNCTIONS 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_IMAGE_SURFACE\n #define CAIRO_HAS_IMAGE_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_PDF_SURFACE\n #define CAIRO_HAS_PDF_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_PNG_FUNCTIONS\n #define CAIRO_HAS_PNG_FUNCTIONS 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_PS_SURFACE\n #define CAIRO_HAS_PS_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_RECORDING_SURFACE\n #define CAIRO_HAS_RECORDING_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_SVG_SURFACE\n #define CAIRO_HAS_SVG_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_USER_FONT\n #define CAIRO_HAS_USER_FONT 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS\n #define CAIRO_HAS_XCB_SHM_FUNCTIONS 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_XCB_SURFACE\n #define CAIRO_HAS_XCB_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_XLIB_SURFACE\n #define CAIRO_HAS_XLIB_SURFACE 0\n#endif\n\n'
-   @inject '#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE\n #define CAIRO_HAS_XLIB_XRENDER_SURFACE 0\n#endif\n'
+   @inject '#ifndef CAIRO_HAS_FC_FONT\n# define CAIRO_HAS_FC_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_FT_FONT\n# define CAIRO_HAS_FT_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_GOBJECT_FUNCTIONS\n# define CAIRO_HAS_GOBJECT_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_IMAGE_SURFACE\n# define CAIRO_HAS_IMAGE_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PDF_SURFACE\n# define CAIRO_HAS_PDF_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PNG_FUNCTIONS\n# define CAIRO_HAS_PNG_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_PS_SURFACE\n# define CAIRO_HAS_PS_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_RECORDING_SURFACE\n# define CAIRO_HAS_RECORDING_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_SVG_SURFACE\n# define CAIRO_HAS_SVG_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_USER_FONT\n# define CAIRO_HAS_USER_FONT 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XCB_SHM_FUNCTIONS\n# define CAIRO_HAS_XCB_SHM_FUNCTIONS 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XCB_SURFACE\n# define CAIRO_HAS_XCB_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XLIB_SURFACE\n# define CAIRO_HAS_XLIB_SURFACE 0\n#endif\n\n'
+   @inject '#ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE\n# define CAIRO_HAS_XLIB_XRENDER_SURFACE 0\n#endif\n'
 
    // Features
    const uint32
