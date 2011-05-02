@@ -1,6 +1,8 @@
 // Copyright 2011 Google Inc.
 // header for the exceptions subsystem of the runtime
 
+#define __STDC_CONSTANT_MACROS 1
+#define __STDC_LIMIT_MACROS 1
 #include <stdint.h>
 
 namespace crack { namespace runtime {

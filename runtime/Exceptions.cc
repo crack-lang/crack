@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <stdint.h>
 #include <iostream>
 #include <dlfcn.h>
 

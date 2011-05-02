@@ -3,6 +3,9 @@
 #ifndef _ItaniumExceptionABI_h_
 #define _ItaniumExceptionABI_h_
 
+#define __STDC_CONSTANT_MACROS 1
+#define __STDC_LIMIT_MACROS 1
+
 #include <stdint.h>
 
 namespace crack { namespace runtime {
