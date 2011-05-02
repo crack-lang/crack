@@ -564,7 +564,7 @@ void nativeCompile(llvm::Module *module,
     Linker::ItemList NativeLinkItems;
 
     // libcrack is required
-    NativeLinkItems.push_back(pair<string,bool>("CrackExtStub",true));
+    NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
 
     for (vector<string>::const_iterator i = sharedLibs.begin();
          i != sharedLibs.end();
