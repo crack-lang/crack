@@ -527,7 +527,7 @@ The for statement also supports a for-each style usage:
 {{
     String argVal;
     for (argVal in argv)
-        cout `arg is $argv\n`;
+        cout `arg is $argVal\n`;
 }}
 
 In the example above, #argVal# will be set to each element of argv in 
@@ -537,7 +537,7 @@ defines the variable for the scope of the loop, so we could have omitted the
 
 {{
     for (argVal :in argv)
-        cout `arg is $argv\n`;
+        cout `arg is $argVal\n`;
 }}
 
 The value on the right side of the "in" keyword (in this case #argv#) must 
@@ -555,7 +555,7 @@ For this use case, there is also a "for-on" variation of this statement:
 {{
     for (iter :on argv) {
         argVal := iter.elem();
-        cout `arg is $argv\n`;
+        cout `arg is $argVal\n`;
     }
 }}
 
@@ -2770,6 +2770,12 @@ file defining the extension.  Its usage is best illustrated by example:
         
             # a string value can be used to indicate a complex expression
             SIMPLE_NAME = 'ONE_HUNDRED >> 1';
+        
+        # @ifdef lets you define bindings based on preprocessor values (there 
+        is also an @ifndef)
+        @ifdef FOO_FEATURE_X {
+            int useFeatureX();
+        }
     }
 }}
 
