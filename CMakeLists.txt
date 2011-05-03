@@ -130,12 +130,17 @@ target_link_libraries( crack
                        libcrack
                      )
 
+add_custom_command(TARGET crack POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink crack crackc)
+
 # install targets
 install(TARGETS crack libcrack libcrackextstub
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
        )
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/crackc DESTINATION bin)
 
 # runtime
 install(TARGETS crack-runtime
