@@ -29,7 +29,7 @@ Syntax::
 Typing::
     Static, strong (with some implicit conversion)
 Compiler::
-    JIT native compiled (at runtime) or compiled to a native binary.
+    native compiled, either JIT (at runtime) or AOT (native binary)
 Paradigms::
     Object oriented, procedural
 Garbage Collection::
@@ -46,10 +46,69 @@ Installation
 
 See the INSTALL file for the latest installation instructions.
 
+Execution
+---------
+
+crack may be run in one of two ways: as a scripting language (like Python)
+or as a traditional compiler that creates native binaries (like C++).
+Both methods will compile to the native instruction set and run similar 
+optimizations. We call these two methods JIT (Just In Time) and AOT (Ahead Of 
+Time) compilation, respectively. 
+
+To run a script in the JIT, simply follow the standard "hashbang" practice
+of putting the crack binary as the program loader in the first line of your
+script, like so:
+
+{{
+    #!/usr/local/bin/crack
+    import crack.io cout;
+    cout `hello world!\n`;
+}}
+
+If you write this as a script and "chmod u+x" it, when you run it you should 
+see "hello world!" written to the terminal. Changes to the script do not require 
+any explicit compile command - simply rerun the script.
+
+Instead of (or in addition to) the hashbang, you may also run a script directly 
+by calling "crack <scriptfile>".
+
+{{
+    $ crack hello.crk
+    hello word!
+}}
+
+To compile your script to a standalone binary (AOT), simply call "crackc" 
+instead of "crack". Thus executing "crackc hello.crk" will produce 
+a binary "hello" which, when run, executes your code and displays output to 
+terminal:
+
+{{
+    $ crackc hello.crk
+    $ ./hello
+    hello word!
+}}
+
+As with all AOT compilers, in this mode of work you must recompile your script
+and run the resulting binary before seeing any changes to your codebase. 
+However, keep in mind that you are free to develop in the JIT and deploy a
+final binary with AOT if you'd like. Both methods should run your code in an
+identical manner.
+
+Note that during native compilation, all imported crack scripts will be 
+"statically" compiled. This means that all imported scripts, including those you 
+import from the crack standard library, will become a static part of your 
+standalone binary and consecutive changes or updates to those scripts will not 
+affect your (previously compiled) standalone binaries. In other words, there are 
+no  "shared crack libraries" currently.
+
+For more command line options that affect execution and compilation including 
+verbosity, optimization levels, and debug output, see "crack --help".
+
+
 Hello World
 -----------
 
-Here's the crack "hello world" program:
+Let's examine the crack "hello world" program again:
 
 {{
     #!/usr/local/bin/crack
@@ -60,8 +119,8 @@ Here's the crack "hello world" program:
 If you write this as a script and "chmod u+x" it, when you run it you should 
 see "hello world!" written to the terminal.
 
-The first line is the standard unix "`#!`" line.  It tells the kernel to 
-execute the script by passing its full name as an argument to the 
+As mentioned, the first line is the standard unix "`#!`" line.  It tells the 
+kernel to execute the script by passing its full name as an argument to the 
 "`/usr/local/bin/crack`" program.
 
 The second line imports the "#cout#" variable from the #crack.io# module.  
@@ -78,14 +137,6 @@ character, character code 10).
 Expressions consisting of a value followed by back-tick quoted text and code 
 are called "interpolation expressions."
 
-We could compile our script to a standalone executable by running the "crackc" 
-program:
-
-{{
-    $ crackc hello.crk
-}}
-
-This would produce a normal native binary file named "hello."
 
 Comments
 --------
@@ -3740,6 +3791,22 @@ When a #Directory# object is created, it canonicalizes the name by stripping
 a trailing path separator (i.e. "\/") if it exists. If you need a version with 
 the trailing separator (for example, to build a full path name with string 
 concatenation), you can call #nameWithTrailing#.
+
+Process
+-------
+Crack provides a method for executing and controlling sub-processes and 
+retrieving their output via the #Process# class, which is located in 
+#crack.exp.process#
+
+You run a new process by constructing a Process class with the full command line 
+to execute. If successful, you can retrieve the process ID with getPid().
+
+Once running, you can poll() the process to find its status, or wait() for the
+process to finish execution. Once finished, you can call getReturnCode() for 
+the final return code.
+
+To retrieve stdout and stderr output from the process, use getStdOut() and 
+getStdErr().
 
 Regular Expressions
 -------------------
