@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <title>
+        The Crack Programming Language Guide
+    </title>
+  </head>
+  <body>
+    <h1>
+        The Crack Programming Language Guide
+    </h2>
+    <p>Because life is too short to wait for software.</p>
+    
+    <br>
+    <i>Author: Michael Muller</i><br>
+    <i>Contributions by: Shannon Weyrick, Conrad Steenberg</i>
+
+    <hr>
+    &toc
+    <hr>
+    &expand
+  </body>
+</html>

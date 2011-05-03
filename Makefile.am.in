@@ -183,13 +183,13 @@ AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
 TESTS = test/run_all_tests
 
-doc/Manual.html: doc/Manual.nml
+doc/Manual.html: doc/Manual.nml doc/Manual.template
 	@if which nml2html >/dev/null; then \
 	   if test -e "$@" -a ! -w $@; then \
 	       echo "Not generating $@: access denied."; \
 	   else \
                echo generating $@; \
-               nml2html $?; \
+               nml2html -t doc/Manual.template doc/Manual.nml; \
            fi; \
 	else \
 	   echo "To regenerate the manual, you need the nml2html tool and "; \
