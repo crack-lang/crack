@@ -1,12 +1,24 @@
-Here are the people who have contributed to Crack:
+Here are the people who have contributed to Crack (listed alphabetically):
 
+Michael Muller (mmuller@google.com):
+    Lead developer.
+Arno Rehn (arno@arnorehn.de)::
+    Misc fixes.  Support for variadic functions in extensions.
+Conrad Steenberg (conrad.steenberg@gmail.com):
+    The Math module.  Various improvements to CMake and the standard modules.
+    Improvements
 tcmreastwood:
     GCC 4.4.2 fixes.
 Shannon Weyrick (weyrick@mozek.us):
     Floating point types.  Logical "&&" and "||" operators.  CMake support.
-Conrad Steenberg (conrad.steenberg@gmail.com):
-    The Math module.  Various improvements to CMake and the standard modules.
-Michael Muller (mmuller@google.com):
-    Everything else.
+    Native binary builder support.
 
-Special thanks to Google for allowing 20% time for this project.
+Special thanks to the following buisnesses for providing employee time to work 
+on this:
+
+-   Google
+-   Mozek LLC
+
+Further special thanks to the LLVM project without which Crack would be far 
+behind.
+
