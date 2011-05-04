@@ -8,9 +8,9 @@
 
 // import functions and some constants known at compile time
 @import crack.exp.ann define;
-import crack.lang CString;
+import crack.lang CString, Exception, InvalidArgumentError, BadCastError;
 import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
-                    acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
+                    acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs, exp, exp2,
                     ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
                     erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
                     round, trunc, fpclassify, isfinite, isinf, isnan,
@@ -19,7 +19,9 @@ import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
                     FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
                     ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
-                    UNDERFLOW, ERANGE;
+                    UNDERFLOW, ERANGE, EINVAL;
+
+import crack.io FStr;
 
 /// Define common constants
 float E =            2.7182818284590452354;   // e
@@ -73,7 +75,7 @@ float GAMMA =        0.57721566490153286061;  // Euler's constant gamma
 // Augment the atoi(char*) imported from _math
 @define _atoi(Tpe){
    int atoi(Tpe s){
-     return atoi(CString(s.buffer, s.size, true).buffer);
+     return atoi(CString(s.buffer, s.size, false).buffer);
    }
 }
 
@@ -85,11 +87,29 @@ int atoi(CString s){
   return atoi(s.buffer);
 }
 
+// Augment the strtoi(char*) imported from _math
+@define _strtoi(Tpe){
+   int strtoi(Tpe s){
+     int result = strtoi(CString(s.buffer, s.size, false).buffer);
+     int err = errno();
+     if (!err) return result;
+     else if (err == ERANGE)
+      throw InvalidArgumentError(FStr() `Value '$s' out of range in converting string to integer`);
+     else if (err == EINVAL)
+      throw BadCastError(FStr() `Invalid input '$s' in converting string to integer`);
+     else 
+      throw Exception(FStr() `Unknown error in strtoi, errno = $err`);
+   }
+}
+
+@_strtoi(StaticString)
+@_strtoi(String)
+
 
 // Augment the atof(char*) imported from _math
 @define _atof(Tpe){
    float atof(Tpe s){
-     return atof(CString(s.buffer, s.size, true).buffer);
+     return atof(CString(s.buffer, s.size, false).buffer);
    }
 }
 
@@ -100,3 +120,21 @@ int atoi(CString s){
 float atof(CString s){
   return atof(s.buffer);
 }
+
+// Augment the strtof(char*) imported from _math
+@define _strtof(Tpe){
+   float strtof(Tpe s){
+     float result = strtof(CString(s.buffer, s.size, false).buffer);
+     int err = errno();
+     if (!err) return result;
+     else if (err == ERANGE)
+      throw InvalidArgumentError(FStr() `Value '$s' out of range converting string to float`);
+     else if (err == EINVAL)
+      throw BadCastError(FStr() `Invalid input '$s' in converting string to float`);
+     else 
+      throw Exception(FStr() `Unknown error in strtof, errno = $err`);
+   }
+}
+
+@_strtof(StaticString)
+@_strtof(String)

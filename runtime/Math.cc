@@ -78,7 +78,7 @@ const double_constant_struct double_constants[] = {
                                  };
 
 
-const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, {NULL, 0}};
+const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, {"EINVAL", EINVAL}, {NULL, 0}};
 // -----------------------------------------------------------------------------
 // Functions that take a single float argument
 const one_name_struct  one_names[]={ 
@@ -232,6 +232,18 @@ void crk_set_errno(int value){
   errno=value;
 }
 
+int crk_strtoi(char *s){
+   return (int)strtol(s, (char**)NULL, 0);
+}
+
+float crk_strtof(char *s){
+   return (float)strtof(s, (char**)NULL);
+}
+
+float crk_strtod(char *s){
+   return (double)strtod(s, (char**)NULL);
+}
+
 
 OneMacroFuncDouble *one_macros_double[]={ crk_fpclassify_double, crk_isfinite_double,
                                              crk_isinf_double, crk_isinf_double,
@@ -313,13 +325,21 @@ void math_init(Module *mod) {
   Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi);
   atoi_func->addArg(mod->getByteptrType(), "str");
 
+  // strtoi
+  Func *strtoi_func = mod->addFunc(mod->getIntType(), "strtoi", (void *)crk_strtoi);
+  strtoi_func->addArg(mod->getByteptrType(), "str");
+
   // strtof
-  Func *strtof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof);
+  Func *strtof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)crk_strtof);
   strtof_func->addArg(mod->getByteptrType(), "str");
 
   // atof like strtof, but no error checking
-  Func *atof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)strtof);
+  Func *atof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof);
   atof_func->addArg(mod->getByteptrType(), "str");
+
+  // strtod
+  Func *strtod_func = mod->addFunc(mod->getFloat64Type(), "strtod", (void *)crk_strtod);
+  strtod_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
   Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
