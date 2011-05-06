@@ -595,10 +595,6 @@ Desired Grammer:
                 primary '[' expr ']' ;
     expr ::= constant | primary
 
-Compatibility issues for 0.2:
-    We're now checking for variable overrides in method arguments, and it's 
-    really annoying.  Consider capping the redefinition check at Toplevel.
-
 Annotations:
 
     Annotations should allow you to do manipulations on language objects 
@@ -618,3 +614,10 @@ Forward Declarations:
     often useful to have a class method definition defined after the class 
     definition ends (like when it makes use of another class that depends on 
     the initial class).
+
+Ugly Stuff:
+    
+    I can't how the ModuleDef namespace can ever get populated with the 
+    contents of a module, but I can't see how imports could work without it.
+    It seems like when parsing a module, the module toplevel context should 
+    reference the ModuleDef as its namespace
