@@ -1,0 +1,391 @@
+// Command line argument processor
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
+
+import crack.lang die, cmp, free; 
+import crack.container Array;
+import crack.math strtoi, strtof;
+import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
+import crack.sys argv, StringArray;
+import crack.io cout, Formatter, FStr;
+@import crack.exp.cont.array GenericObjArray, GenericPrimArray, GenericArray;
+
+
+uint CMD_STR = 0;
+uint CMD_INT = 1;
+uint CMD_FLT = 2;
+uint CMD_BLN = 3;
+uint NOINDEX = 0xffffffff; // Completely arbitrary a large number
+
+StringArray splitString(String s, byte sep) {
+   StringArray result = {256};
+   uint count = 0;
+   int pos = 0;
+
+   while (true) {
+      end := s.lfind(sep, uint(pos));
+      if (end != -1) {
+          result[count++]=s.slice(pos, end);
+
+      } else {
+          result[count++]=s.slice(pos);
+          break;
+      }
+      pos = end + 1;
+   }
+
+   StringArray real = {count};
+   for (uint i=0; i< count; i++) real[i] = result[i];
+   return real;
+}
+
+class Option : Object {
+   StaticString long;
+   StaticString short;
+   StaticString desc;
+   uint type;
+   uint pos = NOINDEX; // index in option array
+   String value; // may be null
+
+   oper init(uint type):
+      type(type),
+      value("") {}
+
+   oper init(StaticString long, StaticString short, StaticString desc, String value, uint type):
+      long(long.buffer, long.size),
+      short(short.buffer, short.size),
+      desc(desc),
+      type(type),
+      value(value) {}
+
+   oper init(StaticString long, StaticString short, StaticString desc, StaticString value, uint type):
+      long(long.buffer, long.size),
+      short(short.buffer, short.size),
+      type(type),
+      value(String(value)) {}
+
+   oper init(StaticString long, StaticString short):
+      long(long.buffer, long.size),
+      short(short.buffer, short.size),
+      desc(""),
+      type(CMD_STR),
+      value("") {}
+
+   int cmp(Option other){
+      return long.cmp(other.long);
+   }
+// Setters
+   void setInt(int value0){
+      value = FStr() `$value0`;
+   }
+
+   void setFloat(float value0){
+      value = FStr() `$value0`;
+   }
+
+   void setBool(bool value0){
+      value = FStr() `$value0`;
+   }
+
+   void setString(String value0){
+      value = value0;
+   }
+
+   void setString(StaticString value0){
+      value = String(value0);
+   }
+
+   void set(StaticString value0){
+      if (type == CMD_BLN){
+         if (value0 == 't' || value0 == 'true' || value0 == '1')
+            value = String("1");
+         else 
+            if (value0 == 'f' || value0 == 'false' || value0 == '0')
+               value = String("1");
+            else
+               throw BadCastError(FStr() `Invalid value '$(value0)' for boolean option`);
+         return;
+      } 
+      else if (type == CMD_INT)
+         strtoi(value0);
+      else if (type == CMD_FLT)
+         strtof(value0);
+      value = String(value0);
+   }
+}
+
+@GenericObjArray(OptionArray, Option)
+@GenericPrimArray(ByteArray, byte)
+
+// Command line options tree
+class CmdOptions : Object{
+   OptionArray options; // Contains option objects
+   ByteArray short;
+   bool sorted = false;
+
+   oper init(): options(), short()
+   {  }
+   
+   void add(Option newoption){
+      options.append(newoption);
+      short.append(newoption.short[0]);
+   }
+
+   Option add(StaticString long, StaticString short, StaticString desc, String value, uint type){
+      newoption := Option(long, short, desc, value, type);
+      add(newoption);
+      return newoption;
+   }
+
+   Option add(StaticString long, StaticString short, StaticString desc, StaticString value, uint type){
+      return add(long, short, desc, String(value), type);
+   }
+
+   // Forward declaration
+   StringArray parse(StringArray args, bool createUnknown);
+
+   // Convenience method to add options based on a specification string
+   StringArray addFromString(StaticString line){
+      new_argv := splitString(line, b' ');
+      return parse(new_argv, true);
+   }
+   
+   // Linear search for now
+   uint findLongIndex(StaticString optName){
+      result := NOINDEX;
+      Option opt;
+
+      for (uint i=0; i<options.count(); i++){
+         if (optName == options[i].long) return i;
+      }
+
+      return result;
+   }
+
+   uint findShortIndex(byte optName){
+      result := NOINDEX;
+
+      for (uint i=0; i<options.count(); i++)
+         if (optName == options[i].short[0]) return i;
+
+      return result;
+   }
+
+
+   // Generalized get
+   Option getOption(StaticString optName, bool throwException){
+      index := NOINDEX;
+      Option option = null;
+
+      if (optName.size==1)
+         index = findShortIndex(optName[0]);
+      else
+         index = findLongIndex(optName);
+
+      if (index != NOINDEX) return options[index];
+      else if (throwException) {
+         throw IndexError(FStr() `Option '$optName' not found`);
+      }
+      return option;
+   }
+   
+   Option getOption(StaticString optName){
+      return getOption(optName, true);
+   }
+
+   Option getOption(String optName){
+      return getOption(StaticString(optName.buffer, optName.size), true);
+   }
+
+   Option oper [](StaticString optName){
+      return getOption(optName, true);
+   }
+
+   Option oper [](String optName){
+      return getOption(StaticString(optName.buffer, optName.size), true);
+   }
+
+
+   // Getters 
+   int getInt(StaticString optName){
+      Option opt = getOption(optName);
+      if (opt.type != CMD_INT) throw InvalidArgumentError(FStr() `Attempting to fetch non-integer '$optName' option as an integer`);
+      return strtoi(opt.value);
+   }
+
+   float getFloat(StaticString optName){
+      Option opt = getOption(optName);
+      if (opt.type != CMD_FLT) throw InvalidArgumentError(FStr() `Attempting to fetch non-float option '$optName' as a float`);
+      return strtof(opt.value);
+
+   }
+
+   bool stringAsBool(String value){
+      if (value == "1" || value == "t" || value == "true")
+         return true;
+      else 
+         return false;
+   }
+
+   bool getBool(StaticString optName){
+      Option opt = getOption(optName);
+
+      if (opt.type != CMD_BLN) throw InvalidArgumentError(FStr() 
+         `Attempting to fetch non-bool option '$optName' as a bool`);
+      
+      return stringAsBool(opt.value);
+   }
+
+   String getString(StaticString optName){
+      return getOption(optName).value;
+   }
+
+   StringArray _getPair(StringArray args, uint argi){
+      StringArray result = {2};
+      arg := args[argi];
+      len := arg.size;
+      if (len == 1) return result;
+      prefix := arg.slice(0,2);
+      
+      if (prefix[0] == b'-' && len > 1) {
+         if (len > 2 && prefix[1] == b'-'){ // long option found
+            eqi := arg.lfind(b'=', 3);
+            if (eqi > 2){ // Found a value after = sign
+               result[0] = arg.slice(2, eqi);
+               result[1] = arg.slice(eqi+1);
+            }
+            else
+               result[0] = arg.slice(2);
+         }
+         else {
+            result[0] = arg.slice(1);
+            if (argi < args.count()-1 && args[argi+1] != '-'){
+               result[1] = args[argi+1];
+            }
+         }
+      }
+      return result
+   }
+
+   // Create a new option from a name/value pair
+   Option addNewOption(StringArray pair){
+      if (!pair[0])
+         throw InvalidArgumentError(FStr() `Error: trying to create new option with null name`);
+
+      uint newType = 100;
+      int startInd = 0;
+      Option opt = null;
+
+      // Check for special typed syntax
+      if (!pair[1] || pair[1].size==0) newType = CMD_BLN;
+      else if (pair[1].size > 2 && pair[1][1] == b'/'){
+         if (pair[1][0] == b'B' || pair[1][0] == b'b') newType = CMD_BLN;
+         else if (pair[1][0] == b'I' || pair[1][0] == b'i') newType = CMD_INT;
+         else if (pair[1][0] == b'F' || pair[1][0] == b'f') newType = CMD_FLT;
+         else if (pair[1][0] == b'S' || pair[1][0] == b's') newType = CMD_STR;
+         startInd = 2;
+      }
+      else // Default is a simple string option
+         newType = CMD_STR;
+
+      if (pair[0] && newType<100 && pair[0].size>0){
+         try {
+            if (pair[1])
+               opt = Option(StaticString(pair[0]), StaticString(pair[0].slice(0, 1)), "", String(pair[1].slice(startInd)), newType);
+            else if (newType == CMD_BLN)
+               opt = Option(StaticString(pair[0]), StaticString(pair[0].slice(0, 1)), "", "1", newType);
+            else InvalidArgumentError(FStr() `While setting new option '$(pair[0])': `);
+               
+         } catch (Exception ex){
+            String newMsg = ex.text + FStr() `Error in new option format '$(pair[1])': `;
+            throw InvalidArgumentError(newMsg);
+         }
+         add(opt);
+         return opt;
+      }
+      else throw Exception(FStr() `Unrecoverable error in creating new option`);
+   }
+   
+   // Parse the array obtained from sys.argv
+   StringArray parse(StringArray args, bool createUnknown){
+      StringArray unparsed={args.count()};
+      uint argi, unpi = 0;
+      Option opt;
+      bool isnew = false;
+
+      for (argi=0; argi < args.count(); argi++){
+         opt = null;
+         pair := _getPair(args, argi);
+         isnew = false;
+         if (pair[0]) {
+            // Look up 
+            try {
+               opt = getOption(pair[0]);
+            } catch (IndexError ix){
+               if (createUnknown) isnew = true;
+               else throw IndexError(ix.text);
+            }
+
+            if (opt){
+               if (!pair[1] || opt.type == CMD_BLN){
+                  if (opt.type == CMD_BLN){ // ignore pair[1], we'll parse it next
+                     opt.setString("1");
+                     continue;
+                  }
+                  throw InvalidArgumentError(FStr() `Option $(args[argi]) given without a value`);
+               } else {
+                  if (args[argi][1] != b'-') 
+                     argi++;
+                  if (isnew) opt = addNewOption(pair);
+                  else opt.setString(pair[1]);
+               }
+            }
+            else if (isnew){
+               addNewOption(pair); // Creates the option and sets the value
+            }
+         }
+         else {
+            unparsed[unpi++] = args[argi];
+         }
+      }
+      return unparsed;
+      
+   }
+
+   void dump(){
+      for (uint i = 0; i < options.count(); i++){
+         Option opt = options[i];
+         cout `$(opt.short)/$(opt.long) [$(opt.type)] = $(opt.value)\n`;
+      }
+   }
+
+   void printUsage(String intro){
+      Array typeNames = {};
+      typeNames.append("string");
+      typeNames.append("int");
+      typeNames.append("float");
+      typeNames.append("bool");
+
+      cout `$intro\n`;
+      uint i;
+
+      for (i = 0; i < options.count(); i++){
+         Option opt = options[i];
+         if (opt.type != CMD_BLN){
+            cout ` -$(opt.short) ARG --$(opt.long)=ARG \t`;
+            cout` $(opt.desc)  ($(typeNames[opt.type]): $(opt.value))\n`;
+         }
+         else {
+            cout ` -$(opt.short) --$(opt.long) \t\t`;
+            cout` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(opt.value))\n`;
+
+         }
+      }
+      
+      if (i>0) cout `\n`;
+   }
+   
+   void printUsage(StaticString intro){
+      printUsage(String(intro));
+   }
+
+}
