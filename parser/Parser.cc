@@ -13,6 +13,7 @@
 #include "model/Branchpoint.h"
 #include "model/CompositeNamespace.h"
 #include "model/CleanupFrame.h"
+#include "model/Generic.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/FuncDef.h"
@@ -1181,8 +1182,10 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
 
 // type [ subtype, ... ]
 //       ^              ^
-TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
-   if (!typeDef->generic)
+TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
+                                  Generic *generic
+                                  ) {
+   if (typeDef && !typeDef->generic)
       error(lbrack, 
             SPUG_FSTR("You cannot specialize non-generic type " <<
                        typeDef->getFullName()
@@ -1192,10 +1195,11 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
    TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
    Token tok;
    while (true) {      
-      TypeDefPtr subType = parseTypeSpec();
+      TypeDefPtr subType = parseTypeSpec(0, generic);
       types->push_back(subType);
       
       tok = getToken();
+      if (generic) generic->addToken(tok);
       if (tok.isRBracket())
          break;
       else if (!tok.isComma())
@@ -1203,7 +1207,8 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
    }
 
    // XXX needs to verify the numbers and types of specializers
-   typeDef = typeDef->getSpecialization(*context, types.get());
+   if (typeDef)
+      typeDef = typeDef->getSpecialization(*context, types.get());
    return typeDef;
 }
 
@@ -1229,22 +1234,31 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    return funcCall;
 }
 
-TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
+TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    Token tok = getToken();
    if (!tok.isIdent())
       unexpected(tok, "type identifier expected");
+   if (generic) generic->addToken(tok);
    
-   VarDefPtr def = context->ns->lookUp(tok.getData());
-   TypeDef *typeDef = TypeDefPtr::rcast(def);
-   if (!typeDef)
-      error(tok, SPUG_FSTR(tok.getData() << errorMsg));
+   TypeDef *typeDef = 0;
+   if (!generic || !generic->getParm(tok.getData())) {
+      VarDefPtr def = context->ns->lookUp(tok.getData());
+      typeDef = TypeDefPtr::rcast(def);
+      if (!typeDef)
+         error(tok, SPUG_FSTR(tok.getData() <<
+                               (errorMsg ? errorMsg : " is not a type.")
+                              )
+               );
+   }
    
    // see if there's a bracket operator   
    tok = getToken();
-   if (tok.isLBracket())
-      typeDef = parseSpecializer(tok, typeDef);
-   else
+   if (tok.isLBracket()) {
+      if (generic) generic->addToken(tok);
+      typeDef = parseSpecializer(tok, typeDef, generic);
+   } else {
       toker.putBack(tok);
+   }
    
    // make sure this isn't an unspecialized generic
    if (typeDef->generic)
@@ -2438,6 +2452,38 @@ void Parser::parsePostOper(TypeDef *returnType) {
    }
 }
 
+// [ n1, n2, ... ]
+//  ^             ^
+void Parser::parseGenericParms(GenericParmVec &parms) {
+   Token tok = getToken();
+   while (true) {
+      if (tok.isIdent())
+         parms.push_back(new GenericParm(tok.getData()));
+      
+      tok = getToken();
+      if (tok.isRBracket())
+         return;
+      else if (!tok.isComma())
+         unexpected(tok, 
+                    "comma or closing bracket expected in generic parameter "
+                     "list."
+                    );
+                    
+   }
+}
+
+void Parser::recordBlock(Generic *generic) {
+   int bracketCount = 1;
+   while (bracketCount) {
+      Token tok = getToken();
+      generic->addToken(tok);
+      if (tok.isLCurly())
+         ++bracketCount;
+      else if (tok.isRCurly())
+         --bracketCount;
+   }
+}
+
 // class name : base, base { ... }
 //      ^                         ^
 // class name;
@@ -2451,21 +2497,37 @@ TypeDefPtr Parser::parseClassDef() {
    string className = tok.getData();
    
    // check for an existing definition of the symbol
-   TypeDefPtr existing = checkForExistingDef(tok, tok.getData());
+   TypeDefPtr existing = checkForExistingDef(tok, className);
+   
+   // check for a generic parameter list
+   tok = getToken();
+   Generic *generic = 0;
+   if (tok.isLBracket()) {
+      if (existing)
+         error(tok, "Generic classes can not be forward declared");
+      
+      generic = new Generic();
+      parseGenericParms(generic->parms);
+      tok = getToken();
+      generic->addToken(tok);
+   }
    
    // parse base class list   
    vector<TypeDefPtr> bases;
    vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
-   tok = getToken();
    if (tok.isColon())
       while (true) {
-         // parse the base class name, make sure it's safe to add this as a 
-         // base class given the existing set, and add it to the list.
-         TypeDefPtr baseClass = parseTypeSpec();
-         baseClass->addToAncestors(*context, ancestors);
-         bases.push_back(baseClass);
-         
+         // parse the base class name
+         TypeDefPtr baseClass = parseTypeSpec(0, generic);
+         if (!generic) {
+            // make sure it's safe to add this as a base class given the 
+            // existing set, and add it to the list.
+            baseClass->addToAncestors(*context, ancestors);
+            bases.push_back(baseClass);
+         }
+
          tok = getToken();
+         if (generic) generic->addToken(tok);
          if (tok.isLCurly())
             break;
          else if (!tok.isComma())
@@ -2476,6 +2538,20 @@ TypeDefPtr Parser::parseClassDef() {
       return context->createForwardClass(className);
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
+   
+   // if we're recording a generic definition, just record the rest of the 
+   // block, create a generic type and quit.
+   if (generic) {
+      recordBlock(generic);
+      TypeDefPtr result = new TypeDef(context->construct->classType.get(),
+                                      className,
+                                      true
+                                      );
+      result->genericInfo = generic;
+      result->generic = new TypeDef::SpecializationCache();
+      addDef(result.get());
+      return result;
+   }
    
    // if no base classes were specified, and Object has been defined, make 
    // Object the implicit base class.

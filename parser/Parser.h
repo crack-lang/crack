@@ -12,12 +12,14 @@
 
 #include "Toker.h"
 #include "model/FuncCall.h"
+#include "model/GenericParm.h"
 #include "model/Context.h"
 
 namespace model {
    SPUG_RCPTR(ArgDef);
    SPUG_RCPTR(FuncDef);
    SPUG_RCPTR(Expr);
+   class Generic;
    SPUG_RCPTR(Initializers);
    class Namespace;
    SPUG_RCPTR(TypeDef);
@@ -287,9 +289,11 @@ class Parser {
       /** 
        * Parse the "specializer" after a generic type name. 
        * @param tok the left bracket token of the generic specifier.
+       * @param generic defined when doing this within a generic definition.
        */
       model::TypeDef *parseSpecializer(const Token &tok, 
-                                       model::TypeDef *typeDef
+                                       model::TypeDef *typeDef,
+                                       model::Generic *generic = 0
                                        );
       
       
@@ -297,8 +301,8 @@ class Parser {
                                       Token::Type terminator
                                       );
       
-      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 
-                                       " is not a type."
+      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 0,
+                                      model::Generic *generic = 0
                                       );
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args, bool isMethod);
@@ -378,6 +382,11 @@ class Parser {
        * Parse a function definition after an "oper" keyword.
        */
       void parsePostOper(model::TypeDef *returnType);
+
+      /** Parse the generic parameter list */
+      void parseGenericParms(model::GenericParmVec &parms);
+      
+      void recordBlock(model::Generic *generic);
       
       model::TypeDefPtr parseClassDef();
       

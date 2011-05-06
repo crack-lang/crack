@@ -223,6 +223,12 @@ class Construct : public spug::RCBase {
          */
         bool loadBootstrapModules();
 
+        /** 
+         * Register a module with the module cache and the loaded module list. 
+         *  This is intended to accomodate ephemeral modules
+         */
+        void registerModule(ModuleDef *module);
+
         /**
          * Run the specified script.  Catches all parse exceptions, returns 
          * an exit code, which will be non-zero if a parse error occurred and 

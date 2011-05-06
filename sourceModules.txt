@@ -13,6 +13,7 @@ model/VarRef.cc
 model/SetRegisterExpr.cc
 model/FuncCall.cc
 model/Expr.cc
+model/Generic.cc
 model/OverloadDef.cc
 model/ResultExpr.cc
 model/Initializers.cc

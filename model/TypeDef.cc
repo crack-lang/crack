@@ -5,6 +5,8 @@
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
+#include "parser/Parser.h"
+#include "parser/Toker.h"
 #include "AllocExpr.h"
 #include "AssignExpr.h"
 #include "CleanupFrame.h"
@@ -12,6 +14,8 @@
 #include "Branchpoint.h"
 #include "Context.h"
 #include "FuncDef.h"
+#include "Generic.h"
+#include "GlobalNamespace.h"
 #include "Initializers.h"
 #include "InstVarDef.h"
 #include "OverloadDef.h"
@@ -21,9 +25,11 @@
 #include "VarDefImpl.h"
 #include "VarRef.h"
 
+using namespace builder;
 using namespace std;
 using namespace model;
 using namespace spug;
+using namespace parser;
 
 TypeDef *TypeDef::findSpecialization(TypeVecObj *types) {
     assert(generic && "find specialization called on non-generic type");
@@ -594,7 +600,75 @@ void TypeDef::addDestructorCleanups(Context &context) {
 TypeDef *TypeDef::getSpecialization(Context &context, 
                                     TypeDef::TypeVecObj *types
                                     ) {
-    assert(false && "generics are not yet supported for normal types.");
+    assert(genericInfo);
+    
+    // check the cache
+    TypeDef *result = findSpecialization(types);
+    if (result)
+        return result;
+
+    // construct the module name from the class name plus type parameters
+    ostringstream tmp;
+    tmp << getFullName() << '[';
+    for (int i = 0; i < types->size(); ++i)
+        tmp << (*types)[i]->getFullName() << ',';
+    tmp << ']';
+    string moduleName = tmp.str();
+
+    // make sure we've got the right number of arguments
+    if (types->size() != genericInfo->parms.size())
+        context.error(SPUG_FSTR("incorrect number of arguments for generic " <<
+                                moduleName << ".  Expected " <<
+                                genericInfo->parms.size() << " got " <<
+                                types->size()
+                                )
+                      );
+    
+    // create an ephemeral module for the new class
+    Context *rootContext = context.construct->rootContext.get();
+    NamespacePtr compileNS =
+        new GlobalNamespace(rootContext->compileNS.get(),
+                            moduleName
+                            );
+    BuilderPtr moduleBuilder = 
+        context.construct->rootBuilder->createChildBuilder();
+    ContextPtr modContext = new Context(*moduleBuilder, Context::module, 
+                                        rootContext,
+                                        new GlobalNamespace(rootContext->ns.get(),
+                                                            moduleName
+                                                            ),
+                                        compileNS.get()
+                                        );
+    modContext->toplevel = true;
+                                                         
+    ModuleDefPtr module = modContext->createModule(moduleName);
+    
+    // XXX alias all global symbols in the original module
+    
+    // alias the template arguments to their parameter names
+    for (int i = 0; i < types->size(); ++i)
+        modContext->ns->addAlias(genericInfo->parms[i]->name, (*types)[i].get());
+    
+    istringstream fakeInput;
+    Toker toker(fakeInput, moduleName.c_str());
+    genericInfo->replay(toker);
+    toker.putBack(Token(Token::ident, name, Location()));
+    toker.putBack(Token(Token::classKw, "class", Location()));
+
+    Parser parser(toker, modContext.get());
+    parser.parse();
+    module->close(*modContext);
+
+    // cache the module    
+    context.construct->registerModule(module.get());
+    
+    // extract the type out of the newly created module and store it in the 
+    // specializations cache
+    result = TypeDefPtr::rcast(module->lookUp(name));
+    assert(result);
+    (*generic)[types] = result;
+    
+    return result;
 }
 
 bool TypeDef::isConstant() {

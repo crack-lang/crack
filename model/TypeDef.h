@@ -14,6 +14,7 @@ namespace model {
 
 SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
+class Generic;
 class Initializers;
 SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(VarDef);
@@ -79,7 +80,8 @@ class TypeDef : public VarDef, public Namespace {
         // defined for a generic type.  Stores the cache of all 
         // specializations for the type.
         SpecializationCache *generic;
-        
+        Generic *genericInfo;
+
         // the default initializer expression (XXX I'm not sure that we want 
         // to keep this, for now it's expedient to be able to do variable 
         // initialization without the whole "oper new" business)
@@ -117,6 +119,7 @@ class TypeDef : public VarDef, public Namespace {
                 ) :
             VarDef(metaType, name),
             Namespace(name),
+            genericInfo(0),
             generic(0),
             pointer(pointer),
             hasVTable(false),

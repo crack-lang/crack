@@ -1,0 +1,11 @@
+# Copyright 2011 Google Inc.
+
+class A[T] {
+    T val;
+    oper init(T val) : val = val {}
+}
+
+if (A[int](100).val != 100) puts('FAILED generic based on int');
+if (A[float](1.0).val != 1.0) puts('FAILED generic based on float');
+
+puts('ok');

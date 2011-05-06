@@ -373,6 +373,11 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
     return modDef;
 }    
 
+void Construct::registerModule(ModuleDef *module) {
+    moduleCache[module->getFullName()] = module;
+    loadedModules.push_back(module);
+}
+
 namespace {
     // extract a class from a module and verify that it is a class - returns 
     // null on failure.
