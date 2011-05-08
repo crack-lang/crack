@@ -749,8 +749,6 @@ class CString : String {
 class StaticString : String {
 
     oper init(byteptr data, uint size) : String(data, size, true) {}
-    oper init(String str) : String(str.buffer, str.size, true) {}
-    oper init(SubString str) : String(str.buffer, str.size, true) {}
 
     ## Initialize from a null terminated string.
     oper init(byteptr data) : String(data, strlen(data), true) {}

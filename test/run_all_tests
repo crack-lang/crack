@@ -1251,4 +1251,6 @@ test_output 'test readers' 'import test.test_readers;' ok
 
 test_output 'test fs' 'import test.test_fs;' ok
 
+test_output 'test command line flags' 'import test.test_cmdline;' ok
+
 exit $rc

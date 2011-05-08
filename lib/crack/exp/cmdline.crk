@@ -39,9 +39,9 @@ StringArray splitString(String s, byte sep) {
 }
 
 class Option : Object {
-   StaticString long;
-   StaticString short;
-   StaticString desc;
+   String long;
+   String short;
+   String desc;
    uint type;
    uint pos = NOINDEX; // index in option array
    String value; // may be null
@@ -50,25 +50,25 @@ class Option : Object {
       type(type),
       value("") {}
 
-   oper init(StaticString long, StaticString short, StaticString desc, String value, uint type):
-      long(long.buffer, long.size),
-      short(short.buffer, short.size),
-      desc(desc),
-      type(type),
-      value(value) {}
+   oper init(String long, String short, String desc, String value, uint type):
+      long = long,
+      short = short,
+      desc = desc,
+      type = type,
+      value = value {}
 
-   oper init(StaticString long, StaticString short, StaticString desc, StaticString value, uint type):
-      long(long.buffer, long.size),
-      short(short.buffer, short.size),
-      type(type),
-      value(String(value)) {}
+   oper init(String long, String short, String desc, String value, uint type):
+      long = long,
+      short = short,
+      type = type,
+      value = value {}
 
-   oper init(StaticString long, StaticString short):
-      long(long.buffer, long.size),
-      short(short.buffer, short.size),
-      desc(""),
-      type(CMD_STR),
-      value("") {}
+   oper init(String long, String short):
+      long = long,
+      short = short,
+      desc = "",
+      type = CMD_STR,
+      value = "" {}
 
    int cmp(Option other){
       return long.cmp(other.long);
@@ -90,17 +90,13 @@ class Option : Object {
       value = value0;
    }
 
-   void setString(StaticString value0){
-      value = String(value0);
-   }
-
-   void set(StaticString value0){
+   void set(String value0){
       if (type == CMD_BLN){
          if (value0 == 't' || value0 == 'true' || value0 == '1')
-            value = String("1");
+            value = "1";
          else 
             if (value0 == 'f' || value0 == 'false' || value0 == '0')
-               value = String("1");
+               value = "1";
             else
                throw BadCastError(FStr() `Invalid value '$(value0)' for boolean option`);
          return;
@@ -109,7 +105,7 @@ class Option : Object {
          strtoi(value0);
       else if (type == CMD_FLT)
          strtof(value0);
-      value = String(value0);
+      value = value0;
    }
 }
 
@@ -130,27 +126,23 @@ class CmdOptions : Object{
       short.append(newoption.short[0]);
    }
 
-   Option add(StaticString long, StaticString short, StaticString desc, String value, uint type){
+   Option add(String long, String short, String desc, String value, uint type){
       newoption := Option(long, short, desc, value, type);
       add(newoption);
       return newoption;
-   }
-
-   Option add(StaticString long, StaticString short, StaticString desc, StaticString value, uint type){
-      return add(long, short, desc, String(value), type);
    }
 
    // Forward declaration
    StringArray parse(StringArray args, bool createUnknown);
 
    // Convenience method to add options based on a specification string
-   StringArray addFromString(StaticString line){
+   StringArray addFromString(String line){
       new_argv := splitString(line, b' ');
       return parse(new_argv, true);
    }
    
    // Linear search for now
-   uint findLongIndex(StaticString optName){
+   uint findLongIndex(String optName){
       result := NOINDEX;
       Option opt;
 
@@ -172,7 +164,7 @@ class CmdOptions : Object{
 
 
    // Generalized get
-   Option getOption(StaticString optName, bool throwException){
+   Option getOption(String optName, bool throwException){
       index := NOINDEX;
       Option option = null;
 
@@ -188,31 +180,31 @@ class CmdOptions : Object{
       return option;
    }
    
-   Option getOption(StaticString optName){
+   Option getOption(String optName){
       return getOption(optName, true);
    }
 
    Option getOption(String optName){
-      return getOption(StaticString(optName.buffer, optName.size), true);
-   }
-
-   Option oper [](StaticString optName){
       return getOption(optName, true);
    }
 
    Option oper [](String optName){
-      return getOption(StaticString(optName.buffer, optName.size), true);
+      return getOption(optName, true);
+   }
+
+   Option oper [](String optName){
+      return getOption(optName, true);
    }
 
 
    // Getters 
-   int getInt(StaticString optName){
+   int getInt(String optName){
       Option opt = getOption(optName);
       if (opt.type != CMD_INT) throw InvalidArgumentError(FStr() `Attempting to fetch non-integer '$optName' option as an integer`);
       return strtoi(opt.value);
    }
 
-   float getFloat(StaticString optName){
+   float getFloat(String optName){
       Option opt = getOption(optName);
       if (opt.type != CMD_FLT) throw InvalidArgumentError(FStr() `Attempting to fetch non-float option '$optName' as a float`);
       return strtof(opt.value);
@@ -226,7 +218,7 @@ class CmdOptions : Object{
          return false;
    }
 
-   bool getBool(StaticString optName){
+   bool getBool(String optName){
       Option opt = getOption(optName);
 
       if (opt.type != CMD_BLN) throw InvalidArgumentError(FStr() 
@@ -235,7 +227,7 @@ class CmdOptions : Object{
       return stringAsBool(opt.value);
    }
 
-   String getString(StaticString optName){
+   String getString(String optName){
       return getOption(optName).value;
    }
 
@@ -290,9 +282,12 @@ class CmdOptions : Object{
       if (pair[0] && newType<100 && pair[0].size>0){
          try {
             if (pair[1])
-               opt = Option(StaticString(pair[0]), StaticString(pair[0].slice(0, 1)), "", String(pair[1].slice(startInd)), newType);
+               opt = Option(pair[0], pair[0].slice(0, 1), "", 
+                            pair[1].slice(startInd), 
+                            newType
+                            );
             else if (newType == CMD_BLN)
-               opt = Option(StaticString(pair[0]), StaticString(pair[0].slice(0, 1)), "", "1", newType);
+               opt = Option(pair[0], pair[0].slice(0, 1), "", "1", newType);
             else InvalidArgumentError(FStr() `While setting new option '$(pair[0])': `);
                
          } catch (Exception ex){
@@ -384,8 +379,8 @@ class CmdOptions : Object{
       if (i>0) cout `\n`;
    }
    
-   void printUsage(StaticString intro){
-      printUsage(String(intro));
+   void printUsage(String intro){
+      printUsage(intro);
    }
 
 }
