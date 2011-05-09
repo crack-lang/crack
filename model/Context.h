@@ -162,6 +162,11 @@ class Context : public spug::RCBase {
         ContextPtr getToplevel();
         
         /**
+         * Returns the first enclosing module context.
+         */
+        ContextPtr getModuleContext();
+        
+        /**
          * Returns the parent of the context.
          */
         ContextPtr getParent() {

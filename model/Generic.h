@@ -12,6 +12,8 @@ namespace parser {
 
 namespace model {
 
+SPUG_RCPTR(Namespace);
+
 /** Stores information used to replay a generic. */
 class Generic {
     public:
@@ -20,6 +22,9 @@ class Generic {
         
         // the body of the generic, stored in reverse order.
         std::vector<parser::Token> body;
+        
+        // the original module Namespace
+        NamespacePtr moduleNS;
         
         /** Add the token to the body. */
         void addToken(const parser::Token &tok) {

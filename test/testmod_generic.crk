@@ -1,0 +1,7 @@
+
+# verifies that we can use module globals
+int val = 100;
+
+class G[T] {
+    int getVal() { return val; }
+}

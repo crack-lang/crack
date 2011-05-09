@@ -2475,7 +2475,9 @@ void Parser::parseGenericParms(GenericParmVec &parms) {
 void Parser::recordBlock(Generic *generic) {
    int bracketCount = 1;
    while (bracketCount) {
-      Token tok = getToken();
+      // get the next token, use the low-level token so as not to process 
+      // annotations.
+      Token tok = toker.getToken();
       generic->addToken(tok);
       if (tok.isLCurly())
          ++bracketCount;
@@ -2508,6 +2510,7 @@ TypeDefPtr Parser::parseClassDef() {
       
       generic = new Generic();
       parseGenericParms(generic->parms);
+      generic->moduleNS = context->getModuleContext()->ns;
       tok = getToken();
       generic->addToken(tok);
    }

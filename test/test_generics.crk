@@ -1,5 +1,7 @@
 # Copyright 2011 Google Inc.
 
+import test.testmod_generic G;
+
 class A[T] {
     T val;
     oper init(T val) : val = val {}
@@ -7,5 +9,6 @@ class A[T] {
 
 if (A[int](100).val != 100) puts('FAILED generic based on int');
 if (A[float](1.0).val != 1.0) puts('FAILED generic based on float');
+if (G[int]().getVal() != 100) puts('FAILED imported generics');
 
 puts('ok');

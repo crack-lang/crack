@@ -172,6 +172,15 @@ ContextPtr Context::getToplevel() {
         return 0;
 }
 
+ContextPtr Context::getModuleContext() {
+    if (scope == module) {
+        return this;
+    } else {
+        assert(parent);
+        return parent->getModuleContext();
+    }
+}
+
 bool Context::encloses(const Context &other) const {
     if (this == &other)
         return true;
