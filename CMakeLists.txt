@@ -1,6 +1,7 @@
 # root
 
-cmake_minimum_required(VERSION 2.6)
+# 2.8.3 includes a patch for detecting gdk-pixbuf
+cmake_minimum_required(VERSION 2.8.3)
 
 # this policy warning is due to lib command lines arg output from llvm-config
 if(COMMAND cmake_policy)
@@ -19,34 +20,34 @@ set(LLVM_MIN_VERSION_TEXT  "2.9")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 
-set(CMAKE_CXX_FLAGS_DEBUG "-D_DEBUG -g")#-Wall -Winline -W -Wwrite-strings -Wno-unused")
-set(RELFLAGS "-DNDEBUG -O3")
-set(CMAKE_CXX_FLAGS ${RELFLAGS})
-set(CMAKE_CXX_FLAGS_RELEASE ${RELFLAGS})
+include(MacroOptionalFindPackage)
+include(MacroLogFeature)
 
 MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
 
 MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
-INCLUDE(FindPkgConfig)
 
 Find_Package(LLVM REQUIRED)
-Find_Package(CWD)
-
-include_directories(${PROJECT_SOURCE_DIR} 
-                    ${LLVM_INCLUDE_DIR})
 
 IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
-  MESSAGE(FATAL_ERROR "LLVM version ${LLVM_STRING_VERSION} is too old, 
+  MESSAGE(FATAL_ERROR "LLVM version ${LLVM_STRING_VERSION} is too old,
                        please install ${LLVM_MIN_VERSION_TEXT} of greater!")
 ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
-add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
-add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
+macro_optional_find_package(CWD)
+macro_log_feature(CWD_FOUND "libcwd" "Better debugging support" "http://libcwd.sourceforge.net/")
+
 IF (CWD_FOUND)
   add_definitions(-DGOT_CWD)
-  set(CWD_LIBS ${CWD_LIBRARIES})
 ENDIF (CWD_FOUND)
+
+include_directories(${PROJECT_SOURCE_DIR}
+                    ${PROJECT_BINARY_DIR}
+                    ${LLVM_INCLUDE_DIR})
+
+add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
+add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
 
 # share this is autoconf
 file(STRINGS sourceModules.txt CRACK_SRC_FILES)
@@ -69,10 +70,9 @@ set_target_properties(libcrack
                       OUTPUT_NAME CrackLang
                       SOVERSION ${CRACKLANG_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
+                      COMPILE_DEFINITIONS_DEBUG _DEBUG
                       )
 target_link_libraries( libcrack
-                       ${CWD_LIBS}
-                       dl
                        ${LLVM_LIBS}
                      )
 
@@ -83,17 +83,25 @@ set_target_properties(libcrackextstub
                       OUTPUT_NAME CrackNativeRuntime
                       SOVERSION ${NATRUN_API_VERSION}
                       LINK_FLAGS ${LLVM_LDFLAGS}
+                      COMPILE_DEFINITIONS_DEBUG _DEBUG
                       )
 target_link_libraries( libcrackextstub
-                       ${CWD_LIBS}
-                       dl
                        ${LLVM_LIBS}
                      )
+
+if (CWD_FOUND)
+    target_link_libraries( libcrack ${CWD_LIBRARIES} )
+    target_link_libraries( libcrackextstub ${CWD_LIBRARIES} )
+endif (CWD_FOUND)
+
+# link dl last, so cwd doesn't complain
+target_link_libraries( libcrack dl )
+target_link_libraries( libcrackextstub dl )
 
 # extension config, per autoconf
 set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P})
 configure_file("${PROJECT_SOURCE_DIR}/ext/crack_config.h.in"
-               "${PROJECT_SOURCE_DIR}/ext/crack_config.h")
+               "${PROJECT_BINARY_DIR}/crack_config.h")
 
 # test extension. we set this up to mirror the autoconf
 # build
@@ -102,7 +110,6 @@ set_target_properties(testext
                       PROPERTIES
                       OUTPUT_NAME testext
                       PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/test/.libs/"
                       )
 
 # runtime extension
@@ -111,7 +118,6 @@ set_target_properties(crack-runtime
                       PROPERTIES
                       OUTPUT_NAME runtime
                       PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
                       )
 target_link_libraries(crack-runtime
                       pthread)
@@ -120,9 +126,6 @@ target_link_libraries(crack-runtime
 add_executable(crack crack.cc)
 set_target_properties( crack
                        PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
-                       # test suite currently expects crack binary in project 
-                       # source
-                       RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
                        VERSION ${CRACK_VERSION}
                      )
 
@@ -148,168 +151,53 @@ install(TARGETS crack-runtime
         )
 
 # manual
-install(FILES doc/Manual.html DESTINATION share/doc/crack)
+if (EXISTS doc/Manual.html)
+    install(FILES doc/Manual.html DESTINATION share/doc/crack)
+endif (EXISTS doc/Manual.html)
 
 # header files
 install(DIRECTORY compiler/ DESTINATION "include/crack-${CRACK_VERSION}/crack/compiler"
         FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/ext"
         FILES_MATCHING PATTERN "*.h")
+install(FILES "${PROJECT_BINARY_DIR}/crack_config.h" DESTINATION "include/crack-${CRACK_VERSION}/crack/ext")
 
-# install library modules and extensions
+# install library modules
 install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
         FILES_MATCHING PATTERN "*.crk")
-install(DIRECTORY .libs/ DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext"
-        FILES_MATCHING PATTERN "_*.so")
 
+# test suite, hackish
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/.libs
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.libs)
 
-# test suite
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/.libs
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/.libs)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/crack
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/crack ${CMAKE_CURRENT_SOURCE_DIR}/crack)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/opt/_pcre.so ${CMAKE_CURRENT_BINARY_DIR}/_pcre.so)
+
 add_custom_target(check 
                   ${PROJECT_SOURCE_DIR}/test/run_all_tests
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
                   )
 add_custom_target(checkc
                   ${PROJECT_SOURCE_DIR}/test/run_all_tests crackc
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
                   )
 
 add_custom_target(screen
-                  ${PROJECT_SOURCE_DIR}/crack
+                  crack     # we can put targets here as well
                     ${PROJECT_SOURCE_DIR}/screen/screen.crk
                     ${PROJECT_SOURCE_DIR}/crack
                     ${PROJECT_SOURCE_DIR}/screen/tests
                     ${PROJECT_SOURCE_DIR}/screen/output
                   )
 
-# optional extensions
+add_subdirectory(opt)
 
-# GTK
-SET(GTK2_ADDITIONAL_SUFFIXES x86_64-linux-gnu/glib-2.0 gdk-pixbuf-2.0)
-find_package(GTK2 QUIET 2.6 COMPONENTS gtk)
-if(GTK2_FOUND)
-   message(STATUS "Found GTK, will build extension")
-   find_package(GTK2_GDKPIXBUF QUIET)
-   include_directories(${GTK2_INCLUDE_DIRS})
-   add_library(gtk SHARED opt/_gtk.cc)
-   set_target_properties(gtk
-                      PROPERTIES
-                      OUTPUT_NAME _gtk
-                      COMPILE_FLAGS
-                      ${GTK2_GDKPIXBUF_INCLUDE_DIRS}
-                      PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                      )
-   target_link_libraries( gtk
-                          ${GTK2_LIBRARIES}
-                         )
-else()
-   message(STATUS "Gtk+2 not found, skipping")
-endif()
-
-# pcre
-find_library(PCRE_LIBRARY NAMES pcre)
-find_path(PCRE_INCLUDE_DIR NAMES pcre.h)
-
-if(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
-  SET(PCRE_FOUND TRUE)
-endif(PCRE_LIBRARY AND PCRE_INCLUDE_DIR)
-
-if (PCRE_FOUND)
-   message(STATUS "Found pcre, will build extension")
-   include_directories(${PCRE_INCLUDE_DIR})
-   add_library(pcre SHARED opt/_pcre.cc)
-   set_target_properties(pcre
-                      PROPERTIES
-                      OUTPUT_NAME _pcre
-                      PREFIX ""
-                      LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                      )
-   target_link_libraries( pcre
-                          ${PCRE_LIBRARY}
-                         )
-else()
-   message(STATUS "PCRE not found, skipping")
-endif()
-
-# SDL
-find_package(SDL)
-if(SDL_FOUND)
-   find_library(SDL_LIBRARY NAMES SDL)
-   find_path(SDL_INCLUDE_DIR NAMES SDL.h)
-
-   if(SDL_LIBRARY AND SDL_INCLUDE_DIR)
-     SET(SDL_FOUND_PRELIM TRUE)
-   endif(SDL_LIBRARY AND SDL_INCLUDE_DIR)
-
-   if (SDL_FOUND_PRELIM)
-      message(STATUS "Found SDL, will build extension")
-      include_directories(${SDL_INCLUDE_DIR})
-      add_library(sdl SHARED opt/_sdl.cc)
-      set_target_properties(sdl
-                         PROPERTIES
-                         OUTPUT_NAME _sdl
-                         PREFIX ""
-                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                         )
-      target_link_libraries( sdl
-                             ${SDL_LIBRARY}
-                            )
-   endif()
-else()
-   message(STATUS "SDL not found, skipping")
-endif()
-
-# OpenGL
-find_package(OpenGL QUIET)
-if(OPENGL_FOUND)
-   find_path(OPENGL_INCLUDE_DIR NAMES gl.h)
-   if(OPENGL_INCLUDE_DIR)
-     SET(OPENGL_FOUND_PRELIM TRUE)
-   endif(OPENGL_INCLUDE_DIR)
-   
-   if (OPENGL_FOUND_PRELIM)
-      message(STATUS "Found OpenGL, will build extension")
-      include_directories(${OPENGL_INCLUDE_DIR})
-      add_library(gl SHARED opt/_gl.cc)
-      set_target_properties(gl
-                         PROPERTIES
-                         OUTPUT_NAME _gl
-                         PREFIX ""
-                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                         )
-      target_link_libraries( gl
-                             ${OPENGL_LIBRARIES}
-                            )
-   endif()
-else()
-   message(STATUS "OpenGL not found, skipping")
-endif()
-
-# Cairo
-find_package(Cairo QUIET)
-IF (CAIRO_FOUND)
-   pkg_check_modules(CAIRO cairo>=1.10 QUIET)
-   find_path(CAIRO_INCLUDE_DIR NAMES cairo.h PATH_SUFFIXES cairo)
-   if(CAIRO_INCLUDE_DIR)
-     SET(CAIRO_FOUND_PRELIM TRUE)
-     #~ SET(CAIRO_INCLUDE_DIR ${CAIRO_INCLUDE_DIR}/cairo)
-   endif(CAIRO_INCLUDE_DIR)
-
-   if(CAIRO_FOUND_PRELIM)
-      message(STATUS "Found Cairo, will build extension")
-      add_library(cairo SHARED opt/_cairo.cc)
-      set_target_properties(cairo
-                         PROPERTIES
-                         OUTPUT_NAME _cairo
-                         PREFIX ""
-                         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/.libs/"
-                         )
-      target_link_libraries( cairo
-                             ${CAIRO_LDFLAGS} 
-                            )
-   else()
-      message(STATUS "Cairo not found, skipping")
-   endif()
-else()
-   message(STATUS "Cairo not found, skipping")
-endif()
+macro_display_feature_log()
