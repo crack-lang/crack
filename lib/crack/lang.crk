@@ -474,7 +474,7 @@ class String : Buffer {
         _freeBuffer();
     }
 
-    ## Find the rightmost index of a character in a string, starting at
+    ## Find the rightmost index of a byte in a string, starting at
     ## index idx
     ## returns -1 if not found
     int rfind(byte c, uint idx) {
@@ -489,7 +489,7 @@ class String : Buffer {
         else
             return -1;
     }
-    ## Find the rightmost index of a character in a string
+    ## Find the rightmost index of a byte in a string
     ## returns -1 if not found
     ## note this function is not safe for strings larger than INT_MAX
     int rfind(byte c) {
@@ -499,7 +499,7 @@ class String : Buffer {
             return rfind(c, size-1);
     }
 
-    ## Find the leftmost index of a character in a string, starting at
+    ## Find the leftmost index of a byte in a string, starting at
     ## index idx
     ## returns -1 if not found
     int lfind(byte c, uint idx) {
@@ -511,7 +511,7 @@ class String : Buffer {
         }
         return -1;
     }
-    ## Find the leftmost index of a character in a string
+    ## Find the leftmost index of a byte in a string
     ## returns -1 if not found
     ## note this function is not safe for strings larger than INT_MAX
     int lfind(byte c) {
@@ -721,10 +721,6 @@ class CString : String {
 
     oper init(Buffer buf) {
         __copy(buf.buffer, buf.size);
-    }
-
-    oper init(SubString str) {
-        __copy(str.buffer, str.size);
     }
 
     ## Initialize a the string from byteptr and size, take ownership of the

@@ -67,7 +67,7 @@ class Args {
         li := 0;
         ss := 0;
         CString val;
-        while ( (i = str.lfind(delim, uint(i+1))) != -1) {
+        while ( (i = str.lfind(delim, uint(li))) != -1) {
             val = CString(str.slice(li, i));
             val.oper bind();
             __rep[ss].oper release();
