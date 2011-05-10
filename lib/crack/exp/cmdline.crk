@@ -230,7 +230,8 @@ class CmdOptions : Object{
       return getOption(optName).value;
    }
 
-   StringArray _getPair(StringArray args, uint argi){
+   Array _getPairs(StringArray args, uint argi){
+      Array 
       StringArray result = {2};
       arg := args[argi];
       len := arg.size;
