@@ -233,14 +233,17 @@ void crk_set_errno(int value){
 }
 
 int crk_strtoi(char *s){
+   errno = 0;
    return (int)strtol(s, (char**)NULL, 0);
 }
 
 float crk_strtof(char *s){
+   errno = 0;
    return (float)strtof(s, (char**)NULL);
 }
 
 float crk_strtod(char *s){
+   errno = 0;
    return (double)strtod(s, (char**)NULL);
 }
 

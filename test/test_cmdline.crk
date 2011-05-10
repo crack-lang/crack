@@ -1,14 +1,14 @@
 // Test CmdOptions
 
 import crack.io cout, FStr;
-import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_FLT, CMD_BLN, splitString;
+import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_FLOAT, CMD_BOOL, splitString;
 import crack.lang Exception;
 import crack.sys argv;
 
 String S = null;
 
 // Test full constructor
-Option help = {"help", "h", "Show help message", "f", CMD_BLN};
+Option help = {"help", "h", "Show help message", "f", CMD_BOOL};
 
 // Test constructor with default empty value
 Option example = {"help", "h"};
@@ -22,11 +22,11 @@ for (uint i = 0; i < 2; i++)
 
 CmdOptions options = {};
 
-options.add("help", "h", "Show help message", "f", CMD_BLN);
+options.add("help", "h", "Show help message", "f", CMD_BOOL);
 options.add("string", "s", "An example string", "astring", CMD_STR);
-options.add("float", "f", "A floating point number", "100.0", CMD_FLT);
+options.add("float", "f", "A floating point number", "100.0", CMD_FLOAT);
 options.add("int", "i", "Integer example", "10", CMD_INT);
-options.add("bool", "b", "Boolean example", "f", CMD_BLN);
+options.add("bool", "b", "Boolean example", "f", CMD_BOOL);
 
 // Test the values of the options
 if (options.getInt("int") != 10 || options.getInt("i") != 10)

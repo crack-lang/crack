@@ -98,7 +98,7 @@ int atoi(CString s){
      else if (err == EINVAL)
       throw BadCastError(FStr() `Invalid input '$s' in converting string to integer`);
      else 
-      throw Exception(FStr() `Unknown error in strtoi, errno = $err`);
+      throw Exception(FStr() `Unknown error in strtoi($(s)), errno = $err`);
    }
 }
 
@@ -132,7 +132,7 @@ float atof(CString s){
      else if (err == EINVAL)
       throw BadCastError(FStr() `Invalid input '$s' in converting string to float`);
      else 
-      throw Exception(FStr() `Unknown error in strtof, errno = $err`);
+      throw Exception(FStr() `Unknown error in strtof($(s)), errno = $err`);
    }
 }
 
