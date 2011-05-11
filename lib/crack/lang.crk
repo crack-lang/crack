@@ -1,5 +1,3 @@
-
-#!/usr/bin/crack
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
@@ -949,9 +947,9 @@ void die() {
 int cmp(Object a, Object b) {
     if (a is b)
         return 0;
-    else if (a)
+    else if (!(a is null))
         return a.cmp(b);
-    else if (b)
+    else if (!(b is null))
         return -1;
     else
         return 1;
