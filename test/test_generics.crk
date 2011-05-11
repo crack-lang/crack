@@ -2,13 +2,18 @@
 
 import test.testmod_generic G;
 
+bool gotStaticCalled;
 class A[T] {
     T val;
     oper init(T val) : val = val {}
+    @static void gotStatic() { gotStaticCalled = 1; }
 }
 
 if (A[int](100).val != 100) puts('FAILED generic based on int');
 if (A[float](1.0).val != 1.0) puts('FAILED generic based on float');
 if (G[int]().getVal() != 100) puts('FAILED imported generics');
+
+A[int].gotStatic();
+if (!gotStaticCalled) puts('FAILED static function call');
 
 puts('ok');

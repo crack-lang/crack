@@ -157,11 +157,13 @@ void Parser::parseClause(bool defsAllowed) {
             
             // don't do expression processing
             expr = 0;
+         } else if (tok2.isAssign()) {
+            error(tok2, "You cannot assign to a constant, class or function.");
          } else {
 
-            // try treating the class as a primary
+            // try treating the class as a primary.
             toker.putBack(tok2);
-            expr = parsePostIdent(0, tok);
+            expr = context->createVarRef(typeDef);
             expr = parseSecondary(expr.get());
          }
       } else if (!def) {
@@ -834,6 +836,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          
          // ... unless this is a type, in which case it is a specializer.
          TypeDef *generic = convertTypeRef(expr.get());
+         // XXX try setting expr to generic
          if (generic) {
             TypeDef *type = parseSpecializer(tok, generic);
             
@@ -891,6 +894,32 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          }
          
          expr = funcCall;
+
+      } else if (tok.isLParen()) {
+         
+         // XXX need to unify this to expr->call(args);
+         // is the expression a type
+         TypeDef *type = convertTypeRef(expr.get());
+         if (type) {
+            expr = parseConstructor(tok, type, Token::rparen);
+         } else {            
+            // assume it's a functor
+            FuncCall::ExprVec args;
+            parseMethodArgs(args);
+            
+            FuncDefPtr funcDef =
+               context->lookUp("oper call", args, expr->type.get());
+            if (!funcDef)
+               error(tok, SPUG_FSTR("'oper call' not defined for " <<
+                                    expr->type->name <<
+                                    " with these arguments: (" << args << ")"
+                                    )
+                     );
+            FuncCallPtr funcCall = 
+               context->builder.createFuncCall(funcDef.get());
+            funcCall->receiver = expr;
+            funcCall->args = args;
+         }
       
       } else if (tok.isIncr() || tok.isDecr()) {
          
@@ -1703,7 +1732,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 //     ^                         ^
 // type function() { }
 //     ^              ^
-bool Parser::parseDef(TypeDef *type) {
+bool Parser::parseDef(TypeDef *&type) {
    Token tok2 = getToken();
    
    // if we get a '[', parse the specializer and get a generic type.
@@ -2696,7 +2725,8 @@ void Parser::parseClassBody() {
       toker.putBack(tok);
       state = st_notBase;
       TypeDefPtr type = parseTypeSpec();
-      parseDef(type.get());
+      TypeDef *tempType = type.get();
+      parseDef(tempType);
    }
    
    // make sure all forward declarations have been defined.
