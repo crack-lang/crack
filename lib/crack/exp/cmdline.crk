@@ -129,6 +129,7 @@ class ParseInfo {
 class CmdOptions {
    OptionArray options; // Contains option objects
    bool sorted = false;
+   Array typeNames = ["string", "int", "float", "bool"];
 
    oper init(): options()
    {  }
@@ -137,13 +138,19 @@ class CmdOptions {
    StringArray parse(StringArray args, bool createUnknown);
 
    
-   /// Create a new CmdOptions object filled in with keys/values/types from the 
-   /// provided string
+   /// Create a new CmdOptions object filled in with keys/values/types
+   ///  from the provided string
    oper init(String createOpts): options() {
       newArgs := splitString(createOpts, b' ');
       parse(newArgs, true);
    }
-   
+
+   /// Create a new CmdOptions object filled in with keys/values/types
+   ///  from the provided StringArray
+   oper init(StringArray newArgs): options() {
+      parse(newArgs, true);
+   }
+
    void add(Option newoption){
       options.append(newoption);
    }
@@ -434,16 +441,15 @@ class CmdOptions {
       for (uint i = 0; i < options.count(); i++){
          Option opt = options[i];
          if (opt.value)
-            cout `$(opt.short)/$(opt.long) [$(opt.type)] = $(opt.value)\n`;
+            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = $(opt.value)\n`;
          else
-            cout `$(opt.short)/$(opt.long) [$(opt.type)] = (null)\n`;
+            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = (null)\n`;
       }
    }
 
    // Generate a usage string
    String createUsage(String intro){
       StringFormatter fmt = {};
-      Array typeNames = ["string", "int", "float", "bool"];
       fmt `$(intro)\n`;
       uint i;
 

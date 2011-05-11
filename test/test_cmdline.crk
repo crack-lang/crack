@@ -40,8 +40,19 @@ if (options.getBool("bool") || options.getBool("b"))
    cout `Bool retrieve failed\n`;
 
 
-// options.dump();
-// options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
+// Dogfood it: create an Options object for the test script itself
+sys_options :=  CmdOptions("--dump=b/false --usage=b/false");
+
+// Parse options passed by the system
+sys_options.parse(argv, false);
+
+if  (sys_options.getBool("dump")) {
+   cout `First option set:\n`;
+   options.dump();
+}
+
+if  (sys_options.getBool("usage"))
+   options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
 
 
 // this causes a segfault in AOT compiled code
@@ -59,7 +70,15 @@ test_argv2 := splitString("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello -- som
 // Parse command line array
 options.parse(test_argv, true);
 unparsed := options.parse(test_argv2, true);
-// options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
+
+if  (sys_options.getBool("dump")) {
+   cout `\nSecond option set:\n`;
+   options.dump();
+}
+
+if  (sys_options.getBool("usage"))
+   options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
+
 
 if (options.getInt("int") != 1 || options.getInt("i") != 1)
    cout `Integer retrieve failed\n`;
