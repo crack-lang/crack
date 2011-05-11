@@ -266,6 +266,17 @@ class Array[Elem] {
         return _merge_sort(this, 0);
     }
 
+    ## swap element index1 with index2
+    void swap(uint index1, uint index2) {
+        if (index1 > __size || index2 > __size)
+            throw IndexError('Index out of range in Array.swap()');
+        if (index1 == index2)
+            return;
+        tmp := __rep[index2];
+        __rep[index2] = __rep[index1];
+        __rep[index1] = tmp;
+    }
+
     ## delete the element at 'index'.
     void delete(uint index) {
         if (index > __size)

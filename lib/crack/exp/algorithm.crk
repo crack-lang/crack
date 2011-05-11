@@ -1,74 +1,78 @@
 // Algorithms
-// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.container Array;
+import crack.cont.array Array;
 
-void _quickSort3(Array A, int l, int r) {
-    
-    // this is based on a 3-partition version from a talk by Robert Sedgewick
-    // and Jon Bentley
-    // http://www.cs.princeton.edu/~rs/talks/QuicksortIsOptimal.pdf
-    int i = l-1;
-    int j = r;
-    int p = l-1;
-    int q = r; 
-    if (r <= l)
-        return;
-    Object v = A[uint(r)];
-    while (true) {
-        while (A[uint(++i)] < v);
-        while (v < A[uint(--j)]) 
-            if (j == l) 
+class QuickSort[Elem] {
+
+    void _quickSort3(Array[Elem] A, int l, int r) {
+        
+        // this is based on a 3-partition version from a talk by Robert Sedgewick
+        // and Jon Bentley
+        // http://www.cs.princeton.edu/~rs/talks/QuicksortIsOptimal.pdf
+        int i = l-1;
+        int j = r;
+        int p = l-1;
+        int q = r; 
+        if (r <= l)
+            return;
+        Elem v = A[uint(r)];
+        while (true) {
+            while (A[uint(++i)] < v);
+            while (v < A[uint(--j)]) 
+                if (j == l) 
+                    break;
+            if (i >= j) 
                 break;
-        if (i >= j) 
-            break;
-        A.swap(uint(i),uint(j));
-        if (A[uint(i)] == v) { 
-            p++; 
-            A.swap(uint(p),uint(i));
+            A.swap(uint(i),uint(j));
+            if (A[uint(i)] == v) { 
+                p++; 
+                A.swap(uint(p),uint(i));
+            }
+            if (v == A[uint(j)]) { 
+                q--; 
+                A.swap(uint(j),uint(q));
+            }
         }
-        if (v == A[uint(j)]) { 
-            q--; 
-            A.swap(uint(j),uint(q));
+        A.swap(uint(i),uint(r));
+        j = i-1; 
+        i = i+1;
+        for (k := l; k < p; k++) {
+            A.swap(uint(k),uint(j));
+            j--;
         }
+        for (k := r-1; k > q; k--) {
+            A.swap(uint(i),uint(k));
+            i++;
+        }
+        _quickSort3(A, l, j);
+        _quickSort3(A, i, r);    
     }
-    A.swap(uint(i),uint(r));
-    j = i-1; 
-    i = i+1;
-    for (k := l; k < p; k++) {
-        A.swap(uint(k),uint(j));
-        j--;
+
+    // XXX move out of constructor
+    void oper init(Array[Elem] A) {
+        _quickSort3(A, 0, int(A.count()-1));
     }
-    for (k := r-1; k > q; k--) {
-        A.swap(uint(i),uint(k));
-        i++;
-    }
-    _quickSort3(A, l, j);
-    _quickSort3(A, i, r);    
+
 }
 
-void quickSort(Array A) {
-    _quickSort3(A, 0, int(A.count()-1));
-}
+class InsertionSort[Elem] {
 
-void insertionSort(Array A) {
-    uint j = 1;
-    int i;
-    while (j < A.count()) {
-        Object key = A[j];
-        i = int(j)-1;
-        while (i >= 0 && A[uint(i)] > key) {
-            A.swap(uint(i)+1,uint(i));
-            i--;
+    // XXX move out of constructor
+    void oper init(Array[Elem] A) {
+        uint j = 1;
+        int i;
+        while (j < A.count()) {
+            Elem key = A[j];
+            i = int(j)-1;
+            while (i >= 0 && A[uint(i)] > key) {
+                A.swap(uint(i)+1,uint(i));
+                i--;
+            }
+            A[uint(i)+1] = key;
+            j++;
         }
-        A[uint(i)+1] = key;
-        j++;
     }
+    
 }
 
-void sort(Array A) {
-    if (A.count() < 9)
-        insertionSort(A);
-    else
-        quickSort(A);
-}
