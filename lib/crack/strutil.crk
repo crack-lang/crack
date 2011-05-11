@@ -1,0 +1,72 @@
+
+import crack.io Formatter, Writer;
+import crack.cont.array Array;
+
+class StringArray : Array[String] {
+    oper init(uint size) : Array[String](size) {}
+    oper init() {}    
+    
+    void writeTo(Writer out) {
+        out.write('[');
+        bool first = true;
+        for (elem :in this) {
+            if (!first)
+                out.write(', ');
+            else
+                first = false;
+            out.write(elem.getRepr());
+        }
+        out.write(']');
+    }
+}
+
+## Split the string into an array of words delimited by a sequence of 
+## ascii whitespace characters.
+StringArray split(String val) {
+
+    # rule out the simple case
+    if (val.size == 0)
+        return StringArray![''];
+
+    # set to true if we are currently in a block of non-whitespace characters
+    bool inWord = true;
+    
+    # figure out how big we need to make the array
+    uint count = 1;
+    for (uint i = 0; i < val.size; ++i) {
+        cur := val[i];
+        if (cur == b' ' || cur == b'\t' || cur == b'\n' || cur == b'\r') {
+            inWord = !inWord;
+            if (inWord)
+                ++count;
+        }
+    }
+    if (!inWord) ++count;
+
+    result := StringArray(count);
+    
+    # do it again, this time create substrings
+    int start = 0;
+    inWord = true;
+    for (int i = 0; i < val.size; ++i) {
+        cur := val[i];
+        gotSpace := cur == b' ' || cur == b'\t' || cur == b'\n' || 
+                    cur == b'\r';
+        if (gotSpace && inWord) {
+            result.append(val.slice(start, i));
+            inWord = false;
+        } else if (!gotSpace && !inWord) {
+            # first non-space character after a block of whitespace, reset start
+            start = i;
+            inWord = true;
+        }
+    }
+
+    # add the last word
+    if (inWord)
+        result.append(val.slice(start));
+    else
+        result.append('');
+
+    return result;
+}

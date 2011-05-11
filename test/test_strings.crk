@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang die, ManagedBuffer, SubString, CString, substr, slice;
+import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
+import crack.strutil split, StringArray;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -96,5 +97,23 @@ if (1) {
     if (temp `second` != 'second')
         cout `FAILED reuse of local FStr variable\n`;
 }
+
+if (1) {
+    if (cmp('', ''))
+        cout `FAILED identical null string comparison\n`;
+}
+
+if (1) {
+    if (split('') != StringArray![''])
+        cout `FAILED ws-splitting empty string\n`;
+
+    if (split('bogus') != StringArray!['bogus'])
+        cout `FAILED ws-splitting single element string`;
+
+    if (split('  this\tis\r\na test ') != 
+        StringArray!['', 'this', 'is', 'a', 'test', '']
+        )
+        cout `FAILED ws-splitting string with whitespace ends\n`;
+}    
 
 cout `ok\n`;

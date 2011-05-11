@@ -1,0 +1,287 @@
+# Copyright 2011 Google Inc
+# Generic array implementation
+
+import crack.lang cmp, free, IndexError, InvalidArgumentError;
+import crack.io cout;
+@import crack.exp.ann define;
+
+void _bind(Object obj) { obj.oper bind(); }
+void _release(Object obj) { obj.oper release(); }
+
+@define _nobind(type) { 
+    void _bind(type i) { }
+    void _release(type i) { }
+}
+
+@_nobind(byte)
+@_nobind(int32)
+@_nobind(int64)
+@_nobind(float32)
+@_nobind(float64)
+@_nobind(byteptr)
+
+## An Array is a sequence backed by a low-level array.  It supports the 
+## bracket operators and adding items at the end.
+class Array[Elem] {
+    
+    array[Elem] __rep = null;
+    uint __cap, __size;
+
+    @final
+    void oper []=(uint index, Elem elem) {
+        if (index > __size)
+            throw IndexError('Index out of range in Array.oper []=');
+        
+        tmp := __rep[index];
+        __rep[index] = elem;
+        _bind(elem);
+        _release(tmp);
+    }
+
+    @final
+    void oper []=(int index, Elem elem) {
+        uint i;
+        if (index < 0)
+            i = __size + uint(index);
+        else
+            i = uint(index);
+        
+        this[i] = elem;
+    }
+
+    @final
+    uint count() {
+        return __size;
+    }
+
+    @final
+    Elem oper [](uint index) {
+        if (index > __size)
+            throw IndexError('Index out of range in Array.oper []');
+        
+        return __rep[index];
+    }
+
+    @final
+    Elem oper [](int index) {
+        uint i;
+        if (index < 0)
+            i = __size + uint(index);
+        else
+            i = uint(index);
+        
+        return this[i];
+    }
+
+    @final
+    Elem last() { return __rep[__size - 1]; }
+    
+    int cmp(Object other) {
+        if (this is other)
+            return 0;
+        else if (!this.isa(Array))
+            return Object.cmp(other);
+        
+        peer := Array.cast(other);
+
+        c := count();
+        oc := peer.count();
+        for (int i = 0; i < c; ++i) {
+            
+            # if I'm longer than other, and we share a common prefix, I'm 
+            # greater.
+            if (i > oc)
+                return 1;
+            
+            # compare the elements
+            elemDiff := cmp(this[i], peer[i]);
+            if (elemDiff)
+                return elemDiff;
+        }
+        
+        # if other is longer than me, and we share a common prefix, I'm lesser.
+        if (oc > c)
+            return -1;
+        else
+            # we're the same length and all elements are equal
+            return 0;
+    }
+
+    class ArrayIter {
+        Array __arr;
+        uint __index;
+        bool __first = true;
+    
+        oper init(Array arr) : __arr = arr {}
+        
+
+        Elem elem() {
+            return __arr[__index];
+        }
+
+        @final
+        bool next() {
+            cnt := __arr.count();
+            if (__index < cnt) {
+                __index = __index + 1;
+                return __index < cnt;
+            } else {
+                return false;
+            }
+        }
+
+        @final
+        bool nx() {
+            if (__first) {
+                __first = false;
+                return __index < __arr.count();
+            } else {
+                return next();
+            }
+        }
+        
+        bool isTrue() {
+            return __index < __arr.count();
+        }
+    }
+    
+    oper init(uint initCapacity) :
+        __rep = array[Elem](initCapacity), 
+        __cap = initCapacity,
+        __size = 0 {
+    }
+    
+    oper init() : 
+        __rep = array[Elem](16), 
+        __cap = 16,
+        __size = 0 {
+    }
+    
+    oper del() {
+        uint i;
+        while (i < __size) {
+            elem := __rep[i];
+            _release(elem);
+            i = i + 1;
+        }
+        free(__rep);
+    }
+    
+    void realloc(uint newCapacity) {
+        if (newCapacity < __cap)
+            throw InvalidArgumentError('Array.realloc() - decreasing capacity');
+            
+        newRep := array[Elem](newCapacity);
+        
+        # move all of the entries to the new array.
+        uint i;
+        while (i < __size) {
+            newRep[i] = __rep[i];
+            i = i + 1;
+        }
+
+        free(__rep);
+        __rep = newRep;
+        __cap = newCapacity;
+    }
+
+    @final
+    void append(Elem elem) {
+        if (__size == __cap)
+            realloc(__cap * 2);
+        
+        __rep[__size] = elem;
+        _bind(elem);
+        __size = __size + 1;
+    }
+
+    Elem pop() {
+       if (__size>0)
+          return __rep[--__size];
+       else
+          return null;
+    }
+
+  @final
+    ArrayIter iter() {
+        return ArrayIter(this);
+    }
+    
+    uint capacity() {
+        return __cap;
+    }
+
+    Array rest(uint i){
+        result := Array(__size - i);
+        for (j := i; j < __size; j++)
+        result.append(__rep[j]);
+        return result;
+    }
+
+    Array _merge(Array left, Array right){
+        result := Array(left.count()*2);
+        while (left.count() > 0 || right.count() > 0){
+        if (left.count() > 0 && right.count() > 0){
+            if (left[0] <= right[0]){
+                result.append(left[0]);
+                left = left.rest(1);
+            }
+            else{
+                result.append(right[0]);
+                right = right.rest(1);
+            }
+        }
+        else if (left.count() > 0){
+                result.append(left[0]);
+                left = left.rest(1);
+            }
+        else if (right.count() > 0){
+                result.append(right[0]);
+                right = right.rest(1);
+            }
+        }
+        return result
+    }
+
+    Array _merge_sort(Array m, uint depth){
+        if (m.count() <= 1) return m;
+
+        middle := m.count() / 2;
+        left := Array(middle);
+        right := Array(middle);
+        result := Array(middle * 2);
+        if (depth>10) return result;
+
+        for (x:=0; x < middle; x++) left.append(m[x]);
+
+        for (x:=middle; x < m.count(); x++) right.append(m[x]);
+
+        left = _merge_sort(left, depth+1);
+        right = _merge_sort(right, depth+1);
+        result = _merge(left, right);
+        return result;
+    }
+
+    Array sort(){
+        return _merge_sort(this, 0);
+    }
+
+    ## delete the element at 'index'.
+    void delete(uint index) {
+        if (index > __size)
+            throw IndexError('Index out of range in Array.delete()');
+        
+        # release the object at the index
+        elem := __rep[index];
+        _release(elem);
+        
+        # move everything else down one
+        uint i = index;
+        while (i < __size - 1) {
+            __rep[i] = __rep[i + 1];
+            ++i;
+        }
+#        memmove(__rep + index, __rep + index + 1, __size - index);
+        --__size;
+    }   
+}
