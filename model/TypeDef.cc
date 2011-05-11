@@ -643,12 +643,14 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                                          
     ModuleDefPtr module = modContext->createModule(moduleName);
     
-    // alias all global symbols in the original module
+    // alias all global symbols in the original module, excluding the 
+    // built-ins which are already defined.
     for (VarDefMap::iterator iter = genericInfo->moduleNS->beginDefs();
          iter != genericInfo->moduleNS->endDefs();
          ++iter
          )
-        modContext->ns->addAlias(iter->second.get());
+        if (!modContext->ns->lookUp(iter->first))
+            modContext->ns->addAlias(iter->second.get());
     // XXX alias everything in the compile namespace 
     
     // alias the template arguments to their parameter names
