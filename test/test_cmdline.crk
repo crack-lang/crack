@@ -18,8 +18,6 @@ CmdOptions testOptions = CmdOptions();
 for (uint i = 0; i < 2; i++)
    testOptions.add(optArray[i]);
 
-
-
 CmdOptions options = {};
 
 options.add("help", "h", "Show help message", "f", CMD_BOOL);
@@ -41,25 +39,27 @@ if (options.getString("string") != "astring" || options.getString("s") != "astri
 if (options.getBool("bool") || options.getBool("b"))
    cout `Bool retrieve failed\n`;
 
-#~ options.dump();
-#~ options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
+
+// options.dump();
+// options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
 
 
 // this causes a segfault in AOT compiled code
-#~ try{
-#~    int o = options.getInt("o");
-#~    cout `Fetching non-existent key did not throw exception\n`;
-#~ } 
-#~ catch (Exception ex){
-#~ }
+// try{
+//    int o = options.getInt("o");
+//    cout `Fetching non-existent key did not throw exception\n`;
+// } 
+// catch (Exception ex){
+// }
 
 options = CmdOptions();
-test_argv := splitString("--help=b/false --bool -int i/1 --j=i/2 --s2=str2 -f f/1.0 --gloat2=f/2.0", b' ');
+test_argv := splitString("--help=b/false --bool --int=i/1 --j=i/2 --s2=str2 -f f/1.0 --gloat2=f/2.0", b' ');
+test_argv2 := splitString("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello -- something", b' ');
 
 // Parse command line array
 options.parse(test_argv, true);
-#~ options.dump();
-
+unparsed := options.parse(test_argv2, true);
+// options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
 
 if (options.getInt("int") != 1 || options.getInt("i") != 1)
    cout `Integer retrieve failed\n`;
@@ -81,5 +81,9 @@ if (!options.getBool("bool") || !options.getBool("b"))
 
 if (options.getBool("help") || options.getBool("h"))
    cout `Bool retrieve 3 failed\n`;
+
+// Short options 
+if (options.getFloat("o") != 20.0)
+   cout `Float retrieve of option 'o' failed\n`;
 
 cout `ok\n`;
