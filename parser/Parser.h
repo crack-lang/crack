@@ -388,6 +388,7 @@ class Parser {
       /** Parse the generic parameter list */
       void parseGenericParms(model::GenericParmVec &parms);
       
+      void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
       
       model::TypeDefPtr parseClassDef();

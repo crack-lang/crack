@@ -2501,6 +2501,24 @@ void Parser::parseGenericParms(GenericParmVec &parms) {
    }
 }
 
+void Parser::recordIStr(Generic *generic) {
+   int depth = 0;
+
+   while (true) {
+
+      Token tok = toker.getToken();
+      generic->addToken(tok);
+      if (tok.isLParen())
+         ++depth;
+      else if (tok.isRParen() && !--depth)
+         toker.continueIString();
+      else if (tok.isIdent() && !depth)
+         toker.continueIString();
+      else if (tok.isIstrEnd())
+         return;
+   }
+}
+
 void Parser::recordBlock(Generic *generic) {
    int bracketCount = 1;
    while (bracketCount) {
@@ -2512,6 +2530,8 @@ void Parser::recordBlock(Generic *generic) {
          ++bracketCount;
       else if (tok.isRCurly())
          --bracketCount;
+      else if (tok.isIstrBegin())
+         recordIStr(generic);
    }
 }
 

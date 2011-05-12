@@ -2,11 +2,33 @@
 
 import test.testmod_generic G;
 
+
+void someFunc() {}
+
 bool gotStaticCalled;
 class A[T] {
     T val;
+
+    class FakeFormatter {
+        int result;
+        void format(byteptr val) {
+            result |= val[0];
+        }
+        void format(int val) {
+            result |= val;
+        }
+        void format(float val) { }
+        
+        int leave() { return result; }
+        
+        bool toBool() { return 1; }
+    }
+
     oper init(T val) : val = val {}
     @static void gotStatic() { gotStaticCalled = 1; }
+    
+    int format() { return FakeFormatter() `\001$val\002`; }
+    
 }
 
 if (A[int](100).val != 100) puts('FAILED generic based on int');
@@ -16,4 +38,5 @@ if (G[int]().getVal() != 100) puts('FAILED imported generics');
 A[int].gotStatic();
 if (!gotStaticCalled) puts('FAILED static function call');
 
+if (A[int](4).format() != 7) puts('FAILED generic with i-string');
 puts('ok');
