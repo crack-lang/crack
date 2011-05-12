@@ -2,12 +2,12 @@
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.lang die, cmp, free; 
-import crack.container Array;
+import crack.cont.array Array;
 import crack.math strtoi, strtof;
 import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
-import crack.sys argv, StringArray;
+import crack.sys argv;
 import crack.io cout, StringFormatter, FStr;
-@import crack.exp.cont.array GenericObjArray, GenericPrimArray, GenericArray;
+import crack.strutil split, StringArray;
 
 
 uint CMD_STR = 0;
@@ -15,28 +15,6 @@ uint CMD_INT = 1;
 uint CMD_FLOAT = 2;
 uint CMD_BOOL = 3;
 uint NOINDEX = 0xffffffff; // Completely arbitrary a large number
-
-StringArray splitString(String s, byte sep) {
-   StringArray result = {256};
-   uint count = 0;
-   int pos = 0;
-
-   while (true) {
-      end := s.lfind(sep, uint(pos));
-      if (end != -1) {
-          result[count++]=s.slice(pos, end);
-
-      } else {
-          result[count++]=s.slice(pos);
-          break;
-      }
-      pos = end + 1;
-   }
-
-   StringArray real = {count};
-   for (uint i=0; i< count; i++) real[i] = result[i];
-   return real;
-}
 
 class Option {
    String long;
@@ -122,12 +100,9 @@ class ParseInfo {
    }
 }
 
-@GenericObjArray(ParseArray, ParseInfo)
-@GenericObjArray(OptionArray, Option)
-
 // Command line options tree
 class CmdOptions {
-   OptionArray options; // Contains option objects
+   Array[Option] options; // Contains option objects
    bool sorted = false;
 
    oper init(): options()
@@ -140,7 +115,7 @@ class CmdOptions {
    /// Create a new CmdOptions object filled in with keys/values/types from the 
    /// provided string
    oper init(String createOpts): options() {
-      newArgs := splitString(createOpts, b' ');
+      newArgs := split(createOpts);
       parse(newArgs, true);
    }
    
@@ -156,7 +131,7 @@ class CmdOptions {
 
    // Convenience method to add options based on a specification string
    StringArray addFromString(String line){
-      new_argv := splitString(line, b' ');
+      new_argv := split(line);
       return parse(new_argv, true);
    }
    
@@ -248,8 +223,8 @@ class CmdOptions {
       return getOption(optName).value;
    }
 
-   ParseArray _getParseInfo(StringArray args, uint argi){
-      ParseArray parseInfo = {4};
+   Array[ParseInfo] _getParseInfo(StringArray args, uint argi){
+      Array[ParseInfo] parseInfo = {4};
       Option opt;
       arg := args[argi];
       len := arg.size;
@@ -362,11 +337,11 @@ class CmdOptions {
    // Parse the array obtained from sys.argv
    StringArray parse(StringArray args, bool createUnknown){
       StringArray unparsed={args.count()};
-      uint argi, unpi = 0;
+      uint argi;
       Option opt;
       bool isnew = false, skipping = false;
       String name, value;
-      ParseArray parseValues;
+      Array[ParseInfo] parseValues;
 
       for (argi=0; argi < args.count(); argi++){
          opt = null;
@@ -380,7 +355,7 @@ class CmdOptions {
          }
 
          if (skipping) {
-            unparsed[unpi++] = args[argi];
+            unparsed.append(args[argi]);
             continue;
          }
 
@@ -421,7 +396,7 @@ class CmdOptions {
          }
 
          if (!name) {
-            unparsed[unpi++] = args[argi];
+            unparsed.append(args[argi]);
          }
          else if (value && !nadv) {
             argi++; // Skip next value
@@ -443,7 +418,7 @@ class CmdOptions {
    // Generate a usage string
    String createUsage(String intro){
       StringFormatter fmt = {};
-      Array typeNames = ["string", "int", "float", "bool"];
+      StringArray typeNames = ["string", "int", "float", "bool"];
       fmt `$(intro)\n`;
       uint i;
 

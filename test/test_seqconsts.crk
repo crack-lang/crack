@@ -1,16 +1,14 @@
 
 import crack.lang die, free;
 import crack.io cout, StringFormatter;
-@import crack.exp.cont.array GenericArray, GenericObjArray, GenericPrimArray;
+import crack.cont.array Array;
+import crack.strutil StringArray;
 
 array[int] intVals = [1, 2, 3];
 for (int i = 0; i < 3; ++i)
      if (i != intVals[i] - 1)
           cout `FAILED index $i of test array not $(i - 1), but \
 $(intVals[i])\n`;
-
-@GenericPrimArray(IntArray, int);
-@GenericObjArray(StringArray, String);
 
 String strcat(StringArray elems) {
     StringFormatter f = {};
@@ -21,7 +19,7 @@ String strcat(StringArray elems) {
 
 
 if (1) {
-     IntArray arr = [1, 2, 3];
+     Array[int] arr = [1, 2, 3];
      if (arr.count() != 3)
           cout `FAILED high-level object init: count != 3\n`;
      int i;

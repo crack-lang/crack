@@ -8,10 +8,11 @@ import crack.compiler CrackContext, Token;
 import crack.exp.file File;
 import crack.exp.error err;
 import crack.exp.regex Regex, Match;
+import crack.cont.array Array;
+import crack.strutil StringArray;
 
 @import crack.exp.ann define;
 @import crack.exp.cont.treemap GenericTreeMap;
-@import crack.exp.cont.array GenericArray, GenericObjArray;
 
 // Constants to make later code more readable
 OPENBRACE:=true;
@@ -103,8 +104,6 @@ class IfdefPreamble : Type {
 }
 
 
-@GenericObjArray(TypeArray, Type);
-
 class Arg {
     String name;
     Type type;
@@ -112,12 +111,10 @@ class Arg {
     oper init(Type type, String name) : type = type, name = name {}
 }
 
-@GenericObjArray(ArgArray, Arg);
- 
 class Func {
     Type retType;
     String name;
-    ArgArray args;
+    Array[Arg] args;
     bool initialized;
 
     oper init(Type retType, String name) :
@@ -162,9 +159,6 @@ class IfdefFunc: Func{
    }
 }
 
-@GenericObjArray(StringArray, String);
-@GenericObjArray(FuncArray, Func);
-
 int cmp(String a, String b) { return a.cmp(b); }
 @GenericTreeMap(TypeMap, String, Type);
 
@@ -201,8 +195,8 @@ class ConstType : BuiltInType {
 
 class TypeImpl : Type {
     String emitted;
-    FuncArray methods;
-    ArgArray members;
+    Array[Func] methods;
+    Array[Arg] members;
     
     oper init(String name) : Type(name), members() {}
     oper init(String name, String emitted) : 
@@ -423,45 +417,14 @@ class Errors : StringFormatter {
     typeNames.append(name);
 }
 
-@define def_join(Iterable) {
-    String join(Iterable strings, String sep) {
-        
-        # figure out how much space we need
-        uint total;
-        for (elem :in strings)
-            total += elem.size + sep.size;
-        
-        # drop the last separator
-        total -= sep.size;
-        
-        AppendBuffer buf = {total};
-        first := true;
-        for (elem :in strings) {
-        
-            # add the separator for everything but the first string.
-            if (first)
-                first = false;
-            else
-                buf.extend(sep);
-
-            buf.extend(elem);
-        }
-        
-        return String(buf, true);
-    }
-}
-
-@def_join(StringArray);
-@GenericObjArray(ConstArray, Const);
-
 class ExtensionData {
     String filename;
     String symbolFilename;
     TypeMap types;
-    FuncArray funcs;
-    ConstArray consts = {};
+    Array[Func] funcs;
+    Array[Const] consts = {};
     StringArray module = {};  # module name
-    TypeArray preamble = {};
+    Array[Type] preamble = {};
     StringArray ifdefs ={};
     StringArray typeNames ={}; // Need this because the typemap is not ordered
     bool inSrcDir;
@@ -798,7 +761,7 @@ definition.`;
         return fmt.createString();
     }
 
-    bool goodIfdefNesting(TypeArray ta){
+    bool goodIfdefNesting(Array[Type] ta){
         if (ta.count()>0){
             FStr errFMT = {};
             String errMsg = errFMT `Improperly nested @ifdef conditions:\n`;
@@ -811,7 +774,7 @@ definition.`;
 
 
 @define emitNested(Type, name) {
-    void emitInitializerNested$$Type(Type$$Array ta, Type ct, Formatter o){
+    void emitInitializerNested$$Type(Array[Type] ta, Type ct, Formatter o){
          if (ct.isIfdef()){
              if (ct.isOpen())
                 ta.append(ct);
@@ -843,7 +806,7 @@ definition.`;
     void emitCode(Writer out) {
         o := Formatter(out);
 
-        TypeArray ta = {}; // For nested ifdefs
+        Array[Type] ta = {}; // For nested ifdefs
         for (block :in preamble)
             emitInitializerNestedType(ta, block, o);
 
@@ -856,18 +819,18 @@ definition.`;
 #include $(header('Func'))
 
 extern "C"
-void $(join(module, '_'))_init(crack::ext::Module *mod) {
+void $(module.join('_'))_init(crack::ext::Module *mod) {
     crack::ext::Func *f;
 `;
 
         for (typeName :in typeNames)
             emitInitializerNestedType(ta, types[typeName], o);
 
-        FuncArray fa = {};
+        Array[Func] fa = {};
         for (f :in funcs)
             emitInitializerNestedFunc(fa, f, o);
 
-        ConstArray ca = {};
+        Array[Const] ca = {};
         for (c :in consts)
             emitInitializerNestedConst(ca, c, o);
 

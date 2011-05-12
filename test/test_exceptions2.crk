@@ -3,9 +3,7 @@
 
 import crack.lang die, free, Exception, SubString;
 import crack.io cout, StringFormatter;
-@import crack.exp.cont.array GenericObjArray, GenericArray;
-
-@GenericObjArray(StringArray, String);
+import crack.strutil StringArray;
 
 String exText;
 try {

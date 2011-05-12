@@ -4,7 +4,6 @@ import crack.lang cmp, die, free;
 import crack.io cout, Formatter, StringFormatter;
 @import crack.exp.ann define;
 @import crack.exp.cont.treemap GenericTreeMap;
-@import crack.exp.cont.array GenericArray, GenericObjArray;
 @import crack.exp.cont.list GenericList, GenericDList;
 
 @GenericTreeMap(StringIntMap, String, int);
@@ -15,8 +14,7 @@ m['second'] = 200;
 if (m['first'] != 100 || m['second'] != 200)
     cout `failed TreeMap access\n`;
 
-@GenericObjArray(StringArray, String);
-StringArray sa = {};
+Array[String] sa = {};
 
 for (item :in m) {
     StringFormatter fmt = {};
@@ -29,7 +27,7 @@ if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
 
 # test a second invocation (uses a different code path)
 class Foo {}
-@GenericObjArray(FooArray, Foo);
+Array[Foo];
 
 @GenericList(StringList, String);
 

@@ -3,76 +3,15 @@
 
 import crack.lang IndexError;
 import crack.io FStr;
-import crack.runtime exit, free;
-
-class StringArray {
-    
-    array[String] __rep;
-    uint __count;
-    array[byteptr] __primArray;
-    
-    oper init(uint count) : 
-        __rep = array[String](count),
-        __count = count {
-    }
-
-    void oper []=(uint i, String val) {
-        if (i >= __count)
-            throw IndexError(FStr() `Array index $i out of bounds`);
-
-        # bind the new value, release the existing one
-        val.oper bind();
-        __rep[i].oper release();
-        __rep[i] = val;
-    }
-    
-    String oper [](uint i) {
-        if (i >= __count)
-            throw IndexError(FStr() `Array index $i out of bounds`);
-
-        result := __rep[i];
-        return __rep[i];
-    }
-    
-    oper del() {
-        # release all of the elements
-        uint i;
-        while (i < __count) {
-            __rep[i].oper release();
-            i = i + 1;
-        }
-        free(__rep);
-        if (!(__primArray is null)) free(__primArray);
-    }
-
-    ## Returns the number of elements in the array.    
-    uint count() {
-        return __count;
-    }
-    
-    ## Returns the primitive array (useful for communicating to C bindings)
-    array[byteptr] getPrimArray() {
-        if (__primArray is null) {
-            __primArray = array[byteptr](__count);
-            uint i;
-            while (i < __count) {
-                __primArray[i] = __rep[i].buffer;
-                ++i;
-            }
-        }
-        return __primArray;
-    }
-}
+import crack.runtime exit;
+import crack.strutil StringArray;
 
 StringArray _createArgv() {
     v := __getArgv();
     c := __getArgc();
     argv := StringArray(uint(c));
-    uint i;
-    while (i < c) {
-        argv[i] = StaticString(v[i]);
-        i = i + 1;
-    }
+    for (uint i; i < c; ++i)
+        argv.append(StaticString(v[i]));
     return argv;
 }
 
