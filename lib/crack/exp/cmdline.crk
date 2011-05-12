@@ -104,6 +104,7 @@ class ParseInfo {
 class CmdOptions {
    Array[Option] options; // Contains option objects
    bool sorted = false;
+   StringArray typeNames = ["string", "int", "float", "bool"];
 
    oper init(): options()
    {  }
@@ -409,16 +410,15 @@ class CmdOptions {
       for (uint i = 0; i < options.count(); i++){
          Option opt = options[i];
          if (opt.value)
-            cout `$(opt.short)/$(opt.long) [$(opt.type)] = $(opt.value)\n`;
+            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = $(opt.value)\n`;
          else
-            cout `$(opt.short)/$(opt.long) [$(opt.type)] = (null)\n`;
+            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = (null)\n`;
       }
    }
 
    // Generate a usage string
    String createUsage(String intro){
       StringFormatter fmt = {};
-      StringArray typeNames = ["string", "int", "float", "bool"];
       fmt `$(intro)\n`;
       uint i;
 
