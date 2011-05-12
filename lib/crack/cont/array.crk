@@ -29,7 +29,7 @@ class Array[Elem] {
 
     @final
     void oper []=(uint index, Elem elem) {
-        if (index > __size)
+        if (index >= __size)
             throw IndexError('Index out of range in Array.oper []=');
         
         tmp := __rep[index];
@@ -56,7 +56,7 @@ class Array[Elem] {
 
     @final
     Elem oper [](uint index) {
-        if (index > __size)
+        if (index >= __size)
             throw IndexError('Index out of range in Array.oper []');
         
         return __rep[index];
