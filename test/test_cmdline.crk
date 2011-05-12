@@ -59,12 +59,11 @@ if  (sys_options.getBool("usage"))
 
 
 // this causes a segfault in AOT compiled code
-// try{
-//    int o = options.getInt("o");
-//    cout `Fetching non-existent key did not throw exception\n`;
-// } 
-// catch (Exception ex){
-// }
+try{
+   int o = options.getInt("o");
+   cout `Fetching non-existent key did not throw exception\n`;
+} 
+catch (Exception ex){}
 
 options = CmdOptions();
 test_argv := split("--help=b/false --bool --int=i/1 --j=i/2 --s2=str2 -f "
