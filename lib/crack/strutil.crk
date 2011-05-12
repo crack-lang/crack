@@ -1,4 +1,5 @@
 
+import crack.lang AppendBuffer;
 import crack.io Formatter, Writer;
 import crack.cont.array Array;
 
@@ -18,6 +19,53 @@ class StringArray : Array[String] {
         }
         out.write(']');
     }
+
+    ## Returns a primitive array based on the array (useful for communicating 
+    ## to C bindings)
+    ## @unsafe
+    array[byteptr] makePrimArray() {
+        size := count();
+        prim := array[byteptr](size);
+        for (int i; i < size; ++i)
+            prim[i] = this[i].buffer;
+        return prim;
+    }
+
+    uint __countBytes() {
+        uint total;
+        for (elem :in this)
+            total += elem.size;
+        return total;
+    }
+    
+    ## Join all of the elements into a single string with elements separated 
+    ## by 'sep'
+    String join(String sep) {
+        
+        # deal with the empty case
+        size := count();
+        if (!size)
+            return '';
+        
+        # figure out how much space we need
+        total := __countBytes() + sep.size * (size - 1);
+        
+        AppendBuffer buf = {total};
+        first := true;
+        for (elem :in this) {
+        
+            # add the separator for everything but the first string.
+            if (first)
+                first = false;
+            else
+                buf.extend(sep);
+
+            buf.extend(elem);
+        }
+        
+        return String(buf, true);
+    }
+        
 }
 
 ## Split the string into an array of words delimited by a sequence of 
