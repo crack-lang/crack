@@ -38,6 +38,7 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
+builder/llvm/FunctionTypeDef.cc
 builder/llvm/ArrayTypeDef.cc
 builder/llvm/BBuilderContextData.cc
 builder/llvm/BCleanupFrame.cc

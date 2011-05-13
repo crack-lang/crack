@@ -3,6 +3,7 @@
 #ifndef _model_VarDef_h_
 #define _model_VarDef_h_
 
+#include "model/ResultExpr.h"
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 
@@ -11,7 +12,6 @@ namespace model {
 class Context;
 SPUG_RCPTR(Expr);
 class Namespace;
-SPUG_RCPTR(ResultExpr);
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
 

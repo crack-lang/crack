@@ -14,6 +14,7 @@
 #include "Consts.h"
 #include "ExceptionCleanupExpr.h"
 #include "FuncBuilder.h"
+#include "FunctionTypeDef.h"
 #include "Incompletes.h"
 #include "LLVMValueExpr.h"
 #include "Ops.h"
@@ -502,6 +503,7 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
 }
 
 TypeDef *LLVMBuilder::getFuncType(Context &context,
+                                  FuncDef *funcDef,
                                   const llvm::Type *llvmFuncType
                                   ) {
 
@@ -511,19 +513,47 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
         return TypeDefPtr::rcast(iter->second);
 
     // nope.  create a new type object and store it
-    BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
-                                           "",
-                                           llvmFuncType
-                                           );
-    funcTypes[llvmFuncType] = crkFuncType;
-    
-    // Give it an "oper to voidptr" method.
-    context.addDef(
-        new VoidPtrOpDef(context.construct->voidptrType.get()),
-        crkFuncType.get()
-    );
-    
-    return crkFuncType.get();
+    TypeDefPtr function = context.ns->lookUp("function");
+
+    if ((funcDef->flags & FuncDef::method) || function.get() == 0) {
+        // this is a method, or there is no function in this context
+        BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
+                                               "",
+                                               llvmFuncType
+                                               );
+        funcTypes[llvmFuncType] = crkFuncType;
+
+        // Give it an "oper to voidptr" method.
+        context.addDef(
+                    new VoidPtrOpDef(context.construct->voidptrType.get()),
+                    crkFuncType.get()
+                    );
+
+        return crkFuncType.get();
+    }
+
+    // we have function, specialize based on return and argument types
+    TypeDef::TypeVecObjPtr args = new TypeDef::TypeVecObj();
+
+    // push return
+    args->push_back(funcDef->returnType);
+
+    // now args
+    for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
+         arg != funcDef->args.end();
+         ++arg
+         ) {
+        args->push_back((*arg)->type.get());
+    }
+
+    TypeDefPtr specFuncType =
+            function->getSpecialization(context, args.get());
+
+    specFuncType->defaultInitializer = new NullConst(specFuncType.get());
+
+    funcTypes[llvmFuncType] = specFuncType;
+    return specFuncType.get();
+
 }
 
 BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
@@ -2203,6 +2233,14 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             0
                                             );
     context.addDef(arrayType.get());
+
+    // create the raw function type
+    TypeDefPtr functionType = new FunctionTypeDef(
+                                            context.construct->classType.get(),
+                                            "function",
+                                            0
+                                            );
+    context.addDef(functionType.get());
 
     // now that we have byteptr and array and all of the integer types, we can
     // initialize the body of Class.

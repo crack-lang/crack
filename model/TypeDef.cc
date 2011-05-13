@@ -597,6 +597,16 @@ void TypeDef::addDestructorCleanups(Context &context) {
     initializersEmitted = true;
 }
 
+string TypeDef::getSpecializedName(TypeVecObj *types) {
+    // construct the module name from the class name plus type parameters
+    ostringstream tmp;
+    tmp << getFullName() << '[';
+    for (int i = 0; i < types->size(); ++i)
+        tmp << (*types)[i]->getFullName() << ',';
+    tmp << ']';
+    return tmp.str();
+}
+
 TypeDef *TypeDef::getSpecialization(Context &context, 
                                     TypeDef::TypeVecObj *types
                                     ) {
@@ -608,12 +618,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         return result;
 
     // construct the module name from the class name plus type parameters
-    ostringstream tmp;
-    tmp << getFullName() << '[';
-    for (int i = 0; i < types->size(); ++i)
-        tmp << (*types)[i]->getFullName() << ',';
-    tmp << ']';
-    string moduleName = tmp.str();
+    string moduleName = getSpecializedName(types);
 
     // make sure we've got the right number of arguments
     if (types->size() != genericInfo->parms.size())
