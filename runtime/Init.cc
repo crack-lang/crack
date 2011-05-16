@@ -415,7 +415,12 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
     f->addArg(uintType, "size");
-    
+
+    f = mod->addFunc(byteptrType, "memset", (void *)memset, "memset");
+    f->addArg(byteptrType, "dst");
+    f->addArg(byteType, "c");
+    f->addArg(uintType, "size");
+
     f = mod->addFunc(intType, "memcmp", (void *)memcmp, "memcmp");
     f->addArg(byteptrType, "a");
     f->addArg(byteptrType, "b");

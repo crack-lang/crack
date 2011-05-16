@@ -68,9 +68,14 @@ class StringArray : Array[String] {
         
 }
 
-## Split the string into an array of words delimited by a sequence of 
-## ascii whitespace characters.
-StringArray split(String val) {
+bool _findByte(Array[byte] A, byte c){
+    for (a: in A) if (a == c) return true;
+    return false;
+}
+
+## Split the string into an array of words delimited by one of the given array of 
+## characters
+StringArray split(String val, Array[byte] ws) {
 
     # rule out the simple case
     if (val.size == 0)
@@ -83,7 +88,7 @@ StringArray split(String val) {
     uint count = 1;
     for (uint i = 0; i < val.size; ++i) {
         cur := val[i];
-        if (cur == b' ' || cur == b'\t' || cur == b'\n' || cur == b'\r') {
+        if (_findByte(ws, cur)) {
             inWord = !inWord;
             if (inWord)
                 ++count;
@@ -98,8 +103,7 @@ StringArray split(String val) {
     inWord = true;
     for (int i = 0; i < val.size; ++i) {
         cur := val[i];
-        gotSpace := cur == b' ' || cur == b'\t' || cur == b'\n' || 
-                    cur == b'\r';
+        gotSpace := _findByte(ws, cur);
         if (gotSpace && inWord) {
             result.append(val.slice(start, i));
             inWord = false;
@@ -117,4 +121,55 @@ StringArray split(String val) {
         result.append('');
 
     return result;
+}
+
+## Split the string into an array of words delimited by a sequence of 
+## ascii whitespace characters.
+StringArray split(String val) {
+    Array[byte] ws = [b' ', b'\t', b'\n', b'\r'];
+    return split(val, ws);
+}
+
+## Split the string into an array of words delimited by the given character
+StringArray split(String val, byte c) {
+    Array[byte] ws = [c];
+    return split(val, ws);
+}
+
+
+## Pads a string with the provided bytes so it has the given width
+String ljust(String text, uint width, byte c){
+    if (text.size >= width) return text;
+    return text + String(width - text.size, c);
+}
+
+## Pads a string with spaces so it has the given width
+String ljust(String text, uint width){
+    return ljust(text, width, b' ');
+}
+
+## Prepends a string with the provided bytes so it has the given width
+String rjust(String text, uint width, byte c){
+    if (text.size >= width) return text;
+    return String(width - text.size, c) + text ;
+}
+
+## Prepends string with spaces so it has the given width
+String rjust(String text, uint width){
+    return  rjust(text, width, b' ');
+}
+
+
+## Centers string with the provided bytes so it has the given width
+String center(String text, uint width, byte c){
+    if (text.size >= width) return text;
+    sWidth := width - text.size;
+    lwidth := sWidth/2;
+    rwidth := sWidth/2 + sWidth%2;
+    return String(lwidth, c) + text + String(rwidth, c);
+}
+
+## Centers string with spaces so it has the given width
+String center(String text, uint width){
+    return  center(text, width, b' ');
 }

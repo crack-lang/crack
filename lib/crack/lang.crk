@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
-    memcpy, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
+    memcpy, memset, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
     EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC, 
     EXCEPTION_UNCAUGHT_FUNC;
 @import crack._poormac define;
@@ -258,7 +258,7 @@ class WriteBuffer : Buffer {
 class ManagedBuffer : WriteBuffer {
 
     oper init(uint size) : WriteBuffer(malloc(size), size) {}
-
+    
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
     byteptr orphan() {
@@ -409,6 +409,12 @@ class String : Buffer {
     oper init(Buffer buf) : Buffer(malloc(buf.size), buf.size) {
         memcpy(buffer, buf.buffer, buf.size);
     }
+
+    ## Initialize with a given length and byte
+    oper init(uint size, byte c) : Buffer(malloc(size), size) {
+        memset(buffer, c, size);
+    }
+
 
     ## Initialize from a WriteBuffer and optionally take ownership of the
     ## buffer.
