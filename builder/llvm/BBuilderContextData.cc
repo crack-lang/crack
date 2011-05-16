@@ -24,7 +24,24 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
             b.CreateCall(f);
-        b.CreateUnwind();
+        
+        // XXX We used to create an "unwind" instruction here, but that seems 
+        // to cause a problem when creating a module with dependencies on 
+        // classes in an unfinished module, as we can do when specializing a 
+        // generic.  The problem is that _Unwind_Resume is resolved from the 
+        // incorrect module.
+        // To deal with this, we create an explicit call to _Unwind_Resume.  
+        // The only problem here is that we have to call llvm.eh.exception to 
+        // obtain the exception object, even though we might already have one.
+        LLVMContext &lctx = getGlobalContext();
+        Constant *c = mod->getOrInsertFunction("_Unwind_Resume", 
+                                               Type::getVoidTy(lctx),
+                                               Type::getInt8PtrTy(lctx),
+                                               NULL
+                                               );
+        f = cast<Function>(c);
+        b.CreateCall(f, b.CreateCall(mod->getFunction("llvm.eh.exception")));
+        b.CreateUnreachable();
     }
 
     // assertion to make sure this is the right unwind block

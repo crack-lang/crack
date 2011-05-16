@@ -823,4 +823,10 @@ void implements(CrackContext ctx) {
     for (node :in interfaces)
         node.expand(ctx, null);
 }
-    
+
+void warn(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (!tok.isString())
+        ctx.error(tok, "String expected after @warn annotation".buffer);
+    ctx.warn(tok, tok.getText());
+}
