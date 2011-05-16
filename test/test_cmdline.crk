@@ -44,7 +44,7 @@ if (options.getBool("bool") || options.getBool("b"))
 
 
 // Dogfood it: create an Options object for the test script itself
-sys_options :=  CmdOptions("--dump=b/false --usage=b/false");
+sys_options :=  CmdOptions("--dump=b/false --usage=b/false --sort=b/true");
 
 // Parse options passed by the system
 sys_options.parse(argv, false);
@@ -52,10 +52,16 @@ sys_options.parse(argv, false);
 if  (sys_options.getBool("dump")) {
    cout `First option set:\n`;
    options.dump();
+   cout `$options\n`;
 }
 
-if  (sys_options.getBool("usage"))
+if  (sys_options.getBool("usage")){
+   if (sys_options.getBool("sort")) {
+      cout `Sorting options disabled for now\n`;
+#~       options.sort();
+   }
    options.printUsage(FStr() `Usage: $(argv[0]) [OPT1] [OPT2] file\n`);
+}
 
 
 // this causes a segfault in AOT compiled code
@@ -68,7 +74,8 @@ catch (Exception ex){}
 options = CmdOptions();
 test_argv := split("--help=b/false --bool --int=i/1 --j=i/2 --s2=str2 -f "
                    "f/1.0 --gloat2=f/2.0");
-test_argv2 := split("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello -- "
+test_argv2 := split("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello "
+                    "--enable-selection --disable-makefalse -- "
                     "something");
 
 // Parse command line array
@@ -78,6 +85,7 @@ unparsed := options.parse(test_argv2, true);
 if  (sys_options.getBool("dump")) {
    cout `\nSecond option set:\n`;
    options.dump();
+   cout `$options\n`;
 }
 
 if  (sys_options.getBool("usage"))

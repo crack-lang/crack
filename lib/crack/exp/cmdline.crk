@@ -6,10 +6,10 @@ import crack.cont.array Array;
 import crack.math strtoi, strtof;
 import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
 import crack.sys argv;
-import crack.io cout, StringFormatter, FStr;
+import crack.io cout, StringFormatter, FStr, Writer;;
 import crack.strutil split, StringArray;
 
-
+StringArray typeNames = ["string", "int", "float", "bool"];
 uint CMD_STR = 0;
 uint CMD_INT = 1;
 uint CMD_FLOAT = 2;
@@ -48,11 +48,13 @@ class Option {
       type = CMD_STR,
       value = "" {}
 
+   // comparison, so we can sort the options
    int cmp(Option other){
+      if (!other) return 0;
       return long.cmp(other.long);
    }
 
-// Setters
+   // Setters
    void setInt(int value0){
       value = FStr() `$value0`;
    }
@@ -85,6 +87,17 @@ class Option {
       else if (type == CMD_FLOAT)
          strtof(value0);
       value = value0;
+   }
+   
+   String getRepr(){
+      if (value)
+         return FStr() `$(short)/$(long)/[$(typeNames[type])]=$(value)`;
+      else
+         return FStr() `$(short)/$(long)/[$(typeNames[type])]=(null)`;
+   }
+
+   void writeTo(Writer out) {
+      out.write(getRepr());
    }
 }
 
@@ -120,8 +133,17 @@ class CmdOptions {
       parse(newArgs, true);
    }
    
+#~    void sort() {
+#~       if (!sorted) {
+#~          options = options.sort();
+#~          cout `CmdOptions.sort()\n`;
+#~       }
+#~       sorted = true;
+#~    }
+
    void add(Option newoption){
       options.append(newoption);
+      sorted = false;
    }
 
    Option add(String long, String short, String desc, String value, uint type){
@@ -240,10 +262,21 @@ class CmdOptions {
             if (eqi > 2){ // Found a value after = sign
                result.name = arg.slice(2, eqi);
                result.value = arg.slice(eqi+1);
-               result.nadv = true;
             }
-            else
-               result.name = arg.slice(2);
+            else {
+               if (arg.size > 9 && arg.substr(2, 7) == "enable-"){
+                  result.name = arg.slice(9);
+                  result.value = "b/1";
+               }
+               else if (arg.size > 10 && arg.substr(2, 8) == "disable-"){
+                  result.name = arg.slice(10);
+                  result.value = "b/0";
+               }
+               else 
+                  result.name = arg.slice(2);
+            }
+
+            result.nadv = true;
             parseInfo.append(result);
          }
          else {                            // short option
@@ -416,6 +449,19 @@ class CmdOptions {
       }
    }
 
+   void writeTo(Writer out) {
+      out.write('[');
+      bool first = true;
+      for (elem :in options) {
+         if (!first)
+            out.write(', ');
+         else
+            first = false;
+         out.write(elem.getRepr());
+      }
+      out.write(']');
+   }
+
    // Generate a usage string
    String createUsage(String intro){
       StringFormatter fmt = {};
@@ -433,7 +479,7 @@ class CmdOptions {
          }
          else {
             fmt ` -$(opt.short) --$(opt.long) \t\t`;
-            fmt ` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(value))\n`;
+            fmt ` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(value)))\n`;
 
          }
       }
