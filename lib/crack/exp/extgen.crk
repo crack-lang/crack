@@ -10,9 +10,9 @@ import crack.exp.error err;
 import crack.exp.regex Regex, Match;
 import crack.cont.array Array;
 import crack.strutil StringArray;
+import crack.cont.treemap TreeMap;
 
 @import crack.exp.ann define;
-@import crack.exp.cont.treemap GenericTreeMap;
 
 // Constants to make later code more readable
 OPENBRACE:=true;
@@ -159,9 +159,6 @@ class IfdefFunc: Func{
    }
 }
 
-int cmp(String a, String b) { return a.cmp(b); }
-@GenericTreeMap(TypeMap, String, Type);
-
 class BuiltInType : Type {
     String funcName;
     oper init(String name, String funcName) : 
@@ -299,9 +296,11 @@ class GenericType : TypeImpl {
         TypeImpl(name, emitted) {
     }
     
-    Type getSpecialization(TypeMap types, StringArray typeNames, Type specializer) {
+    Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames, 
+                           Type specializer
+                           ) {
         
-        # construct the specilization name
+        # construct the specialization name
         StringFormatter fmt = {};
         fmt `$name[$(specializer.name)]`;
         newName := fmt.createString();
@@ -420,7 +419,7 @@ class Errors : StringFormatter {
 class ExtensionData {
     String filename;
     String symbolFilename;
-    TypeMap types;
+    TreeMap[String, Type] types;
     Array[Func] funcs;
     Array[Const] consts = {};
     StringArray module = {};  # module name

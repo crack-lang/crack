@@ -1134,6 +1134,7 @@ test_output 'arg index out of bounds' \
     ok
 
 test_output 'containers' 'import test.test_containers;' ok
+test_output 'container generics' 'import test.test_container_generics;' ok
 
 test_output 'reference counting of assigned variables' \
     'import crack.io cout;

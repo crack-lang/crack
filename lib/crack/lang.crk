@@ -922,6 +922,9 @@ void _throwNotImplementedError(byteptr text) {
 ## Raised when a user specifies an invalid argument to a function.
 @except InvalidArgumentError
 
+## Raised when an invalid key is passed to a function in a key-value interface.
+@except KeyError
+
 # misc functions
 
 void print(String val) {
