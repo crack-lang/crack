@@ -314,8 +314,8 @@ class CmdOptions {
    }
 
    /// Create a new option from a name/value pair
-   /// pair[0]: name of the option
-   /// pair[1]: string value of the option
+   /// name   : name of the option
+   /// value  : string value of the option
    ///          for CMD_BOOL options a null means the option is getting set
    ///          i.e. true
 
