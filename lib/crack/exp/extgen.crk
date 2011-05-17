@@ -1,5 +1,5 @@
 # annotation that generates bindings.
-# This currently duplicates the parser logic - rewrite this once the 
+# This currently duplicates the parser logic - rewrite this once the
 # annotation interface supports introspection of compile contexts.
 
 import crack.lang die, free, AppendBuffer, NotImplementedError, Exception;
@@ -24,21 +24,21 @@ class Type {
     String name;
     String __emitName;
     bool initialized;
-    
+
     oper init(String name) : name = name, __emitName = 'type_' + name {}
     oper init(String name, String emitted) :
         name = name,
         __emitName = emitted {
     }
-    
+
     String emit() {
         return __emitName;
     }
-    
+
     bool isBuiltIn() {
         return false;
     }
-    
+
     bool isIfdef() {
         return false;
     }
@@ -52,7 +52,7 @@ class Type {
             FStr() `$(this.class.name).emitInitializer() not implemented`
         );
     }
-    
+
     String getConstCast() { return null; }
 }
 
@@ -61,13 +61,13 @@ class IfdefType : Type {
    bool _open;
    String _test;
 
-    oper init(bool open0, String test0, String name0) : 
-        _open=open0, 
+    oper init(bool open0, String test0, String name0) :
+        _open=open0,
         _test = test0,
         Type(name0) {
     }
 
-    oper init(bool open0, String test0, String name0, String emitted0) : 
+    oper init(bool open0, String test0, String name0, String emitted0) :
         _open=open0,
         _test = test0,
         Type(name0, emitted0) {
@@ -76,7 +76,7 @@ class IfdefType : Type {
     bool isIfdef() {
         return true;
     }
-    
+
     bool isOpen(){
        return _open;
     }
@@ -85,16 +85,16 @@ class IfdefType : Type {
         if (initialized) return;
         if (_open)
            out `\n#$(_test) $name\n\n`;
-        else 
+        else
            out `#$(_test) // $(name.slice(0, -4))\n\n`;
         initialized = true;
     }
 }
 
 class IfdefPreamble : Type {
-   
+
    oper init(String name0, String emitted0) : Type(name0, emitted0) {}
-   
+
     void emitInitializer(Formatter out) {
         if (initialized) return;
         out.write(emit());
@@ -118,12 +118,12 @@ class Func {
     bool initialized;
 
     oper init(Type retType, String name) :
-        retType = retType, 
+        retType = retType,
         name = name,
         initialized = false,
         args() {
     }
-    
+
     void addArg(Arg arg) {
         args.append(arg);
     }
@@ -135,9 +135,9 @@ class Func {
     bool isOpen(){
        return retType.isOpen();
     }
-    
+
     void emitInitializer(Formatter out) {
-        if (initialized) return; 
+        if (initialized) return;
           retTypeRepr := retType.emit();
             out `    f = mod->addFunc($retTypeRepr, "$(name)",
                      (void *)$(name)
@@ -150,7 +150,7 @@ class Func {
 }
 
 class IfdefFunc: Func{
-   oper init(bool open, String test, String name): 
+   oper init(bool open, String test, String name):
       Func(IfdefType(open, test, name), name) {
    }
 
@@ -161,17 +161,17 @@ class IfdefFunc: Func{
 
 class BuiltInType : Type {
     String funcName;
-    oper init(String name, String funcName) : 
-        Type(name), 
+    oper init(String name, String funcName) :
+        Type(name),
         funcName = funcName {
     }
-    
+
     bool isBuiltIn() {
         return true;
     }
-    
+
     void emitInitializer(Formatter out) {
-        if (initialized) 
+        if (initialized)
             return;
         out `    crack::ext::Type *$(emit()) = mod->get$(funcName)Type();\n`;
         initialized = true;
@@ -179,9 +179,9 @@ class BuiltInType : Type {
 }
 
 class ConstType : BuiltInType {
-    
+
     String constCast;
-    
+
     oper init(String name, String funcName, String constCast) :
         BuiltInType(name, funcName),
         constCast = constCast {
@@ -194,10 +194,10 @@ class TypeImpl : Type {
     String emitted;
     Array[Func] methods;
     Array[Arg] members;
-    
+
     oper init(String name) : Type(name), members() {}
-    oper init(String name, String emitted) : 
-       Type(name, emitted), 
+    oper init(String name, String emitted) :
+       Type(name, emitted),
        members() {}
 
     // class members
@@ -215,12 +215,12 @@ class TypeImpl : Type {
             return;
 
         typeVar := emit();
-        
+
         // make sure all our member types are defined
         for (member :in members)
             if (member.type.isBuiltIn())
               member.type.emitInitializer(out);
-              
+
 
         // emit initializer
         out `
@@ -228,12 +228,12 @@ class TypeImpl : Type {
 
         // emit member variables
         for (member :in members){
-           if (member.type.isBuiltIn()) 
+           if (member.type.isBuiltIn())
               member.type.emitInitializer(out);
            out `       $typeVar->addInstVar($(member.type.emit()),
                                             "$(member.name)");\n`;
         }
-        
+
         // finish type definition
         out `    $typeVar->finish();\n\n`;
         initialized = true;
@@ -241,9 +241,9 @@ class TypeImpl : Type {
 }
 
 class SpecializedType : TypeImpl {
-    
+
     Type generic, specializer;
-    
+
     @static String _mangle(String name) {
         # allocate a generous buffer
         AppendBuffer result = {name.size * 2};
@@ -258,12 +258,12 @@ class SpecializedType : TypeImpl {
             else
                 result.append(ch);
         }
-        
+
         result.size = result.pos;
         return String(result, true);
     }
-    
-    # specialized types look like builtins - we don't do the normal type 
+
+    # specialized types look like builtins - we don't do the normal type
     # creation for them, instead we just get specializations for them.
     oper init(String name, Type generic, Type specializer) :
         TypeImpl(name, _mangle(name)),
@@ -295,16 +295,16 @@ class GenericType : TypeImpl {
     oper init(String name, String emitted) :
         TypeImpl(name, emitted) {
     }
-    
-    Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames, 
+
+    Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames,
                            Type specializer
                            ) {
-        
+
         # construct the specialization name
         StringFormatter fmt = {};
         fmt `$name[$(specializer.name)]`;
         newName := fmt.createString();
-        
+
         # see if there's an existing type, create a new one if not.
         type := types.get(newName);
         if (!type) {
@@ -329,7 +329,7 @@ class ArrayType : GenericType {
     oper init() :
         GenericType('array', 'array') {
     }
-    
+
     void emitInitializer(Formatter out) {
         if (initialized) return;
         out `
@@ -387,13 +387,13 @@ class IfdefConst:Const{
 }
 
 class Errors : StringFormatter {
-    
+
     CrackContext ctx;
     Token tok;
-    
+
     oper init(CrackContext ctx, Token tok) : ctx = ctx, tok = tok {}
     oper init(CrackContext ctx) : ctx = ctx {}
-    
+
     oper del() {
         # null terminate
         this `\0`;
@@ -428,7 +428,7 @@ class ExtensionData {
     StringArray typeNames ={}; // Need this because the typemap is not ordered
     bool inSrcDir;
     uint ifdefLevel = 0;
-    
+
     oper init() : types(), funcs() {
         String name;
         @setBuiltinType('Class', 'Class');
@@ -446,10 +446,10 @@ class ExtensionData {
         @setConstType('float32', 'Float32', 'double');
         @setConstType('float64', 'Float64', 'double');
         @setConstType('float', 'Float', 'double');
-        
+
         types['array'] = ArrayType();
     }
-    
+
     Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }
     Errors error(CrackContext ctx) { return Errors(ctx); }
 
@@ -460,7 +460,7 @@ class ExtensionData {
         type := types.get(String(tok.getText()));
         if (!type)
             error(ctx, tok) `Unknown type $(tok.getText())`;
-        
+
         # check for a specializer type
         tok = ctx.getToken();
         Type specializer;
@@ -469,54 +469,54 @@ class ExtensionData {
             tok = ctx.getToken();
             if (!tok.isRBracket())
                 error(ctx, tok) `Right bracket expected`;
-            
+
             if (!type.isa(GenericType))
                 error(ctx, tok) `$(type.name) is not a generic type`;
-            
-            type = GenericType.unsafeCast(type).getSpecialization(types, 
+
+            type = GenericType.unsafeCast(type).getSpecialization(types,
                                                                   typeNames,
                                                                   specializer
                                                                   );
         } else {
             ctx.putBack(tok);
         }
-        
+
         return type;
     }
-        
- 
+
+
     void _parseFuncDef(CrackContext ctx) {
         retType := _parseType(ctx);
-        
+
         tok := ctx.getToken();
         if (!tok.isIdent())
             error(ctx, tok) `Identifier expected`;
-        
+
         f := Func(retType, String(tok.getText()));
         funcs.append(f);
 
         if (!(tok = ctx.getToken()).isLParen())
             error(ctx, tok) `Left paren expected`;
-        
+
         tok = ctx.getToken();
         while (!tok.isRParen()) {
             # parse the argument type
             ctx.putBack(tok);
             argType := _parseType(ctx);
-            
+
             # get the arg variable
             tok = ctx.getToken();
             if (!tok.isIdent())
                 error(ctx, tok) `argument name expected`;
-            
+
             f.addArg(Arg(argType, String(tok.getText())));
-            
+
             tok = ctx.getToken();
             if (tok.isComma())
                 tok = ctx.getToken();
             else if (!tok.isRParen())
                 error(ctx, tok) `Comma or right paren expected`;
-        }   
+        }
     }
 
     void _parseClassDef(CrackContext ctx) {
@@ -526,9 +526,9 @@ class ExtensionData {
 
         if (!tok.isIdent())
             error(ctx, tok) `Identifier expected after "class" keyword.`;
-        
+
         String className = {tok.getText()};
-        
+
         # get a semicolon or left curly
         tok = ctx.getToken();
         if (tok.isSemi() || tok.isLCurly()){
@@ -546,7 +546,7 @@ class declaration`;
                # parse the argument type
                ctx.putBack(tok);
                argType := _parseType(ctx);
-               
+
                # get the arg variable
                tok = ctx.getToken();
                if (!tok.isIdent())
@@ -572,7 +572,7 @@ class declaration`;
                    error(ctx, tok) `Semicolon or right curly brace expected`;
            }
         }
-        
+
         types[className] = ctype;
         typeNames.append(className);
 
@@ -584,7 +584,7 @@ class declaration`;
             error(ctx, tok) `Expected string`;
         return String(tok.getText());
     }
-    
+
     void _populateIfdefs(bool open, String ifdefTest,  String ifdefCond){
         funcs.append(IfdefFunc(open, ifdefTest, ifdefCond));
         consts.append(IfdefConst(open, ifdefTest, ifdefCond));
@@ -596,15 +596,15 @@ class declaration`;
     void _closeIfdef(){
         ifdefLevel--;
         ifdefCondStart:=ifdefs.pop();
-       
+
         StringFormatter no = {}; // Object name = $(ifdefCondStart)_end
         no `$(ifdefCondStart)_end`;
         ifdefCond := no.createString();
-       
+
         _populateIfdefs(CLOSEBRACE, "endif", ifdefCond);
     }
 
-    
+
     void _parseIfdef(String ifdefTest, CrackContext ctx){
         tok := ctx.getToken();
         if (!tok.isIdent())
@@ -620,7 +620,7 @@ class declaration`;
         _populateIfdefs(OPENBRACE, ifdefTest,  ifdefCond);
 
     }
-    
+
 
     void _parseAnnotation(CrackContext ctx) {
         tok := ctx.getToken();
@@ -655,32 +655,32 @@ class declaration`;
             tok := ctx.getToken();
             if (!tok.isIdent())
                 error(ctx, tok) `Expected extension name.`;
-            
+
             result.append(String(tok.getText()));
             tok = ctx.getToken();
-            
+
             if (!tok.isDot()) {
                 ctx.putBack(tok);
                 break;
             }
         }
-        
+
         return result;
     }
-    
+
     void _parseConst(CrackContext ctx) {
         Type type = _parseType(ctx);
-        
+
         if (!type.getConstCast())
             error(ctx) `$(type.name) is not a valid constant type.`;
-        
+
         while (true) {
             tok := ctx.getToken();
             if (!tok.isIdent())
                 error(ctx, tok) `Identifier expected in constant definition`;
-            
+
             ident := String(tok.getText());
-            
+
             tok = ctx.getToken();
             if (tok.isSemi()) {
                 consts.append(Const(type, ident));
@@ -689,12 +689,12 @@ class declaration`;
                 consts.append(Const(type, ident));
                 continue;
             }
-            
+
             # expecting assigning to a value
             if (!tok.isAssign())
                 error(ctx, tok) `Assignment operator, comma or semicolon \
 expected after constant name.`;
-            
+
             tok = ctx.getToken();
             if (!(tok.isIdent() || tok.isString() || tok.isInteger() ||
                   tok.isFloat()
@@ -704,7 +704,7 @@ expected after constant name.`;
 or string.`;
 
             consts.append(Const(type, ident, String(tok.getText())));
-            
+
             tok = ctx.getToken();
             if (tok.isSemi())
                 break;
@@ -713,12 +713,12 @@ or string.`;
 definition.`;
         }
     }
- 
+
     void parse(CrackContext ctx) {
-        
+
         # get the extension module
         module = _parseExtensionName(ctx);
-        
+
         # expecting a '{'
         tok := ctx.getToken();
         if (!tok.isLCurly())
@@ -727,7 +727,7 @@ definition.`;
         # parse all definitions
         while (true) {
             tok = ctx.getToken();
-            
+
             # check for a class definition
             if (tok.isClass())
                 _parseClassDef(ctx);
@@ -750,7 +750,7 @@ definition.`;
                 error(ctx, tok)
                     `expected class, function or right curly bracket.`;
         }
-        
+
     }
 
     String header(String name) {
@@ -789,7 +789,7 @@ definition.`;
                }
 
                if (doEmit) ct.emitInitializer(o);
-             } 
+             }
          }
          else {
             if (ta.count()>0) ta.pop().emitInitializer(o);
@@ -809,7 +809,7 @@ definition.`;
         for (block :in preamble)
             emitInitializerNestedType(ta, block, o);
 
-        if (!goodIfdefNesting(ta)) die(); 
+        if (!goodIfdefNesting(ta)) die();
 
         o `
 
@@ -835,7 +835,7 @@ void $(module.join('_'))_init(crack::ext::Module *mod) {
 
         o `}\n`;
     }
-   
+
     void emit() {
         # emit all of the code
         cout `emitting $filename\n`;
@@ -861,14 +861,13 @@ void $(module.join('_'))_init(crack::ext::Module *mod) {
                 i++;
             }
          }
-         if (i==0) cout `(None)`;
-        
+
         o `\n\n// Functions\n`;
         i=0;
         for (func :in funcs) {
             if (i>0) o `,\n`;
             if (i>0 && i%10==0) o `\n`;
-            
+
             retTypeRepr := func.retType.emit();
             o `$(retTypeRepr) $(func.name)(`;
 
@@ -894,7 +893,6 @@ void $(module.join('_'))_init(crack::ext::Module *mod) {
             l+=c.ident.size;
             i++;
         }
-        if (i==0) cout `(None)`;
     }
 
 
