@@ -39,4 +39,11 @@ A[int].gotStatic();
 if (!gotStaticCalled) puts('FAILED static function call');
 
 if (A[int](4).format() != 7) puts('FAILED generic with i-string');
+
+
+class B[T1, T2] { T1 f(T1 a) { return a; } T2 f(T2 a) { return a; } }
+B[int, float] b = {};
+if (b.f(100) != 100 || b.f(1.5) != 1.5)
+    puts('FAILED two argument generic');
+
 puts('ok');
