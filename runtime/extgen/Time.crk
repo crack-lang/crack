@@ -1,0 +1,17 @@
+# Crack binding of time.h
+# Conrad Steenberg <conrad.steenberg@gmail.com>
+
+@import crack.exp.extgen generateExtension;
+
+@generateExtension crack._time {
+   @filename 'runtime/Time.cc'
+   @dumpsymbols 'runtime/extgen/Time.txt'
+   @inject '#include <time.h>\n'
+   @crack_internal
+
+   class tm {
+      int sec, min, hour, mday, mon, year, wday, yday, isdst;
+      int64 gmtoff;
+      int64 mktime(tm t);
+   }
+}
