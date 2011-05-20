@@ -195,19 +195,25 @@ class TypeImpl : Type {
     Array[Func] methods;
     Array[Arg] members;
 
-    oper init(String name) : Type(name), members() {}
+    oper init(String name) : Type(name), members(), methods() {}
     oper init(String name, String emitted) :
        Type(name, emitted),
-       members() {}
+       members(),
+       methods() {}
 
     // class members
     void addMember(Arg member) {
-        members.append(member);
+       members.append(member);
     }
 
    // class methods, emit not implemented
-    void addMethod(Arg method) {
-        // methods.append(method);
+    void addMethod(Func method) {
+        if (method){
+            methods.append(method);
+            cout `addMethod($(method.name))\n`;
+        }
+        else
+            cout `addMethod(null)\n`;
     }
 
     void emitInitializer(Formatter out) {
@@ -230,8 +236,17 @@ class TypeImpl : Type {
         for (member :in members){
            if (member.type.isBuiltIn())
               member.type.emitInitializer(out);
-           out `       $typeVar->addInstVar($(member.type.emit()),
-                                            "$(member.name)");\n`;
+           out `       $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
+        }
+
+        // emit methods
+        for (method :in methods){
+          if (method.retType.isBuiltIn())
+            method.retType.emitInitializer(out);
+            cout `method found\n`;
+          out `       f = $typeVar->addMethod($(method.retType.emit()),  "$(method.name)", (void *)$(method.name));\n`;
+          for (arg: in method.args)
+            out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
         }
 
         // finish type definition
@@ -455,6 +470,7 @@ class ExtensionData {
 
     Type _parseType(CrackContext ctx) {
         tok := ctx.getToken();
+        cout `_parseType got $(tok.getText())\n`;
         if (!tok.isIdent())
             error(ctx, tok) `Type specifier expected`;
         type := types.get(String(tok.getText()));
@@ -485,20 +501,21 @@ class ExtensionData {
     }
 
 
-    void _parseFuncDef(CrackContext ctx) {
+    Func _parseFuncDef(CrackContext ctx) {
         retType := _parseType(ctx);
 
         tok := ctx.getToken();
+        cout `_parseFuncDef1 got $(tok.getText())\n`;
         if (!tok.isIdent())
             error(ctx, tok) `Identifier expected`;
 
         f := Func(retType, String(tok.getText()));
-        funcs.append(f);
 
         if (!(tok = ctx.getToken()).isLParen())
             error(ctx, tok) `Left paren expected`;
 
         tok = ctx.getToken();
+        cout `_parseFuncDef2 got $(tok.getText())\n`;
         while (!tok.isRParen()) {
             # parse the argument type
             ctx.putBack(tok);
@@ -517,6 +534,9 @@ class ExtensionData {
             else if (!tok.isRParen())
                 error(ctx, tok) `Comma or right paren expected`;
         }
+
+        cout `returning\n`;
+        return f;
     }
 
     void _parseClassDef(CrackContext ctx) {
@@ -546,26 +566,42 @@ class declaration`;
                # parse the argument type
                ctx.putBack(tok);
                argType := _parseType(ctx);
+               cout `argType = $(argType.name)\n`;
 
                # get the arg variable
-               tok = ctx.getToken();
+               tok2 := ctx.getToken();
+               cout `got2 $(tok2.getText())\n`;
                if (!tok.isIdent())
                    error(ctx, tok) `argument name expected`;
 
-               ctype.addMember(Arg(argType, String(tok.getText())));
-               tok = ctx.getToken();
-
-               while (tok.isComma()){
+               tok3 := ctx.getToken();
+               cout `got3 $(tok3.getText())\n`;
+               if (tok3.isLParen()){
+                  ctx.putBack(tok3);
+                  ctx.putBack(tok2);
+                  ctx.putBack(tok);
+                  Func f = _parseFuncDef(ctx);
+                  ctype.addMethod(f);
+                  cout `added method\n`;
                   tok = ctx.getToken();
-                  if (!tok.isIdent())
-                      error(ctx, tok) `argument name expected`;
-
-                  ctype.addMember(Arg(argType, String(tok.getText())));
-                  tok = ctx.getToken();
-                  if (!tok.isSemi() && !tok.isComma())
-                    error(ctx, tok) `Semicolon or comma expected`;
                }
+               else{
+                  ctx.putBack(tok3);
+                  ctype.addMember(Arg(argType, String(tok2.getText())));
+                  tok = ctx.getToken();
+                  cout `got4 $(tok.getText())\n`;
 
+                  while (tok.isComma()){
+                     tok = ctx.getToken();
+                     if (!tok.isIdent())
+                         error(ctx, tok) `argument name expected`;
+
+                     ctype.addMember(Arg(argType, String(tok.getText())));
+                     tok = ctx.getToken();
+                     if (!tok.isSemi() && !tok.isComma())
+                       error(ctx, tok) `Semicolon or comma expected`;
+                  }
+               }
                if (tok.isSemi())
                    tok = ctx.getToken();
                else if (!tok.isRCurly())
@@ -736,7 +772,8 @@ definition.`;
                     _parseConst(ctx);
                 } else {
                     ctx.putBack(tok);
-                    _parseFuncDef(ctx);
+                    funcs.append(_parseFuncDef(ctx));
+                    
                 }
             } else if (tok.isRCurly()){
                if (ifdefLevel>0) _closeIfdef();
