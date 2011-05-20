@@ -89,6 +89,15 @@ class Object : VTableBase {
         return this is null ? false : cmp(other) > 0;
     }
 
+    ## Returns the hash value of the object.  Hash values have a special 
+    ## relationsip with equality, a.cmp(b) == 0 implies a.makeHashVal() == 
+    ## b.makeHashVal().  If you override this, you must also override cmp() 
+    ## and vice-versa in order to preserve this relationship.
+    uint makeHashVal() {
+        v := uint(uint64(this));
+        return v ^ (v >> 9) ^ (v << 7);
+    }
+
     @final bool toBool() {
         if (this is null)
             return false;
@@ -219,6 +228,13 @@ class Buffer : Object {
             # if other is not a string, it is not equal.
             return 1;
         }
+    }
+    
+    uint makeHashVal() {
+        uint hash;
+        for (int i = 0; i < size; ++i)
+            hash = (hash << 5 ^ hash >> 21) ^ buffer[i];
+        return hash;
     }
 }
 
@@ -952,7 +968,7 @@ void die() {
     abort();
 }
 
-# comparison functions (helpful for macros)
+# comparison functions (helpful for generics)
 int cmp(Object a, Object b) {
     if (a is b)
         return 0;
@@ -984,3 +1000,19 @@ $$
 @heavycmp float32
 @heavycmp float64
 
+# hash functions (helpful for generics)
+# we don't define float hashes yet because there is no cheap way to implement 
+# them in Crack and they're not very useful anyway.
+uint makeHashVal(Object obj) { return obj.makeHashVal(); }
+
+@define lighthash 1 uint makeHashVal($1 val) {
+    return uint(val);
+}
+$$
+
+@lighthash byte
+@lighthash int32
+@lighthash uint32
+
+uint makeHashVal(uint64 val) { return uint(val >> 32 ^ val); }
+uint makeHashVal(int64 val) { return uint(val >> 32 ^ val); }

@@ -1,0 +1,297 @@
+# Copyright 2011 Google Inc
+# Generic hash map implementation
+
+import crack.lang makeHashVal, free, AssertionError, KeyError;
+import crack.io cout, Formatter, FStr, Writer;
+
+class HashMap[Key, Value] {
+    class Item {
+        uint _hash;
+        Key key;
+        Value val;
+        
+        oper init(uint hash, Key key, Value val) :
+            _hash = hash,
+            key = key,
+            val = val {
+        }
+    }
+    
+    class Iter {
+        array[Item] __items;
+        uint __size, __index;
+        
+        oper init(array[Item] items, uint size) :
+            __items = items,
+            __size = size {
+        }
+        
+        Item elem() { return __items[__index]; }
+        
+        void next() { ++__index; }
+        
+        bool isValid() { return __index < __size; }
+    }
+    
+    array[Item] __items;
+    uint __size, __cap;
+    
+    oper init() : __items(16), __cap = 16 {}
+    oper del() {
+        # release all items
+        for (int i = 0; i < __cap; ++i)
+            if (__items[i])
+                __items[i].oper release();
+        
+        # free the list
+        free(__items);
+    }
+    
+    @final int __findSlot(uint hash, Key key) {
+        
+        # find the ideal slot
+        i := hash % __cap;
+        
+        # if it's occupied by something with a different key, increment to 
+        # the next slot.
+        while (__items[i] && __items[i].key != key) {
+#            cout `desired slot $i for $key is occupied,`;
+            i = (i + 1) % __cap;
+#            cout `checking slot $i\n`;
+        }
+#        cout `assigning $key to $i\n`;
+        
+        return int(i);
+    }
+    
+    @final void __reallocate() {
+        
+        # stash the old array, create a new array with double the capacity.
+        oldCap := __cap;
+        __cap = oldCap * 2;
+        array[Item] oldItems = __items;
+        __items = array[Item](__cap);
+        
+        # move everything over to the new array.
+        for (uint i = 0; i < oldCap; ++i) {
+            item := oldItems[i];
+            if (item)
+                __items[__findSlot(item._hash, item.key)] = item;
+        }
+        
+        # free the old list
+        free(oldItems);
+    }
+    
+    @final Value oper []=(Key key, Value val) {
+#        cout `*** map[$key] = $val\n`;
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        if (__items[i]) {
+            # slot is occupied, simply replace the value
+#            cout `replacing $key at $i with $val\n`;
+            __items[i].val = val;
+        } else {
+            # see if we've exceeded capacity
+            if (__size > 3 * __cap / 4) {
+#                cout `reallocating\n`;
+                __reallocate();
+                i = __findSlot(hash, key);
+            }
+            
+            item := Item(hash, key, val);
+#            cout `storing key $key at $i with $val\n`;
+            __items[i] = item;
+            item.oper bind();
+            ++__size;
+        }
+        
+        return val;
+    }
+    
+    ## Returns the value associated with the specified key, throws KeyError if 
+    ## the key is not in the container.
+    Value oper [](Key key) {
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        if (__items[i])
+            return __items[i].val;
+        else
+            throw KeyError(FStr() `Invalid key: $key`);
+    }
+
+    ## Returns the value associated with the specified key, null if the key is 
+    ## not in the container.
+    Value get(Key key) {
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        return __items[i] ? __items[i].val : null;
+    }
+    
+    # Check all subsequent slots up to the next empty slot to see if there are 
+    # any items that would like to fill 'index'
+    # Returns 'true if it found a replacement.
+    bool __findNewOccupant2(int index) {
+        bool foundReplacement;
+        last := index;
+        i := int((index + 1) % __cap);
+        while (__items[i]) {
+            if (__items[i]._hash % __cap == index) {
+#                cout `moving $(__items[i].key) which wants to be in $index \
+#to $last\n`;
+                __items[last] = __items[i];
+                __items[i] = null;
+                foundReplacement = true;
+                
+                # first see if there's an item that wants to be in the newly
+                # opened slot.
+                if (__findNewOccupant2(i))
+                    # there was, and we know that the recursive call has left 
+                    # us with a safe contiguous block of items, so we're done.
+                    break;
+                else
+                    # There is not.  See if there's an item that wants to be 
+                    # in the originally opened slot, if so move it to this 
+                    # slot.
+                    last = i;
+            }
+            i = int((i + 1) % __cap);
+        }
+        
+        return foundReplacement;
+    }
+    
+    void __findNewOccupant3(int opening) {
+        
+        # scan through the continguous following items to see if there are any 
+        # that don't belong where they are and would be better served by the 
+        # newly opened position.  
+        # We do some funny math here - basically we want to be able to ask 
+        # the question "would the item at 'i' be better off at slot 
+        # 'opening'"  We can phrase this question concisely as 
+        # "desiredIndex(item) <= 'opening'" if we offset all indeces by the 
+        # container capacity and reserve the use of the 'actualIndex' computed 
+        # from the modulus to the places where we're actually referencing the 
+        # item.  So in this function, we use the variables:
+        #  index: the index under consideration offset by the array capacity
+        #  actualIndex: 
+        
+        # (we defer the modulus operation so we can 
+        # make this determination with a simple '<=' check)
+        i := opening + 1;
+        
+        while (__items[i]) {
+#            cout `does $(__items[i].key) at $i which wants to be at \
+# $(__items[i]._hash % __cap) belong at $opening?\n`;
+#            cout `  opening = $opening, $(__items[i]._hash % __cap <= 
+#                                          opening)\n`;
+            if (__items[i]._hash % __cap <= opening) {
+                # found one!
+#                cout `moving $(__items[i].key) which wants to be in $opening \
+#to $opening\n`;
+                i = int(i % __cap);
+                __items[opening] = __items[i];
+                __items[i] = null;
+                
+                # repeat with the newly vacated opening
+                opening = i;
+            }
+            ++i;
+        }
+    }
+
+    void __findNewOccupant(int opening) {
+        
+        # check if a < b <= c, respecting the modulus operation.
+        bool inOrder(int a, int b, int c) {
+            return 
+                # if a < c, this is trivial
+                a < c && a < b && b <= c ||
+                
+                # if a > c, the range is split between a..top of range and
+                # bottom of range .. c
+                   a > c && (b > a || b <= c);
+        }
+        
+        # scan through the continguous following items to see if there are any 
+        # that don't belong where they are and would be better served by the 
+        # newly opened position.  
+        # make this determination with a simple '<=' check)
+        i := int((opening + 1) % __cap);
+        
+        # find the last open slot
+        last := opening ? opening - 1 : int(__cap - 1);
+        while (__items[last])
+            if (--last < 0) last = int(__cap + last);
+        
+        while (__items[i]) {
+            desired := int(__items[i]._hash % __cap);
+#            cout `does $(__items[i].key) at $i which wants to be at \
+# $desired belong at $opening (last = $last)?\n`;
+            if (inOrder(last, desired, opening)) {
+                # found one!
+#                cout `moving $(__items[i].key) to $opening\n`;
+                __items[opening] = __items[i];
+                __items[i] = null;
+                
+                # repeat with the newly vacated opening
+                opening = i;
+            }
+            i = int((i + 1) % __cap);
+        }
+    }
+    
+    void delete(Key key) {
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        if (__items[i]) {
+#            cout `deleting item $key at $i\n`;
+            __items[i].oper release();
+            __items[i] = null;
+            --__size;
+            __findNewOccupant(i);
+        } else {
+            throw KeyError(FStr() `Invalid key: $key`);
+        }
+    }
+
+    Iter iter() { return Iter(__items, __size); }
+    
+    void writeTo(Writer out) {
+        Formatter f = {out};
+        f `{`;
+        for (item :in this)
+            f `$(item.key): $(item.val), `;
+        f `}`;
+    }
+    
+    uint count() {
+        return __size;
+    }
+    
+    ## Method for testing - verify that all constraints are satisfied.
+    void checkConstraints() {
+        for (int i = 0; i < __cap; ++i) {
+            if (__items[i]) {
+                expected := __items[i]._hash % __cap;
+                if (expected != i) {
+                    # make sure there are no empty slots between here and the
+                    # expected index
+                    int j = i;
+                    while (true) {
+                        if (!__items[j])
+                            throw AssertionError(FStr() `Empty slot at $j \
+between actual position of $(__items[i].key) at $i and expected position at \
+$expected`);
+                        if (j == expected)
+                            break;
+                        --j;
+                        if (j < 0)
+                            j = int(__cap + j);
+                    }
+                }
+            }
+        }
+    }
+}
+    

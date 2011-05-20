@@ -1,11 +1,13 @@
 # Copyright 2010 Google Inc.
 
 import crack.lang cmp, die, free;
-import crack.io cout, Formatter, StringFormatter;
+import crack.runtime random;
+import crack.io cout, Formatter, FStr, StringFormatter;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
+import crack.cont.list List, DList;
+import crack.cont.hashmap HashMap;
 @import crack.exp.ann define;
-@import crack.exp.cont.list GenericList, GenericDList;
 
 TreeMap[String, int] m = {};
 m['first'] = 100;
@@ -28,8 +30,6 @@ if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
 class Foo {}
 Array[Foo];
 
-@GenericList(StringList, String);
-
 @define concat(Type) {
     String concat(Type list) {
         StringFormatter result = {};
@@ -39,14 +39,14 @@ Array[Foo];
     }
 }
 
-@concat(StringList);
+@concat(List[String]);
 
-StringList s = {};
+List[String] s = {};
 s.append('1');
 s.append('2');
 if (concat(s) != '12' || s.count() != 2)
     cout `Failed List appends\n`;
-s = StringList();
+s = List[String]();
 s.pushHead('2');
 s.pushHead('1');
 if (concat(s) != '12' || s.count() != 2)
@@ -58,7 +58,7 @@ if (concat(s) != '2' || s.count() != 1)
 s.popHead();
 if (concat(s) != '' || s.count() != 0)
     cout `failed List popHead on empty list\n`;
-s = StringList();
+s = List[String]();
 s.insert(0, 'first');
 s.insert(1, 'last');
 s.insert(1, 'middle');
@@ -78,17 +78,16 @@ if (concat(s) != 'first' || s.count() != 1)
 if (s[0] != 'first')
     cout `failed List [] access\n`;
 
-@GenericDList(StringDList, String);
-@concat(StringDList);
+@concat(DList[String]);
 
-void checkDList(StringDList list, String val, uint count, String message) {
+void checkDList(DList[String] list, String val, uint count, String message) {
     # make sure that the list is properly terminated
     revIter := list.iter(true);
     if (revIter.next())
         cout `$message: last element has non-null next\n`;
 
     # verify that the list looks the same forwards as backwards
-    StringList temp = {};
+    List[String] temp = {};
     for (revIter = list.iter(true); revIter; revIter.last())
         temp.pushHead(revIter.elem());
     
@@ -115,13 +114,13 @@ $(listIter.elem()), got $(iter.elem())\n`;
 $(list.count())\n`;
 }
 
-StringDList dl = {};
+DList[String] dl = {};
 
 dl.append('1');
 dl.append('2');
 checkDList(dl, '12', 2, 'Failed DList appends');
 
-dl = StringDList();
+dl = DList[String]();
 dl.pushHead('2');
 dl.pushHead('1');
 checkDList(dl, '12', 2, 'Failed DList pushHeads');
@@ -131,7 +130,7 @@ checkDList(dl, '2', 1, 'Failed DList popHead');
 dl.popHead();
 checkDList(dl, '', 0, 'Failed DList popHead on empty list');
 
-dl = StringDList();
+dl = DList[String]();
 dl.insert(0, 'first');
 dl.insert(1, 'last');
 dl.insert(1, 'middle');
@@ -159,7 +158,7 @@ checkDList(dl, 'elem', 1, 'failed DList append after popTail');
 dl.popTail();
 checkDList(dl, '', 0, 'failed DList append after popTail of last elem');
 
-dl = StringDList();
+dl = DList[String]();
 dl.append('1');
 dl.append('2');
 iter := dl.iter();
@@ -174,4 +173,52 @@ checkDList(dl, '12', 2, 'Failed DList iterator delete');
 dl.delete(iter);
 dl.delete(iter);
 checkDList(dl, '', 0, 'Failed DList iterator delete of last elements');
+
+hm := HashMap[String, int]();
+for (int i = 0; i < 100; ++i) {
+    key := FStr() `$i`;
+    hm[key] = i;
+}
+
+for (int i = 0; i < 100; ++i) {
+    key := FStr() `$i`;
+    if (hm[key] != i)
+        cout `FAILED hash key lookup for $key\n`;
+    hm.delete(key);
+}
+
+if (hm.count() != 0)
+    cout `FAILED hash key count after deletes\n`;
+
+# fuzz test hash map
+if (true) {
+    HashMap[int, int] map = {};
+    Array[int] a = {};
+    int i;
+    while (i < 10000) {
+        action := random() % 3;
+        if (action < 2) {
+            # insert a new random value
+            
+            # find an unused key
+            v := random();
+            while (map.get(v))
+                v = random();
+    
+#            cout `$i: adding $v\n`;
+            map[v] = v;
+            a.append(v);
+        } else if (action == 2 && a.count()) {
+            # delete key
+            index := uint(random()) % a.count();
+#            cout `$i: deleting a[$index]: $(a[index])\n`;
+            map.delete(a[index]);
+            a.delete(index);
+        }
+
+        map.checkConstraints();
+        ++i;
+    }
+}
+
 cout `ok\n`;
