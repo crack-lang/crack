@@ -2534,6 +2534,8 @@ void Parser::recordBlock(Generic *generic) {
          --bracketCount;
       else if (tok.isIstrBegin())
          recordIStr(generic);
+      else if (tok.isEnd())
+         error(tok, "Premature end of file");
    }
 }
 

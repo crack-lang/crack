@@ -721,6 +721,8 @@ NodeList readBlock(CrackContext ctx) {
     depth := 1;
     while (depth) {
         tok = ctx.getToken();
+        if (tok.isEnd())
+            ctx.error(tok, 'Premature end of file'.buffer);
         if (tok.isLCurly())
             ++depth;
         else if (tok.isRCurly())
