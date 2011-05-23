@@ -61,16 +61,16 @@ class IfdefType : Type {
    bool _open;
    String _test;
 
-    oper init(bool open0, String test0, String name0) :
-        _open=open0,
-        _test = test0,
-        Type(name0) {
+    oper init(bool open, String test, String name) :
+        _open = open,
+        _test = test,
+        Type(name) {
     }
 
-    oper init(bool open0, String test0, String name0, String emitted0) :
-        _open=open0,
-        _test = test0,
-        Type(name0, emitted0) {
+    oper init(bool open, String test, String name, String emitted) :
+        _open = open,
+        _test = test,
+        Type(name, emitted) {
     }
 
     bool isIfdef() {
@@ -93,7 +93,7 @@ class IfdefType : Type {
 
 class IfdefPreamble : Type {
 
-   oper init(String name0, String emitted0) : Type(name0, emitted0) {}
+   oper init(String name, String emitted) : Type(name, emitted) {}
 
     void emitInitializer(Formatter out) {
         if (initialized) return;
@@ -114,15 +114,27 @@ class Arg {
 class Func {
     Type retType;
     String name;
+    String cname;
     Array[Arg] args;
     bool initialized;
+    bool isOperInit;
 
-    oper init(Type retType, String name) :
+    oper init(Type retType, String name, String cname) :
         retType = retType,
         name = name,
+        cname = cname,
         initialized = false,
-        args() {
-    }
+        isOperInit = false,
+        args() { }
+
+    oper init(Type retType, String name, String cname, bool isOperInit) :
+        retType = retType,
+        name = name,
+        cname = cname,
+        initialized = false,
+        isOperInit = isOperInit,
+        args() { }
+
 
     void addArg(Arg arg) {
         args.append(arg);
@@ -138,20 +150,28 @@ class Func {
 
     void emitInitializer(Formatter out) {
         if (initialized) return;
-          retTypeRepr := retType.emit();
-            out `    f = mod->addFunc($retTypeRepr, "$(name)",
-                     (void *)$(name)
-                     );
+        
+        retTypeRepr := retType.emit();
+        
+        if (isOperInit)
+            out `       f = $retTypeRepr->addConstructor("init",
+                (void *)$(cname)
+            );
+`;      
+        else
+            out `       f = mod->addFunc($retTypeRepr, "$(name)",
+                (void *)$(cname)
+            );
 `;
             for (arg :in args)
-                out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+                out `           f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
             out `\n`;
         }
 }
 
 class IfdefFunc: Func{
    oper init(bool open, String test, String name):
-      Func(IfdefType(open, test, name), name) {
+      Func(IfdefType(open, test, name), name, name) {
    }
 
    void emitInitializer(Formatter out){
@@ -208,12 +228,7 @@ class TypeImpl : Type {
 
    // class methods, emit not implemented
     void addMethod(Func method) {
-        if (method){
-            methods.append(method);
-            cout `addMethod($(method.name))\n`;
-        }
-        else
-            cout `addMethod(null)\n`;
+        methods.append(method);
     }
 
     void emitInitializer(Formatter out) {
@@ -241,12 +256,7 @@ class TypeImpl : Type {
 
         // emit methods
         for (method :in methods){
-          if (method.retType.isBuiltIn())
-            method.retType.emitInitializer(out);
-            cout `method found\n`;
-          out `       f = $typeVar->addMethod($(method.retType.emit()),  "$(method.name)", (void *)$(method.name));\n`;
-          for (arg: in method.args)
-            out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+            method.emitInitializer(out);
         }
 
         // finish type definition
@@ -470,7 +480,7 @@ class ExtensionData {
 
     Type _parseType(CrackContext ctx) {
         tok := ctx.getToken();
-        cout `_parseType got $(tok.getText())\n`;
+
         if (!tok.isIdent())
             error(ctx, tok) `Type specifier expected`;
         type := types.get(String(tok.getText()));
@@ -501,21 +511,47 @@ class ExtensionData {
     }
 
 
-    Func _parseFuncDef(CrackContext ctx) {
-        retType := _parseType(ctx);
+    Func _parseFuncDef(CrackContext ctx, bool isOperInit) {
+        Type retType = null;
+        String name = null, cname = null;
+        Token tok;
+        if (!isOperInit)
+            retType = _parseType(ctx);
+        else
+            tok = ctx.getToken();
 
-        tok := ctx.getToken();
-        cout `_parseFuncDef1 got $(tok.getText())\n`;
-        if (!tok.isIdent())
+        tok = ctx.getToken();
+        if (!tok.isIdent() )
             error(ctx, tok) `Identifier expected`;
+            
+        name = String(tok.getText());
 
-        f := Func(retType, String(tok.getText()));
+        // Look for pattern name[cname](tpe1 arg1,...)
+        tok = ctx.getToken();
+        if (tok.isLBracket()){
+            tok = ctx.getToken();
+            if (!tok.isIdent() )
+                error(ctx, tok) `Identifier expected`;
+            else
+                cname = String(tok.getText());
+
+            tok = ctx.getToken();
+            if (!tok.isRBracket())
+                error(ctx, tok) `Right bracket expected`;
+            
+        }
+        else {
+            cname = String(name);
+            ctx.putBack(tok);
+        }
+        
+
+        f := Func(retType, name, cname, isOperInit);
 
         if (!(tok = ctx.getToken()).isLParen())
             error(ctx, tok) `Left paren expected`;
 
         tok = ctx.getToken();
-        cout `_parseFuncDef2 got $(tok.getText())\n`;
         while (!tok.isRParen()) {
             # parse the argument type
             ctx.putBack(tok);
@@ -535,7 +571,6 @@ class ExtensionData {
                 error(ctx, tok) `Comma or right paren expected`;
         }
 
-        cout `returning\n`;
         return f;
     }
 
@@ -561,52 +596,53 @@ class declaration`;
         }
 
         if (tok.isLCurly()){
-           tok = ctx.getToken();
-           while (!tok.isRCurly()) {
-               # parse the argument type
-               ctx.putBack(tok);
-               argType := _parseType(ctx);
-               cout `argType = $(argType.name)\n`;
+            tok = ctx.getToken();
+            Type argType = null;
+            while (!tok.isRCurly()) {
+                isOperInit := tok.isOper();
+                # parse the argument type
+                if (!isOperInit){
+                    ctx.putBack(tok);
+                    argType = _parseType(ctx);
+                }
 
-               # get the arg variable
-               tok2 := ctx.getToken();
-               cout `got2 $(tok2.getText())\n`;
-               if (!tok.isIdent())
-                   error(ctx, tok) `argument name expected`;
+                # get the arg variable
+                tok2 := ctx.getToken();
+                if (!tok2.isIdent())
+                    error(ctx, tok2) `argument name expected`;
 
-               tok3 := ctx.getToken();
-               cout `got3 $(tok3.getText())\n`;
-               if (tok3.isLParen()){
-                  ctx.putBack(tok3);
-                  ctx.putBack(tok2);
-                  ctx.putBack(tok);
-                  Func f = _parseFuncDef(ctx);
-                  ctype.addMethod(f);
-                  cout `added method\n`;
-                  tok = ctx.getToken();
-               }
+                tok3 := ctx.getToken();
+                if (tok3.isLParen() || tok3.isLBracket()){
+                    ctx.putBack(tok3);
+                    ctx.putBack(tok2);
+                    ctx.putBack(tok);
+                    Func f = _parseFuncDef(ctx, isOperInit);
+                    if (isOperInit) f.retType = ctype;
+                    ctype.addMethod(f);
+                    tok = ctx.getToken();
+                }
                else{
-                  ctx.putBack(tok3);
-                  ctype.addMember(Arg(argType, String(tok2.getText())));
-                  tok = ctx.getToken();
-                  cout `got4 $(tok.getText())\n`;
+                    ctx.putBack(tok3);
+                    ctype.addMember(Arg(argType, String(tok2.getText())));
+                    tok = ctx.getToken();
 
-                  while (tok.isComma()){
-                     tok = ctx.getToken();
-                     if (!tok.isIdent())
-                         error(ctx, tok) `argument name expected`;
+                    while (tok.isComma()){
+                        tok = ctx.getToken();
+                        if (!tok.isIdent())
+                            error(ctx, tok) `argument name expected`;
 
-                     ctype.addMember(Arg(argType, String(tok.getText())));
-                     tok = ctx.getToken();
-                     if (!tok.isSemi() && !tok.isComma())
-                       error(ctx, tok) `Semicolon or comma expected`;
-                  }
+                        ctype.addMember(Arg(argType, String(tok.getText())));
+                        tok = ctx.getToken();
+                        if (!tok.isSemi() && !tok.isComma())
+                            error(ctx, tok) `Semicolon or comma expected`;
+                    }
                }
+
                if (tok.isSemi())
-                   tok = ctx.getToken();
+                    tok = ctx.getToken();
                else if (!tok.isRCurly())
-                   error(ctx, tok) `Semicolon or right curly brace expected`;
-           }
+                   error(ctx, tok) `Semicolon or right curly brace expected, got $(tok.getText())`;
+            }
         }
 
         types[className] = ctype;
@@ -772,11 +808,11 @@ definition.`;
                     _parseConst(ctx);
                 } else {
                     ctx.putBack(tok);
-                    funcs.append(_parseFuncDef(ctx));
+                    funcs.append(_parseFuncDef(ctx, false));
                     
                 }
             } else if (tok.isRCurly()){
-               if (ifdefLevel>0) _closeIfdef();
+               if (ifdefLevel > 0) _closeIfdef();
                else break;
             }
             else if (tok.isSemi())
@@ -875,7 +911,7 @@ void $(module.join('_'))_init(crack::ext::Module *mod) {
 
     void emit() {
         # emit all of the code
-        cout `emitting $filename\n`;
+        cout cout `emitting $filename\n`;
         out := Formatter(File(filename, 'w'));
         emitCode(out);
     }

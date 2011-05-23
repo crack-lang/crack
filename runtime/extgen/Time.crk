@@ -12,6 +12,11 @@
    class tm {
       int sec, min, hour, mday, mon, year, wday, yday, isdst;
       int64 gmtoff;
+
+      oper init[localtime](int64 secs);
+
       int64 mktime(tm t);
+      byteptr asctime_r(tm t, byteptr buf);
+      byteptr gmtime_r(tm t, byteptr buf);
    }
 }
