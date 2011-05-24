@@ -56,14 +56,23 @@ char *crk_ctime_r(int64_t t, char * buf){
       int tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst;
       int64 tm_gmtoff;
 
-      oper init[crk_localtime](int64 seconds);
-      oper init[crk_epoch]();
+      @cname crk_localtime
+      oper init(int64 seconds);
+      
+      @cname crk_epoch
+      oper init();
 
       int64 mktime();
-      bool setToNowLocal[crk_localtime_now]();
-      bool setToNowUTC[crk_gmtime_now]();
+      
+      @cname crk_localtime_now
+      bool setToNowLocal();
+
+      @cname crk_gmtime_now
+      bool setToNowUTC();
+
       byteptr asctime_r(byteptr buf);
    }
 
-   byteptr ctime_r[crk_ctime_r](int64 seconds, byteptr buf);
+   @cname crk_ctime_r
+   byteptr ctime_r(int64 seconds, byteptr buf);
 }

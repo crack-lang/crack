@@ -518,45 +518,45 @@ class ExtensionData {
     }
 
 
-    Func _parseFuncDef(CrackContext ctx, bool isOperInit) {
+    Func _parseFuncDef(CrackContext ctx, bool isClassDef) {
         Type retType = null;
         String name = null, cname = null;
         Token tok;
-        if (!isOperInit)
-            retType = _parseType(ctx);
-        else
-            tok = ctx.getToken();
 
         tok = ctx.getToken();
-        if (!tok.isIdent() )
-            error(ctx, tok) `Identifier expected`;
-            
-        name = String(tok.getText());
-
-        // Look for pattern name[cname](tpe1 arg1,...)
-        tok = ctx.getToken();
-        if (tok.isLBracket()){
+        if (tok.isAnn()){
+            tokAnn := ctx.getToken();
+            ann := String(tokAnn.getText());
+            if (ann != 'cname')
+                error(ctx, tokAnn) `invalid annotation'$ann'`;
             tok = ctx.getToken();
-            if (!tok.isIdent() )
-                error(ctx, tok) `Identifier expected`;
+            if (!tok.isIdent())
+                error(ctx, tok) `Function C name expected`;
             else
                 cname = String(tok.getText());
-
             tok = ctx.getToken();
-            if (!tok.isRBracket())
-                error(ctx, tok) `Right bracket expected`;
-            
         }
-        else {
-            cname = String(name);
+
+        isOperInit:= tok.isOper();
+        if (!isOperInit) {
             ctx.putBack(tok);
+            retType = _parseType(ctx);
         }
-        
+        else if (!isClassDef)
+            error(ctx, tok) `Operator not expected in this context`;
+
+        tok = ctx.getToken();
+
+        if (!tok.isIdent())
+            error(ctx, tok) `Identifier expected`;
+
+        name = String(tok.getText());
+        if (!cname) cname = String(name);
 
         f := Func(retType, name, cname, isOperInit);
 
         if (!(tok = ctx.getToken()).isLParen())
-            error(ctx, tok) `Left paren expected`;
+            error(ctx, tok) `Left paren expected, got $(tok.getText())`;
 
         tok = ctx.getToken();
         while (!tok.isRParen()) {
@@ -606,44 +606,62 @@ class declaration`;
             tok = ctx.getToken();
             Type argType = null;
             while (!tok.isRCurly()) {
-                isOperInit := tok.isOper();
-                # parse the argument type
-                if (!isOperInit){
-                    ctx.putBack(tok);
-                    argType = _parseType(ctx);
-                }
+                
+                // Handle the @cname Cname type funcname(...) case
+                if (tok.isAnn()){
+                    tokAnn := ctx.getToken();
+                    ann := String(tokAnn.getText());
+                    if (ann != 'cname')
+                        error(ctx, tokAnn) `invalid annotation'$ann'`;
 
-                # get the arg variable
-                tok2 := ctx.getToken();
-                if (!tok2.isIdent())
-                    error(ctx, tok2) `argument name expected`;
-
-                tok3 := ctx.getToken();
-                if (tok3.isLParen() || tok3.isLBracket()){
-                    ctx.putBack(tok3);
-                    ctx.putBack(tok2);
+                    ctx.putBack(tokAnn);
                     ctx.putBack(tok);
-                    Func f = _parseFuncDef(ctx, isOperInit);
-                    if (isOperInit) f.retType = ctype;
+                    Func f = _parseFuncDef(ctx, true);
+                    if (f.isOperInit) f.retType = ctype;
                     ctype.addMethod(f);
                     tok = ctx.getToken();
-                }
-               else{
-                    ctx.putBack(tok3);
-                    ctype.addMember(Arg(argType, String(tok2.getText())));
-                    tok = ctx.getToken();
 
-                    while (tok.isComma()){
-                        tok = ctx.getToken();
-                        if (!tok.isIdent())
-                            error(ctx, tok) `argument name expected`;
+                } else {
+                    isOperInit := tok.isOper();
 
-                        ctype.addMember(Arg(argType, String(tok.getText())));
-                        tok = ctx.getToken();
-                        if (!tok.isSemi() && !tok.isComma())
-                            error(ctx, tok) `Semicolon or comma expected`;
+                    # parse the argument type
+                    if (!isOperInit){
+                        ctx.putBack(tok);
+                        argType = _parseType(ctx);
                     }
-               }
+
+                    # get the arg variable or method name
+                    tok2 := ctx.getToken();
+                    if (!tok2.isIdent())
+                        error(ctx, tok2) `method name expected`;
+
+                    tok3 := ctx.getToken();
+                    if (tok3.isLParen()){
+                        ctx.putBack(tok3); // (
+                        ctx.putBack(tok2); // method name
+                        ctx.putBack(tok);  // return type
+                        Func f = _parseFuncDef(ctx, isOperInit);
+                        if (f.isOperInit) f.retType = ctype;
+                        ctype.addMethod(f);
+                        tok = ctx.getToken();
+                    }
+                   else{
+                        ctx.putBack(tok3);
+                        ctype.addMember(Arg(argType, String(tok2.getText())));
+                        tok = ctx.getToken();
+
+                        while (tok.isComma()){
+                            tok = ctx.getToken();
+                            if (!tok.isIdent())
+                                error(ctx, tok) `argument name expected`;
+
+                            ctype.addMember(Arg(argType, String(tok.getText())));
+                            tok = ctx.getToken();
+                            if (!tok.isSemi() && !tok.isComma())
+                                error(ctx, tok) `Semicolon or comma expected`;
+                        }
+                   }
+                }
 
                if (tok.isSemi())
                     tok = ctx.getToken();
@@ -702,6 +720,10 @@ class declaration`;
 
 
     void _parseAnnotation(CrackContext ctx) {
+        tokAnn := ctx.getToken();
+        if (!tokAnn.isAnn())
+            error(ctx, tokAnn) `Expected annotation`;
+
         tok := ctx.getToken();
         if (tok.isIdent()) {
             String ann = {tok.getText()};
@@ -720,6 +742,11 @@ class declaration`;
             }
             else if (ann == 'ifdef' || ann == 'ifndef') {
                 _parseIfdef(ann, ctx);
+            }
+            else if (ann == 'cname') {
+                ctx.putBack(tok);
+                ctx.putBack(tokAnn);
+                funcs.append(_parseFuncDef(ctx, false));
             } else {
                 error(ctx, tok) `Unexpected annotation: $ann`;
             }
@@ -824,8 +851,10 @@ definition.`;
             }
             else if (tok.isSemi())
                 ;
-            else if (tok.isAnn())
+            else if (tok.isAnn()){
+                ctx.putBack(tok);
                 _parseAnnotation(ctx);
+            }
             else
                 error(ctx, tok)
                     `expected class, function or right curly bracket.`;
