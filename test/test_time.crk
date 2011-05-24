@@ -1,0 +1,40 @@
+// Test time.h binding in runtime
+import crack.runtime _date, ctime_r;
+import crack.exp.cmdline CmdOptions;
+import crack.io cout;
+import crack.sys argv;
+
+sys_options :=  CmdOptions("--verbose=b/false");
+sys_options.parse(argv);
+
+void printDate(_date d){
+   cout `date = $(d.tm_mday)/$(d.tm_mon)/$(d.tm_year) `
+        `$(d.tm_hour):$(d.tm_min):$(d.tm_sec), $(d.tm_wday)/w and $(d.tm_yday)/y, `
+        `DST = $(d.tm_isdst)\n`;
+}
+
+_date mytime = {};
+
+verbose := sys_options.getBool("v");
+
+mytime.setToNowLocal();
+if (verbose) printDate(mytime);
+
+mytime.setToNowUTC();
+if (verbose) printDate(mytime);
+
+secs:=mytime.mktime();
+if (verbose) cout `secs = $secs\n`;
+
+dateString := String(100,0); // Create a string to store time repr in
+mytime.asctime_r(dateString.buffer);
+if (verbose) cout `asctime = $dateString`;
+
+dateString2 := String(100,0);
+ctime_r(secs, dateString2.buffer);
+if (verbose) cout `ctime_r = $dateString2`;
+
+if (dateString!=dateString2)
+   cout `Date format mismatch\n`;
+
+cout `ok\n`;

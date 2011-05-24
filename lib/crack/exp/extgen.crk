@@ -150,23 +150,15 @@ class Func {
 
     void emitInitializer(Formatter out) {
         if (initialized) return;
-        
-        retTypeRepr := retType.emit();
-        
-        if (isOperInit)
-            out `       f = $retTypeRepr->addConstructor("init",
-                (void *)$(cname)
-            );
-`;      
-        else
-            out `       f = mod->addFunc($retTypeRepr, "$(name)",
-                (void *)$(cname)
-            );
+
+        out `    f = mod->addFunc($(retType.emit()), "$(name)",
+            (void *)$(cname)
+        );
 `;
-            for (arg :in args)
-                out `           f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
-            out `\n`;
-        }
+        for (arg :in args)
+            out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+        out `\n`;
+    }
 }
 
 class IfdefFunc: Func{
@@ -199,7 +191,6 @@ class BuiltInType : Type {
 }
 
 class ConstType : BuiltInType {
-
     String constCast;
 
     oper init(String name, String funcName, String constCast) :
@@ -251,12 +242,28 @@ class TypeImpl : Type {
         for (member :in members){
            if (member.type.isBuiltIn())
               member.type.emitInitializer(out);
-           out `       $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
+           out `        $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
         }
 
         // emit methods
         for (method :in methods){
-            method.emitInitializer(out);
+            if (method.retType.isBuiltIn())
+                method.retType.emitInitializer(out);
+
+            if (method.isOperInit)
+                out `        f = $typeVar->addConstructor("init",
+                    (void *)$(method.cname)
+            );
+`;
+            else
+                out `        f = $typeVar->addMethod($(method.retType.emit()), "$(method.name)",
+                    (void *)$(method.cname)
+            );
+`;
+            for (arg :in method.args)
+                out `            f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+            out `\n`;
+
         }
 
         // finish type definition
@@ -911,7 +918,7 @@ void $(module.join('_'))_init(crack::ext::Module *mod) {
 
     void emit() {
         # emit all of the code
-        cout cout `emitting $filename\n`;
+        cout `emitting $filename\n`;
         out := Formatter(File(filename, 'w'));
         emitCode(out);
     }
