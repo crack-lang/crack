@@ -5,6 +5,9 @@
 #include "model/NullConst.h"
 #include "Ops.h"
 
+#include <iostream>
+#include <sstream>
+
 #include <spug/StringFmt.h>
 #include <llvm/DerivedTypes.h>
 
@@ -16,6 +19,7 @@ FunctionTypeDef::FunctionTypeDef(TypeDef *metaType, const std::string &name,
                            const Type *rep
                            ) : BTypeDef(metaType, name, rep) {
 
+    defaultInitializer = new NullConst(this);
     generic = new SpecializationCache();
 
 }
@@ -33,6 +37,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
 
     // need at least one, the return type
     assert(types->size() >= 1);
+    int arity(types->size() - 1);
 
     // return type is always 0
     BTypeDef *returnCType = BTypeDefPtr::rcast((*types)[0]);
@@ -40,8 +45,8 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     // remaining types are function arguments
     std::vector<const Type*> fun_args;
 
-    if (types->size() > 1) {
-        for (int i = 1; i < types->size(); ++i) {
+    if (arity) {
+        for (int i = 1; i < arity+1; ++i) {
             BTypeDef *argCType = BTypeDefPtr::rcast((*types)[i]);
             fun_args.push_back(argCType->rep);
         }
@@ -59,6 +64,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
                          llvmFunPtrType
                          );
     tempSpec->setOwner(this);
+    tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
     // Give it an "oper to voidptr" method.
     context.addDef(
@@ -66,8 +72,19 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
         tempSpec.get()
     );
 
-    // Give it an
+    // Give it a specialized "oper call" method, which wraps the
+    // call to the function pointer
+    FuncDefPtr fptrCall = new FunctionPtrOpDef(returnCType, arity);
+    std::ostringstream argName;
+    argName << "arg";
+    for (int i = 0; i < arity; ++i) {
+        argName << i+1;
+        fptrCall->args[i] = new ArgDef((*types)[i+1].get(), argName.str());
+        argName.rdbuf()->pubseekpos(3);
+    }
+    context.addDef(fptrCall.get(), tempSpec.get());
 
+    // cache and return
     (*generic)[types] = tempSpec;
     return tempSpec.get();
 

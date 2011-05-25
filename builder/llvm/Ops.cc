@@ -7,6 +7,8 @@
 #include "BFieldRef.h"
 #include "BResultExpr.h"
 #include "BTypeDef.h"
+#include "BFuncDef.h"
+#include "BFuncPtr.h"
 #include "model/AllocExpr.h"
 #include "model/AssignExpr.h"
 #include "model/CleanupFrame.h"
@@ -310,6 +312,33 @@ FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name) :
     args[0] = new ArgDef(resultType, "operand");
 }
 
+// FunctionPtrCall
+ResultExprPtr FunctionPtrCall::emit(Context &context) {
+
+    LLVMBuilder &builder =
+            dynamic_cast<LLVMBuilder &>(context.builder);
+
+    receiver->emit(context)->handleTransient(context);
+    Value *fptr = builder.lastValue;
+
+    // generate a function pointer call by passing on arguments
+    // from oper call to llvm function pointer
+    BFuncPtrPtr bfp = new BFuncPtr(fptr, args.size());
+    bfp->returnType = func->returnType;
+    bfp->args.assign(func->args.begin(), func->args.end());
+    FuncCallPtr fc = new FuncCall(bfp.get());
+    fc->args.assign(args.begin(), args.end());
+
+    builder.emitFuncCall(context, fc.get());
+    return new BResultExpr(this, builder.lastValue);
+
+}
+
+// FunctionPtrOpDef
+model::FuncCallPtr FunctionPtrOpDef::createFuncCall() {
+    return new FunctionPtrCall(this);
+}
+
 
 // ArrayGetItemCall
 ResultExprPtr ArrayGetItemCall::emit(Context &context) {
@@ -386,7 +415,7 @@ ResultExprPtr ArrayOffsetCall::emit(Context &context) {
 
     return new BResultExpr(this, builder.lastValue);
 }
-    
+
 // BoolOpCall
 ResultExprPtr BoolOpCall::emit(Context &context) {
     // emit the receiver

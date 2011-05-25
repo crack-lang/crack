@@ -8,6 +8,7 @@
 #include "BCleanupFrame.h"
 #include "BFieldRef.h"
 #include "BFuncDef.h"
+#include "BFuncPtr.h"
 #include "BModuleDef.h"
 #include "BResultExpr.h"
 #include "BTypeDef.h"
@@ -597,15 +598,22 @@ LLVMBuilder::LLVMBuilder() :
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
 
-    BFuncDef *func = BFuncDefPtr::arcast(funcCall->func);
-
     // get the LLVM arg list from the receiver and the argument expressions
     vector<Value*> valueArgs;
-    
+
+    // either a normal function call or a function pointer call
+    BFuncDef *funcDef = BFuncDefPtr::rcast(funcCall->func);
+    BFuncPtr *funcPtr;
+    if (!funcDef) {
+        funcPtr = BFuncPtrPtr::rcast(funcCall->func);
+        assert(funcPtr && "no funcDef or funcPtr");
+    }
+
     // if there's a receiver, use it as the first argument.
     Value *receiver;
-    BFuncDef *funcDef = BFuncDefPtr::arcast(funcCall->func);
-    if (funcCall->receiver) {
+
+    if (funcCall->receiver) {        
+        assert(funcDef && "funcPtr instead of funcDef");
         funcCall->receiver->emit(context)->handleTransient(context);
         narrow(funcCall->receiver->type.get(), funcDef->getReceiverType());
         receiver = lastValue;
@@ -631,16 +639,21 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
     BasicBlock *followingBlock = 0, *cleanupBlock;
     getInvokeBlocks(context, followingBlock, cleanupBlock);
 
-    if (funcCall->virtualized)
+    if (funcCall->virtualized) {
+        assert(funcDef && "funcPtr instead of funcDef");
         lastValue = IncompleteVirtualFunc::emitCall(context, funcDef, 
                                                     receiver,
                                                     valueArgs,
                                                     followingBlock,
                                                     cleanupBlock
                                                     );
+    }
     else {
+        // for a normal funcdef, get the Function*
+        // for a function pointer, we invoke the pointer directly
+        Value *callee = (funcDef) ? funcDef->getRep(*this) : funcPtr->rep;
         lastValue =
-            builder.CreateInvoke(funcDef->getRep(*this), followingBlock, 
+            builder.CreateInvoke(callee, followingBlock,
                                  cleanupBlock,
                                  valueArgs.begin(), 
                                  valueArgs.end()
@@ -2235,6 +2248,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(arrayType.get());
 
     // create the raw function type
+    // "oper call" methods are added as this type is specialized during parse
     TypeDefPtr functionType = new FunctionTypeDef(
                                             context.construct->classType.get(),
                                             "function",

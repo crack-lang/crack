@@ -12,8 +12,7 @@ using namespace model;
 using namespace std;
 
 FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
-    // XXX need function types, but they'll probably be assigned after 
-    // the fact.
+    // function types are assigned after the fact.
     VarDef(0, name),
     flags(flags),
     args(argCount) {

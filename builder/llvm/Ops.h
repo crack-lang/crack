@@ -159,6 +159,27 @@ public:
     }
 };
 
+class FunctionPtrOpDef : public OpDef {
+public:
+    FunctionPtrOpDef(model::TypeDef *resultType,
+                     size_t argCount) :
+    OpDef(resultType, FuncDef::method, "call", argCount) {
+        type = resultType;
+    }
+
+    virtual model::FuncCallPtr createFuncCall();
+
+};
+
+class FunctionPtrCall : public model::FuncCall {
+public:
+    FunctionPtrCall(model::FuncDef *def) : FuncCall(def) {}
+
+    virtual model::ResultExprPtr emit(model::Context &context);
+
+    virtual bool isProductive() const { return true; }
+};
+
 template<class T>
 class GeneralOpDef : public OpDef {
 public:
