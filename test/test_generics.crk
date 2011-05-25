@@ -5,24 +5,24 @@ import test.testmod_generic G;
 
 void someFunc() {}
 
+class FakeFormatter {
+    int result;
+    void format(byteptr val) {
+        result |= val[0];
+    }
+    void format(int val) {
+        result |= val;
+    }
+    void format(float val) { }
+    
+    int leave() { return result; }
+    
+    bool toBool() { return 1; }
+}
+
 bool gotStaticCalled;
 class A[T] {
     T val;
-
-    class FakeFormatter {
-        int result;
-        void format(byteptr val) {
-            result |= val[0];
-        }
-        void format(int val) {
-            result |= val;
-        }
-        void format(float val) { }
-        
-        int leave() { return result; }
-        
-        bool toBool() { return 1; }
-    }
 
     oper init(T val) : val = val {}
     @static void gotStatic() { gotStaticCalled = 1; }
@@ -39,4 +39,11 @@ A[int].gotStatic();
 if (!gotStaticCalled) puts('FAILED static function call');
 
 if (A[int](4).format() != 7) puts('FAILED generic with i-string');
+
+
+class B[T1, T2] { T1 f(T1 a) { return a; } T2 f(T2 a) { return a; } }
+B[int, float] b = {};
+if (b.f(100) != 100 || b.f(1.5) != 1.5)
+    puts('FAILED two argument generic');
+
 puts('ok');

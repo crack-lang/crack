@@ -2,13 +2,12 @@
 
 import crack.lang cmp, die, free;
 import crack.io cout, Formatter, StringFormatter;
+import crack.cont.array Array;
+import crack.cont.treemap TreeMap;
 @import crack.exp.ann define;
-@import crack.exp.cont.treemap GenericTreeMap;
 @import crack.exp.cont.list GenericList, GenericDList;
 
-@GenericTreeMap(StringIntMap, String, int);
-
-StringIntMap m = {};
+TreeMap[String, int] m = {};
 m['first'] = 100;
 m['second'] = 200;
 if (m['first'] != 100 || m['second'] != 200)

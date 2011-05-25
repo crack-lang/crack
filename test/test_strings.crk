@@ -2,7 +2,7 @@
 
 import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
-import crack.strutil split, StringArray;
+import crack.strutil split, StringArray, ljust, rjust, center;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -114,6 +114,23 @@ if (1) {
         StringArray!['', 'this', 'is', 'a', 'test', '']
         )
         cout `FAILED ws-splitting string with whitespace ends\n`;
-}    
+        
+    if (split('amount|reason', b'|') != StringArray!['amount','reason'])
+        cout `FAILED ws-splitting string with non-whitespace\n`;
+}
+
+# String padding function tests
+s = "foo";
+newS := ljust(s, 5);
+if (newS != "foo  ")
+    cout `FAILED ljust string\n`;
+
+newS = rjust(s, 5);
+if (newS != "  foo")
+    cout `FAILED rjust string\n`;
+
+newS = center(s, 6);
+if (newS != " foo  ")
+    cout `FAILED center string\n`;
 
 cout `ok\n`;

@@ -2497,6 +2497,8 @@ void Parser::parseGenericParms(GenericParmVec &parms) {
                     "comma or closing bracket expected in generic parameter "
                      "list."
                     );
+      else
+         tok = getToken();
                     
    }
 }

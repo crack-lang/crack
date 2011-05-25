@@ -2,7 +2,7 @@
 # Generic array implementation
 
 import crack.lang cmp, free, IndexError, InvalidArgumentError;
-import crack.io cout;
+import crack.io cout, Writer;
 @import crack.exp.ann define;
 
 void _bind(Object obj) { obj.oper bind(); }
@@ -214,7 +214,8 @@ class Array[Elem] {
     Array rest(uint i){
         result := Array(__size - i);
         for (j := i; j < __size; j++)
-        result.append(__rep[j]);
+            result.append(__rep[j]);
+        len := result.count();
         return result;
     }
 
@@ -252,9 +253,16 @@ class Array[Elem] {
         result := Array(middle * 2);
         if (depth>10) return result;
 
-        for (x:=0; x < middle; x++) left.append(m[x]);
+        for (x:=0; x < middle; x++) {
+           if (!m[x]) cout `Error: left.append(null)!\n`;
 
-        for (x:=middle; x < m.count(); x++) right.append(m[x]);
+           left.append(m[x]);
+        }
+
+        for (x:=middle; x < m.count(); x++) {
+           if (!m[x]) cout `Error: left.append(null)!\n`;
+            right.append(m[x]);
+         }
 
         left = _merge_sort(left, depth+1);
         right = _merge_sort(right, depth+1);
@@ -264,6 +272,20 @@ class Array[Elem] {
 
     Array sort(){
         return _merge_sort(this, 0);
+    }
+
+    void writeTo(Writer out) {
+        out.write('[');
+        bool first = true;
+        for (elem :in this) {
+            if (!first)
+                out.write(', ');
+            else
+                first = false;
+            if (!elem) out.write('null');
+            else out.write('A');
+        }
+        out.write(']');
     }
 
     ## swap element index1 with index2
