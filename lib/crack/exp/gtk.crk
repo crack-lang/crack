@@ -253,7 +253,7 @@ class _ArgvWrapper : Wrapper {
 class App {
     void init(StringArray argv) {
         IntWrapper argcAddr = {int(argv.count())};
-        gtk_init(argcAddr, _ArgvWrapper(argv.getPrimArray()));
+        gtk_init(argcAddr, _ArgvWrapper(argv.makePrimArray()));
     }
     
     void main() {

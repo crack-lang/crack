@@ -6,3 +6,4 @@ runtime/Util.cc
 runtime/Init.cc
 runtime/Math.cc
 runtime/Process.cc
+runtime/Time.cc

@@ -2,6 +2,8 @@
 @import crack.exp.ann define, export, exporter;
 @exporter;
 
+@warn 'GenericList/DList is deprecated, use crack.cont.list instead'
+
 @define GenericList(Name, Elem) {
 
     ## A singly-linked list.

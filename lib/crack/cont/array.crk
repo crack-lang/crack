@@ -219,61 +219,6 @@ class Array[Elem] {
         return result;
     }
 
-    Array _merge(Array left, Array right){
-        result := Array(left.count()*2);
-        while (left.count() > 0 || right.count() > 0){
-        if (left.count() > 0 && right.count() > 0){
-            if (left[0] <= right[0]){
-                result.append(left[0]);
-                left = left.rest(1);
-            }
-            else{
-                result.append(right[0]);
-                right = right.rest(1);
-            }
-        }
-        else if (left.count() > 0){
-                result.append(left[0]);
-                left = left.rest(1);
-            }
-        else if (right.count() > 0){
-                result.append(right[0]);
-                right = right.rest(1);
-            }
-        }
-        return result
-    }
-
-    Array _merge_sort(Array m, uint depth){
-        if (m.count() <= 1) return m;
-
-        middle := m.count() / 2;
-        left := Array(middle);
-        right := Array(middle);
-        result := Array(middle * 2);
-        if (depth>10) return result;
-
-        for (x:=0; x < middle; x++) {
-           if (!m[x]) cout `Error: left.append(null)!\n`;
-
-           left.append(m[x]);
-        }
-
-        for (x:=middle; x < m.count(); x++) {
-           if (!m[x]) cout `Error: left.append(null)!\n`;
-            right.append(m[x]);
-         }
-
-        left = _merge_sort(left, depth+1);
-        right = _merge_sort(right, depth+1);
-        result = _merge(left, right);
-        return result;
-    }
-
-    Array sort(){
-        return _merge_sort(this, 0);
-    }
-
     void writeTo(Writer out) {
         out.write('[');
         bool first = true;

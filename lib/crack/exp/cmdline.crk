@@ -368,6 +368,11 @@ class CmdOptions {
       else throw Exception(FStr() `Unrecoverable error in creating new option`);
    }
    
+
+   StringArray parse(StringArray args){
+      return parse(args, false);
+   }
+
    // Parse the array obtained from sys.argv
    StringArray parse(StringArray args, bool createUnknown){
       StringArray unparsed={args.count()};

@@ -1,0 +1,78 @@
+# Crack binding of time.h
+# Conrad Steenberg <conrad.steenberg@gmail.com>
+
+@import crack.exp.extgen generateExtension;
+
+@generateExtension crack.runtime.time {
+   @filename 'runtime/Time.cc'
+   @dumpsymbols 'runtime/extgen/Time.txt'
+   @inject '#include <time.h>\n'
+   @inject '#include <sys/types.h>\n'
+   @inject '#include <sys/time.h>\n'
+   @inject '#include <stdio.h>\n'
+
+   @inject '
+struct tm *crk_localtime(int64_t t){
+   const time_t lt = (const time_t)t;
+   return localtime(&lt);
+}
+'
+
+   @inject '
+struct tm *crk_localtime_now(struct tm *now){
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   return localtime_r(&(tv.tv_sec), now);
+   ;
+}
+'
+
+   @inject '
+struct tm *crk_gmtime_now(struct tm *now){
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   return gmtime_r(&(tv.tv_sec), now);
+}
+'
+
+
+   @inject '
+struct tm *crk_epoch(void){
+   return gmtime(NULL);
+}
+'
+
+   @inject '
+char *crk_ctime_r(int64_t t, char * buf){
+   const time_t lt = (const time_t)t;
+   return ctime_r(&lt, buf);
+}
+'
+
+
+   @crack_internal
+
+   class _date {
+      int tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst;
+      int64 tm_gmtoff;
+
+      @cname crk_localtime
+      oper init(int64 seconds);
+      
+      @cname crk_epoch
+      oper init();
+
+      int64 mktime();
+      
+      @cname crk_localtime_now
+      bool setToNowLocal();
+
+      @cname crk_gmtime_now
+      bool setToNowUTC();
+
+      byteptr asctime_r(byteptr buf);
+   }
+
+   @cname crk_ctime_r
+   byteptr ctime_r(int64 seconds, byteptr buf);
+}

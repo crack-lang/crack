@@ -22,6 +22,7 @@
 using namespace crack::ext;
 
 extern "C" bool __CrackUncaughtException();
+extern "C" void crack_runtime_time_init(crack::ext::Module *mod);
 
 extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
@@ -459,6 +460,9 @@ extern "C" void crack_runtime_init(Module *mod) {
 
     // Add math functions
     crack::runtime::math_init(mod);
+    
+    // Add time functions
+    crack_runtime_time_init(mod);
     
     // add exception functions
     mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 
