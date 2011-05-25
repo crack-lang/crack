@@ -101,19 +101,22 @@ UNOP(SIToFP);
 UNOP(UIToFP);
 
 #define FPTRUNCOP(opCode) \
-  ResultExprPtr opCode##OpCall::emit(Context &context) {                    \
-                args[0]->emit(context)->handleTransient(context);           \
-                                                                            \
-                LLVMBuilder &builder =                                      \
-                    dynamic_cast<LLVMBuilder &>(context.builder);           \
-                builder.lastValue =                                         \
-                    builder.builder.Create##opCode(                         \
-                        builder.lastValue,                                  \
-                        BTypeDefPtr::arcast(func->returnType)->rep          \
-                    );                                                      \
-                                                                            \
-                return new BResultExpr(this, builder.lastValue);            \
-            }                                                               \
+    ResultExprPtr opCode##OpCall::emit(Context &context) {          \
+        if (receiver)                                               \
+            receiver->emit(context)->handleTransient(context);      \    
+        else                                                        \
+            args[0]->emit(context)->handleTransient(context);       \
+                                                                    \
+        LLVMBuilder &builder =                                      \
+            dynamic_cast<LLVMBuilder &>(context.builder);           \
+        builder.lastValue =                                         \
+            builder.builder.Create##opCode(                         \
+                builder.lastValue,                                  \
+                BTypeDefPtr::arcast(func->returnType)->rep          \
+            );                                                      \
+                                                                    \
+        return new BResultExpr(this, builder.lastValue);            \
+    }                                                               \
 
 // Floating Point Truncating Ops
 FPTRUNCOP(FPTrunc);
@@ -133,7 +136,10 @@ BinOpDef::BinOpDef(TypeDef *argType,
 
 // TruncOpCall
 ResultExprPtr TruncOpCall::emit(Context &context) {
-    args[0]->emit(context)->handleTransient(context);
+    if (receiver)
+        receiver->emit(context)->handleTransient(context);
+    else
+        args[0]->emit(context)->handleTransient(context);
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
@@ -148,7 +154,10 @@ ResultExprPtr TruncOpCall::emit(Context &context) {
 
 // NoOpCall
 ResultExprPtr NoOpCall::emit(Context &context) {
-    return args[0]->emit(context);
+    if (receiver)
+        return receiver->emit(context);
+    else
+        return args[0]->emit(context);
 }
 
 // BitNotOpCall

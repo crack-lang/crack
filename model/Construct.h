@@ -155,6 +155,8 @@ class Construct : public spug::RCBase {
                    uint64Type,
                    intType,
                    uintType,
+                   intzType,
+                   uintzType,
                    float32Type,
                    float64Type,
                    floatType,

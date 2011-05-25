@@ -478,7 +478,7 @@ test_output 'no inheritance of oper new' \
     'class A { oper init(int a0) {} };
      class B : A { oper init() : A(100) {} };
      b := B(100);' \
-    "${parseError}3: No method exists matching B(int32)"
+    "${parseError}3: No method exists matching B(int)"
 
 test_output 'constructor initializers' 'import test.test_init;' ok
 
@@ -510,7 +510,7 @@ test_output 'eol putbacks do not affect line numbers' \
 
 test_output 'errors on invalid constructors' \
     'class A {}; t := A(1, 2);' \
-    "${parseError}1: No method exists matching A(int32, int32)"
+    "${parseError}1: No method exists matching A(int, int)"
 
 test_output 'array generics' \
     'x := array[uint](100);
@@ -779,8 +779,8 @@ test_output 'forward declaration args must match' \
      }' \
     "${parseError}2: Argument list of function f doesn't match the names of \
 its forward declaration:
-    forward: (.builtin.int32 a)
-    defined: (.builtin.int32 b)"
+    forward: (.builtin.int a)
+    defined: (.builtin.int b)"
 
 test_output 'forward declarations must be in the same context as definition' \
     'void f();
@@ -1158,7 +1158,7 @@ test_output '++/-- operators' \
 test_output 'instance variable initializer typecheck' \
     'class A { }
      class B { A a; oper init(): a = 5 { } }' \
-    "${parseError}2: Invalid type int32 for initializer for instance variable \
+    "${parseError}2: Invalid type int for initializer for instance variable \
 a of type A"
 
 test_output 'escaped newline is ignored' \
