@@ -1000,6 +1000,14 @@ $$
 @heavycmp float32
 @heavycmp float64
 
+# define PDNTs last, anything can convert to them (this shouldn't matter if 
+# all other types are defined)
+@lightcmp int
+@heavycmp uint
+@heavycmp intz
+@heavycmp uintz
+@heavycmp float
+
 # hash functions (helpful for generics)
 # we don't define float hashes yet because there is no cheap way to implement 
 # them in Crack and they're not very useful anyway.
@@ -1013,6 +1021,9 @@ $$
 @lighthash byte
 @lighthash int32
 @lighthash uint32
+
+# all other PDNT types should convert to this
+@lighthash uint
 
 uint makeHashVal(uint64 val) { return uint(val >> 32 ^ val); }
 uint makeHashVal(int64 val) { return uint(val >> 32 ^ val); }

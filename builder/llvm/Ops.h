@@ -56,17 +56,8 @@ class UnOpDef : public OpDef {
         }
 };
 
-// truncate is a unary op but is used as the "oper new" so it doesn't get
-// a receiver.
-class TruncOpCall : public model::FuncCall {
-public:
-    TruncOpCall(model::FuncDef *def) : model::FuncCall(def) {}
-
-    virtual model::ResultExprPtr emit(model::Context &context);
-};
-
-// No-op call returns its argument.  This is used for oper new's to avoid 
-// doing any conversions if the type is already correct.
+// No-op call returns its receiver or argument.  This is used for oper new's 
+// to avoid doing any conversions if the type is already correct.
 class NoOpCall : public model::FuncCall {
 public:
     NoOpCall(model::FuncDef *def) : model::FuncCall(def) {}
@@ -194,6 +185,15 @@ public:
     virtual model::FuncCallPtr createFuncCall() {
         return new T(this);
     }
+};
+
+class NoOpDef : public GeneralOpDef<NoOpCall> {
+    public:
+        NoOpDef(model::TypeDef *resultType, const std::string &name) : 
+            GeneralOpDef<NoOpCall>(resultType, model::FuncDef::method, name,
+                                   0
+                                   ) {
+        }
 };
 
 class ArrayGetItemCall : public model::FuncCall {
@@ -421,6 +421,7 @@ UNOP_DEF(ZExt);
 UNOP_DEF(FPExt);
 UNOP_DEF(SIToFP);
 UNOP_DEF(UIToFP);
+UNOP_DEF(Trunc);
 UNOP_DEF(PreIncrInt);
 UNOP_DEF(PreDecrInt);
 UNOP_DEF(PostIncrInt);
@@ -439,6 +440,19 @@ FPTRUNCOP_DEF(FPTrunc);
 FPTRUNCOP_DEF(FPToSI);
 FPTRUNCOP_DEF(FPToUI);
 
+// define a floating point truncation definition so we can use this as either 
+// an explicit constructor or an implicit "oper to" for converting to the 
+// 'float' PDNT.
+class FPTruncOpDef : public UnOpDef {
+    public:
+        FPTruncOpDef(model::TypeDef *resultType, const std::string &name) :
+                UnOpDef(resultType, name) {
+        }
+    
+        virtual model::FuncCallPtr createFuncCall() {
+            return new FPTruncOpCall(this);
+        }
+};
 
 } // end namespace builder::vmll
 } // end namespace builder

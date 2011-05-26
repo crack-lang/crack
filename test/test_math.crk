@@ -49,12 +49,12 @@ trig_inputs_float_64:=array[float64](41);
 trig_inputs_float:=array[float](41);
 
 // Populate the arrays
-float32 val32=-2.0*PI;
-float32 delta32=0.1*PI;
+float32 val32=-2.0*float32(PI);
+float32 delta32=0.1*float32(PI);
 float64 val64=-2.0*PI;
 float64 delta64=0.1*PI;
-float val=-2.0*float(PI);
-float delta=0.1*float(PI);
+float val=-2.0*PI;
+float delta=0.1*PI;
 
 uint i=0;
 uint intervals=40;

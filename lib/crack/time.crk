@@ -11,5 +11,5 @@ class TimeDelta : Object, TimeVal {
 }
 
 TimeDelta seconds(int secs) {
-    return TimeDelta(secs, 0);
+    return TimeDelta(int32(secs), 0);
 }

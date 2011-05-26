@@ -2011,24 +2011,57 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             );
     gd->float64Type = float64Type;
 
-    // XXX bad assumptions about sizeof
+    // PDNTs
+    BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType;
+    bool intIs32Bit, ptrIs32Bit, floatIs32Bit;
     if (sizeof(int) == 4) {
-        context.ns->addAlias("int", int32Type);
-        context.ns->addAlias("uint", uint32Type);
-        context.ns->addAlias("float", float32Type);
-        gd->uintType = uint32Type;
-        gd->intType = int32Type;
-        gd->floatType = float32Type;
-        llvmIntType = int32Type->rep;
+        intIs32Bit = true;
+        intType = createIntPrimType(context, Type::getInt32Ty(lctx), "int");
+        gd->intType = intType;
+        uintType = createIntPrimType(context, Type::getInt32Ty(lctx), "uint");
+        gd->uintType = uintType;
     } else {
         assert(sizeof(int) == 8);
-        context.ns->addAlias("int", int64Type);
-        context.ns->addAlias("uint", uint64Type);
-        context.ns->addAlias("float", float64Type);
-        gd->uintType = uint64Type;
-        gd->intType = int64Type;
-        gd->floatType = float64Type;
-        llvmIntType = int64Type->rep;
+
+        intIs32Bit = false;
+        intType = createIntPrimType(context, Type::getInt64Ty(lctx), "int");
+        gd->intType = intType;
+        uintType = createIntPrimType(context, Type::getInt64Ty(lctx), "uint");
+        gd->uintType = uintType;
+    }
+    llvmIntType = intType->rep;
+    
+    if (sizeof(void *) == 4) {
+        ptrIs32Bit = true;
+        intzType = createIntPrimType(context, Type::getInt32Ty(lctx), "intz");
+        gd->intzType = intzType;
+        uintzType = createIntPrimType(context, Type::getInt32Ty(lctx), "uintz");
+        gd->uintzType = uintzType;
+    } else {
+        assert(sizeof(void *) == 8);
+
+        ptrIs32Bit = false;
+        intzType = createIntPrimType(context, Type::getInt64Ty(lctx), "intz");
+        gd->intzType = intzType;
+        uintzType = 
+            createIntPrimType(context, Type::getInt64Ty(lctx), "uintz");
+        gd->uintzType = uintzType;
+    }
+    
+    if (sizeof(float) == 4) {
+        floatIs32Bit = true;
+        floatType = createFloatPrimType(context, Type::getFloatTy(lctx),
+                                        "float"
+                                        );
+        gd->floatType = floatType;
+    } else {
+        floatIs32Bit = false;
+        assert(sizeof(float) == 8);
+
+        floatType = createFloatPrimType(context, Type::getDoubleTy(lctx),
+                                        "float"
+                                        );
+        gd->floatType = floatType;
     }
 
     // conversion from voidptr to integer
@@ -2041,127 +2074,54 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(funcDef.get(), uint64Type);
     
     // create integer operations
-    context.addDef(new AddOpDef(byteType));
-    context.addDef(new SubOpDef(byteType));
-    context.addDef(new MulOpDef(byteType));
-    context.addDef(new SDivOpDef(byteType));
-    context.addDef(new SRemOpDef(byteType));
-    context.addDef(new ICmpEQOpDef(byteType, boolType));
-    context.addDef(new ICmpNEOpDef(byteType, boolType));
-    context.addDef(new ICmpSGTOpDef(byteType, boolType));
-    context.addDef(new ICmpSLTOpDef(byteType, boolType));
-    context.addDef(new ICmpSGEOpDef(byteType, boolType));
-    context.addDef(new ICmpSLEOpDef(byteType, boolType));
-    context.addDef(new NegOpDef(byteType, "oper -"));
-    context.addDef(new BitNotOpDef(byteType, "oper ~"));
-    context.addDef(new OrOpDef(byteType));
-    context.addDef(new AndOpDef(byteType));
-    context.addDef(new XorOpDef(byteType));
-    context.addDef(new ShlOpDef(byteType));
-    context.addDef(new LShrOpDef(byteType));
+#define INTOPS(type, signed, shift) \
+    context.addDef(new AddOpDef(type));                                \
+    context.addDef(new SubOpDef(type));                                \
+    context.addDef(new MulOpDef(type));                                \
+    context.addDef(new signed##DivOpDef(type));                        \
+    context.addDef(new signed##RemOpDef(type));                        \
+    context.addDef(new ICmpEQOpDef(type, boolType));                   \
+    context.addDef(new ICmpNEOpDef(type, boolType));                   \
+    context.addDef(new ICmpSGTOpDef(type, boolType));                  \
+    context.addDef(new ICmpSLTOpDef(type, boolType));                  \
+    context.addDef(new ICmpSGEOpDef(type, boolType));                  \
+    context.addDef(new ICmpSLEOpDef(type, boolType));                  \
+    context.addDef(new NegOpDef(type, "oper -"));                      \
+    context.addDef(new BitNotOpDef(type, "oper ~"));                   \
+    context.addDef(new OrOpDef(type));                                 \
+    context.addDef(new AndOpDef(type));                                \
+    context.addDef(new XorOpDef(type));                                \
+    context.addDef(new ShlOpDef(type));                                \
+    context.addDef(new shift##ShrOpDef(type));
 
-    context.addDef(new AddOpDef(uint32Type));
-    context.addDef(new SubOpDef(uint32Type));
-    context.addDef(new MulOpDef(uint32Type));
-    context.addDef(new UDivOpDef(uint32Type));
-    context.addDef(new URemOpDef(uint32Type));
-    context.addDef(new ICmpEQOpDef(uint32Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint32Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint32Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint32Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint32Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint32Type, boolType));
-    context.addDef(new NegOpDef(uint32Type, "oper -"));
-    context.addDef(new BitNotOpDef(uint32Type, "oper ~"));
-    context.addDef(new OrOpDef(uint32Type));
-    context.addDef(new AndOpDef(uint32Type));
-    context.addDef(new XorOpDef(uint32Type));
-    context.addDef(new ShlOpDef(uint32Type));
-    context.addDef(new LShrOpDef(uint32Type));
-
-    context.addDef(new AddOpDef(int32Type));
-    context.addDef(new SubOpDef(int32Type));
-    context.addDef(new MulOpDef(int32Type));
-    context.addDef(new SDivOpDef(int32Type));
-    context.addDef(new SRemOpDef(int32Type));
-    context.addDef(new ICmpEQOpDef(int32Type, boolType));
-    context.addDef(new ICmpNEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int32Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int32Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int32Type, boolType));
-    context.addDef(new NegOpDef(int32Type, "oper -"));
-    context.addDef(new BitNotOpDef(int32Type, "oper ~"));
-    context.addDef(new OrOpDef(int32Type));
-    context.addDef(new AndOpDef(int32Type));
-    context.addDef(new XorOpDef(int32Type));
-    context.addDef(new ShlOpDef(int32Type));
-    context.addDef(new AShrOpDef(int32Type));
-
-    context.addDef(new AddOpDef(uint64Type));
-    context.addDef(new SubOpDef(uint64Type));
-    context.addDef(new MulOpDef(uint64Type));
-    context.addDef(new UDivOpDef(uint64Type));
-    context.addDef(new URemOpDef(uint64Type));
-    context.addDef(new ICmpEQOpDef(uint64Type, boolType));
-    context.addDef(new ICmpNEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULTOpDef(uint64Type, boolType));
-    context.addDef(new ICmpUGEOpDef(uint64Type, boolType));
-    context.addDef(new ICmpULEOpDef(uint64Type, boolType));
-    context.addDef(new NegOpDef(uint64Type, "oper -"));
-    context.addDef(new BitNotOpDef(uint64Type, "oper ~"));
-    context.addDef(new OrOpDef(uint64Type));
-    context.addDef(new AndOpDef(uint64Type));
-    context.addDef(new XorOpDef(uint64Type));
-    context.addDef(new ShlOpDef(uint64Type));
-    context.addDef(new LShrOpDef(uint64Type));
-
-    context.addDef(new AddOpDef(int64Type));
-    context.addDef(new SubOpDef(int64Type));
-    context.addDef(new MulOpDef(int64Type));
-    context.addDef(new SDivOpDef(int64Type));
-    context.addDef(new SRemOpDef(int64Type));
-    context.addDef(new ICmpEQOpDef(int64Type, boolType));
-    context.addDef(new ICmpNEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLTOpDef(int64Type, boolType));
-    context.addDef(new ICmpSGEOpDef(int64Type, boolType));
-    context.addDef(new ICmpSLEOpDef(int64Type, boolType));
-    context.addDef(new NegOpDef(int64Type, "oper -"));
-    context.addDef(new BitNotOpDef(int64Type, "oper ~"));
-    context.addDef(new OrOpDef(int64Type));
-    context.addDef(new AndOpDef(int64Type));
-    context.addDef(new XorOpDef(int64Type));
-    context.addDef(new ShlOpDef(int64Type));
-    context.addDef(new AShrOpDef(int64Type));
+    INTOPS(byteType, U, L)
+    INTOPS(int32Type, S, A)
+    INTOPS(uint32Type, U, L)
+    INTOPS(int64Type, S, A)
+    INTOPS(uint64Type, U, L)
+    INTOPS(intType, S, A)
+    INTOPS(uintType, U, L)
+    INTOPS(intzType, S, A)
+    INTOPS(uintzType, U, L)
 
     // float operations
-    context.addDef(new FAddOpDef(float32Type));
-    context.addDef(new FSubOpDef(float32Type));
-    context.addDef(new FMulOpDef(float32Type));
-    context.addDef(new FDivOpDef(float32Type));
-    context.addDef(new FRemOpDef(float32Type));
-    context.addDef(new FCmpOEQOpDef(float32Type, boolType));
-    context.addDef(new FCmpONEOpDef(float32Type, boolType));
-    context.addDef(new FCmpOGTOpDef(float32Type, boolType));
-    context.addDef(new FCmpOLTOpDef(float32Type, boolType));
-    context.addDef(new FCmpOGEOpDef(float32Type, boolType));
-    context.addDef(new FCmpOLEOpDef(float32Type, boolType));
-    context.addDef(new FNegOpDef(float32Type, "oper -"));
-
-    context.addDef(new FAddOpDef(float64Type));
-    context.addDef(new FSubOpDef(float64Type));
-    context.addDef(new FMulOpDef(float64Type));
-    context.addDef(new FDivOpDef(float64Type));
-    context.addDef(new FRemOpDef(float64Type));
-    context.addDef(new FCmpOEQOpDef(float64Type, boolType));
-    context.addDef(new FCmpONEOpDef(float64Type, boolType));
-    context.addDef(new FCmpOGTOpDef(float64Type, boolType));
-    context.addDef(new FCmpOLTOpDef(float64Type, boolType));
-    context.addDef(new FCmpOGEOpDef(float64Type, boolType));
-    context.addDef(new FCmpOLEOpDef(float64Type, boolType));
-    context.addDef(new FNegOpDef(float64Type, "oper -"));
+#define FLOPS(type) \
+    context.addDef(new FAddOpDef(type));                                    \
+    context.addDef(new FSubOpDef(type));                                    \
+    context.addDef(new FMulOpDef(type));                                    \
+    context.addDef(new FDivOpDef(type));                                    \
+    context.addDef(new FRemOpDef(type));                                    \
+    context.addDef(new FCmpOEQOpDef(type, boolType));                       \
+    context.addDef(new FCmpONEOpDef(type, boolType));                       \
+    context.addDef(new FCmpOGTOpDef(type, boolType));                       \
+    context.addDef(new FCmpOLTOpDef(type, boolType));                       \
+    context.addDef(new FCmpOGEOpDef(type, boolType));                       \
+    context.addDef(new FCmpOLEOpDef(type, boolType));                       \
+    context.addDef(new FNegOpDef(type, "oper -"));
+    
+    FLOPS(float32Type);
+    FLOPS(float64Type);
+    FLOPS(floatType);
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
@@ -2182,27 +2142,179 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uint32Type);
     context.addDef(new FPExtOpDef(float64Type, "oper to float64"), float32Type);
 
+    // implicit conversions to PDNTs
+    context.addDef(new ZExtOpDef(intType, "oper to int"), byteType);
+    context.addDef(new ZExtOpDef(uintType, "oper to uint"), byteType);
+    context.addDef(new ZExtOpDef(intzType, "oper to intz"), byteType);
+    context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), byteType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), byteType);
+
+    if (intIs32Bit) {
+        context.addDef(new NoOpDef(intType, "oper to int"), int32Type);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), int32Type);
+        context.addDef(new NoOpDef(intType, "oper to int"), uint32Type);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), uint32Type);
+        context.addDef(new TruncOpDef(intType, "oper to int"), int64Type);
+        context.addDef(new TruncOpDef(uintType, "oper to uint"), int64Type);
+        context.addDef(new TruncOpDef(intType, "oper to int"), uint64Type);
+        context.addDef(new TruncOpDef(uintType, "oper to uint"), uint64Type);
+    } else {
+        context.addDef(new SExtOpDef(intType, "oper to int"), int32Type);
+        context.addDef(new ZExtOpDef(uintType, "oper to uint"), int32Type);
+        context.addDef(new ZExtOpDef(intType, "oper to int"), uint32Type);
+        context.addDef(new ZExtOpDef(uintType, "oper to uint"), uint32Type);
+        context.addDef(new NoOpDef(intType, "oper to int"), int64Type);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), int64Type);
+        context.addDef(new NoOpDef(intType, "oper to int"), uint64Type);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), uint64Type);
+    }
+    if (ptrIs32Bit) {
+        context.addDef(new NoOpDef(intzType, "oper to intz"), int32Type);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), int32Type);
+        context.addDef(new NoOpDef(intzType, "oper to intz"), uint32Type);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uint32Type);
+        context.addDef(new TruncOpDef(intzType, "oper to intz"), int64Type);
+        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), int64Type);
+    } else {
+        context.addDef(new SExtOpDef(intzType, "oper to intz"), int32Type);
+        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), int32Type);
+        context.addDef(new ZExtOpDef(intzType, "oper to intz"), uint32Type);
+        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint32Type);
+        context.addDef(new NoOpDef(intzType, "oper to intz"), int64Type);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), int64Type);
+    }
+    if (floatIs32Bit) {
+        context.addDef(new NoOpDef(floatType, "oper to float"), float32Type);
+        context.addDef(new FPTruncOpDef(floatType, "oper to float"),
+                       float64Type
+                       );
+        context.addDef(new FPExtOpDef(float64Type, "oper to float64"), 
+                       floatType
+                       );
+    } else {
+        context.addDef(new FPExtOpDef(floatType, "oper to float"),
+                       float32Type
+                       );
+        context.addDef(new NoOpDef(floatType, "oper to float"), float64Type);
+        context.addDef(new NoOpDef(float64Type, "oper to float64"), floatType);
+    }
+    context.addDef(new SIToFPOpDef(floatType, "oper to float"), int32Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uint32Type);    
+    context.addDef(new SIToFPOpDef(floatType, "oper to float"), int64Type);
+    context.addDef(new ZExtOpDef(intzType, "oper to intz"), uint64Type);
+    context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint64Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uint64Type);    
+    
+    // implicit conversion from PDNTs to UNTs
+    if (intIs32Bit) {
+        context.addDef(new SExtOpDef(int64Type, "oper to int64"), intType);
+        context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uintType);
+    } else {
+        context.addDef(new NoOpDef(int64Type, "oper to int64"), intType);
+        context.addDef(new NoOpDef(uint64Type, "oper to uint64"), uintType);
+    }
+    if (ptrIs32Bit) {
+        context.addDef(new SExtOpDef(int64Type, "oper to int64"), intzType);
+        context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uintzType);
+    } else {
+        context.addDef(new NoOpDef(int64Type, "oper to int64"), intzType);
+        context.addDef(new NoOpDef(uint64Type, "oper to uint64"), uintzType);
+    }
+    if (floatIs32Bit)
+        context.addDef(new FPExtOpDef(float64Type, "oper to float64"), 
+                       floatType
+                       );
+    else
+        context.addDef(new NoOpDef(float64Type, "oper to float64"), floatType);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uintType);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), intType);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uintType);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), intType);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uintzType);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), intzType);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uintzType);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), intzType);
+    
+    // implicit conversion from PDNTs to other PDNTs
+    context.addDef(new NoOpDef(uintType, "oper to uint"), intType);
+    context.addDef(new NoOpDef(intType, "oper to int"), uintType);
+    context.addDef(new NoOpDef(uintzType, "oper to uintz"), intzType);
+    context.addDef(new NoOpDef(intzType, "oper to intz"), uintzType);
+    if (intIs32Bit == ptrIs32Bit) {
+        context.addDef(new NoOpDef(intzType, "oper to intz"), intType);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), intType);
+        context.addDef(new NoOpDef(intzType, "oper to intz"), uintType);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uintType);
+        
+        context.addDef(new NoOpDef(intType, "oper to int"), intzType);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), intzType);
+        context.addDef(new NoOpDef(intType, "oper to int"), uintzType);
+        context.addDef(new NoOpDef(uintType, "oper to uint"), uintzType);
+    } else if (intIs32Bit) {
+        context.addDef(new SExtOpDef(intzType, "oper to intz"), intType);
+        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), intType);
+        context.addDef(new ZExtOpDef(intzType, "oper to intz"), uintType);
+        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uintType);
+        
+        context.addDef(new TruncOpDef(intType, "oper to int"), intzType);
+        context.addDef(new TruncOpDef(uintType, "oper to uint"), intzType);
+        context.addDef(new TruncOpDef(intType, "oper to int"), uintzType);
+        context.addDef(new TruncOpDef(uintType, "oper to uint"), uintzType);
+    } else if (ptrIs32Bit) {
+        // integer is wider than a pointer?  Not very likely, but just in 
+        // case...
+        context.addDef(new TruncOpDef(intzType, "oper to intz"), intType);
+        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), intType);
+        context.addDef(new TruncOpDef(intzType, "oper to intz"), uintType);
+        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), uintType);
+        
+        context.addDef(new SExtOpDef(intType, "oper to int"), intzType);
+        context.addDef(new ZExtOpDef(uintType, "oper to uint"), intzType);
+        context.addDef(new ZExtOpDef(intType, "oper to int"), uintzType);
+        context.addDef(new ZExtOpDef(uintType, "oper to uint"), uintzType);
+    }
+    context.addDef(new SIToFPOpDef(floatType, "oper to float"), intType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintType);    
+    context.addDef(new SIToFPOpDef(floatType, "oper to float"), intzType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintzType);    
+
     // add the increment and decrement operators
     context.addDef(new PreIncrIntOpDef(byteType, "oper ++x"), byteType);
     context.addDef(new PreIncrIntOpDef(int32Type, "oper ++x"), int32Type);
     context.addDef(new PreIncrIntOpDef(uint32Type, "oper ++x"), uint32Type);
     context.addDef(new PreIncrIntOpDef(int64Type, "oper ++x"), int64Type);
     context.addDef(new PreIncrIntOpDef(uint64Type, "oper ++x"), uint64Type);
+    context.addDef(new PreIncrIntOpDef(intType, "oper ++x"), intType);
+    context.addDef(new PreIncrIntOpDef(uintType, "oper ++x"), uintType);
+    context.addDef(new PreIncrIntOpDef(intzType, "oper ++x"), intzType);
+    context.addDef(new PreIncrIntOpDef(uintzType, "oper ++x"), uintzType);
     context.addDef(new PreDecrIntOpDef(byteType, "oper --x"), byteType);
     context.addDef(new PreDecrIntOpDef(int32Type, "oper --x"), int32Type);
     context.addDef(new PreDecrIntOpDef(uint32Type, "oper --x"), uint32Type);
     context.addDef(new PreDecrIntOpDef(int64Type, "oper --x"), int64Type);
     context.addDef(new PreDecrIntOpDef(uint64Type, "oper --x"), uint64Type);
+    context.addDef(new PreDecrIntOpDef(intType, "oper --x"), intType);
+    context.addDef(new PreDecrIntOpDef(uintType, "oper --x"), uintType);
+    context.addDef(new PreDecrIntOpDef(intzType, "oper --x"), intzType);
+    context.addDef(new PreDecrIntOpDef(uintzType, "oper --x"), uintzType);
     context.addDef(new PostIncrIntOpDef(byteType, "oper x++"), byteType);
     context.addDef(new PostIncrIntOpDef(int32Type, "oper x++"), int32Type);
     context.addDef(new PostIncrIntOpDef(uint32Type, "oper x++"), uint32Type);
     context.addDef(new PostIncrIntOpDef(int64Type, "oper x++"), int64Type);
     context.addDef(new PostIncrIntOpDef(uint64Type, "oper x++"), uint64Type);
+    context.addDef(new PostIncrIntOpDef(intType, "oper x++"), intType);
+    context.addDef(new PostIncrIntOpDef(uintType, "oper x++"), uintType);
+    context.addDef(new PostIncrIntOpDef(intzType, "oper x++"), intzType);
+    context.addDef(new PostIncrIntOpDef(uintzType, "oper x++"), uintzType);
     context.addDef(new PostDecrIntOpDef(byteType, "oper x--"), byteType);
     context.addDef(new PostDecrIntOpDef(int32Type, "oper x--"), int32Type);
     context.addDef(new PostDecrIntOpDef(uint32Type, "oper x--"), uint32Type);
     context.addDef(new PostDecrIntOpDef(int64Type, "oper x--"), int64Type);
     context.addDef(new PostDecrIntOpDef(uint64Type, "oper x--"), uint64Type);
+    context.addDef(new PostDecrIntOpDef(intType, "oper x--"), intType);
+    context.addDef(new PostDecrIntOpDef(uintType, "oper x--"), uintType);
+    context.addDef(new PostDecrIntOpDef(intzType, "oper x--"), intzType);
+    context.addDef(new PostDecrIntOpDef(uintzType, "oper x--"), uintzType);
 
     // explicit no-op construction
     addNopNew(context, int64Type);
@@ -2212,6 +2324,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addNopNew(context, byteType);
     addNopNew(context, float32Type);
     addNopNew(context, float64Type);
+    addNopNew(context, intType);
+    addNopNew(context, uintType);
+    addNopNew(context, intzType);
+    addNopNew(context, uintzType);
+    addNopNew(context, floatType);
 
     // explicit (loss of precision)
     addExplicitTruncate(context, int64Type, uint64Type);
@@ -2227,6 +2344,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitTruncate(context, int32Type, uint32Type);
     addExplicitTruncate(context, uint32Type, byteType);
     addExplicitTruncate(context, uint32Type, int32Type);
+    addExplicitTruncate(context, intType, int32Type);
+    addExplicitTruncate(context, intType, uint32Type);
+    addExplicitTruncate(context, intType, byteType);
+    addExplicitTruncate(context, uintType, int32Type);
+    addExplicitTruncate(context, uintType, uint32Type);
+    addExplicitTruncate(context, uintType, byteType);
 
     addExplicitFPTruncate<FPTruncOpCall>(context, float64Type, float32Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float32Type, byteType);

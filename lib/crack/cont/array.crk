@@ -14,7 +14,9 @@ void _release(Object obj) { obj.oper release(); }
 }
 
 @_nobind(byte)
+@_nobind(int)
 @_nobind(int32)
+@_nobind(float)
 @_nobind(int64)
 @_nobind(float32)
 @_nobind(float64)
