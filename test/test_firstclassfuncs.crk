@@ -1,0 +1,66 @@
+
+// function types from defs
+void f0() {
+    puts("ok");
+}
+
+f0.oper call();
+
+int f1(int x) {
+    //printint(x);
+    return x;
+}
+
+int n;
+n = f1(1);
+if (n != 1)
+    puts("fail");
+n = f1.oper call(1);
+if (n != 1)
+    puts("fail");
+
+int f2(int x, int y) {
+    //printint(x);
+    //printint(y);
+    return x+y;
+}
+
+n = f2(2,2);
+if (n != 4)
+    puts("fail");
+n = f2.oper call(2,2);
+if (n != 4)
+    puts("fail");
+
+// first class function vars
+function[void] fp0 = f0;
+function[int,int] fp1 = f1;
+function[int,int,int] fp2 = f2;
+
+fp0.oper call();
+n = fp1.oper call(10);
+if (n != 10)
+    puts("fail");
+n = fp2.oper call(20,20);
+if (n != 40)
+    puts("fail");
+
+function[int,int,int] fpF;
+fpF = f2;
+n = fpF.oper call(30,30);
+if (n != 60)
+    puts("fail");
+
+
+// callbacks
+void cb(function[int, int, int] cb0) {
+    int n;
+    n = cb0.oper call(50,50);
+    if (n != 100)
+        puts("fail");
+}
+
+cb(fpF);
+cb(f2);
+
+puts("ok");

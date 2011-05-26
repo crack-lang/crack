@@ -154,7 +154,7 @@ class FunctionPtrOpDef : public OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    OpDef(resultType, FuncDef::method, "call", argCount) {
+    OpDef(resultType, FuncDef::method, "oper call", argCount) {
         type = resultType;
     }
 

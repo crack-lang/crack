@@ -105,7 +105,7 @@ UNOP(UIToFP);
 #define FPTRUNCOP(opCode) \
     ResultExprPtr opCode##OpCall::emit(Context &context) {          \
         if (receiver)                                               \
-            receiver->emit(context)->handleTransient(context);      \    
+            receiver->emit(context)->handleTransient(context);      \
         else                                                        \
             args[0]->emit(context)->handleTransient(context);       \
                                                                     \

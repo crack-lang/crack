@@ -463,7 +463,7 @@ string Parser::parseOperSpec() {
        tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
        tok.isAsterisk() || tok.isPercent() ||
        ident == "init" || ident == "release" || ident == "bind" ||
-       ident == "del" || tok.isAugAssign()
+       ident == "del" || ident == "call" || tok.isAugAssign()
        ) {
       return "oper " + ident;
    } else if (tok.isIncr() || tok.isDecr()) {
@@ -919,6 +919,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                context->builder.createFuncCall(funcDef.get());
             funcCall->receiver = expr;
             funcCall->args = args;
+            expr = funcCall;
          }
       
       } else if (tok.isIncr() || tok.isDecr()) {

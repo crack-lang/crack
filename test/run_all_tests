@@ -868,6 +868,12 @@ test_output 'no class symbol collisions on link' \
     'testmod
 cleanup testmod'
 
+test_output 'first class functions' \
+    'import test.test_firstclassfuncs;' \
+    'ok
+ok
+ok'
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 
