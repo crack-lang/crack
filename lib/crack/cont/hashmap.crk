@@ -37,7 +37,9 @@ class HashMap[Key, Value] {
     uint __size, __cap;
     
     oper init() : __items(16), __cap = 16 {}
-    oper del() {
+    
+    @final
+    void _free(){
         # release all items
         for (int i = 0; i < __cap; ++i)
             if (__items[i])
@@ -45,6 +47,23 @@ class HashMap[Key, Value] {
         
         # free the list
         free(__items);
+    }
+    
+    @final
+    void clear(uint newcap) {
+        _free();
+        __items = array[Item](newcap);
+        __cap = newcap;
+        __size = 0;
+    }
+    
+    @final
+    void clear() {
+        clear(16);
+    }
+    
+    oper del() {
+        _free();
     }
     
     @final int __findSlot(uint hash, Key key) {
@@ -83,7 +102,7 @@ class HashMap[Key, Value] {
         free(oldItems);
     }
     
-    @final Value oper []=(Key key, Value val) {
+    Value set(Key key, Value val) {
 #        cout `*** map[$key] = $val\n`;
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -108,7 +127,11 @@ class HashMap[Key, Value] {
         
         return val;
     }
-    
+
+    Value oper []=(Key key, Value val) {
+        return set(key, val);
+    }
+
     ## Returns the value associated with the specified key, throws KeyError if 
     ## the key is not in the container.
     Value oper [](Key key) {
@@ -294,4 +317,4 @@ $expected`);
         }
     }
 }
-    
+

@@ -78,7 +78,10 @@ const double_constant_struct double_constants[] = {
                                  };
 
 
-const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, {"EINVAL", EINVAL}, {NULL, 0}};
+const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, 
+                                               {"EINVAL", EINVAL}, 
+                                               {"ENOMEM", ENOMEM}, 
+                                               {NULL, 0}};
 // -----------------------------------------------------------------------------
 // Functions that take a single float argument
 const one_name_struct  one_names[]={ 

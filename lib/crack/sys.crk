@@ -1,10 +1,13 @@
 ## This module provides access to system internals.
 ## Copyright 2010 Google Inc.
 
-import crack.lang IndexError;
-import crack.io FStr;
-import crack.runtime exit;
+import crack.lang IndexError, InvalidResourceError, CString, 
+                   InvalidArgumentError, Exception;
+import crack.io FStr, cout;
+import crack.runtime exit, get_environ, putenv, getenv, setenv, unsetenv, 
+                        errno, EINVAL, ENOMEM;
 import crack.strutil StringArray;
+import crack.cont.hashmap HashMap;
 
 StringArray _createArgv() {
     v := __getArgv();
@@ -13,6 +16,93 @@ StringArray _createArgv() {
     for (uint i; i < c; ++i)
         argv.append(StaticString(v[i]));
     return argv;
+}
+
+class Environment: HashMap[String, String] {
+   void _update();
+   oper init(){ 
+      _update();
+   }
+
+   // Update the environment map without clearing it first
+   @final
+   void _update(){
+      array[byteptr] e = get_environ();
+      String keyValString, val, key;
+      uint eqPos;
+
+      if (e is null)
+        throw InvalidResourceError(FStr() `Error getting environment array\n`);
+      else{
+         uint i = 0;
+         while (!(e[i] is null)){
+            keyValString = String(e[i]);
+            eqPos = keyValString.lfind(b"=");
+            if (eqPos <= 0 )
+               throw InvalidResourceError(FStr() `Failed to split environment string $(e[i])\n`);
+
+            if (keyValString.size > eqPos)
+               val = String(keyValString.substr(eqPos+1));
+            else
+               val = "";
+            key = String(keyValString.substr(0, eqPos));
+            set(key, val);
+            i++;
+         }
+      }
+   }
+   
+   @final
+   void update(){
+      HashMap[String, String].clear();
+      _update();
+   }
+   
+   String _setptr(String key, byteptr val){
+      if (val is null){
+         delete(key);
+         return null;
+      }
+
+      newString := String(val);
+      HashMap[String, String].set(key, newString);
+      return newString;
+   }
+   
+   @final
+   String set(String key, String val, bool overwrite){
+      cval:=CString(val);
+      ckey:=CString(key);
+      result:=setenv(ckey.buffer, cval.buffer, overwrite?1:0);
+      err := errno();
+
+      if (err == EINVAL)
+         throw InvalidArgumentError(FStr() `Invalid key/value pair $key,$val`);
+      else if (err == ENOMEM)
+         throw Exception('Insufficient memory to add a new variable to the environment');
+
+      newval := getenv(ckey.buffer);
+      return _setptr(key, newval);
+   }
+
+   @final
+   String set(String key, String val){
+      return set(key, val, true);
+   }
+
+   @final
+   String oper []=(String key, String val){
+      return set(key, val, true);
+   }
+
+   @final
+   String get(String key, bool refresh){
+      if (refresh){
+         newval:=getenv(CString(key).buffer);
+         return _setptr(key, newval);
+      }
+      return HashMap[String, String].get(key);
+   }
 }
 
 ## The "argv" variable.

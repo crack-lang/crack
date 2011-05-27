@@ -352,6 +352,7 @@ class AppendBuffer : ManagedBuffer {
 
 class SubString;
 class String;
+class CString;
 SubString _substr(SubString target, uint pos, uint len);
 SubString substr(SubString target, int pos, uint len);
 SubString substr(SubString target, int pos);

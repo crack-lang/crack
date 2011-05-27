@@ -2,7 +2,8 @@
 # test random stuff in the runtime extension.
 
 import crack.io cout;
-import crack.runtime SockAddrIn, TimeVal, _date;
+import crack.runtime SockAddrIn, TimeVal;
+import crack.sys Environment;
 
 s := SockAddrIn(100, 200);
 if (s.family != 2)
@@ -18,7 +19,17 @@ if (t.secs != 100)
 if (t.nsecs != 200)
     cout `FAIL tv.secs != 200\n`;
 
-ctime := _date();
+# --- Test environment functions ---
+Environment env = {};
+
+env.set("test_time", "true");
+if (env["test_time"] != "true")
+   cout `Environment.set() failed\n`;
+
+env["test_time2"] = "false";
+if (env["test_time2"] != "false")
+   cout `Environment[]= failed\n`;
+
 
 
 cout `ok\n`;
