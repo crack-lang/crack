@@ -595,15 +595,15 @@
 
    uint32
       cairo_scaled_font_text_to_glyphs (cairo_scaled_font_t  scaled_font,
-                                   float64                     x,
-                                   float64                     y,
-                                   byteptr                 utf8,
-                                   int                         utf8_len,
-                                   array[cairo_glyph_t]        glyphs,
-                                   int                         num_glyphs,
+                                   float64                      x,
+                                   float64                      y,
+                                   byteptr                      utf8,
+                                   int                          utf8_len,
+                                   array[cairo_glyph_t]         glyphs,
+                                   int                          num_glyphs,
                                    array[cairo_text_cluster_t]  clusters,
-                                   int                         num_clusters,
-                                   array[uint32]               cluster_flags);
+                                   int                          num_clusters,
+                                   array[uint32]                cluster_flags);
 
    cairo_font_face_t 
       cairo_scaled_font_get_font_face (cairo_scaled_font_t scaled_font);

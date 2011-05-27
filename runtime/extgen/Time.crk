@@ -6,6 +6,8 @@
 @generateExtension crack.runtime.time {
    @filename 'runtime/Time.cc'
    @dumpsymbols 'runtime/extgen/Time.txt'
+   @inject '#include <stdlib.h>\n'
+   @inject '#include <unistd.h>\n'
    @inject '#include <time.h>\n'
    @inject '#include <sys/types.h>\n'
    @inject '#include <sys/time.h>\n'
@@ -35,10 +37,12 @@ struct tm *crk_gmtime_now(struct tm *now){
 }
 '
 
-
    @inject '
-struct tm *crk_epoch(void){
-   return gmtime(NULL);
+struct tm *crk_epoch(struct tm *epoch){
+   struct timeval tv;
+   tv.tv_sec = 0;
+   tv.tv_usec = 0;
+   return gmtime_r(&(tv.tv_sec), epoch);
 }
 '
 
@@ -46,6 +50,12 @@ struct tm *crk_epoch(void){
 char *crk_ctime_r(int64_t t, char * buf){
    const time_t lt = (const time_t)t;
    return ctime_r(&lt, buf);
+}
+'
+
+   @inject '
+char **get_environ(){
+   return environ;
 }
 '
 
@@ -75,4 +85,13 @@ char *crk_ctime_r(int64_t t, char * buf){
 
    @cname crk_ctime_r
    byteptr ctime_r(int64 seconds, byteptr buf);
+
+   uint64 strftime(byteptr s, uint64 max, byteptr format, _date d);
+
+   array[byteptr] get_environ();
+   int putenv(byteptr keyvalue);
+   byteptr getenv(byteptr name);
+   int setenv(byteptr name, byteptr value, int overwrite);
+   int unsetenv(byteptr name);
+   
 }

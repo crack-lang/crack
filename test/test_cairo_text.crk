@@ -15,8 +15,8 @@ import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
                            cairo_set_source_rgb, cairo_stroke, cairo_scale,
                            cairo_destroy, cairo_surface_destroy,
                            cairo_text_extents_t, cairo_select_font_face,
-                           CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD,
-                           cairo_set_font_size,cairo_text_extents, 
+                           CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD,
+                           cairo_set_font_size, cairo_text_extents, 
                            cairo_text_extents_new, cairo_show_text;
 import crack.math PI, sqrt;
 

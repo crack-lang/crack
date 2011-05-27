@@ -1,5 +1,5 @@
 // Test time.h binding in runtime
-import crack.runtime _date, ctime_r;
+import crack.runtime _date, ctime_r, strftime;
 import crack.exp.cmdline CmdOptions;
 import crack.io cout;
 import crack.sys argv;
@@ -36,5 +36,12 @@ if (verbose) cout `ctime_r = $dateString2`;
 
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
+
+mytime = _date(); // Reset
+
+len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
+if (dateString2.substr(0,len)!='Thursday January 01 1970')
+   cout `strftime format mismatch\n`;
+
 
 cout `ok\n`;

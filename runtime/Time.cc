@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -21,13 +23,20 @@ struct tm *crk_gmtime_now(struct tm *now){
    return gmtime_r(&(tv.tv_sec), now);
 }
 
-struct tm *crk_epoch(void){
-   return gmtime(NULL);
+struct tm *crk_epoch(struct tm *epoch){
+   struct timeval tv;
+   tv.tv_sec = 0;
+   tv.tv_usec = 0;
+   return gmtime_r(&(tv.tv_sec), epoch);
 }
 
 char *crk_ctime_r(int64_t t, char * buf){
    const time_t lt = (const time_t)t;
    return ctime_r(&lt, buf);
+}
+
+char **get_environ(){
+   return environ;
 }
 
 
@@ -93,10 +102,53 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
 
     type__date->finish();
 
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pbyteptr_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_byteptr;
+        array_pbyteptr_q = array->getSpecialization(params);
+    }
     f = mod->addFunc(type_byteptr, "ctime_r",
             (void *)crk_ctime_r
         );
        f->addArg(type_int64, "seconds");
        f->addArg(type_byteptr, "buf");
+
+    f = mod->addFunc(type_uint64, "strftime",
+            (void *)strftime
+        );
+       f->addArg(type_byteptr, "s");
+       f->addArg(type_uint64, "max");
+       f->addArg(type_byteptr, "format");
+       f->addArg(type__date, "d");
+
+    f = mod->addFunc(array_pbyteptr_q, "get_environ",
+            (void *)get_environ
+        );
+
+    f = mod->addFunc(type_int, "putenv",
+            (void *)putenv
+        );
+       f->addArg(type_byteptr, "keyvalue");
+
+    f = mod->addFunc(type_byteptr, "getenv",
+            (void *)getenv
+        );
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_int, "setenv",
+            (void *)setenv
+        );
+       f->addArg(type_byteptr, "name");
+       f->addArg(type_byteptr, "value");
+       f->addArg(type_int, "overwrite");
+
+    f = mod->addFunc(type_int, "unsetenv",
+            (void *)unsetenv
+        );
+       f->addArg(type_byteptr, "name");
 
 }
