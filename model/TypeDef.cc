@@ -601,8 +601,12 @@ string TypeDef::getSpecializedName(TypeVecObj *types) {
     // construct the module name from the class name plus type parameters
     ostringstream tmp;
     tmp << getFullName() << '[';
-    for (int i = 0; i < types->size(); ++i)
-        tmp << (*types)[i]->getFullName() << ',';
+    int last = types->size()-1;
+    for (int i = 0; i <= last; ++i) {
+        tmp << (*types)[i]->getFullName();
+        if (i != last)
+            tmp << ',';
+    }
     tmp << ']';
     return tmp.str();
 }

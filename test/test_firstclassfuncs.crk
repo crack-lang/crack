@@ -64,3 +64,17 @@ cb(fpF);
 cb(f2);
 
 puts("ok");
+
+// comparison
+void foo(int x) {
+}
+void foo2(int x) {
+}
+
+fpcmp := foo;
+fpcmp2 := foo2;
+if (fpcmp is fpcmp2)
+    puts("fail");
+if (foo is foo2) {
+    puts("fail");
+}

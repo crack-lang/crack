@@ -48,6 +48,10 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     if (arity) {
         for (int i = 1; i < arity+1; ++i) {
             BTypeDef *argCType = BTypeDefPtr::rcast((*types)[i]);
+            if (argCType == context.construct->voidType) {
+                context.error(context.getLocation(),
+                          "Cannot specialize function type with void argument");
+            }
             fun_args.push_back(argCType->rep);
         }
     }
