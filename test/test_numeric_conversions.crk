@@ -1,0 +1,138 @@
+
+import crack.io cout;
+@import crack.exp.ann define;
+
+int i;
+uint u;
+intz iz;
+uintz uz;
+int32 i32;
+uint32 u32;
+int64 i64;
+uint64 u64;
+float f;
+float32 f32;
+float64 f64;
+
+# test all legal implicit conversions
+if (1) {
+    i = 100;
+    @define ca(var, val) {
+        var = val;
+        if (var != 100) {
+            varstr := $var;
+            valstr := $val;
+            cout `FAILED: assignment of $varstr from $valstr\n`;
+        }
+    }
+    @ca(u, i)
+    @ca(iz, i)
+    @ca(uz, i)
+    @ca(f, i)
+    @ca(i64, i)
+    @ca(i, u)
+    @ca(iz, u)
+    @ca(uz, u)
+    @ca(u64, u)
+    @ca(f, u)
+    @ca(f32, u)
+    @ca(f64, u)
+    @ca(i, iz)
+    @ca(u, iz)
+    @ca(uz, iz)
+    @ca(i64, iz)
+    @ca(f, iz)
+    @ca(f32, iz)
+    @ca(f64, iz)
+    @ca(i, uz)
+    @ca(u, uz)
+    @ca(iz, uz)
+    @ca(u64, uz)
+    @ca(f, uz)
+    @ca(f32, uz)
+    @ca(f64, uz)
+    i32 = 100;
+    @ca(i, i32)
+    @ca(u, i32)
+    @ca(iz, i32)
+    @ca(uz, i32)
+    @ca(i64, i32)
+    @ca(f, i32)
+    @ca(f64, i32)
+    u32 = 100;
+    @ca(i, u32)
+    @ca(u, u32)
+    @ca(iz, u32)
+    @ca(uz, u32)
+    @ca(u64, u32)
+    @ca(f, u32)
+    @ca(f64, u32)
+    @ca(i, i64)
+    @ca(u, i64)
+    @ca(iz, i64)
+    @ca(uz, i64)
+    @ca(f, i64)
+    @ca(i, u64)
+    @ca(u, u64)
+    @ca(iz, u64)
+    @ca(uz, u64)
+    @ca(u64, u64)
+    @ca(f, u64)
+    @ca(i, f)
+    @ca(u, f)
+    @ca(iz, f)
+    @ca(uz, f)
+    @ca(f64, f)
+    @ca(i, f32)
+    @ca(u, f32)
+    @ca(iz, f32)
+    @ca(uz, f32)
+    @ca(f, f32)
+    @ca(f64, f32)
+}
+
+# check explicit conversion from every numeric type to every other numeric 
+# type.
+if (1) {
+    # check explicit conversions
+    @define ce(varType, valType) {
+        if (1) {
+            valType val = 100;
+            varType var = {val};
+            if (var != 100) {
+                varStr := $varType;
+                valStr := $valType;
+                cout `FAILED explicit construction of $varStr from $valStr\n`;
+            }
+        }
+    }
+    
+    # check explicit conversion suite
+    @define ces(valType) {
+        @ce(int, valType)
+        @ce(uint, valType)
+        @ce(intz, valType)
+        @ce(uintz, valType)
+        @ce(int32, valType)
+        @ce(uint32, valType)
+        @ce(int64, valType)
+        @ce(uint64, valType)
+        @ce(float, valType)
+        @ce(float32, valType)
+        @ce(float64, valType)
+    }
+
+    @ces(int)
+    @ces(uint)
+    @ces(intz)
+    @ces(uintz)
+    @ces(int32)
+    @ces(uint32)
+    @ces(int64)
+    @ces(uint64)
+    @ces(float)
+    @ces(float32)
+    @ces(float64)
+}
+
+cout `ok\n`;

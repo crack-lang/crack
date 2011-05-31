@@ -2073,56 +2073,64 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     funcDef->args[0] = new ArgDef(voidptrType, "val");
     context.addDef(funcDef.get(), uint64Type);
     
+    // the definition order of global binary operations is significant, when 
+    // there is no exact match and we need to attempt conversions, we want to 
+    // check the higher precision types first.
+    
     // create integer operations
-#define INTOPS(type, signed, shift) \
-    context.addDef(new AddOpDef(type));                                \
-    context.addDef(new SubOpDef(type));                                \
-    context.addDef(new MulOpDef(type));                                \
-    context.addDef(new signed##DivOpDef(type));                        \
-    context.addDef(new signed##RemOpDef(type));                        \
-    context.addDef(new ICmpEQOpDef(type, boolType));                   \
-    context.addDef(new ICmpNEOpDef(type, boolType));                   \
-    context.addDef(new ICmpSGTOpDef(type, boolType));                  \
-    context.addDef(new ICmpSLTOpDef(type, boolType));                  \
-    context.addDef(new ICmpSGEOpDef(type, boolType));                  \
-    context.addDef(new ICmpSLEOpDef(type, boolType));                  \
-    context.addDef(new NegOpDef(type, "oper -"));                      \
-    context.addDef(new BitNotOpDef(type, "oper ~"));                   \
-    context.addDef(new OrOpDef(type));                                 \
-    context.addDef(new AndOpDef(type));                                \
-    context.addDef(new XorOpDef(type));                                \
-    context.addDef(new ShlOpDef(type));                                \
-    context.addDef(new shift##ShrOpDef(type));
+#define INTOPS(type, signed, shift, ns) \
+    context.addDef(new AddOpDef(type, 0, ns), ns);                                \
+    context.addDef(new SubOpDef(type, 0, ns), ns);                                \
+    context.addDef(new MulOpDef(type, 0, ns), ns);                                \
+    context.addDef(new signed##DivOpDef(type, 0, ns), ns);                        \
+    context.addDef(new signed##RemOpDef(type, 0, ns), ns);                        \
+    context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                   \
+    context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                   \
+    context.addDef(new ICmpSGTOpDef(type, boolType, ns), ns);                  \
+    context.addDef(new ICmpSLTOpDef(type, boolType, ns), ns);                  \
+    context.addDef(new ICmpSGEOpDef(type, boolType, ns), ns);                  \
+    context.addDef(new ICmpSLEOpDef(type, boolType, ns), ns);                  \
+    context.addDef(new NegOpDef(type, "oper -", ns), ns);                      \
+    context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                   \
+    context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
+    context.addDef(new AndOpDef(type, 0, ns), ns);                                \
+    context.addDef(new XorOpDef(type, 0, ns), ns);                                \
+    context.addDef(new ShlOpDef(type, 0, ns), ns);                                \
+    context.addDef(new shift##ShrOpDef(type, 0, ns), ns);
 
-    INTOPS(byteType, U, L)
-    INTOPS(int32Type, S, A)
-    INTOPS(uint32Type, U, L)
-    INTOPS(int64Type, S, A)
-    INTOPS(uint64Type, U, L)
-    INTOPS(intType, S, A)
-    INTOPS(uintType, U, L)
-    INTOPS(intzType, S, A)
-    INTOPS(uintzType, U, L)
+    INTOPS(byteType, U, L, 0)
+    INTOPS(int32Type, S, A, 0)
+    INTOPS(uint32Type, U, L, 0)
+    INTOPS(int64Type, S, A, 0)
+    INTOPS(uint64Type, U, L, 0)
 
     // float operations
-#define FLOPS(type) \
-    context.addDef(new FAddOpDef(type));                                    \
-    context.addDef(new FSubOpDef(type));                                    \
-    context.addDef(new FMulOpDef(type));                                    \
-    context.addDef(new FDivOpDef(type));                                    \
-    context.addDef(new FRemOpDef(type));                                    \
-    context.addDef(new FCmpOEQOpDef(type, boolType));                       \
-    context.addDef(new FCmpONEOpDef(type, boolType));                       \
-    context.addDef(new FCmpOGTOpDef(type, boolType));                       \
-    context.addDef(new FCmpOLTOpDef(type, boolType));                       \
-    context.addDef(new FCmpOGEOpDef(type, boolType));                       \
-    context.addDef(new FCmpOLEOpDef(type, boolType));                       \
-    context.addDef(new FNegOpDef(type, "oper -"));
+#define FLOPS(type, ns) \
+    context.addDef(new FAddOpDef(type, 0, ns), ns);                           \
+    context.addDef(new FSubOpDef(type, 0, ns), ns);                           \
+    context.addDef(new FMulOpDef(type, 0, ns), ns);                           \
+    context.addDef(new FDivOpDef(type, 0, ns), ns);                           \
+    context.addDef(new FRemOpDef(type, 0, ns), ns);                           \
+    context.addDef(new FCmpOEQOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FCmpONEOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FCmpOGTOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FCmpOLTOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FCmpOGEOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FCmpOLEOpDef(type, boolType, ns), ns);                 \
+    context.addDef(new FNegOpDef(type, "oper -"), ns);
     
-    FLOPS(float32Type);
-    FLOPS(float64Type);
-    FLOPS(floatType);
+    FLOPS(float32Type, 0)
+    FLOPS(float64Type, 0)
 
+    // PDNT operations need to be methods so that we try to resolve them with 
+    // type conversions prior to attempting the general methods and _only if_
+    // one of the arguments is a PDNT.
+    INTOPS(intType, S, A, intType)
+    INTOPS(uintType, U, L, uintType)
+    INTOPS(intzType, S, A, intzType)
+    INTOPS(uintzType, U, L, uintzType)
+    FLOPS(floatType, floatType)
+    
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
     context.addDef(new LogicOrOpDef(boolType, boolType));
@@ -2142,7 +2150,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uint32Type);
     context.addDef(new FPExtOpDef(float64Type, "oper to float64"), float32Type);
 
-    // implicit conversions to PDNTs
+    // implicit conversions from UNTs to PDNTs
     context.addDef(new ZExtOpDef(intType, "oper to int"), byteType);
     context.addDef(new ZExtOpDef(uintType, "oper to uint"), byteType);
     context.addDef(new ZExtOpDef(intzType, "oper to intz"), byteType);
@@ -2204,6 +2212,14 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ZExtOpDef(intzType, "oper to intz"), uint64Type);
     context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint64Type);
     context.addDef(new UIToFPOpDef(floatType, "oper to float"), uint64Type);    
+    context.addDef(new FPToSIOpDef(intType, "oper to int"), float32Type);
+    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), float32Type);
+    context.addDef(new FPToSIOpDef(intzType, "oper to intz"), float32Type);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), float32Type);
+    context.addDef(new FPToSIOpDef(intType, "oper to int"), float64Type);
+    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), float64Type);
+    context.addDef(new FPToSIOpDef(intzType, "oper to intz"), float64Type);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), float64Type);
     
     // implicit conversion from PDNTs to UNTs
     if (intIs32Bit) {
@@ -2276,7 +2292,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new SIToFPOpDef(floatType, "oper to float"), intType);
     context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintType);    
     context.addDef(new SIToFPOpDef(floatType, "oper to float"), intzType);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintzType);    
+    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintzType);
+    context.addDef(new FPToUIOpDef(intType, "oper to int"), floatType);
+    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), floatType);
+    context.addDef(new FPToUIOpDef(intzType, "oper to intz"), floatType);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), floatType);
 
     // add the increment and decrement operators
     context.addDef(new PreIncrIntOpDef(byteType, "oper ++x"), byteType);
@@ -2362,6 +2382,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint32Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint64Type);
+
+    addExplicitFPTruncate<SIToFPOpCall>(context, int64Type, float32Type);
+    addExplicitFPTruncate<SIToFPOpCall>(context, uint64Type, float32Type);
+    addExplicitFPTruncate<SIToFPOpCall>(context, int64Type, float64Type);
+    addExplicitFPTruncate<SIToFPOpCall>(context, uint64Type, float64Type);
 
     // create the array generic
     TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),

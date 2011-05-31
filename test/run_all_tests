@@ -1260,4 +1260,8 @@ test_output 'test fs' 'import test.test_fs;' ok
 
 test_output 'test command line flags' 'import test.test_cmdline;' ok
 
+test_output 'test numeric conversions' \
+  'import test.test_numeric_conversions;' \
+  ok
+
 exit $rc

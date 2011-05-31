@@ -95,7 +95,7 @@ uint _format(uint64 val,  ## value to format
         i = i - 1;
         digit := byte(v % 10);
         v = v / 10;
-        buf[i] = 48 + digit;
+        buf[i] = b'0' + digit;
     }
     return i;
 }

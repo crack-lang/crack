@@ -592,10 +592,10 @@ class String : Buffer {
         for (uint i = 0; i < size; ++i) {
             ch := buffer[i];
             if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
-                buf.append(92); # '\'
-                buf.append(48 + (ch >> 6));
-                buf.append(48 + ((ch & 56) >> 3));
-                buf.append(48 + (ch & 7));
+                buf.append(b'\\'); # '\'
+                buf.append(b'0' + (ch >> 6));
+                buf.append(b'0' + ((ch & 56) >> 3));
+                buf.append(b'0' + (ch & 7));
             } else {
                 buf.append(ch)
             }

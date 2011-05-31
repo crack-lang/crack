@@ -80,8 +80,10 @@ void define(CrackContext ctx) {
         if (gotDollar) {
             if (tok.isInteger()) {
                 arg := atoi(tok.getText()) - 1;
-                if (arg < 0 || arg > m.numArgs)
+                if (arg < 0 || arg > m.numArgs) {
+                    printint(arg);
                     ctx.error(tok, 'argument index out of bounds');
+                }
                 m.put(arg);
             } else if (tok.isDollar()) {
                 break;

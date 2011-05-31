@@ -4,7 +4,7 @@
 import crack.runtime free;
 import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer, 
     WriteBuffer;
-import crack.io Formatter, Reader, Writer;
+import crack.io cout, Formatter, Reader, Writer;
 
 BUFSIZE := uint(1024);
 

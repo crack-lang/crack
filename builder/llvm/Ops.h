@@ -44,7 +44,9 @@ class BinOpDef : public OpDef {
     public:
         BinOpDef(model::TypeDef *argType,
                  model::TypeDef *resultType,
-                 const std::string &name);
+                 const std::string &name,
+                 bool isMethod = false
+                 );
 
         virtual model::FuncCallPtr createFuncCall() = 0;
 };
@@ -74,7 +76,9 @@ public:
 
 class BitNotOpDef : public OpDef {
 public:
-    BitNotOpDef(BTypeDef *resultType, const std::string &name);
+    BitNotOpDef(BTypeDef *resultType, const std::string &name,
+                bool isMethod = false
+                );
 
     virtual model::FuncCallPtr createFuncCall() {
         return new BitNotOpCall(this);
@@ -127,7 +131,9 @@ public:
 
 class NegOpDef : public OpDef {
 public:
-    NegOpDef(BTypeDef *resultType, const std::string &name);
+    NegOpDef(BTypeDef *resultType, const std::string &name,
+             bool isMethod
+             );
 
     virtual model::FuncCallPtr createFuncCall() {
         return new NegOpCall(this);
@@ -361,9 +367,12 @@ public:
     class prefix##OpDef : public BinOpDef {                                 \
         public:                                                             \
             prefix##OpDef(model::TypeDef *argType,                          \
-                          model::TypeDef *resultType = 0) :                 \
+                          model::TypeDef *resultType = 0,                   \
+                          bool isMethod = false                             \
+                          ) :                                               \
                 BinOpDef(argType, resultType ? resultType : argType,        \
-                         "oper " op                                         \
+                         "oper " op,                                        \
+                         isMethod                                           \
                          ) {                                                \
             }                                                               \
                                                                             \
@@ -434,25 +443,28 @@ UNOP_DEF(PostDecrInt);
                                                                             \
             virtual model::ResultExprPtr emit(model::Context &context);     \
     };                                                                      \
+    class opCode##OpDef : public UnOpDef {                                  \
+        public:                                                             \
+            opCode##OpDef(model::TypeDef *resultType,                       \
+                         const std::string &name                            \
+                         ) :                                                \
+                    UnOpDef(resultType, name) {                             \
+            }                                                               \
+                                                                            \
+            virtual model::FuncCallPtr createFuncCall() {                   \
+                return new opCode##OpCall(this);                            \
+                                                                            \
+            }                                                               \
+    };
 
 // Floating Point Truncating Ops
-FPTRUNCOP_DEF(FPTrunc);
-FPTRUNCOP_DEF(FPToSI);
-FPTRUNCOP_DEF(FPToUI);
+FPTRUNCOP_DEF(FPTrunc)
+FPTRUNCOP_DEF(FPToSI)
+FPTRUNCOP_DEF(FPToUI)
 
-// define a floating point truncation definition so we can use this as either 
-// an explicit constructor or an implicit "oper to" for converting to the 
-// 'float' PDNT.
-class FPTruncOpDef : public UnOpDef {
-    public:
-        FPTruncOpDef(model::TypeDef *resultType, const std::string &name) :
-                UnOpDef(resultType, name) {
-        }
-    
-        virtual model::FuncCallPtr createFuncCall() {
-            return new FPTruncOpCall(this);
-        }
-};
+    // define a floating point truncation definition so we can use this as either 
+    // an explicit constructor or an implicit "oper to" for converting to the 
+    // 'float' PDNT.
 
 } // end namespace builder::vmll
 } // end namespace builder

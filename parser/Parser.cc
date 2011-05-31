@@ -617,7 +617,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
             FuncCallPtr funcCall =
                context->builder.createFuncCall(funcDef.get());
             funcCall->args = args;
-            if (funcDef->method)
+            if (funcDef->flags & FuncDef::method)
                funcCall->receiver = varRef;
             return funcCall;
          }
@@ -632,7 +632,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
             FuncCallPtr funcCall = 
                context->builder.createFuncCall(funcDef.get());
             funcCall->args = args;
-            if (funcDef->method)
+            if (funcDef->flags & FuncDef::method)
                funcCall->receiver = varRef;
             return createAssign(container, ident, var.get(), funcCall.get());
          } else {

@@ -23,34 +23,39 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
 
 #define UNOP(opCode) \
     model::ResultExprPtr opCode##OpCall::emit(model::Context &context) {    \
-                receiver->emit(context)->handleTransient(context);          \
+        if (receiver)                                                       \
+            receiver->emit(context)->handleTransient(context);              \
+        else                                                                \
+            args[0]->emit(context)->handleTransient(context);               \
+        LLVMBuilder &builder =                                              \
+            dynamic_cast<LLVMBuilder &>(context.builder);                   \
+        builder.lastValue =                                                 \
+            builder.builder.Create##opCode(                                 \
+                builder.lastValue,                                          \
+                BTypeDefPtr::arcast(func->returnType)->rep                  \
+            );                                                              \
                                                                             \
-                LLVMBuilder &builder =                                      \
-                    dynamic_cast<LLVMBuilder &>(context.builder);           \
-                builder.lastValue =                                         \
-                    builder.builder.Create##opCode(                         \
-                        builder.lastValue,                                  \
-                        BTypeDefPtr::arcast(func->returnType)->rep          \
-                    );                                                      \
-                                                                            \
-                return new BResultExpr(this, builder.lastValue);            \
-            }                                                               \
+        return new BResultExpr(this, builder.lastValue);                    \
+    }
 
 #define QUAL_BINOP(prefix, opCode, op)                                      \
-  ResultExprPtr prefix##OpCall::emit(Context &context) {                    \
-                LLVMBuilder &builder =                                      \
-                    dynamic_cast<LLVMBuilder &>(context.builder);           \
+    ResultExprPtr prefix##OpCall::emit(Context &context) {                  \
+        LLVMBuilder &builder =                                              \
+            dynamic_cast<LLVMBuilder &>(context.builder);                   \
+        int arg = 0;                                                        \
+        if (receiver)                                                       \
+            receiver->emit(context)->handleTransient(context);              \
+        else                                                                \
+            args[arg++]->emit(context)->handleTransient(context);           \
+        Value *lhs = builder.lastValue;                                     \
+        args[arg]->emit(context)->handleTransient(context);                 \
+        builder.lastValue =                                                 \
+            builder.builder.Create##opCode(lhs,                             \
+                                           builder.lastValue                \
+                                           );                               \
                                                                             \
-                args[0]->emit(context)->handleTransient(context);           \
-                Value *lhs = builder.lastValue;                             \
-                args[1]->emit(context)->handleTransient(context);           \
-                builder.lastValue =                                         \
-                    builder.builder.Create##opCode(lhs,                     \
-                                                   builder.lastValue        \
-                                                   );                       \
-                                                                            \
-                return new BResultExpr(this, builder.lastValue);            \
-            }                                                               \
+        return new BResultExpr(this, builder.lastValue);                    \
+    }                                                                       \
 
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
@@ -128,12 +133,20 @@ FPTRUNCOP(FPToUI);
 // BinOpDef
 BinOpDef::BinOpDef(TypeDef *argType,
                    TypeDef *resultType,
-                   const string &name) :
-                OpDef(resultType, FuncDef::noFlags, name, 2) {
+                   const string &name,
+                   bool isMethod
+                   ) :
+    OpDef(resultType, 
+          isMethod ? FuncDef::method : FuncDef::noFlags, 
+          name, 
+          isMethod ? 1 : 2
+          ) {
 
-                args[0] = new ArgDef(argType, "lhs");
-                args[1] = new ArgDef(argType, "rhs");
-            }
+    int arg = 0;
+    if (!isMethod)
+        args[arg++] = new ArgDef(argType, "lhs");
+    args[arg] = new ArgDef(argType, "rhs");
+}
     
 
 // TruncOpCall
@@ -164,7 +177,10 @@ ResultExprPtr NoOpCall::emit(Context &context) {
 
 // BitNotOpCall
 ResultExprPtr BitNotOpCall::emit(Context &context) {
-    args[0]->emit(context)->handleTransient(context);
+    if (receiver)
+        receiver->emit(context)->handleTransient(context);
+    else
+        args[0]->emit(context)->handleTransient(context);
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
@@ -181,8 +197,13 @@ ResultExprPtr BitNotOpCall::emit(Context &context) {
 }
 
 // BitNotOpDef
-BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name) :
-        OpDef(resultType, FuncDef::noFlags, name, 1) {
+BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
+                         bool isMethod
+                         ) :
+    OpDef(resultType, isMethod ? FuncDef::method :FuncDef::noFlags, name, 
+          isMethod ? 0 : 1
+          ) {
+    if (!isMethod)
         args[0] = new ArgDef(resultType, "operand");
 }
             
@@ -275,7 +296,10 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
 
 // NegOpCall
 ResultExprPtr NegOpCall::emit(Context &context) {
-    args[0]->emit(context)->handleTransient(context);
+    if (receiver)
+        receiver->emit(context)->handleTransient(context);
+    else
+        args[0]->emit(context)->handleTransient(context);
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
@@ -292,9 +316,14 @@ ResultExprPtr NegOpCall::emit(Context &context) {
 }
 
 // NegOpDef
-NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name) :
-        OpDef(resultType, FuncDef::noFlags, name, 1) {
-    args[0] = new ArgDef(resultType, "operand");
+NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
+                   bool isMethod
+                   ) :
+        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name, 
+              isMethod ? 0 : 1
+              ) {
+    if (!isMethod)
+        args[0] = new ArgDef(resultType, "operand");
 }
 
 // FNegOpCall
