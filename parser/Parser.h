@@ -245,6 +245,11 @@ class Parser {
       model::ExprPtr parseConstSequence(model::TypeDef *containerType);
 
       /**
+       * Parse a "typeof" expression.
+       */
+      model::TypeDefPtr parseTypeof();
+
+      /**
        * If the expression is a VarRef referencing a TypeDef, return the 
        * TypeDef.  Otherwise returns null.
        */
@@ -390,6 +395,7 @@ class Parser {
       
       void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
+      void recordParenthesized(model::Generic *generic);
       
       model::TypeDefPtr parseClassDef();
       

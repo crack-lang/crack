@@ -2419,7 +2419,14 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     fixMeta(context, int64Type);
     fixMeta(context, uint32Type);
     fixMeta(context, uint64Type);
+    fixMeta(context, float32Type);
+    fixMeta(context, float64Type);
     fixMeta(context, arrayType.get());
+    fixMeta(context, intType);
+    fixMeta(context, uintType);
+    fixMeta(context, intzType);
+    fixMeta(context, uintzType);
+    fixMeta(context, floatType);
 
     // create OverloadDef's type
     metaType = createMetaClass(context, "Overload");

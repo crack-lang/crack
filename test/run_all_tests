@@ -874,6 +874,8 @@ test_output 'first class functions' \
 ok
 ok'
 
+test_output 'the typeof() operator' 'import test.test_typeof;' ok
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 

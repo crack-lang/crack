@@ -16,15 +16,15 @@ class Token {
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
                      catchKw, classKw, continueKw, dollar, forKw, elseKw, 
                      ifKw, importKw, inKw, isKw, nullKw, onKw, operKw, 
-                     returnKw, throwKw, tryKw, whileKw, assign, assignAnd, 
-                     assignAsterisk, assignLSh, assignOr, assignRSh, 
-                     assignXor, assignMinus, assignPercent, assignPlus, 
-                     assignSlash, asterisk, bang, colon, comma, decr, define, 
-                     dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
-                     lcurly, le, lparen, lt, minus, ne, percent, plus, quest, 
-                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
-                     istrBegin, istrEnd, logicAnd, logicOr, floatLit, 
-                     octalLit, hexLit, binLit,
+                     returnKw, throwKw, tryKw, typeofKw, whileKw, assign, 
+                     assignAnd, assignAsterisk, assignLSh, assignOr, 
+                     assignRSh, assignXor, assignMinus, assignPercent, 
+                     assignPlus, assignSlash, asterisk, bang, colon, comma, 
+                     decr, define, dot, end, eq, ge, gt, ident, incr, 
+                     integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
+                     percent, plus, quest, rbracket, rcurly, rparen, semi, 
+                     slash, string, tilde, istrBegin, istrEnd, logicAnd, 
+                     logicOr, floatLit, octalLit, hexLit, binLit,
                      
                      // these tokens are special - they are used to 
                      // communicate actions that need to be performed in the 
@@ -125,6 +125,7 @@ class Token {
       bool isEnd() const { return type == end; }
       bool isLogicAnd() const { return type == logicAnd; }
       bool isLogicOr() const { return type == logicOr; }
+      bool isTypeof() const { return type == typeofKw; }
       
       bool isBinOp() const {
          switch (type) {

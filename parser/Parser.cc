@@ -132,23 +132,66 @@ void Parser::parseClause(bool defsAllowed) {
    Token tok = getToken();
    state = st_notBase;
    ExprPtr expr;
-   if (tok.isIdent()) {
+   VarDefPtr def;
+   TypeDefPtr primaryType;
+
+   if (tok.isTypeof()) {
+      primaryType = parseTypeof();
+   } else if (tok.isIdent()) {
       
-      // if the identifier is a type, try to parse a definition
-      VarDefPtr def = context->ns->lookUp(tok.getData());
-      TypeDef *typeDef = TypeDefPtr::rcast(def);
-      if (typeDef && parseDef(typeDef)) {
+      // if the identifier is a type, deal with it later.  Otherwise deal with 
+      // it as a variable
+      def = context->ns->lookUp(tok.getData());
+      primaryType = TypeDefPtr::rcast(def);
+      if (!primaryType) {
+         if (!def) {
+            // XXX think I want to move this into expression, it's just as valid 
+            // for an existing identifier (in a parent context) as for a 
+            // non-existing one.
+            // unknown identifier. if the next token(s) is ':=' (the "define" 
+            // operator) then this is an assignment
+            Token tok2 = getToken();
+            if (tok2.isDefine()) {
+               if (!defsAllowed)
+                  error(tok, "definition is not allowed in this context.");
+               expr = parseExpression();
+               context->emitVarDef(expr->type.get(), tok, expr.get());
+               
+               // trick the expression processing into not happening
+               expr = 0;
+            } else {
+               error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
+            }
+         } else {
+            toker.putBack(tok);
+            runCallbacks(exprBegin);
+            expr = parseExpression();
+         }
+      }
+
+   // not an identifier
+   } else {
+      toker.putBack(tok);
+      runCallbacks(exprBegin);
+      expr = parseExpression();
+   }
+
+   // if we got a type, try to parse a definition.
+   if (primaryType) {
+      TypeDef *typeDef = primaryType.get();
+      if (parseDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
          // bypass expression emission and semicolon parsing (parseDef() 
          // consumes it's own semicolon)
          return;
-      } else if (typeDef) {
+      } else {
          // we didn't parse a definition
          
-         // see if this is a define
+         // see if this is a define of a variable that happens to bear the 
+         // same name as a class.
          Token tok2 = getToken();
-         if (tok2.isDefine()) {
+         if (def && tok2.isDefine()) {
             if (def->getOwner() == context->ns.get())
                redefineError(tok2, def.get());
             
@@ -166,34 +209,7 @@ void Parser::parseClause(bool defsAllowed) {
             expr = context->createVarRef(typeDef);
             expr = parseSecondary(expr.get());
          }
-      } else if (!def) {
-         // XXX think I want to move this into expression, it's just as valid 
-         // for an existing identifier (in a parent context) as for a 
-         // non-existing one.
-         // unknown identifier. if the next token(s) is ':=' (the "define" 
-         // operator) then this is an assignment
-         Token tok2 = getToken();
-         if (tok2.isDefine()) {
-            if (!defsAllowed)
-               error(tok, "definition is not allowed in this context.");
-            expr = parseExpression();
-            context->emitVarDef(expr->type.get(), tok, expr.get());
-            
-            // trick the expression processing into not happening
-            expr = 0;
-         } else {
-            error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
-         }
-      } else {
-         toker.putBack(tok);
-         runCallbacks(exprBegin);
-         expr = parseExpression();
       }
-
-   } else {
-      toker.putBack(tok);
-      runCallbacks(exprBegin);
-      expr = parseExpression();
    }
 
    // if we got an expression, emit it.
@@ -765,22 +781,41 @@ ExprPtr Parser::parseIString(Expr *expr) {
 //  ^                 ^
 ExprPtr Parser::parseConstSequence(TypeDef *containerType) {
    vector<ExprPtr> elems;
-   Token tok = toker.getToken();
+   Token tok = getToken();
    while (!tok.isRBracket()) {
       // parse the next element
       toker.putBack(tok);
       elems.push_back(parseExpression());
 
-      tok = toker.getToken();
+      tok = getToken();
       if (tok.isComma())
-         tok = toker.getToken();
+         tok = getToken();
       else if (!tok.isRBracket())
          unexpected(tok, "Expected comma or right bracket after element");
    }
    
    return context->emitConstSequence(containerType, elems);
 }
-   
+
+// typeof ( expr )
+//       ^        ^
+TypeDefPtr Parser::parseTypeof() {
+   Token tok = getToken();
+   if (!tok.isLParen())
+      unexpected(tok, 
+                 "Expected parenthesized expression after 'typeof' keyword."
+                 );
+
+   TypeDefPtr result = parseExpression()->type;
+
+   tok = getToken();
+   if (!tok.isRParen())
+      unexpected(tok,
+                 "Expected closing paren after 'typeof' expression."
+                 );
+
+   return result;
+}
 
 TypeDef *Parser::convertTypeRef(Expr *expr) {
    VarRef *ref = VarRefPtr::cast(expr);
@@ -1080,6 +1115,10 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
       if (!tok.isRParen())
          unexpected(tok, "expected a right paren");
 
+   // check for a "typeof"
+   } else if (tok.isTypeof()) {
+      expr = context->createVarRef(parseTypeof().get());
+
    // check for a method
    } else if (tok.isIdent()) {
       expr = parsePostIdent(0, tok);
@@ -1266,12 +1305,23 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
 
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    Token tok = getToken();
-   if (!tok.isIdent())
+   TypeDefPtr typeofType;
+   if (tok.isTypeof()) {
+      if (generic) {
+         // record the typeof expression, return a bogus type
+         generic->addToken(tok);
+         recordParenthesized(generic);
+         return context->construct->voidType;
+      } else {
+         typeofType = parseTypeof();
+      }
+   } else if (!tok.isIdent()) {
       unexpected(tok, "type identifier expected");
+   }
    if (generic) generic->addToken(tok);
    
-   TypeDef *typeDef = 0;
-   if (!generic || !generic->getParm(tok.getData())) {
+   TypeDef *typeDef = typeofType.get();
+   if (!typeDef && (!generic || !generic->getParm(tok.getData()))) {
       VarDefPtr def = context->ns->lookUp(tok.getData());
       typeDef = TypeDefPtr::rcast(def);
       if (!typeDef)
@@ -2538,6 +2588,24 @@ void Parser::recordBlock(Generic *generic) {
       else if (tok.isEnd())
          error(tok, "Premature end of file");
    }
+}
+
+void Parser::recordParenthesized(Generic *generic) {
+   Token tok = getToken();
+   if (!tok.isLParen())
+      unexpected(tok, "left parenthesis expected");
+   generic->addToken(tok);
+   int parenCount = 1;
+   
+   while (parenCount) {
+      tok = getToken();
+      if (tok.isLParen())
+         ++parenCount;
+      else if (tok.isRParen())
+         --parenCount;
+      
+      generic->addToken(tok);
+   }         
 }
 
 // class name : base, base { ... }

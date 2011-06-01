@@ -83,6 +83,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::operKw, data, loc);
     else if (data == "for")
         return Token(Token::forKw, data, loc);
+    else if (data == "typeof")
+        return Token(Token::typeofKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

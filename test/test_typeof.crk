@@ -1,0 +1,37 @@
+# Copyright 2011 Google Inc.
+
+int i = 100;
+if (!(typeof(i) is int))
+    puts('FAILED basic variable type checks');
+if (!(typeof(float32(1) + i) is float32))
+    puts('FAILED compound expression');
+
+# try declaring a variable
+typeof(i) x = 2;
+if (!(typeof(i) is typeof(x)))
+    puts('two ints have a different type');
+    
+if (typeof(i) is typeof(float(100)))
+    puts('int is the same as float!');
+
+int foo(typeof(i) val) {
+    if (!(typeof(val) is typeof(i)))
+        puts('FAILED typeof in an arg list.');
+    return val;
+}
+
+if (foo(100) != 100)
+    puts('FAILED funny return value failure');
+
+class A { int i; void f(int val) { i = val; } }
+A a;
+class Foo[T] : typeof(a) {
+    void g(int val) { typeof(a).f(val + 1); }
+}
+
+Foo[int] y = {};
+y.g(100);
+if (y.i != 101)
+    puts('FAILED typeof in generic base classes or in base class delegation');
+
+puts('ok');
