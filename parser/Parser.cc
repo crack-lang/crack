@@ -542,9 +542,12 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    FuncDefPtr func = context->lookUp(funcName, args, ns, 
                                      container && container->type->meta
                                      );
-   if (!func)
-      error(ident, SPUG_FSTR("No method exists matching " << funcName << 
-                              "(" << args << ")"));
+   if (!func) {
+      ostringstream msg;
+      msg << "No method exists matching " << funcName <<  "(" << args << ")";
+      context->maybeExplainOverload(msg, funcName, ns);
+      error(ident, msg.str());
+   }
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable

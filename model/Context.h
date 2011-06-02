@@ -386,6 +386,14 @@ class Context : public spug::RCBase {
          */
         void insureOverloadPath(Context *ancestor, OverloadDef *overload);
 
+        /**
+         * If an overload exists for varName,
+         * this will write overload possibilities to stream out
+         */
+        void maybeExplainOverload(std::ostream &out,
+                                  const std::string &varName,
+                                  Namespace *srcNs);
+
         // location management
 
         /**

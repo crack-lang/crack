@@ -678,6 +678,29 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
         return def;
 }
 
+void Context::maybeExplainOverload(std::ostream &out,
+                           const std::string &varName,
+                           Namespace *srcNs) {
+
+    if (!srcNs)
+        srcNs = ns.get();
+
+    // do a lookup, if nothing was found no further action is necessary.
+    VarDefPtr var = lookUp(varName, srcNs);
+    if (!var)
+        return;
+
+    // if it's an overload...
+    OverloadDefPtr overload = OverloadDefPtr::rcast(var);
+    if (!overload)
+        return;
+
+    // explain the overload
+    out << "\nPossible overloads for \"" << varName << "\":\n";
+    overload->dump(out);
+
+}
+
 FuncDefPtr Context::lookUp(const std::string &varName,
                            vector<ExprPtr> &args,
                            Namespace *srcNs,
