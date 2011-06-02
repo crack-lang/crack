@@ -46,6 +46,10 @@ int *copyArray(int count, int *array) {
     return (int *)memcpy(result, array, count * sizeof(int));
 }
 
+int callback(int (*cb)(int)) {
+    return cb(100);
+}
+
 extern "C" void testext_init(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
@@ -78,4 +82,13 @@ extern "C" void testext_init(Module *mod) {
     f = mod->addFunc(intArrayType, "copyArray", (void *)copyArray);
     f->addArg(mod->getIntType(), "count");
     f->addArg(intArrayType, "array");
+
+    Type *funcType = mod->getType("function");
+    vector<Type *> fparams(2);
+    fparams[0] = mod->getIntType(); // return type
+    fparams[1] = mod->getIntType(); // 1st param
+    Type *intFuncType = funcType->getSpecialization(fparams);
+    f = mod->addFunc(mod->getIntType(), "callback", (void *)callback);
+    f->addArg(intFuncType, "cb");
+
 }

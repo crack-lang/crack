@@ -1,7 +1,8 @@
 # Copyright 2010 Google Inc.
 # Extension tests.
 
-import testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST;
+import testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST,
+               callback;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
@@ -45,5 +46,16 @@ arr2 := copyArray(10, arr);
 for (int i = 0; i < 10; ++i)
     if (arr2[uint(i)] != i)
         cout `Type specialization failed: arr2[$i] != $i\n`;
+
+int myCallBack(int x) {
+    // value of 100 is specified in textext.cc
+    if (x != 100)
+        cout `callback param fail\n`;
+    return 50;
+}
+
+r := callback(myCallBack);
+if (r != 50)
+    cout `callback return fail\n`;
 
 cout `ok\n`;
