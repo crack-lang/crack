@@ -218,6 +218,14 @@ if (true) {
 
         map.checkConstraints();
         ++i;
+        
+        # iterate over the map
+        int countedElems;
+        for (x :in map)
+            ++countedElems;
+        if (countedElems != map.count())
+            cout `FAILED counted a different number of elements in a map than\
+expected\n`;
     }
 }
 

@@ -17,44 +17,47 @@ class HashMap[Key, Value] {
         }
     }
     
+    array[Item] _items;
+    uint _size, _cap;
+    
     class Iter {
-        array[Item] __items;
-        uint __size, __index;
+        HashMap __map;
+        int __index = -1;
+
+        @final void next();
         
-        oper init(array[Item] items, uint size) :
-            __items = items,
-            __size = size {
+        oper init(HashMap map) : __map = map { next(); }
+        
+        @final Item elem() { return __map._items[__index]; }
+        
+        @final void next() {
+            while ((++__index < __map._cap) && 
+                   (!__map._items[__index]))
+                ;
         }
         
-        Item elem() { return __items[__index]; }
-        
-        void next() { ++__index; }
-        
-        bool isValid() { return __index < __size; }
+        bool isTrue() { return __index < __map._cap; }
     }
     
-    array[Item] __items;
-    uint __size, __cap;
-    
-    oper init() : __items(16), __cap = 16 {}
+    oper init() : _items(16), _cap = 16 {}
     
     @final
     void _free(){
         # release all items
-        for (int i = 0; i < __cap; ++i)
-            if (__items[i])
-                __items[i].oper release();
+        for (int i = 0; i < _cap; ++i)
+            if (_items[i])
+                _items[i].oper release();
         
         # free the list
-        free(__items);
+        free(_items);
     }
     
     @final
     void clear(uint newcap) {
         _free();
-        __items = array[Item](newcap);
-        __cap = newcap;
-        __size = 0;
+        _items = array[Item](newcap);
+        _cap = newcap;
+        _size = 0;
     }
     
     @final
@@ -69,13 +72,13 @@ class HashMap[Key, Value] {
     @final int __findSlot(uint hash, Key key) {
         
         # find the ideal slot
-        i := hash % __cap;
+        i := hash % _cap;
         
         # if it's occupied by something with a different key, increment to 
         # the next slot.
-        while (__items[i] && __items[i].key != key) {
+        while (_items[i] && _items[i].key != key) {
 #            cout `desired slot $i for $key is occupied,`;
-            i = (i + 1) % __cap;
+            i = (i + 1) % _cap;
 #            cout `checking slot $i\n`;
         }
 #        cout `assigning $key to $i\n`;
@@ -86,16 +89,16 @@ class HashMap[Key, Value] {
     @final void __reallocate() {
         
         # stash the old array, create a new array with double the capacity.
-        oldCap := __cap;
-        __cap = oldCap * 2;
-        array[Item] oldItems = __items;
-        __items = array[Item](__cap);
+        oldCap := _cap;
+        _cap = oldCap * 2;
+        array[Item] oldItems = _items;
+        _items = array[Item](_cap);
         
         # move everything over to the new array.
         for (uint i = 0; i < oldCap; ++i) {
             item := oldItems[i];
             if (item)
-                __items[__findSlot(item._hash, item.key)] = item;
+                _items[__findSlot(item._hash, item.key)] = item;
         }
         
         # free the old list
@@ -106,13 +109,13 @@ class HashMap[Key, Value] {
 #        cout `*** map[$key] = $val\n`;
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        if (__items[i]) {
+        if (_items[i]) {
             # slot is occupied, simply replace the value
 #            cout `replacing $key at $i with $val\n`;
-            __items[i].val = val;
+            _items[i].val = val;
         } else {
             # see if we've exceeded capacity
-            if (__size > 3 * __cap / 4) {
+            if (_size > 3 * _cap / 4) {
 #                cout `reallocating\n`;
                 __reallocate();
                 i = __findSlot(hash, key);
@@ -120,9 +123,9 @@ class HashMap[Key, Value] {
             
             item := Item(hash, key, val);
 #            cout `storing key $key at $i with $val\n`;
-            __items[i] = item;
+            _items[i] = item;
             item.oper bind();
-            ++__size;
+            ++_size;
         }
         
         return val;
@@ -137,8 +140,8 @@ class HashMap[Key, Value] {
     Value oper [](Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        if (__items[i])
-            return __items[i].val;
+        if (_items[i])
+            return _items[i].val;
         else
             throw KeyError(FStr() `Invalid key: $key`);
     }
@@ -148,7 +151,7 @@ class HashMap[Key, Value] {
     Value get(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        return __items[i] ? __items[i].val : null;
+        return _items[i] ? _items[i].val : null;
     }
     
     # Check all subsequent slots up to the next empty slot to see if there are 
@@ -157,13 +160,13 @@ class HashMap[Key, Value] {
     bool __findNewOccupant2(int index) {
         bool foundReplacement;
         last := index;
-        i := int((index + 1) % __cap);
-        while (__items[i]) {
-            if (__items[i]._hash % __cap == index) {
-#                cout `moving $(__items[i].key) which wants to be in $index \
+        i := int((index + 1) % _cap);
+        while (_items[i]) {
+            if (_items[i]._hash % _cap == index) {
+#                cout `moving $(_items[i].key) which wants to be in $index \
 #to $last\n`;
-                __items[last] = __items[i];
-                __items[i] = null;
+                _items[last] = _items[i];
+                _items[i] = null;
                 foundReplacement = true;
                 
                 # first see if there's an item that wants to be in the newly
@@ -178,7 +181,7 @@ class HashMap[Key, Value] {
                     # slot.
                     last = i;
             }
-            i = int((i + 1) % __cap);
+            i = int((i + 1) % _cap);
         }
         
         return foundReplacement;
@@ -203,18 +206,18 @@ class HashMap[Key, Value] {
         # make this determination with a simple '<=' check)
         i := opening + 1;
         
-        while (__items[i]) {
-#            cout `does $(__items[i].key) at $i which wants to be at \
-# $(__items[i]._hash % __cap) belong at $opening?\n`;
-#            cout `  opening = $opening, $(__items[i]._hash % __cap <= 
+        while (_items[i]) {
+#            cout `does $(_items[i].key) at $i which wants to be at \
+# $(_items[i]._hash % _cap) belong at $opening?\n`;
+#            cout `  opening = $opening, $(_items[i]._hash % _cap <= 
 #                                          opening)\n`;
-            if (__items[i]._hash % __cap <= opening) {
+            if (_items[i]._hash % _cap <= opening) {
                 # found one!
-#                cout `moving $(__items[i].key) which wants to be in $opening \
+#                cout `moving $(_items[i].key) which wants to be in $opening \
 #to $opening\n`;
-                i = int(i % __cap);
-                __items[opening] = __items[i];
-                __items[i] = null;
+                i = int(i % _cap);
+                _items[opening] = _items[i];
+                _items[i] = null;
                 
                 # repeat with the newly vacated opening
                 opening = i;
@@ -240,45 +243,45 @@ class HashMap[Key, Value] {
         # that don't belong where they are and would be better served by the 
         # newly opened position.  
         # make this determination with a simple '<=' check)
-        i := int((opening + 1) % __cap);
+        i := int((opening + 1) % _cap);
         
         # find the last open slot
-        last := opening ? opening - 1 : int(__cap - 1);
-        while (__items[last])
-            if (--last < 0) last = int(__cap + last);
+        last := opening ? opening - 1 : int(_cap - 1);
+        while (_items[last])
+            if (--last < 0) last = int(_cap + last);
         
-        while (__items[i]) {
-            desired := int(__items[i]._hash % __cap);
-#            cout `does $(__items[i].key) at $i which wants to be at \
+        while (_items[i]) {
+            desired := int(_items[i]._hash % _cap);
+#            cout `does $(_items[i].key) at $i which wants to be at \
 # $desired belong at $opening (last = $last)?\n`;
             if (inOrder(last, desired, opening)) {
                 # found one!
-#                cout `moving $(__items[i].key) to $opening\n`;
-                __items[opening] = __items[i];
-                __items[i] = null;
+#                cout `moving $(_items[i].key) to $opening\n`;
+                _items[opening] = _items[i];
+                _items[i] = null;
                 
                 # repeat with the newly vacated opening
                 opening = i;
             }
-            i = int((i + 1) % __cap);
+            i = int((i + 1) % _cap);
         }
     }
     
     void delete(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        if (__items[i]) {
+        if (_items[i]) {
 #            cout `deleting item $key at $i\n`;
-            __items[i].oper release();
-            __items[i] = null;
-            --__size;
+            _items[i].oper release();
+            _items[i] = null;
+            --_size;
             __findNewOccupant(i);
         } else {
             throw KeyError(FStr() `Invalid key: $key`);
         }
     }
 
-    Iter iter() { return Iter(__items, __size); }
+    Iter iter() { return Iter(this); }
     
     void writeTo(Writer out) {
         Formatter f = {out};
@@ -289,28 +292,28 @@ class HashMap[Key, Value] {
     }
     
     uint count() {
-        return __size;
+        return _size;
     }
     
     ## Method for testing - verify that all constraints are satisfied.
     void checkConstraints() {
-        for (int i = 0; i < __cap; ++i) {
-            if (__items[i]) {
-                expected := __items[i]._hash % __cap;
+        for (int i = 0; i < _cap; ++i) {
+            if (_items[i]) {
+                expected := _items[i]._hash % _cap;
                 if (expected != i) {
                     # make sure there are no empty slots between here and the
                     # expected index
                     int j = i;
                     while (true) {
-                        if (!__items[j])
+                        if (!_items[j])
                             throw AssertionError(FStr() `Empty slot at $j \
-between actual position of $(__items[i].key) at $i and expected position at \
+between actual position of $(_items[i].key) at $i and expected position at \
 $expected`);
                         if (j == expected)
                             break;
                         --j;
                         if (j < 0)
-                            j = int(__cap + j);
+                            j = int(_cap + j);
                     }
                 }
             }
