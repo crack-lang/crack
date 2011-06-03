@@ -2183,6 +2183,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.addDef(new NoOpDef(uintzType, "oper to uintz"), uint32Type);
         context.addDef(new TruncOpDef(intzType, "oper to intz"), int64Type);
         context.addDef(new TruncOpDef(uintzType, "oper to uintz"), int64Type);
+        context.addDef(new TruncOpDef(intzType, "oper to intz"), uint64Type);
+        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), uint64Type);
     } else {
         context.addDef(new SExtOpDef(intzType, "oper to intz"), int32Type);
         context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), int32Type);
@@ -2190,6 +2192,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint32Type);
         context.addDef(new NoOpDef(intzType, "oper to intz"), int64Type);
         context.addDef(new NoOpDef(uintzType, "oper to uintz"), int64Type);
+        context.addDef(new NoOpDef(intzType, "oper to intz"), uint64Type);
+        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uint64Type);
     }
     if (floatIs32Bit) {
         context.addDef(new NoOpDef(floatType, "oper to float"), float32Type);
