@@ -876,6 +876,18 @@ ok'
 
 test_output 'the typeof() operator' 'import test.test_typeof;' ok
 
+test_output 'context error messages for generics' \
+    'class A[T] { T f() { return "foo"; } }
+     A[int] i;' \
+"ParseError: $source:1: Invalid return type byteptr for function returning int
+  in generic instantiation at $source:2"
+
+test_output 'context error messages removed after generics' \
+    'class A[T] { T f() { return 0; } }
+     A[int] i;
+     bogus value' \
+"ParseError: $source:3: Unknown identifier bogus"
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 

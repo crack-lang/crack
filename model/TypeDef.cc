@@ -672,9 +672,14 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     toker.putBack(Token(Token::ident, name, Location()));
     toker.putBack(Token(Token::classKw, "class", Location()));
 
+    modContext->pushErrorContext(SPUG_FSTR("in generic instantiation at " <<
+                                           context.getLocation()
+                                           )
+                                 );
     Parser parser(toker, modContext.get());
     parser.parse();
     module->close(*modContext);
+    modContext->popErrorContext();
 
     // cache the module    
     context.construct->registerModule(module.get());
