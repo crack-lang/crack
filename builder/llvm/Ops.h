@@ -45,7 +45,8 @@ class BinOpDef : public OpDef {
         BinOpDef(model::TypeDef *argType,
                  model::TypeDef *resultType,
                  const std::string &name,
-                 bool isMethod = false
+                 bool isMethod = false,
+                 bool reversed = false
                  );
 
         virtual model::FuncCallPtr createFuncCall() = 0;
@@ -354,7 +355,7 @@ public:
             }                                                               \
     };
 
-#define QUAL_BINOP_DEF(prefix, opCode, op)                                  \
+#define BINOP_DEF(prefix, op) \
     class prefix##OpCall : public model::FuncCall {                         \
         public:                                                             \
             prefix##OpCall(model::FuncDef *def) :                           \
@@ -368,11 +369,13 @@ public:
         public:                                                             \
             prefix##OpDef(model::TypeDef *argType,                          \
                           model::TypeDef *resultType = 0,                   \
-                          bool isMethod = false                             \
+                          bool isMethod = false,                            \
+                          bool reversed = false                             \
                           ) :                                               \
                 BinOpDef(argType, resultType ? resultType : argType,        \
                          "oper " op,                                        \
-                         isMethod                                           \
+                         isMethod,                                          \
+                         reversed                                           \
                          ) {                                                \
             }                                                               \
                                                                             \
@@ -380,8 +383,6 @@ public:
                 return new prefix##OpCall(this);                            \
             }                                                               \
     };
-
-#define BINOP_DEF(opCode, op) QUAL_BINOP_DEF(opCode, opCode, op)
 
 // Binary Ops
 BINOP_DEF(Add, "+");
@@ -397,6 +398,19 @@ BINOP_DEF(Xor, "^");
 BINOP_DEF(Shl, "<<");
 BINOP_DEF(LShr, ">>");
 BINOP_DEF(AShr, ">>");
+BINOP_DEF(AddR, "r+");
+BINOP_DEF(SubR, "r-");
+BINOP_DEF(MulR, "r*");
+BINOP_DEF(SDivR, "r/");
+BINOP_DEF(UDivR, "r/");
+BINOP_DEF(SRemR, "r%");
+BINOP_DEF(URemR, "r%");
+BINOP_DEF(OrR, "r|");
+BINOP_DEF(AndR, "r&");
+BINOP_DEF(XorR, "r^");
+BINOP_DEF(ShlR, "r<<");
+BINOP_DEF(LShrR, "r>>");
+BINOP_DEF(AShrR, "r>>");
 
 BINOP_DEF(ICmpEQ, "==");
 BINOP_DEF(ICmpNE, "!=");
@@ -408,21 +422,41 @@ BINOP_DEF(ICmpUGT, ">");
 BINOP_DEF(ICmpULT, "<");
 BINOP_DEF(ICmpUGE, ">=");
 BINOP_DEF(ICmpULE, "<=");
+BINOP_DEF(ICmpEQR, "==");
+BINOP_DEF(ICmpNER, "!=");
+BINOP_DEF(ICmpSGTR, "r>");
+BINOP_DEF(ICmpSLTR, "r<");
+BINOP_DEF(ICmpSGER, "r>=");
+BINOP_DEF(ICmpSLER, "r<=");
+BINOP_DEF(ICmpUGTR, "r>");
+BINOP_DEF(ICmpULTR, "r<");
+BINOP_DEF(ICmpUGER, "r>=");
+BINOP_DEF(ICmpULER, "r<=");
 
 BINOP_DEF(FAdd, "+");
 BINOP_DEF(FSub, "-");
 BINOP_DEF(FMul, "*");
 BINOP_DEF(FDiv, "/");
 BINOP_DEF(FRem, "%");
+BINOP_DEF(FAddR, "r+");
+BINOP_DEF(FSubR, "r-");
+BINOP_DEF(FMulR, "r*");
+BINOP_DEF(FDivR, "r/");
+BINOP_DEF(FRemR, "r%");
 
+BINOP_DEF(Is, "is");
 BINOP_DEF(FCmpOEQ, "==");
 BINOP_DEF(FCmpONE, "!=");
 BINOP_DEF(FCmpOGT, ">");
 BINOP_DEF(FCmpOLT, "<");
 BINOP_DEF(FCmpOGE, ">=");
 BINOP_DEF(FCmpOLE, "<=");
-
-QUAL_BINOP_DEF(Is, ICmpEQ, "is");
+BINOP_DEF(FCmpOEQR, "==");
+BINOP_DEF(FCmpONER, "!=");
+BINOP_DEF(FCmpOGTR, ">");
+BINOP_DEF(FCmpOLTR, "<");
+BINOP_DEF(FCmpOGER, ">=");
+BINOP_DEF(FCmpOLER, "<=");
 
 // Type Conversion Ops
 UNOP_DEF(SExt);

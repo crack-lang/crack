@@ -82,7 +82,7 @@ bool IntConst::isAdaptive() const {
     return true;
 }
 
-// for selecting between int32 and int64
+// for selecting the default type of a constant
 TypeDef *IntConst::selectType(Context &context, int64_t val) {
     // note, due to the way the parser processes large unsigned ints,
     // this shouldn't be called if val > INT64_MAX, i.e. when it requires

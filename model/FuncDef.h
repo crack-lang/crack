@@ -28,6 +28,7 @@ class FuncDef : public VarDef {
             virtualized = 2, // function is virtual
             forward = 4,  // this is a forward declaration
             variadic = 8,  // this is a variadic function
+            reverse = 16,  // for a binary op, reverse receiver and first arg
             explicitFlags = 256  // these flags were set by an annotation
         } flags;
         

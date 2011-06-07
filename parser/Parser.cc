@@ -111,17 +111,54 @@ void Parser::expectToken(Token::Type type, const char *error) {
       unexpected(tok, error);
 }
 
-FuncDefPtr Parser::lookUpBinOp(const string &name, FuncCall::ExprVec &args) {
+FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
    FuncCall::ExprVec exprs(1);
    exprs[0] = args[1];
+   string fullName = "oper " + op;
+
+   // The default types of constants are PDNTs - integer constants default to 
+   // the int type, float constants default to float type (as long as the 
+   // constants fit into the minimum sizes of these types).   We usually don't 
+   // want to check for methods on constants because if we did, the constant's 
+   // method would match a non-const UNT, so something like "int64 + 1" would 
+   // match "int + int".
+   // The one exception to this rule is when we are performing a binary 
+   // operation on two constants - if the compiler were smarter, it would fold 
+   // these into a single constant.  But for now, we basically want to do a 
+   // method check if both values are equivalent constant types (both float or 
+   // both int) or only on the float if one is a float and the other is an 
+   // int, float being a more inclusive type for constants.
+   // We can simplify the logic on this by introducing the concept of 
+   // "weights".  A non-const value is "heavier" than a const value, a float 
+   // const is heavier than an integer constsnt.  We do a method check (or a 
+   // reverse method check) on a value if it is of the same weight or heavier 
+   // than tha other type.
+   // The weight calculation amounts to: int const has a weight of 1, float 
+   // const has a weight of 2, non-const has a weight of 3.
    
-   // first try to find it in the type's context, then try to find it in 
-   // the current context.
-   FuncDefPtr func = context->lookUp(name, exprs, args[0]->type.get());
+   int leftWeight = (IntConstPtr::rcast(args[0]) ? 0 : 2) +
+                    (FloatConstPtr::rcast(args[0]) ? 0 : 1);
+   int rightWeight = (IntConstPtr::rcast(args[1]) ? 0 : 2) +
+                     (FloatConstPtr::rcast(args[1]) ? 0 : 1);
+   bool checkLeftMethods = leftWeight >= rightWeight;
+   bool checkRightMethods = rightWeight >= leftWeight;
+   
+   // see if it is a method of the left-hand type
+   FuncDefPtr func;
+   if (checkLeftMethods)
+      func = context->lookUp(fullName, exprs, args[0]->type.get());
+   
+   // not there, try the right-hand type
+   if (!func && checkRightMethods) {
+      exprs[0] = args[0];
+      func = context->lookUp("oper r" + op, exprs, args[1]->type.get());
+   }
+   
+   // not there either, check for a non-method operator.
    if (!func) {
       exprs[0] = args[0];
       exprs.push_back(args[1]);
-      func = context->lookUp(name, exprs);
+      func = context->lookUp(fullName, exprs);
    }
 
    args = exprs;
@@ -632,12 +669,13 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          args[0] = varRef;
          args[1] = val;
          FuncDefPtr funcDef;
-         if (funcDef = lookUpBinOp("oper " + tok1.getData(), args)) {
+         if (funcDef = lookUpBinOp(tok1.getData(), args)) {
             FuncCallPtr funcCall =
                context->builder.createFuncCall(funcDef.get());
             funcCall->args = args;
             if (funcDef->flags & FuncDef::method)
-               funcCall->receiver = varRef;
+               funcCall->receiver = 
+                  (funcDef->flags & FuncDef::reverse) ? val : varRef;
             return funcCall;
          }
          
@@ -647,12 +685,13 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          args[1] = val;
          const string &tok1Data = tok1.getData();
          const string &oper = tok1Data.substr(0, tok1Data.size() - 1);
-         if (funcDef = lookUpBinOp("oper " + oper, args)) {
+         if (funcDef = lookUpBinOp(oper, args)) {
             FuncCallPtr funcCall = 
                context->builder.createFuncCall(funcDef.get());
             funcCall->args = args;
             if (funcDef->flags & FuncDef::method)
-               funcCall->receiver = varRef;
+               funcCall->receiver = 
+                  (funcDef->flags & FuncDef::reverse) ? val : varRef;
             return createAssign(container, ident, var.get(), funcCall.get());
          } else {
             error(tok1, SPUG_FSTR("Neither " << oper << "=  nor " << oper << 
@@ -992,9 +1031,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          FuncCall::ExprVec exprs(2);
          exprs[0] = expr;
          exprs[1] = rhs;
-         std::string name = "oper " + tok.getData();
 
-         FuncDefPtr func = lookUpBinOp(name, exprs);
+         FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
          if (!func)
             error(tok,
                   SPUG_FSTR("Operator " << expr->type->name << " " <<
@@ -1005,7 +1043,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
          funcCall->args = exprs;
          if (func->flags & FuncDef::method)
-            funcCall->receiver = expr;
+            funcCall->receiver =
+               (func->flags & FuncDef::reverse) ? rhs : expr;
          expr = funcCall;
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());

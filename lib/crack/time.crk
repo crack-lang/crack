@@ -1,6 +1,8 @@
 # Copyright 2010 Google Inc.
 # Code for dealing with time.
 
+import crack.lang AssertionError;
+import crack.io FStr;
 import crack.runtime TimeVal;
 
 ## A difference in time.
@@ -11,5 +13,7 @@ class TimeDelta : Object, TimeVal {
 }
 
 TimeDelta seconds(int secs) {
+    if (secs > 0xFFFFFFFF || secs < -0xFFFFFFFF)
+        throw AssertionError(FStr() `Integer value $secs out of range`);
     return TimeDelta(int32(secs), 0);
 }

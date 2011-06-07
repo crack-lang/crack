@@ -1813,9 +1813,9 @@ FloatConstPtr LLVMBuilder::createFloatConst(model::Context &context, double val,
     // fit into (compatibility rules will allow us to coerce it into another
     // type)
     return new BFloatConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                          BTypeDefPtr::arcast(context.construct->float32Type),
-                         val
-                         );
+                           BTypeDefPtr::arcast(context.construct->floatType),
+                           val
+                           );
 }
                        
 model::FuncCallPtr LLVMBuilder::createFuncCall(FuncDef *func, 
@@ -2084,14 +2084,14 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new MulOpDef(type, 0, ns), ns);                                \
     context.addDef(new signed##DivOpDef(type, 0, ns), ns);                        \
     context.addDef(new signed##RemOpDef(type, 0, ns), ns);                        \
-    context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                   \
-    context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                   \
-    context.addDef(new ICmpSGTOpDef(type, boolType, ns), ns);                  \
-    context.addDef(new ICmpSLTOpDef(type, boolType, ns), ns);                  \
-    context.addDef(new ICmpSGEOpDef(type, boolType, ns), ns);                  \
-    context.addDef(new ICmpSLEOpDef(type, boolType, ns), ns);                  \
-    context.addDef(new NegOpDef(type, "oper -", ns), ns);                      \
-    context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                   \
+    context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                      \
+    context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                      \
+    context.addDef(new ICmpSGTOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmpSLTOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmpSGEOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmpSLEOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new NegOpDef(type, "oper -", ns), ns);                         \
+    context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                      \
     context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
     context.addDef(new AndOpDef(type, 0, ns), ns);                                \
     context.addDef(new XorOpDef(type, 0, ns), ns);                                \
@@ -2122,14 +2122,53 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     FLOPS(float32Type, 0)
     FLOPS(float64Type, 0)
 
+// Reverse integer operations
+#define REVINTOPS(type, signed, shift) \
+    context.addDef(new AddROpDef(type, 0, true, true), type);               \
+    context.addDef(new SubROpDef(type, 0, true, true), type);               \
+    context.addDef(new MulROpDef(type, 0, true, true), type);               \
+    context.addDef(new signed##DivROpDef(type, 0, true, true), type);       \
+    context.addDef(new signed##RemROpDef(type, 0, true, true), type);       \
+    context.addDef(new ICmpEQROpDef(type, boolType, true, true), type);     \
+    context.addDef(new ICmpNEROpDef(type, boolType, true, true), type);     \
+    context.addDef(new ICmpSGTROpDef(type, boolType, true, true), type);    \
+    context.addDef(new ICmpSLTROpDef(type, boolType, true, true), type);    \
+    context.addDef(new ICmpSGEROpDef(type, boolType, true, true), type);    \
+    context.addDef(new ICmpSLEROpDef(type, boolType, true, true), type);    \
+    context.addDef(new OrROpDef(type, 0, true, true), type);                \
+    context.addDef(new AndROpDef(type, 0, true, true), type);               \
+    context.addDef(new XorROpDef(type, 0, true, true), type);               \
+    context.addDef(new ShlROpDef(type, 0, true, true), type);               \
+    context.addDef(new shift##ShrROpDef(type, 0, true, true), type);
+
+// reverse floating point operations
+#define REVFLOPS(type) \
+    context.addDef(new FAddROpDef(type, 0, true, true), type);               \
+    context.addDef(new FSubROpDef(type, 0, true, true), type);               \
+    context.addDef(new FMulROpDef(type, 0, true, true), type);               \
+    context.addDef(new FDivROpDef(type, 0, true, true), type);               \
+    context.addDef(new FRemROpDef(type, 0, true, true), type);               \
+    context.addDef(new FCmpOEQROpDef(type, boolType, true, true), type);     \
+    context.addDef(new FCmpONEROpDef(type, boolType, true, true), type);     \
+    context.addDef(new FCmpOGTROpDef(type, boolType, true, true), type);     \
+    context.addDef(new FCmpOLTROpDef(type, boolType, true, true), type);     \
+    context.addDef(new FCmpOGEROpDef(type, boolType, true, true), type);     \
+    context.addDef(new FCmpOLEROpDef(type, boolType, true, true), type);
+
     // PDNT operations need to be methods so that we try to resolve them with 
     // type conversions prior to attempting the general methods and _only if_
-    // one of the arguments is a PDNT.
+    // one of the arguments is a PDNT.  We also define reverse operations for 
+    // them for the same reason.
     INTOPS(intType, S, A, intType)
+    REVINTOPS(intType, S, A)
     INTOPS(uintType, U, L, uintType)
+    REVINTOPS(uintType, U, L)
     INTOPS(intzType, S, A, intzType)
+    REVINTOPS(intzType, S, A)
     INTOPS(uintzType, U, L, uintzType)
+    REVINTOPS(intType, U, L)
     FLOPS(floatType, floatType)
+    REVFLOPS(floatType)
     
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));
@@ -2143,7 +2182,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), byteType);
     context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), byteType);
     context.addDef(new SExtOpDef(int64Type, "oper to int64"), int32Type);
-    context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), int32Type);
     context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), int32Type);
     context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uint32Type);
     context.addDef(new ZExtOpDef(int64Type, "oper to int64"), uint32Type);

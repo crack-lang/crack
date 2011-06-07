@@ -57,6 +57,22 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         return new BResultExpr(this, builder.lastValue);                    \
     }                                                                       \
 
+// reverse binary operators, must be run as methods.
+#define REV_BINOP(opCode) \
+    ResultExprPtr opCode##ROpCall::emit(Context &context) {                 \
+        LLVMBuilder &builder =                                              \
+            dynamic_cast<LLVMBuilder &>(context.builder);                   \
+        receiver->emit(context)->handleTransient(context);                  \
+        Value *rhs = builder.lastValue;                                     \
+        args[0]->emit(context)->handleTransient(context);                   \
+        builder.lastValue =                                                 \
+            builder.builder.Create##opCode(builder.lastValue,               \
+                                           rhs                              \
+                                           );                               \
+                                                                            \
+        return new BResultExpr(this, builder.lastValue);                    \
+    }                                                                       \
+
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
 // Binary Ops
@@ -73,6 +89,19 @@ BINOP(Xor, "^");
 BINOP(Shl, "<<");
 BINOP(LShr, ">>");
 BINOP(AShr, ">>");
+REV_BINOP(Add)
+REV_BINOP(Sub)
+REV_BINOP(Mul)
+REV_BINOP(SDiv)
+REV_BINOP(UDiv)
+REV_BINOP(SRem)
+REV_BINOP(URem)
+REV_BINOP(Or)
+REV_BINOP(And)
+REV_BINOP(Xor)
+REV_BINOP(Shl)
+REV_BINOP(LShr)
+REV_BINOP(AShr)
 
 BINOP(ICmpEQ, "==");
 BINOP(ICmpNE, "!=");
@@ -84,12 +113,27 @@ BINOP(ICmpUGT, ">");
 BINOP(ICmpULT, "<");
 BINOP(ICmpUGE, ">=");
 BINOP(ICmpULE, "<=");
+REV_BINOP(ICmpEQ)
+REV_BINOP(ICmpNE)
+REV_BINOP(ICmpSGT)
+REV_BINOP(ICmpSLT)
+REV_BINOP(ICmpSGE)
+REV_BINOP(ICmpSLE)
+REV_BINOP(ICmpUGT)
+REV_BINOP(ICmpULT)
+REV_BINOP(ICmpUGE)
+REV_BINOP(ICmpULE)
 
 BINOP(FAdd, "+");
 BINOP(FSub, "-");
 BINOP(FMul, "*");
 BINOP(FDiv, "/");
 BINOP(FRem, "%");
+REV_BINOP(FAdd)
+REV_BINOP(FSub)
+REV_BINOP(FMul)
+REV_BINOP(FDiv)
+REV_BINOP(FRem)
 
 BINOP(FCmpOEQ, "==");
 BINOP(FCmpONE, "!=");
@@ -97,6 +141,12 @@ BINOP(FCmpOGT, ">");
 BINOP(FCmpOLT, "<");
 BINOP(FCmpOGE, ">=");
 BINOP(FCmpOLE, "<=");
+REV_BINOP(FCmpOEQ)
+REV_BINOP(FCmpONE)
+REV_BINOP(FCmpOGT)
+REV_BINOP(FCmpOLT)
+REV_BINOP(FCmpOGE)
+REV_BINOP(FCmpOLE)
 
 QUAL_BINOP(Is, ICmpEQ, "is");
 
@@ -134,10 +184,12 @@ FPTRUNCOP(FPToUI);
 BinOpDef::BinOpDef(TypeDef *argType,
                    TypeDef *resultType,
                    const string &name,
-                   bool isMethod
+                   bool isMethod,
+                   bool reversed
                    ) :
     OpDef(resultType, 
-          isMethod ? FuncDef::method : FuncDef::noFlags, 
+          (isMethod ? FuncDef::method : FuncDef::noFlags) |
+           (reversed ? FuncDef::reverse : FuncDef::noFlags), 
           name, 
           isMethod ? 1 : 2
           ) {

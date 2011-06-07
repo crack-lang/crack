@@ -3,7 +3,7 @@
 int i = 100;
 if (!(typeof(i) is int))
     puts('FAILED basic variable type checks');
-if (!(typeof(float32(1) + i) is float32))
+if (!(typeof(float32(1) + i) is int))
     puts('FAILED compound expression');
 
 # try declaring a variable
