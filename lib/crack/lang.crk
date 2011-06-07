@@ -62,7 +62,7 @@ class Object : VTableBase {
     ## equal to other, > 0 if this > other.
     int cmp(Object other) {
         if (this is other) return 0;
-        else return uint64(this) > uint64(other) ? 1 : -1;
+        else return uintz(this) > uintz(other) ? 1 : -1;
     }
 
     @final bool oper <(Object other) {
@@ -94,7 +94,7 @@ class Object : VTableBase {
     ## b.makeHashVal().  If you override this, you must also override cmp() 
     ## and vice-versa in order to preserve this relationship.
     uint makeHashVal() {
-        v := uint(uint64(this));
+        v := uintz(this);
         return v ^ (v >> 9) ^ (v << 7);
     }
 
@@ -862,7 +862,7 @@ void exceptionFrameFunc(Object ex, voidptr last_ip) {
         getLocation(last_ip, info);
         
         e.append(StackFrame(StaticString(info[0]), StaticString(info[1]), 
-                            uint(uint64(info[2]))
+                            uintz(info[2])
                             )
                  );
     }

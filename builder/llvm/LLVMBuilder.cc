@@ -2066,12 +2066,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // conversion from voidptr to integer
     funcDef =
-        new GeneralOpDef<PtrToIntOpCall>(uint64Type, FuncDef::noFlags,
+        new GeneralOpDef<PtrToIntOpCall>(uintzType, FuncDef::noFlags,
                                          "oper new",
                                          1
                                          );
     funcDef->args[0] = new ArgDef(voidptrType, "val");
-    context.addDef(funcDef.get(), uint64Type);
+    context.addDef(funcDef.get(), uintzType);
     
     // the definition order of global binary operations is significant, when 
     // there is no exact match and we need to attempt conversions, we want to 
