@@ -1,6 +1,6 @@
 ## Regular expressions (based on PCRE)
 
-import crack.lang Buffer, die, free, SubString;
+import crack.lang die, free, AppendBuffer, Buffer, SubString;
 import crack.io cerr, StringFormatter;
 import crack.exp.bindings ByteptrWrapper, Opaque;
 
@@ -154,4 +154,17 @@ class Regex : _RegexBase {
     oper del() { free(_rx); }
 };
 
-
+## Escape all special characters in the pattern.
+String escape(String pattern) {
+    # since the pcre api doesn't seem to define a function to do this, we'll 
+    # have to do it ourselves.
+    AppendBuffer result = {pattern.size};
+    for (int i = 0; i < pattern.size; ++i) {
+        ch := pattern[i];
+        if ('.?+*[\\{^$('.lfind(ch) != -1)
+            result.append(b'\\');
+        result.append(ch);
+    }
+    
+    return String(result, true);
+}

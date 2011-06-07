@@ -1,7 +1,7 @@
 
 import crack.lang die;
 import crack.io cout;
-import crack.exp.regex Regex;
+import crack.exp.regex escape, Regex;
 
 rx := Regex('simple');
 m := rx.search('not simple');
@@ -21,5 +21,12 @@ if (!m || m.group('stuff') != 'foo')
     die('named groups failed');
 if (m.begin('stuff') != 5) die('begin(stuff) failed');
 if (m.end('stuff') != 8) die('end(stuff) failed');
+
+if (1) {
+    expected := '\\.\\?\\+\\*\\[\\\\\\{\\^\\$\\(';
+    actual := escape('.?+*[\\{^$(');
+    if (actual != expected)
+        cout `FAILED regex escaping: got $actual, expected $expected\n`;
+} 
 
 cout `ok\n`;
