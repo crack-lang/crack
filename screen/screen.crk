@@ -1,13 +1,15 @@
 // A test suite for crack
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter;
+import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter, FStr;
 import crack.sys argv, exit;
 import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
 import crack.exp.process Process;
+import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_FLOAT,
+   CMD_BOOL;
 
 SCREEN_VERSION := ".4";
 
@@ -236,9 +238,10 @@ class Test {
 class TestSuite {
 
     List _testList = {};
+    CmdOptions _options = {};
     
     void usage() {
-        cout `screen <crack binary> <test dir> <output dir>\n`;
+        _options.printUsage(FStr() `Usage: $(argv[0]) <crack binary> <test dir> <output dir>\n`);
         exit(1);
     }
     
@@ -298,15 +301,23 @@ class TestSuite {
 
     oper init() {
         
-        if (argv.count() <= 3) {
-            usage();            
-        }
 
+        _options.add("help", "h", "Show usage", "f", CMD_BOOL);
+        _options.add("crackbin", "c", "Crack binary", "", CMD_STR);
+        _options.add("testdir", "t", "Directory to search recursively for tests", "./tests", CMD_STR);
+        _options.add("outdir", "o", "Directory to create output files", "./output", CMD_STR);
+        _options.parse(argv);
+        
         cout `screen v$(SCREEN_VERSION)\n`;
-
-        config.crackBin = argv[1];
-        config.rootDir = argv[2];
-        config.outDir = argv[3];
+        
+        if (_options.getBool("help"))
+            usage();
+        
+        config.crackBin = _options.getString("crackbin");
+        if (config.crackBin == "")
+            usage();
+        config.rootDir = _options.getString("testdir");
+        config.outDir = _options.getString("outdir");
  
         // XXX
         //config.verbose = 1;
