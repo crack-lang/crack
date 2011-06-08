@@ -214,6 +214,7 @@ int main(int argc, char **argv) {
     if (optind == argc) {
         cerr << "You need to define a script or the '-' option to read "
                 "from standard input." << endl;
+        rc = -1;
     } else if (!strcmp(argv[optind], "-")) {
         crack.setArgv(argc - optind, &argv[optind]);
         // ensure a reasonable output file name in native mode
@@ -226,8 +227,14 @@ int main(int argc, char **argv) {
     } else {
         // it's the script name - run it.
         ifstream src(argv[optind]);
-        crack.setArgv(argc - optind, &argv[optind]);
-        rc = crack.runScript(src, argv[optind]);
+        if (!src.good()) {
+            cerr << "Unable to open: " << argv[optind] << endl;
+            rc = -1;
+        }
+        else {
+            crack.setArgv(argc - optind, &argv[optind]);
+            rc = crack.runScript(src, argv[optind]);
+        }
     }
     
     if (bType == jitBuilder && !crack.options->dumpMode)
