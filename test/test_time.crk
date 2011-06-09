@@ -38,9 +38,10 @@ if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
 mytime = _date(); // Reset
+mytime.mktime();
 
 len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
 if (dateString2.substr(0,len)!='Thursday January 01 1970')
-   cout `strftime format mismatch\n`;
+   cout `strftime format mismatch, got $dateString2\n`;
 
 cout `ok\n`;

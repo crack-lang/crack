@@ -24,10 +24,10 @@ struct tm *crk_gmtime_now(struct tm *now){
 }
 
 struct tm *crk_epoch(struct tm *epoch){
-   struct timeval tv;
-   tv.tv_sec = 0;
-   tv.tv_usec = 0;
-   return gmtime_r(&(tv.tv_sec), epoch);
+   epoch->tm_year = 70;
+   epoch->tm_mon = 0;
+   epoch->tm_mday = 1;
+   return epoch;
 }
 
 char *crk_ctime_r(int64_t t, char * buf){

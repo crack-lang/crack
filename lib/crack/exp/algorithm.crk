@@ -46,7 +46,7 @@ class QuickSort[Elem] {
             i++;
         }
         _quickSort3(A, l, j);
-        _quickSort3(A, i, r);    
+        _quickSort3(A, i, r);
     }
 
     // XXX move out of constructor
