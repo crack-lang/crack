@@ -216,14 +216,23 @@ float32::
 float64::
     A 64-bit floating point.
 int::
-    An integer of the C compiler's default int-size for the platform (this is 
-    an alias to either int32 or int64).
+    An integer of the C compiler's default int-size for the platform.  This 
+    must be at least 32 bits and no more than 64 bits in size.
 uint::
     An unsigned integer of the C compiler's default unsigned int-size for the 
-    platform (this is an alias to either uint32 or uint64).
+    platform.  Like int, this must be at least 32 bits and no more than 64 
+    bits in size.
+intz::
+    An integer the size of the C compiler's pointer.  #intz# and #uintz# are 
+    used for memory sizes, pointer offsets, array indeces and cases where we 
+    want to represent pointers as integers.  #intz# is equivalent to #ssize\_t#
+    in C++.
+uintz::
+    An unsigned integer the size of the C compiler's pointer.  #uintz# is 
+    equivalent to #size\_t# in C and C++.
 float::
-    A floating point of the C compiler's float size for the platform (this is
-    an alias to either float32 or float64).
+    A floating point of the C compiler's float size for the platform.  This 
+    must be at least 32 bits and no more than 64 bits in size.
 byteptr::
     A pointer to an array of bytes (roughly like C's #char\*#)
 voidptr::
@@ -318,6 +327,27 @@ general integer form is useful for specifying magic numbers.  The bytes in a
 string integer constant are ordered from high-byte to low-byte on any 
 architecture, regardless of how integers are stored.
 
+For more information on how numeric constants work with other types, see 
+\X(Numeric Types).
+
+Floating Point Constants
+''''''''''''''''''''''''
+
+Floating point constants look just like floating point constants in most other 
+languages.  They consist of a decimal /mantissa/ and an optional /exponent/.
+
+Examples:
+
+{{
+    float f = 1.0;
+    f = 3.1e+6;
+    f = 1.2e-14;
+    f = .25;
+}}
+
+For more information on how floating point constants interact with other 
+types, see \X(Numeric Types).
+
 Implicit Conversion
 '''''''''''''''''''
 
@@ -327,10 +357,16 @@ as the condition in an #if# or #while# statement.
 
 Aggregate types will implicitly convert to #voidptr#.
 
-Numeric types will implicitly convert between one another as long as there is 
-no risk of precision loss.  In cases where there is a risk of precision loss, 
-you can use explicit construction to force a conversion - truncating the value 
-if necessary.
+Numeric types are slightly more complicated.
+
+There are two kinds of numeric types, Universal Numeric Types (UNTs) and 
+Platform Dependent Numeric Types.  The UNT types are byte, int32, uint32, 
+int64, uint64, float32 and float64.  These are guaranteeed to be of the same 
+size no matter what the preferences of the platform.  A numeric type can 
+implicitly convert to a UNT as long as there is no risk of precision loss.
+
+The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly 
+convert to a PDNT.
 
 {{
     # implicit conversions
@@ -344,11 +380,21 @@ if necessary.
     float64 f64 = i32;
     f64 = u32;
     
+    # conversions to PDNTs - note that these may truncate the value and lose 
+    # information.
+    int i = f32;
+    uint u = i64;
+    intz iz = f64;
+    float g = i64;
+    
     # explicit conversions
     i32 = int32(i64);
     b = byte(f32);
     i64 = int64(u64);
 }}
+
+See the section on \X(Numeric Types) for more information on the philsophy and 
+details of how numeric conversions work.
 
 Strings
 '''''''
@@ -732,6 +778,10 @@ match and use #print(uint64 u)#.  If we called it with an #int32# parameter,
 the resolver would try all three functions, and not find a match.  It would 
 then repeat the search with conversion enabled and immediately match the first 
 function, because #int32# can implicitly convert to #int64#.
+
+Binary operators ('+', '-', '\*' ...) and unary operators ('~', '!', '++' ...) 
+have some additional special steps associated with their resolution, see 
+\X(Operator Overloading) for details.
 
 We mentioned searching across namespaces: functions can be defined in most 
 block contexts, including within other functions:
@@ -1767,6 +1817,29 @@ Certain operators can not be overloaded:
 -   The assignment operator ("#=#").
 -   The define operator ("#:=#").
 -   The "is" operator.
+
+All of the binary operators have corresponding "reverse operators."  For 
+example, #oper r+()# is the reverse operator of #oper +()#.  Reverse operators 
+are used to check for an overload on the _right operand_ of a binary 
+expression.
+
+Binary operations have special resolution rules based on the normal overload 
+resolution order.  When trying to find a match for a binary operation, the 
+compiler:
+
+-   Checks for a method named for the operator on the left operand with an 
+    argument matching the type of the right operand.
+-   Checks for a method named for the reverse operator on the right operand 
+    with an argument matching the type of the left operand.
+-   checks for a function named for the operator with two arguments, the first 
+    matching the left operand and the second matching the right operand.
+
+Each of these steps uses the existing method resolution rules as defined in 
+above in \X(Functions) and below in \X(Method Resolution in Classes).
+
+Unary operators also have a special resolution rule: the compiler checks for a 
+unary method named for the operator with no arguments prior to checking for a 
+function with a single argument in the enclosing namespaces.
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -2829,6 +2902,76 @@ file defining the extension.  Its usage is best illustrated by example:
         }
     }
 }}
+
+Numeric Types
+-------------
+
+The rules with which Crack deals with numeric types are complicated but 
+predictable.
+
+The general philosophy is that the Platform Dependent Numeric Types (PDNTs, 
+which are #int#, #uint#, #intz#, #uintz# and #float#) should be easily usable 
+in most cases where the programmer cares more for performance and 
+compatibility with C libraries than for precision.  For this reason, implicit 
+conversions to PDNTs are allowed from all other numeric types and PDNTs are 
+said to "dominate" in binary operations, meaning that the type of the result 
+of a binary operation involving a PDNT will be the first PDNT (from left to 
+right) in the operation.
+
+The Universal Numeric Types (UNTs, which are #byte#, #int32#, #uint32#, 
+#int64#, #uint64#, #float32#, and #float64#) are intended for use in 
+situations where the programmer cares very much about precision.  You can 
+implicitly convert to a PDNT only in cases where no loss of precision is 
+possible.
+
+In binary operations (for example '+', '-', '\*' ...) involving multiple numeric 
+types, PDNTs are said to "dominate."  That is, if one operand is a PDNT and the 
+other is a UNT, the the PDNT flavor of the operation is always matched.  So 
+#float32(5) + int(5)# is of type #int#.
+
+If both values in a binary expression are PDNTs, the type of the left-most 
+operand dominates, so #float(5) + int(5)# is of type #float#.
+
+Note that integer and floating-point constants, although they default to the 
+corresponding PDNT types in situations where type cannot otherwise be inferred, 
+do not dominate - so an expression like: #int32(val) + 1# is of type #int32#.
+
+All of this behavior is implemented using the normal Crack method resolution 
+and conversion rules.  The trick is that PDNT binary operations are 
+implemented as methods and reverse methods and UNT binary operations are 
+implemented as functions in the default namespace. UNT operations are also 
+defined in order of smallest to largest types, so binary operation involving 
+two UNTs will match the first operation with a type large enough to 
+accomodate both operands.
+
+As an example, when resolving #int64(a) + int(b)#:
+
+-   check #int64# for an #oper +()# method accepting first an #int# argument 
+    and then an argument that can be converted to #int# (no match)
+-   check #int# for an #oper r+()# method (the /reverse operator/ of #oper +#) 
+    that accepts:
+    -   an #int64# argument (no match)
+    -   an argmuent that #int64# can be converted to (matches #oper r+(int)# 
+        because all numeric types can convert to the #int# PDNT)
+
+On the other hand, let's consider #int64(a) + byte(b)#:
+
+-   Check #int64# for an #oper +()# method accepting a #byte# argument or an 
+    argument that can be converted to #byte# (no match)
+-   Check #byte# for an #oper r+()# method accepting an #int64# argument or an 
+    argument that can be converted to #int64# (no match)
+-   Check the global scope for #oper +(int64, byte)# (no match)
+-   Check each of the following to see if #int64# and #byte# can be converted 
+    to each of the arguments
+    -   #oper +(byte, byte)# (no match)
+    -   #oper +(int32, int32)# (no match)
+    -   #oper +(uint32, uint32)# (no match)
+    -   #oper +(int64, int64)# (matched!)
+
+As a special exception, we don't check for methods or reverse methods when 
+performing binary operator resolution on constants: doing so would cause 
+constants (whose default types are PDNTs) to dominate.  This would lead to 
+silly results like #float64(a) + 1# producing a result of type #int#.
 
 Threading
 ---------
