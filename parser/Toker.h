@@ -68,7 +68,10 @@ class Toker {
          st_hex,
          st_octal,
          st_binary,
-         st_strint
+         st_strint,
+         st_rawStr,
+         st_rawStrBody,
+         st_rawStrEscape
       } state;
       
       // the putback queue

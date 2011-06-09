@@ -123,6 +123,10 @@ Token Toker::readToken() {
                     // deal with i'str' and b'c' tokens
                     buf << ch;
                     state = st_strint;
+                } else if (ch == 'r') {
+                    // deal with r'raw string' tokens
+                    buf << ch;
+                    state = st_rawStr;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
@@ -321,10 +325,19 @@ Token Toker::readToken() {
                     t1 = Token::integer;
                     terminator = ch;
                     break;
+                }
+                // fall through to ident processing via rawStr
+            
+            // raw string
+            case st_rawStr:
+                if (ch == '"' || ch == '\'') {
+                    state = st_rawStrBody;
+                    terminator = ch;
+                    buf.str("");
+                    break;
                 } else {
                     state = st_ident;
                 }
-                // fall through to ident processing
 
             case st_ident:
    
@@ -491,6 +504,30 @@ Token Toker::readToken() {
                                  locationMap.getLocation()
                                  );
                 }
+                break;
+
+            case st_rawStrBody:
+                // check for the terminator
+                if (ch == terminator) {
+                    state = st_none;
+                    return Token(Token::string, buf.str(), 
+                                 locationMap.getLocation()
+                                 );
+                }
+
+                buf << ch;
+                if (ch == '\\')
+                    state = st_rawStrEscape;
+
+                break;
+            
+            case st_rawStrEscape:
+                // the only thing special about escape chars in raw strings is 
+                // that they can't preceed a terminator.  This is how python 
+                // does it, I'm not sure why, but barring compelling reasons 
+                // to do anything else...
+                buf << ch;
+                state = st_rawStrBody;
                 break;
 
             case st_octal:
