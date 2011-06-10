@@ -510,7 +510,7 @@ ExprPtr Parser::createAssign(Expr *container, const Token &ident,
 // obj.oper <symbol>
 string Parser::parseOperSpec() {
    Token tok = getToken();
-   const string &ident = tok.getData();
+   const string &ident = tok.isIdent() ? tok.getData() : "";
    if (tok.isMinus() || tok.isTilde() || tok.isBang() ||
        tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
        tok.isGE() || tok.isGT() || tok.isPlus() || tok.isSlash() || 
@@ -518,17 +518,19 @@ string Parser::parseOperSpec() {
        ident == "init" || ident == "release" || ident == "bind" ||
        ident == "del" || ident == "call" || tok.isAugAssign()
        ) {
-      return "oper " + ident;
+      return "oper " + tok.getData();
    } else if (tok.isIncr() || tok.isDecr()) {
       
       // make sure the next token is an "x"
       Token tok2 = getToken();
       if (!tok2.isIdent() || tok2.getData() != "x")
          unexpected(tok2, 
-                    SPUG_FSTR("expected an 'x' after oper " << ident).c_str()
+                    SPUG_FSTR("expected an 'x' after oper " << 
+                              tok.getData()
+                              ).c_str()
                     );
 
-      return "oper " + ident + "x";
+      return "oper " + tok.getData() + "x";
    } else if (ident == "x") {
       tok = getToken();
       if (tok.isIncr() || tok.isDecr())
@@ -554,6 +556,12 @@ string Parser::parseOperSpec() {
    } else if (ident == "to") {
       TypeDefPtr type = parseTypeSpec();
       return "oper to " + type->getFullName();
+   } else if (ident == "r") {
+      tok = getToken();
+      if (tok.isBinOp())
+         return "oper r" + tok.getData();
+      else
+         error(tok, "Expected a binary operator after reverse designator");
    } else {
       unexpected(tok, "expected legal operator name or symbol.");
    }
@@ -1674,7 +1682,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // figure out what the flags are going to be.
    FuncDef::Flags flags =
       (isMethod ? FuncDef::method : FuncDef::noFlags) |
-      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags);
+      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags) |
+      (funcFlags == reverseOp ? FuncDef::reverse : FuncDef::noFlags);
    
    Token tok3 = getToken();
    InitializersPtr inits;
@@ -2440,7 +2449,7 @@ ContextPtr Parser::parseThrowStmt() {
 // oper name ( args ) { ... }
 //     ^                     ^
 void Parser::parsePostOper(TypeDef *returnType) {
-
+   bool reversed = false;
    Token tok = getToken();
    if (tok.isIdent()) {
       const string &ident = tok.getData();
@@ -2499,78 +2508,91 @@ void Parser::parsePostOper(TypeDef *returnType) {
          } else {
             error(tok, "++ or -- expected after 'oper x' definition");
          }
+      } else if (ident == "r") {
+         reversed = true;
+         tok = getToken();
       } else {
          unexpected(tok, "only 'oper init' honored at this time");
       }
-
-   } else {
       
-      // all others require a return type
-      if (!returnType)
-         error(tok, "operator requires a return type");
+      // if we're done here, leave before processing symbolic operators
+      if (!reversed) return;
+   }
+   
+   // not an identifier (or was a "r" for a reverse operator)
+   // all others require a return type
+   if (!returnType)
+      error(tok, "operator requires a return type");
 
-      if (tok.isLBracket()) {
-         // "oper []" or "oper []="
-         expectToken(Token::rbracket, "expected right bracket.");
-         tok = getToken();
-         if (context->scope != Context::composite)
-            error(tok, 
-                  "Bracket operators may only be defined in class scope."
-                  );
-         if (tok.isAssign()) {
-            expectToken(Token::lparen, "expected argument list.");
-            parseFuncDef(returnType, tok, "oper []=", normal, 2);
-         } else {
-            parseFuncDef(returnType, tok, "oper []", normal, 1);
-         }
-      } else if (tok.isMinus()) {
-         // minus is special because it can be either unary or binary
+   if (tok.isLBracket()) {
+      // "oper []" or "oper []="
+      if (reversed) error(tok, "Only binary operators are reversible");
+      expectToken(Token::rbracket, "expected right bracket.");
+      tok = getToken();
+      if (context->scope != Context::composite)
+         error(tok, 
+               "Bracket operators may only be defined in class scope."
+               );
+      if (tok.isAssign()) {
          expectToken(Token::lparen, "expected argument list.");
-         int numArgs = parseFuncDef(returnType, tok, "oper " + tok.getData(), 
-                                    normal, 
-                                    -1
-                                    );
-         
-         int receiverCount = (context->scope == Context::composite);
-         if (numArgs != 1 - receiverCount && numArgs != 2 - receiverCount)
-            error(tok, SPUG_FSTR("'oper -' must have " << 1 - receiverCount <<
-                                 " or " << 2 - receiverCount <<
-                                 " arguments."
-                                 )
-                  );
-      } else if (tok.isTilde() || tok.isBang()) {
-         expectToken(Token::lparen, "expected an argument list.");
-         // in composite context, these should have no arguments.
-         int numArgs = (context->scope == Context::composite) ? 0 : 1;
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
-                      numArgs
-                      );
-      } else if (tok.isIncr() || tok.isDecr()) {
-         string sym = tok.getData();
-         tok = getToken();
-         if (!tok.isIdent() || tok.getData() != "x")
-            unexpected(tok, 
-                       "increment/decrement operators must include an 'x' "
-                        "token to indicate pre or post: ex: oper ++x()"
-                       );
-         expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper " + sym + "x",
-                      normal,
-                      (context->scope == Context::composite) ? 0 : 1
-                      );
-      } else if (tok.isBinOp() || tok.isAugAssign()) {
-         // binary operators
-         
-         // in composite context, these should have just one argument.
-         int numArgs = (context->scope == Context::composite) ? 1 : 2;
-         
-         expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
-                      numArgs
-                      );
+         parseFuncDef(returnType, tok, "oper []=", normal, 2);
       } else {
-         unexpected(tok, "identifier or symbol expected after 'oper' keyword");
+         parseFuncDef(returnType, tok, "oper []", normal, 1);
       }
+   } else if (tok.isMinus()) {
+      // minus is special because it can be either unary or binary
+      if (reversed) error(tok, "Only binary operators are reversible");
+      expectToken(Token::lparen, "expected argument list.");
+      int numArgs = parseFuncDef(returnType, tok, "oper " + tok.getData(), 
+                                 normal, 
+                                 -1
+                                 );
+      
+      int receiverCount = (context->scope == Context::composite);
+      if (numArgs != 1 - receiverCount && numArgs != 2 - receiverCount)
+         error(tok, SPUG_FSTR("'oper -' must have " << 1 - receiverCount <<
+                              " or " << 2 - receiverCount <<
+                              " arguments."
+                              )
+               );
+   } else if (tok.isTilde() || tok.isBang()) {
+      if (reversed) error(tok, "Only binary operators are reversible");
+      expectToken(Token::lparen, "expected an argument list.");
+      // in composite context, these should have no arguments.
+      int numArgs = (context->scope == Context::composite) ? 0 : 1;
+      parseFuncDef(returnType, tok, "oper " + tok.getData(), normal, 
+                   numArgs
+                   );
+   } else if (tok.isIncr() || tok.isDecr()) {
+      if (reversed) error(tok, "Only binary operators are reversible");
+      string sym = tok.getData();
+      tok = getToken();
+      if (!tok.isIdent() || tok.getData() != "x")
+         unexpected(tok, 
+                    "increment/decrement operators must include an 'x' "
+                     "token to indicate pre or post: ex: oper ++x()"
+                    );
+      expectToken(Token::lparen, "expected argument list.");
+      parseFuncDef(returnType, tok, "oper " + sym + "x",
+                   normal,
+                   (context->scope == Context::composite) ? 0 : 1
+                   );
+   } else if (tok.isBinOp() || tok.isAugAssign()) {
+      // binary operators
+      if (reversed && tok.isAugAssign())
+         error(tok, "Only binary operators are reversible");
+      
+      // in composite context, these should have just one argument.
+      int numArgs = (context->scope == Context::composite) ? 1 : 2;
+      
+      expectToken(Token::lparen, "expected argument list.");
+      
+      string name = (reversed ? "oper r" : "oper ") + tok.getData();
+      parseFuncDef(returnType, tok, name, reversed ? reverseOp: normal, 
+                   numArgs
+                   );
+   } else {
+      unexpected(tok, "identifier or symbol expected after 'oper' keyword");
    }
 }
 

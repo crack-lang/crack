@@ -321,8 +321,9 @@ class Parser {
          normal,           // normal function
          hasMemberInits,   // function with member/base class initializers
                            // ("oper new")
-         hasMemberDels     // function with member/base class destructors
+         hasMemberDels,    // function with member/base class destructors
                            // ("oper del")
+         reverseOp         // reverse binary operator.
       };
 
       /**
