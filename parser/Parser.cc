@@ -2462,8 +2462,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
                   SPUG_FSTR("oper " << ident << 
                              " can only be defined in a class scope."
                             )
-                  );
-         
+                  ); 
+        
          // these opers must be of type "void"
          if (!returnType)
             context->returnType = returnType =
@@ -2508,6 +2508,32 @@ void Parser::parsePostOper(TypeDef *returnType) {
          } else {
             error(tok, "++ or -- expected after 'oper x' definition");
          }
+      } else if (ident == "to") {
+         TypeDefPtr type = parseTypeSpec();
+
+         // check for instance scope
+         if (context->scope != Context::composite)
+            error(tok, 
+                  SPUG_FSTR("oper to " << type->getFullName() << 
+                             " can only be defined in a class scope."
+                            )
+                  );
+
+         // make sure that our return types is the type that we're converting 
+         // to.
+         if (!returnType)
+            returnType = type.get();
+         else if (returnType != type.get())
+            error(tok, SPUG_FSTR("oper to " << type->getFullName() <<
+                                 " must return " << type->getFullName()
+                                 )
+                  );
+
+         expectToken(Token::lparen, "expected argument list");
+         parseFuncDef(returnType, tok, "oper to " + type->getFullName(), 
+                      normal,
+                      0
+                      );
       } else if (ident == "r") {
          reversed = true;
          tok = getToken();

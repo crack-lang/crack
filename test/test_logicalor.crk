@@ -55,7 +55,7 @@ if (s != 7)
 if (!(1 || 0 && 0))
  puts('fail8');
 
-class Foo { oper release() {} bool toBool() { return 1==0; } }
+class Foo { oper release() {} oper to bool() { return 1==0; } }
 if ((0) || (Foo()))
  puts('fail9');
 

@@ -281,7 +281,7 @@ namespace {
         btype->defaultInitializer =
             context.builder.createIntConst(context, 0, btype.get());
         context.addDef(new BoolOpDef(context.construct->boolType.get(),
-                                     "toBool"
+                                     "oper to .builtin.bool"
                                      ),
                        btype.get()
                        );
@@ -302,7 +302,7 @@ namespace {
         btype->defaultInitializer =
             context.builder.createFloatConst(context, 0.0, btype.get());
         context.addDef(new FBoolOpDef(context.construct->boolType.get(),
-                                      "toBool"
+                                      "oper to .builtin.bool"
                                       ),
                        btype.get()
                        );
@@ -524,7 +524,7 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
                                                );
         funcTypes[llvmFuncType] = crkFuncType;
 
-        // Give it an "oper to voidptr" method.
+        // Give it an "oper to .builtin.voidptr" method.
         context.addDef(
                     new VoidPtrOpDef(context.construct->voidptrType.get()),
                     crkFuncType.get()
@@ -2175,170 +2175,170 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new LogicOrOpDef(boolType, boolType));
     
     // implicit conversions (no loss of precision)
-    context.addDef(new ZExtOpDef(int32Type, "oper to int32"), byteType);
-    context.addDef(new ZExtOpDef(int64Type, "oper to int64"), byteType);
-    context.addDef(new ZExtOpDef(uint32Type, "oper to uint32"), byteType);
-    context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), byteType);
-    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), byteType);
-    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), byteType);
-    context.addDef(new SExtOpDef(int64Type, "oper to int64"), int32Type);
-    context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), int32Type);
-    context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uint32Type);
-    context.addDef(new ZExtOpDef(int64Type, "oper to int64"), uint32Type);
-    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uint32Type);
-    context.addDef(new FPExtOpDef(float64Type, "oper to float64"), float32Type);
+    context.addDef(new ZExtOpDef(int32Type, "oper to .builtin.int32"), byteType);
+    context.addDef(new ZExtOpDef(int64Type, "oper to .builtin.int64"), byteType);
+    context.addDef(new ZExtOpDef(uint32Type, "oper to .builtin.uint32"), byteType);
+    context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), byteType);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to .builtin.float32"), byteType);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), byteType);
+    context.addDef(new SExtOpDef(int64Type, "oper to .builtin.int64"), int32Type);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to .builtin.float64"), int32Type);
+    context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), uint32Type);
+    context.addDef(new ZExtOpDef(int64Type, "oper to .builtin.int64"), uint32Type);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), uint32Type);
+    context.addDef(new FPExtOpDef(float64Type, "oper to .builtin.float64"), float32Type);
 
     // implicit conversions from UNTs to PDNTs
-    context.addDef(new ZExtOpDef(intType, "oper to int"), byteType);
-    context.addDef(new ZExtOpDef(uintType, "oper to uint"), byteType);
-    context.addDef(new ZExtOpDef(intzType, "oper to intz"), byteType);
-    context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), byteType);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), byteType);
+    context.addDef(new ZExtOpDef(intType, "oper to .builtin.int"), byteType);
+    context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), byteType);
+    context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), byteType);
+    context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), byteType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), byteType);
 
     if (intIs32Bit) {
-        context.addDef(new NoOpDef(intType, "oper to int"), int32Type);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), int32Type);
-        context.addDef(new NoOpDef(intType, "oper to int"), uint32Type);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), uint32Type);
-        context.addDef(new TruncOpDef(intType, "oper to int"), int64Type);
-        context.addDef(new TruncOpDef(uintType, "oper to uint"), int64Type);
-        context.addDef(new TruncOpDef(intType, "oper to int"), uint64Type);
-        context.addDef(new TruncOpDef(uintType, "oper to uint"), uint64Type);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), int32Type);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), int32Type);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), uint32Type);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), uint32Type);
+        context.addDef(new TruncOpDef(intType, "oper to .builtin.int"), int64Type);
+        context.addDef(new TruncOpDef(uintType, "oper to .builtin.uint"), int64Type);
+        context.addDef(new TruncOpDef(intType, "oper to .builtin.int"), uint64Type);
+        context.addDef(new TruncOpDef(uintType, "oper to .builtin.uint"), uint64Type);
     } else {
-        context.addDef(new SExtOpDef(intType, "oper to int"), int32Type);
-        context.addDef(new ZExtOpDef(uintType, "oper to uint"), int32Type);
-        context.addDef(new ZExtOpDef(intType, "oper to int"), uint32Type);
-        context.addDef(new ZExtOpDef(uintType, "oper to uint"), uint32Type);
-        context.addDef(new NoOpDef(intType, "oper to int"), int64Type);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), int64Type);
-        context.addDef(new NoOpDef(intType, "oper to int"), uint64Type);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), uint64Type);
+        context.addDef(new SExtOpDef(intType, "oper to .builtin.int"), int32Type);
+        context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), int32Type);
+        context.addDef(new ZExtOpDef(intType, "oper to .builtin.int"), uint32Type);
+        context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), uint32Type);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), int64Type);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), int64Type);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), uint64Type);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), uint64Type);
     }
     if (ptrIs32Bit) {
-        context.addDef(new NoOpDef(intzType, "oper to intz"), int32Type);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), int32Type);
-        context.addDef(new NoOpDef(intzType, "oper to intz"), uint32Type);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uint32Type);
-        context.addDef(new TruncOpDef(intzType, "oper to intz"), int64Type);
-        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), int64Type);
-        context.addDef(new TruncOpDef(intzType, "oper to intz"), uint64Type);
-        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), uint64Type);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), int32Type);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), int32Type);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), uint32Type);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), uint32Type);
+        context.addDef(new TruncOpDef(intzType, "oper to .builtin.intz"), int64Type);
+        context.addDef(new TruncOpDef(uintzType, "oper to .builtin.uintz"), int64Type);
+        context.addDef(new TruncOpDef(intzType, "oper to .builtin.intz"), uint64Type);
+        context.addDef(new TruncOpDef(uintzType, "oper to .builtin.uintz"), uint64Type);
     } else {
-        context.addDef(new SExtOpDef(intzType, "oper to intz"), int32Type);
-        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), int32Type);
-        context.addDef(new ZExtOpDef(intzType, "oper to intz"), uint32Type);
-        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint32Type);
-        context.addDef(new NoOpDef(intzType, "oper to intz"), int64Type);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), int64Type);
-        context.addDef(new NoOpDef(intzType, "oper to intz"), uint64Type);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uint64Type);
+        context.addDef(new SExtOpDef(intzType, "oper to .builtin.intz"), int32Type);
+        context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), int32Type);
+        context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), uint32Type);
+        context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), uint32Type);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), int64Type);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), int64Type);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), uint64Type);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), uint64Type);
     }
     if (floatIs32Bit) {
-        context.addDef(new NoOpDef(floatType, "oper to float"), float32Type);
-        context.addDef(new FPTruncOpDef(floatType, "oper to float"),
+        context.addDef(new NoOpDef(floatType, "oper to .builtin.float"), float32Type);
+        context.addDef(new FPTruncOpDef(floatType, "oper to .builtin.float"),
                        float64Type
                        );
-        context.addDef(new FPExtOpDef(float64Type, "oper to float64"), 
+        context.addDef(new FPExtOpDef(float64Type, "oper to .builtin.float64"), 
                        floatType
                        );
     } else {
-        context.addDef(new FPExtOpDef(floatType, "oper to float"),
+        context.addDef(new FPExtOpDef(floatType, "oper to .builtin.float"),
                        float32Type
                        );
-        context.addDef(new NoOpDef(floatType, "oper to float"), float64Type);
-        context.addDef(new NoOpDef(float64Type, "oper to float64"), floatType);
+        context.addDef(new NoOpDef(floatType, "oper to .builtin.float"), float64Type);
+        context.addDef(new NoOpDef(float64Type, "oper to .builtin.float64"), floatType);
     }
-    context.addDef(new SIToFPOpDef(floatType, "oper to float"), int32Type);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uint32Type);    
-    context.addDef(new SIToFPOpDef(floatType, "oper to float"), int64Type);
-    context.addDef(new ZExtOpDef(intzType, "oper to intz"), uint64Type);
-    context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uint64Type);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uint64Type);    
-    context.addDef(new FPToSIOpDef(intType, "oper to int"), float32Type);
-    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), float32Type);
-    context.addDef(new FPToSIOpDef(intzType, "oper to intz"), float32Type);
-    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), float32Type);
-    context.addDef(new FPToSIOpDef(intType, "oper to int"), float64Type);
-    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), float64Type);
-    context.addDef(new FPToSIOpDef(intzType, "oper to intz"), float64Type);
-    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), float64Type);
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int32Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uint32Type);    
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int64Type);
+    context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), uint64Type);
+    context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), uint64Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uint64Type);    
+    context.addDef(new FPToSIOpDef(intType, "oper to .builtin.int"), float32Type);
+    context.addDef(new FPToUIOpDef(uintType, "oper to .builtin.uint"), float32Type);
+    context.addDef(new FPToSIOpDef(intzType, "oper to .builtin.intz"), float32Type);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to .builtin.uintz"), float32Type);
+    context.addDef(new FPToSIOpDef(intType, "oper to .builtin.int"), float64Type);
+    context.addDef(new FPToUIOpDef(uintType, "oper to .builtin.uint"), float64Type);
+    context.addDef(new FPToSIOpDef(intzType, "oper to .builtin.intz"), float64Type);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to .builtin.uintz"), float64Type);
     
     // implicit conversion from PDNTs to UNTs
     if (intIs32Bit) {
-        context.addDef(new SExtOpDef(int64Type, "oper to int64"), intType);
-        context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uintType);
+        context.addDef(new SExtOpDef(int64Type, "oper to .builtin.int64"), intType);
+        context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), uintType);
     } else {
-        context.addDef(new NoOpDef(int64Type, "oper to int64"), intType);
-        context.addDef(new NoOpDef(uint64Type, "oper to uint64"), uintType);
+        context.addDef(new NoOpDef(int64Type, "oper to .builtin.int64"), intType);
+        context.addDef(new NoOpDef(uint64Type, "oper to .builtin.uint64"), uintType);
     }
     if (ptrIs32Bit) {
-        context.addDef(new SExtOpDef(int64Type, "oper to int64"), intzType);
-        context.addDef(new ZExtOpDef(uint64Type, "oper to uint64"), uintzType);
+        context.addDef(new SExtOpDef(int64Type, "oper to .builtin.int64"), intzType);
+        context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), uintzType);
     } else {
-        context.addDef(new NoOpDef(int64Type, "oper to int64"), intzType);
-        context.addDef(new NoOpDef(uint64Type, "oper to uint64"), uintzType);
+        context.addDef(new NoOpDef(int64Type, "oper to .builtin.int64"), intzType);
+        context.addDef(new NoOpDef(uint64Type, "oper to .builtin.uint64"), uintzType);
     }
     if (floatIs32Bit)
-        context.addDef(new FPExtOpDef(float64Type, "oper to float64"), 
+        context.addDef(new FPExtOpDef(float64Type, "oper to .builtin.float64"), 
                        floatType
                        );
     else
-        context.addDef(new NoOpDef(float64Type, "oper to float64"), floatType);
-    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uintType);
-    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), intType);
-    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uintType);
-    context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), intType);
-    context.addDef(new UIToFPOpDef(float32Type, "oper to float32"), uintzType);
-    context.addDef(new SIToFPOpDef(float32Type, "oper to float32"), intzType);
-    context.addDef(new UIToFPOpDef(float64Type, "oper to float64"), uintzType);
-    context.addDef(new SIToFPOpDef(float64Type, "oper to float64"), intzType);
+        context.addDef(new NoOpDef(float64Type, "oper to .builtin.float64"), floatType);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to .builtin.float32"), uintType);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to .builtin.float32"), intType);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), uintType);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to .builtin.float64"), intType);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to .builtin.float32"), uintzType);
+    context.addDef(new SIToFPOpDef(float32Type, "oper to .builtin.float32"), intzType);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), uintzType);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to .builtin.float64"), intzType);
     
     // implicit conversion from PDNTs to other PDNTs
-    context.addDef(new NoOpDef(uintType, "oper to uint"), intType);
-    context.addDef(new NoOpDef(intType, "oper to int"), uintType);
-    context.addDef(new NoOpDef(uintzType, "oper to uintz"), intzType);
-    context.addDef(new NoOpDef(intzType, "oper to intz"), uintzType);
+    context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), intType);
+    context.addDef(new NoOpDef(intType, "oper to .builtin.int"), uintType);
+    context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), intzType);
+    context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), uintzType);
     if (intIs32Bit == ptrIs32Bit) {
-        context.addDef(new NoOpDef(intzType, "oper to intz"), intType);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), intType);
-        context.addDef(new NoOpDef(intzType, "oper to intz"), uintType);
-        context.addDef(new NoOpDef(uintzType, "oper to uintz"), uintType);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), intType);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), intType);
+        context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), uintType);
+        context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), uintType);
         
-        context.addDef(new NoOpDef(intType, "oper to int"), intzType);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), intzType);
-        context.addDef(new NoOpDef(intType, "oper to int"), uintzType);
-        context.addDef(new NoOpDef(uintType, "oper to uint"), uintzType);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), intzType);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), intzType);
+        context.addDef(new NoOpDef(intType, "oper to .builtin.int"), uintzType);
+        context.addDef(new NoOpDef(uintType, "oper to .builtin.uint"), uintzType);
     } else if (intIs32Bit) {
-        context.addDef(new SExtOpDef(intzType, "oper to intz"), intType);
-        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), intType);
-        context.addDef(new ZExtOpDef(intzType, "oper to intz"), uintType);
-        context.addDef(new ZExtOpDef(uintzType, "oper to uintz"), uintType);
+        context.addDef(new SExtOpDef(intzType, "oper to .builtin.intz"), intType);
+        context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), intType);
+        context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), uintType);
+        context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), uintType);
         
-        context.addDef(new TruncOpDef(intType, "oper to int"), intzType);
-        context.addDef(new TruncOpDef(uintType, "oper to uint"), intzType);
-        context.addDef(new TruncOpDef(intType, "oper to int"), uintzType);
-        context.addDef(new TruncOpDef(uintType, "oper to uint"), uintzType);
+        context.addDef(new TruncOpDef(intType, "oper to .builtin.int"), intzType);
+        context.addDef(new TruncOpDef(uintType, "oper to .builtin.uint"), intzType);
+        context.addDef(new TruncOpDef(intType, "oper to .builtin.int"), uintzType);
+        context.addDef(new TruncOpDef(uintType, "oper to .builtin.uint"), uintzType);
     } else if (ptrIs32Bit) {
         // integer is wider than a pointer?  Not very likely, but just in 
         // case...
-        context.addDef(new TruncOpDef(intzType, "oper to intz"), intType);
-        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), intType);
-        context.addDef(new TruncOpDef(intzType, "oper to intz"), uintType);
-        context.addDef(new TruncOpDef(uintzType, "oper to uintz"), uintType);
+        context.addDef(new TruncOpDef(intzType, "oper to .builtin.intz"), intType);
+        context.addDef(new TruncOpDef(uintzType, "oper to .builtin.uintz"), intType);
+        context.addDef(new TruncOpDef(intzType, "oper to .builtin.intz"), uintType);
+        context.addDef(new TruncOpDef(uintzType, "oper to .builtin.uintz"), uintType);
         
-        context.addDef(new SExtOpDef(intType, "oper to int"), intzType);
-        context.addDef(new ZExtOpDef(uintType, "oper to uint"), intzType);
-        context.addDef(new ZExtOpDef(intType, "oper to int"), uintzType);
-        context.addDef(new ZExtOpDef(uintType, "oper to uint"), uintzType);
+        context.addDef(new SExtOpDef(intType, "oper to .builtin.int"), intzType);
+        context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), intzType);
+        context.addDef(new ZExtOpDef(intType, "oper to .builtin.int"), uintzType);
+        context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), uintzType);
     }
-    context.addDef(new SIToFPOpDef(floatType, "oper to float"), intType);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintType);    
-    context.addDef(new SIToFPOpDef(floatType, "oper to float"), intzType);
-    context.addDef(new UIToFPOpDef(floatType, "oper to float"), uintzType);
-    context.addDef(new FPToUIOpDef(intType, "oper to int"), floatType);
-    context.addDef(new FPToUIOpDef(uintType, "oper to uint"), floatType);
-    context.addDef(new FPToUIOpDef(intzType, "oper to intz"), floatType);
-    context.addDef(new FPToUIOpDef(uintzType, "oper to uintz"), floatType);
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), intType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uintType);    
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), intzType);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uintzType);
+    context.addDef(new FPToUIOpDef(intType, "oper to .builtin.int"), floatType);
+    context.addDef(new FPToUIOpDef(uintType, "oper to .builtin.uint"), floatType);
+    context.addDef(new FPToUIOpDef(intzType, "oper to .builtin.intz"), floatType);
+    context.addDef(new FPToUIOpDef(uintzType, "oper to .builtin.uintz"), floatType);
 
     // add the increment and decrement operators
     context.addDef(new PreIncrIntOpDef(byteType, "oper ++x"), byteType);
@@ -2476,7 +2476,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     metaType->meta = overloadDef.get();
     createClassImpl(context, overloadDef.get());
         
-    // Give it a context and an "oper to voidptr" method.
+    // Give it a context and an "oper to .builtin.voidptr" method.
     context.addDef(
         new VoidPtrOpDef(context.construct->voidptrType.get()),
         overloadDef.get()

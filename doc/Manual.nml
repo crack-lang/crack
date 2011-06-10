@@ -1701,6 +1701,10 @@ invoked using a #null# value as the receiver.
 
 #oper init#::
     A constructor.
+#oper to #/type/::
+    If this method is defined for a type, instances of the class can be 
+    implicitly converted to that type.  Specifying the return type is 
+    optional, if it is specified it must be the same as the type in the name.
 #oper del#::
     The destructor.
 #oper bind#::
@@ -1708,16 +1712,10 @@ invoked using a #null# value as the receiver.
     varialble.
 #oper release#::
     (*final*) Called when a variable of the type goes out of scope.
-#bool toBool()#::
-    (*final*) If this method is defined, instances of the class can be implicitly 
-    converted to null (see \X(Implicit Conversion)).  #Object# implements this.
-
-    This will be replaced with the more general "#oper to# /type/" form in a 
-    future version of the language.
 #bool isTrue()#::
     Returns true if the object is "true" when converted to a boolean.
     This is a virtual function defined in #Object# that is called for non-null 
-    values by #toBool()#.  It allows derived classes to easily override 
+    values by #oper to bool()#.  It allows derived classes to easily override 
     conversion to #bool#.
 #int cmp(Object other)#::
     Compare the object with another object.  Return a value that is greater 
@@ -4418,6 +4416,12 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 
 The remainder of this appendix describes the things you need to know when 
 upgrading between versions.
+
+From 0.4 to 0.5
+---------------
+-   the #toBool()# converter has been replaced with #oper to bool()#
+-   Macro style generic containers are deprecated: use real generics instead.  
+    (This currently just triggers a warning).
 
 From 0.3 to 0.4
 ---------------

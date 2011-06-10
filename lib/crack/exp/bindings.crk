@@ -7,7 +7,7 @@ class Opaque : VTableBase {
         die('attempted to construct opaque class');
     }
     
-    bool toBool() { return !(this is null); }
+    oper to bool() { return !(this is null); }
 };
 
 class Wrapper : FreeBase {

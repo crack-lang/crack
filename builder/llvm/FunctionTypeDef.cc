@@ -70,7 +70,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     tempSpec->setOwner(this);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
-    // Give it an "oper to voidptr" method.
+    // Give it an "oper to .builtin.voidptr" method.
     context.addDef(
         new VoidPtrOpDef(context.construct->voidptrType.get()),
         tempSpec.get()

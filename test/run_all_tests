@@ -552,7 +552,7 @@ switch statement."
 test_output 'while does boolean conversion' \
     'class A {
          int val; oper init(int val0) : val = val0 {} 
-         bool toBool() { return val; } 
+         oper to bool() { return val; } 
      }
      a := A(3);
      while (a) {

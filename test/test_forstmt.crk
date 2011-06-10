@@ -33,7 +33,7 @@ class RangeIter {
     
     bool next() { ++i; return i < max; }
     
-    bool toBool() { return i < max; }
+    oper to bool() { return i < max; }
 }
 
 class Range {

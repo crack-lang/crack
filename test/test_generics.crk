@@ -17,7 +17,7 @@ class FakeFormatter {
     
     int leave() { return result; }
     
-    bool toBool() { return 1; }
+    oper to bool() { return 1; }
 }
 
 bool gotStaticCalled;

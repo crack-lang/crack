@@ -290,7 +290,7 @@ public:
 class VoidPtrOpDef : public UnOpDef {
 public:
     VoidPtrOpDef(model::TypeDef *resultType) :
-            UnOpDef(resultType, "oper to voidptr") {
+            UnOpDef(resultType, "oper to .builtin.voidptr") {
     }
 
     virtual model::FuncCallPtr createFuncCall() {

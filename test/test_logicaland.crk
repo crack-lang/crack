@@ -70,7 +70,7 @@ if (a && b && c && d)
 if (s != 7)
  puts("fail");
 
-class Foo { oper release() {} bool toBool() { return 1==0; } }
+class Foo { oper release() {} oper to bool() { return 1==0; } }
 if ((1) && (Foo()))
  puts('fail');
 

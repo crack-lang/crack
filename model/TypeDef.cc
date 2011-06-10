@@ -429,14 +429,7 @@ bool TypeDef::isParent(TypeDef *type) {
 }
 
 FuncDefPtr TypeDef::getConverter(Context &context, const TypeDef &other) {
-    // XXX This is a half-assed general solution to the problem, we should 
-    // really be using the canonical name of the type (and omitting the 
-    // special case for bool).
-    if (other.name == "bool") {
-        return context.lookUpNoArgs("toBool", true, this);
-    } else {
-        return context.lookUpNoArgs("oper to " + other.name, true, this);
-    }
+    return context.lookUpNoArgs("oper to " + other.getFullName(), true, this);
 }
 
 bool TypeDef::getPathToAncestor(const TypeDef &ancestor, 

@@ -8,7 +8,7 @@ if (1) {
         void format(byteptr val) {}
         void format(int i) {}
         oper release() { ++releaseCount; }
-        bool toBool() { return 1; }
+        oper to bool() { return 1; }
     }
     
     int i;

@@ -31,8 +31,10 @@ class Foo {
     int oper -() { tester = 21; return 0; }
     int oper >>=(int i) { tester = i; return 100; }
     int oper |(int i) { tester = i; return 0; }
-    bool toBool() { return 1; }
+    oper to bool() { return 1; }
     int oper r+(int val) { tester = val; return 0; }
+    
+    oper to int() { return tester; }
 }
 
 if (1) {
@@ -62,6 +64,8 @@ if (1) {
     f | 23; check(23, 'FAILED |');
     100 + f; check(100, 'FAILED implicit oper r+()');
     f.oper r+(101); check(101, 'FAILED explicit oper r+()');
+    
+    if (int(101) != f) puts('FAILED conversion operator definition');
 
     # we only need to check broad classes of the implicit operators - the 
     # logic is all the same.
@@ -125,7 +129,9 @@ if (1) {
     int released;
     class Marker {
         oper release() { ++released; }
-        bool toBool() { return 1; }
+        
+        # try this once with the return type specified
+        bool oper to bool() { return 1; }
     }
     
     Marker() ? 1 : 2;
@@ -173,7 +179,7 @@ if (1) {
             return 0;
         }
         
-        bool toBool() { return 1; }
+        oper to bool() { return 1; }
     }
     Formatter() `test of $(1) other`;
     if (released != 1)

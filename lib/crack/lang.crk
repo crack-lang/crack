@@ -98,7 +98,7 @@ class Object : VTableBase {
         return v ^ (v >> 9) ^ (v << 7);
     }
 
-    @final bool toBool() {
+    @final oper to bool() {
         if (this is null)
             return false;
         else
