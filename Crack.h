@@ -103,6 +103,13 @@ class Crack {
          * terminating.
          */
         void callModuleDestructors();        
+
+        /**
+         * print compile time stats to the given stream
+         */
+        void printStats(std::ostream &out);
+
+
 };
 
 #endif

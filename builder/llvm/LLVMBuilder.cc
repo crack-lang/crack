@@ -1907,6 +1907,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
+    ConstructStats::CompileState oldStatState;
+    if (options->statsMode) {
+        oldStatState = context.construct->stats->state;
+        context.construct->stats->switchState(ConstructStats::builtin);
+    }
     createLLVMModule(".builtin");
     BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get(), module);
 
@@ -2522,11 +2527,21 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     engineBindModule(bMod);
     engineFinishModule(bMod);
 
+    if (options->statsMode) {
+        context.construct->stats->switchState(oldStatState);
+    }
+
     return bMod;
 
 }
 
 void LLVMBuilder::createModuleCommon(Context &context) {
+
+    ConstructStats::CompileState oldStatState;
+    if (options->statsMode) {
+        oldStatState = context.construct->stats->state;
+        context.construct->stats->switchState(ConstructStats::builtin);
+    }
 
     // name some structs in this module
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
@@ -2633,6 +2648,10 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
+    }
+
+    if (options->statsMode) {
+        context.construct->stats->switchState(oldStatState);
     }
 
 }

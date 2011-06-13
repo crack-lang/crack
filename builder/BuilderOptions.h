@@ -26,6 +26,8 @@ class BuilderOptions : public spug::RCBase {
         bool dumpMode;
         // Generate debug information
         bool debugMode;
+        // Keep compile time statistics
+        bool statsMode;
         // builder specific option strings
         StringMap optionMap;
 

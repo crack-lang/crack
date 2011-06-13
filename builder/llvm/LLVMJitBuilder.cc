@@ -224,10 +224,17 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     }
 
     // dump or run the module depending on the mode.
+    if (rootBuilder->options->statsMode)
+        context.construct->stats->switchState(ConstructStats::run);
+
     if (options->dumpMode)
         dump();
     else
         run();
+
+    if (rootBuilder->options->statsMode)
+        context.construct->stats->switchState(ConstructStats::build);
+
 }
 
 void LLVMJitBuilder::dump() {

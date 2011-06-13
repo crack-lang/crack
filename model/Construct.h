@@ -6,6 +6,7 @@
 #include "ModuleDef.h"
 #include <list>
 #include <stack>
+#include <sys/time.h>
 
 namespace builder {
     SPUG_RCPTR(Builder);
@@ -21,6 +22,38 @@ SPUG_RCPTR(ModuleDef);
 
 SPUG_RCPTR(Construct);
 SPUG_RCPTR(StrConst);
+SPUG_RCPTR(ConstructStats);
+
+struct ConstructStats: public spug::RCBase {
+
+    enum CompileState { start=0, builtin, build, run, end };
+
+    typedef std::map<std::string, double> ModuleTiming;
+    unsigned int parsedCount;
+    unsigned int cachedCount;
+    CompileState state;
+    double timing[5];
+    ModuleTiming moduleTimes;
+    struct timeval lastTime;
+    std::string currentModule;
+
+    ConstructStats(void): parsedCount(0),
+        cachedCount(0),
+        state(start),
+        timing(),
+        moduleTimes(),
+        lastTime(),
+        currentModule("NONE") {
+        gettimeofday(&lastTime, NULL);
+        for (int i=0; i<5; i++)
+            timing[i] = 0.0;
+    }
+
+    void switchState(CompileState newState);
+
+    void write(std::ostream &out) const;
+
+};
 
 /**
  * Construct is a bundle containing the builder and all of the modules created 
@@ -80,6 +113,9 @@ class Construct : public spug::RCBase {
 
         // the library path for source files.
         std::vector<std::string> sourceLibPath;
+
+        // if we keep statistics, they reside here
+        ConstructStatsPtr stats;
 
         /**
          * Search the specified path for a file with the name 

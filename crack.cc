@@ -36,6 +36,7 @@ struct option longopts[] = {
     {"migration-warnings", false, 0, 'm'},
     {"lib", true, 0, 'l'},
     {"version", false, 0, 0},
+    {"stats", false, 0, 0},
     {0, 0, 0, 0}
 };
 
@@ -73,6 +74,8 @@ void usage(int retval) {
             " for greater effect" << endl;
     cout << "            --version            Emit the version number and exit"
             << endl;
+    cout << "            --stats              Emit statistics about compile "
+            "time operations." << endl;
     exit(retval);
 }
 
@@ -107,6 +110,9 @@ int main(int argc, char **argv) {
                 if (strcmp(longopts[idx].name,"version") == 0) {
                     version();
                     exit(0);
+                }
+                if (strcmp(longopts[idx].name,"stats") == 0) {
+                    crack.options->statsMode = true;
                 }
                 break;
             case '?':
@@ -239,6 +245,10 @@ int main(int argc, char **argv) {
     
     if (bType == jitBuilder && !crack.options->dumpMode)
         crack.callModuleDestructors();
+
+    if (crack.options->statsMode) {
+        crack.printStats(cerr);
+    }
 
     return rc;
 

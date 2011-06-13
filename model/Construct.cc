@@ -24,6 +24,43 @@ using namespace parser;
 using namespace builder;
 using namespace crack::ext;
 
+void ConstructStats::write(std::ostream &out) const {
+
+    out << "\n----------------\n";
+    out << "parsed     : " << parsedCount << "\n";
+    out << "cached     : " << cachedCount << "\n";
+    out << "startup    : " << timing[start] << "s\n";
+    out << "builtin    : " << timing[builtin] << "s\n";
+    out << "parse/build: " << timing[build] << "s\n";
+    out << "run        : " << timing[run] << "s\n";
+    double total = 0;
+    for (ModuleTiming::const_iterator i = moduleTimes.begin();
+         i != moduleTimes.end();
+         ++i) {
+         cout << i->first << ": " << i->second << "s\n";
+         total += i->second;
+    }
+    out << "total module time: " << total << "s\n";
+    out << endl;
+
+}
+
+void ConstructStats::switchState(CompileState newState) {
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    double beforeF = (lastTime.tv_usec/1000000.0) + lastTime.tv_sec;
+    double nowF = (t.tv_usec/1000000.0) + t.tv_sec;
+    double diff = (nowF - beforeF);
+    timing[state] += diff;
+    if (state == build && currentModule != "NONE") {
+        // if we are saving build time, add it to the current module
+        // as well
+        moduleTimes[currentModule] += diff;
+    }
+    lastTime = t;
+    state = newState;
+}
+
 Construct::ModulePath Construct::searchPath(
     const Construct::StringVec &path,
     Construct::StringVecIter moduleNameBegin,
@@ -105,7 +142,10 @@ std::string Construct::joinName(const std::string &base,
 Construct::Construct(Builder *builder, Construct *primary) :
     rootBuilder(builder),
     uncaughtExceptionFunc(0) {
-        
+
+    if (builder->options->statsMode)
+        stats = new ConstructStats();
+
     builderStack.push(builder);
     createRootContext();
     
@@ -229,7 +269,20 @@ void Construct::parseModule(Context &context,
                             ) {
     Toker toker(src, path.c_str());
     Parser parser(toker, &context);
+    string lastModule;
+    ConstructStats::CompileState oldStatState;
+    if (rootBuilder->options->statsMode) {
+        stats->switchState(ConstructStats::build);
+        lastModule = stats->currentModule;
+        stats->currentModule = module->getFullName();
+        oldStatState = context.construct->stats->state;
+        stats->parsedCount++;
+    }
     parser.parse();
+    if (rootBuilder->options->statsMode) {
+        stats->switchState(oldStatState);
+        stats->currentModule = lastModule;
+    }
     module->close(context);
 }
 
@@ -484,6 +537,8 @@ int Construct::runScript(istream &src, const string &name) {
     }
     builderStack.pop();
     rootBuilder->finishBuild(*context);
+    if (rootBuilder->options->statsMode)
+        stats->switchState(ConstructStats::end);
     return 0;
 }
 

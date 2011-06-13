@@ -106,3 +106,9 @@ void Crack::callModuleDestructors() {
          )
         (*ri)->callDestructor();
 }
+
+void Crack::printStats(std::ostream &out) {
+    construct->stats->write(out);
+    if (construct->compileTimeConstruct)
+        construct->compileTimeConstruct->stats->write(out);
+}
