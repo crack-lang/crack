@@ -5,16 +5,15 @@
 #include <sys/time.h>
 #include <stdio.h>
 
-struct tm *crk_localtime(int64_t t){
+struct tm *crk_localtime(struct tm *st, int64_t t){
    const time_t lt = (const time_t)t;
-   return localtime(&lt);
+   return localtime_r(&lt, st);
 }
 
 struct tm *crk_localtime_now(struct tm *now){
    struct timeval tv;
    gettimeofday(&tv, NULL);
    return localtime_r(&(tv.tv_sec), now);
-   ;
 }
 
 struct tm *crk_gmtime_now(struct tm *now){

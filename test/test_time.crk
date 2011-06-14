@@ -37,6 +37,10 @@ if (verbose) cout `ctime_r = $dateString2`;
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
+mytime2:=_date(secs);
+if (mytime2.mktime() != secs)
+   cout `Date seconds conversion mismatch\n`;
+
 mytime = _date(); // Reset
 mytime.mktime();
 
