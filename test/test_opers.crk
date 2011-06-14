@@ -35,6 +35,7 @@ class Foo {
     int oper r+(int val) { tester = val; return 0; }
     
     oper to int() { return tester; }
+    int oper call(int val) { return val; }
 }
 
 if (1) {
@@ -66,6 +67,8 @@ if (1) {
     f.oper r+(101); check(101, 'FAILED explicit oper r+()');
     
     if (int(101) != f) puts('FAILED conversion operator definition');
+    if (f(102) != 102) puts('FAILED implicit oper call');
+    if (f.oper call(103) != 103) puts('FAILED explicit oper call');
 
     # we only need to check broad classes of the implicit operators - the 
     # logic is all the same.

@@ -15,7 +15,7 @@ int n;
 n = f1(1);
 if (n != 1)
     puts("fail");
-n = f1.oper call(1);
+n = f1(1);
 if (n != 1)
     puts("fail");
 
@@ -28,7 +28,7 @@ int f2(int x, int y) {
 n = f2(2,2);
 if (n != 4)
     puts("fail");
-n = f2.oper call(2,2);
+n = f2(2,2);
 if (n != 4)
     puts("fail");
 
@@ -37,17 +37,17 @@ function[void] fp0 = f0;
 function[int,int] fp1 = f1;
 function[int,int,int] fp2 = f2;
 
-fp0.oper call();
-n = fp1.oper call(10);
+fp0();
+n = fp1(10);
 if (n != 10)
     puts("fail");
-n = fp2.oper call(20,20);
+n = fp2(20,20);
 if (n != 40)
     puts("fail");
 
 function[int,int,int] fpF;
 fpF = f2;
-n = fpF.oper call(30,30);
+n = fpF(30,30);
 if (n != 60)
     puts("fail");
 
@@ -55,7 +55,7 @@ if (n != 60)
 // callbacks
 void cb(function[int, int, int] cb0) {
     int n;
-    n = cb0.oper call(50,50);
+    n = cb0(50,50);
     if (n != 100)
         puts("fail");
 }

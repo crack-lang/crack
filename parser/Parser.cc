@@ -468,23 +468,30 @@ ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
    }
 }
 
-ExprPtr Parser::createVarRef(Expr *container, const Token &ident) {
+ExprPtr Parser::createVarRef(Expr *container, const Token &ident,
+                             const char *undefinedError
+                             ) {
    Namespace &varNS = container ? *container->type : *context->ns;
    VarDefPtr var = varNS.lookUp(ident.getData());
    if (!var)
       error(ident,
-            SPUG_FSTR("Undefined variable: " << ident.getData()));
+            undefinedError ? undefinedError :
+             SPUG_FSTR("Undefined variable: " << ident.getData()).c_str()
+            );
    
    // check for an overload definition - if it is one, make sure there's only 
    // a single overload.
    OverloadDef *ovld = OverloadDefPtr::rcast(var);
    if (ovld) {
       if (!ovld->isSingleFunction())
-         error(ident, 
-               SPUG_FSTR("Cannot reference function " << ident.getData() <<
-                          " because there are multiple overloads."
-                         )
-               );
+         if (undefinedError)
+            return 0;
+         else
+            error(ident, 
+                  SPUG_FSTR("Cannot reference function " << ident.getData() <<
+                           " because there are multiple overloads."
+                           )
+                  );
       
       // make sure that the implementation has been defined
       ovld->createImpl();
@@ -572,6 +579,8 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
                                   Expr *container
                                   ) {
 
+   VarRefPtr var;
+
    // parse the arg list
    FuncCall::ExprVec args;
    parseMethodArgs(args);
@@ -587,6 +596,22 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    FuncDefPtr func = context->lookUp(funcName, args, ns, 
                                      container && container->type->meta
                                      );
+   if (!func) {
+      
+      // first try to resolve the identifier as a non-function, then get the 
+      // "oper call" from it.
+      var = createVarRef(container, ident, 
+                         SPUG_FSTR("No method exists matching " << 
+                                   ident.getData() << "()"
+                                   ).c_str()
+                         );
+      if (var) {
+         func = context->lookUp("oper call", args, var->type.get());
+         container = var.get();
+      }
+   }
+
+   // no function, not a callable variable - give an error.   
    if (!func) {
       ostringstream msg;
       msg << "No method exists matching " << funcName <<  "(" << args << ")";
@@ -2508,6 +2533,17 @@ void Parser::parsePostOper(TypeDef *returnType) {
          } else {
             error(tok, "++ or -- expected after 'oper x' definition");
          }
+      } else if (ident == "call") {
+
+         // check for instance scope
+         if (context->scope != Context::composite)
+            error(tok, "'oper call' can only be defined in a class scope.");
+
+         if (!returnType)
+            error(tok, "'call' operator requires a return type");
+         
+         expectToken(Token::lparen, "expected argument list");
+         parseFuncDef(returnType, tok, "oper call", normal, -1);
       } else if (ident == "to") {
          TypeDefPtr type = parseTypeSpec();
 
@@ -2538,7 +2574,9 @@ void Parser::parsePostOper(TypeDef *returnType) {
          reversed = true;
          tok = getToken();
       } else {
-         unexpected(tok, "only 'oper init' honored at this time");
+         unexpected(tok, 
+                    SPUG_FSTR(ident << " is not a legal operator").c_str()
+                    );
       }
       
       // if we're done here, leave before processing symbolic operators

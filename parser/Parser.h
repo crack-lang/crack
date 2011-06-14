@@ -200,8 +200,14 @@ class Parser {
       /** 
        * Create a variable reference expression for the identifier, complete 
        * with an implicit "this" if necessary.
+       * @param undefinedError If this is not null, it is an alternate error 
+       *    to use if the variable is undefined and it also makes the function 
+       *    return null rather than raising a parse error if the variable is 
+       *    an OverloadDef with multiple variations.
        */
-      model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident);
+      model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident,
+                                  const char *undefinedError = 0
+                                  );
 
       /**
        * Parse the rest of an explicit "oper" name.
