@@ -3,27 +3,41 @@
 
 import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter, FStr;
 import crack.sys argv, exit;
-import crack.container List, Iterator, TreeMap, KeyVal;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.regex Regex;
 import crack.exp.process Process;
-import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_FLOAT,
-   CMD_BOOL;
+import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
+import crack.cont.hashmap HashMap;
+import crack.cont.list List;
 
-SCREEN_VERSION := ".4";
+// XXX 
+import crack.container Iterator;
+
+SCREEN_VERSION := ".5";
 
 class Config {
-    String crackBin, rootDir, outDir;  
-    bool verbose;
+    String crackBin, rootDir, outDir, libPath;  
+    bool verbose, showDiff;
 }
 Config config = {};
+
+class Result {
+    bool pass;
+    String expected, actual;
+
+    oper init(bool t): pass = t { }
+    oper init(String e, String a): pass = false, expected = e, actual = a { 
+        
+    }
+    
+}
 
 class Test {
 
     FileInfo _fInfo;
     String _desc;
-    TreeMap _testData = {};
+    HashMap[String, String] _testData = {};
     
     String _isSkipped;
 
@@ -97,24 +111,21 @@ class Test {
         return _colorMsg("31", "FAIL");
     }
 
-    void compareOutput(String expected, String actual) {
-        
-        if (expected == actual) {
+    Result compareOutput(String expected, String actual) {
+
+        if (expected == actual) {            
             cout `$(_pass())`;
+            return Result(true);
         }
         else {
-            cout `$(_fail())`;
-            if (config.verbose) {
-                cout `Expected:\n[$expected]\nActual:\n[$actual]\n`;
-            }
-            // XXX check config object
-            // XXX optionally show diff, or fail after failed test
+            cout `$(_fail())`;            
+            return Result(expected, actual);
         }
         
     }
 
-    void execCrackWithBuilder(String builder, String nick, 
-                              Directory outDir, bool nativeRun) {
+    Result execCrackWithBuilder(String builder, String nick, 
+                                Directory outDir, bool nativeRun) {
         
         testScript := writeScript(outDir);
         String testBinary;
@@ -130,8 +141,10 @@ class Test {
             args = args+" -b out="+testBinary;
         }
 
-        // XXX script argv
-        cmd := config.crackBin+" -B "+builder+" "+args+" "+testScript;
+        // XXX template argv section
+        cmd := config.crackBin+" -G -B "+builder+" "+args+" "+testScript;
+        if (config.libPath)
+            cmd = cmd + " -l " + config.libPath;
         if (config.verbose)
             cout `(running: $cmd])\n`;
 
@@ -149,18 +162,19 @@ class Test {
             // compile failed
             cout `$(_fail()) `;
             cout `[$(p.getReturnCode())]\n$compileErr`;
-            return;
+            return Result(false);
         }
         else if (nativeRun) {
             cout `$(_pass()) `;
         }
-        
+
         if (!_testData["EXPECT"]) {
            cout `no valid EXPECT section\n`;
-           return;
+           return Result(false);
         }
 
         expect := String.cast(_testData["EXPECT"]);
+        Result r;
         if (nativeRun) {
             // native: run binary to get final results for comparison
             bfi := FileInfo(testBinary);
@@ -168,7 +182,7 @@ class Test {
                 cout `$nick: `;
                 _fail();
                 cout `: binary ($testBinary) wasn't created, check compile output\n`;
-                return;
+                return Result(false);
             }
             // XXX binary args (script argv)
             if (config.verbose)
@@ -183,17 +197,18 @@ class Test {
             else {
                 nativeOut := b.getStdOut();
                 nativeErr := b.getStdErr();
-                compareOutput(expect, nativeOut);
+                r = compareOutput(expect, nativeOut);
                 // XXX err output EXPECTERR ?
             }
             cout `) `;
         }
         else {
             // JIT, interpreted, etc
-            compareOutput(expect, compileOut);
+            r = compareOutput(expect, compileOut);
             cout `  `;
             // XXX err output EXPECTERR ?
         }
+        return r;
         
     }
 
@@ -205,11 +220,18 @@ class Test {
         }
         
         cout `[$_fInfo]: $_desc\n`;
-        
-        execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
-        execCrackWithBuilder("llvm-native", "Native", outDir, true);
-        
+
+        HashMap[String, Result] results = {};
+        results["JIT"] = execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
+        results["Native"] = execCrackWithBuilder("llvm-native", "Native", outDir, true);
         cout `\n`;
+        
+        for (r :in results) {
+            if (!r.val.pass && (config.verbose || config.showDiff) && r.val.actual && r.val.expected) {
+                cout `----$(r.key) Fail----\nExpected: [$(r.val.expected)] Actual: [$(r.val.actual)]\n------------\n`;
+            }
+        }
+        
 
     }
 
@@ -220,12 +242,8 @@ class Test {
     }
 
     void _dump(Writer out) {
-        ti := _testData.iter();
-        while (ti.nx()) {
-            section := String.cast(KeyVal.cast(ti.elem()).key);
-            data := String.cast(KeyVal.cast(ti.elem()).val);
-            Formatter(out) `[$section]:\n$data`;
-        }
+        for (t :in _testData)
+            Formatter(out) `[$(t.key)]:\n$(t.val)`;
     }
 
     void writeTo(Writer out) {
@@ -237,7 +255,7 @@ class Test {
 
 class TestSuite {
 
-    List _testList = {};
+    List[Test] _testList = {};
     CmdOptions _options = {};
     
     void usage() {
@@ -254,30 +272,34 @@ class TestSuite {
         
         cout `importing tests from $dir ... `;
 
-        Iterator i;
         cnt := 0;
-        
-        // gather test files
         FileInfo curFile;
-        i = dir.fileInfoIter();
+        i := dir.fileInfoIter();
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
+        
+/*        
+        // gather test files
+        for (curFile :in dir.files()) {
             if (curFile.matches("*.crkt")) {
                 cnt++;
                 test := Test(curFile);
                 _testList.append(test);
             }
         }
-
+*/
         cout `found $cnt\n`;
-
-        // recurse to directories
         Directory nextDir;
         i = dir.dirIter();
         while (i.nx()) {
             nextDir = Directory.cast(i.elem());
+        
+/*
+        // recurse to directories
+        for (nextDir :in dir.dirs()) {
             scanForTests(nextDir);
         }
+        */
     }
 
     void runTests(Directory dir) {
@@ -287,13 +309,9 @@ class TestSuite {
             return;
         }
         
-        cout `\nrunning tests with output in $dir...\n`;
+        cout `running tests with output in $dir...\n`;
 
-        Test curTest;
-
-        i := _testList.iter();
-        while (i.nx()) {
-            curTest = Test.cast(i.elem());
+        for (curTest :in _testList) {
             curTest.run(dir);
         }
 
@@ -303,9 +321,12 @@ class TestSuite {
         
 
         _options.add("help", "h", "Show usage", "f", CMD_BOOL);
+        _options.add("verbose", "h", "Show verbose output", "f", CMD_BOOL);
         _options.add("crackbin", "c", "Crack binary", "", CMD_STR);
         _options.add("testdir", "t", "Directory to search recursively for tests", "./tests", CMD_STR);
+        _options.add("testfile", "f", "Single test template to execute", "", CMD_STR);
         _options.add("outdir", "o", "Directory to create output files", "./output", CMD_STR);
+        _options.add("libpath", "l", "Add path to crack library path during test. May be colon seperated list.", "", CMD_STR);
         _options.parse(argv);
         
         cout `screen v$(SCREEN_VERSION)\n`;
@@ -316,11 +337,26 @@ class TestSuite {
         config.crackBin = _options.getString("crackbin");
         if (config.crackBin == "")
             usage();
+        
         config.rootDir = _options.getString("testdir");
         config.outDir = _options.getString("outdir");
- 
-        // XXX
-        //config.verbose = 1;
+        config.libPath = _options.getString("libpath");
+        config.verbose = _options.getBool("verbose");
+        config.showDiff = false;
+        
+        testFile := _options.getString("testfile");        
+        if (testFile != "" && config.rootDir != "") {
+            // if specific file, clear directory
+            config.rootDir = null;
+            fi := FileInfo(testFile);
+            if (!fi.exists()) {
+                cerr `$testFile does not exist\n`;
+                exit(1);
+            }
+            test := Test(fi);
+            _testList.append(test);
+            config.showDiff = true;
+        }
         
         // check binary
         cfi := FileInfo(config.crackBin);
@@ -346,8 +382,12 @@ class TestSuite {
             cout `using binary: $out\n`;
         }
         
-        scanForTests(Directory(config.rootDir));
-
+    }
+    
+    void run() {
+        
+        if (config.rootDir)
+            scanForTests(Directory(config.rootDir));
         runTests(Directory(config.outDir, false));
         
     }
@@ -355,3 +395,4 @@ class TestSuite {
 }
 
 suite := TestSuite();
+suite.run();
