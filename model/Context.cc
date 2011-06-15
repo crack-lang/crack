@@ -566,7 +566,9 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     // verify that the sequence has an "iter" method
     FuncDefPtr iterFunc = lookUpNoArgs("iter", true, seqExpr->type.get());
     if (!iterFunc)
-        error("iteration expression has no 'iter' method.");
+        error(SPUG_FSTR("iteration expression has no 'iter' method "
+                        "(was type " << seqExpr->type->getFullName() << ")")
+                        );
     
     // create an expression from it
     FuncCallPtr iterCall = builder.createFuncCall(iterFunc.get());

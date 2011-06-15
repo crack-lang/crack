@@ -1013,7 +1013,7 @@ $mainFunc
 Exception: badness transpired"
 
 test_output 'C Comments' \
-    '/* comment text */print("ok");' \
+    '/* comment * text / text2 */print("ok");' \
     ok
 
 test_output 'functions as values' \

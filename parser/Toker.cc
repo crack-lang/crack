@@ -383,6 +383,8 @@ Token Toker::readToken() {
             case st_ccomment2:
                 if (ch == '/')
                     state = st_none;
+                else
+                    state = st_ccomment;
                 break;
    
             case st_string:
