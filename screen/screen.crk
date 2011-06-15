@@ -277,23 +277,28 @@ class TestSuite {
         i := dir.fileInfoIter();
         while (i.nx()) {
             curFile = FileInfo.cast(i.elem());
-        
+            if (curFile.matches("*.crkt")) {
+                cnt++;
+                _testList.append(Test(curFile));
+            }
+        }
 /*        
         // gather test files
         for (curFile :in dir.files()) {
             if (curFile.matches("*.crkt")) {
                 cnt++;
-                test := Test(curFile);
-                _testList.append(test);
+                _testList.append(Test(curFile));
             }
         }
 */
         cout `found $cnt\n`;
+        
         Directory nextDir;
         i = dir.dirIter();
         while (i.nx()) {
             nextDir = Directory.cast(i.elem());
-        
+            scanForTests(nextDir);
+        }
 /*
         // recurse to directories
         for (nextDir :in dir.dirs()) {
