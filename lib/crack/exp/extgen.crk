@@ -645,7 +645,7 @@ class declaration`;
                         ctype.addMethod(f);
                         tok = ctx.getToken();
                     }
-                   else{
+                    else{
                         ctx.putBack(tok3);
                         ctype.addMember(Arg(argType, String(tok2.getText())));
                         tok = ctx.getToken();
@@ -660,7 +660,7 @@ class declaration`;
                             if (!tok.isSemi() && !tok.isComma())
                                 error(ctx, tok) `Semicolon or comma expected`;
                         }
-                   }
+                    }
                 }
 
                if (tok.isSemi())
@@ -883,10 +883,10 @@ definition.`;
 
 @define emitNested(Type, name) {
     void emitInitializerNested$$Type(Array[Type] ta, Type ct, Formatter o){
-         if (ct.isIfdef()){
-             if (ct.isOpen())
+        if (ct.isIfdef()){
+            if (ct.isOpen())
                 ta.append(ct);
-             else {
+            else {
                 doEmit:=false;
                 if (ta.count()==0) doEmit = true;
 
@@ -895,15 +895,15 @@ definition.`;
                    endifCond := ct.$$name$$.slice(0, -4);
                    String ifdefCond  = ifdefTpe.$$name;
                    if (endifCond != ifdefTpe.$$name) doEmit = true;
-               }
+                }
 
-               if (doEmit) ct.emitInitializer(o);
+                if (doEmit) ct.emitInitializer(o);
              }
-         }
-         else {
+        }
+        else {
             if (ta.count()>0) ta.pop().emitInitializer(o);
             ct.emitInitializer(o);
-         }
+        }
     }
 }
 
