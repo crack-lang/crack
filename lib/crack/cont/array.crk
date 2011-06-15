@@ -213,14 +213,6 @@ class Array[Elem] {
         return __cap;
     }
 
-    Array rest(uint i){
-        result := Array(__size - i);
-        for (j := i; j < __size; j++)
-            result.append(__rep[j]);
-        len := result.count();
-        return result;
-    }
-
     void writeTo(Writer out) {
         out.write('[');
         bool first = true;

@@ -18,7 +18,7 @@ StringArray _createArgv() {
     return argv;
 }
 
-class Environment: HashMap[String, String] {
+class _Environment: HashMap[String, String] {
    void _update();
    oper init(){ 
       _update();
@@ -51,13 +51,13 @@ class Environment: HashMap[String, String] {
          }
       }
    }
-   
+
    @final
    void update(){
       HashMap[String, String].clear();
       _update();
    }
-   
+
    String _setptr(String key, byteptr val){
       if (val is null){
          delete(key);
@@ -68,7 +68,7 @@ class Environment: HashMap[String, String] {
       HashMap[String, String].set(key, newString);
       return newString;
    }
-   
+
    @final
    String set(String key, String val, bool overwrite){
       cval:=CString(val);
@@ -107,3 +107,6 @@ class Environment: HashMap[String, String] {
 
 ## The "argv" variable.
 argv := _createArgv();
+
+## The "env" variable
+env := _Environment();
