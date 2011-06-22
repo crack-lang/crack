@@ -1,4 +1,4 @@
-// Copyright 2010 Google Inc, Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2011 Google Inc, Shannon Weyrick <weyrick@mozek.us>
 
 #ifndef _builder_llvm_BModuleDef_h_
 #define _builder_llvm_BModuleDef_h_
@@ -26,12 +26,14 @@ public:
     // primitive cleanup function
     void (*cleanup)();
     llvm::Module *rep;
-
+    
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
-               llvm::Module *rep0) :
+               llvm::Module *rep0
+               ) :
             ModuleDef(canonicalName, parent),
-            cleanup(0), rep(rep0) {
+            cleanup(0),
+            rep(rep0) {
     }
 
     void callDestructor() {
