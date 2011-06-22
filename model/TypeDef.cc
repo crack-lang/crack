@@ -634,16 +634,19 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                             );
     BuilderPtr moduleBuilder = 
         context.construct->rootBuilder->createChildBuilder();
-    ContextPtr modContext = new Context(*moduleBuilder, Context::module, 
-                                        rootContext,
-                                        new GlobalNamespace(rootContext->ns.get(),
-                                                            moduleName
-                                                            ),
-                                        compileNS.get()
-                                        );
+    ContextPtr modContext =
+        new Context(*moduleBuilder, Context::module, rootContext,
+                    new GlobalNamespace(rootContext->ns.get(),
+                                        moduleName
+                                        ),
+                    compileNS.get()
+                    );
     modContext->toplevel = true;
-                                                         
-    ModuleDefPtr module = modContext->createModule(moduleName);
+    
+    // create the new module with the current module as the owner.        
+    ModuleDef *currentModule = 
+        ModuleDefPtr::rcast(context.getModuleContext()->ns);
+    ModuleDefPtr module = modContext->createModule(moduleName, currentModule);
     
     // alias all global symbols in the original module, excluding the 
     // built-ins which are already defined.

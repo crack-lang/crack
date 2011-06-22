@@ -171,7 +171,8 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
 }
 
 ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
-                                             const string &name
+                                             const string &name,
+                                             ModuleDef *owner
                                              ) {
 
     assert(!module);
@@ -227,7 +228,8 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     
     createModuleCommon(context);
 
-    BModuleDef *newModule = new BModuleDef(name, context.ns.get(), module);
+    BModuleDef *newModule =
+        new BModuleDef(name, context.ns.get(), module);
     return newModule;
 }
 

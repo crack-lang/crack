@@ -46,7 +46,8 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         virtual BuilderPtr createChildBuilder();
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
+                                                 const std::string &name,
+                                                 model::ModuleDef *owner
                                                  );
 
         virtual void initializeImport(model::ModuleDef*, bool annotation);

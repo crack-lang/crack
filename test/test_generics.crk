@@ -46,4 +46,14 @@ B[int, float] b = {};
 if (b.f(100) != 100 || b.f(1.5) != 1.5)
     puts('FAILED two argument generic');
 
+class C { 
+    oper to int() { return 1; } // so we can match a formtter
+
+    A[C] wrap; 
+    oper init() : wrap(this) {}
+}
+C c = {};
+if (!(c.wrap.val is c))
+    puts('FAILED nested generic parameterized by outer class');
+
 puts('ok');
