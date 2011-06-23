@@ -621,3 +621,10 @@ Ugly Stuff:
     contents of a module, but I can't see how imports could work without it.
     It seems like when parsing a module, the module toplevel context should 
     reference the ModuleDef as its namespace
+
+Parser Refactor:
+    
+    Function processing should all be in the general expression location - not
+    in parsePostIdent().  For this to happen, method lookups without args 
+    need to return a special kind of field reference that accepts "oper call"
+    and translates it to the underlying method invocation.

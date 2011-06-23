@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
 #include "LLVMJitBuilder.h"
-#include "BModuleDef.h"
+#include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "BTypeDef.h"
 #include "model/Context.h"
@@ -67,10 +67,20 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
                                 execEng->getPointerToFunction(delFunc)
                              );
     }
+    
+    // mark the module as finished
+    moduleDef->rep->getOrInsertNamedMetadata("crack::finished");
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
     type->getClassInstRep(module, execEng);
+}
+
+BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
+                                              const std::string &name,
+                                              llvm::Module *owner
+                                              ) {
+    return new BJitModuleDef(name, context.ns.get(), owner, 0);
 }
 
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
@@ -103,7 +113,19 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
-    execEng->addGlobalMapping(pointer, execEng->getPointerToFunction(real));
+    // if the module containing the original function has been finished, just 
+    // add the global mapping.
+    if (real->getParent()->getNamedMetadata("crack::finished")) {
+        void *realAddr = execEng->getPointerToFunction(real);
+        execEng->addGlobalMapping(pointer, realAddr);
+    } else {
+        // push this on the list of externals - we used to assign a global mapping 
+        // for these right here, but that only works if we're guaranteed that an 
+        // imported module is closed before any of its functions are used by the 
+        // importer, and that is no longer the case after generics and ephemeral 
+        // modules.
+        externals.push_back(pair<Function *, Function *>(pointer, real));
+    }
 }
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
@@ -134,7 +156,8 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
 }
 
 ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
-                                          const string &name
+                                          const string &name,
+                                          ModuleDef *owner
                                           ) {
 
     assert(!module);
@@ -158,13 +181,14 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     
     bindJitModule(module);
 
-    BModuleDef *moduleDef = new BModuleDef(name, context.ns.get(), module);
+    BModuleDef *moduleDef = 
+        new BJitModuleDef(name, context.ns.get(), module, 
+                          owner ? BJitModuleDefPtr::acast(owner) : 0
+                          );
     return moduleDef;
 }
 
-void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
-    assert(module);
-
+void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // if there was a top-level throw, we could already have a terminator.  
     // Generate a return instruction if not.
     if (!builder.GetInsertBlock()->getTerminator())
@@ -206,6 +230,13 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     if (debugInfo)
         delete debugInfo;
+
+    // resolve all externals
+    for (int i = 0; i < externals.size(); ++i) {
+        void *realAddr = execEng->getPointerToFunction(externals[i].second);
+        execEng->addGlobalMapping(externals[i].first, realAddr);
+    }
+    externals.clear();
     
     // build the debug tables
     Module::FunctionListType &funcList = module->getFunctionList();
@@ -235,6 +266,11 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     if (rootBuilder->options->statsMode)
         context.construct->stats->switchState(ConstructStats::build);
 
+}
+
+void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
+    assert(module);
+    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);    
 }
 
 void LLVMJitBuilder::dump() {

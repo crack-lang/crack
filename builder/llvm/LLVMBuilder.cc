@@ -1062,6 +1062,13 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
     }
 }
 
+BModuleDef *LLVMBuilder::instantiateModule(Context &context,
+                                           const string &name,
+                                           Module *module
+                                           ) {
+    return new BModuleDef(name, context.ns.get(), module);
+}
+
 void LLVMBuilder::emitExceptionCleanupExpr(Context &context) {
     Value *exObjVal = getExceptionObjectValue(context, builder);
     Function *cleanupExceptionFunc =
@@ -1913,7 +1920,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.construct->stats->switchState(ConstructStats::builtin);
     }
     createLLVMModule(".builtin");
-    BModuleDef *bMod = new BModuleDef(".builtin", context.ns.get(), module);
+    BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
@@ -2524,8 +2531,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addArrayMethods(context, byteptrType, byteType);    
 
     // bind the module to the execution engine
-    engineBindModule(bMod);
-    engineFinishModule(bMod);
+    engineBindModule(bMod.get());
+    engineFinishModule(bMod.get());
 
     if (options->statsMode) {
         context.construct->stats->switchState(oldStatState);

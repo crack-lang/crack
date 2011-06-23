@@ -20,6 +20,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         llvm::ExecutionEngine *execEng;
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
+        
+        std::vector< std::pair<llvm::Function *, llvm::Function *> > externals;
 
         virtual void run();
 
@@ -37,7 +39,10 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void engineBindModule(BModuleDef *moduleDef);
         virtual void engineFinishModule(BModuleDef *moduleDef);
         virtual void fixClassInstRep(BTypeDef *type);
-
+        virtual BModuleDef *instantiateModule(model::Context &context,
+                                              const std::string &name,
+                                              llvm::Module *owner
+                                              );
 
     public:
         LLVMJitBuilder(void) : execEng(0) { }
@@ -48,8 +53,13 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual BuilderPtr createChildBuilder();
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
+                                                 const std::string &name,
+                                                 model::ModuleDef *module
                                                  );
+
+        void innerCloseModule(model::Context &context, 
+                              model::ModuleDef *module
+                              );
 
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module

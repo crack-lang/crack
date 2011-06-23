@@ -136,6 +136,14 @@ class LLVMBuilder : public Builder {
          * Insures that the class body global is present in the current module.
          */
         virtual void fixClassInstRep(BTypeDef *type) = 0;
+
+        /**
+         * Instantiates the BModuleDef subclass appropriate for the builder.
+         */
+        virtual BModuleDef *instantiateModule(model::Context &context,
+                                              const std::string &name,
+                                              llvm::Module *module
+                                              );
         
     public:
         // currently experimenting with making these public to give objects in 

@@ -1351,7 +1351,7 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
    }
 
    // XXX needs to verify the numbers and types of specializers
-   if (typeDef)
+   if (typeDef && !generic)
       typeDef = typeDef->getSpecialization(*context, types.get());
    return typeDef;
 }
@@ -1416,7 +1416,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    }
    
    // make sure this isn't an unspecialized generic
-   if (typeDef->generic)
+   if (!generic && typeDef->generic)
       error(tok, SPUG_FSTR("Generic type " << typeDef->name << 
                             " must be specialized to be used."
                            )

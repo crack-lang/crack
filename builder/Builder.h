@@ -372,8 +372,16 @@ class Builder : public spug::RCBase {
                                                      model::AssignExpr *assign
                                                      ) = 0;
 
+        /**
+         * Create a new module.
+         * @param context the module context.
+         * @param name the module's canonical name.
+         * @param owner the module's owner - this should be null unless the 
+         *  module is being defined inside another module that it depends on.
+         */
         virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name
+                                                 const std::string &name,
+                                                 model::ModuleDef *owner
                                                  ) = 0;
 
         virtual void closeModule(model::Context &context,
