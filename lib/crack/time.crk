@@ -1,9 +1,13 @@
 # Copyright 2010 Google Inc.
 # Code for dealing with time.
 
+import crack.runtime _date, strftime, strlen;
 import crack.lang AssertionError;
 import crack.io FStr;
 import crack.runtime TimeVal;
+import crack.cont.array Array;
+import crack.io Writer;
+
 
 ## A difference in time.
 class TimeDelta : Object, TimeVal {
@@ -16,4 +20,79 @@ TimeDelta seconds(int secs) {
     if (secs > 0xFFFFFFFF || secs < -0xFFFFFFFF)
         throw AssertionError(FStr() `Integer value $secs out of range`);
     return TimeDelta(int32(secs), 0);
+}
+
+bool isLeap(int year){
+   if (year%4 == 0) return true;
+   else return false;
+}
+
+Array[int] maxDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+class Date: _date {
+   oper init(): _date(){
+   }
+
+   oper init(int64 secs): _date(secs){
+   }
+
+   String strftime(StaticString format, uint buflen){
+      String result = {buflen, 0};
+      strftime(result.buffer, buflen, format.buffer, this); // TODO handle errors
+      len:=strlen(result.buffer);
+      return result.substr(0,len);
+   }
+   
+   String strftime(StaticString format){
+      return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
+   }
+   
+   void writeTo(Writer out) {
+      result := FStr() `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
+      if (tm_isdst) result += "DST";
+      out.write(result);
+   }
+}
+
+// Creates a calendar as an array of weeks of ints of the form
+//
+//     June 2011
+// Su Mo Tu We Th Fr Sa  
+// -1 -1 -1  1  2  3  4  
+//  5  6  7  8  9 10 11  
+// 12 13 14 15 16 17 18  
+// 19 20 21 22 23 24 25  
+// 26 27 28 29 30 -1 -1
+
+// The daystart argument determines the start of the week: 0 = Sunday, 1 = Monday, etc.
+
+Array[Array[int]] cal(_date d, int dayStart){
+   d.mktime(); // This sets the weekday and year day of the d object
+   max := maxDays[d.tm_mon];
+   if (d.tm_mon == 1 && isLeap(d.tm_year)) 
+      max = 29;
+
+   week := Array[int](7);
+   Array[Array[int]] weeks = {};
+   int wday = 0;
+
+   for (cday:= 1 + dayStart - d.tm_wday; cday < max || wday%7 > 0; cday++){
+      if (cday <= 0)
+         week.append(-1);
+      else if (cday > 0 && cday <= max)
+         week.append(cday);
+      else
+         week.append(-2);
+      wday++;
+      if (wday%7 == 0){
+         weeks.append(week);
+         wday = 0;
+         week = Array[int](7);
+      }
+   }
+   return weeks;
+}
+
+Array[Array[int]] cal(_date d){
+   return cal(d, 0);
 }
