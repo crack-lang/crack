@@ -2,6 +2,7 @@
 import crack.runtime _date, ctime_r, strftime;
 import crack.exp.cmdline CmdOptions;
 import crack.io cout;
+import crack.time Date;
 import crack.sys argv;
 
 sys_options :=  CmdOptions("--verbose=b/false");
@@ -46,6 +47,41 @@ mytime.mktime();
 
 len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
 if (dateString2.substr(0,len)!='Thursday January 01 1970')
-   cout `strftime format mismatch, got $dateString2\n`;
+   cout `strftime format mismatch, got $dateString2, len = $len\n`;
+
+// Repeat the above with the wrapped Date class
+Date Mytime = {};
+
+Mytime.setToNowLocal();
+if (verbose) printDate(Mytime);
+
+Mytime.setToNowUTC();
+if (verbose) printDate(Mytime);
+
+secs = Mytime.mktime();
+if (verbose) cout `secs = $secs\n`;
+
+Mytime.asctime_r(dateString.buffer);
+if (verbose) cout `asctime = $dateString`;
+
+ctime_r(secs, dateString2.buffer);
+if (verbose) cout `ctime_r = $dateString2`;
+
+if (dateString!=dateString2)
+   cout `Date format mismatch\n`;
+
+
+Mytime2:=Date(secs);
+if (Mytime2.mktime() != secs)
+   cout `Date seconds conversion mismatch\n`;
+
+Mytime = Date(); // Reset
+Mytime.mktime();
+
+dateString2 = Mytime.strftime("%A %B %d %Y");
+len = dateString2.size;
+
+if (dateString2 != 'Thursday January 01 1970')
+   cout `Date.strftime format mismatch, got '$dateString2', len = $len\n`;
 
 cout `ok\n`;
