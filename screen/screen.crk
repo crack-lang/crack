@@ -11,9 +11,6 @@ import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
 import crack.cont.hashmap HashMap;
 import crack.cont.list List;
 
-// XXX 
-import crack.container Iterator;
-
 SCREEN_VERSION := ".5";
 
 class Config {
@@ -273,16 +270,6 @@ class TestSuite {
         cout `importing tests from $dir ... `;
 
         cnt := 0;
-        FileInfo curFile;
-        i := dir.fileInfoIter();
-        while (i.nx()) {
-            curFile = FileInfo.cast(i.elem());
-            if (curFile.matches("*.crkt")) {
-                cnt++;
-                _testList.append(Test(curFile));
-            }
-        }
-/*        
         // gather test files
         for (curFile :in dir.files()) {
             if (curFile.matches("*.crkt")) {
@@ -290,21 +277,14 @@ class TestSuite {
                 _testList.append(Test(curFile));
             }
         }
-*/
+
         cout `found $cnt\n`;
         
-        Directory nextDir;
-        i = dir.dirIter();
-        while (i.nx()) {
-            nextDir = Directory.cast(i.elem());
-            scanForTests(nextDir);
-        }
-/*
         // recurse to directories
         for (nextDir :in dir.dirs()) {
             scanForTests(nextDir);
         }
-        */
+
     }
 
     void runTests(Directory dir) {
