@@ -55,7 +55,7 @@ class Test {
         // parse out sections
         String lineBuf, curSection;
         StringWriter dataBuf = {};
-        headerPat := Regex('^--(\\w+)--$');
+        headerPat := Regex('^%%(\\w+)%%$');
         while (lineBuf = f.nextLine()) {
             // look for section change
             m := headerPat.search(lineBuf);
@@ -326,7 +326,7 @@ class TestSuite {
         
 
         _options.add("help", "h", "Show usage", "f", CMD_BOOL);
-        _options.add("verbose", "h", "Show verbose output", "f", CMD_BOOL);
+        _options.add("verbose", "v", "Show verbose output", "f", CMD_BOOL);
         _options.add("crackbin", "c", "Crack binary", "", CMD_STR);
         _options.add("testdir", "t", "Directory to search recursively for tests", "./tests", CMD_STR);
         _options.add("testfile", "f", "Single test template to execute", "", CMD_STR);
