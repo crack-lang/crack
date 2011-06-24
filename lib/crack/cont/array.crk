@@ -2,22 +2,34 @@
 # Generic array implementation
 
 import crack.lang cmp, free, IndexError, InvalidArgumentError;
-import crack.io cout, Writer;
+import crack.io cout, Writer, FStr;
 @import crack.exp.ann define;
 
 void _bind(Object obj) { obj.oper bind(); }
 void _release(Object obj) { obj.oper release(); }
+bool _isObject(Object obj) { return true; }
+bool _isNull(Object obj) {
+    return (obj is null);
+}
+
 
 @define _nobind(type) { 
     void _bind(type i) { }
     void _release(type i) { }
+    bool _isObject(type i) { return false; }
+    bool _isNull(type i) { return false; } 
+        
+    
 }
 
 @_nobind(byte)
 @_nobind(int)
 @_nobind(int32)
-@_nobind(float)
+@_nobind(uint)
+@_nobind(uint32)
 @_nobind(int64)
+@_nobind(uint64)
+@_nobind(float)
 @_nobind(float32)
 @_nobind(float64)
 @_nobind(byteptr)
@@ -29,12 +41,23 @@ class ArrayData[Elem] {
     
     oper init(uint cap): cap(cap), rep = array[Elem](cap) {
     }
-    
-    @final
-    oper del(){
-        if (!(rep is null)) free(rep);
+
+    void releaseAll(){
+        if (cap > 0 && _isObject(rep[0])){
+            for (uint i = 0; i < cap; i++) {
+                if (!_isNull(rep[i])) {
+                    _release(rep[i]);
+                }
+            }
+        }
     }
 
+
+    @final
+    oper del(){
+        if (!(rep is null)) 
+            releaseAll();
+    }
 }
 
 ## An Array is a sequence backed by a low-level array.  It supports the 
@@ -172,6 +195,7 @@ class Array[Elem] {
     oper init() : 
         data = ArrayData[Elem](16), 
         __rep = data.rep,
+        __cap = 16,
         __size = 0 {
     }
 
@@ -180,21 +204,9 @@ class Array[Elem] {
         __rep = rep, // data.rep <= rep <= rep + cap
         __cap(cap),
         __size(size){
+    }
 
-        cout `oper init(data, $(uintz(rep)), $cap, $size)\n`;
-    }
-    
-    oper del() {
-        uint i;
-        while (i < __size) {
-            elem := __rep[i];
-            _release(elem);
-            i = i + 1;
-        }
-    }
-    
     void realloc(uint newCapacity) {
-        cout `realloc($newCapacity, __size = $__size, __cap = $__cap)\n`;
         uint newCap = newCapacity;
         if (newCap < __cap)
             throw InvalidArgumentError('Array.realloc() - decreasing capacity');
@@ -213,10 +225,23 @@ class Array[Elem] {
         __rep = newRep;
         __cap = newCap;
     }
+    
+    Array copy(){
+        newData := ArrayData[Elem](__cap);
+        newRep := newData.rep;
+        
+        # move all of the entries to the new array.
+        uint i;
+        while (i < __size) {
+            newRep[i] = __rep[i];
+            i = i + 1;
+       }
+
+       return Array(newData, newRep, __cap , __size);
+    }
 
     @final
     void append(Elem elem) {
-        cout `append(__size = $__size, __cap = $__cap)\n`;
         if (__size == __cap)
             realloc(__cap * 2);
         __rep[__size] = elem;
@@ -241,6 +266,7 @@ class Array[Elem] {
     }
 
     void writeTo(Writer out) {
+        FStr fmt = {};
         out.write('[');
         bool first = true;
         for (elem :in this) {
@@ -248,8 +274,11 @@ class Array[Elem] {
                 out.write(', ');
             else
                 first = false;
-            if (!elem) out.write('null');
-            else out.write('A');
+            if (_isNull(elem)) out.write('null');
+            else {
+                text := fmt `$elem`;
+                out.write(text);
+            }
         }
         out.write(']');
     }
@@ -259,7 +288,6 @@ class Array[Elem] {
         if (pos > __size || pos + len > __size)
             throw IndexError('Subarray out of bounds');
 
-        cout `_subarray($pos, $len), cap = $__cap, size = $__size\n`;
         array[Elem] newrep = __rep + uintz(pos);
         return Array(data, newrep, __cap - pos, len);
     }
@@ -273,8 +301,12 @@ class Array[Elem] {
         return _subarray(uint(pos), len);
     }
 
-    Array subarray(int pos) {
+    Array subarray(uint pos, uint len) {
+        return _subarray(pos, len);
+    }
 
+
+    Array subarray(int pos) {
         # adjust a negative position
         if (pos < 0)
             pos = int(__size) + pos;
@@ -282,8 +314,11 @@ class Array[Elem] {
         return _subarray(uint(pos), __size - uint(pos));
     }
 
-    Array slice(int start, int end) {
+    Array subarray(uint pos) {
+        return _subarray(pos, __size - pos);
+    }
 
+    Array slice(int start, int end) {
         # adjust negative offsets
         if (start < 0)
             start = int(__size) + start;
@@ -296,6 +331,15 @@ class Array[Elem] {
 
         return _subarray(uint(start), uint(end - start));
     }
+
+    Array slice(uint start, uint end) {
+        # bounds checking
+        if (end < start)
+            throw IndexError('Start of slice is after end.');
+
+        return _subarray(start, end - start);
+    }
+
 
     Array slice(int start) {
         # adjust negative offsets

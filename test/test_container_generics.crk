@@ -7,11 +7,14 @@ import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.cont.list List, DList;
 import crack.cont.hashmap HashMap;
+import crack.exp.algorithm QuickSort;
 @import crack.exp.ann define;
 
 TreeMap[String, int] m = {};
 m['first'] = 100;
 m['second'] = 200;
+m['third'] = 300;
+m['fourth'] = 400;
 if (m['first'] != 100 || m['second'] != 200)
     cout `failed TreeMap access\n`;
 
@@ -23,12 +26,65 @@ for (item :in m) {
     sa.append(fmt.createString());
 }
 
-if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
+QuickSort[String] qs = {sa};
+
+# Now sa = [first: 100, fourth: 400, second: 200, third: 300]
+
+if (sa[0] != 'first: 100' || sa[1] != 'fourth: 400')
     cout `string array or iteration failed\n`;
 
+#  test subarray
 sub := sa.subarray(1);
-if (sa[0] != 'second: 200')
-    cout `string array substring failed, got '$(sa[0])'\n`;
+if (sub[1] != 'second: 200' || sub[2] != 'third: 300' || sub[0] != 'fourth: 400')
+    cout `string array subarray  1 failed, got '$sub'\n`;
+
+if (sub.count() != 3) 
+   cout `string array subarray failed, length $(sub.count()) != 3\n`;
+
+# 2 arguments: start, len
+sub = sa.subarray(1, 1);
+if (sub[0] != 'fourth: 400')
+    cout `string array subarray 2 failed, got '$sub'\n`;
+
+if (sub.count() != 1) 
+   cout `string array subarray failed, length $(sub.count()) != 1\n`;
+
+sub = sa.subarray(1);
+if (sub[1] != 'second: 200' || sub[2] != 'third: 300' || sub[0] != 'fourth: 400')
+    cout `string array subarray 3 failed, got '$sub'\n`;
+
+# array slice
+sub = sa.slice(1, 3);
+if (sub.count() != 2) 
+   cout `string array subarray failed, length $(sub.count()) != 3\n`;
+
+if (sub[1] != 'second: 200' || sub[0] != 'fourth: 400')
+    cout `string array slice 1 failed, got '$sub)'\n`;
+
+sub = sa.slice(1, 2);
+if (sub.count() != 1) 
+   cout `string array slice failed, length $(sub.count()) != 2\n`;
+
+if (sub[0] != 'fourth: 400')
+    cout `string array slice 2 failed, got '$sub'\n`;
+
+
+
+testA :=Array[String]!['bogus', 'test', 'array'];
+if (testA[0] != 'bogus' || testA[1] != 'test' || testA[2] != 'array')
+   cout `string array ! notation failed, got $testA\n`;
+
+intA := Array[int]![1,2,3,4,5,6,7,8,9,0];
+stringA := Array[String]!["bogus", "test", "string"];
+
+intRepr:=FStr() `$intA`;
+stringRepr:=FStr() `$stringA`;
+
+if (intRepr != '[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]')
+    cout `Array[int].writeTo failed\n`;
+if (stringRepr != '[bogus, test, string]')
+    cout `Array[String].writeTo failed\n`;
+
 
 # test a second invocation (uses a different code path)
 class Foo {}
