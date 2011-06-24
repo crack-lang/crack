@@ -22,10 +22,25 @@ void _release(Object obj) { obj.oper release(); }
 @_nobind(float64)
 @_nobind(byteptr)
 
+# A class to keep track of the primitive array needed for the Array[Elem] class
+class ArrayData[Elem] {
+    array[Elem] rep = null;
+    uint cap;
+    
+    oper init(uint cap): cap(cap), rep = array[Elem](cap) {
+    }
+    
+    @final
+    oper del(){
+        if (!(rep is null)) free(rep);
+    }
+
+}
+
 ## An Array is a sequence backed by a low-level array.  It supports the 
 ## bracket operators and adding items at the end.
 class Array[Elem] {
-    
+    ArrayData[Elem] data;
     array[Elem] __rep = null;
     uint __cap, __size;
 
@@ -148,15 +163,23 @@ class Array[Elem] {
     }
     
     oper init(uint initCapacity) :
-        __rep = array[Elem](initCapacity), 
+        data = ArrayData[Elem](initCapacity), 
+        __rep = data.rep,
         __cap = initCapacity,
         __size = 0 {
     }
     
     oper init() : 
-        __rep = array[Elem](16), 
-        __cap = 16,
+        data = ArrayData[Elem](16), 
+        __rep = data.rep,
         __size = 0 {
+    }
+    
+    oper init (ArrayData[Elem] data, array[Elem] rep, uint cap, uint size):
+        data = data,
+        __rep = rep, // data.rep <= rep <= rep + cap
+        __cap(cap),
+        __size(size){
     }
     
     oper del() {
@@ -166,14 +189,13 @@ class Array[Elem] {
             _release(elem);
             i = i + 1;
         }
-        free(__rep);
     }
     
     void realloc(uint newCapacity) {
         if (newCapacity < __cap)
             throw InvalidArgumentError('Array.realloc() - decreasing capacity');
-            
-        newRep := array[Elem](newCapacity);
+        newData := ArrayData[Elem](newCapacity);
+        newRep := newData.rep;
         
         # move all of the entries to the new array.
         uint i;
@@ -182,7 +204,7 @@ class Array[Elem] {
             i = i + 1;
         }
 
-        free(__rep);
+        data = newData;
         __rep = newRep;
         __cap = newCapacity;
     }
@@ -191,7 +213,6 @@ class Array[Elem] {
     void append(Elem elem) {
         if (__size == __cap)
             realloc(__cap * 2);
-        
         __rep[__size] = elem;
         _bind(elem);
         __size = __size + 1;
@@ -225,6 +246,60 @@ class Array[Elem] {
             else out.write('A');
         }
         out.write(']');
+    }
+
+
+    Array _subarray(uint pos, uint len){
+        if (pos > __size || pos + len > __size)
+            throw IndexError('Subarray out of bounds');
+
+         array[Elem] newrep = __rep + uintz(pos);
+         return Array(data, newrep, __cap - pos, len);
+    }
+
+
+    Array subarray(int pos, uint len) {
+        # adjust a negative position
+        if (pos < 0)
+            pos = int(__size) + pos;
+
+        return _subarray(uint(pos), len);
+    }
+
+    Array subarray(int pos) {
+
+        # adjust a negative position
+        if (pos < 0)
+            pos = int(__size) + pos;
+
+        return _subarray(uint(pos), __size - uint(pos));
+    }
+
+    Array slice(int start, int end) {
+
+        # adjust negative offsets
+        if (start < 0)
+            start = int(__size) + start;
+        if (end < 0)
+            end = int(__size) + end;
+
+        # bounds checking
+        if (end < start)
+            throw IndexError('Start of slice is after end.');
+
+        return _subarray(uint(start), uint(end - start));
+    }
+
+    Array slice(int start) {
+        # adjust negative offsets
+        if (start < 0)
+            start = int(__size) + start;
+
+        # bounds checking
+        if (uint(start) > __size)
+            throw IndexError('Start of slice is after end.');
+
+        return _subarray(uint(start), __size - uint(start));
     }
 
     ## swap element index1 with index2
