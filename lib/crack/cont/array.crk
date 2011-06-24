@@ -3,6 +3,7 @@
 
 import crack.lang cmp, free, IndexError, InvalidArgumentError;
 import crack.io cout, Writer, FStr;
+import crack.exp.algorithm QuickSort;
 @import crack.exp.ann define;
 
 void _bind(Object obj) { obj.oper bind(); }
@@ -12,14 +13,11 @@ bool _isNull(Object obj) {
     return (obj is null);
 }
 
-
 @define _nobind(type) { 
     void _bind(type i) { }
     void _release(type i) { }
     bool _isObject(type i) { return false; }
     bool _isNull(type i) { return false; } 
-        
-    
 }
 
 @_nobind(byte)
@@ -45,9 +43,8 @@ class ArrayData[Elem] {
     void releaseAll(){
         if (cap > 0 && _isObject(rep[0])){
             for (uint i = 0; i < cap; i++) {
-                if (!_isNull(rep[i])) {
+                if (!_isNull(rep[i])) 
                     _release(rep[i]);
-                }
             }
         }
     }
@@ -85,8 +82,11 @@ class Array[Elem] {
             i = __size + uint(index);
         else
             i = uint(index);
-        
-        this[i] = elem;
+
+        tmp := __rep[i];
+        __rep[i] = elem;
+        _bind(elem);
+        _release(tmp);
     }
 
     @final
@@ -145,6 +145,10 @@ class Array[Elem] {
         else
             # we're the same length and all elements are equal
             return 0;
+    }
+    
+    void sort(){
+        QuickSort[Array] qs = {this, __size};
     }
 
     class ArrayIter {
