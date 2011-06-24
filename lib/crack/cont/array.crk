@@ -174,12 +174,14 @@ class Array[Elem] {
         __rep = data.rep,
         __size = 0 {
     }
-    
+
     oper init (ArrayData[Elem] data, array[Elem] rep, uint cap, uint size):
         data = data,
         __rep = rep, // data.rep <= rep <= rep + cap
         __cap(cap),
         __size(size){
+
+        cout `oper init(data, $(uintz(rep)), $cap, $size)\n`;
     }
     
     oper del() {
@@ -192,9 +194,12 @@ class Array[Elem] {
     }
     
     void realloc(uint newCapacity) {
-        if (newCapacity < __cap)
+        cout `realloc($newCapacity, __size = $__size, __cap = $__cap)\n`;
+        uint newCap = newCapacity;
+        if (newCap < __cap)
             throw InvalidArgumentError('Array.realloc() - decreasing capacity');
-        newData := ArrayData[Elem](newCapacity);
+        if (newCap == 0) newCap = 16;
+        newData := ArrayData[Elem](newCap);
         newRep := newData.rep;
         
         # move all of the entries to the new array.
@@ -206,11 +211,12 @@ class Array[Elem] {
 
         data = newData;
         __rep = newRep;
-        __cap = newCapacity;
+        __cap = newCap;
     }
 
     @final
     void append(Elem elem) {
+        cout `append(__size = $__size, __cap = $__cap)\n`;
         if (__size == __cap)
             realloc(__cap * 2);
         __rep[__size] = elem;
@@ -253,8 +259,9 @@ class Array[Elem] {
         if (pos > __size || pos + len > __size)
             throw IndexError('Subarray out of bounds');
 
-         array[Elem] newrep = __rep + uintz(pos);
-         return Array(data, newrep, __cap - pos, len);
+        cout `_subarray($pos, $len), cap = $__cap, size = $__size\n`;
+        array[Elem] newrep = __rep + uintz(pos);
+        return Array(data, newrep, __cap - pos, len);
     }
 
 

@@ -26,6 +26,10 @@ for (item :in m) {
 if (sa[0] != 'first: 100' || sa[1] != 'second: 200')
     cout `string array or iteration failed\n`;
 
+sub := sa.subarray(1);
+if (sa[0] != 'second: 200')
+    cout `string array substring failed, got '$(sa[0])'\n`;
+
 # test a second invocation (uses a different code path)
 class Foo {}
 Array[Foo];
