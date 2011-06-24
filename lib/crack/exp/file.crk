@@ -19,7 +19,7 @@ class FileInfo: Object {
     oper init(byteptr name): name(name) { }
 
     bool matches(String pattern) {
-        return (fnmatch(pattern.buffer, name.buffer) == 0);
+        return (fnmatch(CString(pattern).buffer, CString(name).buffer) == 0);
     }
 
     void writeTo(Writer out) {

@@ -16,9 +16,8 @@ if (true) {
     Directory d = {base + 'lib'};
     StringFormatter result = {};
     
-    i := d.dirIter();
-    while (i.nx())
-        result `$(Directory.cast(i.elem()).name)`;
+    for (f :in d.dirs())
+        result `$(f.name)`;
     
     s := result.createString();
     if (s != base + 'lib/crack')
@@ -29,9 +28,7 @@ if (true) {
     Directory d = {base + 'lib/crack'};
     
     FileInfo target;
-    i := d.fileInfoIter();
-    while (i.nx()) {
-        info := FileInfo.cast(i.elem());
+    for (info :in d.files()) {
         if (info.name == base + 'lib/crack/lang.crk')
             target = info;
     }

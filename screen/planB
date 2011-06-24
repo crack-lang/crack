@@ -1,0 +1,119 @@
+#!/bin/bash
+# Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
+
+OUTDIR="./output/"
+echo "output to $OUTDIR"
+
+CRACKBIN="../crack"
+if [ -s $CRACKBIN ]
+then
+    echo "crack binary at $CRACKBIN"
+else
+    echo "no crack binary found at $CRACKBIN. run from screen/ directory."
+    exit 1
+fi
+
+function extract_section {
+    file="$1"
+    sec="$2"
+    filelen=`wc -l $file | awk '{ print \$1'}`
+    #echo "file len: $filelen"
+    cmd="grep -n --color=never %%$sec%% $file"
+    start=`$cmd  | awk -F : '{print \$1}'`
+    #echo "start of $sec: $start"
+    start_plus_one=`expr $start + 1`
+    cmd1="tail -n +$start_plus_one $file"
+    cmd2="egrep -n -m 1 --color=never %%.+%%"
+    next=`$cmd1 | $cmd2 | awk -F : '{print \$2}'`
+    if [ -n "$next" ]; then  
+        # there is a following section
+        #echo "next section following $sec: $next"
+        cmd="grep -n --color=never $next $file"
+        end=`$cmd  | awk -F : '{print \$1}'`
+        #echo "which is located at $end"
+        seclen=`expr $end - $start_plus_one`
+        #echo "section length: $seclen"
+        seclen_minus_one=`expr $seclen - 1`
+        EXTRACT=`tail -n +$start_plus_one $file | head -n $seclen`
+        #echo "got: $EXTRACT"
+    else
+       # no following section, i.e. EOF
+        #echo "no following section"
+        end=$filelen
+        seclen=`expr $end - $start`
+        EXTRACT=`tail -n +$start_plus_one $file`
+    fi
+}
+
+
+function test_output {
+    text="$1"
+    script="$2"
+    expected="$3"
+    stdin="$4"
+    args="$5"
+    
+    echo -n "$text..."
+    echo "$script" >run_all_tests.tmp
+    cmdline="./crack -B $builder $opts $extra_opts run_all_tests.tmp $args"
+    #echo ""
+    #echo "running $cmdline"
+    result="$(echo $stdin | $cmdline 2>&1)"
+    if [ "$result" = "$expected" ]; then
+        echo ok
+    else
+        echo ""
+        echo FAILED
+        echo "$cmdline"
+        echo "Expected: $expected"
+        echo "Got     : $result"
+        rc=1
+    fi
+}
+
+function run_test {
+
+    file="$1"
+    #echo "infile: $file"
+    newname=`basename $file .crkt`
+    outfile="$OUTDIR$newname.crk"
+    #echo "outfile: $outfile"
+    extract_section $file TEST
+    TEST_sec=$EXTRACT
+    echo -n "$TEST_sec ..."
+    extract_section $file FILE
+    FILE_sec=$EXTRACT
+    echo "$FILE_sec" > $outfile
+    extract_section $file ARGS
+    ARGS_sec=$EXTRACT
+    extract_section $file EXPECT
+    EXPECT_sec=$EXTRACT
+    
+    # XXX script args
+    # XXX stdin
+    
+    cmdline="$CRACKBIN $ARGS_sec $outfile" # xxx script args section
+    #echo "running $cmdline"
+    result="$(echo $stdin | $cmdline 2>&1)"
+    if [ "$result" = "$EXPECT_sec" ]; then
+        echo ok
+    else
+        echo ""
+        echo FAILED
+        echo "$cmdline"
+        echo "Expected: $EXPECT_sec"
+        echo "Got     : $result"
+        rc=1
+    fi
+    
+    
+}
+
+# pre bootstrap tests
+BASIC=`find ./tests/basic -name "*.crkt"`
+
+for file in $BASIC
+do
+    run_test $file
+done
+

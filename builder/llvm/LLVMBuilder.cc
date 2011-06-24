@@ -52,7 +52,6 @@
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
 #include <model/TernaryExpr.h>
-#include <llvm/Assembly/PrintModulePass.h> // XXX remove me
 
 using namespace std;
 using namespace llvm;

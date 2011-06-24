@@ -56,4 +56,11 @@ C c = {};
 if (!(c.wrap.val is c))
     puts('FAILED nested generic parameterized by outer class');
 
+# test parsing a generic derived from another generic parameterized by a 
+# generic parameter
+class D[T] : A[T] { oper init(int val) : A[T](val) {} }
+
+if (D[int](100).val != 100)
+    puts('FAILED generics inhereting from other generics');
+
 puts('ok');

@@ -5,7 +5,7 @@
 import crack.io cerr, Formatter, Writer;
 import crack.lang die, FreeBase, CString, SubString;
 import crack.exp.bindings Opaque;
-import crack.container List, Iterator;
+import crack.cont.list List;
 import crack.exp.file Openable, FileInfo;
 
 import crack.runtime opendir, closedir, readdir, getDirEntry, Dir, DirEntry;
@@ -24,8 +24,8 @@ class Directory : Object, Openable {
 
     Dir _dir;
 
-    List _dirList = {};
-    List _fileList = {};
+    List[Directory] _dirList = {};
+    List[FileInfo] _fileList = {};
 
     oper init(String name, bool open): name(name) {
         // possibly strip trailing delim
@@ -80,20 +80,20 @@ class Directory : Object, Openable {
     }
 
     /// Returns an iterator over the subdirectories (Iter[Directory]).
-    Iterator dirIter() { 
+    List[Directory] dirs() { 
         if (!_isOpened)
             _open();
         if (_isValid)
-            return _dirList.iter(); 
+            return _dirList; 
         else
             return null;
     }
 
-    Iterator fileInfoIter() {
+    List[FileInfo] files() {
         if (!_isOpened)
             _open();
         if (_isValid)
-            return _fileList.iter(); 
+            return _fileList; 
         else
             return null;        
     }

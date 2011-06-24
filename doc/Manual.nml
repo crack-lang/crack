@@ -4422,6 +4422,10 @@ From 0.4 to 0.5
 -   the #toBool()# converter has been replaced with #oper to bool()#
 -   Macro style generic containers are deprecated: use real generics instead.  
     (This currently just triggers a warning).
+-   crack.exp.dir #Directory.dirIter()# has been replaced with 
+    #Directory.dirs()#, and #Directory.fileIter()# with #Directory.files()#
+    which now return #List[Directory].Iter# and #List[FileInfo].Iter# objects,
+    respectively.
 
 From 0.3 to 0.4
 ---------------

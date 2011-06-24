@@ -114,51 +114,17 @@ test_output 'return in module scope' \
     'return' \
     "${parseError}1: Return statement not allowed in module scope" \
 
-test_output 'simple class definition' 'class Foo {};' ''
-test_output 'class with base class' 'class Base {}; class Foo : Base {};' ''
-# this was shabby to begin with, restore this and more tests when we get real 
-# multiple inheritence working.
-#test_output 'class with base classes' 'class Foo : int32, byteptr {};' ''
+test_output 'classes' 'import test.test_classes;' ok
 test_output 'bad class definition' 'class Foo xxx;' \
     "${parseError}1: token xxx was not expected at this time, "\
 'expected colon or opening brace.'
-test_output 'class with nested def' 'class Foo { int32 val; }' ''
-test_output 'nested classes' 'class Foo { class Bar {}; }' ''
 test_output 'bad type for member function' \
     'class Foo { xxx f() {} };' \
     "${parseError}1: xxx is not a type."
 test_output 'the "define" (":=") operator' \
     'x := 1234; printint(x)' \
     '1234'
-test_output 'basic methods' \
-    'class Foo { void p(byteptr data) { puts(data); } }; 
-     Foo f = {}; f.p("abcd");' \
-    'abcd'
 test_output 'voidptr default initializer' 'voidptr p; puts("ok");' ok
-
-test_output 'instance variables' \
-    'class Foo {
-        int32 val; void set() {val = 100;} int32 get() {return val;}
-    };
-    Foo x = {}; x.set(); printint(x.get());
-    x.val = 200; printint(x.val);' \
-    '100200'
-
-test_output 'implicit this' \
-    'class Foo { int32 a; void g() { printint(a); }
-                 void f() { a = 100; g(); } 
-                 };
-     Foo foo = {}; foo.f();' \
-     '100'
-
-test_output 'explicit this' \
-    'class Foo {
-        int32 a;
-        void g() { printint(this.a); }
-        void f() { this.a = 100; this.g(); }
-     };
-     Foo foo = {}; foo.f();' \
-     '100'
 
 test_output 'bad func names' \
     'class Foo { void f() { this.g(); }};' \
