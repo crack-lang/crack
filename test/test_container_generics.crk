@@ -26,7 +26,7 @@ for (item :in m) {
     sa.append(fmt.createString());
 }
 
-QuickSort[String] qs = {sa};
+QuickSort[Array[String]] qs = {sa, sa.count()};
 
 # Now sa = [first: 100, fourth: 400, second: 200, third: 300]
 
@@ -85,6 +85,81 @@ if (intRepr != '[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]')
 if (stringRepr != '[bogus, test, string]')
     cout `Array[String].writeTo failed\n`;
 
+# test map/reduce/filter
+
+int plus(int a){
+    return a + 2;
+}
+
+int minus(int a){
+    return a - 2;
+}
+
+bool gte10(int a){
+    return a >= 10;
+}
+
+int sum(int a, int b){
+    return a + b;
+}
+
+intA.map(plus);
+if (intA != Array[int]![3, 4, 5, 6, 7, 8, 9, 10, 11, 2])
+    cout `Array[int].map failed, got $intRepr\n`;
+intB := intA.mapped(minus);
+
+if (intB != Array[int]![1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
+    cout `Array[int].mapped failed\n`;
+
+intB = intA.sorted();
+intA.sort();
+if (intA != Array[int]![2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    cout `sorted intA failed, got $intA\n`;
+
+if (intA != intB)
+    cout `Array compare/sorted failed, got $intA != $intB\n`;
+
+intB = intA.filtered(gte10);
+if (intB != Array[int]![10, 11])
+    cout `filter intA failed, got $intB\n`;
+
+intSum := intA.reduce(sum);
+if (intSum != 65)
+    cout `reduce intA failed, got $intSum\n`;
+
+# test String Array  map/reduce/filter
+String plusString(String s){
+    return s + "__END";
+}
+
+String appendString(String s, String t){
+    return s + t;
+}
+
+bool filterString(String s){
+    return s == "test";
+}
+
+stringB := stringA.sorted();
+if (stringB != Array[String]!["bogus", "string", "test"])
+    cout `Array[String] sort failed, got $stringB\n`;
+
+stringC := stringB.mapped(plusString);
+stringB.map(plusString);
+
+if (stringB != Array[String]!["bogus__END", "string__END", "test__END"] || stringB != stringC)
+    cout `Array[String] map failed, got $stringB\n`;
+
+stringB = stringA.filtered(filterString);
+stringC.filter(filterString);
+
+if (stringB != Array[String]!["test"] || stringC != Array[String]![])
+    cout `Array[String] filter failed, got $stringB and $stringC\n`;
+
+rs := stringA.reduce(appendString);
+
+if (rs != "bogusteststring")
+    cout `Array[String] reduce failed, got $rs\n`;
 
 # test a second invocation (uses a different code path)
 class Foo {}

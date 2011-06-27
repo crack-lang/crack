@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc
 # Generic array implementation
 
-import crack.lang cmp, free, IndexError, InvalidArgumentError;
+import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
 import crack.io cout, Writer, FStr;
 import crack.exp.algorithm QuickSort;
 @import crack.exp.ann define;
@@ -146,10 +146,6 @@ class Array[Elem] {
             # we're the same length and all elements are equal
             return 0;
     }
-    
-    void sort(){
-        QuickSort[Array] qs = {this, __size};
-    }
 
     class ArrayIter {
         Array __arr;
@@ -258,6 +254,70 @@ class Array[Elem] {
           return __rep[--__size];
        else
           return null;
+    }
+
+    void sort(){
+        QuickSort[Array] qs = {this, __size};
+    }
+
+    Array sorted(){
+        Array newArray = this.copy();
+        QuickSort[Array] qs = {newArray, __size};
+        return newArray;
+    }
+
+    void map(function[Elem, Elem] f){
+        Elem newElem;
+        for (uint i = 0; i < __size; i++){
+            newElem = f(__rep[i]);
+            _bind(newElem);
+            __rep[i] = newElem;
+        }
+    }
+
+    Array mapped(function[Elem, Elem] f){
+        newData := ArrayData[Elem](__size);
+        Array newArray = Array(newData, newData.rep, __size, __size);
+        newRep := newData.rep;
+        Elem newElem;
+        
+        for (uint i = 0; i < __size; i++){
+            newElem = f(__rep[i]);
+            _bind(newElem);
+            newRep[i] = newElem;
+        }
+        return newArray;
+    }
+
+    Elem reduce(function[Elem, Elem, Elem] f){
+        if (__size == 0) throw AssertionError("reduce of zero-length Array is undefined");
+        Elem val = __rep[0];
+        for (uint i = 1; i < __size; i++)
+            val = f(val, __rep[i]);
+        return val;
+    }
+
+    Elem reduce(function[Elem, Elem, Elem] f, Elem initialValue){
+        Elem val = initialValue;
+        for (uint i = 0; i < __size; i++)
+            val = f(val, __rep[i]);
+        return val;
+    }
+
+    void filter(function[bool, Elem] f) {
+        uint ns = 0;
+        for (uint i = 0; i < __size; i++)
+            if (f(__rep[i])) __rep[ns++] = __rep[i];
+            else _release(__rep[i]);
+        __size = ns;
+    }
+
+
+    Array filtered(function[bool, Elem] f) {
+        retval := Array();
+        for (uint i = 0; i < __size; i++)
+            if (f(__rep[i])) retval.append(__rep[i]);
+        return retval;
     }
 
   @final

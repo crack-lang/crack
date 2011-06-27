@@ -159,7 +159,6 @@ String rjust(String text, uint width){
     return  rjust(text, width, b' ');
 }
 
-
 ## Centers string with the provided bytes so it has the given width
 String center(String text, uint width, byte c){
     if (text.size >= width) return text;
