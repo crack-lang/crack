@@ -35,6 +35,7 @@ class BuilderOptions : public spug::RCBase {
                               verbosity(0),
                               dumpMode(false),
                               debugMode(false),
+                              statsMode(false),
                               optionMap() { }
 
 };
