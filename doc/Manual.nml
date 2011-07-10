@@ -2,13 +2,12 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.4 of the Crack Programming Language.  Version 
-0.4 is a fairly complete programming language.  We believe the language to be 
-usable for real work at this time, but there are still a few key features to 
-be added before we release 1.0 (including generics and first class 
-functions). While the compiler is generating debug information at this time, 
-only a limited subset of it is currently usable (you can get a stack trace in 
-gdb or from an exception).
+This is the Manual for version 0.5 of the Crack Programming Language.  Version 
+0.5 is a fairly complete programming language.  We believe the language to be 
+usable for real work at this time, but we still plan to introduce a few 
+changes affecting compatibility prior to releasing 1.0. While the compiler is 
+generating debug information at this time, only a limited subset of it is 
+currently usable (you can get a stack trace in gdb or from an exception).
 
 But that said, if you want to get in on the ground floor of a new scripting 
 language that is C-like, fast, and interfaces well with C and C++ code, Crack 
@@ -35,7 +34,7 @@ Paradigms::
 Garbage Collection::
     Reference counted objects, programmer controlled
 OO Features::
-    Virtual functions, overloaded functions, multiple inheritance
+    Virtual functions, overloaded functions, multiple inheritance, generics.
 
 Crack has been developed on Linux x86 and x86-64. It is highly questionable 
 whether it will build under any other platform.  Portability will play a 
@@ -245,6 +244,9 @@ array[/class/]::
 
     This is Crack's only existing generic datatype - to use it, you specialize 
     it with another class type, for example: #array[int]#
+function[/return-type/, /arg-type/ ...]::
+    The type of a function with the corresponding return type and argument 
+    types.
 VTableBase::
     The base class used for all classes that can have virtual functions (more on
     this later).
@@ -282,9 +284,8 @@ the state data defined for the type.  They can be extended to create other
 high-level types through sub-classing (more on this later).
 
 Type names in Crack are very simple.  They are either a single word or 
-"#array[#/other-type-name/#]#"  The latter form, though currently used only 
-for arrays, will eventually be expanded as the instantiation mechanism for 
-/generic types/, similar to generics in Java.
+"#array[#/other-type-name/#]#"  The latter form is used both for the built-in 
+types #array# and #function# and for generics.
 
 Integer Constants
 '''''''''''''''''
@@ -1519,34 +1520,20 @@ derived class using #cast()# and #unsafeCast()#.
 
 Typecasting is generally deprecated in object-oriented paradigms.  However, 
 there are certain situations where it is necessary, and others where it is 
-just the easiest way to get something done.  Consider the case of 
-containers:
+just the easiest way to get something done.
+
+The #cast()# function accepts an object as an argument and returns the object 
+cast to its type:
 
 {{
-    import crack.container Array;
-    
-    # create an array of coordinates
-    coords := Array();
-    coords.append(Coord(1, 2));
-    coords.append(Coord(3, 4));
+    class A {}
+    class B : A {}
+    A a = B();
+    B b = B.cast(a);
 }}
 
-We've stored a couple of #Coord# objects in the array, but we can't use these 
-directly because #Array# stores an array of objects: 
-
-{{
-    # gives an error because there is no drawLine(Object, Object) function.
-    drawLine(coords[0], coords[1]);
-}}
-
-This is the same problem that early versions of Java had - it will be fixed 
-in a later version of Crack through the introduction of generics.  But for now 
-we can work around this with a type cast (in Crack 0.4, we also have a weak 
-form of generics implemented using macros, see \X(Generic Containers)):
-
-{{
-    drawLine(Coord.cast(coords[0]), Coord.cast(coords[1]));
-}}
+If the object is not actually an instance of the type we are casting to, the 
+#cast()# function throws a #BadCastError#.
 
 The #cast()# function is defined for all classes that derive from 
 #VTableBase# (including all classes derived from #Object#).  If you attempt 
@@ -1875,6 +1862,60 @@ without also matching more specific overloads defined in the base class.  For
 example, imagine that if, in the example above, B were derived from A. 
 Matching #Derived.func(A a)# would hide the more specific #Base.func(B b)# 
 which is probably not what you want.
+
+Generics
+--------
+
+In strongly typed languages like Crack, it is very desirable to be able to 
+express a type in terms of other types.  For example, if we have an array 
+container, we want to be able to define an "array of integers" or an "array of 
+strings."  Without this feature, you need to do a lot of typecasting when 
+extracting an object from the array.
+
+Crack provides this feature in the form of /generics/.  A generic is a class 
+that can accept other types as parameters, similar to the way that the 
+primitive built-ins #array# and #function# do.
+
+You define a generic like any other class definition only with a parameter 
+list:
+
+{{
+    class Pair[FirstType, SecondType] {
+        FirstType first;
+        SecondType second;
+        
+        oper init(FirstType first, SecondType second) :
+            first = first,
+            second = second {
+        }
+    }
+}}
+
+In this example, we have defined a #Pair# generic that is simply a holder for 
+two variables, #first# and #second#, each of which can have their own type.
+
+To construct a #Pair# of an integer and a string:
+
+{{
+    p := Pair[int, String](100, 'string value');
+}}
+
+You can use a #Pair[#/t1/#, #/t2/#]# specification anywhere a type is allowed. 
+When such a specification is encountered, the Crack compiler instantiates the 
+generic for its parameter types by actually compiling the code of the generic 
+with its parameters aliased to the types provided.
+
+Generics in Crack are essentially macros.  When they are defined, the contents 
+of the generic class is simply recorded.  When instantiated, that recording is 
+played back in an "ephemeral module" containing:
+
+-   Aliases for all of the names contained in the original module where the 
+    generic was defined.
+-   The generic parameter types for the instantiation, aliased to the the 
+    generic parameter names.
+
+By virtue of this, compile-time errors in generics do not manifest until the 
+generic is instantiated.
 
 Modules
 -------
@@ -2518,8 +2559,7 @@ definition:
 
 {{
 
-    @GenericObjArray(CallbackArray, Callback);
-    CallbackArray callbacks;
+    Array[Callback] callbacks;
 
     void deregisterCallbacks() {
         for (cb :in callbacks)
@@ -3248,21 +3288,9 @@ Containers
 
 Containers provide support for the basic sequential and mapping datastructures 
 expected from a modern programming language.  Crack's container library is 
-#crack.container#  All container classes are derived from #Container#.
-
-Crack containers all store objects of type #Object#.  You can store derived 
-types, but in order to do anything useful with them after retrieval you pretty 
-much need to cast them to the type that you expect them to be.
-
-For example, if we have an array of objects of type #Foo# with method #bar()#, 
-we need to do something like this to call bar on the zeroth element:
-
-{{
-    Foo.cast(arr[0]).bar();
-}}
-
-Java-like generics will be supported in a later version of the language, and 
-you'll be able to have an #Array[Foo]#.
+defined in a set of modules in #crack.cont#.  Each module is named for the 
+container generic that it provides, for example, high-level arrays are in 
+#crack.cont.array# and the array class itself is called #Array#.
 
 All containers have a #count()# method that returns the number of elements in 
 the container.  They also convert to boolean based on whether or not they are 
@@ -3286,25 +3314,25 @@ Iterators allow you to iterate over the set of objects in a container one at a
 time.  As an example, consider an array:
 
 {{
-    Array arr = createArray();
+    Array[ElemType] arr = createArray();
     
-    i := arr.iter();
-    while (i.nx())
+    for (i := arr.iter(); i; i.next())
         cout `got $(i.elem())\n`;
 }}
 
 #arr.iter()# creates an iterator over the array initialized at the first item. 
-The #nx()# method forwards the iterator to the next element except when it is 
-called for the first time.  It returns true if the iterator is valid after 
-being forwarded.  #elem()# returns the element associated with the 
-iterator.
+An iterator is "true" for as long as there are elements remaining in the 
+collection.  #next()# forwards the iterator to the next element, and #elem()# 
+returns the element associated with the iterator.
 
-The #nx()# method is a stop-gap solution - it exists because Crack doesn't 
-have a #for# statement yet.  #nx()# lets us do iteration in a while loop.  
-Don't expect it to stick around for very long.
+Iterators conform to \X(The Iteration Protocol), and as such can be used more 
+succinctly in a #for# loop:
 
-You can also use the more permanent #next()# method - this forwards the 
-iterator regardless of whether it is pointing to the first element or not.
+{{
+    for (elem :in arr)
+        cout `got $elem\n`;
+}}
+
 
 Arrays
 ''''''
@@ -3317,8 +3345,8 @@ reference counts of the elements.
 Construct an array with the expected number of elements:
 
 {{
-    import crack.container Array;
-    Array arr = {10};  # 10 element array
+    import crack.cont.array Array;
+    Array[String] arr = {10};  # 10 element array of Strings
 }}
 
 The number of elements specified is the array /capacity/ - this is the number 
@@ -3359,10 +3387,14 @@ result in a runtime error.
 Finally, like all containers, you can iterate over the elements of an array:
 
 {{
-    i := arr.iter();
-    while (i.nx())
+    for (i :on arr)
         cout `elem: $(i.elem())\n`;
 }}
+
+It should be noted that there is a specialization of #Array[String]# called 
+#StringArray# defined in the #crack.strutil# module.  In addition to the 
+standard #Array# functionality, it's contains methods for obtaining a 
+primitive array and for joining the array into a single delimited string.
 
 Linked Lists
 ''''''''''''
@@ -3374,18 +3406,17 @@ them preferrable to arrays in certain cases.
 The #List# interface looks very much like the #Array# interface:
 
 {{
-    import crack.container List;
+    import crack.cont.list List;
     
-    List l;
+    List[String] l;
     
     # add some elements
     l.append('first');
     l.append('second');
     
     # iterate over them
-    i := l.iter();
-    while (i.nx())
-        cout `got element $(i.elem())\n`;
+    for (elem :in l)
+        cout `got element $elem\n`;
 }}
 
 Random access lookup, delete and insert are all available, although they are 
@@ -3421,24 +3452,25 @@ Doubly-Linked Lists
 The #DList# class implements a doubly-linked list.  #DList# provides some 
 additional functionality over #List# and can facilitate faster operations, but 
 at the cost of higher memory usage (each #DList# element requires an 
-additional pointer).
+additional pointer).  #DList# is part of the #crack.list# module.
 
 #DList# supports inserting and deleting the element referenced by an iterator:
 
 {{
-    DList dl;
-    fillList(dl);
+    # all sequence types can be initialized with a sequence constant.
+    DList[String] dl = ['first', 'delete me', 'temp', 'before me'];
 
-    i := dl.iter();
-    while (i.nx()) {
+    for (i :on dl) {
     
         # delete the 'delete me' string from the list
-        if (i.elem() == 'delete me')
+        if (i.elem() == 'delete me') {
             dl.delete(i);
         
         # insert 'inserted' before 'before me'
-        else if (i.elem() == 'before me')
+        } else if (i.elem() == 'before me') {
             dl.insert(i, 'inserted');
+            i.next();  # skip the item we just inserted
+        }
     }
 }}
     
@@ -3454,7 +3486,7 @@ to the element after the deleted element.
     i := dl.bidiIter(true);
     while (i) {
         cout `$(i.elem())\n`;
-        i.last();
+        i.prev();
     }
 }}
 
@@ -3474,17 +3506,18 @@ RBTree Maps
 '''''''''''
 
 A "map" or an "associative array" is a container that stores a set of values 
-each indexed by a key.  Both keys and values can be arbitrary objects.  The 
-only kind of map that Crack 0.4 supports is red-black trees.  Red-black trees 
-provide a natural sort order, and provide O(log n) insertion and lookup with 
-constant time rebalancing.
+each indexed by a key.  Both keys and values can be arbitrary types.  The 
+Crack library provides both hashtable and red-black tree map implementations. 
+Red-black trees provide a natural sort order, and provide O(log n) insertion 
+and lookup with constant time rebalancing.
 
 To create an RBTree map:
 
 {{
     import crack.container RBTree;
     
-    map = RBTree();
+    # maps are defined with the types of the key and the value.
+    map := RBTree[String, String]();
 }}
 
 To add elements:
@@ -3506,11 +3539,8 @@ objects.  As their name suggests, #KeyVal# objects have a #key# and #val#
 attribute:
 
 {{
-    i := map.iter();
-    while (i.nx()) {
-        kv := KeyVal.cast(i.elem());
+    for (kv :in map)
         cout `map[$(kv.key)] = $(kv.val)\n`;
-    }
 }}
 
 Algorithms (Sort Functions)
@@ -4419,13 +4449,16 @@ upgrading between versions.
 
 From 0.4 to 0.5
 ---------------
+
 -   the #toBool()# converter has been replaced with #oper to bool()#
 -   Macro style generic containers are deprecated: use real generics instead.  
-    (This currently just triggers a warning).
+    (This currently just triggers a warning, but macro-generics will be 
+    removed by 1.0).
 -   crack.exp.dir #Directory.dirIter()# has been replaced with 
     #Directory.dirs()#, and #Directory.fileIter()# with #Directory.files()#
     which now return #List[Directory].Iter# and #List[FileInfo].Iter# objects,
     respectively.
+-   #DList.last()# was renamed #DList.prev()#
 
 From 0.3 to 0.4
 ---------------

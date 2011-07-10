@@ -1,4 +1,19 @@
-
+0.5
+    -   Added support for generics.  Created true generic containers.
+    -   Made functions "first class" objects, implemented support for storing 
+        functions in variables and "oper call", permitting the creation of 
+        functors.
+    -   Implemented the Platform Dependent Numeric Types and made them work 
+        according to spec in all contexts.
+    -   Added a command-line parsing module.
+    -   Added a HashMap generic.
+    -   Added some date manipulation code.
+    -   Refactored cmake files.
+    -   Added the "typeof()" operator.
+    -   Added full support for "oper to" implicit conversions.
+    -   Enhancements to extension generation for class methods, constructors,
+        C function name specification
+    -   Various small bug fixes and enhancements.
 0.4
     -   Added support for exception handling, converted the library to use 
         exceptions instead of the crack.exp.error module.
