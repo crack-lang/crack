@@ -41,7 +41,7 @@ class BJitModuleDef : public BModuleDef {
                 }
                 
                 void close() {
-                    builder->innerCloseModule(*context, moduleDef.get());
+                    moduleDef->recursiveClose(*context, builder.get());
                 }
         };
         
@@ -58,19 +58,25 @@ class BJitModuleDef : public BModuleDef {
             BModuleDef(canonicalName, parent, rep0),
             owner(owner) {
         }
+
+        void recursiveClose(model::Context &context, LLVMJitBuilder *builder) {
+            // closing for real - close all of my sub-modules
+            for (int i = 0; i < subModules.size(); ++i)
+                subModules[i]->close();
+            
+            // and do the real close
+            builder->innerCloseModule(context, this);
+        }
         
         void closeOrDefer(model::Context &context, LLVMJitBuilder *builder) {
             // if we've got an owner, defer our close until his close
             if (owner) {
                 CloserPtr closer = new Closer(&context, this, builder);
+                std::cout << "deferring " << name << " to close of " <<
+                    owner->name << std::endl;
                 owner->subModules.push_back(closer);
             } else {
-                // closing for real - close all of my sub-modules
-                for (int i = 0; i < subModules.size(); ++i)
-                    subModules[i]->close();
-                
-                // and do the real close
-                builder->innerCloseModule(context, this);
+                recursiveClose(context, builder);
             }
         }
 };

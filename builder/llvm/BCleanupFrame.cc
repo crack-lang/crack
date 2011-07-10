@@ -2,6 +2,7 @@
 
 #include "BCleanupFrame.h"
 
+#include <llvm/Intrinsics.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
 #include "model/ResultExpr.h"
@@ -95,7 +96,7 @@ BasicBlock *BCleanupFrame::getLandingPad(
         
         // get the exception
         Function *exceptionFunc = 
-            llvmBuilder.module->getFunction("llvm.eh.exception");
+            getDeclaration(llvmBuilder.module, Intrinsic::eh_exception);
         assert(exceptionFunc);
         Value *exceptionValue = b.CreateCall(exceptionFunc);
         

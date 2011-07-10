@@ -5,6 +5,7 @@
 #include <llvm/BasicBlock.h>
 #include <llvm/Function.h>
 #include <llvm/GlobalVariable.h>
+#include <llvm/Intrinsics.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
 #include <llvm/Support/IRBuilder.h>
@@ -40,7 +41,8 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
                                                NULL
                                                );
         f = cast<Function>(c);
-        b.CreateCall(f, b.CreateCall(mod->getFunction("llvm.eh.exception")));
+        Function *exFn = getDeclaration(mod, Intrinsic::eh_exception);
+        b.CreateCall(f, b.CreateCall(exFn));
         b.CreateUnreachable();
     }
 

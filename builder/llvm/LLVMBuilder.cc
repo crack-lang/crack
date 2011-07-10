@@ -454,10 +454,12 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
         // not found, create a new one and map it to the existing function 
-        // pointer
+        // pointer.  We use 'ExternalWeakLinkage' for these because it 
+        // prevents an abort if we lookup a pointer to a function that hasn't 
+        // been defined yet.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
-                                          Function::ExternalLinkage,
+                                          Function::ExternalWeakLinkage,
                                           bfuncDef->rep->getName(),
                                           module
                                           );
