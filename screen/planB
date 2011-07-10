@@ -1,10 +1,12 @@
 #!/bin/bash
 # Copyright 2009-2011 Google Inc., Shannon Weyrick <weyrick@mozek.us>
 
-OUTDIR="./output/"
+MYDIR=`dirname $0`
+(cd $MYDIR; cd ..; ROOT=`pwd`)
+OUTDIR="$MYDIR/output/"
 echo "output to $OUTDIR"
 
-CRACKBIN="../crack"
+CRACKBIN="$MYDIR/../crack"
 if [ -s $CRACKBIN ]
 then
     echo "crack binary at $CRACKBIN"
@@ -87,7 +89,7 @@ function run_test {
     extract_section $file ARGS
     ARGS_sec=$EXTRACT
     extract_section $file EXPECT
-    EXPECT_sec=$EXTRACT
+    EXPECT_sec=`echo "$EXTRACT" | sed "s:%OUTDIR%:$OUTDIR:"`
     
     # XXX script args
     # XXX stdin
@@ -110,7 +112,7 @@ function run_test {
 }
 
 # pre bootstrap tests
-BASIC=`find ./tests/basic -name "*.crkt"`
+BASIC=`find $MYDIR/tests/basic -name "*.crkt"`
 
 for file in $BASIC
 do
