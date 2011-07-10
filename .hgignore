@@ -34,4 +34,4 @@ stamp-h[12]$
 ^test/run_all_tests.tmp$
 ^lib/crack/runtime.so$
 ^lib/testext.so$
-
+^screen/output/
