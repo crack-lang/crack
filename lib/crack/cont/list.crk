@@ -207,7 +207,7 @@ class DList[Elem] {
 
         ## The opposite of next(): Back-up the iterator to the last node, 
         ## return true if it's valid.
-        bool last() { _node = _node.prev; return _node; }
+        bool prev() { _node = _node.prev; return _node; }
     }
 
     Node head, tail;
