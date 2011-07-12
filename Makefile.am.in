@@ -7,11 +7,11 @@ ACLOCAL_AMFLAGS = -I m4 --install
 lib_LTLIBRARIES = libCrackLang.la libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
-libCrackLang_la_LDFLAGS = -version-info 1:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LDFLAGS = -version-info 2:0:0 @CWD_LIBS@ @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc debug/NativeDebugTools.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS) @CWD_CPPFLAGS@
-libCrackNativeRuntime_la_LDFLAGS = -version-info 0:0:0 @CWD_LIBS@
+libCrackNativeRuntime_la_LDFLAGS = -version-info 1:0:1 @CWD_LIBS@
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
@@ -71,6 +71,8 @@ noinst_HEADERS = \
     builder/llvm/BCleanupFrame.h \
     builder/llvm/BFieldRef.h \
     builder/llvm/BFuncDef.h \
+    builder/llvm/BFuncPtr.h \
+    builder/llvm/BJitModuleDef.h \
     builder/llvm/BModuleDef.h \
     builder/llvm/BResultExpr.h \
     builder/llvm/BTypeDef.h \
@@ -78,6 +80,7 @@ noinst_HEADERS = \
     builder/llvm/DebugInfo.h \
     builder/llvm/ExceptionCleanupExpr.h \
     builder/llvm/FuncBuilder.h \
+    builder/llvm/FunctionTypeDef.h \
     builder/llvm/LLVMJitBuilder.h \
     builder/llvm/LLVMLinkerBuilder.h \
     builder/llvm/LLVMValueExpr.h \
@@ -108,6 +111,8 @@ noinst_HEADERS = \
     model/FuncAnnotation.h \
     model/FuncCall.h \
     model/FuncDef.h \
+    model/Generic.h \
+    model/GenericParm.h \
     model/GetRegisterExpr.h \
     model/GlobalNamespace.h \
     model/Initializers.h \
@@ -126,6 +131,7 @@ noinst_HEADERS = \
     model/StubDef.h \
     model/TernaryExpr.h \
     model/TypeDef.h \
+    model/TypeOfCall.h \
     model/VarAnnotation.h \
     model/VarDef.h \
     model/VarDefImpl.h \
