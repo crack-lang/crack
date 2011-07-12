@@ -161,6 +161,17 @@ rs := stringA.reduce(appendString);
 if (rs != "bogusteststring")
     cout `Array[String] reduce failed, got $rs\n`;
 
+if (1) {
+    bool deleted;
+    class Tracer { oper del() { deleted = true; } }
+    if (1) {
+        Array[Tracer] t = [Tracer()];
+    }
+    
+    if (!deleted)
+        cout `FAILED array cleanup\n`;
+}
+
 # test a second invocation (uses a different code path)
 class Foo {}
 Array[Foo];
