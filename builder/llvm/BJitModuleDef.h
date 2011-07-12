@@ -72,8 +72,6 @@ class BJitModuleDef : public BModuleDef {
             // if we've got an owner, defer our close until his close
             if (owner) {
                 CloserPtr closer = new Closer(&context, this, builder);
-                std::cout << "deferring " << name << " to close of " <<
-                    owner->name << std::endl;
                 owner->subModules.push_back(closer);
             } else {
                 recursiveClose(context, builder);
