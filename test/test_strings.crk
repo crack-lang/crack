@@ -133,4 +133,17 @@ newS = center(s, 6);
 if (newS != " foo  ")
     cout `FAILED center string\n`;
 
+# Primitive array from StringArray
+three := String("thr");
+sa := StringArray!["one"/*static*/,CString("two"),three];
+if (sa[0].buffer[3] != 0)
+    cout `FAILED null char check 1\n`;
+if (sa[1].buffer[3] != 0)
+    cout `FAILED null char check 2\n`;
+pa := sa.makePrimArray();
+for (i:=0; i < sa.count(); ++i) {
+    if (pa[i][3] != 0)
+        cout `FAILED null char check $i,3\n`;
+}
+
 cout `ok\n`;

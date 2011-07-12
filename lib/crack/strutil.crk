@@ -1,9 +1,14 @@
 
-import crack.lang AppendBuffer;
+import crack.lang AppendBuffer, CString;
 import crack.io Formatter, Writer;
-import crack.cont.array Array;
+import crack.cont.array Array, ArrayData;
 
 class StringArray : Array[String] {
+
+    # memory management for null terminated strings from makePrimArray
+    # otherwise unused
+    ArrayData[CString] __nullTermStore = null;
+
     oper init(uint size) : Array[String](size) {}
     oper init() {}    
     
@@ -21,13 +26,31 @@ class StringArray : Array[String] {
     }
 
     ## Returns a primitive array based on the array (useful for communicating 
-    ## to C bindings)
+    ## to C bindings). The strings will be null terminated.
     ## @unsafe
     array[byteptr] makePrimArray() {
         size := count();
+        # we initialize the null term store to the full size of the string
+        # array, but only use those indexes that actually need to be copied
+        # for null termination
+        __nullTermStore = ArrayData[CString](size);
         prim := array[byteptr](size);
-        for (int i; i < size; ++i)
-            prim[i] = this[i].buffer;
+        for (int i; i < size; ++i) {
+            # if already null terminated (CString or StaticString), use
+            # direct buffer
+            if (this[i].isa(CString) || this[i].isa(StaticString)) {
+                prim[i] = this[i].buffer;
+            }
+            # otherwise, copy it and manage the null terminated version
+            # locally
+            else {
+                mcs := CString(this[i]);
+                mcs.oper bind();
+                __nullTermStore.rep[i].oper release();
+                __nullTermStore.rep[i] = mcs;
+                prim[i] = __nullTermStore.rep[i].buffer;
+            }
+        }
         return prim;
     }
 
