@@ -223,7 +223,7 @@ void checkDList(DList[String] list, String val, uint count, String message) {
 
     # verify that the list looks the same forwards as backwards
     List[String] temp = {};
-    for (revIter = list.iter(true); revIter; revIter.last())
+    for (revIter = list.iter(true); revIter; revIter.prev())
         temp.pushHead(revIter.elem());
     
     iter := list.iter();
