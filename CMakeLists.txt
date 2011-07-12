@@ -11,9 +11,9 @@ endif(COMMAND cmake_policy)
 
 project (crack)
 
-set(CRACK_VERSION "0.4")
-set(CRACKLANG_API_VERSION "1.0.0")
-set(NATRUN_API_VERSION "0.0.0")
+set(CRACK_VERSION "0.5")
+set(CRACKLANG_API_VERSION "2.0.0")
+set(NATRUN_API_VERSION "1.0.1")
 
 set(LLVM_MIN_VERSION       "2009000")
 set(LLVM_MIN_VERSION_TEXT  "2.9")
