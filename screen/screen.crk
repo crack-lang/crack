@@ -308,7 +308,7 @@ class TestSuite {
         _options.add("help", "h", "Show usage", "f", CMD_BOOL);
         _options.add("verbose", "v", "Show verbose output", "f", CMD_BOOL);
         _options.add("crackbin", "c", "Crack binary", "", CMD_STR);
-        _options.add("testdir", "t", "Directory to search recursively for tests", "./tests", CMD_STR);
+        _options.add("testdir", "d", "Directory to search recursively for tests", "./tests", CMD_STR);
         _options.add("testfile", "f", "Single test template to execute", "", CMD_STR);
         _options.add("outdir", "o", "Directory to create output files", "./output", CMD_STR);
         _options.add("libpath", "l", "Add path to crack library path during test. May be colon seperated list.", "", CMD_STR);
