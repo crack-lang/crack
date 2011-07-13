@@ -128,10 +128,10 @@ output and error streams.  "#cout#" and "#cerr#" are both "formatters," which
 means that they support the use of the back-tick operator for formatting.
 
 The third line actually uses the back-tick operator to print some text.  We 
-won't go into too much detail on this operator right now - suffice it to say 
-that this line is roughly equivalent to "#cout.format('hello world!\\n');#"  
-The "\\n" at the end of the string translates into a newline (the ASCII "LF"
-character, character code 10).
+won't go into too much detail on this operator right now
+(see \X(The Formatter Protocol)) - suffice it to say that this line is roughly
+equivalent to "#cout.format('hello world!\\n');#"  The "\\n" at the end of the
+string translates into a newline (the ASCII "LF" character, character code 10).
 
 Expressions consisting of a value followed by back-tick quoted text and code 
 are called "interpolation expressions."
@@ -239,11 +239,11 @@ voidptr::
     implicitly convert to voidptr.
 array[/class/]::
     The low-level array type.  You should generally avoid using this in favor 
-    of high-level data structures (see #crack.container#). They are not
+    of high-level data structures (see #crack.cont.*#). They are not
     memory-managed, and don't do memory management of their elements.
 
-    This is Crack's only existing generic datatype - to use it, you specialize 
-    it with another class type, for example: #array[int]#
+    To use it, you specialize it with another class type, for example:
+    #array[int]#
 function[/return-type/, /arg-type/ ...]::
     The type of a function with the corresponding return type and argument 
     types.
@@ -254,7 +254,8 @@ Object::
     The implicit base class of all classes that don't define base classes
     (extends VTableBase)
 String::
-    An immutable, memory managed string of bytes.
+    An immutable, memory managed string of bytes. Strings are character set
+    neutral and may contain null bytes.
 StaticString::
     This is a String whose buffer can point to read-only memory.
 Class::
@@ -273,19 +274,19 @@ value, but the memory they reference is not.
 Primitive types, primitive pointer types, and the #void# type are all 
 classified as /low-level/ types.  They are distinguished from the higher 
 level aggregate types by naming convention: low-level types will always be all 
-lower case (and digits), high-level types (at least the ones in the standard 
+lower case (and digits) while high-level types (at least the ones in the standard
 libraries) will always begin with an upper-case character.  You may not 
-currently subclass low-level types (see \X(Inheritance)), this restriction 
+currently subclass low-level types (see \X(Inheritance)), but this restriction
 will be lifted in a future version of Crack.
 
 /High level/ or /aggregate/ types are first class objects: variables of these
 types are pointers to allocated regions of memory large enough to accommodate 
 the state data defined for the type.  They can be extended to create other 
-high-level types through sub-classing (more on this later).
+high-level types through sub-classing (see \X(Classes are Variables)).
 
 Type names in Crack are very simple.  They are either a single word or 
 "#array[#/other-type-name/#]#"  The latter form is used both for the built-in 
-types #array# and #function# and for generics.
+types #array# and #function#, and for \X(Generics).
 
 Integer Constants
 '''''''''''''''''
@@ -301,7 +302,7 @@ Integer constants are "adaptive", which means that they will convert to
 whatever type is required by their usage as long as the value is within the 
 range of values for that type (for example, "uint u = -1" would be illegal).
 
-Integer constants can be defined using hexadecimal, octal and binary notation 
+Integer constants can be defined using hexadecimal, octal or binary notation
 as well as the default decimal notation.  Examples follow:
 
 {{
@@ -369,6 +370,9 @@ implicitly convert to a UNT as long as there is no risk of precision loss.
 The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly 
 convert to a PDNT.
 
+In general, if you care about precision you should use a UNT. Otherwise,
+PDNTs can be more convenient.
+
 {{
     # implicit conversions
     byte b;
@@ -402,8 +406,8 @@ Strings
 
 Most programming languages support strings of characters, which are usually 
 implemented as some kind of array.  Crack strings are strings of bytes - you 
-can embed any kind of byte values you want in them, there are no assumptions 
-about encoding.
+can embed any kind of byte values you want in them (including nulls) and there
+are no assumptions about encoding.
 
 String constants are sequences of bytes enclosed in single or double quotes
 (which are equivalent forms):
@@ -415,7 +419,7 @@ String constants are sequences of bytes enclosed in single or double quotes
 
 String constants are actually instances of the "StaticString" class - they're
 just like strings except that since their buffers are constants, they don't try
-to deallocate them on destruction.
+to deallocate on destruction.
 
 As in the other C-like languages, string constants (both single and double 
 quoted) can have escape sequences in them.  We've dealt with one of these 
@@ -472,7 +476,7 @@ implement \X(The Sequence Constant Protocol) as defined below.
 Control Structures
 ------------------
 
-Crack 0.4 supports four control structures: the "if\/else" statement,
+Crack 0.5 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.  
 "if" runs code blocks depending on whether a condition is true or false:
 
