@@ -133,6 +133,7 @@ class OverloadDef : public VarDef {
         /** @} */
         
         bool hasInstSlot();
+        bool isStatic() const;
         
         /**
          * Returns true if the overload consists of only one function.

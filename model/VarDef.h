@@ -40,6 +40,11 @@ class VarDef : public virtual spug::RCBase {
          * variable.
          */
         virtual bool hasInstSlot();
+        
+        /**
+         * Returns true if the definition is class static.
+         */
+        virtual bool isStatic() const;
 
         /**
          * Returns the fully qualified name of the definition.
