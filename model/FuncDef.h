@@ -84,6 +84,7 @@ class FuncDef : public VarDef {
         bool isOverridable() const;
         
         virtual bool hasInstSlot();
+        virtual bool isStatic() const;
         
         /**
          * Returns true if the function is an override of a virtual method

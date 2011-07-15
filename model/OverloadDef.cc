@@ -157,6 +157,8 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
 
 OverloadDefPtr OverloadDef::createAlias() {
     OverloadDefPtr alias = new OverloadDef(name);
+    alias->type = type;
+    alias->impl = impl;
     flatten(alias->funcs);
     return alias;
 }
@@ -181,6 +183,15 @@ bool OverloadDef::hasParent(OverloadDef *parent) {
 
 bool OverloadDef::hasInstSlot() {
     return false;
+}
+
+bool OverloadDef::isStatic() const {
+    FuncList flatFuncs;
+    flatten(flatFuncs);
+    assert((flatFuncs.size() == 1) && 
+           "isStatic() check applied to a multi-function overload"
+           );
+    return flatFuncs.front()->isStatic();
 }
 
 bool OverloadDef::isSingleFunction() const {

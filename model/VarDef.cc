@@ -29,6 +29,10 @@ bool VarDef::hasInstSlot() {
     return true;
 }
 
+bool VarDef::isStatic() const {
+    return false;
+}
+
 std::string VarDef::getFullName() const {
     if (!fullName.empty())
         return fullName;

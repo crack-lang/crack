@@ -112,6 +112,10 @@ bool FuncDef::hasInstSlot() {
     return false;
 }
 
+bool FuncDef::isStatic() const {
+    return !(flags & method);
+}
+
 bool FuncDef::isVirtualOverride() const {
     return flags & virtualized && pathToFirstDeclaration.size();
 }

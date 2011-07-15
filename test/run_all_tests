@@ -854,6 +854,17 @@ test_output 'context error messages removed after generics' \
      bogus value' \
 "ParseError: $source:3: Unknown identifier bogus"
 
+test_output 'first class static member funcs' \
+  'class A { @static void foo(int a) { puts("ok"); } }
+   x := A.foo;
+   x(100);' \
+  ok
+
+test_output 'error on first class methods' \
+  'class B { void bar() {} } y := B.bar;' \
+  "${parseError}1: Trying to get the value of bar, first class methods are not \
+supported yet."
+
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
 

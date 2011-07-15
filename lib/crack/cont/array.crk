@@ -32,7 +32,7 @@ bool _isNull(Object obj) {
 @_nobind(float64)
 @_nobind(byteptr)
 
-# A class to keep track of the primitive array needed for the Array[Elem] class
+## A class to keep track of the primitive array needed for the Array[Elem] class
 class ArrayData[Elem] {
     array[Elem] rep = null;
     uint cap;
@@ -41,14 +41,20 @@ class ArrayData[Elem] {
     }
 
     void releaseAll(){
-        if (cap > 0 && _isObject(rep[0])){
-            for (uint i = 0; i < cap; i++) {
-                if (!_isNull(rep[i])) 
-                    _release(rep[i]);
-            }
+        if (cap > 0 && _isObject(rep[0])) {
+            for (uint i = 0; i < cap; i++)
+                _release(rep[i]);
         }
+        
+        free(rep);
+        rep = null;
     }
 
+    ## Release just the buffer, not the elements.
+    void releaseBuffer() {
+        free(rep);
+        rep = null;
+    }
 
     oper del(){
         if (!(rep is null)) 
@@ -220,6 +226,7 @@ class Array[Elem] {
             i = i + 1;
         }
 
+        data.releaseBuffer();
         data = newData;
         __rep = newRep;
         __cap = newCap;
@@ -256,12 +263,12 @@ class Array[Elem] {
     }
 
     void sort(){
-        QuickSort[Array] qs = {this, __size};
+        QuickSort[Array].sort(this);
     }
 
     Array sorted(){
         Array newArray = this.copy();
-        QuickSort[Array] qs = {newArray, __size};
+        QuickSort[Array].sort(newArray);
         return newArray;
     }
 
