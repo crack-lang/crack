@@ -1004,7 +1004,7 @@ that is allocated on the heap. The system initializes this variable by:
     arguments ("3, 4" in the examples above).
 -   Assigning the address of the newly created #Coord# object to #c#.
 
-Note that the all variables of class types are references - they behave very 
+Note that all variables of class types are references - they behave very 
 much like pointers in C.  So if we were to initialize one variable from 
 another, both variables would refer to the same object:
 
@@ -1439,7 +1439,7 @@ This isn't always what you want.  For one thing, virtual methods are
 relatively expensive compared to normal functions.  Calling them involves 
 looking up their addresses at runtime from the vtable, which may be overkill 
 if you have no intention of ever overriding them.  Furthermore, because the 
-vtable is associated with an instnace, a virtual method can not be called on 
+vtable is associated with an instance, a virtual method can not be called on 
 a null value.  Finally, there are situations where you may want a function to 
 be scoped to a class, but it isn't really a method: it doesn't need to access 
 #this#.
@@ -1519,7 +1519,7 @@ or anything you don't put into your derived class.  If you're going to use it,
 you should at minimum figure out how to deal with memory management.
 
 There are situations where you get a base class but you suspect or know that 
-it is a derived cast.  Like C++, Crack lets you /typecast/ a base class to a 
+it is a derived class.  Like C++, Crack lets you /typecast/ a base class to a 
 derived class using #cast()# and #unsafeCast()#.
 
 Typecasting is generally deprecated in object-oriented paradigms.  However, 
@@ -1659,7 +1659,7 @@ null because interfaces are never derived from #Object#: they are derived from
 for every interface class name that follows it (you can have a comma 
 separated list of them) it generates a #get#/IFaceName/#Object()# method that 
 simply returns "this".  Impelementation classes must therefore derive from 
-Object, either indirectly or directly and they must do so explicitly (so 
+Object, either indirectly or directly and they must do so explicitly. So, 
 "#class A @implements IFace#" would be illegal, you'd have to use "#class A 
 : Object @implements IFace#" instead.
 
@@ -1695,12 +1695,12 @@ invoked using a #null# value as the receiver.
 #oper to #/type/::
     If this method is defined for a type, instances of the class can be 
     implicitly converted to that type.  Specifying the return type is 
-    optional, if it is specified it must be the same as the type in the name.
+    optional. If it is specified it must be the same as the type in the name.
 #oper del#::
     The destructor.
 #oper bind#::
     (*final*) Called when an instance of the type is created or assigned to a 
-    varialble.
+    variable.
 #oper release#::
     (*final*) Called when a variable of the type goes out of scope.
 #bool isTrue()#::
@@ -1820,10 +1820,10 @@ compiler:
     argument matching the type of the right operand.
 -   Checks for a method named for the reverse operator on the right operand 
     with an argument matching the type of the left operand.
--   checks for a function named for the operator with two arguments, the first 
+-   Checks for a function named for the operator with two arguments, the first 
     matching the left operand and the second matching the right operand.
 
-Each of these steps uses the existing method resolution rules as defined in 
+Each of these steps uses the existing method resolution rules as defined 
 above in \X(Functions) and below in \X(Method Resolution in Classes).
 
 Unary operators also have a special resolution rule: the compiler checks for a 
