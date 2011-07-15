@@ -1,6 +1,6 @@
 
 import crack.lang AppendBuffer, CString;
-import crack.io Formatter, Writer;
+import crack.io Formatter, Writer, cout;
 import crack.cont.array Array, ArrayData;
 
 class StringArray : Array[String] {
@@ -91,14 +91,9 @@ class StringArray : Array[String] {
         
 }
 
-bool _findByte(Array[byte] A, byte c){
-    for (a: in A) if (a == c) return true;
-    return false;
-}
-
 ## Split the string into an array of words delimited by one of the given array of 
 ## characters
-StringArray split(String val, Array[byte] ws) {
+StringArray split(String val, String ws) {
 
     # rule out the simple case
     if (val.size == 0)
@@ -111,7 +106,7 @@ StringArray split(String val, Array[byte] ws) {
     uint count = 1;
     for (uint i = 0; i < val.size; ++i) {
         cur := val[i];
-        if (_findByte(ws, cur)) {
+        if (ws.lfind(cur) != -1) {
             inWord = !inWord;
             if (inWord)
                 ++count;
@@ -126,9 +121,10 @@ StringArray split(String val, Array[byte] ws) {
     inWord = true;
     for (int i = 0; i < val.size; ++i) {
         cur := val[i];
-        gotSpace := _findByte(ws, cur);
+        gotSpace := ws.lfind(cur) != -1;
         if (gotSpace && inWord) {
-            result.append(val.slice(start, i));
+            word := val.slice(start, i);
+            result.append(word);
             inWord = false;
         } else if (!gotSpace && !inWord) {
             # first non-space character after a block of whitespace, reset start
@@ -149,14 +145,12 @@ StringArray split(String val, Array[byte] ws) {
 ## Split the string into an array of words delimited by a sequence of 
 ## ascii whitespace characters.
 StringArray split(String val) {
-    Array[byte] ws = [b' ', b'\t', b'\n', b'\r'];
-    return split(val, ws);
+    return split(val, ' \t\n\r');
 }
 
 ## Split the string into an array of words delimited by the given character
 StringArray split(String val, byte c) {
-    Array[byte] ws = [c];
-    return split(val, ws);
+    return split(val, String(byteptr(array[byte]![c]), 1, true));
 }
 
 

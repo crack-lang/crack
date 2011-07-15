@@ -26,7 +26,7 @@ for (item :in m) {
     sa.append(fmt.createString());
 }
 
-QuickSort[Array[String]] qs = {sa, sa.count()};
+QuickSort[Array[String]].sort(sa);
 
 # Now sa = [first: 100, fourth: 400, second: 200, third: 300]
 

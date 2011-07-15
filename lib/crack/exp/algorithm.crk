@@ -1,14 +1,17 @@
 // Algorithms
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-class QuickSort[Elem] {
+## Base class version of quick-sort, can be applied to primitive arrays.
+class QuickSortPrim[Elem] {
 
+    @static
     void _swap(Elem A, uintz l, uintz r){
         temp := A[l];
         A[l] = A[r];
         A[r] = temp;
     }
 
+    @static
     void _quickSort3(Elem A, uintz l, uintz r) {
         
         // this is based on a 3-partition version from a talk by Robert Sedgewick
@@ -59,21 +62,25 @@ class QuickSort[Elem] {
         _quickSort3(A, i, r);
     }
 
-    // XXX move out of constructor
-    void oper init(Elem A, uintz count) {
-        _quickSort3(A, 0, count - 1);
-    }
-
-    void oper init() {
-    }
-
+    @static
     void sort(Elem A, uintz count){
         _quickSort3(A, 0, count - 1);
     }
+
 }
 
-class InsertionSort[Elem] {
+## Quick-sort.  SeqT must have [], []= and count()
+class QuickSort[SeqT] : QuickSortPrim[SeqT] {
+    @static
+    void sort(SeqT A){
+        _quickSort3(A, 0, A.count() - 1);
+    }
+}
 
+## Insertion sort primitive.  Can be used on primitive arrays.
+class InsertionSortPrim[Elem] {
+
+    @static
     void _swap(Elem A, uintz l, uintz r){
         temp := A[l];
         A[l] = A[r];
@@ -81,7 +88,7 @@ class InsertionSort[Elem] {
     }
 
 
-    // XXX move out of constructor
+    @static
     void _insertionSort(Elem A, uintz count) {
         uintz j = 1;
         uintz i;
@@ -97,16 +104,16 @@ class InsertionSort[Elem] {
         }
     }
 
-    oper init(Elem A, uintz count) {
-        _insertionSort(A, count);
-
-    }
-
-    void oper init() {
-    }
-
+    @static
     void sort(Elem A, uintz count){
         _insertionSort(A, count);
     }
 }
 
+## Insertion sort.  Requires [], []= and count().
+## Usage: typeof(seq).sort(seq);
+class InsertionSort[SeqT] : InsertionSortPrim[SeqT] {
+    @static void sort(SeqT A) {
+        _insertionSort(A, A.count());
+    }
+}
