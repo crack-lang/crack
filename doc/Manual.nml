@@ -239,7 +239,7 @@ voidptr::
     implicitly convert to voidptr.
 array[/class/]::
     The low-level array type.  You should generally avoid using this in favor 
-    of high-level data structures (see #crack.cont.*#). They are not
+    of high-level data structures (see #crack.cont.\*#). They are not
     memory-managed, and don't do memory management of their elements.
 
     To use it, you specialize it with another class type, for example:
@@ -269,23 +269,23 @@ scope in which they are defined.
 
 The #byteptr#, #voidptr# and #array# types are classified as /primitive 
 pointer/ types.  These are essentially memory addresses: they are copied by 
-value, but the memory they reference is not.
+value: the memory that they reference is not.
 
 Primitive types, primitive pointer types, and the #void# type are all 
 classified as /low-level/ types.  They are distinguished from the higher 
 level aggregate types by naming convention: low-level types will always be all 
 lower case (and digits) while high-level types (at least the ones in the standard
 libraries) will always begin with an upper-case character.  You may not 
-currently subclass low-level types (see \X(Inheritance)), but this restriction
+currently subclass low-level types (see \X(Inheritance)) but this restriction
 will be lifted in a future version of Crack.
 
 /High level/ or /aggregate/ types are first class objects: variables of these
 types are pointers to allocated regions of memory large enough to accommodate 
 the state data defined for the type.  They can be extended to create other 
-high-level types through sub-classing (see \X(Classes are Variables)).
+high-level types through sub-classing (see \X(Inheritance)).
 
 Type names in Crack are very simple.  They are either a single word or 
-"#array[#/other-type-name/#]#"  The latter form is used both for the built-in 
+"/word/#[#/other-type-name/#]#"  The latter form is used both for the built-in 
 types #array# and #function#, and for \X(Generics).
 
 Integer Constants
@@ -319,7 +319,7 @@ specifying a "b" (for byte) or "i" (for integer) prefix to a constant string
 {{
     b := b'A';  # b is set to 65, the ascii value of A
     int n = i'\001\0';  # i is set to 256
-    int magic = i"SpugCrak";  # magic = 6012434588913262955
+    int64 magic = i"SpugCrak";  # magic = 6012434588913262955
 }}
 
 This usage helps to make up for the fact that Crack uses the single quote as 
@@ -365,7 +365,11 @@ There are two kinds of numeric types, Universal Numeric Types (UNTs) and
 Platform Dependent Numeric Types.  The UNT types are byte, int32, uint32, 
 int64, uint64, float32 and float64.  These are guaranteeed to be of the same 
 size no matter what the preferences of the platform.  A numeric type can 
-implicitly convert to a UNT as long as there is no risk of precision loss.
+implicitly convert to a UNT as long as there is no risk of precision loss on 
+any platform.  Since we define most PDNTs to be either 32-bit or 64-bit 
+values, this means that we can always implicitly convert from, for example, 
+an unsigned int to a uint64, but we can never implicitly convert from an uint 
+to a uint32. aaaa
 
 The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly 
 convert to a PDNT.
@@ -819,6 +823,43 @@ Attempting to do this will result in a compile-time error.
 [it should be noted that a future version of Crack will support this 
 partially, without assignment, and will also support a limited form of closure]
 
+Functions are Values
+''''''''''''''''''''
+
+Functions are first class values in Crack.  That is to say, functions are 
+values with well defined types and can be assigned to variables or passed to 
+other functions.  The type of a function is a variation of the built-in 
+#function# type parameterized with the return type of the function and the 
+types of all of its arguments.
+
+For example, given the following function:
+
+{{
+    void f(int a) { cout `got $a\n`; }
+}}
+
+We can assign it to a variable and then call that variable:
+
+{{
+    function[void, int] g = f;
+    f(100); # prints "got 100"
+}}
+
+This can be particularly useful when you want to pass a function to another 
+function.  For example, we could define a "map" operation to apply an 
+arbitrary function to a low-level array of integers:
+
+{{
+    void map(array[int] data, uintz size, function[int, int] func) {
+        for (uintz i = 0; i < size; ++i)
+            data[i] = func(data[i]);
+    }
+    
+    array[int] arr = [1, 2, 3, 4];
+    int addOne(int val) { return val + 1; }
+    map(arr, 4, addOne);
+}}
+
 Operators
 ---------
 
@@ -946,6 +987,38 @@ first):
 -   #||# (logical or)
 -   #?:# Ternary operator
 -   #= += -= \*= \/= %= &= |= <<= >>=# (assignment operators)
+
+The #typeof()# Operator
+'''''''''''''''''''''''
+
+#typeof()# is a special function built-in to the compiler that produces the 
+type of the expression in its argument.  For example:
+
+{{
+    int a;
+    typeof(a) b = a;
+}}
+
+Since the variable #a# in the example is of type #int#, #typeof(a) b# declared 
+a variable #b# of type #int#.
+
+It should be noted that #typeof()# determines the type of its argument, but 
+the argument is not evaluated at runtime.  So it is safe to pass expressions 
+that would normally have side-effects into #typeof()#.  Likewise, it should be 
+noted that #typeof()# produces the /compile-time/ type of a value, not its 
+runtime type.
+
+You can use #typeof()# as another way to avoid explicitly specifying types 
+that you don't really care about.  For example:
+
+{{
+    typeof(getValue()) val = getValue();
+    doSomething(val);
+    doSomethingElse(val);
+}}
+
+#typeof()# is particularly useful in macros (see \X(The Standard Annotations)) 
+and \X(Generics) where type information might not be easily accessible.
 
 Classes
 -------
@@ -1591,7 +1664,7 @@ Interfaces
 ''''''''''
 
 As an interim solution to accomodate the lack of virtual base classes, Crack 
-0.4 provides an /interface/ concept similar to that of Java.  In fact, the 
+0.5 provides an /interface/ concept similar to that of Java.  In fact, the 
 interface implementation makes it suitable for use as a limited form of 
 virtual base class, but we'll mainly focus on the interface use case.
 
@@ -1673,7 +1746,7 @@ These annotations are a very weak form of syntactic sugar, as such:
     constructed from the class name, and subject to non-obvious naming 
     conflicts with similarly named methods defined by the programmer.
 
-Versions of Crack after 0.4 will most likely to continue to provide some form 
+Versions of Crack after 0.5 will most likely to continue to provide some form 
 of the #@interface# and #@implements# annotations (hopefully a refined form) 
 but will ultimately implement them in terms of virtual inheritance.
 
@@ -1703,6 +1776,9 @@ invoked using a #null# value as the receiver.
     variable.
 #oper release#::
     (*final*) Called when a variable of the type goes out of scope.
+#oper call#::
+    Called when you call the value as if it were a function (see \X(Functors) 
+    below).
 #bool isTrue()#::
     Returns true if the object is "true" when converted to a boolean.
     This is a virtual function defined in #Object# that is called for non-null 
@@ -1829,6 +1905,30 @@ above in \X(Functions) and below in \X(Method Resolution in Classes).
 Unary operators also have a special resolution rule: the compiler checks for a 
 unary method named for the operator with no arguments prior to checking for a 
 function with a single argument in the enclosing namespaces.
+
+Functors
+''''''''
+
+If a class defines the special #oper call# method, it is possible to call an 
+instance of the class with the same syntax that you would use to call a 
+function.  For example:
+
+{{
+
+    class Action {
+        void oper call(int arg) { ... }
+    }
+    
+    Action a = {};
+    a(100);
+}}
+
+This ends up calling the #oper call# method.
+
+This sort of pattern is commonly known as a "function object" or simply a 
+"functor."  This feature will be expanded in future versions of the language 
+to provide standard interfaces for functors and implicit conversion from 
+normal functions to functors.
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -2201,7 +2301,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned 
-    integer value (as of 0.4 - we will eventually be switching to an integer 
+    integer value (as of 0.5 - we will eventually be switching to an integer 
     type large enough to accommodate a memory size).  This #uint# value is 
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -2890,7 +2990,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs 
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually 
-    something like #`/usr/local/include/crack-0.4`#)
+    something like #`/usr/local/include/crack-0.5`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -3018,7 +3118,7 @@ silly results like #float64(a) + 1# producing a result of type #int#.
 Threading
 ---------
 
-As it stands, Crack 0.4 is written with little regard for threads.  You can 
+As it stands, Crack 0.5 is written with little regard for threads.  You can 
 attempt to use the normal threading libraries, if you like, but you're likely 
 to run into some problems.  In particular, you should be aware that the 
 reference counting mechanism is not thread-safe, so memory management will 
@@ -3032,7 +3132,7 @@ implemented safely - with some cost to performance of threaded applications.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.4.  If your program 
+Crack has only minimal support for debugging in 0.5.  If your program 
 seg-faults or aborts, you can at least get a sparse stack-trace by running it 
 under a fairly recent version of GDB (7.0 or later).
 
@@ -3185,7 +3285,7 @@ MixIn
 
 The #MixIn# class allows you to do multiple inheritance safely - without risk 
 of breaking reference counting.  The #MixIn# approach is a stand-in for 
-virtual inheritance, which Crack 0.4 does not yet support.
+virtual inheritance, which Crack 0.5 does not yet support.
 
 #MixIn# defines #bind# and #release# operators and a virtual function called 
 #getObject()# that knows how to get the #Object# instance that the class is 
@@ -3506,8 +3606,8 @@ function:
     elem := dl.popTail();  # elem == 'second'
 }}
 
-RBTree Maps
-'''''''''''
+TreeMap
+'''''''
 
 A "map" or an "associative array" is a container that stores a set of values 
 each indexed by a key.  Both keys and values can be arbitrary types.  The 
@@ -3515,13 +3615,13 @@ Crack library provides both hashtable and red-black tree map implementations.
 Red-black trees provide a natural sort order, and provide O(log n) insertion 
 and lookup with constant time rebalancing.
 
-To create an RBTree map:
+To create red-black tree map:
 
 {{
-    import crack.container RBTree;
+    import crack.cont.treemap TreeMap;
     
     # maps are defined with the types of the key and the value.
-    map := RBTree[String, String]();
+    map := TreeMap[String, String]();
 }}
 
 To add elements:
@@ -3547,6 +3647,29 @@ attribute:
         cout `map[$(kv.key)] = $(kv.val)\n`;
 }}
 
+HashMap
+'''''''
+
+A #HashMap# provides the same interface as #TreeMap#, but is backed by a 
+hashtable instead of a red-black tree.  Hashtables should provide 
+significantly faster inserts and lookups (generally O(1), although insertions 
+will occassionally be O(N) when table grows beyond its capacity and both 
+insertions and lookups can be a multiple of constant time in cases of hash 
+collisions).  The downside is that they do not preserve the order of their 
+keys.  If you iterate over a hashtable the order of elements returned is 
+undefined.
+
+Since the interface is the same as that of #TreeMap#, we won't go over it in 
+detail except to provide an example of how it is constructed:
+
+{{
+    import crack.cont.hashmap HashMap;
+    
+    HashMap[String, int] map = {};
+    map['first'] = 100;
+    map['second'] = 200;
+}}
+
 Algorithms (Sort Functions)
 '''''''''''''''''''''''''''
 
@@ -3555,116 +3678,22 @@ For example:
 
 {{
     import crack.containers Array;
-    import crack.exp.algorithm quickSort, insertionSort;
-    Array arr = getAnArray();
+    import crack.exp.algorithm QuickSort, InsertionSort;
+    Array[int] arr = getAnArray();
     
     # try out both kinds of sort
-    quickSort(arr);
-    insertionSort(arr);
+    QuickSort[Array[int]].sort(arr);
+    nsertionSort[Array[int]].sort(arr);
 }}
 
-Sorting relies on the comparison functions of #Object#, which in turn rely on 
-the overridable #cmp()# method.
-
-Generic Containers
-''''''''''''''''''
-
-"Generics" is a language feature that allows you to create classes that are 
-parameterized by other classes.  It is particularly useful for containers.  For 
-example, rather than just an "array", we typically want to be able to create 
-an "array of strings."  Generic containers have the following advantages over 
-standard containers:
-
--   Type safety.  An "array of strings" will produce an error at compile time 
-    if you attempt to put something that's not a string in it.
--   No need for typecasting.
--   Improved performance.  A lot of things that standard containers need to do 
-    at runtime, through virtual functions, can instead be done at compile time.
--   Support for primitive types.  All of the standard containers require you 
-    to wrap primitive values in aggregate types derived from #Object#.
-
-Crack 0.4 does not yet support generics.  However, it does provide a weak 
-substitute for generic containers in the form of container macros (see \X(The 
-Standard Annotations) for complete info on macros).  All of the standard 
-container types (#Array#, #List#, #DList# and #TreeMap#) have generic 
-implementations.
-
-For example, if we wanted to build a #TreeMap# allowing us to lookup strings 
-based on integer keys, we could do this:
-
-{{
-    import crack.lang die, cmp;
-    import crack.io cout, Formatter;
-    @import crack.exp.cont.treemap GenericTreeMap;
-    
-    int cmp(int a, int b) { return a - b; }
-    @GenericTreeMap(IntStringMap, int, String);
-    
-    IntStringMap vals = {};
-    vals[0] = 'test';
-    for (item :in vals)
-        cout `$(item.key): $(item.val)\n`;
-
-}}
-
-#@GenericTreeMap# is a macro that expands to a class definition for (in this 
-case) the #IntStringMap# class, which has keys of type #int# and values of 
-type #String#.  Note that we need to import some other things to be able to 
-use it (#die#, #cmp#, #cout# and #Formatter#).  The requirements of each of 
-the generic container types are identified in the comments at the beginning of
-their source files.
-
-Arrays are a little different in that there are primitive and object based 
-varieties.  Here's an example of the creation of an array of strings:
-
-{{
-    # imports required for generic arrays
-    import crack.lang die, free;
-    @import crack.exp.cont.array GenericArray, GenericObjArray;
-    
-    import crack.io cout;
-    
-    @GenericObjArray(StringArray, String);
-    
-    StringArray strings = {};
-    strings.append('first');
-    strings.append('second');
-    for (s :in strings)
-        cout `$s\n`;
-}}
-
-Note that we have to import both #GenericArray# and #GenericObjArray#.  
-#GenericObjArray# is actually implemented in terms of #GenericArray#.
-
-If we wanted to create an array of primitives (for example, of floating point 
-values), we would use #@GenericPrimArray#:
-
-{{
-    import crack.lang die, free;
-    @import crack.exp.cont.array GenericArray, GenericPrimArray;
-
-    @GenericPrimArray(FloatArray, float);
-}}
-
-#GenericList# and #GenericDList# are also provided in the 
-#crack.exp.cont.list# module.
-
-Macro-based generic containers are not as good as real generic containers:
-
--   They require explicit import of support objects.
--   They require explicit instantiation.  (With generic types, we could just 
-    use #Array[String]#, for example, instead of having to declare it 
-    somewhere).
--   If the same container type is used in more than one module, the same code 
-    will be generated in multiple places, resulting in an unnecessarily large 
-    runtime footprint.
-
-Support for true generics is planned for Crack 0.4.
+For aggregate types, sorting relies on the comparison functions of #Object#, 
+which in turn rely on the overridable #cmp()# method.  For primitive types, 
+the type must define the comparison operators.
 
 Error Handling
 --------------
 
-Crack 0.4 continues to provide an error handling module (#crack.exp.error#).  
+Crack 0.5 continues to provide an error handling module (#crack.exp.error#).  
 However, this interface is deprecated in favor of exceptions.  This 
 documentation should be regarded as purely of historical inteterest.
 
@@ -3748,10 +3777,14 @@ command line arguments:
     }
 }}
 
-#StringArray# is a special purpose class just for storing arg lists without 
-having to do annoying casting.  You can use it as a general purpose string 
-sequence if you like, it will be supplanted by #Array[String]# once crack 
-supports generics (post 0.4).
+The #env# variable is a \X(HashMap) containing the environment variables.  It 
+can also be used to change environment variables:
+
+{{
+    import crack.sys env;
+    path := env['PATH'] + ':/opt/my/programs';
+    env['PATH'] = path;
+}}
 
 Input\/Output
 -------------
@@ -4416,6 +4449,32 @@ Crack's GTK libraries are really a toy implementation or proof of concept.
 You can probably implement minimal programs with them, you can implement 
 larger programs if you care to augment the library.
 
+Command Line Option Processing
+------------------------------
+
+The #crack.exp.cmdline# module allows you to do options processing:
+
+{{
+    import crack.sys argv;
+    import crack.exp.cmdline CmdOptions, CMD_BOOL;
+    
+    CmdOptions opts = {};
+    
+    options.add('help', 'h', 'Show help text', 'f', CMD_BOOL);
+    options.add('port', 'p', 'Port number', '', CMD_INT);
+    
+    options.parse(argv);
+    
+    if (options.getBool('help'))
+        showUsage();
+    
+    # get the port number
+    port := options.getInt('port');
+}}
+
+There are numerous other modes of interaction with this module, see the module 
+itself and the test script for details.
+
 Appendix 2 - Migration
 ======================
 
@@ -4434,13 +4493,13 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
     this by adding the version number to the binary in your '`#!`' line:
 
     {{
-        #!/usr/local/bin/crack-0.4
+        #!/usr/local/bin/crack-0.5
     }}
 
     You will want to install your own modules under the module tree for the 
     version that they were developed for.  For example, if you create module 
     "foo.bar", you would typically install it somewhere like 
-    #`/usr/local/lib/crack-0.4/foo/bar`#.
+    #`/usr/local/lib/crack-0.5/foo/bar`#.
 
 -   Read the migration section of the manual for the changes involved in 
     upgrading to the new version.
