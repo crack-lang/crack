@@ -1,7 +1,7 @@
 
 import crack.lang die;
-import crack.io cout;
-import crack.exp.regex escape, Regex;
+import crack.io cout, Writer;
+import crack.exp.regex escape, Regex, Match;
 
 rx := Regex('simple');
 m := rx.search('not simple');
@@ -28,5 +28,27 @@ if (1) {
     if (actual != expected)
         cout `FAILED regex escaping: got $actual, expected $expected\n`;
 } 
+
+if (1) {
+    
+    void replacer(Match match, Writer out) {
+        if (match.group() != 'pat')
+            cout `FAILED match value during replacement.\n`;
+        out.write('foo');
+    }
+
+    rx = Regex('pat');
+    if (rx.subst('some pat for patbar', 'foo') != 'some foo for foobar')
+        cout `FAILED basic string replacement\n`;
+    
+    if (rx.subst('some pat for patbar', 'foo', 1) != 'some foo for patbar')
+        cout `FAILED counted string replacement\n`;
+    
+    if (rx.subst('patpat', 'foo') != 'foofoo')
+        cout `FAILED replacement at beginning or end or abuttal\n`;
+    
+    if (rx.subst('some pat for patbar', replacer) != 'some foo for foobar')
+        cout `FAILED function replacement\n`;
+}
 
 cout `ok\n`;

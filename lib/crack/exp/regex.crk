@@ -1,8 +1,9 @@
 ## Regular expressions (based on PCRE)
 
 import crack.lang die, free, AppendBuffer, Buffer, SubString;
-import crack.io cerr, StringFormatter;
+import crack.io cerr, StringFormatter, StringWriter, Writer;
 import crack.exp.bindings ByteptrWrapper, Opaque;
+@import crack.exp.ann define;
 
 import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
                        pcre_get_stringnumber, PCRE;
@@ -134,12 +135,12 @@ class Regex : _RegexBase {
         free(intReturns);
     }
     
-    ## Search 'subject' for the regular expression.  Returns a Match 
-    ## object if it is found or null if not.
-    Match search(String subject) {
+    ## Search 'subject' for the regular expression starting at 'start'.  
+    ## Returns a Match object if it is found or null if not.
+    Match search(String subject, int start) {
         captures := array[int](__captureCount * 3);
         Match result;
-        rc := pcre_exec(_rx, null, subject.buffer, subject.size, 0, 0, 
+        rc := pcre_exec(_rx, null, subject.buffer, subject.size, start, 0, 
                         captures,
                         __captureCount * 3
                         );
@@ -149,6 +150,58 @@ class Regex : _RegexBase {
             free(captures);
             return null;
         }
+    }
+    
+    ## Search 'subject' for the regular expression starting at the beginning 
+    ## of the string.  Returns a Match object if it is found or null if not.
+    Match search(String subject) {
+        return search(subject, 0);
+    }
+
+    @define __subst(arg, action) {
+        String subst(String subject, arg, int count) {
+            match := search(subject);
+            if (!match)
+                return subject;
+    
+            StringWriter result = {};
+            int last = 0;
+            while (match && count--) {
+                result.write(subject.slice(last, match.begin()));
+                action;
+                last = match.end();
+                match = search(subject, match.end());
+            }
+            
+            # write any remaining substring
+            if (last < subject.size)
+                result.write(subject.slice(last));
+            
+            return result.createString();
+        }
+    }
+
+    ## Replace the first 'count' instances of the regular expression in 
+    ## 'subject' using the function.  If count >= 0, it is the number of 
+    ## instances to replace.
+    @define __arg() { function[void, Match, Writer] func }
+    @__subst(@__arg(), func(match, result));
+    
+    ## Replace the first 'count'instances of the regular expression in 
+    ## 'subject' with the specified string.  If count >= 0, it is the number 
+    ## of instances to replace.
+    @__subst(String replacement, result.write(replacement));
+
+    ## Replace all instances of the regular expression in 'subject' using the 
+    ## function.
+    String subst(String subject, @__arg()) {
+        return subst(subject, func, -1);
+    }
+    
+    ## Replace all instances of the regular expression in 'subject' with the 
+    ## specified string.
+    String subst(String subject, String replacement) {
+        return subst(subject, replacement, -1);
     }
     
     oper del() { free(_rx); }
