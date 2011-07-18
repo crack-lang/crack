@@ -117,3 +117,91 @@ class InsertionSort[SeqT] : InsertionSortPrim[SeqT] {
         _insertionSort(A, A.count());
     }
 }
+
+
+## Heap routines
+class HeapPrim[Elem] {
+
+    @static
+    void _swap(Elem A, uintz l, uintz r){
+        --l; --r;
+        temp := A[l];
+        A[l] = A[r];
+        A[r] = temp;
+    }
+
+    @static
+    bool isMaxHeap(Elem A, uintz count) {
+        // for i:=1..count, assert A[Parent(i)] >= A[i]
+        for (i := count; i > 1; --i) {
+            parent := i >> 1;
+            if (A[parent-1] < A[i-1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    ## index i is 1 based, not 0 based
+    @static
+    void maxHeapify(Elem A, uintz i, uintz count) {
+        uintz l = i << 1;
+        uintz r = l+1;
+        uintz largest;
+        if (l <= count && A[l-1] > A[i-1])
+            largest = l;
+        else
+            largest = i;
+        if (r <= count && A[r-1] > A[largest-1])
+            largest = r;
+        if (largest != i) {
+            _swap(A, i, largest);
+            maxHeapify(A, largest, count);
+        }
+    }
+
+    @static
+    void buildMaxHeap(Elem A, uintz count) {
+        for (i := count >> 1; i > 0; --i) {
+            maxHeapify(A, i, count);
+        }
+    }
+
+}
+
+## Heaps.  Requires [], []= and count().
+class Heap[SeqT] : HeapPrim[SeqT] {
+    @static
+    void buildMaxHeap(SeqT A) {
+        buildMaxHeap(A, A.count());
+    }
+    @static
+    bool isMaxHeap(SeqT A) {
+        return isMaxHeap(A, A.count());
+    }
+}
+
+class HeapSortPrim[Elem] {
+    @static
+    void _heapSort(Elem A, uintz count) {
+        heapSize := count;
+        for (i := count; i > 1; --i) {
+            HeapPrim[Elem]._swap(A, 1, i);
+            heapSize--;
+            HeapPrim[Elem].maxHeapify(A, 1, heapSize);
+        }
+    }
+    @static
+    void sort(Elem A, uintz count) {
+        if (!HeapPrim[Elem].isMaxHeap(A, count))
+            HeapPrim[Elem].buildMaxHeap(A, count);
+        _heapSort(A, count);
+    }
+}
+
+class HeapSort[SeqT] : HeapSortPrim[SeqT] {
+    @static
+    void sort(SeqT A) {
+        _heapSort(A, A.count());
+    }
+}
