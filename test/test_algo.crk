@@ -83,7 +83,7 @@ if (!Heap[Array[uint]].isMaxHeap(d)) {
 HeapSort[Array[uint]].sort(d);
 Checker[Array[uint]].check(d);
 
-// SORTING PRIMATIVES
+// SORTING PRIMITIVES
 sA2 := array[int]![0, 3, 2, 1];
 InsertionSortPrim[array[int]].sort(sA2, 4);
 CheckerPrim[array[int]].check(sA2, 4);

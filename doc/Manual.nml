@@ -223,7 +223,7 @@ uint::
     bits in size.
 intz::
     An integer the size of the C compiler's pointer.  #intz# and #uintz# are 
-    used for memory sizes, pointer offsets, array indeces and cases where we 
+    used for memory sizes, pointer offsets, array indices and cases where we 
     want to represent pointers as integers.  #intz# is equivalent to #ssize\_t#
     in C++.
 uintz::
@@ -317,7 +317,7 @@ specifying a "b" (for byte) or "i" (for integer) prefix to a constant string
 (either single or double-quoted).  For example:
 
 {{
-    b := b'A';  # b is set to 65, the ascii value of A
+    b := b'A';  # b is set to 65, the ASCII value of A
     int n = i'\001\0';  # i is set to 256
     int64 magic = i"SpugCrak";  # magic = 6012434588913262955
 }}
@@ -363,13 +363,13 @@ Numeric types are slightly more complicated.
 
 There are two kinds of numeric types, Universal Numeric Types (UNTs) and 
 Platform Dependent Numeric Types.  The UNT types are byte, int32, uint32, 
-int64, uint64, float32 and float64.  These are guaranteeed to be of the same 
+int64, uint64, float32 and float64.  These are guaranteed to be of the same 
 size no matter what the preferences of the platform.  A numeric type can 
 implicitly convert to a UNT as long as there is no risk of precision loss on 
 any platform.  Since we define most PDNTs to be either 32-bit or 64-bit 
 values, this means that we can always implicitly convert from, for example, 
 an unsigned int to a uint64, but we can never implicitly convert from an uint 
-to a uint32. aaaa
+to a uint32.
 
 The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly 
 convert to a PDNT.
@@ -402,7 +402,7 @@ PDNTs can be more convenient.
     i64 = int64(u64);
 }}
 
-See the section on \X(Numeric Types) for more information on the philsophy and 
+See the section on \X(Numeric Types) for more information on the philosophy and 
 details of how numeric conversions work.
 
 Strings
@@ -451,7 +451,7 @@ already ("\\n").  The full list is:
 Sequence Constants
 ''''''''''''''''''
 
-Most modern languages provide some syntax for defining entire datastructures 
+Most modern languages provide some syntax for defining entire data structures 
 in the code.  This is a nice convenience in that the alternative is usually to 
 write a lot of tedious code to compose them.
 
@@ -464,8 +464,8 @@ to define a low-level array of integers we could do this:
 
 Sometimes it's useful to be able to do this sort of thing in an expression, 
 for example to pass a sequence argument to a function.  Since the compiler 
-doesn't know the type in these cases, we have to specify it expclitly by 
-preceeding the list with the type followed by an exclamation point.
+doesn't know the type in these cases, we have to specify it explicitly by 
+preceding the list with the type followed by an exclamation point.
 
 For example, we could have used the define operator in conjunction with this 
 notation to write the definition above as follows:
@@ -593,7 +593,7 @@ The for statement
 '''''''''''''''''
 
 Crack supports two different flavors of "for": C-style and "for-each" style 
-(as used in Python, Javascript, Java and Perl).
+(as used in Python, JavaScript, Java and Perl).
 
 The C-style for statement looks like a while statement, but the parenthesized 
 form at the beginning consists of three parts:
@@ -622,7 +622,7 @@ statement:
     for (;/expr/;) /stmt/
 ]]
 
-Likewise, an inifinite loop could be written as:
+Likewise, an infinite loop could be written as:
 
 [[
     for (;;) /stmt/
@@ -680,7 +680,7 @@ are implemented using the #try\/catch# and #throw# statements:
 
 {{
     try {
-        throw Exception('badness occured');
+        throw Exception('badness occurred');
     } catch (Exception ex) {
         cout `exception caught: $ex\n`;
     }
@@ -704,7 +704,7 @@ lets say we have a function that creates file objects:
 }}
 
 Control would be transferred to the first catch in the call stack matching 
-InvalidResourceError (by specifiying either that class or a base class).
+InvalidResourceError (by specifying either that class or a base class).
 
 The expressions in a throw clause can not be of arbitrary type.  In 
 particular, they must be a type derived from VTableBase.  In general, you also 
@@ -926,7 +926,7 @@ All of the integer types support the following bitwise operations:
 |::
     Bitwise or.  #5 | 4 == 5#
 <<::
-    Shift all bits left by the amount specfied on the right.  #1 << 2 == 4#
+    Shift all bits left by the amount specified on the right.  #1 << 2 == 4#
 >>::
     Shift all bits right by the amount specified on the right.  #4 >> 2 == 1# 
     If this is done on a signed operator, this is an /arithmetic/ shift.  
@@ -1525,7 +1525,7 @@ of this feature)
 special status.  #@final# indicates that the method should not be virtual.  
 This makes the method more like a normal function: no vtable lookup is 
 required, and the receiver can be null.  Using #@final# prevents the method 
-from ever being overriden.  If you try to override it in a derived class, you 
+from ever being overridden.  If you try to override it in a derived class, you 
 will get an error.
 
 #@static# effectively makes the method a normal function scoped to the class.  
@@ -1663,7 +1663,7 @@ Use #isSubclass()# instead.
 Interfaces
 ''''''''''
 
-As an interim solution to accomodate the lack of virtual base classes, Crack 
+As an interim solution to accommodate the lack of virtual base classes, Crack 
 0.5 provides an /interface/ concept similar to that of Java.  In fact, the 
 interface implementation makes it suitable for use as a limited form of 
 virtual base class, but we'll mainly focus on the interface use case.
@@ -1702,7 +1702,7 @@ Now lets create a flavor of our LineSegment class that implements it:
 }}
 
 We can now pass DrawableLineSegment to any function that accepts Drawable 
-objects without having to worry about doing anything special to accomodate 
+objects without having to worry about doing anything special to accommodate 
 reference counting.  That is to say, we can do something like this:
 
 {{
@@ -1731,7 +1731,7 @@ null because interfaces are never derived from #Object#: they are derived from
 #@implements# does something similar with the implementation class: 
 for every interface class name that follows it (you can have a comma 
 separated list of them) it generates a #get#/IFaceName/#Object()# method that 
-simply returns "this".  Impelementation classes must therefore derive from 
+simply returns "this".  Implementation classes must therefore derive from 
 Object, either indirectly or directly and they must do so explicitly. So, 
 "#class A @implements IFace#" would be illegal, you'd have to use "#class A 
 : Object @implements IFace#" instead.
@@ -1868,10 +1868,10 @@ The following operators can be overloaded:
     called when the augmented assignment operators are used.  If they are not 
     defined, they can still be used if the type defines the simple operator 
     that it is based on.  So for example, if a class defines "#oper +#", you 
-    can use the #+=# opertator on an instance without defining it.
+    can use the #+=# operator on an instance without defining it.
 
 As in the last section, *final* means the method is non-virtual for Object 
-derivatives and cannot be overriden.
+derivatives and cannot be overridden.
 
 The primitive types mostly have intrinsic implementations of the operators.
 
@@ -2055,7 +2055,7 @@ Module names correspond directly to directory and file names in the Crack
     the filename.  Example: "foo.bar.baz" -> path = "`foo/bar`", filename = 
     "baz"
 -   for every directory in the crack library path, search for a subdirectory 
-    matching the path and the filename with a ".crk" extention
+    matching the path and the filename with a ".crk" extension
 -   when we find it, compile it and then execute the module top-level code 
     (everything that's not in a function).
 
@@ -2237,7 +2237,7 @@ are already a few specializations of this class in the #crack.io# module.
 }}
 
 It's often useful to be able to format a string in an expression.  For 
-example, throwing an exception like this would be unwieldly:
+example, throwing an exception like this would be unwieldy:
 
 {{
     if (foo > MAX_FOO) {
@@ -2424,7 +2424,7 @@ can be passed using primitive arrays:
 }}
 
 The #crack.exp.bindings# defines an #Opaque# class.  This can be used for 
-structures returned from C functions that contain no user-servicable parts.  
+structures returned from C functions that contain no user-serviceable parts.  
 For example:
 
 {{
@@ -2602,7 +2602,7 @@ after the final semicolon would find the parser in the base state.
 Annotations anywhere else would not be in the base state.
 
 These functions can be used in conjunction with parser callbacks to insure 
-that an annotation used to modify a definition or statement preceeds the right 
+that an annotation used to modify a definition or statement precedes the right 
 kind of syntactic construct.
 
 Here's an example of an annotation that verifies that it has been used in the 
@@ -2890,7 +2890,7 @@ syntax error in the body of the macro, the error message will report the
 location of the error within the definition of the macro, followed by the 
 location of the annotation that expanded the macro.
 
-As in C macros, you can do argument concatentation and stringification.  A 
+As in C macros, you can do argument concatenation and stringification.  A 
 single dollar sign in a macro stringifies the following argument, a double 
 dollar sign concatenates the argument with the adjacent tokens.
 
@@ -2920,7 +2920,7 @@ make a macro available to other modules, you have to export it:
     @import crack.exp.ann define, export, exporter;
     
     # Indicates that the module will be exporting macros.
-    # What this actually does is to import various utlity functions from 
+    # What this actually does is to import various utility functions from 
     # crack.exp.ann needed to do an export.
     @exporter
     
@@ -2983,7 +2983,7 @@ follows:
     func->addArg(mod->getByteptrType(), "data");
 }}
 
-The details of the extension interface are docummented in the header files in 
+The details of the extension interface are documented in the header files in 
 the #`crack/ext`# directory installed with your distribution.  To compile your 
 extension, you'll want to:
 
@@ -3084,7 +3084,7 @@ implemented as methods and reverse methods and UNT binary operations are
 implemented as functions in the default namespace. UNT operations are also 
 defined in order of smallest to largest types, so binary operation involving 
 two UNTs will match the first operation with a type large enough to 
-accomodate both operands.
+accommodate both operands.
 
 As an example, when resolving #int64(a) + int(b)#:
 
@@ -3093,7 +3093,7 @@ As an example, when resolving #int64(a) + int(b)#:
 -   check #int# for an #oper r+()# method (the /reverse operator/ of #oper +#) 
     that accepts:
     -   an #int64# argument (no match)
-    -   an argmuent that #int64# can be converted to (matches #oper r+(int)# 
+    -   an argument that #int64# can be converted to (matches #oper r+(int)# 
         because all numeric types can convert to the #int# PDNT)
 
 On the other hand, let's consider #int64(a) + byte(b)#:
@@ -3211,7 +3211,7 @@ If one buffer is identical to the beginning of the other, but is shorter, the
 shorter buffer is "less than" the larger buffer.
 
 The #String# class is one of the few types that don't need to be imported.  
-#Buffer# and its other descendents can be imported from #crack.lang#.
+#Buffer# and its other descendants can be imported from #crack.lang#.
 
 CString
 '''''''
@@ -3390,7 +3390,7 @@ The following standard exception types are defined in #crack.lang#:
 Containers
 ----------
 
-Containers provide support for the basic sequential and mapping datastructures 
+Containers provide support for the basic sequential and mapping data structures 
 expected from a modern programming language.  Crack's container library is 
 defined in a set of modules in #crack.cont#.  Each module is named for the 
 container generic that it provides, for example, high-level arrays are in 
@@ -3411,7 +3411,7 @@ empty:
 Iterators
 '''''''''
 
-Iterators are like iterators in java.  All container types have an #iter()# 
+Iterators are like iterators in Java.  All container types have an #iter()# 
 method which returns an #Iterator# object for the container.
 
 Iterators allow you to iterate over the set of objects in a container one at a 
@@ -3505,7 +3505,7 @@ Linked Lists
 
 The #List# class implements a linked list.  Linked lists aren't very good for 
 random access, but they do support constant time insert and append, making 
-them preferrable to arrays in certain cases.
+them preferable to arrays in certain cases.
 
 The #List# interface looks very much like the #Array# interface:
 
@@ -3653,7 +3653,7 @@ HashMap
 A #HashMap# provides the same interface as #TreeMap#, but is backed by a 
 hashtable instead of a red-black tree.  Hashtables should provide 
 significantly faster inserts and lookups (generally O(1), although insertions 
-will occassionally be O(N) when table grows beyond its capacity and both 
+will occasionally be O(N) when table grows beyond its capacity and both 
 insertions and lookups can be a multiple of constant time in cases of hash 
 collisions).  The downside is that they do not preserve the order of their 
 keys.  If you iterate over a hashtable the order of elements returned is 
@@ -3683,7 +3683,7 @@ For example:
     
     # try out both kinds of sort
     QuickSort[Array[int]].sort(arr);
-    nsertionSort[Array[int]].sort(arr);
+    insertionSort[Array[int]].sort(arr);
 }}
 
 For aggregate types, sorting relies on the comparison functions of #Object#, 
@@ -3695,7 +3695,7 @@ Error Handling
 
 Crack 0.5 continues to provide an error handling module (#crack.exp.error#).  
 However, this interface is deprecated in favor of exceptions.  This 
-documentation should be regarded as purely of historical inteterest.
+documentation should be regarded as purely of historical interest.
 
 The error module lets you record an error in a manner that can be controlled 
 by the callers.  The default action is to abort.
@@ -4080,9 +4080,9 @@ Likewise, the #begin()# and #end()# functions can be used with group names.
 
 Named subgroups can greatly enhance the readability of regular expression code.
 
-#crack.exp.regex# is a wrapper around the PCRE library (perl-compatible 
+#crack.exp.regex# is a wrapper around the PCRE library (Perl-compatible 
 regular expressions).  As the name suggests, the regular expression syntax 
-supported by this library is very close to the syntax supported by perl 5.
+supported by this library is very close to the syntax supported by Perl 5.
 
 Math
 ----
@@ -4481,7 +4481,7 @@ Appendix 2 - Migration
 Crack guarantees backwards compatibility between ternary release numbers (so 
 0.2.1 should be compatible with 0.2).  We will adhere to this policy until we 
 release 1.0, at which point we will begin guaranteeing backwards 
-compatibililty until the next major version number (2.0).
+compatibility until the next major version number (2.0).
 
 Until this time, the language and all of its libraries are considered to be 
 "in flux:" anything can change between minor version numbers.
