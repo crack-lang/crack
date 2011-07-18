@@ -175,8 +175,8 @@ extinc_HEADERS = \
     ext/Var.h \
     ext/crack_config.h
 
-EXTRA_DIST = doc lib test Credits CMakeLists.txt sourceModules.txt \
-    runtimeModules.txt cmake COPYING COPYING.Lesser
+EXTRA_DIST = doc lib test Credits CMakeLists.txt opt/CMakeLists.txt \
+    sourceModules.txt runtimeModules.txt cmake COPYING COPYING.Lesser
 
 bin_PROGRAMS = crack
 
