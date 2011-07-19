@@ -326,6 +326,12 @@ class Array[Elem] {
         return retval;
     }
 
+    void _setSize(uint newSize){
+        if (newSize > __cap)
+            throw IndexError('Index out of range in Array.setSize');
+        __size = newSize;
+    }
+
   @final
     ArrayIter iter() {
         return ArrayIter(this);

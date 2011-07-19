@@ -2021,6 +2021,21 @@ played back in an "ephemeral module" containing:
 By virtue of this, compile-time errors in generics do not manifest until the 
 generic is instantiated.
 
+Generic classes also support inheritance. Using the above example we can derive
+a class #PrimitivePair# from #Pair# as follows:
+
+{{
+    class PrimitivePair[FirstType, SecondType] : Pair[FirstType, SecondType] {
+
+    oper init(FirstType f, SecondType s) : Pair(f, s) {
+    }
+
+        oper +=(FirstType f){
+            first += f;
+        }
+    }
+}}
+
 Modules
 -------
 
