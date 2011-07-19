@@ -7,6 +7,7 @@ import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.cont.list List, DList;
 import crack.cont.hashmap HashMap;
+import crack.cont.priorityqueue PriorityQueue;
 import crack.exp.algorithm QuickSort;
 @import crack.exp.ann define;
 
@@ -374,5 +375,68 @@ if (true) {
 expected\n`;
     }
 }
+
+# priority queue
+PriorityQueue[int] pq = { };
+pq.push(1);
+pq.push(3);
+pq.push(5);
+pq.push(10);
+pq.push(12);
+pq.push(2);
+pq.push(8);
+if (pq.top() != 12)
+    cout `priority queue top() fail\n`;
+int a = pq.pop();
+if (a != 12)
+    cout `priority queue pop() fail\n`;
+a = pq.pop();
+if (a != 10)
+    cout `priority queue pop() fail\n`;
+a = pq.pop();
+if (a != 8)
+    cout `priority queue pop() fail\n`;
+pq.push(50);
+a = pq.pop();
+if (a != 50)
+    cout `priority queue pop() fail\n`;
+
+PriorityQueue[int] pq2 = { };
+if (pq2.pop())
+    cout `null pq pop fail\n`;
+
+class Job {
+    int priority;
+    oper init(int p): priority = p { }
+    int cmp(Object other) {
+        if (this is other || !other.isa(Job)) return 0;
+        else {
+            j := Job.cast(other);
+            return (this.priority > j.priority) ? 1 : -1;
+        }
+    }
+}
+PriorityQueue[Job] pq3 = { };
+pq3.push(Job(5));
+pq3.push(Job(10));
+pq3.push(Job(50));
+pq3.push(Job(20));
+if (pq3.count() != 4)
+    cout `priority queue count() fail\n`;
+j := pq3.pop();
+if (j.priority != 50)
+    cout `priority queue pop() fail (50)\n`;
+j = pq3.pop();
+if (j.priority != 20)
+    cout `priority queue pop() fail (20)\n`;
+j = pq3.pop();
+if (j.priority != 10)
+    cout `priority queue pop() fail (10)\n`;
+j = pq3.pop();
+if (j.priority != 5)
+    cout `priority queue pop() fail (5)\n`;
+j = pq3.pop();
+if (j)
+    cout `priority queue pop() fail (null)\n`;
 
 cout `ok\n`;

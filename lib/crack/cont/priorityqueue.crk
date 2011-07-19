@@ -1,0 +1,50 @@
+# Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
+# Generic priority queue implementation
+
+import crack.cont.array Array;
+import crack.io Writer, cout;
+import crack.exp.algorithm HeapPrim;
+
+## A priority queue backed by a dynamic array which maintains the max-heap
+## property
+class PriorityQueue[Elem] {
+
+    Array[Elem] __data = { };
+
+    void writeTo(Writer out) {
+        __data.writeTo(out);
+    }
+
+    @final
+    Elem pop() {
+        if (__data.count() == 0)
+            return null;
+        __data.swap(0, __data.count()-1);
+        Elem e = __data.pop();
+        if (__data.count() > 1)
+            HeapPrim[typeof(__data)].maxHeapify(__data, 1, __data.count());
+        return e;
+    }
+
+    @final
+    void push(Elem e) {
+        __data.append(e);
+        for (i := __data.count();
+             i > 1 && (__data[(i>>1)-1] < __data[i-1]);
+             i = i >> 1) {
+             //cout `i: $i == $(__data[i-1]), parent: $(i>>1) == $(__data[(i>>1)-1])\n`;
+            __data.swap(i-1, (i>>1)-1);
+        }
+    }
+
+    @final
+    uint count() {
+        return __data.count();
+    }
+
+    @final
+    Elem top() {
+       return __data[0];
+    }
+
+}

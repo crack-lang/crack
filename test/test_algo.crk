@@ -2,7 +2,7 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.exp.algorithm QuickSort, QuickSortPrim, InsertionSort, 
-    InsertionSortPrim;
+    InsertionSortPrim, HeapPrim, Heap, HeapSortPrim, HeapSort;
 import crack.cont.array Array;
 import crack.io cout, FStr;
 import crack.runtime random;
@@ -37,6 +37,14 @@ class Checker[SeqT] {
     }
 }
 
+class Printer[SeqT] {
+    @static void print(SeqT a) {
+        for (i := 0; i < a.count(); ++i) {
+            cout `$i: $(a[i])\n`;
+        }
+    }
+}
+
 
 ////////////////////////////////
 
@@ -49,11 +57,10 @@ Checker[Array[uint]].check(a);
 
 // INSERTION SORT
 c := newRandomArray(nsize);
-// XXX this syntax will change once some parser issues have been fixed
 InsertionSort[Array[uint]].sort(c);
 Checker[Array[uint]].check(c);
 
-// In place sort
+// ARRAY IN PLACE
 b := newRandomArray(nsize);
 b.sort();
 Checker[Array[uint]].check(b);
@@ -65,6 +72,18 @@ stringRepr := FStr() `$sA`;
 if (stringRepr != '[crack, on, some, string]')
    cout `String Array sort/writeTo method failed\n`;
 
+// HEAPS
+d := newRandomArray(nsize);
+Heap[Array[uint]].buildMaxHeap(d);
+if (!Heap[Array[uint]].isMaxHeap(d)) {
+   Printer[Array[uint]].print(d);
+   cout `max heap build fail\n`;
+}
+
+HeapSort[Array[uint]].sort(d);
+Checker[Array[uint]].check(d);
+
+// SORTING PRIMITIVES
 sA2 := array[int]![0, 3, 2, 1];
 InsertionSortPrim[array[int]].sort(sA2, 4);
 CheckerPrim[array[int]].check(sA2, 4);
@@ -72,5 +91,9 @@ CheckerPrim[array[int]].check(sA2, 4);
 sI2 := array[uint]![3, 2, 1, 0];
 QuickSortPrim[array[uint]].sort(sI2, 4);
 CheckerPrim[array[uint]].check(sI2, 4);
+
+sH2 := array[uint]![3, 2, 1, 0];
+HeapSortPrim[array[uint]].sort(sH2, 4);
+CheckerPrim[array[uint]].check(sH2, 4);
 
 cout `ok\n`;
