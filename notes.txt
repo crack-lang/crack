@@ -582,18 +582,45 @@ Desired Grammer:
 
     XXX Finish this. XXX
     
+    module ::= block ;
+    
+    block ::= statement_or_def* ;
+    
+    statement_or_def ::= statement | definition ;
+    
+    statement ::= expression ';' |  # block can be terminated by something 
+                                    #    other than a semicolon?
+                  if_stmt |
+                  'while' '(' expr ')' clause |
+                  'for' '(' for_expr ')' clause |
+                  try_stmt
+    
+    if_stmt ::= if_root | if_root else ;
+    
+    try_stmt ::= 'try' '{' block '}' catch '(' typespec identifier ')' '{'
+                    block '}'
+    
+    if_root ::= 'if' '(' expr ')' clause ;
+    
+    else ::= 'else' clause ;
+    
+    clause ::= statement ';' | block ;
+    
     condition = expr | var_def
     typespec_list = typespec |
                     typespec_list ',' typespec ;
     typespec ::= identifier |
                  typespec '.' identifier |
                  typespec '[' typespec_list ']
-    primary ::= constant |
-                identifier |
-                primary '.' identifier |
-                primary arg_list |
-                primary '[' expr ']' ;
-    expr ::= constant | primary
+    atom ::= constant | identifier ;
+    cluster ::= atom |
+                cluster specializer ;
+    specializer :: '.' identifier | '::' identifier ;
+    primary ::= cluster arg_list |
+                cluster '[' expr ']' ;
+    expr ::= primary |
+             primary op expr |
+             '(' expr ')'
 
 Annotations:
 
