@@ -80,6 +80,13 @@ test_argv2 := split("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello "
 
 // Parse command line array
 options.parse(test_argv, true);
+
+if  (sys_options.getBool("dump")) {
+   cout `\nSecond option set:\n`;
+   options.dump();
+   cout `$options\n`;
+}
+
 unparsed := options.parse(test_argv2, true);
 
 if  (sys_options.getBool("dump")) {

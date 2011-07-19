@@ -6,7 +6,7 @@ import crack.cont.array Array;
 import crack.math strtoi, strtof;
 import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
 import crack.sys argv;
-import crack.io cout, StringFormatter, FStr, Writer;;
+import crack.io cout, StringFormatter, FStr, Writer;
 import crack.strutil split, StringArray;
 
 StringArray typeNames = ["string", "int", "float", "bool"];
@@ -14,7 +14,7 @@ uint CMD_STR = 0;
 uint CMD_INT = 1;
 uint CMD_FLOAT = 2;
 uint CMD_BOOL = 3;
-uint NOINDEX = 0xffffffff; // Completely arbitrary a large number
+uint NOINDEX = 0xffffffff; // Completely arbitrary large number
 
 class Option {
    String long;
@@ -285,6 +285,7 @@ class CmdOptions {
                shortname := arg.substr(i,1);
                hasValue=false;
                opt = getOption(shortname, false);
+
                if (i==1 || opt){
                   result = ParseInfo(null, null);
                   result.name = shortname;
@@ -293,9 +294,12 @@ class CmdOptions {
                   if (opt && opt.type != CMD_BOOL && len > i+1) { // gobble up the rest of the option
                      result.value = arg.slice(i+1);
                      hasValue = true;
-                     result.nadv = true; // set the no advance flag
+                     if (i==1) result.nadv = true;
+                     else result.nadv = false; // set the no advance flag
                      i+=int(result.value.size);
-                     
+                  }
+                  else if (opt && opt.type == CMD_BOOL){
+                     result.nadv = true;
                   }
                }
                else if (len > i) { // the case -aARG
