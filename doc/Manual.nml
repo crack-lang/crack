@@ -448,6 +448,17 @@ already ("\\n").  The full list is:
     newline is ignored.  This allows you to wrap large strings across multiple 
     lines.
 
+In certain cases (most notably, regular expressions) it is desirable that the 
+backslash not be an escape character, but be passed through verbatim.  For 
+these cases, we can define a raw string constant using an "r" prefix (similar 
+to python):
+
+{{
+    val := r'test\nstring';
+    cout `$val\n`;  # prints "test\nstring"
+}}
+
+
 Sequence Constants
 ''''''''''''''''''
 
