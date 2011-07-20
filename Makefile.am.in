@@ -131,7 +131,6 @@ noinst_HEADERS = \
     model/StubDef.h \
     model/TernaryExpr.h \
     model/TypeDef.h \
-    model/TypeOfCall.h \
     model/VarAnnotation.h \
     model/VarDef.h \
     model/VarDefImpl.h \
