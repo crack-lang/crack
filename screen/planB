@@ -57,6 +57,8 @@ function test_output {
     
     echo -n "$text..."
     echo "$script" >run_all_tests.tmp
+    opts="-Gnl /home/mmuller/w/crack.new -l \
+/home/mmuller/w/crack.new/lib:lib:.libs"
     cmdline="./crack -B $builder $opts $extra_opts run_all_tests.tmp $args"
     #echo ""
     #echo "running $cmdline"
@@ -89,12 +91,14 @@ function run_test {
     extract_section $file ARGS
     ARGS_sec=$EXTRACT
     extract_section $file EXPECT
-    EXPECT_sec=`echo "$EXTRACT" | sed "s:%OUTDIR%:$OUTDIR:"`
+    EXPECT_sec=`echo "$EXTRACT" | sed "s:%OUTDIR%:$OUTDIR:g"`
     
     # XXX script args
     # XXX stdin
     
-    cmdline="$CRACKBIN $ARGS_sec $outfile" # xxx script args section
+    opts="-Gnl /home/mmuller/w/crack.new -l \
+/home/mmuller/w/crack.new/lib:lib:.libs"
+    cmdline="$CRACKBIN $opts $outfile $ARGS_sec" # xxx script args section
     #echo "running $cmdline"
     result="$(echo $stdin | $cmdline 2>&1)"
     if [ "$result" = "$EXPECT_sec" ]; then
