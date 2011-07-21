@@ -63,4 +63,28 @@ class D[T] : A[T] { oper init(int val) : A[T](val) {} }
 if (D[int](100).val != 100)
     puts('FAILED generics inhereting from other generics');
 
+# verify that symbols from enclosing contexts are available to a generic
+if (1) {
+    gotStaticCalled = 0;
+    void e() {}
+
+    void outer() {
+        void f() {}
+        int i;
+        class B[X] {
+            @static void g() { f(); e(); gotStaticCalled = 1; }
+        }
+        
+        void h() {
+            B[int].g();
+        }
+        
+        h();
+    }
+    
+    outer();
+    if (!gotStaticCalled)
+        puts('FAILED generics accessing symbols from enclosing contexts');
+}
+
 puts('ok');

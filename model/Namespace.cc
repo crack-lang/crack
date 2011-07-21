@@ -79,6 +79,13 @@ void Namespace::aliasAll(Namespace *other) {
          )
         if (!lookUp(iter->first))
             addAlias(iter->second.get());
+    
+    // do parents afterwards - since we don't clobber existing aliases, we 
+    // want to do the innermost names first.
+    NamespacePtr parent;
+    for (int i = 0; parent = other->getParent(i++);) {
+        aliasAll(parent.get());
+    }
 }
 
 void Namespace::replaceDef(VarDef *def) {

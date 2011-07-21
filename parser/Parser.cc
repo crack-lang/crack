@@ -2770,7 +2770,7 @@ TypeDefPtr Parser::parseClassDef() {
       
       generic = new Generic();
       parseGenericParms(generic->parms);
-      generic->moduleNS = context->getModuleContext()->ns;
+      generic->ns = context->ns;
       generic->compileNS = context->compileNS;
       tok = getToken();
       generic->addToken(tok);

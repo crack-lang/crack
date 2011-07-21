@@ -650,7 +650,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     
     // alias all global symbols in the original module and original compile 
     // namespace.
-    modContext->ns->aliasAll(genericInfo->moduleNS.get());
+    modContext->ns->aliasAll(genericInfo->ns.get());
     modContext->compileNS->aliasAll(genericInfo->compileNS.get());
     
     // alias the template arguments to their parameter names
