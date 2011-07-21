@@ -106,14 +106,21 @@ function run_test {
     
 }
 
-# pre bootstrap tests
-BASIC=`find $MYDIR/tests/basic -name "*.crkt" | sort`
-
 errors=0
-for file in $BASIC
-do
-    run_test $file
-done
+if [ -z "$*" ]; then
+    # pre bootstrap tests
+    BASIC=`find $MYDIR/tests/basic -name "*.crkt" | sort`
+    
+    for file in $BASIC
+    do
+        run_test $file
+    done
+else
+    # deal with user-specified tests
+    for test in "$@"; do
+        run_test "$test"
+    done
+fi
 
 if [ "$errors" != 0 ]; then
     echo "====================="
