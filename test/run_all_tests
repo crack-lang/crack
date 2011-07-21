@@ -1186,6 +1186,27 @@ test_output x 'order of initialization and destruction' \
 test_output x 'Object/String comparison operators' \
     'import test.test_compare;' ok
 
+test_output generics_with_annotations 'generics with annotations' \
+    '@import crack.exp.ann define;
+    import crack.io cout;
+     
+     class A[X] {
+         @define attr(name) {
+             X name;
+         }
+         @attr(a);
+         @attr(b);
+     }
+     
+     A[int] a = {};
+     a.a = 100;
+     a.b = 200;
+     
+     if (a.a != 100 || a.b != 200)
+        cout `FAILED generics with annotations\n`;
+     cout `ok\n`;' \
+     ok
+
 test_output x 'command line arguments' \
     'import crack.sys argv; uint i = 1;
      while (i < argv.count()) { print(argv[i]); i = i + 1; }' \

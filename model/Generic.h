@@ -23,8 +23,8 @@ class Generic {
         // the body of the generic, stored in reverse order.
         std::vector<parser::Token> body;
         
-        // the original module Namespace
-        NamespacePtr moduleNS;
+        // the original module Namespace and compile namespace
+        NamespacePtr moduleNS, compileNS;
         
         /** Add the token to the body. */
         void addToken(const parser::Token &tok) {

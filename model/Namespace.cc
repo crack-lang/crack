@@ -72,6 +72,15 @@ void Namespace::addAlias(const string &name, VarDef *def) {
     defs[name] = def;
 }
 
+void Namespace::aliasAll(Namespace *other) {
+    for (VarDefMap::iterator iter = other->beginDefs();
+         iter != other->endDefs();
+         ++iter
+         )
+        if (!lookUp(iter->first))
+            addAlias(iter->second.get());
+}
+
 void Namespace::replaceDef(VarDef *def) {
     assert(!def->getOwner());
     assert(!def->hasInstSlot() && 

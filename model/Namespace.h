@@ -86,6 +86,9 @@ class Namespace : public virtual spug::RCBase {
         virtual void addAlias(VarDef *def);
         virtual void addAlias(const std::string &name, VarDef *def);
         
+        /** Alias all symbols from the other namespace. */
+        void aliasAll(Namespace *other);
+        
         /**
          * Replace an existing defintion with the new definition.
          * This is only used to replace a StubDef with an external function 
