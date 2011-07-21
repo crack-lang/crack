@@ -66,6 +66,8 @@ if [ "$1" != "emit" ]; then
     fi
     ln -f test/.libs/testext.so lib
 
+    function emit_opts { true; }
+    
 else
 
     source='%source%'
@@ -78,14 +80,14 @@ else
 
     function test_output {
         
-        name="$1"
-        text="$2"
-        script="$3"
-        expected="$4"
-        stdin="$5"
-        args="$6"
-        opts="-Gnl $root -l $root/lib:lib:.libs"
-        out=screen/tests/basic/$(printf '%03d' $testNum)_$name.crkt
+        local name="$1"
+        local text="$2"
+        local script="$3"
+        local expected="$4"
+        local stdin="$5"
+        local args="$6"
+        local basename="$(printf '%03d' $testNum)_$name"
+        out="screen/tests/basic/$class/$basename.crkt"
         testNum=$((testNum + 1))
         if [ -e "$out" ]; then
             echo "$out already defineed"
@@ -98,9 +100,22 @@ else
         echo '%%FILE%%' >> $out
         echo "$script" >> $out
         echo '%%EXPECT%%' >> $out
-        echo "$expected" | sed -e "s:%source%:%OUTDIR%$name.crk:g" >> $out
+        echo "$expected" | sed -e "s:%source%:%OUTDIR%$basename.crk:g" >> $out
+        echo '%%STDIN%%' >> $out
+        echo $stdin >> $out
     }
+
+
+    function emit_opts {
+        local out="$root/screen/tests/basic/$class/options"
+        mkdir -p "$root/screen/tests/basic/$class"
+        echo '%%OPTS%%' >$out
+        echo "$opts" >>$out
+        
+    }
+    
 fi  # run tests/emit test templates
+
 
 parseError="ParseError: $source:"
 parseWarn="$source:"
@@ -112,6 +127,8 @@ echo "dirname = $0, root = $root"
 
 # start with no bootstrapping
 opts="-Gnl $root -l $root/lib:lib:.libs"
+class="0_pre_bs"
+emit_opts
 
 test_output hello "hello world" 'puts("hello world")' 'hello world'
 test_output semi_term "semicolon terminated" 'puts("hello world");' 'hello world'
@@ -478,7 +495,7 @@ test_output base_cons_notrans 'base constructors are non-transitive' \
     'class A { oper init(int a0) {} };
      class B : A { oper init() : A(100) {} };
      class C : B { oper init() : B(100) {} };' \
-    "${parseError}3: No matching constructor found for run_all_tests.tmp.B"
+    "${parseError}3: No matching constructor found for $source.B"
 
 test_output oper_new_noinherit 'no inheritance of oper new' \
     'class A { oper init(int a0) {} };
@@ -767,7 +784,7 @@ test_output multi_inherit_same_base \
     'class A {}
      class B : A {}
      class C : B, A {}' \
-    "${parseError}3: Class run_all_tests.tmp.A is already an ancestor."
+    "${parseError}3: Class $source.A is already an ancestor."
 
 # this should still work
 #void f() {
@@ -916,6 +933,8 @@ supported yet."
 
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"
+class="1_post_bs"
+emit_opts
 
 test_output x 'correct caching of crack.lang' \
     'import crack.lang; print("ok");' \

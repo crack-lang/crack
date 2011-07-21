@@ -16,110 +16,112 @@ else
 fi
 
 function extract_section {
-    file="$1"
-    sec="$2"
-    filelen=`wc -l $file | awk '{ print \$1'}`
-    #echo "file len: $filelen"
+    local file="$1"
+    local sec="$2"
+    local filelen=`wc -l $file | awk '{ print \$1'}`
+    local result
+    #echo "file len: $filelen" >&2
     cmd="grep -n --color=never %%$sec%% $file"
     start=`$cmd  | awk -F : '{print \$1}'`
-    #echo "start of $sec: $start"
+    #echo "start of $sec: $start"  >&2
     start_plus_one=`expr $start + 1`
     cmd1="tail -n +$start_plus_one $file"
     cmd2="egrep -n -m 1 --color=never %%.+%%"
     next=`$cmd1 | $cmd2 | awk -F : '{print \$2}'`
     if [ -n "$next" ]; then  
         # there is a following section
-        #echo "next section following $sec: $next"
+        #echo "next section following $sec: $next"  >&2
         cmd="grep -n --color=never $next $file"
         end=`$cmd  | awk -F : '{print \$1}'`
-        #echo "which is located at $end"
+        #echo "which is located at $end"  >&2
         seclen=`expr $end - $start_plus_one`
-        #echo "section length: $seclen"
+        #echo "section length: $seclen"  >&2
         seclen_minus_one=`expr $seclen - 1`
-        EXTRACT=`tail -n +$start_plus_one $file | head -n $seclen`
-        #echo "got: $EXTRACT"
+        result=`tail -n +$start_plus_one $file | head -n $seclen`
+        #echo "got: $result" >&2
     else
        # no following section, i.e. EOF
-        #echo "no following section"
+        #echo "no following section" >&2
         end=$filelen
         seclen=`expr $end - $start`
-        EXTRACT=`tail -n +$start_plus_one $file`
+        result=`tail -n +$start_plus_one $file`
     fi
+    
+    echo "$result"
 }
 
-
-function test_output {
-    text="$1"
-    script="$2"
-    expected="$3"
-    stdin="$4"
-    args="$5"
+function load_options {
+    local path="$1"
     
-    echo -n "$text..."
-    echo "$script" >run_all_tests.tmp
-    opts="-Gnl /home/mmuller/w/crack.new -l \
-/home/mmuller/w/crack.new/lib:lib:.libs"
-    cmdline="./crack -B $builder $opts $extra_opts run_all_tests.tmp $args"
-    #echo ""
-    #echo "running $cmdline"
-    result="$(echo $stdin | $cmdline 2>&1)"
-    if [ "$result" = "$expected" ]; then
-        echo ok
-    else
-        echo ""
-        echo FAILED
-        echo "$cmdline"
-        echo "Expected: $expected"
-        echo "Got     : $result"
-        rc=1
+    # stop when we get to the top
+    if [ "$path" = "/" -o "$(basename $path)" = "screen" ]; then
+        return
     fi
+    
+    opt_file="$path/options"
+    if [ -e "$opt_file" ]; then
+        OPTS_sec="$(extract_section "$opt_file" OPTS)"
+    fi
+    
+    # check parent directory
+    load_options "$(dirname $path)"
 }
 
 function run_test {
 
-    file="$1"
+    local file="$1"
+    
+    # fill the global vars from the options files
+    load_options $(cd "$(dirname "$file")"; pwd)
     #echo "infile: $file"
     newname=`basename $file .crkt`
     outfile="$OUTDIR$newname.crk"
     #echo "outfile: $outfile"
-    extract_section $file TEST
-    TEST_sec=$EXTRACT
+    
+    TEST_sec=$(extract_section $file TEST)
     echo -n "$TEST_sec ..."
-    extract_section $file FILE
-    FILE_sec=$EXTRACT
+    FILE_sec=$(extract_section $file FILE)
     echo "$FILE_sec" > $outfile
-    extract_section $file ARGS
-    ARGS_sec=$EXTRACT
-    extract_section $file EXPECT
-    EXPECT_sec=`echo "$EXTRACT" | sed "s:%OUTDIR%:$OUTDIR:g"`
+    ARGS_sec=$(extract_section $file ARGS)    
+    EXPECT_sec=`extract_section $file EXPECT | sed "s:%OUTDIR%:$OUTDIR:g"`
+    STDIN_sec=`extract_section $file STDIN`
     
     # XXX script args
     # XXX stdin
     
-    opts="-Gnl /home/mmuller/w/crack.new -l \
-/home/mmuller/w/crack.new/lib:lib:.libs"
-    cmdline="$CRACKBIN $opts $outfile $ARGS_sec" # xxx script args section
+    cmdline="$CRACKBIN $OPTS_sec $outfile $ARGS_sec" # xxx script args section
     #echo "running $cmdline"
-    result="$(echo $stdin | $cmdline 2>&1)"
+    result="$(echo $STDIN_sec | $cmdline 2>&1)"
     if [ "$result" = "$EXPECT_sec" ]; then
         echo ok
     else
         echo ""
-        echo FAILED
+        echo "FAILED $file"
         echo "$cmdline"
         echo "Expected: $EXPECT_sec"
         echo "Got     : $result"
-        rc=1
+        errors=$((errors + 1))
     fi
     
     
 }
 
 # pre bootstrap tests
-BASIC=`find $MYDIR/tests/basic -name "*.crkt"`
+BASIC=`find $MYDIR/tests/basic -name "*.crkt" | sort`
 
+errors=0
 for file in $BASIC
 do
     run_test $file
 done
 
+if [ "$errors" != 0 ]; then
+    echo "====================="
+    echo "Test Failures: $errors"
+    echo "====================="
+    exit 1
+else
+    echo "=============="
+    echo "All Tests Pass"
+    echo "=============="
+fi
