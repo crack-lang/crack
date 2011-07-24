@@ -9,42 +9,37 @@ import crack.exp.regex Regex;
 import crack.exp.process Process;
 import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
 import crack.cont.hashmap HashMap;
-import crack.cont.list List;
+import crack.cont.array Array;
+import crack.cont.priorityqueue PriorityQueue;
+import crack.strutil StringArray, split;
 
-SCREEN_VERSION := ".5";
+import testdata TestData;
+import builders BuilderTestHarness, CrackBuilderDef, builderDefList;
+import config config, T_INIT, T_RUNNING, T_FINISHED;
 
-class Config {
-    String crackBin, rootDir, outDir, libPath;  
-    bool verbose, showDiff;
-}
-Config config = {};
-
-class Result {
-    bool pass;
-    String expected, actual;
-
-    oper init(bool t): pass = t { }
-    oper init(String e, String a): pass = false, expected = e, actual = a { 
-        
-    }
-    
-}
-
+// represent single test template
+// parse template, store data fields, write script
+// maintain state while running available builders so we
+//     don't hang on any one builder
+// maintain final concatenated output of all builders run on this test
+// a test is finished well all of the configured builders have run
 class Test {
 
-    FileInfo _fInfo;
-    String _desc;
-    HashMap[String, String] _testData = {};
-    
-    String _isSkipped;
+    TestData _data = {};
+    StringWriter _output = {};
+    StringWriter _vOutput = {};
 
-    oper init(): _desc("Unknown") { }
+    int _status = T_INIT;
+    Array[BuilderTestHarness] _harness = {};
+    int _activeHarness = 0;
+
+    String _isSkipped;
 
     void loadTemplate() {
         
-        f := File(_fInfo.name, "r");
+        f := File(_data.fInfo.name, "r");
         if (!f.isValid()) {
-            cout `file: $(_fInfo.name) could not be opened!\n`;
+            cout `file: $(_data.fInfo.name) could not be opened!\n`;
             _isSkipped = "unable to open";
             return;
         }
@@ -58,7 +53,7 @@ class Test {
             m := headerPat.search(lineBuf);
             if (m) {
                 if (curSection)
-                    _testData[curSection] = dataBuf.createString();
+                    _data.sections[curSection] = dataBuf.createString();
                 curSection = m.group(1);
                 //cerr `debug: switching to group $curSection\n`;
                 dataBuf = StringWriter();
@@ -67,196 +62,123 @@ class Test {
                 // add line to current section
                 dataBuf.write(lineBuf);
                 if (curSection == 'TEST')
-                    _desc = String(lineBuf, 0, lineBuf.size-1);
+                    _data.desc = String(lineBuf, 0, lineBuf.size-1);
             }
         }
         if (curSection)
-            _testData[curSection] = dataBuf.createString();
+            _data.sections[curSection] = dataBuf.createString();
 
     }
 
     /// ensure test has required sections and that they contain valid data
     /// also check to see if we're skipping this test for some reason
     void checkTemplate() {        
-        if (!_testData["FILE"]) {
+        if (!_data.sections["FILE"]) {
             _isSkipped = "the template was missing a FILE section";
         }
     }
 
-    String writeScript(Directory outDir) {
+    void writeScript() {
         
-        outName := outDir.nameWithTrailing()+_fInfo.basename(true) + ".crk";
+        _data.scriptName = config.outDir.nameWithTrailing()+_data.fInfo.basename(true) + ".crk";
         
         //cout `writing: $outName\n`;
         
-        out := File(outName,"w");        
-        out.write(String.cast(_testData["FILE"]));
-
-        return outName;
+        out := File(_data.scriptName,"w");
+        out.write(_data.sections["FILE"]);
         
     }
 
-    String _colorMsg(String c, String msg) {
-        sw := StringFormatter(128);        
-        sw `\033[$(c);1m$(msg)\033[0m`;
-        return sw.createString();
-    }
-    String _pass() {
-        return _colorMsg("32", "PASS");
-    }
-    String _fail() {
-        return _colorMsg("31", "FAIL");
-    }
-
-    Result compareOutput(String expected, String actual) {
-
-        if (expected == actual) {            
-            cout `$(_pass())`;
-            return Result(true);
-        }
-        else {
-            cout `$(_fail())`;            
-            return Result(expected, actual);
-        }
-        
-    }
-
-    Result execCrackWithBuilder(String builder, String nick, 
-                                Directory outDir, bool nativeRun) {
-        
-        testScript := writeScript(outDir);
-        String testBinary;
-        
-        String args = {};
-        if (_testData["ARGS"]) {
-            args = String.cast(_testData["ARGS"]).rtrim();            
-        }
-
-        if (nativeRun) {
-            // we need to output a binary, then run it after for the final results
-            testBinary = outDir.nameWithTrailing()+_fInfo.basename(true);
-            args = args+" -b out="+testBinary;
-        }
-
-        // XXX template argv section
-        cmd := config.crackBin+" -G -B "+builder+" "+args+" "+testScript;
-        if (config.libPath)
-            cmd = cmd + " -l " + config.libPath;
-        if (config.verbose)
-            cout `(running: $cmd])\n`;
-
-        cout `$nick: `;
-        if (nativeRun)
-            cout `(Compile: `;
-        
-        // XXX stdin
-        p := Process(cmd);
-        p.wait();
-        compileOut := p.getStdOut();
-        compileErr := p.getStdErr();
-
-        if (p.getReturnCode() != 0) {
-            // compile failed
-            cout `$(_fail()) `;
-            cout `[$(p.getReturnCode())]\n$compileErr`;
-            return Result(false);
-        }
-        else if (nativeRun) {
-            cout `$(_pass()) `;
-        }
-
-        if (!_testData["EXPECT"]) {
-           cout `no valid EXPECT section\n`;
-           return Result(false);
-        }
-
-        expect := String.cast(_testData["EXPECT"]);
-        Result r;
-        if (nativeRun) {
-            // native: run binary to get final results for comparison
-            bfi := FileInfo(testBinary);
-            if (!bfi.exists()) {
-                cout `$nick: `;
-                _fail();
-                cout `: binary ($testBinary) wasn't created, check compile output\n`;
-                return Result(false);
-            }
-            // XXX binary args (script argv)
-            if (config.verbose)
-                cout `(running: $testBinary)\n`;
-            cout `Run: `;
-            b := Process(testBinary);
-            b.wait();
-            if (b.failed()) {
-                cout `$(_fail())`;
-                cout `: binary failed to run\n`;
-            }
-            else {
-                nativeOut := b.getStdOut();
-                nativeErr := b.getStdErr();
-                r = compareOutput(expect, nativeOut);
-                // XXX err output EXPECTERR ?
-            }
-            cout `) `;
-        }
-        else {
-            // JIT, interpreted, etc
-            r = compareOutput(expect, compileOut);
-            cout `  `;
-            // XXX err output EXPECTERR ?
-        }
-        return r;
-        
-    }
-
-    void run(Directory outDir) {
+    void run() {
         
         if (_isSkipped) {
-            cout `[$_fInfo]: $_isSkipped\n`;
+            cout `[$_data.fInfo]: $_isSkipped\n`;
             return;
         }
         
-        cout `[$_fInfo]: $_desc\n`;
+        cout `[$(_data.fInfo)]: $(_data.desc)\n`;
 
-        HashMap[String, Result] results = {};
-        results["JIT"] = execCrackWithBuilder("llvm-jit", "JIT", outDir, false);
-        results["Native"] = execCrackWithBuilder("llvm-native", "Native", outDir, true);
-        cout `\n`;
-        
+        writeScript();
+
+        _status = T_RUNNING;
+
+        // start initial harness
+        _activeHarness = 0;
+        _harness[_activeHarness].run();
+
+    }
+
+    int tick() {
+
+        // if finished, get output, increase activeBuilder
+        if (_harness[_activeHarness].tick() == T_FINISHED) {
+
+                if (config.verbose)
+                    _vOutput.write(_harness[_activeHarness]._vOutput.createString());
+            _output.write(_harness[_activeHarness]._output.createString());
+
+            _activeHarness++;
+            if (_activeHarness < _harness.count()) {
+                _harness[_activeHarness].run();
+            }
+            else {
+                _status = T_FINISHED;
+                cout `$(_vOutput.createString())\n`;
+                cout `$(_output.createString())\n`;
+            }
+
+        }
+
+        return _status;
+
+    }
+
+    String getResult() {
+        /*
         for (r :in results) {
             if (!r.val.pass && (config.verbose || config.showDiff) && r.val.actual && r.val.expected) {
                 cout `----$(r.key) Fail----\nExpected: [$(r.val.expected)] Actual: [$(r.val.actual)]\n------------\n`;
             }
         }
-        
-
+        */
+        return "";
     }
 
-    oper init(FileInfo info): _fInfo = info,
-                              _desc("Unknown") {
+    oper init(FileInfo info) {
+        _data.fInfo = info;
         loadTemplate();
         checkTemplate();
+        // setup test harnesses for this test, based on the builders
+        // that have been selected
+        for (b :in config.builders) {
+            _harness.append((CrackBuilderDef.cast(b)).newTestHarness(_data));
+        }
     }
 
     void _dump(Writer out) {
-        for (t :in _testData)
+        for (t :in _data.sections)
             Formatter(out) `[$(t.key)]:\n$(t.val)`;
     }
 
     void writeTo(Writer out) {
-        Formatter(out) `[$_fInfo]: $_desc\n`;
+        Formatter(out) `[$(_data.fInfo)]: $(_data.desc)\n`;
         //_dump(out);
     }
 
 }
 
+// handle command line
+// find all tests
+// handle queue of active tests
+// decide which builders to run
 class TestSuite {
 
-    List[Test] _testList = {};
+    PriorityQueue[Test] _testList = {};
+    Array[Test] _active = {};
     CmdOptions _options = {};
     
     void usage() {
-        _options.printUsage(FStr() `Usage: $(argv[0]) <crack binary> <test dir> <output dir>\n`);
+        _options.printUsage(FStr() `Usage: $(argv[0]) -c <crack binary> [options]\n`);
         exit(1);
     }
     
@@ -274,7 +196,7 @@ class TestSuite {
         for (curFile :in dir.files()) {
             if (curFile.matches("*.crkt")) {
                 cnt++;
-                _testList.append(Test(curFile));
+                _testList.push(Test(curFile));
             }
         }
 
@@ -287,50 +209,74 @@ class TestSuite {
 
     }
 
-    void runTests(Directory dir) {
+    void runTests() {
 
-        if (!dir.isValid()) {
-            cerr `invalid output directory: $dir\n`;
+        if (!config.outDir.isValid()) {
+            cerr `invalid output directory: $(config.outDir)\n`;
             return;
         }
         
-        cout `running tests with output in $dir...\n`;
+        cout `running $(config.jobs) concurrent tests with output in $(config.outDir)...\n`;
 
-        for (curTest :in _testList) {
-            curTest.run(dir);
+        bool cull(Test t) { return t.tick() != T_FINISHED; }
+
+        Test cur;
+        while (_testList.count()) {
+
+            // check active for finished tests, remove
+            _active.filter(cull);
+
+            // add to active if active.count <= max
+            while (_testList.count() &&
+                   _active.count() < config.jobs) {
+                cur = _testList.pop();
+                _active.append(cur);
+                cur.run();
+            }
+
         }
 
     }
 
     oper init() {
         
+        StringArray bDefStrings = {};
+        for (i :in builderDefList) {
+            bDefStrings.append(i.key);
+        }
+        String availBuilders = bDefStrings.join(',');
 
+        _options.add("crackbin", "c", "Crack binary to test", "", CMD_STR);
         _options.add("help", "h", "Show usage", "f", CMD_BOOL);
         _options.add("verbose", "v", "Show verbose output", "f", CMD_BOOL);
-        _options.add("crackbin", "c", "Crack binary", "", CMD_STR);
+        _options.add("jobs", "j", "Number of concurrent jobs", "10", CMD_INT);
         _options.add("testdir", "d", "Directory to search recursively for tests", "./tests", CMD_STR);
         _options.add("testfile", "f", "Single test template to execute", "", CMD_STR);
         _options.add("outdir", "o", "Directory to create output files", "./output", CMD_STR);
         _options.add("libpath", "l", "Add path to crack library path during test. May be colon seperated list.", "", CMD_STR);
+        _options.add("builders", "b", "Builders to test, comma delimited list ["+availBuilders+"]",availBuilders, CMD_STR);
         _options.parse(argv);
-        
-        cout `screen v$(SCREEN_VERSION)\n`;
-        
+                
         if (_options.getBool("help"))
             usage();
-        
+
+        // binary - required
         config.crackBin = _options.getString("crackbin");
-        if (config.crackBin == "")
+        if (config.crackBin == "") {
+            cerr `you must explicitly specify the crack binary via the -c option\n\n`;
             usage();
+        }
         
-        config.rootDir = _options.getString("testdir");
-        config.outDir = _options.getString("outdir");
+        config.rootDir = Directory(_options.getString("testdir"), false);
+        config.outDir = Directory(_options.getString("outdir"), false);
+
         config.libPath = _options.getString("libpath");
         config.verbose = _options.getBool("verbose");
+        config.jobs = _options.getInt("jobs");
         config.showDiff = false;
         
         testFile := _options.getString("testfile");        
-        if (testFile != "" && config.rootDir != "") {
+        if (testFile != "" && config.rootDir.isValid()) {
             // if specific file, clear directory
             config.rootDir = null;
             fi := FileInfo(testFile);
@@ -339,10 +285,27 @@ class TestSuite {
                 exit(1);
             }
             test := Test(fi);
-            _testList.append(test);
+            _testList.push(test);
             config.showDiff = true;
         }
-        
+
+        // verify, initialize builder defs
+        builders := _options.getString("builders");
+        clb := split(builders, ",");
+        for (b :in clb) {
+            if (bDefStrings.contains(b)) {
+                config.builders.append(builderDefList[b]);
+            }
+            else {
+                cout `invalid builder specified: $b`;
+                exit(1);
+            }
+        }
+
+
+        // banner
+        cout `screen\n`;
+
         // check binary
         cfi := FileInfo(config.crackBin);
         if (!cfi.exists()) {
@@ -372,8 +335,8 @@ class TestSuite {
     void run() {
         
         if (config.rootDir)
-            scanForTests(Directory(config.rootDir));
-        runTests(Directory(config.outDir, false));
+            scanForTests(config.rootDir);
+        runTests();
         
     }
 

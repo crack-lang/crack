@@ -1,0 +1,15 @@
+// Shared test data
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.exp.file File, FileInfo;
+import crack.cont.hashmap HashMap;
+
+class TestData {
+    // template file info
+    FileInfo fInfo;
+    // script file name
+    String scriptName;
+    String desc = "Unknown";
+    HashMap[String, String] sections = {};
+}
+

@@ -1,0 +1,22 @@
+// Config object for screen
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.exp.dir Directory;
+import crack.cont.array Array;
+
+class Config {
+    String crackBin, libPath;
+    Directory rootDir, outDir;
+    Array[Object] builders = {}; // CrackBuilderDef
+    bool verbose, showDiff;
+    uint jobs; // # of concurrent jobs
+}
+
+Config config = {};
+
+// test and harness states
+int T_INIT     = 1;
+int T_CRACK    = 2;
+int T_BINARY   = 3;
+int T_FINISHED = 4;
+int T_RUNNING  = 5;

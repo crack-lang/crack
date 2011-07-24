@@ -1,0 +1,254 @@
+// Builder definitions for screen
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.io Writer, StringWriter, StringFormatter, FStr;
+import crack.exp.dir Directory;
+import crack.exp.file File, FileInfo;
+import crack.exp.process Process;
+import crack.cont.treemap TreeMap;
+import crack.cont.array Array;
+import crack.lang AssertionError;
+
+import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
+import testdata TestData;
+
+///////////////////////////
+
+class Result {
+    bool pass;
+    String expected, actual;
+
+    oper init(bool t): pass = t { }
+    oper init(String e, String a): pass = false, expected = e, actual = a { 
+        
+    }
+}
+
+class BuilderTestHarness;
+
+class CrackBuilderDef {
+    BuilderTestHarness newTestHarness(TestData d) {
+        throw AssertionError("virtual");
+    }
+    bool separateBinary() { throw AssertionError("virtual"); }
+    String builderName() { throw AssertionError("virtual"); }
+    String getNick() { throw AssertionError("virtual"); }
+}
+
+
+// execute crack process for specific builder for specific test
+// get output, compare results, decide pass/fail
+// diff failed output
+// maintain state so we don't have on crack processes
+// maintain final PASS/FAIL output for this builder/test
+class BuilderTestHarness {
+
+    Result _crackResult;
+    Result _binaryResult;
+
+    int _status = T_INIT;
+    StringWriter _output = { }; // test results
+    StringWriter _vOutput = { }; // verbose
+    CrackBuilderDef _bDef;
+    TestData _data;
+    Process _proc;
+
+    oper init(CrackBuilderDef d, TestData data) : _bDef = d,
+                                                  _data = data { }
+
+
+    String _colorMsg(String c, String msg) {
+        sw := StringFormatter(128);
+        sw `\033[$(c);1m$(msg)\033[0m`;
+        return sw.createString();
+    }
+    void _pass() {
+        _output.write(_colorMsg("32", "PASS "));
+    }
+    void _fail() {
+        _output.write(_colorMsg("31", "FAIL "));
+    }
+
+    Result compareOutput(String expected, String actual) {
+
+        if (expected == actual) {
+            _pass();
+            return Result(true);
+        }
+        else {
+            _fail();
+            return Result(expected, actual);
+        }
+
+    }
+
+    void runBinary() {
+
+        String testBinary;
+        String args = {};
+
+        if (_data.sections["ARGS"]) {
+            args = _data.sections["ARGS"].rtrim();
+        }
+
+        // we need to output a binary, then run it after for the final results
+        testBinary = config.outDir.nameWithTrailing()+
+                      _data.fInfo.basename(true);
+
+        args = args+" -b out="+testBinary;
+
+            // native: run binary to get final results for comparison
+            bfi := FileInfo(testBinary);
+            if (!bfi.exists()) {
+                _output.write(_bDef.getNick());
+                _fail();
+                _output.write("binary wasn't created, check compile output");
+                _binaryResult = Result(false);
+                _status = T_FINISHED;
+                return;
+            }
+            // XXX binary args (script argv)
+            if (config.verbose) {
+                _vOutput.write(testBinary);
+                _vOutput.write("\n");
+            }
+            _output.write("Run: ");
+            _status = T_BINARY;
+            _proc = Process(testBinary);
+
+    }
+
+    void finishBinary() {
+
+            if (_proc.failed()) {
+                _fail();
+                _output.write("binary failed to run\n");
+            }
+            else {
+                nativeOut := _proc.getStdOut();
+                nativeErr := _proc.getStdErr();
+                expect := _data.sections["EXPECT"];
+                _binaryResult = compareOutput(expect, nativeOut);
+                // XXX err output EXPECTERR ?
+            }
+
+    }
+
+    void run() {
+
+        String args = {};
+
+        if (_data.sections["ARGS"]) {
+            args = _data.sections["ARGS"].rtrim();
+        }
+
+        // XXX template argv section
+        cmd := config.crackBin+" -G -B "+_bDef.builderName()+" "+args+" "+_data.scriptName;
+        if (config.libPath)
+            cmd = cmd + " -l " + config.libPath;
+        if (config.verbose) {
+            _vOutput.write(cmd);
+            _vOutput.write("\n");
+        }
+
+        _output.write(_bDef.getNick());
+        _output.write(": ");
+
+        // XXX stdin
+        _status = T_CRACK;
+        _proc = Process(cmd);
+
+    }
+
+     void finishCrack() {
+
+        compileOut := _proc.getStdOut();
+        compileErr := _proc.getStdErr();
+
+        if (_proc.getReturnCode() != 0) {
+            // compile failed
+            _fail();
+            //cout `[$(p.getReturnCode())]\n$compileErr`;
+            //if (nativeRun)
+            //    cout `) `;
+            _crackResult = Result(false);
+            return;
+        }
+
+        if (!_data.sections["EXPECT"]) {
+           _output.write("no valid EXPECT section\n");
+           _crackResult = Result(false);
+           return;
+        }
+
+        expect := _data.sections["EXPECT"];
+        _crackResult = compareOutput(expect, compileOut);
+
+    }
+
+
+    int tick() {
+
+        if (_status == T_FINISHED)
+            return _status;
+
+        if (_proc.isRunning())
+            return _status;
+
+        // we're in state CRACK or BINARY, and our process is done
+        if (_status == T_CRACK) {
+            finishCrack();
+            // if we have a separate binary, launch it
+            if (_bDef.separateBinary())
+                runBinary();
+            else
+                _status = T_FINISHED;
+        }
+        else if (_status == T_BINARY) {
+            finishBinary();
+            _status = T_FINISHED;
+        }
+
+        return _status;
+    }
+
+}
+
+class JitTestHarness : BuilderTestHarness {
+
+    oper init(CrackBuilderDef d, TestData data): BuilderTestHarness(d, data) { }
+
+}
+
+class NativeTestHarness : BuilderTestHarness {
+
+    oper init(CrackBuilderDef d, TestData data): BuilderTestHarness(d, data) { }
+
+}
+
+//////////////////////////////
+
+class JitBuilderDef : CrackBuilderDef {
+    BuilderTestHarness newTestHarness(TestData d) {
+        return JitTestHarness(this, d);
+    }
+    bool separateBinary() { return false; }
+    String builderName() { return "llvm-jit"; }
+    String getNick() { return "JIT"; }
+}
+
+class NativeBuilderDef : CrackBuilderDef {
+    BuilderTestHarness newTestHarness(TestData d) {
+        return NativeTestHarness(this, d);
+    }
+    bool separateBinary() { return true; }
+    String builderName() { return "llvm-native"; }
+    String getNick() { return "AOT"; }
+}
+
+// These are the list of builders we support in the test suite.
+// The keys to this hash are used to specify which builders to run
+// from the command line
+TreeMap[String, CrackBuilderDef] builderDefList = { };
+builderDefList["jit"] = JitBuilderDef();
+builderDefList["native"] = NativeBuilderDef();
