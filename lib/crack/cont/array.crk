@@ -272,6 +272,14 @@ class Array[Elem] {
         return newArray;
     }
 
+    bool contains(Elem e) {
+        for (uint i = 0; i < __size; i++){
+            if (e == __rep[i])
+                return true;
+        }
+        return false;
+    }
+
     void map(function[Elem, Elem] f){
         Elem newElem;
         for (uint i = 0; i < __size; i++){
