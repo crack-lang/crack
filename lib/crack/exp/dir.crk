@@ -54,8 +54,6 @@ class Directory : Object, Openable {
             return;
 
         DirEntry d = getDirEntry(_dir);
-        // note, this should be done lazily so we don't have to load
-        // an entire directory structure on open
         StaticString n;
         while (readdir(_dir)) {
             if (d.type == __CRACK_DTYPE_DIR) {
