@@ -4,6 +4,10 @@
 import crack.exp.file File, FileInfo;
 import crack.cont.hashmap HashMap;
 
+class DirConfig {
+    String options = {};
+}
+
 class TestData {
     // template file info
     FileInfo fInfo;
@@ -11,5 +15,5 @@ class TestData {
     String scriptName;
     String desc = "Unknown";
     HashMap[String, String] sections = {};
+    DirConfig dirConfig;
 }
-

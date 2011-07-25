@@ -142,8 +142,12 @@ class BuilderTestHarness {
             args = _data.sections["ARGS"].rtrim();
         }
 
+        if (_data.dirConfig) {
+            args = args + " " + _data.dirConfig.options;
+        }
+
         // XXX template argv section
-        cmd := config.crackBin+" -G -B "+_bDef.builderName()+" "+args+" "+_data.scriptName;
+        cmd := config.crackBin+" -B "+_bDef.builderName()+" "+args+" "+_data.scriptName;
         if (config.libPath)
             cmd = cmd + " -l " + config.libPath;
         if (config.verbose) {
