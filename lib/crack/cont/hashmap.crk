@@ -135,6 +135,13 @@ class HashMap[Key, Value] {
         return set(key, val);
     }
 
+    ## Returns true if the key exists
+    bool contains(Key key) {
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        return _items[i];
+    }
+
     ## Returns the value associated with the specified key, throws KeyError if 
     ## the key is not in the container.
     Value oper [](Key key) {
