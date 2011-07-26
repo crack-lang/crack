@@ -254,6 +254,21 @@ class Array[Elem] {
         _bind(elem);
         __size = __size + 1;
     }
+    
+    ## Append all elements in "other" onto the array.
+    @final void extend(Array other) {
+        if (__cap - __size < other.__size) {
+            newCap := __cap;
+            while (newCap - __size < other.__size)
+                newCap *= 2;
+            realloc(newCap);
+        }
+        
+        for (intz i = 0; i < other.__size; ++i)
+            __rep[__size + i] = other[i];
+        __size += other.__size;
+    }
+            
 
     Elem pop() {
        if (__size>0)
