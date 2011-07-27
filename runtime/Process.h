@@ -23,6 +23,8 @@ int runChildProcess(const char **argv,
                     const char **env,
                     PipeDesc *pd);
 
+void closeProcess(PipeDesc *pd);
+
 int waitProcess(int pid, int noHang);
 
 void signalProcess(int pid, int sig);

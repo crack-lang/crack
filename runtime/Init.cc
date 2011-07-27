@@ -544,6 +544,10 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(byteptrArrayType, "env");
     f->addArg(cpipeType, "pipes");
 
+    f = mod->addFunc(intType, "closeProcess",
+                     (void *)&crack::runtime::closeProcess);
+    f->addArg(cpipeType, "pipes");
+
     f = mod->addFunc(intType, "waitProcess",
                      (void *)&crack::runtime::waitProcess);
     f->addArg(intType, "pid");

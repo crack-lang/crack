@@ -56,6 +56,19 @@ void signalProcess(int pid, int sig) {
 
 }
 
+void closeProcess(PipeDesc *pd) {
+
+    if (close(pd->stdin) == -1)
+            perror("close pipe failed: stdin");
+
+    if (close(pd->stdout) == -1)
+            perror("close pipe failed: stdout");
+
+    if (close(pd->stderr) == -1)
+            perror("close pipe failed: stderr");
+
+}
+
 int runChildProcess(const char **argv,
                     const char **env,
                     PipeDesc *pd
