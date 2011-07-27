@@ -14,7 +14,6 @@ class Writer;
 void _writeObject(Writer out);
 void _throwAssertionError(byteptr text);
 void _throwIndexError(byteptr text);
-void _throwNotImplementedError(byteptr text);
 
 ## Base class for things that you don't want derived from object or VTableBase.
 class FreeBase {};
@@ -125,15 +124,12 @@ class Object : VTableBase {
 ## inherit from the mixin class more than once.
 ##
 ## Derived classes must implement the getObject() method.
-class MixIn : VTableBase {
+@abstract class MixIn : VTableBase {
 
     ## Returns the underlying Object of the concrete class derived from the
     ## mix-in.  This is used by our bind and release operators to allow
     ## mix-ins to work with Object's reference counting.
-    Object getObject() {
-        _throwNotImplementedError('MixIn.getObject() not implemented.');
-        return null;
-    }
+    @abstract Object getObject();
 
     # defining bind and release here takes advantage of the fact that the
     # same final functions can be inherited from multiple ancestors.  This is
@@ -145,20 +141,16 @@ class MixIn : VTableBase {
 
 class Buffer;
 
-class Writer : VTableBase {
-    void write(Buffer data) {
-        puts(this.class.name);
-        _throwNotImplementedError("Writer.write() not implemented.");
-    }
+@abstract class Writer : VTableBase {
+
+    ## Write the buffer to the writer.
+    @abstract void write(Buffer data);
 
     ## Flush the contents of the buffer.
     void flush() {}
 
     # MixIn stuff
-    Object getWriterObject() {
-        _throwNotImplementedError('Writer.getWriterObject() not implemented.');
-        return null;
-    }
+    @abstract Object getWriterObject();
     oper bind() { if (!(this is null)) getWriterObject().oper bind(); }
     oper release() { if (!(this is null)) getWriterObject().oper release(); }
 }
@@ -917,15 +909,6 @@ void _throwAssertionError(byteptr text) {
 
 void _throwIndexError(byteptr text) {
     throw IndexError(StaticString(text));
-}
-
-## Raised when we call a virtual function that is supposed to be implemented 
-## by a derived class but has not been (this will be replaced by abstract/pure 
-## virtual functions)
-@except NotImplementedError
-
-void _throwNotImplementedError(byteptr text) {
-    throw NotImplementedError(StaticString(text));
 }
 
 ## Raised when code attempts to use a resource that doesn't exist or is 

@@ -1245,7 +1245,7 @@ FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
                                           const vector<ArgDefPtr> &args,
                                           FuncDef *override
                                           ) {
-    assert(flags & FuncDef::forward);
+    assert(flags & FuncDef::forward || flags & FuncDef::abstract);
 
     // create the function
     FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name,

@@ -34,8 +34,8 @@ void funcAnnCheck(CrackContext *ctx, const char *name) {
     if (ctx->getScope() != model::Context::composite ||
         ctx->getParseState() != parser::Parser::st_base
         )
-        ctx->error(SPUG_FSTR(name << " annotation can not be used in this "
-                                     "here (it must precede a function "
+        ctx->error(SPUG_FSTR(name << " annotation can not be used  here (it "
+                                     "must precede a function "
                                      "definition in a class body)"
                              ).c_str()
                    );
@@ -68,6 +68,52 @@ void finalAnn(CrackContext *ctx) {
     ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
                           model::FuncDef::method
                           );
+}
+
+void cleanUpAfterClass(CrackContext *ctx) {
+    cleanUpCallbacks(ctx);
+    ctx->setNextFuncFlags(model::FuncDef::noFlags);
+}
+
+void cleanUpAfterFunc(CrackContext *ctx) {
+    cleanUpCallbacks(ctx);
+    ctx->setNextClassFlags(model::TypeDef::noFlags);
+}
+
+void abstractAnn(CrackContext *ctx) {
+    
+    // @abstract is not strictly a function annotation, it may precede a class 
+    // definition.
+    if (ctx->getParseState() != parser::Parser::st_base)
+        ctx->error("abstract annotation can not be used here (it must precede "
+                    "a function or class definition)"
+                   );
+
+    callbacks.push_back(ctx->addCallback(parser::Parser::funcDef,
+                                         cleanUpCallbacks
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::classDef,
+                                         cleanUpCallbacks
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::exprBegin,
+                                         unexpectedElement
+                                         )
+                        );
+    callbacks.push_back(ctx->addCallback(parser::Parser::controlStmt,
+                                         unexpectedElement
+                                         )
+                        );
+                                                                        
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
+                          model::FuncDef::method |
+                          model::FuncDef::virtualized |
+                          model::FuncDef::abstract
+                          );
+    ctx->setNextClassFlags(model::TypeDef::explicitFlags |
+                           model::TypeDef::abstractClass
+                           );
 }
 
 void fileAnn(CrackContext *ctx) {
@@ -350,6 +396,8 @@ void init(Module *mod) {
     f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getVoidType(), "final", (void *)finalAnn);
     f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getVoidType(), "abstract", (void *)abstractAnn);
+    f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getByteptrType(), "FILE", (void *)fileAnn);
     f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getByteptrType(), "LINE", (void *)lineAnn);
@@ -524,6 +572,13 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "FUNCFLAG_FINAL",
                      model::FuncDef::explicitFlags | model::FuncDef::method
+                     );
+    mod->addConstant(mod->getIntType(), "FUNCFLAG_ABSTRACT",
+                     model::FuncDef::explicitFlags | model::FuncDef::abstract
+                     );
+    mod->addConstant(mod->getIntType(), "CLASSFLAG_ABSTRACT",
+                     model::FuncDef::explicitFlags | 
+                      model::TypeDef::abstractClass
                      );
                     
 }

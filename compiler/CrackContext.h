@@ -183,9 +183,15 @@ class CrackContext {
         
         /**
          * Set the flags for the next function.  Valid values are 
-         * FUNCFLAG_STATIC and FUNCFLAG_FINAL.
+         * FUNCFLAG_STATIC, FUNCFLAG_FINAL and FUNCFLAG_ABSTRACT.
          */
         void setNextFuncFlags(int nextFuncFlags);
+        
+        /**
+         * Set the flags for the next class.  Valid values are 
+         * CLASSFLAG_ABSTRACT.
+         */
+        void setNextClassFlags(int nextClassFlags);
         
         /** Create the specified location. */
         Location *getLocation(const char *name, int lineNumber);

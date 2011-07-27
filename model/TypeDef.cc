@@ -31,6 +31,46 @@ using namespace model;
 using namespace spug;
 using namespace parser;
 
+// returns true if func is non-null and abstract
+bool TypeDef::isAbstract(FuncDef *func) {
+    if (func && (func->flags & FuncDef::abstract)) {
+
+        // found one.  do a look-up on the function, if there is a 
+        // non-abstract implementation we should get a match that is 
+        // _not_ abstract.
+        OverloadDefPtr overloads =
+            OverloadDefPtr::rcast(lookUp(func->name));
+        assert(overloads);
+        FuncDefPtr nearest = overloads->getSigMatch(func->args);
+        if (nearest->flags & FuncDef::abstract)
+            return true;
+    }
+    
+    return false;
+}
+
+// if overload contains abstract functions, returns true and adds them to 
+// abstractFuncs (assuming abstractFuncs is non-null)
+bool TypeDef::hasAbstractFuncs(OverloadDef *overload,
+                               vector<FuncDefPtr> *abstractFuncs
+                               ) {
+    bool gotAbstract = false;
+    for (OverloadDef::FuncList::iterator iter = overload->beginTopFuncs();
+         iter != overload->endTopFuncs();
+         ++iter
+         ) {
+        if (isAbstract(iter->get()))
+            if (abstractFuncs) {
+                abstractFuncs->push_back(iter->get());
+                gotAbstract = true;
+            } else {
+                return true;
+            }
+    }
+    
+    return gotAbstract;
+}
+
 TypeDef *TypeDef::findSpecialization(TypeVecObj *types) {
     assert(generic && "find specialization called on non-generic type");
     SpecializationCache::iterator match = generic->find(types);
@@ -404,11 +444,67 @@ void TypeDef::createCast(Context &outer) {
     outer.addDef(castFunc.get(), type.get());
 }
 
+bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
+                               TypeDef *ancestor
+                               ) {
+    bool gotAbstract = false;
+    if (!ancestor)
+        ancestor = this;
+
+    // iterate over the definitions, locate all abstract functions
+    for (VarDefMap::iterator iter = ancestor->beginDefs();
+         iter != ancestor->endDefs(); 
+         ++iter
+         ) {
+        OverloadDef *ovld = OverloadDefPtr::rcast(iter->second);
+        if (ovld && hasAbstractFuncs(ovld, abstractFuncs)) {
+            if (abstractFuncs)
+                gotAbstract = true;
+            else
+                return true;
+        }
+    }
+    
+    // recurse through all of the parents
+    TypeDefPtr parent;
+    for (int i = 0; parent = ancestor->getParent(i++);)
+        if (gotAbstractFuncs(abstractFuncs, parent.get()))
+            if (abstractFuncs)
+                gotAbstract = true;
+            else
+                return true;
+    
+    return gotAbstract;
+}
+
 void TypeDef::rectify(Context &classContext) {
+    
+    // if this is an abstract class, make sure we have abstract methods.  If 
+    // it is not, make sure we don't have abstract methods.
+    if (abstract && !gotAbstractFuncs()) {
+        classContext.warn(SPUG_FSTR("Abstract class " << name << 
+                                     " has no abstract functions."
+                                    )
+                          );
+    } else if (!abstract) {
+        vector<FuncDefPtr> funcs;
+        if (gotAbstractFuncs(&funcs)) {
+            ostringstream tmp;
+            tmp << "Non-abstract class " << name << 
+                " has abstract methods:\n";
+            for (int i = 0; i < funcs.size(); ++i)
+                tmp << "  " << *funcs[i] << '\n';
+            classContext.error(tmp.str());
+        }
+    }
+    
     // if there are no init functions specific to this class, create a
-    // default constructor and wrap it in a new function.
-    if (!lookUp("oper init", false))
-        createNewFunc(classContext, createDefaultInit(classContext).get());
+    // default constructor and possibly wrap it in a new function.
+    if (!lookUp("oper init", false)) {
+        FuncDefPtr initFunc = createDefaultInit(classContext);
+        if (!abstract)
+            createNewFunc(classContext, initFunc.get());
+    }
     
     // if the class doesn't already define a delete operator specific to the 
     // class, generate one.

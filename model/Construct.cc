@@ -213,6 +213,7 @@ void Construct::loadBuiltinModules() {
     // in either case, aliases get installed in the compiler namespace.
     rootContext->compileNS->addAlias(ns->lookUp("static").get());
     rootContext->compileNS->addAlias(ns->lookUp("final").get());
+    rootContext->compileNS->addAlias(ns->lookUp("abstract").get());
     rootContext->compileNS->addAlias(ns->lookUp("FILE").get());
     rootContext->compileNS->addAlias(ns->lookUp("LINE").get());
     rootContext->compileNS->addAlias(ns->lookUp("encoding").get());

@@ -48,6 +48,7 @@ if [ "$1" != "emit" ]; then
         else
             echo ""
             echo FAILED
+            echo "test id: $id"
             echo "$cmdline"
             echo "Expected: $expected"
             echo "Got     : $result"
@@ -930,6 +931,33 @@ test_output x 'error on first class methods' \
   'class B { void bar() {} } y := B.bar;' \
   "${parseError}1: Trying to get the value of bar, first class methods are not \
 supported yet."
+
+test_output abstract_in_non_abstract_class \
+    'Abstract method in non-abstract class' \
+    'class A : VTableBase { @abstract void f(); }' \
+    "${parseError}1: Abstract functions can only be defined in an abstract \
+class."
+
+test_output abstract_in_non_class \
+    'Abstract method in non-class context' \
+    '@abstract void f();' \
+    "${parseError}1: Abstract functions can only be defined in an abstract \
+class."
+
+test_output abstract_constructors \
+    'Error on creating an instance of an abstract class' \
+    '@abstract class Foo { @abstract void f(); }
+     Foo foo = {};' \
+    "${parseError}2: You can not create an instance of abstract class Foo \
+without an explicit 'oper new'."
+
+test_output abstract_method \
+    'Abstract method' \
+    '@abstract class A : VTableBase { @abstract void f(); }
+     class B : A { void f() { puts("ok"); } }
+     A a = B();
+     a.f();' \
+    ok
 
 # switch to full bootstrapping mode now that importing works
 opts="-Gl $root -l $root/lib:lib:.libs"

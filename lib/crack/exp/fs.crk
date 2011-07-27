@@ -5,7 +5,7 @@ import crack.runtime errno, fileExists, fileRemove, open, O_CREAT, O_RDONLY,
     O_WRONLY;
 import crack.exp.error strerror;
 import crack.io FDReader, FDWriter, FStr, Reader, Writer;
-import crack.lang Exception, InvalidArgumentError, NotImplementedError;
+import crack.lang Exception, InvalidArgumentError;
 import crack.exp.readers FullReader;
 
 ## This gets raised when referencing a path that doesn't exist.
@@ -34,12 +34,13 @@ class SystemError : Exception {
 
 ## A path is a node in a virtual filesystem.  It can correspond to a 
 ## directory, a file, or the root of the filesystem.
-class Path {
+@abstract class Path {
 
     ## Returns a reader for the path.  The path must be readable.
-    Reader reader() { throw NotImplementedError(); }
+    @abstract Reader reader();
     
-    Writer writer() { throw NotImplementedError(); }
+    ## Returns a writer for the path.  The path must be writable.
+    @abstract Writer writer();
     
     FullReader makeFullReader() { 
         return FullReader(reader());
@@ -50,26 +51,17 @@ class Path {
         return src.readAll();
     }
 
-    Path oper [](String child) { throw NotImplementedError(); }
+    @abstract Path oper [](String child);
 
-    Path _createNode(String path) { throw NotImplementedError(); }
+    @abstract Path _createNode(String path);
 
-    Path oper /(String other) {
-        # XXX actually, we should implement this in terms of oper [].
-        throw NotImplementedError();
-    }
+    @abstract Path oper /(String other);
     
     ## Returns true if the object exists, false if not.
-    bool exists() { throw NotImplementedError(); }
-    
-    ## Creates a reader for the path.
-    Reader reader() { throw NotImplementedError(); }
-
-    ## Creates a writer for the path.
-    Writer writer() { throw NotImplementedError(); }
+    @abstract bool exists();
     
     ## Deletes the object at the path.
-    void delete() { throw NotImplementedError(); }
+    @abstract void delete();
 }
 
 ## A real filesystem path.
@@ -85,6 +77,14 @@ class RealPath : Path {
                 'Parent directory access not supported'
             );
         return RealPath(__path + '/' + child);
+    }
+
+    Path _createNode(String path) {
+        return this[path];
+    }
+    
+    Path oper /(String other) {
+        return this[other];
     }
 
     bool exists() {

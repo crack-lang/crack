@@ -27,6 +27,11 @@ class TypeDef : public VarDef, public Namespace {
         class TypeVecObj;
         typedef std::vector<TypeDefPtr> TypeVec;
 
+        bool isAbstract(FuncDef *func);
+        bool hasAbstractFuncs(OverloadDef *overload,
+                              std::vector<FuncDefPtr> *abstractFuncs
+                              );
+
     protected:
         TypeDef *findSpecialization(TypeVecObj *types);
         std::string getSpecializedName(TypeVecObj *types);
@@ -111,6 +116,15 @@ class TypeDef : public VarDef, public Namespace {
         // now illegal to add instance variables.
         bool initializersEmitted;
         
+        // if true, this is an abstract class (contains abstract methods)
+        bool abstract;
+        
+        enum Flags {
+            noFlags = 0,
+            abstractClass = 1,
+            explicitFlags = 256  // these flags were set by an annotation
+        };
+        
         // if true, the user has created an explicit "oper new" for the class, 
         // so don't generate them for any more of the init methods.
         bool gotExplicitOperNew;
@@ -128,6 +142,7 @@ class TypeDef : public VarDef, public Namespace {
             complete(false),
             forward(false),
             initializersEmitted(false),
+            abstract(false),
             gotExplicitOperNew(false) {
         }
         
@@ -208,6 +223,16 @@ class TypeDef : public VarDef, public Namespace {
          */
         void createCast(Context &outerContext);
 
+        /**
+         * Returns true if the class has any abstract functions.
+         * @param abstractFuncs if provided, this is a vector to fill with the 
+         *        abstract functions we've discovered.
+         * @param ancestor (for internal use) if provided, this the ancestor 
+         *                 to start searching from.
+         */
+        bool gotAbstractFuncs(std::vector<FuncDefPtr> *abstractFuncs = 0,
+                              TypeDef *ancestor = 0
+                              );
         /**
          * Fill in everything that's missing from the class.
          */

@@ -46,6 +46,7 @@ class Parser {
          funcDef, // after open paren for args in a functino def.
          funcEnter, // after first curly brace of the function block.
          funcLeave, // before the last curly brace of the function block.
+         funcForward, // right after a forward declaration
          classDef, // after "class" keyword in a class def
          classEnter, // after opening brace at the beginning of a class def.
          classLeave, // before closing brace at the end of a class def.

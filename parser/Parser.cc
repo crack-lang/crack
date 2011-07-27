@@ -1379,9 +1379,17 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    
    // look up the new operator for the class
    FuncDefPtr func = context->lookUp("oper new", args, type);
-   if (!func)
-      error(tok, SPUG_FSTR("No constructor for " << type->name <<
-                           " with these argument types: (" << args << ")"));
+   if (!func) {
+      if (type->abstract)
+         error(tok, SPUG_FSTR("You can not create an instance of abstract "
+                               "class " << type->name << " without an "
+                               "explicit 'oper new'."
+                              )
+               );
+      else
+         error(tok, SPUG_FSTR("No constructor for " << type->name <<
+                              " with these argument types: (" << args << ")"));
+   }
    
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
    funcCall->args = args;
@@ -1751,22 +1759,41 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                               )
               );
       } else {
-         // it's a forward declaration
-         funcDef = context->builder.createFuncForward(*context, 
-                                                      FuncDef::forward | 
-                                                       flags,
-                                                      name,
+         // it's a forward declaration or abstract function
+         
+         // see if the "next function" flags indicate an abstract function
+         if (nextFuncFlags & FuncDef::abstract) {
+            // abstract function - make sure we're in an abstract class
+            if (!classTypeDef || !classTypeDef->abstract)
+               error(tok3, 
+                     "Abstract functions can only be defined in an abstract "
+                      "class."
+                     );
+
+            flags = flags | FuncDef::abstract | FuncDef::virtualized | 
+               FuncDef::method;
+            
+         } else {
+            flags = flags | FuncDef::forward;
+         }
+
+         funcDef = context->builder.createFuncForward(*context, flags, name,
                                                       returnType,
                                                       argDefs,
                                                       override.get()
                                                       );
+         runCallbacks(funcForward);
 
          cstack.restore();
          addFuncDef(funcDef.get());
+         context->nextFuncFlags = FuncDef::noFlags;
 
-         // if this is a constructor, and the user hasn't introduced their own 
-         // "oper new", generate one for the new constructor now.
-         if (funcFlags & hasMemberInits && !classTypeDef->gotExplicitOperNew)
+         // if this is a constructor for a non-abstract class, and the user 
+         // hasn't introduced their own "oper new", generate one for the new 
+         // constructor now.
+         if (funcFlags & hasMemberInits && !classTypeDef->abstract &&
+             !classTypeDef->gotExplicitOperNew
+             )
             classTypeDef->createNewFunc(*classCtx, funcDef.get());
       }
       return argDefs.size();
@@ -1853,10 +1880,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // clear the next function flags (we're done with them)
    context->nextFuncFlags = FuncDef::noFlags;
 
-   // if this is an init function, and the user hasn't introduced an explicit
-   // "oper new", and we haven't already done this for a forward declaration,
-   // generate the corresponding "oper new".
-   if (inits && !classTypeDef->gotExplicitOperNew && 
+   // if this is an init function for a non-abstract class, and the user 
+   // hasn't introduced an explicit "oper new", and we haven't already done 
+   // this for a forward declaration, generate the corresponding "oper new".
+   if (inits && !classTypeDef->gotExplicitOperNew &&
+       !classTypeDef->abstract &&
        (!override || !(override->flags & FuncDef::forward))
        )
       classTypeDef->createNewFunc(*classCtx, funcDef.get());
@@ -2802,6 +2830,10 @@ TypeDefPtr Parser::parseClassDef() {
       return context->createForwardClass(className);
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
+
+   // get any user flags
+   TypeDef::Flags flags = context->nextClassFlags;
+   context->nextClassFlags = TypeDef::noFlags;
    
    // if we're recording a generic definition, just record the rest of the 
    // block, create a generic type and quit.
@@ -2813,6 +2845,8 @@ TypeDefPtr Parser::parseClassDef() {
                                       );
       result->genericInfo = generic;
       result->generic = new TypeDef::SpecializationCache();
+      if (flags & TypeDef::abstractClass)
+         result->abstract = true;
       addDef(result.get());
       return result;
    }
@@ -2836,6 +2870,10 @@ TypeDefPtr Parser::parseClassDef() {
                                       );
    if (!existing)
       addDef(type.get());
+
+   // check for an abstract class
+   if (flags & TypeDef::abstractClass)
+      type->abstract = true;
    
    // add the "cast" method
    if (type->hasVTable)

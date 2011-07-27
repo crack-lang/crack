@@ -71,13 +71,15 @@ void FuncBuilder::finish(bool storeDef) {
         llvmArg->setName("this");
 
         // add the implementation to the "this" var
-        receiver = context.ns->lookUp("this");
-        assert(receiver &&
-               "missing 'this' variable in the context of a "
-               "function with a receiver"
-               );
-        funcDef->thisArg = receiver;
-        receiver->impl = new BArgVarDefImpl(llvmArg);
+        if (!(funcDef->flags & FuncDef::abstract)) {
+            receiver = context.ns->lookUp("this");
+            assert(receiver &&
+                "missing 'this' variable in the context of a "
+                "function with a receiver"
+                );
+            funcDef->thisArg = receiver;
+            receiver->impl = new BArgVarDefImpl(llvmArg);
+        }
         ++llvmArg;
     }
     for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {

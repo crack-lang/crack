@@ -1,7 +1,6 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang Buffer, Exception, FreeBase, InvalidStateError, 
-    NotImplementedError, WriteBuffer;
+import crack.lang Buffer, Exception, FreeBase, InvalidStateError, WriteBuffer;
 import crack.io FStr, Reader, Writer, Formatter, cout;
 import crack.exp.error strerror;
 import crack.container Array;
@@ -14,8 +13,8 @@ import crack.runtime connect, Constants, makeIPV4, setsockopt,
 sockconsts := Constants();
 
 ## interface for all classes that can be polled.
-class Pollable {
-    int getFD() { throw NotImplementedError('Pollable.getFD() not defined.'); }
+@abstract class Pollable {
+    @abstract int getFD();
 }
 
 class PollEvent : Object, PollEvt {
@@ -23,15 +22,13 @@ class PollEvent : Object, PollEvt {
 }
 
 ## base class for all kinds of socket addresses.
-class Address {
+@abstract class Address {
     SockAddr _addr;
 
     oper init(SockAddr addr) : _addr = addr {}
     oper del() { free(_addr); }
     
-    Address create() {
-        throw NotImplementedError('Address.create() not defined');
-    }
+    @abstract Address create();
 }
 
 ## IPv4 address.

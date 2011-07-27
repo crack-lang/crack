@@ -152,6 +152,10 @@ void CrackContext::setNextFuncFlags(int nextFuncFlags) {
     context->nextFuncFlags = static_cast<FuncDef::Flags>(nextFuncFlags);
 }
 
+void CrackContext::setNextClassFlags(int nextClassFlags) {
+    context->nextClassFlags = static_cast<TypeDef::Flags>(nextClassFlags);
+}
+
 Location *CrackContext::getLocation(const char *name, int lineNumber) {
     return new Location(toker->getLocationMap().getLocation(name, lineNumber));
 }

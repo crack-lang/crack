@@ -2,7 +2,7 @@
 # This currently duplicates the parser logic - rewrite this once the
 # annotation interface supports introspection of compile contexts.
 
-import crack.lang die, free, AppendBuffer, NotImplementedError, Exception;
+import crack.lang die, free, AppendBuffer, Exception;
 import crack.io cout, FStr, Formatter, StringFormatter, Writer;
 import crack.compiler CrackContext, Token;
 import crack.exp.file File;
@@ -20,7 +20,7 @@ CLOSEBRACE:=false;
 
 class Func;
 
-class Type {
+@abstract class Type {
     String name;
     String __emitName;
     bool initialized;
@@ -47,11 +47,7 @@ class Type {
        return false;
     }
 
-    void emitInitializer(Formatter out) {
-        throw NotImplementedError(
-            FStr() `$(this.class.name).emitInitializer() not implemented`
-        );
-    }
+    @abstract void emitInitializer(Formatter out);
 
     String getConstCast() { return null; }
 }

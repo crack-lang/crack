@@ -98,6 +98,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     terminal(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
+    nextClassFlags(TypeDef::noFlags),
     construct(parentContext->construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
     assert(construct && "parent context must have a construct");

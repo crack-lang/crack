@@ -112,6 +112,9 @@ class Context : public spug::RCBase {
         
         // flags to be injected into the next function
         FuncDef::Flags nextFuncFlags;
+        
+        // flags to be injected into the next class
+        TypeDef::Flags nextClassFlags;
 
         // the construct
         Construct *construct;

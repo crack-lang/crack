@@ -5,7 +5,7 @@ import crack.io cout;
 
 bool methodCalled, deleted;
 
-class I : MixIn { void f() { die('I.f() called'); } }
+@abstract class I : MixIn { void f() { die('I.f() called'); } }
 class A : Object, I {
     void f() { methodCalled = true; }
     Object getObject() { return this; }
