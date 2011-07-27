@@ -177,6 +177,19 @@ if (1) {
 class Foo {}
 Array[Foo];
 
+# test of extend
+if (true) {
+    a := Array[int]![1, 2, 3];
+    b := Array[int]![4, 5, 6];
+    a.extend(b);
+    if (a != Array[int]![1, 2, 3, 4, 5, 6])
+        cout `FAILED extend\n`;
+    if (a.count() != 6)
+        cout `FAILED count after extend\n`;
+}
+
+# --- List tests ---
+
 @define concat(Type) {
     String concat(Type list) {
         StringFormatter result = {};
