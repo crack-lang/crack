@@ -26,13 +26,17 @@ class Result {
 
 class BuilderTestHarness;
 
+// one per builder that exists in crack
+// specific builders are defined below BuilderTestHarness
 class CrackBuilderDef {
     BuilderTestHarness newTestHarness(TestData d) {
         throw AssertionError("virtual");
     }
     bool separateBinary() { throw AssertionError("virtual"); }
-    String builderName() { throw AssertionError("virtual"); }
+    String getName() { throw AssertionError("virtual"); }
     String getNick() { throw AssertionError("virtual"); }
+    String getCrackOptions(BuilderTestHarness h) { return ""; }
+    String getBinaryOptions(BuilderTestHarness h) { return ""; }
 }
 
 
@@ -52,6 +56,7 @@ class BuilderTestHarness {
     CrackBuilderDef _bDef;
     TestData _data;
     Process _proc;
+    String _testBinary;
 
     oper init(CrackBuilderDef d, TestData data) : _bDef = d,
                                                   _data = data { }
@@ -84,70 +89,75 @@ class BuilderTestHarness {
 
     void runBinary() {
 
-        String testBinary;
         String args = {};
 
         if (_data.sections["ARGS"]) {
             args = _data.sections["ARGS"].rtrim();
         }
 
-        // we need to output a binary, then run it after for the final results
-        testBinary = config.outDir.nameWithTrailing()+
-                      _data.fInfo.basename(true);
+        _output.write(_bDef.getNick());
+        _output.write(" Run: ");
 
-        args = args+" -b out="+testBinary;
-
-            // native: run binary to get final results for comparison
-            bfi := FileInfo(testBinary);
-            if (!bfi.exists()) {
-                _output.write(_bDef.getNick());
-                _fail();
-                _output.write("binary wasn't created, check compile output");
-                _binaryResult = Result(false);
-                _status = T_FINISHED;
-                return;
-            }
-            // XXX binary args (script argv)
-            if (config.verbose) {
-                _vOutput.write(testBinary);
-                _vOutput.write("\n");
-            }
-            _output.write("Run: ");
-            _status = T_BINARY;
-            _proc = Process(testBinary);
+        // native: run binary to get final results for comparison
+        bfi := FileInfo(_testBinary);
+        if (!bfi.exists()) {
+            _fail();
+            _vOutput.write("binary wasn't created, check compile output");
+            _binaryResult = Result(false);
+            _status = T_FINISHED;
+            return;
+        }
+        // XXX binary args (script argv)
+        if (config.verbose) {
+            _vOutput.write(_testBinary);
+            _vOutput.write("\n");
+        }
+        _status = T_BINARY;
+        _proc = Process(_testBinary);
 
     }
 
     void finishBinary() {
 
-            if (_proc.failed()) {
-                _fail();
-                _output.write("binary failed to run\n");
-            }
-            else {
-                nativeOut := _proc.getStdOut();
-                nativeErr := _proc.getStdErr();
-                expect := _data.sections["EXPECT"];
-                _binaryResult = compareOutput(expect, nativeOut);
-                // XXX err output EXPECTERR ?
-            }
+        if (_proc.failed()) {
+            _fail();
+            _output.write("binary failed to run\n");
+        }
+        else {
+            nativeOut := _proc.getStdOut();
+            nativeErr := _proc.getStdErr();
+            expect := _data.sections["EXPECT"];
+            _binaryResult = compareOutput(expect, nativeOut);
+            // XXX err output EXPECTERR ?
+        }
+
+        _proc.close();
+
 
     }
 
     void run() {
 
-        String args = {};
+        if (_bDef.separateBinary()) {
+            _testBinary = config.outDir.nameWithTrailing()+
+                           _data.fInfo.basename(true);
+        }
+
+        StringWriter args = {};
 
         if (_data.sections["ARGS"]) {
-            args = _data.sections["ARGS"].rtrim();
+            args.write(_data.sections["ARGS"].rtrim());
         }
 
         if (_data.dirConfig) {
-            args = args + " " + _data.dirConfig.options;
+            args.write(" ");
+            args.write(_data.dirConfig.options);
         }
 
+        args.write(_bDef.getCrackOptions(this));
+
         // XXX template argv section
-        cmd := config.crackBin+" -B "+_bDef.builderName()+" "+args+" "+_data.scriptName;
+        cmd := config.crackBin+" -B "+_bDef.getName()+" "+args.createString()+" "+_data.scriptName;
         if (config.libPath)
             cmd = cmd + " -l " + config.libPath;
         if (config.verbose) {
@@ -169,18 +179,30 @@ class BuilderTestHarness {
         compileOut := _proc.getStdOut();
         compileErr := _proc.getStdErr();
 
-        if (_proc.getReturnCode() != 0) {
+        if (_bDef.separateBinary()) {
+            // if return code is not 0, we'll be checking against error
+            // output
+            // XXX
+            _crackResult = Result(true);
+            _pass();
+            return;
+            
+/*
+         && _proc.getReturnCode() != 0) {
             // compile failed
             _fail();
-            //cout `[$(p.getReturnCode())]\n$compileErr`;
-            //if (nativeRun)
-            //    cout `) `;
+            _vOutput.write(" Return code: ");
+            _vOutput.write(FStr() `$(_proc.getReturnCode())`);
+            _vOutput.write("\n");
             _crackResult = Result(false);
             return;
+            */
         }
 
+        _proc.close();
+
         if (!_data.sections["EXPECT"]) {
-           _output.write("no valid EXPECT section\n");
+           _vOutput.write("no valid EXPECT section\n");
            _crackResult = Result(false);
            return;
         }
@@ -213,6 +235,9 @@ class BuilderTestHarness {
             _status = T_FINISHED;
         }
 
+        if (_status == T_FINISHED && _vOutput.size)
+            _vOutput.write("\n");
+
         return _status;
     }
 
@@ -237,7 +262,7 @@ class JitBuilderDef : CrackBuilderDef {
         return JitTestHarness(this, d);
     }
     bool separateBinary() { return false; }
-    String builderName() { return "llvm-jit"; }
+    String getName() { return "llvm-jit"; }
     String getNick() { return "JIT"; }
 }
 
@@ -246,8 +271,11 @@ class NativeBuilderDef : CrackBuilderDef {
         return NativeTestHarness(this, d);
     }
     bool separateBinary() { return true; }
-    String builderName() { return "llvm-native"; }
+    String getName() { return "llvm-native"; }
     String getNick() { return "AOT"; }
+    String getCrackOptions(BuilderTestHarness h) {
+        return " -b out="+h._testBinary;
+    }
 }
 
 // These are the list of builders we support in the test suite.
