@@ -31,6 +31,9 @@ class ModuleDef : public VarDef, public Namespace {
         // to crack source)
         bool fromExtension;
 
+        // aliased symbols that other modules are allowed to import.
+        std::map<std::string, bool> exports;
+
         ModuleDef(const std::string &name, Namespace *parent);
 
         /**

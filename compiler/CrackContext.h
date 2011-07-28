@@ -201,6 +201,14 @@ class CrackContext {
         
         /** Tells the tokenizer to resume parsing an i-string. */
         void continueIString();
+        
+        /**
+         * This is a back-door for things like the compiler-defined "export" 
+         * annotation to get access to the underlying context object without 
+         * us having to wrap the entire data model.  It is not available to 
+         * annotations written in crack.
+         */
+        model::Context *getContext() { return context; }
 };
 
 } // namespace compiler

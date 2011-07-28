@@ -138,8 +138,33 @@ void lineAnn(CrackContext *ctx) {
 void encodingAnn(CrackContext *ctx) {
     Token *tok = ctx->getToken();
     bool isString = tok->isString();
+    tok->release();
     if (!isString)
         ctx->error("String expected after 'encoding' annotation");
+}
+
+void export_symbolsAnn(CrackContext *ctx) {
+    
+    // get the module namespace
+    model::Context *realCtx = ctx->getContext();
+    model::ModuleDefPtr mod = 
+        model::ModuleDefPtr::rcast(realCtx->getModuleContext()->ns);
+
+    while (true) {
+        Token *tok = ctx->getToken();
+        if (!tok->isIdent())
+            ctx->error("Identifier expected.");
+
+        // add the symbol to the module's exports        
+        mod->exports[tok->getText()] = true;
+        
+        // check for a comma or semicolon
+        tok = ctx->getToken();
+        if (tok->isSemi())
+            break;
+        else if (!tok->isComma())
+            ctx->error("Comma or semicolon expected in export_symbols.");
+    }
 }
 
 void init(Module *mod) {
@@ -403,6 +428,9 @@ void init(Module *mod) {
     f = mod->addFunc(mod->getByteptrType(), "LINE", (void *)lineAnn);
     f->addArg(cc, "ctx");
     f = mod->addFunc(mod->getVoidType(), "encoding", (void *)encodingAnn);
+    f->addArg(cc, "ctx");
+    f = mod->addFunc(mod->getVoidType(), "export_symbols", 
+                     (void *)export_symbolsAnn);
     f->addArg(cc, "ctx");
     
     // constants

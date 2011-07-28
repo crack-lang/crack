@@ -2335,7 +2335,7 @@ void Parser::parseImportStmt(Namespace *ns) {
    vector<string> syms;
    while (true) {
       tok = getToken();
-      if (tok.isIdent()) {
+      if (tok.isIdent()) {         
          syms.push_back(tok.getData());
          tok = getToken();
          if (tok.isSemi()) {
@@ -2375,6 +2375,22 @@ void Parser::parseImportStmt(Namespace *ns) {
                                   canonicalName
                                  )
                   );
+         
+         // make sure the symbol either belongs to the module or was 
+         // explicitly exported by the module (no implicit second-order 
+         // imports).
+         if (symVal->getOwner() != mod.get() &&
+             mod->exports.find(*iter) == mod->exports.end()
+             )
+            error(tok, SPUG_FSTR("Name " << *iter <<
+                                  " does not belong to module " <<
+                                  canonicalName << ".  Second-order imports " 
+                                  "are not allowed.  Import it from " <<
+                                  symVal->getOwner()->getNamespaceName() <<
+                                  " instead."
+                                 )
+                  );
+         
          builder.registerImportedDef(*context, symVal.get());
          ns->addAlias(symVal.get());
       }

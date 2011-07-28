@@ -217,6 +217,7 @@ void Construct::loadBuiltinModules() {
     rootContext->compileNS->addAlias(ns->lookUp("FILE").get());
     rootContext->compileNS->addAlias(ns->lookUp("LINE").get());
     rootContext->compileNS->addAlias(ns->lookUp("encoding").get());
+    rootContext->compileNS->addAlias(ns->lookUp("export_symbols").get());
 
     // load the runtime extension
     StringVec crackRuntimeName(2);
