@@ -7,7 +7,7 @@ import crack.exp.file File, FileInfo;
 import crack.exp.process Process;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
-import crack.lang AssertionError;
+import crack.lang AssertionError, SubString;
 
 import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
 import testdata TestData;
@@ -16,7 +16,7 @@ import testdata TestData;
 
 class Result {
     bool pass;
-    String expected, actual;
+    String expected = {}, actual = {};
 
     oper init(bool t): pass = t { }
     oper init(String e, String a): pass = false, expected = e, actual = a { 
@@ -76,7 +76,8 @@ class BuilderTestHarness {
 
     Result compareOutput(String expected, String actual) {
 
-        if (expected == actual) {
+        // note that we ignore trailing newspace on expected and actual
+        if (expected.rtrim() == actual.rtrim()) {
             _pass();
             return Result(true);
         }
@@ -101,6 +102,7 @@ class BuilderTestHarness {
         // native: run binary to get final results for comparison
         bfi := FileInfo(_testBinary);
         if (!bfi.exists()) {
+            // shouldn't happen since we don't run binary if compile failed...
             _fail();
             _vOutput.write("binary wasn't created, check compile output");
             _binaryResult = Result(false);
@@ -121,6 +123,7 @@ class BuilderTestHarness {
 
         if (_proc.failed()) {
             _fail();
+            _crackResult = Result(false);
             _output.write("binary failed to run\n");
         }
         else {
@@ -178,33 +181,27 @@ class BuilderTestHarness {
 
         compileOut := _proc.getStdOut();
         compileErr := _proc.getStdErr();
-
-        if (_bDef.separateBinary()) {
-            // if return code is not 0, we'll be checking against error
-            // output
-            // XXX
-            _crackResult = Result(true);
-            _pass();
-            return;
-            
-/*
-         && _proc.getReturnCode() != 0) {
-            // compile failed
-            _fail();
-            _vOutput.write(" Return code: ");
-            _vOutput.write(FStr() `$(_proc.getReturnCode())`);
-            _vOutput.write("\n");
-            _crackResult = Result(false);
-            return;
-            */
-        }
-
         _proc.close();
 
-        if (!_data.sections["EXPECT"]) {
-           _vOutput.write("no valid EXPECT section\n");
-           _crackResult = Result(false);
-           return;
+        // XXX right now, out stdout and stderr are merged. this will change when we
+        // have an explicit stderr section
+        if (compileOut.size == 0 && compileErr.size > 0)
+            compileOut = compileErr;
+
+        if (_bDef.separateBinary()) {
+            if (_proc.getReturnCode() != 0) {
+                // if return code is not 0, we'll be checking against error
+                // output
+                _fail();
+                _vOutput.write(FStr() `Return code: $(_proc.getReturnCode())`);
+                _vOutput.write(FStr() `Output [$compileErr]\n`);
+                _crackResult = Result(false);
+            }
+            else {
+                _pass();
+                _crackResult = Result(true);
+            }
+            return;
         }
 
         expect := _data.sections["EXPECT"];
@@ -225,7 +222,7 @@ class BuilderTestHarness {
         if (_status == T_CRACK) {
             finishCrack();
             // if we have a separate binary, launch it
-            if (_bDef.separateBinary())
+            if (_bDef.separateBinary() && _crackResult.pass)
                 runBinary();
             else
                 _status = T_FINISHED;

@@ -14,7 +14,7 @@ import crack.cont.priorityqueue PriorityQueue;
 import crack.strutil StringArray, split;
 
 import testdata TestData, DirConfig;
-import builders BuilderTestHarness, CrackBuilderDef, builderDefList;
+import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
 import config config, T_INIT, T_RUNNING, T_FINISHED;
 
 class Template {
@@ -63,7 +63,7 @@ class Template {
 // maintain state while running available builders so we
 //     don't hang on any one builder
 // maintain final concatenated output of all builders run on this test
-// a test is finished well all of the configured builders have run
+// a test is finished when all of the configured builders have run
 class Test {
 
     TestData _data = {};
@@ -76,12 +76,27 @@ class Test {
 
     String _isSkipped;
 
+    // for the benefit of the priority queue, by default we give higher priority to tests
+    // based on comparing the file name. thus, 0_foo is higher priority than 1_foo
+    // note this is not strictly the same as sorting them by name, because of the
+    // properties of the heap structure.
+    int cmp(Object other) {
+        if (other.isa(Test)) {
+            return -(_data.fInfo.name.cmp(Test.unsafeCast(other)._data.fInfo.name));
+        }
+        else {
+            return 0;
+        }
+    }
 
-    /// ensure test has required sections and that they contain valid data
-    /// also check to see if we're skipping this test for some reason
+    // ensure test has required sections and that they contain valid data
+    // also check to see if we're skipping this test for some reason
     void checkTemplate() {        
         if (!_data.sections.contains("FILE")) {
             _isSkipped = "the template was missing a FILE section";
+        }
+        if (!_data.sections.contains("EXPECT")) {
+            _isSkipped = "the template was missing a EXPECT section";
         }
         if (_data.sections.contains("TEST"))
             _data.desc = _data.sections["TEST"].rtrim();
@@ -89,10 +104,8 @@ class Test {
 
     void writeScript() {
         
-        _data.scriptName = config.outDir.nameWithTrailing()+_data.fInfo.basename(true) + ".crk";
-        
-        //cout `writing: $outName\n`;
-        
+        _data.scriptName = config.outDir.nameWithTrailing()+
+                           _data.fInfo.basename(true) + ".crk";
         out := File(_data.scriptName,"w");
         out.write(_data.sections["FILE"]);
         
@@ -116,14 +129,29 @@ class Test {
 
     }
 
+    void checkResult(Result r) {
+        if (!r)
+            return;
+        if (!r.pass &&
+            config.showDiff &&
+            r.expected.size) {
+            _output.write(FStr() `\n---- Diff ----\nExpected: [$(r.expected)]`);
+            _output.write(FStr() `\nActual: [$(r.actual)]\n--------------\n`);
+        }
+    }
+
     int tick() {
 
-        // if finished, get output, increase activeBuilder
+        // poll the builder process
+        // if finished, get/show output, increment activeBuilder
         if (_harness[_activeHarness].tick() == T_FINISHED) {
 
-                if (config.verbose)
-                    _vOutput.write(_harness[_activeHarness]._vOutput.createString());
+            if (config.verbose)
+                _vOutput.write(_harness[_activeHarness]._vOutput.createString());
             _output.write(_harness[_activeHarness]._output.createString());
+
+            checkResult(_harness[_activeHarness]._crackResult);
+            checkResult(_harness[_activeHarness]._binaryResult);
 
             _activeHarness++;
             if (_activeHarness < _harness.count()) {
@@ -133,24 +161,13 @@ class Test {
                 _status = T_FINISHED;
                 cout `[$(_data.fInfo)]: $(_data.desc)\n`;
                 cout `$(_vOutput.createString())`;
-                cout `$(_output.createString())\n\n`;
+                cout `$(_output.createString())\n`;
             }
 
         }
 
         return _status;
 
-    }
-
-    String getResult() {
-        /*
-        for (r :in results) {
-            if (!r.val.pass && (config.verbose || config.showDiff) && r.val.actual && r.val.expected) {
-                cout `----$(r.key) Fail----\nExpected: [$(r.val.expected)] Actual: [$(r.val.actual)]\n------------\n`;
-            }
-        }
-        */
-        return "";
     }
 
     oper init(FileInfo info, DirConfig dc) {
@@ -177,7 +194,6 @@ class Test {
 
     void writeTo(Writer out) {
         Formatter(out) `[$(_data.fInfo)]: $(_data.desc)\n`;
-        //_dump(out);
     }
 
 }
@@ -189,7 +205,6 @@ class Test {
 class TestSuite {
 
     PriorityQueue[Test] _testList = {};
-    Array[Test] _active = {};
     CmdOptions _options = {};
     
     void usage() {
@@ -203,7 +218,6 @@ class TestSuite {
         DirConfig dc;
         dcFile := FileInfo(dir.nameWithTrailing() + "options");
         if (dcFile.exists()) {
-            //cout `found options file in $dir\n`;
             sec := Template.load(dcFile.name);
             if (sec.contains("OPTS")) {
                 dc = DirConfig();
@@ -226,8 +240,8 @@ class TestSuite {
 
         dc := getDirConfig(dir);
 
-        cnt := 0;
         // gather test files
+        cnt := 0;
         for (curFile :in dir.files()) {
             if (curFile.matches("*.crkt")) {
                 cnt++;
@@ -246,26 +260,26 @@ class TestSuite {
 
     void runTests() {
 
-        if (!config.outDir.isValid()) {
-            cerr `invalid output directory: $(config.outDir)\n`;
-            return;
-        }
-        
-        cout `running $(config.jobs) concurrent tests with output in $(config.outDir)...\n`;
+        if (_testList.count() == 1)
+            cout `running single test`;
+        else
+            cout `running $(_testList.count()) total tests in $(config.jobs) concurrent jobs`;
+        cout ` with output in $(config.outDir)...\n`;
 
         bool cull(Test t) { return t.tick() != T_FINISHED; }
 
+        Array[Test] active = {};
         Test cur;
-        while (_testList.count()) {
+        while (_testList.count() || active.count()) {
 
             // check active for finished tests, remove
-            _active.filter(cull);
+            active.filter(cull);
 
             // add to active if active.count <= max
             while (_testList.count() &&
-                   _active.count() < config.jobs) {
+                   active.count() < config.jobs) {
                 cur = _testList.pop();
-                _active.append(cur);
+                active.append(cur);
                 cur.run();
             }
 
@@ -290,6 +304,7 @@ class TestSuite {
         _options.add("outdir", "o", "Directory to create output files", "./output", CMD_STR);
         _options.add("libpath", "l", "Add path to crack library path during test. May be colon seperated list.", "", CMD_STR);
         _options.add("builders", "b", "Builders to test, comma delimited list ["+availBuilders+"]","jit", CMD_STR);
+        _options.add("diff", "", "Show a diff of expected vs actual output if a test fails","f", CMD_BOOL);
         _options.parse(argv);
                 
         if (_options.getBool("help"))
@@ -308,22 +323,8 @@ class TestSuite {
         config.libPath = _options.getString("libpath");
         config.verbose = _options.getBool("verbose");
         config.jobs = _options.getInt("jobs");
-        config.showDiff = false;
+        config.showDiff = _options.getBool("diff");
         
-        testFile := _options.getString("testfile");        
-        if (testFile != "" && config.rootDir.isValid()) {
-            // if specific file, clear directory
-            config.rootDir = null;
-            fi := FileInfo(testFile);
-            if (!fi.exists()) {
-                cerr `$testFile does not exist\n`;
-                exit(1);
-            }
-            test := Test(fi, getDirConfig(Directory(fi.dirname())));
-            _testList.push(test);
-            config.showDiff = true;
-        }
-
         // verify, initialize builder defs
         builders := _options.getString("builders");
         clb := split(builders, ",");
@@ -337,6 +338,20 @@ class TestSuite {
             }
         }
 
+        testFile := _options.getString("testfile");
+        if (testFile != "" && config.rootDir.isValid()) {
+            // if specific file, clear directory
+            config.rootDir = null;
+            fi := FileInfo(testFile);
+            if (!fi.exists()) {
+                cerr `$testFile does not exist\n`;
+                exit(1);
+            }
+            test := Test(fi, getDirConfig(Directory(fi.dirname())));
+            _testList.push(test);
+            config.showDiff = true;
+            config.jobs = 1;
+        }
 
         // banner
         cout `screen\n`;
@@ -371,6 +386,12 @@ class TestSuite {
         
         if (config.rootDir)
             scanForTests(config.rootDir);
+
+        if (!config.outDir.isValid()) {
+            cerr `invalid output directory: $(config.outDir)\n`;
+            return;
+        }
+
         runTests();
         
     }
