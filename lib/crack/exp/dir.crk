@@ -15,8 +15,7 @@ int __CRACK_DTYPE_DIR   = 1;
 int __CRACK_DTYPE_FILE  = 2;
 int __CRACK_DTYPE_OTHER = 3;
 
-// XXX make portable
-String PATH_SEPARATOR = "/";
+byte PATH_SEPARATOR = b"/";
 
 class Directory : Object, Openable {
 
@@ -29,7 +28,7 @@ class Directory : Object, Openable {
 
     oper init(String name, bool open): name(name) {
         // possibly strip trailing delim
-        if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
+        if (name.rfind(PATH_SEPARATOR) == (name.size-1))
             name = SubString(name, 0, name.size-1);
         if (open)
             _open();
@@ -37,7 +36,7 @@ class Directory : Object, Openable {
 
     oper init(String name): name(name) {
         // possibly strip trailing delim
-        if (name.rfind(PATH_SEPARATOR[0]) == (name.size-1))
+        if (name.rfind(PATH_SEPARATOR) == (name.size-1))
             name = SubString(name, 0, name.size-1);
         // default open
         _open();
