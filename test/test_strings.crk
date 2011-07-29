@@ -146,4 +146,14 @@ for (i:=0; i < sa.count(); ++i) {
         cout `FAILED null char check $i,3\n`;
 }
 
+// concatenation
+f := "foo";
+b := "bar";
+fb := f+b;
+if (fb != "foobar")
+    cout `FAILED string concat\n`;
+fc := "foo" + b"0";
+if (fc != "foo0")
+    cout `FAILED string byte concat\n`;
+
 cout `ok\n`;

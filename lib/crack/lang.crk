@@ -544,6 +544,14 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
 
+    String oper +(byte chr) {
+        uint newBufferSize = this.size + 1;
+        byteptr newRawBuffer = malloc(newBufferSize);
+        memcpy(newRawBuffer, this.buffer, this.size);
+        newRawBuffer[this.size] = chr;
+        return String(newRawBuffer, newBufferSize, true);
+    }
+
     # note, not binary safe
     String oper +(byteptr rhs) {
         uint rhs_size = strlen(rhs);
