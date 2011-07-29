@@ -960,6 +960,7 @@ test_output abstract_method \
     ok
 
 # switch to full bootstrapping mode now that importing works
+testNum=0
 opts="-Gl $root -l $root/lib:lib:.libs"
 class="1_post_bs"
 emit_opts
@@ -1361,6 +1362,15 @@ test_output x 'error contexts work' \
      @fail()' \
      "${parseError}1: Unknown identifier bad
   expanded from macro at $source:2"
+
+test_output second_order_imports \
+    'Error on second-degree imports' \
+    'import test.testmod4 A;' \
+    "in testmod4
+${parseError}1: Name A does not belong to module test.testmod4.  Second-order imports are not allowed.  Import it from test.testmod3 instead.
+
+testmod4 destroyed
+testmod3 deleted"
 
 test_output x 'serial module' 'import test.test_serial;' ok
 

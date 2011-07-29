@@ -5,6 +5,9 @@ import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
     ManagedBuffer, Writer;
 import crack.runtime float_str, strlen, write, malloc, memcpy, free, read;
 
+# we need Writer to be in crack.lang, but it belongs here.
+@export_symbols Writer;
+
 ## Writer for a file descriptor.
 class FDWriter : Object, Writer {
     int fd;

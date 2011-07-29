@@ -264,8 +264,11 @@ class Array[Elem] {
             realloc(newCap);
         }
         
-        for (intz i = 0; i < other.__size; ++i)
-            __rep[__size + i] = other[i];
+        for (intz i = 0; i < other.__size; ++i) {
+            elem := other[i];
+            __rep[__size + i] = elem;
+            _bind(elem);
+        }
         __size += other.__size;
     }
             
