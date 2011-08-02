@@ -181,20 +181,20 @@ class Heap[SeqT] : HeapPrim[SeqT] {
     }
 }
 
-class HeapSortPrim[Elem] {
+class HeapSortPrim[Elem] : HeapPrim[Elem] {
     @static
     void _heapSort(Elem A, uintz count) {
         heapSize := count;
         for (i := count; i > 1; --i) {
-            HeapPrim[Elem]._swap(A, 1, i);
+            _swap(A, 1, i);
             heapSize--;
-            HeapPrim[Elem].maxHeapify(A, 1, heapSize);
+            maxHeapify(A, 1, heapSize);
         }
     }
     @static
     void sort(Elem A, uintz count) {
-        if (!HeapPrim[Elem].isMaxHeap(A, count))
-            HeapPrim[Elem].buildMaxHeap(A, count);
+        if (!isMaxHeap(A, count))
+            buildMaxHeap(A, count);
         _heapSort(A, count);
     }
 }

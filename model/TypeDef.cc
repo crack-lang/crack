@@ -86,6 +86,10 @@ void TypeDef::storeDef(VarDef *def) {
         ordered.push_back(def);
 }
 
+ModuleDefPtr TypeDef::getModule() {
+    return owner->getModule();
+}
+
 NamespacePtr TypeDef::getParent(unsigned i) {
     if (i < parents.size())
         return parents[i];
@@ -743,6 +747,12 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     ModuleDef *currentModule = 
         ModuleDefPtr::rcast(context.getModuleContext()->ns);
     ModuleDefPtr module = modContext->createModule(moduleName, currentModule);
+    
+    // XXX this is confusing: there's a "owner" that's part of some kinds of 
+    // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
+    // here so that we can accept protected variables from the original 
+    // module's context
+    module->setOwner(genericInfo->ns.get());
     
     // alias all global symbols in the original module and original compile 
     // namespace.

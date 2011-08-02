@@ -26,6 +26,10 @@ class LocalNamespace : public Namespace {
                                          parent->getNamespaceName()+"."+cName) :
                                cName),
                 parent(parent) {}
+
+        /** required implementation of Namespace::getModule() */
+        virtual ModuleDefPtr getModule();
+
         virtual NamespacePtr getParent(unsigned index);
 };
 

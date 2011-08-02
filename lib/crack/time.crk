@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 # Code for dealing with time.
 
-import crack.runtime _date, strftime, strlen;
+import crack.runtime InternalDate, strftime, strlen;
 import crack.lang AssertionError;
 import crack.io FStr;
 import crack.runtime TimeVal;
@@ -29,11 +29,11 @@ bool isLeap(int year){
 
 Array[int] maxDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-class Date: _date {
-   oper init(): _date(){
+class Date : Object, InternalDate {
+   oper init(): InternalDate(){
    }
 
-   oper init(int64 secs): _date(secs){
+   oper init(int64 secs): InternalDate(secs){
    }
 
    String strftime(StaticString format, uint buflen){
@@ -66,7 +66,7 @@ class Date: _date {
 
 // The daystart argument determines the start of the week: 0 = Sunday, 1 = Monday, etc.
 
-Array[Array[int]] cal(_date d, int dayStart){
+Array[Array[int]] cal(InternalDate d, int dayStart){
    d.mktime(); // This sets the weekday and year day of the d object
    max := maxDays[d.tm_mon];
    if (d.tm_mon == 1 && isLeap(d.tm_year)) 
@@ -93,6 +93,6 @@ Array[Array[int]] cal(_date d, int dayStart){
    return weeks;
 }
 
-Array[Array[int]] cal(_date d){
+Array[Array[int]] cal(InternalDate d){
    return cal(d, 0);
 }

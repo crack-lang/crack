@@ -62,44 +62,44 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type__date = mod->addType("_date");
-        type__date->addInstVar(type_int, "tm_sec");
-        type__date->addInstVar(type_int, "tm_min");
-        type__date->addInstVar(type_int, "tm_hour");
-        type__date->addInstVar(type_int, "tm_mday");
-        type__date->addInstVar(type_int, "tm_mon");
-        type__date->addInstVar(type_int, "tm_year");
-        type__date->addInstVar(type_int, "tm_wday");
-        type__date->addInstVar(type_int, "tm_yday");
-        type__date->addInstVar(type_int, "tm_isdst");
-        type__date->addInstVar(type_int64, "tm_gmtoff");
-        f = type__date->addConstructor("init",
+    crack::ext::Type *type_InternalDate = mod->addType("InternalDate");
+        type_InternalDate->addInstVar(type_int, "tm_sec");
+        type_InternalDate->addInstVar(type_int, "tm_min");
+        type_InternalDate->addInstVar(type_int, "tm_hour");
+        type_InternalDate->addInstVar(type_int, "tm_mday");
+        type_InternalDate->addInstVar(type_int, "tm_mon");
+        type_InternalDate->addInstVar(type_int, "tm_year");
+        type_InternalDate->addInstVar(type_int, "tm_wday");
+        type_InternalDate->addInstVar(type_int, "tm_yday");
+        type_InternalDate->addInstVar(type_int, "tm_isdst");
+        type_InternalDate->addInstVar(type_int64, "tm_gmtoff");
+        f = type_InternalDate->addConstructor("init",
                     (void *)crk_localtime
             );
             f->addArg(type_int64, "seconds");
 
-        f = type__date->addConstructor("init",
+        f = type_InternalDate->addConstructor("init",
                     (void *)crk_epoch
             );
 
-        f = type__date->addMethod(type_int64, "mktime",
+        f = type_InternalDate->addMethod(type_int64, "mktime",
                     (void *)mktime
             );
 
-        f = type__date->addMethod(type_bool, "setToNowLocal",
+        f = type_InternalDate->addMethod(type_bool, "setToNowLocal",
                     (void *)crk_localtime_now
             );
 
-        f = type__date->addMethod(type_bool, "setToNowUTC",
+        f = type_InternalDate->addMethod(type_bool, "setToNowUTC",
                     (void *)crk_gmtime_now
             );
 
-        f = type__date->addMethod(type_byteptr, "asctime_r",
+        f = type_InternalDate->addMethod(type_byteptr, "asctime_r",
                     (void *)asctime_r
             );
             f->addArg(type_byteptr, "buf");
 
-    type__date->finish();
+    type_InternalDate->finish();
 
 
     crack::ext::Type *array = mod->getType("array");
@@ -122,7 +122,7 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "s");
        f->addArg(type_uint64, "max");
        f->addArg(type_byteptr, "format");
-       f->addArg(type__date, "d");
+       f->addArg(type_InternalDate, "d");
 
     f = mod->addFunc(array_pbyteptr_q, "get_environ",
             (void *)get_environ

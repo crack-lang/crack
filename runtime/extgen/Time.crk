@@ -61,8 +61,9 @@ char **get_environ(){
 
    @crack_internal
 
-   class _date {
-      int tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst;
+   class InternalDate {
+      int tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, 
+          tm_isdst;
       int64 tm_gmtoff;
 
       @cname crk_localtime
@@ -85,7 +86,7 @@ char **get_environ(){
    @cname crk_ctime_r
    byteptr ctime_r(int64 seconds, byteptr buf);
 
-   uint64 strftime(byteptr s, uint64 max, byteptr format, _date d);
+   uint64 strftime(byteptr s, uint64 max, byteptr format, InternalDate d);
 
    array[byteptr] get_environ();
    int putenv(byteptr keyvalue);

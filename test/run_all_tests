@@ -959,6 +959,31 @@ test_output abstract_method \
      a.f();' \
     ok
 
+test_output importing_privates \
+    'Error when importing privates' \
+    'import test.testmod5 _protected;' \
+    "${parseError}1: Can not import private symbol _protected."
+
+test_output using_ancestor_privates \
+    'Error when using ancestor privates' \
+    'class A { int __var; }
+     class B : A { void f() { __var; } }' \
+     "${parseError}2: __var is private to class A and not acessible in this \
+context."
+
+test_output using_module_protected \
+    'Error when using module protected vars' \
+    'import test.testmod5 A; A()._val;' \
+    "${parseError}1: _val is private to module test.testmod5 and not accessible \
+in this context."
+
+test_output protected_from_derived_class \
+    'Using a protected member from a derived class.' \
+    'import test.testmod5 A;
+     class B : A { void f() { _val; } }
+     puts("ok");' \
+    'ok'
+
 # switch to full bootstrapping mode now that importing works
 testNum=0
 opts="-Gl $root -l $root/lib:lib:.libs"
@@ -1365,12 +1390,9 @@ test_output x 'error contexts work' \
 
 test_output second_order_imports \
     'Error on second-degree imports' \
-    'import test.testmod4 A;' \
-    "in testmod4
-${parseError}1: Name A does not belong to module test.testmod4.  Second-order imports are not allowed.  Import it from test.testmod3 instead.
-
-testmod4 destroyed
-testmod3 deleted"
+    'import test.testmod6 public;' \
+    "${parseError}1: Name public does not belong to module test.testmod6.  \
+Second-order imports are not allowed.  Import it from test.testmod5 instead."
 
 test_output x 'serial module' 'import test.test_serial;' ok
 

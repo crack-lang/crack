@@ -4,6 +4,7 @@
 
 #include "Expr.h"
 #include "VarDef.h"
+#include "ModuleDef.h"
 #include "OverloadDef.h"
 
 using namespace model;
@@ -15,6 +16,10 @@ CompositeNamespace::CompositeNamespace(Namespace *parent0,
         parents(2) {
     parents[0] = parent0;
     parents[1] = parent1;
+}
+
+ModuleDefPtr CompositeNamespace::getModule() {
+    return parents[0]->getModule();
 }
 
 NamespacePtr CompositeNamespace::getParent(unsigned index) {

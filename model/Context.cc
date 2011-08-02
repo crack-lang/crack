@@ -877,6 +877,53 @@ void Context::popErrorContext() {
     construct->errorContexts.pop_front();
 }
 
+void Context::checkAccessible(VarDef *var) {
+    size_t nameSize = var->name.size();
+    if (nameSize && var->name[0] == '_') {
+        if (nameSize > 1 && var->name[1] == '_') {
+
+            // private variable: if it is owned by a class, we must be 
+            // in the scope of that class.
+            TypeDef *varClass = TypeDefPtr::cast(var->getOwner());
+            if (!varClass)
+                return;
+            ContextPtr myClassCtx = getClassContext();
+            if (!myClassCtx || TypeDefPtr::rcast(myClassCtx->ns) != varClass)
+                error(SPUG_FSTR(var->name << " is private to class " <<
+                                 varClass->name << " and not acessible in this "
+                                 "context."
+                                )
+                      );
+            
+        } else {
+
+            // module protected variable: no problem if part of the same 
+            // module or in the module's owner module 
+            NamespacePtr varMod = var->getOwner()->getModule();
+            ModuleDefPtr curMod = getModuleContext()->ns;
+            if (varMod.get() == curMod.get() ||
+                varMod.get() == curMod->getOwner())
+                return;
+
+            // see if this class is derived from the variable's class
+            ContextPtr myClassCtx = getClassContext();
+            TypeDef *varClass = TypeDefPtr::cast(var->getOwner());
+            if (varClass && myClassCtx && 
+                TypeDefPtr::rcast(myClassCtx->ns)->isDerivedFrom(varClass)
+                )
+                return;
+            
+            // the symbol is from a different module and we are not in a 
+            // derived class.
+            error(SPUG_FSTR(var->name << " is private to module " <<
+                             varMod->getNamespaceName() << 
+                             " and not accessible in this context."
+                            )
+                  );
+        }
+    }
+}
+
 void Context::dump(ostream &out, const std::string &prefix) const {
     switch (scope) {
         case module: out << "module "; break;

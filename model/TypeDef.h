@@ -148,6 +148,9 @@ class TypeDef : public VarDef, public Namespace {
         
         ~TypeDef() { if (generic) delete generic; }
 
+        /** required implementation of Namespace::getModule() */
+        virtual ModuleDefPtr getModule();
+
         /** required implementation of Namespace::getParent() */
         virtual NamespacePtr getParent(unsigned i);
         

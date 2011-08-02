@@ -13,6 +13,7 @@ namespace model {
 class Context;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
+SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(OverloadDef);
 SPUG_RCPTR(VarDef);
 
@@ -64,6 +65,11 @@ class Namespace : public virtual spug::RCBase {
         virtual NamespacePtr getParent(unsigned index) = 0;
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
+        
+        /**
+         * Returns the module that the namespace is part of.
+         */
+        virtual ModuleDefPtr getModule() = 0;
 
         /**
          * Add a new definition to the namespace (this may not be used for 

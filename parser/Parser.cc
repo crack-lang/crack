@@ -216,6 +216,7 @@ void Parser::parseClause(bool defsAllowed) {
    // if we got a type, try to parse a definition.
    if (primaryType) {
       TypeDef *typeDef = primaryType.get();
+      context->checkAccessible(typeDef);
       if (parseDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
@@ -488,6 +489,7 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident,
             undefinedError ? undefinedError :
              SPUG_FSTR("Undefined variable: " << ident.getData()).c_str()
             );
+   context->checkAccessible(var.get());
    
    // check for an overload definition - if it is one, make sure there's only 
    // a single overload.
@@ -620,7 +622,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
          container = var.get();
       }
    }
-
+   
    // no function, not a callable variable - give an error.   
    if (!func) {
       ostringstream msg;
@@ -628,6 +630,8 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       context->maybeExplainOverload(msg, funcName, ns);
       error(ident, msg.str());
    }
+
+   context->checkAccessible(func.get());
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
@@ -689,6 +693,8 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
                           ident.getData()
                          )
                );
+      
+      context->checkAccessible(var.get());
 
       // make sure the variable is not a constant.
       if (var->isConstant())
@@ -2362,6 +2368,12 @@ void Parser::parseImportStmt(Namespace *ns) {
            iter != syms.end();
            ++iter
            ) {
+         // make sure that the symbol is not private
+         if ((*iter)[0] == '_')
+            error(tok,
+                  SPUG_FSTR("Can not import private symbol " << *iter << ".")
+                  );
+         
          // make sure we don't already have it
          if (ns->lookUp(*iter))
             error(tok, SPUG_FSTR("imported name " << *iter << 

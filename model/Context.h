@@ -465,6 +465,12 @@ class Context : public spug::RCBase {
          */
         void popErrorContext();
         
+        /**
+         * Verifies that the variable is accessible within the context (that 
+         * it is not some other namespace's private or protected variable).
+         */
+        void checkAccessible(VarDef *var);
+        
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();
 };

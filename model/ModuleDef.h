@@ -58,6 +58,7 @@ class ModuleDef : public VarDef, public Namespace {
         }
 
         virtual NamespacePtr getParent(unsigned index);
+        virtual ModuleDefPtr getModule();
 };
 
 } // namespace model

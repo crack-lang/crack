@@ -22,6 +22,7 @@ class CompositeNamespace : public Namespace {
 
     public:
         CompositeNamespace(Namespace *parent0, Namespace *parent1);
+        virtual ModuleDefPtr getModule();
         virtual NamespacePtr getParent(unsigned index);
         virtual void addDef(VarDef *def);
         virtual void removeDef(VarDef *def);

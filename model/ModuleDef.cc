@@ -26,3 +26,8 @@ void ModuleDef::close(Context &context) {
 NamespacePtr ModuleDef::getParent(unsigned index) {
     return index ? NamespacePtr(0) : parent;
 }
+
+ModuleDefPtr ModuleDef::getModule() {
+    return this;
+}
+
