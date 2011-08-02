@@ -1245,7 +1245,7 @@ test_output x 'operator overloading of unary operators' \
 
 test_output x 'bootstrapped overloads' 'print()' \
     "${parseError}1: No method exists matching print()
-Possible overloads for \"print\":
+Possible overloads for print:
 .builtin.void crack.lang.print(crack.lang.String val)
 .builtin.void crack.lang.print(crack.lang.StaticString val)
 .builtin.void crack.lang.print(crack.lang.CString val)"
