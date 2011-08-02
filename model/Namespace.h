@@ -72,6 +72,16 @@ class Namespace : public virtual spug::RCBase {
         virtual ModuleDefPtr getModule() = 0;
 
         /**
+         * Returns the "real module" that the namespace is part of.  If the 
+         * namespace is part of an ephemeral module generated for a generic, 
+         * the real module is the module that the generic was defined in.
+         * This is equivalent to the owner of the module returned by 
+         * getModule() if there is one, and simply the module returned by 
+         * getModule() if it doesn't have an owner.
+         */
+        ModuleDefPtr getRealModule();
+
+        /**
          * Add a new definition to the namespace (this may not be used for 
          * FuncDef's, these must be wrapped in an OverloadDef.  See Context 
          * for an easy way to add FuncDef's)

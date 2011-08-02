@@ -752,7 +752,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
     // here so that we can accept protected variables from the original 
     // module's context
-    module->setOwner(genericInfo->ns.get());
+    module->setOwner(genericInfo->ns->getRealModule().get());
     
     // alias all global symbols in the original module and original compile 
     // namespace.

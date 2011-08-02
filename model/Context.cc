@@ -898,11 +898,10 @@ void Context::checkAccessible(VarDef *var) {
         } else {
 
             // module protected variable: no problem if part of the same 
-            // module or in the module's owner module 
-            NamespacePtr varMod = var->getOwner()->getModule();
-            ModuleDefPtr curMod = getModuleContext()->ns;
-            if (varMod.get() == curMod.get() ||
-                varMod.get() == curMod->getOwner())
+            // module (use the owner module if there is one)
+            ModuleDefPtr varMod = var->getOwner()->getRealModule();
+            ModuleDefPtr curMod = getModuleContext()->ns->getRealModule();
+            if (varMod.get() == curMod.get())
                 return;
 
             // see if this class is derived from the variable's class

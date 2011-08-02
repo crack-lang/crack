@@ -88,23 +88,34 @@ function run_test {
     
     # XXX script args
     # XXX stdin
-    
-    cmdline="$CRACKBIN $OPTS_sec $outfile $ARGS_sec" # xxx script args section
-    #echo "running $cmdline"
-    result="$(echo $STDIN_sec | $cmdline 2>&1)"
-    if [ "$result" = "$EXPECT_sec" ]; then
-        echo ok
+
+    if $debug; then
+        gdb_opts="gdb.options.$$"
+        echo "set args $OPTS_sec $outfile $ARGS_sec" >$gdb_opts
+        LD_LIBRARY_PATH=.libs gdb -x $gdb_opts .libs/crack
+        rm "$gdb_opts"
     else
-        echo ""
-        echo "FAILED $file"
-        echo "$cmdline"
-        echo "Expected: $EXPECT_sec"
-        echo "Got     : $result"
-        errors=$((errors + 1))
+        cmdline="$CRACKBIN $OPTS_sec $outfile $ARGS_sec" # xxx script args section
+        #echo "running $cmdline"
+        result="$(echo $STDIN_sec | $cmdline 2>&1)"
+        if [ "$result" = "$EXPECT_sec" ]; then
+            echo ok
+        else
+            echo ""
+            echo "FAILED $file"
+            echo "$cmdline"
+            echo "Expected: $EXPECT_sec"
+            echo "Got     : $result"
+            errors=$((errors + 1))
+        fi
     fi
-    
-    
 }
+
+debug=false
+if [ "$1" = '-g' ]; then
+    debug=true
+    shift
+fi
 
 errors=0
 if [ -z "$*" ]; then

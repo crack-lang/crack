@@ -36,6 +36,12 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     return 0;
 }
 
+ModuleDefPtr Namespace::getRealModule() {
+    ModuleDefPtr mod = getModule();
+    ModuleDefPtr owner = ModuleDefPtr::cast(mod->getOwner());
+    return owner ? owner : mod;
+}
+
 void Namespace::addDef(VarDef *def) {
     assert(!def->getOwner());
 
