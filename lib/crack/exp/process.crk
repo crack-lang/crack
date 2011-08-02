@@ -56,7 +56,7 @@ class Process {
 
     String _readPipe(int pipe) {
         if (pipe < 0)
-            return "";
+            return ""; // XXX null?
         // paged reads        
         buf := ManagedBuffer(1024);
         // extendable buffer used for final string
@@ -128,6 +128,13 @@ class Process {
     bool isRunning() {
         _maybePoll();
         return (_returnCode & CRK_PROC_STILL_RUNNING);
+    }
+
+    void putStdIn(String data) {
+        if (isRunning() && _pd.stdin) {
+            rd := FDWriter(_pd.stdin);
+            rd.write(data);
+        }
     }
 
     void sendSignal(int sig) {
