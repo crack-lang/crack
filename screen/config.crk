@@ -8,7 +8,7 @@ class Config {
     String crackBin, libPath;
     Directory rootDir, outDir;
     Array[Object] builders = {}; // CrackBuilderDef
-    bool verbose, showDiff;
+    bool verbose, showDiff, stopOnFail;
     uint jobs; // # of concurrent jobs
 }
 

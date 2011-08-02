@@ -8,6 +8,7 @@ import crack.exp.process Process;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AssertionError, SubString;
+import crack.exp.regex Regex;
 
 import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
 import testdata TestData;
@@ -47,12 +48,13 @@ class CrackBuilderDef {
 // maintain final PASS/FAIL output for this builder/test
 class BuilderTestHarness {
 
-    Result _crackResult;
-    Result _binaryResult;
+    Result crackResult;
+    Result binaryResult;
+
+    StringWriter output = { }; // test results
+    StringWriter vOutput = { }; // verbose
 
     int _status = T_INIT;
-    StringWriter _output = { }; // test results
-    StringWriter _vOutput = { }; // verbose
     CrackBuilderDef _bDef;
     TestData _data;
     Process _proc;
@@ -68,13 +70,20 @@ class BuilderTestHarness {
         return sw.createString();
     }
     void _pass() {
-        _output.write(_colorMsg("32", "PASS "));
+        output.write(_colorMsg("32", "PASS "));
     }
     void _fail() {
-        _output.write(_colorMsg("31", "FAIL "));
+        output.write(_colorMsg("31", "FAIL "));
     }
 
     Result compareOutput(String expected, String actual) {
+
+        // variable replacement
+        // XXX using regex isn't necessary here, but String doesn't have
+        // a simple replace yet
+        pat := Regex('%OUTDIR%');
+        if (pat.search(expected))
+            expected = pat.subst(expected, config.outDir.nameWithTrailing());
 
         // note that we ignore trailing newspace on expected and actual
         if (expected.rtrim() == actual.rtrim()) {
@@ -96,26 +105,30 @@ class BuilderTestHarness {
             args = _data.sections["ARGS"].rtrim();
         }
 
-        _output.write(_bDef.getNick());
-        _output.write(" Run: ");
+        output.write(_bDef.getNick());
+        output.write(" Run: ");
 
         // native: run binary to get final results for comparison
         bfi := FileInfo(_testBinary);
         if (!bfi.exists()) {
             // shouldn't happen since we don't run binary if compile failed...
             _fail();
-            _vOutput.write("binary wasn't created, check compile output");
-            _binaryResult = Result(false);
+            vOutput.write("binary wasn't created, check compile output");
+            binaryResult = Result(false);
             _status = T_FINISHED;
             return;
         }
         // XXX binary args (script argv)
         if (config.verbose) {
-            _vOutput.write(_testBinary);
-            _vOutput.write("\n");
+            vOutput.write(_testBinary);
+            vOutput.write("\n");
         }
         _status = T_BINARY;
         _proc = Process(_testBinary);
+
+        if (_data.sections.contains("STDIN")) {
+            _proc.putStdIn(_data.sections["STDIN"]);
+        }
 
     }
 
@@ -123,14 +136,14 @@ class BuilderTestHarness {
 
         if (_proc.failed()) {
             _fail();
-            _crackResult = Result(false);
-            _output.write("binary failed to run\n");
+            crackResult = Result(false);
+            output.write("binary failed to run\n");
         }
         else {
             nativeOut := _proc.getStdOut();
             nativeErr := _proc.getStdErr();
             expect := _data.sections["EXPECT"];
-            _binaryResult = compareOutput(expect, nativeOut);
+            binaryResult = compareOutput(expect, nativeOut);
             // XXX err output EXPECTERR ?
         }
 
@@ -164,16 +177,19 @@ class BuilderTestHarness {
         if (config.libPath)
             cmd = cmd + " -l " + config.libPath;
         if (config.verbose) {
-            _vOutput.write(cmd);
-            _vOutput.write("\n");
+            vOutput.write(cmd);
+            vOutput.write("\n");
         }
 
-        _output.write(_bDef.getNick());
-        _output.write(": ");
+        output.write(_bDef.getNick());
+        output.write(": ");
 
-        // XXX stdin
         _status = T_CRACK;
         _proc = Process(cmd);
+
+        if (!_bDef.separateBinary() && _data.sections.contains("STDIN")) {
+            _proc.putStdIn(_data.sections["STDIN"]);
+        }
 
     }
 
@@ -193,19 +209,19 @@ class BuilderTestHarness {
                 // if return code is not 0, we'll be checking against error
                 // output
                 _fail();
-                _vOutput.write(FStr() `Return code: $(_proc.getReturnCode())`);
-                _vOutput.write(FStr() `Output [$compileErr]\n`);
-                _crackResult = Result(false);
+                vOutput.write(FStr() `Return code: $(_proc.getReturnCode())`);
+                vOutput.write(FStr() `Output [$compileErr]\n`);
+                crackResult = Result(false);
             }
             else {
                 _pass();
-                _crackResult = Result(true);
+                crackResult = Result(true);
             }
             return;
         }
 
         expect := _data.sections["EXPECT"];
-        _crackResult = compareOutput(expect, compileOut);
+        crackResult = compareOutput(expect, compileOut);
 
     }
 
@@ -222,7 +238,7 @@ class BuilderTestHarness {
         if (_status == T_CRACK) {
             finishCrack();
             // if we have a separate binary, launch it
-            if (_bDef.separateBinary() && _crackResult.pass)
+            if (_bDef.separateBinary() && crackResult.pass)
                 runBinary();
             else
                 _status = T_FINISHED;
@@ -232,8 +248,8 @@ class BuilderTestHarness {
             _status = T_FINISHED;
         }
 
-        if (_status == T_FINISHED && _vOutput.size)
-            _vOutput.write("\n");
+        if (_status == T_FINISHED && vOutput.size)
+            vOutput.write("\n");
 
         return _status;
     }

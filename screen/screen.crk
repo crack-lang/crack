@@ -74,6 +74,8 @@ class Test {
     Array[BuilderTestHarness] _harness = {};
     int _activeHarness = 0;
 
+    bool pass = false;
+
     String _isSkipped;
 
     // for the benefit of the priority queue, by default we give higher priority to tests
@@ -133,12 +135,25 @@ class Test {
         if (!r)
             return;
         if (!r.pass &&
-            config.showDiff &&
+            (config.showDiff || config.stopOnFail) &&
             r.expected.size) {
             _output.write(FStr() `\n---- Diff ----\nExpected: [$(r.expected)]`);
             _output.write(FStr() `\nActual: [$(r.actual)]\n--------------\n`);
         }
     }
+/*
+
+    XXX merely defining this function causes a strange overload bug to appear
+
+    bool _allBuildersPass() {
+        for (b :in _harness) {
+            if ((b.crackResult && !b.crackResult.pass) ||
+                (b.binaryResult && !b.binaryResult.pass))
+                return false;
+        }
+        return true;
+    }
+*/
 
     int tick() {
 
@@ -147,11 +162,11 @@ class Test {
         if (_harness[_activeHarness].tick() == T_FINISHED) {
 
             if (config.verbose)
-                _vOutput.write(_harness[_activeHarness]._vOutput.createString());
-            _output.write(_harness[_activeHarness]._output.createString());
+                _vOutput.write(_harness[_activeHarness].vOutput.createString());
+            _output.write(_harness[_activeHarness].output.createString());
 
-            checkResult(_harness[_activeHarness]._crackResult);
-            checkResult(_harness[_activeHarness]._binaryResult);
+            checkResult(_harness[_activeHarness].crackResult);
+            checkResult(_harness[_activeHarness].binaryResult);
 
             _activeHarness++;
             if (_activeHarness < _harness.count()) {
@@ -162,6 +177,18 @@ class Test {
                 cout `[$(_data.fInfo)]: $(_data.desc)\n`;
                 cout `$(_vOutput.createString())`;
                 cout `$(_output.createString())\n`;
+
+                pass = true;
+                for (b :in _harness) {
+                    if ((b.crackResult && !b.crackResult.pass) ||
+                        (b.binaryResult && !b.binaryResult.pass))
+                        pass = false;
+                }
+
+                if (config.stopOnFail && !pass) {
+                    // XXX close procs nicely?
+                    exit(0);
+                }
             }
 
         }
@@ -266,14 +293,14 @@ class TestSuite {
             cout `running $(_testList.count()) total tests in $(config.jobs) concurrent jobs`;
         cout ` with output in $(config.outDir)...\n`;
 
-        bool cull(Test t) { return t.tick() != T_FINISHED; }
+        bool reap(Test t) { return t.tick() != T_FINISHED; }
 
         Array[Test] active = {};
         Test cur;
         while (_testList.count() || active.count()) {
 
             // check active for finished tests, remove
-            active.filter(cull);
+            active.filter(reap);
 
             // add to active if active.count <= max
             while (_testList.count() &&
@@ -305,6 +332,7 @@ class TestSuite {
         _options.add("libpath", "l", "Add path to crack library path during test. May be colon seperated list.", "", CMD_STR);
         _options.add("builders", "b", "Builders to test, comma delimited list ["+availBuilders+"]","jit", CMD_STR);
         _options.add("diff", "", "Show a diff of expected vs actual output if a test fails","f", CMD_BOOL);
+        _options.add("stop-on-fail", "", "Stop on first test failure and display diff","f", CMD_BOOL);
         _options.parse(argv);
                 
         if (_options.getBool("help"))
@@ -324,7 +352,11 @@ class TestSuite {
         config.verbose = _options.getBool("verbose");
         config.jobs = _options.getInt("jobs");
         config.showDiff = _options.getBool("diff");
-        
+        config.stopOnFail = _options.getBool("stop-on-fail");
+
+        if (config.stopOnFail)
+            config.showDiff = true;
+
         // verify, initialize builder defs
         builders := _options.getString("builders");
         clb := split(builders, ",");
