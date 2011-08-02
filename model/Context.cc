@@ -701,7 +701,7 @@ void Context::maybeExplainOverload(std::ostream &out,
         return;
 
     // explain the overload
-    out << "\nPossible overloads for \"" << varName << "\":\n";
+    out << "\nPossible overloads for " << varName << ":\n";
     overload->dump(out);
 
 }
