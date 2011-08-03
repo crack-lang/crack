@@ -98,7 +98,7 @@ class Test {
             _isSkipped = "the template was missing a FILE section";
         }
         if (!_data.sections.contains("EXPECT")) {
-            _isSkipped = "the template was missing a EXPECT section";
+            _isSkipped = "the template was missing an EXPECT section";
         }
         if (_data.sections.contains("TEST"))
             _data.desc = _data.sections["TEST"].rtrim();
@@ -116,7 +116,7 @@ class Test {
     void run() {
         
         if (_isSkipped) {
-            cout `[$(_data.fInfo)]: $_isSkipped\n`;
+            cout `[$(_data.fInfo)]: SKIPPED: $_isSkipped\n`;
             _status = T_FINISHED;
             return;
         }
@@ -156,6 +156,9 @@ class Test {
 */
 
     int tick() {
+
+        if (_status == T_FINISHED)
+            return _status;
 
         // poll the builder process
         // if finished, get/show output, increment activeBuilder
@@ -287,6 +290,9 @@ class TestSuite {
 
     void runTests() {
 
+        if (_testList.count() < config.jobs)
+            config.jobs = _testList.count();
+
         if (_testList.count() == 1)
             cout `running single test`;
         else
@@ -312,6 +318,32 @@ class TestSuite {
 
         }
 
+    }
+
+    void checkBinary() {
+        // check binary
+        cfi := FileInfo(config.crackBin);
+        if (!cfi.exists()) {
+            cout `crack binary [$(config.crackBin)] not found\n`;
+            exit(1);
+        }
+
+        p := Process(config.crackBin+" --version");
+        p.wait();
+        String out = {};
+        if (!p.failed())
+            out = p.getStdOut();
+        if (p.failed() || p.getReturnCode() != 0) {
+            cout `crack binary [$(config.crackBin)] failed to run, or unexpected result\n`;
+            exit(1);
+        }
+        else if (out.size < 5 || out.slice(0,5) != "crack") {
+            cout `crack binary [$(config.crackBin)] invalid version response: $(out.slice(0,5))\n`;
+            exit(1);
+        }
+        else {
+            cout `using binary: $out\n`;
+        }
     }
 
     oper init() {
@@ -388,29 +420,8 @@ class TestSuite {
         // banner
         cout `screen\n`;
 
-        // check binary
-        cfi := FileInfo(config.crackBin);
-        if (!cfi.exists()) {
-            cout `crack binary [$(config.crackBin)] not found\n`;
-            exit(1);            
-        }
-        
-        p := Process(config.crackBin+" --version");
-        p.wait();
-        String out = {};
-        if (!p.failed())
-            out = p.getStdOut();        
-        if (p.failed() || p.getReturnCode() != 0) {
-            cout `crack binary [$(config.crackBin)] failed to run, or unexpected result\n`;
-            exit(1);
-        }
-        else if (out.size < 5 || out.slice(0,5) != "crack") {
-            cout `crack binary [$(config.crackBin)] invalid version response: $(out.slice(0,5))\n`;
-            exit(1);
-        }
-        else {
-            cout `using binary: $out\n`;
-        }
+        // in the future, do a version check to make sure we have a good crack binary
+        //checkBinary();
         
     }
     

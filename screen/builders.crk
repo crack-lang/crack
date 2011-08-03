@@ -118,13 +118,15 @@ class BuilderTestHarness {
             _status = T_FINISHED;
             return;
         }
-        // XXX binary args (script argv)
+
+        cmd := _testBinary + " " + args;
+
         if (config.verbose) {
-            vOutput.write(_testBinary);
+            vOutput.write(cmd);
             vOutput.write("\n");
         }
         _status = T_BINARY;
-        _proc = Process(_testBinary);
+        _proc = Process(cmd);
 
         if (_data.sections.contains("STDIN")) {
             _proc.putStdIn(_data.sections["STDIN"]);
@@ -159,23 +161,32 @@ class BuilderTestHarness {
                            _data.fInfo.basename(true);
         }
 
-        StringWriter args = {};
+        StringWriter opts = {};
 
-        if (_data.sections["ARGS"]) {
-            args.write(_data.sections["ARGS"].rtrim());
+        // options for crack
+        if (_data.sections.contains("OPTS")) {
+            opts.write(_data.sections["OPTS"].rtrim());
         }
 
         if (_data.dirConfig) {
-            args.write(" ");
-            args.write(_data.dirConfig.options);
+            opts.write(" ");
+            opts.write(_data.dirConfig.options);
         }
 
-        args.write(_bDef.getCrackOptions(this));
+        opts.write(_bDef.getCrackOptions(this));
+        if (config.libPath) {
+            opts.write(" -l ");
+            opts.write(config.libPath);
+        }
 
         // XXX template argv section
-        cmd := config.crackBin+" -B "+_bDef.getName()+" "+args.createString()+" "+_data.scriptName;
-        if (config.libPath)
-            cmd = cmd + " -l " + config.libPath;
+        cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.createString()) $(_data.scriptName)`;
+
+        // args for script
+        if (_data.sections["ARGS"] && !_bDef.separateBinary()) {
+            cmd = cmd + " -- " + _data.sections["ARGS"].rtrim();
+        }
+
         if (config.verbose) {
             vOutput.write(cmd);
             vOutput.write("\n");
