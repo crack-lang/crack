@@ -1000,6 +1000,24 @@ test_output protected_across_generics \
 in g
 in h'
 
+test_output var_defs_in_cond \
+    'defining variables in condtional expressions' \
+    'x := 10;
+     while (v := x) {
+         printint(v);
+         --x;
+     }
+     if (v := 10) {
+         printint(v);
+     }
+     v := "test";' \
+    '1098765432110'
+
+test_output redefining_methods \
+    'redefinition of methods' \
+    'class A { void f() { f := 100; } }; puts("ok");' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 testNum=0
 opts="-Gl $root -l $root/lib:lib:.libs"

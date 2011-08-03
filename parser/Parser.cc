@@ -683,8 +683,25 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
    if (ident.isOper() && tok1.isAssign())
       error(tok1, "Expected operator identifier after 'oper' keyword");
 
+   // is it ident := expr?
+   if (tok1.isDefine()) {
+      // make sure that the variable is not defined in this context.
+      VarDefPtr def = ns->lookUp(ident.getData());
+      if (def && def->getOwner() == context->ns.get())
+         redefineError(tok1, def.get());
+      
+      ExprPtr val = parseExpression();
+      if (!val) {
+         tok1 = getToken();
+         error(tok1, "expression expected");
+      }
+      
+      // emit the variable with a null initializer and then create a separate 
+      // assignment expression.
+      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+      return createAssign(container, ident, var.get(), val.get());
    // is it an assignment?
-   if ((tok1.isAssign() || tok1.isAugAssign()) && !ident.isOper()) {
+   } else if ((tok1.isAssign() || tok1.isAugAssign()) && !ident.isOper()) {
       
       VarDefPtr var = ns->lookUp(ident.getData());
       if (!var)
@@ -2036,6 +2053,9 @@ ExprPtr Parser::parseCondExpr() {
 // if ( expr ) clause else clause
 //   ^                           ^
 ContextPtr Parser::parseIfStmt() {
+   // create a subcontext for variables defined in the condition.
+   ContextStackFrame cstack(*this, context->createSubContext().get());
+
    Token tok = getToken();
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");

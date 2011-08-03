@@ -287,9 +287,9 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
     return varDef;
 }
 
-void Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
-                         Expr *initializer
-                         ) {
+VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
+                              Expr *initializer
+                              ) {
 
     if (construct->migrationWarnings) {
         if (initializer && NullConstPtr::cast(initializer)) {
@@ -324,7 +324,7 @@ void Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                          );
     }
 
-    emitVarDef(defCtx.get(), type, tok.getData(), initializer);
+    return emitVarDef(defCtx.get(), type, tok.getData(), initializer);
 }
 
 ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {

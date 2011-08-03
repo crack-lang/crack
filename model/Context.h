@@ -236,9 +236,9 @@ class Context : public spug::RCBase {
         /**
          * Emit a variable definition in the context.
          */
-        void emitVarDef(TypeDef *type, const parser::Token &name, 
-                        Expr *initializer
-                        );
+        VarDefPtr emitVarDef(TypeDef *type, const parser::Token &name, 
+                             Expr *initializer
+                             );
 
         /**
          * Create a ternary expression.
