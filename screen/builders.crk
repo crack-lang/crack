@@ -144,9 +144,13 @@ class BuilderTestHarness {
         else {
             nativeOut := _proc.getStdOut();
             nativeErr := _proc.getStdErr();
+
+            // XXX right now, out stdout and stderr are merged. this will change when we
+            // have an explicit stderr section
+            if (nativeErr.size > 0)
+                nativeOut = nativeOut + nativeErr;
             expect := _data.sections["EXPECT"];
             binaryResult = compareOutput(expect, nativeOut);
-            // XXX err output EXPECTERR ?
         }
 
         _proc.close();
@@ -212,8 +216,8 @@ class BuilderTestHarness {
 
         // XXX right now, out stdout and stderr are merged. this will change when we
         // have an explicit stderr section
-        if (compileOut.size == 0 && compileErr.size > 0)
-            compileOut = compileErr;
+        if (compileErr.size > 0)
+            compileOut = compileOut + compileErr;
 
         if (_bDef.separateBinary()) {
             if (_proc.getReturnCode() != 0) {
