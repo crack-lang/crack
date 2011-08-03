@@ -2,6 +2,7 @@
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.lang die, cmp, free; 
+import crack.strutil ljust;
 import crack.cont.array Array;
 import crack.math strtoi, strtof;
 import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
@@ -475,22 +476,39 @@ class CmdOptions {
    String createUsage(String intro){
       StringFormatter fmt = {};
       fmt `$(intro)\n`;
-      uint i;
+      uint i, maxSpecLen = 0;
+      StringArray lineSpecs = {}, lineTexts = {};
+      
 
       for (i = 0; i < options.count(); i++){
          Option opt = options[i];
          String value = opt.value;
+         String lineStart = {};
          if (!value)
             value = "null";
          if (opt.type != CMD_BOOL){
-            fmt ` -$(opt.short) ARG --$(opt.long)=ARG \t`;
-            fmt ` $(opt.desc)  ($(typeNames[opt.type]): $(value))\n`;
+            if (opt.short)
+               lineStart += FStr()` -$(opt.short) ARG`;
+            if (opt.long)
+               lineStart += FStr()` --$(opt.long)=ARG`;
+            lineTexts.append(FStr() ` $(opt.desc)  ($(typeNames[opt.type]): $(value))\n`);
          }
          else {
-            fmt ` -$(opt.short) --$(opt.long) \t\t`;
-            fmt ` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(value)))\n`;
+            if (opt.short)
+               lineStart += FStr()` -$(opt.short)`;
+            if (opt.long)
+               lineStart += FStr() ` --$(opt.long)`;
+            
+            lineTexts.append(FStr() ` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(value)))\n`);
 
          }
+         lineSpecs.append(lineStart);
+         if (lineStart.size > maxSpecLen) maxSpecLen = lineStart.size;
+      }
+      
+      for (i = 0; i < options.count(); i++){
+         fmt `$(ljust(lineSpecs[i], maxSpecLen + 1))`;
+         fmt `$(lineTexts[i])`;
       }
 
       if (i>0) fmt `\n`;

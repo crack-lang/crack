@@ -69,8 +69,6 @@ if (sub.count() != 1)
 if (sub[0] != 'fourth: 400')
     cout `string array slice 2 failed, got '$sub'\n`;
 
-
-
 testA :=Array[String]!['bogus', 'test', 'array'];
 if (testA[0] != 'bogus' || testA[1] != 'test' || testA[2] != 'array')
    cout `string array ! notation failed, got $testA\n`;
@@ -85,6 +83,13 @@ if (intRepr != '[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]')
     cout `Array[int].writeTo failed\n`;
 if (stringRepr != '[bogus, test, string]')
     cout `Array[String].writeTo failed\n`;
+
+# Test array comparison
+Array[int] N = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+Array[int] N2 = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+
+if (N == N2)
+    cout `Array[int].cmp failed\n`;
 
 # test map/reduce/filter
 
