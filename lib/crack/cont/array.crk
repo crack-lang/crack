@@ -126,7 +126,7 @@ class Array[Elem] {
             return 0;
         else if (!this.isa(Array))
             return Object.cmp(other);
-        
+
         peer := Array.cast(other);
 
         c := count();
@@ -137,7 +137,7 @@ class Array[Elem] {
             # greater.
             if (i > oc)
                 return 1;
-            
+
             # compare the elements
             elemDiff := cmp(this[i], peer[i]);
             if (elemDiff)
@@ -271,7 +271,6 @@ class Array[Elem] {
         }
         __size += other.__size;
     }
-            
 
     Elem pop() {
        if (__size>0)
