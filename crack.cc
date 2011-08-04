@@ -103,7 +103,8 @@ int main(int argc, char **argv) {
     char * const token[] = { NULL };
     bool optionsError = false;
     bool useDoubleBuilder = false;    
-    while ((opt = getopt_long(argc, argv, "B:b:dgO:nGml:v", longopts, &idx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nGml:v", longopts, &idx)) !=
+           -1) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable

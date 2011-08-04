@@ -701,9 +701,10 @@ test_output cmdline_args 'command line arguments' \
      while (i < argc) { puts(argv[i]); i = i + 1; }' \
     'a
 b
-c' \
+c
+-d' \
     '' \
-    'a b c'
+    'a b c -d'
 
 test_output specialized_comparisons 'specialization comparisons' \
     'array[byteptr] b = array[byteptr](10); puts("ok")' \
