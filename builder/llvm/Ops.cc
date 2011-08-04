@@ -465,8 +465,7 @@ ResultExprPtr ArraySetItemCall::emit(Context &context) {
 
     // get the address of the index, store the value in it.
     Value *addr = builder.builder.CreateGEP(r, i);
-    builder.lastValue =
-            builder.builder.CreateStore(v, addr);
+    builder.builder.CreateStore(v, addr);
 
     return new BResultExpr(this, v);
 }

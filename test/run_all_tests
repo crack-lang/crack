@@ -1428,6 +1428,19 @@ test_output second_order_imports \
     "${parseError}1: Name public does not belong to module test.testmod6.  \
 Second-order imports are not allowed.  Import it from test.testmod5 instead."
 
+test_output array_assignment_result \
+    'result of array assignment expressions is the value assigned.' \
+    'import crack.io cout;
+     class A {}
+     A a = {};
+     array[A] aa = {1};
+     Object x;
+     x = (aa[0] = a);
+     if (!(x is a))
+         cout `failed assignment of result of array output assignment\n`;
+     cout `ok\n`;' \
+     ok
+
 test_output x 'serial module' 'import test.test_serial;' ok
 
 test_output x 'math module' 'import test.test_math;' ok "" "" noredir
