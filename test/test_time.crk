@@ -1,5 +1,5 @@
 // Test time.h binding in runtime
-import crack.runtime _date, ctime_r, strftime;
+import crack.runtime InternalDate, ctime_r, strftime;
 import crack.exp.cmdline CmdOptions;
 import crack.io cout;
 import crack.time Date;
@@ -8,13 +8,13 @@ import crack.sys argv;
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
 
-void printDate(_date d){
+void printDate(InternalDate d){
    cout `date = $(d.tm_mday)/$(d.tm_mon)/$(d.tm_year) `
         `$(d.tm_hour):$(d.tm_min):$(d.tm_sec), $(d.tm_wday)/w and $(d.tm_yday)/y, `
         `DST = $(d.tm_isdst)\n`;
 }
 
-_date mytime = {};
+InternalDate mytime = {};
 
 verbose := sys_options.getBool("v");
 
@@ -38,11 +38,11 @@ if (verbose) cout `ctime_r = $dateString2`;
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
-mytime2:=_date(secs);
+mytime2:=InternalDate(secs);
 if (mytime2.mktime() != secs)
    cout `Date seconds conversion mismatch\n`;
 
-mytime = _date(); // Reset
+mytime = InternalDate(); // Reset
 mytime.mktime();
 
 len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
