@@ -1,5 +1,5 @@
 // Test time.h binding in runtime
-import crack.runtime InternalDate, ctime_r, strftime;
+import crack.runtime InternalDate, ctime, strftime, asctime, epoch;
 import crack.exp.cmdline CmdOptions;
 import crack.io cout;
 import crack.time Date;
@@ -9,7 +9,7 @@ sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
 
 void printDate(InternalDate d){
-   cout `date = $(d.tm_mday)/$(d.tm_mon)/$(d.tm_year) `
+   cout `date = $(d.tm_mday)/$(d.tm_mon+1)/$(d.tm_year+1900) `
         `$(d.tm_hour):$(d.tm_min):$(d.tm_sec), $(d.tm_wday)/w and $(d.tm_yday)/y, `
         `DST = $(d.tm_isdst)\n`;
 }
@@ -18,32 +18,28 @@ InternalDate mytime = {};
 
 verbose := sys_options.getBool("v");
 
-mytime.setToNowLocal();
+mytime.setLocalNow();
 if (verbose) printDate(mytime);
 
-mytime.setToNowUTC();
+mytime.setUTCNow();
 if (verbose) printDate(mytime);
 
-secs:=mytime.mktime();
+secs:=mytime.getSeconds();
 if (verbose) cout `secs = $secs\n`;
 
 dateString := String(100,0); // Create a string to store time repr in
-mytime.asctime_r(dateString.buffer);
+asctime(mytime, dateString.buffer);
 if (verbose) cout `asctime = $dateString`;
 
 dateString2 := String(100,0);
-ctime_r(secs, dateString2.buffer);
-if (verbose) cout `ctime_r = $dateString2`;
+ctime(secs, dateString2.buffer);
+if (verbose) cout `ctime = $dateString2`;
 
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
-mytime2:=InternalDate(secs);
-if (mytime2.mktime() != secs)
-   cout `Date seconds conversion mismatch\n`;
-
-mytime = InternalDate(); // Reset
-mytime.mktime();
+mytime.setEpoch();
+mytime.getSeconds();
 
 len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
 if (dateString2.substr(0,len)!='Thursday January 01 1970')
@@ -52,31 +48,31 @@ if (dateString2.substr(0,len)!='Thursday January 01 1970')
 // Repeat the above with the wrapped Date class
 Date Mytime = {};
 
-Mytime.setToNowLocal();
+Mytime.setLocalNow();
 if (verbose) printDate(Mytime);
 
-Mytime.setToNowUTC();
+Mytime.setUTCNow();
 if (verbose) printDate(Mytime);
 
-secs = Mytime.mktime();
+secs = Mytime.getSeconds();
 if (verbose) cout `secs = $secs\n`;
 
-Mytime.asctime_r(dateString.buffer);
+dateString = Mytime.getDefaultString();
 if (verbose) cout `asctime = $dateString`;
 
-ctime_r(secs, dateString2.buffer);
-if (verbose) cout `ctime_r = $dateString2`;
+ctime(secs, dateString2.buffer);
+if (verbose) cout `ctime = $dateString2`;
 
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
 
 Mytime2:=Date(secs);
-if (Mytime2.mktime() != secs)
+if (Mytime2.getSeconds() != secs)
    cout `Date seconds conversion mismatch\n`;
 
 Mytime = Date(); // Reset
-Mytime.mktime();
+Mytime.getSeconds();
 
 dateString2 = Mytime.strftime("%A %B %d %Y");
 len = dateString2.size;

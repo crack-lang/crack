@@ -14,14 +14,21 @@
    @inject '#include <stdio.h>\n'
 
    @inject '
-struct tm *crk_localtime(struct tm *st, int64_t t){
-   const time_t lt = (const time_t)t;
-   return localtime_r(&lt, st);
+typedef struct tm InternalDate;
+
+InternalDate *crk_create_date(){
+   return (InternalDate *)calloc(1, sizeof(InternalDate));
 }
+
+InternalDate *crk_localtime(InternalDate *d, int64_t t){
+   const time_t lt = (const time_t)t;
+   return localtime_r(&lt, d);
+}
+
 '
 
    @inject '
-struct tm *crk_localtime_now(struct tm *now){
+InternalDate *crk_localtime_now(InternalDate *now){
    struct timeval tv;
    gettimeofday(&tv, NULL);
    return localtime_r(&(tv.tv_sec), now);
@@ -29,19 +36,26 @@ struct tm *crk_localtime_now(struct tm *now){
 '
 
    @inject '
-struct tm *crk_gmtime_now(struct tm *now){
+InternalDate *crk_gmtime(InternalDate *d, int64_t t){
+   const time_t gt = (const time_t)t;
+   return gmtime_r(&gt, d);
+}
+'
+
+   @inject '
+InternalDate *crk_gmtime_now(InternalDate *now){
    struct timeval tv;
    gettimeofday(&tv, NULL);
    return gmtime_r(&(tv.tv_sec), now);
 }
 '
 
+
    @inject '
-struct tm *crk_epoch(struct tm *epoch){
+void crk_epoch(InternalDate *epoch){
    epoch->tm_year = 70;
    epoch->tm_mon = 0;
    epoch->tm_mday = 1;
-   return epoch;
 }
 '
 
@@ -58,33 +72,62 @@ char **get_environ(){
 }
 '
 
-
    @crack_internal
-
    class InternalDate {
       int tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, 
           tm_isdst;
       int64 tm_gmtoff;
+      byteptr tm_zone;
 
-      @cname crk_localtime
-      oper init(int64 seconds);
-      
-      @cname crk_epoch
+      @cname crk_create_date
       oper init();
 
-      int64 mktime();
-      
+      @cname mktime
+      int64 getSeconds();
+
+      @cname crk_localtime
+      void setLocalSeconds(int64 t);
+
       @cname crk_localtime_now
-      bool setToNowLocal();
+      void setLocalNow();
+
+      @cname crk_gmtime
+      void setUTCSeconds(int64 t);
 
       @cname crk_gmtime_now
-      bool setToNowUTC();
+      void setUTCNow();
 
-      byteptr asctime_r(byteptr buf);
+      @cname crk_epoch
+      void setEpoch();
+
+      @cname asctime_r
+      void _toBufferRaw(byteptr buf);
+
    }
 
+   @cname mktime
+   int64 mktime(InternalDate d);
+
+   @cname crk_localtime
+   InternalDate localtime(InternalDate d, int64 t);
+
+   @cname crk_localtime_now
+   InternalDate localtime_now(InternalDate now);
+
+   @cname crk_gmtime_now
+   InternalDate gmtime_now(InternalDate now);
+
+   @cname crk_gmtime
+   InternalDate gmtime(InternalDate now, int64 t);
+
+   @cname crk_epoch
+   void epoch(InternalDate epoch);
+
+   @cname asctime_r
+   byteptr asctime(InternalDate d, byteptr buf);
+
    @cname crk_ctime_r
-   byteptr ctime_r(int64 seconds, byteptr buf);
+   byteptr ctime(int64 seconds, byteptr buf);
 
    uint64 strftime(byteptr s, uint64 max, byteptr format, InternalDate d);
 
@@ -93,5 +136,4 @@ char **get_environ(){
    byteptr getenv(byteptr name);
    int setenv(byteptr name, byteptr value, int overwrite);
    int unsetenv(byteptr name);
-   
 }

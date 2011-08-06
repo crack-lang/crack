@@ -61,6 +61,14 @@ if [ "$1" != "emit" ]; then
     
     # get a fresh copy of the runtime library and the PCRE library
     mkdir -p lib/crack/ext
+    if ![ -e .libs ]; then
+        mkdir -p .libs
+    fi
+    
+    if ![ -e .libs/runtime.so && -e runtime.so ]; then
+        cp runtime.so .libs
+    fi
+
     ln -f .libs/runtime.so lib/crack
     if [ -e .libs/_pcre.so ]; then
         ln -f .libs/_pcre.so lib/crack/ext
@@ -1455,5 +1463,7 @@ test_output x 'test command line flags' 'import test.test_cmdline;' ok
 test_output x 'test numeric conversions' \
   'import test.test_numeric_conversions;' \
   ok
+
+test_output x 'test date functions' 'import test.test_time;' ok
 
 exit $rc

@@ -5,28 +5,39 @@
 #include <sys/time.h>
 #include <stdio.h>
 
-struct tm *crk_localtime(struct tm *st, int64_t t){
-   const time_t lt = (const time_t)t;
-   return localtime_r(&lt, st);
+typedef struct tm InternalDate;
+
+InternalDate *crk_create_date(){
+   return (InternalDate *)calloc(1, sizeof(InternalDate));
 }
 
-struct tm *crk_localtime_now(struct tm *now){
+InternalDate *crk_localtime(InternalDate *d, int64_t t){
+   const time_t lt = (const time_t)t;
+   return localtime_r(&lt, d);
+}
+
+
+InternalDate *crk_localtime_now(InternalDate *now){
    struct timeval tv;
    gettimeofday(&tv, NULL);
    return localtime_r(&(tv.tv_sec), now);
 }
 
-struct tm *crk_gmtime_now(struct tm *now){
+InternalDate *crk_gmtime(InternalDate *d, int64_t t){
+   const time_t gt = (const time_t)t;
+   return gmtime_r(&gt, d);
+}
+
+InternalDate *crk_gmtime_now(InternalDate *now){
    struct timeval tv;
    gettimeofday(&tv, NULL);
    return gmtime_r(&(tv.tv_sec), now);
 }
 
-struct tm *crk_epoch(struct tm *epoch){
+void crk_epoch(InternalDate *epoch){
    epoch->tm_year = 70;
    epoch->tm_mon = 0;
    epoch->tm_mday = 1;
-   return epoch;
 }
 
 char *crk_ctime_r(int64_t t, char * buf){
@@ -73,28 +84,38 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
         type_InternalDate->addInstVar(type_int, "tm_yday");
         type_InternalDate->addInstVar(type_int, "tm_isdst");
         type_InternalDate->addInstVar(type_int64, "tm_gmtoff");
+        type_InternalDate->addInstVar(type_byteptr, "tm_zone");
         f = type_InternalDate->addConstructor("init",
-                    (void *)crk_localtime
-            );
-            f->addArg(type_int64, "seconds");
-
-        f = type_InternalDate->addConstructor("init",
-                    (void *)crk_epoch
+                    (void *)crk_create_date
             );
 
-        f = type_InternalDate->addMethod(type_int64, "mktime",
+        f = type_InternalDate->addMethod(type_int64, "getSeconds",
                     (void *)mktime
             );
 
-        f = type_InternalDate->addMethod(type_bool, "setToNowLocal",
+        f = type_InternalDate->addMethod(type_void, "setLocalSeconds",
+                    (void *)crk_localtime
+            );
+            f->addArg(type_int64, "t");
+
+        f = type_InternalDate->addMethod(type_void, "setLocalNow",
                     (void *)crk_localtime_now
             );
 
-        f = type_InternalDate->addMethod(type_bool, "setToNowUTC",
+        f = type_InternalDate->addMethod(type_void, "setUTCSeconds",
+                    (void *)crk_gmtime
+            );
+            f->addArg(type_int64, "t");
+
+        f = type_InternalDate->addMethod(type_void, "setUTCNow",
                     (void *)crk_gmtime_now
             );
 
-        f = type_InternalDate->addMethod(type_byteptr, "asctime_r",
+        f = type_InternalDate->addMethod(type_void, "setEpoch",
+                    (void *)crk_epoch
+            );
+
+        f = type_InternalDate->addMethod(type_void, "_toBufferRaw",
                     (void *)asctime_r
             );
             f->addArg(type_byteptr, "buf");
@@ -110,7 +131,45 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
         params[0] = type_byteptr;
         array_pbyteptr_q = array->getSpecialization(params);
     }
-    f = mod->addFunc(type_byteptr, "ctime_r",
+    f = mod->addFunc(type_int64, "mktime",
+            (void *)mktime
+        );
+       f->addArg(type_InternalDate, "d");
+
+    f = mod->addFunc(type_InternalDate, "localtime",
+            (void *)crk_localtime
+        );
+       f->addArg(type_InternalDate, "d");
+       f->addArg(type_int64, "t");
+
+    f = mod->addFunc(type_InternalDate, "localtime_now",
+            (void *)crk_localtime_now
+        );
+       f->addArg(type_InternalDate, "now");
+
+    f = mod->addFunc(type_InternalDate, "gmtime_now",
+            (void *)crk_gmtime_now
+        );
+       f->addArg(type_InternalDate, "now");
+
+    f = mod->addFunc(type_InternalDate, "gmtime",
+            (void *)crk_gmtime
+        );
+       f->addArg(type_InternalDate, "now");
+       f->addArg(type_int64, "t");
+
+    f = mod->addFunc(type_void, "epoch",
+            (void *)crk_epoch
+        );
+       f->addArg(type_InternalDate, "epoch");
+
+    f = mod->addFunc(type_byteptr, "asctime",
+            (void *)asctime_r
+        );
+       f->addArg(type_InternalDate, "d");
+       f->addArg(type_byteptr, "buf");
+
+    f = mod->addFunc(type_byteptr, "ctime",
             (void *)crk_ctime_r
         );
        f->addArg(type_int64, "seconds");

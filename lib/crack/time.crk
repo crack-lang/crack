@@ -30,27 +30,52 @@ bool isLeap(int year){
 Array[int] maxDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 class Date : Object, InternalDate {
-   oper init(): InternalDate(){
-   }
+    oper init(){
+        setEpoch();
+    }
 
-   oper init(int64 secs): InternalDate(secs){
-   }
+    oper init(int64 secs) {
+        setLocalSeconds(secs);
+    }
+    
+    oper init(InternalDate d){
+        if (!(d is null)){
+            tm_sec = d.tm_sec;
+            tm_min = d.tm_min;
+            tm_hour = d.tm_hour;
+            tm_mday = d.tm_mday;
+            tm_mon = d.tm_mon;
+            tm_year = d.tm_year;
+            tm_wday = d.tm_wday;
+            tm_yday = d.tm_yday;
+            tm_isdst = d.tm_isdst;
+            tm_gmtoff = d.tm_gmtoff;
+            getSeconds();
+        }
+    }
+
+
+    String getDefaultString(){
+        String result = {100, 0};
+        _toBufferRaw(result.buffer);
+        return result;
+    }
 
    String strftime(StaticString format, uint buflen){
-      String result = {buflen, 0};
-      strftime(result.buffer, buflen, format.buffer, this); // TODO handle errors
-      len:=strlen(result.buffer);
-      return result.substr(0,len);
+        String result = {buflen, 0};
+        strftime(result.buffer, buflen, format.buffer, this); // TODO handle errors
+        len:=strlen(result.buffer);
+        return result.substr(0,len);
    }
    
    String strftime(StaticString format){
-      return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
+        return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
    }
    
    void writeTo(Writer out) {
-      result := FStr() `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
-      if (tm_isdst) result += "DST";
-      out.write(result);
+        result := FStr() `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
+        if (tm_isdst) result += "DST";
+        out.write(result);
    }
 }
 
@@ -66,8 +91,8 @@ class Date : Object, InternalDate {
 
 // The daystart argument determines the start of the week: 0 = Sunday, 1 = Monday, etc.
 
-Array[Array[int]] cal(InternalDate d, int dayStart){
-   d.mktime(); // This sets the weekday and year day of the d object
+Array[Array[int]] cal(Date d, int dayStart){
+   d.getSeconds(); // This sets the weekday and year day of the d object
    max := maxDays[d.tm_mon];
    if (d.tm_mon == 1 && isLeap(d.tm_year)) 
       max = 29;
@@ -93,6 +118,6 @@ Array[Array[int]] cal(InternalDate d, int dayStart){
    return weeks;
 }
 
-Array[Array[int]] cal(InternalDate d){
+Array[Array[int]] cal(Date d){
    return cal(d, 0);
 }
