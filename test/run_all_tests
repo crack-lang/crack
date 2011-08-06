@@ -61,12 +61,12 @@ if [ "$1" != "emit" ]; then
     
     # get a fresh copy of the runtime library and the PCRE library
     mkdir -p lib/crack/ext
-    if ![ -e .libs ]; then
+    if ! [ -d .libs ]; then
         mkdir -p .libs
     fi
     
-    if ![ -e .libs/runtime.so && -e runtime.so ]; then
-        cp runtime.so .libs
+    if ! [ -e .libs/runtime.so ] && [ -e runtime.so ]; then
+        cp runtime.so .libs/runtime.so
     fi
 
     ln -f .libs/runtime.so lib/crack
