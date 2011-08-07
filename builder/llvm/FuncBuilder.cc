@@ -94,12 +94,9 @@ void FuncBuilder::finish(bool storeDef) {
     builder.setModFunc(funcDef.get(), func);
 
     // get or create the type registered for the function
-    BTypeDef *crkFuncType =
-            BTypeDefPtr::acast(builder.getFuncType(context,
-                                                   funcDef.get(),
-                                                   llvmFuncType
-                                                   )
-                               );
+    BTypeDefPtr crkFuncType = builder.getFuncType(context, funcDef.get(),
+                                                  llvmFuncType
+                                                  );
     funcDef->type = crkFuncType;
 
     // create an implementation object to return the function

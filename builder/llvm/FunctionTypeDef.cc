@@ -62,13 +62,17 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
                                           );
     Type *llvmFunPtrType = PointerType::get(llvmFunType, 0);
 
-    TypeDefPtr tempSpec =
+    BTypeDefPtr tempSpec =
             new BTypeDef(type.get(),
                          getSpecializedName(types),
                          llvmFunPtrType
                          );
     tempSpec->setOwner(this);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
+
+// XXX this needs a deferred-propagation mechanism to work during 
+// bootstrapping.  
+//    createClassImpl(context, tempSpec.get());
 
     // Give it an "oper to .builtin.voidptr" method.
     context.addDef(

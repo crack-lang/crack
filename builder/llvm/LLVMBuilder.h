@@ -46,11 +46,6 @@ class LLVMBuilder : public Builder {
         typedef std::map<model::FuncDef *, llvm::Function *> ModFuncMap;
         ModFuncMap moduleFuncs;
         
-        // mapping from pointer types to crack types (only exists in the root 
-        // builder)
-        typedef std::map<const llvm::Type *, model::TypeDefPtr> FuncTypeMap;
-        FuncTypeMap funcTypes; 
-        
         // keeps track of the GlobalVariable object for the VarDef in the 
         // builder's module.
         typedef std::map<model::VarDefImpl *, llvm::GlobalVariable *> ModVarMap;
@@ -178,10 +173,10 @@ class LLVMBuilder : public Builder {
 
         llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef);
         
-        model::TypeDef *getFuncType(model::Context &context,
-                                    model::FuncDef *funcDef,
-                                    const llvm::Type *llvmFuncType
-                                    );
+        BTypeDefPtr getFuncType(model::Context &context,
+                                model::FuncDef *funcDef,
+                                const llvm::Type *llvmFuncType
+                                );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var,
                                           llvm::Value *initVal = 0
                                           );

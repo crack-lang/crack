@@ -505,17 +505,12 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
     }
 }
 
-TypeDef *LLVMBuilder::getFuncType(Context &context,
-                                  FuncDef *funcDef,
-                                  const llvm::Type *llvmFuncType
-                                  ) {
+BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
+                                     FuncDef *funcDef,
+                                     const llvm::Type *llvmFuncType
+                                     ) {
 
-    // see if we've already got it
-    FuncTypeMap::const_iterator iter = funcTypes.find(llvmFuncType);
-    if (iter != funcTypes.end())
-        return TypeDefPtr::rcast(iter->second);
-
-    // nope.  create a new type object and store it
+    // create a new type object and store it
     TypeDefPtr function = context.ns->lookUp("function");
 
     if ((funcDef->flags & FuncDef::method) || function.get() == 0) {
@@ -524,7 +519,6 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
                                                "",
                                                llvmFuncType
                                                );
-        funcTypes[llvmFuncType] = crkFuncType;
 
         // Give it an "oper to .builtin.voidptr" method.
         context.addDef(
@@ -540,7 +534,7 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
 
     // push return
     args->push_back(funcDef->returnType);
-
+    
     // now args
     for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
          arg != funcDef->args.end();
@@ -549,12 +543,11 @@ TypeDef *LLVMBuilder::getFuncType(Context &context,
         args->push_back((*arg)->type.get());
     }
 
-    TypeDefPtr specFuncType =
-            function->getSpecialization(context, args.get());
+    BTypeDefPtr specFuncType =
+        BTypeDefPtr::acast(function->getSpecialization(context, args.get()));
 
     specFuncType->defaultInitializer = new NullConst(specFuncType.get());
 
-    funcTypes[llvmFuncType] = specFuncType;
     return specFuncType.get();
 
 }

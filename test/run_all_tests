@@ -1027,6 +1027,16 @@ test_output redefining_methods \
     'class A { void f() { f := 100; } }; puts("ok");' \
     ok
 
+test_output func_type_independence \
+    "function types with common LLVM structure are discrete" \
+    'class A {}
+     class B {}
+     void f(B b) {}
+     void g(A a) {}
+     function[void, A] fva = g;
+     puts("ok");' \
+    ok
+
 # switch to full bootstrapping mode now that importing works
 testNum=0
 opts="-Gl $root -l $root/lib:lib:.libs"
