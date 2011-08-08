@@ -1,7 +1,7 @@
 // Builder definitions for screen
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io Writer, StringWriter, StringFormatter, FStr;
+import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.process Process;
@@ -101,7 +101,7 @@ class BuilderTestHarness {
 
         String args = {};
 
-        if (_data.sections["ARGS"]) {
+        if (_data.sections.contains("ARGS")) {
             args = _data.sections["ARGS"].rtrim();
         }
 
@@ -119,7 +119,9 @@ class BuilderTestHarness {
             return;
         }
 
-        cmd := _testBinary + " " + args;
+        cmd := _testBinary;
+        if (!args.isEmpty())
+            cmd = cmd + " " + args;
 
         if (config.verbose) {
             vOutput.write(cmd);
@@ -183,17 +185,19 @@ class BuilderTestHarness {
             opts.write(config.libPath);
         }
 
-        // XXX template argv section
         cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.createString()) $(_data.scriptName)`;
 
         // args for script
-        if (_data.sections["ARGS"] && !_bDef.separateBinary()) {
-            cmd = cmd + " -- " + _data.sections["ARGS"].rtrim();
+
+        if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
+            args := _data.sections["ARGS"].rtrim();
+            if (!args.isEmpty()) {
+                cmd = cmd + " " + args;
+            }
         }
 
         if (config.verbose) {
-            vOutput.write(cmd);
-            vOutput.write("\n");
+            vOutput.write(FStr() `$cmd\n`);
         }
 
         output.write(_bDef.getNick());
@@ -214,15 +218,16 @@ class BuilderTestHarness {
         compileErr := _proc.getStdErr();
         _proc.close();
 
+        vOutput.write(FStr() `code: [$(_proc.getReturnCode())], out: [$compileOut], err [$compileErr]\n`);
+
         // XXX right now, out stdout and stderr are merged. this will change when we
         // have an explicit stderr section
         if (compileErr.size > 0)
             compileOut = compileOut + compileErr;
 
         if (_bDef.separateBinary()) {
+            // if we have a separate binary, this is the AOT compile phase
             if (_proc.getReturnCode() != 0) {
-                // if return code is not 0, we'll be checking against error
-                // output
                 _fail();
                 vOutput.write(FStr() `Return code: $(_proc.getReturnCode())`);
                 vOutput.write(FStr() `Output [$compileErr]\n`);

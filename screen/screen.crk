@@ -13,6 +13,7 @@ import crack.cont.array Array;
 import crack.cont.priorityqueue PriorityQueue;
 import crack.strutil StringArray, split;
 
+import stats testSuiteStats;
 import testdata TestData, DirConfig;
 import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
 import config config, T_INIT, T_RUNNING, T_FINISHED;
@@ -188,10 +189,14 @@ class Test {
                         pass = false;
                 }
 
-                if (config.stopOnFail && !pass) {
-                    // XXX close procs nicely?
-                    exit(0);
+                if (!pass) {
+                    testSuiteStats.failList.append(_data.fInfo.name);
+                    if (config.stopOnFail) {
+                        // XXX close procs nicely?
+                        exit(0);
+                    }
                 }
+
             }
 
         }
@@ -234,6 +239,7 @@ class Test {
 // decide which builders to run
 class TestSuite {
 
+    bool _singleTest = false;
     PriorityQueue[Test] _testList = {};
     CmdOptions _options = {};
     
@@ -406,6 +412,7 @@ class TestSuite {
         if (testFile != "" && config.rootDir.isValid()) {
             // if specific file, clear directory
             config.rootDir = null;
+            _singleTest = true;
             fi := FileInfo(testFile);
             if (!fi.exists()) {
                 cerr `$testFile does not exist\n`;
@@ -418,13 +425,28 @@ class TestSuite {
         }
 
         // banner
-        cout `screen\n`;
+        //cout `screen\n`;
 
         // in the future, do a version check to make sure we have a good crack binary
         //checkBinary();
         
     }
     
+    void showStats() {
+
+        cnt := testSuiteStats.failList.count();
+        if (cnt == 0) {
+            cout `all tests passed\n`;
+            return;
+        }
+
+        cout `-----------------------\n$cnt failing tests:\n`;
+        for (f :in testSuiteStats.failList) {
+            cout `$f\n`;
+        }
+
+    }
+
     void run() {
         
         if (config.rootDir)
@@ -436,6 +458,8 @@ class TestSuite {
         }
 
         runTests();
+        if (!_singleTest)
+            showStats();
         
     }
 
