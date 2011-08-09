@@ -64,7 +64,8 @@ class QuickSortPrim[Elem] {
 
     @static
     void sort(Elem A, uintz count){
-        _quickSort3(A, 0, count - 1);
+        if (count > 1)
+            _quickSort3(A, 0, count - 1);
     }
 
 }
@@ -73,7 +74,8 @@ class QuickSortPrim[Elem] {
 class QuickSort[SeqT] : QuickSortPrim[SeqT] {
     @static
     void sort(SeqT A){
-        _quickSort3(A, 0, A.count() - 1);
+        if (A.count() > 1)
+            _quickSort3(A, 0, A.count() - 1);
     }
 }
 
@@ -106,7 +108,8 @@ class InsertionSortPrim[Elem] {
 
     @static
     void sort(Elem A, uintz count){
-        _insertionSort(A, count);
+        if (A.count() > 1)
+            _insertionSort(A, count);
     }
 }
 
@@ -114,7 +117,8 @@ class InsertionSortPrim[Elem] {
 ## Usage: typeof(seq).sort(seq);
 class InsertionSort[SeqT] : InsertionSortPrim[SeqT] {
     @static void sort(SeqT A) {
-        _insertionSort(A, A.count());
+        if (A.count() > 1)
+            _insertionSort(A, A.count());
     }
 }
 
@@ -193,15 +197,18 @@ class HeapSortPrim[Elem] : HeapPrim[Elem] {
     }
     @static
     void sort(Elem A, uintz count) {
-        if (!isMaxHeap(A, count))
-            buildMaxHeap(A, count);
-        _heapSort(A, count);
+        if (count >1) {
+            if (!isMaxHeap(A, count))
+                buildMaxHeap(A, count);
+            _heapSort(A, count);
+        }
     }
 }
 
 class HeapSort[SeqT] : HeapSortPrim[SeqT] {
     @static
     void sort(SeqT A) {
-        _heapSort(A, A.count());
+        if (A.count() > 1)
+            _heapSort(A, A.count());
     }
 }
