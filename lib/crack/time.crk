@@ -60,17 +60,17 @@ class Date : Object, InternalDate {
         return result;
     }
 
-   String strftime(StaticString format, uint buflen){
+   String strftime(String format, uint buflen){
         String result = {buflen, 0};
         strftime(result.buffer, buflen, format.buffer, this); // TODO handle errors
         len:=strlen(result.buffer);
         return result.substr(0,len);
    }
-   
-   String strftime(StaticString format){
+
+   String strftime(String format){
         return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
    }
-   
+
    void writeTo(Writer out) {
         result := FStr() `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
         if (tm_isdst) result += "DST";
