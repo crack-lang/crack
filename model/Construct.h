@@ -201,7 +201,8 @@ class Construct : public spug::RCBase {
                    stringType,
                    staticStringType,
                    overloadType,
-                   crackContext;
+                   crackContext,
+                   functionType;
 
         Construct(builder::Builder *rootBuilder, Construct *primary = 0);
 

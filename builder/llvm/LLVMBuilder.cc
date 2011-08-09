@@ -511,7 +511,7 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
                                      ) {
 
     // create a new type object and store it
-    TypeDefPtr function = context.ns->lookUp("function");
+    TypeDefPtr function = context.construct->functionType.get();
 
     if ((funcDef->flags & FuncDef::method) || function.get() == 0) {
         // this is a method, or there is no function in this context
@@ -2452,6 +2452,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             0
                                             );
     context.addDef(functionType.get());
+    gd->functionType = functionType;
 
     // now that we have byteptr and array and all of the integer types, we can
     // initialize the body of Class.
