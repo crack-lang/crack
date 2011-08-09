@@ -1,7 +1,7 @@
 // Builder definitions for screen
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io Writer, StringWriter, StringFormatter, FStr;
+import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.exp.process Process;
@@ -59,15 +59,14 @@ class BuilderTestHarness {
     TestData _data;
     Process _proc;
     String _testBinary;
+    bool _runBinary = true;
 
     oper init(CrackBuilderDef d, TestData data) : _bDef = d,
                                                   _data = data { }
 
 
     String _colorMsg(String c, String msg) {
-        sw := StringFormatter(128);
-        sw `\033[$(c);1m$(msg)\033[0m`;
-        return sw.createString();
+        return FStr() `\033[$(c);1m$(msg)\033[0m`;
     }
     void _pass() {
         output.write(_colorMsg("32", "PASS "));
@@ -82,17 +81,19 @@ class BuilderTestHarness {
         // XXX using regex isn't necessary here, but String doesn't have
         // a simple replace yet
         pat := Regex('%OUTDIR%');
+
+        String e = expected;
         if (pat.search(expected))
-            expected = pat.subst(expected, config.outDir.nameWithTrailing());
+            e = pat.subst(expected, config.outDir.nameWithTrailing());
 
         // note that we ignore trailing newspace on expected and actual
-        if (expected.rtrim() == actual.rtrim()) {
+        if (e.rtrim() == actual.rtrim()) {
             _pass();
             return Result(true);
         }
         else {
             _fail();
-            return Result(expected, actual);
+            return Result(e, actual);
         }
 
     }
@@ -101,7 +102,7 @@ class BuilderTestHarness {
 
         String args = {};
 
-        if (_data.sections["ARGS"]) {
+        if (_data.sections.contains("ARGS")) {
             args = _data.sections["ARGS"].rtrim();
         }
 
@@ -119,7 +120,9 @@ class BuilderTestHarness {
             return;
         }
 
-        cmd := _testBinary + " " + args;
+        cmd := _testBinary;
+        if (!args.isEmpty())
+            cmd = cmd + " " + args;
 
         if (config.verbose) {
             vOutput.write(cmd);
@@ -183,17 +186,19 @@ class BuilderTestHarness {
             opts.write(config.libPath);
         }
 
-        // XXX template argv section
         cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.createString()) $(_data.scriptName)`;
 
         // args for script
-        if (_data.sections["ARGS"] && !_bDef.separateBinary()) {
-            cmd = cmd + " -- " + _data.sections["ARGS"].rtrim();
+
+        if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
+            args := _data.sections["ARGS"].rtrim();
+            if (!args.isEmpty()) {
+                cmd = cmd + " " + args;
+            }
         }
 
         if (config.verbose) {
-            vOutput.write(cmd);
-            vOutput.write("\n");
+            vOutput.write(FStr() `$cmd\n`);
         }
 
         output.write(_bDef.getNick());
@@ -214,29 +219,34 @@ class BuilderTestHarness {
         compileErr := _proc.getStdErr();
         _proc.close();
 
+        vOutput.write(FStr() `code: [$(_proc.getReturnCode())], out: [$compileOut], err [$compileErr]\n`);
+
         // XXX right now, out stdout and stderr are merged. this will change when we
         // have an explicit stderr section
         if (compileErr.size > 0)
             compileOut = compileOut + compileErr;
 
+        expect := _data.sections["EXPECT"];
+
         if (_bDef.separateBinary()) {
+            // if we have a separate binary, this is the AOT compile phase
             if (_proc.getReturnCode() != 0) {
-                // if return code is not 0, we'll be checking against error
-                // output
-                _fail();
-                vOutput.write(FStr() `Return code: $(_proc.getReturnCode())`);
-                vOutput.write(FStr() `Output [$compileErr]\n`);
-                crackResult = Result(false);
+                // if it failed, we'll compare expect output, because it may be
+                // a test for parse failure
+                crackResult = compareOutput(expect, compileErr);
+                // in this case, we don't run the binary
+                _runBinary = false;
             }
             else {
+                // good aot compile
                 _pass();
                 crackResult = Result(true);
             }
-            return;
         }
-
-        expect := _data.sections["EXPECT"];
-        crackResult = compareOutput(expect, compileOut);
+        else {
+            // compare jit result
+            crackResult = compareOutput(expect, compileOut);
+        }
 
     }
 
@@ -253,7 +263,7 @@ class BuilderTestHarness {
         if (_status == T_CRACK) {
             finishCrack();
             // if we have a separate binary, launch it
-            if (_bDef.separateBinary() && crackResult.pass)
+            if (_bDef.separateBinary() && _runBinary && crackResult.pass)
                 runBinary();
             else
                 _status = T_FINISHED;

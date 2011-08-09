@@ -38,6 +38,9 @@ void crk_epoch(InternalDate *epoch){
    epoch->tm_year = 70;
    epoch->tm_mon = 0;
    epoch->tm_mday = 1;
+   epoch->tm_hour = 0;
+   epoch->tm_min = 0;
+   epoch->tm_sec = 0;
 }
 
 char *crk_ctime_r(int64_t t, char * buf){
