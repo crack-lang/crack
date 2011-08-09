@@ -1,0 +1,18 @@
+// Global statistics built during test suite run
+// Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+
+import crack.runtime usecs;
+import crack.cont.list List;
+
+class Stats {
+    List[String] failList = {};
+    uint64 __startTime = 0;
+    uint64 __endTime = 0;
+    void startStopwatch() { __startTime = usecs(); }
+    void stopStopwatch() { __endTime = usecs(); }
+    String getTotalTime() {
+        return "total time: foo";
+    }
+}
+
+Stats testSuiteStats = {};
