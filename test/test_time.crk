@@ -38,12 +38,12 @@ if (verbose) cout `ctime = $dateString2`;
 if (dateString!=dateString2)
    cout `Date format mismatch\n`;
 
-mytime.setEpoch();
+mytime.setUTCSeconds(0);
 mytime.getSeconds();
 
 len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
 if (dateString2.substr(0,len)!='Thursday January 01 1970')
-   cout `strftime format mismatch, got $dateString2, len = $len\n`;
+   cout `InternalDate.strftime format mismatch, got $dateString2, len = $len\n`;
 
 // Repeat the above with the wrapped Date class
 Date Mytime = {};
@@ -72,7 +72,10 @@ if (Mytime2.getSeconds() != secs)
    cout `Date seconds conversion mismatch\n`;
 
 Mytime = Date(); // Reset
-Mytime.getSeconds();
+Mytime.setUTCSeconds(0);
+secs = Mytime.getSeconds();
+
+if (verbose) cout `LocalSeconds = $secs\n`;
 
 dateString2 = Mytime.strftime("%A %B %d %Y");
 len = dateString2.size;

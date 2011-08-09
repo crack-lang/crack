@@ -37,7 +37,7 @@ class Date : Object, InternalDate {
     oper init(int64 secs) {
         setLocalSeconds(secs);
     }
-    
+
     oper init(InternalDate d){
         if (!(d is null)){
             tm_sec = d.tm_sec;
@@ -53,7 +53,6 @@ class Date : Object, InternalDate {
             getSeconds();
         }
     }
-
 
     String getDefaultString(){
         String result = {100, 0};
