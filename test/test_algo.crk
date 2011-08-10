@@ -65,6 +65,12 @@ b := newRandomArray(nsize);
 b.sort();
 Checker[Array[uint]].check(b);
 
+// Try to sort zero-length collections
+a = Array[uint]();
+QuickSort[Array[uint]].sort(a);
+InsertionSort[Array[uint]].sort(a);
+a.sort();
+
 sA := Array[String]!['some', 'string', 'on', 'crack'];
 sA.sort();
 FStr sWriter = {};
