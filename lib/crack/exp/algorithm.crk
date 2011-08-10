@@ -108,7 +108,7 @@ class InsertionSortPrim[Elem] {
 
     @static
     void sort(Elem A, uintz count){
-        if (A.count() > 1)
+        if (count > 1)
             _insertionSort(A, count);
     }
 }
