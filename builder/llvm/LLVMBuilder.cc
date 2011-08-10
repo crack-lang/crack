@@ -513,8 +513,9 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
     // create a new type object and store it
     TypeDefPtr function = context.construct->functionType.get();
 
-    if ((funcDef->flags & FuncDef::method) || function.get() == 0) {
-        // this is a method, or there is no function in this context
+    if (!function) {
+        // there is no function in this context XXX this should create a 
+        // deferred entry.
         BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
                                                "",
                                                llvmFuncType
@@ -534,6 +535,11 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
 
     // push return
     args->push_back(funcDef->returnType);
+    
+    // if there is a receiver, push that
+    TypeDefPtr rcvrType = funcDef->getReceiverType();
+    if (rcvrType)
+        args->push_back(rcvrType.get());
     
     // now args
     for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
