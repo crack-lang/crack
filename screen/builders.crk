@@ -10,7 +10,7 @@ import crack.cont.array Array;
 import crack.lang AssertionError, SubString;
 import crack.exp.regex Regex;
 
-import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
+import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED, str_replace;
 import testdata TestData;
 
 ///////////////////////////
@@ -78,13 +78,7 @@ class BuilderTestHarness {
     Result compareOutput(String expected, String actual) {
 
         // variable replacement
-        // XXX using regex isn't necessary here, but String doesn't have
-        // a simple replace yet
-        pat := Regex('%OUTDIR%');
-
-        String e = expected;
-        if (pat.search(expected))
-            e = pat.subst(expected, config.outDir.nameWithTrailing());
+        e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expected);
 
         // note that we ignore trailing newspace on expected and actual
         if (e.rtrim() == actual.rtrim()) {
@@ -230,11 +224,18 @@ class BuilderTestHarness {
 
         if (_bDef.separateBinary()) {
             // if we have a separate binary, this is the AOT compile phase
-            if (_proc.getReturnCode() != 0) {
+            if (_proc.getReturnCode() != 0 || // parse failure
+                !compileErr.isEmpty() // warning
+               ) {
+
+                // XXX this will break when we have a test that checks for a warning
+                // _and_ output from the binary. the real fix is a separate section
+                // for stderr output
+
                 // if it failed, we'll compare expect output, because it may be
                 // a test for parse failure
                 crackResult = compareOutput(expect, compileErr);
-                // in this case, we don't run the binary
+                // if it was a failure, we don't run the binary
                 _runBinary = false;
             }
             else {

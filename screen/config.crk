@@ -3,16 +3,26 @@
 
 import crack.exp.dir Directory;
 import crack.cont.array Array;
+import crack.exp.regex Regex;
 
 class Config {
     String crackBin, libPath;
-    Directory rootDir, outDir;
+    Directory rootDir, outDir, sourceDir;
     Array[Object] builders = {}; // CrackBuilderDef
     bool verbose, showDiff, stopOnFail;
     uint jobs; // # of concurrent jobs
 }
 
 Config config = {};
+
+// XXX this is only until we get a replace in String
+String str_replace(String search, String replace, String subj) {
+    pat := Regex(search);
+    if (pat.search(subj))
+        return pat.subst(subj, replace);
+    else
+        return subj;
+}
 
 // test and harness states
 int T_INIT     = 1;

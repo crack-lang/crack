@@ -16,7 +16,7 @@ import crack.strutil StringArray, split;
 import stats testSuiteStats;
 import testdata TestData, DirConfig;
 import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
-import config config, T_INIT, T_RUNNING, T_FINISHED;
+import config config, T_INIT, T_RUNNING, T_FINISHED, str_replace;
 
 class Template {
 
@@ -110,7 +110,11 @@ class Test {
         _data.scriptName = config.outDir.nameWithTrailing()+
                            _data.fInfo.basename(true) + ".crk";
         out := File(_data.scriptName,"w");
-        out.write(_data.sections["FILE"]);
+
+        text := _data.sections["FILE"];
+        text = str_replace('%SOURCEDIR%', config.sourceDir.nameWithTrailing(), text);
+
+        out.write(text);
         
     }
 
@@ -371,6 +375,7 @@ class TestSuite {
         _options.add("builders", "b", "Builders to test, comma delimited list ["+availBuilders+"]","jit", CMD_STR);
         _options.add("diff", "", "Show a diff of expected vs actual output if a test fails","f", CMD_BOOL);
         _options.add("stop-on-fail", "", "Stop on first test failure and display diff","f", CMD_BOOL);
+        _options.add("sourcedir", "s", "The crack source root directory, which will be used in variable substitution", "", CMD_STR);
         _options.parse(argv);
                 
         if (_options.getBool("help"))
@@ -385,10 +390,13 @@ class TestSuite {
         
         config.rootDir = Directory(_options.getString("testdir"), false);
         config.outDir = Directory(_options.getString("outdir"), false);
+        config.sourceDir = Directory(_options.getString("sourcedir"), false);
 
         config.libPath = _options.getString("libpath");
         config.verbose = _options.getBool("verbose");
         config.jobs = _options.getInt("jobs");
+        if (config.jobs <= 0)
+            config.jobs = 1;
         config.showDiff = _options.getBool("diff");
         config.stopOnFail = _options.getBool("stop-on-fail");
 
