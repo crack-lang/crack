@@ -175,7 +175,8 @@ class CmdOptions {
       result := NOINDEX;
 
       for (uint i=0; i<options.count(); i++)
-         if (optName == options[i].short[0]) return i;
+         if (!options[i].short.isEmpty() && optName == options[i].short[0])
+            return i;
 
       return result;
    }
