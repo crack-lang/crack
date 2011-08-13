@@ -1945,6 +1945,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            Type::getVoidTy(lctx)
                                            );
     context.addDef(voidType);
+    deferMetaClass.push_back(voidType);
 
     BTypeDef *voidptrType;
     llvmVoidPtrType = Type::getInt8Ty(lctx)->getPointerTo();
@@ -1955,6 +1956,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  );
     voidptrType->defaultInitializer = new NullConst(voidptrType);
     context.addDef(voidptrType);
+    deferMetaClass.push_back(voidptrType);
 
     // now that we've got a voidptr type, give the class object a cast to it.
     context.addDef(new VoidPtrOpDef(voidptrType), classType);
@@ -1971,6 +1973,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         new VoidPtrOpDef(context.construct->voidptrType.get()),
         byteptrType
     );
+    deferMetaClass.push_back(byteptrType);
     FuncDefPtr funcDef =
         new GeneralOpDef<UnsafeCastCall>(byteptrType, FuncDef::noFlags,
                                          "oper new",
@@ -1988,41 +1991,50 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            );
     gd->boolType->defaultInitializer = new BIntConst(boolType, (int64_t)0);
     context.addDef(boolType);
+    deferMetaClass.push_back(boolType);
     
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
                                            "byte"
                                            );
     gd->byteType = byteType;
+    deferMetaClass.push_back(byteType);
 
     BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "int32"
                                             );
     gd->int32Type = int32Type;
+    deferMetaClass.push_back(int32Type);
 
     BTypeDef *int64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
                                             "int64"
                                             );
     gd->int64Type = int64Type;
+    deferMetaClass.push_back(int64Type);
     
     BTypeDef *uint32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "uint32"
                                             );
     gd->uint32Type = uint32Type;
+    deferMetaClass.push_back(uint32Type);
 
     BTypeDef *uint64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
                                             "uint64"
                                             );
     gd->uint64Type = uint64Type;
+    deferMetaClass.push_back(uint64Type);
 
     BTypeDef *float32Type = createFloatPrimType(context, Type::getFloatTy(lctx),
                                             "float32"
                                             );
     gd->float32Type = float32Type;
+    deferMetaClass.push_back(float32Type);
 
-    BTypeDef *float64Type = createFloatPrimType(context, Type::getDoubleTy(lctx),
-                                            "float64"
-                                            );
+    BTypeDef *float64Type = createFloatPrimType(context, 
+                                                Type::getDoubleTy(lctx),
+                                                "float64"
+                                                );
     gd->float64Type = float64Type;
+    deferMetaClass.push_back(float64Type);
 
     // PDNTs
     BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType;
@@ -2030,43 +2042,41 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     if (sizeof(int) == 4) {
         intIs32Bit = true;
         intType = createIntPrimType(context, Type::getInt32Ty(lctx), "int");
-        gd->intType = intType;
         uintType = createIntPrimType(context, Type::getInt32Ty(lctx), "uint");
-        gd->uintType = uintType;
     } else {
         assert(sizeof(int) == 8);
-
         intIs32Bit = false;
         intType = createIntPrimType(context, Type::getInt64Ty(lctx), "int");
-        gd->intType = intType;
         uintType = createIntPrimType(context, Type::getInt64Ty(lctx), "uint");
-        gd->uintType = uintType;
     }
+    gd->intType = intType;
+    gd->uintType = uintType;
     llvmIntType = intType->rep;
+    deferMetaClass.push_back(intType);
+    deferMetaClass.push_back(uintType);
     
     if (sizeof(void *) == 4) {
         ptrIs32Bit = true;
         intzType = createIntPrimType(context, Type::getInt32Ty(lctx), "intz");
-        gd->intzType = intzType;
         uintzType = createIntPrimType(context, Type::getInt32Ty(lctx), "uintz");
-        gd->uintzType = uintzType;
     } else {
         assert(sizeof(void *) == 8);
 
         ptrIs32Bit = false;
         intzType = createIntPrimType(context, Type::getInt64Ty(lctx), "intz");
-        gd->intzType = intzType;
         uintzType = 
             createIntPrimType(context, Type::getInt64Ty(lctx), "uintz");
-        gd->uintzType = uintzType;
     }
+    gd->intzType = intzType;
+    gd->uintzType = uintzType;
+    deferMetaClass.push_back(intzType);
+    deferMetaClass.push_back(uintzType);
     
     if (sizeof(float) == 4) {
         floatIs32Bit = true;
         floatType = createFloatPrimType(context, Type::getFloatTy(lctx),
                                         "float"
                                         );
-        gd->floatType = floatType;
     } else {
         floatIs32Bit = false;
         assert(sizeof(float) == 8);
@@ -2074,8 +2084,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         floatType = createFloatPrimType(context, Type::getDoubleTy(lctx),
                                         "float"
                                         );
-        gd->floatType = floatType;
     }
+    gd->floatType = floatType;
+    deferMetaClass.push_back(floatType);
 
     // conversion from voidptr to integer
     funcDef =
@@ -2449,6 +2460,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             0
                                             );
     context.addDef(arrayType.get());
+    deferMetaClass.push_back(arrayType);
 
     // create the raw function type
     // "oper call" methods are added as this type is specialized during parse
@@ -2459,30 +2471,17 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             );
     context.addDef(functionType.get());
     gd->functionType = functionType;
+    deferMetaClass.push_back(functionType);
 
     // now that we have byteptr and array and all of the integer types, we can
-    // initialize the body of Class.
+    // initialize the body of Class (the meta-type).
     context.addDef(new IsOpDef(classType, boolType));
-
     finishClassType(context, classType);
     
-    // back-fill meta class and impls for the existing primitives
-    fixMeta(context, voidType);
-    fixMeta(context, voidptrType);
-    fixMeta(context, boolType);
-    fixMeta(context, byteType);
-    fixMeta(context, int32Type);
-    fixMeta(context, int64Type);
-    fixMeta(context, uint32Type);
-    fixMeta(context, uint64Type);
-    fixMeta(context, float32Type);
-    fixMeta(context, float64Type);
-    fixMeta(context, arrayType.get());
-    fixMeta(context, intType);
-    fixMeta(context, uintType);
-    fixMeta(context, intzType);
-    fixMeta(context, uintzType);
-    fixMeta(context, floatType);
+    // back fill the meta-class for the types defined so far.
+    for (int i = 0; i < deferMetaClass.size(); ++i)
+        fixMeta(context, deferMetaClass[i].get());
+    deferMetaClass.clear();
 
     // create OverloadDef's type
     metaType = createMetaClass(context, "Overload");

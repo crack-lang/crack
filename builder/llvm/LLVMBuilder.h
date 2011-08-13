@@ -4,10 +4,9 @@
 #define _builder_LLVMBuilder_h_
 
 #include <map>
-
-#include "builder/Builder.h"
-
 #include <llvm/Support/IRBuilder.h>
+#include "builder/Builder.h"
+#include "BTypeDef.h"
 
 namespace llvm {
     class Module;
@@ -22,7 +21,6 @@ namespace builder {
 namespace mvll {
 
 SPUG_RCPTR(BHeapVarDefImpl);
-SPUG_RCPTR(BTypeDef);
 class DebugInfo;
 class FuncBuilder;
 class BModuleDef;
@@ -153,6 +151,10 @@ class LLVMBuilder : public Builder {
         llvm::Function *exceptionPersonalityFunc;
         static int argc;
         static char **argv;
+
+        // the list of types that need to be fixed when the meta-class has 
+        // been defined.
+        std::vector<BTypeDefPtr> deferMetaClass;
 
         /** 
          * Returns true if cleanups should be suppressed (i.e. after a throw) 

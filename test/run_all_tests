@@ -1037,6 +1037,16 @@ test_output func_type_independence \
      puts("ok");' \
     ok
 
+test_output func_type_impls \
+    'function types have implementations' \
+    'void f() {} puts(typeof(f).name)' \
+    '.builtin.function[.builtin.void]'
+
+test_output array_type_impls \
+    'array types have implementations' \
+    'array[int] a; puts(typeof(a).name)' \
+    'array[.builtin.int]'
+
 # switch to full bootstrapping mode now that importing works
 testNum=0
 opts="-Gl $root -l $root/lib:lib:.libs"

@@ -4,6 +4,7 @@
 
 #include "model/NullConst.h"
 #include "Ops.h"
+#include "Utils.h"
 
 #include <iostream>
 #include <sstream>
@@ -70,9 +71,14 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     tempSpec->setOwner(this);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
-// XXX this needs a deferred-propagation mechanism to work during 
-// bootstrapping.  
-//    createClassImpl(context, tempSpec.get());
+    // create the implementation (this can be called before the meta-class is 
+    // initialized, so check for it and defer if it is)
+    if (context.construct->classType->complete) {
+        createClassImpl(context, tempSpec.get());
+    } else {
+        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+        b.deferMetaClass.push_back(tempSpec);
+    }
 
     // Give it an "oper to .builtin.voidptr" method.
     context.addDef(

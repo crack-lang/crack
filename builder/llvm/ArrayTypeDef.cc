@@ -37,7 +37,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
     BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
 
     Type *llvmType = PointerType::getUnqual(parmType->rep);
-    TypeDefPtr tempSpec =
+    BTypeDefPtr tempSpec =
             new BTypeDef(type.get(),
                          SPUG_FSTR(name << "[" << parmType->getFullName() <<
                                    "]"
@@ -51,6 +51,15 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
                    );
 
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
+
+    // create the implementation (this can be called before the meta-class is 
+    // initialized, so check for it and defer if it is)
+    if (context.construct->classType->complete) {
+        createClassImpl(context, tempSpec.get());
+    } else {
+        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+        b.deferMetaClass.push_back(tempSpec);
+    }
 
     // add all of the methods
     addArrayMethods(context, tempSpec.get(), parmType);
