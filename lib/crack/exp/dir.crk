@@ -3,7 +3,7 @@
 // Portions Copyright 2010 Google Inc.
 
 import crack.io cerr, Formatter, Writer;
-import crack.lang die, FreeBase, CString, SubString;
+import crack.lang die, FreeBase, CString;
 import crack.exp.bindings Opaque;
 import crack.cont.list List;
 import crack.exp.file Openable, FileInfo;
@@ -26,18 +26,18 @@ class Directory : Object, Openable {
     List[Directory] _dirList = {};
     List[FileInfo] _fileList = {};
 
-    oper init(String name, bool open): name(name) {
+    oper init(String name0, bool open): name = name0 {
         // possibly strip trailing delim
         if (name.rfind(PATH_SEPARATOR) == (name.size-1))
-            name = SubString(name, 0, name.size-1);
+            name = name.substr(0, name.size-1);
         if (open)
             _open();
     }
 
-    oper init(String name): name(name) {
+    oper init(String name0): name = name0 {
         // possibly strip trailing delim
         if (name.rfind(PATH_SEPARATOR) == (name.size-1))
-            name = SubString(name, 0, name.size-1);
+            name = name.substr(0, name.size-1);
         // default open
         _open();
     }

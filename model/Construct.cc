@@ -158,11 +158,17 @@ void Construct::addToSourceLibPath(const string &path) {
     size_t pos = 0;
     size_t i = path.find(':');
     while (i != -1) {
-        sourceLibPath.push_back(path.substr(pos, i - pos));
+        if (i > 1 && path[i-1] == '/')
+            sourceLibPath.push_back(path.substr(pos, i - pos - 1));
+        else
+            sourceLibPath.push_back(path.substr(pos, i - pos));
         pos = i + 1;
         i = path.find(':', pos);
     }
-    sourceLibPath.push_back(path.substr(pos));
+    if (path.size() > 1 && path[path.size()-1] == '/')
+        sourceLibPath.push_back(path.substr(pos, (path.size()-pos)-1));
+    else
+        sourceLibPath.push_back(path.substr(pos));
 }
 
 ContextPtr Construct::createRootContext() {
