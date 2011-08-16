@@ -191,11 +191,12 @@ add_custom_target(checkc
                   )
 
 add_custom_target(screen
-                  crack     # we can put targets here as well
-                    ${PROJECT_SOURCE_DIR}/screen/screen.crk --
+                  crack  -l ${PROJECT_SOURCE_DIR}/screen
+                    ${PROJECT_SOURCE_DIR}/screen/screen.crk
                     -c ${PROJECT_SOURCE_DIR}/crack
-                    -t ${PROJECT_SOURCE_DIR}/screen/tests
+                    -d ${PROJECT_SOURCE_DIR}/screen/tests
                     -o ${PROJECT_SOURCE_DIR}/screen/output
+                    -s ${PROJECT_SOURCE_DIR}
                   )
 
 add_subdirectory(opt)
