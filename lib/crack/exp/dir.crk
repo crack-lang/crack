@@ -26,18 +26,21 @@ class Directory : Object, Openable {
     List[Directory] _dirList = {};
     List[FileInfo] _fileList = {};
 
-    oper init(String name0, bool open): name = name0 {
+    void __stripTrailing() {
         // possibly strip trailing delim
-        if (name.rfind(PATH_SEPARATOR) == (name.size-1))
+        if (name.rfind(PATH_SEPARATOR) > 0 &&
+            name.rfind(PATH_SEPARATOR) == (name.size-1))
             name = name.substr(0, name.size-1);
+    }
+
+    oper init(String name0, bool open): name = name0 {
+        __stripTrailing();
         if (open)
             _open();
     }
 
     oper init(String name0): name = name0 {
-        // possibly strip trailing delim
-        if (name.rfind(PATH_SEPARATOR) == (name.size-1))
-            name = name.substr(0, name.size-1);
+        __stripTrailing();
         // default open
         _open();
     }

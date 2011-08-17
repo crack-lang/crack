@@ -445,6 +445,8 @@ class TestSuite {
     
     void showStats() {
 
+        cout `total runtime: $(testSuiteStats.getTotalTime()) secs\n`;
+
         cnt := testSuiteStats.failList.count();
         if (cnt == 0) {
             cout `all tests passed\n`;
@@ -455,6 +457,7 @@ class TestSuite {
         for (f :in testSuiteStats.failList) {
             cout `$f\n`;
         }
+        cout `-----------------------\n`;
 
     }
 
@@ -468,7 +471,10 @@ class TestSuite {
             return;
         }
 
+        testSuiteStats.startStopwatch();
         runTests();
+        testSuiteStats.stopStopwatch();
+
         if (!_singleTest)
             showStats();
         
