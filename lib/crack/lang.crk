@@ -561,6 +561,23 @@ class String : Buffer {
         memcpy(newRawBuffer + size, rhs, rhs_size);
         return String(newRawBuffer, newBufferSize, true);
     }
+    
+    String oper *(uint times){
+        String newString;
+        
+        if (size == 1)
+            newString = String(times, buffer[0]);
+        else {
+            newString = String(malloc(size * times), size * times, true);
+            byteptr ptr = newString.buffer;
+            for (uint i = 0; i < times; i++){
+                memcpy(ptr, buffer, size);
+                ptr +=size;
+            }
+        }
+
+        return newString;
+    }
 
     ## Create a substring.  This function is smart enough to know if the
     ## receiver is already a SubString, in which case it will translate to

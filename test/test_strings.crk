@@ -156,4 +156,13 @@ fc := "foo" + b"0";
 if (fc != "foo0")
     cout `FAILED string byte concat\n`;
 
+// Test multiply operator
+line := "-"*10;
+if (line != "----------")
+    cout `Failed multiply of length 1 string\n`;
+line2 := "hello"*2;
+if (line2 != "hellohello")
+    cout `Failed multiply of length > 1 string\n`;
+
+
 cout `ok\n`;
