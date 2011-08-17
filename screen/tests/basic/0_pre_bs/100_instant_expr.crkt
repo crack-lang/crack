@@ -1,0 +1,10 @@
+%%TEST%%
+class at the start of an expression
+%%ARGS%%
+
+%%FILE%%
+class A { void ok() { puts("ok"); } } A().ok()
+%%EXPECT%%
+ok
+%%STDIN%%
+

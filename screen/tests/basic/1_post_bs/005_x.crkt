@@ -1,0 +1,10 @@
+%%TEST%%
+multiple types with the same underlying structure
+%%ARGS%%
+
+%%FILE%%
+class A {}; class B {}; B b = {}; print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

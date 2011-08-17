@@ -1,0 +1,12 @@
+%%TEST%%
+unsafe casts from non-primary base classes
+%%ARGS%%
+
+%%FILE%%
+class A {} class B {}
+     class C : A, B { void run() { puts("ok"); } }
+     B b = C(); (C.unsafeCast(b).run());
+%%EXPECT%%
+ok
+%%STDIN%%
+

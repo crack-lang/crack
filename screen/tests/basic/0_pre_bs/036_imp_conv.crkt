@@ -1,0 +1,10 @@
+%%TEST%%
+implicit conversion from int to bool in condition
+%%ARGS%%
+
+%%FILE%%
+if (1) puts("yes"); if (0) puts("no");
+%%EXPECT%%
+yes
+%%STDIN%%
+

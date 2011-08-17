@@ -1,0 +1,12 @@
+%%TEST%%
+instance narrowing works more than one level
+%%ARGS%%
+
+%%FILE%%
+class A { byteptr t; oper init() { t = "ok"; } oper bind() { puts(t); } };
+     class B : A {};
+     class C : B {}; C c = {};
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+bootstrapped exception tests
+%%ARGS%%
+
+%%FILE%%
+import test.test_exceptions2;
+%%EXPECT%%
+ok
+%%STDIN%%
+

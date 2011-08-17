@@ -1,0 +1,11 @@
+%%TEST%%
+built-in "final" annotation
+%%ARGS%%
+
+%%FILE%%
+class A { @final void f() {} }
+     class B : A { void f() {} }
+%%EXPECT%%
+ParseError: %OUTDIR%067_x.crk:2: Definition of f hides previous overload.
+%%STDIN%%
+

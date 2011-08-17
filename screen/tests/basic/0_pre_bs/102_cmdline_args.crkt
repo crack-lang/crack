@@ -1,0 +1,14 @@
+%%TEST%%
+command line arguments
+%%ARGS%%
+a b c -d
+%%FILE%%
+uint i = 1; argv := __getArgv(); argc := __getArgc();
+     while (i < argc) { puts(argv[i]); i = i + 1; }
+%%EXPECT%%
+a
+b
+c
+-d
+%%STDIN%%
+

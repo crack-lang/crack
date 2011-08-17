@@ -1,0 +1,13 @@
+%%TEST%%
+byteptr array access
+%%ARGS%%
+
+%%FILE%%
+import crack.runtime malloc, strcpy;
+     byteptr b = {5}; strcpy(b, "test"); b[0] = 110; b[2] = 120;
+     puts(b); printint(b[0]); printint(b[2]);
+%%EXPECT%%
+next
+110120
+%%STDIN%%
+

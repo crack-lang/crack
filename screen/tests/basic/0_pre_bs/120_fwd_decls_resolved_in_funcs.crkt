@@ -1,0 +1,10 @@
+%%TEST%%
+forward declarations in functions must be resolved by the end of the block
+%%ARGS%%
+
+%%FILE%%
+void outer() { void foo(); }
+%%EXPECT%%
+ParseError: %OUTDIR%120_fwd_decls_resolved_in_funcs.crk:1: Forward declared function not defined at the end of the block: .builtin.void %OUTDIR%120_fwd_decls_resolved_in_funcs.crk.outer.foo()
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+assignment to type
+%%ARGS%%
+
+%%FILE%%
+class A {} A = 100;
+%%EXPECT%%
+ParseError: %OUTDIR%125_x.crk:1: You cannot assign to a constant, class or function.
+%%STDIN%%
+

@@ -1,0 +1,11 @@
+%%TEST%%
+narrowing field assignment
+%%ARGS%%
+
+%%FILE%%
+class A {}; class B : A {}; class C { A a = B(); }; C c = {}; c.a = B();
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

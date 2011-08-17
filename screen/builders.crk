@@ -92,12 +92,29 @@ class BuilderTestHarness {
 
     }
 
+    Result compareOutputRegex(String expectedRegex, String actual) {
+
+        // variable replacement
+        e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expectedRegex.rtrim());
+
+        rx := Regex(e);
+        m := rx.search(actual.rtrim());
+
+        if (m is null) {
+            _fail();
+            return Result(e, actual);
+        }
+
+        _pass();
+        return Result(true);
+    }
+
     void runBinary() {
 
         String args = {};
 
         if (_data.sections.contains("ARGS")) {
-            args = _data.sections["ARGS"].rtrim();
+            args = str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["ARGS"].rtrim());
         }
 
         output.write(_bDef.getNick());
@@ -126,7 +143,7 @@ class BuilderTestHarness {
         _proc = Process(cmd);
 
         if (_data.sections.contains("STDIN")) {
-            _proc.putStdIn(_data.sections["STDIN"]);
+            _proc.putStdIn(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["STDIN"]));
         }
 
     }
@@ -146,8 +163,14 @@ class BuilderTestHarness {
             // have an explicit stderr section
             if (nativeErr.size > 0)
                 nativeOut = nativeOut + nativeErr;
-            expect := _data.sections["EXPECT"];
-            binaryResult = compareOutput(expect, nativeOut);
+
+            expect := _data.sections.get("EXPECT");
+            if (expect is null){
+                expect = _data.sections["REXPECT"];
+                binaryResult = compareOutputRegex(expect, nativeOut);
+            }
+            else
+                binaryResult = compareOutput(expect, nativeOut);
         }
 
         _proc.close();
@@ -166,7 +189,7 @@ class BuilderTestHarness {
 
         // options for crack
         if (_data.sections.contains("OPTS")) {
-            opts.write(_data.sections["OPTS"].rtrim());
+            opts.write(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["OPTS"].rtrim()));
         }
 
         if (_data.dirConfig) {
@@ -185,7 +208,7 @@ class BuilderTestHarness {
         // args for script
 
         if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
-            args := _data.sections["ARGS"].rtrim();
+            args := str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["ARGS"].rtrim());
             if (!args.isEmpty()) {
                 cmd = cmd + " " + args;
             }
@@ -202,12 +225,13 @@ class BuilderTestHarness {
         _proc = Process(cmd);
 
         if (!_bDef.separateBinary() && _data.sections.contains("STDIN")) {
-            _proc.putStdIn(_data.sections["STDIN"]);
+            _proc.putStdIn(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["STDIN"]));
         }
 
     }
 
      void finishCrack() {
+        bool isRegex = false;
 
         compileOut := _proc.getStdOut();
         compileErr := _proc.getStdErr();
@@ -220,7 +244,11 @@ class BuilderTestHarness {
         if (compileErr.size > 0)
             compileOut = compileOut + compileErr;
 
-        expect := _data.sections["EXPECT"];
+        expect := _data.sections.get("EXPECT");
+        if (expect is null){
+            expect =_data.sections["REXPECT"];
+            isRegex = true;
+        }
 
         if (_bDef.separateBinary()) {
             // if we have a separate binary, this is the AOT compile phase
@@ -234,7 +262,10 @@ class BuilderTestHarness {
 
                 // if it failed, we'll compare expect output, because it may be
                 // a test for parse failure
-                crackResult = compareOutput(expect, compileErr);
+                if (isRegex)
+                    crackResult = compareOutputRegex(expect, compileErr);
+                else
+                    crackResult = compareOutput(expect, compileErr);
                 // if it was a failure, we don't run the binary
                 _runBinary = false;
             }
@@ -246,7 +277,10 @@ class BuilderTestHarness {
         }
         else {
             // compare jit result
-            crackResult = compareOutput(expect, compileOut);
+            if (isRegex)
+                crackResult = compareOutputRegex(expect, compileOut);
+            else
+                crackResult = compareOutput(expect, compileOut);
         }
 
     }

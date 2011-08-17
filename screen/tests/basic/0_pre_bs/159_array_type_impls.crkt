@@ -1,0 +1,10 @@
+%%TEST%%
+array types have implementations
+%%ARGS%%
+
+%%FILE%%
+array[int] a; puts(typeof(a).name)
+%%EXPECT%%
+array[.builtin.int]
+%%STDIN%%
+

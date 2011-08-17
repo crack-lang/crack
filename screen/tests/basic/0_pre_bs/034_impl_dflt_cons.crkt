@@ -1,0 +1,10 @@
+%%TEST%%
+implicit default constructor
+%%ARGS%%
+
+%%FILE%%
+class A { int32 val; }; A a = {}; printint(a.val);
+%%EXPECT%%
+0
+%%STDIN%%
+

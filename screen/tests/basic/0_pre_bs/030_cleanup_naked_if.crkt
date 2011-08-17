@@ -1,0 +1,11 @@
+%%TEST%%
+cleanup works in naked if clauses
+%%ARGS%%
+
+%%FILE%%
+class A { A g() { return null; }  oper bind() {} oper release() {} }
+     A f() { if (1) return A().g(); return null; } puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

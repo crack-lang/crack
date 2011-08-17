@@ -1,0 +1,10 @@
+%%TEST%%
+logical or
+%%ARGS%%
+
+%%FILE%%
+import test.test_logicalor;
+%%EXPECT%%
+ok
+%%STDIN%%
+

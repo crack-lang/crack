@@ -1,0 +1,10 @@
+%%TEST%%
+defining a variable of an undefined type gives an error
+%%ARGS%%
+
+%%FILE%%
+class A; A a;
+%%EXPECT%%
+ParseError: %OUTDIR%052_x.crk:1: You cannot define a variable of a forward declared type.
+%%STDIN%%
+

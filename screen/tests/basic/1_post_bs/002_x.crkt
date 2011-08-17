@@ -1,0 +1,12 @@
+%%TEST%%
+type narrowing of receivers and args
+%%ARGS%%
+
+%%FILE%%
+class A { void foo(A more) { print("did bar"); } };
+     class B : A { void bar() { foo(this); } };
+    (B().bar());
+%%EXPECT%%
+did bar
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+function types have implementations
+%%ARGS%%
+
+%%FILE%%
+void f() {} puts(typeof(f).name)
+%%EXPECT%%
+.builtin.function[.builtin.void]
+%%STDIN%%
+

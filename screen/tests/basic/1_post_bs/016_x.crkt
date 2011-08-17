@@ -1,0 +1,10 @@
+%%TEST%%
+sequence constants
+%%ARGS%%
+
+%%FILE%%
+import test.test_seqconsts;
+%%EXPECT%%
+ok
+%%STDIN%%
+

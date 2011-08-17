@@ -1,0 +1,10 @@
+%%TEST%%
+cout & cerr
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout, cerr; cout `cout`; cerr `cerr`;
+%%EXPECT%%
+coutcerr
+%%STDIN%%
+

@@ -1,0 +1,11 @@
+%%TEST%%
+multiple module loads
+%%ARGS%%
+
+%%FILE%%
+import test.testmod2 func; func();
+%%EXPECT%%
+testmod2
+in testmod2.func()
+%%STDIN%%
+

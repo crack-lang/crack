@@ -1,0 +1,44 @@
+%%TEST%%
+multiple vtables
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase {
+    byteptr aval;
+    void a() { puts(aval); }
+    void aa() { puts(aval); }
+};
+
+class B : VTableBase {
+    byteptr bval;
+    void b() { puts(bval); }
+    void bb() { puts(bval); }
+};
+
+class C : A, B {
+    byteptr cval;
+    void a() { puts(cval); }
+    void b() { puts(cval); }
+    
+    void c() { puts(cval); }
+    void c2() { puts('in c2'); c(); }
+};
+
+c := C();
+c.aval = 'a';
+c.bval = 'b';
+c.cval = 'c';
+c.a();
+c.b();
+c.aa();
+c.bb();
+c.c2();
+%%EXPECT%%
+c
+c
+a
+b
+in c2
+c
+%%STDIN%%
+

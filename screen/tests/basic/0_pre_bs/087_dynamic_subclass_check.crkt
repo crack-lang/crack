@@ -1,0 +1,12 @@
+%%TEST%%
+dyanmic subclass check
+%%ARGS%%
+
+%%FILE%%
+class A {} class B : A {} class C {}
+     if (C.isSubclass(A)) puts("FAIL");
+     if (B.isSubclass(A)) puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

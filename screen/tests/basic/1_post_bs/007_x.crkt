@@ -1,0 +1,14 @@
+%%TEST%%
+incomplete virtual methods
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase { void f() { print("fail"); }
+                            void g() { f(); } };
+     class B : A { void f() { print("ok"); } };
+     A a = B();
+     a.g();
+%%EXPECT%%
+ok
+%%STDIN%%
+

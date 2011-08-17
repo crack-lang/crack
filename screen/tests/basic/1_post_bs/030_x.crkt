@@ -1,0 +1,14 @@
+%%TEST%%
+array operator overloading
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+     class A { int oper [](int i) { return i; }
+               int oper []=(int i, int v) { return i * v; } };
+     A a = {};
+     cout `$(a[100]) $(a[100] = 2)`;
+%%EXPECT%%
+100 200
+%%STDIN%%
+

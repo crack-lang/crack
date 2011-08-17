@@ -1,0 +1,10 @@
+%%TEST%%
+for statement
+%%ARGS%%
+
+%%FILE%%
+import test.test_forstmt;
+%%EXPECT%%
+ok
+%%STDIN%%
+

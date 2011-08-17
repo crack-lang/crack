@@ -1,0 +1,16 @@
+%%TEST%%
+overrides of globals
+%%ARGS%%
+
+%%FILE%%
+void foo() { puts("global foo"); }
+     class A {
+        void foo(int v) { puts("class foo"); }
+        void bar() { foo(100); }
+     };
+     A a = {};
+     a.bar();
+%%EXPECT%%
+class foo
+%%STDIN%%
+

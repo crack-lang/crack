@@ -1,0 +1,12 @@
+%%TEST%%
+explicit calls of base class functions
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase { void f() { puts("ok"); } }
+     class B : A { void f() { (A.f()); } }
+     B b = {}; b.f()
+%%EXPECT%%
+ok
+%%STDIN%%
+

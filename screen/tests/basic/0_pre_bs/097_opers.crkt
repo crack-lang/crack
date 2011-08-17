@@ -1,0 +1,10 @@
+%%TEST%%
+explicit operator invocation
+%%ARGS%%
+
+%%FILE%%
+import test.test_opers;
+%%EXPECT%%
+ok
+%%STDIN%%
+

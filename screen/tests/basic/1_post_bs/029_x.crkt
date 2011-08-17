@@ -1,0 +1,10 @@
+%%TEST%%
+typed opers
+%%ARGS%%
+
+%%FILE%%
+class A { void oper init() { print("ok"); } }; A a = {};
+%%EXPECT%%
+ok
+%%STDIN%%
+

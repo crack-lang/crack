@@ -1,0 +1,10 @@
+%%TEST%%
+test fs
+%%ARGS%%
+
+%%FILE%%
+import test.test_fs;
+%%EXPECT%%
+ok
+%%STDIN%%
+

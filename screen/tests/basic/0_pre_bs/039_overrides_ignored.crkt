@@ -1,0 +1,19 @@
+%%TEST%%
+overrides ignored in overload search
+%%ARGS%%
+
+%%FILE%%
+class A {} class B : A {}
+     class X : VTableBase {
+        void f(B v) { puts("ok"); }
+        void f(A v) { puts("FAILED virtual functions altogether!!"); }
+     }
+     class Y : X {
+        void f(A v) { puts("FAILED called override"); }
+     }
+     Y y = {};
+     y.f(B());
+%%EXPECT%%
+ok
+%%STDIN%%
+

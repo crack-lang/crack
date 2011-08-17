@@ -1,0 +1,13 @@
+%%TEST%%
+negation and bitwise not operators
+%%ARGS%%
+
+%%FILE%%
+a := 32;
+     if (~a != -33) puts("1s complement FAIL");
+     if (-a != -32) puts("negation FAIL");
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

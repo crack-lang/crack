@@ -1,0 +1,10 @@
+%%TEST%%
+correct caching of crack.lang
+%%ARGS%%
+
+%%FILE%%
+import crack.lang; print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

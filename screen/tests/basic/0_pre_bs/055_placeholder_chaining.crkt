@@ -1,0 +1,11 @@
+%%TEST%%
+chaining placeholders
+%%ARGS%%
+
+%%FILE%%
+class Foo { int a; int b; void foo() { a = b; } }; 
+     Foo f = {}; f.b = 100; f.foo(); printint(f.a);
+%%EXPECT%%
+100
+%%STDIN%%
+

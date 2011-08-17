@@ -1,0 +1,11 @@
+%%TEST%%
+escaped newline is ignored
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout; cout `o\
+k\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

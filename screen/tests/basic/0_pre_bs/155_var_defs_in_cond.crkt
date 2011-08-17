@@ -1,0 +1,18 @@
+%%TEST%%
+defining variables in condtional expressions
+%%ARGS%%
+
+%%FILE%%
+x := 10;
+     while (v := x) {
+         printint(v);
+         --x;
+     }
+     if (v := 10) {
+         printint(v);
+     }
+     v := "test";
+%%EXPECT%%
+1098765432110
+%%STDIN%%
+

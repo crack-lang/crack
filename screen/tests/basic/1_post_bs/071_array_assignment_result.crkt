@@ -1,0 +1,18 @@
+%%TEST%%
+result of array assignment expressions is the value assigned.
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+     class A {}
+     A a = {};
+     array[A] aa = {1};
+     Object x;
+     x = (aa[0] = a);
+     if (!(x is a))
+         cout `failed assignment of result of array output assignment\n`;
+     cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

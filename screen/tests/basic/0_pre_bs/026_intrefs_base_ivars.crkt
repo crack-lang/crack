@@ -1,0 +1,12 @@
+%%TEST%%
+internal references of base class inst vars
+%%ARGS%%
+
+%%FILE%%
+class A { int32 val; };
+     class B : A { oper init() { val = 100; } int32 f() { return val; } };
+     B b = {}; printint(b.f());
+%%EXPECT%%
+100
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+assigning a class
+%%ARGS%%
+
+%%FILE%%
+class A {} Class c = A; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

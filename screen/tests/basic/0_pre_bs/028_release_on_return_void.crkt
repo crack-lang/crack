@@ -1,0 +1,13 @@
+%%TEST%%
+release on return void
+%%ARGS%%
+
+%%FILE%%
+class A { int32 s; void i(int32 s0) {s=s0}
+             oper bind() {printint(s); puts("b");}
+             oper release() {printint(s); puts("r");} }; void func() { A a = {}; a.i(2); printint(1); return } func()
+%%EXPECT%%
+0b
+12r
+%%STDIN%%
+

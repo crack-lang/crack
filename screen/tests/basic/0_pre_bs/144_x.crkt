@@ -1,0 +1,12 @@
+%%TEST%%
+first class static member funcs
+%%ARGS%%
+
+%%FILE%%
+class A { @static void foo(int a) { puts("ok"); } }
+   x := A.foo;
+   x(100);
+%%EXPECT%%
+ok
+%%STDIN%%
+

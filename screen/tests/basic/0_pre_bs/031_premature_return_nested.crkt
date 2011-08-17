@@ -1,0 +1,17 @@
+%%TEST%%
+premature return in nested context
+%%ARGS%%
+
+%%FILE%%
+class A { int32 s; void i(int32 s0) {s=s0}
+             oper bind() {printint(s); puts("b");}
+             oper release() {printint(s); puts("r");} }; void func(int32 val) { A a = {}; a.i(5); printint(1); 
+                          if (val) { A b = {}; b.i(4); printint(2); return; }
+                          printint(3); } func(1)
+%%EXPECT%%
+0b
+10b
+24r
+5r
+%%STDIN%%
+

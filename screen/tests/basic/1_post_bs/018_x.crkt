@@ -1,0 +1,10 @@
+%%TEST%%
+module cleanup on exception during import
+%%ARGS%%
+
+%%FILE%%
+import test.testmod_throw;
+%%EXPECT%%
+releasing
+%%STDIN%%
+

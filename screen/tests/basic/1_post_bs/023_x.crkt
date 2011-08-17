@@ -1,0 +1,26 @@
+%%TEST%%
+interpolation operator
+%%ARGS%%
+
+%%FILE%%
+import crack.io FDWriter, Formatter;
+
+    class F : Formatter {
+        bool enabled;
+        oper init(int fd) : Formatter(FDWriter(fd)), enabled = true {}
+        bool isTrue() { return enabled; }
+    };
+    out := F(1);
+    moreData := "more data";
+    out `sum = $(1 + 2)
+more data = $moreData
+dollar sign: \$
+`;
+    out.enabled = false;
+    out `should not see this`;
+%%EXPECT%%
+sum = 3
+more data = more data
+dollar sign: $
+%%STDIN%%
+

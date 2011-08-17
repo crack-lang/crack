@@ -1,0 +1,19 @@
+%%TEST%%
+while does boolean conversion
+%%ARGS%%
+
+%%FILE%%
+class A {
+         int val; oper init(int val0) : val = val0 {} 
+         oper to bool() { return val; } 
+     }
+     a := A(3);
+     while (a) {
+         if (!a) { puts("failed"); break; }
+         --a.val;
+     };
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

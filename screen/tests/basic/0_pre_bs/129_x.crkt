@@ -1,0 +1,10 @@
+%%TEST%%
+invalid unary operator
+%%ARGS%%
+
+%%FILE%%
+class Foo {} !Foo();
+%%EXPECT%%
+ParseError: %OUTDIR%129_x.crk:1: oper ! is not defined for type Foo
+%%STDIN%%
+

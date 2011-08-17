@@ -1,0 +1,21 @@
+%%TEST%%
+reference counting of assigned variables
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+     class A {
+         String val;
+         A next;
+         oper init(String val0, A next0) : val = val0, next = next0 {}
+         oper del() { print(val); }
+     }
+     a := A("first", null);
+     a = A("second", a);
+     cout `done\n`;
+%%EXPECT%%
+done
+second
+first
+%%STDIN%%
+

@@ -1,0 +1,13 @@
+%%TEST%%
+command line arguments
+%%ARGS%%
+a b c
+%%FILE%%
+import crack.sys argv; uint i = 1;
+     while (i < argv.count()) { print(argv[i]); i = i + 1; }
+%%EXPECT%%
+a
+b
+c
+%%STDIN%%
+

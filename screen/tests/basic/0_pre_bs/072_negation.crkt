@@ -1,0 +1,11 @@
+%%TEST%%
+negation
+%%ARGS%%
+
+%%FILE%%
+if (1 - 2 != -1) puts("FAIL");
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

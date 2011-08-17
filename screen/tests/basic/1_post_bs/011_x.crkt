@@ -1,0 +1,10 @@
+%%TEST%%
+narrowing during return
+%%ARGS%%
+
+%%FILE%%
+String s() { return "val"; } print(s());
+%%EXPECT%%
+val
+%%STDIN%%
+

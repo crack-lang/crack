@@ -1,0 +1,21 @@
+%%TEST%%
+integer comparison operators
+%%ARGS%%
+
+%%FILE%%
+if (0 == 0) printint(1); else printint(0);
+     if (1 == 0) printint(0); else printint(1);
+     if (0 != 0) printint(0); else printint(1);
+     if (0 != 1) printint(1); else printint(0);
+     if (1 > 0) printint(1); else printint(0);
+     if (1 > 1) printint(0); else printint(1);
+     if (0 < 1) printint(1); else printint(0);
+     if (1 < 1) printint(0); else printint(1);
+     if (1 >= 0) printint(1); else printint(0);
+     if (1 >= 1) printint(1); else printint(0);
+     if (1 >= 2) printint(0); else printint(1);
+     if (0 <= 1) printint(1); else printint(0);
+%%EXPECT%%
+111111111111
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+forward declarations
+%%ARGS%%
+
+%%FILE%%
+import test.test_forward;
+%%EXPECT%%
+ok
+%%STDIN%%
+

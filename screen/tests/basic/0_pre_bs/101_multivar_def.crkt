@@ -1,0 +1,10 @@
+%%TEST%%
+multiple variables in the same definition
+%%ARGS%%
+
+%%FILE%%
+int a, b = 100, c; printint(a); printint(b); printint(c);
+%%EXPECT%%
+01000
+%%STDIN%%
+

@@ -1,0 +1,17 @@
+%%TEST%%
+operator overloading of unary operators
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+     String oper ~(String s) { return "complemented"; }
+     String oper -(String s) { return "negated"; }
+     String oper --x(String s) { return "decremented"; }
+     if ((-"test").cmp("negated")) cout `negation FAIL\n`;
+     if ((~"test").cmp("complemented")) cout `complement FAIL\n`;
+     if ((--"test").cmp("decremented")) cout `decrement FAIL\n`;
+     cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

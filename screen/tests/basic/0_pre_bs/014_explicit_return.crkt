@@ -1,0 +1,10 @@
+%%TEST%%
+void func with explicit return
+%%ARGS%%
+
+%%FILE%%
+void f() { return; } f(); puts("abcd");
+%%EXPECT%%
+abcd
+%%STDIN%%
+

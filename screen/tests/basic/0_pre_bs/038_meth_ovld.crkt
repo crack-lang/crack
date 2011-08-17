@@ -1,0 +1,12 @@
+%%TEST%%
+method overloads
+%%ARGS%%
+
+%%FILE%%
+class A { void f(int32 v) { printint(v); }
+               void f(byteptr v) { puts(v); } };
+     A a = {}; a.f(100); a.f("test");
+%%EXPECT%%
+100test
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+not operator
+%%ARGS%%
+
+%%FILE%%
+if (!false) print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

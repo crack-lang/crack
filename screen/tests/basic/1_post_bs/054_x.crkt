@@ -1,0 +1,10 @@
+%%TEST%%
+objects
+%%ARGS%%
+
+%%FILE%%
+import test.test_object;
+%%EXPECT%%
+ok
+%%STDIN%%
+

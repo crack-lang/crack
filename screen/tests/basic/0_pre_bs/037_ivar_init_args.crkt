@@ -1,0 +1,11 @@
+%%TEST%%
+Initialization of instance variables from similarly named args
+%%ARGS%%
+
+%%FILE%%
+int32 a; class X { int a; oper init(int32 a) : a = a {} };
+     X x = {100}; if (x.a == 100) puts("ok"); else puts("FAILED");
+%%EXPECT%%
+ok
+%%STDIN%%
+

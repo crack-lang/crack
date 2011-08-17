@@ -1,0 +1,10 @@
+%%TEST%%
+initialization from a non-productive expression
+%%ARGS%%
+
+%%FILE%%
+class X { oper bind() {} } X x; y := x; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

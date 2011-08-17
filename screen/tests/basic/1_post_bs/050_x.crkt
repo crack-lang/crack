@@ -1,0 +1,12 @@
+%%TEST%%
+explicit conversion to byteptr
+%%ARGS%%
+
+%%FILE%%
+import crack.runtime strcpy; a := array[int32](10); 
+     strcpy(byteptr(a), "ok".buffer); 
+     puts(byteptr(a));
+%%EXPECT%%
+ok
+%%STDIN%%
+

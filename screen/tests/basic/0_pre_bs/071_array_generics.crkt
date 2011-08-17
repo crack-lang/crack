@@ -1,0 +1,13 @@
+%%TEST%%
+array generics
+%%ARGS%%
+
+%%FILE%%
+x := array[uint](100);
+     uint i = 0; while (i < 100) { x[i] = i; i = i + 1; }
+     i = 0; while (i < 10) { if (x[i] != i) puts("FAIL"); i = i + 1; }
+     puts("ok")
+%%EXPECT%%
+ok
+%%STDIN%%
+

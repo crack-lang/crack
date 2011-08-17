@@ -1,0 +1,13 @@
+%%TEST%%
+arg index out of bounds
+%%ARGS%%
+
+%%FILE%%
+import crack.sys argv;
+     import crack.lang IndexError;
+     import crack.io cout;
+     try { argv[1]; } catch (IndexError ex) { cout `ok`; }
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+multiple variables
+%%ARGS%%
+
+%%FILE%%
+int x = 0, y = 1; printint(x); printint(y)
+%%EXPECT%%
+01
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+string constant folding
+%%ARGS%%
+
+%%FILE%%
+puts("o" "k")
+%%EXPECT%%
+ok
+%%STDIN%%
+

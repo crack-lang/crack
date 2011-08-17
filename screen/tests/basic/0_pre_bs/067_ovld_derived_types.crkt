@@ -1,0 +1,12 @@
+%%TEST%%
+overloading based on derived types
+%%ARGS%%
+
+%%FILE%%
+class A { void f(A a) { puts("A"); } };
+     class B : A { void f(B b) { puts("B"); } };
+     B b = {}; b.f(b);
+%%EXPECT%%
+B
+%%STDIN%%
+

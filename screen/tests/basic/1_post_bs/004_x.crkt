@@ -1,0 +1,15 @@
+%%TEST%%
+recursive methods
+%%ARGS%%
+
+%%FILE%%
+class A {
+        int32 sum(int32 top) { 
+            if (top > 0) return top + sum(top - 1); else return 0;
+        }
+     };
+     printint(A().sum(10));
+%%EXPECT%%
+55
+%%STDIN%%
+

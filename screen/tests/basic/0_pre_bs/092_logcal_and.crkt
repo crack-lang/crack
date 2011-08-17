@@ -1,0 +1,10 @@
+%%TEST%%
+logical and
+%%ARGS%%
+
+%%FILE%%
+import test.test_logicaland;
+%%EXPECT%%
+ok
+%%STDIN%%
+

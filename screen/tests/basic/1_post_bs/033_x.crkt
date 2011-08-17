@@ -1,0 +1,13 @@
+%%TEST%%
+order of destruction
+%%ARGS%%
+
+%%FILE%%
+class A { oper del() { printint(1); } };
+     class B { oper del() { printint(2); } };
+     class C : A { B b = {}; oper del() { printint(3); } };
+     C c = {};
+%%EXPECT%%
+321
+%%STDIN%%
+

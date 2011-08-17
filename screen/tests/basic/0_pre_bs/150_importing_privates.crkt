@@ -1,0 +1,10 @@
+%%TEST%%
+Error when importing privates
+%%ARGS%%
+
+%%FILE%%
+import test.testmod5 _protected;
+%%EXPECT%%
+ParseError: %OUTDIR%150_importing_privates.crk:1: Can not import private symbol _protected.
+%%STDIN%%
+

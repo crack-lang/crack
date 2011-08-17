@@ -1,0 +1,11 @@
+%%TEST%%
+double terminal "if"
+%%ARGS%%
+
+%%FILE%%
+int32 function(int32 val) { if (val) return val; else return 0; }
+     printint(function(1)); printint(function(0));
+%%EXPECT%%
+10
+%%STDIN%%
+

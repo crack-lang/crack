@@ -1,0 +1,10 @@
+%%TEST%%
+file api
+%%ARGS%%
+%SOURCEDIR%
+%%FILE%%
+import test.test_dir;
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+sockets
+%%ARGS%%
+
+%%FILE%%
+import test.test_sockets;
+%%EXPECT%%
+ok
+%%STDIN%%
+

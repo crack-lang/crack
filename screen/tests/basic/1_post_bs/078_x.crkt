@@ -1,0 +1,10 @@
+%%TEST%%
+test date functions
+%%ARGS%%
+
+%%FILE%%
+import test.test_time;
+%%EXPECT%%
+ok
+%%STDIN%%
+

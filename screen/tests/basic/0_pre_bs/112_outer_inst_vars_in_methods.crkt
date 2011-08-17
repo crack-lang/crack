@@ -1,0 +1,10 @@
+%%TEST%%
+using instance variables from nested class methods.
+%%ARGS%%
+
+%%FILE%%
+class A { int a; class B { int f() { return a; } } }
+%%EXPECT%%
+ParseError: %OUTDIR%112_outer_inst_vars_in_methods.crk:1: Variable 'a' is not accessible from within this context.
+%%STDIN%%
+

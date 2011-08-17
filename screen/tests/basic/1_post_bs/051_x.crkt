@@ -1,0 +1,12 @@
+%%TEST%%
+error if return types don't match on an override
+%%ARGS%%
+
+%%FILE%%
+class A { Object f() { return null; } }
+     class B : A { String f() { return "test"; } }
+     B().f();
+%%EXPECT%%
+ParseError: %OUTDIR%051_x.crk:2: Function return type of crack.lang.String does not match that of the function it overrides (crack.lang.Object)
+%%STDIN%%
+

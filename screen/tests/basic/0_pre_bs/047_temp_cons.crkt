@@ -1,0 +1,11 @@
+%%TEST%%
+temporary object construction
+%%ARGS%%
+
+%%FILE%%
+class A { int32 val; oper init(int32 val0) { val = val0; } };
+     printint(A(100).val)
+%%EXPECT%%
+100
+%%STDIN%%
+

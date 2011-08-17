@@ -1,0 +1,10 @@
+%%TEST%%
+forward declarations in classes must be resolved by the end of the block
+%%ARGS%%
+
+%%FILE%%
+class A { void foo(); }
+%%EXPECT%%
+ParseError: %OUTDIR%121_x.crk:1: Forward declared function not defined at the end of the block: .builtin.void %OUTDIR%121_x.crk.A.foo()
+%%STDIN%%
+

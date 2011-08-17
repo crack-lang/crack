@@ -1,0 +1,18 @@
+%%TEST%%
+assignment releases old value
+%%ARGS%%
+
+%%FILE%%
+class A { String val;
+        oper init(String val0) : val = val0 {}
+        oper del() { print(val); }
+     };
+     
+     a := A("first");
+     a = A("second");
+     
+%%EXPECT%%
+first
+second
+%%STDIN%%
+

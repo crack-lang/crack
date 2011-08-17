@@ -1,0 +1,13 @@
+%%TEST%%
+assignment operator type is consistent with the LLVM lastValue
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+     void f(String s) {} String s; f(s = "test");
+     class Foo { String z; void g() { f(z = "test"); } }
+     cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

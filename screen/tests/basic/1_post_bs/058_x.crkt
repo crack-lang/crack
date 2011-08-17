@@ -1,0 +1,10 @@
+%%TEST%%
+regex tests
+%%ARGS%%
+
+%%FILE%%
+import test.test_regex;
+%%EXPECT%%
+ok
+%%STDIN%%
+

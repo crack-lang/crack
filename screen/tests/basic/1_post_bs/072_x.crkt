@@ -1,0 +1,10 @@
+%%TEST%%
+serial module
+%%ARGS%%
+
+%%FILE%%
+import test.test_serial;
+%%EXPECT%%
+ok
+%%STDIN%%
+

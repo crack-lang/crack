@@ -1,0 +1,10 @@
+%%TEST%%
+algorithms
+%%ARGS%%
+
+%%FILE%%
+import test.test_algo;
+%%EXPECT%%
+ok
+%%STDIN%%
+

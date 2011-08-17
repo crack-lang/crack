@@ -1,0 +1,11 @@
+%%TEST%%
+augmented assignment to instance variables
+%%ARGS%%
+
+%%FILE%%
+class Foo { int i; } Foo f = {}; f.i += 1;
+     if (f.i == 1) puts('ok'); else puts('FAIL: did not increment');
+%%EXPECT%%
+ok
+%%STDIN%%
+

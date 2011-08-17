@@ -94,12 +94,12 @@ class Test {
 
     // ensure test has required sections and that they contain valid data
     // also check to see if we're skipping this test for some reason
-    void checkTemplate() {        
+    void checkTemplate() {
         if (!_data.sections.contains("FILE")) {
             _isSkipped = "the template was missing a FILE section";
         }
-        if (!_data.sections.contains("EXPECT")) {
-            _isSkipped = "the template was missing an EXPECT section";
+        if (!_data.sections.contains("EXPECT") && !_data.sections.contains("REXPECT")) {
+            _isSkipped = "the template was missing an EXPECT or REXPECT section";
         }
         if (_data.sections.contains("TEST"))
             _data.desc = _data.sections["TEST"].rtrim();

@@ -1,0 +1,10 @@
+%%TEST%%
+containers
+%%ARGS%%
+
+%%FILE%%
+import test.test_containers;
+%%EXPECT%%
+ok
+%%STDIN%%
+

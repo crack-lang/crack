@@ -1,0 +1,10 @@
+%%TEST%%
+returning void from non-void func
+%%ARGS%%
+
+%%FILE%%
+int32 f() { return; }
+%%EXPECT%%
+ParseError: %OUTDIR%015_bad_return.crk:1: Missing return expression for function returning int32
+%%STDIN%%
+

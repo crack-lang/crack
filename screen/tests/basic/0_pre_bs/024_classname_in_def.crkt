@@ -1,0 +1,11 @@
+%%TEST%%
+using a classname with its definition
+%%ARGS%%
+
+%%FILE%%
+class C { void out() { puts("abcd"); } 
+               C self() { return this; } }; C c = {}; c.self().out();
+%%EXPECT%%
+abcd
+%%STDIN%%
+

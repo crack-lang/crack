@@ -1,0 +1,14 @@
+%%TEST%%
+intermediate ancestor adds function to inherited vtable
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase {}
+     class I : VTableBase {}
+     class I1 : I { void f() { puts("ok"); } }
+     class B : A, I1 {}
+     B().f();
+%%EXPECT%%
+ok
+%%STDIN%%
+

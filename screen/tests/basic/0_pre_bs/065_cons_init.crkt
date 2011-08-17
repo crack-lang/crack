@@ -1,0 +1,10 @@
+%%TEST%%
+constructor initializers
+%%ARGS%%
+
+%%FILE%%
+import test.test_init;
+%%EXPECT%%
+ok
+%%STDIN%%
+

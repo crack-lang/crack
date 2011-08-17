@@ -1,0 +1,12 @@
+%%TEST%%
+cin
+%%ARGS%%
+
+%%FILE%%
+import crack.io cin, cout;
+     data := cin.read(1024);
+     cout `got $data`;
+%%EXPECT%%
+got test data
+%%STDIN%%
+test data

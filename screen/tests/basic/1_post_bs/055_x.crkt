@@ -1,0 +1,10 @@
+%%TEST%%
+mix-ins
+%%ARGS%%
+
+%%FILE%%
+import test.test_mixins;
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+use of external class globals
+%%ARGS%%
+
+%%FILE%%
+b := byte; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

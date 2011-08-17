@@ -1,0 +1,14 @@
+%%TEST%%
+function overloads
+%%ARGS%%
+
+%%FILE%%
+void f(bool b) {if (b) puts("true"); else puts("false")}
+     void f(int32 v) {printint(v);}
+     void f(byteptr v) {puts(v);}
+     f(int32(100)); f("test"); f(1 == 0);
+%%EXPECT%%
+100test
+false
+%%STDIN%%
+

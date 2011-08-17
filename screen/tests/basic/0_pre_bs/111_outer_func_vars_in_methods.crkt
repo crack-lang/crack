@@ -1,0 +1,10 @@
+%%TEST%%
+using variables from enclosing functions in methods
+%%ARGS%%
+
+%%FILE%%
+void f() { int a; class A { int g() { return a; } } }
+%%EXPECT%%
+ParseError: %OUTDIR%111_outer_func_vars_in_methods.crk:1: Variable 'a' is not accessible from within this context.
+%%STDIN%%
+

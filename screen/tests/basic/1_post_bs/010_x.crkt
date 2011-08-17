@@ -1,0 +1,11 @@
+%%TEST%%
+matching preceeds conversion
+%%ARGS%%
+
+%%FILE%%
+void f(int32 i) { printint(1); } void f(uint32 u) { printint(2); }
+     int32 i; uint32 u; f(i); f(u); byte b; f(b);
+%%EXPECT%%
+121
+%%STDIN%%
+

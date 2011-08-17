@@ -1,0 +1,10 @@
+%%TEST%%
+vtable init of top-level base classes
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase { void a() { puts("ok" ); } }; (A().a());
+%%EXPECT%%
+ok
+%%STDIN%%
+

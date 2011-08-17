@@ -1,0 +1,14 @@
+%%TEST%%
+oper new generated immediately after init
+%%ARGS%%
+
+%%FILE%%
+class Foo { byteptr val; oper init(byteptr val0) : val = val0 {}
+                 Foo clone() { return Foo(val); } }
+     Foo f = {"ok"};
+     g := f.clone();
+     puts(g.val)
+%%EXPECT%%
+ok
+%%STDIN%%
+

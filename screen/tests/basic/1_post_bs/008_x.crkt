@@ -1,0 +1,10 @@
+%%TEST%%
+conversion from byteptr -> voidptr
+%%ARGS%%
+
+%%FILE%%
+voidptr v = "test string".buffer; print("ok")
+%%EXPECT%%
+ok
+%%STDIN%%
+

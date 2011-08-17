@@ -1,0 +1,18 @@
+%%TEST%%
+order of import and cleanup
+%%ARGS%%
+
+%%FILE%%
+puts("in toplevel");
+     import test.testmod;
+     puts("still in toplevel");
+     import test.testmod_nbs2;
+%%EXPECT%%
+testmod
+testmod_nbs2
+in toplevel
+still in toplevel
+cleanup testmod_nbs2
+cleanup testmod
+%%STDIN%%
+

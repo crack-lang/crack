@@ -1,0 +1,10 @@
+%%TEST%%
+inheriting from a primitive class
+%%ARGS%%
+
+%%FILE%%
+class A : int32 {}
+%%EXPECT%%
+ParseError: %OUTDIR%114_inheriting_prim_class.crk:1: You may not inherit from .builtin.int32 because it's a primitive class.
+%%STDIN%%
+

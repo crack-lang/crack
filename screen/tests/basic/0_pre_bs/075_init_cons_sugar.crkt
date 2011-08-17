@@ -1,0 +1,12 @@
+%%TEST%%
+initializer constructor sugar
+%%ARGS%%
+
+%%FILE%%
+class A { int i; oper init(int i0, byteptr b0) : i = i0 {} 
+               oper init() : i = 200 {} };
+     A a = {100, "ok"}; A b = {}; if (a.i + b.i == 300) puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

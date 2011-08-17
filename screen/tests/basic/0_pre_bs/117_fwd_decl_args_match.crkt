@@ -1,0 +1,15 @@
+%%TEST%%
+forward declaration args must match
+%%ARGS%%
+
+%%FILE%%
+void f(int a);
+     void f(int b) {
+         printint(b);
+     }
+%%EXPECT%%
+ParseError: %OUTDIR%117_fwd_decl_args_match.crk:2: Argument list of function f doesn't match the names of its forward declaration:
+    forward: (.builtin.int a)
+    defined: (.builtin.int b)
+%%STDIN%%
+

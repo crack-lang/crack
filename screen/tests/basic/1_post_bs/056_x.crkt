@@ -1,0 +1,10 @@
+%%TEST%%
+string tests
+%%ARGS%%
+
+%%FILE%%
+import test.test_strings;
+%%EXPECT%%
+ok
+%%STDIN%%
+
