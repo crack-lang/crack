@@ -3,6 +3,7 @@
 
 import crack.runtime usecs;
 import crack.cont.list List;
+import crack.io FStr;
 
 class Stats {
     List[String] failList = {};
@@ -10,8 +11,8 @@ class Stats {
     uint64 __endTime = 0;
     void startStopwatch() { __startTime = usecs(); }
     void stopStopwatch() { __endTime = usecs(); }
-    String getTotalTime() {
-        return "total time: foo";
+    float64 getTotalTime() {
+        return float64((__endTime - __startTime)) / 1000000;
     }
 }
 
