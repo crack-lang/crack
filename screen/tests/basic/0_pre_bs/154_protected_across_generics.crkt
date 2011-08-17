@@ -1,0 +1,21 @@
+%%TEST%%
+using protected members across generics
+%%ARGS%%
+
+%%FILE%%
+void _h() { puts("in h"); }
+     class A[T] {
+         @static void _f() { puts("in f"); }
+         class B[T] {
+             @static void _g() { _f(); puts("in g");  _h(); }
+         }
+         B[T] get() { return B[T](); }
+     }
+     
+     A[int]().get()._g();
+%%EXPECT%%
+in f
+in g
+in h
+%%STDIN%%
+

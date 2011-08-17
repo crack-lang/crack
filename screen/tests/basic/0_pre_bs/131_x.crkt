@@ -1,0 +1,10 @@
+%%TEST%%
+test array functions
+%%ARGS%%
+
+%%FILE%%
+import test.test_arrays;
+%%EXPECT%%
+ok
+%%STDIN%%
+

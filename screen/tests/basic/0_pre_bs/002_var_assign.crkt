@@ -1,0 +1,10 @@
+%%TEST%%
+variable assignment
+%%ARGS%%
+
+%%FILE%%
+byteptr d = "abcd"; puts(d);
+%%EXPECT%%
+abcd
+%%STDIN%%
+

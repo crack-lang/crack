@@ -1,0 +1,10 @@
+%%TEST%%
+nested class syntax
+%%ARGS%%
+
+%%FILE%%
+class A { class B {} class C {}; class D {} }; puts ("ok")
+%%EXPECT%%
+ok
+%%STDIN%%
+

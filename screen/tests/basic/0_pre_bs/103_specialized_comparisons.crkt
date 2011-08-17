@@ -1,0 +1,10 @@
+%%TEST%%
+specialization comparisons
+%%ARGS%%
+
+%%FILE%%
+array[byteptr] b = array[byteptr](10); puts("ok")
+%%EXPECT%%
+ok
+%%STDIN%%
+

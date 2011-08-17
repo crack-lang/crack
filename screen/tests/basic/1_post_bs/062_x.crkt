@@ -1,0 +1,10 @@
+%%TEST%%
+annotations
+%%ARGS%%
+
+%%FILE%%
+import test.test_annotations;
+%%EXPECT%%
+ok
+%%STDIN%%
+

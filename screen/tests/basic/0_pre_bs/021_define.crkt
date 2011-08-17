@@ -1,0 +1,10 @@
+%%TEST%%
+the "define" (":=") operator
+%%ARGS%%
+
+%%FILE%%
+x := 1234; printint(x)
+%%EXPECT%%
+1234
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+conversion of null during initialization
+%%ARGS%%
+
+%%FILE%%
+int32 i = null; byteptr b = null; class A {}; A a = null; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

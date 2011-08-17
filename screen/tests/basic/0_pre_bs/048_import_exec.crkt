@@ -1,0 +1,12 @@
+%%TEST%%
+execution of imports
+%%ARGS%%
+
+%%FILE%%
+import test.testmod func; puts("main")
+%%EXPECT%%
+testmod
+main
+cleanup testmod
+%%STDIN%%
+

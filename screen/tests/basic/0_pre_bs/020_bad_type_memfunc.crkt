@@ -1,0 +1,10 @@
+%%TEST%%
+bad type for member function
+%%ARGS%%
+
+%%FILE%%
+class Foo { xxx f() {} };
+%%EXPECT%%
+ParseError: %OUTDIR%020_bad_type_memfunc.crk:1: xxx is not a type.
+%%STDIN%%
+

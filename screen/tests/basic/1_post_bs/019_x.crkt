@@ -1,0 +1,13 @@
+%%TEST%%
+uncaught exceptions
+%%ARGS%%
+
+%%FILE%%
+import crack.lang Exception;
+     throw Exception("badness transpired");
+%%EXPECT%%
+Uncaught Exception:
+__main__
+Exception: badness transpired
+%%STDIN%%
+

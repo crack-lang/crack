@@ -1,0 +1,12 @@
+%%TEST%%
+setting "final" attribute from an annotation
+%%ARGS%%
+
+%%FILE%%
+@import test.testann user_final;
+     class A { @user_final void f() {} }
+     class B : A { void f() {} }
+%%EXPECT%%
+ParseError: %OUTDIR%066_x.crk:3: Definition of f hides previous overload.
+%%STDIN%%
+

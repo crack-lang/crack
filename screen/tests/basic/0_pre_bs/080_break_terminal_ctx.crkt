@@ -1,0 +1,11 @@
+%%TEST%%
+correct propagation of break terminal contexts
+%%ARGS%%
+
+%%FILE%%
+while (1) { if (0) break; else break;
+                 puts("fail"); }
+%%EXPECT%%
+ParseError: %OUTDIR%080_break_terminal_ctx.crk:2: unreachable code
+%%STDIN%%
+

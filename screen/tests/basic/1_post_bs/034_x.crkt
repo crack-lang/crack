@@ -1,0 +1,17 @@
+%%TEST%%
+StringFormatter
+%%ARGS%%
+
+%%FILE%%
+import crack.io StringFormatter, cout;
+     f := StringFormatter(5);
+     f `test larger than 2*size`;
+     f ` second write`;
+     if (!f.createString().cmp("test larger than 2*size second write"))
+        cout `ok`;
+    else
+        cout `FAIL`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

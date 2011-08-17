@@ -1,0 +1,10 @@
+%%TEST%%
+math module
+%%ARGS%%
+
+%%FILE%%
+import test.test_math;
+%%EXPECT%%
+ok
+%%STDIN%%
+

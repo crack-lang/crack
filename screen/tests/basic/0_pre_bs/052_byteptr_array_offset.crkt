@@ -1,0 +1,10 @@
+%%TEST%%
+byteptr array offsets
+%%ARGS%%
+
+%%FILE%%
+puts("not ok" + 4)
+%%EXPECT%%
+ok
+%%STDIN%%
+

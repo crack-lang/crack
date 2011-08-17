@@ -1,0 +1,10 @@
+%%TEST%%
+Object/String comparison operators
+%%ARGS%%
+
+%%FILE%%
+import test.test_compare;
+%%EXPECT%%
+ok
+%%STDIN%%
+

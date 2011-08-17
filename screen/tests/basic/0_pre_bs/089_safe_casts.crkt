@@ -1,0 +1,13 @@
+%%TEST%%
+safe casting
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase {}
+     class B : A { void check() { puts("ok"); } }
+     A b = B();
+     (B).cast(b).check();
+%%EXPECT%%
+ok
+%%STDIN%%
+

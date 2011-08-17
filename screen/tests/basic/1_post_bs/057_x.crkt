@@ -1,0 +1,10 @@
+%%TEST%%
+error tests
+%%ARGS%%
+
+%%FILE%%
+import test.test_error;
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+block if/else
+%%ARGS%%
+
+%%FILE%%
+if (1) { puts("abcd"); } else { puts("efgh"); }
+%%EXPECT%%
+abcd
+%%STDIN%%
+

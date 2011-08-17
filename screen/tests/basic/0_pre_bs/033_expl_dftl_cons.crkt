@@ -1,0 +1,11 @@
+%%TEST%%
+explicit default constructor
+%%ARGS%%
+
+%%FILE%%
+class A { int32 val; oper init() { val = 100; } };
+     A a = {}; printint(a.val);
+%%EXPECT%%
+100
+%%STDIN%%
+

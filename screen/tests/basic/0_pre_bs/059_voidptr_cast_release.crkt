@@ -1,0 +1,12 @@
+%%TEST%%
+voidptr cast of class with release
+%%ARGS%%
+
+%%FILE%%
+void func(voidptr val) {printint(1);}
+     class A { oper release() { printint(2); } };
+     func(A());
+%%EXPECT%%
+12
+%%STDIN%%
+

@@ -1,0 +1,11 @@
+%%TEST%%
+external references of base inst vars
+%%ARGS%%
+
+%%FILE%%
+class A { int32 v; }; class B : A {}; 
+     B b = {}; b.v = 100; printint(b.v);
+%%EXPECT%%
+100
+%%STDIN%%
+

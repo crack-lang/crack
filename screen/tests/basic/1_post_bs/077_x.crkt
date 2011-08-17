@@ -1,0 +1,10 @@
+%%TEST%%
+test numeric conversions
+%%ARGS%%
+
+%%FILE%%
+import test.test_numeric_conversions;
+%%EXPECT%%
+ok
+%%STDIN%%
+

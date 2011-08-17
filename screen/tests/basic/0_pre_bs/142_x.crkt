@@ -1,0 +1,12 @@
+%%TEST%%
+context error messages for generics
+%%ARGS%%
+
+%%FILE%%
+class A[T] { T f() { return "foo"; } }
+     A[int] i;
+%%EXPECT%%
+ParseError: %OUTDIR%142_x.crk:1: Invalid return type byteptr for function returning int
+  in generic instantiation at %OUTDIR%142_x.crk:2
+%%STDIN%%
+

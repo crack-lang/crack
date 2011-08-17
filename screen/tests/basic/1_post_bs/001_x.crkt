@@ -1,0 +1,10 @@
+%%TEST%%
+bool construction
+%%ARGS%%
+
+%%FILE%%
+bool b; if (b) print("fail"); else print("pass")
+%%EXPECT%%
+pass
+%%STDIN%%
+

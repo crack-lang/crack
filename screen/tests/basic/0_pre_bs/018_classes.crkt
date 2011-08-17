@@ -1,0 +1,10 @@
+%%TEST%%
+classes
+%%ARGS%%
+
+%%FILE%%
+import test.test_classes;
+%%EXPECT%%
+ok
+%%STDIN%%
+

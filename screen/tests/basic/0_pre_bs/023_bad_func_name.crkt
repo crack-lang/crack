@@ -1,0 +1,10 @@
+%%TEST%%
+bad func names
+%%ARGS%%
+
+%%FILE%%
+class Foo { void f() { this.g(); }};
+%%EXPECT%%
+ParseError: %OUTDIR%023_bad_func_name.crk:1: No method exists matching g()
+%%STDIN%%
+

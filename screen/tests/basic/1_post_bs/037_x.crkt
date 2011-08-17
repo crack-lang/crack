@@ -1,0 +1,10 @@
+%%TEST%%
+order of initialization and destruction
+%%ARGS%%
+
+%%FILE%%
+import test.test_init_del_order;
+%%EXPECT%%
+ok
+%%STDIN%%
+

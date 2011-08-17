@@ -1,0 +1,10 @@
+%%TEST%%
+simple addition
+%%ARGS%%
+
+%%FILE%%
+printint(1 + 2)
+%%EXPECT%%
+3
+%%STDIN%%
+

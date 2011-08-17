@@ -1,0 +1,10 @@
+%%TEST%%
+voidptr default initializer
+%%ARGS%%
+
+%%FILE%%
+voidptr p; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

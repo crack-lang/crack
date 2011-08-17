@@ -1,0 +1,10 @@
+%%TEST%%
+functions as values
+%%ARGS%%
+
+%%FILE%%
+void func() {} voidptr v = func; if (func is v) print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

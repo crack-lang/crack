@@ -1,0 +1,10 @@
+%%TEST%%
+semicolons unnecessary after classes, null statements
+%%ARGS%%
+
+%%FILE%%
+class A {} if (1) ; if (1) ; else ; if (1) {;;;} puts("ok")
+%%EXPECT%%
+ok
+%%STDIN%%
+

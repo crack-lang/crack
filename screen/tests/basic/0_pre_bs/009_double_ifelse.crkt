@@ -1,0 +1,11 @@
+%%TEST%%
+double if/else, all terminal
+%%ARGS%%
+
+%%FILE%%
+void f() { if (1) return; else if (0) return; else return; }
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

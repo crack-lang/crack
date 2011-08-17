@@ -1,0 +1,10 @@
+%%TEST%%
+test readers
+%%ARGS%%
+
+%%FILE%%
+import test.test_readers;
+%%EXPECT%%
+ok
+%%STDIN%%
+

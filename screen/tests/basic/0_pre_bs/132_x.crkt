@@ -1,0 +1,10 @@
+%%TEST%%
+error on the use of unspecialized generics
+%%ARGS%%
+
+%%FILE%%
+array x;
+%%EXPECT%%
+ParseError: %OUTDIR%132_x.crk:1: Generic type array must be specialized to be used.
+%%STDIN%%
+

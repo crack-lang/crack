@@ -1,0 +1,12 @@
+%%TEST%%
+module destruction order
+%%ARGS%%
+
+%%FILE%%
+import test.testmod4;
+%%EXPECT%%
+in testmod4
+testmod4 destroyed
+testmod3 deleted
+%%STDIN%%
+

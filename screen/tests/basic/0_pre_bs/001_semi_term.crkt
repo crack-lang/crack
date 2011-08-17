@@ -1,0 +1,10 @@
+%%TEST%%
+semicolon terminated
+%%ARGS%%
+
+%%FILE%%
+puts("hello world");
+%%EXPECT%%
+hello world
+%%STDIN%%
+

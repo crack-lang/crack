@@ -1,0 +1,11 @@
+%%TEST%%
+Error on creating an instance of an abstract class
+%%ARGS%%
+
+%%FILE%%
+@abstract class Foo { @abstract void f(); }
+     Foo foo = {};
+%%EXPECT%%
+ParseError: %OUTDIR%148_abstract_constructors.crk:2: You can not create an instance of abstract class Foo without an explicit 'oper new'.
+%%STDIN%%
+

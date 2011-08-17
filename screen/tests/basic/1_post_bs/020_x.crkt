@@ -1,0 +1,10 @@
+%%TEST%%
+C Comments
+%%ARGS%%
+
+%%FILE%%
+/* comment * text / text2 */print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

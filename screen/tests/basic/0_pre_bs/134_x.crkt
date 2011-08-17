@@ -1,0 +1,10 @@
+%%TEST%%
+exceptions
+%%ARGS%%
+
+%%FILE%%
+import test.test_exceptions;
+%%EXPECT%%
+ok
+%%STDIN%%
+

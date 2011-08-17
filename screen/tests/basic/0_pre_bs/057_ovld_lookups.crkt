@@ -1,0 +1,24 @@
+%%TEST%%
+overload lookups respect definition order
+%%ARGS%%
+
+%%FILE%%
+class A {}; class B : A {}; class C : B {}; class D : C {};
+     class X : A {
+         void f(D d) { puts("D"); }
+         void f(C c) { puts("C"); }
+         void f(B b) { puts("B"); }
+         void f(A a) { puts("A"); }
+     };
+
+     (X().f(A()));
+     (X().f(B()));
+     (X().f(C()));
+     (X().f(D()));
+%%EXPECT%%
+A
+B
+C
+D
+%%STDIN%%
+

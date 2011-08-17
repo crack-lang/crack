@@ -1,0 +1,10 @@
+%%TEST%%
+break and continue
+%%ARGS%%
+
+%%FILE%%
+import test.test_break;
+%%EXPECT%%
+ok
+%%STDIN%%
+

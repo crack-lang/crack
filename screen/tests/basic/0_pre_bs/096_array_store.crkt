@@ -1,0 +1,15 @@
+%%TEST%%
+storing objects in an array
+%%ARGS%%
+
+%%FILE%%
+class Foo { oper bind() { puts("binding"); } 
+                 oper release() { puts("releasing"); } };
+     f := array[Foo](10);
+     Foo foo = {};
+     f[0] = foo;
+%%EXPECT%%
+binding
+releasing
+%%STDIN%%
+

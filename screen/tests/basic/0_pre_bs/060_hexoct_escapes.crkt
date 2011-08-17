@@ -1,0 +1,16 @@
+%%TEST%%
+hex and octal code escapes
+%%ARGS%%
+
+%%FILE%%
+puts("\141\x61"); b := "\0\01\001";
+     if (b[0] == 0) puts("ok");
+     if (b[1] == 1) puts("ok");
+     if (b[2] == 1) puts("ok");
+%%EXPECT%%
+aa
+ok
+ok
+ok
+%%STDIN%%
+

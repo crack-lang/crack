@@ -1,0 +1,10 @@
+%%TEST%%
+cleanup of temporarys in conditionals
+%%ARGS%%
+
+%%FILE%%
+if ("test") 1; while ("test".size == 0) 1; print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

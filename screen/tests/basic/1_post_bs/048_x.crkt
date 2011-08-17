@@ -1,0 +1,11 @@
+%%TEST%%
+error if Object is not the first class
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase { int i; }
+     class B : A, Object {}
+%%EXPECT%%
+ParseError: %OUTDIR%048_x.crk:2: If you directly or indirectly inherit from Object, Object (or its derivative) must come first in the ancestor list.
+%%STDIN%%
+

@@ -1,0 +1,10 @@
+%%TEST%%
+simple if
+%%ARGS%%
+
+%%FILE%%
+if (1) puts("abcd");
+%%EXPECT%%
+abcd
+%%STDIN%%
+

@@ -1,0 +1,15 @@
+%%TEST%%
+function types with common LLVM structure are discrete
+%%ARGS%%
+
+%%FILE%%
+class A {}
+     class B {}
+     void f(B b) {}
+     void g(A a) {}
+     function[void, A] fva = g;
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

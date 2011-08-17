@@ -1,0 +1,10 @@
+%%TEST%%
+return in module scope
+%%ARGS%%
+
+%%FILE%%
+return
+%%EXPECT%%
+ParseError: %OUTDIR%017_return_from_mod.crk:1: Return statement not allowed in module scope
+%%STDIN%%
+

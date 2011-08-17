@@ -1,0 +1,15 @@
+%%TEST%%
+assignment to function arguments
+%%ARGS%%
+
+%%FILE%%
+bool f(int i, int c) {
+        counter := 0;
+        while (i) { if (counter > c) return 0; i >>= 1; ++counter; }
+        return 1;
+     }
+     if (!f(100, 7)) puts("failed"); else puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

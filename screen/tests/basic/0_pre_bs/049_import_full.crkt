@@ -1,0 +1,18 @@
+%%TEST%%
+full import functionality
+%%ARGS%%
+
+%%FILE%%
+import test.testmod func, A, aImportVar;
+     func();
+     aImportVar.dump();
+     (A("local inst of imported class").dump());
+     
+%%EXPECT%%
+testmod
+in test func
+imported var
+local inst of imported class
+cleanup testmod
+%%STDIN%%
+

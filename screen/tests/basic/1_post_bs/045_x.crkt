@@ -1,0 +1,10 @@
+%%TEST%%
+++/-- operators
+%%ARGS%%
+
+%%FILE%%
+import test.test_incrdecr;
+%%EXPECT%%
+ok
+%%STDIN%%
+

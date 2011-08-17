@@ -1,0 +1,10 @@
+%%TEST%%
+lack of rethrow gives a sane error
+%%ARGS%%
+
+%%FILE%%
+throw;
+%%EXPECT%%
+ParseError: %OUTDIR%135_x.crk:1: Rethrowing exceptions not supported yet.
+%%STDIN%%
+

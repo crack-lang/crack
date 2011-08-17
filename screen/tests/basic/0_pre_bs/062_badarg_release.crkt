@@ -1,0 +1,10 @@
+%%TEST%%
+errors on bad argument lists for release
+%%ARGS%%
+
+%%FILE%%
+class A { oper release(int val) {} };
+%%EXPECT%%
+ParseError: %OUTDIR%062_badarg_release.crk:1: Expected 0 arguments for function oper release
+%%STDIN%%
+

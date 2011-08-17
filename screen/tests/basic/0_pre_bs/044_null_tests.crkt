@@ -1,0 +1,17 @@
+%%TEST%%
+tests against null
+%%ARGS%%
+
+%%FILE%%
+class A {}; 
+    if (0 == null) printint(1);
+    byteptr b = null;
+    if (b is null) printint(2);
+    A a;
+    A c = {};
+    if (a is null) printint(3);
+    if (c is null) puts("fail"); else printint(4);
+%%EXPECT%%
+1234
+%%STDIN%%
+

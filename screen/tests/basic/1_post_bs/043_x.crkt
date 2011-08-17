@@ -1,0 +1,10 @@
+%%TEST%%
+container generics
+%%ARGS%%
+
+%%FILE%%
+import test.test_container_generics;
+%%EXPECT%%
+ok
+%%STDIN%%
+

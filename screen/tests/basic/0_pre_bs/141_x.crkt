@@ -1,0 +1,10 @@
+%%TEST%%
+the typeof() operator
+%%ARGS%%
+
+%%FILE%%
+import test.test_typeof;
+%%EXPECT%%
+ok
+%%STDIN%%
+

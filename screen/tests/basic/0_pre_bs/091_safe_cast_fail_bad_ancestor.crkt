@@ -1,0 +1,12 @@
+%%TEST%%
+safe cast failure (incorrect inheritence)
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase {}
+     class B : VTableBase {}
+     (B.cast(A()));
+%%EXPECT%%
+Invalid class cast.
+%%STDIN%%
+

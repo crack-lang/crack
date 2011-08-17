@@ -1,0 +1,10 @@
+%%TEST%%
+pass 2 args, return 1
+%%ARGS%%
+
+%%FILE%%
+int32 f(int32 a, byteptr b) { return a; } printint(f(10, "xx"))
+%%EXPECT%%
+10
+%%STDIN%%
+

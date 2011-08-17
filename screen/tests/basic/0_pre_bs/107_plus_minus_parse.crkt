@@ -1,0 +1,10 @@
+%%TEST%%
++/- parse
+%%ARGS%%
+
+%%FILE%%
+int i=+1; int f=-1; i=i+1; f=f-1; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

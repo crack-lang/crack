@@ -1,0 +1,10 @@
+%%TEST%%
+no void variables
+%%ARGS%%
+
+%%FILE%%
+void v;
+%%EXPECT%%
+ParseError: %OUTDIR%138_x.crk:1: Can not create a variable of type 'void'
+%%STDIN%%
+

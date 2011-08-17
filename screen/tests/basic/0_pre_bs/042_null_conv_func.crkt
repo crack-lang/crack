@@ -1,0 +1,11 @@
+%%TEST%%
+conversion of null during params and returns
+%%ARGS%%
+
+%%FILE%%
+class A {}; int32 func(int32 i, byteptr b, A a) { return null; }
+     func(null, null, null); puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

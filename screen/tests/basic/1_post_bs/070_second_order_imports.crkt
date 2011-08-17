@@ -1,0 +1,10 @@
+%%TEST%%
+Error on second-degree imports
+%%ARGS%%
+
+%%FILE%%
+import test.testmod6 public;
+%%EXPECT%%
+ParseError: %OUTDIR%070_second_order_imports.crk:1: Name public does not belong to module test.testmod6.  Second-order imports are not allowed.  Import it from test.testmod5 instead.
+%%STDIN%%
+

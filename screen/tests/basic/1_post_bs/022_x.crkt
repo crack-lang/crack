@@ -1,0 +1,11 @@
+%%TEST%%
+functions as values in nested contexts
+%%ARGS%%
+
+%%FILE%%
+void f() {}
+     class A { void a() { voidptr g = f; } }; print("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

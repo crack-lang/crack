@@ -1,0 +1,10 @@
+%%TEST%%
+binary operators
+%%ARGS%%
+
+%%FILE%%
+import test.test_binops;
+%%EXPECT%%
+ok
+%%STDIN%%
+

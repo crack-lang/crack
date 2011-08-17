@@ -1,0 +1,12 @@
+%%TEST%%
+the class operator
+%%ARGS%%
+
+%%FILE%%
+class A : VTableBase {} class B : A {} class C : VTableBase {}
+     if (C().class.isSubclass(A)) puts("FAIL");
+     if (B().class.isSubclass(A)) puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

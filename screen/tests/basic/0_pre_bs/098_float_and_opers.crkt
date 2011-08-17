@@ -1,0 +1,10 @@
+%%TEST%%
+float type and operators
+%%ARGS%%
+
+%%FILE%%
+import test.test_float;
+%%EXPECT%%
+ok
+%%STDIN%%
+

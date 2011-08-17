@@ -1,0 +1,10 @@
+%%TEST%%
+test command line flags
+%%ARGS%%
+
+%%FILE%%
+import test.test_cmdline;
+%%EXPECT%%
+ok
+%%STDIN%%
+

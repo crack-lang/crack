@@ -1,0 +1,12 @@
+%%TEST%%
+first class functions
+%%ARGS%%
+
+%%FILE%%
+import test.test_firstclassfuncs;
+%%EXPECT%%
+ok
+ok
+ok
+%%STDIN%%
+

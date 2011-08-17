@@ -1,0 +1,10 @@
+%%TEST%%
+hello world
+%%ARGS%%
+
+%%FILE%%
+puts("hello world")
+%%EXPECT%%
+hello world
+%%STDIN%%
+

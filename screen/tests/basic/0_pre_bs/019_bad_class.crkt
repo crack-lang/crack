@@ -1,0 +1,10 @@
+%%TEST%%
+bad class definition
+%%ARGS%%
+
+%%FILE%%
+class Foo xxx;
+%%EXPECT%%
+ParseError: %OUTDIR%019_bad_class.crk:1: token xxx was not expected at this time, expected colon or opening brace.
+%%STDIN%%
+

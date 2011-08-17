@@ -1,0 +1,10 @@
+%%TEST%%
+errors on invalid constructors
+%%ARGS%%
+
+%%FILE%%
+class A {}; t := A(1, 2);
+%%EXPECT%%
+ParseError: %OUTDIR%070_invalid_cons_errors.crk:1: No method exists matching A(int, int)
+%%STDIN%%
+

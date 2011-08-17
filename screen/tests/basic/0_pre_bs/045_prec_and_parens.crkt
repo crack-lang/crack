@@ -1,0 +1,11 @@
+%%TEST%%
+precedence and parens
+%%ARGS%%
+
+%%FILE%%
+printint(4 / 2 * 2);
+     printint(4 / (2 * 2));
+%%EXPECT%%
+41
+%%STDIN%%
+

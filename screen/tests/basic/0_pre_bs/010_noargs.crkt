@@ -1,0 +1,10 @@
+%%TEST%%
+function with no args
+%%ARGS%%
+
+%%FILE%%
+void func() { puts("abcd"); } func()
+%%EXPECT%%
+abcd
+%%STDIN%%
+

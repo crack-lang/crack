@@ -1,0 +1,13 @@
+%%TEST%%
+Abstract method
+%%ARGS%%
+
+%%FILE%%
+@abstract class A : VTableBase { @abstract void f(); }
+     class B : A { void f() { puts("ok"); } }
+     A a = B();
+     a.f();
+%%EXPECT%%
+ok
+%%STDIN%%
+

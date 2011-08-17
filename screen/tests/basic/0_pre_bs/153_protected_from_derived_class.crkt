@@ -1,0 +1,12 @@
+%%TEST%%
+Using a protected member from a derived class.
+%%ARGS%%
+
+%%FILE%%
+import test.testmod5 A;
+     class B : A { void f() { _val; } }
+     puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

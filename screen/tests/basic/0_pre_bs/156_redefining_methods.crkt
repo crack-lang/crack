@@ -1,0 +1,10 @@
+%%TEST%%
+redefinition of methods
+%%ARGS%%
+
+%%FILE%%
+class A { void f() { f := 100; } }; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,11 @@
+%%TEST%%
+errors get locations outside of the Parser class
+%%ARGS%%
+
+%%FILE%%
+class A { oper init(int i) {} }
+    class B : A {}
+%%EXPECT%%
+ParseError: %OUTDIR%105_error_locs_outside_parser.crk:2: Cannot create a default constructor because base class A has no default constructor.
+%%STDIN%%
+

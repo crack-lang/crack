@@ -1,0 +1,10 @@
+%%TEST%%
+recursive imports give an error
+%%ARGS%%
+
+%%FILE%%
+import test.recursive_import;
+%%EXPECT%%
+ParseError: /home/weyrick/workspace/crack-language/test/recursive_import.crk:2: Attempting to import module test.recursive_import recursively.
+%%STDIN%%
+

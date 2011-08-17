@@ -1,0 +1,10 @@
+%%TEST%%
+simple negative if/else
+%%ARGS%%
+
+%%FILE%%
+if (0) puts("abcd"); else puts("efgh");
+%%EXPECT%%
+efgh
+%%STDIN%%
+

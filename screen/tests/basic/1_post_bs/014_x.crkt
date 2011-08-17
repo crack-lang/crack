@@ -1,0 +1,10 @@
+%%TEST%%
+remainder operator
+%%ARGS%%
+
+%%FILE%%
+printint((-1) % 2);
+%%EXPECT%%
+-1
+%%STDIN%%
+

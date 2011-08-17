@@ -1,0 +1,12 @@
+%%TEST%%
+multiple inheritence from the same base class
+%%ARGS%%
+
+%%FILE%%
+class A {}
+     class B : A {}
+     class C : B, A {}
+%%EXPECT%%
+ParseError: %OUTDIR%115_multi_inherit_same_base.crk:3: Class %OUTDIR%115_multi_inherit_same_base.crk.A is already an ancestor.
+%%STDIN%%
+
