@@ -36,12 +36,6 @@ class Option {
       type = type,
       value = value {}
 
-   oper init(String long, String short, String desc, String value, uint type):
-      long = long,
-      short = short,
-      type = type,
-      value = value {}
-
    oper init(String long, String short):
       long = long,
       short = short,
