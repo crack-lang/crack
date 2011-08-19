@@ -97,7 +97,7 @@ class BuilderTestHarness {
         // variable replacement
         e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expectedRegex.rtrim());
 
-        rx := Regex(e);
+        rx := Regex(e+"\w*");
         m := rx.search(actual.rtrim());
 
         if (m is null) {
