@@ -79,6 +79,7 @@ class BuilderTestHarness {
 
         // variable replacement
         e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expected);
+        e = str_replace('%SOURCEDIR%', config.sourceDir.name, e);
 
         // note that we ignore trailing newspace on expected and actual
         if (e.rtrim() == actual.rtrim()) {
@@ -96,6 +97,8 @@ class BuilderTestHarness {
 
         // variable replacement
         e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expectedRegex.rtrim());
+        e = str_replace('%SOURCEDIR%', config.sourceDir.name, e);
+                        
 
         rx := Regex(e+"\w*");
         m := rx.search(actual.rtrim());

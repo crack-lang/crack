@@ -4,7 +4,7 @@ recursive imports give an error
 
 %%FILE%%
 import test.recursive_import;
-%%REXPECT%%
-ParseError: .*recursive_import.crk:2: Attempting to import module test.recursive_import recursively.
+%%EXPECT%%
+ParseError: %SOURCEDIR%/test/recursive_import.crk:2: Attempting to import module test.recursive_import recursively.
 %%STDIN%%
 

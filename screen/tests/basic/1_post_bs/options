@@ -1,2 +1,2 @@
 %%OPTS%%
--G -l %SOURCEDIR%:%SOURCEDIR%lib:%SOURCEDIR%.libs
+-G -l %SOURCEDIR%:%SOURCEDIR%/lib:%SOURCEDIR%/.libs

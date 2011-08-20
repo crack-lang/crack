@@ -6,6 +6,14 @@ MYDIR=`dirname $0`
 OUTDIR="$MYDIR/output/"
 echo "output to $OUTDIR"
 
+if [ -z "$ROOT" ]; then
+    ROOT=.
+fi
+
+if [ ! -e "$OUTDIR" ]; then
+    mkdir -p "$OUTDIR"
+fi
+
 CRACKBIN="$MYDIR/../crack"
 if [ -s $CRACKBIN ]
 then
@@ -60,7 +68,8 @@ function load_options {
     
     opt_file="$path/options"
     if [ -e "$opt_file" ]; then
-        OPTS_sec="$(extract_section "$opt_file" OPTS)"
+        OPTS_sec="$(extract_section "$opt_file" OPTS | 
+                    sed s:%SOURCEDIR%:$ROOT:g)"
     fi
     
     # check parent directory
@@ -80,10 +89,12 @@ function run_test {
     
     TEST_sec=$(extract_section $file TEST)
     echo -n "$TEST_sec ..."
-    FILE_sec=$(extract_section $file FILE)
+    FILE_sec=$(extract_section $file FILE | sed "s:%SOURCEDIR%:$ROOT:g")
     echo "$FILE_sec" > $outfile
-    ARGS_sec=$(extract_section $file ARGS)    
-    EXPECT_sec=`extract_section $file EXPECT | sed "s:%OUTDIR%:$OUTDIR:g"`
+    ARGS_sec=$(extract_section $file ARGS |
+               sed "s:%SOURCEDIR%:$ROOT:g")
+    EXPECT_sec=`extract_section $file EXPECT |
+                sed "s:%OUTDIR%:$OUTDIR:g;s:%SOURCEDIR%:$ROOT:g"`
     STDIN_sec=`extract_section $file STDIN`
     
     # XXX script args
