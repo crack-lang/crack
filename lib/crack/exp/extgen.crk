@@ -471,6 +471,8 @@ class ExtensionData {
         @setConstType('uint64', 'Uint64', 'int64_t');
         @setConstType('int', 'Int', 'int');
         @setConstType('uint', 'Uint', 'int');
+        @setConstType('intz', 'Intz', 'intz');
+        @setConstType('uintz', 'Uintz', 'intz');
         @setConstType('float32', 'Float32', 'double');
         @setConstType('float64', 'Float64', 'double');
         @setConstType('float', 'Float', 'double');

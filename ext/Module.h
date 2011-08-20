@@ -38,6 +38,8 @@ class Module {
             uint64Type,
             intType,
             uintType,
+            intzType,
+            uintzType,
             float32Type,
             float64Type,
             floatType,
@@ -74,6 +76,8 @@ class Module {
         Type *getUint64Type();
         Type *getIntType();
         Type *getUintType();
+        Type *getUintzType();
+        Type *getIntzType();
         Type *getFloat32Type();
         Type *getFloat64Type();
         Type *getFloatType();
