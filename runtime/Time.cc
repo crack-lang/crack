@@ -72,6 +72,8 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
     crack::ext::Type *type_uint = mod->getUintType();
+    crack::ext::Type *type_intz = mod->getIntzType();
+    crack::ext::Type *type_uintz = mod->getUintzType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
@@ -178,11 +180,11 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
        f->addArg(type_int64, "seconds");
        f->addArg(type_byteptr, "buf");
 
-    f = mod->addFunc(type_uint64, "strftime",
+    f = mod->addFunc(type_uintz, "strftime",
             (void *)strftime
         );
        f->addArg(type_byteptr, "s");
-       f->addArg(type_uint64, "max");
+       f->addArg(type_uintz, "max");
        f->addArg(type_byteptr, "format");
        f->addArg(type_InternalDate, "d");
 

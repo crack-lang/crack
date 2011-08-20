@@ -132,7 +132,7 @@ char **get_environ(){
    @cname crk_ctime_r
    byteptr ctime(int64 seconds, byteptr buf);
 
-   uint64 strftime(byteptr s, uint64 max, byteptr format, InternalDate d);
+   uintz strftime(byteptr s, uintz max, byteptr format, InternalDate d);
 
    array[byteptr] get_environ();
    int putenv(byteptr keyvalue);
