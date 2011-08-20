@@ -2,7 +2,7 @@
 # Code for dealing with time.
 
 import crack.runtime InternalDate, strftime, strlen;
-import crack.lang AssertionError;
+import crack.lang AssertionError, ManagedBuffer;
 import crack.io FStr;
 import crack.runtime TimeVal;
 import crack.cont.array Array;
@@ -55,9 +55,10 @@ class Date : Object, InternalDate {
     }
 
     String getDefaultString(){
-        String result = {100, 0};
+        ManagedBuffer result = {100};
         _toBufferRaw(result.buffer);
-        return result;
+        result.size = strlen(result.buffer);
+        return String(result, true);
     }
 
    String strftime(String format, uint buflen){

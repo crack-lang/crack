@@ -1,5 +1,6 @@
 // Test time.h binding in runtime
-import crack.runtime InternalDate, ctime, strftime, asctime, epoch;
+import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen;
+import crack.lang ManagedBuffer;
 import crack.exp.cmdline CmdOptions;
 import crack.io cout;
 import crack.time Date;
@@ -27,21 +28,31 @@ if (verbose) printDate(mytime);
 secs:=mytime.getSeconds();
 if (verbose) cout `secs = $secs\n`;
 
-dateString := String(100,0); // Create a string to store time repr in
-asctime(mytime, dateString.buffer);
+String makeString(ManagedBuffer buf) {
+   buf.size = strlen(buf.buffer);
+   return String(buf, true);
+}
+
+ManagedBuffer dateBuf = {100};
+asctime(mytime, dateBuf.buffer);
+dateString := makeString(dateBuf);
 if (verbose) cout `asctime = $dateString`;
 
-dateString2 := String(100,0);
-ctime(secs, dateString2.buffer);
+dateBuf = ManagedBuffer(100);
+ctime(secs, dateBuf.buffer);
+dateString2 := makeString(dateBuf);
 if (verbose) cout `ctime = $dateString2`;
 
 if (dateString!=dateString2)
-   cout `Date format mismatch\n`;
+   cout `Date format mismatch: $dateString versus $dateString2\n`;
 
 mytime.setUTCSeconds(0);
 mytime.getSeconds();
 
-len:=strftime(dateString2.buffer, 100, "%A %B %d %Y".buffer, mytime);
+temp := "%A %B %d %Y";
+len:=strftime(dateString2.buffer, dateString2.size, temp.buffer,
+              mytime
+              );
 if (dateString2.substr(0,len)!='Thursday January 01 1970')
    cout `InternalDate.strftime format mismatch, got $dateString2, len = $len\n`;
 
@@ -64,7 +75,8 @@ ctime(secs, dateString2.buffer);
 if (verbose) cout `ctime = $dateString2`;
 
 if (dateString!=dateString2)
-   cout `Date format mismatch\n`;
+   cout `Date format mismatch: [$dateString] of size $(dateString.size) versus
+   [$dateString2] of size $(dateString2.size)\n`;
 
 
 Mytime2:=Date(secs);
