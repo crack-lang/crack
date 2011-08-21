@@ -484,3 +484,7 @@ class TestSuite {
 
 suite := TestSuite();
 suite.run();
+
+if (testSuiteStats.failList)
+    exit(2);  # an exit code of 2 indicates that we failed due to a test 
+              # failure
