@@ -186,7 +186,7 @@ crack_LDADD = libCrackLang.la $(LDFLAGS)
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
-TESTS = test/run_all_tests
+TESTS = test/screen
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template
 	@if which nml2html >/dev/null; then \

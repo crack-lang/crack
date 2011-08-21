@@ -1,0 +1,44 @@
+#!/bin/sh
+# Copyright 2011 Google Inc.
+# Runs the "screen" command on selected tests or the set of all tests.
+# Options:
+#   -n run tests under llvm-native
+
+root="$(dirname $(dirname $0))"
+
+builders="-bjit"
+opts=""
+
+function run_screen {
+    $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
+        -c "$root/crack" -s "$root" -o "$root/screen/output" "$builders" \
+        $opts "$@"
+}
+
+args=$(getopt fn "$@")
+eval set -- "$args"
+
+# process options
+while true; do
+    
+    case "$1" in
+        -n) builders='-bnative' ;;
+        -f) opts="$opts --stop-on-fail" ;;
+        --) shift ; break ;;
+    esac
+    
+    shift
+done
+
+tests=""
+for arg in "$@"; do
+    tests="$tests -f $arg"
+done
+
+if [ -n "$tests" ]; then
+    run_screen $tests
+else
+    run_screen -d "$root/screen/tests/basic"
+fi
+
+exit $?
