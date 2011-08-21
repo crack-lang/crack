@@ -595,5 +595,8 @@ class TreeMap[KeyT, ValT] {
     
     uint count() { return __count; }
     
+    ## a TreeMap is true if it has elements
+    bool isTrue() { return __count; }
+    
     Iter iter() { return Iter(__root); }
 }

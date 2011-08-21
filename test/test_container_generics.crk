@@ -19,6 +19,12 @@ m['fourth'] = 400;
 if (m['first'] != 100 || m['second'] != 200)
     cout `failed TreeMap access\n`;
 
+if (!m)
+    cout `FAILED: non-empty TreeMap is not true\n`;
+
+if (TreeMap[String, int]())
+    cout `FAILED: empty TreeMap is not false\n`;
+
 Array[String] sa = {};
 
 for (item :in m) {
@@ -30,6 +36,12 @@ for (item :in m) {
 QuickSort[Array[String]].sort(sa);
 
 # Now sa = [first: 100, fourth: 400, second: 200, third: 300]
+
+if (!sa)
+    cout `FAILED: non-empty array is not true\n`;
+
+if (Array[String]())
+    cout `FAILED: empty array is not false\n`;
 
 if (sa[0] != 'first: 100' || sa[1] != 'fourth: 400')
     cout `string array or iteration failed\n`;
@@ -243,6 +255,12 @@ if (concat(s) != 'first' || s.count() != 1)
 if (s[0] != 'first')
     cout `failed List [] access\n`;
 
+if (!List[int]![1])
+    cout `FAILED: non-empty list is not true\n`;
+
+if (List[int]())
+    cout `FAILED: empty list is not false\n`;
+
 @concat(DList[String]);
 
 void checkDList(DList[String] list, String val, uint count, String message) {
@@ -339,11 +357,23 @@ dl.delete(iter);
 dl.delete(iter);
 checkDList(dl, '', 0, 'Failed DList iterator delete of last elements');
 
+if (!DList[int]![1])
+    cout `FAILED: non-empty list is not true\n`;
+
+if (DList[int]())
+    cout `FAILED: empty list is not false\n`;
+
 hm := HashMap[String, int]();
 for (int i = 0; i < 100; ++i) {
     key := FStr() `$i`;
     hm[key] = i;
 }
+
+if (!hm)
+    cout `FAILED: non-empty HashMap is not true\n`;
+
+if (HashMap[String, int]())
+    cout `FAILED: empty HashMap is not false\n`;
 
 for (int i = 0; i < 100; ++i) {
     key := FStr() `$i`;

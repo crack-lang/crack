@@ -482,5 +482,8 @@ class Array[Elem] {
         }
 #        memmove(__rep + index, __rep + index + 1, __size - index);
         --__size;
-    }    
+    }
+    
+    ## Empty arrays are false, non-empty arrays are true.
+    bool isTrue() { return __size; }
 }

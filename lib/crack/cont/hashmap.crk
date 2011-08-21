@@ -302,6 +302,9 @@ class HashMap[Key, Value] {
         return _size;
     }
     
+    ## A HashMap is true if it has elements.
+    bool isTrue() { return _size; }
+    
     ## Method for testing - verify that all constraints are satisfied.
     void checkConstraints() {
         for (int i = 0; i < _cap; ++i) {

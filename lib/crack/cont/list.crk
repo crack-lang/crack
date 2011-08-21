@@ -157,6 +157,9 @@ class List[Elem] {
     }
     
     uint count() { return _count; }
+
+    ## Empty lists are false, non-empty lists are true.
+    bool isTrue() { return _count; }
 }
 
 ## Doubly-linked list
@@ -405,4 +408,7 @@ class DList[Elem] {
     }
     
     uint count() { return _count; }
+
+    ## Empty lists are false, non-empty lists are true.
+    bool isTrue() { return _count; }
 }   
