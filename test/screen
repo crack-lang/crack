@@ -9,7 +9,7 @@ root="$(dirname $(dirname $0))"
 builders="-bjit"
 opts=""
 
-function run_screen {
+run_screen() {
     $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
         -c "$root/crack" -s "$root" -o "$root/screen/output" "$builders" \
         $opts "$@"
