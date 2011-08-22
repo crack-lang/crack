@@ -180,23 +180,14 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so
                    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/opt/_pcre.so ${CMAKE_CURRENT_BINARY_DIR}/_pcre.so)
 
 add_custom_target(check 
-                  ${PROJECT_SOURCE_DIR}/test/run_all_tests
+                  ${PROJECT_SOURCE_DIR}/test/screen
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
                   )
 add_custom_target(checkc
-                  ${PROJECT_SOURCE_DIR}/test/run_all_tests crackc
+                  ${PROJECT_SOURCE_DIR}/test/screen -n
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
-                  )
-
-add_custom_target(screen
-                  crack  -l ${PROJECT_SOURCE_DIR}/screen
-                    ${PROJECT_SOURCE_DIR}/screen/screen.crk
-                    -c ${PROJECT_SOURCE_DIR}/crack
-                    -d ${PROJECT_SOURCE_DIR}/screen/tests
-                    -o ${PROJECT_SOURCE_DIR}/screen/output
-                    -s ${PROJECT_SOURCE_DIR}
                   )
 
 add_subdirectory(opt)
