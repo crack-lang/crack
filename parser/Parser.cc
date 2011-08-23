@@ -2054,7 +2054,7 @@ ExprPtr Parser::parseCondExpr() {
 //   ^                           ^
 ContextPtr Parser::parseIfStmt() {
    // create a subcontext for variables defined in the condition.
-   ContextStackFrame cstack(*this, context->createSubContext().get());
+   ContextStackFrame cstack(*this, context->createSubContext(true).get());
 
    Token tok = getToken();
    if (!tok.isLParen())
@@ -2906,9 +2906,7 @@ TypeDefPtr Parser::parseClassDef() {
 
    // create a class context
    ContextPtr classContext =
-      new Context(context->builder, Context::instance, context.get(), 0, 
-                  context->compileNS.get()
-                  );
+      new Context(context->builder, Context::instance, context.get(), 0);
 
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.

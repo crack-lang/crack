@@ -121,7 +121,7 @@ class Context : public spug::RCBase {
     
         Context(builder::Builder &builder, Scope scope, Context *parentContext,
                 Namespace *ns,
-                Namespace *compileNS
+                Namespace *compileNS = 0
                 );
         
         Context(builder::Builder &builder, Scope scope, Construct *construct,
@@ -136,14 +136,19 @@ class Context : public spug::RCBase {
          * context.
          */
         ContextPtr createSubContext(Scope newScope, Namespace *ns = 0,
-                                    const std::string *name = 0
+                                    const std::string *name = 0,
+                                    Namespace *cns = 0
                                     );
 
         /**
          * Create a new subcontext in the same scope.
+         * @param sameCNS if true, use the compile namespace of the existing 
+         *  context.
          */
-        ContextPtr createSubContext() {
-            return createSubContext(scope, 0);
+        ContextPtr createSubContext(bool sameCNS = false) {
+            return createSubContext(scope, 0, 0, 
+                                    sameCNS ? compileNS.get() : 0
+                                    );
         }
         
         /**

@@ -107,12 +107,12 @@ class CrackContext {
         int getScope();
         
         /**
-         * Stores a simple annotation function in the module context.
+         * Stores a simple annotation function in the context.
          */
         void storeAnnotation(const char *name, AnnotationFunc func);
         
         /**
-         * Stores an annotation and user data in the module context.
+         * Stores an annotation and user data in the context.
          */
         void storeAnnotation(const char *name, AnnotationFunc func,
                              void *userData

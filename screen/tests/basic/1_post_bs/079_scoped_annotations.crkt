@@ -1,0 +1,18 @@
+%%TEST%%
+annotations are scoped to the defining context
+%%ARGS%%
+
+%%FILE%%
+@import test.testann createAnnotations;
+
+void f() {
+    @createAnnotations
+    bool v = @created;
+}
+
+# should give an error
+bool v = @created;
+
+%%EXPECT%%
+ParseError: %OUTDIR%079_scoped_annotations.crk:9: Undefined annotation created
+%%STDIN%%

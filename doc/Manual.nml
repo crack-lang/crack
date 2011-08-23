@@ -2787,7 +2787,10 @@ annotations, we could do this:
     }
 }}
 
-Like all annotations, these will exist throughout the scope of the module.
+The new annotations are scoped to the lexical context from which they 
+are called - for example, if registerAnnotation() is called from the top-level 
+block of a function, the annotations will only exist within the scope of the 
+function.
 
 When registering an annotation, it is often useful to associate the annotation 
 with user data.  For example, the following example is a very weak macro 
@@ -2904,8 +2907,10 @@ macro name.  The argument list follows, then the body of the macro enclosed in
 curly braces.
 
 Defining a macro creates a new annotation with the macro name.  Macro 
-annotations parse an argument list that follows them and then expand the macro 
-with the arguments.
+annotations parse an argument list that follows them and then expand the macro
+with the arguments.  Macros are scoped to the context in which they are 
+defined - so if you define a macro in the body of a class, it can only be 
+used from within that class.
 
 When a macro is expanded, all of the tokens within the curly braces are 
 expanded into the location of the macro.  All macro arguments are expanded to 

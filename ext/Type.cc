@@ -122,9 +122,7 @@ void Type::finish() {
     }
     
     // create the subcontext and emit the beginning of the class.
-    ContextPtr clsCtx = new Context(ctx->builder, Context::instance, ctx, 0,
-                                    ctx->compileNS.get()
-                                    );
+    ContextPtr clsCtx = new Context(ctx->builder, Context::instance, ctx, 0);
     TypeDefPtr td =
         ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, 0);
     typeDef = td.get();

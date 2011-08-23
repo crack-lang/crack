@@ -738,8 +738,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         new Context(*moduleBuilder, Context::module, rootContext,
                     new GlobalNamespace(rootContext->ns.get(),
                                         moduleName
-                                        ),
-                    compileNS.get()
+                                        )
                     );
     modContext->toplevel = true;
     

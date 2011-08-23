@@ -521,8 +521,7 @@ int Construct::runScript(istream &src, const string &name) {
     builderStack.push(builder);
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), name),
-                    new GlobalNamespace(rootContext->compileNS.get(), name)
+                    new GlobalNamespace(rootContext->ns.get(), name)
                     );
     context->toplevel = true;
 

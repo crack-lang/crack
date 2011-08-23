@@ -52,7 +52,7 @@ class Namespace : public virtual spug::RCBase {
         {
 
         }
-
+        
         /**
          * Returns the fully qualified name of the namespace
          */

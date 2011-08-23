@@ -90,7 +90,12 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     parent(parentContext),
     ns(ns),
     compileNS(compileNS ? compileNS : 
-                (parentContext ? parentContext->compileNS : NamespacePtr(0))),
+                (parentContext ?
+                  new LocalNamespace(parentContext->compileNS.get(),
+                                     ns ? ns->getNamespaceName() : ""
+                                     ) : 
+                  NamespacePtr(0))
+                 ),
     builder(builder),
     scope(scope),
     toplevel(false),
@@ -120,12 +125,14 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     nextFuncFlags(FuncDef::noFlags),
     construct(construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
+    assert(compileNS);
 }
 
 Context::~Context() {}
 
 ContextPtr Context::createSubContext(Scope newScope, Namespace *ns,
-                                     const string *name
+                                     const string *name,
+                                     Namespace *cns
                                      ) {
     if (!ns) {
         switch (newScope) {
@@ -143,7 +150,8 @@ ContextPtr Context::createSubContext(Scope newScope, Namespace *ns,
                        );
         }
     }
-    return new Context(builder, newScope, this, ns, compileNS.get());
+    
+    return new Context(builder, newScope, this, ns, cns);
 }
 
 ContextPtr Context::getClassContext() {
