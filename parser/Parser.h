@@ -351,12 +351,21 @@ class Parser {
                        );
 
       /**
+       * Parse a variable definition initializer.  Deals with the special 
+       * syntax for constructors and sequence constants.
+       */
+      model::ExprPtr parseInitializer(model::TypeDef *type);
+
+      /**
        * Parse a definition. Returns false if there was no definition. 
        * This will always parse the type specializer if it exists, and will 
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
       bool parseDef(model::TypeDef *&type);
+      
+      /** Parse a constant definition. */
+      void parseConstDef();
       
       // statements
 

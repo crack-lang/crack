@@ -1,0 +1,28 @@
+%%TEST%%
+constants
+%%ARGS%%
+
+%%FILE%%
+const int A = 100, B = 200;
+
+class C { bool oper !=(C other) { return 0; } }
+const X := C(); 
+
+if (A != 100)
+    puts('FAILED, A != 100');
+if (B != 200)
+    puts('FAILED, B != 200');
+if (X != C())
+    puts('FAILED, X != C()');
+
+if (1) {
+    const C := 1.0;
+    if (C != 1.0)
+        puts('FAILED, nested C != 1.0');
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
+

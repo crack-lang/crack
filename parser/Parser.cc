@@ -207,6 +207,11 @@ void Parser::parseClause(bool defsAllowed) {
       }
 
    // not an identifier
+   } else if (tok.isConst()) {
+      if (!defsAllowed)
+         error(tok, "definition is not allowed in this context");
+      parseConstDef();
+      return;
    } else {
       toker.putBack(tok);
       runCallbacks(exprBegin);
@@ -1914,7 +1919,27 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    
    return argDefs.size();
 }         
-         
+
+// type var = ... ;
+//           ^   ^
+ExprPtr Parser::parseInitializer(TypeDef *type) {
+   ExprPtr initializer;
+   
+   // check for special initializer syntax.
+   Token tok = getToken();
+   if (tok.isLCurly()) {
+      // got constructor args, parse an arg list terminated by a right 
+      // curly.
+      initializer = parseConstructor(tok, type, Token::rcurly);
+   } else if (tok.isLBracket()) {
+      initializer = parseConstSequence(type);
+   } else {
+      toker.putBack(tok);
+      initializer = parseExpression();
+   }
+   
+   return initializer;
+}   
 
 // type var = initializer, var2 ;
 //     ^                         ^
@@ -1968,30 +1993,18 @@ bool Parser::parseDef(TypeDef *&type) {
    
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
-   
-            // check for a curly brace, indicating construction args.
-            Token tok4 = getToken();
-            if (tok4.isLCurly()) {
-               // got constructor args, parse an arg list terminated by a right 
-               // curly.
-               initializer = parseConstructor(tok4, type, Token::rcurly);
-            } else if (tok4.isLBracket()) {
-               initializer = parseConstSequence(type);
-            } else {
-               toker.putBack(tok4);
-               initializer = parseExpression();
-            }
-   
+            
+            initializer = parseInitializer(type);
             // make sure the initializer matches the declared type.
             initializer = initializer->convert(*context, type);
             if (!initializer)
-               error(tok4, "Incorrect type for initializer.");
+               error(tok3, "Incorrect type for initializer.");
 
             context->emitVarDef(type, tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 
             // another definition for the type.
-            tok4 = getToken();
+            Token tok4 = getToken();
             if (tok4.isComma()) {
                tok2 = getToken();
                continue;
@@ -2023,6 +2036,85 @@ bool Parser::parseDef(TypeDef *&type) {
       toker.putBack(tok2);
       return false;
    }
+}
+
+// const type var = value, ... ;
+//      ^                     ^
+// const var := value ;
+//      ^            ^
+void Parser::parseConstDef() {
+   Token tok = getToken();
+   if (!tok.isIdent())
+      unexpected(tok, "identifier or type expected after 'const'");
+   
+   TypeDefPtr type = context->lookUp(tok.getData());
+   if (type) {
+      // assume that this is the "const type var = value, ...;" syntax.  The 
+      // altSyntaxPossible flag indicates whether it is still possible that 
+      // this could be the alternate "const var := value" syntax.
+      Token varName = getToken();
+      bool altSyntaxPossible = true;
+      
+      // check for a type specializer
+      if (varName.isLBracket()) {
+         type = parseSpecializer(varName, type.get());
+         varName = getToken();
+         altSyntaxPossible = false;
+      }
+
+      // parse as many constants as we get
+      while (true) {      
+         // get the variable
+         if (!varName.isIdent()) {
+            // if we haven't committed to the typed syntax, check for a := 
+            // here.
+            if (altSyntaxPossible && varName.isDefine())
+               break;
+            unexpected(varName, "variable name expected in constant definition");
+         }
+         
+         // if we got an identifier, we're now locked into the typed syntax.
+         altSyntaxPossible = false;
+         
+         Token tok2 = getToken();
+         if (!tok2.isAssign())
+            unexpected(tok2, 
+                     "Expected assignment operator in constant definition"
+                     );
+         
+         // parse the initializer
+         ExprPtr expr = parseInitializer(type.get());
+         context->emitVarDef(type.get(), varName, expr.get(), true);
+         
+         // see if there are more constants in this definition.
+         tok2 = getToken();
+         if (tok2.isSemi()) {
+            toker.putBack(tok2);
+            return;
+         } else if (!tok2.isComma()) {
+            unexpected(tok2, "Comma or semicolon expected.");
+         }
+         
+         // get the next variable identifier
+         varName = getToken();
+      }
+      
+      // if we exit the loop, it's because we've disovered that this is 
+      // actually a case of the "const var := val" syntax.  Verify that the 
+      // type is not defined in this context.
+      if (type->getOwner() == context->ns.get())
+         redefineError(varName, type.get());
+   } else {
+      // it's just an identifier
+      Token tok2 = getToken();
+      if (!tok2.isDefine())
+         unexpected(tok2, "':=' operator expected in const definition");
+   }
+      
+   // parse the initializer
+   ExprPtr expr = parseExpression();
+   
+   context->emitVarDef(expr->type.get(), tok, expr.get(), true);
 }
 
 ContextPtr Parser::parseIfClause() {

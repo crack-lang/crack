@@ -15,7 +15,8 @@ using namespace model;
 VarDef::VarDef(TypeDef *type, const std::string &name) :
     type(type),
     name(name),
-    owner(0) {
+    owner(0),
+    constant(false) {
 }
 
 VarDef::~VarDef() {}
@@ -44,7 +45,7 @@ std::string VarDef::getFullName() const {
 }
 
 bool VarDef::isConstant() {
-    return false;
+    return constant;
 }
 
 void VarDef::dump(ostream &out, const string &prefix) const {

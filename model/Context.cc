@@ -19,6 +19,7 @@
 #include "Branchpoint.h"
 #include "GlobalNamespace.h"
 #include "IntConst.h"
+#include "FloatConst.h"
 #include "LocalNamespace.h"
 #include "ModuleDef.h"
 #include "NullConst.h"
@@ -282,21 +283,36 @@ void Context::checkForUnresolvedForwards() {
 
 VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
                               const std::string &name,
-                              Expr *initializer
+                              Expr *initializer,
+                              bool constant
                               ) {
     // make sure the type isn't void
     if (construct->voidType->matches(*type))
         error("Can not create a variable of type 'void'");
-    createCleanupFrame();
-    VarDefPtr varDef = type->emitVarDef(*this, name, initializer);
-    closeCleanupFrame();
+
+    VarDefPtr varDef;
+
+    // if this is a constant, and the expression is a constant integer or 
+    // float, create a ConstVarDef.
+    if (constant && (IntConstPtr::cast(initializer) ||
+                     FloatConstPtr::cast(initializer)
+                     )
+        ) {
+        varDef = new ConstVarDef(type, name, initializer);
+    } else {
+        createCleanupFrame();
+        varDef = type->emitVarDef(*this, name, initializer);
+        varDef->constant = constant;
+        closeCleanupFrame();
+        cleanupFrame->addCleanup(varDef.get());
+    }
     defCtx->ns->addDef(varDef.get());
-    cleanupFrame->addCleanup(varDef.get());
     return varDef;
 }
 
 VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
-                              Expr *initializer
+                              Expr *initializer,
+                              bool constant
                               ) {
 
     if (construct->migrationWarnings) {
@@ -332,7 +348,7 @@ VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                          );
     }
 
-    return emitVarDef(defCtx.get(), type, tok.getData(), initializer);
+    return emitVarDef(defCtx.get(), type, tok.getData(), initializer, constant);
 }
 
 ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {

@@ -14,17 +14,18 @@ class Token {
 
       // the token types
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
-                     catchKw, classKw, continueKw, dollar, forKw, elseKw, 
-                     ifKw, importKw, inKw, isKw, nullKw, onKw, operKw, 
-                     returnKw, throwKw, tryKw, typeofKw, whileKw, assign, 
-                     assignAnd, assignAsterisk, assignLSh, assignOr, 
-                     assignRSh, assignXor, assignMinus, assignPercent, 
-                     assignPlus, assignSlash, asterisk, bang, colon, comma, 
-                     decr, define, dot, end, eq, ge, gt, ident, incr, 
-                     integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
-                     percent, plus, quest, rbracket, rcurly, rparen, semi, 
-                     slash, string, tilde, istrBegin, istrEnd, logicAnd, 
-                     logicOr, floatLit, octalLit, hexLit, binLit,
+                     catchKw, classKw, constKw, continueKw, dollar, enumKw, 
+                     forKw, elseKw, ifKw, importKw, inKw, isKw, lambdaKw, 
+                     moduleKw, nullKw, onKw, operKw, returnKw, throwKw, 
+                     tryKw, typeofKw, whileKw, assign, assignAnd, 
+                     assignAsterisk, assignLSh, assignOr, assignRSh, 
+                     assignXor, assignMinus, assignPercent, assignPlus, 
+                     assignSlash, asterisk, bang, colon, comma, decr, define, 
+                     dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
+                     lcurly, le, lparen, lt, minus, ne, percent, plus, quest, 
+                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
+                     istrBegin, istrEnd, logicAnd, logicOr, floatLit, 
+                     octalLit, hexLit, binLit,
                      
                      // these tokens are special - they are used to 
                      // communicate actions that need to be performed in the 
@@ -68,10 +69,14 @@ class Token {
       bool isBoolAnd() const { return type == bitAnd; }
       bool isBoolOr() const { return type == bitOr; }
       bool isCatch() const { return type == catchKw; }
+      bool isConst() const { return type == constKw; }
+      bool isEnum() const { return type == enumKw; }
       bool isFor() const { return type == forKw; }
       bool isIf() const { return type == ifKw; }
       bool isIn() const { return type == inKw; }
       bool isImport() const { return type == importKw; }
+      bool isLambda() const { return type == lambdaKw; }
+      bool isModule() const { return type == moduleKw; }
       bool isElse() const { return type == elseKw; }
       bool isOn() const { return type == onKw; }
       bool isOper() const { return type == operKw; }

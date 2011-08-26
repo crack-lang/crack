@@ -1,0 +1,11 @@
+%%TEST%%
+error assigning to a numeric constant
+%%ARGS%%
+
+%%FILE%%
+const int A = 100;
+A = 1;
+%%EXPECT%%
+ParseError: %OUTDIR%161_error_const_assgn.crk:2: You cannot assign to a constant, class or function.
+%%STDIN%%
+

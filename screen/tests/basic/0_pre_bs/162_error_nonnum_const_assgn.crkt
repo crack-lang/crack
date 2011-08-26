@@ -1,0 +1,12 @@
+%%TEST%%
+error assigning to a non-numeric constant
+%%ARGS%%
+
+%%FILE%%
+class C {}
+const C A = {};
+A = C();
+%%EXPECT%%
+ParseError: %OUTDIR%162_error_nonnum_const_assgn.crk:3: You cannot assign to a constant, class or function.
+%%STDIN%%
+

@@ -29,6 +29,7 @@ class VarDef : public virtual spug::RCBase {
         TypeDefPtr type;
         std::string name;
         VarDefImplPtr impl;
+        bool constant;
 
         VarDef(TypeDef *type, const std::string &name);
         virtual ~VarDef();

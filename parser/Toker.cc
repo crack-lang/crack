@@ -85,6 +85,14 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::forKw, data, loc);
     else if (data == "typeof")
         return Token(Token::typeofKw, data, loc);
+    else if (data == "const")
+        return Token(Token::constKw, data, loc);
+    else if (data == "module")
+        return Token(Token::moduleKw, data, loc);
+    else if (data == "lambda")
+        return Token(Token::lambdaKw, data, loc);
+    else if (data == "enum")
+        return Token(Token::enumKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

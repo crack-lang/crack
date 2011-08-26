@@ -53,7 +53,8 @@ class Context : public spug::RCBase {
         // emit a variable definition with no error checking.
         VarDefPtr emitVarDef(Context *defCtx, TypeDef *type,
                              const std::string &name,
-                             Expr *initializer
+                             Expr *initializer,
+                             bool constant = false
                              );
 
         // issue a warning if defining the variable would hide a symbol in an
@@ -242,7 +243,8 @@ class Context : public spug::RCBase {
          * Emit a variable definition in the context.
          */
         VarDefPtr emitVarDef(TypeDef *type, const parser::Token &name, 
-                             Expr *initializer
+                             Expr *initializer,
+                             bool constant = false
                              );
 
         /**
