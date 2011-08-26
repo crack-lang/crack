@@ -6,8 +6,7 @@ import crack.runtime abort, free, getLocation, strcpy, strlen, malloc,
     EXCEPTION_UNCAUGHT_FUNC;
 @import crack._poormac define;
 
-bool true = (1 == 1);
-bool false = (1 == 0);
+const bool true = (1 == 1), false = (1 == 0);
 
 class Writer;
 

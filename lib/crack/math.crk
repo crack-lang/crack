@@ -24,23 +24,23 @@ import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
 import crack.io FStr;
 
 /// Define common constants
-float E =            2.7182818284590452354;   // e
-float LOG2E =        1.4426950408889634074;   // base 2 log of e
-float LOG10E =       0.43429448190325182765;  // base log of e
-float LN2 =          0.69314718055994530942;  // base e log of 2
-float LN10 =         2.30258509299404568402;  // base e log of 10
-float LNPI =         1.14472988584940017414;  // ln(pi)
-float PI =           3.14159265358979323846;  // pi
-float PI_2 =         1.57079632679489661923;  // pi/2
-float PI_4 =         0.78539816339744830962;  // pi/4
-float PI1 =          0.31830988618379067154;  // 1/pi
-float PI2 =          0.63661977236758134308;  // 2/pi
-float SQRTPI2 =      1.12837916709551257390;  // 2/sqrt(pi)
-float SQRT2 =        1.41421356237309504880;  // sqrt(2)
-float SQRT3 =        1.73205080756887729353;  // sqrt(3)
-float SQRT1_2 =      0.70710678118654752440;  // 1/sqrt(2)
-float SQRTPI =       1.77245385090551602730;  // sqrt(pi)
-float GAMMA =        0.57721566490153286061;  // Euler's constant gamma
+const float E =            2.7182818284590452354,   // e
+            LOG2E =        1.4426950408889634074,   // base 2 log of e
+            LOG10E =       0.43429448190325182765,  // base log of e
+            LN2 =          0.69314718055994530942,  // base e log of 2
+            LN10 =         2.30258509299404568402,  // base e log of 10
+            LNPI =         1.14472988584940017414,  // ln(pi)
+            PI =           3.14159265358979323846,  // pi
+            PI_2 =         1.57079632679489661923,  // pi/2
+            PI_4 =         0.78539816339744830962,  // pi/4
+            PI1 =          0.31830988618379067154,  // 1/pi
+            PI2 =          0.63661977236758134308,  // 2/pi
+            SQRTPI2 =      1.12837916709551257390,  // 2/sqrt(pi)
+            SQRT2 =        1.41421356237309504880,  // sqrt(2)
+            SQRT3 =        1.73205080756887729353,  // sqrt(3)
+            SQRT1_2 =      0.70710678118654752440,  // 1/sqrt(2)
+            SQRTPI =       1.77245385090551602730,  // sqrt(pi)
+            GAMMA =        0.57721566490153286061;  // Euler's constant gamma
 
 // A few simple functions, overlaoded with various types
 // Generics really helps here
