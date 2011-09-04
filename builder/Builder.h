@@ -333,6 +333,18 @@ class Builder : public spug::RCBase {
             model::Expr *initializer = 0,
             bool staticScope = false
         ) = 0;
+        
+        /**
+         * Creates an "offset field" - this is a special kind of instance 
+         * variable that resised at a specific offset from the instance base 
+         * pointer.  These are used for mapping instance variables in 
+         * extension objects.
+         */
+        virtual model::VarDefPtr createOffsetField(model::Context &context,
+                                                   model::TypeDef *type,
+                                                   const std::string &name,
+                                                   size_t offset
+                                                   ) = 0;
     
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
                                               const std::string &name

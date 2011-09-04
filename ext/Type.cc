@@ -45,13 +45,13 @@ void Type::addBase(Type *base) {
     impl->bases.push_back(base);
 }
 
-void Type::addInstVar(Type *type, const std::string &name) {
+void Type::addInstVar(Type *type, const std::string &name, size_t offset) {
     if (impl->instVars.find(name) != impl->instVars.end()) {
         std::cerr << "variable " << name << " already exists." << endl;
         assert(false);
     }
 
-    Var *var = new Var(type, name);
+    Var *var = new Var(type, name, offset);
     impl->instVars[name] = var;
     impl->instVarVec.push_back(var);
 }
@@ -133,9 +133,10 @@ void Type::finish() {
         Type *type = var->type;
         type->checkFinished();
         VarDefPtr varDef =
-            clsCtx->builder.emitVarDef(*clsCtx, type->typeDef, var->name, 0,
-                                       false
-                                       );
+            clsCtx->builder.createOffsetField(*clsCtx, type->typeDef,
+                                              var->name,
+                                              var->offset
+                                              );
         clsCtx->ns->addDef(varDef.get());
     }
 
@@ -147,6 +148,9 @@ void Type::finish() {
         (*fi)->context = clsCtx.get();
         (*fi)->finish();
     }
+    
+    // pad the class to the instance size
+    typeDef->padding = impl->instSize;
     
     ctx->builder.emitEndClass(*clsCtx);
     ctx->ns->addDef(typeDef);

@@ -41,48 +41,47 @@ namespace {
 // IncompleteInstVarRef
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarRef, Value);
 
- void * IncompleteInstVarRef::operator new(size_t s) {
-     return User::operator new(s, 1);
- }
+void * IncompleteInstVarRef::operator new(size_t s) {
+    return User::operator new(s, 1);
+}
 
- IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
-                                            Value *aggregate,
-                                            unsigned index,
-                                            BasicBlock *parent
-                                            ) :
-     PlaceholderInstruction(
-             type,
-             parent,
-             OperandTraits<IncompleteInstVarRef>::op_begin(this),
-             OperandTraits<IncompleteInstVarRef>::operands(this)
-             ),
-     index(index) {
-     Op<0>() = aggregate;
- }
+IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
+                                           Value *aggregate,
+                                           BFieldDefImpl *fieldImpl,
+                                           BasicBlock *parent
+                                           ) :
+    PlaceholderInstruction(
+            type,
+            parent,
+            OperandTraits<IncompleteInstVarRef>::op_begin(this),
+            OperandTraits<IncompleteInstVarRef>::operands(this)
+            ),
+    fieldImpl(fieldImpl) {
+    Op<0>() = aggregate;
+}
 
- IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
-                                            Value *aggregate,
-                                            unsigned index,
-                                            Instruction *insertBefore
-                                            ) :
-     PlaceholderInstruction(
-             type,
-             insertBefore,
-             OperandTraits<IncompleteInstVarRef>::op_begin(this),
-             OperandTraits<IncompleteInstVarRef>::operands(this)
-             ),
-     index(index) {
-     Op<0>() = aggregate;
- }
+IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
+                                           Value *aggregate,
+                                           BFieldDefImpl *fieldImpl,
+                                           Instruction *insertBefore
+                                           ) :
+    PlaceholderInstruction(
+            type,
+            insertBefore,
+            OperandTraits<IncompleteInstVarRef>::op_begin(this),
+            OperandTraits<IncompleteInstVarRef>::operands(this)
+            ),
+    fieldImpl(fieldImpl) {
+    Op<0>() = aggregate;
+}
 
- Instruction * IncompleteInstVarRef::clone_impl() const {
-     return new IncompleteInstVarRef(getType(), Op<0>(), index);
- }
+Instruction * IncompleteInstVarRef::clone_impl() const {
+    return new IncompleteInstVarRef(getType(), Op<0>(), fieldImpl.get());
+}
 
- void IncompleteInstVarRef::insertInstructions(IRBuilder<> &builder) {
-     Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
-     replaceAllUsesWith(builder.CreateLoad(fieldPtr));
- }
+void IncompleteInstVarRef::insertInstructions(IRBuilder<> &builder) {
+    replaceAllUsesWith(fieldImpl->emitFieldRef(builder, getType(), Op<0>()));
+}
 
 // IncompleteInstVarAssign
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
@@ -92,7 +91,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
 
  IncompleteInstVarAssign::IncompleteInstVarAssign(const Type *type,
                                                   Value *aggregate,
-                                                  unsigned index,
+                                                  BFieldDefImpl *fieldDefImpl,
                                                   Value *rval,
                                                   BasicBlock *parent
                                                   ) :
@@ -102,14 +101,14 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
              OperandTraits<IncompleteInstVarAssign>::op_begin(this),
              OperandTraits<IncompleteInstVarAssign>::operands(this)
              ),
-     index(index) {
+     fieldDefImpl(fieldDefImpl) {
      Op<0>() = aggregate;
      Op<1>() = rval;
  }
 
  IncompleteInstVarAssign::IncompleteInstVarAssign(const Type *type,
                                                   Value *aggregate,
-                                                  unsigned index,
+                                                  BFieldDefImpl *fieldDefImpl,
                                                   Value *rval,
                                                   Instruction *insertBefore
                                                   ) :
@@ -119,20 +118,19 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
              OperandTraits<IncompleteInstVarAssign>::op_begin(this),
              OperandTraits<IncompleteInstVarAssign>::operands(this)
              ),
-     index(index) {
+     fieldDefImpl(fieldDefImpl) {
      Op<0>() = aggregate;
      Op<1>() = rval;
  }
 
-Instruction * IncompleteInstVarAssign::clone_impl() const {
-     return new IncompleteInstVarAssign(getType(), Op<0>(), index,
+Instruction *IncompleteInstVarAssign::clone_impl() const {
+     return new IncompleteInstVarAssign(getType(), Op<0>(), fieldDefImpl.get(),
                                         Op<1>()
                                         );
- }
+}
 
 void IncompleteInstVarAssign::insertInstructions(IRBuilder<> &builder) {
-    Value *fieldPtr = builder.CreateStructGEP(Op<0>(), index);
-    builder.CreateStore(Op<1>(), fieldPtr);
+    fieldDefImpl->emitFieldAssign(builder, Op<0>(), Op<1>());
 }
 
 // IncompleteCatchSelector

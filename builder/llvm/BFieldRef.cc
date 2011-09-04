@@ -4,6 +4,7 @@
 
 #include "model/VarDef.h"
 #include "BTypeDef.h"
+#include "VarDefs.h"
 #include "BResultExpr.h"
 #include "Incompletes.h"
 #include "LLVMBuilder.h"
@@ -20,28 +21,26 @@ ResultExprPtr BFieldRef::emit(Context &context) {
     // narrow to the ancestor type where the variable is defined.
     bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->getOwner()));
 
-    unsigned index = BInstVarDefImplPtr::rcast(def->impl)->index;
+    // cast the implementation and type to their local types.
+    BFieldDefImplPtr impl = BFieldDefImplPtr::arcast(def->impl);
+    BTypeDef *typeDef = BTypeDefPtr::arcast(def->type);
 
     // if the variable is from a complete type, we can emit it.
     //  Otherwise, we need to store a placeholder.
     BTypeDef *owner = BTypeDefPtr::acast(def->getOwner());
     if (owner->complete) {
-        Value *fieldPtr =
-                bb.builder.CreateStructGEP(bb.lastValue, index);
-        bb.lastValue = bb.builder.CreateLoad(fieldPtr);
+        bb.lastValue = impl->emitFieldRef(bb.builder, typeDef->rep,
+                                          bb.lastValue
+                                          );
     } else {
-        // create a fixup object for the reference
-        BTypeDef *typeDef =
-                BTypeDefPtr::rcast(def->type);
-
         // stash the aggregate, emit a placeholder for the
         // reference
         Value *aggregate = bb.lastValue;
         PlaceholderInstruction *placeholder =
-                new IncompleteInstVarRef(typeDef->rep, aggregate,
-                                         index,
-                                         bb.builder.GetInsertBlock()
-                                         );
+            new IncompleteInstVarRef(typeDef->rep, aggregate,
+                                     impl.get(),
+                                     bb.builder.GetInsertBlock()
+                                     );
         bb.lastValue = placeholder;
 
         // store the placeholder

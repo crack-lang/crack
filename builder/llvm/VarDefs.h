@@ -39,6 +39,8 @@ public:
                            model::AssignExpr *assign);
 
     model::VarDefImplPtr promote(LLVMBuilder &builder, model::ArgDef *arg);
+    
+    virtual bool hasInstSlot() const;
 };
 
 
@@ -56,6 +58,7 @@ public:
 
     virtual llvm::Value *getRep(LLVMBuilder &builder) = 0;
 
+    virtual bool hasInstSlot() const;
 };
 
 SPUG_RCPTR(BHeapVarDefImpl)
@@ -97,34 +100,89 @@ public:
         return 0;
     }
 
+    virtual bool hasInstSlot() const;
+};
+
+SPUG_RCPTR(BFieldDefImpl);
+
+// Base class for variable implementations that are offsets from a base 
+// pointer.
+class BFieldDefImpl : public model::VarDefImpl {
+    public:
+        virtual model::ResultExprPtr emitRef(model::Context &context,
+                                             model::VarRef *var
+                                             ) {
+            assert(false &&
+                    "attempting to emit a direct reference to a instance "
+                    "variable."
+                   );
+        }
+    
+        virtual model::ResultExprPtr emitAssignment(model::Context &context,
+                                                    model::AssignExpr *assign
+                                                    ) {
+            assert(false &&
+                    "attempting to assign a direct reference to a instance "
+                    "variable."
+                   );
+        }
+
+        // emit assignment of the field in the aggregate from the value.
+        virtual void emitFieldAssign(llvm::IRBuilder<> &builder,
+                                     llvm::Value *aggregate,
+                                     llvm::Value *value
+                                     ) = 0;
+
+        // emit a field reference.
+        virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
+                                          const llvm::Type *fieldType,
+                                          llvm::Value *aggregate
+                                          ) = 0;
 };
 
 SPUG_RCPTR(BInstVarDefImpl);
 
 // Impl object for instance variables.  These should never be used to emit
 // instance variables, so when used they just raise an assertion error.
-class BInstVarDefImpl : public model::VarDefImpl {
-public:
-    unsigned index;
-    BInstVarDefImpl(unsigned index) : index(index) {}
-    virtual model::ResultExprPtr emitRef(model::Context &context,
-                                         model::VarRef *var
-                                         ) {
-        assert(false &&
-               "attempting to emit a direct reference to a instance "
-               "variable."
-               );
-    }
+class BInstVarDefImpl : public BFieldDefImpl {
+    public:
+        unsigned index;
+        BInstVarDefImpl(unsigned index) : index(index) {}
 
-    virtual model::ResultExprPtr emitAssignment(model::Context &context,
-                                                model::AssignExpr *assign
-                                                ) {
-        assert(false &&
-               "attempting to assign a direct reference to a instance "
-               "variable."
-               );
-    }
+        virtual void emitFieldAssign(llvm::IRBuilder<> &builder,
+                                     llvm::Value *aggregate,
+                                     llvm::Value *value
+                                     );
+
+        virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
+                                          const llvm::Type *fieldType,
+                                          llvm::Value *aggregate
+                                          );
+
+        virtual bool hasInstSlot() const;
 };
+
+// Implementation for "offset fields."  These are used to access structure 
+// fields in extension objects, where we need fine grain control over where 
+// the field is located.
+class BOffsetFieldDefImpl : public BFieldDefImpl {
+    public:
+        size_t offset;
+        BOffsetFieldDefImpl(size_t offset) : offset(offset) {}
+
+        virtual void emitFieldAssign(llvm::IRBuilder<> &builder,
+                                     llvm::Value *aggregate,
+                                     llvm::Value *value
+                                     );
+
+        virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
+                                          const llvm::Type *fieldType,
+                                          llvm::Value *aggregate
+                                          );
+
+        virtual bool hasInstSlot() const;
+};
+
 
 } // end namespace builder::vmll
 } // end namespace builder

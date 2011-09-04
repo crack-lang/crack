@@ -87,6 +87,12 @@ class TypeDef : public VarDef, public Namespace {
         // specializations for the type.
         SpecializationCache *generic;
         Generic *genericInfo;
+        
+        // the number of bytes of padding required by the type after the 
+        // instance variables (this exists so we can define extension types, 
+        // whose instances consist entirely of padding with no instance 
+        // variables)
+        unsigned padding;
 
         // the default initializer expression (XXX I'm not sure that we want 
         // to keep this, for now it's expedient to be able to do variable 
@@ -136,6 +142,7 @@ class TypeDef : public VarDef, public Namespace {
             Namespace(name),
             genericInfo(0),
             generic(0),
+            padding(0),
             pointer(pointer),
             hasVTable(false),
             meta(0),

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include "debug/DebugTools.h"
 #include "ext/Func.h"
@@ -45,12 +46,18 @@ extern "C" void crack_runtime_init(Module *mod) {
     }
     byteptrArrayType->finish();
 
-    Type *cdentType = mod->addType("DirEntry");
-    cdentType->addInstVar(byteptrType, "name");
-    cdentType->addInstVar(intType, "type");
+    Type *cdentType = mod->addType("DirEntry", 
+                                   sizeof(crack::runtime::DirEntry)
+                                   );
+    cdentType->addInstVar(byteptrType, "name", 
+                          CRACK_OFFSET(crack::runtime::DirEntry, name)
+                          );
+    cdentType->addInstVar(intType, "type", 
+                          CRACK_OFFSET(crack::runtime::DirEntry, type)
+                          );
     cdentType->finish();
 
-    Type *cdType = mod->addType("Dir");
+    Type *cdType = mod->addType("Dir", sizeof(crack::runtime::Dir));
     cdType->finish();
     
     Func *f = mod->addFunc(cdType, "opendir", (void *)crack::runtime::opendir);
@@ -164,38 +171,34 @@ extern "C" void crack_runtime_init(Module *mod) {
 
     // Net
     
-    Type *netConstantsType = mod->addType("Constants");
-    netConstantsType->addInstVar(intType, "AF_UNIX");
-    netConstantsType->addInstVar(intType, "AF_LOCAL");
-    netConstantsType->addInstVar(intType, "AF_INET");
-    netConstantsType->addInstVar(intType, "AF_INET6");
-    netConstantsType->addInstVar(intType, "AF_IPX");
-    netConstantsType->addInstVar(intType, "AF_NETLINK");
-    netConstantsType->addInstVar(intType, "AF_X25");
-    netConstantsType->addInstVar(intType, "AF_AX25");
-    netConstantsType->addInstVar(intType, "AF_ATMPVC");
-    netConstantsType->addInstVar(intType, "AF_APPLETALK");
-    netConstantsType->addInstVar(intType, "AF_PACKET");
-    netConstantsType->addInstVar(intType, "SOCK_STREAM");
-    netConstantsType->addInstVar(intType, "SOCK_DGRAM");
-    netConstantsType->addInstVar(intType, "SOCK_SEQPACKET");
-    netConstantsType->addInstVar(intType, "SOCK_RAW");
-    netConstantsType->addInstVar(intType, "SOCK_RDM");
-    netConstantsType->addInstVar(intType, "SOCK_PACKET");
-    netConstantsType->addInstVar(intType, "SOCK_NONBLOCK");
-    netConstantsType->addInstVar(intType, "SOCK_CLOEXEC");
-    netConstantsType->addInstVar(intType, "SOL_SOCKET");
-    netConstantsType->addInstVar(intType, "SO_REUSEADDR");
-    netConstantsType->addInstVar(intType, "POLLIN");
-    netConstantsType->addInstVar(intType, "POLLOUT");
-    netConstantsType->addInstVar(intType, "POLLPRI");
-    netConstantsType->addInstVar(intType, "POLLERR");
-    netConstantsType->addInstVar(intType, "POLLHUP");
-    netConstantsType->addInstVar(intType, "POLLNVAL");
-    netConstantsType->addInstVar(uint32Type, "INADDR_ANY");
-    netConstantsType->addStaticMethod(netConstantsType, "oper new",
-                                      (void *)crack::runtime::getConstants);
-    netConstantsType->finish();
+    mod->addConstant(intType, "AF_UNIX", AF_UNIX);
+    mod->addConstant(intType, "AF_LOCAL", AF_LOCAL);
+    mod->addConstant(intType, "AF_INET", AF_INET);
+    mod->addConstant(intType, "AF_INET6", AF_INET6);
+    mod->addConstant(intType, "AF_IPX", AF_IPX);
+    mod->addConstant(intType, "AF_NETLINK", AF_NETLINK);
+    mod->addConstant(intType, "AF_X25", AF_X25);
+    mod->addConstant(intType, "AF_AX25", AF_AX25);
+    mod->addConstant(intType, "AF_ATMPVC", AF_ATMPVC);
+    mod->addConstant(intType, "AF_APPLETALK", AF_APPLETALK);
+    mod->addConstant(intType, "AF_PACKET", AF_PACKET);
+    mod->addConstant(intType, "SOCK_STREAM", SOCK_STREAM);
+    mod->addConstant(intType, "SOCK_DGRAM", SOCK_DGRAM);
+    mod->addConstant(intType, "SOCK_SEQPACKET", SOCK_SEQPACKET);
+    mod->addConstant(intType, "SOCK_RAW", SOCK_RAW);
+    mod->addConstant(intType, "SOCK_RDM", SOCK_RDM);
+    mod->addConstant(intType, "SOCK_PACKET", SOCK_PACKET);
+    mod->addConstant(intType, "SOCK_NONBLOCK", SOCK_NONBLOCK);
+    mod->addConstant(intType, "SOCK_CLOEXEC", SOCK_CLOEXEC);
+    mod->addConstant(intType, "SOL_SOCKET", SOL_SOCKET);
+    mod->addConstant(intType, "SO_REUSEADDR", SO_REUSEADDR);
+    mod->addConstant(intType, "POLLIN", POLLIN);
+    mod->addConstant(intType, "POLLOUT", POLLOUT);
+    mod->addConstant(intType, "POLLPRI", POLLPRI);
+    mod->addConstant(intType, "POLLERR", POLLERR);
+    mod->addConstant(intType, "POLLHUP", POLLHUP);
+    mod->addConstant(intType, "POLLNVAL", POLLNVAL);
+    mod->addConstant(uint32Type, "INADDR_ANY", static_cast<int>(INADDR_ANY));
     
     f = mod->addFunc(uint32Type, "makeIPV4", 
                      (void*)crack::runtime::makeIPV4);
@@ -205,17 +208,25 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(byteType, "d");
 
     // begin SockAddr
-    Type *sockAddrType = mod->addType("SockAddr");
+    Type *sockAddrType = mod->addType("SockAddr", sizeof(sockaddr));
     sockAddrType->addConstructor();
-    sockAddrType->addInstVar(intType, "family");
+    sockAddrType->addInstVar(intType, "family", 
+                             CRACK_OFFSET(sockaddr, sa_family)
+                             );
     sockAddrType->finish();
     // end SockAddr
 
     // begin SockAddrIn    
-    Type *sockAddrInType = mod->addType("SockAddrIn");
+    Type *sockAddrInType = mod->addType("SockAddrIn", 
+                                        sizeof(sockaddr_in) - sizeof(sockaddr)
+                                        );
     sockAddrInType->addBase(sockAddrType);
-    sockAddrInType->addInstVar(uint32Type, "addr");
-    sockAddrInType->addInstVar(uintType, "port");
+    sockAddrInType->addInstVar(uint32Type, "addr", 
+                               CRACK_OFFSET(sockaddr_in, sin_addr.s_addr)
+                               );
+    sockAddrInType->addInstVar(uintType, "port",
+                               CRACK_OFFSET(sockaddr_in, sin_port)
+                               );
 
     f = sockAddrInType->addConstructor(
         "init",
@@ -262,18 +273,31 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(intType, "val");
 
     // begin PollEvt
-    Type *pollEventType = mod->addType("PollEvt");
-    pollEventType->addInstVar(intType, "fd");
-    pollEventType->addInstVar(intType, "events");
-    pollEventType->addInstVar(intType, "revents");
+    Type *pollEventType = mod->addType("PollEvt", 
+                                       sizeof(crack::runtime::PollEvt));
+    pollEventType->addInstVar(intType, "fd", 
+                              CRACK_OFFSET(crack::runtime::PollEvt, fd)
+                              );
+    pollEventType->addInstVar(intType, "events", 
+                              CRACK_OFFSET(crack::runtime::PollEvt, events)
+                              );
+    pollEventType->addInstVar(intType, "revents", 
+                              CRACK_OFFSET(pollfd, revents)
+                              );
     pollEventType->addConstructor();
     pollEventType->finish();
     // end PollEvent
 
     // begin TimeVal
-    Type *timeValType = mod->addType("TimeVal");
-    timeValType->addInstVar(int32Type, "secs");
-    timeValType->addInstVar(int32Type, "nsecs");
+    Type *timeValType = mod->addType("TimeVal", 
+                                     sizeof(crack::runtime::TimeVal)
+                                     );
+    timeValType->addInstVar(int32Type, "secs", 
+                            CRACK_OFFSET(crack::runtime::TimeVal, secs)
+                            );
+    timeValType->addInstVar(int32Type, "nsecs", 
+                            CRACK_OFFSET(crack::runtime::TimeVal, nsecs)
+                            );
 
     f = timeValType->addConstructor("init", 
                                     (void *)&crack::runtime::TimeVal::init
@@ -290,7 +314,7 @@ extern "C" void crack_runtime_init(Module *mod) {
     // end TimeVal
     
     // begin SigSet
-    Type *sigSetType = mod->addType("SigSet");
+    Type *sigSetType = mod->addType("SigSet", 0);
     f = sigSetType->addStaticMethod(sigSetType, "oper new",
                                     (void *)crack::runtime::SigSet_create
                                     );
@@ -326,7 +350,7 @@ extern "C" void crack_runtime_init(Module *mod) {
     // end SigSet
 
     // begin PollSet
-    Type *pollSetType = mod->addType("PollSet");
+    Type *pollSetType = mod->addType("PollSet", 0);
     f = pollSetType->addStaticMethod(pollSetType, "oper new",
                                      (void *)&crack::runtime::PollSet_create
                                      );
@@ -432,7 +456,7 @@ extern "C" void crack_runtime_init(Module *mod) {
     f->addArg(byteptrType, "src");
     f->addArg(uintType, "size");
     
-    Type *cFileType = mod->addType("CFile");
+    Type *cFileType = mod->addType("CFile", 0);
     cFileType->finish();
     
     f = mod->addFunc(cFileType, "fopen", (void *)fopen, "fopen");
@@ -530,11 +554,21 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "SIGXCPU", SIGXCPU);
     mod->addConstant(intType, "SIGXFSZ", SIGXFSZ);
 
-    Type *cpipeType = mod->addType("PipeDesc");
-    cpipeType->addInstVar(intType, "flags");
-    cpipeType->addInstVar(intType, "stdin");
-    cpipeType->addInstVar(intType, "stdout");
-    cpipeType->addInstVar(intType, "stderr");
+    Type *cpipeType = mod->addType("PipeDesc", 
+                                   sizeof(crack::runtime::PipeDesc)
+                                   );
+    cpipeType->addInstVar(intType, "flags", 
+                          CRACK_OFFSET(crack::runtime::PipeDesc, flags)
+                          );
+    cpipeType->addInstVar(intType, "stdin", 
+                          CRACK_OFFSET(crack::runtime::PipeDesc, stdin)
+                          );
+    cpipeType->addInstVar(intType, "stdout", 
+                          CRACK_OFFSET(crack::runtime::PipeDesc, stdout)
+                          );
+    cpipeType->addInstVar(intType, "stderr", 
+                          CRACK_OFFSET(crack::runtime::PipeDesc, stderr)
+                          );
     cpipeType->addConstructor();
     cpipeType->finish();
 

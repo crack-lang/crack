@@ -54,18 +54,18 @@ extern "C" void testext_init(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
     
-    Type *type = mod->addType("MyType");
-    type->addInstVar(mod->getIntType(), "a");
-    type->addInstVar(mod->getByteptrType(), "b");
+    Type *type = mod->addType("MyType", sizeof(MyType));
+    type->addInstVar(mod->getIntType(), "a", CRACK_OFFSET(MyType, a));
+    type->addInstVar(mod->getByteptrType(), "b", CRACK_OFFSET(MyType, b));
 
     type->addStaticMethod(type, "oper new", (void *)MyType::oper_new);
     f = type->addMethod(mod->getByteptrType(), "echo", (void *)MyType::echo);
     f->addArg(mod->getByteptrType(), "data");
     type->finish();
     
-    type = mod->addType("MyAggType");
+    type = mod->addType("MyAggType", sizeof(MyType) - sizeof(Object));
     type->addBase(mod->getObjectType());
-    type->addInstVar(mod->getIntType(), "a"); 
+    type->addInstVar(mod->getIntType(), "a", CRACK_OFFSET(MyAggType, a)); 
     f = type->addConstructor();
     f = type->addConstructor("init", (void *)MyAggType::init);
     f->addArg(mod->getIntType(), "a");

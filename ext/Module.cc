@@ -84,7 +84,7 @@ Type *Module::getType(const char *name) {
     return type;
 }
 
-Type *Module::addType(const char *name) {
+Type *Module::addType(const char *name, size_t instSize) {
     TypeMap::iterator i = types.find(name);
     if (i != types.end()) {
         std::cerr << "Type " << name << " already registered!" << std::endl;
@@ -92,7 +92,7 @@ Type *Module::addType(const char *name) {
     }
 
     Type *result;
-    types[name] = result = new Type(this, name, context);
+    types[name] = result = new Type(this, name, context, instSize);
     return result;
 }
 

@@ -40,6 +40,8 @@ ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context,
     assert(0 && "attempting to emit an argument assignment");
 }
 
+bool BArgVarDefImpl::hasInstSlot() const { return false; }
+
 // BMemVarDefImpl
 ResultExprPtr BMemVarDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
@@ -61,6 +63,7 @@ ResultExprPtr BMemVarDefImpl::emitAssignment(Context &context, AssignExpr *assig
     return new BResultExpr(assign, exprVal);
 }
 
+bool BMemVarDefImpl::hasInstSlot() const { return false; }
 
 // BGlobalVarDefImpl
 Value * BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
@@ -69,7 +72,6 @@ Value * BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
     return rep;
 }
 
-
 // BConstDefImpl
 ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
@@ -77,3 +79,53 @@ ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     b.lastValue = rep;
     return new BResultExpr((Expr*)var, b.lastValue);
 }
+
+bool BConstDefImpl::hasInstSlot() const { return false; }
+
+// BInstVarDefImpl
+void BInstVarDefImpl::emitFieldAssign(IRBuilder<> &builder, Value *aggregate,
+                                      Value *value
+                                      ) {
+    Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
+    builder.CreateStore(value, fieldPtr);
+}
+
+Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder, 
+                                     const Type *fieldType,
+                                     Value *aggregate
+                                     ) {
+    Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
+    return builder.CreateLoad(fieldPtr);
+}
+
+bool BInstVarDefImpl::hasInstSlot() const { return true; }
+
+// BOffsetFieldDefImpl
+void BOffsetFieldDefImpl::emitFieldAssign(IRBuilder<> &builder,
+                                          Value *aggregate,
+                                          Value *value
+                                          ) {
+    // cast to a byte pointer, GEP to the offset
+    Value *fieldPtr = builder.CreateBitCast(aggregate, 
+                                            builder.getInt8Ty()->getPointerTo()
+                                            );
+    fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
+    const Type *fieldPtrType = value->getType()->getPointerTo();
+    builder.CreateStore(value, builder.CreateBitCast(fieldPtr, fieldPtrType));
+}
+
+Value *BOffsetFieldDefImpl::emitFieldRef(IRBuilder<> &builder,
+                                         const Type *fieldType,
+                                         Value *aggregate
+                                         ) {
+    // cast to a byte pointer, GEP to the offset
+    Value *fieldPtr = builder.CreateBitCast(aggregate, 
+                                            builder.getInt8Ty()->getPointerTo()
+                                            );
+    fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
+    const Type *fieldPtrType = fieldType->getPointerTo();
+    return builder.CreateLoad(builder.CreateBitCast(fieldPtr, fieldPtrType));
+}
+    
+
+bool BOffsetFieldDefImpl::hasInstSlot() const { return false; }

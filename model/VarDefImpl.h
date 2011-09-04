@@ -27,6 +27,8 @@ class VarDefImpl : public spug::RCBase {
         virtual ResultExprPtr emitAssignment(Context &context,
                                              AssignExpr *assign
                                              ) = 0;
+
+        virtual bool hasInstSlot() const = 0;
 };
 
 } // namespace model

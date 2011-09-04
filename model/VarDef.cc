@@ -27,7 +27,7 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 }
 
 bool VarDef::hasInstSlot() {
-    return true;
+    return impl->hasInstSlot();
 }
 
 bool VarDef::isStatic() const {

@@ -1609,6 +1609,10 @@ void LLVMBuilder::emitEndClass(Context &context) {
         }
     }
     
+    // if instances of the type require padding, add a character array.
+    if (type->padding)
+        members.push_back(ArrayType::get(builder.getInt8Ty(), type->padding));
+    
     // verify that all of the members have been assigned
     for (vector<const Type *>::iterator iter = members.begin();
          iter != members.end();
@@ -1775,6 +1779,16 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
 }
  
 
+VarDefPtr LLVMBuilder::createOffsetField(model::Context &context,
+                                         model::TypeDef *type,
+                                         const std::string &name,
+                                         size_t offset
+                                         ) {
+    VarDefPtr varDef = new VarDef(type, name);
+    varDef->impl = new BOffsetFieldDefImpl(offset);
+    return varDef;
+}
+
 CleanupFramePtr LLVMBuilder::createCleanupFrame(Context &context) {
     return new BCleanupFrame(&context);
 }
@@ -1886,18 +1900,16 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
         assign->value->type->isDerivedFrom(assign->var->type.get()))
         narrow(assign->value->type.get(), assign->var->type.get());
 
-    unsigned index = BInstVarDefImplPtr::rcast(assign->var->impl)->index;
-    // if the variable is part of a complete context, just do the store.  
-    // Otherwise create a fixup.
+    // emit the field assignment or a placeholder
+    BFieldDefImplPtr impl = BFieldDefImplPtr::rcast(assign->var->impl);
     if (typeDef->complete) {
-        Value *fieldRef = builder.CreateStructGEP(aggregateRep, index);
-        builder.CreateStore(lastValue, fieldRef);
-    } else {
+        impl->emitFieldAssign(builder, aggregateRep, lastValue);
+    } else {        
         // create a placeholder instruction
         PlaceholderInstruction *placeholder =
             new IncompleteInstVarAssign(aggregateRep->getType(),
                                         aggregateRep,
-                                        index,
+                                        impl.get(),
                                         lastValue,
                                         builder.GetInsertBlock()
                                         );

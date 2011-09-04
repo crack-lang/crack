@@ -37,12 +37,15 @@ class Type {
             FuncVec funcs;
             VarMap instVars;
             VarVec instVarVec;
+            size_t instSize;
             
             Impl(const std::string &name, 
-                 model::Context *context
+                 model::Context *context,
+                 size_t instSize
                  ) :
                 name(name),
-                context(context) {
+                context(context),
+                instSize(instSize) {
             }
             
             ~Impl();
@@ -57,11 +60,12 @@ class Type {
         }
 
         Type(Module *module, const std::string &name, 
-             model::Context *context
+             model::Context *context,
+             size_t instSize
              ) : 
             typeDef(0),
             module(module),
-            impl(new Impl(name, context)) {
+            impl(new Impl(name, context, instSize)) {
         }
         ~Type();
 
@@ -80,7 +84,7 @@ class Type {
         /**
          * Add an instance variable.
          */
-        void addInstVar(Type *type, const std::string &name);
+        void addInstVar(Type *type, const std::string &name, size_t offset);
         
         /**
          * Add a new method to the class and returns it.

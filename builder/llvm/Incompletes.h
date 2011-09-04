@@ -81,10 +81,12 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+SPUG_RCPTR(BFieldDefImpl);
+
 /** an incomplete reference to an instance variable. */
 class IncompleteInstVarRef : public PlaceholderInstruction {
 private:
-    unsigned index;
+    BFieldDefImplPtr fieldImpl;
 
 public:
     // allocate space for 1 operand
@@ -92,15 +94,15 @@ public:
 
     IncompleteInstVarRef(const llvm::Type *type,
                          llvm::Value *aggregate,
-                         unsigned index,
+                         BFieldDefImpl *fieldImpl,
                          llvm::BasicBlock *parent
                          );
 
     IncompleteInstVarRef(const llvm::Type *type,
                          llvm::Value *aggregate,
-                         unsigned index,
+                         BFieldDefImpl *fieldImpl,
                          llvm::Instruction *insertBefore = 0
-                                                           );
+                         );
 
     virtual llvm::Instruction *clone_impl() const;
 
@@ -112,7 +114,7 @@ public:
 
 class IncompleteInstVarAssign : public PlaceholderInstruction {
 private:
-    unsigned index;
+    BFieldDefImplPtr fieldDefImpl;
 
 public:
     // allocate space for 2 operands
@@ -120,17 +122,17 @@ public:
 
     IncompleteInstVarAssign(const llvm::Type *type,
                             llvm::Value *aggregate,
-                            unsigned index,
+                            BFieldDefImpl *fieldDefImpl,
                             llvm::Value *rval,
                             llvm::BasicBlock *parent
                             );
 
     IncompleteInstVarAssign(const llvm::Type *type,
                             llvm::Value *aggregate,
-                            unsigned index,
+                            BFieldDefImpl *fieldDefImpl,
                             llvm::Value *rval,
                             llvm::Instruction *insertBefore = 0
-                                                        );
+                            );
 
     virtual llvm::Instruction *clone_impl() const;
 

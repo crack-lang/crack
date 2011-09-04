@@ -356,6 +356,12 @@ class LLVMBuilder : public Builder {
                                             bool staticScope
                                             );
 
+        virtual model::VarDefPtr createOffsetField(model::Context &context,
+                                                   model::TypeDef *type,
+                                                   const std::string &name,
+                                                   size_t offset
+                                                   );
+
         // for definitions, we're going to just let the builder be a factory 
         // so that it can tie whatever special information it wants to the 
         // definition.

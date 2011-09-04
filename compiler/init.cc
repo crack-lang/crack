@@ -169,7 +169,7 @@ void export_symbolsAnn(CrackContext *ctx) {
 
 void init(Module *mod) {
     Func *f;
-    Type *locationType = mod->addType("Location");
+    Type *locationType = mod->addType("Location", sizeof(Location));
     locationType->addMethod(mod->getByteptrType(), "getName",
                             (void *)Location::_getName
                             );
@@ -184,7 +184,7 @@ void init(Module *mod) {
                             );
     locationType->finish();
 
-    Type *tokenType = mod->addType("Token");
+    Type *tokenType = mod->addType("Token", sizeof(Token));
     f = tokenType->addStaticMethod(tokenType, "oper new",
                                    (void *)&Token::create
                                    );
@@ -251,12 +251,15 @@ void init(Module *mod) {
     tokenType->addMethod(mod->getBoolType(), "isSemi", (void *)Token::_isSemi);
     tokenType->addMethod(mod->getBoolType(), "isComma", (void *)Token::_isComma);
     tokenType->addMethod(mod->getBoolType(), "isColon", (void *)Token::_isColon);
+    tokenType->addMethod(mod->getBoolType(), "isConst", (void *)Token::_isConst);
     tokenType->addMethod(mod->getBoolType(), "isDecr", (void *)Token::_isDecr);
     tokenType->addMethod(mod->getBoolType(), "isDefine", (void *)Token::_isDefine);
     tokenType->addMethod(mod->getBoolType(), "isDot", (void *)Token::_isDot);
     tokenType->addMethod(mod->getBoolType(), "isIncr", (void *)Token::_isIncr);
     tokenType->addMethod(mod->getBoolType(), "isAssign", (void *)Token::_isAssign);
+    tokenType->addMethod(mod->getBoolType(), "isLambda", (void *)Token::_isLambda);
     tokenType->addMethod(mod->getBoolType(), "isLParen", (void *)Token::_isLParen);
+    tokenType->addMethod(mod->getBoolType(), "isModule", (void *)Token::_isModule);
     tokenType->addMethod(mod->getBoolType(), "isRParen", (void *)Token::_isRParen);
     tokenType->addMethod(mod->getBoolType(), "isLCurly", (void *)Token::_isLCurly);
     tokenType->addMethod(mod->getBoolType(), "isRCurly", (void *)Token::_isRCurly);
@@ -290,10 +293,10 @@ void init(Module *mod) {
 
     tokenType->finish();
 
-    Type *opaqCallbackType = mod->addType("Callback");
+    Type *opaqCallbackType = mod->addType("Callback", 0);
     opaqCallbackType->finish();
 
-    Type *annotationType = mod->addType("Annotation");
+    Type *annotationType = mod->addType("Annotation", sizeof(Annotation));
     annotationType->addMethod(mod->getVoidptrType(), "getUserData",
                               (void *)Annotation::_getUserData
                               );
@@ -305,7 +308,7 @@ void init(Module *mod) {
                               );
     annotationType->finish();
 
-    Type *cc = mod->addType("CrackContext");
+    Type *cc = mod->addType("CrackContext", sizeof(CrackContext));
     f = cc->addMethod(mod->getVoidType(), "inject",
                       (void *)CrackContext::_inject
                       );
