@@ -3,11 +3,13 @@
 # Runs the "screen" command on selected tests or the set of all tests.
 # Options:
 #   -n run tests under llvm-native
+#   -f stop on fail
 
 root="$(dirname $(dirname $0))"
 
 builders="-bjit"
 opts=""
+export CRACK_LIB_PATH=$root/.libs
 
 run_screen() {
     $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
