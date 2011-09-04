@@ -1,19 +1,20 @@
 
 import crack.lang die, ManagedBuffer;
 import crack.io cout;
-import crack.net InetAddress, sockconsts, Socket, Poller, PollEvent;
+import crack.net InetAddress, Socket, Poller, PollEvent, AF_INET, INADDR_ANY, 
+    POLLIN, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
 
 # create a server socket, bind to a port and listen.
-srv := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
+srv := Socket(AF_INET, SOCK_STREAM, 0);
 srv.setReuseAddr(true);
-if (!srv.bind(InetAddress(sockconsts.INADDR_ANY, 9923)))
+if (!srv.bind(InetAddress(INADDR_ANY, 9923)))
     die('bind failed');
 if (!srv.listen(5))
     die('listen failed');
 
 # create a client socket
-cln := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
+cln := Socket(AF_INET, SOCK_STREAM, 0);
 if (!cln.connect(InetAddress(127, 0, 0, 1, 9923)))
     die('connect failed');
 
@@ -39,8 +40,8 @@ if (fromServer != 'another test string')
 
 # test Pollers
 poller := Poller();
-poller.add(accepted.sock, sockconsts.POLLIN | sockconsts.POLLERR);
-poller.add(cln, sockconsts.POLLIN | sockconsts.POLLERR);
+poller.add(accepted.sock, POLLIN | POLLERR);
+poller.add(cln, POLLIN | POLLERR);
 cln.send('to server', 0);
 poller.wait(null);
 PollEvent p;

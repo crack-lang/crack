@@ -23,19 +23,21 @@ void crack_ext__gtk_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
     crack::ext::Type *type_uint = mod->getUintType();
+    crack::ext::Type *type_intz = mod->getIntzType();
+    crack::ext::Type *type_uintz = mod->getUintzType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_GList = mod->addType("GList");
+    crack::ext::Type *type_GList = mod->addType("GList", sizeof(GList));
     type_GList->finish();
 
 
-    crack::ext::Type *type_GtkWidget = mod->addType("GtkWidget");
+    crack::ext::Type *type_GtkWidget = mod->addType("GtkWidget", sizeof(GtkWidget));
     type_GtkWidget->finish();
 
 
-    crack::ext::Type *type_GtkObject = mod->addType("GtkObject");
+    crack::ext::Type *type_GtkObject = mod->addType("GtkObject", sizeof(GtkObject));
     type_GtkObject->finish();
 
     f = mod->addFunc(type_GList, "g_list_append",
