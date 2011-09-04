@@ -53,6 +53,8 @@ class Module {
         Type *getUint64Type();
         Type *getIntType();
         Type *getUintType();
+        Type *getIntzType();
+        Type *getUintzType();
         Type *getFloat32Type();
         Type *getFloat64Type();
         Type *getFloatType();
@@ -63,7 +65,7 @@ class Module {
         Type *getOverloadType();
         
         Type *getType(const char *name);
-        Type *addType(const char *name);
+        Type *addType(const char *name, size_t instSize);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);
         void addConstant(Type *type, const std::string &name, double val);
@@ -80,7 +82,7 @@ class Type {
     public:
         
         void addBase(Type *base);
-        void addInstVar(Type *type, const std::string &name);
+        void addInstVar(Type *type, const std::string &name, size_t offset);
 
         Func *addMethod(Type *returnType, const std::string &name,
                         void *funcPtr
