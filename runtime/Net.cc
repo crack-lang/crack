@@ -31,39 +31,6 @@ namespace {
 // our exported functions
 namespace crack { namespace runtime {
 
-// mirrors the _Constants class in crack.net
-
-static Constants constants = {
-    AF_UNIX,
-    AF_LOCAL,
-    AF_INET,
-    AF_INET6,
-    AF_IPX,
-    AF_NETLINK,
-    AF_X25,
-    AF_AX25,
-    AF_ATMPVC,
-    AF_APPLETALK,
-    AF_PACKET,
-    SOCK_STREAM,
-    SOCK_DGRAM,
-    SOCK_SEQPACKET,
-    SOCK_RAW,
-    SOCK_RDM,
-    SOCK_PACKET,
-    SOCK_NONBLOCK,
-    SOCK_CLOEXEC,
-    SOL_SOCKET,
-    SO_REUSEADDR,
-    POLLIN,
-    POLLOUT,
-    POLLPRI,
-    POLLERR,
-    POLLHUP,
-    POLLNVAL,
-    INADDR_ANY
-};
-
 void SockAddrIn::init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c, 
                        uint8_t d, 
                        unsigned int port0
@@ -83,8 +50,6 @@ void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
     inst->secs = secs0;
     inst->nsecs = nsecs0;
 }
-
-Constants *getConstants() { return &constants; }
 
 uint32_t makeIPV4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     return (a << 24) | (b << 16) | (c << 8) | d;

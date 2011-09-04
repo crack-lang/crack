@@ -1,16 +1,25 @@
 # Copyright 2010 Google Inc.
 
-import crack.lang Buffer, Exception, FreeBase, InvalidStateError, WriteBuffer;
+import crack.lang Buffer, Exception, FreeBase, InvalidStateError, 
+    ManagedBuffer, WriteBuffer;
 import crack.io FStr, Reader, Writer, Formatter, cout;
 import crack.exp.error strerror;
-import crack.container Array;
+import crack.cont.array Array;
 import crack.exp.bindings Opaque;
 import crack.time TimeDelta;
-import crack.runtime connect, Constants, makeIPV4, setsockopt,
-    accept, bind, free, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, 
-    TimeVal, close, listen, send, socket, recv;
+import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
+    PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, TimeVal, close, listen, 
+    send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, 
+    AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, 
+    SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
+    SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
+    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
 
-sockconsts := Constants();
+@export_symbols AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, AF_NETLINK, 
+    AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SOCK_STREAM, 
+    SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
+    SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
+    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
 
 ## interface for all classes that can be polled.
 @abstract class Pollable {
@@ -93,9 +102,7 @@ class Socket : Pollable, Reader, Writer {
     }
     
     bool setReuseAddr(bool val) {
-        return setsockopt(fd, sockconsts.SOL_SOCKET, sockconsts.SO_REUSEADDR, 
-                          1
-                          ) == 0;
+        return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1 ) == 0;
     }
     
     int send(Buffer data, int flags) {
@@ -159,7 +166,7 @@ class Socket : Pollable, Reader, Writer {
 ## on any of the pollables and then iterate over the set of events that 
 ## occurred.
 class Poller {
-    Array __pollables;
+    Array[Pollable] __pollables;
     PollSet __fds;
     uint __nextIndex;
     uint __capacity;
@@ -221,7 +228,7 @@ class Poller {
             return null;
 
         # store the pollable in the result and return it.
-        result.pollable = Pollable.cast(__pollables[uint(__iter++)]);
+        result.pollable = __pollables[uint(__iter++)];
         return result;   
     }
 }

@@ -78,18 +78,51 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_InternalDate = mod->addType("InternalDate");
-        type_InternalDate->addInstVar(type_int, "tm_sec");
-        type_InternalDate->addInstVar(type_int, "tm_min");
-        type_InternalDate->addInstVar(type_int, "tm_hour");
-        type_InternalDate->addInstVar(type_int, "tm_mday");
-        type_InternalDate->addInstVar(type_int, "tm_mon");
-        type_InternalDate->addInstVar(type_int, "tm_year");
-        type_InternalDate->addInstVar(type_int, "tm_wday");
-        type_InternalDate->addInstVar(type_int, "tm_yday");
-        type_InternalDate->addInstVar(type_int, "tm_isdst");
-        type_InternalDate->addInstVar(type_int64, "tm_gmtoff");
-        type_InternalDate->addInstVar(type_byteptr, "tm_zone");
+    crack::ext::Type *type_InternalDate = mod->addType("InternalDate", sizeof(InternalDate));
+        type_InternalDate->addInstVar(type_int,
+                             "tm_sec",
+                             CRACK_OFFSET(InternalDate, tm_sec)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_min",
+                             CRACK_OFFSET(InternalDate, tm_min)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_hour",
+                             CRACK_OFFSET(InternalDate, tm_hour)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_mday",
+                             CRACK_OFFSET(InternalDate, tm_mday)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_mon",
+                             CRACK_OFFSET(InternalDate, tm_mon)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_year",
+                             CRACK_OFFSET(InternalDate, tm_year)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_wday",
+                             CRACK_OFFSET(InternalDate, tm_wday)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_yday",
+                             CRACK_OFFSET(InternalDate, tm_yday)
+                             );
+        type_InternalDate->addInstVar(type_int,
+                             "tm_isdst",
+                             CRACK_OFFSET(InternalDate, tm_isdst)
+                             );
+        type_InternalDate->addInstVar(type_int64,
+                             "tm_gmtoff",
+                             CRACK_OFFSET(InternalDate, tm_gmtoff)
+                             );
+        type_InternalDate->addInstVar(type_byteptr,
+                             "tm_zone",
+                             CRACK_OFFSET(InternalDate, tm_zone)
+                             );
         f = type_InternalDate->addConstructor("init",
                     (void *)crk_create_date
             );
@@ -137,81 +170,81 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
         array_pbyteptr_q = array->getSpecialization(params);
     }
     f = mod->addFunc(type_int64, "mktime",
-            (void *)mktime
-        );
+                     (void *)mktime
+                     );
        f->addArg(type_InternalDate, "d");
 
     f = mod->addFunc(type_InternalDate, "localtime",
-            (void *)crk_localtime
-        );
+                     (void *)crk_localtime
+                     );
        f->addArg(type_InternalDate, "d");
        f->addArg(type_int64, "t");
 
     f = mod->addFunc(type_InternalDate, "localtime_now",
-            (void *)crk_localtime_now
-        );
+                     (void *)crk_localtime_now
+                     );
        f->addArg(type_InternalDate, "now");
 
     f = mod->addFunc(type_InternalDate, "gmtime_now",
-            (void *)crk_gmtime_now
-        );
+                     (void *)crk_gmtime_now
+                     );
        f->addArg(type_InternalDate, "now");
 
     f = mod->addFunc(type_InternalDate, "gmtime",
-            (void *)crk_gmtime
-        );
+                     (void *)crk_gmtime
+                     );
        f->addArg(type_InternalDate, "now");
        f->addArg(type_int64, "t");
 
     f = mod->addFunc(type_void, "epoch",
-            (void *)crk_epoch
-        );
+                     (void *)crk_epoch
+                     );
        f->addArg(type_InternalDate, "epoch");
 
     f = mod->addFunc(type_byteptr, "asctime",
-            (void *)asctime_r
-        );
+                     (void *)asctime_r
+                     );
        f->addArg(type_InternalDate, "d");
        f->addArg(type_byteptr, "buf");
 
     f = mod->addFunc(type_byteptr, "ctime",
-            (void *)crk_ctime_r
-        );
+                     (void *)crk_ctime_r
+                     );
        f->addArg(type_int64, "seconds");
        f->addArg(type_byteptr, "buf");
 
     f = mod->addFunc(type_uintz, "strftime",
-            (void *)strftime
-        );
+                     (void *)strftime
+                     );
        f->addArg(type_byteptr, "s");
        f->addArg(type_uintz, "max");
        f->addArg(type_byteptr, "format");
        f->addArg(type_InternalDate, "d");
 
     f = mod->addFunc(array_pbyteptr_q, "get_environ",
-            (void *)get_environ
-        );
+                     (void *)get_environ
+                     );
 
     f = mod->addFunc(type_int, "putenv",
-            (void *)putenv
-        );
+                     (void *)putenv
+                     );
        f->addArg(type_byteptr, "keyvalue");
 
     f = mod->addFunc(type_byteptr, "getenv",
-            (void *)getenv
-        );
+                     (void *)getenv
+                     );
        f->addArg(type_byteptr, "name");
 
     f = mod->addFunc(type_int, "setenv",
-            (void *)setenv
-        );
+                     (void *)setenv
+                     );
        f->addArg(type_byteptr, "name");
        f->addArg(type_byteptr, "value");
        f->addArg(type_int, "overwrite");
 
     f = mod->addFunc(type_int, "unsetenv",
-            (void *)unsetenv
-        );
+                     (void *)unsetenv
+                     );
        f->addArg(type_byteptr, "name");
 
 }
