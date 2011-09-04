@@ -20,11 +20,13 @@ void crack_ext__pcre_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
     crack::ext::Type *type_uint = mod->getUintType();
+    crack::ext::Type *type_intz = mod->getIntzType();
+    crack::ext::Type *type_uintz = mod->getUintzType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_PCRE = mod->addType("PCRE");
+    crack::ext::Type *type_PCRE = mod->addType("PCRE", sizeof(int));
     type_PCRE->finish();
 
 

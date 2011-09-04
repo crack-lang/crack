@@ -34,27 +34,29 @@ void crack_ext__sdl_init(crack::ext::Module *mod) {
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
     crack::ext::Type *type_uint = mod->getUintType();
+    crack::ext::Type *type_intz = mod->getIntzType();
+    crack::ext::Type *type_uintz = mod->getUintzType();
     crack::ext::Type *type_float32 = mod->getFloat32Type();
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_SDL_Surface = mod->addType("SDL_Surface");
+    crack::ext::Type *type_SDL_Surface = mod->addType("SDL_Surface", sizeof(SDL_Surface));
     type_SDL_Surface->finish();
 
 
-    crack::ext::Type *type_SDL_Event = mod->addType("SDL_Event");
+    crack::ext::Type *type_SDL_Event = mod->addType("SDL_Event", sizeof(SDL_Event));
     type_SDL_Event->finish();
 
 
-    crack::ext::Type *type_SDL_KeyboardEvent = mod->addType("SDL_KeyboardEvent");
+    crack::ext::Type *type_SDL_KeyboardEvent = mod->addType("SDL_KeyboardEvent", sizeof(SDL_KeyboardEvent));
     type_SDL_KeyboardEvent->finish();
 
 
-    crack::ext::Type *type_SDL_keysym = mod->addType("SDL_keysym");
+    crack::ext::Type *type_SDL_keysym = mod->addType("SDL_keysym", sizeof(SDL_keysym));
     type_SDL_keysym->finish();
 
 
-    crack::ext::Type *type_SDL_MouseMotionEvent = mod->addType("SDL_MouseMotionEvent");
+    crack::ext::Type *type_SDL_MouseMotionEvent = mod->addType("SDL_MouseMotionEvent", sizeof(SDL_MouseMotionEvent));
     type_SDL_MouseMotionEvent->finish();
 
 

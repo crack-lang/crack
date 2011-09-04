@@ -6,7 +6,9 @@
     @inject '#include <pcre.h>\n'
     @crack_internal
 
-    class PCRE;
+    # use "int" as the actual type for PCRE because pcre.h defines those as 
+    # opaque.  Ideally, we would mark this as "final"
+    @cname int class PCRE;
     PCRE pcre_compile2(byteptr pattern, int options, array[int] errorCode,
                        array[byteptr] errorText,
                        array[int] errorOffset,

@@ -362,6 +362,8 @@
 
    }
 
+   class cairo_user_data_key_t;
+
    cairo_matrix_t cairo_matrix_new();
    class cairo_pattern_t{
 
@@ -488,7 +490,6 @@
 
    class cairo_font_extents_t;
    class cairo_font_options_t;
-   class cairo_user_data_key_t;
    class cairo_path_data_t;
    class cairo_path_t;
    class cairo_rectangle_int_t;
@@ -569,7 +570,7 @@
       @cname cairo_create
       oper init (cairo_surface_t target);
       
-      @cname cairo_get_reference_count();
+      @cname cairo_get_reference_count
       uint get_reference_count();
 
       @cname cairo_save
@@ -582,7 +583,7 @@
       @cname cairo_pop_group
       cairo_pattern_t pop_group ();
       
-      @cairo_pop_group_to_source
+      @cname cairo_pop_group_to_source
       void  pop_group_to_source ();
 
       // Modify state

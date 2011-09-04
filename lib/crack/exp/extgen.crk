@@ -7,7 +7,6 @@ import crack.io cout, FStr, Formatter, StringFormatter, Writer;
 import crack.compiler CrackContext, Token;
 import crack.exp.file File;
 import crack.exp.error err;
-import crack.exp.regex Regex, Match;
 import crack.cont.array Array;
 import crack.strutil StringArray;
 import crack.cont.treemap TreeMap;
@@ -21,13 +20,19 @@ CLOSEBRACE:=false;
 class Func;
 
 @abstract class Type {
-    String name;
+    String name, cname;
     String __emitName;
     bool initialized;
 
-    oper init(String name) : name = name, __emitName = 'type_' + name {}
-    oper init(String name, String emitted) :
+    oper init(String name, int bogus, String cname) : 
+        name = name, 
+        cname = cname,
+        __emitName = 'type_' + name {
+    }
+
+    oper init(String name, int bogus, String cname, String emitted) :
         name = name,
+        cname = cname,
         __emitName = emitted {
     }
 
@@ -60,13 +65,13 @@ class IfdefType : Type {
     oper init(bool open, String test, String name) :
         _open = open,
         _test = test,
-        Type(name) {
+        Type(name, 0, name) {
     }
 
     oper init(bool open, String test, String name, String emitted) :
         _open = open,
         _test = test,
-        Type(name, emitted) {
+        Type(name, 0, name, emitted) {
     }
 
     bool isIfdef() {
@@ -89,7 +94,7 @@ class IfdefType : Type {
 
 class IfdefPreamble : Type {
 
-   oper init(String name, String emitted) : Type(name, emitted) {}
+    oper init(String name, String emitted) : Type(name, 0, cname, emitted) {}
 
     void emitInitializer(Formatter out) {
         if (initialized) return;
@@ -148,8 +153,8 @@ class Func {
         if (initialized) return;
 
         out `    f = mod->addFunc($(retType.emit()), "$(name)",
-            (void *)$(cname)
-        );
+                     (void *)$(cname)
+                     );
 `;
         for (arg :in args)
             out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
@@ -170,7 +175,7 @@ class IfdefFunc: Func{
 class BuiltInType : Type {
     String funcName;
     oper init(String name, String funcName) :
-        Type(name),
+        Type(name, 0, name),
         funcName = funcName {
     }
 
@@ -198,15 +203,21 @@ class ConstType : BuiltInType {
 }
 
 class TypeImpl : Type {
-    String emitted;
+    String emitted, lastCName;
     Array[Func] methods;
     Array[Arg] members;
 
-    oper init(String name) : Type(name), members(), methods() {}
-    oper init(String name, String emitted) :
-       Type(name, emitted),
-       members(),
-       methods() {}
+    oper init(String name, int bogus, String cname) : 
+        Type(name, 0, cname), 
+        members(), 
+        methods() {
+    }
+
+    oper init(String name, int bogus, String cname, String emitted) :
+        Type(name, 0, cname, emitted),
+        members(),
+        methods() {
+    }
 
     // class members
     void addMember(Arg member) {
@@ -232,13 +243,16 @@ class TypeImpl : Type {
 
         // emit initializer
         out `
-    crack::ext::Type *$typeVar = mod->addType("$name");\n`;
+    crack::ext::Type *$typeVar = mod->addType("$name", sizeof($cname));\n`;
 
         // emit member variables
         for (member :in members){
            if (member.type.isBuiltIn())
               member.type.emitInitializer(out);
-           out `        $typeVar->addInstVar($(member.type.emit()), "$(member.name)");\n`;
+           out `        $typeVar->addInstVar($(member.type.emit()),
+                             "$(member.name)",
+                             CRACK_OFFSET($(cname), $(member.name))
+                             );\n`;
         }
 
         // emit methods
@@ -294,7 +308,7 @@ class SpecializedType : TypeImpl {
     # specialized types look like builtins - we don't do the normal type
     # creation for them, instead we just get specializations for them.
     oper init(String name, Type generic, Type specializer) :
-        TypeImpl(name, _mangle(name)),
+        TypeImpl(name, 0, name, _mangle(name)),
         generic = generic,
         specializer = specializer {
     }
@@ -321,7 +335,7 @@ class SpecializedType : TypeImpl {
 
 class GenericType : TypeImpl {
     oper init(String name, String emitted) :
-        TypeImpl(name, emitted) {
+        TypeImpl(name, 0, name, emitted) {
     }
 
     Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames,
@@ -450,12 +464,13 @@ class ExtensionData {
     TreeMap[String, Type] types;
     Array[Func] funcs;
     Array[Const] consts = {};
-    StringArray module = {};  # module name
+    StringArray moduleName = {};  # module name
     Array[Type] preamble = {};
     StringArray ifdefs ={};
     StringArray typeNames ={}; // Need this because the typemap is not ordered
     bool inSrcDir;
     uint ifdefLevel = 0;
+    String lastCName;
 
     oper init() : types(), funcs() {
         String name;
@@ -518,23 +533,10 @@ class ExtensionData {
 
     Func _parseFuncDef(CrackContext ctx, bool isClassDef) {
         Type retType = null;
-        String name = null, cname = null;
+        String name = null;
         Token tok;
 
         tok = ctx.getToken();
-        if (tok.isAnn()){
-            tokAnn := ctx.getToken();
-            ann := String(tokAnn.getText());
-            if (ann != 'cname')
-                error(ctx, tokAnn) `invalid annotation'$ann'`;
-            tok = ctx.getToken();
-            if (!tok.isIdent())
-                error(ctx, tok) `Function C name expected`;
-            else
-                cname = String(tok.getText());
-            tok = ctx.getToken();
-        }
-
         isOperInit:= tok.isOper();
         if (!isOperInit) {
             ctx.putBack(tok);
@@ -549,9 +551,9 @@ class ExtensionData {
             error(ctx, tok) `Identifier expected`;
 
         name = String(tok.getText());
-        if (!cname) cname = String(name);
 
-        f := Func(retType, name, cname, isOperInit);
+        f := Func(retType, name, lastCName ? lastCName : name, isOperInit);
+        lastCName = null;
 
         if (!(tok = ctx.getToken()).isLParen())
             error(ctx, tok) `Left paren expected, got $(tok.getText())`;
@@ -579,6 +581,70 @@ class ExtensionData {
         return f;
     }
 
+    String _parseString(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (!tok.isString())
+            error(ctx, tok) `Expected string`;
+        return String(tok.getText());
+    }
+
+    void _populateIfdefs(bool open, String ifdefTest,  String ifdefCond){
+        funcs.append(IfdefFunc(open, ifdefTest, ifdefCond));
+        consts.append(IfdefConst(open, ifdefTest, ifdefCond));
+        types[ifdefCond]=IfdefType(open, ifdefTest, ifdefCond);
+        typeNames.append(ifdefCond);
+        preamble.append(IfdefType(open, ifdefTest, ifdefCond));
+    }
+
+    void _parseIfdef(String ifdefTest, CrackContext ctx){
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+          error(ctx, tok) `Identifier expected`;
+
+        ifdefCond := String(tok.getText());
+        tok = ctx.getToken();
+        if (!tok.isLCurly())
+             error(ctx, tok) `Opening curly bracket expected`;
+
+        ifdefs.append(ifdefCond);
+        ifdefLevel++;
+        _populateIfdefs(OPENBRACE, ifdefTest,  ifdefCond);
+
+    }
+
+    void _parseAnnotation(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (tok.isIdent()) {
+            String ann = {tok.getText()};
+            if (ann == 'filename') {
+                filename = _parseString(ctx);
+            } else if (ann == 'inject') {
+               StringFormatter po = {};
+               po `preamble_$(preamble.count())`;
+               ifdefCond := po.createString();
+               preamble.append(IfdefPreamble(ifdefCond, _parseString(ctx)));
+            } else if (ann == 'crack_internal') {
+                inSrcDir = true;
+            }
+            else if (ann == 'dumpsymbols') {
+                symbolFilename = _parseString(ctx);
+            }
+            else if (ann == 'ifdef' || ann == 'ifndef') {
+                _parseIfdef(ann, ctx);
+            }
+            else if (ann == 'cname') {
+                tok = ctx.getToken();
+                if (!tok.isIdent())
+                    error(ctx, tok) `Expected identifier in cname annotation`;
+                lastCName = String(tok.getText());
+            } else {
+                error(ctx, tok) `Unexpected annotation: $ann`;
+            }
+        } else {
+            error(ctx, tok) `Identifier expected after at sign`;
+        }
+    }
+
     void _parseClassDef(CrackContext ctx) {
         # get the type name.
         tok := ctx.getToken();
@@ -592,8 +658,9 @@ class ExtensionData {
         # get a semicolon or left curly
         tok = ctx.getToken();
         if (tok.isSemi() || tok.isLCurly()){
-            ctype = TypeImpl(className);
+            ctype = TypeImpl(className, 0, lastCName ? lastCName : className);
             types[className] = ctype;
+            lastCName = null;
         } else {
             error(ctx, tok) `Semicolon or class definition expected after \
 class declaration`;
@@ -605,20 +672,11 @@ class declaration`;
             Type argType = null;
             while (!tok.isRCurly()) {
                 
-                // Handle the @cname Cname type funcname(...) case
-                if (tok.isAnn()){
-                    tokAnn := ctx.getToken();
-                    ann := String(tokAnn.getText());
-                    if (ann != 'cname')
-                        error(ctx, tokAnn) `invalid annotation'$ann'`;
-
-                    ctx.putBack(tokAnn);
-                    ctx.putBack(tok);
-                    Func f = _parseFuncDef(ctx, true);
-                    if (f.isOperInit) f.retType = ctype;
-                    ctype.addMethod(f);
+                // check for an annotation
+                if (tok.isAnn()) {
+                    _parseAnnotation(ctx);
                     tok = ctx.getToken();
-
+                    continue;
                 } else {
                     isOperInit := tok.isOper();
 
@@ -673,21 +731,6 @@ class declaration`;
 
     }
 
-    String _parseString(CrackContext ctx) {
-        tok := ctx.getToken();
-        if (!tok.isString())
-            error(ctx, tok) `Expected string`;
-        return String(tok.getText());
-    }
-
-    void _populateIfdefs(bool open, String ifdefTest,  String ifdefCond){
-        funcs.append(IfdefFunc(open, ifdefTest, ifdefCond));
-        consts.append(IfdefConst(open, ifdefTest, ifdefCond));
-        types[ifdefCond]=IfdefType(open, ifdefTest, ifdefCond);
-        typeNames.append(ifdefCond);
-        preamble.append(IfdefType(open, ifdefTest, ifdefCond));
-    }
-
     void _closeIfdef(){
         ifdefLevel--;
         ifdefCondStart:=ifdefs.pop();
@@ -697,60 +740,6 @@ class declaration`;
         ifdefCond := no.createString();
 
         _populateIfdefs(CLOSEBRACE, "endif", ifdefCond);
-    }
-
-
-    void _parseIfdef(String ifdefTest, CrackContext ctx){
-        tok := ctx.getToken();
-        if (!tok.isIdent())
-          error(ctx, tok) `Identifier expected`;
-
-        ifdefCond := String(tok.getText());
-        tok = ctx.getToken();
-        if (!tok.isLCurly())
-             error(ctx, tok) `Opening curly bracket expected`;
-
-        ifdefs.append(ifdefCond);
-        ifdefLevel++;
-        _populateIfdefs(OPENBRACE, ifdefTest,  ifdefCond);
-
-    }
-
-
-    void _parseAnnotation(CrackContext ctx) {
-        tokAnn := ctx.getToken();
-        if (!tokAnn.isAnn())
-            error(ctx, tokAnn) `Expected annotation`;
-
-        tok := ctx.getToken();
-        if (tok.isIdent()) {
-            String ann = {tok.getText()};
-            if (ann == 'filename') {
-                filename = _parseString(ctx);
-            } else if (ann == 'inject') {
-               StringFormatter po = {};
-               po `preamble_$(preamble.count())`;
-               ifdefCond := po.createString();
-               preamble.append(IfdefPreamble(ifdefCond, _parseString(ctx)));
-            } else if (ann == 'crack_internal') {
-                inSrcDir = true;
-            }
-            else if (ann == 'dumpsymbols') {
-                symbolFilename = _parseString(ctx);
-            }
-            else if (ann == 'ifdef' || ann == 'ifndef') {
-                _parseIfdef(ann, ctx);
-            }
-            else if (ann == 'cname') {
-                ctx.putBack(tok);
-                ctx.putBack(tokAnn);
-                funcs.append(_parseFuncDef(ctx, false));
-            } else {
-                error(ctx, tok) `Unexpected annotation: $ann`;
-            }
-        } else {
-            error(ctx, tok) `Identifier expected after at sign`;
-        }
     }
 
     StringArray _parseExtensionName(CrackContext ctx) {
@@ -821,7 +810,7 @@ definition.`;
     void parse(CrackContext ctx) {
 
         # get the extension module
-        module = _parseExtensionName(ctx);
+        moduleName = _parseExtensionName(ctx);
 
         # expecting a '{'
         tok := ctx.getToken();
@@ -835,14 +824,11 @@ definition.`;
             # check for a class definition
             if (tok.isClass())
                 _parseClassDef(ctx);
-            else if (tok.isIdent()) {
-                if (String(tok.getText()) == 'const') {
-                    _parseConst(ctx);
-                } else {
-                    ctx.putBack(tok);
-                    funcs.append(_parseFuncDef(ctx, false));
-                    
-                }
+            else if (tok.isConst()) {
+                _parseConst(ctx);
+            } else if (tok.isIdent()) {
+                ctx.putBack(tok);
+                funcs.append(_parseFuncDef(ctx, false));
             } else if (tok.isRCurly()){
                if (ifdefLevel > 0) _closeIfdef();
                else break;
@@ -850,7 +836,6 @@ definition.`;
             else if (tok.isSemi())
                 ;
             else if (tok.isAnn()){
-                ctx.putBack(tok);
                 _parseAnnotation(ctx);
             }
             else
@@ -925,7 +910,7 @@ definition.`;
 #include $(header('Func'))
 
 extern "C"
-void $(module.join('_'))_init(crack::ext::Module *mod) {
+void $(moduleName.join('_'))_init(crack::ext::Module *mod) {
     crack::ext::Func *f;
 `;
 
