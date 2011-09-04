@@ -226,3 +226,13 @@ uninstall-local:
 
 clean-local:
 	rm -f lib/crack/ext/_pcre.so lib/crack/runtime.so lib/testext.so
+
+testbed:
+	ln -f .libs/runtime.so lib/crack
+	for ext in _cairo _gl _gtk _pcre _sdl; do \
+	  if [ -e .libs/$$ext.so ]; then \
+	    ln -f .libs/$$ext.so lib/crack/ext; \
+	  fi \
+	done
+
+check: testbed
