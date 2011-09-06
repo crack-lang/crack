@@ -176,18 +176,25 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/.libs
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/crack
                    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/crack ${CMAKE_CURRENT_SOURCE_DIR}/crack)
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/opt/_pcre.so ${CMAKE_CURRENT_BINARY_DIR}/_pcre.so)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so
+                   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/opt/_pcre.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/runtime.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/testext.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so)
 
 add_custom_target(check 
                   ${PROJECT_SOURCE_DIR}/test/screen
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
-                  )
-add_custom_target(checkc
-                  ${PROJECT_SOURCE_DIR}/test/screen -n
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs" "${CMAKE_CURRENT_SOURCE_DIR}/crack" "${CMAKE_CURRENT_SOURCE_DIR}/opt/_pcre.so"
+                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/crack"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so"
                   )
 
 add_subdirectory(opt)

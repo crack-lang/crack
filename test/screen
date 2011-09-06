@@ -32,6 +32,11 @@ while true; do
     shift
 done
 
+# ensure output directory exits
+if [ ! -e "$root/screen/output" ]; then
+    mkdir "$root/screen/output"
+fi
+
 tests=""
 for arg in "$@"; do
     tests="$tests -f $arg"
