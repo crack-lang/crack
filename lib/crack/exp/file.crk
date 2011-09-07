@@ -3,7 +3,7 @@
 // Portions Copyright 2010 Google Inc.
 
 import crack.io FStr, Formatter, Writer, FDReader, FDWriter;
-import crack.lang die, Buffer, Exception, FreeBase, SubString, CString;
+import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
 import crack.exp.error strerror;
@@ -71,8 +71,8 @@ class Openable: VTableBase {
 
 }
 
-byte F_READ  = 0x72; // 'r'
-byte F_WRITE = 0x77; // 'w'
+byte F_READ  = b'r';
+byte F_WRITE = b'w';
 
 class File : FileInfo,
              Openable,
@@ -81,6 +81,7 @@ class File : FileInfo,
     String _mode;
     CFile _fd;
     LineReader _lReader;
+    FDReader _reader;
     FDWriter _writer;
     
     void _open() {
@@ -99,7 +100,8 @@ class File : FileInfo,
     void _initRead() {
         
         _open();
-        _lReader = LineReader(FDReader(fileno(_fd)));
+        _reader = FDReader(fileno(_fd));
+        _lReader = LineReader(_reader);
         _isValid = true;
         
     }
@@ -117,6 +119,10 @@ class File : FileInfo,
 
         return _lReader.readLine();
 
+    }
+    
+    uint read(WriteBuffer buf){
+        return _reader.read(buf);
     }
     
     void write(Buffer data) {
@@ -139,8 +145,6 @@ class File : FileInfo,
         if (_isOpened)
             close();
     }
-
-    Object getWriterObject() { return this; }
 
     oper init(String name, String mode): FileInfo(name),
                                          _mode(CString(mode)) {
