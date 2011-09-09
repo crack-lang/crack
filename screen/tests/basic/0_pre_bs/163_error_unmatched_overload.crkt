@@ -1,0 +1,12 @@
+%%TEST%%
+error when matching the name of a method overload but not the args
+%%ARGS%%
+
+%%FILE%%
+class A { void f(int a) {} }
+A().f();
+%%EXPECT%%
+ParseError: %OUTDIR%163_error_unmatched_overload.crk:2: No method exists matching f()
+Possible overloads for f:
+.builtin.void %OUTDIR%163_error_unmatched_overload.crk.A.f(.builtin.int a)
+%%STDIN%%

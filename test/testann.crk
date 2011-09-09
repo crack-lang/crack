@@ -3,7 +3,7 @@
 import crack.io StringFormatter, cout;
 import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE, 
     STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL, TOK_STRING, Token;
-import crack.container TreeMap;
+import crack.cont.treemap TreeMap;
 
 ## increment everything but a constant zero.
 void incrButZero(CrackContext ctx) {
@@ -28,12 +28,12 @@ void emitOk(CrackContext ctx) {
     ctx.inject(@FILE.buffer, @LINE, 'cout `ok\n`;'.buffer);
 }
 
-TreeMap scopes = {};
-
 class IntWrapper {
     int val;
     oper init(int val) : val = val {}
 }
+
+TreeMap[String, IntWrapper] scopes = {};
 
 void storeScope(CrackContext ctx) {
     scopes[String(ctx.getToken().getText())] = IntWrapper(ctx.getScope());

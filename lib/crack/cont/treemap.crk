@@ -523,18 +523,28 @@ class TreeMap[KeyT, ValT] {
     
     ## Returns the object with the specified key, returns null if the key
     ## is not in the tree.
-    ValT get(KeyT key) {
+    ValT get(KeyT key, ValT defaultVal) {
         if (__root) {
             node := __root.find(key);
             if (node)
                 return node.val;
         }
         
-        return null;
+        return defaultVal;
+    }
+    
+    @final ValT get(KeyT key) {
+        return get(key, null);
     }
     
     ValT oper [](KeyT key) {
-        return get(key);
+        if (__root) {
+            node := __root.find(key);
+            if (node)
+                return node.val;
+        }
+        
+        throw KeyError('Node not found in oper []');
     }
     
     void dump() {

@@ -4,7 +4,10 @@
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
 import crack.io cout, Writer, FStr;
 import crack.exp.algorithm QuickSort;
-@import crack.exp.ann define;
+
+# we use poormac here because the standard macro mechanism depends on this 
+# module.
+@import crack._poormac define;
 
 void _bind(Object obj) { obj.oper bind(); }
 void _release(Object obj) { obj.oper release(); }
@@ -13,24 +16,24 @@ bool _isNull(Object obj) {
     return (obj is null);
 }
 
-@define _nobind(type) { 
-    void _bind(type i) { }
-    void _release(type i) { }
-    bool _isObject(type i) { return false; }
-    bool _isNull(type i) { return false; } 
-}
+@define _nobind 1
+    void _bind($1 i) { }
+    void _release($1 i) { }
+    bool _isObject($1 i) { return false; }
+    bool _isNull($1 i) { return false; } 
+$$
 
-@_nobind(byte)
-@_nobind(int)
-@_nobind(int32)
-@_nobind(uint)
-@_nobind(uint32)
-@_nobind(int64)
-@_nobind(uint64)
-@_nobind(float)
-@_nobind(float32)
-@_nobind(float64)
-@_nobind(byteptr)
+@_nobind byte
+@_nobind int
+@_nobind int32
+@_nobind uint
+@_nobind uint32
+@_nobind int64
+@_nobind uint64
+@_nobind float
+@_nobind float32
+@_nobind float64
+@_nobind byteptr
 
 ## A class to keep track of the primitive array needed for the Array[Elem] class
 class ArrayData[Elem] {

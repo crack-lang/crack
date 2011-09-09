@@ -24,13 +24,13 @@ class Func;
     String __emitName;
     bool initialized;
 
-    oper init(String name, int bogus, String cname) : 
+    oper init(String name, String cname) : 
         name = name, 
         cname = cname,
         __emitName = 'type_' + name {
     }
 
-    oper init(String name, int bogus, String cname, String emitted) :
+    oper init(String name, String cname, String emitted) :
         name = name,
         cname = cname,
         __emitName = emitted {
@@ -65,13 +65,13 @@ class IfdefType : Type {
     oper init(bool open, String test, String name) :
         _open = open,
         _test = test,
-        Type(name, 0, name) {
+        Type(name, name) {
     }
 
     oper init(bool open, String test, String name, String emitted) :
         _open = open,
         _test = test,
-        Type(name, 0, name, emitted) {
+        Type(name, name, emitted) {
     }
 
     bool isIfdef() {
@@ -94,7 +94,7 @@ class IfdefType : Type {
 
 class IfdefPreamble : Type {
 
-    oper init(String name, String emitted) : Type(name, 0, cname, emitted) {}
+    oper init(String name, String emitted) : Type(name, cname, emitted) {}
 
     void emitInitializer(Formatter out) {
         if (initialized) return;
@@ -175,7 +175,7 @@ class IfdefFunc: Func{
 class BuiltInType : Type {
     String funcName;
     oper init(String name, String funcName) :
-        Type(name, 0, name),
+        Type(name, name),
         funcName = funcName {
     }
 
@@ -207,14 +207,14 @@ class TypeImpl : Type {
     Array[Func] methods;
     Array[Arg] members;
 
-    oper init(String name, int bogus, String cname) : 
-        Type(name, 0, cname), 
+    oper init(String name, String cname) : 
+        Type(name, cname), 
         members(), 
         methods() {
     }
 
-    oper init(String name, int bogus, String cname, String emitted) :
-        Type(name, 0, cname, emitted),
+    oper init(String name, String cname, String emitted) :
+        Type(name, cname, emitted),
         members(),
         methods() {
     }
@@ -284,19 +284,24 @@ class TypeImpl : Type {
 
 class SpecializedType : TypeImpl {
 
-    Type generic, specializer;
+    Type generic;
+    Array[Type] specializers = {};
 
     @static String _mangle(String name) {
         # allocate a generous buffer
         AppendBuffer result = {name.size * 2};
         for (uint i = 0; i < name.size; ++i) {
             ch := name.buffer[i];
-            if (ch == 95)  # '_'
+            if (ch == b'_')  # '_'
                 result.extend('__');
-            else if (ch == 91)
+            else if (ch == b'[')
                 result.extend('_p');
-            else if (ch == 93)
+            else if (ch == b']')
                 result.extend('_q');
+            else if (ch == b',')
+                result.extend('_c');
+            else if (ch == b' ')
+                result.extend('_s');
             else
                 result.append(ch);
         }
@@ -308,9 +313,15 @@ class SpecializedType : TypeImpl {
     # specialized types look like builtins - we don't do the normal type
     # creation for them, instead we just get specializations for them.
     oper init(String name, Type generic, Type specializer) :
-        TypeImpl(name, 0, name, _mangle(name)),
+        TypeImpl(name, name, _mangle(name)),
+        generic = generic {
+        specializers.append(specializer);
+    }
+    
+    oper init(String name, Type generic, Array[Type] specializers) :
+        TypeImpl(name, name, _mangle(name)),
         generic = generic,
-        specializer = specializer {
+        specializers = specializers {
     }
 
     void emitInitializer(Formatter out) {
@@ -319,38 +330,53 @@ class SpecializedType : TypeImpl {
 
         # make sure that the types we depend on are initialized
         generic.emitInitializer(out);
-        specializer.emitInitializer(out);
+        for (spec :in specializers)
+            spec.emitInitializer(out);
 
         typeName := emit();
         out `
     crack::ext::Type *$typeName;
     {
-        std::vector<crack::ext::Type *> params(1);
-        params[0] = $(specializer.emit());
+        std::vector<crack::ext::Type *> params($(specializers.count()));
+`;
+        int i;
+        for (spec :in specializers)
+            out `\
+        params[$(i++)] = $(spec.emit());\n`;
+        out `\
         $typeName = $(generic.emit())->getSpecialization(params);
     }
 `;
     }
 }
 
-class GenericType : TypeImpl {
+@abstract class GenericType : TypeImpl {
     oper init(String name, String emitted) :
-        TypeImpl(name, 0, name, emitted) {
+        TypeImpl(name, name, emitted) {
     }
 
     Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames,
-                           Type specializer
+                           Array[Type] specializers
                            ) {
 
         # construct the specialization name
         StringFormatter fmt = {};
-        fmt `$name[$(specializer.name)]`;
+        fmt `$name[`;
+        bool first = true;
+        for (spec :in specializers)
+            if (first) {
+                first = false;
+                fmt `$(spec.name)`;
+            } else {
+                fmt `, $(spec.name)`;
+            }
+        fmt `]`;
         newName := fmt.createString();
 
         # see if there's an existing type, create a new one if not.
         type := types.get(newName);
         if (!type) {
-            type = SpecializedType(newName, this, specializer);
+            type = SpecializedType(newName, this, specializers);
             types[newName] = type;
             typeNames.append(newName);
         }
@@ -364,6 +390,8 @@ class GenericType : TypeImpl {
     crack::ext::Type $(emit()) = mod->addType("$name");
 `;
     }
+
+    @abstract uint getParamCount();
 }
 
 class ArrayType : GenericType {
@@ -379,6 +407,25 @@ class ArrayType : GenericType {
 `;
         initialized = true;
     }
+    
+    uint getParamCount() { return 1; }
+}
+
+class FunctionType : GenericType {
+
+    oper init() :
+        GenericType('function', 'function') {
+    }
+
+    void emitInitializer(Formatter out) {
+        if (initialized) return;
+        out `
+    crack::ext::Type *$(emit()) = mod->getType("function");
+`;
+        initialized = true;
+    }
+    
+    uint getParamCount() { return -1; }
 }
 
 class Const {
@@ -493,6 +540,7 @@ class ExtensionData {
         @setConstType('float', 'Float', 'double');
 
         types['array'] = ArrayType();
+        types['function'] = FunctionType();
     }
 
     Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }
@@ -509,20 +557,32 @@ class ExtensionData {
 
         # check for a specializer type
         tok = ctx.getToken();
-        Type specializer;
         if (tok.isLBracket()) {
-            specializer = _parseType(ctx);
-            tok = ctx.getToken();
-            if (!tok.isRBracket())
-                error(ctx, tok) `Right bracket expected`;
+            Array[Type] specializers = {};
+            while (true) {
+                specializers.append(_parseType(ctx));
+                tok = ctx.getToken();
+                if (tok.isRBracket())
+                    break;
+                else if (!tok.isComma())
+                    error(ctx, tok) `Right bracket or comma expected`;
+            }
 
             if (!type.isa(GenericType))
                 error(ctx, tok) `$(type.name) is not a generic type`;
-
-            type = GenericType.unsafeCast(type).getSpecialization(types,
-                                                                  typeNames,
-                                                                  specializer
-                                                                  );
+            
+            generic := GenericType.unsafeCast(type);
+            paramCount := generic.getParamCount();
+            if (paramCount == -1 && specializers.count() < 1)
+                error(ctx, tok) `$(type.name) must have at least one \
+parameter.`;
+            else if (paramCount >= 0 &&
+                     specializers.count() != generic.getParamCount()
+                     )
+                error(ctx, tok) `$(type.name) requires \
+$(generic.getParamCount()) parameters.`;
+                
+            type = generic.getSpecialization(types, typeNames, specializers);
         } else {
             ctx.putBack(tok);
         }
@@ -658,7 +718,7 @@ class ExtensionData {
         # get a semicolon or left curly
         tok = ctx.getToken();
         if (tok.isSemi() || tok.isLCurly()){
-            ctype = TypeImpl(className, 0, lastCName ? lastCName : className);
+            ctype = TypeImpl(className, lastCName ? lastCName : className);
             types[className] = ctype;
             lastCName = null;
         } else {

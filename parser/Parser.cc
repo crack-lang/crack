@@ -509,6 +509,11 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident,
                            " because there are multiple overloads."
                            )
                   );
+      else if (undefinedError)
+         // this is a funnny edge condition - we could have come here after 
+         // failing to match an overload, in which case we're looking for a
+         // variable.  In that case, resolving to an overload is a failure.
+         return 0;
       
       // make sure that the implementation has been defined
       ovld->createImpl();

@@ -385,7 +385,7 @@
       @cname cairo_pattern_set_user_data
       uint32 set_user_data(cairo_user_data_key_t key,
                            voidptr user_data,
-                           voidptr destroy);
+                           function[void, voidptr] destroy);
 
       @cname cairo_pattern_get_type
       uint32 get_type();
@@ -903,7 +903,7 @@
       @cname cairo_surface_set_user_data
       uint32 set_user_data(cairo_user_data_key_t key,
                            voidptr user_data,
-                           voidptr   destroy);
+                           function[void, voidptr]   destroy);
 
       @cname cairo_surface_get_mime_data
       void
@@ -916,7 +916,7 @@
          set_mime_data(byteptr mime_type,
                        byteptr data,
                        uint64 length,
-                       voidptr   destroy,
+                       function[void, voidptr]   destroy,
                        voidptr closure);
 
       @cname cairo_surface_get_font_options
@@ -1346,7 +1346,8 @@
                                       byteptr filename);
 
    uint32 cairo_surface_write_to_png_stream (cairo_surface_t surface,
-                                             voidptr         write_func,
+                                             function[uint32, voidptr, byteptr, 
+                                                      uint] write_func,
                                              voidptr         closure);
 }
 
@@ -1356,7 +1357,7 @@
    uint32 cairo_surface_set_user_data (cairo_surface_t surface,
                                        cairo_user_data_key_t key,
                                        voidptr user_data,
-                                       voidptr   destroy);
+                                       function[void, voidptr] destroy);
 
    void
       cairo_surface_get_mime_data (cairo_surface_t surface,
@@ -1369,7 +1370,7 @@
                                    byteptr mime_type,
                                    byteptr data,
                                    uint64 length,
-                                   voidptr   destroy,
+                                   function[void, voidptr] destroy,
                                    voidptr closure);
 
    void cairo_surface_get_font_options (cairo_surface_t surface,
@@ -1470,7 +1471,7 @@
       cairo_pattern_set_user_data (cairo_pattern_t pattern,
                                    cairo_user_data_key_t key,
                                    voidptr user_data,
-                                   voidptr destroy);
+                                   function[void, voidptr] destroy);
 
    uint32 cairo_pattern_get_type (cairo_pattern_t pattern);
 
@@ -1634,7 +1635,8 @@
                                 float64                 height_in_points);
 
    cairo_surface_t
-      cairo_pdf_surface_create_for_stream (voidptr             write_func,
+      cairo_pdf_surface_create_for_stream (function[uint32, voidptr, byteptr,
+                                                    uint] write_func,
                                            voidptr             closure,
                                            float64             width_in_points,
                                            float64             height_in_points);
@@ -1687,7 +1689,8 @@
 
    // Don't know how usable this is from crack
    cairo_surface_t
-      cairo_svg_surface_create_for_stream (voidptr write_func,
+      cairo_svg_surface_create_for_stream (function[uint32, voidptr, byteptr,
+                                                    uint] write_func,
                                            voidptr closure,
                                            float64 width_in_points,
                                            float64 height_in_points);
@@ -1766,7 +1769,8 @@
                                float64  height_in_points);
 
    cairo_surface_t
-      cairo_ps_surface_create_for_stream (voidptr  write_func,
+      cairo_ps_surface_create_for_stream (function[uint32, voidptr, byteptr,
+                                                   uint] write_func,
                                           voidptr  closure,
                                           float64  width_in_points,
                                           float64  height_in_points);

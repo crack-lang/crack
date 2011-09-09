@@ -704,7 +704,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_user_data_key_t, "key");
             f->addArg(type_voidptr, "user_data");
-            f->addArg(type_voidptr, "destroy");
+            f->addArg(function_pvoid_c_svoidptr_q, "destroy");
 
         f = type_cairo_surface_t->addMethod(type_void, "get_mime_data",
                     (void *)cairo_surface_get_mime_data
@@ -719,7 +719,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_byteptr, "mime_type");
             f->addArg(type_byteptr, "data");
             f->addArg(type_uint64, "length");
-            f->addArg(type_voidptr, "destroy");
+            f->addArg(function_pvoid_c_svoidptr_q, "destroy");
             f->addArg(type_voidptr, "closure");
 
         f = type_cairo_surface_t->addMethod(type_void, "get_font_options",
@@ -917,6 +917,16 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_user_data_key_t->finish();
 
 
+    crack::ext::Type *function = mod->getType("function");
+
+    crack::ext::Type *function_pvoid_c_svoidptr_q;
+    {
+        std::vector<crack::ext::Type *> params(2);
+        params[0] = type_void;
+        params[1] = type_voidptr;
+        function_pvoid_c_svoidptr_q = function->getSpecialization(params);
+    }
+
     crack::ext::Type *array_pcairo__matrix__t_q;
     {
         std::vector<crack::ext::Type *> params(1);
@@ -958,7 +968,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_user_data_key_t, "key");
             f->addArg(type_voidptr, "user_data");
-            f->addArg(type_voidptr, "destroy");
+            f->addArg(function_pvoid_c_svoidptr_q, "destroy");
 
         f = type_cairo_pattern_t->addMethod(type_uint32, "get_type",
                     (void *)cairo_pattern_get_type
@@ -1059,10 +1069,22 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t", sizeof(cairo_rectangle_t));
-        type_cairo_rectangle_t->addInstVar(type_float64, "x");
-        type_cairo_rectangle_t->addInstVar(type_float64, "y");
-        type_cairo_rectangle_t->addInstVar(type_float64, "width");
-        type_cairo_rectangle_t->addInstVar(type_float64, "height");
+        type_cairo_rectangle_t->addInstVar(type_float64,
+                             "x",
+                             CRACK_OFFSET(cairo_rectangle_t, x)
+                             );
+        type_cairo_rectangle_t->addInstVar(type_float64,
+                             "y",
+                             CRACK_OFFSET(cairo_rectangle_t, y)
+                             );
+        type_cairo_rectangle_t->addInstVar(type_float64,
+                             "width",
+                             CRACK_OFFSET(cairo_rectangle_t, width)
+                             );
+        type_cairo_rectangle_t->addInstVar(type_float64,
+                             "height",
+                             CRACK_OFFSET(cairo_rectangle_t, height)
+                             );
         f = type_cairo_rectangle_t->addConstructor("init",
                     (void *)cairo_rectangle_new
             );
@@ -1078,9 +1100,18 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     }
 
     crack::ext::Type *type_cairo_rectangle_list_t = mod->addType("cairo_rectangle_list_t", sizeof(cairo_rectangle_list_t));
-        type_cairo_rectangle_list_t->addInstVar(type_uint32, "status");
-        type_cairo_rectangle_list_t->addInstVar(array_pcairo__rectangle__t_q, "rectangles");
-        type_cairo_rectangle_list_t->addInstVar(type_int, "num_rectangles");
+        type_cairo_rectangle_list_t->addInstVar(type_uint32,
+                             "status",
+                             CRACK_OFFSET(cairo_rectangle_list_t, status)
+                             );
+        type_cairo_rectangle_list_t->addInstVar(array_pcairo__rectangle__t_q,
+                             "rectangles",
+                             CRACK_OFFSET(cairo_rectangle_list_t, rectangles)
+                             );
+        type_cairo_rectangle_list_t->addInstVar(type_int,
+                             "num_rectangles",
+                             CRACK_OFFSET(cairo_rectangle_list_t, num_rectangles)
+                             );
         f = type_cairo_rectangle_list_t->addConstructor("init",
                     (void *)cairo_rectangle_list_new
             );
@@ -1110,12 +1141,30 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_cairo_text_extents_t = mod->addType("cairo_text_extents_t", sizeof(cairo_text_extents_t));
-        type_cairo_text_extents_t->addInstVar(type_float64, "x_bearing");
-        type_cairo_text_extents_t->addInstVar(type_float64, "y_bearing");
-        type_cairo_text_extents_t->addInstVar(type_float64, "width");
-        type_cairo_text_extents_t->addInstVar(type_float64, "height");
-        type_cairo_text_extents_t->addInstVar(type_float64, "x_advance");
-        type_cairo_text_extents_t->addInstVar(type_float64, "y_advance");
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "x_bearing",
+                             CRACK_OFFSET(cairo_text_extents_t, x_bearing)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "y_bearing",
+                             CRACK_OFFSET(cairo_text_extents_t, y_bearing)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "width",
+                             CRACK_OFFSET(cairo_text_extents_t, width)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "height",
+                             CRACK_OFFSET(cairo_text_extents_t, height)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "x_advance",
+                             CRACK_OFFSET(cairo_text_extents_t, x_advance)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "y_advance",
+                             CRACK_OFFSET(cairo_text_extents_t, y_advance)
+                             );
         f = type_cairo_text_extents_t->addConstructor("init",
                     (void *)cairo_text_extents_t
             );
@@ -1314,6 +1363,16 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_myClass = mod->addType("myClass", sizeof(myClass));
     type_myClass->finish();
 
+
+    crack::ext::Type *function_puint32_c_svoidptr_c_sbyteptr_c_suint_q;
+    {
+        std::vector<crack::ext::Type *> params(4);
+        params[0] = type_uint32;
+        params[1] = type_voidptr;
+        params[2] = type_byteptr;
+        params[3] = type_uint;
+        function_puint32_c_svoidptr_c_sbyteptr_c_suint_q = function->getSpecialization(params);
+    }
 #endif // CAIRO_HAS_PNG_FUNCTIONS
 
 
@@ -2396,7 +2455,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_surface_write_to_png_stream
                      );
        f->addArg(type_cairo_surface_t, "surface");
-       f->addArg(type_voidptr, "write_func");
+       f->addArg(function_puint32_c_svoidptr_c_sbyteptr_c_suint_q, "write_func");
        f->addArg(type_voidptr, "closure");
 
 #endif // CAIRO_HAS_PNG_FUNCTIONS
@@ -2413,7 +2472,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
        f->addArg(type_cairo_surface_t, "surface");
        f->addArg(type_cairo_user_data_key_t, "key");
        f->addArg(type_voidptr, "user_data");
-       f->addArg(type_voidptr, "destroy");
+       f->addArg(function_pvoid_c_svoidptr_q, "destroy");
 
     f = mod->addFunc(type_void, "cairo_surface_get_mime_data",
                      (void *)cairo_surface_get_mime_data
@@ -2430,7 +2489,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "mime_type");
        f->addArg(type_byteptr, "data");
        f->addArg(type_uint64, "length");
-       f->addArg(type_voidptr, "destroy");
+       f->addArg(function_pvoid_c_svoidptr_q, "destroy");
        f->addArg(type_voidptr, "closure");
 
     f = mod->addFunc(type_void, "cairo_surface_get_font_options",
@@ -2643,7 +2702,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
        f->addArg(type_cairo_pattern_t, "pattern");
        f->addArg(type_cairo_user_data_key_t, "key");
        f->addArg(type_voidptr, "user_data");
-       f->addArg(type_voidptr, "destroy");
+       f->addArg(function_pvoid_c_svoidptr_q, "destroy");
 
     f = mod->addFunc(type_uint32, "cairo_pattern_get_type",
                      (void *)cairo_pattern_get_type
@@ -2983,7 +3042,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     f = mod->addFunc(type_cairo_surface_t, "cairo_pdf_surface_create_for_stream",
                      (void *)cairo_pdf_surface_create_for_stream
                      );
-       f->addArg(type_voidptr, "write_func");
+       f->addArg(function_puint32_c_svoidptr_c_sbyteptr_c_suint_q, "write_func");
        f->addArg(type_voidptr, "closure");
        f->addArg(type_float64, "width_in_points");
        f->addArg(type_float64, "height_in_points");
@@ -3022,7 +3081,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     f = mod->addFunc(type_cairo_surface_t, "cairo_svg_surface_create_for_stream",
                      (void *)cairo_svg_surface_create_for_stream
                      );
-       f->addArg(type_voidptr, "write_func");
+       f->addArg(function_puint32_c_svoidptr_c_sbyteptr_c_suint_q, "write_func");
        f->addArg(type_voidptr, "closure");
        f->addArg(type_float64, "width_in_points");
        f->addArg(type_float64, "height_in_points");
@@ -3122,7 +3181,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     f = mod->addFunc(type_cairo_surface_t, "cairo_ps_surface_create_for_stream",
                      (void *)cairo_ps_surface_create_for_stream
                      );
-       f->addArg(type_voidptr, "write_func");
+       f->addArg(function_puint32_c_svoidptr_c_sbyteptr_c_suint_q, "write_func");
        f->addArg(type_voidptr, "closure");
        f->addArg(type_float64, "width_in_points");
        f->addArg(type_float64, "height_in_points");

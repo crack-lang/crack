@@ -28,6 +28,8 @@ void cleanUpCallbacks(CrackContext *ctx) {
 
 void unexpectedElement(CrackContext *ctx) {
     ctx->error("Function expected after annotation");
+    ctx->setNextFuncFlags(model::FuncDef::noFlags);
+    ctx->setNextClassFlags(model::TypeDef::noFlags);
 }
 
 void funcAnnCheck(CrackContext *ctx, const char *name) {
@@ -90,11 +92,11 @@ void abstractAnn(CrackContext *ctx) {
                    );
 
     callbacks.push_back(ctx->addCallback(parser::Parser::funcDef,
-                                         cleanUpCallbacks
+                                         cleanUpAfterFunc
                                          )
                         );
     callbacks.push_back(ctx->addCallback(parser::Parser::classDef,
-                                         cleanUpCallbacks
+                                         cleanUpAfterClass
                                          )
                         );
     callbacks.push_back(ctx->addCallback(parser::Parser::exprBegin,
