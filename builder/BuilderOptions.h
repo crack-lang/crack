@@ -28,6 +28,8 @@ class BuilderOptions : public spug::RCBase {
         bool debugMode;
         // Keep compile time statistics
         bool statsMode;
+        // Enable builder module caching
+        bool cacheMode;
         // builder specific option strings
         StringMap optionMap;
 
@@ -36,6 +38,7 @@ class BuilderOptions : public spug::RCBase {
                               dumpMode(false),
                               debugMode(false),
                               statsMode(false),
+                              cacheMode(true),
                               optionMap() { }
 
 };

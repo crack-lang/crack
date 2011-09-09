@@ -206,6 +206,19 @@ ModuleDefPtr Context::createModule(const string &name, ModuleDef *owner) {
     return result;
 }
 
+ModuleDefPtr Context::materializeModule(const string &canonicalName,
+                                        const string &path,
+                                        ModuleDef *owner) {
+    ModuleDefPtr result = builder.materializeModule(*this, canonicalName, path, owner);
+    if (result)
+        ns = result;
+    return result;
+}
+
+void Context::cacheModule(ModuleDefPtr mod) {
+    builder.cacheModule(*this, mod);
+}
+
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {
     
     // look up the raw string constant

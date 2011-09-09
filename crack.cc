@@ -31,6 +31,7 @@ struct option longopts[] = {
     {"double-builder", false, 0, doubleBuilder},
     {"optimize", true, 0, 'O'},
     {"verbosity", false, 0, 'v'},
+    {"no-cache", false, 0, 'C'},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
@@ -60,6 +61,8 @@ void usage(int retval) {
             "even in JIT mode." << endl;
     cout << " -G         --no-default-paths   Do not include default module"
             " search paths" << endl;
+    cout << " -C         --no-cache           Do not cache or use cached modules"
+            << endl;
     cout << " -g         --debug              Generate DWARF debug information"
             << endl;
     cout << " -O <N>     --optimize N         Use optimization level N (default"
@@ -103,7 +106,7 @@ int main(int argc, char **argv) {
     char * const token[] = { NULL };
     bool optionsError = false;
     bool useDoubleBuilder = false;    
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nGml:v", longopts, &idx)) !=
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:v", longopts, &idx)) !=
            -1) {
         switch (opt) {
             case 0:
@@ -155,6 +158,9 @@ int main(int argc, char **argv) {
                 break;
             case 'd':
                 crack.options->dumpMode = true;
+                break;
+            case 'C':
+                crack.options->cacheMode = false;
                 break;
             case 'h':
                 usage(0);

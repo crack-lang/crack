@@ -60,6 +60,7 @@ builder/llvm/Utils.cc
 builder/llvm/VarDefs.cc
 builder/llvm/VTableBuilder.cc
 builder/llvm/DebugInfo.cc
+builder/llvm/Cacher.cc
 compiler/init.cc
 compiler/Annotation2.cc
 compiler/CrackContext.cc

@@ -395,6 +395,8 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         moduleCache[canonicalName] = modDef;
     } else {
         
+        // fall through - not in immediate module cache, not a shared library
+
         // try to find the module on the source path
         modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
                             ".crk", rootBuilder->options->verbosity
@@ -415,17 +417,37 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                                             )
                         );
         context->toplevel = true;
-        modDef = context->createModule(canonicalName);
+
+        // before parsing the module from scratch, we give the builder a chance
+        // to materialize the module through its own means (e.g., a cache)
+        bool cached = false;
+        if (rootBuilder->options->cacheMode && !modPath.isDir)
+            modDef = context->materializeModule(canonicalName, modPath.path);
+        if (modDef) {
+            cached = true;
+            if (rootBuilder->options->statsMode)
+                stats->cachedCount++;
+        }
+        else
+            modDef = context->createModule(canonicalName);
+
         moduleCache[canonicalName] = modDef;
-        if (!modPath.isDir) {
-            ifstream src(modPath.path.c_str());
-            parseModule(*context, modDef.get(), modPath.path, src);
+
+        if (!cached) {
+            if (!modPath.isDir) {
+                ifstream src(modPath.path.c_str());
+                // parse from scratch
+                parseModule(*context, modDef.get(), modPath.path, src);
+                // allow builder to cache after parse
+                if (rootBuilder->options->cacheMode)
+                    context->cacheModule(modDef);
+            }
+            else {
+                // directory
+                modDef->close(*context);
+            }
         }
-        else {
-            // directory
-            modDef->close(*context);
-        }
-        
+
         builderStack.pop();
     }
 

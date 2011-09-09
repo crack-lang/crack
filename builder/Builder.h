@@ -399,7 +399,31 @@ class Builder : public spug::RCBase {
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *modDef
                                  ) = 0;
-        
+
+        /**
+         * Materialize a module from a builder specific cache. Returns NULL in
+         * the event of a cache miss.
+         * @param context the module context.
+         * @param canonicalName the module's canonical name.
+         * @param path the full path to the existing source on disk
+         * @param owner the module's owner - this should be null unless the
+         *  module is being defined inside another module that it depends on.
+         * @return a module that has been loaded from the cache, or null if unavailable
+         */
+        virtual model::ModuleDefPtr materializeModule(model::Context &context,
+                                                      const std::string &canonicalName,
+                                                      const std::string &path,
+                                                      model::ModuleDef *owner
+                                                      ) = 0;
+
+        /**
+         * Save a module to a builder specific cache, which can later be materialized
+         * @param context the module context
+         * @param mod the module def to cache
+         */
+        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod) = 0;
+
+
         /**
          * Create a new cleanup frame.
          */
