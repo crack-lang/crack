@@ -191,23 +191,3 @@ String center(String text, uint width, byte c){
 String center(String text, uint width){
     return  center(text, width, b' ');
 }
-
-## Replaces one character in a string with another, in place
-void replace(String text, byte orig, byte new){
-    for (uint i = 0; i< text.size; i++)
-        if (text[i] == orig)
-            text[i] = new;
-}
-
-## Deletes any occurence of the given charecter in a string
-void remove(String text, byte find){
-    uint newSize = 0;
-    for (uint i = 0; i < text.size; i++)
-        if (text[i] != find){
-            if (i>0) {
-                text[newSize] = text[i];
-                newSize++;
-            }
-        }
-    text.size = newSize;
-}

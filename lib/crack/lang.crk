@@ -187,18 +187,6 @@ class Buffer : Object {
         return buffer[uint(index)];
     }
 
-    void oper []=(uint index, byte b) {
-        if (index >= size)
-            _throwIndexError('string index out of bounds');
-        buffer[index] = b;
-    }
-
-    void oper []=(int index, byte b) {
-        if (index < 0 || index >= size)
-            _throwIndexError('string index out of bounds');
-        buffer[uint(index)] = b;
-    }
-
     ## Override Object.cmp() to do buffer comparison.
     int cmp(Object other) {
 

@@ -2,7 +2,7 @@
 
 import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
-import crack.strutil split, StringArray, ljust, rjust, center, remove, replace;
+import crack.strutil split, StringArray, ljust, rjust, center;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -163,16 +163,6 @@ if (line != "----------")
 line2 := "hello"*2;
 if (line2 != "hellohello")
     cout `Failed multiply of length > 1 string\n`;
-
-// Test replace
-replace(line2, b'h', b'H');
-if (line2 != "HelloHello")
-    cout `Failed to replace characters in string\n`;
-
-// Test remove
-remove(line2, b'H');
-if (line2 != "elloello")
-    cout `Failed to remove characters from string\n`;
 
 
 cout `ok\n`;
