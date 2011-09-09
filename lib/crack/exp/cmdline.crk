@@ -17,6 +17,7 @@ uint CMD_FLOAT = 2;
 uint CMD_BOOL = 3;
 uint NOINDEX = 0xffffffff; // Completely arbitrary large number
 
+/// A command line option.
 class Option {
    String long;
    String short;
@@ -29,6 +30,12 @@ class Option {
       type(type),
       value = "" {}
 
+   /// long: the long option name
+   /// short: the (single character) short option name
+   /// desc: the option description (displayed by CmdOptions.writeUsage() and 
+   ///       friends)
+   /// value: the default value.
+   /// type: the option type (one of CMD_STR, CMD_INT, CMD_FLOAT, and CMD_BOOL)
    oper init(String long, String short, String desc, String value, uint type):
       long = long,
       short = short,
@@ -36,6 +43,10 @@ class Option {
       type = type,
       value = value {}
 
+   /// Constructs a string option with no description and an empty default 
+   /// value.
+   /// long: the long option name
+   /// short: the (single character) short option name   
    oper init(String long, String short):
       long = long,
       short = short,
@@ -137,6 +148,11 @@ class CmdOptions {
 #~    }
 
    void add(Option newoption){
+      options.append(newoption);
+      sorted = false;
+   }
+   
+   void append(Option newoption) {
       options.append(newoption);
       sorted = false;
    }
@@ -467,10 +483,11 @@ class CmdOptions {
       out.write(']');
    }
 
-   // Generate a usage string
-   String createUsage(String intro){
-      StringFormatter fmt = {};
-      fmt `$(intro)\n`;
+   /// Write a usage message to the writer.
+   /// intro: if non-null, this is an intro message written prior to the option 
+   /// text.
+   void writeUsage(Writer out, String intro) {
+      if (intro) { out.write(intro); out.write('\n'); }
       uint i, maxSpecLen = 0;
       StringArray lineSpecs = {}, lineTexts = {};
       
@@ -502,12 +519,17 @@ class CmdOptions {
       }
       
       for (i = 0; i < options.count(); i++){
-         fmt `$(ljust(lineSpecs[i], maxSpecLen + 1))`;
-         fmt `$(lineTexts[i])`;
+         out.write(ljust(lineSpecs[i], maxSpecLen + 1));
+         out.write(lineTexts[i]);
       }
 
-      if (i>0) fmt `\n`;
+      if (i>0) out.write('\n');
+   }
 
+   // Generate a usage string
+   String createUsage(String intro){
+      StringFormatter fmt = {};
+      writeUsage(fmt, null);
       return fmt.createString();
    }
    
