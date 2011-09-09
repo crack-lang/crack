@@ -25,6 +25,12 @@ if (!m)
 if (TreeMap[String, int]())
     cout `FAILED: empty TreeMap is not false\n`;
 
+if (m.get('undefined', 100) != 100)
+    cout `FAILED: default keys don't work\n`;
+
+if (m.get('first', -1) != 100)
+    cout `FAILED: default values on defined keys don't work\n`;
+
 Array[String] sa = {};
 
 for (item :in m) {

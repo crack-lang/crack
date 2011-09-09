@@ -7,6 +7,6 @@ setting "final" attribute from an annotation
      class A { @user_final void f() {} }
      class B : A { void f() {} }
 %%EXPECT%%
-ParseError: %OUTDIR%066_x.crk:3: Definition of f hides previous overload.
+ParseError: %OUTDIR%066_ann_setting_final.crk:3: Definition of f hides previous overload.
 %%STDIN%%
 

@@ -12,35 +12,33 @@
 #   mainly entails doing normal class derivation and implementing the 
 #   'get<interface>Object()' method.
 
-import crack.lang die, CString, IndexError, AssertionError;
+import crack.runtime free;
+import crack.lang die, CString, IndexError, InvalidArgumentError, 
+    AssertionError;
 import crack.io cout, FStr, StringFormatter, StringWriter, Formatter, Reader, 
     Writer;
 import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING, 
     TOK_POPERRCTX;
-import crack.container Array, TreeMap;
+import crack.cont.array Array;
+import crack.cont.treemap TreeMap;
 import crack.exp.serial SerialReader, SerialWriter;
-
-class UInt {
-    uint val;
-    
-    oper init(uint val) : val = val {}
-}
 
 ## Serial writer with some additional facilities to simplify macro 
 ## serialization.
 class MacroSerializer : SerialWriter {
-    TreeMap sourceNames = {};
+    TreeMap[String, uint] sourceNames = {};
     uint lastIdx;
 
     oper init(Writer dst) : SerialWriter(dst) {}
     
     void writeSrcName(String name) {
-        idx := sourceNames.get(name);
-        if (idx) {
-            write(UInt.cast(idx).val);
+        const NOT_FOUND := 0xFFFFFFFF;
+        idx := sourceNames.get(name, NOT_FOUND);
+        if (idx != NOT_FOUND) {
+            write(idx);
         } else {
             # new name, write the index and the 
-            sourceNames[name] = UInt(lastIdx);
+            sourceNames[name] = lastIdx;
             write(lastIdx++);
             write(name);
         }
@@ -56,7 +54,7 @@ class MacroSerializer : SerialWriter {
 ## deserialization.
 class MacroDeserializer : SerialReader {
     CrackContext ctx;
-    Array sourceNames = {};
+    Array[String] sourceNames = {4};
     
     oper init(CrackContext ctx, Reader src) : SerialReader(src), ctx = ctx {}
     
@@ -71,7 +69,7 @@ class MacroDeserializer : SerialReader {
             sourceNames.append(name);
             return name;
         } else {
-            return String.cast(sourceNames[idx]);
+            return sourceNames[idx];
         }
     }
 
@@ -80,19 +78,26 @@ class MacroDeserializer : SerialReader {
     }
 }
 
-class Node {
+class Node;
+class NodeIter;
+
+@abstract class NodeList {
+    @abstract void pushHead(Node node);
+    @abstract void append(Node node);
+    @abstract Node popHead();
+    @abstract void writeTo(MacroSerializer dst);
+    @abstract NodeIter iter();
+    @abstract Node getLast();
+    @abstract Node getFirst();
+}
+
+@abstract class Node {
     Node next;
     
-    void expand(CrackContext ctx, Array args) {}
-    String toString(Array args) {return null;}
-    Location getLocation() {
-        die('Node.getLocation() undefined');
-        return null;
-    }
-    
-    void writeTo(MacroSerializer dst) {
-        die('Node.writeTo() undefined');
-    }
+    void expand(CrackContext ctx, Array[NodeList] args) {}
+    String toString(Array[NodeList] args) {return null;}
+    @abstract Location getLocation();
+    @abstract void writeTo(MacroSerializer dst);
 }
 
 class NodeIter {
@@ -108,7 +113,7 @@ Node _readNode(MacroDeserializer src);
 ## A list of tokens.  These are typically stored in reverse order of the 
 ## actual order of the tokens so that they can be easily "put back" into the 
 ## token stream (after putBack() they will be in the correct order once again)
-class NodeList {
+class NodeListImpl : NodeList {
     Node first, last;
     
     oper init() {}
@@ -172,10 +177,23 @@ class NodeList {
         }
     }
 
+    void __write(Writer out, Node node) {
+        if (node.next)
+            __write(out, node.next);
+        node.writeTo(out);
+    }
+    
+    void writeTo(Writer out) {
+        __write(out, first);
+    }
+
     NodeIter iter() { return NodeIter(first); }
 
     ## Node lists are true if they have any contents.
     bool isTrue() { return first; }
+    
+    Node getLast() { return last; }
+    Node getFirst() { return first; }
 }
 
 class Tok : Node {
@@ -185,11 +203,11 @@ class Tok : Node {
 
     oper init() {}
 
-    void expand(CrackContext ctx, Array args) {
+    void expand(CrackContext ctx, Array[NodeList] args) {
         ctx.putBack(tok);
     }
     
-    String toString(Array args) {
+    String toString(Array[NodeList] args) {
         if (tok.isString())
             return String(tok.getText()).getRepr();
         else
@@ -201,12 +219,16 @@ class Tok : Node {
     }
     
     void writeTo(Writer out) {
-        out.write('token: ' + String(tok.getText()));
+        if (tok.isString()) {
+            out.write(' ');
+            out.write(String(tok.getText()).getRepr());
+        } else {
+            out.write(' ');
+            out.write(StaticString(tok.getText()));
+        }
     }
 
     void writeTo(MacroSerializer dst) {
-        
-        TreeMap names = {};
         
         # my node type
         dst.write(0);
@@ -242,22 +264,24 @@ class Arg : Node {
     
     oper init() {}
 
-    void expand(CrackContext ctx, Array args) {
+    void expand(CrackContext ctx, Array[NodeList] args) {
         for (node :in NodeList.cast(args[argIndex]))
             node.expand(ctx, args);
     }
     
-    String toString(Array args) {
+    String toString(Array[NodeList] args) {
         StringFormatter sf = {};
         argVal := NodeList.cast(args[argIndex]);
         
         # do the last node so we can add a whitespace separator for every 
         # subsequent node.
-        if (argVal.last)
-            sf.format(argVal.last.toString(args));
+        if (last := argVal.getLast())
+            sf.format(last.toString(args));
         
         # do the rest of the nodes
-        void reverseNodeList(Array args1, StringFormatter out, Node node) {
+        void reverseNodeList(Array[NodeList] args1, StringFormatter out, 
+                             Node node
+                             ) {
             
             # stop recursing before the last node
             if (node.next) {
@@ -266,7 +290,7 @@ class Arg : Node {
             }
         }
 
-        reverseNodeList(args, sf, argVal.first);
+        reverseNodeList(args, sf, argVal.getFirst());
         return sf.createCString();
     }
     
@@ -304,7 +328,7 @@ class Concat : Node {
     
     oper init() {}
 
-    void expand(CrackContext ctx, Array args) {
+    void expand(CrackContext ctx, Array[NodeList] args) {
         StringFormatter concat = {};
         for (item :in list)
             concat.format(item.toString(args));
@@ -314,7 +338,7 @@ class Concat : Node {
         ctx.inject(@FILE.buffer, @LINE, s.buffer);
     }
     
-    String toString(Array args) {
+    String toString(Array[NodeList] args) {
         die('Concat.toString() called.');
         return null;
     }
@@ -324,7 +348,7 @@ class Concat : Node {
     }
 
     oper init(MacroDeserializer src) {
-        list = NodeList(src);
+        list = NodeListImpl(src);
         type = int(src.readUInt());
         loc = src.readLocation();
     }
@@ -343,14 +367,14 @@ class Stringify : Node {
     
     oper init(Node node) : node = node {}
     
-    void expand(CrackContext ctx, Array args) {
+    void expand(CrackContext ctx, Array[NodeList] args) {
         ctx.putBack(Token(TOK_STRING, node.toString(args).buffer, 
                           node.getLocation()
                           )
                     );
     }
     
-    String toString(Array args) {
+    String toString(Array[NodeList] args) {
         die('Stringify.toString called.');
         return null;
     }
@@ -390,20 +414,20 @@ Node _readNode(MacroDeserializer src) {
 }
 
 ## Parse macro arguments, returns them as an array of NodeList objects.
-Array parseArgs(CrackContext ctx, uint argCount) {
+Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     # extract the arguments from the following tokens
     tok := ctx.getToken();
     if (!tok.isLParen())
         ctx.error(tok, 'left paren expected in macro expansion'.buffer);
     
     uint nesting = 1;
-    argTokList := NodeList();
-    Array args = {argCount};
+    argTokList := NodeListImpl();
+    Array[NodeList] args = {argCount};
     while (true) {
         tok = ctx.getToken();
         if (nesting == 1 && tok.isComma()) {
             args.append(argTokList);
-            argTokList = NodeList();
+            argTokList = NodeListImpl();
         } else {
             if (tok.isLParen()) {
                 ++nesting;
@@ -417,7 +441,7 @@ Array parseArgs(CrackContext ctx, uint argCount) {
     }
     
     # if we got a non-empty element left over, add it to the list.
-    if (argTokList.first)
+    if (argTokList.getFirst())
         args.append(argTokList);
     
     # verify that the number of arguments provided was correct
@@ -431,22 +455,22 @@ $(argCount), got $(args.count())\0`;
     return args;
 }
 
-class Macro : NodeList {
+class Macro : NodeListImpl {
     String name;
     uint argCount;
 
     oper init() {}
-    oper init(MacroDeserializer src) : NodeList(src) {
+    oper init(MacroDeserializer src) : NodeListImpl(src) {
         name = src.readString();
         argCount = src.readUInt();
     }
     
     void writeTo(MacroSerializer dst) {
-        NodeList.writeTo(dst);
+        NodeListImpl.writeTo(dst);
         dst.write(name);
         dst.write(argCount);
     }
-
+    
     void expand(CrackContext ctx) {
         # hold onto the last location
         loc := ctx.getLocation();
@@ -490,7 +514,7 @@ ST_ISTR := 3; # MUST BE THE HIGHEST VALUE STATE.  Values greater than this
 
 void define(CrackContext ctx) {
     Macro mac = {};
-    TreeMap args = {};
+    TreeMap[String, uint] args = {};
     uint index;
     tok := ctx.getToken();
     
@@ -512,7 +536,7 @@ void define(CrackContext ctx) {
         if (!tok.isIdent())
             ctx.error(tok, 'identifier expected'.buffer);
 
-        args[String(tok.getText())] = UInt(index++);
+        args[String(tok.getText())] = index++;
         
         tok = ctx.getToken();
         if (tok.isRParen())
@@ -530,11 +554,11 @@ void define(CrackContext ctx) {
     # read everything until the end bracket
     uint bracketCount = 1;
     int state = ST_NONE;
-    NodeList lastConcat = {};  # last concatenation sequence.
+    NodeListImpl lastConcat = {};  # last concatenation sequence.
     Node node;  # the last node
     while (true) {
         tok = ctx.getToken();
-        Object argIndex;
+        uint argIndex;
         
         if (tok.isEnd()) {
             ctx.error(
@@ -604,8 +628,9 @@ void define(CrackContext ctx) {
         }
 
         # replace arguments with indices
-        if (tok.isIdent() && (argIndex = args.get(String(tok.getText()))))
-            node = Arg(tok.getLocation(), UInt.cast(argIndex).val);
+        if (tok.isIdent() &&
+            (argIndex = args.get(String(tok.getText()), -1)) != -1)
+            node = Arg(tok.getLocation(), argIndex);
         else
             node = Tok(tok);
 
@@ -626,7 +651,7 @@ void define(CrackContext ctx) {
             
             # reset any last concatenation sequence that we've accumulated
             if (lastConcat)
-                lastConcat = NodeList();
+                lastConcat = NodeListImpl();
         }
     }
     
@@ -710,7 +735,7 @@ void readIStr(CrackContext ctx, NodeList nodes) {
 }
 
 NodeList readBlock(CrackContext ctx) {
-    NodeList result = {};
+    NodeListImpl result = {};
 
     # get the opening bracket.
     tok := ctx.getToken();
@@ -775,8 +800,8 @@ void interface(CrackContext ctx) {
 ## implements, e.g.
 void implements(CrackContext ctx) {
     # parse the list of interfaces
-    NodeList interfaces = {};
-    Array ifaces = {};
+    NodeListImpl interfaces = {};
+    Array[String] ifaces = {4};
 
     Token firstTok;
     while (true) {
