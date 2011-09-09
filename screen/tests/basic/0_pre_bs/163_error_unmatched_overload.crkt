@@ -8,5 +8,5 @@ A().f();
 %%EXPECT%%
 ParseError: %OUTDIR%163_error_unmatched_overload.crk:2: No method exists matching f()
 Possible overloads for f:
-.builtin.void tester.crk.A.f(.builtin.int a)
+.builtin.void %OUTDIR%163_error_unmatched_overload.crk.A.f(.builtin.int a)
 %%STDIN%%
