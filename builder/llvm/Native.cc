@@ -95,8 +95,9 @@ static int GenerateNative(const std::string &OutputFilename,
       // cause conflicts where foo/baz.so and bar/baz.so exist as crack
       // extensions, but the runtime loader loads foo/baz.so for both since
       // it shows up first matching the rpath. this needs a better fix.
-      if (path::is_absolute(LibPaths[index]))
-          args.push_back("-Wl,-rpath=" + LibPaths[index]);
+      char *rp = realpath(LibPaths[index].c_str(), NULL);
+      args.push_back("-Wl,-rpath=" + string(rp));
+      free(rp);
   }
 
   // Add in the libraries to link.
