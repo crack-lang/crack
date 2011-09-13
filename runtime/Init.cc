@@ -58,6 +58,13 @@ extern "C" void crack_runtime_init(Module *mod) {
     cdentType->finish();
 
     Type *cdType = mod->addType("Dir", sizeof(crack::runtime::Dir));
+    // XXX should these be part of addType?
+    cdType->addMethod(voidptrType, "oper to .builtin.voidptr", 
+                      (void *)crack::runtime::Dir_toVoidptr
+                      );
+    cdType->addMethod(boolType, "oper to .builtin.bool", 
+                      (void *)crack::runtime::Dir_toBool
+                      );
     cdType->finish();
     
     Func *f = mod->addFunc(cdType, "opendir", (void *)crack::runtime::opendir);
@@ -91,9 +98,46 @@ extern "C" void crack_runtime_init(Module *mod) {
                      (void *)crack::runtime::fileExists
                      );
     f->addArg(byteptrType, "path");
+    
+    Type *statType = mod->addType("Stat", sizeof(struct stat));
+    statType->addInstVar(intType, "st_dev", CRACK_OFFSET(struct stat, st_dev));
+    statType->addInstVar(intType, "st_ino", CRACK_OFFSET(struct stat, st_ino));
+    statType->addInstVar(intType, "st_mode", CRACK_OFFSET(struct stat, st_mode));
+    statType->addInstVar(intType, "st_nlink", 
+                         CRACK_OFFSET(struct stat, st_nlink)
+                         );
+    statType->addInstVar(intType, "st_uid", CRACK_OFFSET(struct stat, st_uid));
+    statType->addInstVar(intType, "st_gid", CRACK_OFFSET(struct stat, st_gid));
+    statType->addInstVar(intType, "st_rdev", CRACK_OFFSET(struct stat, st_rdev));
+    statType->addInstVar(intType, "st_size", CRACK_OFFSET(struct stat, st_size));
+    statType->addInstVar(intType, "st_blksize", 
+                         CRACK_OFFSET(struct stat, st_blksize)
+                         );
+    statType->addInstVar(intType, "st_blocks", 
+                         CRACK_OFFSET(struct stat, st_blocks)
+                         );
+    statType->addInstVar(intType, "st_atime", 
+                         CRACK_OFFSET(struct stat, st_atime)
+                         );
+    statType->addInstVar(intType, "st_mtime", 
+                         CRACK_OFFSET(struct stat, st_mtime)
+                         );
+    statType->addInstVar(intType, "st_ctime", 
+                         CRACK_OFFSET(struct stat, st_ctime)
+                         );
+    statType->addConstructor();
+    statType->finish();
+
+    f = mod->addFunc(intType, "stat", (void *)stat, "stat");
+    f->addArg(byteptrType, "path");
+    f->addArg(statType, "buf");
 
     f = mod->addFunc(intType, "fileRemove", (void *)remove);
     f->addArg(byteptrType, "path");
+
+    f = mod->addFunc(intType, "mkdir", (void *)mkdir);
+    f->addArg(byteptrType, "path");
+    f->addArg(intType, "mode");
 
     f = mod->addFunc(byteptrType, "c_strerror",
                      (void *)crack::runtime::strerror

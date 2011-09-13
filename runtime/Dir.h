@@ -35,6 +35,9 @@ int readdir(Dir* d);
 
 int fnmatch(const char* pattern, const char* string); 
 
+bool Dir_toBool(Dir *dir);
+void *Dir_toVoidptr(Dir *dir);
+
 }} // namespace crack::ext
 
 #endif // _runtime_Dir_h_

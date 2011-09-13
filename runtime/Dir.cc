@@ -75,4 +75,12 @@ int fnmatch(const char* pattern, const char* string) {
     return ::fnmatch(pattern, string, 0);
 }
 
+bool Dir_toBool(Dir *dir) {
+    return dir;
+}
+
+void *Dir_toVoidptr(Dir *dir) {
+    return dir;
+}
+
 }} // namespace crack::runtime

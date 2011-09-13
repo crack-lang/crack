@@ -1,7 +1,8 @@
 
 
 import crack.io cout;
-import crack.exp.fs RealPath;
+import crack.strutil StringArray;
+import crack.exp.fs Path, RealPath;
 
 tempFile := RealPath('writer.out');
 tempFile.writer().write('this is a test');
@@ -14,5 +15,28 @@ if (tempFile.makeFullReader().readAll() != 'this is a test')
 tempFile.delete();
 if (tempFile.exists())
     cout `FAILED file delete\n`;
+
+tempDir := RealPath('tempdir');
+tempDir.makeDir();
+
+if (!tempDir.exists())
+    cout `FAILED making directory\n`;
+
+Path foo = tempDir/'foo', bar = tempDir/'bar';
+foo.writeAll('this is foo');
+bar.writeAll('this is bar');
+
+StringArray children = {2};
+for (child :in tempDir.children())
+    children.append(child.getName());
+
+if (children != StringArray!['bar', 'foo'])
+    cout `FAILED creating children, wanted foo, bar, got: $children\n`;
+
+foo.delete();
+bar.delete();
+
+if (tempDir.exists())
+    tempDir.delete();
 
 cout `ok\n`;

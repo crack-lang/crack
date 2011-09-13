@@ -1,11 +1,13 @@
 ## Copyright 2011 Google Inc.
 ## Crack Virtual Filesystem
 
-import crack.runtime errno, fileExists, fileRemove, open, O_CREAT, O_RDONLY, 
-    O_WRONLY;
+import crack.runtime basename, errno, fileExists, fileRemove, getDirEntry, 
+    mkdir, open, opendir, readdir, Stat, stat, Dir, DirEntry, O_CREAT, 
+    O_RDONLY, O_WRONLY;
 import crack.exp.error strerror;
-import crack.io FDReader, FDWriter, FStr, Reader, Writer;
-import crack.lang Exception, InvalidArgumentError;
+import crack.io cout, FDReader, FDWriter, FStr, Reader, Writer;
+import crack.lang Buffer, CString, Exception, InvalidArgumentError, 
+    InvalidStateError;
 import crack.exp.readers FullReader;
 
 ## This gets raised when referencing a path that doesn't exist.
@@ -31,6 +33,15 @@ class SystemError : Exception {
     }
 }
 
+class Path;
+
+## Iterates over a sequence of Path objects.
+@abstract class PathIter {
+    PathIter iter() { return this; }
+    
+    @abstract Path elem();
+    @abstract bool next();
+}
 
 ## A path is a node in a virtual filesystem.  It can correspond to a 
 ## directory, a file, or the root of the filesystem.
@@ -42,6 +53,9 @@ class SystemError : Exception {
     ## Returns a writer for the path.  The path must be writable.
     @abstract Writer writer();
     
+    ## Make a directory corresponding to the path.
+    @abstract void makeDir();
+    
     FullReader makeFullReader() { 
         return FullReader(reader());
     }
@@ -49,6 +63,11 @@ class SystemError : Exception {
     String readAll() {
         src := FullReader(reader());
         return src.readAll();
+    }
+    
+    ## write the entire contents of the file.
+    void writeAll(Buffer data) {
+        writer().write(data);
     }
 
     @abstract Path oper [](String child);
@@ -62,14 +81,82 @@ class SystemError : Exception {
     
     ## Deletes the object at the path.
     @abstract void delete();
+
+    ## Returns the short (unqualified) name of the Path.  This is the name 
+    ## relative to its container.
+    @abstract String getName();
+
+    ## Returns the fully qualified name of the Path.
+    @abstract String getFullName();
+    
+    ## Returns the size of the object.
+    @abstract uint64 getSize();
+    
+    ## Returns an interator over the children of the path.
+    @abstract PathIter children();
+}
+
+class RealPathIter : PathIter {
+    Path __container;
+    Dir __dir;
+    DirEntry __entry;
+
+    bool _readNext() {
+        if (!__dir)
+            throw InvalidStateError('Iterating past the end of the directory');
+
+        if (!readdir(__dir)) {
+            __dir = null;
+            return false;
+        } else {
+            return true;
+        }
+    }
+    
+    oper init(Path container) : __container = container,
+        __dir = opendir(CString(container.getFullName()).buffer),
+        __entry = getDirEntry(__dir) {
+
+        next();        
+    }
+
+    Path elem() { return __container[StaticString(__entry.name)]; }
+
+    ## Returns true if 'name' is '.' or '..'
+    @static bool __isSpecial(byteptr name) {
+        return name[0] == b'.' && 
+               (name[1] == 0 || name[1] == b'.' && name[2] == 0);
+    }
+    
+    bool next() {
+        while (true) {
+            if (!_readNext()) {
+                __dir = null;
+                return false;
+            } else if (__isSpecial(__entry.name)) {
+                continue;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    bool isTrue() { return __dir; }
+    
 }
 
 ## A real filesystem path.
 class RealPath : Path {
 
-    String __path;
+    CString __path;
 
-    oper init(String realPath) : __path = realPath {}
+    oper init(String realPath) : __path = CString(realPath) {}
+    oper init(CString realPath) : __path = realPath {}
+
+    void writeTo(Writer out) {
+        out.write(__path);
+    }
 
     Path oper [](String child) {
         if (child == '..' || child == '.')
@@ -106,11 +193,29 @@ class RealPath : Path {
                               );
         return FDWriter(fd);
     }
-    
+
+    void makeDir() {
+        mkdir(__path.buffer, 0o777);
+    }
+
     void delete() {
         if (fileRemove(__path.buffer))
             throw SystemError(FStr() `Removing $__path: $(strerror())`, 
                               errno()
                               );
     }
+    
+    
+    PathIter children() { return RealPathIter(this); }
+    String getFullName() { return __path; }
+    String getName() { return String(basename(__path.buffer)); }
+    uint64 getSize() {
+        Stat st = {};
+        if (stat(__path.buffer, st))
+            throw SystemError(FStr() `stating $__path: $(strerror())`,
+                              errno()
+                              );
+        return uint64(st.st_size);
+    }
+        
 }
