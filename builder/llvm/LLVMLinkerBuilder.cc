@@ -268,6 +268,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     llvm::Constant *c =
         module->getOrInsertFunction(moduleDef->name+":cleanup",
                                     Type::getVoidTy(lctx), NULL);
+    Function *initFunc = func;
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
     builder.SetInsertPoint(BasicBlock::Create(lctx, "", func));
@@ -284,6 +285,72 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     
     builder.SetInsertPoint(retBlock);
     builder.CreateRetVoid();
+
+    // emit a table of address/function for the module
+    vector<Constant *> funcVals;
+    const Type *byteType = builder.getInt8Ty();
+    const Type *bytePtrType = byteType->getPointerTo();
+    Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
+    Constant *index00[] = { zero, zero };
+    Module::FunctionListType &funcList = module->getFunctionList();
+    for (Module::FunctionListType::iterator funcIter = funcList.begin();
+         funcIter != funcList.end();
+         ++funcIter
+         ) {
+        string name = funcIter->getName();
+        if (!funcIter->isDeclaration()) {
+            funcVals.push_back(ConstantExpr::getBitCast(funcIter, 
+                                                        bytePtrType
+                                                        )
+                               );
+            const ArrayType *byteArrType = 
+                ArrayType::get(byteType, name.size() + 1);
+            Constant *funcName = ConstantArray::get(lctx, name, true);
+            GlobalVariable *nameGVar =
+                new GlobalVariable(*module, byteArrType, true, // is constant
+                                   GlobalValue::InternalLinkage,
+                                   funcName,
+                                   moduleDef->name +
+                                   ":debug_func_name",
+                                   0,
+                                   false
+                                   );
+            Constant *namePtr =
+                ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
+            funcVals.push_back(namePtr);
+        }            
+    }
+    funcVals.push_back(Constant::getNullValue(bytePtrType));
+    const ArrayType *bytePtrArrType = 
+        ArrayType::get(bytePtrType, funcVals.size());
+    GlobalVariable *funcTable = new GlobalVariable(
+        *module, bytePtrArrType, 
+        true,
+        GlobalValue::InternalLinkage,
+        ConstantArray::get(bytePtrArrType, 
+                            funcVals
+                            ),
+        moduleDef->name + ":debug_func_table",
+        0,
+        false
+    );
+
+    // call the function to populate debug info.
+    vector<const Type *> argTypes(1);
+    argTypes[0] = bytePtrType->getPointerTo();
+    FunctionType *funcType = FunctionType::get(builder.getVoidTy(), argTypes,
+                                              false
+                                              );
+    Function *registerFunc = 
+        cast<Function>(module->getOrInsertFunction("__CrackRegisterFuncTable", 
+                                                   funcType
+                                                   )
+                       );
+    vector<Value *> args(1);
+    args[0] = ConstantExpr::getGetElementPtr(funcTable, index00, 2);
+    BasicBlock &entryBlock = initFunc->getEntryBlock();
+    builder.SetInsertPoint(&entryBlock, entryBlock.begin());
+    builder.CreateCall(registerFunc, args.begin(), args.end());
 
     if (debugInfo)
         delete debugInfo;

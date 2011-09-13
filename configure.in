@@ -36,9 +36,6 @@ AC_CHECK_SIZEOF([void *])
 
 # optional libraries
 
-AM_PATH_CWD
-AM_CONDITIONAL(HAVE_CWD, [test "x$got_cwd" = xyes])
-
 AM_PATH_GTK_2_0(2.0.0, [got_gtk=yes])
 AM_CONDITIONAL(HAVE_GTK, [test "x$got_gtk" = xyes])
 

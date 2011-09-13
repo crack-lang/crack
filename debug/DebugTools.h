@@ -13,6 +13,9 @@ void registerDebugInfo(void *address, const std::string &funcName,
                        int lineNumber
                        );
 
+/** Register an entire function table.  */
+void registerFuncTable(const char **table);
+
 /**
  * Finds the source location for the specified address.
  * Source info is an array of three elements:
