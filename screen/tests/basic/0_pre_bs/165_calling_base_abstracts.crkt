@@ -1,0 +1,14 @@
+%%TEST%%
+error calling abstract methods in a base class
+%%ARGS%%
+%%FILE%%
+@abstract class A {
+    @abstract void f();
+}
+
+class B : A {
+    void f() { A.f(); }
+}
+%%EXPECT%%
+ParseError: %OUTDIR%165_calling_base_abstracts.crk:6: Abstract function f() can not be called.
+%%STDIN%%
