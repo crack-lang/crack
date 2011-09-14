@@ -56,7 +56,8 @@ class Type {
         Type(Module *module, model::TypeDef *typeDef) : 
             module(module),
             typeDef(typeDef), 
-            impl(0) {
+            impl(0),
+            finished(false) {
         }
 
         Type(Module *module, const std::string &name, 
@@ -65,13 +66,29 @@ class Type {
              ) : 
             typeDef(0),
             module(module),
-            impl(new Impl(name, context, instSize)) {
+            impl(new Impl(name, context, instSize)),
+            finished(false) {
         }
+
+        Type(Module *module, const std::string &name, 
+             model::Context *context, 
+             size_t instSize,
+             model::TypeDef *typeDef) : 
+            typeDef(typeDef),
+            module(module),
+            impl(new Impl(name, context, instSize)),
+            finished(false) {
+        }
+
         ~Type();
+        
+        // verify that the type has been initilized (has a non-null impl)
+        void checkInitialized();
 
         // verify that the type has been "finished" (presumably before using 
         // it).
         void checkFinished();
+        bool finished;
     
     public:
         

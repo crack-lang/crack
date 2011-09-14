@@ -29,6 +29,8 @@ extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
     Type *intType = mod->getIntType();
+    Type *type_intz = mod->getIntzType();
+    Type *type_uintz = mod->getUintzType();
     Type *uint32Type = mod->getUint32Type();
     Type *int32Type = mod->getInt32Type();
     Type *uintType = mod->getUintType();

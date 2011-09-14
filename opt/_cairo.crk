@@ -12,6 +12,7 @@
    @inject '#include <cairo/cairo-ps.h>\n'
    @inject '#include <cairo/cairo-svg.h>\n'
    @inject '#include <cairo/cairo-xlib.h>\n'
+   @inject '#include <stdio.h>\n'
 
    @inject '#include <cairo/cairo-features.h>\n'
    @inject '#include <X11/Xlib.h>\n'
@@ -385,7 +386,7 @@
       @cname cairo_pattern_set_user_data
       uint32 set_user_data(cairo_user_data_key_t key,
                            voidptr user_data,
-                           function[void, voidptr] destroy);
+                           voidptr destroy);
 
       @cname cairo_pattern_get_type
       uint32 get_type();
@@ -479,8 +480,9 @@
    class cairo_text_cluster_t;
    
    // Text extents
+   @inject 'cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }\n'
    class cairo_text_extents_t{
-      @cname cairo_text_extents_t
+      @cname cairo_text_extents_new
       oper init();
       float64 x_bearing, y_bearing;
       float64 width, height;
@@ -575,7 +577,7 @@
 
       @cname cairo_save
       void save ();
-      @cname cario_restore
+      @cname cairo_restore
       void restore ();
       @cname cairo_push_group
       void push_group ();
@@ -857,7 +859,7 @@
       oper del();
    }
 
-   @inject 'cairo_surface_t *cairo_surface_new(cairo_surface_t existing_surface) { 
+   @inject 'cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) { 
       return existing_surface;
    }\n'
 
@@ -963,17 +965,18 @@
       oper del();
    }
 
-   cairo_t cairo_create (cairo_surface_t target); //b
+   cairo_t cairo_create (cairo_surface_t target);
+
    cairo_t cairo_reference (cairo_t cr);
-   void cairo_destroy (cairo_t cr); //b
-   uint cairo_get_reference_count (cairo_t cr); //b
+   void cairo_destroy (cairo_t cr);
+   uint cairo_get_reference_count (cairo_t cr);
 
-   void cairo_save (cairo_t cr); //b
-   void cairo_restore (cairo_t cr); //b
-   void cairo_push_group (cairo_t cr); //b
+   void cairo_save (cairo_t cr);
+   void cairo_restore (cairo_t cr);
+   void cairo_push_group (cairo_t cr);
 
-   cairo_pattern_t cairo_pop_group (cairo_t cr); //b
-   void  cairo_pop_group_to_source (cairo_t cr); //b
+   cairo_pattern_t cairo_pop_group (cairo_t cr);
+   void  cairo_pop_group_to_source (cairo_t cr);
 
    // Modify state
    void cairo_set_operator (cairo_t cr, uint32 op);
@@ -1341,7 +1344,6 @@
    uint32 cairo_surface_get_content (cairo_surface_t surface);
 
 @ifdef CAIRO_HAS_PNG_FUNCTIONS {
-   class myClass;
    uint32 cairo_surface_write_to_png (cairo_surface_t surface,
                                       byteptr filename);
 

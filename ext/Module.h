@@ -58,6 +58,8 @@ class Module {
         typedef std::map<std::string, Type *> TypeMap;
         TypeMap types;
         bool finished;
+    protected:
+        Type *addTypeWorker(const char *name, size_t instSize, bool forward);
 
     public:
         Module(model::Context *context);
@@ -89,6 +91,8 @@ class Module {
         
         Type *getType(const char *name);
         Type *addType(const char *name, size_t instSize);
+        Type *addForwardType(const char *name, size_t instSize);
+
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);
         void addConstant(Type *type, const std::string &name, double val);

@@ -84,16 +84,32 @@ Type *Module::getType(const char *name) {
     return type;
 }
 
-Type *Module::addType(const char *name, size_t instSize) {
+Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward) {
+
     TypeMap::iterator i = types.find(name);
-    if (i != types.end()) {
+    bool found = (i != types.end());
+    if (found && !(i->second->typeDef && i->second->typeDef->forward))  {
         std::cerr << "Type " << name << " already registered!" << std::endl;
         assert(false);
     }
 
     Type *result;
-    types[name] = result = new Type(this, name, context, instSize);
+
+    if (forward)
+        result = new Type(this, name, context, instSize, context->createForwardClass(name).get());
+    else
+        result = new Type(this, name, context, instSize);
+
+	types[name] = result;
     return result;
+}
+
+Type *Module::addType(const char *name, size_t instSize) {
+    return Module::addTypeWorker(name, instSize, false);
+}
+
+Type *Module::addForwardType(const char *name, size_t instSize) {
+    return Module::addTypeWorker(name, instSize, true);
 }
 
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,

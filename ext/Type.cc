@@ -32,10 +32,20 @@ Type::~Type() {
         delete impl;
 }
 
+
+void Type::checkInitialized() {
+    if (!impl) {
+        std::cerr << "Attempting to add attributes to forward type"
+            << "."  << std::endl;
+        assert(false);
+    }
+}
+
 void Type::checkFinished() {
     if (!typeDef) {
-        std::cerr << "Attempting to make use of unfinished type " << impl->name
-            << "."  << std::endl;
+        std::cerr << "Attempting to make use of unfinished type";
+        if (impl) std::cerr << " " << impl->name;
+        std::cerr << std::endl;
         assert(false);
     }
 }
@@ -46,6 +56,7 @@ void Type::addBase(Type *base) {
 }
 
 void Type::addInstVar(Type *type, const std::string &name, size_t offset) {
+    checkInitialized();
     if (impl->instVars.find(name) != impl->instVars.end()) {
         std::cerr << "variable " << name << " already exists." << endl;
         assert(false);
@@ -59,16 +70,19 @@ void Type::addInstVar(Type *type, const std::string &name, size_t offset) {
 Func *Type::addMethod(Type *returnType, const std::string &name,
                       void *funcPtr
                       ) {
+    checkInitialized();
     Func *result = new Func(0, returnType, name, funcPtr, Func::method);
     impl->funcs.push_back(result);
     return result;
 }
 
 Func *Type::addConstructor(const char *name, void *funcPtr) {
+    checkInitialized();
     Func *result = new Func(0, module->getVoidType(), name ? name : "", 
                             funcPtr,
                             Func::constructor | Func::method
                             );
+
     impl->funcs.push_back(result);
     return result;
 }
@@ -76,6 +90,7 @@ Func *Type::addConstructor(const char *name, void *funcPtr) {
 Func *Type::addStaticMethod(Type *returnType, const std::string &name,
                             void *funcPtr
                             ) {
+    checkInitialized();
     Func *result = new Func(0, returnType, name, funcPtr, Func::noFlags);
     impl->funcs.push_back(result);
     return result;
@@ -104,7 +119,7 @@ Type *Type::getSpecialization(const vector<Type *> &params) {
 
 void Type::finish() {
     // ignore this if we're already finished.
-    if (typeDef)
+    if (finished || (!impl && typeDef && !typeDef->forward))
         return;
     
     Context *ctx = impl->context;
@@ -120,11 +135,13 @@ void Type::finish() {
         (*i)->typeDef->addToAncestors(*ctx, ancestors);
         bases.push_back((*i)->typeDef);
     }
-    
+
     // create the subcontext and emit the beginning of the class.
-    ContextPtr clsCtx = new Context(ctx->builder, Context::instance, ctx, 0);
+    ContextPtr clsCtx = new Context(ctx->builder, Context::instance, ctx, 0,
+                                    ctx->compileNS.get()
+                                   );
     TypeDefPtr td =
-        ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, 0);
+        ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, typeDef);
     typeDef = td.get();
 
     // emit the variables
@@ -151,7 +168,9 @@ void Type::finish() {
     
     // pad the class to the instance size
     typeDef->padding = impl->instSize;
-    
-    ctx->builder.emitEndClass(*clsCtx);
-    ctx->ns->addDef(typeDef);
+	ctx->builder.emitEndClass(*clsCtx);    
+
+    if (!typeDef->getOwner())
+		ctx->ns->addDef(typeDef);
+	finished = true;
 }

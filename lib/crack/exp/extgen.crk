@@ -3,10 +3,12 @@
 # annotation interface supports introspection of compile contexts.
 
 import crack.lang die, free, AppendBuffer, Exception;
+import crack.strutil ljust;
 import crack.io cout, FStr, Formatter, StringFormatter, Writer;
 import crack.compiler CrackContext, Token;
 import crack.exp.file File;
 import crack.exp.error err;
+import crack.exp.regex Regex, Match;
 import crack.cont.array Array;
 import crack.strutil StringArray;
 import crack.cont.treemap TreeMap;
@@ -206,17 +208,25 @@ class TypeImpl : Type {
     String emitted, lastCName;
     Array[Func] methods;
     Array[Arg] members;
+    uint numDecls;
+    uint numEmitted;
 
     oper init(String name, String cname) : 
         Type(name, cname), 
-        members(), 
-        methods() {
+        members(), methods(),
+        numDecls(1), numEmitted(0) {
+    }
+
+    oper init(String name, String cname, uint numDecls) : 
+        Type(name, cname), 
+        members(), methods(),
+        numDecls(numDecls), numEmitted(0) {
     }
 
     oper init(String name, String cname, String emitted) :
         Type(name, cname, emitted),
-        members(),
-        methods() {
+        members(), methods(),
+        numDecls(1), numEmitted(0) {
     }
 
     // class members
@@ -236,49 +246,56 @@ class TypeImpl : Type {
         typeVar := emit();
 
         // make sure all our member types are defined
-        for (member :in members)
-            if (member.type.isBuiltIn())
-              member.type.emitInitializer(out);
-
+        if (numEmitted == 0)
+            for (member :in members)
+                if (member.type.isBuiltIn())
+                  member.type.emitInitializer(out);
 
         // emit initializer
-        out `
-    crack::ext::Type *$typeVar = mod->addType("$name", sizeof($cname));\n`;
-
-        // emit member variables
-        for (member :in members){
-           if (member.type.isBuiltIn())
-              member.type.emitInitializer(out);
-           out `        $typeVar->addInstVar($(member.type.emit()),
-                             "$(member.name)",
-                             CRACK_OFFSET($(cname), $(member.name))
-                             );\n`;
+        if (numDecls == 1 || numEmitted == 1){
+            if (numEmitted == 0) 
+                out `\n    crack::ext::Type *$typeVar = mod->addType("$name", sizeof($cname));\n`;
+            else {
+                comment := FStr() `\n    // Definition of forward type $name `;
+                out `$(ljust(comment, 80, b'-'))\n`;
+            }
         }
+        else
+            out `\n    crack::ext::Type *$typeVar = mod->addForwardType("$name", sizeof($cname));\n`;
+        
+        if (numDecls == 1 || numEmitted ==1) {
+            // emit member variables
+            for (member :in members){
+               if (member.type.isBuiltIn())
+                  member.type.emitInitializer(out);
+               out `        $typeVar->addInstVar($(member.type.emit()), "$(member.name)",
+                                CRACK_OFFSET($(cname), $(member.name)));\n`;
+            }
 
-        // emit methods
-        for (method :in methods){
-            if (method.retType.isBuiltIn())
-                method.retType.emitInitializer(out);
+            // emit methods
+            for (method :in methods){
+                if (method.retType.isBuiltIn())
+                    method.retType.emitInitializer(out);
 
-            if (method.isOperInit)
-                out `        f = $typeVar->addConstructor("init",
-                    (void *)$(method.cname)
-            );
-`;
-            else
-                out `        f = $typeVar->addMethod($(method.retType.emit()), "$(method.name)",
-                    (void *)$(method.cname)
-            );
-`;
-            for (arg :in method.args)
-                out `            f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
-            out `\n`;
+                if (method.isOperInit)
+                    out `        f = $typeVar->addConstructor("init",
+                        (void *)$(method.cname)
+                );\n`;
+                else
+                    out `        f = $typeVar->addMethod($(method.retType.emit()), "$(method.name)",
+                        (void *)$(method.cname)
+                );\n`;
+                for (arg :in method.args)
+                    out `            f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+                out `\n`;
 
+            }
+
+            // finish type definition
+            out `    $typeVar->finish();\n\n`;
+            initialized = true;
         }
-
-        // finish type definition
-        out `    $typeVar->finish();\n\n`;
-        initialized = true;
+        numEmitted++;
     }
 }
 
@@ -718,7 +735,12 @@ $(generic.getParamCount()) parameters.`;
         # get a semicolon or left curly
         tok = ctx.getToken();
         if (tok.isSemi() || tok.isLCurly()){
-            ctype = TypeImpl(className, lastCName ? lastCName : className);
+            uint numDecl = 1;
+            if (types.get(className))
+               numDecl = 2;
+
+            ctype = TypeImpl(className, lastCName ? lastCName : className, numDecl);
+            cout `Declaring class $className, numDecl = $numDecl\n`;
             types[className] = ctype;
             lastCName = null;
         } else {
@@ -786,7 +808,6 @@ class declaration`;
             }
         }
 
-        types[className] = ctype;
         typeNames.append(className);
 
     }
