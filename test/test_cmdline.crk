@@ -21,13 +21,11 @@ CmdOptions testOptions = CmdOptions();
 for (uint i = 0; i < 2; i++)
    testOptions.add(optArray[i]);
 
-CmdOptions options = {};
-
-options.add("help", "h", "Show help message", "f", CMD_BOOL);
-options.add("string", "s", "An example string", "astring", CMD_STR);
-options.add("float", "f", "A floating point number", "100.0", CMD_FLOAT);
-options.add("int", "i", "Integer example", "10", CMD_INT);
-options.add("bool", "b", "Boolean example", "f", CMD_BOOL);
+CmdOptions options = [Option("help",   "h", "Show help message", "f", CMD_BOOL),
+                      Option("string", "s", "An example string", "astring", CMD_STR),
+                      Option("float",  "f", "A floating point number", "100.0", CMD_FLOAT),
+                      Option("int",    "i", "Integer example", "10", CMD_INT),
+                      Option("bool",   "b", "Boolean example", "f", CMD_BOOL)];
 
 // Test the values of the options
 if (options.getInt("int") != 10 || options.getInt("i") != 10)

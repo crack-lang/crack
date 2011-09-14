@@ -7,7 +7,7 @@ import crack.cont.array Array;
 import crack.math strtoi, strtof;
 import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
 import crack.sys argv;
-import crack.io cout, StringFormatter, FStr, Writer;
+import crack.io cout, cerr, StringFormatter, FStr, Writer;
 import crack.strutil split, StringArray;
 
 StringArray typeNames = ["string", "int", "float", "bool"];
@@ -503,7 +503,8 @@ class CmdOptions {
                lineStart += FStr()` -$(opt.short) ARG`;
             if (opt.long)
                lineStart += FStr()` --$(opt.long)=ARG`;
-            lineTexts.append(FStr() ` $(opt.desc)  ($(typeNames[opt.type]): $(value))\n`);
+            lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
+                             FStr() `($(typeNames[opt.type]): $(value))\n`);
          }
          else {
             if (opt.short)
@@ -511,16 +512,25 @@ class CmdOptions {
             if (opt.long)
                lineStart += FStr() ` --$(opt.long)`;
             
-            lineTexts.append(FStr() ` $(opt.desc)  ($(typeNames[opt.type]): $(stringAsBool(value)))\n`);
+            lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
+                             FStr() `(bool: $(stringAsBool(value)))`);
 
          }
          lineSpecs.append(lineStart);
          if (lineStart.size > maxSpecLen) maxSpecLen = lineStart.size;
       }
       
+      StringArray helpLines;
       for (i = 0; i < options.count(); i++){
          out.write(ljust(lineSpecs[i], maxSpecLen + 1));
-         out.write(lineTexts[i]);
+         helpLines = split(lineTexts[i], b'\n');
+         out.write(helpLines[0]+"\n");
+         for (uint j = 1; j < helpLines.count(); j++) {
+            if (helpLines[j].size > 0){
+               out.write(" "*(maxSpecLen + 2));
+               out.write(helpLines[j]+"\n");
+            }
+         }
       }
 
       if (i>0) out.write('\n');
