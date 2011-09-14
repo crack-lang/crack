@@ -1,17 +1,9 @@
 // Copyright 2011 Google Inc.
 
-#ifdef GOT_CWD
-#include <libcwd/sys.h> // libcwd requires us to include this before all else
-#endif
-
 #include "DebugTools.h"
 
-#ifdef GOT_CWD
-#define CWDEBUG
-#include <libcwd/debug.h>
-#endif
-
 #include <string.h>
+#include <iostream>
 #include <map>
 #include <set>
 
@@ -48,13 +40,17 @@ namespace {
     typedef set<InternedString> InternedStringSet;
     InternedStringSet internTable;
 
-    const InternedString &lookUpString(const string &str) {
-        InternedString key(str.c_str());
+    const InternedString &lookUpString(const InternedString &key) {
         InternedStringSet::iterator iter = internTable.find(key);
         if (iter == internTable.end())
             iter = 
-                internTable.insert(InternedString(strdup(str.c_str()))).first;
+                internTable.insert(InternedString(strdup(key.val))).first;
         return *iter;
+    }
+
+    const InternedString &lookUpString(const string &str) {
+        InternedString key(str.c_str());
+        return lookUpString(key);
     }
 }
 
@@ -68,28 +64,27 @@ void crack::debug::registerDebugInfo(void *address,
     debugTable[address] = DebugInfo(name.val, file.val, lineNumber);
 }
 
+void crack::debug::registerFuncTable(const char **table) {
+    while (table[0]) {
+        const InternedString &name = lookUpString(InternedString(table[1]));
+        debugTable[(void *)table[0]] = 
+            DebugInfo(name.val, "", 0);
+        table = table + 2;
+    }
+}
+
+extern "C" void __CrackRegisterFuncTable(const char **table) {
+    crack::debug::registerFuncTable(table);
+}
+
 void crack::debug::getLocation(void *address, const char *info[3]) {
     DebugTable::iterator i = debugTable.lower_bound(address);
     if (i == debugTable.end() || i->first != address)
         --i;
     
     if (i == debugTable.end()) {
-
-#ifdef GOT_CWD
-        // try to find the info from the static debug info
-        libcwd::location_ct loc(reinterpret_cast<char *>(address));
-        info[0] = loc.mangled_function_name();
-        if (loc.is_known()) {
-            info[1] = loc.file().c_str();
-            info[2] = reinterpret_cast<const char *>(loc.line());
-        } else {
-            info[1] = "unknown";
-            info[2] = 0;
-        }
-#else
         info[1] = "unknown";
         info[2] = 0;
-#endif
     } else {
         info[0] = i->second.funcName;
         info[1] = i->second.filename;

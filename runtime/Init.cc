@@ -644,4 +644,8 @@ extern "C" void crack_runtime_init(Module *mod) {
                      );
     f->addArg(voidptrType, "address");
     f->addArg(byteptrArrayType, "info");
+    f = mod->addFunc(voidType, "registerFuncTable",
+                     (void *)&crack::debug::registerFuncTable
+                     );
+    f->addArg(byteptrArrayType, "funcTable");
 }

@@ -35,13 +35,6 @@ IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
                        please install ${LLVM_MIN_VERSION_TEXT} of greater!")
 ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
-macro_optional_find_package(CWD)
-macro_log_feature(CWD_FOUND "libcwd" "Better debugging support" "http://libcwd.sourceforge.net/")
-
-IF (CWD_FOUND)
-  add_definitions(-DGOT_CWD)
-ENDIF (CWD_FOUND)
-
 include_directories(${PROJECT_SOURCE_DIR}
                     ${PROJECT_BINARY_DIR}
                     ${LLVM_INCLUDE_DIR})
@@ -77,7 +70,7 @@ target_link_libraries( libcrack
                      )
 
 # libCrackNativeRuntime
-add_library(libcrackextstub SHARED ext/Stub.cc debug/NativeDebugTools.cc)
+add_library(libcrackextstub SHARED ext/Stub.cc)
 set_target_properties(libcrackextstub
                       PROPERTIES
                       OUTPUT_NAME CrackNativeRuntime
