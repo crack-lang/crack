@@ -203,7 +203,7 @@ class ConstType : BuiltInType {
 }
 
 class TypeImpl : Type {
-    String emitted, lastCName;
+    String emitted;
     Array[Func] methods;
     Array[Arg] members;
 
@@ -244,6 +244,10 @@ class TypeImpl : Type {
         // emit initializer
         out `
     crack::ext::Type *$typeVar = mod->addType("$name", sizeof($cname));\n`;
+    
+        // mark as initialized - from here on in we can use the type without 
+        // further action.
+        initialized = true;
 
         // emit member variables
         for (member :in members){
@@ -259,6 +263,10 @@ class TypeImpl : Type {
         for (method :in methods){
             if (method.retType.isBuiltIn())
                 method.retType.emitInitializer(out);
+            
+            // make sure arg types are initialized
+            for (arg :in method.args)
+                arg.type.emitInitializer(out);
 
             if (method.isOperInit)
                 out `        f = $typeVar->addConstructor("init",
@@ -278,7 +286,6 @@ class TypeImpl : Type {
 
         // finish type definition
         out `    $typeVar->finish();\n\n`;
-        initialized = true;
     }
 }
 

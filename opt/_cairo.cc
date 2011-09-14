@@ -60,10 +60,11 @@
 #ifndef CAIRO_HAS_XLIB_XRENDER_SURFACE
 # define CAIRO_HAS_XLIB_XRENDER_SURFACE 0
 #endif
+typedef int Undef;
 cairo_matrix_t *cairo_matrix_new() { return new cairo_matrix_t; }
 cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
 cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
-cairo_surface_t *cairo_surface_new(cairo_surface_t existing_surface) { 
+cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) { 
       return existing_surface;
    }
 
@@ -93,7 +94,11 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_cairo_t = mod->addType("cairo_t", sizeof(cairo_t));
+    crack::ext::Type *type_cairo_t = mod->addType("cairo_t", sizeof(Undef));
+
+    crack::ext::Type *type_cairo_surface_t = mod->addType("cairo_surface_t", sizeof(Undef));
+    type_cairo_surface_t->finish();
+
         f = type_cairo_t->addConstructor("init",
                     (void *)cairo_create
             );
@@ -108,7 +113,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
 
         f = type_cairo_t->addMethod(type_void, "restore",
-                    (void *)cario_restore
+                    (void *)cairo_restore
             );
 
         f = type_cairo_t->addMethod(type_void, "push_group",
@@ -127,6 +132,402 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_set_operator
             );
             f->addArg(type_uint32, "op");
+
+
+    crack::ext::Type *type_cairo_pattern_t = mod->addType("cairo_pattern_t", sizeof(Undef));
+        f = type_cairo_pattern_t->addMethod(type_cairo_pattern_t, "reference",
+                    (void *)cairo_pattern_reference
+            );
+
+        f = type_cairo_pattern_t->addConstructor("init",
+                    (void *)cairo_pattern_destroy
+            );
+
+        f = type_cairo_pattern_t->addMethod(type_uint, "get_reference_count",
+                    (void *)cairo_pattern_get_reference_count
+            );
+
+        f = type_cairo_pattern_t->addMethod(type_uint32, "status",
+                    (void *)cairo_pattern_status
+            );
+
+
+    crack::ext::Type *type_cairo_user_data_key_t = mod->addType("cairo_user_data_key_t", sizeof(cairo_user_data_key_t));
+    type_cairo_user_data_key_t->finish();
+
+        f = type_cairo_pattern_t->addMethod(type_voidptr, "get_user_data",
+                    (void *)cairo_pattern_get_user_data
+            );
+            f->addArg(type_cairo_user_data_key_t, "key");
+
+
+    crack::ext::Type *function = mod->getType("function");
+
+    crack::ext::Type *function_pvoid_c_svoidptr_q;
+    {
+        std::vector<crack::ext::Type *> params(2);
+        params[0] = type_void;
+        params[1] = type_voidptr;
+        function_pvoid_c_svoidptr_q = function->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "set_user_data",
+                    (void *)cairo_pattern_set_user_data
+            );
+            f->addArg(type_cairo_user_data_key_t, "key");
+            f->addArg(type_voidptr, "user_data");
+            f->addArg(function_pvoid_c_svoidptr_q, "destroy");
+
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_type",
+                    (void *)cairo_pattern_get_type
+            );
+
+        f = type_cairo_pattern_t->addMethod(type_void, "add_color_stop_rgb",
+                    (void *)cairo_pattern_add_color_stop_rgb
+            );
+            f->addArg(type_float64, "offset");
+            f->addArg(type_float64, "red");
+            f->addArg(type_float64, "green");
+            f->addArg(type_float64, "blue");
+
+        f = type_cairo_pattern_t->addMethod(type_void, "add_color_stop_rgba",
+                    (void *)cairo_pattern_add_color_stop_rgba
+            );
+            f->addArg(type_float64, "offset");
+            f->addArg(type_float64, "red");
+            f->addArg(type_float64, "green");
+            f->addArg(type_float64, "blue");
+            f->addArg(type_float64, "alpha");
+
+
+    crack::ext::Type *type_cairo_matrix_t = mod->addType("cairo_matrix_t", sizeof(cairo_matrix_t));
+        f = type_cairo_matrix_t->addConstructor("init",
+                    (void *)cairo_matrix_new
+            );
+
+        f = type_cairo_matrix_t->addMethod(type_void, "init",
+                    (void *)cairo_matrix_init
+            );
+            f->addArg(type_float64, "xx");
+            f->addArg(type_float64, "yx");
+            f->addArg(type_float64, "xy");
+            f->addArg(type_float64, "yy");
+            f->addArg(type_float64, "x0");
+            f->addArg(type_float64, "y0");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "init_identity",
+                    (void *)cairo_matrix_init_identity
+            );
+
+        f = type_cairo_matrix_t->addMethod(type_void, "init_translate",
+                    (void *)cairo_matrix_init_translate
+            );
+            f->addArg(type_float64, "tx");
+            f->addArg(type_float64, "ty");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "init_scale",
+                    (void *)cairo_matrix_init_scale
+            );
+            f->addArg(type_float64, "sx");
+            f->addArg(type_float64, "sy");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "init_rotate",
+                    (void *)cairo_matrix_init_rotate
+            );
+            f->addArg(type_float64, "radians");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "translate",
+                    (void *)cairo_matrix_translate
+            );
+            f->addArg(type_float64, "tx");
+            f->addArg(type_float64, "ty");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "scale",
+                    (void *)cairo_matrix_scale
+            );
+            f->addArg(type_float64, "sx");
+            f->addArg(type_float64, "sy");
+
+        f = type_cairo_matrix_t->addMethod(type_void, "rotate",
+                    (void *)cairo_matrix_rotate
+            );
+            f->addArg(type_float64, "radians");
+
+        f = type_cairo_matrix_t->addMethod(type_uint32, "invert",
+                    (void *)cairo_matrix_invert
+            );
+
+        f = type_cairo_matrix_t->addMethod(type_void, "multiply",
+                    (void *)cairo_matrix_multiply
+            );
+            f->addArg(type_cairo_matrix_t, "a");
+            f->addArg(type_cairo_matrix_t, "b");
+
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_matrix_t->addMethod(type_void, "transform_distance",
+                    (void *)cairo_matrix_transform_distance
+            );
+            f->addArg(array_pfloat64_q, "dx");
+            f->addArg(array_pfloat64_q, "dy");
+
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_matrix_t->addMethod(type_void, "transform_point",
+                    (void *)cairo_matrix_transform_point
+            );
+            f->addArg(array_pfloat64_q, "x");
+            f->addArg(array_pfloat64_q, "y");
+
+    type_cairo_matrix_t->finish();
+
+        f = type_cairo_pattern_t->addMethod(type_void, "set_matrix",
+                    (void *)cairo_pattern_set_matrix
+            );
+            f->addArg(type_cairo_matrix_t, "matrix");
+
+
+    crack::ext::Type *array_pcairo__matrix__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_matrix_t;
+        array_pcairo__matrix__t_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_void, "get_matrix",
+                    (void *)cairo_pattern_get_matrix
+            );
+            f->addArg(array_pcairo__matrix__t_q, "matrix");
+
+        f = type_cairo_pattern_t->addMethod(type_void, "set_extend",
+                    (void *)cairo_pattern_set_extend
+            );
+            f->addArg(type_uint32, "extend");
+
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_extend",
+                    (void *)cairo_pattern_get_extend
+            );
+
+        f = type_cairo_pattern_t->addMethod(type_void, "set_filter",
+                    (void *)cairo_pattern_set_filter
+            );
+            f->addArg(type_uint32, "filter");
+
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_filter",
+                    (void *)cairo_pattern_get_filter
+            );
+
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_rgba",
+                    (void *)cairo_pattern_get_rgba
+            );
+            f->addArg(array_pfloat64_q, "red");
+            f->addArg(array_pfloat64_q, "green");
+            f->addArg(array_pfloat64_q, "blue");
+            f->addArg(array_pfloat64_q, "alpha");
+
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_surface",
+                    (void *)cairo_pattern_get_surface
+            );
+            f->addArg(type_cairo_surface_t, "surface");
+
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_color_stop_rgba",
+                    (void *)cairo_pattern_get_color_stop_rgba
+            );
+            f->addArg(type_int, "index");
+            f->addArg(array_pfloat64_q, "offset");
+            f->addArg(array_pfloat64_q, "red");
+            f->addArg(array_pfloat64_q, "green");
+            f->addArg(array_pfloat64_q, "blue");
+            f->addArg(array_pfloat64_q, "alpha");
+
+
+    crack::ext::Type *array_pint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int;
+        array_pint_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_color_stop_count",
+                    (void *)cairo_pattern_get_color_stop_count
+            );
+            f->addArg(array_pint_q, "count");
+
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_linear_points",
+                    (void *)cairo_pattern_get_linear_points
+            );
+            f->addArg(array_pfloat64_q, "x0");
+            f->addArg(array_pfloat64_q, "y0");
+            f->addArg(array_pfloat64_q, "x1");
+            f->addArg(array_pfloat64_q, "y1");
+
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+        f = type_cairo_pattern_t->addMethod(type_uint32, "get_radial_circles",
+                    (void *)cairo_pattern_get_radial_circles
+            );
+            f->addArg(array_pfloat64_q, "x0");
+            f->addArg(array_pfloat64_q, "y0");
+            f->addArg(array_pfloat64_q, "r0");
+            f->addArg(array_pfloat64_q, "x1");
+            f->addArg(array_pfloat64_q, "y1");
+            f->addArg(array_pfloat64_q, "r1");
+
+    type_cairo_pattern_t->finish();
 
         f = type_cairo_t->addMethod(type_void, "set_source",
                     (void *)cairo_set_source
@@ -185,6 +586,13 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_uint32, "line_join");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "set_dash",
                     (void *)cairo_set_dash
             );
@@ -229,24 +637,80 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_t, "cr");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "user_to_device",
                     (void *)cairo_user_to_device
             );
             f->addArg(array_pfloat64_q, "x");
             f->addArg(array_pfloat64_q, "y");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "user_to_device_distance",
                     (void *)cairo_user_to_device_distance
             );
             f->addArg(array_pfloat64_q, "dx");
             f->addArg(array_pfloat64_q, "dy");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "device_to_user",
                     (void *)cairo_device_to_user
             );
             f->addArg(array_pfloat64_q, "x");
             f->addArg(array_pfloat64_q, "y");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "device_to_user_distance",
                     (void *)cairo_device_to_user_distance
             );
@@ -335,6 +799,34 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_close_path
             );
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "path_extents",
                     (void *)cairo_path_extents
             );
@@ -406,6 +898,34 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_float64, "x");
             f->addArg(type_float64, "y");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "stroke_extents",
                     (void *)cairo_stroke_extents
             );
@@ -414,6 +934,34 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(array_pfloat64_q, "x2");
             f->addArg(array_pfloat64_q, "y2");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "fill_extents",
                     (void *)cairo_fill_extents
             );
@@ -434,6 +982,34 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_clip_preserve
             );
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "clip_extents",
                     (void *)cairo_clip_extents
             );
@@ -468,6 +1044,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_matrix_t, "matrix");
 
+
+    crack::ext::Type *type_cairo_font_options_t = mod->addType("cairo_font_options_t", sizeof(Undef));
+    type_cairo_font_options_t->finish();
+
         f = type_cairo_t->addMethod(type_void, "set_font_options",
                     (void *)cairo_set_font_options
             );
@@ -478,6 +1058,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_font_options_t, "options");
 
+
+    crack::ext::Type *type_cairo_font_face_t = mod->addType("cairo_font_face_t", sizeof(Undef));
+    type_cairo_font_face_t->finish();
+
         f = type_cairo_t->addMethod(type_void, "set_font_face",
                     (void *)cairo_set_font_face
             );
@@ -486,6 +1070,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         f = type_cairo_t->addMethod(type_cairo_font_face_t, "get_font_face",
                     (void *)cairo_get_font_face
             );
+
+
+    crack::ext::Type *type_cairo_scaled_font_t = mod->addType("cairo_scaled_font_t", sizeof(Undef));
+    type_cairo_scaled_font_t->finish();
 
         f = type_cairo_t->addMethod(type_void, "set_scaled_font",
                     (void *)cairo_set_scaled_font
@@ -501,12 +1089,27 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_byteptr, "utf8");
 
+
+    crack::ext::Type *type_cairo_glyph_t = mod->addType("cairo_glyph_t", sizeof(cairo_glyph_t));
+    type_cairo_glyph_t->finish();
+
         f = type_cairo_t->addMethod(type_void, "show_glyphs",
                     (void *)cairo_show_glyphs
             );
             f->addArg(type_cairo_glyph_t, "glyphs");
             f->addArg(type_int, "num_glyphs");
 
+
+    crack::ext::Type *type_cairo_text_cluster_t = mod->addType("cairo_text_cluster_t", sizeof(cairo_text_cluster_t));
+    type_cairo_text_cluster_t->finish();
+
+
+    crack::ext::Type *array_puint32_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_uint32;
+        array_puint32_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "show_text_glyphs",
                     (void *)cairo_show_text_glyphs
             );
@@ -529,6 +1132,38 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_cairo_glyph_t, "glyphs");
             f->addArg(type_int, "num_glyphs");
 
+
+    crack::ext::Type *type_cairo_text_extents_t = mod->addType("cairo_text_extents_t", sizeof(cairo_text_extents_t));
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "x_bearing",
+                             CRACK_OFFSET(cairo_text_extents_t, x_bearing)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "y_bearing",
+                             CRACK_OFFSET(cairo_text_extents_t, y_bearing)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "width",
+                             CRACK_OFFSET(cairo_text_extents_t, width)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "height",
+                             CRACK_OFFSET(cairo_text_extents_t, height)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "x_advance",
+                             CRACK_OFFSET(cairo_text_extents_t, x_advance)
+                             );
+        type_cairo_text_extents_t->addInstVar(type_float64,
+                             "y_advance",
+                             CRACK_OFFSET(cairo_text_extents_t, y_advance)
+                             );
+        f = type_cairo_text_extents_t->addConstructor("init",
+                    (void *)cairo_text_extents_t
+            );
+
+    type_cairo_text_extents_t->finish();
+
         f = type_cairo_t->addMethod(type_void, "text_extents",
                     (void *)cairo_text_extents
             );
@@ -541,6 +1176,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_cairo_glyph_t, "glyphs");
             f->addArg(type_int, "num_glyphs");
             f->addArg(type_cairo_text_extents_t, "extents");
+
+
+    crack::ext::Type *type_cairo_font_extents_t = mod->addType("cairo_font_extents_t", sizeof(cairo_font_extents_t));
+    type_cairo_font_extents_t->finish();
 
         f = type_cairo_t->addMethod(type_void, "font_extents",
                     (void *)cairo_font_extents
@@ -567,6 +1206,20 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_has_current_point
             );
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "get_current_point",
                     (void *)cairo_get_current_point
             );
@@ -597,12 +1250,33 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_get_dash_count
             );
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "get_dash",
                     (void *)cairo_get_dash
             );
             f->addArg(array_pfloat64_q, "dashes");
             f->addArg(array_pfloat64_q, "offset");
 
+
+    crack::ext::Type *array_pcairo__matrix__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_matrix_t;
+        array_pcairo__matrix__t_q = array->getSpecialization(params);
+    }
         f = type_cairo_t->addMethod(type_void, "get_matrix",
                     (void *)cairo_get_matrix
             );
@@ -623,6 +1297,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         f = type_cairo_t->addMethod(type_cairo_path_t, "copy_path_flat",
                     (void *)cairo_copy_path_flat
             );
+
+
+    crack::ext::Type *type_cairo_path_t = mod->addType("cairo_path_t", sizeof(cairo_path_t));
+    type_cairo_path_t->finish();
 
         f = type_cairo_t->addMethod(type_void, "append_path",
                     (void *)cairo_append_path
@@ -699,6 +1377,14 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_user_data_key_t, "key");
 
+
+    crack::ext::Type *function_pvoid_c_svoidptr_q;
+    {
+        std::vector<crack::ext::Type *> params(2);
+        params[0] = type_void;
+        params[1] = type_voidptr;
+        function_pvoid_c_svoidptr_q = function->getSpecialization(params);
+    }
         f = type_cairo_surface_t->addMethod(type_uint32, "set_user_data",
                     (void *)cairo_surface_set_user_data
             );
@@ -706,6 +1392,20 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_voidptr, "user_data");
             f->addArg(function_pvoid_c_svoidptr_q, "destroy");
 
+
+    crack::ext::Type *array_pbyteptr_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_byteptr;
+        array_pbyteptr_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_puint64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_uint64;
+        array_puint64_q = array->getSpecialization(params);
+    }
         f = type_cairo_surface_t->addMethod(type_void, "get_mime_data",
                     (void *)cairo_surface_get_mime_data
             );
@@ -713,6 +1413,14 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(array_pbyteptr_q, "data");
             f->addArg(array_puint64_q, "length");
 
+
+    crack::ext::Type *function_pvoid_c_svoidptr_q;
+    {
+        std::vector<crack::ext::Type *> params(2);
+        params[0] = type_void;
+        params[1] = type_voidptr;
+        function_pvoid_c_svoidptr_q = function->getSpecialization(params);
+    }
         f = type_cairo_surface_t->addMethod(type_uint32, "set_mime_data",
                     (void *)cairo_surface_set_mime_data
             );
@@ -749,6 +1457,20 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_float64, "x_offset");
             f->addArg(type_float64, "y_offset");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_surface_t->addMethod(type_void, "get_device_offset",
                     (void *)cairo_surface_get_device_offset
             );
@@ -761,6 +1483,20 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             f->addArg(type_float64, "x_pixels_per_inch");
             f->addArg(type_float64, "y_pixels_per_inch");
 
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
         f = type_cairo_surface_t->addMethod(type_void, "get_fallback_resolution",
                     (void *)cairo_surface_get_fallback_resolution
             );
@@ -786,7 +1522,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_surface_t->finish();
 
 
-    crack::ext::Type *type_cairo_device_t = mod->addType("cairo_device_t", sizeof(cairo_device_t));
+    crack::ext::Type *type_cairo_device_t = mod->addType("cairo_device_t", sizeof(Undef));
         f = type_cairo_device_t->addMethod(type_cairo_device_t, "reference",
                     (void *)cairo_device_reference
             );
@@ -826,98 +1562,12 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_device_t->finish();
 
 
-    crack::ext::Type *array = mod->getType("array");
-
     crack::ext::Type *array_pfloat64_q;
     {
         std::vector<crack::ext::Type *> params(1);
         params[0] = type_float64;
         array_pfloat64_q = array->getSpecialization(params);
     }
-
-    crack::ext::Type *type_cairo_matrix_t = mod->addType("cairo_matrix_t", sizeof(cairo_matrix_t));
-        f = type_cairo_matrix_t->addConstructor("init",
-                    (void *)cairo_matrix_new
-            );
-
-        f = type_cairo_matrix_t->addMethod(type_void, "init",
-                    (void *)cairo_matrix_init
-            );
-            f->addArg(type_float64, "xx");
-            f->addArg(type_float64, "yx");
-            f->addArg(type_float64, "xy");
-            f->addArg(type_float64, "yy");
-            f->addArg(type_float64, "x0");
-            f->addArg(type_float64, "y0");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "init_identity",
-                    (void *)cairo_matrix_init_identity
-            );
-
-        f = type_cairo_matrix_t->addMethod(type_void, "init_translate",
-                    (void *)cairo_matrix_init_translate
-            );
-            f->addArg(type_float64, "tx");
-            f->addArg(type_float64, "ty");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "init_scale",
-                    (void *)cairo_matrix_init_scale
-            );
-            f->addArg(type_float64, "sx");
-            f->addArg(type_float64, "sy");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "init_rotate",
-                    (void *)cairo_matrix_init_rotate
-            );
-            f->addArg(type_float64, "radians");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "translate",
-                    (void *)cairo_matrix_translate
-            );
-            f->addArg(type_float64, "tx");
-            f->addArg(type_float64, "ty");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "scale",
-                    (void *)cairo_matrix_scale
-            );
-            f->addArg(type_float64, "sx");
-            f->addArg(type_float64, "sy");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "rotate",
-                    (void *)cairo_matrix_rotate
-            );
-            f->addArg(type_float64, "radians");
-
-        f = type_cairo_matrix_t->addMethod(type_uint32, "invert",
-                    (void *)cairo_matrix_invert
-            );
-
-        f = type_cairo_matrix_t->addMethod(type_void, "multiply",
-                    (void *)cairo_matrix_multiply
-            );
-            f->addArg(type_cairo_matrix_t, "a");
-            f->addArg(type_cairo_matrix_t, "b");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "transform_distance",
-                    (void *)cairo_matrix_transform_distance
-            );
-            f->addArg(array_pfloat64_q, "dx");
-            f->addArg(array_pfloat64_q, "dy");
-
-        f = type_cairo_matrix_t->addMethod(type_void, "transform_point",
-                    (void *)cairo_matrix_transform_point
-            );
-            f->addArg(array_pfloat64_q, "x");
-            f->addArg(array_pfloat64_q, "y");
-
-    type_cairo_matrix_t->finish();
-
-
-    crack::ext::Type *type_cairo_user_data_key_t = mod->addType("cairo_user_data_key_t", sizeof(cairo_user_data_key_t));
-    type_cairo_user_data_key_t->finish();
-
-
-    crack::ext::Type *function = mod->getType("function");
 
     crack::ext::Type *function_pvoid_c_svoidptr_q;
     {
@@ -940,133 +1590,6 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         params[0] = type_int;
         array_pint_q = array->getSpecialization(params);
     }
-
-    crack::ext::Type *type_cairo_pattern_t = mod->addType("cairo_pattern_t", sizeof(cairo_pattern_t));
-        f = type_cairo_pattern_t->addMethod(type_cairo_pattern_t, "reference",
-                    (void *)cairo_pattern_reference
-            );
-
-        f = type_cairo_pattern_t->addConstructor("init",
-                    (void *)cairo_pattern_destroy
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_uint, "get_reference_count",
-                    (void *)cairo_pattern_get_reference_count
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "status",
-                    (void *)cairo_pattern_status
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_voidptr, "get_user_data",
-                    (void *)cairo_pattern_get_user_data
-            );
-            f->addArg(type_cairo_user_data_key_t, "key");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "set_user_data",
-                    (void *)cairo_pattern_set_user_data
-            );
-            f->addArg(type_cairo_user_data_key_t, "key");
-            f->addArg(type_voidptr, "user_data");
-            f->addArg(function_pvoid_c_svoidptr_q, "destroy");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_type",
-                    (void *)cairo_pattern_get_type
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_void, "add_color_stop_rgb",
-                    (void *)cairo_pattern_add_color_stop_rgb
-            );
-            f->addArg(type_float64, "offset");
-            f->addArg(type_float64, "red");
-            f->addArg(type_float64, "green");
-            f->addArg(type_float64, "blue");
-
-        f = type_cairo_pattern_t->addMethod(type_void, "add_color_stop_rgba",
-                    (void *)cairo_pattern_add_color_stop_rgba
-            );
-            f->addArg(type_float64, "offset");
-            f->addArg(type_float64, "red");
-            f->addArg(type_float64, "green");
-            f->addArg(type_float64, "blue");
-            f->addArg(type_float64, "alpha");
-
-        f = type_cairo_pattern_t->addMethod(type_void, "set_matrix",
-                    (void *)cairo_pattern_set_matrix
-            );
-            f->addArg(type_cairo_matrix_t, "matrix");
-
-        f = type_cairo_pattern_t->addMethod(type_void, "get_matrix",
-                    (void *)cairo_pattern_get_matrix
-            );
-            f->addArg(array_pcairo__matrix__t_q, "matrix");
-
-        f = type_cairo_pattern_t->addMethod(type_void, "set_extend",
-                    (void *)cairo_pattern_set_extend
-            );
-            f->addArg(type_uint32, "extend");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_extend",
-                    (void *)cairo_pattern_get_extend
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_void, "set_filter",
-                    (void *)cairo_pattern_set_filter
-            );
-            f->addArg(type_uint32, "filter");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_filter",
-                    (void *)cairo_pattern_get_filter
-            );
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_rgba",
-                    (void *)cairo_pattern_get_rgba
-            );
-            f->addArg(array_pfloat64_q, "red");
-            f->addArg(array_pfloat64_q, "green");
-            f->addArg(array_pfloat64_q, "blue");
-            f->addArg(array_pfloat64_q, "alpha");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_surface",
-                    (void *)cairo_pattern_get_surface
-            );
-            f->addArg(type_cairo_surface_t, "surface");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_color_stop_rgba",
-                    (void *)cairo_pattern_get_color_stop_rgba
-            );
-            f->addArg(type_int, "index");
-            f->addArg(array_pfloat64_q, "offset");
-            f->addArg(array_pfloat64_q, "red");
-            f->addArg(array_pfloat64_q, "green");
-            f->addArg(array_pfloat64_q, "blue");
-            f->addArg(array_pfloat64_q, "alpha");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_color_stop_count",
-                    (void *)cairo_pattern_get_color_stop_count
-            );
-            f->addArg(array_pint_q, "count");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_linear_points",
-                    (void *)cairo_pattern_get_linear_points
-            );
-            f->addArg(array_pfloat64_q, "x0");
-            f->addArg(array_pfloat64_q, "y0");
-            f->addArg(array_pfloat64_q, "x1");
-            f->addArg(array_pfloat64_q, "y1");
-
-        f = type_cairo_pattern_t->addMethod(type_uint32, "get_radial_circles",
-                    (void *)cairo_pattern_get_radial_circles
-            );
-            f->addArg(array_pfloat64_q, "x0");
-            f->addArg(array_pfloat64_q, "y0");
-            f->addArg(array_pfloat64_q, "r0");
-            f->addArg(array_pfloat64_q, "x1");
-            f->addArg(array_pfloat64_q, "y1");
-            f->addArg(array_pfloat64_q, "r1");
-
-    type_cairo_pattern_t->finish();
-
 
     crack::ext::Type *type_cairo_rectangle_t = mod->addType("cairo_rectangle_t", sizeof(cairo_rectangle_t));
         type_cairo_rectangle_t->addInstVar(type_float64,
@@ -1124,68 +1647,8 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
     type_cairo_rectangle_list_t->finish();
 
 
-    crack::ext::Type *type_cairo_scaled_font_t = mod->addType("cairo_scaled_font_t", sizeof(cairo_scaled_font_t));
-    type_cairo_scaled_font_t->finish();
-
-
-    crack::ext::Type *type_cairo_font_face_t = mod->addType("cairo_font_face_t", sizeof(cairo_font_face_t));
-    type_cairo_font_face_t->finish();
-
-
-    crack::ext::Type *type_cairo_glyph_t = mod->addType("cairo_glyph_t", sizeof(cairo_glyph_t));
-    type_cairo_glyph_t->finish();
-
-
-    crack::ext::Type *type_cairo_text_cluster_t = mod->addType("cairo_text_cluster_t", sizeof(cairo_text_cluster_t));
-    type_cairo_text_cluster_t->finish();
-
-
-    crack::ext::Type *type_cairo_text_extents_t = mod->addType("cairo_text_extents_t", sizeof(cairo_text_extents_t));
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "x_bearing",
-                             CRACK_OFFSET(cairo_text_extents_t, x_bearing)
-                             );
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "y_bearing",
-                             CRACK_OFFSET(cairo_text_extents_t, y_bearing)
-                             );
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "width",
-                             CRACK_OFFSET(cairo_text_extents_t, width)
-                             );
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "height",
-                             CRACK_OFFSET(cairo_text_extents_t, height)
-                             );
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "x_advance",
-                             CRACK_OFFSET(cairo_text_extents_t, x_advance)
-                             );
-        type_cairo_text_extents_t->addInstVar(type_float64,
-                             "y_advance",
-                             CRACK_OFFSET(cairo_text_extents_t, y_advance)
-                             );
-        f = type_cairo_text_extents_t->addConstructor("init",
-                    (void *)cairo_text_extents_t
-            );
-
-    type_cairo_text_extents_t->finish();
-
-
-    crack::ext::Type *type_cairo_font_extents_t = mod->addType("cairo_font_extents_t", sizeof(cairo_font_extents_t));
-    type_cairo_font_extents_t->finish();
-
-
-    crack::ext::Type *type_cairo_font_options_t = mod->addType("cairo_font_options_t", sizeof(cairo_font_options_t));
-    type_cairo_font_options_t->finish();
-
-
     crack::ext::Type *type_cairo_path_data_t = mod->addType("cairo_path_data_t", sizeof(cairo_path_data_t));
     type_cairo_path_data_t->finish();
-
-
-    crack::ext::Type *type_cairo_path_t = mod->addType("cairo_path_t", sizeof(cairo_path_t));
-    type_cairo_path_t->finish();
 
 
     crack::ext::Type *type_cairo_rectangle_int_t = mod->addType("cairo_rectangle_int_t", sizeof(cairo_rectangle_int_t));
@@ -1199,7 +1662,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         array_pcairo__rectangle__int__t_q = array->getSpecialization(params);
     }
 
-    crack::ext::Type *type_cairo_region_t = mod->addType("cairo_region_t", sizeof(cairo_region_t));
+    crack::ext::Type *type_cairo_region_t = mod->addType("cairo_region_t", sizeof(Undef));
         f = type_cairo_region_t->addConstructor("init",
                     (void *)cairo_region_create
             );
@@ -1209,6 +1672,13 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
             );
             f->addArg(type_cairo_rectangle_int_t, "rectangle");
 
+
+    crack::ext::Type *array_pcairo__rectangle__int__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_rectangle_int_t;
+        array_pcairo__rectangle__int__t_q = array->getSpecialization(params);
+    }
         f = type_cairo_region_t->addConstructor("init",
                     (void *)cairo_region_create_rectangles
             );
@@ -1232,6 +1702,13 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                     (void *)cairo_region_status
             );
 
+
+    crack::ext::Type *array_pcairo__rectangle__int__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_rectangle_int_t;
+        array_pcairo__rectangle__int__t_q = array->getSpecialization(params);
+    }
         f = type_cairo_region_t->addMethod(type_void, "get_extents",
                     (void *)cairo_region_get_extents
             );
@@ -1376,7 +1853,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 #endif // CAIRO_HAS_PNG_FUNCTIONS
 
 
-    crack::ext::Type *type_Display = mod->addType("Display", sizeof(Display));
+    crack::ext::Type *type_Display = mod->addType("Display", sizeof(Undef));
     type_Display->finish();
 
 
