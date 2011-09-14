@@ -38,6 +38,7 @@ Type *Module::getOverloadType() { }
 
 Type *Module::getType(const char *name) { }
 Type *Module::addType(const char *name, size_t instSize) { }
+Type *Module::addForwardType(const char *name, size_t instSize) { }
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName) { }
 void Module::addConstant(Type *type, const std::string &name, double val)  { }

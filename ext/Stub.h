@@ -66,6 +66,7 @@ class Module {
         
         Type *getType(const char *name);
         Type *addType(const char *name, size_t instSize);
+        Type *addForwardType(const char *name, size_t instSize);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);
         void addConstant(Type *type, const std::string &name, double val);

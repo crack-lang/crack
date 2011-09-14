@@ -599,7 +599,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         array_puint32_q = array->getSpecialization(params);
     }
 
-    // Definition of forward type cairo_t --------------------------------------
+    // Definition of forward type cairo_t -------------------------------------
         f = type_cairo_t->addConstructor("init",
                         (void *)cairo_create
                 );
@@ -1175,7 +1175,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         array_puint64_q = array->getSpecialization(params);
     }
 
-    // Definition of forward type cairo_surface_t ------------------------------
+    // Definition of forward type cairo_surface_t -----------------------------
         f = type_cairo_surface_t->addConstructor("init",
                         (void *)cairo_surface_new
                 );

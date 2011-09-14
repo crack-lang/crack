@@ -740,7 +740,6 @@ $(generic.getParamCount()) parameters.`;
                numDecl = 2;
 
             ctype = TypeImpl(className, lastCName ? lastCName : className, numDecl);
-            cout `Declaring class $className, numDecl = $numDecl\n`;
             types[className] = ctype;
             lastCName = null;
         } else {
