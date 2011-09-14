@@ -229,6 +229,7 @@ clean-local:
 
 testbed:
 	ln -f .libs/runtime.so lib/crack
+	ln -f test/.libs/testext.so lib
 	for ext in _cairo _gl _gtk _pcre _sdl; do \
 	  if [ -e .libs/$$ext.so ]; then \
 	    ln -f .libs/$$ext.so lib/crack/ext; \
