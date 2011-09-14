@@ -92,7 +92,8 @@ class Path;
     ## Returns the size of the object.
     @abstract uint64 getSize();
     
-    ## Returns an interator over the children of the path.
+    ## Returns an interator over the children of the path.  (Children may not 
+    ## be assumed to be in any particular order)
     @abstract PathIter children();
 }
 
