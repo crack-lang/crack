@@ -440,9 +440,6 @@ void nativeCompile(llvm::Module *module,
     sys::Path oFile(i->second);
     sys::Path binFile(i->second);
 
-    oFile.eraseSuffix();
-    binFile.eraseSuffix();
-
     // see if we should output an object file/native binary,
     // native assembly, or llvm bitcode
     TargetMachine::CodeGenFileType cgt = TargetMachine::CGFT_ObjectFile;
