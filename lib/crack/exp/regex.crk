@@ -157,20 +157,30 @@ class Regex : _RegexBase {
     Match search(String subject) {
         return search(subject, 0);
     }
+    
+    ## If 'subject' starts with a match for the regular expression, return the 
+    ## match.  Otherwise return null.
+    Match match(String subject) {
+        m := search(subject, 0);
+        if (m.begin(0) == 0)
+            return m;
+        else
+            return null;
+    }
 
     @define __subst(arg, action) {
         String subst(String subject, arg, int count) {
-            match := search(subject);
-            if (!match)
+            mx := search(subject);
+            if (!mx)
                 return subject;
     
             StringWriter result = {};
             int last = 0;
-            while (match && count--) {
-                result.write(subject.slice(last, match.begin()));
+            while (mx && count--) {
+                result.write(subject.slice(last, mx.begin()));
                 action;
-                last = match.end();
-                match = search(subject, match.end());
+                last = mx.end();
+                mx = search(subject, mx.end());
             }
             
             # write any remaining substring
@@ -185,7 +195,7 @@ class Regex : _RegexBase {
     ## 'subject' using the function.  If count >= 0, it is the number of 
     ## instances to replace.
     @define __arg() { function[void, Match, Writer] func }
-    @__subst(@__arg(), func(match, result));
+    @__subst(@__arg(), func(mx, result));
     
     ## Replace the first 'count'instances of the regular expression in 
     ## 'subject' with the specified string.  If count >= 0, it is the number 

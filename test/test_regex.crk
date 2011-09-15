@@ -51,4 +51,13 @@ if (1) {
         cout `FAILED function replacement\n`;
 }
 
+if (1) {
+    rx = Regex(r'foo');
+    if (!rx.match('foobar'))
+        cout `FAILED match() on matching string\n`;
+    
+    if (rx.match('babafoo'))
+        cout `FAILED !match() not starting with matching string\n`;
+}
+
 cout `ok\n`;

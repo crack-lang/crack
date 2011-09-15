@@ -30,6 +30,7 @@ StringArray children = {2};
 for (child :in tempDir.children())
     children.append(child.getName());
 
+children.sort();
 if (children != StringArray!['bar', 'foo'])
     cout `FAILED creating children, wanted foo, bar, got: $children\n`;
 

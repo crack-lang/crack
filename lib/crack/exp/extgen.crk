@@ -205,7 +205,7 @@ class ConstType : BuiltInType {
 }
 
 class TypeImpl : Type {
-    String emitted, lastCName;
+    String emitted;
     Array[Func] methods;
     Array[Arg] members;
     uint numDecls;
