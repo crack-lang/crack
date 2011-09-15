@@ -1,0 +1,110 @@
+// Test NumericArray
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+
+import crack.cont.numericarray NumericVector;
+import crack.io cout;
+import crack.exp.cmdline CmdOptions;
+import crack.sys argv;
+@import crack.exp.ann define;
+
+sys_options :=  CmdOptions("--verbose=b/false");
+sys_options.parse(argv);
+
+void printCmp(NumericVector[int] A, NumericVector[int] B, String msg){
+    if (A != B){
+        cout `$msg\n`;
+        cout `A = $A\n`;
+        cout `B = $B\n`;
+    }
+}
+
+// Zeros
+z := NumericVector[int].zeros(6);
+NumericVector[int] tz = [0, 0, 0, 0, 0, 0];
+printCmp(tz, z, "zeros constructor failed");
+
+zl := NumericVector[int].zeros(z);
+printCmp(tz, zl, "zeros constructor from array failed");
+
+// Ones
+o := NumericVector[int].ones(6);
+NumericVector[int] to = [1, 1, 1, 1, 1, 1];
+printCmp(to, o, "ones constructor failed");
+
+// Fill
+v := NumericVector[int].fill(6, 10);
+NumericVector[int] tv = [10, 10, 10, 10, 10, 10];
+printCmp(tv, v, "fill constructor failed");
+
+// Two param range
+r := NumericVector[int].range(5, 15, 1);
+NumericVector[int] tr = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+printCmp(tr, r, "Simple range constructor failed");
+
+r = NumericVector[int].range(5, 15, 5);
+NumericVector[int] tr2 = [5, 10];
+printCmp(tr2, r, "Two parameter range constructor failed");
+
+
+rr := NumericVector[int].linspace(5, 15, 5, false);
+NumericVector[int] trr = [5, 7, 9, 11, 13];
+printCmp(trr, rr, "Exclusive linspace failed");
+
+rr = NumericVector[int].linspace(5, 15, 5, true);
+NumericVector[int] trr2 = [5, 7, 9, 11, 13, 15];
+printCmp(trr2, rr, "Inclusive linspace failed");
+
+// Range
+r = NumericVector[int].range(10);
+tr-=5;
+printCmp(tr, r, "Two parameter positive range constructor failed");
+
+verbose := sys_options.getBool("v");
+
+if (verbose){
+    cout `z = $z\n`;
+    cout `o = $o\n`;
+    cout `v = $v\n`;
+    cout `r = $r\n`;
+}
+
+original := r.copy(r);
+
+printCmp(original, r, "Copied array not equal to original");
+
+// Scalar operations
+r += 5;
+NumericVector[int] r2 = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+printCmp(r2, r, "Scalar addition failed");
+
+r -= 2;
+NumericVector[int] r3 = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+printCmp(r3, r, "Scalar subtraction failed");
+
+r *= 2;
+NumericVector[int] r4 = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+printCmp(r4, r, "Scalar multiplication failed");
+
+r /= 2;
+printCmp(r3, r, "Scalar division failed");
+
+// Vector operations
+r += original;
+NumericVector[int] r6 = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+printCmp(r6, r, "Vector addition failed");
+
+r -= original;
+ printCmp(r3, r, "Vector subtraction failed");
+
+r *= original;
+r6 = NumericVector[int]![0, 4, 10, 18, 28, 40, 54, 70, 88, 108];
+printCmp(r6, r, "Vector multiplication failed");
+
+r /= r.fill(r.count(), 2);
+
+// Append another array
+r.append(r3);
+NumericVector[int] r8 = [0, 2, 5, 9, 14, 20, 27, 35, 44, 54, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+printCmp(r8, r, "Vector append failed");
+
+cout `ok\n`;

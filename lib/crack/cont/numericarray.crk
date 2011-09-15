@@ -1,0 +1,226 @@
+import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
+import crack.io cout, Writer, FStr;
+import crack.exp.algorithm QuickSort;
+import crack.cont.array Array, ArrayData;
+@import crack.exp.ann define;
+
+void _bind(Object obj) { obj.oper bind(); }
+void _release(Object obj) { obj.oper release(); }
+bool _isObject(Object obj) { return true; }
+bool _isNull(Object obj) {
+    return (obj is null);
+}
+
+@define _nobind(type) { 
+    void _bind(type i) { }
+    void _release(type i) { }
+    bool _isObject(type i) { return false; }
+    bool _isNull(type i) { return false; } 
+}
+
+@_nobind(byte)
+@_nobind(int)
+@_nobind(intz)
+@_nobind(int32)
+@_nobind(uint)
+@_nobind(uintz)
+@_nobind(uint32)
+@_nobind(int64)
+@_nobind(uint64)
+@_nobind(float)
+@_nobind(float32)
+@_nobind(float64)
+@_nobind(byteptr)
+
+
+class NumericVector[Elem] : Array[Elem] {
+
+    oper init (uint initCapacity): Array[Elem](initCapacity){
+    }
+
+    // This should go away when we have virtual inheritance
+    oper init (ArrayData[Elem] data, array[Elem] rep, uint cap, uint size):
+        Array[Elem](data, rep, cap, size) {
+    }
+
+    @static
+    NumericVector copy(NumericVector NV){
+        V := NV.copy();
+        return NumericVector(V.data, V.data.rep, V.data.cap, V.count());
+    }
+    
+    @static
+    NumericVector range(Elem startVal, Elem endVal, Elem delta){
+        if (delta <= 0)
+            throw InvalidArgumentError('Array.range step size cannot be <= 0');
+
+        int realSize = (endVal - startVal);
+
+        V := NumericVector(realSize);
+
+        if (realSize < 0){
+            val := endVal;
+            for (uint i = 0; val > startVal; i++){
+                V.append(val);
+                val -= delta;
+            }
+        }
+        else {
+            val := startVal;
+            for (uint i = 0; val < endVal; i++){
+                V.append(val);
+                val += delta;
+            }
+        }
+        return V;
+    }
+    
+    @static
+    NumericVector range(uint endVal){
+        return range(0, Elem(endVal), 1);
+    }
+
+    @static
+    NumericVector linspace(Elem startVal, Elem endVal, uint num, bool includeLast){
+        Elem delta = 1;
+        if (endVal > startVal){
+            delta = endVal - startVal;
+            delta /= num;
+            if (includeLast)
+                endVal += delta;
+        }
+        else {
+            delta = startVal - endVal;
+            delta /= num;
+            if (includeLast)
+                endVal -= delta;
+        }
+        return range(startVal, endVal, delta);
+    }
+
+    bool _isConformant(NumericVector vector){
+        return count() == vector.count();
+    }
+
+     void _assertConformant(NumericVector vector){
+        if (!_isConformant(vector))
+            throw AssertionError('Arrays are not conformant');
+    }
+
+
+    /// Set all elements of the vector to value
+    void set(Elem value){
+        size := count();
+        rep := data.rep;
+
+        for (uint i = 0; i < size; i++)
+           rep[i] = value;
+    }
+
+    /// Convenience constructor to create a vector filled with the given
+    /// value
+    @static
+    NumericVector empty(uint maxInd){
+        V := NumericVector(maxInd);
+        V._setSize(maxInd);
+        return V;
+    }
+
+    @static
+    NumericVector empty(NumericVector vector){
+        V := NumericVector(vector.count());
+        V._setSize(vector.count());
+        return V;
+    }
+
+
+    /// Convenience constructor to create a vector filled with the given
+    /// value
+    @static
+    NumericVector fill(uint maxInd, Elem value){
+        V := empty(maxInd);
+        V.set(value);
+        return V;
+    }
+
+    @static
+    NumericVector fill(NumericVector vector, Elem value){
+        V := empty(vector.count());
+        V.set(value);
+        return V;
+    }
+
+    /// Convenience constructor to create a zeroed out vector
+    @static
+    NumericVector zeros(uint maxInd){
+        return fill(maxInd, 0);
+    }
+
+    @static
+    NumericVector zeros(NumericVector vector){
+        return fill(vector, 0);
+    }
+
+    /// Convenience constructor to create a vector of ones
+    @static
+    NumericVector ones(uint maxInd){
+        return fill(maxInd, 1);
+    }
+
+    @static
+    NumericVector ones(NumericVector vector, uint maxInd){
+        return fill(vector, 1);
+    }
+
+    /// Append all elements in "other" onto the vector.
+    void append(NumericVector other) {
+        ts := this.count();
+        os := other.count();
+        if (data.cap - ts < os) {
+            newCap := data.cap + os;
+            realloc(newCap);
+        }
+        
+        for (intz i = 0; i < os; ++i) {
+            elem := other[i];
+            data.rep[ts + i] = elem;
+            _bind(elem);
+        }
+        _setSize(ts + os);
+    }
+
+    /// Apply scalar operator to all elements
+    @define ScalarOperEqual(op){
+        void oper op$$=(Elem value){
+            size := count();
+            rep := data.rep;
+
+            for (uint i = 0; i < size; i++)
+               rep[i] = rep[i] op value;
+        }
+    }
+
+    @ScalarOperEqual(+)
+    @ScalarOperEqual(-)
+    @ScalarOperEqual(*)
+    @ScalarOperEqual(/)
+
+    /// Vector operators
+    @define VectorOperEqual(op){
+        void oper op$$=(NumericVector vector){
+            size := count();
+            rep := data.rep;
+            rep2 := vector.data.rep;
+            _assertConformant(vector);
+
+            for (uint i = 0; i < size; i++)
+               rep[i] = rep[i] op rep2[i];
+        }
+    }
+
+    @VectorOperEqual(+)
+    @VectorOperEqual(-)
+    @VectorOperEqual(*)
+    @VectorOperEqual(/)
+
+}
