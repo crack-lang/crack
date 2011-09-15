@@ -3186,7 +3186,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
          return existing;
 
       // check for forward declarations
-      if (existingNS == context->ns.get()) {
+      if (existingNS == context->getDefContext()->ns.get()) {
          
          // forward function
          FuncDef *funcDef;
