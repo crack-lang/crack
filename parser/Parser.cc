@@ -640,7 +640,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       context->maybeExplainOverload(msg, funcName, ns);
       error(ident, msg.str());
    }
-
+   
    context->checkAccessible(func.get());
 
    // if the definition is for an instance variable, emit an implicit 
@@ -659,6 +659,15 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
          if (container->type->meta && !TypeDefPtr::acast(func->getOwner())->meta) {
             // the container is a class and the function is an explicit 
             // call of a (presumably base class) method.
+            
+            // make sure that the function is not abstract
+            if (func->flags & FuncDef::abstract)
+               error(ident, SPUG_FSTR("Abstract function " << funcName << "(" << 
+                                       args << ") can not be called."
+                                      )
+                     );
+
+            
             squashVirtual = true;
             verifyThisIsContainer = true;
          } else {
@@ -1422,6 +1431,18 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
       else
          error(tok, SPUG_FSTR("No constructor for " << type->name <<
                               " with these argument types: (" << args << ")"));
+   } else if (func->returnType != type) {
+      if (type->abstract)
+         error(tok, SPUG_FSTR("You can not create an instance of abstract "
+                               "class " << type->name << " without an "
+                               "explicit 'oper new'."
+                              )
+               );
+      else
+         error(tok, SPUG_FSTR("'oper new' method " << *func <<
+                               " does not return " << type->name
+                              )
+               );
    }
    
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
