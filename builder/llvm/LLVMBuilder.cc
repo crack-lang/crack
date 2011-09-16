@@ -1653,15 +1653,26 @@ void LLVMBuilder::emitEndClass(Context &context) {
         vtableBuilder.emit(type);
     }
 
-    // fix-up all of the placeholder instructions
-    for (vector<PlaceholderInstruction *>::iterator iter = 
-            type->placeholders.begin();
-         iter != type->placeholders.end();
+    // verify that all of the base classes are complete (because we can only 
+    // inherit from an incomplete base class in the case of a nested derived 
+    // class, there can be only one incomplete base class)
+    TypeDefPtr incompleteBase;
+    for (TypeDef::TypeVec::iterator iter = type->parents.begin();
+         iter != type->parents.end();
          ++iter
-         )
-        (*iter)->fix();
-    type->placeholders.clear();
-    type->complete = true;
+         ) {
+        if (!(*iter)->complete) {
+            assert(!incompleteBase);
+            incompleteBase = *iter;
+        }
+    }
+    
+    // if we have an incomplete base, we have to defer placeholder instruction 
+    // resolution to the incomplete base class
+    if (incompleteBase)
+        BTypeDefPtr::arcast(incompleteBase)->incompleteChildren.push_back(type);
+    else
+        type->fixIncompletes();
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -2533,6 +2544,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                      vtableBaseType
                                      );
     vtableBuilder.emit(vtableBaseType);
+
+    // finally, mark the class as complete
+    vtableBaseType->complete = true;
 
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidptrType, boolType));
