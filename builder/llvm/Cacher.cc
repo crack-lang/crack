@@ -1,8 +1,10 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 
 #include "Cacher.h"
+#include "BModuleDef.h"
 
 #include "builder/BuilderOptions.h"
+#include "builder/util/SourceDigest.h"
 
 #include <assert.h>
 
@@ -103,10 +105,12 @@ void Cacher::writeBitcode(llvm::Module *module) {
 
 }
 
-BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
+BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
                                          const string &path) {
     if (options->verbosity >= 2)
         cerr << "attempting cache load: " << canonicalName << ", " << path << endl;
+
+    SourceDigest d = SourceDigest::fromFile(path);
 
     string cacheFile = getCacheFilePath(canonicalName);
     if (cacheFile.empty())

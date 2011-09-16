@@ -3,6 +3,7 @@
 #ifndef _builder_llvm_BModuleDef_h_
 #define _builder_llvm_BModuleDef_h_
 
+#include "builder/util/SourceDigest.h"
 #include "model/ModuleDef.h"
 #include <spug/RCPtr.h>
 #include <string>
@@ -26,6 +27,11 @@ public:
     // primitive cleanup function
     void (*cleanup)();
     llvm::Module *rep;
+
+    // source text hash code, used for caching
+    SourceDigest digest;
+    // real path on disk
+    std::string path;
     
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
@@ -33,7 +39,10 @@ public:
                ) :
             ModuleDef(canonicalName, parent),
             cleanup(0),
-            rep(rep0) {
+            rep(rep0),
+            digest(),
+            path()
+    {
     }
 
     void callDestructor() {

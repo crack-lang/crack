@@ -4,7 +4,6 @@
 #define _builder_llvm_Cacher_h_
 
 #include "model/Context.h"
-#include "BModuleDef.h"
 #include <string>
 
 namespace llvm {
@@ -17,6 +16,8 @@ class BuilderOptions;
 
 namespace mvll {
 
+class BModuleDef;
+
 class Cacher {
 
     BModuleDef *modDef;
@@ -28,11 +29,12 @@ protected:
     void writeBitcode(llvm::Module *module);
 
 public:
+
     Cacher(model::Context &c, builder::BuilderOptions* o, BModuleDef *m = NULL):
         modDef(m), context(c), options(o) { }
 
-    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName,
-                                     const std::string &path);
+    BModuleDef *maybeLoadFromCache(const std::string &canonicalName,
+                                   const std::string &path);
     void saveToCache();
 
 };
