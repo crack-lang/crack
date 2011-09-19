@@ -2,7 +2,6 @@
 
 import test.testmod_generic G;
 
-
 void someFunc() {}
 
 class FakeFormatter {
@@ -85,6 +84,21 @@ if (1) {
     outer();
     if (!gotStaticCalled)
         puts('FAILED generics accessing symbols from enclosing contexts');
+}
+
+if (1) {
+    class B[C] : C {}
+    class Foo : VTableBase {}
+    bool streq(byteptr a, byteptr b) { 
+        while (a[0]) {
+            if (a[0] != b[0]) return 0;
+            a += 1; 
+            b += 1;
+        }
+        return (!b[0]);
+    }
+    if (!streq(B[Foo]().class.name, "B"))
+        puts('FAILED inheriting from a generic parameter');
 }
 
 puts('ok');

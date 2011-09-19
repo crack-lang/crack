@@ -2978,19 +2978,20 @@ TypeDefPtr Parser::parseClassDef() {
          // parse the base class name
          TypeDefPtr baseClass = parseTypeSpec(0, generic);
          if (!generic) {
+
+            // make sure that the class is not a forward declaration.
+            if (baseClass->forward)
+               error(tok, 
+                     SPUG_FSTR("you may not derive from forward declared "
+                              "class " << baseClass->name
+                              )
+                     );
+
             // make sure it's safe to add this as a base class given the 
             // existing set, and add it to the list.
             baseClass->addToAncestors(*context, ancestors);
             bases.push_back(baseClass);
          }
-         
-         // make sure that the class is not a forward declaration.
-         if (baseClass->forward)
-            error(tok, 
-                  SPUG_FSTR("you may not derive from forward declared "
-                             "class " << baseClass->name
-                            )
-                  );
 
          tok = getToken();
          if (generic) generic->addToken(tok);

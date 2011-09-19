@@ -1,0 +1,8 @@
+%%TEST%%
+generics
+%%ARGS%%
+%%FILE%%
+import test.test_generics;
+%%EXPECT%%
+ok
+%%STDIN%%
