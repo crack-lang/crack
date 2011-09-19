@@ -2983,6 +2983,14 @@ TypeDefPtr Parser::parseClassDef() {
             baseClass->addToAncestors(*context, ancestors);
             bases.push_back(baseClass);
          }
+         
+         // make sure that the class is not a forward declaration.
+         if (baseClass->forward)
+            error(tok, 
+                  SPUG_FSTR("you may not derive from forward declared "
+                             "class " << baseClass->name
+                            )
+                  );
 
          tok = getToken();
          if (generic) generic->addToken(tok);
