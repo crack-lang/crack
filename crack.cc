@@ -61,8 +61,13 @@ void usage(int retval) {
             "even in JIT mode." << endl;
     cout << " -G         --no-default-paths   Do not include default module"
             " search paths" << endl;
+
+    /*
     cout << " -C         --no-cache           Do not cache or use cached modules"
             << endl;
+    */
+    cout << " -C                              Turn on moduld caching" << endl;
+
     cout << " -g         --debug              Generate DWARF debug information"
             << endl;
     cout << " -O <N>     --optimize N         Use optimization level N (default"
@@ -160,7 +165,7 @@ int main(int argc, char **argv) {
                 crack.options->dumpMode = true;
                 break;
             case 'C':
-                crack.options->cacheMode = false;
+                crack.options->cacheMode = true;
                 break;
             case 'h':
                 usage(0);

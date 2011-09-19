@@ -25,7 +25,6 @@ class Cacher {
     const builder::BuilderOptions *options;
 
 protected:
-    std::string getCacheFilePath(const std::string &canonicalName);
     void writeBitcode(llvm::Module *module);
 
 public:
