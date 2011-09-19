@@ -2978,6 +2978,15 @@ TypeDefPtr Parser::parseClassDef() {
          // parse the base class name
          TypeDefPtr baseClass = parseTypeSpec(0, generic);
          if (!generic) {
+
+            // make sure that the class is not a forward declaration.
+            if (baseClass->forward)
+               error(tok, 
+                     SPUG_FSTR("you may not derive from forward declared "
+                              "class " << baseClass->name
+                              )
+                     );
+
             // make sure it's safe to add this as a base class given the 
             // existing set, and add it to the list.
             baseClass->addToAncestors(*context, ancestors);
@@ -3186,7 +3195,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
          return existing;
 
       // check for forward declarations
-      if (existingNS == context->ns.get()) {
+      if (existingNS == context->getDefContext()->ns.get()) {
          
          // forward function
          FuncDef *funcDef;

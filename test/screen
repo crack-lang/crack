@@ -4,20 +4,36 @@
 # Options:
 #   -n run tests under llvm-native
 #   -f stop on fail
+#   -r recompile the screen program
+#   -j run screen in JIT mode
 
 root="$(dirname $(dirname $0))"
 
 builders="-bjit"
 opts=""
+screen_jit=false
+screen_recompile=false
 export CRACK_LIB_PATH=$root/.libs
 
 run_screen() {
-    $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
-        -c "$root/crack" -s "$root" -o "$root/screen/output" "$builders" \
-        $opts "$@"
+    if $screen_jit; then
+        $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
+            -c "$root/crack" -s "$root" -o "$root/screen/output" "$builders" \
+            $opts "$@"
+        return
+    fi
+
+    if $screen_recompile || [ ! -e $root/test/screen.bin ]; then
+        echo "rebuilding screen.bin..."
+        $root/crack -B llvm-native -l "$root/lib:$root/screen" \
+            -b out=$root/test/screen.bin $root/screen/screen.crk
+    fi
+    
+    $root/test/screen.bin -c "$root/crack" -s "$root" \
+        -o "$root/screen/output" "$builders" $opts "$@"
 }
 
-args=$(getopt fn "$@")
+args=$(getopt fnrj "$@")
 eval set -- "$args"
 
 # process options
@@ -26,6 +42,8 @@ while true; do
     case "$1" in
         -n) builders='-bnative' ;;
         -f) opts="$opts --stop-on-fail" ;;
+        -r) screen_recompile=true ;;
+        -j) screen_jit=true ;;
         --) shift ; break ;;
     esac
     

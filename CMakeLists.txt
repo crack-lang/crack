@@ -190,6 +190,17 @@ add_custom_target(check
                           "${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so"
                   )
 
+add_custom_target(checkn
+                  ${PROJECT_SOURCE_DIR}/test/screen -n
+                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/crack"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so"
+                  )
+
 add_subdirectory(opt)
 
 macro_display_feature_log()

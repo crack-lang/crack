@@ -91,8 +91,14 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     if (!init())
         return 1;
     options->optionMap["mainUnit"] = name;
-    if (options->optionMap.find("out") == options->optionMap.end())
-        options->optionMap["out"] = basename(name.c_str());
+    if (options->optionMap.find("out") == options->optionMap.end()) {
+        if (name.substr(name.size() - 4) == ".crk")
+            options->optionMap["out"] = name.substr(0, name.size() - 4);
+        else
+            // no extension - add one to the output file to distinguish it 
+            // from the script.
+            options->optionMap["out"] = name + ".bin";
+    }
     construct->runScript(src, name);
 }
 

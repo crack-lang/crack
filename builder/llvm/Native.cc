@@ -35,6 +35,8 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -96,6 +98,10 @@ static int GenerateNative(const std::string &OutputFilename,
       // extensions, but the runtime loader loads foo/baz.so for both since
       // it shows up first matching the rpath. this needs a better fix.
       char *rp = realpath(LibPaths[index].c_str(), NULL);
+      if (!rp) {
+          perror("realpath");
+          continue;
+      }
       args.push_back("-Wl,-rpath=" + string(rp));
       free(rp);
   }
@@ -439,9 +445,6 @@ void nativeCompile(llvm::Module *module,
 
     sys::Path oFile(i->second);
     sys::Path binFile(i->second);
-
-    oFile.eraseSuffix();
-    binFile.eraseSuffix();
 
     // see if we should output an object file/native binary,
     // native assembly, or llvm bitcode

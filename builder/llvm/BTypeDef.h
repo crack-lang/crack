@@ -33,6 +33,7 @@ public:
     llvm::PATypeHolder rep;
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
+    std::vector<BTypeDefPtr> incompleteChildren;
 
     // mapping from base types to their vtables.
     std::map<BTypeDef *, llvm::Constant *> vtables;
@@ -93,6 +94,12 @@ public:
     llvm::GlobalVariable *getClassInstRep(llvm::Module *module,
                                           llvm::ExecutionEngine *execEng
                                           );
+
+    /** 
+     * Fix all incomplete instructions and incomplete children and set the 
+     * "complete" flag.
+     */
+    void fixIncompletes();
 };
 
 } // end namespace builder::vmll

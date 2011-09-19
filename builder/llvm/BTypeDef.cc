@@ -170,3 +170,24 @@ GlobalVariable *BTypeDef::getClassInstRep(Module *module,
         return gvar;
     }
 }
+
+void BTypeDef::fixIncompletes() {
+    // fix-up all of the placeholder instructions
+    for (vector<PlaceholderInstruction *>::iterator iter = 
+            placeholders.begin();
+         iter != placeholders.end();
+         ++iter
+         )
+        (*iter)->fix();
+    placeholders.clear();
+    
+    // fix up all incomplete children
+    for (vector<BTypeDefPtr>::iterator iter = incompleteChildren.begin();
+         iter != incompleteChildren.end();
+         ++iter
+         )
+        (*iter)->fixIncompletes();
+    incompleteChildren.clear();
+    
+    complete = true;
+}
