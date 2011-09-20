@@ -99,11 +99,21 @@ static int GenerateNative(const std::string &OutputFilename,
       // it shows up first matching the rpath. this needs a better fix.
       char *rp = realpath(LibPaths[index].c_str(), NULL);
       if (!rp) {
-          perror("realpath");
+          switch (errno) {
+              case EACCES:
+              case ELOOP:
+              case ENAMETOOLONG:
+              case ENOENT:
+              case ENOTDIR:
+                  break;
+              default:
+                  perror("realpath");
+          }
           continue;
+      } else {
+        args.push_back("-Wl,-rpath=" + string(rp));
+        free(rp);
       }
-      args.push_back("-Wl,-rpath=" + string(rp));
-      free(rp);
   }
 
   // Add in the libraries to link.
