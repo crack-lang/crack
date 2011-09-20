@@ -2,7 +2,8 @@
 
 import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
-import crack.strutil split, StringArray, ljust, rjust, center;
+import crack.strutil split, StringArray, ljust, rjust, center, replace, remove;
+import crack.cont.array Array;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -164,5 +165,18 @@ line2 := "hello"*2;
 if (line2 != "hellohello")
     cout `Failed multiply of length > 1 string\n`;
 
+// Test replace
+line3 := replace(line2, b'h', b'H');
+if (line3 != "HelloHello")
+    cout `Failed to replace characters in string\n`;
+
+line3 = replace(line2, Array[byte]![b'h', b'e', b'l', b'o'], Array[byte]![b'H', b'E', b'L', b'O']);
+if (line3 != "HELLOHELLO")
+    cout `Failed to replace characters in string\n`;
+
+// Test remove
+line3 = remove(line2, b'H');
+if (line3 != "elloello")
+    cout `Failed to remove characters from string\n`;
 
 cout `ok\n`;
