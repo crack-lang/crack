@@ -176,9 +176,9 @@ if (line3 != "HELLOHELLO")
     cout `Failed to replace characters in string\n`;
 
 // Test remove
-line3 = remove(line2, b'H');
+line3 = remove(line2, b'h');
 if (line3 != "elloello")
-    cout `Failed to remove characters from string\n`;
+    cout `Failed to remove characters from string, got '$line3'\n`;
 
 line3 = toUpper(line2);
 if (line3 != "HELLOHELLO")
@@ -191,11 +191,11 @@ if (line3 != "hellohello")
 String words = "this is a heading";
 capWords := capitalize(words);
 if (capWords != "This Is A Heading")
-    cout `Failed to capitalize string\n`;
+    cout `Failed to capitalize string, got '$capWords'\n`;
 
 capWords = capitalize(words, 1);
 if (capWords != "This is a heading")
-    cout `Failed to capitalize first word in string\n`;
+    cout `Failed to capitalize first word in string, got $capWords\n`;
 
 
 cout `ok\n`;

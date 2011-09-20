@@ -226,13 +226,12 @@ String remove(String text, byte find){
     newBuf := newString.buffer; 
 
     uint newSize = 0;
-    for (uint i = 0; i < text.size; i++)
+    for (uint i = 0; i < text.size; i++){
         if (oldBuf[i] != find){
-            if (i>0) {
-                newBuf[newSize] = oldBuf[i];
-                newSize++;
-            }
+            newBuf[newSize] = oldBuf[i];
+            newSize++;
         }
+    }
     newString.size = newSize;
     return newString
 }

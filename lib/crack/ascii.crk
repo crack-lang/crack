@@ -68,14 +68,16 @@ String toLower(String text){
 ## Capitalize the initial character of numWords words in a string
 String capitalize(String text, uint numWords){
     StringArray words = split(text);
-    byteptr wordBuf;
+    byteptr wordBuf,wordBufCopy;
 
     for (uint i = 0; i < words.count() && i < numWords; i++){
         wordBuf = words[i].buffer;
-        if (words[i].size > 0 && wordBuf[0] >= b'a' && wordBuf[0] <= b'z')
-            wordBuf[0] = b'A' + (wordBuf[0] - b'a');
+        if (words[i].size > 0 && wordBuf[0] >= b'a' && wordBuf[0] <= b'z'){
+            words[i] = String(words[i]); // copy string since we're going to modify it
+            words[i].buffer[0] = b'A' + (wordBuf[0] - b'a');
+        }
     }
-    
+
     return words.join(' ');
 }
 
