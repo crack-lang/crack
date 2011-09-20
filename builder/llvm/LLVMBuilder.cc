@@ -488,13 +488,15 @@ GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
         // extract the raw type
         const Type *type = bvar->rep->getType()->getElementType();
 
+        assert(!module->getGlobalVariable(bvar->rep->getName()) &&
+               "global variable redefined"
+               );
         GlobalVariable *global =
             new GlobalVariable(*module, type, bvar->rep->isConstant(),
                                GlobalValue::ExternalLinkage,
                                0, // initializer: null for externs
                                bvar->rep->getName()
                                );
-
 
         // possibly do a global mapping (delegated to specific builder impl.)
         addGlobalVarMapping(global, bvar->rep);
@@ -1769,6 +1771,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                    module->getModuleIdentifier()+"."+name
                                    );
             varDefImpl = new BGlobalVarDefImpl(gvar);
+            moduleVars[varDefImpl.get()] = gvar;
             break;
         }
 

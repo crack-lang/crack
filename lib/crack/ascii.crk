@@ -1,0 +1,35 @@
+## Copyright 2010 Google Inc
+## Module for manipulating ascii stirngs.
+
+import crack.io cout;
+import crack.lang ManagedBuffer;
+ 
+## Returns the number converted to a string in the specified base - e.g. 
+## radix(26, 16) -> '1a'
+String radix(uintz val, uint base) {
+    const SIZE := 20;
+    ManagedBuffer tempBuf = {SIZE};
+    byteptr cur = tempBuf.buffer + SIZE + -1;
+    cur[0] = 0;
+    cur = cur + -1;
+    uint size;
+    
+    if (!val) {
+        cur += -1;
+        cur[0] = b'0';
+        size = 1;
+    } else {
+        while (val) {
+            cur += -1;
+            b := byte(val % base);
+            if (b < 10)
+                b += b'0';
+            else
+                b += b'a' - byte(10);
+            cur[0] = b;
+            val = val / base;
+            ++size;
+        }
+    }
+    return String(cur, size, false);
+}

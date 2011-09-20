@@ -1,0 +1,20 @@
+%%TEST%%
+ascii module
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+import crack.ascii radix;
+
+if (radix(0, 10) != '0')
+    cout `FAILED radix(0)\n`;
+
+if (radix(12345, 10) != '12345')
+    cout `FAILED radix(12345, 10)\n`;
+
+if (radix(0xabc123, 16) != 'abc123')
+    cout `FAILED radix(0xabc123)\n`;
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
