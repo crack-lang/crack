@@ -3,6 +3,7 @@
 import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
 import crack.strutil split, StringArray, ljust, rjust, center, replace, remove;
+import crack.ascii toLower, toUpper, capitalize;
 import crack.cont.array Array;
 
 if ('test' >= 'test string')
@@ -179,4 +180,23 @@ line3 = remove(line2, b'H');
 if (line3 != "elloello")
     cout `Failed to remove characters from string\n`;
 
+line3 = toUpper(line2);
+if (line3 != "HELLOHELLO")
+    cout `Failed to convert string to uppercase\n`;
+    
+line3 = toLower(line3);
+if (line3 != "hellohello")
+    cout `Failed to convert string to lowercase\n`;
+
+String words = "this is a heading";
+capWords := capitalize(words);
+if (capWords != "This Is A Heading")
+    cout `Failed to capitalize string\n`;
+
+capWords = capitalize(words, 1);
+if (capWords != "This is a heading")
+    cout `Failed to capitalize first word in string\n`;
+
+
 cout `ok\n`;
+
