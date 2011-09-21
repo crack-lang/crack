@@ -2,7 +2,7 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Portions Copyright 2010 Google Inc.
 
-import crack.io FStr, Formatter, Writer, FDReader, FDWriter;
+import crack.io cout, FStr, Formatter, Writer, FDReader, FDWriter;
 import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
@@ -78,7 +78,7 @@ class File : FileInfo,
              Openable,
              Writer {
 
-    String _mode;
+    CString _mode;
     CFile _fd;
     LineReader _lReader;
     FDReader _reader;
@@ -147,7 +147,7 @@ class File : FileInfo,
     }
 
     oper init(String name, String mode): FileInfo(name),
-                                         _mode(CString(mode)) {
+                                         _mode(mode) {
 
         // parse file mode
         if (_mode.size != 1 ||
