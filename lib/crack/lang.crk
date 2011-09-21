@@ -227,6 +227,115 @@ class Buffer : Object {
             hash = (hash << 5 ^ hash >> 21) ^ buffer[i];
         return hash;
     }
+
+    @define __findBreak 0 break $$
+    @define __findReturn 0 return pos $$
+    @define __findFail 0 return -1; $$
+    @define __findCheck 0 if (pos == size) return -1; $$
+
+    @define __lfindLoop 2
+        for (; pos < size; ++pos)
+            if (buffer[pos] == c)
+                @$1;
+        @$2
+    $$
+
+    @define __rfindLoop 2
+        for (; pos >= 0; --pos)
+            if (buffer[pos] == c)
+                @$1;
+        @$2
+    $$
+    
+    @define __lfind 0 @__lfindLoop __findReturn __findFail $$
+    @define __rfind 0 @__rfindLoop __findReturn __findFail $$
+    
+    @define __findPosChecks 0
+        if (pos < 0)
+            pos += size;
+
+        if (pos >= size || pos < 0)
+            return -1;
+    $$        
+    
+    ## Find the rightmost index of a byte in a string, starting at
+    ## index pos
+    ## returns -1 if not found
+    int rfind(byte c, uint pos) {
+        @__findPosChecks
+        @__rfind
+    }
+
+    ## Find the rightmost index of a byte in a string
+    ## returns -1 if not found
+    ## note this function is not safe for strings larger than INT_MAX
+    int rfind(byte c) {
+        int pos = size - 1;
+        @__rfind
+    }
+    
+    ## Find the rightmost index of the substring 'sub' in the string at or 
+    ## before 'pos'.  Returns -1 if not found.
+    int rfind(Buffer sub, int pos) {
+        @__findPosChecks
+        c := sub.buffer[0];
+        while (true) {
+            @__rfindLoop __findBreak __findCheck
+            if (pos + sub.size > size || 
+                memcmp(sub.buffer, buffer + pos, sub.size)
+                )
+                --pos;
+            else
+                return pos;
+        }
+        return -1;
+    }
+    
+    ## Find the rightmost index of the substring 'sub' in the string.
+    int rfind(Buffer sub) {
+        return rfind(sub, -1);
+    }
+    
+    ## Find the rightmost index of the substring '
+
+    ## Find the leftmost index of a byte in a string, starting at
+    ## index pos
+    ## returns -1 if not found
+    int lfind(byte c, int pos) {
+        @__findPosChecks
+        @__lfind
+    }
+
+    ## Find the leftmost index of a byte in a string
+    ## returns -1 if not found
+    ## note this function is not safe for strings larger than INT_MAX
+    int lfind(byte c) {
+        int pos = 0;
+        @__lfind
+    }
+
+    ## find the leftmost index after pos of the substring 'sub'.
+    ## Returns -1 if not found.
+    int lfind(Buffer sub, int pos) {
+        @__findPosChecks
+        
+        c := sub.buffer[0];
+        while (true) {
+            @__lfindLoop __findBreak __findCheck
+            if (pos + sub.size > size ||
+                memcmp(sub.buffer, buffer + pos, sub.size)
+                ) {
+                ++pos;
+                continue;
+            } else {
+                return pos;
+            }
+        }
+        return -1;
+    }
+    
+    ## Find the leftmost index of the substring 'sub'.
+    int lfind(Buffer sub) { return lfind(sub, 0); }
 }
 
 void _writeObject(Writer out) {
@@ -485,54 +594,6 @@ class String : Buffer {
     oper del() {
         _freeBuffer();
     }
-
-    ## Find the rightmost index of a byte in a string, starting at
-    ## index idx
-    ## returns -1 if not found
-    int rfind(byte c, uint idx) {
-        if (idx >= size)
-            return -1;
-        for (uint i = idx; i != 0; i--) {
-            if (buffer[i] == c)
-                return int(i); // warning, possible truncate
-        }
-        if (buffer[0] == c)
-            return 0;
-        else
-            return -1;
-    }
-    ## Find the rightmost index of a byte in a string
-    ## returns -1 if not found
-    ## note this function is not safe for strings larger than INT_MAX
-    int rfind(byte c) {
-        if (size == 0)
-            return -1;
-        else
-            return rfind(c, size-1);
-    }
-
-    ## Find the leftmost index of a byte in a string, starting at
-    ## index idx
-    ## returns -1 if not found
-    int lfind(byte c, uint idx) {
-        if (idx >= size)
-            return -1;
-        for (uint i = idx; i < size; i++) {
-            if (buffer[i] == c)
-                return int(i); // warning, possible truncate
-        }
-        return -1;
-    }
-    ## Find the leftmost index of a byte in a string
-    ## returns -1 if not found
-    ## note this function is not safe for strings larger than INT_MAX
-    int lfind(byte c) {
-        if (size == 0)
-            return -1;
-        else
-            return lfind(c, 0);
-    }
-
 
     ## Concatenation
     String oper +(String rhs) {

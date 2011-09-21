@@ -71,15 +71,37 @@ if (cs.buffer[cs.size] != 0)
     die('failed to null terminate');
 
 // string methods
-s = String("one.two.three");
-if (s.rfind("."[0]) != 7)
+s = 'one.two.three';
+if (s.rfind(b".") != 7)
     die('rfind failed');
-if (s.rfind("@"[0]) != -1)
+if (s.rfind(b"@") != -1)
     die('rfind nofind failed');
-if (s.lfind("."[0]) != 3)
+if (s.lfind(b".") != 3)
     die('lfind failed');
-if (s.lfind("@"[0]) != -1)
+if (s.lfind(b"@") != -1)
     die('lfind nofind failed');
+
+# lfind(String) methods
+if (s.lfind('two') != 4)
+    die('lfind substring offset 0 failed');
+if (s.lfind('o', 1) != 6)
+    die('lfind pos offset failed');
+if (s.lfind('e', -1) != 12)
+    die('lfind neg offset failed');
+if (s.lfind('one', -100) != -1)
+    die('lfind out of bounds offset failed');
+
+# rfind(String) methods
+if (s.rfind('two') != 4)
+    die('rfind substring offset -1 failed');
+if (s.rfind('two', 5) != 4)
+    die('rfind pos offset failed');
+if (s.rfind('one', -12) != 0)
+    die('rfind neg offset failed');
+if (s.rfind('one', -100) != -1)
+    die('rfind out of bounds offset failed');
+if (s.rfind('three', -1) != 8)
+    die('rfind at end failed');
 
 s = "foo\n";
 if (s.rtrim() != "foo")
