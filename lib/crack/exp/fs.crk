@@ -1,9 +1,9 @@
 ## Copyright 2011 Google Inc.
 ## Crack Virtual Filesystem
 
-import crack.runtime basename, errno, fileExists, fileRemove, getDirEntry, 
-    mkdir, open, opendir, readdir, Stat, stat, Dir, DirEntry, O_CREAT, 
-    O_RDONLY, O_WRONLY;
+import crack.runtime basename, errno, fileExists, free, fileRemove, 
+    getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir, DirEntry, 
+    O_CREAT, O_RDONLY, O_WRONLY, S_IFDIR;
 import crack.exp.error strerror;
 import crack.io cout, FDReader, FDWriter, FStr, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError, 
@@ -79,6 +79,10 @@ class Path;
     ## Returns true if the object exists, false if not.
     @abstract bool exists();
     
+    ## Returns true if the path is a directory (that is, if "children()" can
+    ## be used for iteration)
+    @abstract bool isDir();
+   
     ## Deletes the object at the path.
     @abstract void delete();
 
@@ -179,6 +183,14 @@ class RealPath : Path {
         return fileExists(__path.buffer);
     }
 
+    bool isDir() {
+        Stat st = {};
+        rc := stat(__path.buffer, st);
+        result := rc && st.st_mode & S_IFDIR;
+        free(st);
+        return result;
+    }
+
     Reader reader() {
         fd := open(__path.buffer, O_RDONLY, 0);
         if (fd == -1)
@@ -212,11 +224,14 @@ class RealPath : Path {
     String getName() { return String(basename(__path.buffer)); }
     uint64 getSize() {
         Stat st = {};
-        if (stat(__path.buffer, st))
+        rc := stat(__path.buffer, st);
+        result := uint64(st.st_size);
+        free(st);
+        if (rc)
             throw SystemError(FStr() `stating $__path: $(strerror())`,
                               errno()
                               );
-        return uint64(st.st_size);
+        return result;
     }
         
 }
