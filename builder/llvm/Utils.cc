@@ -145,18 +145,20 @@ void createClassImpl(Context &context, BTypeDef *type) {
     vector<Constant *> basesVal(type->parents.size());
     for (int i = 0; i < type->parents.size(); ++i) {
         // get the pointer to the inner "Class" object of "Class[BaseName]"
-        BGlobalVarDefImplPtr impl =
-            BGlobalVarDefImplPtr::arcast(
-                BTypeDefPtr::arcast(type->parents[i])->impl
-            );
+        BTypeDefPtr base = BTypeDefPtr::arcast(type->parents[i]);
+        BGlobalVarDefImplPtr impl = BGlobalVarDefImplPtr::arcast(base->impl);
 
         // extract the initializer from the rep (which is the global
-        // variable for the _pointer_ to the class) and then GEP our way
-        // into the base class (Class) instance.
+        // variable for the _pointer_ to the class) and then:
+        // 1) if the base class is Class, just use the pointer
+        // 2) if it's Class[BaseName], GEP our way into the base class 
+        // (Class) instance.
         Constant *baseClassPtr = impl->rep->getInitializer();
-        Constant *baseAsClass =
-            ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
-        basesVal[i] = baseAsClass;
+        if (base->type.get() == base.get())
+            basesVal[i] = baseClassPtr;
+        else
+            basesVal[i] =
+                ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
     }
     const ArrayType *baseArrayType =
         ArrayType::get(classType->rep, type->parents.size());
@@ -182,12 +184,25 @@ void createClassImpl(Context &context, BTypeDef *type) {
     const StructType *metaClassStructType =
         cast<StructType>(metaClassPtrType->getElementType());
 
-    // the new meta class's structure is another structure with only
-    // Class as a member.
-    vector<Constant *> metaClassStructVals(1);
-    metaClassStructVals[0] = classStruct;
-    Constant *classObjVal =
-        ConstantStruct::get(metaClassStructType, metaClassStructVals);
+    // initialize the structure based on whether we're implementing an 
+    // instance of Class or an instance of a meta-class derived from Class.
+    Constant *classObjVal;
+    if (type->type.get() != context.construct->classType.get()) {
+        
+        // this is an instance of a normal meta-class, wrap the Class 
+        // implementation in another structure.
+        vector<Constant *> metaClassStructVals(1);
+        metaClassStructVals[0] = classStruct;
+        classObjVal =
+            ConstantStruct::get(metaClassStructType, metaClassStructVals);
+    } else {
+        
+        // this is an instance of Class - just use the Class implementation as 
+        // is.
+        metaClassPtrType = classPtrType;
+        metaClassStructType = classStructType;
+        classObjVal = classStruct;
+    }
 
     // Create the class global variable
     type->classInst =
@@ -248,6 +263,14 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     const Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
+
+    // make the owner the builtin module if it is available, if it is not we 
+    // are presumably registering primitives, so just use the module namespace.
+    if (context.construct->builtinMod)
+        context.construct->builtinMod->addDef(metaType.get());
+    else
+        context.getDefContext()->addDef(metaType.get());
+    createClassImpl(context, metaType.get());
         
     return metaType;
 }

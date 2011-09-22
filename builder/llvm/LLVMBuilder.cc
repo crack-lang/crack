@@ -2501,9 +2501,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     deferMetaClass.push_back(functionType);
 
     // now that we have byteptr and array and all of the integer types, we can
-    // initialize the body of Class (the meta-type).
+    // initialize the body of Class (the meta-type) and create an 
+    // implementation object for it.
     context.addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
+    createClassImpl(context, classType);
     
     // back fill the meta-class for the types defined so far.
     for (int i = 0; i < deferMetaClass.size(); ++i)
