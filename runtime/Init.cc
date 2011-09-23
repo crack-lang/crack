@@ -25,6 +25,12 @@ using namespace crack::ext;
 extern "C" bool __CrackUncaughtException();
 extern "C" void crack_runtime_time_init(crack::ext::Module *mod);
 
+// stat() appears to have some funny linkage issues in native mode so we wrap 
+// it in a normal function.
+extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
+    return stat(path, buf);
+}
+
 extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
@@ -155,7 +161,9 @@ extern "C" void crack_runtime_init(Module *mod) {
     mod->addConstant(intType, "S_IXOTH", S_IXOTH);
 
 
-    f = mod->addFunc(intType, "stat", (void *)stat, "stat");
+    f = mod->addFunc(intType, "stat", (void *)crack_runtime_stat, 
+                     "crack_runtime_stat"
+                     );
     f->addArg(byteptrType, "path");
     f->addArg(statType, "buf");
 
