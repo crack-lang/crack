@@ -419,7 +419,20 @@ class Parser {
       // error checking functions
       model::VarDefPtr checkForExistingDef(const Token &tok,
                                            const std::string &name,
-                                           bool overloadOk = false);
+                                           bool overloadOk = false
+                                           );
+
+      // checks if "existingDef" is an OverloadDef that contains an overload 
+      // matching argDefs.  Raises an error if this is an illegal overload, 
+      // otherwise returns the function that we're overriding if the override 
+      // needs to be considered (for implementation of a virtual or forward 
+      // function).
+      model::FuncDefPtr checkForOverride(model::VarDef *existingDef,
+                                         const model::FuncDef::ArgVec &argDefs,
+                                         model::Namespace *ownerNS,
+                                         const Token &nameTok,
+                                         const std::string &name
+                                         );
 
    public:
       // current parser state.      

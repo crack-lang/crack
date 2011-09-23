@@ -1709,6 +1709,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    TypeDef *classTypeDef = 0;
    
    // push a new context, arg defs will be stored in the new context.
+   NamespacePtr ownerNS = context->ns;
    ContextPtr subCtx = context->createSubContext(Context::local, 0,
                                                  &name
                                                  );
@@ -1746,21 +1747,12 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    // If we're overriding/implementing a previously declared virtual 
    // function, we'll store it here.
-   FuncDefPtr override;
+   FuncDefPtr override = checkForOverride(existingDef.get(), argDefs,
+                                          ownerNS.get(),
+                                          nameTok,
+                                          name
+                                          );
 
-   // we now need to verify that the new definition doesn't hide an 
-   // existing definition.
-   OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-   if (existingOvldDef && 
-      (override = existingOvldDef->getSigMatch(argDefs)) &&
-      !override->isOverridable()
-      )
-      error(nameTok,
-            SPUG_FSTR("Definition of " << name <<
-                     " hides previous overload."
-                     )
-            );
-   
    // if we're "overriding" a forward declaration, use the namespace of the 
    // forward declaration.
    if (override && override->flags & FuncDef::forward)
@@ -3218,6 +3210,46 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
    }
    
    return 0;
+}
+
+FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
+                                    const FuncDef::ArgVec &argDefs,
+                                    Namespace *ownerNS,
+                                    const Token &nameTok,
+                                    const string &name
+                                    ) {
+   OverloadDef *existingOvldDef = OverloadDefPtr::cast(existingDef);
+   FuncDefPtr override;
+   
+   // if 1) the definition isn't an overload or 2) there is no function in the 
+   // overload with the same arguments, or 3) there is one but it's 
+   // overridable, we're done.
+   if (!existingOvldDef ||
+       !(override = existingOvldDef->getSigMatch(argDefs)) ||
+       override->isOverridable()
+       )
+      return override;
+
+   // if the owner namespace is a composite namespace, get the class namespace.
+   CompositeNamespace *cns = CompositeNamespacePtr::cast(ownerNS);
+   if (cns)
+      ownerNS = cns->getParent(0).get();
+
+   // if the override is not in the same context or a derived context, we're 
+   // done and the caller should not consider the override so we return null.
+   TypeDefPtr overrideOwner, curClass;
+   if (override->getOwner() != ownerNS &&
+       (!(overrideOwner = TypeDefPtr::cast(override->getOwner())) ||
+        !(curClass = TypeDefPtr::cast(ownerNS)) ||
+        !curClass->isDerivedFrom(overrideOwner.get())
+        )
+       )
+      return 0;
+
+   // otherwise this is an illegal override
+   error(nameTok,
+         SPUG_FSTR("Definition of " << name << " hides previous overload.")
+         );
 }
 
 void Parser::redefineError(const Token &tok, const VarDef *existing) {

@@ -1,0 +1,9 @@
+%%TEST%%
+error on overrides in the same context
+%%ARGS%%
+%%FILE%%
+void f() {}
+void f() {}
+%%EXPECT%%
+ParseError: %OUTDIR%172_overrides_same_ctx.crk:2: Definition of f hides previous overload.
+%%STDIN%%
