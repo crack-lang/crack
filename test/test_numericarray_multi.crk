@@ -1,0 +1,37 @@
+// Test NumericArray
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+
+import crack.cont.array Array;
+import crack.cont.numericarray NumericVector, NumericArray;
+import crack.io cout;
+import crack.exp.cmdline CmdOptions;
+import crack.sys argv;
+@import crack.exp.ann define;
+
+sys_options :=  CmdOptions("--verbose=b/false");
+sys_options.parse(argv);
+
+void printCmp(NumericArray[int] A, NumericArray[int] B, String msg){
+    if (A != B){
+        cout `$msg\n`;
+        cout `A = $A\n`;
+        cout `B = $B\n`;
+    }
+}
+
+A := Array[int]![1,2,3,4];
+NumericArray[int] NA = {A};
+printCmp(NA, NumericArray[int]![1,2,3,4], "Constructor using array failed");
+
+
+NA2 := NA.promote();
+if (NA2.dims != 2)
+    cout `Promoting 1D to 2D array failed\n`;
+
+NA2 = NA.appended(5);
+printCmp(NA2, NumericArray[int]![1, 2, 3, 4, 5], "Array append failed");
+
+NA2[4] = 10;
+NA2[1] = 8;
+printCmp(NA2, NumericArray[int]![1, 8, 3, 4, 10], "Array assign failed");
+cout `ok\n`;
