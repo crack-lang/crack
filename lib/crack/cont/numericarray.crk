@@ -1,4 +1,5 @@
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
+import crack.math abs, log2;
 import crack.io cout, Writer, FStr;
 import crack.exp.algorithm QuickSort;
 import crack.cont.array Array, ArrayData;
@@ -32,7 +33,8 @@ bool _isNull(Object obj) {
 @_nobind(float64)
 @_nobind(byteptr)
 
-
+/// An 1D array that can be assumed to contain elements that have numeric
+/// properties
 class NumericVector[Elem] : Array[Elem] {
 
     oper init (uint initCapacity): Array[Elem](initCapacity){
@@ -223,4 +225,379 @@ class NumericVector[Elem] : Array[Elem] {
     @VectorOperEqual(*)
     @VectorOperEqual(/)
 
+}
+
+@define initFromArray(ArrayType){
+    oper init(ArrayType[Elem] A): dims=1 
+    {
+        cols := A.count();
+        data=ArrayData[Elem](cols);
+        __rep = data.rep;
+        __cap = data.cap; 
+        __size = cols;
+
+        // Copy over data
+        Arep := A.data.rep;
+        for (uint i = 0; i < cols; i++)
+            __rep[i] = Arep[i];
+
+        shape = Array[uint]![cols];
+        strides = Array[uintz]![1];
+        offsets = Array[uintz]![0];
+        dims = 1;
+        T = this;
+    }
+}
+
+
+/// A multidimensional array similar to numpy's ndarray
+/// For 1D arrays it is faster to use the above NumericVector class
+class NumericArray[Elem] {
+    // underlying data
+    ArrayData[Elem] data;
+    array[Elem] __rep = null; // equal to data.rep
+    uint __cap,               // equal to data.cap
+         __size;              // size of array in elements
+    
+    // description of our view of the data
+    Array[uint] shape;
+    uint dims;
+    Array[uintz] strides;
+    Array[uintz] offsets;
+    
+    NumericArray T; // Transpose
+
+    @initFromArray(Array)
+    @initFromArray(NumericVector)
+    
+    void _oneDinitWorker(uint cols){
+        data=ArrayData[Elem](cols);
+        __rep = data.rep;
+        __cap = data.cap; 
+        __size = 0;
+
+        shape = Array[uint]![0];
+        strides = Array[uintz]![1];
+        offsets = Array[uintz]![0];
+        dims = 1;
+        T = this;
+
+    }
+
+    oper init(){
+        _oneDinitWorker(16);
+    }
+    
+    oper init(uint cols){
+        _oneDinitWorker(cols);
+    }
+
+    void _createTranspose();
+
+    oper init(Array[Array[Elem]] AA): dims = 2
+    {
+        if (AA.count() == 0 || AA[0].count() == 0)
+            throw AssertionError("Number of rows must be greater than zero");
+
+        cols := AA[0].count();
+        uint rows;
+        for (rows = 1; rows < AA.count(); rows++){
+            if (AA[rows].count() != cols)
+                throw AssertionError("All rows must have the same length");
+        }
+
+        
+        data=ArrayData[Elem](cols * rows);
+        __rep = data.rep;
+        __cap = data.cap; 
+        __size = cols * rows;
+
+        // Copy over data
+        uint k = 0;
+        for (uint j = 0; j < rows; j++){
+            for (uint i = 0 ; i < cols; i++){
+                __rep[k] = AA[j].data.rep[i];
+                k++;
+            }
+        }
+
+        shape := Array[uint]![cols, rows];
+        strides = Array[uintz]![1, cols];
+        offsets = Array[uintz]![0, 0];
+        _createTranspose();
+        T.T = this;
+    }
+
+    // This is a low-level constructor for use when slices, subarrays or transposes
+    // are created
+    oper init(ArrayData[Elem] data0, Array[uint] shape0,
+              Array[uintz] strides0, Array[uintz] offsets0):
+              data = data0, shape = shape0, 
+              strides = strides0, offsets = offsets0,
+              __rep = data0.rep, __cap = data0.cap, dims = shape0.count() {
+
+        dims = shape0.count();
+        __size = shape0[0];
+        for (uint i = 0; i < shape0.count(); i++)
+            __size *= shape0[i];
+        T = null;
+    }
+    
+    void _createTranspose() {
+        
+        if (dims == 1) {
+            T = this;
+            return;
+        }
+
+        if (dims == 2){
+            newShape := Array[uint]![shape[1], shape[0]];
+            newStrides := Array[uintz]![strides[1], strides[0]];
+            newOffsets := Array[uintz]![offsets[1], offsets[1]];
+            T = NumericArray(data, newShape, newOffsets, newOffsets);
+        }
+    }
+    
+    ArrayData[Elem] _copyData(uint newCap){
+        newData := ArrayData[Elem](newCap);
+        newRep := newData.rep;
+
+        uint i;
+        for (uint i = 0; i < __size; i++)
+            newRep[i] = __rep[i];
+
+        if (__cap > 0 && _isObject(__rep[0]))
+            for (uint i = __size; i < newCap; i++)
+                newRep[i] = null;
+
+        return newData;
+    }
+
+    NumericArray promote(){
+        if (dims == 1) {
+            newShape := Array[uint]![shape[0], 1];
+            newStrides := Array[uintz]![strides[0], shape[0]];
+            newOffsets := Array[uintz]![offsets[0], 0];
+
+            return NumericArray(data, newShape, newStrides, newOffsets);
+        }
+        else
+            throw AssertionError("promote only implemented for 1D arrays");
+    }
+
+    Elem oper [](uint i){
+        if (dims!=1) 
+            throw InvalidArgumentError(FStr() 
+                `Attempting to access element from $(dims)D array using only one index`);
+        if (i >= __size)
+            throw IndexError(FStr() 
+            `Index $i out of bounds for size $__size array`);
+        return (__rep + offsets[0] + strides[0] * i)[0];
+        
+    }
+
+    void oper []=(uint i, Elem e){
+        if (dims!=1) 
+            throw InvalidArgumentError(FStr() 
+                `Attempting to assign element from $(dims)D array using only one index`);
+        if (i >= __size)
+            throw IndexError(FStr() 
+            `Index $i out of bounds for size $__size array`);
+        (__rep + offsets[0] + strides[0] * i)[0] = e;
+    }
+
+
+    Elem oper [](uint i, uint j){
+        if (dims!=2) 
+            throw InvalidArgumentError(FStr() 
+            `Attempting to access element from $(dims)D array using 2 indices`);
+        if (i * j >= __size || i > shape[0] || j > shape[1])
+            throw IndexError(FStr() 
+            `Index [$i,$j] out of bounds for array with shape $shape`);
+        return (__rep + strides[1] * (j + offsets[0]) + offsets[0] + strides[0] * i)[0];
+    }
+
+    Elem oper [](uint i, uint j, uint k){
+        if (dims!=3) 
+            throw InvalidArgumentError(FStr() 
+            `Attempting to access element from $(dims)D array using 3 indices`);
+        throw AssertionError("3D array access is not implemented yet");
+    }
+
+    int cmp(Object other) {
+        if (this is other)
+            return 0;
+        else if (!this.isa(NumericArray))
+            return Object.cmp(other);
+
+        peer := NumericArray.cast(other);
+
+        if (dims != peer.dims)
+            throw AssertionError(FStr() `Comparing $(dims)D array with $(peer.dims) array\n`);
+
+        if (dims == 1){
+            oc := peer.shape[0];
+            c := shape[0];
+            for (uint i = 0; i < c; ++i) {
+                
+                # if I'm longer than other, and we share a common prefix, I'm 
+                # greater.
+                if (i > oc)
+                    return 1;
+
+                # compare the elements
+                elemDiff := cmp(this[i], peer[i]);
+                if (elemDiff)
+                    return elemDiff;
+            }
+            
+            # if other is longer than me, and we share a common prefix, I'm lesser.
+            if (oc > c)
+                return -1;
+            else
+                # we're the same length and all elements are equal
+                return 0;
+        }
+        else if (dims == 2){
+            peerSize := 0;
+            oc := peer.shape[1];
+            c := shape[1];
+            for (uint j = 0; j < c; j++){
+                if (j > oc)
+                    return 1;
+                od := peer.shape[0];
+                d := shape[0];
+                for (uint i = 0; i < d; ++i) {
+                    
+                    # if I'm longer than other, and we share a common prefix, I'm 
+                    # greater.
+                    if (i > od)
+                        return 1;
+
+                    # compare the elements
+                    elemDiff := cmp(this[i,j], peer[i,j]); // TODO use faster iteration
+                    if (elemDiff)
+                        return elemDiff;
+                }
+                
+                # if other is longer than me, and we share a common prefix, I'm lesser.
+                if (od > d)
+                    return - 1;
+            }
+            if (oc > c)
+                return -1;
+            else
+                # we're the same length and all elements are equal
+                return 0;
+        }
+        else if (dims ==0 || dims > 2)
+            throw AssertionError(FStr() `Comparing $(dims)D arrays is not implemented\n`);
+        return 0;
+    }
+
+    ArrayData[Elem] _appendWorker(ArrayData[Elem] tmpData, Elem e){
+        uint index = offsets[0] + shape[0]*strides[0];
+        if (__cap > index){
+            tmpData.rep[index] = e;
+            return tmpData;
+        }
+        else {
+            uint newCap = __cap > 1 ? __cap + __cap/uint(abs(log2(float(__cap)))) : 10;
+            newData := _copyData(newCap);
+            newData.rep[index] = e;
+            return newData
+        }
+    }
+
+    /// Append an element to an array, expanding it if needed
+    void append(Elem e){
+        if (dims > 1)
+            throw InvalidArgumentError(FStr() `Cannot append an element to a ($dims)D array`);
+
+        ArrayData[Elem] newData  = _appendWorker(data, e);
+
+        if (newData != data) {
+            __cap = newData.cap;
+            __rep = newData.rep;
+            data = newData;
+        }
+
+        __size++;
+        shape[0] = __size;
+    }
+
+    /// Return a new array with an element appended
+    NumericArray appended(Elem e){
+        if (dims > 1)
+            throw InvalidArgumentError(FStr() `Cannot append an element to a ($dims)D array`);
+
+        uint index = offsets[0] + shape[0]*strides[0];
+        ArrayData[Elem] newData;
+        if (__cap > index) {
+            newData = _copyData(__cap);
+            tmpData := newData;
+            newData = _appendWorker(tmpData, e);
+            if (!(newData is tmpData))
+                throw AssertionError("Array data changed during element append without expansion");
+        }
+        else
+            newData = _appendWorker(data, e);
+        if (newData is data)
+            throw AssertionError("Array data not copied during element append with expansion");
+
+        return NumericArray(newData, Array[uint]![shape[0] + 1], strides.copy(), offsets.copy());
+    }
+
+    void _writeLevel(Writer out, Array[uintz] wstrides, Array[uintz] woffsets, 
+                Array[uint] wshape, uint dim);
+
+    void _writeLevel(Writer out, Array[uintz] wstrides, Array[uintz] woffsets, 
+                Array[uint] wshape, uint dim){
+        out.write('[');
+        if (dim == 1){
+            bool first = true;
+            uintz offset = woffsets[dim - 1];
+            uintz stride = wstrides[dim - 1];
+            for (uint i = 0; i < wshape[0]; i++){
+                if (!first)
+                    out.write(', ');
+                else
+                    first = false;
+                Elem elem = (__rep + offset + stride * i)[0];
+                if (_isNull(elem)) out.write('null');
+                else {
+                    out.write(FStr() `$elem`);
+                }
+            }
+        } 
+        else {
+            bool first = true;
+
+            Array[uintz] noffsets = woffsets.subarray(0, dim - 1).copy();
+            nstrides := wstrides.subarray(0, dim - 1);
+            nshape := shape.subarray(0, dim - 1);
+            stride := nstrides[dim - 2];
+
+            for (uint i = 0; i < wshape[dim - 1]; i++){
+                if (!first)
+                    out.write(', ');
+                else
+                    first = false;
+                _writeLevel(out, nstrides, noffsets, nshape, dim - 1);
+                uintz noffset = noffsets[dim - 2] + stride;
+                noffsets[dim - 2] = noffset;
+            }
+            
+        }
+        
+        out.write(']');
+    }
+
+    void writeTo(Writer out) {
+        _writeLevel(out, strides, offsets, shape, dims);
+    }
+    
+    oper del(){
+        T = null;
+    }
 }

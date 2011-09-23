@@ -1014,16 +1014,11 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             continue;
          }
          
-         FuncCall::ExprVec args(1);
-         args[0] = parseExpression();
-         
-         // parse the right bracket
-         Token tok2 = getToken();
-         if (!tok2.isRBracket())
-            unexpected(tok2, "expected right bracket.");
-         
+         FuncCall::ExprVec args;
+         parseMethodArgs(args, Token::rbracket);
+
          // check for an assignment operator
-         tok2 = getToken();
+         Token tok2 = getToken();
          FuncCallPtr funcCall;
          if (tok2.isAssign()) {
             // this is "a[i] = v"
@@ -1042,6 +1037,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          } else {
             // this is "a[i]"
             toker.putBack(tok2);
+
             FuncDefPtr funcDef =
                context->lookUp("oper []", args, expr->type.get());
             if (!funcDef)
@@ -1050,11 +1046,12 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                      " with these arguments: (" << args << ")"
                                     )
                      );
+            
             funcCall = context->builder.createFuncCall(funcDef.get());
             funcCall->receiver = expr;
             funcCall->args = args;
          }
-         
+
          expr = funcCall;
 
       } else if (tok.isLParen()) {
@@ -1361,7 +1358,7 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
    while (true) {
       if (tok.getType() == terminator)
          return;
-         
+
       // XXX should be verifying arg types against signature
 
       // get the next argument value
@@ -2795,9 +2792,9 @@ void Parser::parsePostOper(TypeDef *returnType) {
                );
       if (tok.isAssign()) {
          expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper []=", normal, 2);
+         parseFuncDef(returnType, tok, "oper []=", normal, -1);
       } else {
-         parseFuncDef(returnType, tok, "oper []", normal, 1);
+         parseFuncDef(returnType, tok, "oper []", normal, -1);
       }
    } else if (tok.isMinus()) {
       // minus is special because it can be either unary or binary
