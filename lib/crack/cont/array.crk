@@ -343,6 +343,10 @@ class Array[Elem] {
         for (uint i = 0; i < __size; i++)
             if (f(__rep[i])) __rep[ns++] = __rep[i];
             else _release(__rep[i]);
+
+        // Make sure we don't hold references to old objects at the end of the new array
+        for (uint nsi = ns; nsi < __size; nsi++)
+            __rep[nsi] = null;
         __size = ns;
     }
 
