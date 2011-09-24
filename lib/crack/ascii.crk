@@ -2,7 +2,8 @@
 ## Module for manipulating ascii stirngs.
 
 import crack.io cout;
-import crack.lang ManagedBuffer;
+import crack.lang ManagedBuffer, Buffer;
+import crack.strutil StringArray, split;
  
 ## Returns the number converted to a string in the specified base - e.g. 
 ## radix(26, 16) -> '1a'
@@ -32,4 +33,55 @@ String radix(uintz val, uint base) {
         }
     }
     return String(cur, size, false);
+}
+
+
+String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset, 
+                    uint num)
+{
+    oldBuf := text.buffer;
+    newString := String(text);
+    newBuf := newString.buffer; 
+    byte c;
+
+    for (uint i = 0; i < num && i < text.size; i++){
+        c = oldBuf[i];
+        if (c >= lowerBound && c <= upperBound){
+            byte offset = c - lowerBound;
+            newBuf[i] = newOffset + offset;
+        }
+    }
+
+    return newString
+}
+
+## Change all characters in a string to uppercase
+String toUpper(String text){
+    return _changeCase(text, b'a', b'z', b'A', text.size);
+}
+
+## Change all characters in a string to lowercase
+String toLower(String text){
+    return _changeCase(text, b'A', b'Z', b'a', text.size);
+}
+
+## Capitalize the initial character of numWords words in a string
+String capitalize(String text, uint numWords){
+    StringArray words = split(text);
+    byteptr wordBuf,wordBufCopy;
+
+    for (uint i = 0; i < words.count() && i < numWords; i++){
+        wordBuf = words[i].buffer;
+        if (words[i].size > 0 && wordBuf[0] >= b'a' && wordBuf[0] <= b'z'){
+            words[i] = String(words[i]); // copy string since we're going to modify it
+            words[i].buffer[0] = b'A' + (wordBuf[0] - b'a');
+        }
+    }
+
+    return words.join(' ');
+}
+
+## Capitalize the initial character of all words in a string
+String capitalize(String text){
+    return capitalize(text, text.size);
 }

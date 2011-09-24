@@ -26,6 +26,9 @@ Path foo = tempDir/'foo', bar = tempDir/'bar';
 foo.writeAll('this is foo');
 bar.writeAll('this is bar');
 
+if (foo.getSize() != 11)
+    cout `FAILED file size() method\n`;
+
 StringArray children = {2};
 for (child :in tempDir.children())
     children.append(child.getName());

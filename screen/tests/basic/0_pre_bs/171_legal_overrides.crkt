@@ -1,0 +1,19 @@
+%%TEST%%
+legal overrides
+%%ARGS%%
+%%FILE%%
+void f() {}
+void outer() { void f() {} }
+class X { void f() {} }
+class Outer : VTableBase {
+    void f() { }    
+    void g() {
+        class Inner { void f() { puts('ok'); } }
+        Inner().f();
+    }
+}
+
+Outer().g();
+%%EXPECT%%
+ok
+%%STDIN%%

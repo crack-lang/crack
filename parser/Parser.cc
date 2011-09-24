@@ -1014,16 +1014,11 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             continue;
          }
          
-         FuncCall::ExprVec args(1);
-         args[0] = parseExpression();
-         
-         // parse the right bracket
-         Token tok2 = getToken();
-         if (!tok2.isRBracket())
-            unexpected(tok2, "expected right bracket.");
-         
+         FuncCall::ExprVec args;
+         parseMethodArgs(args, Token::rbracket);
+
          // check for an assignment operator
-         tok2 = getToken();
+         Token tok2 = getToken();
          FuncCallPtr funcCall;
          if (tok2.isAssign()) {
             // this is "a[i] = v"
@@ -1042,6 +1037,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          } else {
             // this is "a[i]"
             toker.putBack(tok2);
+
             FuncDefPtr funcDef =
                context->lookUp("oper []", args, expr->type.get());
             if (!funcDef)
@@ -1050,11 +1046,12 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                      " with these arguments: (" << args << ")"
                                     )
                      );
+            
             funcCall = context->builder.createFuncCall(funcDef.get());
             funcCall->receiver = expr;
             funcCall->args = args;
          }
-         
+
          expr = funcCall;
 
       } else if (tok.isLParen()) {
@@ -1361,7 +1358,7 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
    while (true) {
       if (tok.getType() == terminator)
          return;
-         
+
       // XXX should be verifying arg types against signature
 
       // get the next argument value
@@ -1709,6 +1706,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    TypeDef *classTypeDef = 0;
    
    // push a new context, arg defs will be stored in the new context.
+   NamespacePtr ownerNS = context->ns;
    ContextPtr subCtx = context->createSubContext(Context::local, 0,
                                                  &name
                                                  );
@@ -1746,21 +1744,12 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
    // If we're overriding/implementing a previously declared virtual 
    // function, we'll store it here.
-   FuncDefPtr override;
+   FuncDefPtr override = checkForOverride(existingDef.get(), argDefs,
+                                          ownerNS.get(),
+                                          nameTok,
+                                          name
+                                          );
 
-   // we now need to verify that the new definition doesn't hide an 
-   // existing definition.
-   OverloadDef *existingOvldDef = OverloadDefPtr::rcast(existingDef);
-   if (existingOvldDef && 
-      (override = existingOvldDef->getSigMatch(argDefs)) &&
-      !override->isOverridable()
-      )
-      error(nameTok,
-            SPUG_FSTR("Definition of " << name <<
-                     " hides previous overload."
-                     )
-            );
-   
    // if we're "overriding" a forward declaration, use the namespace of the 
    // forward declaration.
    if (override && override->flags & FuncDef::forward)
@@ -2803,9 +2792,9 @@ void Parser::parsePostOper(TypeDef *returnType) {
                );
       if (tok.isAssign()) {
          expectToken(Token::lparen, "expected argument list.");
-         parseFuncDef(returnType, tok, "oper []=", normal, 2);
+         parseFuncDef(returnType, tok, "oper []=", normal, -1);
       } else {
-         parseFuncDef(returnType, tok, "oper []", normal, 1);
+         parseFuncDef(returnType, tok, "oper []", normal, -1);
       }
    } else if (tok.isMinus()) {
       // minus is special because it can be either unary or binary
@@ -3218,6 +3207,46 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
    }
    
    return 0;
+}
+
+FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
+                                    const FuncDef::ArgVec &argDefs,
+                                    Namespace *ownerNS,
+                                    const Token &nameTok,
+                                    const string &name
+                                    ) {
+   OverloadDef *existingOvldDef = OverloadDefPtr::cast(existingDef);
+   FuncDefPtr override;
+   
+   // if 1) the definition isn't an overload or 2) there is no function in the 
+   // overload with the same arguments, or 3) there is one but it's 
+   // overridable, we're done.
+   if (!existingOvldDef ||
+       !(override = existingOvldDef->getSigMatch(argDefs)) ||
+       override->isOverridable()
+       )
+      return override;
+
+   // if the owner namespace is a composite namespace, get the class namespace.
+   CompositeNamespace *cns = CompositeNamespacePtr::cast(ownerNS);
+   if (cns)
+      ownerNS = cns->getParent(0).get();
+
+   // if the override is not in the same context or a derived context, we're 
+   // done and the caller should not consider the override so we return null.
+   TypeDefPtr overrideOwner, curClass;
+   if (override->getOwner() != ownerNS &&
+       (!(overrideOwner = TypeDefPtr::cast(override->getOwner())) ||
+        !(curClass = TypeDefPtr::cast(ownerNS)) ||
+        !curClass->isDerivedFrom(overrideOwner.get())
+        )
+       )
+      return 0;
+
+   // otherwise this is an illegal override
+   error(nameTok,
+         SPUG_FSTR("Definition of " << name << " hides previous overload.")
+         );
 }
 
 void Parser::redefineError(const Token &tok, const VarDef *existing) {

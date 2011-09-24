@@ -1,0 +1,24 @@
+%%TEST%%
+metaclass instances are accessible
+%%ARGS%%
+%%FILE%%
+bool streq(byteptr a, byteptr b) { 
+    while (a[0]) {
+        if (a[0] != b[0]) return 0;
+        a += 1; 
+        b += 1;
+    }
+    return (!b[0]);
+}
+
+if ( !streq(typeof(int).name, 'Class[builtin.int]') )
+    puts('FAILED typeof int');
+if ( !streq(typeof(array[int]).name, 'Class[builtin.array]') )
+    puts('FAILED typeof array');
+if ( !streq(typeof(function[void, int]).name, "Class[builtin.function]") )
+    puts('FAILED typeof function');
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

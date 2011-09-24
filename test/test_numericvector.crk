@@ -1,4 +1,4 @@
-// Test NumericArray
+// Test NumericVector
 // (C) Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.cont.numericarray NumericVector;

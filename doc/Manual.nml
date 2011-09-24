@@ -3708,7 +3708,7 @@ The #crack.exp.algorithm# module includes two sorting algorithms for arrays.
 For example:
 
 {{
-    import crack.containers Array;
+    import crack.cont.array Array;
     import crack.exp.algorithm QuickSort, InsertionSort;
     Array[int] arr = getAnArray();
     
@@ -4312,7 +4312,7 @@ back whatever it reads from a client) written using #Poller#:
 
 {{
     import crack.net sockconsts, Poller, PollEvent, Socket, SockAddrIn;
-    import crack.container DList;
+    import crack.cont.list DList;
     import crack.exp.error err, strerror;
     
     Socket srv = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
@@ -4329,7 +4329,7 @@ back whatever it reads from a client) written using #Poller#:
     srv.listen(5);
 
     # our list of clients    
-    DList clients;
+    DList[Socket] clients;
 
     # remove a client from the list
     void removeClient(Socket client) {
@@ -4540,6 +4540,11 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 
 The remainder of this appendix describes the things you need to know when 
 upgrading between versions.
+
+From 0.5 to 0.6
+---------------
+
+-   Removed #crack.container# module (use #crack.cont.\*# instead).
 
 From 0.4 to 0.5
 ---------------

@@ -1,5 +1,5 @@
 
-import crack.lang AppendBuffer, CString;
+import crack.lang Buffer, AppendBuffer, CString, InvalidArgumentError;
 import crack.io Formatter, Writer, cout;
 import crack.cont.array Array, ArrayData;
 
@@ -190,4 +190,48 @@ String center(String text, uint width, byte c){
 ## Centers string with spaces so it has the given width
 String center(String text, uint width){
     return  center(text, width, b' ');
+}
+
+## Creates a new string with all occurences of one character replaced
+## with another
+String replace(String text, byte orig, byte new){
+    newString := String(text);
+    newBuf := newString.buffer; 
+    for (uint i = 0; i < text.size; i++)
+        if (newBuf[i] == orig)
+            newBuf[i] = new;
+    return newString;
+}
+
+## Creates a new string with all occurences of the characters in the first
+## array replaced with the corresponding charecters in the second  array
+String replace(String text, Array[byte] orig, Array[byte] new){
+    newString := String(text);
+    newBuf := newString.buffer; 
+    
+    if (orig.count() != new.count())
+        throw InvalidArgumentError("Length of original and new character arrays must match");
+
+    for (uint j = 0; j < orig.count(); j++)
+        for (uint i = 0; i < text.size; i++)
+            if (newBuf[i] == orig[j])
+                newBuf[i] = new[j];
+    return newString;
+}
+
+## Deletes any occurence of the given charecter in a string
+String remove(String text, byte find){
+    oldBuf := text.buffer;
+    newString := String(text);
+    newBuf := newString.buffer; 
+
+    uint newSize = 0;
+    for (uint i = 0; i < text.size; i++){
+        if (oldBuf[i] != find){
+            newBuf[newSize] = oldBuf[i];
+            newSize++;
+        }
+    }
+    newString.size = newSize;
+    return newString
 }

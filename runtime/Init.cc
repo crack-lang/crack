@@ -25,6 +25,12 @@ using namespace crack::ext;
 extern "C" bool __CrackUncaughtException();
 extern "C" void crack_runtime_time_init(crack::ext::Module *mod);
 
+// stat() appears to have some funny linkage issues in native mode so we wrap 
+// it in a normal function.
+extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
+    return stat(path, buf);
+}
+
 extern "C" void crack_runtime_init(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
@@ -129,8 +135,35 @@ extern "C" void crack_runtime_init(Module *mod) {
                          );
     statType->addConstructor();
     statType->finish();
+    
+    mod->addConstant(intType, "S_IFMT", S_IFMT);
+    mod->addConstant(intType, "S_IFSOCK", S_IFSOCK);
+    mod->addConstant(intType, "S_IFLNK", S_IFLNK);
+    mod->addConstant(intType, "S_IFREG", S_IFREG);
+    mod->addConstant(intType, "S_IFBLK", S_IFBLK);
+    mod->addConstant(intType, "S_IFDIR", S_IFDIR);
+    mod->addConstant(intType, "S_IFCHR", S_IFCHR);
+    mod->addConstant(intType, "S_IFIFO", S_IFIFO);
+    mod->addConstant(intType, "S_ISUID", S_ISUID);
+    mod->addConstant(intType, "S_ISGID", S_ISGID);
+    mod->addConstant(intType, "S_ISVTX", S_ISVTX);
+    mod->addConstant(intType, "S_IRWXU", S_IRWXU);
+    mod->addConstant(intType, "S_IRUSR", S_IRUSR);
+    mod->addConstant(intType, "S_IWUSR", S_IWUSR);
+    mod->addConstant(intType, "S_IXUSR", S_IXUSR);
+    mod->addConstant(intType, "S_IRWXG", S_IRWXG);
+    mod->addConstant(intType, "S_IRGRP", S_IRGRP);
+    mod->addConstant(intType, "S_IWGRP", S_IWGRP);
+    mod->addConstant(intType, "S_IXGRP", S_IXGRP);
+    mod->addConstant(intType, "S_IRWXO", S_IRWXO);
+    mod->addConstant(intType, "S_IROTH", S_IROTH);
+    mod->addConstant(intType, "S_IWOTH", S_IWOTH);
+    mod->addConstant(intType, "S_IXOTH", S_IXOTH);
 
-    f = mod->addFunc(intType, "stat", (void *)stat, "stat");
+
+    f = mod->addFunc(intType, "stat", (void *)crack_runtime_stat, 
+                     "crack_runtime_stat"
+                     );
     f->addArg(byteptrType, "path");
     f->addArg(statType, "buf");
 
