@@ -5,10 +5,16 @@ array operator overloading
 %%FILE%%
 import crack.io cout;
      class A { int oper [](int i) { return i; }
-               int oper []=(int i, int v) { return i * v; } };
+               int oper [](int i, int j) { return i + j; }
+               int oper [](int i, int j, int k) { return i + j + k; }
+               int oper []=(int i, int v) { return i * v; } 
+               int oper []=(int i, int j, int v) { return (i + j) * v; } 
+               int oper []=(int i, int j, int k, int v) { return (i + j + k) * v; } 
+             };
      A a = {};
-     cout `$(a[100]) $(a[100] = 2)`;
+     cout `$(a[100]) $(a[100, 200]) $(a[100, 200, 300]) `;
+     cout `$(a[100] = 2) $(a[100, 200] = 2) $(a[100, 200, 300] = 2)`;
 %%EXPECT%%
-100 200
+100 300 600 200 600 1200
 %%STDIN%%
 
