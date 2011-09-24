@@ -34,7 +34,10 @@ using namespace builder::mvll;
 
 void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
     // note, this->module and moduleDef->rep should be ==
+    // XXX only called from registerPrimFuncs currently
     bindJitModule(moduleDef->rep);
+    if (options->dumpMode)
+        dump();
 }
 
 void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {

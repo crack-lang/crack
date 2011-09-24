@@ -9,52 +9,47 @@
 
 #include <assert.h>
 
-#include <llvm/Support/Program.h>
-#include <llvm/Support/Host.h>
+#include <llvm/Module.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Support/FormattedStream.h>
 
 using namespace llvm;
 using namespace llvm::sys;
 using namespace builder::mvll;
 using namespace std;
 
-void Cacher::writeBitcode(llvm::Module *module) {
+void Cacher::writeMetadata(llvm::Module *module) {
 
-    /*
-    BuilderOptions::StringMap::const_iterator i = options->optionMap.find("out");
-    assert(i != options->optionMap.end() && "no out");
+    // XXX serialize namespace data to bitcode
 
-    sys::Path oFile(i->second);
-    sys::Path binFile(i->second);
+}
 
-    oFile.eraseSuffix();
-    binFile.eraseSuffix();
+void Cacher::writeBitcode(llvm::Module *module, const string &path) {
 
-    std::string error;
+    std::string Err;
     unsigned OpenFlags = 0;
     OpenFlags |= raw_fd_ostream::F_Binary;
-    tool_output_file *FDOut = new tool_output_file(oFile.str().c_str(),
+
+    tool_output_file *FDOut = new tool_output_file(path.c_str(),
                                                    Err,
                                                    OpenFlags);
     if (!Err.empty()) {
-        cerr << error << '\n';
+        cerr << Err << '\n';
         delete FDOut;
         return;
     }
 
     {
         formatted_raw_ostream FOS(FDOut->os());
-
-
-            // llvm bitcode
-            WriteBitcodeToFile(module, FOS);
+        // llvm bitcode
+        WriteBitcodeToFile(module, FOS);
     }
 
     // note FOS needs to destruct before we can keep
     FDOut->keep();
-    */
+    delete FDOut;
 
 }
 
@@ -70,7 +65,8 @@ BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
         return NULL;
 
     if (options->verbosity >= 2)
-        cerr << "attempting to load " << canonicalName << " from file: " << cacheFile << endl;
+        cerr << "attempting to load " << canonicalName << " from file: "
+             << cacheFile << endl;
 
     return NULL;
 }
@@ -82,12 +78,16 @@ void Cacher::saveToCache() {
     string cacheFile = getCacheFilePath(context, options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
-            cerr << "unable to find writeable directory for cache: caching skipped" << endl;
+            cerr << "unable to find writeable directory for cache: caching skipped"
+                 << endl;
         return;
     }
 
     if (options->verbosity >= 2)
         cerr << "caching " << modDef->getFullName() << " to file: " << cacheFile << endl;
+
+    writeMetadata(modDef->rep);
+    writeBitcode(modDef->rep, cacheFile);
 
 }
 
