@@ -25,7 +25,8 @@ class Cacher {
     const builder::BuilderOptions *options;
 
 protected:
-    void writeBitcode(llvm::Module *module);
+    void writeBitcode(llvm::Module *module, const std::string &path);
+    void writeMetadata(llvm::Module *module);
 
 public:
 

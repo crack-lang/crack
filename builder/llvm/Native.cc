@@ -556,6 +556,7 @@ void nativeCompile(llvm::Module *module,
 
     // note FOS needs to destruct before we can keep
     FDOut->keep();
+    delete FDOut;
 
     // if we created llvm or native assembly file we're done
     if (doBitcode ||
