@@ -74,8 +74,6 @@ class LLVMBuilder : public Builder {
                                           llvm::Function*) { }
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           void*) { }
-        virtual void addGlobalVarMapping(llvm::GlobalValue*,
-                                         llvm::GlobalValue*) { }
 
         /**
          * possibly bind the module to an execution engine
@@ -207,6 +205,11 @@ class LLVMBuilder : public Builder {
 
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);
+
+        virtual void addGlobalVarMapping(llvm::GlobalValue *decl,
+                                         llvm::GlobalValue *externalDef
+                                         ) {
+        }
 
         LLVMBuilder();
 

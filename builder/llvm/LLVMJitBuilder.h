@@ -33,9 +33,6 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           void*);
 
-        virtual void addGlobalVarMapping(llvm::GlobalValue*,
-                                         llvm::GlobalValue*);
-
         virtual void engineBindModule(BModuleDef *moduleDef);
         virtual void engineFinishModule(BModuleDef *moduleDef);
         virtual void fixClassInstRep(BTypeDef *type);
@@ -45,6 +42,10 @@ class LLVMJitBuilder : public LLVMBuilder {
                                               );
 
     public:
+        virtual void addGlobalVarMapping(llvm::GlobalValue *decl,
+                                         llvm::GlobalValue *externalDef
+                                         );
+
         LLVMJitBuilder(void) : execEng(0) { }
 
         virtual void *getFuncAddr(llvm::Function *func);
