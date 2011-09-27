@@ -739,9 +739,9 @@ SubString _substr(String target, uint pos, uint len) {
 
     byteptr buf = target.buffer + pos;
     if (target.isa(SubString))
-        target = SubString.cast(target)._rep;
-
-    return SubString(target, buf, len);
+        return SubString(SubString.cast(target)._rep, buf, len);
+    else
+        return SubString(target, buf, len);
 }
 
 SubString substr(String target, int pos, uint len) {
