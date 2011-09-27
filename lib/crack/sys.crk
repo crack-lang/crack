@@ -39,13 +39,14 @@ class _Environment: HashMap[String, String] {
             keyValString = String(e[i]);
             eqPos = keyValString.lfind(b"=");
             if (eqPos <= 0 )
-               throw InvalidResourceError(FStr() `Failed to split environment string $(e[i])\n`);
+               throw InvalidResourceError(FStr() `Failed to split environment \
+string $(e[i])\n`);
 
             if (keyValString.size > eqPos)
-               val = String(keyValString.substr(eqPos+1));
+               val = keyValString.substr(eqPos+1);
             else
                val = "";
-            key = String(keyValString.substr(0, eqPos));
+            key = keyValString.substr(0, eqPos);
             set(key, val);
             i++;
          }
