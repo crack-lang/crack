@@ -1,0 +1,10 @@
+%%TEST%%
+multi-dimensional numeric arrays
+%%ARGS%%
+
+%%FILE%%
+import test.test_numericarray_multi;
+%%EXPECT%%
+ok
+%%STDIN%%
+

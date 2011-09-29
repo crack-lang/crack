@@ -6,6 +6,7 @@
 #   -f stop on fail
 #   -r recompile the screen program
 #   -j run screen in JIT mode
+#   -v turn on verbose output
 
 root="$(dirname $(dirname $0))"
 
@@ -33,7 +34,7 @@ run_screen() {
         -o "$root/screen/output" "$builders" $opts "$@"
 }
 
-args=$(getopt fnrj "$@")
+args=$(getopt fnrjv "$@")
 eval set -- "$args"
 
 # process options
@@ -44,6 +45,7 @@ while true; do
         -f) opts="$opts --stop-on-fail" ;;
         -r) screen_recompile=true ;;
         -j) screen_jit=true ;;
+        -v) opts="$opts -v" ;;
         --) shift ; break ;;
     esac
     

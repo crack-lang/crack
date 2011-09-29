@@ -227,28 +227,6 @@ class NumericVector[Elem] : Array[Elem] {
 
 }
 
-@define initFromArray(ArrayType){
-    oper init(ArrayType[Elem] A): dims=1 
-    {
-        cols := A.count();
-        data=ArrayData[Elem](cols);
-        __rep = data.rep;
-        __cap = data.cap; 
-        __size = cols;
-
-        // Copy over data
-        Arep := A.data.rep;
-        for (uint i = 0; i < cols; i++)
-            __rep[i] = Arep[i];
-
-        shape = Array[uint]![cols];
-        strides = Array[uintz]![1];
-        offsets = Array[uintz]![0];
-        dims = 1;
-        T = this;
-    }
-}
-
 
 /// A multidimensional array similar to numpy's ndarray
 /// For 1D arrays it is faster to use the above NumericVector class
@@ -266,6 +244,29 @@ class NumericArray[Elem] {
     Array[uintz] offsets;
     
     NumericArray T; // Transpose
+    
+    @define initFromArray(ArrayType){
+        oper init(ArrayType[Elem] A): dims=1 
+        {
+            cols := A.count();
+            data=ArrayData[Elem](cols);
+            __rep = data.rep;
+            __cap = data.cap; 
+            __size = cols;
+
+            // Copy over data
+            Arep := A.data.rep;
+            for (uint i = 0; i < cols; i++)
+                __rep[i] = Arep[i];
+
+            shape = Array[uint]![cols];
+            strides = Array[uintz]![1];
+            offsets = Array[uintz]![0];
+            dims = 1;
+            T = this;
+        }
+    }
+
 
     @initFromArray(Array)
     @initFromArray(NumericVector)
@@ -294,39 +295,43 @@ class NumericArray[Elem] {
 
     void _createTranspose();
 
-    oper init(Array[Array[Elem]] AA): dims = 2
-    {
-        if (AA.count() == 0 || AA[0].count() == 0)
-            throw AssertionError("Number of rows must be greater than zero");
+    @define initFromArrayArray(ArrayType){
+        oper init(ArrayType[ArrayType[Elem]] AA): dims = 2
+        {
+            if (AA.count() == 0 || AA[0].count() == 0)
+                throw AssertionError("Number of rows must be greater than zero");
 
-        cols := AA[0].count();
-        uint rows;
-        for (rows = 1; rows < AA.count(); rows++){
-            if (AA[rows].count() != cols)
-                throw AssertionError("All rows must have the same length");
-        }
-
-        
-        data=ArrayData[Elem](cols * rows);
-        __rep = data.rep;
-        __cap = data.cap; 
-        __size = cols * rows;
-
-        // Copy over data
-        uint k = 0;
-        for (uint j = 0; j < rows; j++){
-            for (uint i = 0 ; i < cols; i++){
-                __rep[k] = AA[j].data.rep[i];
-                k++;
+            cols := AA[0].count();
+            uint rows;
+            for (rows = 1; rows < AA.count(); rows++){
+                if (AA[rows].count() != cols)
+                    throw AssertionError("All rows must have the same length");
             }
-        }
 
-        shape := Array[uint]![cols, rows];
-        strides = Array[uintz]![1, cols];
-        offsets = Array[uintz]![0, 0];
-        _createTranspose();
-        T.T = this;
+            
+            data=ArrayData[Elem](cols * rows);
+            __rep = data.rep;
+            __cap = data.cap; 
+            __size = cols * rows;
+
+            // Copy over data
+            uint k = 0;
+            for (uint j = 0; j < rows; j++){
+                for (uint i = 0 ; i < cols; i++){
+                    __rep[k] = AA[j].data.rep[i];
+                    k++;
+                }
+            }
+
+            shape = Array[uint]![cols, rows];
+            strides = Array[uintz]![1, cols];
+            offsets = Array[uintz]![0, 0];
+            _createTranspose();
+            T.T = this;
+        }
     }
+
+    @initFromArrayArray(Array)
 
     // This is a low-level constructor for use when slices, subarrays or transposes
     // are created
@@ -354,7 +359,7 @@ class NumericArray[Elem] {
             newShape := Array[uint]![shape[1], shape[0]];
             newStrides := Array[uintz]![strides[1], strides[0]];
             newOffsets := Array[uintz]![offsets[1], offsets[1]];
-            T = NumericArray(data, newShape, newOffsets, newOffsets);
+            T = NumericArray(data, newShape, newStrides, newOffsets);
         }
     }
     
@@ -373,17 +378,83 @@ class NumericArray[Elem] {
         return newData;
     }
 
-    NumericArray promote(){
-        if (dims == 1) {
-            newShape := Array[uint]![shape[0], 1];
-            newStrides := Array[uintz]![strides[0], shape[0]];
-            newOffsets := Array[uintz]![offsets[0], 0];
+    @static
+    NumericArray I(uint dim){
+        newData := ArrayData[Elem](dim*dim);
 
-            return NumericArray(data, newShape, newStrides, newOffsets);
+        uint cnt = 0;
+        for (uint j = 0; j < dim; j++)
+            for (uint i = 0; i < dim; i++){
+                if (i == j) newData.rep[cnt] = 1;
+                else newData.rep[cnt] = 0;
+                cnt++;
         }
-        else
-            throw AssertionError("promote only implemented for 1D arrays");
+        
+        return NumericArray(newData, Array[uint]![dim, dim], 
+                                     Array[uintz]![1, dim], 
+                                     Array[uintz]![0, 0]);
     }
+
+
+    @define identityNumbered(dim) {
+        @static
+        NumericArray I$$dim(){
+            return I(dim);
+        }
+    }
+
+
+    @identityNumbered(2)
+    @identityNumbered(3)
+    @identityNumbered(4)
+
+    void set(Elem value){
+        uint i;
+
+        for (i = 0; i < __cap; i++)
+            __rep[i] = value;
+    }
+    
+    @static
+    NumericArray empty(Array[uint] d){
+        if (d.count() == 0)
+            throw AssertionError("Attempt to create a NumericArray with 0 dimensions");
+
+        uint cap = 1;
+
+        newShape := d;
+        newStrides := Array[uintz](d.count());
+        newOffsets := Array[uintz](d.count());
+
+        for (uint i=0; i< d.count(); i++){
+            newStrides[i] = cap;
+            newOffsets.append(0);
+            cap*=d[i];
+        }
+        
+        newData := ArrayData[Elem](cap);
+        return NumericArray(newData, newShape, newStrides, newOffsets);
+    }
+
+    @static
+    NumericArray fill(Array[uint] d, Elem value){
+        A := empty(d);
+        A.set(value);
+        return A;
+    }
+
+    /// Convenience constructor to create a zeroed out 1D array
+    @static
+    NumericArray zeros(uint maxInd){
+        return fill(Array[uint]![maxInd], 0);
+    }
+
+    /// Convenience constructor to create a 1D array of ones
+    @static
+    NumericArray ones(uint maxInd){
+        return fill(Array[uint]![maxInd], 1);
+    }
+
 
     Elem oper [](uint i){
         if (dims!=1) 
@@ -548,6 +619,34 @@ class NumericArray[Elem] {
         return NumericArray(newData, Array[uint]![shape[0] + 1], strides.copy(), offsets.copy());
     }
 
+    NumericArray promoted(){
+        if (dims == 1) {
+            newShape := Array[uint]![shape[0], 1];
+            newStrides := Array[uintz]![strides[0], shape[0]];
+            newOffsets := Array[uintz]![offsets[0], 0];
+
+            return NumericArray(data, newShape, newStrides, newOffsets);
+        }
+        else
+            throw AssertionError("promote only implemented for 1D arrays");
+    }
+
+    NumericArray flattened(){
+        if (dims == 1) return this;
+        
+        if (dims == 2){
+            if (shape[1] > 1 && (offsets[0] > 0 || offsets[1] > 0 || strides[1] != shape[0]))
+                throw AssertionError("2D subarray with this shape and offsets cannot be flattened, create a copy first");
+            newShape := Array[uint]![shape[0] * shape[1]];
+            newStrides := Array[uintz]![strides[0]];
+            newOffsets := Array[uintz]![0];
+
+            return NumericArray(data, newShape, newStrides, newOffsets);
+        }
+        else
+            throw AssertionError("flatten only implemented for 1D and 2D arrays");
+    }
+
     void _writeLevel(Writer out, Array[uintz] wstrides, Array[uintz] woffsets, 
                 Array[uint] wshape, uint dim);
 
@@ -576,7 +675,7 @@ class NumericArray[Elem] {
             Array[uintz] noffsets = woffsets.subarray(0, dim - 1).copy();
             nstrides := wstrides.subarray(0, dim - 1);
             nshape := shape.subarray(0, dim - 1);
-            stride := nstrides[dim - 2];
+            stride := wstrides[dim - 1];
 
             for (uint i = 0; i < wshape[dim - 1]; i++){
                 if (!first)
