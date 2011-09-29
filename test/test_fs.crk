@@ -22,6 +22,9 @@ tempDir.makeDir();
 if (!tempDir.exists())
     cout `FAILED making directory\n`;
 
+if (!tempDir.isDir())
+    cout `FAILED isDir() check on directory\n`;
+
 Path foo = tempDir/'foo', bar = tempDir/'bar';
 foo.writeAll('this is foo');
 bar.writeAll('this is bar');
