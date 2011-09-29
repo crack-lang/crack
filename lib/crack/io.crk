@@ -1,47 +1,70 @@
 # Copyright 2009, Google Inc.
 # Basic input/output classes.
 
-import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer, 
+import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
     ManagedBuffer, Writer;
-import crack.runtime float_str, strlen, write, malloc, memcpy, free, read;
+import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
+    read;
 
 # we need Writer to be in crack.lang, but it belongs here.
 @export_symbols Writer;
 
-## Writer for a file descriptor.
-class FDWriter : Object, Writer {
+## Wraps a file handle and provides methods common to all file handles.
+class FileHandle : Object {
     int fd;
 
-    ## Constructs an FDWriter from a plain file descriptor.
     oper init(int fd) : fd = fd {}
+
+    ## Close the file descriptor.
+    void close() {
+        close(fd);
+        fd = -1;
+    }
+}
+
+## Writer for a file descriptor.
+## Unless you are managing the file descriptor elsewhere, you probably want
+## to use OwningFDWriter instead.
+class FDWriter : FileHandle, Writer {
+
+    ## Constructs an FDWriter from a plain file descriptor.
+    oper init(int fd) : FileHandle(fd) {}
 
     void write(Buffer buf) {
         write(fd, buf.buffer, buf.size);
     }
-    
+
     Object getWriterObject() { return this; }
 };
 
+## Writer for a file descriptor that closes the file descriptor upon
+## destruction.
+class OwningFDWriter : FDWriter {
+
+    oper init(int fd) : FDWriter(fd) {}
+    oper del() { if (fd != -1) close(); }
+}
+
 ## Interface for all readers.  Readers support two flavors of read()
 ## methods that allow you to read bytes from a stream.
-## This must be mixed in with something derived from Object, you must 
+## This must be mixed in with something derived from Object, you must
 ## implement read(WriteBuffer) and getReaderObject().
 class Reader : VTableBase {
 
-    ## Reads enough bytes to fill the buffer, or as many bytes as are 
-    ## available from the source.  Returns the number of bytes read.    
+    ## Reads enough bytes to fill the buffer, or as many bytes as are
+    ## available from the source.  Returns the number of bytes read.
     uint read(WriteBuffer buffer) {
         die('Reader.read(uint,byteptr) called');
         return 0;
     }
-    
+
     String read(uint size) {
         b := ManagedBuffer(size);
-        
+
         # have to qualify with this because of an overloading bug.
         s := this.read(b);
-        
-        # if the amount read is most of the buffer, just take ownership of the 
+
+        # if the amount read is most of the buffer, just take ownership of the
         # buffer.
         if (s >= size * 3 / 4) {
             b.size = s;
@@ -63,11 +86,12 @@ class Reader : VTableBase {
 };
 
 ## Reader to read from a file descriptor.
-class FDReader : Object, Reader {
-    int fd;
-    
-    oper init(int fd) : fd = fd {}
-    
+## Unless you are managing the file descriptor elsewhere, you probably want to
+## use OwningFDReader instead.
+class FDReader : FileHandle, Reader {
+
+    oper init(int fd) : FileHandle(fd) {}
+
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
         return uint(read(fd, buf.buffer, buf.size));
@@ -76,11 +100,19 @@ class FDReader : Object, Reader {
     Object getReaderObject() { return this; }
 };
 
-## Format val into buf.  The number will be formatted into the _end_ of the 
+## Reader for a file descriptor that closes the file descriptor upon
+## destruction.
+class OwningFDReader : FDReader {
+
+    oper init(int fd) : FDReader(fd) {}
+    oper del() { if (fd != -1) close(); }
+}
+
+## Format val into buf.  The number will be formatted into the _end_ of the
 ## buffer.
 ## Returns the start index of the number.
 uint _format(uint64 val,  ## value to format
-             byteptr buf, ## buffer to format into.  This must be large enough 
+             byteptr buf, ## buffer to format into.  This must be large enough
                           ## to hold the string representation of the number.
              uint size    ## size of the buffer
              ) {
@@ -92,7 +124,7 @@ uint _format(uint64 val,  ## value to format
         buf[i] = 48;
         return i;
     }
-    
+
     uint64 v = val;
     while (v) {
         i = i - 1;
@@ -106,9 +138,9 @@ uint _format(uint64 val,  ## value to format
 ## Format an integer into the buffer.  "buf" must be at least 21 characters.
 ## Returns the index to the beginning of the number.
 uint _format(int64 val, byteptr buf, uint size) {
-    uint i;   
+    uint i;
     if (val < 0) {
-        # negate the value, format the absolute value then add the sign to the 
+        # negate the value, format the absolute value then add the sign to the
         # beginning
         raw := uint64(-val);
         i = _format(raw, buf, size) - 1;
@@ -122,7 +154,7 @@ uint _format(int64 val, byteptr buf, uint size) {
 
 ## Formatter base class - got a format() method for anything.
 class Formatter : Object, Writer {
-    
+
     Writer rep;
 
     oper init(Writer rep) : rep = rep {}
@@ -135,18 +167,18 @@ class Formatter : Object, Writer {
     void write(Buffer data) {
         rep.write(data);
     }
-    
+
     void format(StaticString data) {
         write(data);
     }
-    
+
     void format(String data) {
         write(data);
     }
-    
+
     void format(int32 val) {
         buffer := ManagedBuffer(11);
-        
+
         # have to convert so it will match the later _format method.
         int64 v = val;
         start := _format(v, buffer.buffer, buffer.size);
@@ -155,7 +187,7 @@ class Formatter : Object, Writer {
 
     void format(uint32 val) {
         buffer := ManagedBuffer(10);
-        
+
         # _format(uint32) comes first so we don't have to type convert
         start := _format(val, buffer.buffer, buffer.size);
         write(Buffer(buffer.buffer + start, buffer.size - start));
@@ -195,7 +227,7 @@ class Formatter : Object, Writer {
         else
             write('false');
     }
-    
+
     ## For general objects, format() just calls the object's writeTo()
     ## method.
     void format(Object obj) {
@@ -204,7 +236,7 @@ class Formatter : Object, Writer {
         else
             obj.writeTo(this);
     }
-    
+
     ## So we can deal with plain null-terminated strings.
     void format(byteptr cstr) {
         write(cstr);
@@ -222,17 +254,17 @@ class StringWriter : AppendBuffer, Writer {
 
     oper init(uint initBufSize) : AppendBuffer(initBufSize) {}
     oper init() : AppendBuffer(1024) {}
-    
+
     void write(Buffer data) {
         extend(data);
     }
-    
+
     ## Return a string containing everything that has been written so far.
     String createString() {
         return String(buffer, pos, false);
     }
-    
-    ## Return a null terminated string containing everything that has been 
+
+    ## Return a null terminated string containing everything that has been
     ## written so far.
     CString createCString() {
         append(0);
@@ -244,23 +276,23 @@ class StringWriter : AppendBuffer, Writer {
 
 ## Allows you to read from a string.
 class StringReader : Object, Reader {
-    
+
     uint __pos;
     String __src;
-    
+
     oper init(String src) : __src = src {}
-    
+
     uint read(WriteBuffer buf) {
         if (__pos >= __src.size)
             return 0;
-        
-        count := 
+
+        count :=
             (__pos + buf.size > __src.size) ? __src.size - __pos : buf.size;
         buf.move(0, __src.buffer + __pos, count);
         __pos += count;
         return count;
     }
-    
+
     Object getReaderObject() { return this; }
 }
 
@@ -282,12 +314,12 @@ class StringFormatter : Formatter {
     String createCString() { return _writer.createCString(); }
 };
 
-## Instances of this class let you create a string from IString syntax.  
+## Instances of this class let you create a string from IString syntax.
 ## Sample usage:
 ##   String v = FStr() `variable x = $x`;
 class FStr : StringFormatter {
     oper init() {}
-    
+
     void enter() {
         if (!_writer)
             rep = _writer = StringWriter();
