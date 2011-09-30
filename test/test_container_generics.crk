@@ -52,6 +52,21 @@ if (Array[String]())
 if (sa[0] != 'first: 100' || sa[1] != 'fourth: 400')
     cout `string array or iteration failed\n`;
 
+# verify that iterators lock the tree
+if (1) {
+    TreeMap[String, int] leakTree() {
+        temp := m;
+        m = null;
+        return temp;
+    }
+
+    StringFormatter fmt = {};
+    for (i :in leakTree()) fmt `$(i.key)`;
+    result := fmt.createString();
+    if (result != 'firstfourthsecondthird')
+        cout `FAILED tree locking, got $result\n`;
+}
+
 #  test subarray
 sub := sa.subarray(1);
 if (sub[1] != 'second: 200' || sub[2] != 'third: 300' || sub[0] != 'fourth: 400')
