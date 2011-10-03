@@ -1,0 +1,22 @@
+%%TEST%%
+abstract generics
+%%ARGS%%
+%%FILE%%
+@abstract class A[T] : VTableBase {
+    @abstract T f();
+}
+
+class B : A[int] {
+    int f() { return 100; }
+}
+
+A[int] a = B();
+if (a.f() != 100)
+    puts('FAILED specialization of abstract');
+    
+
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
