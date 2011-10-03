@@ -84,4 +84,20 @@ b = null;
 if (result.createString() != 'Bar deleted')
     cout `Failed on interface cleanup\n`;
 
+if (1) {
+    @interface Gen1[A] { A a; }
+    class Inst1 : Object @implements Gen1[int] {}
+    Inst1 i = {};
+    if (String(typeof(i.a).name) != 'int')
+        cout `FAILED single argument generic interface\n`;
+    @interface Gen2[A, B] { A a; B b; }
+    class Inst2 : Object @implements Gen2[int, float] {}
+    Inst2 i2 = {};
+    if (String(typeof(i2.a).name) != 'int' ||
+        String(typeof(i2.b).name) != 'float'
+        )
+        cout `FAILED double argument generic interface\n`;
+}
+    
+
 cout `ok\n`;
