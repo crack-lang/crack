@@ -1961,6 +1961,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
     classType->type = classType;
     classType->meta = classType;
+    classType->defaultInitializer = new NullConst(classType);
     context.addDef(classType);
 
     // some tools for creating meta-classes
