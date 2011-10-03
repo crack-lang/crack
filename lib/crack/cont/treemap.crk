@@ -537,6 +537,11 @@ class TreeMap[KeyT, ValT] {
         return defaultVal;
     }
     
+    ## Returns true if the container contains the key.
+    bool contains(KeyT key) {
+        return __root && __root.find(key);
+    }
+    
     @final ValT get(KeyT key) {
         return get(key, null);
     }

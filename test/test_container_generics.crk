@@ -31,6 +31,11 @@ if (m.get('undefined', 100) != 100)
 if (m.get('first', -1) != 100)
     cout `FAILED: default values on defined keys don't work\n`;
 
+if (!m.contains('first'))
+    cout `FAILED: contains() fails on an element\n`;
+if (m.contains('bogus'))
+    cout `FAILED: contains() fails on a non-element\n`;
+
 Array[String] sa = {};
 
 for (item :in m) {
@@ -395,6 +400,12 @@ if (!hm)
 
 if (HashMap[String, int]())
     cout `FAILED: empty HashMap is not false\n`;
+
+if (hm.get('99', -1) != 99)
+    cout `FAILED: get('99', -1) != 99\n`;
+
+if (hm.get('100', -1) != -1)
+    cout `FAILED: get('100', -1) != -1\n`;
 
 for (int i = 0; i < 100; ++i) {
     key := FStr() `$i`;
