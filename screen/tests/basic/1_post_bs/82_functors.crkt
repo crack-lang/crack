@@ -1,0 +1,94 @@
+%%TEST%%
+functors
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+import crack.functor Functor0, Functor1, Functor2, Functor3, Functor4, 
+    Functor5;
+
+if (true) {
+    class F : Functor0[void] {
+        bool called;
+        void oper call() {
+            called = true;
+        }
+    }
+    Functor0[void] ftor = f := F();
+    ftor();
+    if (!f.called)
+        cout `FAILED Functor0\n`;
+}
+
+if (true) {
+    class F : Functor1[void, int] {
+        bool called;
+        void oper call(int val) {
+            called = val > 1;
+        }
+    }
+    Functor1[void, int] ftor = f := F();
+    ftor(2);
+    if (!f.called)
+        cout `FAILED Functor1\n`;
+}
+
+if (true) {
+    class F : Functor2[void, int, String] {
+        bool called;
+        void oper call(int val1, String val2) {
+            called = val1 > 1 && val2 == 'foo';
+        }
+    }
+    Functor2[void, int, String] ftor = f := F();
+    ftor(2, 'foo');
+    if (!f.called)
+        cout `FAILED Functor2\n`;
+}
+
+class A {}
+class B {}
+class C {}
+
+if (true) {
+    class F : Functor3[void, int, String, A] {
+        bool called;
+        void oper call(int val1, String val2, A val3) {
+            called = val1 > 1 && val2 == 'foo' && val3;
+        }
+    }
+    Functor3[void, int, String, A] ftor = f := F();
+    ftor(2, 'foo', A());
+    if (!f.called)
+        cout `FAILED Functor3\n`;
+}
+
+if (true) {
+    class F : Functor4[void, int, String, A, B] {
+        bool called;
+        void oper call(int val1, String val2, A val3, B val4) {
+            called = val1 > 1 && val2 == 'foo' && val3 && val4;
+        }
+    }
+    Functor4[void, int, String, A, B] ftor = f := F();
+    ftor(2, 'foo', A(), B());
+    if (!f.called)
+        cout `FAILED Functor4\n`;
+}
+
+if (true) {
+    class F : Functor5[void, int, String, A, B, C] {
+        bool called;
+        void oper call(int val1, String val2, A val3, B val4, C val5) {
+            called = val1 > 1 && val2 == 'foo' && val3 && val4 && val5;
+        }
+    }
+    Functor5[void, int, String, A, B, C] ftor = f := F();
+    ftor(2, 'foo', A(), B(), C());
+    if (!f.called)
+        cout `FAILED Functor5\n`;
+}
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
