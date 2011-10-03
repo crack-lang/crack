@@ -760,11 +760,52 @@ NodeList readBlock(CrackContext ctx) {
     return result;
 }
 
+void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
+    while (true) {
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            ctx.error(tok, 'Identifier expected in generic definition'.buffer);
+        tokens.append(Tok(tok));
+        
+        tok = ctx.getToken();
+        tokens.append(Tok(tok));
+        if (tok.isRBracket())
+            return;
+        else if (!tok.isComma())
+            ctx.error(tok, 
+                      'Comma or closing bracket expected in generic definition'.
+                       buffer
+                      );
+    }
+}
+
+## Writes a NodeList to an output stream separated by whitespace.
+class TokenWriter {
+    NodeList tokens;
+    oper init(NodeList tokens) : tokens = tokens {}
+    void writeTo(Writer out) {
+        for (tok :in tokens) {
+            out.write(tok.toString(null));
+            out.write(' ');
+        }
+    }
+}
+
 ## An annotation that defines an interface.
 void interface(CrackContext ctx) {
     nameTok := ctx.getToken();
     if (!nameTok.isIdent())
         ctx.error(nameTok, 'identifier expected for interface name'.buffer);
+    
+    # check for generic arguments
+    tok := ctx.getToken();
+    NodeListImpl genericArgs = {};
+    if (tok.isLBracket()) {
+        genericArgs.append(Tok(tok));
+        _parseGenericArgs(ctx, genericArgs);
+    } else {
+        ctx.putBack(tok);
+    }
 
     # read the body
     body := readBlock(ctx);
@@ -792,7 +833,7 @@ void interface(CrackContext ctx) {
     # inject the class definition
     loc = nameTok.getLocation();
     f = StringFormatter();
-    f `class $(nameTok.getText()) : VTableBase\n\0`;
+    f `class $(nameTok.getText())$(TokenWriter(genericArgs)) : VTableBase\n\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
 }
 
