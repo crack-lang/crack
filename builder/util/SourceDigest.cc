@@ -33,10 +33,16 @@ namespace {
 
 }
 
+SourceDigest::SourceDigest() {
+    memset(&digest, 0, SourceDigest::digest_size);
+}
+
 SourceDigest SourceDigest::fromFile(const std::string &path) {
 
     ifstream src;
     src.open(path.c_str());
+    if (!src.good())
+        return SourceDigest();
 
     // MD5
     SourceDigest d;

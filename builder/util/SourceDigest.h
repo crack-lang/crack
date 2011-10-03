@@ -18,6 +18,8 @@ class SourceDigest {
 
 public:
 
+    SourceDigest(void);
+
     static SourceDigest fromFile(const std::string &path);
     static SourceDigest fromHex(const std::string &d);
 
