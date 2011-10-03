@@ -2592,6 +2592,20 @@ void LLVMBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) 
 
 }
 
+std::string LLVMBuilder::getSourcePath(const std::string &path) {
+    char *rp = realpath(path.c_str(), NULL);
+    string result;
+    if (!rp) {
+        result = path;
+    }
+    else {
+        result = rp;
+        free(rp);
+    }
+    return result;
+
+}
+
 void LLVMBuilder::createModuleCommon(Context &context) {
 
     ConstructStats::CompileState oldStatState;

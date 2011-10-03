@@ -388,11 +388,13 @@ class Builder : public spug::RCBase {
          * Create a new module.
          * @param context the module context.
          * @param name the module's canonical name.
-         * @param owner the module's owner - this should be null unless the 
+         * @param path the full path to the existing source on disk
+         * @param owner the module's owner - this should be null unless the
          *  module is being defined inside another module that it depends on.
          */
         virtual model::ModuleDefPtr createModule(model::Context &context,
                                                  const std::string &name,
+                                                 const std::string &path,
                                                  model::ModuleDef *owner
                                                  ) = 0;
 

@@ -200,8 +200,10 @@ bool Context::encloses(const Context &other) const {
         return false;
 }
 
-ModuleDefPtr Context::createModule(const string &name, ModuleDef *owner) {
-    ModuleDefPtr result = builder.createModule(*this, name, owner);
+ModuleDefPtr Context::createModule(const string &name,
+                                   const string &path,
+                                   ModuleDef *owner) {
+    ModuleDefPtr result = builder.createModule(*this, name, path, owner);
     ns = result;
     return result;
 }

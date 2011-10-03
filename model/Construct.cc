@@ -429,7 +429,7 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                 stats->cachedCount++;
         }
         else
-            modDef = context->createModule(canonicalName);
+            modDef = context->createModule(canonicalName, modPath.path);
 
         moduleCache[canonicalName] = modDef;
 

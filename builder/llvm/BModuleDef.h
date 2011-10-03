@@ -30,8 +30,6 @@ public:
 
     // source text hash code, used for caching
     SourceDigest digest;
-    // real path on disk
-    std::string path;
     
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
@@ -40,8 +38,7 @@ public:
             ModuleDef(canonicalName, parent),
             cleanup(0),
             rep(rep0),
-            digest(),
-            path()
+            digest()
     {
     }
 

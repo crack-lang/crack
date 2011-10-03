@@ -55,6 +55,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual model::ModuleDefPtr createModule(model::Context &context,
                                                  const std::string &name,
+                                                 const std::string &path,
                                                  model::ModuleDef *module
                                                  );
 

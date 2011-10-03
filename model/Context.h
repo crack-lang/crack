@@ -201,6 +201,7 @@ class Context : public spug::RCBase {
         bool encloses(const Context &other) const;
 
         ModuleDefPtr createModule(const std::string &name,
+                                  const std::string &path = "",
                                   ModuleDef *owner = 0
                                   );
 

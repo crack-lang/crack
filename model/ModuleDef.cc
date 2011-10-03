@@ -12,7 +12,8 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     Namespace(name),
     parent(parent),
     finished(false),
-    fromExtension(false) {
+    fromExtension(false),
+    path() {
 }
 
 bool ModuleDef::hasInstSlot() {

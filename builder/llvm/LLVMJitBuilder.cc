@@ -73,7 +73,7 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
     }
     
     // mark the module as finished
-    moduleDef->rep->getOrInsertNamedMetadata("crack::finished");
+    moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
@@ -119,7 +119,7 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
     // if the module containing the original function has been finished, just 
     // add the global mapping.
-    if (real->getParent()->getNamedMetadata("crack::finished")) {
+    if (real->getParent()->getNamedMetadata("crack_finished")) {
         void *realAddr = execEng->getPointerToFunction(real);
         execEng->addGlobalMapping(pointer, realAddr);
     } else {
@@ -161,6 +161,7 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
 
 ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
                                           const string &name,
+                                          const string &path,
                                           ModuleDef *owner
                                           ) {
 
@@ -189,6 +190,9 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
         new BJitModuleDef(name, context.ns.get(), module, 
                           owner ? BJitModuleDefPtr::acast(owner) : 0
                           );
+
+    moduleDef->path = getSourcePath(path);
+
     return moduleDef;
 }
 

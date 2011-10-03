@@ -34,6 +34,9 @@ class ModuleDef : public VarDef, public Namespace {
         // aliased symbols that other modules are allowed to import.
         std::map<std::string, bool> exports;
 
+        // path to original source code on disk
+        std::string path;
+
         ModuleDef(const std::string &name, Namespace *parent);
 
         /**

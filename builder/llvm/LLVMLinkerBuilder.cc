@@ -172,6 +172,7 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
 
 ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
                                              const string &name,
+                                             const string &path,
                                              ModuleDef *owner
                                              ) {
 
@@ -230,6 +231,9 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
 
     BModuleDef *newModule =
         new BModuleDef(name, context.ns.get(), module);
+
+    newModule->path = getSourcePath(path);
+
     return newModule;
 }
 

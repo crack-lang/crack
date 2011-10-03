@@ -94,6 +94,10 @@ class LLVMBuilder : public Builder {
          */
         void createModuleCommon(model::Context &context);
 
+        /**
+          * get a realpath source path for the module
+          */
+        std::string getSourcePath(const std::string &path);
 
         /**
          * load module from llvm bitcode file

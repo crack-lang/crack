@@ -745,7 +745,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // create the new module with the current module as the owner.        
     ModuleDef *currentModule = 
         ModuleDefPtr::rcast(context.getModuleContext()->ns);
-    ModuleDefPtr module = modContext->createModule(moduleName, currentModule);
+    ModuleDefPtr module = modContext->createModule(moduleName, "", currentModule);
     
     // XXX this is confusing: there's a "owner" that's part of some kinds of 
     // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
