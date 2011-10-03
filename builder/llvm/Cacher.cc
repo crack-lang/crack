@@ -2,6 +2,7 @@
 
 #include "Cacher.h"
 #include "BModuleDef.h"
+#include "model/Namespace.h"
 
 #include "builder/BuilderOptions.h"
 #include "builder/util/SourceDigest.h"
@@ -14,19 +15,55 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/LLVMContext.h>
 
 using namespace llvm;
 using namespace llvm::sys;
 using namespace builder::mvll;
 using namespace std;
+using namespace model;
 
-void Cacher::writeMetadata(llvm::Module *module) {
+void Cacher::writeMetadata() {
 
-    // XXX serialize namespace data to bitcode
+    // encode metadata into the bitcode
+
+    vector<Value *> dList;
+    NamedMDNode *node;
+    Module *module = modDef->rep;
+
+    node = module->getOrInsertNamedMetadata("crack_origin_digest");
+    dList.push_back(MDString::get(getGlobalContext(), modDef->digest.asHex()));
+    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+
+    // original source path
+    dList.clear();
+    node = module->getOrInsertNamedMetadata("crack_origin_path");
+    dList.push_back(MDString::get(getGlobalContext(), modDef->path));
+    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+
+    /*
+    NamedMDNode *globals = module->getOrInsertNamedMetadata("crack_globals");
+
+    vector<Value *> gList;
+    for (Namespace::VarDefMap::const_iterator varIter = modDef->beginDefs();
+         varIter != modDef->endDefs();
+         ++varIter
+         ) {
+        gList.push_back(MDString::get(getGlobalContext(),
+                                      varIter->second->name));
+    }
+    globals->addOperand(MDNode::get(getGlobalContext(), gList.data(), gList.size()));
+
+
+    */
+
+    //module->dump();
 
 }
 
-void Cacher::writeBitcode(llvm::Module *module, const string &path) {
+void Cacher::writeBitcode(const string &path) {
+
+    Module *module = modDef->rep;
 
     std::string Err;
     unsigned OpenFlags = 0;
@@ -55,10 +92,6 @@ void Cacher::writeBitcode(llvm::Module *module, const string &path) {
 
 BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
                                        const string &path) {
-    if (options->verbosity >= 2)
-        cerr << "attempting cache load: " << canonicalName << ", " << path << endl;
-
-    SourceDigest d = SourceDigest::fromFile(path);
 
     string cacheFile = getCacheFilePath(context, options, canonicalName, "bc");
     if (cacheFile.empty())
@@ -68,12 +101,17 @@ BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
         cerr << "attempting to load " << canonicalName << " from file: "
              << cacheFile << endl;
 
+    // if cache file exists, we need to get a digest for comparison
+    // if it doesn't exist, we digest it when we save
+    SourceDigest digest = SourceDigest::fromFile(path);
+
     return NULL;
 }
 
 void Cacher::saveToCache() {
 
     assert(modDef && "empty modDef for saveToCache");
+    assert(!modDef->path.empty() && "module source path not set");
 
     string cacheFile = getCacheFilePath(context, options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
@@ -84,10 +122,14 @@ void Cacher::saveToCache() {
     }
 
     if (options->verbosity >= 2)
-        cerr << "caching " << modDef->getFullName() << " to file: " << cacheFile << endl;
+        cerr << "caching " << modDef->getFullName() << " from " << modDef->path
+             << " to file: " << cacheFile << endl;
 
-    writeMetadata(modDef->rep);
-    writeBitcode(modDef->rep, cacheFile);
+    // digest the source file
+    modDef->digest = SourceDigest::fromFile(modDef->path);
+
+    writeMetadata();
+    writeBitcode(cacheFile);
 
 }
 
