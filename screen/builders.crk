@@ -10,7 +10,7 @@ import crack.cont.array Array;
 import crack.lang AssertionError, SubString;
 import crack.exp.regex Regex;
 
-import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED, str_replace;
+import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
 import testdata TestData;
 
 ///////////////////////////
@@ -77,35 +77,26 @@ class BuilderTestHarness {
 
     Result compareOutput(String expected, String actual) {
 
-        // variable replacement
-        e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expected);
-        e = str_replace('%SOURCEDIR%', config.sourceDir.name, e);
-
         // note that we ignore trailing newspace on expected and actual
-        if (e.rtrim() == actual.rtrim()) {
+        if (expected.rtrim() == actual.rtrim()) {
             _pass();
             return Result(true);
         }
         else {
             _fail();
-            return Result(e, actual);
+            return Result(expected, actual);
         }
 
     }
 
     Result compareOutputRegex(String expectedRegex, String actual) {
 
-        // variable replacement
-        e := str_replace('%OUTDIR%',config.outDir.nameWithTrailing(), expectedRegex.rtrim());
-        e = str_replace('%SOURCEDIR%', config.sourceDir.name, e);
-                        
-
-        rx := Regex(e+"\w*");
+        rx := Regex(expectedRegex + "\w*");
         m := rx.search(actual.rtrim());
 
         if (m is null) {
             _fail();
-            return Result(e, actual);
+            return Result(expectedRegex, actual);
         }
 
         _pass();
@@ -116,9 +107,8 @@ class BuilderTestHarness {
 
         String args = {};
 
-        if (_data.sections.contains("ARGS")) {
-            args = str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["ARGS"].rtrim());
-        }
+        if (_data.sections.contains("ARGS"))
+            args = _data.sections["ARGS"].rtrim();
 
         output.write(_bDef.getNick());
         output.write(" Run: ");
@@ -146,7 +136,7 @@ class BuilderTestHarness {
         _proc = Process(cmd);
 
         if (_data.sections.contains("STDIN")) {
-            _proc.putStdIn(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["STDIN"]));
+            _proc.putStdIn(_data.sections["STDIN"]);
         }
 
     }
@@ -191,9 +181,8 @@ class BuilderTestHarness {
         StringWriter opts = {};
 
         // options for crack
-        if (_data.sections.contains("OPTS")) {
-            opts.write(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["OPTS"].rtrim()));
-        }
+        if (_data.sections.contains("OPTS"))
+            opts.write(_data.sections["OPTS"].rtrim());
 
         if (_data.dirConfig) {
             opts.write(" ");
@@ -211,7 +200,7 @@ class BuilderTestHarness {
         // args for script
 
         if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
-            args := str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["ARGS"].rtrim());
+            args := _data.sections["ARGS"].rtrim();
             if (!args.isEmpty()) {
                 cmd = cmd + " " + args;
             }
@@ -227,9 +216,8 @@ class BuilderTestHarness {
         _status = T_CRACK;
         _proc = Process(cmd);
 
-        if (!_bDef.separateBinary() && _data.sections.contains("STDIN")) {
-            _proc.putStdIn(str_replace('%SOURCEDIR%',config.sourceDir.nameWithTrailing(), _data.sections["STDIN"]));
-        }
+        if (!_bDef.separateBinary() && _data.sections.contains("STDIN"))
+            _proc.putStdIn(_data.sections["STDIN"]);
 
     }
 

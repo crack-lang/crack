@@ -458,6 +458,10 @@ class TreeMap[KeyT, ValT] {
         bool __first = true;
         Node __node;
         
+        # we preserve a reference to the tree to keep it from getting GC'ed
+        # out from under us.
+        TreeMap __tree;
+        
         void __findMin() {
             __node = __node.findMin();
         }
@@ -478,7 +482,7 @@ class TreeMap[KeyT, ValT] {
             }
         }
         
-        oper init(Node root) {
+        oper init(TreeMap tree, Node root) : __tree = tree {
             if (root)
                 __node = root.findMin();
         }
@@ -531,6 +535,11 @@ class TreeMap[KeyT, ValT] {
         }
         
         return defaultVal;
+    }
+    
+    ## Returns true if the container contains the key.
+    bool contains(KeyT key) {
+        return __root && __root.find(key);
     }
     
     @final ValT get(KeyT key) {
@@ -608,5 +617,5 @@ class TreeMap[KeyT, ValT] {
     ## a TreeMap is true if it has elements
     bool isTrue() { return __count; }
     
-    Iter iter() { return Iter(__root); }
+    Iter iter() { return Iter(this, __root); }
 }

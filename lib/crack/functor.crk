@@ -1,0 +1,28 @@
+# A couple of functor implementations
+# Copyright 2011 Google Inc.
+
+@import crack.exp.ann interface;
+
+@abstract @interface Functor0[RetT] {
+    @abstract RetT oper call();
+}
+
+@abstract @interface Functor1[RetT, T1] {
+    @abstract RetT oper call(T1 p1);
+}
+
+@abstract @interface Functor2[RetT, T1, T2] {
+    @abstract RetT oper call(T1 p1, T2 p2);
+}
+
+@abstract @interface Functor3[RetT, T1, T2, T3] {
+    @abstract RetT oper call(T1 p1, T2 p2, T3 p3);
+}
+
+@abstract @interface Functor4[RetT, T1, T2, T3, T4] {
+    @abstract RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4);
+}
+
+@abstract @interface Functor5[RetT, T1, T2, T3, T4, T5] {
+    @abstract RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5);
+}

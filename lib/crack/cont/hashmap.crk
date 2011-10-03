@@ -161,6 +161,14 @@ class HashMap[Key, Value] {
         return _items[i] ? _items[i].val : null;
     }
     
+    ## Returns the value associated with the key, 'default' if the key is not 
+    ## in the container.
+    Value get(Key key, Value default) {
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+        return _items[i] ? _items[i].val : default;
+    }
+    
     # Check all subsequent slots up to the next empty slot to see if there are 
     # any items that would like to fill 'index'
     # Returns 'true if it found a replacement.

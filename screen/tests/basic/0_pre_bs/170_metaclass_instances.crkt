@@ -2,15 +2,7 @@
 metaclass instances are accessible
 %%ARGS%%
 %%FILE%%
-bool streq(byteptr a, byteptr b) { 
-    while (a[0]) {
-        if (a[0] != b[0]) return 0;
-        a += 1; 
-        b += 1;
-    }
-    return (!b[0]);
-}
-
+import test.preutil streq;
 if ( !streq(typeof(int).name, 'Class[builtin.int]') )
     puts('FAILED typeof int');
 if ( !streq(typeof(array[int]).name, 'Class[builtin.array]') )

@@ -767,6 +767,11 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     genericInfo->replay(toker);
     toker.putBack(Token(Token::ident, name, Location()));
     toker.putBack(Token(Token::classKw, "class", Location()));
+    if (abstract)
+        modContext->nextClassFlags =
+            static_cast<Flags>(model::TypeDef::explicitFlags |
+                               model::TypeDef::abstractClass
+                               );
 
     modContext->pushErrorContext(SPUG_FSTR("in generic instantiation at " <<
                                            context.getLocation()

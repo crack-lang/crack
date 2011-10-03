@@ -2,6 +2,8 @@
 import crack.lang die;
 import crack.io cout, Writer;
 import crack.exp.regex escape, Regex, Match;
+import crack.functor Functor2;
+@import crack.exp.ann implements;
 
 rx := Regex('simple');
 m := rx.search('not simple');
@@ -58,6 +60,21 @@ if (1) {
     
     if (rx.match('babafoo'))
         cout `FAILED !match() not starting with matching string\n`;
+}
+
+# simple test of functors
+if (1) {
+    class F : Object @implements Functor2[void, Match, Writer] {
+        void oper call(Match mx, Writer out) {
+            if (mx.group() != 'pat')
+                cout `FAILED match during value replacement.\n`;
+            out.write('test');
+        }
+    }
+    
+    rx = Regex('pat');
+    if (rx.subst('exchange pat for pat', F(), -1) != 'exchange test for test')
+        cout `FAILED substitution of a functor.\n`;
 }
 
 cout `ok\n`;

@@ -1,0 +1,18 @@
+%%TEST%%
+Meta-class edge cases
+%%ARGS%%
+%%FILE%%
+import test.preutil streq;
+
+class A {}
+Class c;
+if (!streq(typeof(c).name, 'Class'))
+    puts('FAILED type name on a Class variable');
+if (!streq(typeof(A).name, 'Class[%SCRIPTNAME%.A]'))
+    puts('FAILED type name of Class[A]');
+if (!streq(typeof(typeof(A)).name, 'Class'))
+    puts('FAILED type name of type of Class[A]');
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
