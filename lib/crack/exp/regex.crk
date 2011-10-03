@@ -3,6 +3,7 @@
 import crack.lang die, free, AppendBuffer, Buffer, SubString;
 import crack.io cerr, StringFormatter, StringWriter, Writer;
 import crack.exp.bindings ByteptrWrapper, Opaque;
+import crack.functor Functor2;
 @import crack.exp.ann define;
 
 import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
@@ -196,6 +197,12 @@ class Regex : _RegexBase {
     ## instances to replace.
     @define __arg() { function[void, Match, Writer] func }
     @__subst(@__arg(), func(mx, result));
+    
+    ## Replace the first 'count' instances of the regular expression in 
+    ## 'subject' using the functor.  If count >= 0, it is the number of 
+    ## instances to replace.
+    @define __functorArg() { Functor2[void, Match, Writer] func } 
+    @__subst(@__functorArg(), func(mx, result));
     
     ## Replace the first 'count'instances of the regular expression in 
     ## 'subject' with the specified string.  If count >= 0, it is the number 
