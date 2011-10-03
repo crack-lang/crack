@@ -5,7 +5,7 @@ import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter, FS
 import crack.sys argv, exit;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
-import crack.exp.regex Regex;
+import crack.exp.regex Regex, Match;
 import crack.exp.process Process;
 import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
 import crack.cont.hashmap HashMap;
@@ -16,7 +16,33 @@ import crack.strutil StringArray, split;
 import stats testSuiteStats;
 import testdata TestData, DirConfig;
 import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
-import config config, T_INIT, T_RUNNING, T_FINISHED, str_replace;
+import config config, T_INIT, T_RUNNING, T_FINISHED;
+@import crack.exp.ann implements;
+import crack.functor Functor2;
+
+# variable pattern
+Regex varPat = {r'%([^%]+)%'};
+
+class VarMap : HashMap[String, String] 
+               @implements Functor2[void, Match, Writer] {
+    void oper call(Match match, Writer writer) {
+        var := match.group(1);
+        writer.write(get(var, ''));
+    }
+}
+
+# demand-load macros from config.
+VarMap _macros;
+VarMap getMacros() {
+    if (!_macros) {
+        _macros = VarMap();
+        _macros['SOURCEDIR'] = config.sourceDir.nameWithTrailing();
+        _macros['OUTDIR'] = config.outDir.nameWithTrailing();
+        _macros['SCRIPTNAME'] = 'script name not defined!';
+    }
+    
+    return _macros;
+}
 
 class Template {
 
@@ -40,7 +66,8 @@ class Template {
             m := headerPat.search(lineBuf);
             if (m) {
                 if (curSection)
-                    sections[curSection] = dataBuf.createString();
+                    sections[curSection] = 
+                        varPat.subst(dataBuf.createString(), getMacros(), -1);
                 curSection = m.group(1);
                 //cerr `debug: switching to group $curSection\n`;
                 dataBuf = StringWriter();
@@ -51,7 +78,8 @@ class Template {
             }
         }
         if (curSection)
-            sections[curSection] = dataBuf.createString();
+            sections[curSection] =
+                varPat.subst(dataBuf.createString(), getMacros(), -1);
 
         return sections;
 
@@ -68,6 +96,7 @@ class Template {
 class Test {
 
     TestData _data = {};
+    String scriptName;
     StringWriter _output = {};
     StringWriter _vOutput = {};
 
@@ -107,12 +136,10 @@ class Test {
 
     void writeScript() {
         
-        _data.scriptName = config.outDir.nameWithTrailing()+
-                           _data.fInfo.basename(true) + ".crk";
+        _data.scriptName = scriptName;
         out := File(_data.scriptName,"w");
 
         text := _data.sections["FILE"];
-        text = str_replace('%SOURCEDIR%', config.sourceDir.nameWithTrailing(), text);
 
         out.write(text);
         
@@ -212,6 +239,9 @@ class Test {
     oper init(FileInfo info, DirConfig dc) {
         _data.fInfo = info;
         _data.dirConfig = dc;
+        scriptName = config.outDir.nameWithTrailing() +
+                     _data.fInfo.basename(true) + ".crk";
+        getMacros()['SCRIPTNAME'] = scriptName;
         _data.sections = Template.load(info.name);
         if (_data.sections is null) {
             _isSkipped = "unabled to open file";
@@ -262,9 +292,6 @@ class TestSuite {
             if (sec.contains("OPTS")) {
                 dc = DirConfig();
                 dc.options = sec["OPTS"].rtrim();
-                dc.options = str_replace('%SOURCEDIR%',
-                                         config.sourceDir.nameWithTrailing(),
-                                         dc.options);
             }
         }
 
