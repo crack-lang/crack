@@ -1061,6 +1061,11 @@ int cmp(Object a, Object b) {
 
 $$
 
+int cmp(bool a, bool b) { 
+    if ((a && b) || (!a && !b)) return 0;
+    return 1;
+}
+
 @lightcmp byte
 @lightcmp int32
 @heavycmp uint32

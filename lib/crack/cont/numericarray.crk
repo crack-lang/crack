@@ -427,7 +427,7 @@ class NumericArray[Elem] {
         newOffsets := Array[uintz](d.count());
 
         for (uint i=0; i< d.count(); i++){
-            newStrides[i] = cap;
+            newStrides.append(cap);
             newOffsets.append(0);
             cap*=d[i];
         }

@@ -23,6 +23,7 @@ bool _isNull(Object obj) {
     bool _isNull($1 i) { return false; } 
 $$
 
+@_nobind bool
 @_nobind byte
 @_nobind int
 @_nobind int32
@@ -294,7 +295,7 @@ class Array[Elem] {
 
     bool contains(Elem e) {
         for (uint i = 0; i < __size; i++){
-            if (e == __rep[i])
+            if (cmp (e, __rep[i]) == 0)
                 return true;
         }
         return false;

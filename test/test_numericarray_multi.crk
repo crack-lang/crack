@@ -46,6 +46,7 @@ printCmp(NA3.T, NA4, "2D transpose failed");
 printCmp(NA3, NA3.T.T, "2D double transpose failed");
 printCmp(NA3, NA4.T, "2D inverse transpose failed");
 
+// 2D identity matrices
 @define identityTest(dim){
         I$$dim := NumericArray[int].I$$dim();
         _I$$dim := NumericArray[int].I(dim);
@@ -55,5 +56,17 @@ printCmp(NA3, NA4.T, "2D inverse transpose failed");
 @identityTest(2)
 @identityTest(3)
 @identityTest(4)
+
+// convenience constructors
+@define convenienceConstructors(prefix, method){
+    prefix$$1 := NumericArray.method(10);
+}
+
+Z1 := NumericArray[uint].zeros(10);
+O1 := NumericArray[uint].ones(10);
+
+N1 := NumericArray[uint].fill(Array[uint]![10], 20);
+N2 := NumericArray[uint].fill(Array[uint]![10, 10], 30);
+N3 := NumericArray[uint].fill(Array[uint]![10, 10, 10], 40);
 
 cout `ok\n`;

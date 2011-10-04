@@ -1,5 +1,6 @@
 // Algorithms
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+import crack.lang cmp;
 
 ## Base class version of quick-sort, can be applied to primitive arrays.
 class QuickSortPrim[Elem] {
@@ -27,18 +28,18 @@ class QuickSortPrim[Elem] {
         v := A[r];
 
         while (true) {
-            while (A[++i] < v);
-            while (v < A[--j]) 
+            while (cmp(A[++i], v) < 0);
+            while (cmp(v, A[--j]) < 0) 
                 if (j == l) 
                     break;
             if (i >= j) 
                 break;
-            _swap(A, i,j);
-            if (A[i] == v) { 
+            _swap(A, i, j);
+            if (cmp(A[i], v) == 0) { 
                 p++; 
                 _swap(A, p, i);
             }
-            if (v == A[j]) { 
+            if (cmp(v, A[j]) == 0) { 
                 q--; 
                 _swap(A, j, q);
             }
@@ -97,7 +98,7 @@ class InsertionSortPrim[Elem] {
             while (j < count) {
                 key := A[j];
                 i = j-1;
-                while (i >= 0 && A[i] > key) {
+                while (i >= 0 && cmp (A[i], key) > 0) {
                     _swap(A, i+1, i);
                     i--;
                 }
