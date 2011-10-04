@@ -5,8 +5,8 @@
 #include "model/Namespace.h"
 
 #include "builder/BuilderOptions.h"
-#include "builder/util/SourceDigest.h"
 #include "builder/util/CacheFiles.h"
+#include "builder/util/SourceDigest.h"
 
 #include <assert.h>
 
@@ -15,6 +15,8 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/system_error.h>
 #include <llvm/LLVMContext.h>
 
 using namespace llvm;
@@ -61,6 +63,43 @@ void Cacher::writeMetadata() {
 
 }
 
+bool Cacher::readMetadata() {
+
+    Module *module = modDef->rep;
+
+    NamedMDNode *node;
+    MDNode *mnode;
+    MDString *str;
+
+    node = module->getNamedMetadata("crack_origin_digest");
+    assert(node && "no crack_origin_digest");
+    mnode = node->getOperand(0);
+    assert(mnode && "malformed crack_origin_digest");
+    str = dyn_cast<MDString>(mnode->getOperand(0));
+    if (str) {
+
+        // compare the digest stored in the bitcode against the current
+        // digest of the source file on disk. if they don't match, we miss
+        SourceDigest bcDigest = SourceDigest::fromHex(str->getString().str());
+        if (bcDigest != modDef->digest)
+            return false;
+
+    }
+
+    node = module->getNamedMetadata("crack_origin_path");
+    assert(node && "no crack_origin_path");
+    mnode = node->getOperand(0);
+    assert(mnode && "malformed crack_origin_path");
+    str = dyn_cast<MDString>(mnode->getOperand(0));
+    if (str) {
+        modDef->path = str->getString().str();
+    }
+
+    // cache hit
+    return true;
+
+}
+
 void Cacher::writeBitcode(const string &path) {
 
     Module *module = modDef->rep;
@@ -101,11 +140,40 @@ BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
         cerr << "attempting to load " << canonicalName << " from file: "
              << cacheFile << endl;
 
+    OwningPtr<MemoryBuffer> fileBuf;
+    if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
+        if (options->verbosity >= 2)
+            cerr << "getFile: " << ec.message() << endl;
+        return NULL;
+    }
+
+    string errMsg;
+    Module *module = getLazyBitcodeModule(fileBuf.take(), getGlobalContext(), &errMsg);
+    if (!module) {
+        fileBuf.reset();
+        if (options->verbosity >= 1)
+            cerr << "failed to load bitcode: " << errMsg << endl;
+        return NULL;
+    }
+
+    // if we get here, we've loaded bitcode successfully
+    modDef = new BModuleDef(canonicalName, context.ns.get(), module);
+
     // if cache file exists, we need to get a digest for comparison
     // if it doesn't exist, we digest it when we save
-    SourceDigest digest = SourceDigest::fromFile(path);
+    modDef->digest = SourceDigest::fromFile(path);
 
-    return NULL;
+    if (readMetadata()) {
+        // cache hit
+        return modDef;
+    }
+    else {
+        // during meta data read, we determined we will miss
+        delete modDef;
+        delete module;
+        return NULL;
+    }
+
 }
 
 void Cacher::saveToCache() {

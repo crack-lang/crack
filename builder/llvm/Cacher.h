@@ -27,6 +27,7 @@ class Cacher {
 protected:
     void writeBitcode(const std::string &path);
     void writeMetadata();
+    bool readMetadata();
 
 public:
 
