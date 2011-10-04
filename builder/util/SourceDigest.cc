@@ -5,7 +5,9 @@
 #include <fstream>
 #include <iomanip>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 using namespace builder;
 using namespace std;
@@ -51,9 +53,19 @@ SourceDigest SourceDigest::fromFile(const std::string &path) {
 
 }
 
-static SourceDigest fromHex(const std::string &d) {
-    // XXX
-    return SourceDigest();
+SourceDigest SourceDigest::fromHex(const std::string &d) {
+    SourceDigest result;
+    if (d.length() != SourceDigest::digest_size*2)
+        return result;
+    const char *buf = d.c_str();
+    char pos[3];
+    pos[2] = 0;
+    for (int di = 0; di < SourceDigest::digest_size; ++di) {
+        pos[0] = *(buf+di*2);
+        pos[1] = *((buf+di*2)+1);
+        result.digest[di] = (digest_byte_t)strtol((const char*)&pos, NULL, 16);
+    }
+    return result;
 }
 
 
