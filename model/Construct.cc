@@ -447,6 +447,9 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                 modDef->close(*context);
             }
         }
+        else {
+            // XXX hook to run/finish cached module
+        }
 
         builderStack.pop();
     }
@@ -550,20 +553,42 @@ int Construct::runScript(istream &src, const string &name) {
     // XXX using the name as the canonical name which is not right, need to 
     // produce a canonical name from the file name, e.g. "foo" -> "foo", 
     // "foo.crk" -> foo, "anything weird" -> "__main__" or something.
-    ModuleDefPtr modDef = context->createModule(name);
-    try {
-        parseModule(*context, modDef.get(), name, src);
+
+    ModuleDefPtr modDef;
+    bool cached = false;
+    if (rootBuilder->options->cacheMode)
+        modDef = context->materializeModule(name, name);
+    if (modDef) {
+        cached = true;
         loadedModules.push_back(modDef);
+        if (rootBuilder->options->statsMode)
+            stats->cachedCount++;
+    }
+    else
+        modDef = context->createModule(name, name);
+
+    try {
+        if (!cached) {
+            parseModule(*context, modDef.get(), name, src);
+            loadedModules.push_back(modDef);
+            // allow builder to cache after parse
+            if (rootBuilder->options->cacheMode)
+                context->cacheModule(modDef);
+        }
+        else {
+            // XXX hook to run/finish cached module
+        }
     } catch (const ParseError &ex) {
         cerr << ex << endl;
         return 1;
     } catch (...) {
         if (!uncaughtExceptionFunc)
-            cerr << "Uncaught exception, no uncaught exception handler!" << 
+            cerr << "Uncaught exception, no uncaught exception handler!" <<
                 endl;
         else if (!uncaughtExceptionFunc())
             cerr << "Unknown exception caught." << endl;
     }
+
     builderStack.pop();
     rootBuilder->finishBuild(*context);
     if (rootBuilder->options->statsMode)
