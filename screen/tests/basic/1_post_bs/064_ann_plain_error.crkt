@@ -11,8 +11,8 @@ annotation warnings plain error function
     @error
     XXX
 %%EXPECT%%
-%OUTDIR%064_ann_plain_error.crk:4: warning with token
-%OUTDIR%064_ann_plain_error.crk:5: plain warning
-ParseError: %OUTDIR%064_x.crk:6: plain error
+%SCRIPTNAME%:4: warning with token
+%SCRIPTNAME%:5: plain warning
+ParseError: %SCRIPTNAME%:6: plain error
 %%STDIN%%
 
