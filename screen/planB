@@ -23,39 +23,31 @@ else
     exit 1
 fi
 
+function slash_terminate {
+    case "$1" in
+        */) echo "$1" ;;
+        *) echo "$1/" ;;
+    esac
+}
+
+temp_root="$(slash_terminate $ROOT)"
+temp_outdir="$(slash_terminate $OUTDIR)"
+STATIC_VARS="
+    s:%SOURCEDIR%:$temp_root:g
+    s:%OUTDIR%:$temp_outdir:g
+"
+VARS="$STATIC_VARS"
+
 function extract_section {
     local file="$1"
     local sec="$2"
-    local filelen=`wc -l $file | awk '{ print \$1'}`
-    local result
-    #echo "file len: $filelen" >&2
-    cmd="grep -n --color=never %%$sec%% $file"
-    start=`$cmd  | awk -F : '{print \$1}'`
-    #echo "start of $sec: $start"  >&2
-    start_plus_one=`expr $start + 1`
-    cmd1="tail -n +$start_plus_one $file"
-    cmd2="egrep -n -m 1 --color=never %%.+%%"
-    next=`$cmd1 | $cmd2 | awk -F : '{print \$2}'`
-    if [ -n "$next" ]; then  
-        # there is a following section
-        #echo "next section following $sec: $next"  >&2
-        cmd="grep -n --color=never $next $file"
-        end=`$cmd  | awk -F : '{print \$1}'`
-        #echo "which is located at $end"  >&2
-        seclen=`expr $end - $start_plus_one`
-        #echo "section length: $seclen"  >&2
-        seclen_minus_one=`expr $seclen - 1`
-        result=`tail -n +$start_plus_one $file | head -n $seclen`
-        #echo "got: $result" >&2
-    else
-       # no following section, i.e. EOF
-        #echo "no following section" >&2
-        end=$filelen
-        seclen=`expr $end - $start`
-        result=`tail -n +$start_plus_one $file`
-    fi
-    
-    echo "$result"
+    result="$(awk <$file '
+        BEGIN { in_section = 0; }
+        /^%%.*%%$/ && in_section { in_section = 0; }
+        in_section != 0 { print $0; }
+        /^%%'$sec'%%$/ { in_section = 1; }
+        ')"
+    echo "$result" | sed "$VARS"
 }
 
 function load_options {
@@ -68,8 +60,8 @@ function load_options {
     
     opt_file="$path/options"
     if [ -e "$opt_file" ]; then
-        OPTS_sec="$(extract_section "$opt_file" OPTS | 
-                    sed s:%SOURCEDIR%:$ROOT:g)"
+        OPTS_sec="$(extract_section "$opt_file" OPTS)"
+        return
     fi
     
     # check parent directory
@@ -87,14 +79,15 @@ function run_test {
     outfile="$OUTDIR$newname.crk"
     #echo "outfile: $outfile"
     
+    # add the script name to the substitution vars
+    VARS="$STATIC_VARS; s:%SCRIPTNAME%:$outfile:g"
+    
     TEST_sec=$(extract_section $file TEST)
     echo -n "$TEST_sec ..."
-    FILE_sec=$(extract_section $file FILE | sed "s:%SOURCEDIR%:$ROOT:g")
+    FILE_sec=$(extract_section $file FILE)
     echo "$FILE_sec" > $outfile
-    ARGS_sec=$(extract_section $file ARGS |
-               sed "s:%SOURCEDIR%:$ROOT:g")
-    EXPECT_sec=`extract_section $file EXPECT |
-                sed "s:%OUTDIR%:$OUTDIR:g;s:%SOURCEDIR%:$ROOT:g"`
+    ARGS_sec=$(extract_section $file ARGS)
+    EXPECT_sec=`extract_section $file EXPECT`
     STDIN_sec=`extract_section $file STDIN`
     
     # XXX script args
@@ -117,6 +110,7 @@ function run_test {
             echo "$cmdline"
             echo "Expected: $EXPECT_sec"
             echo "Got     : $result"
+            diff <(echo "$EXPECT_sec") <(echo "$result")
             errors=$((errors + 1))
         fi
     fi
