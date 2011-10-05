@@ -107,6 +107,15 @@ s = "foo\n";
 if (s.rtrim() != "foo")
     die('rtrim failed');
 
+if ('test\nother\n'.rtrim() != 'test\nother')
+    die('rtrim of string with embedded newline failed');
+
+if (''.rtrim() != '')
+    cout `FAILED ''.rtrim()\n`;
+
+if (' \n\t\r'.rtrim() != '')
+    cout `FAILED all_whitespace.rtrim()\n`;
+
 s = 'test\'\0\223';
 if (s.getRepr() != "'test\\047\\000\\223'")
     cout `bad value for s.getRepr(): $(s.getRepr())\n`;

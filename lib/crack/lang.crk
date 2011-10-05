@@ -463,7 +463,7 @@ SubString substr(String target, int pos, uint len);
 SubString substr(String target, int pos);
 SubString slice(String target, int start, int end);
 SubString slice(String target, int start);
-SubString rtrim(String target);
+String rtrim(String target);
 
 @define substr2 1 {
 
@@ -659,7 +659,7 @@ class String : Buffer {
     SubString slice(int start) @slice1 this
 
     ## Remove trailing newline from the end of the string
-    SubString rtrim() { return rtrim(this); }
+    String rtrim() { return rtrim(this); }
 
     ## Returns a legal source representation of the string.
     String getRepr() {
@@ -788,22 +788,18 @@ SubString slice(String target, int start) {
     return _substr(target, uint(start), target.size - uint(start));
 }
 
-SubString rtrim(String target) {
+String rtrim(String target) {
 
-    if (target.isa(SubString))
-        target = SubString.cast(target)._rep;
-
-    len := target.size;
-
-    // XXX currently this merely finds the leftmost newline and
-    // returns a substring up to that point. it needs to work harder
-    // to find other whitespace and ensure the substring it returns
-    // doesn't leave any valid non whitespace characters off
-    pos := target.lfind(10);
-    if (pos != -1)
-        len = uint(pos);
-
-    return SubString(target, target.buffer, len);
+    if (!target) return target;
+    intz cur = target.size - 1;
+    while (cur > -1 && ((ch := target.buffer[cur]) == b' ' ||
+                        ch == b'\t' ||
+                        ch == b'\r' ||
+                        ch == b'\n'
+                        )
+           )
+        --cur;
+    return target.slice(0, cur + 1);
 }
 
 ## A string that is guaranteed to be null terminated. The trailing null is
