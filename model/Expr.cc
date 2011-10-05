@@ -43,3 +43,5 @@ bool Expr::isProductive() const {
 bool Expr::isAdaptive() const {
     return false;
 }
+
+void Expr::dump() const { writeTo(std::cerr); }

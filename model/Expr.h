@@ -58,6 +58,8 @@ class Expr : public spug::RCBase {
          * Write a representation of the expression to the stream.
          */
         virtual void writeTo(std::ostream &out) const = 0;
+        
+        void dump() const;
 };
 
 inline std::ostream &operator <<(std::ostream &out, const Expr &expr) {
