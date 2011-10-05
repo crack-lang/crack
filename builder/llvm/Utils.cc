@@ -150,7 +150,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
         // extract the initializer from the rep (which is the global
         // variable for the _pointer_ to the class)
-        Constant *baseClassPtr = impl->rep->getInitializer();
+        Constant *baseClassPtr = base->classInst;
         
         // make sure that this is in the module
         if (cast<GlobalValue>(impl->rep)->getParent() != llvmBuilder.module) {

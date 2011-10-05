@@ -38,24 +38,33 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         return new BResultExpr(this, builder.lastValue);                    \
     }
 
-#define QUAL_BINOP(prefix, opCode, op)                                      \
+#define QUAL_BINOP(prefix, opCode, op) \
     ResultExprPtr prefix##OpCall::emit(Context &context) {                  \
         LLVMBuilder &builder =                                              \
             dynamic_cast<LLVMBuilder &>(context.builder);                   \
         int arg = 0;                                                        \
-        if (receiver)                                                       \
+                                                                            \
+        TypeDef *ltype, *funcLType;                                         \
+        if (receiver) {                                                     \
+            ltype = receiver->type.get();                                   \
+            funcLType = func->getReceiverType();                            \
             receiver->emit(context)->handleTransient(context);              \
-        else                                                                \
+        } else {                                                            \
+            ltype = args[arg]->type.get();                                  \
+            funcLType = func->args[arg]->type.get();                        \
             args[arg++]->emit(context)->handleTransient(context);           \
+        }                                                                   \
+        builder.narrow(ltype, func->args[arg]->type.get());                 \
         Value *lhs = builder.lastValue;                                     \
         args[arg]->emit(context)->handleTransient(context);                 \
+        builder.narrow(args[arg]->type.get(), func->args[arg]->type.get()); \
         builder.lastValue =                                                 \
             builder.builder.Create##opCode(lhs,                             \
                                            builder.lastValue                \
                                            );                               \
                                                                             \
         return new BResultExpr(this, builder.lastValue);                    \
-    }                                                                       \
+    }
 
 // reverse binary operators, must be run as methods.
 #define REV_BINOP(opCode) \

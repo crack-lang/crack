@@ -4,14 +4,25 @@ Meta-class edge cases
 %%FILE%%
 import test.preutil streq;
 
-class A {}
-Class c;
-if (!streq(typeof(c).name, 'Class'))
-    puts('FAILED type name on a Class variable');
-if (!streq(typeof(A).name, 'Class[%SCRIPTNAME%.A]'))
-    puts('FAILED type name of Class[A]');
-if (!streq(typeof(typeof(A)).name, 'Class'))
-    puts('FAILED type name of type of Class[A]');
+# tests that meta-class names are correctly constructed
+if (1) {
+    class A {}
+    Class c;
+    if (!streq(typeof(c).name, 'Class'))
+        puts('FAILED type name on a Class variable');
+    if (!streq(typeof(A).name, 'Class[%SCRIPTNAME%.A]'))
+        puts('FAILED type name of Class[A]');
+    if (!streq(typeof(typeof(A)).name, 'Class'))
+        puts('FAILED type name of type of Class[A]');
+}
+
+# tests that "is" is does narrowing correctly
+if (1) {
+    class A : VTableBase {}
+    if (!(A.bases[0] is VTableBase))
+        puts('FAILED identifying a VTableBase');
+}
+
 puts('ok');
 %%EXPECT%%
 ok
