@@ -87,13 +87,13 @@ class NumericVector[Elem] : Array[Elem] {
         Elem delta = 1;
         if (endVal > startVal){
             delta = endVal - startVal;
-            delta /= num;
+            delta /= Elem(num);
             if (includeLast)
                 endVal += delta;
         }
         else {
             delta = startVal - endVal;
-            delta /= num;
+            delta /= Elem(num);
             if (includeLast)
                 endVal -= delta;
         }

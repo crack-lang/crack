@@ -716,25 +716,36 @@ class Matrix {
         return m;
     }
 
-    void translate(float64 tx, float64 ty) { cairo_matrix_translate(matrix, tx, ty); }
+    void translate(float64 tx, float64 ty) { 
+        cairo_matrix_translate(matrix, tx, ty); 
+    }
+
     void scale(float64 sx, float64 sy) { cairo_matrix_scale(matrix, sx, sy); }
     void rotate(float64 radians) { cairo_matrix_rotate(matrix, radians); }
     uint invert() { return cairo_matrix_invert(matrix); }
     
+
     Matrix inverted(){
         m := Matrix(matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0); 
         m.invert();
         return m;
     }
 
-    Matrix multiply(Matrix b) { 
+    @static
+    Matrix inverted(float64 xx, float64 yx, float64 xy, float64 yy, float64 x0, float64 y0){
+        m := Matrix(xx, yx, xy, yy, x0, y0); 
+        m.invert();
+        return m;
+    }
+
+    Matrix multiplied(Matrix b) { 
         result := Matrix();
         cairo_matrix_multiply(result.matrix, matrix, b.matrix);
         return result;
     }
-    
+
     Matrix oper *(Matrix b){
-        return multiply(b);
+        return multiplied(b);
     }
 
     void transform_distance(array[float64] dx, array[float64] dy) { cairo_matrix_transform_distance(matrix, dx, dy); }
@@ -980,6 +991,7 @@ class Cairo {
     void set_line_cap(uint line_cap) { cairo_set_line_cap(cr, line_cap); }
     void set_line_join(uint line_join) { cairo_set_line_join(cr, line_join); }
     void set_dash(array[float64] dashes, int num_dashes, float64 offset) { cairo_set_dash(cr, dashes, num_dashes, offset); }
+
     void set_dash(Array[float64] dashes, float64 offset) {
         cairo_set_dash(cr, dashes.data.rep, dashes.count(), offset);
     }
@@ -993,11 +1005,44 @@ class Cairo {
     void set_matrix(cairo_matrix_t matrix) { cairo_set_matrix(cr, matrix); }
     void set_matrix(Matrix matrix) { cairo_set_matrix(cr, matrix.matrix); }
     void identity_matrix() { cairo_identity_matrix(cr); }
+
+    // Some user <--> device coord transforms
     void user_to_device(array[float64] x, array[float64] y) { cairo_user_to_device(cr, x, y); }
+
+    Array[float64] user_to_device(float64 x, float64 y) { 
+        xA := array[float64]![x];
+        yA := array[float64]![y];
+        cairo_user_to_device(cr, xA, yA);
+        return Array[float64]![xA[0], yA[0]];
+    }
+
     void user_to_device_distance(array[float64] dx, array[float64] dy) { cairo_user_to_device_distance(cr, dx, dy); }
+
+    Array[float64] user_to_device_distance(float64 dx, float64 dy) { 
+        dxA := array[float64]![dx];
+        dyA := array[float64]![dy];
+        cairo_user_to_device_distance(cr, dxA, dyA);
+        return Array[float64]![dxA[0], dyA[0]];
+    }
+
     void device_to_user(array[float64] x, array[float64] y) { cairo_device_to_user(cr, x, y); }
 
+    Array[float64] device_to_user(float64 x, float64 y) { 
+        xA := array[float64]![x];
+        yA := array[float64]![y];
+        cairo_device_to_user(cr, xA, yA);
+        return Array[float64]![xA[0], yA[0]];
+    }
+
+
     void device_to_user_distance(array[float64] dx, array[float64] dy) { cairo_device_to_user_distance(cr, dx, dy); }
+    Array[float64] device_to_user_distance(float64 dx, float64 dy) { 
+        dxA := array[float64]![dx];
+        dyA := array[float64]![dy];
+        cairo_device_to_user_distance(cr, dxA, dyA);
+        return Array[float64]![dxA[0], dyA[0]];
+    }
+
     void new_path() { cairo_new_path(cr); }
     void move_to(float64 x, float64 y) { cairo_move_to(cr, x, y); }
     void new_sub_path() { cairo_new_sub_path(cr); }
