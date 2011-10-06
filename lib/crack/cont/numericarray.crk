@@ -1,7 +1,7 @@
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
 import crack.math abs, log2;
 import crack.io cout, Writer, FStr;
-import crack.exp.algorithm QuickSort;
+import crack.algorithm QuickSort;
 import crack.cont.array Array, ArrayData;
 @import crack.exp.ann define;
 

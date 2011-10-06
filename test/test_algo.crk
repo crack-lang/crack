@@ -1,7 +1,7 @@
 // test algorithms
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.exp.algorithm QuickSort, QuickSortPrim, InsertionSort, 
+import crack.algorithm QuickSort, QuickSortPrim, InsertionSort, 
     InsertionSortPrim, HeapPrim, Heap, HeapSortPrim, HeapSort;
 import crack.cont.array Array;
 import crack.io cout, FStr;

@@ -3,7 +3,7 @@
 
 import crack.cont.array Array;
 import crack.io Writer, cout;
-import crack.exp.algorithm HeapPrim;
+import crack.algorithm HeapPrim;
 
 ## A priority queue backed by a dynamic array which maintains the max-heap
 ## property

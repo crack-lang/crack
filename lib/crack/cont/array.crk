@@ -3,7 +3,7 @@
 
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
 import crack.io cout, Writer, FStr;
-import crack.exp.algorithm QuickSort;
+import crack.algorithm QuickSort;
 
 # we use poormac here because the standard macro mechanism depends on this 
 # module.

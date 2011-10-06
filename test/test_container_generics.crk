@@ -8,7 +8,7 @@ import crack.cont.treemap TreeMap;
 import crack.cont.list List, DList;
 import crack.cont.hashmap HashMap;
 import crack.cont.priorityqueue PriorityQueue;
-import crack.exp.algorithm QuickSort;
+import crack.algorithm QuickSort;
 @import crack.exp.ann define;
 
 TreeMap[String, int] m = {};
