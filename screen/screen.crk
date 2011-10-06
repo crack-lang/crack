@@ -6,7 +6,7 @@ import crack.sys argv, exit;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.regex Regex, Match;
-import crack.exp.process Process;
+import crack.process Process;
 import crack.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
 import crack.cont.hashmap HashMap;
 import crack.cont.array Array;

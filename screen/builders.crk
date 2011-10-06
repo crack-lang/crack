@@ -4,7 +4,7 @@
 import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
-import crack.exp.process Process;
+import crack.process Process;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AssertionError, SubString;
