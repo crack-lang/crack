@@ -3,7 +3,7 @@
 
 import crack.cont.numericarray NumericVector;
 import crack.io cout;
-import crack.exp.cmdline CmdOptions;
+import crack.cmdline CmdOptions;
 import crack.sys argv;
 @import crack.exp.ann define;
 

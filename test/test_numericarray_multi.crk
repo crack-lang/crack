@@ -4,7 +4,7 @@
 import crack.cont.array Array;
 import crack.cont.numericarray NumericVector, NumericArray;
 import crack.io cout;
-import crack.exp.cmdline CmdOptions;
+import crack.cmdline CmdOptions;
 import crack.sys argv;
 @import crack.exp.ann define;
 

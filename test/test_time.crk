@@ -1,7 +1,7 @@
 // Test time.h binding in runtime
 import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen;
 import crack.lang ManagedBuffer;
-import crack.exp.cmdline CmdOptions;
+import crack.cmdline CmdOptions;
 import crack.io cout;
 import crack.time Date;
 import crack.sys argv;
