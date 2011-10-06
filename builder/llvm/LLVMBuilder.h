@@ -100,20 +100,6 @@ class LLVMBuilder : public Builder {
         std::string getSourcePath(const std::string &path);
 
         /**
-         * load module from llvm bitcode file
-         */
-        virtual model::ModuleDefPtr materializeModule(model::Context &context,
-                                              const std::string &canonicalName,
-                                              const std::string &path,
-                                              model::ModuleDef *owner
-                                              );
-
-        /**
-         * save module to llvm bitcode file
-         */
-        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod);
-
-        /**
          * Gets the first unwind block for the context, emitting the whole 
          * cleanup chain if necessary.
          */

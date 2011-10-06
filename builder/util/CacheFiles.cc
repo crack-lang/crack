@@ -26,6 +26,8 @@ string getCacheFilePath(Context &context,
 
     // XXX maybe pull out ModulePath from construct for use
 
+    // XXX add in opt level?
+
     path = "/tmp/"+canonicalName+"."+ext;
     return path;
 

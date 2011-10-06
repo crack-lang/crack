@@ -27,6 +27,8 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void dump();
 
+        void doRunOrDump(model::Context &context);
+
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
@@ -72,6 +74,14 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void finishBuild(model::Context &context) { }
 
         virtual void initializeImport(model::ModuleDef*, bool annotation) { }
+
+        virtual model::ModuleDefPtr materializeModule(model::Context &context,
+                                              const std::string &canonicalName,
+                                              const std::string &path,
+                                              model::ModuleDef *owner
+                                              );
+
+        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod);
 
 };
 

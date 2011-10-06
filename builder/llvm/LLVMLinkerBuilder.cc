@@ -9,6 +9,7 @@
 #include "Utils.h"
 #include "BBuilderContextData.h"
 #include "Native.h"
+#include "Cacher.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
@@ -410,4 +411,21 @@ void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
 
 void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
     type->getClassInstRep(module, 0);
+}
+
+model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(model::Context &context,
+                                                   const std::string &canonicalName,
+                                                   const std::string &path,
+                                                   model::ModuleDef *owner) {
+
+    Cacher c(context, options.get());
+    return c.maybeLoadFromCache(canonicalName, path);
+
+}
+
+void LLVMLinkerBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) {
+
+    Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
+    c.saveToCache();
+
 }

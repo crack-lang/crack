@@ -61,6 +61,14 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         virtual bool isExec() { return false; }
 
+        virtual model::ModuleDefPtr materializeModule(model::Context &context,
+                                              const std::string &canonicalName,
+                                              const std::string &path,
+                                              model::ModuleDef *owner
+                                              );
+
+        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod);
+
 };
 
 } } // namespace

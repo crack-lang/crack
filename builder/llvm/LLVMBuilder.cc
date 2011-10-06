@@ -24,7 +24,6 @@
 #include "VarDefs.h"
 #include "VTableBuilder.h"
 #include "DebugInfo.h"
-#include "Cacher.h"
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -2573,23 +2572,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     return bMod;
-
-}
-
-model::ModuleDefPtr LLVMBuilder::materializeModule(model::Context &context,
-                                                   const std::string &canonicalName,
-                                                   const std::string &path,
-                                                   model::ModuleDef *owner) {
-
-    Cacher c(context, options.get());
-    return c.maybeLoadFromCache(canonicalName, path);
-
-}
-
-void LLVMBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) {
-
-    Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
-    c.saveToCache();
 
 }
 

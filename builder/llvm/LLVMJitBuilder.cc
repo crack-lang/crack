@@ -9,6 +9,7 @@
 #include "Utils.h"
 #include "BBuilderContextData.h"
 #include "debug/DebugTools.h"
+#include "Cacher.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -286,12 +287,18 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
             );
     }
 
+    doRunOrDump(context);
+
+}
+void LLVMJitBuilder::doRunOrDump(Context &context) {
+
     // dump or run the module depending on the mode.
     if (rootBuilder->options->statsMode)
         context.construct->stats->switchState(ConstructStats::run);
 
     if (options->dumpMode)
         dump();
+
     if (!options->dumpMode || !context.construct->compileTimeConstruct)
         run();
 
@@ -309,4 +316,49 @@ void LLVMJitBuilder::dump() {
     PassManager passMan;
     passMan.add(llvm::createPrintModulePass(&llvm::outs()));
     passMan.run(*module);
+}
+
+model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
+                                                   const std::string &canonicalName,
+                                                   const std::string &path,
+                                                   model::ModuleDef *owner) {
+
+    Cacher c(context, options.get());
+    BModuleDef *bmod = c.maybeLoadFromCache(canonicalName, path);
+
+    if (bmod) {
+
+        // we materialized a module from bitcode cache
+        // find the main function
+        module = bmod->rep;
+
+        NamedMDNode *node = module->getNamedMetadata("crack_entry_func");
+        assert(node && "no crack_entry_func");
+        MDNode *funcNode = node->getOperand(0);
+        assert(funcNode && "malformed crack_entry_func");
+        func = dyn_cast<Function>(funcNode->getOperand(0));
+        assert(func && "entry function not LLVM Function!");
+
+        engineBindModule(bmod);
+        doRunOrDump(context);
+
+    }
+
+    return bmod;
+
+}
+
+void LLVMJitBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) {
+
+    // encode main function location in bitcode metadata
+    vector<Value *> dList;
+    NamedMDNode *node;
+
+    node = module->getOrInsertNamedMetadata("crack_entry_func");
+    dList.push_back(func);
+    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+
+    Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
+    c.saveToCache();
+
 }
