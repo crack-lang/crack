@@ -20,11 +20,15 @@ class BModuleDef;
 
 class Cacher {
 
+    static const std::string MD_VERSION;
+
     BModuleDef *modDef;
     model::Context &context;
     const builder::BuilderOptions *options;
 
 protected:
+    void addNamedStringNode(const std::string &key, const std::string &val);
+    std::string getNamedStringNode(const std::string &key);
     void writeBitcode(const std::string &path);
     void writeMetadata();
     bool readMetadata();

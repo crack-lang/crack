@@ -25,23 +25,46 @@ using namespace builder::mvll;
 using namespace std;
 using namespace model;
 
+// metadata version
+const std::string Cacher::MD_VERSION = "1";
+
+void Cacher::addNamedStringNode(const string &key, const string &val) {
+
+    vector<Value *> dList;
+    NamedMDNode *node;
+
+    node = modDef->rep->getOrInsertNamedMetadata(key);
+    dList.push_back(MDString::get(getGlobalContext(), val));
+    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+
+}
+
+string Cacher::getNamedStringNode(const std::string &key) {
+
+    NamedMDNode *node;
+    MDNode *mnode;
+    MDString *str;
+
+    node = modDef->rep->getNamedMetadata(key);
+    assert(node && "missing required named string node");
+    mnode = node->getOperand(0);
+    assert(mnode && "malformed string node 1");
+    str = dyn_cast<MDString>(mnode->getOperand(0));
+    assert(str && "malformed string node 2");
+    return str->getString().str();
+
+}
+
 void Cacher::writeMetadata() {
 
     // encode metadata into the bitcode
+    addNamedStringNode("crack_md_version", Cacher::MD_VERSION);
+    addNamedStringNode("crack_origin_digest", modDef->digest.asHex());
+    addNamedStringNode("crack_origin_path", modDef->path);
 
     vector<Value *> dList;
     NamedMDNode *node;
     Module *module = modDef->rep;
-
-    node = module->getOrInsertNamedMetadata("crack_origin_digest");
-    dList.push_back(MDString::get(getGlobalContext(), modDef->digest.asHex()));
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
-
-    // original source path
-    dList.clear();
-    node = module->getOrInsertNamedMetadata("crack_origin_path");
-    dList.push_back(MDString::get(getGlobalContext(), modDef->path));
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
 
     /*
     NamedMDNode *globals = module->getOrInsertNamedMetadata("crack_globals");
@@ -65,35 +88,21 @@ void Cacher::writeMetadata() {
 
 bool Cacher::readMetadata() {
 
-    Module *module = modDef->rep;
+    string snode;
 
-    NamedMDNode *node;
-    MDNode *mnode;
-    MDString *str;
+    // first check metadata version
+    snode = getNamedStringNode("crack_md_version");
+    if (snode != Cacher::MD_VERSION)
+        return false;
 
-    node = module->getNamedMetadata("crack_origin_digest");
-    assert(node && "no crack_origin_digest");
-    mnode = node->getOperand(0);
-    assert(mnode && "malformed crack_origin_digest");
-    str = dyn_cast<MDString>(mnode->getOperand(0));
-    if (str) {
+    // compare the digest stored in the bitcode against the current
+    // digest of the source file on disk. if they don't match, we miss
+    snode = getNamedStringNode("crack_origin_digest");
+    SourceDigest bcDigest = SourceDigest::fromHex(snode);
+    if (bcDigest != modDef->digest)
+        return false;
 
-        // compare the digest stored in the bitcode against the current
-        // digest of the source file on disk. if they don't match, we miss
-        SourceDigest bcDigest = SourceDigest::fromHex(str->getString().str());
-        if (bcDigest != modDef->digest)
-            return false;
-
-    }
-
-    node = module->getNamedMetadata("crack_origin_path");
-    assert(node && "no crack_origin_path");
-    mnode = node->getOperand(0);
-    assert(mnode && "malformed crack_origin_path");
-    str = dyn_cast<MDString>(mnode->getOperand(0));
-    if (str) {
-        modDef->path = str->getString().str();
-    }
+    modDef->path = getNamedStringNode("crack_origin_path");
 
     // cache hit
     return true;
