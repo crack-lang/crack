@@ -3,7 +3,7 @@
 
 import crack.exp.dir Directory;
 import crack.cont.array Array;
-import crack.exp.regex Regex;
+import crack.regex Regex;
 
 class Config {
     String crackBin, libPath;

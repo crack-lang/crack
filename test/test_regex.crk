@@ -1,7 +1,7 @@
 
 import crack.lang die;
 import crack.io cout, Writer;
-import crack.exp.regex escape, Regex, Match;
+import crack.regex escape, Regex, Match;
 import crack.functor Functor2;
 @import crack.exp.ann implements;
 

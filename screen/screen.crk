@@ -5,7 +5,7 @@ import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter, FS
 import crack.sys argv, exit;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
-import crack.exp.regex Regex, Match;
+import crack.regex Regex, Match;
 import crack.exp.process Process;
 import crack.exp.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_BOOL;
 import crack.cont.hashmap HashMap;
