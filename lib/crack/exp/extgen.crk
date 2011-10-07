@@ -363,6 +363,7 @@ class SpecializedType : TypeImpl {
         $typeName = $(generic.emit())->getSpecialization(params);
     }
 `;
+        initialized = true;
     }
 }
 
