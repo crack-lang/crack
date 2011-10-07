@@ -3,7 +3,7 @@ generics with annotations
 %%ARGS%%
 
 %%FILE%%
-@import crack.exp.ann define;
+@import crack.ann define;
     import crack.io cout;
      
      class A[X] {

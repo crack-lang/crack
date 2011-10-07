@@ -7,7 +7,7 @@
 // For vector and matrix functions, try to stay close to numpy
 
 // import functions and some constants known at compile time
-@import crack.exp.ann define;
+@import crack.ann define;
 import crack.lang CString, Exception, InvalidArgumentError, BadCastError;
 import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs, exp, exp2,

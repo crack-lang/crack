@@ -1,7 +1,7 @@
 # A couple of functor implementations
 # Copyright 2011 Google Inc.
 
-@import crack.exp.ann interface;
+@import crack.ann interface;
 
 @abstract @interface Functor0[RetT] {
     @abstract RetT oper call();

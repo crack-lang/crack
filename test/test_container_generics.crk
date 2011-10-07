@@ -9,7 +9,7 @@ import crack.cont.list List, DList;
 import crack.cont.hashmap HashMap;
 import crack.cont.priorityqueue PriorityQueue;
 import crack.algorithm QuickSort;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 TreeMap[String, int] m = {};
 m['first'] = 100;

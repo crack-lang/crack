@@ -1,6 +1,6 @@
 # Copyright 2010 Google Inc.
 
-@import crack.exp.ann define, export, exporter;
+@import crack.ann define, export, exporter;
 @exporter;
 
 # Try hardcoding a macro definition just to make sure all of the parts work.

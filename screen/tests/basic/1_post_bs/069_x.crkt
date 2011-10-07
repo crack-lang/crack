@@ -3,7 +3,7 @@ error contexts work
 %%ARGS%%
 
 %%FILE%%
-@import crack.exp.ann define; @define fail() { void f() { bad; } }
+@import crack.ann define; @define fail() { void f() { bad; } }
      @fail()
 %%EXPECT%%
 ParseError: %OUTDIR%069_x.crk:1: Unknown identifier bad

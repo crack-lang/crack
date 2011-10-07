@@ -3,7 +3,7 @@ import crack.math abs, log2;
 import crack.io cout, Writer, FStr;
 import crack.algorithm QuickSort;
 import crack.cont.array Array, ArrayData;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 void _bind(Object obj) { obj.oper bind(); }
 void _release(Object obj) { obj.oper release(); }

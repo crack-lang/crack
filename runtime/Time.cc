@@ -79,83 +79,61 @@ void crack_runtime_time_init(crack::ext::Module *mod) {
     crack::ext::Type *type_float = mod->getFloatType();
 
     crack::ext::Type *type_InternalDate = mod->addType("InternalDate", sizeof(InternalDate));
-        type_InternalDate->addInstVar(type_int,
-                             "tm_sec",
-                             CRACK_OFFSET(InternalDate, tm_sec)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_min",
-                             CRACK_OFFSET(InternalDate, tm_min)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_hour",
-                             CRACK_OFFSET(InternalDate, tm_hour)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_mday",
-                             CRACK_OFFSET(InternalDate, tm_mday)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_mon",
-                             CRACK_OFFSET(InternalDate, tm_mon)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_year",
-                             CRACK_OFFSET(InternalDate, tm_year)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_wday",
-                             CRACK_OFFSET(InternalDate, tm_wday)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_yday",
-                             CRACK_OFFSET(InternalDate, tm_yday)
-                             );
-        type_InternalDate->addInstVar(type_int,
-                             "tm_isdst",
-                             CRACK_OFFSET(InternalDate, tm_isdst)
-                             );
-        type_InternalDate->addInstVar(type_int64,
-                             "tm_gmtoff",
-                             CRACK_OFFSET(InternalDate, tm_gmtoff)
-                             );
-        type_InternalDate->addInstVar(type_byteptr,
-                             "tm_zone",
-                             CRACK_OFFSET(InternalDate, tm_zone)
-                             );
+        type_InternalDate->addInstVar(type_int, "tm_sec",
+                                CRACK_OFFSET(InternalDate, tm_sec));
+        type_InternalDate->addInstVar(type_int, "tm_min",
+                                CRACK_OFFSET(InternalDate, tm_min));
+        type_InternalDate->addInstVar(type_int, "tm_hour",
+                                CRACK_OFFSET(InternalDate, tm_hour));
+        type_InternalDate->addInstVar(type_int, "tm_mday",
+                                CRACK_OFFSET(InternalDate, tm_mday));
+        type_InternalDate->addInstVar(type_int, "tm_mon",
+                                CRACK_OFFSET(InternalDate, tm_mon));
+        type_InternalDate->addInstVar(type_int, "tm_year",
+                                CRACK_OFFSET(InternalDate, tm_year));
+        type_InternalDate->addInstVar(type_int, "tm_wday",
+                                CRACK_OFFSET(InternalDate, tm_wday));
+        type_InternalDate->addInstVar(type_int, "tm_yday",
+                                CRACK_OFFSET(InternalDate, tm_yday));
+        type_InternalDate->addInstVar(type_int, "tm_isdst",
+                                CRACK_OFFSET(InternalDate, tm_isdst));
+        type_InternalDate->addInstVar(type_int64, "tm_gmtoff",
+                                CRACK_OFFSET(InternalDate, tm_gmtoff));
+        type_InternalDate->addInstVar(type_byteptr, "tm_zone",
+                                CRACK_OFFSET(InternalDate, tm_zone));
         f = type_InternalDate->addConstructor("init",
-                    (void *)crk_create_date
-            );
+                        (void *)crk_create_date
+                );
 
         f = type_InternalDate->addMethod(type_int64, "getSeconds",
-                    (void *)mktime
-            );
+                        (void *)mktime
+                );
 
         f = type_InternalDate->addMethod(type_void, "setLocalSeconds",
-                    (void *)crk_localtime
-            );
+                        (void *)crk_localtime
+                );
             f->addArg(type_int64, "t");
 
         f = type_InternalDate->addMethod(type_void, "setLocalNow",
-                    (void *)crk_localtime_now
-            );
+                        (void *)crk_localtime_now
+                );
 
         f = type_InternalDate->addMethod(type_void, "setUTCSeconds",
-                    (void *)crk_gmtime
-            );
+                        (void *)crk_gmtime
+                );
             f->addArg(type_int64, "t");
 
         f = type_InternalDate->addMethod(type_void, "setUTCNow",
-                    (void *)crk_gmtime_now
-            );
+                        (void *)crk_gmtime_now
+                );
 
         f = type_InternalDate->addMethod(type_void, "setEpoch",
-                    (void *)crk_epoch
-            );
+                        (void *)crk_epoch
+                );
 
         f = type_InternalDate->addMethod(type_void, "_toBufferRaw",
-                    (void *)asctime_r
-            );
+                        (void *)asctime_r
+                );
             f->addArg(type_byteptr, "buf");
 
     type_InternalDate->finish();

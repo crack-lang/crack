@@ -9,7 +9,7 @@ import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
     InvalidStateError;
 import crack.exp.readers FullReader;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 ## This gets raised when referencing a path that doesn't exist.
 class NoEntryError : Exception {

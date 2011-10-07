@@ -17,7 +17,7 @@ import stats testSuiteStats;
 import testdata TestData, DirConfig;
 import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
 import config config, T_INIT, T_RUNNING, T_FINISHED;
-@import crack.exp.ann implements;
+@import crack.ann implements;
 import crack.functor Functor2;
 
 # variable pattern

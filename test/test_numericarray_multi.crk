@@ -6,7 +6,7 @@ import crack.cont.numericarray NumericVector, NumericArray;
 import crack.io cout;
 import crack.cmdline CmdOptions;
 import crack.sys argv;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);

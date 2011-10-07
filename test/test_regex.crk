@@ -3,7 +3,7 @@ import crack.lang die;
 import crack.io cout, Writer;
 import crack.regex escape, Regex, Match;
 import crack.functor Functor2;
-@import crack.exp.ann implements;
+@import crack.ann implements;
 
 rx := Regex('simple');
 m := rx.search('not simple');

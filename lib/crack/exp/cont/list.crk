@@ -1,5 +1,5 @@
 
-@import crack.exp.ann define, export, exporter;
+@import crack.ann define, export, exporter;
 @exporter;
 
 @warn 'GenericList/DList is deprecated, use crack.cont.list instead'

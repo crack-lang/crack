@@ -12,7 +12,7 @@ import crack.cont.array Array;
 import crack.strutil StringArray;
 import crack.cont.treemap TreeMap;
 
-@import crack.exp.ann define;
+@import crack.ann define;
 
 // Constants to make later code more readable
 OPENBRACE:=true;

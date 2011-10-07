@@ -2,7 +2,7 @@
 # tests of bitwise operations.
 
 import crack.io cout;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 void expect(int32 actual, String code, int32 expected) {
     if (actual != expected)

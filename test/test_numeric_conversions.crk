@@ -1,6 +1,6 @@
 
 import crack.io cout;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 int i;
 uint u;

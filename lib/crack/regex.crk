@@ -4,7 +4,7 @@ import crack.lang die, free, AppendBuffer, Buffer, SubString;
 import crack.io cerr, StringFormatter, StringWriter, Writer;
 import crack.exp.bindings ByteptrWrapper, Opaque;
 import crack.functor Functor2;
-@import crack.exp.ann define;
+@import crack.ann define;
 
 import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
                        pcre_get_stringnumber, PCRE;

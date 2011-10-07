@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.io cout, StringFormatter;
-@import crack.exp.ann define, interface, implements;
+@import crack.ann define, interface, implements;
 @import test.testmac foo, bar, tm_concat, tm_stringify;
 
 @define oneHundred() { 100 }

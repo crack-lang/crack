@@ -11,7 +11,7 @@ import crack.compiler Token, CrackContext;
 
 # if you get an error here about "Incrrect type for initializer." then you are 
 # trying to use this after bootstrapping.  Silly programmer.  Use 
-# crack.exp.ann instead.
+# crack.ann instead.
 byteptr test = 'test string';
 
 class TokNode {

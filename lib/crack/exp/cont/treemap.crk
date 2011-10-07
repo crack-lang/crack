@@ -3,7 +3,7 @@
 # To use this macro, you must 'import crack.lang die, cmp; 
 # import crack.io cout, Formatter;'
 
-@import crack.exp.ann define, export, exporter, warn;
+@import crack.ann define, export, exporter, warn;
 @exporter;
 
 @warn 'GenericTreeMap is deprecated and will be removed: use crack.cont.treemap instead.'

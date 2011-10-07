@@ -8,7 +8,7 @@
 # (GenericObjArray for objects with oper bind and release, GenericPrimArray 
 # for primitive types).
 
-@import crack.exp.ann define, export, exporter;
+@import crack.ann define, export, exporter;
 @exporter;
 
 @define GenericArray(Name, Elem, binder, releaser) {
