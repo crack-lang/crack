@@ -2,7 +2,7 @@
 
 import crack.io cout;
 import crack.strutil StringArray;
-import crack.exp.fs Path, RealPath;
+import crack.fs Path, RealPath;
 
 tempFile := RealPath('writer.out');
 tempFile.writer().write('this is a test');
