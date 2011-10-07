@@ -40,6 +40,29 @@ void crack_ext__gtk_init(crack::ext::Module *mod) {
     crack::ext::Type *type_GtkObject = mod->addType("GtkObject", sizeof(GtkObject));
     type_GtkObject->finish();
 
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int;
+        array_pint_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pbyteptr_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_byteptr;
+        array_pbyteptr_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_parray_pbyteptr_q_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = array_pbyteptr_q;
+        array_parray_pbyteptr_q_q = array->getSpecialization(params);
+    }
     f = mod->addFunc(type_GList, "g_list_append",
                      (void *)g_list_append
                      );
@@ -54,8 +77,8 @@ void crack_ext__gtk_init(crack::ext::Module *mod) {
     f = mod->addFunc(type_void, "gtk_init",
                      (void *)gtk_init
                      );
-       f->addArg(type_voidptr, "argc");
-       f->addArg(type_voidptr, "argv");
+       f->addArg(array_pint_q, "argc");
+       f->addArg(array_parray_pbyteptr_q_q, "argv");
 
     f = mod->addFunc(type_void, "gtk_widget_destroy",
                      (void *)gtk_widget_destroy

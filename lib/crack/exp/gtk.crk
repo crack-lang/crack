@@ -1,9 +1,8 @@
 #!/usr/local/bin/crack
 
-import crack.lang die, FreeBase, free;
+import crack.lang free;
 import crack.io cout;
-import crack.sys StringArray;
-import crack.exp.bindings IntWrapper, Opaque, Wrapper;
+import crack.strutil StringArray;
 import crack.ext._gtk
     gtk_box_pack_start,
     gtk_button_new_with_label,
@@ -245,15 +244,13 @@ class Entry : Widget {
     }
 };
 
-class _ArgvWrapper : Wrapper {
-    array[byteptr] val = null;
-    oper init(array[byteptr] val) : val = val {}
-}
-
 class App {
     void init(StringArray argv) {
-        IntWrapper argcAddr = {int(argv.count())};
-        gtk_init(argcAddr, _ArgvWrapper(argv.makePrimArray()));
+        array[int] argc = [argv.count()];
+        array[array[byteptr]] argvWrapper = [argv.makePrimArray()];
+        gtk_init(argc, argvWrapper);
+        free(argc);
+        free(argvWrapper);
     }
     
     void main() {

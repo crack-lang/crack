@@ -22,7 +22,7 @@
 
     GList g_list_append(GList list, voidptr data);
     void g_print(byteptr b);
-    void gtk_init(voidptr argc, voidptr argv);
+    void gtk_init(array[int] argc, array[array[byteptr]] argv);
     void gtk_widget_destroy(GtkWidget widget);
     void gtk_widget_show(GtkWidget widget);
     void gtk_object_destroy(GtkObject object);
