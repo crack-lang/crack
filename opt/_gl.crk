@@ -1,6 +1,6 @@
 # Crack GL bindings.
 
-@import crack.exp.extgen generateExtension;
+@import crack.extgen generateExtension;
 
 @generateExtension crack.ext._gl {
     @filename 'opt/_gl.cc'

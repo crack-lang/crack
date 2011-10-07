@@ -1,6 +1,6 @@
 # Crack SDL bindings.
 
-@import crack.exp.extgen generateExtension;
+@import crack.extgen generateExtension;
 
 @generateExtension crack.ext._sdl {
     @filename 'opt/_sdl.cc'

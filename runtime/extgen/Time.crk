@@ -1,7 +1,7 @@
 # Crack binding of time.h
 # Conrad Steenberg <conrad.steenberg@gmail.com>
 
-@import crack.exp.extgen generateExtension;
+@import crack.extgen generateExtension;
 
 @generateExtension crack.runtime.time {
    @filename 'runtime/Time.cc'

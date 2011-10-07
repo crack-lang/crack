@@ -2,7 +2,7 @@
 # Adapted from SDL binding
 # Conrad Steenberg <conrad.steenberg@gmail.com>
 
-@import crack.exp.extgen generateExtension;
+@import crack.extgen generateExtension;
 
 @generateExtension crack.ext._cairo {
    @filename 'opt/_cairo.cc'
