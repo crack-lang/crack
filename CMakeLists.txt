@@ -65,6 +65,7 @@ set_target_properties(libcrack
                       LINK_FLAGS ${LLVM_LDFLAGS}
                       COMPILE_DEFINITIONS_DEBUG _DEBUG
                       )
+
 target_link_libraries( libcrack
                        ${LLVM_LIBS}
                      )
@@ -123,7 +124,7 @@ set_target_properties( crack
                      )
 
 target_link_libraries( crack
-                       libcrack
+                       libcrack pthread
                      )
 
 add_custom_command(TARGET crack POST_BUILD
