@@ -6,7 +6,7 @@ import crack.io cout, FStr, Formatter, Writer, FDReader, FDWriter;
 import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer;
 import crack.exp.bindings Opaque;
 import crack.exp.readers LineReader;
-import crack.exp.error strerror;
+import crack.sys strerror;
 
 import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile,
                      is_file;

@@ -4,7 +4,7 @@
 import crack.runtime basename, errno, fileExists, free, fileRemove,
     getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir, DirEntry,
     O_CREAT, O_RDONLY, O_WRONLY, S_IFDIR;
-import crack.exp.error strerror;
+import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
     InvalidStateError;

@@ -13,13 +13,8 @@
 #       catcher.reset();  # reset the catcher if you want to reuse it.
 #   }
 
-import crack.runtime c_strerror;
 import crack.lang abort;
 import crack.io cerr, Formatter, StringWriter, Writer;
-
-## Utility function.  Returns the last error string recorded at the C library 
-## level.
-String strerror() { return String(c_strerror()); }
 
 class ErrorHandler {
     

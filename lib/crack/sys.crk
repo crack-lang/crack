@@ -4,10 +4,13 @@
 import crack.lang IndexError, InvalidResourceError, CString, 
                    InvalidArgumentError, Exception;
 import crack.io FStr, cout;
-import crack.runtime exit, get_environ, putenv, getenv, setenv, unsetenv, 
-                        errno, EINVAL, ENOMEM;
+import crack.runtime c_strerror, exit, get_environ, putenv, getenv, setenv, unsetenv, 
+    errno, EINVAL, ENOMEM;
 import crack.strutil StringArray;
 import crack.cont.hashmap HashMap;
+
+## Returns the last error string recorded at the C library level.
+String strerror() { return String(c_strerror()); }
 
 StringArray _createArgv() {
     v := __getArgv();

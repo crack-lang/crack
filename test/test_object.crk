@@ -2,7 +2,6 @@
 # tests of basic Object stuff
 
 import crack.io cout;
-import crack.exp.error err;
 
 # test the use of nulls in the comparison operators.
 class Int {
