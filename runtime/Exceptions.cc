@@ -30,12 +30,11 @@ void deleteException(_Unwind_Exception *exc) {
 }
 
 void initExceptionObjectKey() {
-    assert(pthread_key_create(
-                &exceptionObjectKey,
-                reinterpret_cast<void (*)(void *)>(deleteException)
-           ) == 0 &&
-            "Unable to create pthread key for exception object."
-        );
+    int rc = pthread_key_create(
+        &exceptionObjectKey, 
+        reinterpret_cast<void (*)(void *)>(deleteException)
+    );
+    assert(rc == 0 && "Unable to create pthread key for exception object.");
 }
 
 }} // namespace crack::runtime
@@ -111,7 +110,8 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
         uex->exception_class = crackClassId;
         uex->exception_cleanup = __CrackExceptionCleanup;
         uex->ref_count = 1;
-        pthread_setspecific(crack::runtime::exceptionObjectKey, uex);
+        int rc = pthread_setspecific(crack::runtime::exceptionObjectKey, uex);
+        assert(rc == 0 && "unable to store exception key");
     }
     uex->user_data = crackExceptionObject;
     _Unwind_RaiseException(uex);
