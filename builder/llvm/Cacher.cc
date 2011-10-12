@@ -9,6 +9,7 @@
 #include "builder/util/SourceDigest.h"
 
 #include <assert.h>
+#include <vector>
 
 #include <llvm/Module.h>
 #include <llvm/Support/IRBuilder.h>
@@ -66,23 +67,57 @@ void Cacher::writeMetadata() {
     NamedMDNode *node;
     Module *module = modDef->rep;
 
-    /*
-    NamedMDNode *globals = module->getOrInsertNamedMetadata("crack_globals");
-
-    vector<Value *> gList;
-    for (Namespace::VarDefMap::const_iterator varIter = modDef->beginDefs();
-         varIter != modDef->endDefs();
+    // crack_imports: operand list points to import nodes
+    // import node: 0: canonical name 1: source digest
+    node = module->getOrInsertNamedMetadata("crack_imports");
+    for (vector<BModuleDef*>::const_iterator varIter = modDef->importList.begin();
+         varIter != modDef->importList.end();
          ++varIter
          ) {
-        gList.push_back(MDString::get(getGlobalContext(),
-                                      varIter->second->name));
+        dList.push_back(MDString::get(getGlobalContext(),
+                                      (*varIter)->getFullName()));
+        dList.push_back(MDString::get(getGlobalContext(),
+                                      (*varIter)->digest.asHex()));
+        node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+        dList.clear();
     }
-    globals->addOperand(MDNode::get(getGlobalContext(), gList.data(), gList.size()));
-
-
-    */
 
     //module->dump();
+
+}
+
+bool Cacher::doImports() {
+
+    MDNode *mnode;
+    MDString *cname, *digest;
+    SourceDigest iDigest;
+    BModuleDefPtr m;
+    NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_imports");
+
+    assert(imports && "missing crack_imports node");
+
+    for (int i = 0; i < imports->getNumOperands(); ++i) {
+
+        mnode = imports->getOperand(i);
+
+        // canonical name
+        cname = dyn_cast<MDString>(mnode->getOperand(0));
+        assert(cname && "malformed import node: canonical name");
+
+        // source digest
+        digest = dyn_cast<MDString>(mnode->getOperand(1));
+        assert(digest && "malformed import node: digest");
+
+        iDigest = SourceDigest::fromHex(digest->getString().str());
+
+        // load this module. if the digest doesn't match, we miss
+        m = context.construct->loadModule(cname->getString().str());
+        if (m->digest != iDigest)
+            return false;
+
+    }
+
+    return true;
 
 }
 
@@ -103,6 +138,10 @@ bool Cacher::readMetadata() {
         return false;
 
     modDef->path = getNamedStringNode("crack_origin_path");
+
+    // import list
+    if (!doImports())
+        return false;
 
     // cache hit
     return true;

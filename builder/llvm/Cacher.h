@@ -29,7 +29,11 @@ class Cacher {
 protected:
     void addNamedStringNode(const std::string &key, const std::string &val);
     std::string getNamedStringNode(const std::string &key);
+
     void writeBitcode(const std::string &path);
+
+    bool doImports();
+
     void writeMetadata();
     bool readMetadata();
 
