@@ -258,6 +258,11 @@ class Construct : public spug::RCBase {
                                 );
 
         /**
+         * a version of loadModule which accept a string canonicalName
+         */
+        ModuleDefPtr loadModule(const std::string &canonicalName);
+
+        /**
          * Load the executor's bootstrapping modules (crack.lang).
          */
         bool loadBootstrapModules();
