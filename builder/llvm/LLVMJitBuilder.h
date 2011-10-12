@@ -73,7 +73,9 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void finishBuild(model::Context &context) { }
 
-        virtual void initializeImport(model::ModuleDef*, bool annotation) { }
+        virtual void initializeImport(model::ModuleDef* m, bool annotation) {
+            initializeImportCommon(m);
+        }
 
         virtual model::ModuleDefPtr materializeModule(model::Context &context,
                                               const std::string &canonicalName,

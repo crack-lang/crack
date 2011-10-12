@@ -592,6 +592,7 @@ void LLVMBuilder::emitExceptionCleanup(Context &context) {
 
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
+    bModDef(0),
     module(0),
     builder(getGlobalContext()),
     func(0),
@@ -2586,6 +2587,17 @@ std::string LLVMBuilder::getSourcePath(const std::string &path) {
         free(rp);
     }
     return result;
+
+}
+
+void LLVMBuilder::initializeImportCommon(model::ModuleDef* m) {
+
+    BModuleDef *importedMod = dynamic_cast<BModuleDef*>(m);
+
+    assert(bModDef && "no bModDef before initializeImportCommon");
+    assert(importedMod && "importedMod was not a BModuleDef");
+
+    bModDef->importList.push_back(importedMod);
 
 }
 

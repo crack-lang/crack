@@ -230,12 +230,10 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     
     createModuleCommon(context);
 
-    BModuleDef *newModule =
-        new BModuleDef(name, context.ns.get(), module);
+    bModDef =  new BModuleDef(name, context.ns.get(), module);
+    bModDef->path = getSourcePath(path);
 
-    newModule->path = getSourcePath(path);
-
-    return newModule;
+    return bModDef;
 }
 
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
@@ -375,6 +373,8 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
                                          bool annotation) {
 
     assert(!annotation && "annotation given to linker builder");
+
+    initializeImportCommon(m);
 
     // if the module came from an extension, there's no top level to run
     if (m->fromExtension)

@@ -95,6 +95,12 @@ class LLVMBuilder : public Builder {
         void createModuleCommon(model::Context &context);
 
         /**
+         * common module initialization that happens in all builders
+         * during initializeImport
+         */
+        void initializeImportCommon(model::ModuleDef* m);
+
+        /**
           * get a realpath source path for the module
           */
         std::string getSourcePath(const std::string &path);
@@ -145,6 +151,7 @@ class LLVMBuilder : public Builder {
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
         // seems to be cutting down on the amount of code necessary to do this.
+        BModuleDef *bModDef;
         llvm::Module *module;
         llvm::Function *func;
         const llvm::Type *llvmVoidPtrType;

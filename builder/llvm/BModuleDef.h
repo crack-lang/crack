@@ -7,6 +7,7 @@
 #include "model/ModuleDef.h"
 #include <spug/RCPtr.h>
 #include <string>
+#include <vector>
 
 namespace model {
     class Context;
@@ -30,6 +31,9 @@ public:
 
     // source text hash code, used for caching
     SourceDigest digest;
+
+    // list of modules imported by this one
+    std::vector<BModuleDef*> importList;
     
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
@@ -38,7 +42,8 @@ public:
             ModuleDef(canonicalName, parent),
             cleanup(0),
             rep(rep0),
-            digest()
+            digest(),
+            importList()
     {
     }
 

@@ -187,14 +187,14 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     
     bindJitModule(module);
 
-    BModuleDef *moduleDef = 
+    bModDef =
         new BJitModuleDef(name, context.ns.get(), module, 
                           owner ? BJitModuleDefPtr::acast(owner) : 0
                           );
 
-    moduleDef->path = getSourcePath(path);
+    bModDef->path = getSourcePath(path);
 
-    return moduleDef;
+    return bModDef;
 }
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
