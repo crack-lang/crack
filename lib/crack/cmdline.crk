@@ -425,12 +425,9 @@ class CmdOptions {
             isnew = false;
             if (name) {
                // Look up 
-               try {
-                  opt = getOption(name);
-               } catch (IndexError ix){
-                  if (createUnknown) isnew = true;
-                  else throw IndexError(ix.text);
-               }
+               opt = getOption(name, !createUnknown);
+               if (!opt)
+                  isnew = true;
 
                if (opt){
                   if (!value || opt.type == CMD_BOOL){
