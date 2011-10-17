@@ -44,6 +44,9 @@ class ArrayData[Elem] {
     oper init(uint cap): cap(cap), rep = array[Elem](cap) {
     }
 
+    oper init(array[Elem] rep0, uint cap): cap(cap), rep = rep0 {
+    }
+
     void releaseAll(){
         if (cap > 0 && _isObject(rep[0])) {
             for (uint i = 0; i < cap; i++)
@@ -213,6 +216,13 @@ class Array[Elem] {
         __rep = rep, // data.rep <= rep <= rep + cap
         __cap(cap),
         __size(size){
+    }
+
+    oper init (array[Elem] rep, uint cap):
+        data = ArrayData[Elem](rep, cap),
+        __rep = data.rep, // data.rep <= rep <= rep + cap
+        __cap(cap),
+        __size(cap){
     }
 
     void realloc(uint newCapacity) {

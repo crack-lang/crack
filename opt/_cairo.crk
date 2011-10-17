@@ -51,7 +51,12 @@
    @boundclass(Cairo, cr, cairo, _, cairo_t)
 
    @boundclass(TextExtents, extents, cairo_text_extents, _, cairo_text_extents_t)
+   @boundclass(FontExtents, extents, cairo_font_extents, _, cairo_font_extents_t)
    @boundclass(Region, region, cairo_region, _, cairo_region_t)
+   @boundclass(FontOptions, font_options, cairo_font_options, _, cairo_font_options_t)
+   @boundclass(FontFace, font_face, cairo_font_face, _, cairo_font_face_t)
+   @boundclass(ScaledFont, scaled_font, cairo_scaled_font, _, cairo_scaled_font_t)
+   @boundclass(Glyph, glyph, cairo_glyph, _, cairo_glyph_t)
    
 
    // Features
@@ -367,14 +372,22 @@
    
    // Text extents
    @inject 'cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }\n'
-   class cairo_text_extents_t{
+   class cairo_text_extents_t {
       float64 x_bearing, y_bearing;
       float64 width, height;
       float64 x_advance, y_advance;
    }
    cairo_text_extents_t cairo_text_extents_new ();
 
-   class cairo_font_extents_t;
+   @inject 'cairo_font_extents_t *cairo_font_extents_new() { return new cairo_font_extents_t; }\n'
+   class cairo_font_extents_t {
+       float64 ascent;
+       float64 descent;
+       float64 height;
+       float64 max_x_advance;
+       float64 max_y_advance;
+   };
+   cairo_font_extents_t cairo_font_extents_new ();
 
    @cname Undef
    class cairo_font_options_t;
@@ -584,7 +597,7 @@
                               cairo_text_extents_t extents);
 
    void cairo_glyph_extents (cairo_t cr,
-                              cairo_glyph_t glyphs,
+                              array[cairo_glyph_t] glyphs,
                               int num_glyphs,
                               cairo_text_extents_t extents);
 
@@ -635,12 +648,12 @@
 
    void
       cairo_scaled_font_text_extents (cairo_scaled_font_t    scaled_font,
-                                       byteptr           utf8,
+                                       byteptr               utf8,
                                        cairo_text_extents_t  extents);
 
    void
       cairo_scaled_font_glyph_extents (cairo_scaled_font_t     scaled_font,
-                                        cairo_glyph_t          glyphs,
+                                        array[cairo_glyph_t]   glyphs,
                                         int                    num_glyphs,
                                         cairo_text_extents_t   extents);
 
@@ -661,19 +674,19 @@
 
    void
       cairo_scaled_font_get_font_matrix (cairo_scaled_font_t scaled_font,
-                                         array[cairo_matrix_t] font_matrix);
+                                         cairo_matrix_t font_matrix);
 
    void
       cairo_scaled_font_get_ctm (cairo_scaled_font_t  scaled_font,
-                                 array[cairo_matrix_t] ctm);
+                                 cairo_matrix_t ctm);
 
    void
       cairo_scaled_font_get_scale_matrix (cairo_scaled_font_t scaled_font,
-                                          array[cairo_matrix_t]   scale_matrix);
+                                          cairo_matrix_t   scale_matrix);
 
    void
       cairo_scaled_font_get_font_options (cairo_scaled_font_t         scaled_font,
-                                          array[cairo_font_options_t] options);
+                                          cairo_font_options_t options);
 
 
    // Toy fonts
@@ -914,7 +927,7 @@
                                   cairo_matrix_t matrix);
 
    void cairo_pattern_get_matrix (cairo_pattern_t pattern,
-                                   array[cairo_matrix_t] matrix);
+                                   cairo_matrix_t matrix);
 
    // Extend functions
    void cairo_pattern_set_extend (cairo_pattern_t pattern, uint extend);

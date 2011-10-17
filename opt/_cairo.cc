@@ -66,6 +66,7 @@ cairo_matrix_t *cairo_matrix_new() { return new cairo_matrix_t; }
 cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
 cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
 cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }
+cairo_font_extents_t *cairo_font_extents_new() { return new cairo_font_extents_t; }
 cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) { 
       return existing_surface;
    }
@@ -205,6 +206,16 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_cairo_font_extents_t = mod->addType("cairo_font_extents_t", sizeof(cairo_font_extents_t));
+        type_cairo_font_extents_t->addInstVar(type_float64, "ascent",
+                                CRACK_OFFSET(cairo_font_extents_t, ascent));
+        type_cairo_font_extents_t->addInstVar(type_float64, "descent",
+                                CRACK_OFFSET(cairo_font_extents_t, descent));
+        type_cairo_font_extents_t->addInstVar(type_float64, "height",
+                                CRACK_OFFSET(cairo_font_extents_t, height));
+        type_cairo_font_extents_t->addInstVar(type_float64, "max_x_advance",
+                                CRACK_OFFSET(cairo_font_extents_t, max_x_advance));
+        type_cairo_font_extents_t->addInstVar(type_float64, "max_y_advance",
+                                CRACK_OFFSET(cairo_font_extents_t, max_y_advance));
     type_cairo_font_extents_t->finish();
 
 
@@ -242,6 +253,13 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         array_puint_q = array->getSpecialization(params);
     }
 
+    crack::ext::Type *array_pcairo__glyph__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_cairo_glyph_t;
+        array_pcairo__glyph__t_q = array->getSpecialization(params);
+    }
+
     crack::ext::Type *function = mod->getType("function");
 
     crack::ext::Type *function_pvoid_c_svoidptr_q;
@@ -252,32 +270,11 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
         function_pvoid_c_svoidptr_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *array_pcairo__glyph__t_q;
-    {
-        std::vector<crack::ext::Type *> params(1);
-        params[0] = type_cairo_glyph_t;
-        array_pcairo__glyph__t_q = array->getSpecialization(params);
-    }
-
     crack::ext::Type *array_pcairo__text__cluster__t_q;
     {
         std::vector<crack::ext::Type *> params(1);
         params[0] = type_cairo_text_cluster_t;
         array_pcairo__text__cluster__t_q = array->getSpecialization(params);
-    }
-
-    crack::ext::Type *array_pcairo__matrix__t_q;
-    {
-        std::vector<crack::ext::Type *> params(1);
-        params[0] = type_cairo_matrix_t;
-        array_pcairo__matrix__t_q = array->getSpecialization(params);
-    }
-
-    crack::ext::Type *array_pcairo__font__options__t_q;
-    {
-        std::vector<crack::ext::Type *> params(1);
-        params[0] = type_cairo_font_options_t;
-        array_pcairo__font__options__t_q = array->getSpecialization(params);
     }
 
 #ifdef CAIRO_HAS_PNG_FUNCTIONS
@@ -349,6 +346,10 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
 
     f = mod->addFunc(type_cairo_text_extents_t, "cairo_text_extents_new",
                      (void *)cairo_text_extents_new
+                     );
+
+    f = mod->addFunc(type_cairo_font_extents_t, "cairo_font_extents_new",
+                     (void *)cairo_font_extents_new
                      );
 
     f = mod->addFunc(type_cairo_t, "cairo_create",
@@ -988,7 +989,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_glyph_extents
                      );
        f->addArg(type_cairo_t, "cr");
-       f->addArg(type_cairo_glyph_t, "glyphs");
+       f->addArg(array_pcairo__glyph__t_q, "glyphs");
        f->addArg(type_int, "num_glyphs");
        f->addArg(type_cairo_text_extents_t, "extents");
 
@@ -1101,7 +1102,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_scaled_font_glyph_extents
                      );
        f->addArg(type_cairo_scaled_font_t, "scaled_font");
-       f->addArg(type_cairo_glyph_t, "glyphs");
+       f->addArg(array_pcairo__glyph__t_q, "glyphs");
        f->addArg(type_int, "num_glyphs");
        f->addArg(type_cairo_text_extents_t, "extents");
 
@@ -1128,25 +1129,25 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_scaled_font_get_font_matrix
                      );
        f->addArg(type_cairo_scaled_font_t, "scaled_font");
-       f->addArg(array_pcairo__matrix__t_q, "font_matrix");
+       f->addArg(type_cairo_matrix_t, "font_matrix");
 
     f = mod->addFunc(type_void, "cairo_scaled_font_get_ctm",
                      (void *)cairo_scaled_font_get_ctm
                      );
        f->addArg(type_cairo_scaled_font_t, "scaled_font");
-       f->addArg(array_pcairo__matrix__t_q, "ctm");
+       f->addArg(type_cairo_matrix_t, "ctm");
 
     f = mod->addFunc(type_void, "cairo_scaled_font_get_scale_matrix",
                      (void *)cairo_scaled_font_get_scale_matrix
                      );
        f->addArg(type_cairo_scaled_font_t, "scaled_font");
-       f->addArg(array_pcairo__matrix__t_q, "scale_matrix");
+       f->addArg(type_cairo_matrix_t, "scale_matrix");
 
     f = mod->addFunc(type_void, "cairo_scaled_font_get_font_options",
                      (void *)cairo_scaled_font_get_font_options
                      );
        f->addArg(type_cairo_scaled_font_t, "scaled_font");
-       f->addArg(array_pcairo__font__options__t_q, "options");
+       f->addArg(type_cairo_font_options_t, "options");
 
     f = mod->addFunc(type_cairo_font_face_t, "cairo_toy_font_face_create",
                      (void *)cairo_toy_font_face_create
@@ -1702,7 +1703,7 @@ void crack_ext__cairo_init(crack::ext::Module *mod) {
                      (void *)cairo_pattern_get_matrix
                      );
        f->addArg(type_cairo_pattern_t, "pattern");
-       f->addArg(array_pcairo__matrix__t_q, "matrix");
+       f->addArg(type_cairo_matrix_t, "matrix");
 
     f = mod->addFunc(type_void, "cairo_pattern_set_extend",
                      (void *)cairo_pattern_set_extend

@@ -192,6 +192,25 @@ class NumericVector[Elem] : Array[Elem] {
     }
 
     /// Apply scalar operator to all elements
+    @define ScalarOper(op){
+        NumericVector oper op(Elem value){
+            size := count();
+            rep := data.rep;
+
+            nV := NumericVector.empty(size);
+            nVrep := nV.data.rep;
+            for (uint i = 0; i < size; i++)
+               nVrep[i] = rep[i] op value;
+            return nV;
+        }
+    }
+
+    @ScalarOper(+)
+    @ScalarOper(-)
+    @ScalarOper(*)
+    @ScalarOper(/)
+
+    /// Apply scalar operator to all elements
     @define ScalarOperEqual(op){
         void oper op$$=(Elem value){
             size := count();
@@ -206,6 +225,7 @@ class NumericVector[Elem] : Array[Elem] {
     @ScalarOperEqual(-)
     @ScalarOperEqual(*)
     @ScalarOperEqual(/)
+
 
     /// Vector operators
     @define VectorOperEqual(op){

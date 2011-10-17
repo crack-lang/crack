@@ -79,6 +79,7 @@ cairo_matrix_new,
 cairo_rectangle_new,
 cairo_rectangle_list_new,
 cairo_text_extents_new,
+cairo_font_extents_new,
 cairo_create,
 cairo_reference,
 cairo_destroy,
@@ -621,8 +622,13 @@ class Surface;
 class Pattern;
 class Cairo;
 class TextExtents;
+class FontExtents;
 class Region;
 class Path;
+class FontOptions;
+class FontFace;
+class ScaledFont;
+class Glyph;
 
 class Rectangle {
     cairo_rectangle_t rectangle = null;
@@ -748,8 +754,37 @@ class Matrix {
         return multiplied(b);
     }
 
-    void transform_distance(array[float64] dx, array[float64] dy) { cairo_matrix_transform_distance(matrix, dx, dy); }
-    void transform_point(array[float64] x, array[float64] y) { cairo_matrix_transform_point(matrix, x, y); }
+    array[float64] _transform_distance(float64 dx, float64 dy) {
+        distance := array[float64] ![dx, dy];
+        cairo_matrix_transform_distance(matrix, distance, distance+1);
+        return distance;
+    }
+
+    Array[float64] transform_distance(float64 dx, float64 dy) {
+        return Array[float64](_transform_distance(dx,dy), 2);
+    }
+
+    Array[float64] transformed_distance(Array[float64] d) {
+        return Array[float64](_transform_distance(d[0],d[1]), 2);
+    }
+
+    array[float64] _transform_point(float64 x, float64 y) { 
+        point := array[float64]![x, y];
+        cairo_matrix_transform_point(matrix, point, point+1);
+        return point;
+    }
+
+    Array[float64] transform_point(float64 x, float64 y) {
+        return Array[float64](_transform_point(x, y), 2);
+    }
+
+    Array[float64] transform_point(Array[float64] x) {
+        return Array[float64](_transform_point(x[0],x[1]), 2);
+    }
+
+    Array[float64] oper *(Array[float64] x){
+        return transform_point(x);
+    }
 
     void writeTo(Writer out) {
         out.write(FStr() `[[$(matrix.xx),  $(matrix.yx)], [$(matrix.xy),  $(matrix.yy)]], [$(matrix.x0),  $(matrix.y0)]\n`);
@@ -760,6 +795,150 @@ class Matrix {
     }
 
 } // Matrix
+
+class Glyph {
+    cairo_glyph_t glyph = null;
+    oper init(cairo_glyph_t glyph0): glyph = glyph0 { }
+
+    oper del() { if (!(glyph is null)) cairo_glyph_free(glyph); }
+} // Glyph
+
+class TextExtents {
+    cairo_text_extents_t extents = null;
+    oper init(): extents = cairo_text_extents_new() { }
+    oper init(cairo_text_extents_t extents0): extents = extents0 { }
+    
+    oper del(){
+        if (!(extents is null))
+            free(extents);
+    }
+
+} // TextExtents
+
+class FontExtents {
+    cairo_font_extents_t extents = null;
+    oper init(): extents = cairo_font_extents_new() { }
+    oper init(cairo_font_extents_t extents0): extents = extents0 { }
+    oper del(){
+
+    if (!(extents is null))
+            free(extents);
+    }
+
+} // FontExtents
+
+class FontOptions {
+    cairo_font_options_t font_options = null;
+    oper init(cairo_font_options_t font_options0): font_options = font_options0 { }
+
+    FontOptions copy() { return FontOptions(cairo_font_options_copy(this.font_options)); }
+    void destroy() { cairo_font_options_destroy(font_options); }
+    uint status() { return cairo_font_options_status(font_options); }
+
+    void merge(cairo_font_options_t other) { cairo_font_options_merge(font_options, other); }
+    void merge(FontOptions other) { cairo_font_options_merge(font_options, other.font_options); }
+
+    bool oper ==(cairo_font_options_t other) { return cairo_font_options_equal(font_options, other); }
+    bool oper ==(FontOptions other) { return cairo_font_options_equal(font_options, other.font_options); }
+
+    uint64 hash() { return cairo_font_options_hash(font_options); }
+
+    void set_antialias(uint antialias) { cairo_font_options_set_antialias(font_options, antialias); }
+    uint get_antialias() { return cairo_font_options_get_antialias(font_options); }
+    void set_subpixel_order(uint subpixel_order) { cairo_font_options_set_subpixel_order(font_options, subpixel_order); }
+    uint get_subpixel_order() { return cairo_font_options_get_subpixel_order(font_options); }
+
+    void set_hint_style(uint hint_style) { cairo_font_options_set_hint_style(font_options, hint_style); }
+    uint get_hint_style() { return cairo_font_options_get_hint_style(font_options); }
+    void set_hint_metrics(uint hint_metrics) { cairo_font_options_set_hint_metrics(font_options, hint_metrics); }
+    uint get_hint_metrics() { return cairo_font_options_get_hint_metrics(font_options); }
+    
+    void del(){ if (!(font_options is null)) cairo_font_options_destroy(font_options);}
+    
+} // FontOptions
+
+class FontFace {
+    cairo_font_face_t font_face = null;
+    oper init(cairo_font_face_t font_face0): font_face = font_face0 { }
+
+    FontFace reference() { return FontFace(cairo_font_face_reference(font_face)); }
+
+    uint get_reference_count() { return cairo_font_face_get_reference_count(font_face); }
+    uint status() { return cairo_font_face_status(font_face); }
+    uint get_type() { return cairo_font_face_get_type(font_face); }
+    byteptr cairo_toy_font_face_get_family() { return cairo_toy_font_face_get_family(font_face); }
+    uint cairo_toy_font_face_get_slant() { return cairo_toy_font_face_get_slant(font_face); }
+    uint cairo_toy_font_face_get_weight() { return cairo_toy_font_face_get_weight(font_face); }
+
+    oper del() { if (!(font_face is null))  cairo_font_face_destroy(font_face); }
+} // FontFace
+
+class ScaledFont {
+    cairo_scaled_font_t scaled_font = null;
+    oper init(cairo_scaled_font_t scaled_font0): scaled_font = scaled_font0 { }
+
+    @static
+    ScaledFont create(FontFace font_face, Matrix font_matrix, Matrix ctm, FontOptions options) { 
+        return ScaledFont(cairo_scaled_font_create(font_face.font_face, font_matrix.matrix, ctm.matrix, options.font_options)); 
+    }
+
+    ScaledFont reference() { return ScaledFont(cairo_scaled_font_reference(scaled_font)); }
+
+    uint get_reference_count() { return cairo_scaled_font_get_reference_count(scaled_font); }
+    uint status() { return cairo_scaled_font_status(scaled_font); }
+    uint get_type() { return cairo_scaled_font_get_type(scaled_font); }
+
+    FontExtents font_extents() { 
+        new_extents := cairo_font_extents_new();
+        cairo_scaled_font_extents(scaled_font, new_extents); 
+        return FontExtents(new_extents);
+    }
+
+    TextExtents text_extents(String utf8) { 
+        new_extents := cairo_text_extents_new();
+        cairo_scaled_font_text_extents(scaled_font, utf8.buffer, new_extents); 
+        return TextExtents(new_extents);
+
+    }
+
+    TextExtents glyph_extents(array[cairo_glyph_t] glyphs, int num_glyphs) { 
+        extents := cairo_text_extents_new();
+        cairo_scaled_font_glyph_extents(scaled_font, glyphs, num_glyphs, extents); 
+        return TextExtents(extents);
+    }
+
+    uint text_to_glyphs(float64 x, float64 y, byteptr utf8, int utf8_len, array[cairo_glyph_t] glyphs, int num_glyphs, array[cairo_text_cluster_t] clusters, int num_clusters, array[uint] cluster_flags) { return cairo_scaled_font_text_to_glyphs(scaled_font, x, y, utf8, utf8_len, glyphs, num_glyphs, clusters, num_clusters, cluster_flags); }
+
+    FontFace get_font_face() { return FontFace(cairo_scaled_font_get_font_face(scaled_font)); }
+    Matrix matrix() { 
+        font_matrix := cairo_matrix_new();
+        cairo_scaled_font_get_font_matrix(scaled_font, font_matrix); 
+        return Matrix(font_matrix);
+    }
+    
+    Matrix ctm() { 
+        ctm := cairo_matrix_new();
+        cairo_scaled_font_get_ctm(scaled_font, ctm);
+        return Matrix(ctm);
+    }
+
+    Matrix scale_matrix(array[cairo_matrix_t] scale_matrix) { 
+        scale_matrix_new := cairo_matrix_new();
+        cairo_scaled_font_get_scale_matrix(scaled_font, scale_matrix_new); 
+        return Matrix(scale_matrix_new);
+    }
+    
+    FontOptions options() { 
+        options_new := cairo_font_options_create();
+        cairo_scaled_font_get_font_options(scaled_font, options_new); 
+        return FontOptions(options_new);
+    }
+
+    oper del() { if (!(scaled_font is null))  cairo_scaled_font_destroy(scaled_font); }
+
+} // ScaledFont
+
+
 
 class Device {
     cairo_device_t device = null;
@@ -803,7 +982,12 @@ class Pattern {
 
     void set_matrix(Matrix matrix) { cairo_pattern_set_matrix(pattern, matrix.matrix); }
 
-    void get_matrix(array[cairo_matrix_t] matrix) { cairo_pattern_get_matrix(pattern, matrix); }
+    Matrix get_matrix() { 
+        matrix := cairo_matrix_new();
+        cairo_pattern_get_matrix(pattern, matrix); 
+        return Matrix(matrix);
+    }
+
     void set_extend(uint extend) { cairo_pattern_set_extend(pattern, extend); }
     uint get_extend() { return cairo_pattern_get_extend(pattern); }
     void set_filter(uint filter) { cairo_pattern_set_filter(pattern, filter); }
@@ -906,18 +1090,6 @@ class Surface {
     void ps_surface_dsc_begin_setup() { cairo_ps_surface_dsc_begin_setup(surface); }
     void ps_surface_dsc_begin_page_setup() { cairo_ps_surface_dsc_begin_page_setup(surface); }
 } // Surface
-
-class TextExtents {
-    cairo_text_extents_t extents = null;
-    oper init(): extents = cairo_text_extents_new() { }
-    oper init(cairo_text_extents_t extents0): extents = extents0 { }
-    
-    oper del(){
-        if (!(extents is null))
-            free(extents);
-    }
-
-} // TextExtents
 
 class Region {
     cairo_region_t region = null;
@@ -1081,24 +1253,28 @@ class Cairo {
     void clip_preserve() { cairo_clip_preserve(cr); }
     void clip_extents(array[float64] x1, array[float64] y1, array[float64] x2, array[float64] y2) { cairo_clip_extents(cr, x1, y1, x2, y2); }
     RectangleList copy_clip_rectangle_list() { return RectangleList(cairo_copy_clip_rectangle_list(cr)); }
-    void select_font_face(byteptr family, uint slant, uint weight) { cairo_select_font_face(cr, family, slant, weight); }
+    void select_font_face(String family, uint slant, uint weight) { cairo_select_font_face(cr, family.buffer, slant, weight); }
     void set_font_size(float64 size) { cairo_set_font_size(cr, size); }
     void set_font_matrix(cairo_matrix_t matrix) { cairo_set_font_matrix(cr, matrix); }
     void set_font_matrix(Matrix matrix) { cairo_set_font_matrix(cr, matrix.matrix); }
     void get_font_matrix(cairo_matrix_t matrix) { cairo_get_font_matrix(cr, matrix); }
     void get_font_matrix(Matrix matrix) { cairo_get_font_matrix(cr, matrix.matrix); }
-    void set_font_options(cairo_font_options_t options) { cairo_set_font_options(cr, options); }
+
+    void set_font_options(FontOptions options) { cairo_set_font_options(cr, options.font_options); }
+
     void get_font_options(cairo_font_options_t options) { cairo_get_font_options(cr, options); }
 
-    void set_font_face(cairo_font_face_t font_face) { cairo_set_font_face(cr, font_face); }
-    cairo_font_face_t get_font_face() { return cairo_get_font_face(cr); }
+    void set_font_face(FontFace font_face) { cairo_set_font_face(cr, font_face.font_face); }
+
+    FontFace get_font_face() { return FontFace(cairo_get_font_face(cr)); }
     void set_scaled_font(cairo_scaled_font_t scaled_font) { cairo_set_scaled_font(cr, scaled_font); }
-    cairo_scaled_font_t get_scaled_font() { return cairo_get_scaled_font(cr); }
+    ScaledFont get_scaled_font() { return ScaledFont(cairo_get_scaled_font(cr)); }
     void show_text(byteptr utf8) { cairo_show_text(cr, utf8); }
     void show_glyphs(cairo_glyph_t glyphs, int num_glyphs) { cairo_show_glyphs(cr, glyphs, num_glyphs); }
     void show_text_glyphs(byteptr utf8, int utf8_len, cairo_glyph_t glyphs, int num_glyphs, cairo_text_cluster_t clusters, int num_clusters, array[uint] cluster_flags) { cairo_show_text_glyphs(cr, utf8, utf8_len, glyphs, num_glyphs, clusters, num_clusters, cluster_flags); }
     void text_path(byteptr utf8) { cairo_text_path(cr, utf8); }
     void glyph_path(cairo_glyph_t glyphs, int num_glyphs) { cairo_glyph_path(cr, glyphs, num_glyphs); }
+
     void text_extents(byteptr utf8, cairo_text_extents_t extents) { cairo_text_extents(cr, utf8, extents); }
 
     TextExtents text_extents(byteptr utf8) { 
@@ -1107,9 +1283,18 @@ class Cairo {
         return extents;
     }
 
-    void glyph_extents(cairo_glyph_t glyphs, int num_glyphs, cairo_text_extents_t extents) { cairo_glyph_extents(cr, glyphs, num_glyphs, extents); }
-    void glyph_extents(cairo_glyph_t glyphs, int num_glyphs, TextExtents extents) { cairo_glyph_extents(cr, glyphs, num_glyphs, extents.extents); }
-    void font_extents(cairo_font_extents_t extents) { cairo_font_extents(cr, extents); }
+    TextExtents glyph_extents(array[cairo_glyph_t] glyphs, int num_glyphs) { 
+        extents := TextExtents();
+        cairo_glyph_extents(cr, glyphs, num_glyphs, extents.extents); 
+        return extents;
+    }
+
+    FontExtents font_extents() { 
+        extents := FontExtents();
+        cairo_font_extents(cr, extents.extents); 
+        return extents;
+    }
+
     uint get_operator() { return cairo_get_operator(cr); }
     Pattern get_source() { return Pattern(cairo_get_source(cr)); }
     float64 get_tolerance() { return cairo_get_tolerance(cr); }
