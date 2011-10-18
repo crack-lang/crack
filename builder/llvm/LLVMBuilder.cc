@@ -1949,6 +1949,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
+    bModDef = bMod.get();
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
