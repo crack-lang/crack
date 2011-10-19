@@ -117,7 +117,7 @@ target_link_libraries(crack-runtime
                       pthread)
 
 
-add_executable(crack crack.cc)
+add_executable(crack crack_main.cc)
 set_target_properties( crack
                        PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS}
                        VERSION ${CRACK_VERSION}
