@@ -52,7 +52,7 @@ file(STRINGS runtimeModules.txt RUNTIME_SRC_FILES)
 set_source_files_properties( ${CRACK_SRC_FILES}
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
-set_source_files_properties( crack.cc
+set_source_files_properties( crack_main.cc
                              PROPERTIES COMPILE_FLAGS ${LLVM_COMPILE_FLAGS}
                             )
 
