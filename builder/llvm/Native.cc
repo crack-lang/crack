@@ -87,8 +87,11 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(InputFilename);
 
   // Add in the library and framework paths
-  if (verbosity > 2)
+  if (verbosity > 2) {
       cerr << "Native link paths:" << endl;
+      // verbose linker
+      args.push_back("-Wl,--verbose");
+  }
   for (unsigned index = 0; index < LibPaths.size(); index++) {
       if (verbosity > 2)
           cerr << LibPaths[index] << endl;
@@ -578,9 +581,6 @@ void nativeCompile(llvm::Module *module,
 
     Linker::ItemList NativeLinkItems;
 
-    // libcrack is required
-    NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
-
     for (vector<string>::const_iterator i = sharedLibs.begin();
          i != sharedLibs.end();
          ++i) {
@@ -595,6 +595,9 @@ void nativeCompile(llvm::Module *module,
                                                     true // .so
                                                     ));
     }
+
+    // native runtime lib is required
+    NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
 
     string ErrMsg;
     char **envp = ::environ;

@@ -20,7 +20,12 @@ uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent *evt) { return evt->y; }
 #include "ext/Func.h"
 
 extern "C"
-void crack_ext__sdl_init(crack::ext::Module *mod) {
+void crack_ext__sdl_rinit() {
+    return;
+}
+
+extern "C"
+void crack_ext__sdl_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
     crack::ext::Type *type_void = mod->getVoidType();

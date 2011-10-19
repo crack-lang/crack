@@ -327,7 +327,8 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
 
     void *handle = rootBuilder->loadSharedLibrary(path);
 
-    // construct the full init function name XXX should do real name mangling
+    // construct the full init function name
+    // XXX should do real name mangling. also see LLVMLinkerBuilder::initializeImport
     std::string initFuncName;
     for (StringVecIter iter = moduleNameBegin;
          iter != moduleNameEnd;
@@ -335,7 +336,7 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
          )
         initFuncName += *iter + '_';
     
-    initFuncName += "init";
+    initFuncName += "cinit";
 
     InitFunc func = (InitFunc)dlsym(handle, initFuncName.c_str());
     

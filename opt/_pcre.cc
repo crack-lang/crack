@@ -6,7 +6,12 @@
 #include "ext/Func.h"
 
 extern "C"
-void crack_ext__pcre_init(crack::ext::Module *mod) {
+void crack_ext__pcre_rinit() {
+    return;
+}
+
+extern "C"
+void crack_ext__pcre_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
     crack::ext::Type *type_void = mod->getVoidType();

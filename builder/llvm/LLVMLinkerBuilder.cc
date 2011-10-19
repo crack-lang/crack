@@ -376,10 +376,6 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
 
     initializeImportCommon(m);
 
-    // if the module came from an extension, there's no top level to run
-    if (m->fromExtension)
-        return;
-
     // we add a call into our module's :main function
     // to run the top level function of the imported module
     // each :main is only run once, however, so that a module imported
@@ -396,10 +392,26 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
         ++i;
     IRBuilder<> b(mainInsert, i);
 
-    // declaration
-    Constant *fc = module->getOrInsertFunction(m->name+":main",
-                                              Type::getVoidTy(getGlobalContext()),
-                                              NULL);
+    Constant *fc;
+    if (m->fromExtension) {
+        // if this is an extension, we create a runtime initialize call
+        // this allows the extension to initialize, but also ensures the
+        // extension will be linked since ld requires at least one call into it
+        // XXX real mangle? see Construct::loadSharedLib
+        string name = m->getFullName();
+        for (int i=0; i < name.size(); ++i) {
+            if (name[i] == '.')
+                name[i] = '_';
+        }
+        fc = module->getOrInsertFunction(name+"_rinit",
+                                          Type::getVoidTy(getGlobalContext()),
+                                          NULL);
+    }
+    else {
+        fc = module->getOrInsertFunction(m->name+":main",
+                                          Type::getVoidTy(getGlobalContext()),
+                                          NULL);
+    }
     Function *f = llvm::cast<llvm::Function>(fc);
     b.CreateCall(f);
 }

@@ -1044,7 +1044,12 @@ definition.`;
 #include $(header('Func'))
 
 extern "C"
-void $(moduleName.join('_'))_init(crack::ext::Module *mod) {
+void $(moduleName.join('_'))_rinit() {
+    return;
+}
+
+extern "C"
+void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
 `;
 

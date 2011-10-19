@@ -50,7 +50,10 @@ int callback(int (*cb)(int)) {
     return cb(100);
 }
 
-extern "C" void testext_init(Module *mod) {
+extern "C" void testext_rinit(void) {
+}
+
+extern "C" void testext_cinit(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
     

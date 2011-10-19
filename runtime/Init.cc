@@ -31,7 +31,12 @@ extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
     return stat(path, buf);
 }
 
-extern "C" void crack_runtime_init(Module *mod) {
+extern "C"
+void crack_runtime_rinit(void) {
+    return;
+}
+
+extern "C" void crack_runtime_cinit(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
     Type *intType = mod->getIntType();

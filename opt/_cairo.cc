@@ -77,7 +77,12 @@ cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) {
 #include "ext/Func.h"
 
 extern "C"
-void crack_ext__cairo_init(crack::ext::Module *mod) {
+void crack_ext__cairo_rinit() {
+    return;
+}
+
+extern "C"
+void crack_ext__cairo_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
     crack::ext::Type *type_void = mod->getVoidType();
