@@ -72,6 +72,16 @@ if (1) {
         cout `FAILED tree locking, got $result\n`;
 }
 
+# test negative indexing
+if (true) {
+    Array[String] a = ['first', 'second', 'wrong'];
+    if (a[-1] != 'wrong')
+        cout `FAILED array negative indexing\n`;
+    a[-1] = 'third';
+    if (a != Array[String]!['first', 'second', 'third'])
+        cout `FAILED array negative index assignment\n`;
+}
+
 #  test subarray
 sub := sa.subarray(1);
 if (sub[1] != 'second: 200' || sub[2] != 'third: 300' || sub[0] != 'fourth: 400')

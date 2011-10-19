@@ -77,26 +77,26 @@ class Array[Elem] {
     uint __cap, __size;
 
     @final
+    void oper []=(int index, Elem elem) {
+        uint i;
+        if (index < 0)
+            i = __size + index;
+        else
+            i = uint(index);
+
+        tmp := __rep[i];
+        __rep[i] = elem;
+        _bind(elem);
+        _release(tmp);
+    }
+
+    @final
     void oper []=(uint index, Elem elem) {
         if (index >= __size)
             throw IndexError('Index out of range in Array.oper []=');
         
         tmp := __rep[index];
         __rep[index] = elem;
-        _bind(elem);
-        _release(tmp);
-    }
-
-    @final
-    void oper []=(int index, Elem elem) {
-        uint i;
-        if (index < 0)
-            i = __size + uint(index);
-        else
-            i = uint(index);
-
-        tmp := __rep[i];
-        __rep[i] = elem;
         _bind(elem);
         _release(tmp);
     }
