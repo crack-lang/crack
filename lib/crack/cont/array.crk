@@ -131,7 +131,7 @@ class Array[Elem] {
     int cmp(Object other) {
         if (this is other)
             return 0;
-        else if (!this.isa(Array))
+        else if (!other.isa(Array))
             return Object.cmp(other);
 
         peer := Array.cast(other);
@@ -142,7 +142,7 @@ class Array[Elem] {
             
             # if I'm longer than other, and we share a common prefix, I'm 
             # greater.
-            if (i > oc)
+            if (i == oc)
                 return 1;
 
             # compare the elements
