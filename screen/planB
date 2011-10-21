@@ -34,6 +34,7 @@ temp_root="$(slash_terminate $ROOT)"
 temp_outdir="$(slash_terminate $OUTDIR)"
 STATIC_VARS="
     s:%SOURCEDIR%:$temp_root:g
+    s:%BUILDDIR%:${BUILD_ROOT:-$temp_root}:g
     s:%OUTDIR%:$temp_outdir:g
 "
 VARS="$STATIC_VARS"

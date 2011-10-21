@@ -7,7 +7,7 @@ import crack.regex Regex;
 
 class Config {
     String crackBin, libPath;
-    Directory rootDir, outDir, sourceDir;
+    Directory rootDir, outDir, sourceDir, buildDir;
     Array[Object] builders = {}; // CrackBuilderDef
     bool verbose, showDiff, stopOnFail;
     uint jobs; // # of concurrent jobs
