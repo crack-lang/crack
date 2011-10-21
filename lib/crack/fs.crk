@@ -8,7 +8,7 @@ import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
     InvalidStateError;
-import crack.exp.readers FullReader;
+import crack.io.readers FullReader;
 @import crack.ann define;
 
 ## This gets raised when referencing a path that doesn't exist.
