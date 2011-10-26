@@ -10,7 +10,8 @@
 #   -v turn on verbose output
 
 root=${SOURCES_ROOT:-"$(dirname $(dirname $0))"}
-builddir=${BUILD_ROOT:-$(test -d "$root/build" && echo "$root/build" || echo "$root")}   # try to guess BUILD_ROOT if none is provided
+builddir=${BUILD_ROOT:-$(test -f "$root/build/crack" && 
+           echo "$root/build" || echo "$root")}   # try to guess BUILD_ROOT if none is provided
 
 echo "Using root directory: $root"
 echo "      build directory: $builddir"
@@ -24,7 +25,7 @@ screen_recompile=false
 
 # try to guess CRACK_LIB_PATH if none is provided
 if [ -z "$CRACK_LIB_PATH" ]; then
-    if [ -d "$root/build" ]; then
+    if [ -f "$root/build/crack" ]; then
         export CRACK_LIB_PATH=$builddir/lib
     else
         export CRACK_LIB_PATH=$root/.libs
@@ -41,7 +42,7 @@ run_screen() {
 
     if $screen_recompile || [ ! -e $builddir/test/screen.bin ]; then
         echo "rebuilding screen.bin..."
-        $builddir/crack -B llvm-native -l "$lib_paths" \
+        $builddir/crack -B llvm-native -Gl "$lib_paths" \
             -b out=$builddir/test/screen.bin $root/screen/screen.crk
     fi
 
