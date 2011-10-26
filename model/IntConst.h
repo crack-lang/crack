@@ -22,6 +22,7 @@ class IntConst : public Expr {
         } val;
 
         bool reqUnsigned; // > INT64_MAX so requires unsigned 64
+        bool uneg; // "unsigned negative"
 
         IntConst(TypeDef *type, int64_t val);
         IntConst(TypeDef *type, uint64_t val);
@@ -31,8 +32,27 @@ class IntConst : public Expr {
         virtual void writeTo(std::ostream &out) const;
         virtual bool isAdaptive() const;
         
+        virtual IntConstPtr create(int64_t v);
+        virtual IntConstPtr create(uint64_t v);
+        
         /** Return the default type for the value. */
         static TypeDef *selectType(Context &context, int64_t val);
+
+        ExprPtr foldAdd(Expr *other);
+        ExprPtr foldSub(Expr *other);
+        ExprPtr foldMul(Expr *other);
+        ExprPtr foldSDiv(Expr *other);
+        ExprPtr foldUDiv(Expr *other);
+        ExprPtr foldSRem(Expr *other);
+        ExprPtr foldURem(Expr *other);
+        ExprPtr foldOr(Expr *other);
+        ExprPtr foldAnd(Expr *other);
+        ExprPtr foldXor(Expr *other);
+        ExprPtr foldShl(Expr *other);
+        ExprPtr foldLShr(Expr *other);
+        ExprPtr foldAShr(Expr *other);
+        ExprPtr foldNeg();
+        ExprPtr foldBitNot();
 };
 
 } // namespace parser

@@ -44,4 +44,6 @@ bool Expr::isAdaptive() const {
     return false;
 }
 
+ExprPtr Expr::foldConstants() { return this; }
+
 void Expr::dump() const { writeTo(std::cerr); }

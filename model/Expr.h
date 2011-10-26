@@ -59,6 +59,14 @@ class Expr : public spug::RCBase {
          */
         virtual void writeTo(std::ostream &out) const = 0;
         
+        /**
+         * Do const folding on the expression.  Returns either the original 
+         * expression object or a folded constant.
+         * The base class version of this always returns null.  Derived 
+         * classes may implement it for operations that support const folding.
+         */
+        virtual ExprPtr foldConstants();
+        
         void dump() const;
 };
 

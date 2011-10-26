@@ -12,6 +12,8 @@
 #include "model/AllocExpr.h"
 #include "model/AssignExpr.h"
 #include "model/CleanupFrame.h"
+#include "model/IntConst.h"
+#include "model/FloatConst.h"
 #include "model/VarRef.h"
 
 using namespace std;
@@ -82,35 +84,69 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         return new BResultExpr(this, builder.lastValue);                    \
     }                                                                       \
 
+#define REV_BINOPF(opCode) \
+    REV_BINOP(opCode)                                                       \
+    ExprPtr opCode##ROpCall::foldConstants() {                               \
+        ExprPtr rval = receiver.get();                                      \
+        ExprPtr lval = args[0].get();                                       \
+        IntConstPtr ci = IntConstPtr::rcast(lval);                          \
+        ExprPtr result;                                                     \
+        if (ci)                                                             \
+            result = ci->fold##opCode(rval.get());                          \
+                                                                            \
+        FloatConstPtr fi = FloatConstPtr::rcast(lval);                      \
+        if (fi)                                                             \
+            result = ci->fold##opCode(rval.get());                          \
+        return result ? result : this;                                      \
+    }
+    
+
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
+// binary operation with folding
+#define BINOPF(prefix, op) \
+    BINOP(prefix, op)                                                       \
+    ExprPtr prefix##OpCall::foldConstants() {                               \
+        ExprPtr lval = receiver ? receiver.get() : args[0].get();           \
+        ExprPtr rval = receiver ? args[0].get() : args[1].get();            \
+        IntConstPtr ci = IntConstPtr::rcast(lval);                          \
+        ExprPtr result;                                                     \
+        if (ci)                                                             \
+            result = ci->fold##prefix(rval.get());                          \
+                                                                            \
+        FloatConstPtr fi = FloatConstPtr::rcast(lval);                      \
+        if (fi)                                                             \
+            result = ci->fold##prefix(rval.get());                          \
+        return result ? result : this;                                      \
+    }
+
 // Binary Ops
-BINOP(Add, "+");
-BINOP(Sub, "-");
-BINOP(Mul, "*");
-BINOP(SDiv, "/");
-BINOP(UDiv, "/");
-BINOP(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOP(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOP(Or, "|");
-BINOP(And, "&");
-BINOP(Xor, "^");
-BINOP(Shl, "<<");
-BINOP(LShr, ">>");
-BINOP(AShr, ">>");
-REV_BINOP(Add)
-REV_BINOP(Sub)
-REV_BINOP(Mul)
-REV_BINOP(SDiv)
-REV_BINOP(UDiv)
-REV_BINOP(SRem)
-REV_BINOP(URem)
-REV_BINOP(Or)
-REV_BINOP(And)
-REV_BINOP(Xor)
-REV_BINOP(Shl)
-REV_BINOP(LShr)
-REV_BINOP(AShr)
+BINOPF(Add, "+");
+BINOPF(Sub, "-");
+BINOPF(Mul, "*");
+BINOPF(SDiv, "/");
+BINOPF(UDiv, "/");
+BINOPF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+BINOPF(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOPF(Or, "|");
+BINOPF(And, "&");
+BINOPF(Xor, "^");
+BINOPF(Shl, "<<");
+BINOPF(LShr, ">>");
+BINOPF(AShr, ">>");
+REV_BINOPF(Add)
+REV_BINOPF(Sub)
+REV_BINOPF(Mul)
+REV_BINOPF(SDiv)
+REV_BINOPF(UDiv)
+REV_BINOPF(SRem)
+REV_BINOPF(URem)
+REV_BINOPF(Or)
+REV_BINOPF(And)
+REV_BINOPF(Xor)
+REV_BINOPF(Shl)
+REV_BINOPF(LShr)
+REV_BINOPF(AShr)
 
 BINOP(ICmpEQ, "==");
 BINOP(ICmpNE, "!=");
@@ -257,6 +293,20 @@ ResultExprPtr BitNotOpCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
+ExprPtr BitNotOpCall::foldConstants() {
+    ExprPtr val;
+    if (receiver)
+        val = receiver;
+    else
+        val = args[0];
+    
+    IntConstPtr v = IntConstPtr::rcast(val);
+    if (v)
+        return v->foldBitNot();
+    else
+        return this;
+}
+
 // BitNotOpDef
 BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
                          bool isMethod
@@ -374,6 +424,20 @@ ResultExprPtr NegOpCall::emit(Context &context) {
                     builder.lastValue
                     );
     return new BResultExpr(this, builder.lastValue);
+}
+
+ExprPtr NegOpCall::foldConstants() {
+    ExprPtr val;
+    if (receiver)
+        val = receiver;
+    else
+        val = args[0];
+    
+    IntConstPtr v = IntConstPtr::rcast(val);
+    if (v)
+        return v->foldNeg();
+    else
+        return this;
 }
 
 // NegOpDef

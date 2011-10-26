@@ -1,0 +1,8 @@
+%%TEST%%
+const folding negated double not
+%%ARGS%%
+%%FILE%%
+byte b = -(~~1);
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+%%STDIN%%

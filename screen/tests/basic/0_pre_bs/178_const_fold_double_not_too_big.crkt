@@ -1,0 +1,8 @@
+%%TEST%%
+const folding double not on an out-of-range value
+%%ARGS%%
+%%FILE%%
+byte b = ~~0xFFFFFFFFFFFFFFF0;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+%%STDIN%%
