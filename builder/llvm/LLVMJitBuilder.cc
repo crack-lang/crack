@@ -25,6 +25,7 @@
 #include <llvm/Module.h>
 #include <llvm/IntrinsicInst.h>
 #include <llvm/Intrinsics.h>
+#include <llvm/Support/Debug.h>
 
 using namespace std;
 using namespace llvm;
@@ -35,7 +36,6 @@ using namespace builder::mvll;
 
 void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
     // note, this->module and moduleDef->rep should be ==
-    // XXX only called from registerPrimFuncs currently
     bindJitModule(moduleDef->rep);
     if (options->dumpMode)
         dump();
@@ -98,6 +98,8 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
             llvm::JITEmitDebugInfo = true;
             llvm::JITExceptionHandling = true;
+            if (options->verbosity > 3)
+                llvm::DebugFlag = true;
 
             // we have to specify all of the arguments for this so we can turn
             // off "allocate globals with code."  In addition to being
@@ -110,6 +112,7 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
                                               CodeGenOpt::Default, // opt lvl
                                               false // alloc globals with code
                                               );
+
         }
     }
 
@@ -340,6 +343,57 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         assert(func && "entry function not LLVM Function!");
 
         engineBindModule(bmod);
+
+        // poor man's link - global mappings
+        // here we loop through all the externs of the
+        // loaded bitcode and try to resolve them from other modules already
+        // loaded into the JIT. Note that externs from extensions are not
+        // mapped, as these are handled by the JIT without our help (by
+        // searching for the symbol in the current process, which works because
+        // when the extension was imported, we've already dlopen'd it)
+        Function *ext_f;
+        MDString *sym;
+        NamedMDNode *externs = module->getNamedMetadata("crack_externs");
+        assert(externs && "no crack_externs node");
+        MDNode *symNode = externs->getOperand(0);
+        for (int i = 0; i < symNode->getNumOperands(); ++i) {
+
+            sym = dyn_cast<MDString>(symNode->getOperand(i));
+            assert(sym && "malformed crack_externs");
+
+            Function *decl = module->getFunction(sym->getString());
+            assert(decl->isDeclaration() && "declared extern wasn't a decl");
+
+            // find the function with this symbol name by searching through
+            // the modules that have already been added to the JIT
+            // we always expect it because 1) imports for this module have
+            // already been loaded and 2) the imports would have missed if
+            // their source digest didn't match (i.e. symbols changed) causing
+            // us to miss as well before now
+            // XXX this is noted as being a slow function. we have the potential
+            // to speed this up by keeping track of symbols in our own table
+            // local to LLVMJitBuilder as they are imported
+            ext_f = execEng->FindFunctionNamed(sym->getString().str().c_str());
+            assert(ext_f && "extern not found in JIT");
+
+            // materializing will ensure the function is codegen'd
+            if (ext_f->isMaterializable()) {
+                if (ext_f->Materialize()) {
+                    cerr << "materialize fail: " << ext_f->getNameStr()
+                         << endl;
+                    return NULL;
+                }
+            }
+
+            // after potentially materializing, ext_f should be a def
+            assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
+
+            void *realAddr = execEng->getPointerToFunction(ext_f);
+            assert(realAddr && "unable to resolve ext_f");
+            execEng->addGlobalMapping(decl, realAddr);
+
+        }
+
         doRunOrDump(context);
 
     }
@@ -348,7 +402,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
 
 }
 
-void LLVMJitBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) {
+void LLVMJitBuilder::cacheModule(model::Context &context,
+                                 model::ModuleDefPtr mod) {
 
     // encode main function location in bitcode metadata
     vector<Value *> dList;

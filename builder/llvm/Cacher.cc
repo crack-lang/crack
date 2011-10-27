@@ -4,6 +4,7 @@
 #include "BModuleDef.h"
 #include "model/Namespace.h"
 
+#include "builder/llvm/LLVMBuilder.h"
 #include "builder/BuilderOptions.h"
 #include "builder/util/CacheFiles.h"
 #include "builder/util/SourceDigest.h"
@@ -81,6 +82,25 @@ void Cacher::writeMetadata() {
         node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
         dList.clear();
     }
+
+    // crack_externs: these we need to resolve upon load. in the JIT, that means
+    // global mappings
+    node = module->getOrInsertNamedMetadata("crack_externs");
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    for (LLVMBuilder::ModFuncMap::const_iterator i = b.moduleFuncs.begin();
+         i != b.moduleFuncs.end();
+         ++i) {
+        // only include it if it's a decl and it's defined in another module
+        // but skip externals from extensions, since these are found by
+        // the jit through symbol searching the process
+        ModuleDefPtr owner = i->first->getOwner()->getModule();
+        if ((!i->second->isDeclaration()) ||
+            (owner && owner->fromExtension) ||
+            (i->first->getOwner() == modDef->getParent(0).get()))
+            continue;
+        dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
+    }
+    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
 
     //module->dump();
 
