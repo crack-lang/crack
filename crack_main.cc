@@ -66,7 +66,7 @@ void usage(int retval) {
     cout << " -C         --no-cache           Do not cache or use cached modules"
             << endl;
     */
-    cout << " -C                              Turn on moduld caching" << endl;
+    cout << " -C                              Turn on module caching" << endl;
 
     cout << " -g         --debug              Generate DWARF debug information"
             << endl;
