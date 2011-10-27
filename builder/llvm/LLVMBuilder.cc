@@ -459,8 +459,7 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
         // been defined yet.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
-                                          //Function::ExternalWeakLinkage,
-                                          Function::ExternalLinkage,
+                                          Function::ExternalWeakLinkage,
                                           bfuncDef->rep->getName(),
                                           module
                                           );
