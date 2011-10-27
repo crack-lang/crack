@@ -17,6 +17,15 @@ BIntConst::BIntConst(BTypeDef *type, int64_t val) :
         IntConst(type, val),
         rep(ConstantInt::get(type->rep, val)) {
 }
+
+IntConstPtr BIntConst::create(int64_t val) {
+    return new BIntConst(BTypeDefPtr::arcast(type), val);
+}
+
+IntConstPtr BIntConst::create(uint64_t val) {
+    return new BIntConst(BTypeDefPtr::arcast(type), val);
+}
+
 BIntConst::BIntConst(BTypeDef *type, uint64_t val) :
         IntConst(type, val),
         rep(ConstantInt::get(type->rep, val)) {

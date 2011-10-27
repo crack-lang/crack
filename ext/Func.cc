@@ -85,7 +85,14 @@ void Func::finish() {
                                     funcPtr,
                                     (symbolName.empty())?0:symbolName.c_str()
                                     );
-        context->addDef(funcDef.get());
+        VarDefPtr storedDef = context->addDef(funcDef.get());
+        
+        // check for a static method, add it to the meta-class
+        if (context->scope == Context::instance) {
+            TypeDef *type = TypeDefPtr::arcast(context->ns);
+            if (type != type->type.get())
+                type->type->addAlias(storedDef.get());
+        }
     }
 
     if (flags & constructor) {

@@ -1,0 +1,54 @@
+%%TEST%%
+const folding
+%%ARGS%%
+%%FILE%%
+
+import crack.ascii radix;
+import crack.io cout;
+@import crack.ann define;
+
+@define check_bin_op(expr, type, val, rtype) {
+    if (1) {
+        exprStr := $expr;
+        if (!(typeof(expr) is type))
+            cout `FAILED expected type of $exprStr\n`;
+        rtype result = expr;
+        if (result != val)
+            cout `FAILED expected result of $exprStr (got $result)\n`;
+    }
+}
+
+@check_bin_op(1 + 1, int, 2, byte);
+@check_bin_op(2 - 1, int, 1, byte);
+@check_bin_op(2 * 3, int, 6, byte);
+@check_bin_op(6 / 3, int, 2, byte); 
+@check_bin_op(8 % 3, int, 2, byte);
+# XXX not sure how to test unsigned division/remainders
+@check_bin_op(4 | 2, int, 6, byte);
+@check_bin_op(6 & 2, int, 2, byte);
+@check_bin_op(6 ^ 2, int, 4, byte);
+@check_bin_op(2 << 1, int, 4, byte);
+@check_bin_op(-1, int, -1, int32);
+@check_bin_op(-2 >> 1, int, -1, int32);
+@check_bin_op(~0, int, -1, int32);
+@check_bin_op(~0, int, 0xFF, byte);
+@check_bin_op(~0, int, 0xFFFFFFFF, uint32);
+
+# funky edge cases
+@check_bin_op(~0 >> 8, int, 0xFF, byte);
+@check_bin_op(~0 >> 8, int, -1, int64);
+@check_bin_op(~0 >> 8, int, 0xFFFFFFFFFFFFFFFF, uint64);
+@check_bin_op(-(-1), int, 1, byte);
+@check_bin_op(-1, int, -1, int32);
+@check_bin_op(~0 ^ ~0, int, 0, byte);
+@check_bin_op(~0 & ~0, int, 0xFF, byte);
+@check_bin_op(~0xFF, int, 0, byte);
+@check_bin_op(~0xFFFFFFFF, int64, 0, uint32);
+@check_bin_op(~0xFFFFFFFFFFFFFFFF, uint64, 0, uint64);
+@check_bin_op(0x7FFFFFFFFFFFFFFF, int64, 0x7FFFFFFFFFFFFFFF, int64);
+@check_bin_op(0xFFFFFFFFFFFFFFFF >> 1, uint64, 0x7FFFFFFFFFFFFFFF, int64);
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

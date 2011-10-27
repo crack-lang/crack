@@ -1,5 +1,7 @@
 # optional extensions
 
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/crack/ext)
+
 SET(GTK2_ADDITIONAL_SUFFIXES x86_64-linux-gnu/glib-2.0 gdk-pixbuf-2.0)
 macro_optional_find_package(GTK2 2.6 COMPONENTS gtk)
 macro_log_feature(GTK2_FOUND "gtk2+" "Bindings for gtk2+" "http://www.gtk.org/")

@@ -204,6 +204,9 @@ class Construct : public spug::RCBase {
                    crackContext,
                    functionType;
 
+        // Size of these PDNTs in bits.
+        int intSize, intzSize;
+
         Construct(builder::Builder *rootBuilder, Construct *primary = 0);
 
         /**

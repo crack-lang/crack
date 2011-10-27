@@ -1,0 +1,8 @@
+%%TEST%%
+const fold of 'not' on out-of-range value
+%%ARGS%%
+%%FILE%%
+byte b = ~0x100;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+%%STDIN%%

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <poll.h>
+#include <netdb.h>
 #include "ext/Object.h"
 #include <iostream> // XXX remove
 
@@ -56,6 +57,11 @@ struct SockAddrIn : public SockAddr {
                       );
 
     static void init2(SockAddrIn *inst, uint32_t addr, unsigned int port);
+
+    static uint32_t htonl(uint32_t val);    
+    static uint32_t ntohl(uint32_t val);
+    static uint16_t htons(uint16_t val);
+    static uint16_t ntohs(uint16_t val);
 };
 
 struct TimeVal {
@@ -98,6 +104,13 @@ int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index,
 int PollSet_poll(struct pollfd *fds, unsigned int nfds, TimeVal *tv,
                  sigset_t *sigmask
                  );
+
+
+addrinfo *AddrInfo_create(const char *host, const char *service,
+                          addrinfo *hints
+                          );
+void AddrInfo_free(addrinfo *info);
+sockaddr_in *AddrInfo_getInAddr(addrinfo *ai);
 
 
 }} // namespace crack::runtime

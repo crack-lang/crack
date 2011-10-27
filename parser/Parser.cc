@@ -1128,6 +1128,7 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             funcCall->receiver =
                (func->flags & FuncDef::reverse) ? rhs : expr;
          expr = funcCall;
+         expr = expr->foldConstants();
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
@@ -1166,19 +1167,8 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 namespace {
 
    ExprPtr parseConstInt(Context &context,
-                        bool negative,
-                        const string &val,
-                        int base) {
-      if (negative) {
-         // we need to give strtoll the - in the string, because otherwise the
-         // range is off and we can't parse LONG_MIN
-         string nval = "-"+val;
-         return context.builder.createIntConst(context,
-                                               strtoll(nval.c_str(), NULL,
-                                                       base
-                                                       )
-                                               );
-      }
+                         const string &val,
+                         int base) {
       
       // if the constant starts with an 'i' or 'b', this is a string whose 
       // bytes comprise the integer value.
@@ -1223,7 +1213,7 @@ namespace {
 
 } // anonymous namespace
 
-ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
+ExprPtr Parser::parseExpression(unsigned precedence) {
 
    ExprPtr expr;
 
@@ -1268,34 +1258,33 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
    
    // for a numeric constants
    } else if (tok.isInteger()) {
-      expr = parseConstInt(*context, unaryMinus, tok.getData(), 10);
+      expr = parseConstInt(*context, tok.getData(), 10);
    } else if (tok.isFloat()) {
-      // XXX use unaryMinus?
       expr = context->builder.createFloatConst(*context,
                                                atof(tok.getData().c_str())
                                                );
 
    } else if (tok.isOctal()) {
-      expr = parseConstInt(*context, unaryMinus, tok.getData(), 8);
+      expr = parseConstInt(*context, tok.getData(), 8);
    } else if (tok.isHex()) {
-      expr = parseConstInt(*context, unaryMinus, tok.getData(), 16);
+      expr = parseConstInt(*context, tok.getData(), 16);
    } else if (tok.isBinary()) {
-      expr = parseConstInt(*context, unaryMinus, tok.getData(), 2);
+      expr = parseConstInt(*context, tok.getData(), 2);
    } else if (tok.isPlus()) {
        // eat + if expression is a numeric constant and fail if it's not
        tok = getToken();
        if (tok.isInteger())
-           expr = parseConstInt(*context, unaryMinus, tok.getData(), 10);
+           expr = parseConstInt(*context, tok.getData(), 10);
        else if(tok.isFloat())
            expr = context->builder.createFloatConst(*context,
                                                     atof(tok.getData().c_str())
                                                     );
        else if (tok.isOctal())
-           expr = parseConstInt(*context, unaryMinus, tok.getData(), 8);
+           expr = parseConstInt(*context, tok.getData(), 8);
        else if (tok.isHex())
-           expr = parseConstInt(*context, unaryMinus, tok.getData(), 16);
+           expr = parseConstInt(*context, tok.getData(), 16);
        else if (tok.isBinary())
-           expr = parseConstInt(*context, unaryMinus, tok.getData(), 2);
+           expr = parseConstInt(*context, tok.getData(), 2);
        else
            unexpected(tok, "unexpected unary +");
    // for the unary operators
@@ -1305,40 +1294,29 @@ ExprPtr Parser::parseExpression(unsigned precedence, bool unaryMinus) {
       string symbol = tok.getData();
 
       // parse the expression
-      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"),
-                                        tok.isMinus());
+      ExprPtr operand = parseExpression(getPrecedence(symbol + "x"));
 
-
-      // if this is a minus, see if the expression is an integer constant and 
-      // simply negate it if it is.
-      IntConst *ic;
-      if (tok.isMinus() && (ic = IntConstPtr::rcast(operand))) {
-         // nop, handled above with unaryMinus in tok.isInteger() et al
-         expr = operand;
-      } else {
-
-         // try to look it up for the expression, then for the context.
-         symbol = "oper " + symbol;
-         if (tok.isIncr() || tok.isDecr())
-            symbol += "x";
-         FuncDefPtr funcDef = context->lookUp(symbol, args, 
-                                              operand->type.get()
-                                              );
-         if (!funcDef) {
-            args.push_back(operand);
-            funcDef = context->lookUp(symbol, args);
-         }
-         if (!funcDef)
-            error(tok, SPUG_FSTR(symbol << " is not defined for type "
-                                        << operand->type->name));
-
-   
-         FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
-         funcCall->args = args;
-         if (funcDef->flags & FuncDef::method)
-            funcCall->receiver = operand;
-         expr = funcCall;
+      // try to look it up for the expression, then for the context.
+      symbol = "oper " + symbol;
+      if (tok.isIncr() || tok.isDecr())
+         symbol += "x";
+      FuncDefPtr funcDef = context->lookUp(symbol, args, 
+                                           operand->type.get()
+                                           );
+      if (!funcDef) {
+         args.push_back(operand);
+         funcDef = context->lookUp(symbol, args);
       }
+      if (!funcDef)
+         error(tok, SPUG_FSTR(symbol << " is not defined for type "
+                                     << operand->type->name));
+
+
+      FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+      funcCall->args = args;
+      if (funcDef->flags & FuncDef::method)
+         funcCall->receiver = operand;
+      expr = funcCall->foldConstants();
    } else if (tok.isLCurly()) {
       assert(false);
    } else {

@@ -171,6 +171,6 @@ void Type::finish() {
 	ctx->builder.emitEndClass(*clsCtx);    
 
     if (!typeDef->getOwner())
-		ctx->ns->addDef(typeDef);
-	finished = true;
+        ctx->ns->addDef(typeDef);
+    finished = true;
 }

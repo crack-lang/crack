@@ -1,5 +1,6 @@
 #!/bin/sh
 # Copyright 2011 Google Inc.
+# Copyright 2011 Arno Rehn <arno@arnorehn.de>
 # Runs the "screen" command on selected tests or the set of all tests.
 # Options:
 #   -n run tests under llvm-native
@@ -8,30 +9,45 @@
 #   -j run screen in JIT mode
 #   -v turn on verbose output
 
-root="$(dirname $(dirname $0))"
+root=${SOURCES_ROOT:-"$(dirname $(dirname $0))"}
+builddir=${BUILD_ROOT:-$(test -f "$root/build/crack" && 
+           echo "$root/build" || echo "$root")}   # try to guess BUILD_ROOT if none is provided
 
+echo "Using root directory: $root"
+echo "      build directory: $builddir"
+echo
+
+lib_paths="$root/lib:$root/screen:$builddir/lib"
 builders="-bjit"
 opts=""
 screen_jit=false
 screen_recompile=false
-export CRACK_LIB_PATH=$root/.libs
+
+# try to guess CRACK_LIB_PATH if none is provided
+if [ -z "$CRACK_LIB_PATH" ]; then
+    if [ -f "$root/build/crack" ]; then
+        export CRACK_LIB_PATH=$builddir/lib
+    else
+        export CRACK_LIB_PATH=$root/.libs
+    fi
+fi
 
 run_screen() {
     if $screen_jit; then
-        $root/crack -l "$root/lib:$root/screen" $root/screen/screen.crk \
-            -c "$root/crack" -s "$root" -o "$root/screen/output" "$builders" \
+        $builddir/crack -l "$lib_paths" $root/screen/screen.crk -t "$builddir" -l "$lib_paths" \
+            -c "$builddir/crack" -s "$root" -o "$builddir/screen/output" "$builders" \
             $opts "$@"
         return
     fi
 
-    if $screen_recompile || [ ! -e $root/test/screen.bin ]; then
+    if $screen_recompile || [ ! -e $builddir/test/screen.bin ]; then
         echo "rebuilding screen.bin..."
-        $root/crack -B llvm-native -l "$root/lib:$root/screen" \
-            -b out=$root/test/screen.bin $root/screen/screen.crk
+        $builddir/crack -B llvm-native -Gl "$lib_paths" \
+            -b out=$builddir/test/screen.bin $root/screen/screen.crk
     fi
-    
-    $root/test/screen.bin -c "$root/crack" -s "$root" \
-        -o "$root/screen/output" "$builders" $opts "$@"
+
+    $builddir/test/screen.bin -c "$builddir/crack" -s "$root" -l "$lib_paths" \
+        -t "$builddir" -o "$builddir/screen/output" "$builders" $opts "$@"
 }
 
 args=$(getopt fnrjv "$@")
@@ -53,9 +69,8 @@ while true; do
 done
 
 # ensure output directory exits
-if [ ! -e "$root/screen/output" ]; then
-    mkdir "$root/screen/output"
-fi
+[ ! -e "$builddir/screen/output" ] && mkdir -p "$builddir/screen/output"
+[ ! -e "$builddir/test" ] && mkdir -p "$builddir/test"
 
 tests=""
 for arg in "$@"; do

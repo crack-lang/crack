@@ -3,7 +3,7 @@ shared library imports
 %%ARGS%%
 
 %%FILE%%
-import "%SOURCEDIR%/lib/testext.so" cecho; byteptr cecho(byteptr data);
+import "%BUILDDIR%/lib/testext.so" cecho; byteptr cecho(byteptr data);
      puts(cecho("ok"));
 %%EXPECT%%
 ok

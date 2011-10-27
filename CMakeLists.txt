@@ -20,6 +20,8 @@ set(LLVM_MIN_VERSION_TEXT  "2.9")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
+
 include(MacroOptionalFindPackage)
 include(MacroLogFeature)
 
@@ -67,7 +69,7 @@ set_target_properties(libcrack
                       )
 
 target_link_libraries( libcrack
-                       ${LLVM_LIBS}
+                       ${LLVM_LIBS} dl
                      )
 
 # libCrackNativeRuntime
@@ -82,15 +84,6 @@ set_target_properties(libcrackextstub
 target_link_libraries( libcrackextstub
                        ${LLVM_LIBS}
                      )
-
-if (CWD_FOUND)
-    target_link_libraries( libcrack ${CWD_LIBRARIES} )
-    target_link_libraries( libcrackextstub ${CWD_LIBRARIES} )
-endif (CWD_FOUND)
-
-# link dl last, so cwd doesn't complain
-target_link_libraries( libcrack dl )
-target_link_libraries( libcrackextstub dl )
 
 # extension config, per autoconf
 set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P})
@@ -111,6 +104,7 @@ add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
 set_target_properties(crack-runtime
                       PROPERTIES
                       OUTPUT_NAME runtime
+                      LIBRARY_OUTPUT_DIRECTORY lib/crack
                       PREFIX ""
                       )
 target_link_libraries(crack-runtime
@@ -160,47 +154,8 @@ install(FILES "${PROJECT_BINARY_DIR}/crack_config.h" DESTINATION "include/crack-
 install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
         FILES_MATCHING PATTERN "*.crk")
 
-# test suite, hackish
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/.libs
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.libs)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/.libs
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/.libs)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/crack
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/crack ${CMAKE_CURRENT_SOURCE_DIR}/crack)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so
-                   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/opt/_pcre.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/runtime.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/testext.so ${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so)
-
-add_custom_target(check 
-                  ${PROJECT_SOURCE_DIR}/test/screen
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/crack"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so"
-                  )
-
-add_custom_target(checkn
-                  ${PROJECT_SOURCE_DIR}/test/screen -n
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/.libs"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/test/.libs"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/crack"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/ext/_pcre.so"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/crack/runtime.so"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/lib/testext.so"
-                  )
+add_custom_target(check env CRACK_LIB_PATH=${CMAKE_CURRENT_BUILD_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BUILD_DIR}
+                            SOURCES_ROOT=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/screen)
 
 add_subdirectory(opt)
 

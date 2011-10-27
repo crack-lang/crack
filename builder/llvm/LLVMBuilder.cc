@@ -2081,6 +2081,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
     gd->intType = intType;
     gd->uintType = uintType;
+    gd->intSize = intIs32Bit ? 32 : 64;
     llvmIntType = intType->rep;
     deferMetaClass.push_back(intType);
     deferMetaClass.push_back(uintType);
@@ -2099,6 +2100,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
     gd->intzType = intzType;
     gd->uintzType = uintzType;
+    gd->intzSize = ptrIs32Bit ? 32 : 64;
     deferMetaClass.push_back(intzType);
     deferMetaClass.push_back(uintzType);
     

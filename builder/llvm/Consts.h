@@ -36,6 +36,8 @@ public:
     llvm::Value *rep;
     BIntConst(BTypeDef *type, int64_t val);
     BIntConst(BTypeDef *type, uint64_t val);
+    virtual model::IntConstPtr create(int64_t val);
+    virtual model::IntConstPtr create(uint64_t val);
 };
 
 class BFloatConst : public model::FloatConst {

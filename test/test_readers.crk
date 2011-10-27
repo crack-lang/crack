@@ -3,7 +3,7 @@
 
 import crack.runtime random;
 import crack.io cout, StringReader, StringWriter;
-import crack.exp.readers FullReader;
+import crack.io.readers FullReader;
 
 # Construct a string writer full of random data
 arr := array[int32](10000);

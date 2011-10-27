@@ -23,6 +23,8 @@ import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.exp.serial SerialReader, SerialWriter;
 
+const NOT_FOUND := 0xFFFFFFFF;
+
 ## Serial writer with some additional facilities to simplify macro 
 ## serialization.
 class MacroSerializer : SerialWriter {
@@ -32,7 +34,6 @@ class MacroSerializer : SerialWriter {
     oper init(Writer dst) : SerialWriter(dst) {}
     
     void writeSrcName(String name) {
-        const NOT_FOUND := 0xFFFFFFFF;
         idx := sourceNames.get(name, NOT_FOUND);
         if (idx != NOT_FOUND) {
             write(idx);
@@ -629,7 +630,9 @@ void define(CrackContext ctx) {
 
         # replace arguments with indices
         if (tok.isIdent() &&
-            (argIndex = args.get(String(tok.getText()), -1)) != -1)
+            (argIndex = args.get(String(tok.getText()), NOT_FOUND)) != 
+             NOT_FOUND
+            )
             node = Arg(tok.getLocation(), argIndex);
         else
             node = Tok(tok);

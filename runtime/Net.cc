@@ -46,6 +46,22 @@ void SockAddrIn::init2(SockAddrIn *inst, uint32_t addr0, unsigned int port0) {
     inst->port = port0;
 }
 
+uint32_t SockAddrIn::htonl(uint32_t val) {
+    return ::htonl(val);
+}
+
+uint32_t SockAddrIn::ntohl(uint32_t val) {
+    return ::ntohl(val);
+}
+
+uint16_t SockAddrIn::htons(uint16_t val) {
+    return ::htons(val);
+}
+
+uint16_t SockAddrIn::ntohs(uint16_t val) {
+    return ::ntohs(val);
+}
+
 void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
     inst->secs = secs0;
     inst->nsecs = nsecs0;
@@ -172,6 +188,23 @@ int SigSet_del(sigset_t *sigmask, int signum) {
 
 int SigSet_has(sigset_t *sigmask, int signum) {
     return sigismember(sigmask, signum);
+}
+
+addrinfo *AddrInfo_create(const char *host, const char *service,
+                          addrinfo *hints
+                          ) {
+    addrinfo *result;
+    if (getaddrinfo(host, service, hints, &result))
+        return 0;
+    else
+        return result;
+}
+
+sockaddr_in *AddrInfo_getInAddr(addrinfo *ai) {
+    if (ai->ai_family == AF_INET)
+        return (sockaddr_in *)ai->ai_addr;
+    else
+        return 0;
 }
 
 }} // namespace crack::runtime

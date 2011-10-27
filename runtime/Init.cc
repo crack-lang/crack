@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <signal.h>
 #include "debug/DebugTools.h"
 #include "ext/Func.h"
@@ -40,8 +41,8 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
     Type *intType = mod->getIntType();
-    Type *type_intz = mod->getIntzType();
-    Type *type_uintz = mod->getUintzType();
+    Type *intzType = mod->getIntzType();
+    Type *uintzType = mod->getUintzType();
     Type *uint32Type = mod->getUint32Type();
     Type *int32Type = mod->getInt32Type();
     Type *uintType = mod->getUintType();
@@ -329,6 +330,34 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(uint32Type, "addr");
     f->addArg(uintType, "port");
     
+    f = sockAddrInType->addStaticMethod(
+        uint32Type, 
+        "htonl",
+        (void *)&crack::runtime::SockAddrIn::htonl
+    );
+    f->addArg(uint32Type, "val");
+
+    f = sockAddrInType->addStaticMethod(
+        uint32Type, 
+        "ntohl",
+        (void *)&crack::runtime::SockAddrIn::ntohl
+    );
+    f->addArg(uint32Type, "val");
+
+    f = sockAddrInType->addStaticMethod(
+        uintType, 
+        "htons",
+        (void *)&crack::runtime::SockAddrIn::htons
+    );
+    f->addArg(uintType, "val");
+    
+    f = sockAddrInType->addStaticMethod(
+        uintType,
+        "ntohs",
+        (void *)&crack::runtime::SockAddrIn::ntohs
+    );
+    f->addArg(uintType, "val");
+    
     sockAddrInType->finish();
     // end SockAddrIn
     
@@ -479,6 +508,51 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     pollSetType->finish();
     // end PollSet
+
+    // addrinfo
+    Type *addrinfoType = mod->addType("AddrInfo", sizeof(addrinfo));
+    f = addrinfoType->addStaticMethod(addrinfoType, "oper new", 
+                                      (void *)&crack::runtime::AddrInfo_create
+                                      );
+    f->addArg(byteptrType, "node");
+    f->addArg(byteptrType, "service");
+    f->addArg(addrinfoType, "hints");
+    
+    f = addrinfoType->addMethod(voidType, "free",
+                                (void *)freeaddrinfo
+                                );
+    f->addArg(addrinfoType, "addr");
+    
+    f = addrinfoType->addMethod(sockAddrInType, "getInAddr",
+                                (void *)crack::runtime::AddrInfo_getInAddr
+                                );
+    
+    addrinfoType->addInstVar(intType, "ai_flags",
+                             CRACK_OFFSET(addrinfo, ai_flags)
+                             );
+    addrinfoType->addInstVar(intType, "ai_family",
+                             CRACK_OFFSET(addrinfo, ai_family)
+                             );
+    addrinfoType->addInstVar(intType, "ai_socktype",
+                             CRACK_OFFSET(addrinfo, ai_socktype)
+                             );
+    addrinfoType->addInstVar(intType, "ai_protocol",
+                             CRACK_OFFSET(addrinfo, ai_protocol)
+                             );
+    addrinfoType->addInstVar(uintzType, "ai_addrlen",
+                             CRACK_OFFSET(addrinfo, ai_addrlen)
+                             );
+    addrinfoType->addInstVar(sockAddrType, "ai_addr",
+                             CRACK_OFFSET(addrinfo, ai_addr)
+                             );
+    addrinfoType->addInstVar(byteptrType, "ai_canonname",
+                             CRACK_OFFSET(addrinfo, ai_canonname)
+                             );
+    addrinfoType->addInstVar(addrinfoType, "ai_next",
+                             CRACK_OFFSET(addrinfo, ai_next)
+                             );
+    addrinfoType->finish();
+    // end addrinfo
 
     // misc C functions
     f = mod->addFunc(intType, "close", (void *)close, "close");

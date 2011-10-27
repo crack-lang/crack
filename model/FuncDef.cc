@@ -137,6 +137,11 @@ bool FuncDef::isConstant() {
     return true;
 }
 
+ExprPtr FuncDef::foldConstants(const vector<ExprPtr> &args) const {
+    return 0;
+}
+    
+
 void FuncDef::dump(ostream &out, const string &prefix) const {
     out << prefix << returnType->getFullName() << " " << getFullName() <<
         args << "\n";

@@ -289,11 +289,8 @@ class Parser {
        *    side of 'x * y', and the precedence of '*' is 10, and we encounter 
        *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing 
        *    after the 'a'.
-       * @param unaryMinus When true, the expression is preceeded by a unary
-       *    minus. Used to parse negative integer constants correctly.
        */
-      model::ExprPtr parseExpression(unsigned precedence = 0,
-                                     bool unaryMinus=false);
+      model::ExprPtr parseExpression(unsigned precedence = 0);
       void parseMethodArgs(std::vector<model::ExprPtr> &args, 
                            Token::Type terminator = Token::rparen
                            );

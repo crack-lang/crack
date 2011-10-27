@@ -117,6 +117,12 @@ class FuncDef : public VarDef {
          */
         virtual void *getFuncAddr(builder::Builder &builder) = 0;
         
+        /**
+         * Returns a const-folded form of the function if there is one, null 
+         * if not.
+         */
+        ExprPtr foldConstants(const std::vector<ExprPtr> &args) const;
+        
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 

@@ -73,6 +73,7 @@ public:
     BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
+    virtual model::ExprPtr foldConstants();
 };
 
 class BitNotOpDef : public OpDef {
@@ -128,6 +129,8 @@ public:
     NegOpCall(model::FuncDef *def) : FuncCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
+    
+    virtual model::ExprPtr foldConstants();
 };
 
 class NegOpDef : public OpDef {
@@ -356,15 +359,6 @@ public:
     };
 
 #define BINOP_DEF(prefix, op) \
-    class prefix##OpCall : public model::FuncCall {                         \
-        public:                                                             \
-            prefix##OpCall(model::FuncDef *def) :                           \
-                FuncCall(def) {                                             \
-            }                                                               \
-                                                                            \
-            virtual model::ResultExprPtr emit(model::Context &context);     \
-    };                                                                      \
-                                                                            \
     class prefix##OpDef : public BinOpDef {                                 \
         public:                                                             \
             prefix##OpDef(model::TypeDef *argType,                          \
@@ -384,79 +378,102 @@ public:
             }                                                               \
     };
 
+#define BINOPD(prefix, op) \
+    class prefix##OpCall : public model::FuncCall {                         \
+        public:                                                             \
+            prefix##OpCall(model::FuncDef *def) :                           \
+                FuncCall(def) {                                             \
+            }                                                               \
+                                                                            \
+            virtual model::ResultExprPtr emit(model::Context &context);     \
+    };                                                                      \
+    BINOP_DEF(prefix, op)
+
+#define BINOPDF(prefix, op) \
+    class prefix##OpCall : public model::FuncCall {                         \
+        public:                                                             \
+            prefix##OpCall(model::FuncDef *def) :                           \
+                FuncCall(def) {                                             \
+            }                                                               \
+                                                                            \
+            virtual model::ResultExprPtr emit(model::Context &context);     \
+            virtual model::ExprPtr foldConstants();                         \
+    };                                                                      \
+    BINOP_DEF(prefix, op)
+
 // Binary Ops
-BINOP_DEF(Add, "+");
-BINOP_DEF(Sub, "-");
-BINOP_DEF(Mul, "*");
-BINOP_DEF(SDiv, "/");
-BINOP_DEF(UDiv, "/");
-BINOP_DEF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOP_DEF(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOP_DEF(Or, "|");
-BINOP_DEF(And, "&");
-BINOP_DEF(Xor, "^");
-BINOP_DEF(Shl, "<<");
-BINOP_DEF(LShr, ">>");
-BINOP_DEF(AShr, ">>");
-BINOP_DEF(AddR, "r+");
-BINOP_DEF(SubR, "r-");
-BINOP_DEF(MulR, "r*");
-BINOP_DEF(SDivR, "r/");
-BINOP_DEF(UDivR, "r/");
-BINOP_DEF(SRemR, "r%");
-BINOP_DEF(URemR, "r%");
-BINOP_DEF(OrR, "r|");
-BINOP_DEF(AndR, "r&");
-BINOP_DEF(XorR, "r^");
-BINOP_DEF(ShlR, "r<<");
-BINOP_DEF(LShrR, "r>>");
-BINOP_DEF(AShrR, "r>>");
+BINOPDF(Add, "+");
+BINOPDF(Sub, "-");
+BINOPDF(Mul, "*");
+BINOPDF(SDiv, "/");
+BINOPDF(UDiv, "/");
+BINOPDF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+BINOPDF(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOPDF(Or, "|");
+BINOPDF(And, "&");
+BINOPDF(Xor, "^");
+BINOPDF(Shl, "<<");
+BINOPDF(LShr, ">>");
+BINOPDF(AShr, ">>");
+BINOPDF(AddR, "r+");
+BINOPDF(SubR, "r-");
+BINOPDF(MulR, "r*");
+BINOPDF(SDivR, "r/");
+BINOPDF(UDivR, "r/");
+BINOPDF(SRemR, "r%");
+BINOPDF(URemR, "r%");
+BINOPDF(OrR, "r|");
+BINOPDF(AndR, "r&");
+BINOPDF(XorR, "r^");
+BINOPDF(ShlR, "r<<");
+BINOPDF(LShrR, "r>>");
+BINOPDF(AShrR, "r>>");
 
-BINOP_DEF(ICmpEQ, "==");
-BINOP_DEF(ICmpNE, "!=");
-BINOP_DEF(ICmpSGT, ">");
-BINOP_DEF(ICmpSLT, "<");
-BINOP_DEF(ICmpSGE, ">=");
-BINOP_DEF(ICmpSLE, "<=");
-BINOP_DEF(ICmpUGT, ">");
-BINOP_DEF(ICmpULT, "<");
-BINOP_DEF(ICmpUGE, ">=");
-BINOP_DEF(ICmpULE, "<=");
-BINOP_DEF(ICmpEQR, "==");
-BINOP_DEF(ICmpNER, "!=");
-BINOP_DEF(ICmpSGTR, "r>");
-BINOP_DEF(ICmpSLTR, "r<");
-BINOP_DEF(ICmpSGER, "r>=");
-BINOP_DEF(ICmpSLER, "r<=");
-BINOP_DEF(ICmpUGTR, "r>");
-BINOP_DEF(ICmpULTR, "r<");
-BINOP_DEF(ICmpUGER, "r>=");
-BINOP_DEF(ICmpULER, "r<=");
+BINOPD(ICmpEQ, "==");
+BINOPD(ICmpNE, "!=");
+BINOPD(ICmpSGT, ">");
+BINOPD(ICmpSLT, "<");
+BINOPD(ICmpSGE, ">=");
+BINOPD(ICmpSLE, "<=");
+BINOPD(ICmpUGT, ">");
+BINOPD(ICmpULT, "<");
+BINOPD(ICmpUGE, ">=");
+BINOPD(ICmpULE, "<=");
+BINOPD(ICmpEQR, "==");
+BINOPD(ICmpNER, "!=");
+BINOPD(ICmpSGTR, "r>");
+BINOPD(ICmpSLTR, "r<");
+BINOPD(ICmpSGER, "r>=");
+BINOPD(ICmpSLER, "r<=");
+BINOPD(ICmpUGTR, "r>");
+BINOPD(ICmpULTR, "r<");
+BINOPD(ICmpUGER, "r>=");
+BINOPD(ICmpULER, "r<=");
 
-BINOP_DEF(FAdd, "+");
-BINOP_DEF(FSub, "-");
-BINOP_DEF(FMul, "*");
-BINOP_DEF(FDiv, "/");
-BINOP_DEF(FRem, "%");
-BINOP_DEF(FAddR, "r+");
-BINOP_DEF(FSubR, "r-");
-BINOP_DEF(FMulR, "r*");
-BINOP_DEF(FDivR, "r/");
-BINOP_DEF(FRemR, "r%");
+BINOPD(FAdd, "+");
+BINOPD(FSub, "-");
+BINOPD(FMul, "*");
+BINOPD(FDiv, "/");
+BINOPD(FRem, "%");
+BINOPD(FAddR, "r+");
+BINOPD(FSubR, "r-");
+BINOPD(FMulR, "r*");
+BINOPD(FDivR, "r/");
+BINOPD(FRemR, "r%");
 
-BINOP_DEF(Is, "is");
-BINOP_DEF(FCmpOEQ, "==");
-BINOP_DEF(FCmpONE, "!=");
-BINOP_DEF(FCmpOGT, ">");
-BINOP_DEF(FCmpOLT, "<");
-BINOP_DEF(FCmpOGE, ">=");
-BINOP_DEF(FCmpOLE, "<=");
-BINOP_DEF(FCmpOEQR, "==");
-BINOP_DEF(FCmpONER, "!=");
-BINOP_DEF(FCmpOGTR, ">");
-BINOP_DEF(FCmpOLTR, "<");
-BINOP_DEF(FCmpOGER, ">=");
-BINOP_DEF(FCmpOLER, "<=");
+BINOPD(Is, "is");
+BINOPD(FCmpOEQ, "==");
+BINOPD(FCmpONE, "!=");
+BINOPD(FCmpOGT, ">");
+BINOPD(FCmpOLT, "<");
+BINOPD(FCmpOGE, ">=");
+BINOPD(FCmpOLE, "<=");
+BINOPD(FCmpOEQR, "==");
+BINOPD(FCmpONER, "!=");
+BINOPD(FCmpOGTR, ">");
+BINOPD(FCmpOLTR, "<");
+BINOPD(FCmpOGER, ">=");
+BINOPD(FCmpOLER, "<=");
 
 // Type Conversion Ops
 UNOP_DEF(SExt);
