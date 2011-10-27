@@ -7,8 +7,8 @@ import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
 import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
-    PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, TimeVal, close, listen, 
-    send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, 
+    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, TimeVal, close, 
+    listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, 
     AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, 
     SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
     SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
@@ -54,6 +54,55 @@ class InetAddress : Address {
         i := SockAddrIn.unsafeCast(_addr);
         return InetAddress(i.addr, i.port);
     }
+    
+    void writeTo(Writer out) {
+        Formatter fmt = {out};
+        i := SockAddrIn.unsafeCast(_addr);
+        addr := i.addr;
+        fmt `$(addr >> 24).$((addr >> 8) & 0xff).$((addr >> 16) & 0xff)\
+.$(addr & 0xff):$(i.port & 0xFFFF)`;
+    }
+    
+    int cmp(Object other) {
+        if (!other.isa(InetAddress))
+            return Object.cmp(other);
+        a := SockAddrIn.unsafeCast(_addr);
+        b := SockAddrIn.unsafeCast(InetAddress.unsafeCast(other)._addr);
+        int rc = a.addr - b.addr; if (rc) return rc;
+        rc = a.port & 0xFFFF - b.port & 0xFFFF;
+        return rc;
+    }
+}
+
+## Get all of the addresses for the specified hostname.
+Array[Address] resolve(String hostname) {
+    Array[Address] result = {};
+    info := AddrInfo(hostname.buffer, null, null);
+    while (!(info is null)) {
+        if (info.ai_family == AF_INET) {
+            
+            # create an address instance
+            inAddr := info.getInAddr();
+            addr := InetAddress(SockAddrIn.htonl(inAddr.addr), 
+                                SockAddrIn.htons(inAddr.port)
+                                );
+            
+            # make sure it's not in the existing list
+            bool exists;
+            for (existing :in result) {
+                if (addr == existing) {
+                    exists = true;
+                    break;
+                }
+            }
+            
+            if (!exists)
+                result.append(addr);
+        }
+        info = info.ai_next;
+    }
+    
+    return result;
 }
 
 ## Wrapper around a socket.

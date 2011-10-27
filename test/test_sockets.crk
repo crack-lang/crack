@@ -1,8 +1,9 @@
 
+import crack.cont.array Array;
 import crack.lang die, ManagedBuffer;
-import crack.io cout;
-import crack.net InetAddress, Socket, Poller, PollEvent, AF_INET, INADDR_ANY, 
-    POLLIN, POLLERR, SOCK_STREAM;
+import crack.io cout, FStr;
+import crack.net resolve, Address, InetAddress, Socket, Poller, PollEvent, 
+    AF_INET, INADDR_ANY, POLLIN, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
 
 # create a server socket, bind to a port and listen.
@@ -81,5 +82,13 @@ cln.recv(buf, 0);
 # test an empty timeout
 if (poller.wait(TimeDelta(0, 0)) != 0)
     die("waiting on a zero timeout did not return zero!");
+
+# TODO: this has an external dependency on the ability to reolve localhost, 
+# please fix.
+localhost := resolve('localhost');
+if (FStr() `$localhost` != '[127.0.0.1:0]')
+    die('FAILED localhost lookup formatting');
+if (localhost != Array[Address]![InetAddress(127, 0, 0, 1, 0)])
+    die('FAILED localhost lookup');
 
 cout `ok\n`;
