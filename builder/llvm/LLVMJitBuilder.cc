@@ -98,8 +98,10 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
             llvm::JITEmitDebugInfo = true;
             llvm::JITExceptionHandling = true;
-            if (options->verbosity > 3)
-                llvm::DebugFlag = true;
+            
+            // XXX only available in debug builds of llvm?
+            //if (options->verbosity > 3)
+            //    llvm::DebugFlag = true;
 
             // we have to specify all of the arguments for this so we can turn
             // off "allocate globals with code."  In addition to being
