@@ -41,6 +41,8 @@ class Func {
         std::string symbolName;
         void *funcPtr;
         std::vector<Arg *> args;
+
+        std::string funcBody;
         
         // these must match the values in FuncDef::Flags
         Flags flags;
@@ -54,6 +56,19 @@ class Func {
             returnType(returnType),
             name(name),
             funcPtr(funcPtr),
+            flags(flags),
+            finished(false) {
+        }
+
+        Func(model::Context *context, Type *returnType, std::string name,
+             const std::string& body,
+             Flags flags
+             ) :
+            context(context),
+            returnType(returnType),
+            name(name),
+            funcPtr(0),
+            funcBody(body),
             flags(flags),
             finished(false) {
         }
@@ -73,7 +88,13 @@ class Func {
         void setIsVariadic(bool isVariadic);
 
         // gets whether the Func maps to a variadic function
-        bool isVariadic();
+        bool isVariadic() const;
+
+        // sets the function body; sets funcPtr to 0
+        void setBody(const std::string& body);
+
+        // returns the function body
+        std::string body() const;
 
         // finish the definition of the function (this will be called 
         // automatically by Module::finish())
