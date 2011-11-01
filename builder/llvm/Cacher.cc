@@ -3,9 +3,12 @@
 #include "Cacher.h"
 #include "BModuleDef.h"
 #include "model/Namespace.h"
+#include "model/OverloadDef.h"
 
 #include "builder/llvm/LLVMBuilder.h"
 #include "builder/BuilderOptions.h"
+#include "builder/llvm/VarDefs.h"
+#include "builder/llvm/BFuncDef.h"
 #include "builder/util/CacheFiles.h"
 #include "builder/util/SourceDigest.h"
 
@@ -29,6 +32,12 @@ using namespace model;
 
 // metadata version
 const std::string Cacher::MD_VERSION = "1";
+
+namespace {
+    ConstantInt *constInt(int c) {
+        return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), c);
+    }
+}
 
 void Cacher::addNamedStringNode(const string &key, const string &val) {
 
@@ -93,6 +102,7 @@ void Cacher::writeMetadata() {
         // only include it if it's a decl and it's defined in another module
         // but skip externals from extensions, since these are found by
         // the jit through symbol searching the process
+        assert(i->first->getOwner() && "no owner");
         ModuleDefPtr owner = i->first->getOwner()->getModule();
         if ((!i->second->isDeclaration()) ||
             (owner && owner->fromExtension) ||
@@ -101,12 +111,88 @@ void Cacher::writeMetadata() {
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
     }
     node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+    dList.clear();
+
+    // crack_defs: the symbols defined in this module that we need to rebuild
+    // at compile time in order to use this cached module to compile fresh code
+    // from
+    node = module->getOrInsertNamedMetadata("crack_defs");
+    OverloadDef *ol;
+    Namespace *mns = static_cast<Namespace*>(modDef);
+    for (ModuleDef::VarDefMap::const_iterator i = modDef->beginDefs();
+         i != modDef->endDefs();
+         ++i) {
+        if (ol = dynamic_cast<OverloadDef*>(i->second.get())) {
+            for (OverloadDef::FuncList::const_iterator f = ol->beginTopFuncs();
+                 f != ol->endTopFuncs();
+                 ++f) {
+                // skip aliases
+                if ((*f)->getOwner() == mns)
+                    node->addOperand(writeFuncDef((*f).get()));
+            }
+        }
+        else {
+            // skip aliases
+            if (i->second->getOwner() == mns)
+                node->addOperand(writeVarDef(i->second.get()));
+        }
+    }
 
     //module->dump();
 
 }
 
-bool Cacher::doImports() {
+MDNode *Cacher::writeFuncDef(FuncDef *sym) {
+
+    vector<Value *> dList;
+
+    BFuncDef *bf = dynamic_cast<BFuncDef *>(sym);
+    assert(bf && "not BFuncDef");
+
+    // operand 0: symbol name (not canonical)
+    dList.push_back(MDString::get(getGlobalContext(), sym->name));
+
+    // operand 1: symbol type
+    dList.push_back(constInt(Cacher::function));
+
+    // operand 2: llvm rep
+    dList.push_back(bf->rep);
+
+    // operand 3: funcdef flags
+    dList.push_back(constInt(bf->flags));
+
+    // operand 4..ARITY: parameter symbol names
+    for (FuncDef::ArgVec::const_iterator i = bf->args.begin();
+         i != bf->args.end();
+         ++i) {
+        dList.push_back(MDString::get(getGlobalContext(), (*i)->name));
+    }
+
+    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+
+}
+
+MDNode *Cacher::writeVarDef(VarDef *sym) {
+
+    vector<Value *> dList;
+
+    BGlobalVarDefImpl *bvar = dynamic_cast<BGlobalVarDefImpl *>(sym->impl.get());
+    assert(bvar && "not BGlobalVarDefImpl");
+
+    // operand 0: symbol name (not canonical)
+    dList.push_back(MDString::get(getGlobalContext(), sym->name));
+
+    // operand 1: symbol type
+    dList.push_back(constInt(Cacher::global));
+
+    // operand 2: llvm rep
+    dList.push_back(bvar->rep);
+
+    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+
+}
+
+bool Cacher::readImports() {
 
     MDNode *mnode;
     MDString *cname, *digest;
@@ -141,6 +227,79 @@ bool Cacher::doImports() {
 
 }
 
+void Cacher::readDefs() {
+
+    MDNode *mnode;
+    MDString *mstr;
+    string sym;
+    Value *rep;
+    Function *f;
+    ConstantInt *flags;
+    BFuncDef *newF;
+    OverloadDef *o;
+    NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_defs");
+
+    assert(imports && "missing crack_defs node");
+
+    for (int i = 0; i < imports->getNumOperands(); ++i) {
+
+        mnode = imports->getOperand(i);
+
+        // operand 0: symbol name
+        mstr = dyn_cast<MDString>(mnode->getOperand(0));
+        assert(mstr && "malformed def node: symbol name");
+        sym = mstr->getString().str();
+
+        // operand 1: symbol type
+        ConstantInt *type = dyn_cast<ConstantInt>(mnode->getOperand(1));
+        assert(type && "malformed def node: symbol type");
+
+        // operand 2: llvm rep
+        rep = mnode->getOperand(2);
+        assert(rep && "malformed def node: llvm rep");
+
+        switch (type->getLimitedValue()) {
+        case Cacher::function:
+
+            // operand 3: func flags
+            flags = dyn_cast<ConstantInt>(mnode->getOperand(3));
+            assert(flags && "malformed def node: function flags");
+
+            // llvm function
+            f = dyn_cast<Function>(rep);
+            assert(f && "malformed def node: llvm rep not function");
+
+            // model funcdef
+            newF = new BFuncDef((FuncDef::Flags)flags->getLimitedValue(),
+                                          sym,
+                                          f->getArgumentList().size());
+            // XXX what else?
+            newF->rep = f;
+            newF->setOwner(modDef);
+
+            // XXX build/get real return type
+            newF->returnType = context.construct->int32Type;
+
+            // XXX lookup and add to current overload if exists
+            o = new OverloadDef(sym);
+            o->addFunc(newF);
+
+            modDef->addDef(o);
+
+            break;
+
+        case Cacher::global:
+            break;
+
+        default:
+            assert(0 && "unhandled def type");
+        }
+
+    }
+
+
+}
+
 bool Cacher::readMetadata() {
 
     string snode;
@@ -160,8 +319,13 @@ bool Cacher::readMetadata() {
     modDef->path = getNamedStringNode("crack_origin_path");
 
     // import list
-    if (!doImports())
+    // if readImports returns false, then one of our dependencies has
+    // changed on disk and our own cache therefore fails
+    if (!readImports())
         return false;
+
+    // var defs
+    readDefs();
 
     // cache hit
     return true;
