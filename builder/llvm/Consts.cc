@@ -36,3 +36,6 @@ BFloatConst::BFloatConst(BTypeDef *type, double val) :
         rep(ConstantFP::get(type->rep, val)) {
 }
 
+FloatConstPtr BFloatConst::create(double val) const {
+    return new BFloatConst(BTypeDefPtr::arcast(type), val);
+}

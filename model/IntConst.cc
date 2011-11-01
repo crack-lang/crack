@@ -65,8 +65,10 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
             val.sval < static_cast<int64_t>(INT32_MIN))
             return 0;
             // context.error = "Constant out of range of int32"
-    } else if ((newType == context.construct->float32Type) ||
-               (newType == context.construct->float64Type)) {
+    } else if (newType == context.construct->float32Type ||
+               newType == context.construct->float64Type ||
+               newType == context.construct->floatType
+               ) {
         // XXX range check?
         return context.builder.createFloatConst(context,
                                                 (double)val.sval,

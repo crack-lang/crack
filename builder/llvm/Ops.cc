@@ -84,18 +84,14 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         return new BResultExpr(this, builder.lastValue);                    \
     }                                                                       \
 
-#define REV_BINOPF(opCode) \
+#define REV_BINOPF(opCode, cls) \
     REV_BINOP(opCode)                                                       \
-    ExprPtr opCode##ROpCall::foldConstants() {                               \
+    ExprPtr opCode##ROpCall::foldConstants() {                              \
         ExprPtr rval = receiver.get();                                      \
         ExprPtr lval = args[0].get();                                       \
-        IntConstPtr ci = IntConstPtr::rcast(lval);                          \
+        cls##ConstPtr ci = cls##ConstPtr::rcast(lval);                      \
         ExprPtr result;                                                     \
         if (ci)                                                             \
-            result = ci->fold##opCode(rval.get());                          \
-                                                                            \
-        FloatConstPtr fi = FloatConstPtr::rcast(lval);                      \
-        if (fi)                                                             \
             result = ci->fold##opCode(rval.get());                          \
         return result ? result : this;                                      \
     }
@@ -104,49 +100,50 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
 // binary operation with folding
-#define BINOPF(prefix, op) \
+#define BINOPF(prefix, op, cls) \
     BINOP(prefix, op)                                                       \
     ExprPtr prefix##OpCall::foldConstants() {                               \
         ExprPtr lval = receiver ? receiver.get() : args[0].get();           \
         ExprPtr rval = receiver ? args[0].get() : args[1].get();            \
-        IntConstPtr ci = IntConstPtr::rcast(lval);                          \
+        cls##ConstPtr ci = cls##ConstPtr::rcast(lval);                      \
         ExprPtr result;                                                     \
         if (ci)                                                             \
-            result = ci->fold##prefix(rval.get());                          \
-                                                                            \
-        FloatConstPtr fi = FloatConstPtr::rcast(lval);                      \
-        if (fi)                                                             \
             result = ci->fold##prefix(rval.get());                          \
         return result ? result : this;                                      \
     }
 
+#define BINOPIF(prefix, op) BINOPF(prefix, op, Int)
+#define REV_BINOPIF(prefix) REV_BINOPF(prefix, Int)
+#define BINOPFF(prefix, op) BINOPF(prefix, op, Float)
+#define REV_BINOPFF(prefix) REV_BINOPF(prefix, Float)
+
 // Binary Ops
-BINOPF(Add, "+");
-BINOPF(Sub, "-");
-BINOPF(Mul, "*");
-BINOPF(SDiv, "/");
-BINOPF(UDiv, "/");
-BINOPF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOPF(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOPF(Or, "|");
-BINOPF(And, "&");
-BINOPF(Xor, "^");
-BINOPF(Shl, "<<");
-BINOPF(LShr, ">>");
-BINOPF(AShr, ">>");
-REV_BINOPF(Add)
-REV_BINOPF(Sub)
-REV_BINOPF(Mul)
-REV_BINOPF(SDiv)
-REV_BINOPF(UDiv)
-REV_BINOPF(SRem)
-REV_BINOPF(URem)
-REV_BINOPF(Or)
-REV_BINOPF(And)
-REV_BINOPF(Xor)
-REV_BINOPF(Shl)
-REV_BINOPF(LShr)
-REV_BINOPF(AShr)
+BINOPIF(Add, "+");
+BINOPIF(Sub, "-");
+BINOPIF(Mul, "*");
+BINOPIF(SDiv, "/");
+BINOPIF(UDiv, "/");
+BINOPIF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+BINOPIF(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOPIF(Or, "|");
+BINOPIF(And, "&");
+BINOPIF(Xor, "^");
+BINOPIF(Shl, "<<");
+BINOPIF(LShr, ">>");
+BINOPIF(AShr, ">>");
+REV_BINOPIF(Add)
+REV_BINOPIF(Sub)
+REV_BINOPIF(Mul)
+REV_BINOPIF(SDiv)
+REV_BINOPIF(UDiv)
+REV_BINOPIF(SRem)
+REV_BINOPIF(URem)
+REV_BINOPIF(Or)
+REV_BINOPIF(And)
+REV_BINOPIF(Xor)
+REV_BINOPIF(Shl)
+REV_BINOPIF(LShr)
+REV_BINOPIF(AShr)
 
 BINOP(ICmpEQ, "==");
 BINOP(ICmpNE, "!=");
@@ -169,16 +166,16 @@ REV_BINOP(ICmpULT)
 REV_BINOP(ICmpUGE)
 REV_BINOP(ICmpULE)
 
-BINOP(FAdd, "+");
-BINOP(FSub, "-");
-BINOP(FMul, "*");
-BINOP(FDiv, "/");
-BINOP(FRem, "%");
-REV_BINOP(FAdd)
-REV_BINOP(FSub)
-REV_BINOP(FMul)
-REV_BINOP(FDiv)
-REV_BINOP(FRem)
+BINOPFF(FAdd, "+");
+BINOPFF(FSub, "-");
+BINOPFF(FMul, "*");
+BINOPFF(FDiv, "/");
+BINOPFF(FRem, "%");
+REV_BINOPFF(FAdd)
+REV_BINOPFF(FSub)
+REV_BINOPFF(FMul)
+REV_BINOPFF(FDiv)
+REV_BINOPFF(FRem)
 
 BINOP(FCmpOEQ, "==");
 BINOP(FCmpONE, "!=");
@@ -453,7 +450,10 @@ NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
 
 // FNegOpCall
 ResultExprPtr FNegOpCall::emit(Context &context) {
-    args[0]->emit(context)->handleTransient(context);
+    if (receiver)
+        receiver->emit(context)->handleTransient(context);
+    else
+        args[0]->emit(context)->handleTransient(context);
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
@@ -469,10 +469,23 @@ ResultExprPtr FNegOpCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
+ExprPtr FNegOpCall::foldConstants() {
+    FloatConstPtr fc = FloatConstPtr::rcast(receiver ? receiver : args[0]);
+    if (fc)
+        return fc->foldNeg();
+    else
+        return this;
+}
+
 // FNegOpDef
-FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name) :
-        OpDef(resultType, FuncDef::noFlags, name, 1) {
-    args[0] = new ArgDef(resultType, "operand");
+FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name,
+                     bool isMethod
+                     ) :
+        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name, 
+              isMethod ? 0 : 1
+              ) {
+    if (!isMethod)
+        args[0] = new ArgDef(resultType, "operand");
 }
 
 // FunctionPtrCall
