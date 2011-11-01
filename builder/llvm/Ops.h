@@ -149,11 +149,12 @@ public:
     FNegOpCall(model::FuncDef *def) : FuncCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
+    virtual model::ExprPtr foldConstants();
 };
 
 class FNegOpDef : public OpDef {
 public:
-    FNegOpDef(BTypeDef *resultType, const std::string &name);
+    FNegOpDef(BTypeDef *resultType, const std::string &name, bool isMethod);
 
     virtual model::FuncCallPtr createFuncCall() {
         return new FNegOpCall(this);
@@ -450,16 +451,16 @@ BINOPD(ICmpULTR, "r<");
 BINOPD(ICmpUGER, "r>=");
 BINOPD(ICmpULER, "r<=");
 
-BINOPD(FAdd, "+");
-BINOPD(FSub, "-");
-BINOPD(FMul, "*");
-BINOPD(FDiv, "/");
-BINOPD(FRem, "%");
-BINOPD(FAddR, "r+");
-BINOPD(FSubR, "r-");
-BINOPD(FMulR, "r*");
-BINOPD(FDivR, "r/");
-BINOPD(FRemR, "r%");
+BINOPDF(FAdd, "+");
+BINOPDF(FSub, "-");
+BINOPDF(FMul, "*");
+BINOPDF(FDiv, "/");
+BINOPDF(FRem, "%");
+BINOPDF(FAddR, "r+");
+BINOPDF(FSubR, "r-");
+BINOPDF(FMulR, "r*");
+BINOPDF(FDivR, "r/");
+BINOPDF(FRemR, "r%");
 
 BINOPD(Is, "is");
 BINOPD(FCmpOEQ, "==");

@@ -11,7 +11,7 @@ import crack.io cout;
     if (1) {
         exprStr := $expr;
         if (!(typeof(expr) is type))
-            cout `FAILED expected type of $exprStr\n`;
+            cout `FAILED expected type of $exprStr, got $(typeof(expr).name)\n`;
         rtype result = expr;
         if (result != val)
             cout `FAILED expected result of $exprStr (got $result)\n`;
@@ -47,6 +47,16 @@ import crack.io cout;
 @check_bin_op(~0xFFFFFFFFFFFFFFFF, uint64, 0, uint64);
 @check_bin_op(0x7FFFFFFFFFFFFFFF, int64, 0x7FFFFFFFFFFFFFFF, int64);
 @check_bin_op(0xFFFFFFFFFFFFFFFF >> 1, uint64, 0x7FFFFFFFFFFFFFFF, int64);
+
+# floating point operations
+@check_bin_op(1.0 + 2, float, 3.0, float32);
+@check_bin_op(1.0 - 2, float, -1.0, float32);
+@check_bin_op(3 * 4.0, float, 12.0, float32);
+@check_bin_op(4.0 / 2.0, float, 2, float32);
+@check_bin_op(3.0 % 2.0, float, 1, float32);
+@check_bin_op(3.0 % -2.0, float, -1, float32);
+@check_bin_op(-3.0 % -2.0, float, -1, float32);
+@check_bin_op(-3.0 % 2.0, float, 1, float32);
 
 cout `ok\n`;
 %%EXPECT%%

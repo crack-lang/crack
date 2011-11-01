@@ -23,6 +23,15 @@ class FloatConst : public Expr {
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;        
         bool isAdaptive() const;
+
+        virtual FloatConstPtr create(double val) const;
+        
+        ExprPtr foldFAdd(Expr *other);
+        ExprPtr foldFSub(Expr *other);
+        ExprPtr foldFMul(Expr *other);
+        ExprPtr foldFDiv(Expr *other);
+        ExprPtr foldFRem(Expr *other);
+        ExprPtr foldNeg();
 };
 
 } // namespace parser
