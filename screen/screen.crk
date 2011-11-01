@@ -21,7 +21,7 @@ import config config, T_INIT, T_RUNNING, T_FINISHED;
 import crack.functor Functor2;
 
 # variable pattern
-Regex varPat = {r'%([^%]+)%'};
+Regex varPat = {r'%([A-Z]+)%'};
 
 class VarMap : HashMap[String, String] 
                @implements Functor2[void, Match, Writer] {
