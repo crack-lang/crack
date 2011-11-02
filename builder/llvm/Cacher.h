@@ -9,6 +9,7 @@
 namespace llvm {
     class Module;
     class MDNode;
+    class Value;
 }
 
 namespace model {
@@ -42,6 +43,8 @@ protected:
 
     llvm::MDNode *writeVarDef(model::VarDef *);
     llvm::MDNode *writeFuncDef(model::FuncDef *);
+
+    void readFuncDef(const std::string &, llvm::Value *, llvm::MDNode *);
 
     void writeBitcode(const std::string &path);
 

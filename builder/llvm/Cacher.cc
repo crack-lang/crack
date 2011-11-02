@@ -161,7 +161,10 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym) {
     // operand 3: funcdef flags
     dList.push_back(constInt(bf->flags));
 
-    // operand 4..ARITY: parameter symbol names
+    // operand 4: return type
+    dList.push_back(MDString::get(getGlobalContext(), bf->returnType->name));
+
+    // operand 5..ARITY: parameter symbol names
     for (FuncDef::ArgVec::const_iterator i = bf->args.begin();
          i != bf->args.end();
          ++i) {
@@ -227,16 +230,56 @@ bool Cacher::readImports() {
 
 }
 
+void Cacher::readFuncDef(const std::string &sym,
+                         llvm::Value *rep,
+                         llvm::MDNode *mnode) {
+
+    // operand 3: func flags
+    ConstantInt *flags = dyn_cast<ConstantInt>(mnode->getOperand(3));
+    assert(flags && "malformed def node: function flags");
+
+    // operand 4: return type
+    MDString *rtStr = dyn_cast<MDString>(mnode->getOperand(4));
+    assert(rtStr && "malformed def node: function return type");
+
+    // llvm function
+    Function *f = dyn_cast<Function>(rep);
+    assert(f && "malformed def node: llvm rep not function");
+
+    // model funcdef
+    BFuncDef *newF = new BFuncDef((FuncDef::Flags)flags->getLimitedValue(),
+                                  sym,
+                                  f->getArgumentList().size());
+    newF->rep = f;
+    newF->setOwner(modDef);
+
+    VarDefPtr vd = context.ns->lookUp(rtStr->getString().str());
+    TypeDef *td = TypeDefPtr::rcast(vd);
+    assert(td && "return type not found");
+
+    newF->returnType = td;
+
+    OverloadDef *o;
+    vd = modDef->lookUp(sym);
+    if (!vd) {
+        o = new OverloadDef(sym);
+        o->addFunc(newF);
+    }
+    else {
+        o = OverloadDefPtr::rcast(vd);
+        assert(o && "not an overload");
+    }
+
+    modDef->addDef(o);
+
+}
+
 void Cacher::readDefs() {
 
     MDNode *mnode;
     MDString *mstr;
     string sym;
     Value *rep;
-    Function *f;
-    ConstantInt *flags;
-    BFuncDef *newF;
-    OverloadDef *o;
     NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_defs");
 
     assert(imports && "missing crack_defs node");
@@ -260,35 +303,10 @@ void Cacher::readDefs() {
 
         switch (type->getLimitedValue()) {
         case Cacher::function:
-
-            // operand 3: func flags
-            flags = dyn_cast<ConstantInt>(mnode->getOperand(3));
-            assert(flags && "malformed def node: function flags");
-
-            // llvm function
-            f = dyn_cast<Function>(rep);
-            assert(f && "malformed def node: llvm rep not function");
-
-            // model funcdef
-            newF = new BFuncDef((FuncDef::Flags)flags->getLimitedValue(),
-                                          sym,
-                                          f->getArgumentList().size());
-            // XXX what else?
-            newF->rep = f;
-            newF->setOwner(modDef);
-
-            // XXX build/get real return type
-            newF->returnType = context.construct->int32Type;
-
-            // XXX lookup and add to current overload if exists
-            o = new OverloadDef(sym);
-            o->addFunc(newF);
-
-            modDef->addDef(o);
-
+            readFuncDef(sym, rep, mnode);
             break;
-
         case Cacher::global:
+            // XXX
             break;
 
         default:
