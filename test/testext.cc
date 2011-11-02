@@ -51,6 +51,7 @@ int callback(int (*cb)(int)) {
 }
 
 extern "C" void testext_rinit(void) {
+    cout << "in testext" << endl;
 }
 
 extern "C" void testext_cinit(Module *mod) {

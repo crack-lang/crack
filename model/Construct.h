@@ -80,7 +80,8 @@ class Construct : public spug::RCBase {
             }
         };
 
-        typedef void (*InitFunc)(crack::ext::Module *mod);
+        typedef void (*CompileFunc)(crack::ext::Module *mod);
+        typedef void (*InitFunc)();
     
     private:
         std::stack<builder::BuilderPtr> builderStack;
@@ -237,6 +238,7 @@ class Construct : public spug::RCBase {
          * crack compiler shared library.
          */
         ModuleDefPtr initExtensionModule(const std::string &canonicalName,
+                                         CompileFunc compileFunc,
                                          InitFunc initFunc
                                          );
 

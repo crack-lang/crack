@@ -3033,7 +3033,6 @@ TypeDefPtr Parser::parseClassDef() {
    parseClassBody();
 
    type->rectify(*classContext);
-   type->complete = true;
    classContext->builder.emitEndClass(*classContext);
    cstack.restore();
    
