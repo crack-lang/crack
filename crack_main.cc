@@ -104,6 +104,8 @@ int main(int argc, char **argv) {
                                 jitBuilder;
 
     string libPath;
+    if (getenv("CRACK_LIB_PATH"))
+        libPath = getenv("CRACK_LIB_PATH");
 
     // parse the main module
     int opt, idx;
