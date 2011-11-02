@@ -157,6 +157,9 @@ install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
 add_custom_target(check env CRACK_LIB_PATH=${CMAKE_CURRENT_BUILD_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BUILD_DIR}
                             SOURCES_ROOT=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/screen)
 
+add_custom_target(checkc env CRACK_LIB_PATH=${CMAKE_CURRENT_BUILD_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BUILD_DIR}
+                            SOURCES_ROOT=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/screen -n)
+
 add_subdirectory(opt)
 
 macro_display_feature_log()

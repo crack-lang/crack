@@ -1,11 +1,10 @@
 %%TEST%%
-extension modules
+extension init called exactly once
 %%ARGS%%
-
 %%FILE%%
 import test.test_extensions;
+import testext;
 %%EXPECT%%
 in testext
 ok
 %%STDIN%%
-

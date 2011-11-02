@@ -252,6 +252,26 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     // if there was a top-level throw, we could already have a terminator.  
     // Generate the code to set the init flag and a return instruction if not.
     if (!builder.GetInsertBlock()->getTerminator()) {
+
+        if (moduleDef->fromExtension) {
+            // if this is an extension, we create a runtime initialize call
+            // this allows the extension to initialize, but also ensures the
+            // extension will be linked since ld requires at least one call into it
+            // XXX real mangle? see Construct::loadSharedLib
+            string name = moduleDef->getFullName();
+            for (int i=0; i < name.size(); ++i) {
+                if (name[i] == '.')
+                    name[i] = '_';
+            }
+            Constant *initFunc =
+                module->getOrInsertFunction(name + "_rinit",
+                                            Type::getVoidTy(getGlobalContext()),
+                                            NULL
+                                            );
+            Function *f = llvm::cast<llvm::Function>(initFunc);
+            builder.CreateCall(f);
+        }
+
         // at the end of the code for the module, set the "initialized" flag.
         builder.CreateStore(Constant::getIntegerValue(
                                 Type::getInt1Ty(lctx),APInt(1,1,false)
@@ -392,26 +412,11 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
         ++i;
     IRBuilder<> b(mainInsert, i);
 
-    Constant *fc;
-    if (m->fromExtension) {
-        // if this is an extension, we create a runtime initialize call
-        // this allows the extension to initialize, but also ensures the
-        // extension will be linked since ld requires at least one call into it
-        // XXX real mangle? see Construct::loadSharedLib
-        string name = m->getFullName();
-        for (int i=0; i < name.size(); ++i) {
-            if (name[i] == '.')
-                name[i] = '_';
-        }
-        fc = module->getOrInsertFunction(name+"_rinit",
-                                          Type::getVoidTy(getGlobalContext()),
-                                          NULL);
-    }
-    else {
-        fc = module->getOrInsertFunction(m->name+":main",
-                                          Type::getVoidTy(getGlobalContext()),
-                                          NULL);
-    }
+    Constant *fc =
+        module->getOrInsertFunction(m->name+":main",
+                                    Type::getVoidTy(getGlobalContext()),
+                                    NULL
+                                    );
     Function *f = llvm::cast<llvm::Function>(fc);
     b.CreateCall(f);
 }

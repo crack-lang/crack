@@ -44,6 +44,7 @@ class BFloatConst : public model::FloatConst {
 public:
     llvm::Value *rep;
     BFloatConst(BTypeDef *type, double val);
+    virtual model::FloatConstPtr create(double val) const;
 };
 
 } // end namespace builder::vmll

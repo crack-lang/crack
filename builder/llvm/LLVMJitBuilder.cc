@@ -182,11 +182,14 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     // create a context data object
     BBuilderContextData::get(&context);
 
+    string mainFuncName = name + ":main";
     llvm::Constant *c =
-        module->getOrInsertFunction("__main__", Type::getVoidTy(lctx), NULL);
+        module->getOrInsertFunction(mainFuncName, Type::getVoidTy(lctx), 
+                                    NULL
+                                    );
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    createFuncStartBlocks("__main__");
+    createFuncStartBlocks(mainFuncName);
 
     createModuleCommon(context);
     

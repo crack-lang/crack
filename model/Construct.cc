@@ -209,7 +209,7 @@ void Construct::loadBuiltinModules() {
         // initialize the built-in compiler extension and store the 
         // CrackContext type in global data.
         ModuleDefPtr ccMod = 
-            initExtensionModule("crack.compiler", &compiler::init);
+            initExtensionModule("crack.compiler", &compiler::init, 0);
         rootContext->construct->crackContext = ccMod->lookUp("CrackContext");
         moduleCache["crack.compiler"] = ccMod;
         ccMod->finished = true;
@@ -295,6 +295,7 @@ void Construct::parseModule(Context &context,
 }
 
 ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
+                                            Construct::CompileFunc compileFunc,
                                             Construct::InitFunc initFunc
                                             ) {
     // create a new context
@@ -310,13 +311,32 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
     // create a module object
     ModuleDefPtr modDef = context->createModule(canonicalName);
     Module mod(context.get());
-    initFunc(&mod);
+    compileFunc(&mod);
     modDef->fromExtension = true;
     mod.finish();
     modDef->close(*context);
     builderStack.pop();
 
+    if (initFunc)
+        initFunc();
+
     return modDef;
+}
+
+namespace {
+    // load a function from a shared library
+    void *loadFunc(void *handle, const string &path, const string &funcName) {
+        void *func = dlsym(handle, funcName.c_str());
+        
+        if (!func) {
+            cerr << "Error looking up function " << funcName
+                << " in extension library " << path << ": "
+                << dlerror() << endl;
+            return 0;
+        } else {
+            return func;
+        }
+    }
 }
 
 ModuleDefPtr Construct::loadSharedLib(const string &path, 
@@ -335,19 +355,15 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
          ++iter
          )
         initFuncName += *iter + '_';
-    
-    initFuncName += "cinit";
 
-    InitFunc func = (InitFunc)dlsym(handle, initFuncName.c_str());
-    
-    if (!func) {
-        cerr << "Error looking up function " << initFuncName
-            << " in extension library " << path << ": "
-            << dlerror() << endl;
+    CompileFunc cfunc = (CompileFunc)loadFunc(handle, path, 
+                                              initFuncName + "cinit"
+                                              );
+    InitFunc rfunc = (InitFunc)loadFunc(handle, path, initFuncName + "rinit");
+    if (!cfunc || !rfunc)
         return 0;
-    }
-    
-    return initExtensionModule(canonicalName, func);
+
+    return initExtensionModule(canonicalName, cfunc, rfunc);
 }
 
 ModuleDefPtr Construct::loadModule(const string &canonicalName) {

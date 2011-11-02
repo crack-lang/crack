@@ -1,7 +1,40 @@
 # Copyright 2011 Google Inc.
 # Singly and Doubly Linked-list Generics
 
-import crack.lang AssertionError, IndexError, InvalidArgumentError;
+import crack.lang AssertionError, IndexError, InvalidArgumentError, Writer;
+import crack.io FStr;
+
+# we use poormac here because the standard macro mechanism depends on this 
+# module.
+@import crack._poormac define;
+
+void _bind(Object obj) { obj.oper bind(); }
+void _release(Object obj) { obj.oper release(); }
+bool _isObject(Object obj) { return true; }
+bool _isNull(Object obj) {
+    return (obj is null);
+}
+
+@define _nobind 1
+    void _bind($1 i) { }
+    void _release($1 i) { }
+    bool _isObject($1 i) { return false; }
+    bool _isNull($1 i) { return false; } 
+$$
+
+@_nobind bool
+@_nobind byte
+@_nobind int
+@_nobind int32
+@_nobind uint
+@_nobind uint32
+@_nobind int64
+@_nobind uint64
+@_nobind float
+@_nobind float32
+@_nobind float64
+@_nobind byteptr
+
 
 ## A singly-linked list.
 class List[Elem] {
@@ -83,7 +116,7 @@ class List[Elem] {
     void pushTail(Elem elem) {
         append(elem);
     }
-    
+
     ## Remove the element from the front of the list and return it.
     Elem popHead() {
         if (!head)
@@ -160,6 +193,24 @@ class List[Elem] {
 
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
+
+    void writeTo(Writer out) {
+        FStr fmt = {};
+        out.write('[');
+        bool first = true;
+        for (elem :in this) {
+            if (!first)
+                out.write(', ');
+            else
+                first = false;
+            if (_isNull(elem)) out.write('null');
+            else {
+                text := fmt `$elem`;
+                out.write(text);
+            }
+        }
+        out.write(']');
+    }
 }
 
 ## Doubly-linked list
@@ -174,7 +225,7 @@ class DList[Elem] {
             prev = prev {
         }
     }
-    
+
     class Iter {
         Node _node;
         bool __first;
@@ -273,7 +324,7 @@ class DList[Elem] {
     Iter iter() {
         return Iter(head);
     }
-    
+
     ## Returns an iterator.
     ## if 'back' is true, initialize it to point to the last node on the 
     ## list. Otherwise point it to the first node.
@@ -282,7 +333,7 @@ class DList[Elem] {
             return Iter(tail);
         else
             return Iter(head);
-    }    
+    }
 
     void append(Elem elem) {
         if (tail) {
@@ -306,11 +357,11 @@ class DList[Elem] {
         }
         _count = _count + 1;
     }
-    
+
     void pushTail(Elem elem) {
         append(elem);
     }
-    
+
     Elem popHead() {
         if (!head) 
             throw InvalidArgumentError('Attempting to pop from an empty list');
@@ -347,7 +398,7 @@ class DList[Elem] {
         if (!node) throw AssertionError('List is shorter than its count.');
         return node;
     }
-    
+
     void insert(uint index, Elem elem) {
         # special-case inserting at the beginning
         if (!index) {
@@ -406,9 +457,27 @@ class DList[Elem] {
         node := __findNode(index);
         return node.elem;
     }
-    
+
     uint count() { return _count; }
 
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
-}   
+
+    void writeTo(Writer out) {
+        FStr fmt = {};
+        out.write('[');
+        bool first = true;
+        for (elem :in this) {
+            if (!first)
+                out.write(', ');
+            else
+                first = false;
+            if (_isNull(elem)) out.write('null');
+            else {
+                text := fmt `$elem`;
+                out.write(text);
+            }
+        }
+        out.write(']');
+    }
+}

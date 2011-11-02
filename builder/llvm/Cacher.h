@@ -8,6 +8,11 @@
 
 namespace llvm {
     class Module;
+    class MDNode;
+}
+
+namespace model {
+    class VarDef;
 }
 
 namespace builder {
@@ -22,6 +27,11 @@ class Cacher {
 
     static const std::string MD_VERSION;
 
+    enum DefTypes {
+        global = 0,
+        function = 1
+    };
+
     BModuleDef *modDef;
     model::Context &context;
     const builder::BuilderOptions *options;
@@ -30,9 +40,13 @@ protected:
     void addNamedStringNode(const std::string &key, const std::string &val);
     std::string getNamedStringNode(const std::string &key);
 
+    llvm::MDNode *writeVarDef(model::VarDef *);
+    llvm::MDNode *writeFuncDef(model::FuncDef *);
+
     void writeBitcode(const std::string &path);
 
-    bool doImports();
+    bool readImports();
+    void readDefs();
 
     void writeMetadata();
     bool readMetadata();
