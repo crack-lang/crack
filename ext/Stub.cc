@@ -5,8 +5,10 @@
 using namespace crack::ext;
 
 // Func
+void Func::setBody(const std::string&) { }
+std::string Func::body() const { return std::string(); }
 void Func::setIsVariadic(bool isVariadic) { }
-bool Func::isVariadic() { return false; }
+bool Func::isVariadic() const { return false; }
 void Func::setSymbolName(const std::string &name) { }
 void Func::addArg(Type *type, const std::string &name) { }
 void Func::finish() { }
@@ -41,9 +43,12 @@ Type *Module::addType(const char *name, size_t instSize) { }
 Type *Module::addForwardType(const char *name, size_t instSize) { }
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName) { }
+Func *Module::addFunc(Type *returnType, const char *name,
+                      const std::string& body) { }
 void Module::addConstant(Type *type, const std::string &name, double val)  { }
 void Module::addConstant(Type *type, const std::string &name, int64_t val)  { }
 void Module::addConstant(Type *type, const std::string &name, int val)  { }
+void Module::inject(const std::string&) { }
 void Module::finish()  { }
 
 // Type
@@ -54,12 +59,19 @@ void Type::addInstVar(Type *type, const std::string &name, size_t offset) { }
 Func *Type::addMethod(Type *returnType, const std::string &name,
                 void *funcPtr
                 ) { };
+Func *Type::addMethod(Type *returnType, const std::string &name,
+                      const std::string& body
+                      ) { }
 
 Func *Type::addConstructor(const char *name, void *funcPtr) { };
+Func *Type::addConstructor(const std::string& body) { }
 
 Func *Type::addStaticMethod(Type *returnType, const std::string &name,
                       void *funcPtr
                       ) { };
+Func *Type::addStaticMethod(Type *returnType, const std::string &name,
+                      const std::string& body
+                      ) { }
 
 Type *Type::getSpecialization(const std::vector<Type *> &params) { };
 void Type::finish() { };

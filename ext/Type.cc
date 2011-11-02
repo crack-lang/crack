@@ -76,6 +76,16 @@ Func *Type::addMethod(Type *returnType, const std::string &name,
     return result;
 }
 
+Func* Type::addMethod(Type* returnType, const std::string& name,
+                      const std::string& body
+                      )
+{
+    checkInitialized();
+    Func *result = new Func(0, returnType, name, body, Func::method);
+    impl->funcs.push_back(result);
+    return result;
+}
+
 Func *Type::addConstructor(const char *name, void *funcPtr) {
     checkInitialized();
     Func *result = new Func(0, module->getVoidType(), name ? name : "", 
@@ -83,6 +93,16 @@ Func *Type::addConstructor(const char *name, void *funcPtr) {
                             Func::constructor | Func::method
                             );
 
+    impl->funcs.push_back(result);
+    return result;
+}
+
+Func* Type::addConstructor(const std::string& body) {
+    checkInitialized();
+    Func *result = new Func(0, module->getVoidType(), "",
+                            body,
+                            Func::constructor | Func::method
+                            );
     impl->funcs.push_back(result);
     return result;
 }
@@ -95,6 +115,16 @@ Func *Type::addStaticMethod(Type *returnType, const std::string &name,
     impl->funcs.push_back(result);
     return result;
 }
+
+Func* Type::addStaticMethod(Type* returnType, const std::string& name,
+                            const std::string& body
+                           ) {
+    checkInitialized();
+    Func *result = new Func(0, returnType, name, body, Func::noFlags);
+    impl->funcs.push_back(result);
+    return result;
+}
+
 
 Type *Type::getSpecialization(const vector<Type *> &params) {
     checkFinished();

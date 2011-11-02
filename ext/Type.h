@@ -117,6 +117,17 @@ class Type {
                         );
 
         /**
+         * Add a new method to the class and returns it.
+         * @return the new method.
+         * @param returnType the method's return type
+         * @param name the method name
+         * @param body the function body
+         */
+        Func *addMethod(Type *returnType, const std::string &name,
+                        const std::string& body = std::string()
+                        );
+
+        /**
          * Add a new constructor.
          * If 'name' and 'funcPtr' are not null, the should be the name and 
          * function pointer of a function with args as those to be added to 
@@ -125,7 +136,15 @@ class Type {
          * Default initializers will be called prior to the function.
          */
         Func *addConstructor(const char *name = 0, void *funcPtr = 0);
-        
+
+        /**
+         * Add a new constructor.
+         * This function will be called in the body of the
+         * constructor with the constructor's arguments.
+         * Default initializers will be called prior to the function.
+         */
+        Func *addConstructor(const std::string& body);
+
         /**
          * Add a new static method to the class and returns it.  Static 
          * methods have no implicit "this" parameter.
@@ -138,6 +157,18 @@ class Type {
          */
         Func *addStaticMethod(Type *returnType, const std::string &name,
                               void *funcPtr
+                              );
+
+        /**
+         * Add a new static method to the class and returns it.  Static
+         * methods have no implicit "this" parameter.
+         * @return the new method.
+         * @param returnType the method's return type
+         * @param name the method name
+         * @param body the function body
+         */
+        Func *addStaticMethod(Type *returnType, const std::string &name,
+                              const std::string& body = std::string()
                               );
         
         /**

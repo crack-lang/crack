@@ -29,8 +29,10 @@ class Func {
 
     public:
 
+        void setBody(const std::string&);
+        std::string body() const;
         void setIsVariadic(bool isVariadic);
-        bool isVariadic();
+        bool isVariadic() const;
         void setSymbolName(const std::string &name);
         void addArg(Type *type, const std::string &name);
         void finish();
@@ -69,9 +71,13 @@ class Module {
         Type *addForwardType(const char *name, size_t instSize);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);
+        Func *addFunc(Type *returnType, const char *name, const std::string& body = std::string());
         void addConstant(Type *type, const std::string &name, double val);
         void addConstant(Type *type, const std::string &name, int64_t val);
         void addConstant(Type *type, const std::string &name, int val);
+
+        void inject(const std::string& code);
+
         void finish();
 };
 
@@ -88,11 +94,18 @@ class Type {
         Func *addMethod(Type *returnType, const std::string &name,
                         void *funcPtr
                         );
+        Func *addMethod(Type *returnType, const std::string &name,
+                        const std::string& body = std::string()
+                        );
 
         Func *addConstructor(const char *name = 0, void *funcPtr = 0);
+        Func *addConstructor(const std::string& body);
 
         Func *addStaticMethod(Type *returnType, const std::string &name,
                               void *funcPtr
+                              );
+        Func *addStaticMethod(Type *returnType, const std::string &name,
+                              const std::string& body = std::string()
                               );
 
         Type *getSpecialization(const std::vector<Type *> &params);

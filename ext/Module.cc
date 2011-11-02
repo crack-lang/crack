@@ -3,16 +3,20 @@
 #include "Module.h"
 
 #include <string.h>
+#include <sstream>
 #include "builder/Builder.h"
 #include "model/ConstVarDef.h"
 #include "model/Context.h"
 #include "model/FloatConst.h"
 #include "model/IntConst.h"
 #include "model/Namespace.h"
+#include "parser/Toker.h"
+#include "parser/Parser.h"
 #include "Type.h"
 #include "Func.h"
 
 using namespace crack::ext;
+using namespace parser;
 using namespace model;
 
 Module::Module(Context *context)  : context(context),
@@ -123,6 +127,15 @@ Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
     return f;
 }
 
+Func* Module::addFunc(Type* returnType, const char* name, const std::string& body)
+{
+    assert(!finished && "Attempting to add a function to a finished module.");
+    returnType->checkFinished();
+    Func *f = new Func(context, returnType, name, body, Func::noFlags);
+    funcs.push_back(f);
+    return f;
+}
+
 void Module::addConstant(Type *type, const std::string &name, double val) {
     type->checkFinished();
     FloatConstPtr valObj =
@@ -135,6 +148,14 @@ void Module::addConstant(Type *type, const std::string &name, int64_t val) {
     IntConstPtr valObj =
         context->builder.createIntConst(*context, val, type->typeDef);
     vars.push_back(new ConstVarDef(type->typeDef, name, valObj));
+}
+
+void Module::inject(const std::string& code)
+{
+    std::istringstream codeStream(code);
+    Toker toker(codeStream, "injected code");
+    Parser parser(toker, context);
+    parser.parse();
 }
 
 void Module::finish() {
