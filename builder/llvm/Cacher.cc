@@ -164,11 +164,12 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym) {
     // operand 4: return type
     dList.push_back(MDString::get(getGlobalContext(), bf->returnType->name));
 
-    // operand 5..ARITY: parameter symbol names
+    // operand 5..ARITY: pairs of parameter symbol names and their types
     for (FuncDef::ArgVec::const_iterator i = bf->args.begin();
          i != bf->args.end();
          ++i) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->name));
+        dList.push_back(MDString::get(getGlobalContext(), (*i)->type->name));
     }
 
     return MDNode::get(getGlobalContext(), dList.data(), dList.size());
@@ -259,18 +260,40 @@ void Cacher::readFuncDef(const std::string &sym,
 
     newF->returnType = td;
 
+    if (mnode->getNumOperands() > 4) {
+
+        MDString *aSym, *aTypeStr;
+        VarDefPtr aTypeV;
+        TypeDef *aType;
+
+        // operand 5..arity: function parameter names and types
+        for (int i = 5, ai=0; i < mnode->getNumOperands(); i+=2, ++ai) {
+
+            aSym = dyn_cast<MDString>(mnode->getOperand(i));
+            assert(aSym && "function arg: missing symbol");
+            aTypeStr = dyn_cast<MDString>(mnode->getOperand(i+1));
+            assert(aTypeStr && "function arg: missing type");
+            aTypeV = context.ns->lookUp(aTypeStr->getString().str());
+            aType = TypeDefPtr::rcast(aTypeV);
+            assert(aType && "function arg: type not found");
+            newF->args[ai] = new ArgDef(aType, aSym->getString().str());
+
+        }
+    }
+
     OverloadDef *o;
     vd = modDef->lookUp(sym);
     if (!vd) {
         o = new OverloadDef(sym);
         o->addFunc(newF);
+        modDef->addDef(o);
     }
     else {
         o = OverloadDefPtr::rcast(vd);
         assert(o && "not an overload");
+        o->addFunc(newF);
     }
 
-    modDef->addDef(o);
 
 }
 
