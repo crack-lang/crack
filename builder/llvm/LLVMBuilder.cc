@@ -1640,21 +1640,6 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // refine the type
     curType->refineAbstractTypeTo(newType);
 
-    // construct the vtable if necessary
-    if (type->hasVTable) {
-        VTableBuilder vtableBuilder(
-            this,
-            BTypeDefPtr::arcast(context.construct->vtableBaseType),
-            module
-        );
-        type->createAllVTables(
-            vtableBuilder, 
-            ".vtable."+context.parent->ns->getNamespaceName()+"."+type->name,
-            BTypeDefPtr::arcast(context.construct->vtableBaseType)
-        );
-        vtableBuilder.emit(type);
-    }
-
     // verify that all of the base classes are complete (because we can only 
     // inherit from an incomplete base class in the case of a nested derived 
     // class, there can be only one incomplete base class)
@@ -1672,9 +1657,9 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // if we have an incomplete base, we have to defer placeholder instruction 
     // resolution to the incomplete base class
     if (incompleteBase)
-        BTypeDefPtr::arcast(incompleteBase)->incompleteChildren.push_back(type);
+        BTypeDefPtr::arcast(incompleteBase)->addDependent(type, &context);
     else
-        type->fixIncompletes();
+        type->fixIncompletes(context);
 }
 
 void LLVMBuilder::emitReturn(model::Context &context,
@@ -2548,7 +2533,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createOperClassFunc(context, vtableBaseType, metaType.get());
 
     // build VTableBase's vtable
-    VTableBuilder vtableBuilder(this, vtableBaseType, module);
+    VTableBuilder vtableBuilder(this, vtableBaseType);
     vtableBaseType->createAllVTables(vtableBuilder, ".vtable.VTableBase", 
                                      vtableBaseType
                                      );
