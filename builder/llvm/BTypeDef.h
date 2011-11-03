@@ -4,7 +4,6 @@
 #define _builder_llvm_BTypeDef_h_
 
 #include "model/TypeDef.h"
-#include "VTableBuilder.h"
 #include <llvm/Type.h>
 
 #include <map>
@@ -22,6 +21,7 @@ namespace builder {
 namespace mvll {
 
 class PlaceholderInstruction;
+class VTableBuilder;
 
 SPUG_RCPTR(BTypeDef);
 
@@ -33,7 +33,9 @@ public:
     llvm::PATypeHolder rep;
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
-    std::vector<BTypeDefPtr> incompleteChildren;
+    typedef std::vector< std::pair<BTypeDefPtr, model::ContextPtr> >
+        IncompleteChildVec;
+    IncompleteChildVec incompleteChildren;
 
     // mapping from base types to their vtables.
     std::map<BTypeDef *, llvm::Constant *> vtables;
@@ -60,12 +62,10 @@ public:
      * 
      * @param vtb the vtable builder
      * @param name the name stem for the VTable global variables.
-     * @param vtableBaseType the global vtable base type.
      * @param firstVTable if true, we have not yet discovered the first 
      *  vtable in the class schema.
      */
     void createAllVTables(VTableBuilder &vtb, const std::string &name,
-                          BTypeDef *vtableBaseType,
                           bool firstVTable = true
                           );
 
@@ -95,11 +95,19 @@ public:
                                           llvm::ExecutionEngine *execEng
                                           );
 
+    /**
+     * Add a dependent type - this is a nested type that is derived from an 
+     * incomplete enclosing type.  fixIncompletes() will be called on all of 
+     * the dependents during the completion of the receiver.
+     */
+    void addDependent(BTypeDef *type, model::Context *context);
+
     /** 
      * Fix all incomplete instructions and incomplete children and set the 
      * "complete" flag.
      */
-    void fixIncompletes();
+    void fixIncompletes(model::Context &context);
+    
 };
 
 } // end namespace builder::vmll

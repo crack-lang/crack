@@ -9,6 +9,7 @@
 #include "model/Context.h"
 #include "model/OverloadDef.h"
 #include "PlaceholderInstruction.h"
+#include "VTableBuilder.h"
 
 using namespace model;
 using namespace std;
@@ -57,14 +58,12 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
  *  vtable in the class schema.
  */
 void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
-                      BTypeDef *vtableBaseType,
-                      bool firstVTable
-                                         ) {
-
+                                bool firstVTable
+                                ) {
     // if this is VTableBase, we need to create the VTable.
     // This is a special case: we should only get here when
     // initializing VTableBase's own vtable.
-    if (this == vtableBaseType)
+    if (this == vtb.vtableBaseType)
         vtb.createVTable(this, name, true);
 
     // iterate over the base classes, construct VTables for all
@@ -78,20 +77,17 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
         // if the base class is VTableBase, we've hit bottom -
         // construct the initial vtable and store the first vtable
         // type if this is it.
-        if (base == vtableBaseType) {
+        if (base == vtb.vtableBaseType) {
             vtb.createVTable(this, name, firstVTable);
 
             // otherwise, if the base has a vtable, create all of its
             // vtables
         } else if (base->hasVTable) {
             if (firstVTable)
-                base->createAllVTables(vtb, name, vtableBaseType,
-                                       firstVTable
-                                       );
+                base->createAllVTables(vtb, name, firstVTable);
             else
                 base->createAllVTables(vtb,
                                        name + ':' + base->getFullName(),
-                                       vtableBaseType,
                                        firstVTable
                                        );
         }
@@ -100,7 +96,7 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
     }
 
     // we must either have ancestors with vtables or be vtable base.
-    assert(!firstVTable || this == vtableBaseType);
+    assert(!firstVTable || this == vtb.vtableBaseType);
 
     // add my functions to their vtables
     extendVTables(vtb);
@@ -171,7 +167,24 @@ GlobalVariable *BTypeDef::getClassInstRep(Module *module,
     }
 }
 
-void BTypeDef::fixIncompletes() {
+void BTypeDef::addDependent(BTypeDef *type, Context *context) {
+    incompleteChildren.push_back(pair<BTypeDefPtr, ContextPtr>(type, context));
+}
+
+void BTypeDef::fixIncompletes(Context &context) {
+    // construct the vtable if necessary
+    if (hasVTable) {
+        VTableBuilder vtableBuilder(
+            dynamic_cast<LLVMBuilder*>(&context.builder),
+            BTypeDefPtr::arcast(context.construct->vtableBaseType)
+        );
+        createAllVTables(
+            vtableBuilder, 
+            ".vtable." + context.parent->ns->getNamespaceName() + "." + name
+        );
+        vtableBuilder.emit(this);
+    }
+    
     // fix-up all of the placeholder instructions
     for (vector<PlaceholderInstruction *>::iterator iter = 
             placeholders.begin();
@@ -182,11 +195,11 @@ void BTypeDef::fixIncompletes() {
     placeholders.clear();
     
     // fix up all incomplete children
-    for (vector<BTypeDefPtr>::iterator iter = incompleteChildren.begin();
+    for (IncompleteChildVec::iterator iter = incompleteChildren.begin();
          iter != incompleteChildren.end();
          ++iter
          )
-        (*iter)->fixIncompletes();
+        iter->first->fixIncompletes(*iter->second);
     incompleteChildren.clear();
     
     complete = true;

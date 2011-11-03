@@ -333,28 +333,28 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = sockAddrInType->addStaticMethod(
         uint32Type, 
         "htonl",
-        (void *)&crack::runtime::SockAddrIn::htonl
+        (void *)&crack::runtime::SockAddrIn::crack_htonl
     );
     f->addArg(uint32Type, "val");
 
     f = sockAddrInType->addStaticMethod(
         uint32Type, 
         "ntohl",
-        (void *)&crack::runtime::SockAddrIn::ntohl
+        (void *)&crack::runtime::SockAddrIn::crack_ntohl
     );
     f->addArg(uint32Type, "val");
 
     f = sockAddrInType->addStaticMethod(
         uintType, 
         "htons",
-        (void *)&crack::runtime::SockAddrIn::htons
+        (void *)&crack::runtime::SockAddrIn::crack_htons
     );
     f->addArg(uintType, "val");
     
     f = sockAddrInType->addStaticMethod(
         uintType,
         "ntohs",
-        (void *)&crack::runtime::SockAddrIn::ntohs
+        (void *)&crack::runtime::SockAddrIn::crack_ntohs
     );
     f->addArg(uintType, "val");
     

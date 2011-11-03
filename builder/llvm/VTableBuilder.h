@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "LLVMBuilder.h"  // need this because we are accessing its methods
+
 namespace llvm {
     class Constant;
     class Module;
@@ -20,7 +22,6 @@ namespace mvll {
 
 class BTypeDef;
 class BFuncDef;
-class LLVMBuilder;
 
 SPUG_RCPTR(VTableInfo);
 
@@ -52,8 +53,6 @@ private:
     // keep track of the first VTable in the type
     VTableInfo *firstVTable;
 
-    BTypeDef *vtableBaseType;
-
     // used for emmission, but also IR type naming
     llvm::Module *module;
 
@@ -61,12 +60,13 @@ private:
     LLVMBuilder *builder;
 
 public:
+    BTypeDef *vtableBaseType;
+
     VTableBuilder(LLVMBuilder *b,
-                  BTypeDef *vtableBaseType,
-                  llvm::Module *m) :
+                  BTypeDef *vtableBaseType) :
             firstVTable(0),
             vtableBaseType(vtableBaseType),
-            module(m),
+            module(b->module),
             builder(b) {
     }
 

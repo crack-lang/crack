@@ -58,10 +58,10 @@ struct SockAddrIn : public SockAddr {
 
     static void init2(SockAddrIn *inst, uint32_t addr, unsigned int port);
 
-    static uint32_t htonl(uint32_t val);    
-    static uint32_t ntohl(uint32_t val);
-    static uint16_t htons(uint16_t val);
-    static uint16_t ntohs(uint16_t val);
+    static uint32_t crack_htonl(uint32_t val);    
+    static uint32_t crack_ntohl(uint32_t val);
+    static uint16_t crack_htons(uint16_t val);
+    static uint16_t crack_ntohs(uint16_t val);
 };
 
 struct TimeVal {

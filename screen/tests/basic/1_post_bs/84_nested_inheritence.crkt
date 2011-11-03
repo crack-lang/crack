@@ -18,17 +18,16 @@ if (1) {
         cout `FAILED nested inheritence\n`;
 }
 
-# this is another bug, we'll fix it in the next commit.
-#if (1) {
-#    class A {
-#        oper init() {}
-#        class B : A {}
-#        int f() { return 123; }
-#        @static int g() { return B().f(); }
-#    }
-#    if (A.g() != 123)
-#        cout `FAILED method call in nested inheritence\n`;
-#}
+if (1) {
+    class A {
+        oper init() {}
+        class B : A {}
+        int f() { return 123; }
+        @static int g() { return B().f(); }
+    }
+    if (A.g() != 123)
+        cout `FAILED method call in nested inheritence\n`;
+}
 
 cout `ok\n`;
 
