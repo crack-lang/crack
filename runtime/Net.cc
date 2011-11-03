@@ -46,20 +46,20 @@ void SockAddrIn::init2(SockAddrIn *inst, uint32_t addr0, unsigned int port0) {
     inst->port = port0;
 }
 
-uint32_t SockAddrIn::htonl(uint32_t val) {
-    return ::htonl(val);
+uint32_t SockAddrIn::crack_htonl(uint32_t val) {
+    return htonl(val);
 }
 
-uint32_t SockAddrIn::ntohl(uint32_t val) {
-    return ::ntohl(val);
+uint32_t SockAddrIn::crack_ntohl(uint32_t val) {
+    return ntohl(val);
 }
 
-uint16_t SockAddrIn::htons(uint16_t val) {
-    return ::htons(val);
+uint16_t SockAddrIn::crack_htons(uint16_t val) {
+    return htons(val);
 }
 
-uint16_t SockAddrIn::ntohs(uint16_t val) {
-    return ::ntohs(val);
+uint16_t SockAddrIn::crack_ntohs(uint16_t val) {
+    return ntohs(val);
 }
 
 void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
