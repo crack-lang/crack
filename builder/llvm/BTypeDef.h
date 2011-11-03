@@ -54,6 +54,8 @@ public:
         firstVTableType(0) {
     }
 
+    virtual void getDependents(std::vector<model::TypeDefPtr> &deps);
+
     // add all of my virtual functions to 'vtb'
     void extendVTables(VTableBuilder &vtb);
 

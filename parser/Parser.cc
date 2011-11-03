@@ -1790,6 +1790,24 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                      "Abstract functions can only be defined in an abstract "
                       "class."
                      );
+            
+            // verify that the class has no dependents
+            vector<TypeDefPtr> deps;
+            classTypeDef->getDependents(deps);
+            if (deps.size()) {
+               stringstream msg;
+               msg << "You cannot declare an abstract function after "
+                      "the nested derived class";
+               if (deps.size() == 1)
+                  msg << " " << deps[0]->name << ".";
+               else {
+                  msg << "es: ";
+                  for (int i = 0; i < deps.size(); ++i)
+                     msg << (i ? ", " : "") << deps[i]->name;
+                  msg << ".";
+               }
+               error(tok3, msg.str());
+            }
 
             flags = flags | FuncDef::abstract | FuncDef::virtualized | 
                FuncDef::method;

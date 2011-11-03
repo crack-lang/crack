@@ -16,6 +16,14 @@ using namespace std;
 using namespace builder::mvll;
 using namespace llvm;
 
+void BTypeDef::getDependents(std::vector<TypeDefPtr> &deps) {
+    for (IncompleteChildVec::iterator iter = incompleteChildren.begin();
+         iter != incompleteChildren.end();
+         ++iter
+         )
+        deps.push_back(iter->first);
+}
+
 // add all of my virtual functions to 'vtb'
 void BTypeDef::extendVTables(VTableBuilder &vtb) {
     // find all of the virtual functions

@@ -1,0 +1,12 @@
+%%TEST%%
+abstract function defined after nested derived class
+%%ARGS%%
+%%FILE%%
+@abstract class A {
+    oper init() {}
+    class B : A {}
+    @abstract void f();
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4: You cannot declare an abstract function after the nested derived class B.
+%%STDIN%%

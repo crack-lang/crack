@@ -301,6 +301,13 @@ class TypeDef : public VarDef, public Namespace {
         }
 
         virtual bool isConstant();
+        
+        /**
+         * Fills 'deps' with the set of dependent classes - dependent classes 
+         * are nested classes that are derived from this class.
+         * Base class version does nothing, derived classes must implement.
+         */
+        virtual void getDependents(std::vector<TypeDefPtr> &deps);
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

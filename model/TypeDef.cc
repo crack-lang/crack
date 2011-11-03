@@ -798,6 +798,8 @@ bool TypeDef::isConstant() {
     return true;
 }
 
+void TypeDef::getDependents(std::vector<TypeDefPtr> &deps) {}
+
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;
     string childPrefix = prefix + "  ";

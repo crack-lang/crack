@@ -1,0 +1,13 @@
+%%TEST%%
+abstract function defined after multiple nested derived class
+%%ARGS%%
+%%FILE%%
+@abstract class A {
+    oper init() {}
+    class B : A {}
+    class C : A {}
+    @abstract void f();
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5: You cannot declare an abstract function after the nested derived classes: B, C.
+%%STDIN%%
