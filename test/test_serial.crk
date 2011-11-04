@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.io cout, StringWriter, StringReader;
-import crack.exp.serial SerialWriter, SerialReader;
+import crack.serial SerialWriter, SerialReader;
 
 if (true) {
     StringWriter sw = {};

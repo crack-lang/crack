@@ -21,7 +21,7 @@ import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING,
     TOK_POPERRCTX;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
-import crack.exp.serial SerialReader, SerialWriter;
+import crack.serial SerialReader, SerialWriter;
 
 const NOT_FOUND := 0xFFFFFFFF;
 
