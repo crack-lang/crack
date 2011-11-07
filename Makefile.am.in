@@ -7,11 +7,11 @@ ACLOCAL_AMFLAGS = -I m4 --install
 lib_LTLIBRARIES = libCrackLang.la libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 2:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LDFLAGS = -version-info 3:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackNativeRuntime_la_LDFLAGS = -version-info 1:0:1
+libCrackNativeRuntime_la_LDFLAGS = -version-info 2:0:0
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
@@ -26,6 +26,8 @@ extlib_LTLIBRARIES = test/testext.la
 
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
+
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -76,6 +78,7 @@ noinst_HEADERS = \
     builder/llvm/BModuleDef.h \
     builder/llvm/BResultExpr.h \
     builder/llvm/BTypeDef.h \
+    builder/llvm/Cacher.h \
     builder/llvm/Consts.h \
     builder/llvm/DebugInfo.h \
     builder/llvm/ExceptionCleanupExpr.h \
@@ -92,6 +95,9 @@ noinst_HEADERS = \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
+    builder/util/md5.h \
+    builder/util/SourceDigest.h \
+    builder/util/CacheFiles.h \
     debug/DebugTools.h \
     ext/Stub.h \
     model/AllocExpr.h \
@@ -175,7 +181,9 @@ extinc_HEADERS = \
     ext/crack_config.h
 
 EXTRA_DIST = doc lib test Credits CMakeLists.txt opt/CMakeLists.txt \
-    sourceModules.txt runtimeModules.txt cmake COPYING COPYING.Lesser
+    sourceModules.txt runtimeModules.txt cmake COPYING COPYING.Lesser \
+    screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
+    screen/testdata.crk screen/planB screen/tests
 
 bin_PROGRAMS = crack
 
@@ -185,8 +193,6 @@ crack_LDADD = libCrackLang.la $(LDFLAGS)
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
-
-TESTS = test/screen
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template
 	@if which nml2html >/dev/null; then \
@@ -225,15 +231,18 @@ uninstall-local:
 	rm $(DESTDIR)$(bindir)/crack-$(VERSION)
 
 clean-local:
-	rm -f lib/crack/ext/_pcre.so lib/crack/runtime.so lib/testext.so
+	rm -rf $(EXTENSIONS:%=lib/crack/ext/%.so) screen/output \
+	   test/screen.bin* lib/crack/runtime.so lib/testext.so
 
-testbed:
+testbed: runtime.la $(extlib_LTLIBRARIES)
+	mkdir -p lib/crack/ext
 	ln -f .libs/runtime.so lib/crack
 	ln -f test/.libs/testext.so lib
-	for ext in _cairo _gl _gtk _pcre _sdl; do \
+	for ext in $(EXTENSIONS); do \
 	  if [ -e .libs/$$ext.so ]; then \
 	    ln -f .libs/$$ext.so lib/crack/ext; \
 	  fi \
 	done
 
 check: testbed
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen

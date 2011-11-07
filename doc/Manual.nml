@@ -4545,6 +4545,17 @@ From 0.5 to 0.6
 ---------------
 
 -   Removed #crack.container# module (use #crack.cont.\*# instead).
+-   The extgen, readers, gtk, fs, ann, cmdline, serial, regex
+-   The implementation of instance variables in extensions was changed to 
+    make them more portable.  Instead of trying to create a mapping of a 
+    native class, the interface now requires an offset to the instance 
+    variable.
+-   Access protection now works: symbols beginning with a single underscore 
+    can only be accessed from the module they are defined in, symbols 
+    beginning with a double underscore are private to their class.
+-   Second-order imports are now disallowed - to import a symbol from a 
+    module, the symbol must either be defined in the module or explicitly 
+    exposed with an @`export_symbols` annotation.
 
 From 0.4 to 0.5
 ---------------

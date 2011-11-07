@@ -1,8 +1,8 @@
 # Copyright 2003 Michael A. Muller
 # Portions Copyright 2010 Google Inc
 
-AC_INIT(crack, 0.5)
-AM_INIT_AUTOMAKE(crack, 0.5)
+AC_INIT(crack, 0.6)
+AM_INIT_AUTOMAKE(crack, 0.6)
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
 

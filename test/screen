@@ -28,7 +28,7 @@ if [ -z "$CRACK_LIB_PATH" ]; then
     if [ -f "$root/build/crack" ]; then
         export CRACK_LIB_PATH=$builddir/lib
     else
-        export CRACK_LIB_PATH=$root/.libs
+        export CRACK_LIB_PATH=$builddir/.libs
     fi
 fi
 

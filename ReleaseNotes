@@ -1,3 +1,17 @@
+0.6
+    -   Implemented const folding for integer and float operations.
+    -   Added support for injecting crack function body code from an extension.
+    -   Added the foundations of support for module caching.
+    -   Added functors.
+    -   Added an 'ascii' module supporting functionality specific to ASCII 
+        data.
+    -   Added a module for dealing with numeric arrays.
+    -   Migrated modules out of crack.exp, removed obsolete modules.
+    -   Implemented "const" variables.
+    -   Implemented access protection.
+    -   Implemented abstract methods.
+    -   Converted all unit tests to "screen"
+    -   Lots of bug fixes and small enhancements.
 0.5
     -   Added support for generics.  Created true generic containers.
     -   Made functions "first class" objects, implemented support for storing 
