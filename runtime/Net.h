@@ -7,8 +7,6 @@
 #include <signal.h>
 #include <poll.h>
 #include <netdb.h>
-#include "ext/Object.h"
-#include <iostream> // XXX remove
 
 namespace crack { namespace runtime {
 
