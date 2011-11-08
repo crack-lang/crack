@@ -84,9 +84,11 @@ void Token::_release(Token *inst) { inst->release(); }
     bool Token::name() { return rep->name(); } \
     bool Token::_##name(Token *inst) { return inst->rep->name(); }
 
+IS_FUNC(isAlias)
 IS_FUNC(isAnn)
 IS_FUNC(isBoolAnd)
 IS_FUNC(isBoolOr)
+IS_FUNC(isCase)
 IS_FUNC(isCatch)
 IS_FUNC(isConst)
 IS_FUNC(isIf)
@@ -99,6 +101,7 @@ IS_FUNC(isOper)
 IS_FUNC(isOn)
 IS_FUNC(isWhile)
 IS_FUNC(isReturn)
+IS_FUNC(isSwitch)
 IS_FUNC(isThrow)
 IS_FUNC(isTry)
 IS_FUNC(isBreak)

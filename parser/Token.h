@@ -13,19 +13,19 @@ class Token {
    public:
 
       // the token types
-      typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, breakKw, 
-                     catchKw, classKw, constKw, continueKw, dollar, enumKw, 
-                     forKw, elseKw, ifKw, importKw, inKw, isKw, lambdaKw, 
-                     moduleKw, nullKw, onKw, operKw, returnKw, throwKw, 
-                     tryKw, typeofKw, whileKw, assign, assignAnd, 
-                     assignAsterisk, assignLSh, assignOr, assignRSh, 
-                     assignXor, assignMinus, assignPercent, assignPlus, 
-                     assignSlash, asterisk, bang, colon, comma, decr, define, 
-                     dot, end, eq, ge, gt, ident, incr, integer, lbracket, 
-                     lcurly, le, lparen, lt, minus, ne, percent, plus, quest, 
-                     rbracket, rcurly, rparen, semi, slash, string, tilde, 
-                     istrBegin, istrEnd, logicAnd, logicOr, floatLit, 
-                     octalLit, hexLit, binLit,
+      typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, aliasKw, 
+                     breakKw, caseKw, catchKw, classKw, constKw, continueKw, 
+                     dollar, enumKw, forKw, elseKw, ifKw, importKw, inKw, 
+                     isKw, lambdaKw, moduleKw, nullKw, onKw, operKw, 
+                     returnKw, switchKw, throwKw, tryKw, typeofKw, whileKw, 
+                     assign, assignAnd, assignAsterisk, assignLSh, assignOr, 
+                     assignRSh, assignXor, assignMinus, assignPercent, 
+                     assignPlus, assignSlash, asterisk, bang, colon, comma, 
+                     decr, define, dot, end, eq, ge, gt, ident, incr, 
+                     integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
+                     percent, plus, quest, rbracket, rcurly, rparen, semi, 
+                     slash, string, tilde, istrBegin, istrEnd, logicAnd, 
+                     logicOr, floatLit, octalLit, hexLit, binLit,
                      
                      // these tokens are special - they are used to 
                      // communicate actions that need to be performed in the 
@@ -65,9 +65,11 @@ class Token {
       /** Methods to check the token type */
       /** @{ */
 
+      bool isAlias() const { return type == aliasKw; }
       bool isAnn() const { return type == ann; }
       bool isBoolAnd() const { return type == bitAnd; }
       bool isBoolOr() const { return type == bitOr; }
+      bool isCase() const { return type == caseKw; }      
       bool isCatch() const { return type == catchKw; }
       bool isConst() const { return type == constKw; }
       bool isEnum() const { return type == enumKw; }
@@ -82,6 +84,7 @@ class Token {
       bool isOper() const { return type == operKw; }
       bool isWhile() const { return type == whileKw; }
       bool isReturn() const { return type == returnKw; }
+      bool isSwitch() const { return type == switchKw; }
       bool isThrow() const { return type == throwKw; }
       bool isTry() const { return type == tryKw; }
       bool isBreak() const { return type == breakKw; }

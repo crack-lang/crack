@@ -93,6 +93,12 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::lambdaKw, data, loc);
     else if (data == "enum")
         return Token(Token::enumKw, data, loc);
+    else if (data == "alias")
+        return Token(Token::aliasKw, data, loc);
+    else if (data == "case")
+        return Token(Token::caseKw, data, loc);
+    else if (data == "switch")
+        return Token(Token::switchKw, data, loc);
     else
         return Token(Token::ident, data, 
                      locationMap.getLocation()

@@ -214,12 +214,18 @@ void init(Module *mod) {
                          (void *)Token::_getLocation
                          );
     
+    tokenType->addMethod(mod->getBoolType(), "isAlias", 
+                         (void *)Token::_isAlias
+                         );
     tokenType->addMethod(mod->getBoolType(), "isAnn", (void *)Token::_isAnn);
     tokenType->addMethod(mod->getBoolType(), "isBoolAnd", 
                          (void *)Token::_isBoolAnd
                          );
     tokenType->addMethod(mod->getBoolType(), "isBoolOr", 
                          (void *)Token::_isBoolOr
+                         );
+    tokenType->addMethod(mod->getBoolType(), "isCase", 
+                         (void *)Token::_isCase
                          );
     tokenType->addMethod(mod->getBoolType(), "isIf", (void *)Token::_isIf);
     tokenType->addMethod(mod->getBoolType(), "isIn", (void *)Token::_isIn);
@@ -233,6 +239,9 @@ void init(Module *mod) {
                          (void *)Token::_isWhile);
     tokenType->addMethod(mod->getBoolType(), "isReturn",
                          (void *)Token::_isReturn);
+    tokenType->addMethod(mod->getBoolType(), "isSwitch", 
+                         (void *)Token::_isSwitch
+                         );
     tokenType->addMethod(mod->getBoolType(), "isBreak",
                          (void *)Token::_isBreak
                          );
