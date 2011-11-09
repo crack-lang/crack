@@ -1,0 +1,14 @@
+%%TEST%%
+sequence constants with an invalid constructor
+%%ARGS%%
+%%FILE%%
+class B {}
+class A : B {
+    oper init(byteptr val) {}
+    void append(int a) {}
+}
+
+A![1, 2, 3];
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:7: A has neither a constructor accepting a uint nor a default constructor.
+%%STDIN%%
