@@ -2384,14 +2384,6 @@ void Parser::parseReturnStmt() {
       context->builder.emitReturn(*context, 0);
       return;
    }
-   // if return type is void, but they are trying to return an expression,
-   // fail with message
-   else if (context->returnType == context->construct->voidType) {
-      error(tok,
-            SPUG_FSTR("Cannot return expression from function "
-                      "with return type void")
-            );
-   }
 
    // parse the return expression, make sure that it matches the return type.
    toker.putBack(tok);
@@ -2411,6 +2403,15 @@ void Parser::parseReturnStmt() {
                       )
             );
    
+   // if the expression is of type void, emit it now and don't try to get the
+   // builder to generate it.
+   if (expr->type == context->construct->voidType) {
+      context->createCleanupFrame();
+      expr->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+      expr = 0;
+   }
+
    // emit the return statement
    context->builder.emitReturn(*context, expr.get());
 
