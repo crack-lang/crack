@@ -5,9 +5,10 @@ functors
 import crack.io cout;
 import crack.functor Functor0, Functor1, Functor2, Functor3, Functor4,
     Functor5, Function0, Function1, Function2, Function3, Function4, Function5;
+@import crack.ann implements;
 
 if (true) {
-    class F : Functor0[void] {
+    class F : Object @implements Functor0[void] {
         bool called;
         void oper call() {
             called = true;
@@ -20,7 +21,7 @@ if (true) {
 }
 
 if (true) {
-    class F : Functor1[void, int] {
+    class F : Object @implements Functor1[void, int] {
         bool called;
         void oper call(int val) {
             called = val > 1;
@@ -33,7 +34,7 @@ if (true) {
 }
 
 if (true) {
-    class F : Functor2[void, int, String] {
+    class F : Object @implements Functor2[void, int, String] {
         bool called;
         void oper call(int val1, String val2) {
             called = val1 > 1 && val2 == 'foo';
@@ -50,7 +51,7 @@ class B {}
 class C {}
 
 if (true) {
-    class F : Functor3[void, int, String, A] {
+    class F : Object @implements Functor3[void, int, String, A] {
         bool called;
         void oper call(int val1, String val2, A val3) {
             called = val1 > 1 && val2 == 'foo' && val3;
@@ -63,7 +64,7 @@ if (true) {
 }
 
 if (true) {
-    class F : Functor4[void, int, String, A, B] {
+    class F : Object @implements Functor4[void, int, String, A, B] {
         bool called;
         void oper call(int val1, String val2, A val3, B val4) {
             called = val1 > 1 && val2 == 'foo' && val3 && val4;
@@ -76,7 +77,7 @@ if (true) {
 }
 
 if (true) {
-    class F : Functor5[void, int, String, A, B, C] {
+    class F : Object @implements Functor5[void, int, String, A, B, C] {
         bool called;
         void oper call(int val1, String val2, A val3, B val4, C val5) {
             called = val1 > 1 && val2 == 'foo' && val3 && val4 && val5;

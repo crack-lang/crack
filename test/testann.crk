@@ -1,8 +1,9 @@
 # Copyright 2010 Google Inc.
 
 import crack.io StringFormatter, cout;
-import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE, 
-    STATE_BASE, FUNCFLAG_STATIC, FUNCFLAG_FINAL, TOK_STRING, Token;
+import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE,
+    STATE_BASE, STATE_OPT_ELSE, FUNCFLAG_STATIC, FUNCFLAG_FINAL, TOK_STRING,
+    Token;
 import crack.cont.treemap TreeMap;
 
 ## increment everything but a constant zero.
@@ -61,9 +62,9 @@ IntWrapper iw;
 
 void createAnnotations(CrackContext ctx) {
     ctx.storeAnnotation('created'.buffer, createdAnnotation);
-    ctx.storeAnnotation('createdWithCallback'.buffer, 
+    ctx.storeAnnotation('createdWithCallback'.buffer,
                         createdWithCallback,
-                        # we have to store our userData in a global variable 
+                        # we have to store our userData in a global variable
                         # to keeps it from being GCed :-(
                         iw = IntWrapper(100)
                         );
@@ -102,9 +103,12 @@ void leave(CrackContext ctx) {
 
 void wrap(CrackContext ctx) {
     # verify that we're in a state where a definition can occur.
-    if (ctx.getParseState() != STATE_BASE)
+
+    if ((parseState := ctx.getParseState()) != STATE_BASE &&
+        parseState != STATE_OPT_ELSE
+        )
         ctx.error('You cannot place a function annotation here.'.buffer);
-    
+
     enterCB = ctx.addCallback(PCB_FUNC_ENTER, enter);
     leaveCB = ctx.addCallback(PCB_FUNC_LEAVE, leave);
 }

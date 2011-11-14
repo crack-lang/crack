@@ -53,26 +53,26 @@ class Parser {
          variableDef, // after the semicolon, assignment or comma of a variable
                       // definition.
          exprBegin, // beginning of an expression.
-         controlStmt, // after the starting keyword of a control statement 
+         controlStmt, // after the starting keyword of a control statement
                       // (including "import" and the empty statement)
          noCallbacks, // special event that you can't add callbacks to.
          eventSentinel // MUST BE THE LAST SYMBOL IN THE ENUM.
       };
-      
+
    private:
 
-      enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, 
+      enum { noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec,
              bitAndPrec, cmpPrec, shiftPrec, addPrec, multPrec, unaryPrec
             };
 
       Toker &toker;
-      
+
       // the module context, and the current context.
       model::ContextPtr moduleCtx, context;
-      
+
       /**
-       * This class essentially lets us manage the context stack with the 
-       * program's stack.  We push the context by creating an instance, and 
+       * This class essentially lets us manage the context stack with the
+       * program's stack.  We push the context by creating an instance, and
        * pop it by calling restore() or falling through to the destructor.
        */
       friend class ContextStackFrame;
@@ -89,21 +89,21 @@ class Parser {
                restored(false),
                parser(parser),
                context(parser.context) {
-               
+
                parser.context = context;
             }
-            
+
             ~ContextStackFrame() {
                if (!restored)
                   restore();
             }
-            
+
             void restore() {
                assert(!restored);
                parser.context = context;
                restored = true;
             }
-            
+
             model::Context &parent() {
                assert(!restored);
                return *context;
@@ -112,25 +112,25 @@ class Parser {
 
       typedef std::map<std::string, unsigned> OpPrecMap;
       OpPrecMap opPrecMap;
-      
+
       // callbacks for each event type.
       typedef std::vector<ParserCallback *> CallbackVec;
       CallbackVec callbacks[eventSentinel];
 
       /**
-       * Add a new definition to the current context or nearest definition 
+       * Add a new definition to the current context or nearest definition
        * context.
        */
       void addDef(model::VarDef *context);
-      
+
       void addFuncDef(model::FuncDef *funcDef);
-      
+
       /**
-       * Returns the next token from the tokenizer and stores its location in 
+       * Returns the next token from the tokenizer and stores its location in
        * the current context.
        */
       Token getToken();
-      
+
       /**
        * Returns the precedence of the specified operator.
        */
@@ -139,22 +139,22 @@ class Parser {
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
 
-      /** 
-       * Get the next token and make sure it is of type 'type' otherwise 
+      /**
+       * Get the next token and make sure it is of type 'type' otherwise
        * unexpected(tok, error);
        */
       void expectToken(Token::Type type, const char *error);
 
-      /** Look up a binary operator, either as a stand-alone operator 
+      /** Look up a binary operator, either as a stand-alone operator
        * defintiion with two args or a method with one arg.
-       * 
+       *
        * @param name the operator name (e.g. "oper +")
-       * @param args a two element arg list, lhs and rhs values.  This will be 
-       *    modified on return to include the correct argument list for the 
+       * @param args a two element arg list, lhs and rhs values.  This will be
+       *    modified on return to include the correct argument list for the
        *    function or method.
        * @returns the function, null if there was no match.
        */
-      model::FuncDefPtr lookUpBinOp(const std::string &name, 
+      model::FuncDefPtr lookUpBinOp(const std::string &name,
                                     model::FuncCall::ExprVec &args
                                     );
 
@@ -165,10 +165,10 @@ class Parser {
 
       /**
        * Parse a single statement.
-       * @param defsAllowed true if a definition may be provided instead of a 
-       *    statement.  Statements in block contexts may be definitions, 
+       * @param defsAllowed true if a definition may be provided instead of a
+       *    statement.  Statements in block contexts may be definitions,
        *    simple statements in conditionals must not be.
-       * @returns the context that this statement terminates to.  If non-null, 
+       * @returns the context that this statement terminates to.  If non-null,
        *    the statement is terminal in all contexts from the current context
        *    to the returned context (non-inclusive).
        */
@@ -178,32 +178,32 @@ class Parser {
        * Parse a block - a sequence of statements in the same execution
        * context.  A block is "nested" if it is inside the implicit file scope
        * block and wrapped in curly brackets.
-       * @returns the context that this statement terminates to.  See 
+       * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
       model::ContextPtr parseBlock(bool nested, Event closeEvent);
 
       /**
-       * Creates a variable reference complete with an implicit "this" if 
+       * Creates a variable reference complete with an implicit "this" if
        * necessary.
        */
       model::ExprPtr createVarRef(model::Expr *receiver, model::VarDef *var,
                                   const Token &tok);
 
       /**
-       * Create an assignment expression, complete with an implicit "this" if 
+       * Create an assignment expression, complete with an implicit "this" if
        * necessary.
        */
       model::ExprPtr createAssign(model::Expr *container, const Token &ident,
                                   model::VarDef *var,
                                   model::Expr *val
                                   );
-      /** 
-       * Create a variable reference expression for the identifier, complete 
+      /**
+       * Create a variable reference expression for the identifier, complete
        * with an implicit "this" if necessary.
-       * @param undefinedError If this is not null, it is an alternate error 
-       *    to use if the variable is undefined and it also makes the function 
-       *    return null rather than raising a parse error if the variable is 
+       * @param undefinedError If this is not null, it is an alternate error
+       *    to use if the variable is undefined and it also makes the function
+       *    return null rather than raising a parse error if the variable is
        *    an OverloadDef with multiple variations.
        */
       model::ExprPtr createVarRef(model::Expr *receiver, const Token &ident,
@@ -227,8 +227,8 @@ class Parser {
       /**
        * Parse the kinds of things that can come after an identifier.
        *
-       * @param container the aggregate that the identifier is scoped to, as 
-       *   in "container.ident"  This can be null, in which case the 
+       * @param container the aggregate that the identifier is scoped to, as
+       *   in "container.ident"  This can be null, in which case the
        *   identifier is scoped to the local context.
        * @param ident The identifier's token.
        */
@@ -238,15 +238,15 @@ class Parser {
 
       /**
        * Parse an interpolated string.
-       * 
+       *
        * @param expr the receiver of the interpolated string operation.
        */
       model::ExprPtr parseIString(model::Expr *expr);
 
       /**
        * Parse a sequence constant.
-       * 
-       * @param containerType the type of the sequence that we are 
+       *
+       * @param containerType the type of the sequence that we are
        * initializing.
        */
       model::ExprPtr parseConstSequence(model::TypeDef *containerType);
@@ -257,7 +257,7 @@ class Parser {
       model::TypeDefPtr parseTypeof();
 
       /**
-       * If the expression is a VarRef referencing a TypeDef, return the 
+       * If the expression is a VarRef referencing a TypeDef, return the
        * TypeDef.  Otherwise returns null.
        */
       static model::TypeDef *convertTypeRef(model::Expr *expr);
@@ -269,47 +269,47 @@ class Parser {
       model::ExprPtr parseTernary(model::Expr *cond);
 
       /**
-       * Parse a secondary expression.  Secondary expressions include a the 
-       * dot operator, binary operators and the bracket operators and their 
+       * Parse a secondary expression.  Secondary expressions include a the
+       * dot operator, binary operators and the bracket operators and their
        * associated expressions.
-       * 
-       * @param expr the primary expression that this secondary expression 
+       *
+       * @param expr the primary expression that this secondary expression
        *        modifies.
        * @param precedence the current level of operator precedence.
        */
-      model::ExprPtr parseSecondary(model::Expr *expr, 
+      model::ExprPtr parseSecondary(model::Expr *expr,
                                     unsigned precedence = 0
                                     );
 
       /**
        * Parse an expression.
-       * 
-       * @param precedence The function will not parse an operator of lower 
-       *    precedence than this parameter.  So if we're parsing the right 
-       *    side of 'x * y', and the precedence of '*' is 10, and we encounter 
-       *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing 
+       *
+       * @param precedence The function will not parse an operator of lower
+       *    precedence than this parameter.  So if we're parsing the right
+       *    side of 'x * y', and the precedence of '*' is 10, and we encounter
+       *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing
        *    after the 'a'.
        */
       model::ExprPtr parseExpression(unsigned precedence = 0);
-      void parseMethodArgs(std::vector<model::ExprPtr> &args, 
+      void parseMethodArgs(std::vector<model::ExprPtr> &args,
                            Token::Type terminator = Token::rparen
                            );
-      
-      /** 
-       * Parse the "specializer" after a generic type name. 
+
+      /**
+       * Parse the "specializer" after a generic type name.
        * @param tok the left bracket token of the generic specifier.
        * @param generic defined when doing this within a generic definition.
        */
-      model::TypeDef *parseSpecializer(const Token &tok, 
+      model::TypeDef *parseSpecializer(const Token &tok,
                                        model::TypeDef *typeDef,
                                        model::Generic *generic = 0
                                        );
-      
-      
+
+
       model::ExprPtr parseConstructor(const Token &tok, model::TypeDef *type,
                                       Token::Type terminator
                                       );
-      
+
       model::TypeDefPtr parseTypeSpec(const char *errorMsg = 0,
                                       model::Generic *generic = 0
                                       );
@@ -335,10 +335,10 @@ class Parser {
        * @param returnType function return type.
        * @param nameTok the last token parsed in the function name.
        * @param name the full (but unqualified) function name.
-       * @param funcFlags flags defining special processing rules for the 
-       *    function (whether initializers or destructors need to be parsed 
+       * @param funcFlags flags defining special processing rules for the
+       *    function (whether initializers or destructors need to be parsed
        *    and emitted).
-       * @param expectedArgCount if > -1, this is the expected number of arguments. 
+       * @param expectedArgCount if > -1, this is the expected number of arguments.
        * @returns the number of actual arguments.
        */
       int parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
@@ -348,32 +348,32 @@ class Parser {
                        );
 
       /**
-       * Parse a variable definition initializer.  Deals with the special 
+       * Parse a variable definition initializer.  Deals with the special
        * syntax for constructors and sequence constants.
        */
       model::ExprPtr parseInitializer(model::TypeDef *type);
 
       /**
-       * Parse a definition. Returns false if there was no definition. 
-       * This will always parse the type specializer if it exists, and will 
+       * Parse a definition. Returns false if there was no definition.
+       * This will always parse the type specializer if it exists, and will
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
       bool parseDef(model::TypeDef *&type);
-      
+
       /** Parse a constant definition. */
       void parseConstDef();
-      
+
       // statements
 
       /**
-       * Parse a clause, which can either be a an expression statement or a 
+       * Parse a clause, which can either be a an expression statement or a
        * definition.
        */
       void parseClause(bool defsAllowed);
 
-      /*      
-       * @returns the context that this statement terminates to.  See 
+      /*
+       * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
       model::ContextPtr parseIfClause();
@@ -381,8 +381,8 @@ class Parser {
       /** Parse the condition in a 'while', 'for' or 'if' statement */
       model::ExprPtr parseCondExpr();
 
-      /*      
-       * @returns the context that this statement terminates to.  See 
+      /*
+       * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
       model::ContextPtr parseIfStmt();
@@ -392,13 +392,13 @@ class Parser {
       void parseReturnStmt();
       model::ContextPtr parseTryStmt();
       model::ContextPtr parseThrowStmt();
-      
+
       /**
-       * Parse an import statement.  'ns' is the namespace in which to alias 
+       * Parse an import statement.  'ns' is the namespace in which to alias
        * imported symbols.
        */
       void parseImportStmt(model::Namespace *ns);
-      
+
       /**
        * Parse a function definition after an "oper" keyword.
        */
@@ -406,23 +406,23 @@ class Parser {
 
       /** Parse the generic parameter list */
       void parseGenericParms(model::GenericParmVec &parms);
-      
+
       void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
       void recordParenthesized(model::Generic *generic);
-      
+
       model::TypeDefPtr parseClassDef();
-      
+
       // error checking functions
       model::VarDefPtr checkForExistingDef(const Token &tok,
                                            const std::string &name,
                                            bool overloadOk = false
                                            );
 
-      // checks if "existingDef" is an OverloadDef that contains an overload 
-      // matching argDefs.  Raises an error if this is an illegal overload, 
-      // otherwise returns the function that we're overriding if the override 
-      // needs to be considered (for implementation of a virtual or forward 
+      // checks if "existingDef" is an OverloadDef that contains an overload
+      // matching argDefs.  Raises an error if this is an illegal overload,
+      // otherwise returns the function that we're overriding if the override
+      // needs to be considered (for implementation of a virtual or forward
       // function).
       model::FuncDefPtr checkForOverride(model::VarDef *existingDef,
                                          const model::FuncDef::ArgVec &argDefs,
@@ -432,9 +432,9 @@ class Parser {
                                          );
 
    public:
-      // current parser state.      
-      enum State { st_base, st_notBase } state;
-      
+      // current parser state.
+      enum State { st_base, st_optElse, st_notBase } state;
+
       Parser(Toker &toker, model::Context *context);
 
       void parse();
@@ -442,16 +442,16 @@ class Parser {
       void parseClassBody();
 
       /**
-       * Throws a parse error about an attempt to override a variable that has 
+       * Throws a parse error about an attempt to override a variable that has
        * been defined in the same context.
        * @param tok the last parsed token
        * @param existing the existing variable definition.
        */
-      void redefineError(const Token &tok, 
+      void redefineError(const Token &tok,
                          const model::VarDef *existing
                          );
 
-      /** 
+      /**
        * throws a ParseError, properly formatted with the location and
        * message text.
        */
@@ -462,14 +462,14 @@ class Parser {
 
       /** Writes a warning message to standard error. */
       void warn(const Token &tok, const std::string & msg);
-      
-      /** 
-       * Add a new callback to the parser.  It is the responsibility of the 
-       * caller to manage the lifecycle of the callback and to insure that it 
+
+      /**
+       * Add a new callback to the parser.  It is the responsibility of the
+       * caller to manage the lifecycle of the callback and to insure that it
        * remains in existence until it is removed with removeCallback().
        */
       void addCallback(Event event, ParserCallback *callback);
-      
+
       /**
        * Remove an existing callback.  This removes only the first added
        * instance of the callback, so if the same callback has been added N
@@ -477,10 +477,10 @@ class Parser {
        * Returns true if the callback was removed, false if it was not found.
        */
       bool removeCallback(Event event, ParserCallback *callback);
-      
-      /** 
-       * Run all callbacks associated with the event. 
-       * 
+
+      /**
+       * Run all callbacks associated with the event.
+       *
        * Returns true if any callbacks were called.
        */
       bool runCallbacks(Event event);

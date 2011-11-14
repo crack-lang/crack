@@ -17,7 +17,7 @@ if (@oneHundred() != 100)
 if (@echo(200) != 200)
     cout `macro with one arg failed\n`;
 
-if (!@equals(1, 1)) 
+if (!@equals(1, 1))
     cout `macro with two args failed\n`;
 
 @func(f);
@@ -65,18 +65,18 @@ if (@tm_stringify(boyng) != 'boyng')
 class Bar : Object @implements Foo {
     String y() { return 'nested parens work'; }
 
-    void do() { 
+    void do() {
         x := 'interp vars work';
-        result `interfaces work: $x, $(y())`; 
+        result `interfaces work: $x, $(y())`;
     }
-    
+
     oper del() { result `Bar deleted`; }
 }
 
 result = StringFormatter();
 Foo b = Bar();
 b.do();
-if (result.createString() != 
+if (result.createString() !=
     'interfaces work: interp vars work, nested parens work')
     cout `Failed to implement interface implementation\n`;
 result = StringFormatter();
@@ -98,6 +98,6 @@ if (1) {
         )
         cout `FAILED double argument generic interface\n`;
 }
-    
+
 
 cout `ok\n`;

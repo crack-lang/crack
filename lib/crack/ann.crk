@@ -2,22 +2,22 @@
 # Implements some basic annotations that no one should be without.  Included
 # are:
 # @define name(arg, ...) { contents }
-#   defines a macro with the specified arguments (you can then use the macro 
+#   defines a macro with the specified arguments (you can then use the macro
 #   as @name(args...))
 # @interface I { ... }
-#   Defines a class as an interface (similar to crack.lang.MixIn, only you can 
+#   Defines a class as an interface (similar to crack.lang.MixIn, only you can
 #   implement multiple of them)
 # class A : Object @implements I, J { ... }
-#   Makes a class implement the list of interfaces that follows them (this 
-#   mainly entails doing normal class derivation and implementing the 
+#   Makes a class implement the list of interfaces that follows them (this
+#   mainly entails doing normal class derivation and implementing the
 #   'get<interface>Object()' method.
 
 import crack.runtime free;
-import crack.lang die, CString, IndexError, InvalidArgumentError, 
+import crack.lang die, CString, IndexError, InvalidArgumentError,
     AssertionError;
-import crack.io cout, FStr, StringFormatter, StringWriter, Formatter, Reader, 
+import crack.io cout, FStr, StringFormatter, StringWriter, Formatter, Reader,
     Writer;
-import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING, 
+import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING,
     TOK_POPERRCTX;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
@@ -25,20 +25,20 @@ import crack.serial SerialReader, SerialWriter;
 
 const NOT_FOUND := 0xFFFFFFFF;
 
-## Serial writer with some additional facilities to simplify macro 
+## Serial writer with some additional facilities to simplify macro
 ## serialization.
 class MacroSerializer : SerialWriter {
     TreeMap[String, uint] sourceNames = {};
     uint lastIdx;
 
     oper init(Writer dst) : SerialWriter(dst) {}
-    
+
     void writeSrcName(String name) {
         idx := sourceNames.get(name, NOT_FOUND);
         if (idx != NOT_FOUND) {
             write(idx);
         } else {
-            # new name, write the index and the 
+            # new name, write the index and the
             sourceNames[name] = lastIdx;
             write(lastIdx++);
             write(name);
@@ -51,14 +51,14 @@ class MacroSerializer : SerialWriter {
     }
 }
 
-## Serial reader with some additional facilities to simplify macro 
+## Serial reader with some additional facilities to simplify macro
 ## deserialization.
 class MacroDeserializer : SerialReader {
     CrackContext ctx;
     Array[String] sourceNames = {4};
-    
+
     oper init(CrackContext ctx, Reader src) : SerialReader(src), ctx = ctx {}
-    
+
     String readSrcName() {
         # read the index
         idx := readUInt();
@@ -94,7 +94,7 @@ class NodeIter;
 
 @abstract class Node {
     Node next;
-    
+
     void expand(CrackContext ctx, Array[NodeList] args) {}
     String toString(Array[NodeList] args) {return null;}
     @abstract Location getLocation();
@@ -111,14 +111,14 @@ class NodeIter {
 
 Node _readNode(MacroDeserializer src);
 
-## A list of tokens.  These are typically stored in reverse order of the 
-## actual order of the tokens so that they can be easily "put back" into the 
+## A list of tokens.  These are typically stored in reverse order of the
+## actual order of the tokens so that they can be easily "put back" into the
 ## token stream (after putBack() they will be in the correct order once again)
 class NodeListImpl : NodeList {
     Node first, last;
-    
+
     oper init() {}
-    
+
     void pushHead(Node node) {
         if (first) {
             node.next = first;
@@ -126,8 +126,8 @@ class NodeListImpl : NodeList {
         } else {
             first = last = node;
         }
-    }    
-    
+    }
+
     void append(Node node) {
         if (last) {
             last.next = node;
@@ -136,7 +136,7 @@ class NodeListImpl : NodeList {
             first = last = node;
         }
     }
-    
+
     Node popHead() {
         if (first) {
             if (last is first)
@@ -157,9 +157,9 @@ class NodeListImpl : NodeList {
             #cout `remaining = $count\n`;
         }
     }
-    
+
     void writeTo(MacroSerializer dst) {
-        
+
         # count the nodes and write the count
         node := first;
         uint count;
@@ -169,7 +169,7 @@ class NodeListImpl : NodeList {
         }
         #cout `writing count $count\n`;
         dst.write(count);
-   
+
         # write all of the nodes
         node = first;
         while (node) {
@@ -183,7 +183,7 @@ class NodeListImpl : NodeList {
             __write(out, node.next);
         node.writeTo(out);
     }
-    
+
     void writeTo(Writer out) {
         __write(out, first);
     }
@@ -192,7 +192,7 @@ class NodeListImpl : NodeList {
 
     ## Node lists are true if they have any contents.
     bool isTrue() { return first; }
-    
+
     Node getLast() { return last; }
     Node getFirst() { return first; }
 }
@@ -207,18 +207,18 @@ class Tok : Node {
     void expand(CrackContext ctx, Array[NodeList] args) {
         ctx.putBack(tok);
     }
-    
+
     String toString(Array[NodeList] args) {
         if (tok.isString())
             return String(tok.getText()).getRepr();
         else
             return String(tok.getText());
     }
-    
+
     Location getLocation() {
         return tok.getLocation();
     }
-    
+
     void writeTo(Writer out) {
         if (tok.isString()) {
             out.write(' ');
@@ -230,25 +230,25 @@ class Tok : Node {
     }
 
     void writeTo(MacroSerializer dst) {
-        
+
         # my node type
         dst.write(0);
-        
+
         # the token
         dst.write(uint(tok.getType()));
         dst.write(String(tok.getText()));
-        
+
         dst.writeLocation(tok.getLocation());
     }
-    
+
     oper init(MacroDeserializer src) {
         type := int(src.readUInt());
         text := src.readString();
         locName := src.readSrcName();
         locLineNum := src.readUInt();
-    
-        #cout `read token: $type, $text, $locName, $locLineNum\n`;    
-        tok = Token(type, text.buffer, 
+
+        #cout `read token: $type, $text, $locName, $locLineNum\n`;
+        tok = Token(type, text.buffer,
                     src.ctx.getLocation(locName.buffer, int(locLineNum))
                     );
     }
@@ -257,33 +257,33 @@ class Tok : Node {
 class Arg : Node {
     uint argIndex;
     Location loc;
-    
-    oper init(Location loc, uint argIndex) : 
+
+    oper init(Location loc, uint argIndex) :
         loc = loc,
         argIndex = argIndex {
     }
-    
+
     oper init() {}
 
     void expand(CrackContext ctx, Array[NodeList] args) {
         for (node :in NodeList.cast(args[argIndex]))
             node.expand(ctx, args);
     }
-    
+
     String toString(Array[NodeList] args) {
         StringFormatter sf = {};
         argVal := NodeList.cast(args[argIndex]);
-        
-        # do the last node so we can add a whitespace separator for every 
+
+        # do the last node so we can add a whitespace separator for every
         # subsequent node.
         if (last := argVal.getLast())
             sf.format(last.toString(args));
-        
+
         # do the rest of the nodes
-        void reverseNodeList(Array[NodeList] args1, StringFormatter out, 
+        void reverseNodeList(Array[NodeList] args1, StringFormatter out,
                              Node node
                              ) {
-            
+
             # stop recursing before the last node
             if (node.next) {
                 reverseNodeList(args1, out, node.next);
@@ -294,39 +294,39 @@ class Arg : Node {
         reverseNodeList(args, sf, argVal.getFirst());
         return sf.createCString();
     }
-    
+
     void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }
     Location getLocation() { return loc; }
-    
+
     oper init(MacroDeserializer src) {
         argIndex = src.readUInt();
         loc = src.readLocation();
         #cout `read arg $argIndex\n`;
     }
-    
+
     void writeTo(MacroSerializer dst) {
-        
+
         # write my type id
         dst.write(1);
-        
+
         # write the arg id and location fields
         dst.write(argIndex);
         dst.writeLocation(loc);
     }
 }
 
-## Concat nodes concatenate a set of tokens into a single token.  The type and 
+## Concat nodes concatenate a set of tokens into a single token.  The type and
 ## location come from the first non-argument token.
 class Concat : Node {
     NodeList list;
     int type;
     Location loc;
 
-    oper init(NodeList list, Location loc) : 
+    oper init(NodeList list, Location loc) :
         loc = loc,
         list = list {
     }
-    
+
     oper init() {}
 
     void expand(CrackContext ctx, Array[NodeList] args) {
@@ -334,16 +334,16 @@ class Concat : Node {
         for (item :in list)
             concat.format(item.toString(args));
         concat.format(' \0');
-        
+
         s := concat.createString();
         ctx.inject(@FILE.buffer, @LINE, s.buffer);
     }
-    
+
     String toString(Array[NodeList] args) {
         die('Concat.toString() called.');
         return null;
     }
-    
+
     Location getLocation() {
         return loc;
     }
@@ -353,10 +353,10 @@ class Concat : Node {
         type = int(src.readUInt());
         loc = src.readLocation();
     }
-    
+
     void writeTo(MacroSerializer dst) {
         dst.write(2);
-        
+
         list.writeTo(dst);
         dst.write(uint(type));
         dst.writeLocation(loc);
@@ -365,34 +365,34 @@ class Concat : Node {
 
 class Stringify : Node {
     Node node;
-    
+
     oper init(Node node) : node = node {}
-    
+
     void expand(CrackContext ctx, Array[NodeList] args) {
-        ctx.putBack(Token(TOK_STRING, node.toString(args).buffer, 
+        ctx.putBack(Token(TOK_STRING, node.toString(args).buffer,
                           node.getLocation()
                           )
                     );
     }
-    
+
     String toString(Array[NodeList] args) {
         die('Stringify.toString called.');
         return null;
     }
-    
+
     Location getLocation() {
         return node.getLocation();
     }
-    
+
     oper init(MacroDeserializer src) {
         node = _readNode(src);
     }
-    
+
     void writeTo(MacroSerializer dst) {
-        
+
         # write my type id.
         dst.write(3);
-        
+
         node.writeTo(dst);
     }
 }
@@ -410,7 +410,7 @@ Node _readNode(MacroDeserializer src) {
         node = Stringify(src);
     else
         throw AssertionError(FStr() `bogus node $type\n`);
-    
+
     return node;
 }
 
@@ -420,7 +420,7 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     tok := ctx.getToken();
     if (!tok.isLParen())
         ctx.error(tok, 'left paren expected in macro expansion'.buffer);
-    
+
     uint nesting = 1;
     argTokList := NodeListImpl();
     Array[NodeList] args = {argCount};
@@ -440,11 +440,11 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
             argTokList.pushHead(Tok(tok));
         }
     }
-    
+
     # if we got a non-empty element left over, add it to the list.
     if (argTokList.getFirst())
         args.append(argTokList);
-    
+
     # verify that the number of arguments provided was correct
     if (args.count() != argCount) {
         fmt := StringFormatter();
@@ -465,21 +465,21 @@ class Macro : NodeListImpl {
         name = src.readString();
         argCount = src.readUInt();
     }
-    
+
     void writeTo(MacroSerializer dst) {
         NodeListImpl.writeTo(dst);
         dst.write(name);
         dst.write(argCount);
     }
-    
+
     void expand(CrackContext ctx) {
         # hold onto the last location
         loc := ctx.getLocation();
-        
+
         # parse the args.
         args := parseArgs(ctx, argCount);
-        
-        # install the "pop error context" token so that our error context only 
+
+        # install the "pop error context" token so that our error context only
         # shows up for the expansion of the macro.
         ctx.putBack(Token(TOK_POPERRCTX, '[pop error context]'.buffer,
                           loc
@@ -492,12 +492,12 @@ class Macro : NodeListImpl {
             node.expand(ctx, args);
             node = node.next;
         }
-        
+
         # push an error context
         StringFormatter fmt = {};
         fmt `expanded from macro at $(loc.getName()):$(loc.getLineNumber())`;
         ctx.pushErrorContext(fmt.createCString().buffer);
-    }    
+    }
 }
 
 ## Annotation to expand a macro.  This expects a Macro instance as user data.
@@ -510,7 +510,7 @@ void expand(CrackContext ctx) {
 ST_NONE := 0;
 ST_ESC := 1;   # got a dollar-sign escape
 ST_CONCAT := 2;  # got a double-dollar-sign concatenation operator
-ST_ISTR := 3; # MUST BE THE HIGHEST VALUE STATE.  Values greater than this 
+ST_ISTR := 3; # MUST BE THE HIGHEST VALUE STATE.  Values greater than this
               # indicate levels of nested parens in an i-string.
 
 void define(CrackContext ctx) {
@@ -518,27 +518,27 @@ void define(CrackContext ctx) {
     TreeMap[String, uint] args = {};
     uint index;
     tok := ctx.getToken();
-    
+
     if (!tok.isIdent())
         ctx.error(tok, 'Macro name expected after define.'.buffer);
     mac.name = String(tok.getText());
-    
+
     # parse the '(' that begins the argument list
     tok = ctx.getToken();
     if (!tok.isLParen())
         ctx.error(tok, 'Left paren expected after macro definition'.buffer);
-    
+
     # read all of the arguments
     while (true) {
         tok = ctx.getToken();
         if (tok.isRParen())
             break;
-        
+
         if (!tok.isIdent())
             ctx.error(tok, 'identifier expected'.buffer);
 
         args[String(tok.getText())] = index++;
-        
+
         tok = ctx.getToken();
         if (tok.isRParen())
             break;
@@ -546,7 +546,7 @@ void define(CrackContext ctx) {
             ctx.error('comma or end paren expected in macro def'.buffer);
     }
     mac.argCount = index;
-    
+
     # read the body of the macro
     tok = ctx.getToken();
     if (!tok.isLCurly())
@@ -560,7 +560,7 @@ void define(CrackContext ctx) {
     while (true) {
         tok = ctx.getToken();
         uint argIndex;
-        
+
         if (tok.isEnd()) {
             ctx.error(
                 'End of file before the end of a macro definition'.buffer
@@ -569,8 +569,8 @@ void define(CrackContext ctx) {
             # keep track of the parens.
             if (tok.isLParen())
                 ++state;
-            else if (tok.isRParen() && --state == ST_ISTR) 
-                # we have to tell the tokenizer to continue parsing the 
+            else if (tok.isRParen() && --state == ST_ISTR)
+                # we have to tell the tokenizer to continue parsing the
                 # i-string.
                 ctx.continueIString();
             else if (tok.isIstrBegin())
@@ -606,14 +606,14 @@ void define(CrackContext ctx) {
                     ctx.error('The macro may not begin with a concatenation '
                                'operator'.buffer
                               );
-                else if (node.isa(Tok) && 
+                else if (node.isa(Tok) &&
                          Tok.cast(node).tok.isIstrEnd()
                          )
                     ctx.error('An interpolation string may not be used with '
                                'stringification or concatenation'.buffer
                               );
-                
-                # if we're starting off a new concatenation sequence, add the 
+
+                # if we're starting off a new concatenation sequence, add the
                 # last node and store the sequence as a new node in the macro.
                 if (!lastConcat) {
                     lastConcat.append(node);
@@ -630,7 +630,7 @@ void define(CrackContext ctx) {
 
         # replace arguments with indices
         if (tok.isIdent() &&
-            (argIndex = args.get(String(tok.getText()), NOT_FOUND)) != 
+            (argIndex = args.get(String(tok.getText()), NOT_FOUND)) !=
              NOT_FOUND
             )
             node = Arg(tok.getLocation(), argIndex);
@@ -639,32 +639,32 @@ void define(CrackContext ctx) {
 
         # handle special states
         if (state == ST_CONCAT) {
-            
-            # concatenation state - add the new node to the concatenation 
+
+            # concatenation state - add the new node to the concatenation
             # sequence.
             lastConcat.append(node);
             state = ST_NONE;
         } else if (state == ST_ESC) {
-            
+
             # stringify state - add a stringify node.
             mac.pushHead(Stringify(node));
             state = ST_NONE;
         } else {
             mac.pushHead(node);
-            
+
             # reset any last concatenation sequence that we've accumulated
             if (lastConcat)
                 lastConcat = NodeListImpl();
         }
     }
-    
+
     # store a new annotation for expanding the macro
     ctx.storeAnnotation(mac.name.buffer, expand, mac);
     mac.oper bind();
 }
 
 void export(CrackContext ctx) {
-    
+
     # get the next token, make sure it's an annotation.
     tok := ctx.getToken();
     if (!tok.isIdent())
@@ -679,16 +679,16 @@ void export(CrackContext ctx) {
     } else {
         mac = Macro.unsafeCast(ann.getUserData());
     }
-    
+
     # serialize the macro into a string
     flatMac := StringWriter();
     mac.writeTo(MacroSerializer(flatMac));
-    
+
     StringFormatter code = {};
     f := @FILE; l := @LINE; code `
-    
+
         void $name(CrackContext ctx) {
-            userData := 
+            userData :=
                 ctx.getUserData();
             Macro mac;
             if (userData is null) {
@@ -701,28 +701,28 @@ void export(CrackContext ctx) {
             } else {
                 mac = Macro.unsafeCast(userData);
             }
-            
+
             mac.expand(ctx);
         }
     \n\0`;
     ctx.inject(f.buffer, l, code.createString().buffer);
 }
 
-## Call this annotation at the top of your file if you want to export macros.  
+## Call this annotation at the top of your file if you want to export macros.
 ## It will import everything you need.
 void exporter(CrackContext ctx) {
     StringFormatter f = {};
-    f `import crack.ann Macro, MacroDeserializer, Node, NodeList, Tok, Arg, 
+    f `import crack.ann Macro, MacroDeserializer, Node, NodeList, Tok, Arg,
         Stringify, Concat;
        import crack.compiler CrackContext, Token, TOK_STRING;
        import crack.io StringReader;`;
-    ctx.inject(@FILE.buffer, @LINE, 
+    ctx.inject(@FILE.buffer, @LINE,
                f.createCString().buffer);
 }
 
 void readIStr(CrackContext ctx, NodeList nodes) {
     depth := 0;
-    
+
     while (true) {
         tok := ctx.getToken();
         nodes.pushHead(Tok(tok));
@@ -745,7 +745,7 @@ NodeList readBlock(CrackContext ctx) {
     if (!tok.isLCurly())
         ctx.error(tok, 'Opening curly bracket expected.'.buffer);
     result.pushHead(Tok(tok));
-    
+
     depth := 1;
     while (depth) {
         tok = ctx.getToken();
@@ -759,7 +759,7 @@ NodeList readBlock(CrackContext ctx) {
         if (tok.isIstrBegin())
             readIStr(ctx, result);
     }
-    
+
     return result;
 }
 
@@ -769,13 +769,13 @@ void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
         if (!tok.isIdent())
             ctx.error(tok, 'Identifier expected in generic definition'.buffer);
         tokens.append(Tok(tok));
-        
+
         tok = ctx.getToken();
         tokens.append(Tok(tok));
         if (tok.isRBracket())
             return;
         else if (!tok.isComma())
-            ctx.error(tok, 
+            ctx.error(tok,
                       'Comma or closing bracket expected in generic definition'.
                        buffer
                       );
@@ -799,7 +799,7 @@ void interface(CrackContext ctx) {
     nameTok := ctx.getToken();
     if (!nameTok.isIdent())
         ctx.error(nameTok, 'identifier expected for interface name'.buffer);
-    
+
     # check for generic arguments
     tok := ctx.getToken();
     NodeListImpl genericArgs = {};
@@ -812,19 +812,21 @@ void interface(CrackContext ctx) {
 
     # read the body
     body := readBlock(ctx);
-    
+
     # remove the closing bracket, store the location for error reporting
     loc := body.popHead().getLocation();
-    
+
     # inject the bind, release and get*Object() methods
     StringFormatter f = {};
     f `
-    Object get$(nameTok.getText())Object() { return null; }
+    @abstract Object _iface_get$(nameTok.getText())Object();
     @final oper bind() {
-        if (!(this is null)) get$(nameTok.getText())Object().oper bind();
+        if (!(this is null))
+            _iface_get$(nameTok.getText())Object().oper bind();
     }
     @final oper release() {
-        if (!(this is null)) get$(nameTok.getText())Object().oper release(); 
+        if (!(this is null))
+            _iface_get$(nameTok.getText())Object().oper release();
     }
 }\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
@@ -836,11 +838,12 @@ void interface(CrackContext ctx) {
     # inject the class definition
     loc = nameTok.getLocation();
     f = StringFormatter();
-    f `class $(nameTok.getText())$(TokenWriter(genericArgs)) : VTableBase\n\0`;
+    f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
+            VTableBase\n\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
 }
 
-## An annotation to be used before the list of interfaces that a class 
+## An annotation to be used before the list of interfaces that a class
 ## implements, e.g.
 void implements(CrackContext ctx) {
     # parse the list of interfaces
@@ -857,8 +860,8 @@ void implements(CrackContext ctx) {
         if (tok.isLCurly()) {
             ctx.putBack(tok);
             break;
-        
-        # store identifiers in an array so we can generate the get*Object() 
+
+        # store identifiers in an array so we can generate the get*Object()
         # methods.
         } else if (tok.isIdent()) {
             ifaces.append(String(tok.getText()));
@@ -866,30 +869,30 @@ void implements(CrackContext ctx) {
         interfaces.pushHead(Tok(tok));
     }
 
-    # add a comma to the end of the list (so it will show up at the beginning 
+    # add a comma to the end of the list (so it will show up at the beginning
     # of the list when we expand it)
     interfaces.append(
         Tok(Token(TOK_COMMA, ",".buffer, firstTok.getLocation()))
     );
 
-    
+
     # read the body.
     body := readBlock(ctx);
 
     # remove the closing bracket, store the location for error reporting
     loc := body.popHead().getLocation();
-    
+
     # inject the get*Object() implementation
     StringFormatter f = {};
     for (iface :in ifaces)
-        f `    Object get$(iface)Object() { return this; }\n`;
+        f `    Object _iface_get$(iface)Object() { return this; }\n`;
     f `}\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
-    
+
     # inject the body
     for (node :in body)
         node.expand(ctx, null);
-    
+
     # inject the interfaces
     for (node :in interfaces)
         node.expand(ctx, null);

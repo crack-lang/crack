@@ -2175,6 +2175,7 @@ ContextPtr Parser::parseIfStmt() {
    ContextPtr terminalElse;
 
    // check for the "else"
+   state = st_optElse;
    tok = getToken();
    if (tok.isElse()) {
       pos = context->builder.emitElse(*context, pos.get(), terminalIf);
@@ -2184,6 +2185,11 @@ ContextPtr Parser::parseIfStmt() {
       toker.putBack(tok);
       context->builder.emitEndIf(*context, pos.get(), terminalIf);
    }
+   
+   // absorb the flags from the context (an annotation would set flags in the 
+   // nested if context)
+   context->parent->nextFuncFlags = context->nextFuncFlags;
+   context->parent->nextClassFlags = context->nextClassFlags;
 
    // the if is terminal if both conditions are terminal.  The terminal 
    // context is the innermost of the two.

@@ -1,7 +1,7 @@
 # A couple of functor implementations
 # Copyright 2011 Google Inc.
 
-@import crack.ann interface;
+@import crack.ann implements, interface;
 
 @abstract @interface Functor0[RetT] {
     @abstract RetT oper call();
@@ -27,38 +27,41 @@
     @abstract RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5);
 }
 
-class Function0[RetT] : Object, Functor0[RetT] {
+class Function0[RetT] : Object @implements Functor0[RetT] {
     function[RetT] func;
     oper init(function[RetT] func) : func = func {}
     RetT oper call() { return func(); }
 }
 
-class Function1[RetT, T1] : Object, Functor1[RetT, T1] {
+class Function1[RetT, T1] : Object @implements Functor1[RetT, T1] {
     function[RetT, T1] func;
     oper init(function[RetT, T1] func) : func = func {}
     RetT oper call(T1 p1) { return func(p1); }
 }
 
-class Function2[RetT, T1, T2] : Object, Functor2[RetT, T1, T2] {
+class Function2[RetT, T1, T2] : Object @implements Functor2[RetT, T1, T2] {
     function[RetT, T1, T2] func;
     oper init(function[RetT, T1, T2] func) : func = func {}
     RetT oper call(T1 p1, T2 p2) { return func(p1, p2); }
 }
 
-class Function3[RetT, T1, T2, T3] : Object, Functor3[RetT, T1, T2, T3] {
+class Function3[RetT, T1, T2, T3] :
+        Object
+        @implements Functor3[RetT, T1, T2, T3] {
     function[RetT, T1, T2, T3] func;
     oper init(function[RetT, T1, T2, T3] func) : func = func {}
     RetT oper call(T1 p1, T2 p2, T3 p3) { return func(p1, p2, p3); }
 }
 
-class Function4[RetT, T1, T2, T3, T4] : Object, Functor4[RetT, T1, T2, T3, T4] {
+class Function4[RetT, T1, T2, T3, T4] : Object @implements Functor4[RetT, T1, T2, T3, T4] {
     function[RetT, T1, T2, T3, T4] func;
     oper init(function[RetT, T1, T2, T3, T4] func) : func = func {}
     RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4) { return func(p1, p2, p3, p4); }
 }
 
-class Function5[RetT, T1, T2, T3, T4, T5] : Object, 
-                                            Functor5[RetT, T1, T2, T3, T4, T5] {
+class Function5[RetT, T1, T2, T3, T4, T5] :
+        Object @implements
+        Functor5[RetT, T1, T2, T3, T4, T5] {
     function[RetT, T1, T2, T3, T4, T5] func;
     oper init(function[RetT, T1, T2, T3, T4, T5] func) : func = func {}
     RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5) {
