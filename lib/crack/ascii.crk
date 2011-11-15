@@ -40,8 +40,8 @@ String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset
                     uint num)
 {
     oldBuf := text.buffer;
-    newString := String(text);
-    newBuf := newString.buffer; 
+    ManagedBuffer newVal = {text.size};
+    newBuf := newVal.buffer;
     byte c;
 
     for (uint i = 0; i < num && i < text.size; i++){
@@ -49,10 +49,12 @@ String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset
         if (c >= lowerBound && c <= upperBound){
             byte offset = c - lowerBound;
             newBuf[i] = newOffset + offset;
+        } else {
+            newBuf[i] = c;
         }
     }
 
-    return newString
+    return String(newVal, true);
 }
 
 ## Change all characters in a string to uppercase
@@ -66,6 +68,7 @@ String toLower(String text){
 }
 
 ## Capitalize the initial character of numWords words in a string
+## XXX this fails to preserve interspersed whitespace.
 String capitalize(String text, uint numWords){
     StringArray words = split(text);
     byteptr wordBuf,wordBufCopy;
@@ -84,4 +87,27 @@ String capitalize(String text, uint numWords){
 ## Capitalize the initial character of all words in a string
 String capitalize(String text){
     return capitalize(text, text.size);
+}
+
+## Returns true if 'ch' is a whitespace character.
+bool isSpace(byte ch) {
+    return ch == b' ' || ch == b'\t' || ch == b'\n' || ch == b'\r';
+}
+
+## Strip trailing and leading whitespace off a string.
+String strip(String text) {
+    int start, end;
+    for (start = 0; start < text.size && isSpace(text[start]); ++start);
+    
+    # if the string is entirely whitespace, return the empty string
+    if (start == text.size)
+        return '';
+    
+    # we can now assume that the string is at least one character, find the 
+    # last non-whitespace character.
+    for (end = text.size - 1; isSpace(text[end]); --end);
+    
+    # 'end' is now the last non-whitespace character, slice the string after 
+    # that.
+    return text.slice(start, end + 1);
 }
