@@ -7,6 +7,8 @@ import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuf
 import crack.io.readers LineReader;
 import crack.sys strerror;
 
+@import crack.ann implements;
+
 import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile,
                      is_file;
 
@@ -74,8 +76,8 @@ byte F_READ  = b'r';
 byte F_WRITE = b'w';
 
 class File : FileInfo,
-             Openable,
-             Writer {
+             Openable
+             @implements Writer {
 
     CString _mode;
     CFile _fd;
@@ -163,7 +165,5 @@ class File : FileInfo,
             _initWrite();
         
     }
-
-    Object getWriterObject() { return this; }
 
 }

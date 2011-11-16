@@ -4,6 +4,8 @@
 import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
 import crack.io cout, FDReader, Reader;
 
+@import crack.ann implements;
+
 NEWLINE := '\n'[0];
 
 class LineIter;
@@ -80,7 +82,7 @@ LineIter _createLineIter(LineReader reader) {
 
 ## A FullReader is a Reader that supports line reads, and complete reads of 
 ## its underlying reader.
-class FullReader : LineReader, Reader {
+class FullReader : LineReader @implements Reader {
     
     oper init(Reader reader) : LineReader(reader) {}
 

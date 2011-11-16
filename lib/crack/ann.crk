@@ -5,8 +5,8 @@
 #   defines a macro with the specified arguments (you can then use the macro
 #   as @name(args...))
 # @interface I { ... }
-#   Defines a class as an interface (similar to crack.lang.MixIn, only you can
-#   implement multiple of them)
+#   Defines a class as an interface, allowing you to safely do multiple
+#   inheritence.
 # class A : Object @implements I, J { ... }
 #   Makes a class implement the list of interfaces that follows them (this
 #   mainly entails doing normal class derivation and implementing the
