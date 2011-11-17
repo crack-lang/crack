@@ -14,6 +14,7 @@ namespace llvm {
 
 namespace model {
     class VarDef;
+    class Namespace;
 }
 
 namespace builder {
@@ -40,6 +41,8 @@ class Cacher {
 protected:
     void addNamedStringNode(const std::string &key, const std::string &val);
     std::string getNamedStringNode(const std::string &key);
+
+    void writeNamespace(model::Namespace* ns);
 
     llvm::MDNode *writeVarDef(model::VarDef *);
     llvm::MDNode *writeFuncDef(model::FuncDef *);

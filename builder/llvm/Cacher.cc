@@ -116,38 +116,49 @@ void Cacher::writeMetadata() {
     // crack_defs: the symbols defined in this module that we need to rebuild
     // at compile time in order to use this cached module to compile fresh code
     // from
-    node = module->getOrInsertNamedMetadata("crack_defs");
+    writeNamespace(modDef);
+
+    //module->dump();
+
+}
+
+void Cacher::writeNamespace(Namespace *ns) {
+
     OverloadDef *ol;
-    Namespace *mns = static_cast<Namespace*>(modDef);
-    for (ModuleDef::VarDefMap::const_iterator i = modDef->beginDefs();
-         i != modDef->endDefs();
+    TypeDef *td;
+    NamedMDNode *node = modDef->rep->getOrInsertNamedMetadata("crack_defs");
+
+    for (Namespace::VarDefMap::const_iterator i = ns->beginDefs();
+         i != ns->endDefs();
          ++i) {
         if (ol = dynamic_cast<OverloadDef*>(i->second.get())) {
             for (OverloadDef::FuncList::const_iterator f = ol->beginTopFuncs();
                  f != ol->endTopFuncs();
                  ++f) {
                 // skip aliases
-                if ((*f)->getOwner() == mns)
+                if ((*f)->getOwner() == ns)
                     node->addOperand(writeFuncDef((*f).get()));
             }
         }
         else {
             // skip aliases
-            if (i->second->getOwner() == mns)
+            if (i->second->getOwner() == ns)
+                continue;
+            if (td = dynamic_cast<TypeDef*>(i->second.get())) {
+                //writeNamespace(td);
+            }
+            else {
+                // VarDef
                 node->addOperand(writeVarDef(i->second.get()));
+            }
         }
     }
-
-    //module->dump();
 
 }
 
 MDNode *Cacher::writeFuncDef(FuncDef *sym) {
 
     vector<Value *> dList;
-
-    BFuncDef *bf = dynamic_cast<BFuncDef *>(sym);
-    assert(bf && "not BFuncDef");
 
     // operand 0: symbol name (not canonical)
     dList.push_back(MDString::get(getGlobalContext(), sym->name));
@@ -156,17 +167,21 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym) {
     dList.push_back(constInt(Cacher::function));
 
     // operand 2: llvm rep
-    dList.push_back(bf->rep);
+    BFuncDef *bf = dynamic_cast<BFuncDef *>(sym);
+    if (bf)
+        dList.push_back(bf->rep);
+    else
+        dList.push_back(NULL);
 
     // operand 3: funcdef flags
-    dList.push_back(constInt(bf->flags));
+    dList.push_back(constInt(sym->flags));
 
     // operand 4: return type
-    dList.push_back(MDString::get(getGlobalContext(), bf->returnType->name));
+    dList.push_back(MDString::get(getGlobalContext(), sym->returnType->name));
 
     // operand 5..ARITY: pairs of parameter symbol names and their types
-    for (FuncDef::ArgVec::const_iterator i = bf->args.begin();
-         i != bf->args.end();
+    for (FuncDef::ArgVec::const_iterator i = sym->args.begin();
+         i != sym->args.end();
          ++i) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->name));
         dList.push_back(MDString::get(getGlobalContext(), (*i)->type->name));
