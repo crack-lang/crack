@@ -77,6 +77,6 @@ while (i<=intervals){
   i++;
 }
 
-resultString:=fmt.createString();
+resultString:=fmt.string();
 
 cout `ok\n`;

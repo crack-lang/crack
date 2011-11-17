@@ -1,7 +1,7 @@
 # Copyright 2010 Google Inc.
 # Extension tests.
 
-import testext echo, copyArray, MyType, MyAggType, INT_CONST, FLOAT_CONST,
+import testext echo, copyArray, MyType, INT_CONST, FLOAT_CONST,
                callback;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
@@ -21,13 +21,18 @@ MyType u;
 if (!(u is null))
     cout `null test fails\n`;
 
+class MyAggType : Object, MyType {
+    oper init() {}
+    oper init(int a, byteptr b) : MyType(a, b) {}
+}
+
 agg := MyAggType();
 if (agg.refCount != 1)
     cout `bad reference count in MyAggType\n`;
 if (agg.a != 0)
     cout `Instance variable "a" not initialized in MyAggType\n`;
 
-agg = MyAggType(100);
+agg = MyAggType(100, null);
 if (agg.refCount != 1)
     cout `bad reference count in MyAggType(100)\n`;
 if (agg.a != 100)

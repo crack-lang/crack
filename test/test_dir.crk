@@ -19,7 +19,7 @@ if (true) {
     for (f :in d.dirs())
         result `$(f.name)`;
     
-    s := result.createString();
+    s := result.string();
     if (s != base + 'lib/crack')
         cout `failed to get lib/crack, got: $s\n`;
 }

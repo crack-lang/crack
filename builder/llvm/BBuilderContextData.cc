@@ -41,6 +41,17 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
                                                NULL
                                                );
         f = cast<Function>(c);
+
+        // Working around what I think is another bug in LLVM - in some 
+        // circumstances, if we just call _Unwind_Resume, the exception 
+        // personality functions don't get called and we get a null 
+        // exception object.  Introducing a call to a 
+        // No-op function makes this go away.
+        c = mod->getOrInsertFunction("__CrackNOP", Type::getVoidTy(lctx),
+                                     NULL
+                                     );
+        Function *nopFn = cast<Function>(c);
+        b.CreateCall(nopFn);
         Function *exFn = getDeclaration(mod, Intrinsic::eh_exception);
         b.CreateCall(f, b.CreateCall(exFn));
         b.CreateUnreachable();

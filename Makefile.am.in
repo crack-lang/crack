@@ -174,7 +174,6 @@ extincdir = $(includedir)/crack-$(VERSION)/crack/ext
 extinc_HEADERS = \
     ext/Func.h \
     ext/Module.h \
-    ext/Object.h \
     ext/RCObj.h \
     ext/Type.h \
     ext/Var.h \

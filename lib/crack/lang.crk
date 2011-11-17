@@ -114,30 +114,6 @@ class Object : VTableBase {
     }
 };
 
-## Base class for interfaces - these are classes that are not derived from
-## Object but must be mixed in with classes derived from Object.  You can use
-## them to define a interfaces and functionality that a derived class must
-## conform to without limiting the inheritence of the derived class.
-##
-## Unfortunately, this pattern only allows a single MixIn since you cannot
-## inherit from the mixin class more than once.
-##
-## Derived classes must implement the getObject() method.
-@abstract class MixIn : VTableBase {
-
-    ## Returns the underlying Object of the concrete class derived from the
-    ## mix-in.  This is used by our bind and release operators to allow
-    ## mix-ins to work with Object's reference counting.
-    @abstract Object getObject();
-
-    # defining bind and release here takes advantage of the fact that the
-    # same final functions can be inherited from multiple ancestors.  This is
-    # arguably a bug, but we're going to exploit it for now.
-
-    oper bind() { if (!(this is null)) getObject().oper bind(); }
-    oper release() { if (!(this is null)) getObject().oper release(); }
-}
-
 class Buffer;
 
 @abstract class Writer : VTableBase {
@@ -148,10 +124,12 @@ class Buffer;
     ## Flush the contents of the buffer.
     void flush() {}
 
-    # MixIn stuff
-    @abstract Object getWriterObject();
-    oper bind() { if (!(this is null)) getWriterObject().oper bind(); }
-    oper release() { if (!(this is null)) getWriterObject().oper release(); }
+    # since we can't load annotations yet, implement an interface by hand
+    @abstract Object _iface_getWriterObject();
+    oper bind() { if (!(this is null)) _iface_getWriterObject().oper bind(); }
+    oper release() {
+        if (!(this is null)) _iface_getWriterObject().oper release();
+    }
 }
 
 ## The buffer base class containing a bytebuf and size.
@@ -949,7 +927,7 @@ void uncaughtExceptionHandler(Object ex) {
     class StdErr : Object, Writer {
         void write(Buffer buf) { write(2, buf.buffer, buf.size); }
         void write(byteptr string) { write(2, string, strlen(string)); }
-        Object getWriterObject() { return this; }
+        Object _iface_getWriterObject() { return this; }
     }
     writer := StdErr();
 

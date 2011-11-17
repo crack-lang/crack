@@ -28,9 +28,11 @@ class Token : public crack::ext::RCObj {
         static Location *_getLocation(Token *inst);
         static void _bind(Token *inst);
         static void _release(Token *inst);
+        static bool _isAlias(Token *inst);
         static bool _isAnn(Token *inst);
         static bool _isBoolAnd(Token *inst);
         static bool _isBoolOr(Token *inst);
+        static bool _isCase(Token *inst);
         static bool _isCatch(Token *inst);
         static bool _isConst(Token *inst);
         static bool _isIf(Token *inst);
@@ -43,6 +45,7 @@ class Token : public crack::ext::RCObj {
         static bool _isOn(Token *inst);
         static bool _isWhile(Token *inst);
         static bool _isReturn(Token *inst);
+        static bool _isSwitch(Token *inst);
         static bool _isThrow(Token *inst);
         static bool _isTry(Token *inst);
         static bool _isBreak(Token *inst);
@@ -128,9 +131,11 @@ class Token : public crack::ext::RCObj {
 
         Location *getLocation();
 
+        bool isAlias();
         bool isAnn();
         bool isBoolAnd();
         bool isBoolOr();
+        bool isCase();
         bool isCatch();
         bool isConst();
         bool isIf();
@@ -143,6 +148,7 @@ class Token : public crack::ext::RCObj {
         bool isOn();
         bool isWhile();
         bool isReturn();
+        bool isSwitch();
         bool isThrow();
         bool isTry();
         bool isBreak();

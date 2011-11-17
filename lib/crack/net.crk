@@ -14,6 +14,8 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
     POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
 
+@import crack.ann implements;
+
 @export_symbols AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, AF_NETLINK, 
     AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SOCK_STREAM, 
     SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
@@ -106,7 +108,7 @@ Array[Address] resolve(String hostname) {
 }
 
 ## Wrapper around a socket.
-class Socket : Pollable, Reader, Writer {
+class Socket : Pollable @implements Reader, Writer {
     int fd;
     
     # the address the socket is bound to.
@@ -196,8 +198,6 @@ class Socket : Pollable, Reader, Writer {
         return uint(rc);
     }
     
-    Object getReaderObject() { return this; }
-    
     # Writer interface
     void write(Buffer data) {
         rc := send(data, 0);
@@ -206,8 +206,6 @@ class Socket : Pollable, Reader, Writer {
         if (rc != data.size)
             throw Exception('Incomplete write to socket');
     }
-
-    Object getWriterObject() { return this; }
 }
         
 ## A poller is a collection of Pollables that you can use to wait for an event

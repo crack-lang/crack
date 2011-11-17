@@ -14,8 +14,6 @@
 
 #include <iostream>
 
-#include "ext/Object.h"
-
 using namespace std;
 
 namespace {

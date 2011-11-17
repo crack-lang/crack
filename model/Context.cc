@@ -427,7 +427,7 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
     } else {
         consArgs.clear();
         cons = ovld->getMatch(*this, consArgs, false);
-        if (!cons)
+        if (!cons || cons->getOwner() != type)
             error(SPUG_FSTR(type->name << " has neither a constructor "
                              "accepting a uint nor a default constructor."
                             )

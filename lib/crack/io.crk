@@ -34,7 +34,7 @@ class FDWriter : FileHandle, Writer {
         write(fd, buf.buffer, buf.size);
     }
 
-    Object getWriterObject() { return this; }
+    Object _iface_getWriterObject() { return this; }
 };
 
 ## Writer for a file descriptor that closes the file descriptor upon
@@ -47,9 +47,7 @@ class OwningFDWriter : FDWriter {
 
 ## Interface for all readers.  Readers support two flavors of read()
 ## methods that allow you to read bytes from a stream.
-## This must be mixed in with something derived from Object, you must
-## implement read(WriteBuffer) and getReaderObject().
-class Reader : VTableBase {
+@abstract class Reader : VTableBase {
 
     ## Reads enough bytes to fill the buffer, or as many bytes as are
     ## available from the source.  Returns the number of bytes read.
@@ -76,13 +74,12 @@ class Reader : VTableBase {
         }
     }
 
-    # MixIn stuff
-    Object getReaderObject() {
-        die('Reader.getReaderObject() not implemented.');
-        return null;
+    # Since we can't load crack.ann yet, add the interface plumbing manually
+    @abstract Object _iface_getReaderObject();
+    oper bind() { if (!(this is null)) _iface_getReaderObject().oper bind(); }
+    oper release() {
+        if (!(this is null)) _iface_getReaderObject().oper release();
     }
-    oper bind() { if (!(this is null)) getReaderObject().oper bind(); }
-    oper release() { if (!(this is null)) getReaderObject().oper release(); }
 };
 
 ## Reader to read from a file descriptor.
@@ -97,7 +94,7 @@ class FDReader : FileHandle, Reader {
         return uint(read(fd, buf.buffer, buf.size));
     }
 
-    Object getReaderObject() { return this; }
+    Object _iface_getReaderObject() { return this; }
 };
 
 ## Reader for a file descriptor that closes the file descriptor upon
@@ -242,7 +239,7 @@ class Formatter : Object, Writer {
         write(cstr);
     }
 
-    Object getWriterObject() { return this; }
+    Object _iface_getWriterObject() { return this; }
 }
 
 cout := Formatter(FDWriter(1));
@@ -260,18 +257,44 @@ class StringWriter : AppendBuffer, Writer {
     }
 
     ## Return a string containing everything that has been written so far.
+    ## Deprecated.  Use makeString() or string() instead.
     String createString() {
+        return String(buffer, pos, false);
+    }
+
+    ## Return a string containing everything that has been written so far.
+    String makeString() {
+        return String(buffer, pos, false);
+    }
+
+    ## Return a string containing everything that has been written so far.
+    String string() {
         return String(buffer, pos, false);
     }
 
     ## Return a null terminated string containing everything that has been
     ## written so far.
+    ## Deprecated.  Use makeCString() or cString() instead.
     CString createCString() {
         append(0);
         return CString(buffer, pos - 1, false);
     }
 
-    Object getWriterObject() { return this; }
+    ## Return a null terminated string containing everything that has been
+    ## written so far.
+    CString makeCString() {
+        append(0);
+        return CString(buffer, pos - 1, false);
+    }
+
+    ## Return a null terminated string containing everything that has been
+    ## written so far.
+    CString cString() {
+        append(0);
+        return CString(buffer, pos - 1, false);
+    }
+
+    Object _iface_getWriterObject() { return this; }
 };
 
 ## Allows you to read from a string.
@@ -293,7 +316,7 @@ class StringReader : Object, Reader {
         return count;
     }
 
-    Object getReaderObject() { return this; }
+    Object _iface_getReaderObject() { return this; }
 }
 
 ## Convenience wrapper, equivalent to Formatter(StringWriter())
@@ -308,10 +331,24 @@ class StringFormatter : Formatter {
     oper init() : Formatter(null) { rep = _writer; }
 
     ## see: StringWriter.createString()
+    ## Deprecated.  Use makeString() or string() instead.
     String createString() { return _writer.createString(); }
 
+    ## see: StringWriter.makeString()
+    String makeString() { return _writer.makeString(); }
+
+    ## see: StringWriter.string()
+    String string() { return _writer.string(); }
+
     ## see: StringWriter.createCString()
+    ## Deprecated.  Use makeCString() or cString() instead.
     String createCString() { return _writer.createCString(); }
+
+    ## see: StringWriter.makeCString()
+    String makeCString() { return _writer.makeCString(); }
+
+    ## see: StringWriter.cString()
+    String cString() { return _writer.cString(); }
 };
 
 ## Instances of this class let you create a string from IString syntax.

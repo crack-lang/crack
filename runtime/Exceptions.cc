@@ -133,6 +133,9 @@ extern "C" void __CrackPrintPointer(void *pointer) {
     cerr << "pointer is: " << pointer << endl;
 }
 
+// added this as part of the work-around for a tricky exception seg-fault.
+extern "C" void __CrackNOP(void *ex) {}
+
 extern "C" void __CrackBadCast(void *curType, void *newType) {
     if (runtimeHooks.badCastFunc) {
         runtimeHooks.badCastFunc(curType, newType);

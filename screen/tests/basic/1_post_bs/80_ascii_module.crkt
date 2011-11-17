@@ -3,7 +3,7 @@ ascii module
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-import crack.ascii radix;
+import crack.ascii radix, strip, toUpper, toLower;
 
 if (radix(0, 10) != '0')
     cout `FAILED radix(0)\n`;
@@ -13,6 +13,30 @@ if (radix(12345, 10) != '12345')
 
 if (radix(0xabc123, 16) != 'abc123')
     cout `FAILED radix(0xabc123)\n`;
+
+if (strip('  this is a test  \r\n') != 'this is a test')
+    cout `FAILED simple strip()\n`;
+
+if (strip('  \t\n  \r') != '')
+    cout `FAILED all whitespace strip()\n`;
+
+if (strip('') != '')
+    cout `FAILED empty strip\n`;
+
+if (strip('   leading') != 'leading')
+    cout `FAILED strip() with only leading whitespace\n`;
+
+if (strip('trailing   ') != 'trailing')
+    cout `FAILED strip() with only trailing whitespace\n`;
+
+if (toUpper('This Is a Test') != 'THIS IS A TEST')
+    cout `FAILED toUpper()\n`;
+
+if (toUpper('') != '')
+    cout `FAILED toUpper('')\n`;
+    
+if (toLower('tHIS iS A tEST') != 'this is a test')
+    cout `FAILED toLower()\n`;
 
 cout `ok\n`;
 %%EXPECT%%

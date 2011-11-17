@@ -68,7 +68,7 @@ class Template {
             if (m) {
                 if (curSection)
                     sections[curSection] = 
-                        varPat.subst(dataBuf.createString(), getMacros(), -1);
+                        varPat.subst(dataBuf.string(), getMacros(), -1);
                 curSection = m.group(1);
                 //cerr `debug: switching to group $curSection\n`;
                 dataBuf = StringWriter();
@@ -80,7 +80,7 @@ class Template {
         }
         if (curSection)
             sections[curSection] =
-                varPat.subst(dataBuf.createString(), getMacros(), -1);
+                varPat.subst(dataBuf.string(), getMacros(), -1);
 
         return sections;
 
@@ -198,8 +198,8 @@ class Test {
         if (_harness[_activeHarness].tick() == T_FINISHED) {
 
             if (config.verbose)
-                _vOutput.write(_harness[_activeHarness].vOutput.createString());
-            _output.write(_harness[_activeHarness].output.createString());
+                _vOutput.write(_harness[_activeHarness].vOutput.string());
+            _output.write(_harness[_activeHarness].output.string());
 
             checkResult(_harness[_activeHarness].crackResult);
             checkResult(_harness[_activeHarness].binaryResult);
@@ -211,8 +211,8 @@ class Test {
             else {
                 _status = T_FINISHED;
                 cout `[$(_data.fInfo)]: $(_data.desc)\n`;
-                cout `$(_vOutput.createString())`;
-                cout `$(_output.createString())\n`;
+                cout `$(_vOutput.string())`;
+                cout `$(_output.string())\n`;
 
                 pass = true;
                 for (b :in _harness) {

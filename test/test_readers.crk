@@ -35,8 +35,8 @@ if (1) {
     for (int i = 0; i < 10000; ++i)
         temp.write(sampleLine);
     
-    StringReader low = {temp.createString()};
-    full := FullReader(StringReader(temp.createString()));
+    StringReader low = {temp.string()};
+    full := FullReader(StringReader(temp.string()));
     count := 0;
     for (line :in full) {
         if (line != sampleLine)

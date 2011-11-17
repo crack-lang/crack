@@ -14,7 +14,7 @@ String strcat(StringArray elems) {
     StringFormatter f = {};
     for (elem :in elems)
          f `$elem`;
-    return f.createString();
+    return f.string();
 }
 
 
