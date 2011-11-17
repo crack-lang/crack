@@ -99,6 +99,7 @@ void PollSet_get(struct pollfd *set, unsigned int index,
 int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index, 
                  PollEvt *outputEntry
                  );
+void PollSet_delete(struct pollfd *set, unsigned int size, unsigned int index);
 int PollSet_poll(struct pollfd *fds, unsigned int nfds, TimeVal *tv,
                  sigset_t *sigmask
                  );

@@ -395,7 +395,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                               CRACK_OFFSET(crack::runtime::PollEvt, events)
                               );
     pollEventType->addInstVar(intType, "revents", 
-                              CRACK_OFFSET(pollfd, revents)
+                              CRACK_OFFSET(crack::runtime::PollEvt, revents)
                               );
     pollEventType->addConstructor();
     pollEventType->finish();
@@ -498,6 +498,12 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(uintType, "size");
     f->addArg(uintType, "index");
     f->addArg(pollEventType, "outputEntry");
+
+    f = pollSetType->addMethod(intType, "delete",
+                               (void *)crack::runtime::PollSet_delete
+                               );
+    f->addArg(uintType, "size");
+    f->addArg(uintType, "index");
     
     f = pollSetType->addMethod(intType, "poll",
                                (void *)crack::runtime::PollSet_poll

@@ -149,6 +149,12 @@ int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index,
     return -1;
 }
 
+void PollSet_delete(struct pollfd *set, unsigned int size, unsigned int index) {
+    memmove(set + index, set + index + 1, 
+            (size - index - 1) * sizeof(struct pollfd)
+            );
+}
+
 int PollSet_poll(struct pollfd *fds, unsigned int nfds, TimeVal *tv,
                  sigset_t *sigmask
                  ) {
@@ -206,3 +212,4 @@ sockaddr_in *AddrInfo_getInAddr(addrinfo *ai) {
 }
 
 }} // namespace crack::runtime
+
