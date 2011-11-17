@@ -292,7 +292,7 @@ class Arg : Node {
         }
 
         reverseNodeList(args, sf, argVal.getFirst());
-        return sf.createCString();
+        return sf.cString();
     }
 
     void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }
@@ -335,7 +335,7 @@ class Concat : Node {
             concat.format(item.toString(args));
         concat.format(' \0');
 
-        s := concat.createString();
+        s := concat.string();
         ctx.inject(@FILE.buffer, @LINE, s.buffer);
     }
 
@@ -450,7 +450,7 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
         fmt := StringFormatter();
         fmt `Incorrect number of arguments for macro: expected \
 $(argCount), got $(args.count())\0`;
-        ctx.error(tok, fmt.createString().buffer);
+        ctx.error(tok, fmt.string().buffer);
     }
 
     return args;
@@ -496,7 +496,7 @@ class Macro : NodeListImpl {
         # push an error context
         StringFormatter fmt = {};
         fmt `expanded from macro at $(loc.getName()):$(loc.getLineNumber())`;
-        ctx.pushErrorContext(fmt.createCString().buffer);
+        ctx.pushErrorContext(fmt.cString().buffer);
     }
 }
 
@@ -675,7 +675,7 @@ void export(CrackContext ctx) {
     if (ann is null) {
         StringFormatter fmt = {};
         fmt `$name is not an annotation.\0`;
-        ctx.error(tok, fmt.createString().buffer);
+        ctx.error(tok, fmt.string().buffer);
     } else {
         mac = Macro.unsafeCast(ann.getUserData());
     }
@@ -692,7 +692,7 @@ void export(CrackContext ctx) {
                 ctx.getUserData();
             Macro mac;
             if (userData is null) {
-                StringReader reader = { $(flatMac.createString().getRepr()) };
+                StringReader reader = { $(flatMac.string().getRepr()) };
                 mac = Macro(MacroDeserializer(ctx, reader));
                 ctx.storeAnnotation($(name.getRepr()).buffer, $name,
                                     mac
@@ -705,7 +705,7 @@ void export(CrackContext ctx) {
             mac.expand(ctx);
         }
     \n\0`;
-    ctx.inject(f.buffer, l, code.createString().buffer);
+    ctx.inject(f.buffer, l, code.string().buffer);
 }
 
 ## Call this annotation at the top of your file if you want to export macros.
@@ -717,7 +717,7 @@ void exporter(CrackContext ctx) {
        import crack.compiler CrackContext, Token, TOK_STRING;
        import crack.io StringReader;`;
     ctx.inject(@FILE.buffer, @LINE,
-               f.createCString().buffer);
+               f.cString().buffer);
 }
 
 void readIStr(CrackContext ctx, NodeList nodes) {
@@ -829,7 +829,7 @@ void interface(CrackContext ctx) {
             _iface_get$(nameTok.getText())Object().oper release();
     }
 }\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 
     # expand the body and opening bracket
     for (node :in body)
@@ -840,7 +840,7 @@ void interface(CrackContext ctx) {
     f = StringFormatter();
     f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
             VTableBase\n\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 }
 
 ## An annotation to be used before the list of interfaces that a class
@@ -887,7 +887,7 @@ void implements(CrackContext ctx) {
     for (iface :in ifaces)
         f `    Object _iface_get$(iface)Object() { return this; }\n`;
     f `}\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.createString().buffer);
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 
     # inject the body
     for (node :in body)

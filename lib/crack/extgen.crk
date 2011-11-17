@@ -388,7 +388,7 @@ class SpecializedType : TypeImpl {
                 fmt `, $(spec.name)`;
             }
         fmt `]`;
-        newName := fmt.createString();
+        newName := fmt.string();
 
         # see if there's an existing type, create a new one if not.
         type := types.get(newName);
@@ -503,9 +503,9 @@ class Errors : StringFormatter {
         # null terminate
         this `\0`;
         if (!(tok is null))
-            ctx.error(tok, createString().buffer);
+            ctx.error(tok, string().buffer);
         else
-            ctx.error(createString().buffer);
+            ctx.error(string().buffer);
     }
 }
 
@@ -738,7 +738,7 @@ $(generic.getParamCount()) parameters.`;
             } else if (ann == 'inject') {
                StringFormatter po = {};
                po `preamble_$(preamble.count())`;
-               ifdefCond := po.createString();
+               ifdefCond := po.string();
                preamble.append(IfdefPreamble(ifdefCond, _parseString(ctx)));
             } else if (ann == 'crack_internal') {
                 inSrcDir = true;
@@ -871,7 +871,7 @@ class declaration`;
 
         StringFormatter no = {}; // Object name = $(ifdefCondStart)_end
         no `$(ifdefCondStart)_end`;
-        ifdefCond := no.createString();
+        ifdefCond := no.string();
 
         _populateIfdefs(CLOSEBRACE, "endif", ifdefCond);
     }
@@ -983,7 +983,7 @@ definition.`;
         StringFormatter fmt = {};
         pfx := inSrcDir ? '' : 'crack/';
         fmt `"$(pfx)ext/$name.h"`;
-        return fmt.createString();
+        return fmt.string();
     }
 
     bool goodIfdefNesting(Array[Type] ta){
@@ -1210,7 +1210,7 @@ void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
                             cFmt `    $(bciReturn.classname) `;
                             returnBound = true;
                         }
-                        else cFmt `$(nFmt.createString())`;
+                        else cFmt `$(nFmt.string())`;
 
                         // function name
                         if (func.name.substr(0, plen) == prefix){
@@ -1279,8 +1279,8 @@ void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
                         cFmt `; }\n`;
                         
                         // output strings
-                        nLine := nFmt.createString();
-                        cLine := cFmt.createString();
+                        nLine := nFmt.string();
+                        cLine := cFmt.string();
                         o.write(nLine);
 
                         if (cLine != nLine)

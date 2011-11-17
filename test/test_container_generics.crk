@@ -41,7 +41,7 @@ Array[String] sa = {};
 for (item :in m) {
     StringFormatter fmt = {};
     fmt `$(item.key): $(item.val)`;
-    sa.append(fmt.createString());
+    sa.append(fmt.string());
 }
 
 QuickSort[Array[String]].sort(sa);
@@ -67,7 +67,7 @@ if (1) {
 
     StringFormatter fmt = {};
     for (i :in leakTree()) fmt `$(i.key)`;
-    result := fmt.createString();
+    result := fmt.string();
     if (result != 'firstfourthsecondthird')
         cout `FAILED tree locking, got $result\n`;
 }
@@ -257,7 +257,7 @@ if (true) {
         StringFormatter result = {};
         for (x :in list)
             result `$x`;
-        return result.createString();
+        return result.string();
     }
 }
 

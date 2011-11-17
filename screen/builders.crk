@@ -195,7 +195,7 @@ class BuilderTestHarness {
             opts.write(config.libPath);
         }
 
-        cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.createString()) $(_data.scriptName)`;
+        cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.string()) $(_data.scriptName)`;
 
         // args for script
 

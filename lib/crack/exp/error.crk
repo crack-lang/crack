@@ -82,7 +82,7 @@ class ErrorCatcher {
     bool gotError() { return err.gotError; }
     
     ## Returns the error text written to err.writer.
-    String getText() { return __writer.createString(); }
+    String getText() { return __writer.string(); }
     
     ## Reset the catcher: clears the error from the error handler and the 
     ## error string.

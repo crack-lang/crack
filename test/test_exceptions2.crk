@@ -85,7 +85,7 @@ if (1) {
     }
     
     
-    tb := split(out.createString(), b'\n');
+    tb := split(out.string(), b'\n');
     if (tb[0] != 'Exception occurred:')
         cout `FAILED stack traces: no initial string\n`;
     

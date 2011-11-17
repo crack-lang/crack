@@ -537,7 +537,7 @@ class CmdOptions {
    String createUsage(String intro){
       StringFormatter fmt = {};
       writeUsage(fmt, null);
-      return fmt.createString();
+      return fmt.string();
    }
    
    // Convenience method to print usage string to stdout

@@ -48,9 +48,9 @@ void f2() { result `in g`; }
 f1();
 f2();
 
-if (result.createString() != '{in f}in g')
+if (result.string() != '{in f}in g')
     cout `failed to install or remove callbacks, got: 
-$(result.createString())\n`;
+$(result.string())\n`;
 
 class C {
     @user_static

@@ -44,7 +44,7 @@ void getScope(CrackContext ctx) {
     v := IntWrapper.cast(scopes[String(ctx.getToken().getText())]).val;
     StringFormatter fmt = {};
     fmt `$v \0`;
-    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.string().buffer);
 }
 
 void createdAnnotation(CrackContext ctx) {
@@ -55,7 +55,7 @@ void createdWithCallback(CrackContext ctx) {
     StringFormatter fmt = {};
     arg := IntWrapper.unsafeCast(ctx.getUserData());
     fmt `$(arg.val) \0`;
-    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.string().buffer);
 }
 
 IntWrapper iw;
@@ -126,7 +126,7 @@ void getLocation(CrackContext ctx) {
     loc := tok.getLocation();
     StringFormatter fmt = {};
     fmt `NAME := "$(loc.getName())"; LINE := $(loc.getLineNumber()); \0`;
-    ctx.inject(@FILE.buffer, @LINE, fmt.createString().buffer);
+    ctx.inject(@FILE.buffer, @LINE, fmt.string().buffer);
 }
 
 void stringify(CrackContext ctx) {

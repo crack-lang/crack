@@ -46,7 +46,7 @@ class Match {
         if (index >= __captureCount) {
             death 
                 `match out of bounds (index = $index, max = $__captureCount)`;
-            die(death.createString());
+            die(death.string());
         }
     }
     
@@ -68,7 +68,7 @@ class Match {
         int i = pcre_get_stringnumber(regex._rx, name.buffer);
         if (i < 0) {
             death `undefined group name $name`;
-            die(death.createString());
+            die(death.string());
         }
         return uint(i);
     }
@@ -126,7 +126,7 @@ class Regex : _RegexBase {
             f `Error compiling regular expression: $(errorText[0])`;
             free(errorText);
             free(intReturns);
-            die(f.createString());
+            die(f.string());
         }
         free(errorText);
         
@@ -188,7 +188,7 @@ class Regex : _RegexBase {
             if (last < subject.size)
                 result.write(subject.slice(last));
             
-            return result.createString();
+            return result.string();
         }
     }
 

@@ -8,7 +8,7 @@ if (true) {
     SerialWriter w = {sw};
     w.write(1000);
     w.write('test');
-    SerialReader r = {StringReader(sw.createString())};
+    SerialReader r = {StringReader(sw.string())};
     if (r.readUInt() != 1000)
         cout `Failed to write and read uint32\n`;
     

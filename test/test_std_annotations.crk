@@ -42,7 +42,7 @@ if (@stringify((x == 'test')) != "( x == 'test' )")
 StringFormatter result = {};
 String now() { return 'now'; }
 @interp(result, ('then'), now())
-if (result.createString() != 'This is then\nThat was now\n')
+if (result.string() != 'This is then\nThat was now\n')
     cout `Failed on macros with i-strings\n`;
 
 if (@foo() != 'IAM not a crook')
@@ -76,12 +76,12 @@ class Bar : Object @implements Foo {
 result = StringFormatter();
 Foo b = Bar();
 b.do();
-if (result.createString() !=
+if (result.string() !=
     'interfaces work: interp vars work, nested parens work')
     cout `Failed to implement interface implementation\n`;
 result = StringFormatter();
 b = null;
-if (result.createString() != 'Bar deleted')
+if (result.string() != 'Bar deleted')
     cout `Failed on interface cleanup\n`;
 
 if (1) {
