@@ -10,10 +10,12 @@ namespace builder {
 
 class BuilderOptions;
 
-std::string getCacheFilePath(model::Context &c,
-                             const BuilderOptions* o,
-                             const std::string &canonicalName,
-                             const std::string &ext);
+std::string getCacheFilePath(const BuilderOptions* o,
+                             const std::string &path,
+                             const std::string &destExt
+                             );
+
+void initCacheDirectory(BuilderOptions *o);
 
 } // end namespace builder
 

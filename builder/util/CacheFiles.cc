@@ -3,33 +3,149 @@
 #include "CacheFiles.h"
 #include "builder/BuilderOptions.h"
 
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <limits.h>
+#include <string.h>
+#include <libgen.h>
+
 using namespace model;
 using namespace std;
 
 namespace builder {
 
-string getCacheFilePath(Context &context,
-                        const BuilderOptions *options,
-                        const string &canonicalName,
-                        const string &ext) {
+namespace {
+    // recursive mkdir - i.e. ensure the path exists and is readable, and if
+    // necessary create the path and all parent paths
+    // returns true if the path can be used successfully
+    // originally based on idea from
+    // http://nion.modprobe.de/blog/archives/357-Recursive-directory-creation.html
+    bool r_mkdir(const char *path) {
+
+            char opath[PATH_MAX];
+            char *p;
+            size_t len;
+
+            if (access(path, R_OK|W_OK) == 0)
+                return true;
+
+            strncpy(opath, path, sizeof(opath));
+            len = strlen(opath);
+            if (opath[len - 1] == '/')
+                    opath[len - 1] = '\0';
+            p = opath;
+            if (*p == '/')
+                p++;
+            for (; *p; p++) {
+                if (*p == '/') {
+                    *p = '\0';
+                    if (access(opath, F_OK)) {
+                        if (mkdir(opath, S_IRWXU))
+                            return false;
+                    };
+                    *p = '/';
+                }
+            }
+            if (access(opath, F_OK))
+                mkdir(opath, S_IRWXU);
+
+            return (access(opath, R_OK|W_OK) == 0);
+
+    }
+}
+
+void initCacheDirectory(BuilderOptions *options) {
 
     string path;
-/*
-    // look for an explicit cache path
-    BuilderOptions::StringMap::const_iterator i = options->optionMap.find("cachePath");
+
+    // if the user didn't specify a cache directory, use the default
+    BuilderOptions::StringMap::const_iterator i =
+            options->optionMap.find("cachePath");
     if (i != options->optionMap.end()) {
         // explicit path
         path = i->second;
     }
 
-*/
+    if (path.empty()) {
+        // default path is home dir
+        // XXX maybe pull out ModulePath from construct for use?
+        path = getenv("HOME");
+        if (path.empty()) {
+            if (options->verbosity)
+                cerr << "unable to set default cache path, caching disabled\n";
+            options->cacheMode = false;
+            return;
+        }
+        if (path.at(path.size()-1) != '/')
+            path.push_back('/');
+        path.append(".crack/cache/");
+    }
 
-    // XXX maybe pull out ModulePath from construct for use
+    // at this point we have some string they specified on the command line
+    // OR the value of the HOME env variable
+    if (path.at(path.size()-1) != '/')
+        path.push_back('/');
+
+    if (r_mkdir(path.c_str()))
+        options->optionMap["cachePath"] = path;
+    else {
+        if (options->verbosity)
+            cerr << "no access to create/use cache path, caching disabled: " <<
+                    path << "\n";
+        options->cacheMode = false;
+    }
+
+}
+
+string getCacheFilePath(const BuilderOptions* options,
+                        const std::string &path,
+                        const std::string &destExt) {
+
+    // at this point, initCacheDirectory should have ensured we have a path
+    BuilderOptions::StringMap::const_iterator i =
+            options->optionMap.find("cachePath");
+
+    //assert(i != options->optionMap.end() && "cachePath empty");
+    // XXX this only happens for bootstrap module load, before initCacheDirectory
+    // is called. how can we cache boot straps somewhere?
+    if (i == options->optionMap.end())
+        return string();
+
+    string finalPath = i->second;
+
+    char *rpath = realpath(path.c_str(), NULL);
+    assert(rpath && "unable to realpath");
+    assert(*rpath == '/' && "not absolute");
+
+    char *rpathd = strdup(rpath);
+    char *rpathf = strdup(rpath);
+    assert(rpathd); assert(rpathf);
+    char *rpathdir = dirname(rpathd);
+    char *rpathfile = basename(rpathf);
+
+    finalPath.append(rpathdir+1);
+    finalPath.push_back('/');
+
+    if (!r_mkdir(finalPath.c_str())) {
+        if (options->verbosity)
+            cerr << "unable to create cache path for: " <<
+                    finalPath << "\n";
+        return NULL;
+    }
+
+    finalPath.append(rpathfile);
+    finalPath.push_back('.');
+    finalPath.append(destExt);
+
+    free(rpath);
+    free(rpathd);
+    free(rpathf);
 
     // XXX add in opt level?
 
-    path = "/tmp/"+canonicalName+"."+ext;
-    return path;
+    return finalPath;
 
 }
 

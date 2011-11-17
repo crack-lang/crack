@@ -420,7 +420,9 @@ void Cacher::writeBitcode(const string &path) {
 BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
                                        const string &path) {
 
-    string cacheFile = getCacheFilePath(context, options, canonicalName, "bc");
+    string cacheFile = getCacheFilePath(options,
+                                        path,
+                                        "bc");
     if (cacheFile.empty())
         return NULL;
 
@@ -469,7 +471,9 @@ void Cacher::saveToCache() {
     assert(modDef && "empty modDef for saveToCache");
     assert(!modDef->path.empty() && "module source path not set");
 
-    string cacheFile = getCacheFilePath(context, options, modDef->getFullName(), "bc");
+    string cacheFile = getCacheFilePath(options,
+                                        modDef->path,
+                                        "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
             cerr << "unable to find writeable directory for cache: caching skipped"

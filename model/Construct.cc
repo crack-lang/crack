@@ -17,6 +17,7 @@
 #include "StrConst.h"
 #include "TypeDef.h"
 #include "compiler/init.h"
+#include "builder/util/CacheFiles.h"
 
 using namespace std;
 using namespace model;
@@ -594,7 +595,13 @@ int Construct::runScript(istream &src, const string &name) {
     ModuleDefPtr modDef;
     bool cached = false;
     if (rootBuilder->options->cacheMode)
+        builder::initCacheDirectory(rootBuilder->options.get());
+    // we check cacheMode again after init,
+    // because it might have been disabled if
+    // we couldn't find an appropriate cache directory
+    if (rootBuilder->options->cacheMode) {
         modDef = context->materializeModule(name, name);
+    }
     if (modDef) {
         cached = true;
         loadedModules.push_back(modDef);
