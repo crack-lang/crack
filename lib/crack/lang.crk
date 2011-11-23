@@ -812,6 +812,14 @@ class CString : String {
         --size;
     }
 
+    ## Initialize from a ManagedBuffer and optionally take ownership of the
+    ## buffer.  Note that this is subtly different from the corresponding 
+    ## String constructor as "size" will be the number of bytes in the buffer 
+    ## before the first null, and not the total size of the buffer.
+    oper init(ManagedBuffer buf, bool takeOwnership) :
+        String(buf, strlen(buf.buffer), takeOwnership) {
+    }
+
 }
 
 class StaticString : String {

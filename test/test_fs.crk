@@ -2,7 +2,7 @@
 
 import crack.io cout;
 import crack.strutil StringArray;
-import crack.fs Path, RealPath;
+import crack.fs cwd, makePath, sysfs, Path, RealPath;
 
 tempFile := RealPath('writer.out');
 tempFile.writer().write('this is a test');
@@ -28,6 +28,16 @@ if (!tempDir.isDir())
 Path foo = tempDir/'foo', bar = tempDir/'bar';
 foo.writeAll('this is foo');
 bar.writeAll('this is bar');
+if (makePath('tempdir/foo').makeFullReader().readAll() != 'this is foo')
+    cout `FAILED reading a file through makePath()\n`;
+if ((cwd/'tempdir/foo').makeFullReader().readAll() != 'this is foo')
+    cout `FAILED reading a file through cwd\n`;
+cwd.set(cwd/'tempdir');
+if (!(cwd/'foo').exists())
+    cout `FAILED changing current directory\n`;
+cwd.set('..');
+if (!(cwd/'tempdir').exists())
+    cout `FAILED changing directory to parent\n`;
 
 if (foo.getSize() != 11)
     cout `FAILED file size() method\n`;
@@ -45,5 +55,8 @@ bar.delete();
 
 if (tempDir.exists())
     tempDir.delete();
+
+if ((sysfs/'a/b/c').getFullName() != '/a/b/c')
+    cout `FAILED sysfs object.\n`;
 
 cout `ok\n`;

@@ -1,13 +1,13 @@
 ## Copyright 2011 Google Inc.
-## Crack Virtual Filesystem
+## Crack Virtual Filesystem (it's not very virtual yet)
 
-import crack.runtime basename, errno, fileExists, free, fileRemove,
-    getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir, DirEntry,
-    O_CREAT, O_RDONLY, O_WRONLY, S_IFDIR;
+import crack.runtime basename, chdir, errno, fileExists, free, fileRemove,
+    getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir,
+    DirEntry, O_CREAT, O_RDONLY, O_WRONLY, PATH_MAX, S_IFDIR;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
-    InvalidStateError;
+    InvalidStateError, ManagedBuffer;
 import crack.io.readers FullReader;
 @import crack.ann define;
 
@@ -245,3 +245,70 @@ class RealPath : Path {
     }
 
 }
+
+## This is a wrapper class that allows us to define the current directory
+## object.
+class _CWD : Path {
+    Path __path;
+
+    CString __getcwd() {
+        ManagedBuffer buf = {PATH_MAX};
+        if (getcwd(buf.buffer, buf.size) is null) {
+            err := FStr() `Unable to get current directory: $(strerror())`;
+            throw SystemError(err, errno());
+        }
+
+        return CString(buf, true);
+    }
+
+    oper init() : __path = RealPath(__getcwd())  {}
+
+    ## Sets the current directory to the 'other'.  'other' may be either an
+    ## absolute path or a path relative to the current working directory.  The
+    ## "." and ".." special paths can be used to change the director to the
+    ## current directory and parent directory, respectively.
+    void set(CString other) {
+        if (chdir(other.buffer))
+            throw SystemError(FStr() `Unable to chdir to $other`, errno());
+        __path = RealPath(__getcwd());
+    }
+
+    ## See set(CString).
+    void set(String other) {
+        set(CString(other));
+    }
+
+    ## See set(CString).  This is the same only it uses an existing path.
+    void set(Path other) {
+        set(other.getFullName());
+    }
+
+    Reader reader() { return __path.reader(); }
+    Writer writer() { return __path.writer(); }
+    void makeDir() { __path.makeDir(); }
+    Path oper [](String child) { return __path[child]; }
+    Path _createNode(String path) { return __path._createNode(path); }
+    Path oper /(String other) { return __path/other; }
+    bool exists() { return __path.exists(); }
+    bool isDir() { return __path.isDir(); }
+    bool isLink() { return __path.isLink(); }
+    void delete() { return __path.delete(); }
+    String getName() { return __path.getName(); }
+    String getFullName() { return __path.getFullName(); }
+    uint64 getSize() { return __path.getSize(); }
+    PathIter children() { return __path.children(); }
+}
+
+## Contains a path object for the root of the real filesystem.
+const RealPath sysfs = {''};
+
+## A path object that contains the current working directory.
+const _CWD cwd = {};
+
+## See makePath(String)
+Path makePath(CString path) { return RealPath(path); }
+
+## Create a Path object for the specified string path.
+## If 'path' is not an absolute path, the Path object returned will correspond
+## to a filename relative to the current working directory.
+Path makePath(String path) { return RealPath(path); }

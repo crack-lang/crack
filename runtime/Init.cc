@@ -254,6 +254,15 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "O_ASYNC", O_ASYNC);
     mod->addConstant(intType, "O_CREAT", O_CREAT);
 
+    f = mod->addFunc(byteptrType, "getcwd", (void *)getcwd);
+    f->addArg(byteptrType, "buffer");
+    f->addArg(uintzType, "size");
+
+    mod->addConstant(uintzType, "PATH_MAX", PATH_MAX);
+
+    f = mod->addFunc(intType, "chdir", (void *)chdir);
+    f->addArg(byteptrType, "path");
+
     // Net
     
     mod->addConstant(intType, "AF_UNIX", AF_UNIX);
