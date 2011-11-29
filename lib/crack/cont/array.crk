@@ -245,7 +245,7 @@ class Array[Elem] {
         __rep = newRep;
         __cap = newCap;
     }
-    
+
     Array copy(){
         newData := ArrayData[Elem](__cap);
         newRep := newData.rep;
@@ -407,8 +407,18 @@ class Array[Elem] {
         if (pos > __size || pos + len > __size)
             throw IndexError('Subarray out of bounds');
 
-        array[Elem] newrep = __rep + uintz(pos);
-        return Array(data, newrep, __cap - pos, len);
+        array[Elem] tempRep = __rep + uintz(pos);
+
+        uint newCap = len > 0 ? len : 1;
+        newData := ArrayData[Elem](newCap);
+        newRep := newData.rep;
+
+        for (uint i = 0; i < len; i++){
+            newRep[i] = tempRep[i];
+            _bind(newRep[i]);
+        }
+
+        return Array(newData, newRep, newCap, len);
     }
 
 
