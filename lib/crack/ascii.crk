@@ -94,6 +94,16 @@ bool isSpace(byte ch) {
     return ch == b' ' || ch == b'\t' || ch == b'\n' || ch == b'\r';
 }
 
+## Returns true if the entire string is whitespace.
+bool isSpace(String text) {
+    for (int i = 0; i < text.size; ++i) {
+        byte ch = text[i];
+        if (ch != b' ' && ch != b'\t' && ch != b'\n' && ch != b'\r')
+            return false;
+    }
+    return true;
+}
+
 ## Strip trailing and leading whitespace off a string.
 String strip(String text) {
     int start, end;
