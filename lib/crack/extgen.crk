@@ -408,7 +408,7 @@ class SpecializedType : TypeImpl {
 `;
     }
 
-    @abstract uint getParamCount();
+    @abstract int getParamCount();
 }
 
 class ArrayType : GenericType {
@@ -425,7 +425,7 @@ class ArrayType : GenericType {
         initialized = true;
     }
     
-    uint getParamCount() { return 1; }
+    int getParamCount() { return 1; }
 }
 
 class FunctionType : GenericType {
@@ -442,7 +442,7 @@ class FunctionType : GenericType {
         initialized = true;
     }
     
-    uint getParamCount() { return -1; }
+    int getParamCount() { return -1; }
 }
 
 class Const {
