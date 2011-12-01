@@ -37,6 +37,7 @@
 #include "builder/Builder.h"
 #include "ParseError.h"
 #include <cstdlib>
+#define __STDC_LIMIT_MACROS 1
 #include <stdint.h>
 
 using namespace std;
