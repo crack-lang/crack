@@ -504,7 +504,7 @@ to python):
 It is very important to note that strings should be considered _immutable_.
 It is inappropriate to modify the contents of a #String# buffer or its size.
 For that matter, it is inappropriate to do this to any kind of #Buffer#
-derivative except for those derived from #WriteByffer#.  See \X(Compatibilty)
+derivative except for those derived from #WriteBuffer#.  See \X(Compatibilty)
 for more information..
 
 Sequence Constants
@@ -1613,7 +1613,7 @@ cannot be easily circumvented.
 Crack gives special access protection to names that begin with an underscore:
 
 -   A name beginning with a single underscore is /module protected/.  When
-    defined in a class, such a symbol accessible within the module where it
+    defined in a class, such a symbol is accessible within the module where it
     is defined and in methods of all derived classes, regardless of whether
     they are declared in the same module.  (See \X(Access Protection) for
     more information on module protected symbols in the module's scope)
@@ -2889,7 +2889,7 @@ Crack's current approach to bindings is not without its problems:
     implemented as macros.  See \X(Extensions) for information on a more
     portable approach.
 -   You can't currently import global variables.
--   #crack.exp.bindings# is experimental and may be discontinued.  It's use is
+-   #crack.exp.bindings# is experimental and may be discontinued.  Its use is
     considered deprecated.
 
 The primitive import mechanism exists mainly to facilitate quick hacks.  For
@@ -3409,7 +3409,7 @@ the initialization functions would be named #`foo_bar_baz_cinit`# and
 #`foo_bar_baz_rinit`#.
 
 Initialization functions should be C++ functions declared as 'extern "C"'.
-The compile-time init function accept a parameter of type #crack::ext::Module
+The compile-time init function accepts a parameter of type #crack::ext::Module
 \*#.  The role of the compile-time initialization function is to populate the
 module object with the module's interface.  To describe it another way, this
 initialization function configures everything that is necessary to import the
@@ -3418,7 +3418,7 @@ called for extensions loaded from an AOT compiled program, use the
 runtime-initialization function for this purpose.
 
 The runtime initialization function is called at runtime during the initial
-load of the module.  Note that when running in JIT mode, both the
+load of the module (only once).  Note that when running in JIT mode, both the
 compile-initialization and runtime-initialization functions are called.
 
 For example, let's say that we want to provide a binding for a C function
@@ -4197,8 +4197,8 @@ external dependencies making them unsuitable for inclusion in the #String# or
 The ascii Module
 ----------------
 
-The Crack language strives to be encoding-neutral as much as that's possible.
-That's why the #String# class and the #crack.strutil# modules general avoid
+The Crack language strives to be encoding-neutral as much as possible.
+That's why the #String# class and the #crack.strutil# modules generally avoid
 providing functionality for dealing with whitespace or capitalization.
 Nevertheless, there are times when you care about encodings, and there's no
 encoding more ubiquitous than ascii.  Therefore, we include this kind of
@@ -5176,6 +5176,6 @@ The following rules apply to method and function names (we use the word
         }
     }}
 
-    These may also be used to for access of parameterize values, as in
+    These may also be used for access of parameterized values, as in
     "#getRelative(COUSIN)#" or simply #get(Key key)# as in the case of Map
     containers.
