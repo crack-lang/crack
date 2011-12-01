@@ -58,7 +58,12 @@ char **get_environ(){
 #include "ext/Func.h"
 
 extern "C"
-void crack_runtime_time_init(crack::ext::Module *mod) {
+void crack_runtime_time_rinit() {
+    return;
+}
+
+extern "C"
+void crack_runtime_time_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
     crack::ext::Type *type_void = mod->getVoidType();
