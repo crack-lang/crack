@@ -3,7 +3,7 @@ ascii module
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-import crack.ascii radix, strip, toUpper, toLower, isSpace;
+import crack.ascii radix, strip, toUpper, toLower, isSpace, isDigit;
 
 if (radix(0, 10) != '0')
     cout `FAILED radix(0)\n`;
@@ -43,6 +43,13 @@ if (!isSpace(' \n\t\r'))
 
 if (isSpace('  x   '))
     cout `FAILED isSpace check on string with non-spaces\n`;
+
+if (!isDigit(b'0') || !isDigit(b'9') || !isDigit(b'5'))
+    cout `FAILED isDigit check on digits\n`;
+
+# check one outside the range
+if (isDigit(b'/') || isDigit(b':'))
+    cout `FAILED isDigit check on non-digit.\n`;
 
 cout `ok\n`;
 %%EXPECT%%
