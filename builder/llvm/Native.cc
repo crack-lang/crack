@@ -21,8 +21,8 @@
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetRegistry.h>
-#include <llvm/Target/TargetSelect.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/Linker.h>
@@ -641,8 +641,10 @@ void nativeCompile(llvm::Module *module,
     bool is64Bit(TheTriple.getArch() == Triple::x86_64);
 
     string FeaturesStr;
+    string CPU;
     std::auto_ptr<TargetMachine>
             target(TheTarget->createTargetMachine(TheTriple.getTriple(),
+                                                  CPU,
                                                   FeaturesStr));
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();

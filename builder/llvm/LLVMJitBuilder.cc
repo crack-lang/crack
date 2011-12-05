@@ -16,7 +16,7 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/Target/TargetSelect.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Assembly/PrintModulePass.h>
