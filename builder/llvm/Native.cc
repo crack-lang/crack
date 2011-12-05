@@ -17,7 +17,6 @@
 #include <llvm/PassManager.h>
 #include <llvm/Pass.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/Support/StandardPasses.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Target/TargetData.h>
@@ -31,6 +30,7 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
+#include <llvm/Analysis/Verifier.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
 #include <iostream>
@@ -192,8 +192,8 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
     // Type Definitions
 
     // argc
-    std::vector<const Type*>main_args;
-    const IntegerType *argcType = IntegerType::get(mod->getContext(), 32);
+    std::vector<Type *>main_args;
+    IntegerType *argcType = IntegerType::get(mod->getContext(), 32);
     main_args.push_back(argcType);
 
     // argv
@@ -271,7 +271,7 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
         new StoreInst(retValConst, ptr_14, false, label_13);
         new StoreInst(int32_argc, gargc, false, label_13);
         new StoreInst(ptr_argv, gargv, false, label_13);
-        
+
         IRBuilder<> builder(label_13);
 
         // call crack.lang init function
@@ -292,50 +292,50 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
         // cleanup function
         builder.SetInsertPoint(cleanupBlock);
         builder.CreateInvoke(mainCleanup, endBlock, lpPostCleanupBlock);
-        
+
         // exception handling stuff
         Function *ehExFunc = mod->getFunction("llvm.eh.exception"),
                  *ehSelFunc = mod->getFunction("llvm.eh.selector"),
                  *crkExFunc = mod->getFunction("__CrackExceptionPersonality");
-        const Type *i8PtrType = builder.getInt8Ty()->getPointerTo();
-        
+        Type *i8PtrType = builder.getInt8Ty()->getPointerTo();
+
         BasicBlock *uncaughtHandlerBlock =
             BasicBlock::Create(mod->getContext(), "uncaught_exception",
                                func_main
                                );
-        
+
         // first landing pad does cleanups
         builder.SetInsertPoint(lpBlock);
         Value *ex = builder.CreateCall(ehExFunc);
         Value *sel = builder.CreateCall4(ehSelFunc, ex,
-                                         builder.CreateBitCast(crkExFunc, 
+                                         builder.CreateBitCast(crkExFunc,
                                                                i8PtrType
                                                                ),
                                          vtableBaseTypeBody,
                                          Constant::getNullValue(i8PtrType)
                                          );
-        builder.CreateInvoke(mainCleanup, uncaughtHandlerBlock, 
+        builder.CreateInvoke(mainCleanup, uncaughtHandlerBlock,
                              lpPostCleanupBlock
                              );
 
-        // get our uncaught exception function (for some reason this doesn't 
+        // get our uncaught exception function (for some reason this doesn't
         // work when we do it from anywhere else)
-        FunctionType *funcType = 
+        FunctionType *funcType =
             FunctionType::get(Type::getInt1Ty(mod->getContext()), false);
         Constant *uncaughtFuncConst =
             mod->getOrInsertFunction("__CrackUncaughtException", funcType);
         Function *uncaughtFunc = cast<Function>(uncaughtFuncConst);
 
-        // post cleanup landing pad        
+        // post cleanup landing pad
         builder.SetInsertPoint(lpPostCleanupBlock);
         ex = builder.CreateCall(ehExFunc);
-        sel = builder.CreateCall4(ehSelFunc, ex, 
+        sel = builder.CreateCall4(ehSelFunc, ex,
                                   builder.CreateBitCast(crkExFunc, i8PtrType),
                                   vtableBaseTypeBody,
                                   Constant::getNullValue(i8PtrType)
                                   );
         builder.CreateBr(uncaughtHandlerBlock);
-        
+
         // uncaught exception handler
         builder.SetInsertPoint(uncaughtHandlerBlock);
         builder.CreateCall(uncaughtFunc);
@@ -351,8 +351,8 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
     // now fill in the bodies of the __getArgv and __getArgc functions
     // these simply return the values of the globals we setup in main
     // int puts(char *)
-    std::vector<const Type*>args;
-    FunctionType* argv_ftype = FunctionType::get(
+    std::vector<Type *>args;
+    FunctionType *argv_ftype = FunctionType::get(
             argvType,
             args, false);
     FunctionType* argc_ftype = FunctionType::get(
@@ -389,9 +389,85 @@ void optimizeLink(llvm::Module *module, bool verify) {
     if (TD)
         Passes.add(TD);
 
-    createStandardLTOPasses(&Passes, /*Internalize=*/ false,
-                                     /*RunInliner=*/ false, // XXX breaks exceptions
-                                     /*VerifyEach=*/ verify);
+//    createStandardLTOPasses(&Passes, /*Internalize=*/ false,
+//                                     /*RunInliner=*/ false, // XXX breaks exceptions
+//                                     /*VerifyEach=*/ verify);
+
+//    createStandardAliasAnalysisPasses(&Passes);
+    Passes.add(createTypeBasedAliasAnalysisPass());
+    Passes.add(createBasicAliasAnalysisPass());
+
+    // Now that composite has been compiled, scan through the module, looking
+    // for a main function.  If main is defined, mark all other functions
+    // internal.
+//    Passes.add(createInternalizePass(true));
+
+    // Propagate constants at call sites into the functions they call.  This
+    // opens opportunities for globalopt (and inlining) by substituting function
+    // pointers passed as arguments to direct uses of functions.
+    Passes.add(createIPSCCPPass());
+
+    // Now that we internalized some globals, see if we can hack on them!
+    Passes.add(createGlobalOptimizerPass());
+
+    // Linking modules together can lead to duplicated global constants, only
+    // keep one copy of each constant...
+    Passes.add(createConstantMergePass());
+
+    // Remove unused arguments from functions...
+    Passes.add(createDeadArgEliminationPass());
+
+    // Reduce the code after globalopt and ipsccp.  Both can open up significant
+    // simplification opportunities, and both can propagate functions through
+    // function pointers.  When this happens, we often have to resolve varargs
+    // calls, etc, so let instcombine do this.
+    Passes.add(createInstructionCombiningPass());
+
+    // Inline small functions
+//    Passes.add(createFunctionInliningPass());
+
+    Passes.add(createPruneEHPass());   // Remove dead EH info.
+    // Optimize globals again if we ran the inliner.
+//    Passes.add(createGlobalOptimizerPass());
+    Passes.add(createGlobalDCEPass()); // Remove dead functions.
+
+    // If we didn't decide to inline a function, check to see if we can
+    // transform it to pass arguments by value instead of by reference.
+    Passes.add(createArgumentPromotionPass());
+
+    // The IPO passes may leave cruft around.  Clean up after them.
+    Passes.add(createInstructionCombiningPass());
+    Passes.add(createJumpThreadingPass());
+    // Break up allocas
+    Passes.add(createScalarReplAggregatesPass());
+
+    // Run a few AA driven optimizations here and now, to cleanup the code.
+    Passes.add(createFunctionAttrsPass()); // Add nocapture.
+    Passes.add(createGlobalsModRefPass()); // IP alias analysis.
+
+    Passes.add(createLICMPass());      // Hoist loop invariants.
+    Passes.add(createGVNPass());       // Remove redundancies.
+    Passes.add(createMemCpyOptPass()); // Remove dead memcpys.
+
+    // Nuke dead stores.
+    Passes.add(createDeadStoreEliminationPass());
+
+    // Cleanup and simplify the code after the scalar optimizations.
+    Passes.add(createInstructionCombiningPass());
+
+    Passes.add(createJumpThreadingPass());
+
+    // Delete basic blocks, which optimization passes may have killed.
+    Passes.add(createCFGSimplificationPass());
+
+    // Now that we have optimized the program, discard unreachable functions.
+    Passes.add(createGlobalDCEPass());
+
+    // the old code used to inject a verify after every pass, for now we save
+    // some time by doing the verify once at the end.
+    if (verify)
+      Passes.add(createVerifierPass());
+
     Passes.run(*module);
 
 }
@@ -419,7 +495,11 @@ void optimizeUnit(llvm::Module *module, int optimizeLevel) {
     if (TD)
         FPasses->add(new TargetData(*TD));
 
-    createStandardFunctionPasses(FPasses.get(), optimizeLevel);
+    if (optimizeLevel > 0) {
+        FPasses->add(createCFGSimplificationPass());
+        FPasses->add(createScalarReplAggregatesPass());
+        FPasses->add(createEarlyCSEPass());
+    }
 
     llvm::Pass *InliningPass = 0;
 
@@ -435,13 +515,76 @@ void optimizeUnit(llvm::Module *module, int optimizeLevel) {
     }
     */
 
-    createStandardModulePasses(&Passes, optimizeLevel,
-                               /*OptimizeSize=*/ false,
-                               /*UnitAtATime*/ true,
-                               /*UnrollLoops=*/ optimizeLevel > 1,
-                               /*SimplifyLibCalls*/ true,
-                               /*HaveExceptions=*/ true,
-                               InliningPass);
+//    createStandardModulePasses(&Passes, optimizeLevel,
+//                               /*OptimizeSize=*/ false,
+//                               /*UnitAtATime*/ true,
+//                               /*UnrollLoops=*/ optimizeLevel > 1,
+//                               /*SimplifyLibCalls*/ true,
+//                               /*HaveExceptions=*/ true,
+//                               InliningPass);
+
+
+    Passes.add(createGlobalOptimizerPass());     // Optimize out global vars
+    Passes.add(createIPSCCPPass());              // IP SCCP
+    Passes.add(createDeadArgEliminationPass());  // Dead argument elimination
+
+    Passes.add(createInstructionCombiningPass());  // Clean up after IPCP & DAE
+    Passes.add(createCFGSimplificationPass());     // Clean up after IPCP & DAE
+
+    // Start of CallGraph SCC passes.
+    Passes.add(createPruneEHPass());             // Remove dead EH info
+//    if (InliningPass)
+//        Passes.add(InliningPass);
+    Passes.add(createFunctionAttrsPass());       // Set readonly/readnone attrs
+    if (optimizeLevel > 2)
+        Passes.add(createArgumentPromotionPass());  // Scalarize uninlined fn args
+
+    // Start of function pass.
+    // Break up aggregate allocas, using SSAUpdater.
+    Passes.add(createScalarReplAggregatesPass(-1, false));
+    Passes.add(createEarlyCSEPass());  // Catch trivial redundancies
+    Passes.add(createSimplifyLibCallsPass());  // Library Call Optimizations
+    Passes.add(createJumpThreadingPass());  // Thread jumps.
+    Passes.add(createCorrelatedValuePropagationPass());  // Propagate conditionals
+    Passes.add(createCFGSimplificationPass());  // Merge & remove BBs
+    Passes.add(createInstructionCombiningPass());  // Combine silly seq's
+
+    Passes.add(createTailCallEliminationPass());  // Eliminate tail calls
+    Passes.add(createCFGSimplificationPass());  // Merge & remove BBs
+    Passes.add(createReassociatePass());  // Reassociate expressions
+    Passes.add(createLoopRotatePass());  // Rotate Loop
+    Passes.add(createLICMPass());  // Hoist loop invariants
+    Passes.add(createLoopUnswitchPass(optimizeLevel < 3));
+    Passes.add(createInstructionCombiningPass());
+    Passes.add(createIndVarSimplifyPass());  // Canonicalize indvars
+    Passes.add(createLoopIdiomPass());  // Recognize idioms like memset.
+    Passes.add(createLoopDeletionPass());  // Delete dead loops
+    if (optimizeLevel > 1)
+        Passes.add(createLoopUnrollPass());  // Unroll small loops
+    Passes.add(createInstructionCombiningPass());  // Clean up after the unroller
+    if (optimizeLevel > 1)
+        Passes.add(createGVNPass());  // Remove redundancies
+    Passes.add(createMemCpyOptPass());  // Remove memcpy / form memset
+    Passes.add(createSCCPPass());  // Constant prop with SCCP
+
+    // Run instcombine after redundancy elimination to exploit opportunities
+    // opened up by them.
+    Passes.add(createInstructionCombiningPass());
+    Passes.add(createJumpThreadingPass());  // Thread jumps
+    Passes.add(createCorrelatedValuePropagationPass());
+    Passes.add(createDeadStoreEliminationPass());  // Delete dead stores
+    Passes.add(createAggressiveDCEPass());  // Delete dead instructions
+    Passes.add(createCFGSimplificationPass());  // Merge & remove BBs
+
+    Passes.add(createStripDeadPrototypesPass());  // Get rid of dead prototypes
+
+    // GlobalOpt already deletes dead functions and globals, at -O3 try a
+    // late pass of GlobalDCE.  It is capable of deleting dead cycles.
+    if (optimizeLevel > 2)
+          Passes.add(createGlobalDCEPass());  // Remove dead fns and globals.
+
+    if (optimizeLevel > 1)
+        Passes.add(createConstantMergePass());  // Merge dup global constants
 
     FPasses->run(*module);
     Passes.run(*module);

@@ -46,7 +46,7 @@ void Cacher::addNamedStringNode(const string &key, const string &val) {
 
     node = modDef->rep->getOrInsertNamedMetadata(key);
     dList.push_back(MDString::get(getGlobalContext(), val));
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
 
 }
 
@@ -88,7 +88,7 @@ void Cacher::writeMetadata() {
                                       (*varIter)->getFullName()));
         dList.push_back(MDString::get(getGlobalContext(),
                                       (*varIter)->digest.asHex()));
-        node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+        node->addOperand(MDNode::get(getGlobalContext(), dList));
         dList.clear();
     }
 
@@ -110,7 +110,7 @@ void Cacher::writeMetadata() {
             continue;
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
     }
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
     dList.clear();
 
     // crack_defs: the symbols defined in this module that we need to rebuild
@@ -174,7 +174,7 @@ MDNode *Cacher::writeType(model::TypeDef* t) {
     // operand 2: llvm rep
     dList.push_back(NULL);
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 
@@ -218,7 +218,7 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->type->name));
     }
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 
@@ -251,7 +251,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
     else
         dList.push_back(NULL);
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 

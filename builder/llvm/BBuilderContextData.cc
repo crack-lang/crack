@@ -25,27 +25,27 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
             b.CreateCall(f);
-        
-        // XXX We used to create an "unwind" instruction here, but that seems 
-        // to cause a problem when creating a module with dependencies on 
-        // classes in an unfinished module, as we can do when specializing a 
-        // generic.  The problem is that _Unwind_Resume is resolved from the 
+
+        // XXX We used to create an "unwind" instruction here, but that seems
+        // to cause a problem when creating a module with dependencies on
+        // classes in an unfinished module, as we can do when specializing a
+        // generic.  The problem is that _Unwind_Resume is resolved from the
         // incorrect module.
-        // To deal with this, we create an explicit call to _Unwind_Resume.  
-        // The only problem here is that we have to call llvm.eh.exception to 
+        // To deal with this, we create an explicit call to _Unwind_Resume.
+        // The only problem here is that we have to call llvm.eh.exception to
         // obtain the exception object, even though we might already have one.
         LLVMContext &lctx = getGlobalContext();
-        Constant *c = mod->getOrInsertFunction("_Unwind_Resume", 
+        Constant *c = mod->getOrInsertFunction("_Unwind_Resume",
                                                Type::getVoidTy(lctx),
                                                Type::getInt8PtrTy(lctx),
                                                NULL
                                                );
         f = cast<Function>(c);
 
-        // Working around what I think is another bug in LLVM - in some 
-        // circumstances, if we just call _Unwind_Resume, the exception 
-        // personality functions don't get called and we get a null 
-        // exception object.  Introducing a call to a 
+        // Working around what I think is another bug in LLVM - in some
+        // circumstances, if we just call _Unwind_Resume, the exception
+        // personality functions don't get called and we get a null
+        // exception object.  Introducing a call to a
         // No-op function makes this go away.
         c = mod->getOrInsertFunction("__CrackNOP", Type::getVoidTy(lctx),
                                      NULL
@@ -78,7 +78,7 @@ void BBuilderContextData::CatchData::populateClassImpls(
 }
 
 void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
-    // fix all of the incomplete selector functions now that we have all of 
+    // fix all of the incomplete selector functions now that we have all of
     // the catch clauses.
     for (vector<IncompleteCatchSelector *>::iterator iter = selectors.begin();
         iter != selectors.end();
@@ -87,20 +87,20 @@ void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
         // get all of the class implementation objects into a Value vector
         vector<Value *> typeImpls;
         populateClassImpls(typeImpls, module);
-        
+
         // fix the incomplete selector
         (*iter)->typeImpls = &typeImpls;
-        (*iter)->fix();        
+        (*iter)->fix();
     }
-    
+
     // fix the switch instruction
-    const Type *int32Ty = Type::getInt32Ty(getGlobalContext());
+    Type *int32Ty = Type::getInt32Ty(getGlobalContext());
     for (int i = 0; i < catches.size(); ++i) {
-        ConstantInt *index = 
+        ConstantInt *index =
             cast<ConstantInt>(ConstantInt::get(int32Ty, i + 1));
         switchInst->addCase(index, catches[i].block);
     }
-    
+
     // do the same for all nested try/catches
     for (int childIndex = 0; childIndex < nested.size(); ++childIndex) {
         CatchData &child = *nested[childIndex];
@@ -113,14 +113,13 @@ void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
             for (int j = 0; j < child.catches.size(); ++j)
                 if (!branch.type->isDerivedFrom(child.catches[j].type.get()))
                     catchesToAdd.push_back(branch);
-            
+
             for (int j = 0; j < catchesToAdd.size(); ++j)
                 child.catches.push_back(catchesToAdd[j]);
         }
-                    
+
 
         // fix all of the selectors in the child
         child.fixAllSelectors(module);
     }
 }
-    

@@ -91,7 +91,7 @@ void BInstVarDefImpl::emitFieldAssign(IRBuilder<> &builder, Value *aggregate,
 }
 
 Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder, 
-                                     const Type *fieldType,
+                                     Type *fieldType,
                                      Value *aggregate
                                      ) {
     Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
@@ -110,12 +110,12 @@ void BOffsetFieldDefImpl::emitFieldAssign(IRBuilder<> &builder,
                                             builder.getInt8Ty()->getPointerTo()
                                             );
     fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
-    const Type *fieldPtrType = value->getType()->getPointerTo();
+    Type *fieldPtrType = value->getType()->getPointerTo();
     builder.CreateStore(value, builder.CreateBitCast(fieldPtr, fieldPtrType));
 }
 
 Value *BOffsetFieldDefImpl::emitFieldRef(IRBuilder<> &builder,
-                                         const Type *fieldType,
+                                         Type *fieldType,
                                          Value *aggregate
                                          ) {
     // cast to a byte pointer, GEP to the offset
@@ -123,7 +123,7 @@ Value *BOffsetFieldDefImpl::emitFieldRef(IRBuilder<> &builder,
                                             builder.getInt8Ty()->getPointerTo()
                                             );
     fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
-    const Type *fieldPtrType = fieldType->getPointerTo();
+    Type *fieldPtrType = fieldType->getPointerTo();
     return builder.CreateLoad(builder.CreateBitCast(fieldPtr, fieldPtrType));
 }
     

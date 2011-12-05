@@ -17,9 +17,9 @@ namespace mvll {
 class FunctionTypeDef : public BTypeDef {
 public:
     FunctionTypeDef(model::TypeDef *metaType,
-                 const std::string &name,
-                 const llvm::Type *rep
-                 );
+                    const std::string &name,
+                    llvm::Type *rep
+                    );
 
     // specializations of array types actually create a new type
     // object.

@@ -92,13 +92,13 @@ public:
     // allocate space for 1 operand
     void *operator new(size_t s);
 
-    IncompleteInstVarRef(const llvm::Type *type,
+    IncompleteInstVarRef(llvm::Type *type,
                          llvm::Value *aggregate,
                          BFieldDefImpl *fieldImpl,
                          llvm::BasicBlock *parent
                          );
 
-    IncompleteInstVarRef(const llvm::Type *type,
+    IncompleteInstVarRef(llvm::Type *type,
                          llvm::Value *aggregate,
                          BFieldDefImpl *fieldImpl,
                          llvm::Instruction *insertBefore = 0
@@ -120,14 +120,14 @@ public:
     // allocate space for 2 operands
     void *operator new(size_t s);
 
-    IncompleteInstVarAssign(const llvm::Type *type,
+    IncompleteInstVarAssign(llvm::Type *type,
                             llvm::Value *aggregate,
                             BFieldDefImpl *fieldDefImpl,
                             llvm::Value *rval,
                             llvm::BasicBlock *parent
                             );
 
-    IncompleteInstVarAssign(const llvm::Type *type,
+    IncompleteInstVarAssign(llvm::Type *type,
                             llvm::Value *aggregate,
                             BFieldDefImpl *fieldDefImpl,
                             llvm::Value *rval,
@@ -147,14 +147,14 @@ private:
     llvm::Value *ehSelector, *exception, *personalityFunc;
 
 public:
-    // pointers to the type implementation globals, which are set on 
+    // pointers to the type implementation globals, which are set on
     // completion of the catch clause.
     std::vector<llvm::Value *> *typeImpls;
 
     // allocate space for 0 operands
-    // NOTE: We don't make use of any of the operand magic because none of the 
-    // associated value objects should be replacable.  If you start seeing 
-    // value breakage in the exception selectors, look here because that 
+    // NOTE: We don't make use of any of the operand magic because none of the
+    // associated value objects should be replacable.  If you start seeing
+    // value breakage in the exception selectors, look here because that
     // assumption has probably been violated.
     void *operator new(size_t s);
 
@@ -285,7 +285,7 @@ private:
      */
     static llvm::Value *getVTableReference(llvm::IRBuilder<> &builder,
                                            BTypeDef *vtableBaseType,
-                                           const llvm::Type *finalVTableType,
+                                           llvm::Type *finalVTableType,
                                            BTypeDef *curType,
                                            llvm::Value *inst
                                            );
@@ -364,13 +364,13 @@ public:
      * ancestorPath: path from the target class to the ancestor that
      *  value is referencing an instance of.
      */
-    IncompleteSpecialize(const llvm::Type *type,
+    IncompleteSpecialize(llvm::Type *type,
                          llvm::Value *value,
                          const model::TypeDef::AncestorPath &ancestorPath,
                          llvm::Instruction *insertBefore = 0
                          );
 
-    IncompleteSpecialize(const llvm::Type *type,
+    IncompleteSpecialize(llvm::Type *type,
                          llvm::Value *value,
                          const model::TypeDef::AncestorPath &ancestorPath,
                          llvm::BasicBlock *parent
@@ -378,7 +378,7 @@ public:
 
     static Value *emitSpecializeInner(
             llvm::IRBuilder<> &builder,
-            const llvm::Type *type,
+            llvm::Type *type,
             llvm::Value *value,
             const model::TypeDef::AncestorPath &ancestorPath
             );

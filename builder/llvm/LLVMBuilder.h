@@ -144,7 +144,7 @@ class LLVMBuilder : public Builder {
         BModuleDef *bModDef;
         llvm::Module *module;
         llvm::Function *func;
-        const llvm::Type *llvmVoidPtrType;
+        llvm::Type *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *funcBlock;
@@ -188,7 +188,7 @@ class LLVMBuilder : public Builder {
         
         BTypeDefPtr getFuncType(model::Context &context,
                                 model::FuncDef *funcDef,
-                                const llvm::Type *llvmFuncType
+                                llvm::Type *llvmFuncType
                                 );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var,
                                           llvm::Value *initVal = 0

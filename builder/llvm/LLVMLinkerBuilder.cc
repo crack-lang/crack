@@ -128,7 +128,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     // final IR generation: cleanup and main
     emitAggregateCleanup(finalir);
-    BTypeDef *vtableType = 
+    BTypeDef *vtableType =
         BTypeDefPtr::rcast(context.construct->vtableBaseType);
     Value *vtableTypeBody = vtableType->getClassInstRep(finalir, 0);
     createMain(finalir, options.get(), vtableTypeBody);
@@ -227,7 +227,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     BasicBlock *temp = BasicBlock::Create(lctx, "moduleBody", func);
     builder.CreateBr(temp);
     builder.SetInsertPoint(temp);
-    
+
     createModuleCommon(context);
 
     bModDef =  new BModuleDef(name, context.ns.get(), module);
@@ -245,11 +245,11 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     addModule(BModuleDefPtr::cast(moduleDef));
 
     // get the "initialized" flag
-    GlobalVariable *moduleInit = module->getNamedGlobal(moduleDef->name + 
+    GlobalVariable *moduleInit = module->getNamedGlobal(moduleDef->name +
                                                          ":initialized"
                                                         );
-    
-    // if there was a top-level throw, we could already have a terminator.  
+
+    // if there was a top-level throw, we could already have a terminator.
     // Generate the code to set the init flag and a return instruction if not.
     if (!builder.GetInsertBlock()->getTerminator()) {
 
@@ -282,7 +282,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         builder.CreateRetVoid();
     }
 
-    // since the cleanups have to be emitted against the module context, clear 
+    // since the cleanups have to be emitted against the module context, clear
     // the unwind blocks so we generate them for the del function.
     clearCachedCleanups(context);
 
@@ -295,24 +295,24 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
     builder.SetInsertPoint(BasicBlock::Create(lctx, "", func));
-    
+
     // if the initialization flag is not set, branch to return
     BasicBlock *cleanupBlock = BasicBlock::Create(lctx, "cleanups", func),
                *retBlock = BasicBlock::Create(lctx, "done", func);
     Value *initVal = builder.CreateLoad(moduleInit);
     builder.CreateCondBr(initVal, cleanupBlock, retBlock);
-    
+
     builder.SetInsertPoint(cleanupBlock);
     closeAllCleanupsStatic(context);
     builder.CreateBr(retBlock);
-    
+
     builder.SetInsertPoint(retBlock);
     builder.CreateRetVoid();
 
     // emit a table of address/function for the module
     vector<Constant *> funcVals;
-    const Type *byteType = builder.getInt8Ty();
-    const Type *bytePtrType = byteType->getPointerTo();
+    Type *byteType = builder.getInt8Ty();
+    Type *bytePtrType = byteType->getPointerTo();
     Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
     Constant *index00[] = { zero, zero };
     Module::FunctionListType &funcList = module->getFunctionList();
@@ -322,11 +322,11 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
          ) {
         string name = funcIter->getName();
         if (!funcIter->isDeclaration()) {
-            funcVals.push_back(ConstantExpr::getBitCast(funcIter, 
+            funcVals.push_back(ConstantExpr::getBitCast(funcIter,
                                                         bytePtrType
                                                         )
                                );
-            const ArrayType *byteArrType = 
+            ArrayType *byteArrType =
                 ArrayType::get(byteType, name.size() + 1);
             Constant *funcName = ConstantArray::get(lctx, name, true);
             GlobalVariable *nameGVar =
@@ -341,16 +341,16 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
             Constant *namePtr =
                 ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
             funcVals.push_back(namePtr);
-        }            
+        }
     }
     funcVals.push_back(Constant::getNullValue(bytePtrType));
-    const ArrayType *bytePtrArrType = 
+    ArrayType *bytePtrArrType =
         ArrayType::get(bytePtrType, funcVals.size());
     GlobalVariable *funcTable = new GlobalVariable(
-        *module, bytePtrArrType, 
+        *module, bytePtrArrType,
         true,
         GlobalValue::InternalLinkage,
-        ConstantArray::get(bytePtrArrType, 
+        ConstantArray::get(bytePtrArrType,
                             funcVals
                             ),
         moduleDef->name + ":debug_func_table",
@@ -359,13 +359,13 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     );
 
     // call the function to populate debug info.
-    vector<const Type *> argTypes(1);
+    vector<Type *> argTypes(1);
     argTypes[0] = bytePtrType->getPointerTo();
     FunctionType *funcType = FunctionType::get(builder.getVoidTy(), argTypes,
                                               false
                                               );
-    Function *registerFunc = 
-        cast<Function>(module->getOrInsertFunction("__CrackRegisterFuncTable", 
+    Function *registerFunc =
+        cast<Function>(module->getOrInsertFunction("__CrackRegisterFuncTable",
                                                    funcType
                                                    )
                        );
@@ -373,7 +373,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     args[0] = ConstantExpr::getGetElementPtr(funcTable, index00, 2);
     BasicBlock &entryBlock = initFunc->getEntryBlock();
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
-    builder.CreateCall(registerFunc, args.begin(), args.end());
+    builder.CreateCall(registerFunc, args);
 
     if (debugInfo)
         delete debugInfo;

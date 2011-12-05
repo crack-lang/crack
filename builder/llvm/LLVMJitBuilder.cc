@@ -72,7 +72,7 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
                                 execEng->getPointerToFunction(delFunc)
                              );
     }
-    
+
     // mark the module as finished
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
@@ -98,7 +98,7 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
             llvm::JITEmitDebugInfo = true;
             llvm::JITExceptionHandling = true;
-            
+
             // XXX only available in debug builds of llvm?
             //if (options->verbosity > 3)
             //    llvm::DebugFlag = true;
@@ -123,16 +123,16 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
-    // if the module containing the original function has been finished, just 
+    // if the module containing the original function has been finished, just
     // add the global mapping.
     if (real->getParent()->getNamedMetadata("crack_finished")) {
         void *realAddr = execEng->getPointerToFunction(real);
         execEng->addGlobalMapping(pointer, realAddr);
     } else {
-        // push this on the list of externals - we used to assign a global mapping 
-        // for these right here, but that only works if we're guaranteed that an 
-        // imported module is closed before any of its functions are used by the 
-        // importer, and that is no longer the case after generics and ephemeral 
+        // push this on the list of externals - we used to assign a global mapping
+        // for these right here, but that only works if we're guaranteed that an
+        // imported module is closed before any of its functions are used by the
+        // importer, and that is no longer the case after generics and ephemeral
         // modules.
         externals.push_back(pair<Function *, Function *>(pointer, real));
     }
@@ -184,7 +184,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 
     string mainFuncName = name + ":main";
     llvm::Constant *c =
-        module->getOrInsertFunction(mainFuncName, Type::getVoidTy(lctx), 
+        module->getOrInsertFunction(mainFuncName, Type::getVoidTy(lctx),
                                     NULL
                                     );
     func = llvm::cast<llvm::Function>(c);
@@ -192,11 +192,11 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     createFuncStartBlocks(mainFuncName);
 
     createModuleCommon(context);
-    
+
     bindJitModule(module);
 
     bModDef =
-        new BJitModuleDef(name, context.ns.get(), module, 
+        new BJitModuleDef(name, context.ns.get(), module,
                           owner ? BJitModuleDefPtr::acast(owner) : 0
                           );
 
@@ -206,17 +206,17 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
 }
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
-    // if there was a top-level throw, we could already have a terminator.  
+    // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
     if (!builder.GetInsertBlock()->getTerminator())
         builder.CreateRetVoid();
 
     // emit the cleanup function
 
-    // since the cleanups have to be emitted against the module context, clear 
+    // since the cleanups have to be emitted against the module context, clear
     // the unwind blocks so we generate them for the del function.
     clearCachedCleanups(context);
-    
+
     Function *mainFunc = func;
     LLVMContext &lctx = getGlobalContext();
     llvm::Constant *c =
@@ -230,16 +230,16 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // restore the main function
     func = mainFunc;
 
-    // work around for an LLVM bug: When doing one of its internal exception 
-    // handling passes, LLVM can insert llvm.eh.exception() intrinsics with 
-    // calls to an llvm.eh.exception() function that are not part of the 
-    // module.  So this loop replaces all such calls with the correct instance 
+    // work around for an LLVM bug: When doing one of its internal exception
+    // handling passes, LLVM can insert llvm.eh.exception() intrinsics with
+    // calls to an llvm.eh.exception() function that are not part of the
+    // module.  So this loop replaces all such calls with the correct instance
     // of the function.
     Function *ehEx = getDeclaration(module, Intrinsic::eh_exception);
     for (Module::iterator func = module->begin(); func != module->end();
          ++func
          )
-        for (Function::iterator block = func->begin(); block != func->end(); 
+        for (Function::iterator block = func->begin(); block != func->end();
              ++block
              )
             for (BasicBlock::iterator inst = block->begin();
@@ -278,7 +278,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
         execEng->addGlobalMapping(externals[i].first, realAddr);
     }
     externals.clear();
-    
+
     // build the debug tables
     Module::FunctionListType &funcList = module->getFunctionList();
     for (Module::FunctionListType::iterator funcIter = funcList.begin();
@@ -317,7 +317,7 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
-    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);    
+    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
 }
 
 void LLVMJitBuilder::dump() {
@@ -416,7 +416,7 @@ void LLVMJitBuilder::cacheModule(model::Context &context,
 
     node = module->getOrInsertNamedMetadata("crack_entry_func");
     dList.push_back(func);
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
 
     Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
     c.saveToCache();

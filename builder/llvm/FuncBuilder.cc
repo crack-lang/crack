@@ -31,7 +31,7 @@ FuncBuilder::FuncBuilder(Context &context, FuncDef::Flags flags,
 void FuncBuilder::finish(bool storeDef) {
     size_t argCount = funcDef->args.size();
     assert(argIndex == argCount);
-    vector<const Type *> llvmArgs(argCount +
+    vector<Type *> llvmArgs(argCount +
                                   (receiverType ? 1 : 0)
                                   );
 
@@ -46,11 +46,11 @@ void FuncBuilder::finish(bool storeDef) {
         llvmArgs[i] = BTypeDefPtr::rcast((*iter)->type)->rep;
 
     // register the function with LLVM
-    const Type *rawRetType =
-            returnType->rep ? returnType->rep.get() :
-            Type::getVoidTy(getGlobalContext());
+    Type *rawRetType = returnType->rep ? returnType->rep :
+                                         Type::getVoidTy(getGlobalContext());
     FunctionType *llvmFuncType =
-            FunctionType::get(rawRetType, llvmArgs, funcDef->flags & FuncDef::variadic);
+            FunctionType::get(rawRetType, llvmArgs,
+                              funcDef->flags & FuncDef::variadic);
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 

@@ -13,7 +13,7 @@ using namespace model;
 using namespace builder::mvll;
 
 ArrayTypeDef::ArrayTypeDef(TypeDef *metaType, const std::string &name,
-                           const Type *rep
+                           Type *rep
                            ) : BTypeDef(metaType, name, rep) {
 
     defaultInitializer = new NullConst(this);
@@ -52,7 +52,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
 
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
-    // create the implementation (this can be called before the meta-class is 
+    // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
         createClassImpl(context, tempSpec.get());
