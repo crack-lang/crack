@@ -732,15 +732,8 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     // get around the temporary lack of automatic member initialization)
 
     // calculate the size of instances of the type
-    Value *null = Constant::getNullValue(tp);
     assert(llvmIntType && "integer type has not been initialized");
-    Value *startPos = builder.CreatePtrToInt(null, llvmIntType);
-    Value *endPos =
-        builder.CreatePtrToInt(
-            builder.CreateConstGEP1_32(null, 1),
-            llvmIntType
-            );
-    Value *size = builder.CreateSub(endPos, startPos);
+    Value *size = IncompleteSizeOf::emitSizeOf(context, btype, llvmIntType);
 
     // if a count expression was supplied, emit it.  Otherwise, count is a
     // constant 1
@@ -2513,7 +2506,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // Actual type is {}** (another layer of pointer indirection) because
     // classes need to be pointer types.
     vector<Type *> members;
-    Type *vtableType = StructType::get(getGlobalContext(), members);
+    Type *vtableType = StructType::create(getGlobalContext(), members,
+                                          ".builtin.VTableBase"
+                                          );
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
     metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;
@@ -2597,7 +2592,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
                                   context.construct->vtableBaseType);
-    cast<StructType>(vtableBaseType->rep)->setName(".struct.vtableBase");
 
     // all of the "extern" primitive functions have to be created in each of
     // the modules - we can not directly reference across modules.

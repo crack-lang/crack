@@ -22,6 +22,7 @@ namespace builder { namespace mvll {
     class IncompleteVTableInit;
     class IncompleteSpecialize;
     class IncompleteVirtualFunc;
+    class IncompleteSizeOf;
 } }
 
 namespace llvm {
@@ -52,6 +53,10 @@ namespace llvm {
     template<>
     struct OperandTraits<builder::mvll::IncompleteVirtualFunc> :
         VariadicOperandTraits<builder::mvll::IncompleteVirtualFunc, 1> {
+    };
+    template<>
+    struct OperandTraits<builder::mvll::IncompleteSizeOf> :
+        VariadicOperandTraits<builder::mvll::IncompleteSizeOf, 1> {
     };
 
     class BasicBlock;
@@ -399,6 +404,41 @@ public:
 
 };
 
+class IncompleteSizeOf : public PlaceholderInstruction {
+private:
+    llvm::Type *type, *intType;
+
+public:
+    // allocate space for 0 operands
+    void *operator new(size_t s);
+
+    virtual llvm::Instruction *clone_impl() const;
+
+    IncompleteSizeOf(llvm::Type *type,
+                     llvm::Type *intType,
+                     llvm::Instruction *insertBefore = 0
+                     );
+
+    IncompleteSizeOf(llvm::Type *type,
+                     llvm::Type *intType,
+                     llvm::BasicBlock *parent
+                     );
+
+    static llvm::Value *emitInner(llvm::Type *type, llvm::Type *intType,
+                                  llvm::IRBuilder<> &builder
+                                  );
+
+    virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    // Emit the sizeof instructions if the type is finished, creates the
+    // placeholders if not.
+    static Value *emitSizeOf(model::Context &context,
+                             BTypeDef *type,
+                             llvm::Type *intType
+                             );
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+};
 
 } // end namespace builder::vmll
 } // end namespace builder

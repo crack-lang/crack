@@ -724,3 +724,71 @@ Value *IncompleteSpecialize::emitSpecialize(
     }
 
 }
+
+// IncompleteSizeOf
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteSizeOf, Value);
+void * IncompleteSizeOf::operator new(size_t s) {
+    return User::operator new(s, 0);
+}
+
+Instruction *IncompleteSizeOf::clone_impl() const {
+    return new IncompleteSizeOf(type, intType);
+}
+
+IncompleteSizeOf::IncompleteSizeOf(Type *type,
+                                   Type *intType,
+                                   Instruction *insertBefore
+                                   ) :
+    type(type),
+    intType(intType),
+    PlaceholderInstruction(
+        IntegerType::get(type->getContext(), 32),
+        insertBefore,
+        OperandTraits<IncompleteSizeOf>::op_begin(this),
+        OperandTraits<IncompleteSizeOf>::operands(this)
+        ) {
+}
+
+IncompleteSizeOf::IncompleteSizeOf(Type *type,
+                                   Type *intType,
+                                   BasicBlock *parent
+                                   ) :
+    type(type),
+    intType(intType),
+    PlaceholderInstruction(
+        IntegerType::get(type->getContext(), 32),
+        parent,
+        OperandTraits<IncompleteSizeOf>::op_begin(this),
+        OperandTraits<IncompleteSizeOf>::operands(this)
+        ) {
+}
+
+Value *IncompleteSizeOf::emitInner(Type *type, Type *intType,
+                                   IRBuilder<> &builder
+                                   ) {
+    Value *null = Constant::getNullValue(type);
+    Value *offset = builder.CreateConstGEP1_32(null, 1);
+    return builder.CreatePtrToInt(offset, intType);
+}
+
+void IncompleteSizeOf::insertInstructions(IRBuilder<> &builder) {
+    replaceAllUsesWith(emitInner(type, intType, builder));
+}
+
+Value *IncompleteSizeOf::emitSizeOf(Context &context,
+                                    BTypeDef *type,
+                                    Type *intType
+                                    ) {
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    if (type->complete) {
+        return emitInner(type->rep, intType, b.builder);
+    } else {
+        IncompleteSizeOf *placeholder =
+            new IncompleteSizeOf(type->rep, intType,
+                                 b.builder.GetInsertBlock()
+                                 );
+        type->addPlaceholder(placeholder);
+        return placeholder;
+    }
+}
