@@ -1319,7 +1319,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
          funcCall->receiver = operand;
       expr = funcCall->foldConstants();
    } else if (tok.isLCurly()) {
-      assert(false);
+      unexpected(tok, "blocks as expressions are not supported yet");
    } else {
       unexpected(tok, "expected an expression");
    }
