@@ -31,7 +31,7 @@ class Token {
                      // communicate actions that need to be performed in the 
                      // token stream.
                      popErrCtx, // pop error context
-		    } Type;
+      } Type;
 
    private:
 
@@ -59,7 +59,7 @@ class Token {
 
       /** dump a representation of the token to a stream */
       friend std::ostream &operator <<(std::ostream &out, const Token &tok) {
-	 return out << tok.loc << ":\"" << tok.data;
+      return out << tok.loc << ":\"" << tok.data;
       }
 
       /** Methods to check the token type */
