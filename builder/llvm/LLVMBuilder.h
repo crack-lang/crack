@@ -31,6 +31,7 @@ class LLVMBuilder : public Builder {
 
         llvm::Function *callocFunc;
         DebugInfo *debugInfo;
+        BTypeDefPtr exStructType;
         
         // emit all cleanups for context and all parent contextts up to the 
         // level of the function
@@ -40,6 +41,13 @@ class LLVMBuilder : public Builder {
         std::map<llvm::Function *, void *> primFuncs;
         
         LLVMBuilderPtr rootBuilder;
+        
+        BTypeDef *getExStructType() {
+            if (rootBuilder)
+                return rootBuilder->exStructType.get();
+            else
+                return exStructType.get();
+        }
 
         /**
          * Creates a new LLVM module and initializes all of the exception 

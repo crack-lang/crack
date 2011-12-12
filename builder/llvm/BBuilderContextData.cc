@@ -12,49 +12,33 @@
 #include "model/Expr.h"
 #include "BTypeDef.h"
 #include "Incompletes.h"
+#include "VarDefs.h"
 
 using namespace std;
 using namespace llvm;
 using namespace builder::mvll;
+using namespace model;
+
+Value *
+BBuilderContextData::getExceptionLandingPadResult(IRBuilder<> &builder) {
+    VarDefPtr exStruct = context->ns->lookUp(":exStruct");
+    BHeapVarDefImplPtr exStructImpl =
+        BHeapVarDefImplPtr::rcast(exStruct->impl);
+    return builder.CreateLoad(exStructImpl->rep);
+}
 
 BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
+
         Module *mod = func->getParent();
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
             b.CreateCall(f);
 
-        // XXX We used to create an "unwind" instruction here, but that seems
-        // to cause a problem when creating a module with dependencies on
-        // classes in an unfinished module, as we can do when specializing a
-        // generic.  The problem is that _Unwind_Resume is resolved from the
-        // incorrect module.
-        // To deal with this, we create an explicit call to _Unwind_Resume.
-        // The only problem here is that we have to call llvm.eh.exception to
-        // obtain the exception object, even though we might already have one.
-        LLVMContext &lctx = getGlobalContext();
-        Constant *c = mod->getOrInsertFunction("_Unwind_Resume",
-                                               Type::getVoidTy(lctx),
-                                               Type::getInt8PtrTy(lctx),
-                                               NULL
-                                               );
-        f = cast<Function>(c);
-
-        // Working around what I think is another bug in LLVM - in some
-        // circumstances, if we just call _Unwind_Resume, the exception
-        // personality functions don't get called and we get a null
-        // exception object.  Introducing a call to a
-        // No-op function makes this go away.
-        c = mod->getOrInsertFunction("__CrackNOP", Type::getVoidTy(lctx),
-                                     NULL
-                                     );
-        Function *nopFn = cast<Function>(c);
-        b.CreateCall(nopFn);
-        Function *exFn = getDeclaration(mod, Intrinsic::eh_exception);
-        b.CreateCall(f, b.CreateCall(exFn));
-        b.CreateUnreachable();
+        // create the resume instruction
+        b.CreateResume(getExceptionLandingPadResult(b));
     }
 
     // assertion to make sure this is the right unwind block

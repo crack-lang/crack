@@ -149,7 +149,7 @@ public:
 
 class IncompleteCatchSelector : public PlaceholderInstruction {
 private:
-    llvm::Value *ehSelector, *exception, *personalityFunc;
+    llvm::Value *personalityFunc;
 
 public:
     // pointers to the type implementation globals, which are set on
@@ -163,15 +163,11 @@ public:
     // assumption has probably been violated.
     void *operator new(size_t s);
 
-    IncompleteCatchSelector(llvm::Value *ehSelector,
-                            llvm::Value *exception,
-                            llvm::Value *personalityFunc,
+    IncompleteCatchSelector(llvm::Value *personalityFunc,
                             llvm::BasicBlock *parent
                             );
 
-    IncompleteCatchSelector(llvm::Value *ehSelector,
-                            llvm::Value *exception,
-                            llvm::Value *personalityFunc,
+    IncompleteCatchSelector(llvm::Value *personalityFunc,
                             llvm::Instruction *insertBefore = 0
                             );
 

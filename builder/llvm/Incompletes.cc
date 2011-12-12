@@ -139,9 +139,7 @@ void *IncompleteCatchSelector::operator new(size_t s) {
     return User::operator new(s, 0);
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
-                                                 Value *exception,
-                                                 Value *personalityFunc,
+IncompleteCatchSelector::IncompleteCatchSelector(Value *personalityFunc,
                                                  BasicBlock *parent
                                                  ) :
     PlaceholderInstruction(
@@ -150,15 +148,11 @@ IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
     ),
-    ehSelector(ehSelector),
-    exception(exception),
     personalityFunc(personalityFunc),
     typeImpls(0) {
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
-                                                 Value *exception,
-                                                 Value *personalityFunc,
+IncompleteCatchSelector::IncompleteCatchSelector(Value *personalityFunc,
                                                  Instruction *insertBefore
                                                  ) :
     PlaceholderInstruction(
@@ -167,8 +161,6 @@ IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
     ),
-    ehSelector(ehSelector),
-    exception(exception),
     personalityFunc(personalityFunc),
     typeImpls(0) {
 }
@@ -177,18 +169,18 @@ IncompleteCatchSelector::~IncompleteCatchSelector() {
 }
 
 Instruction *IncompleteCatchSelector::clone_impl() const {
-    return new IncompleteCatchSelector(ehSelector, exception, personalityFunc);
+    return new IncompleteCatchSelector(personalityFunc);
 }
 
 void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
+    LandingPadInst *lp = builder.CreateLandingPad(builder.getInt8PtrTy(),
+                                                  personalityFunc,
+                                                  typeImpls->size()
+                                                  );
     vector<Value *> args(3 + typeImpls->size());
-    args[0] = exception;
-    args[1] = personalityFunc;
-    int i;
-    for (i = 0; i < typeImpls->size(); ++i)
-        args[i + 2] = (*typeImpls)[i];
-    args[i + 2] = Constant::getNullValue(builder.getInt8Ty()->getPointerTo());
-    replaceAllUsesWith(builder.CreateCall(ehSelector, args));
+    for (int i = 0; i < typeImpls->size(); ++i)
+        lp->addClause((*typeImpls)[i]);
+    replaceAllUsesWith(lp);
 }
 
 // IncompleteNarrower

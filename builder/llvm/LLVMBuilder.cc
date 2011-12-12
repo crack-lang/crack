@@ -208,8 +208,8 @@ namespace {
                                                           );
         ContextPtr lexicalContext =
             classCtx->createSubContext(Context::composite, ns.get());
-        BBuilderContextData *bdata;
-        lexicalContext->builderData = bdata = new BBuilderContextData();
+        BBuilderContextData *bdata =
+            BBuilderContextData::get(lexicalContext.get());
 
         istringstream src(temp);
         try {
@@ -314,9 +314,11 @@ namespace {
     }
 
     Value *getExceptionObjectValue(Context &context, IRBuilder<> &builder) {
-        VarDefPtr exObj = context.ns->lookUp(":exceptionObject");
-        BHeapVarDefImplPtr exObjImpl = BHeapVarDefImplPtr::rcast(exObj->impl);
-        return builder.CreateLoad(exObjImpl->rep);
+        VarDefPtr exStr = context.ns->lookUp(":exStruct");
+        BHeapVarDefImplPtr exStrImpl = BHeapVarDefImplPtr::rcast(exStr->impl);
+        return builder.CreateLoad(
+            builder.CreateConstGEP1_32(exStrImpl->rep, 0)
+        );
     }
 
 } // anon namespace
@@ -1088,17 +1090,6 @@ bool LLVMBuilder::suppressCleanups() {
 
 
 BranchpointPtr LLVMBuilder::emitBeginTry(model::Context &context) {
-    // make sure we have the special exception variables installed in the
-    // context.
-    if (!context.ns->lookUp(":exceptionSelector")) {
-        createSpecialVar(context.ns.get(), context.construct->int32Type.get(),
-                         ":exceptionSelector"
-                         );
-        createSpecialVar(context.ns.get(), context.construct->voidptrType.get(),
-                         ":exceptionObject"
-                         );
-    }
-
     BasicBlock *catchSwitch = BasicBlock::Create(getGlobalContext(),
                                                  "catch_switch",
                                                  func
@@ -1300,8 +1291,8 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
                                       FuncDef *existing
                                       ) {
     // store the current function and block in the context
-    BBuilderContextData *contextData;
-    context.builderData = contextData = new BBuilderContextData();
+    BBuilderContextData *contextData =
+        BBuilderContextData::get(&context);
     contextData->func = func;
     contextData->block = builder.GetInsertBlock();
 
@@ -1331,7 +1322,6 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
             debugInfo->emitFunctionDef(name, context.getLocation());
             debugInfo->emitLexicalBlock(context.getLocation());
         }
-
 
         f.finish(false);
         funcDef = f.funcDef;
@@ -1382,6 +1372,9 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     for (int i = 0; i < args.size(); ++i)
         a[i]->impl =
             BArgVarDefImplPtr::arcast(a[i]->impl)->promote(*this, a[i].get());
+
+    // create a variable to hold the exception info from the landing pad
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 
     return funcDef;
 }
@@ -1515,8 +1508,8 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        TypeDef *forwardDef
                                        ) {
     assert(!context.builderData);
-    BBuilderContextData *bdata;
-    context.builderData = bdata = new BBuilderContextData();
+    BBuilderContextData *bdata =
+        BBuilderContextData::get(&context);
 
     // find the first base class with a vtable
     BTypeDef *baseWithVTable = 0;
@@ -2478,6 +2471,18 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->functionType = functionType;
     deferMetaClass.push_back(functionType);
 
+    {
+        // add the exception structure type (this is required for creating any
+        // kind of function)
+        vector<Type *> elems(2);
+        elems[0] = builder.getInt8PtrTy();
+        elems[1] = builder.getInt32Ty();
+        exStructType = new BTypeDef(metaType.get(), ":ExStruct",
+                                    StructType::get(lctx, elems),
+                                    false
+                                    );
+    }
+
     // now that we have byteptr and array and all of the integer types, we can
     // initialize the body of Class (the meta-type) and create an
     // implementation object for it.
@@ -2696,6 +2701,9 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     if (options->statsMode) {
         context.construct->stats->switchState(oldStatState);
     }
+
+    // create the exception structure for the module main function
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 
 }
 

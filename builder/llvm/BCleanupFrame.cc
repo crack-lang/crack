@@ -85,6 +85,10 @@ BasicBlock *BCleanupFrame::getLandingPad(
     BasicBlock *&lp =
         (cleanups.size()) ? cleanups.front().landingPad : landingPad;
 
+    // look up the exception structure variable and get its type
+    VarDefPtr exStructVar = context->ns->lookUp(":exStruct");
+    Type *exStructType = BTypeDefPtr::arcast(exStructVar->type)->rep;
+
     if (!lp) {
         // get the builder
         LLVMBuilder &llvmBuilder =
@@ -92,53 +96,32 @@ BasicBlock *BCleanupFrame::getLandingPad(
 
         lp = BasicBlock::Create(getGlobalContext(), "lp", llvmBuilder.func);
         IRBuilder<> b(lp);
-        Type *i8PtrType = b.getInt8Ty()->getPointerTo();
+        Type *i8PtrType = b.getInt8PtrTy();
 
-        // get the exception
-        Function *exceptionFunc =
-            getDeclaration(llvmBuilder.module, Intrinsic::eh_exception);
-        assert(exceptionFunc);
-        Value *exceptionValue = b.CreateCall(exceptionFunc);
+        // get the personality func
+        Value *personality =llvmBuilder.exceptionPersonalityFunc;
 
-        // cast the personality to i8*
-        Value *personality =
-            b.CreatePointerCast(llvmBuilder.exceptionPersonalityFunc,
-                                i8PtrType
-                                );
-
-        // generate the selection function to figure out what to do about it.
-        Function *selectorFunc =
-            llvmBuilder.module->getFunction("llvm.eh.selector");
-
+        // create a catch selector or a cleanup selector
+        Value *exStruct;
         if (cdata) {
             // We're in a try/catch.  create the incomplete selector function
             // call (class impls will get filled in later)
-            IncompleteCatchSelector *selectorValue =
-                new IncompleteCatchSelector(selectorFunc, exceptionValue,
-                                            personality,
-                                            b.GetInsertBlock()
-                                            );
-            cdata->selectors.push_back(selectorValue);
-
-            // store the exception selector
-            VarDefPtr vd = context->ns->lookUp(":exceptionSelector");
-            BMemVarDefImpl *impl = BMemVarDefImplPtr::rcast(vd->impl);
-            b.CreateStore(selectorValue, impl->getRep(llvmBuilder));
-
-            // store the exception object
-            vd = context->ns->lookUp(":exceptionObject");
-            impl = BMemVarDefImplPtr::rcast(vd->impl);
-            b.CreateStore(exceptionValue, impl->getRep(llvmBuilder));
-
+            IncompleteCatchSelector *sel  =
+                new IncompleteCatchSelector(personality, b.GetInsertBlock());
+            cdata->selectors.push_back(sel);
+            exStruct = sel;
         } else {
             // cleanups only
-            vector<Value *> args(3);
-            args[0] = exceptionValue;
-            args[1] = personality;
-            args[2] = Constant::getNullValue(i8PtrType);
-            b.CreateCall(selectorFunc, args);
+            LandingPadInst *lpi =
+                b.CreateLandingPad(exStructType, personality, 0);
+            lpi->setCleanup(true);
+            exStruct = lpi;
         }
 
+        // get the function-wide exception structure
+        BMemVarDefImpl *exStructImpl =
+            BMemVarDefImplPtr::rcast(exStructVar->impl);
+        b.CreateStore(exStruct, exStructImpl->getRep(llvmBuilder));
 
         b.CreateBr(next);
     }
