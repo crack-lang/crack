@@ -7,6 +7,7 @@
 #include <llvm/Support/IRBuilder.h>
 #include "builder/Builder.h"
 #include "BTypeDef.h"
+#include "BBuilderContextData.h"
 
 namespace llvm {
     class Module;
@@ -211,6 +212,17 @@ class LLVMBuilder : public Builder {
 
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);
+
+        /** 
+         * Create a landing pad block. 
+         * @param next the block after the landing pad
+         * @param cdata catch data or null if this is not a catch context.
+         */
+        llvm:: BasicBlock *createLandingPad(
+            model::Context &context,
+            llvm::BasicBlock *next,
+            BBuilderContextData::CatchData *cdata
+        );
 
         virtual void addGlobalVarMapping(llvm::GlobalValue *decl,
                                          llvm::GlobalValue *externalDef

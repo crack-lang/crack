@@ -381,6 +381,9 @@ void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
     }
 }
 
+// this is confusingly named - it returns a block suitable for use in the
+// "unwind" clause of an invoke, which is actually a landing pad (elsewhere
+// we're using "unwind" to refer to the "resume" block)
 BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
     // get the catch-level context and unwind block
     ContextPtr outerContext = context.getCatch();
@@ -1047,8 +1050,11 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
     BBuilderContextData *bdata;
     if (context.emittingCleanups &&
         (bdata = BBuilderContextDataPtr::rcast(context.builderData))
-        )
-        followingBlock = cleanupBlock = bdata->nextCleanupBlock;
+        ) {
+        followingBlock = bdata->nextCleanupBlock;
+        if (followingBlock)
+            cleanupBlock = createLandingPad(context, followingBlock, 0);
+    }
 
     // otherwise, create a new normal destinatation block and get the cleanup
     // block.
@@ -1078,6 +1084,52 @@ void LLVMBuilder::emitExceptionCleanupExpr(Context &context) {
                          );
     if (followingBlock != cleanupBlock)
         builder.SetInsertPoint(followingBlock);
+}
+
+BasicBlock *LLVMBuilder::createLandingPad(
+    Context &context,
+    BasicBlock *next,
+    BBuilderContextData::CatchData *cdata
+) {
+    BasicBlock *lp;
+
+    // look up the exception structure variable and get its type
+    VarDefPtr exStructVar = context.ns->lookUp(":exStruct");
+    Type *exStructType = BTypeDefPtr::arcast(exStructVar->type)->rep;
+
+    lp = BasicBlock::Create(getGlobalContext(), "lp", func);
+    IRBuilder<> b(lp);
+    Type *i8PtrType = b.getInt8PtrTy();
+
+    // get the personality func
+    Value *personality = exceptionPersonalityFunc;
+
+    // create a catch selector or a cleanup selector
+    Value *exStruct;
+    if (cdata) {
+        // We're in a try/catch.  create the incomplete selector function
+        // call (class impls will get filled in later)
+        IncompleteCatchSelector *sel  =
+            new IncompleteCatchSelector(personality, b.GetInsertBlock());
+        cdata->selectors.push_back(sel);
+        exStruct = sel;
+    } else {
+        // cleanups only
+        LandingPadInst *lpi =
+            b.CreateLandingPad(exStructType, personality, 0);
+        lpi->setCleanup(true);
+        exStruct = lpi;
+    }
+
+    // get the function-wide exception structure and store the landingpad
+    // result in it.
+    BMemVarDefImpl *exStructImpl =
+        BMemVarDefImplPtr::rcast(exStructVar->impl);
+    b.CreateStore(exStruct, exStructImpl->getRep(*this));
+
+    b.CreateBr(next);
+
+    return lp;
 }
 
 bool LLVMBuilder::suppressCleanups() {
