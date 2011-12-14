@@ -16,6 +16,9 @@ a[int(0)] = 100;
 if (a[int(0)] != 100)
     puts('FAILED int indexing');
 
+if ((a[0] = 200) != 200)
+    puts('FAILED array assignment does not work as an expression');
+
 class A {} class B : A {}
 aa := array[A](1);
 aa[0] = B();
