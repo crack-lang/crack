@@ -49,12 +49,33 @@ class PollEvent : Object, PollEvt {
 ## IPv4 address.
 class InetAddress : Address {
 
+    ## Construct an address from the dotted values of the IP address and a 
+    ## port number represented as a host-style integer (for example
+    ## InetAddr(127, 0, 0, 1, 80) would talk to the local HTTP server)
     oper init(byte a, byte b, byte c, byte d, int port) : 
         Address(SockAddrIn(a, b, c, d, port)) {
     }
 
+    ## Constructs an address from an IP address and port, both represented as 
+    ## host-style integers.
     oper init(uint32 addr, uint port) :
         Address(SockAddrIn(addr, port)) {
+    }
+    
+    ## Returns the IPv4 address as a host-style integer.
+    uint32 getAddr() {
+        return SockAddrIn.unsafeCast(_addr).addr;
+    }
+    
+    ## Returns the port number as a host-style integer.
+    uint getPort() {
+        return SockAddrIn.unsafeCast(_addr).port;
+    }
+    
+    ## Construct a new address from the specified IP address and the given 
+    ## port.
+    oper init(InetAddress other, uint port) :
+        Address(SockAddrIn(other.getAddr(), port)) {
     }
     
     Address create() {
