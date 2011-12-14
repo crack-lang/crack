@@ -62,6 +62,14 @@ if (1) {
         cout `FAILED !match() not starting with matching string\n`;
 }
 
+# regex null termination problem
+if (1) {
+    s := 'xxabc';
+    rx := Regex(s.slice(0, 2));
+    if (!rx.match('xxfoo'))
+        cout `FAILED regex constructed from substring\n`;
+}
+
 # simple test of functors
 if (1) {
     class F : Object @implements Functor2[void, Match, Writer] {
