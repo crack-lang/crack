@@ -163,11 +163,13 @@ public:
     // assumption has probably been violated.
     void *operator new(size_t s);
 
-    IncompleteCatchSelector(llvm::Value *personalityFunc,
+    IncompleteCatchSelector(llvm::Type *type,
+                            llvm::Value *personalityFunc,
                             llvm::BasicBlock *parent
                             );
 
-    IncompleteCatchSelector(llvm::Value *personalityFunc,
+    IncompleteCatchSelector(llvm::Type *type,
+                            llvm::Value *personalityFunc,
                             llvm::Instruction *insertBefore = 0
                             );
 

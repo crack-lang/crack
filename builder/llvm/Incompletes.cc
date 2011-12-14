@@ -139,11 +139,12 @@ void *IncompleteCatchSelector::operator new(size_t s) {
     return User::operator new(s, 0);
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *personalityFunc,
+IncompleteCatchSelector::IncompleteCatchSelector(Type *type,
+                                                 Value *personalityFunc,
                                                  BasicBlock *parent
                                                  ) :
     PlaceholderInstruction(
-        Type::getInt32Ty(getGlobalContext()),
+        type,
         parent,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
@@ -152,11 +153,12 @@ IncompleteCatchSelector::IncompleteCatchSelector(Value *personalityFunc,
     typeImpls(0) {
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *personalityFunc,
+IncompleteCatchSelector::IncompleteCatchSelector(Type *type,
+                                                 Value *personalityFunc,
                                                  Instruction *insertBefore
                                                  ) :
     PlaceholderInstruction(
-        Type::getInt32Ty(getGlobalContext()),
+        type,
         insertBefore,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
@@ -169,7 +171,7 @@ IncompleteCatchSelector::~IncompleteCatchSelector() {
 }
 
 Instruction *IncompleteCatchSelector::clone_impl() const {
-    return new IncompleteCatchSelector(personalityFunc);
+    return new IncompleteCatchSelector(getType(), personalityFunc);
 }
 
 void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {

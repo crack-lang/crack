@@ -1110,7 +1110,9 @@ BasicBlock *LLVMBuilder::createLandingPad(
         // We're in a try/catch.  create the incomplete selector function
         // call (class impls will get filled in later)
         IncompleteCatchSelector *sel  =
-            new IncompleteCatchSelector(personality, b.GetInsertBlock());
+            new IncompleteCatchSelector(exStructType, personality,
+                                        b.GetInsertBlock()
+                                        );
         cdata->selectors.push_back(sel);
         exStruct = sel;
     } else {
@@ -1499,8 +1501,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
 
 namespace {
     void createOperClassFunc(Context &context,
-                             BTypeDef *objClass,
-                             BTypeDef *metaClass
+                             BTypeDef *objClass
                              ) {
 
         // build a local context to hold the "this"
@@ -1510,9 +1511,11 @@ namespace {
                          );
         localCtx.addDef(new ArgDef(objClass, "this"));
 
+        BTypeDef *classType =
+            BTypeDefPtr::arcast(context.construct->classType);
         FuncBuilder funcBuilder(localCtx,
                                 FuncDef::method | FuncDef::virtualized,
-                                metaClass,
+                                classType,
                                 "oper class",
                                 0
                                 );
@@ -1545,11 +1548,14 @@ namespace {
                                                funcBuilder.funcDef->rep
                                                );
 
-        // body of the function: load the global variable and return it.
+        // body of the function: load the class instance global variable
         IRBuilder<> builder(block);
         BGlobalVarDefImpl *impl =
             BGlobalVarDefImplPtr::arcast(objClass->impl);
         Value *val = builder.CreateLoad(impl->rep);
+
+        // extract the Class instance from it and return it.
+        val = builder.CreateConstGEP2_32(val, 0, 0);
         builder.CreateRet(val);
     }
 }
@@ -1607,9 +1613,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     // create the "oper class" function - currently returns voidptr, but
     // that's good enough for now.
     if (baseWithVTable)
-        createOperClassFunc(context, type.get(),
-                            BTypeDefPtr::arcast(type->type)
-                            );
+        createOperClassFunc(context, type.get());
 
     return type.get();
 }
@@ -2578,7 +2582,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createClassImpl(context, vtableBaseType);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
-    createOperClassFunc(context, vtableBaseType, metaType.get());
+    createOperClassFunc(context, vtableBaseType);
 
     // build VTableBase's vtable
     VTableBuilder vtableBuilder(this, vtableBaseType);
