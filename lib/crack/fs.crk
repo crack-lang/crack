@@ -3,7 +3,7 @@
 
 import crack.runtime basename, chdir, errno, fileExists, free, fileRemove,
     getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir,
-    DirEntry, O_CREAT, O_RDONLY, O_WRONLY, PATH_MAX, S_IFDIR;
+    DirEntry, O_CREAT, O_RDONLY, O_WRONLY, PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
@@ -192,14 +192,14 @@ class RealPath : Path {
         bool funcName() {
             Stat st = {};
             rc := stat(__path.buffer, st);
-            result := !rc && st.st_mode & S_IFDIR;
+            result := !rc && st.st_mode & constName;
             free(st);
             return result;
         }
     }
 
     @__stater(isDir, S_IFDIR)
-    @__stater(isLink, S_IFLINK)
+    @__stater(isLink, S_IFLNK)
 
     Reader reader() {
         fd := open(__path.buffer, O_RDONLY, 0);
