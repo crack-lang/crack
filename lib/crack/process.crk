@@ -1,8 +1,8 @@
 ## This module provides a Process class for managing sub processes
 ## Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.runtime runChildProcess, waitProcess, signalProcess, SIGKILL,
-                     SIGTERM, PipeDesc, free, closeProcess;
+import crack.runtime close, runChildProcess, waitProcess, signalProcess,
+                     SIGKILL, SIGTERM, PipeDesc, free, closeProcess;
 
 import crack.io FDReader, FDWriter, StringFormatter;
 import crack.lang ManagedBuffer, AppendBuffer;
@@ -20,6 +20,9 @@ int CRK_PIPE_STDOUT        = 0x2;
 int CRK_PIPE_STDERR        = 0x4;
 
 import crack.io cout;
+
+class Process;
+FDWriter _makeWriter(Process proc, int fd);
 
 class Process {
 
@@ -54,6 +57,13 @@ class Process {
         }
     }
 
+    oper del() {
+        close(_pd.stdin);
+        close(_pd.stdout);
+        close(_pd.stderr);
+        free(_pd);
+    }
+
     String _readPipe(int pipe) {
         if (pipe < 0)
             return ""; // XXX null?
@@ -82,6 +92,11 @@ class Process {
             return _readPipe(_pd.stderr);
         else
             return "";
+    }
+
+    ## Returns a writer to the process that writes to standard input.
+    FDWriter writer() {
+        return _makeWriter(this, _pd.stdin);
     }
 
     int getPid() { return _pid; }
@@ -163,3 +178,10 @@ class Process {
     }
 
 }
+
+class _ProcWriter : FDWriter {
+    Process __process;
+    oper init(Process process, int fd) : FDWriter(fd), __process = process {}
+}
+
+FDWriter _makeWriter(Process proc, int fd) { return _ProcWriter(proc, fd); }
