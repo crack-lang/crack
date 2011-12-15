@@ -1,3 +1,5 @@
+# Copyright 2011 Google Inc
+# Generic tree map implementation
 
 import crack.lang cmp, AssertionError, KeyError;
 import crack.io cout, Formatter;

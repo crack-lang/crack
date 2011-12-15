@@ -54,9 +54,12 @@
                                  );
 
     class SDL_Event;
+    class SDL_Rect;
 
     SDL_Event SDL_EventNew();
     int SDL_Event_GetType(SDL_Event event);
+    int SDL_Flip(SDL_Surface screen);
+
     
     class SDL_KeyboardEvent;
     SDL_KeyboardEvent SDL_Event_GetKey(SDL_Event evt);

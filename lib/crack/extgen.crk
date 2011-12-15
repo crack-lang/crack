@@ -192,6 +192,25 @@ class BuiltInType : Type {
     }
 }
 
+class ExternalType : Type {
+
+    oper init(String name) :
+        Type(name, name) {
+    }
+
+    bool isBuiltIn() {
+        return false;
+    }
+
+    void emitInitializer(Formatter out) {
+        if (initialized)
+            return;
+        out `    crack::ext::Type *$(emit()) = mod->getType("$name");\n`;
+        initialized = true;
+    }
+}
+
+
 class ConstType : BuiltInType {
     String constCast;
 
@@ -546,6 +565,7 @@ class ExtensionData {
     StringArray moduleName = {};  # module name
     Array[Type] preamble = {};
     StringArray ifdefs = {};
+    StringArray crackInject = {};
     StringArray typeNames = {}; // Need this because the typemap is not ordered
     Array[constClassInfo] constClasses = {};
     Array[boundClassInfo] boundClasses = {};
@@ -740,6 +760,8 @@ $(generic.getParamCount()) parameters.`;
                po `preamble_$(preamble.count())`;
                ifdefCond := po.string();
                preamble.append(IfdefPreamble(ifdefCond, _parseString(ctx)));
+            } else if (ann == 'crack') {
+               crackInject.append(_parseString(ctx));
             } else if (ann == 'crack_internal') {
                 inSrcDir = true;
             }
@@ -768,6 +790,14 @@ $(generic.getParamCount()) parameters.`;
                 if (!tok.isIdent())
                     error(ctx, tok) `Expected identifier in cname annotation`;
                 lastCName = String(tok.getText());
+            } else if (ann == 'extern') {
+                tok = ctx.getToken();
+                if (!tok.isIdent())
+                    error(ctx, tok) `Expected identifier in extern annotation`;
+
+                externName := String(tok.getText());
+                types[externName] = ExternalType(externName);
+                typeNames.append(externName);
             } else {
                 error(ctx, tok) `Unexpected annotation: $ann`;
             }
@@ -1052,6 +1082,9 @@ extern "C"
 void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
 `;
+
+        for (cString :in crackInject)
+            o `    mod->inject(std::string("$(cString)"));\n`;
 
         for (typeName :in typeNames)
             emitInitializerNestedType(ta, types[typeName], o);
