@@ -2021,6 +2021,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  llvmBytePtrType
                                                  );
     byteptrType->defaultInitializer = createStrConst(context, "");
+    byteptrType->complete = true;
     context.addDef(
         new VoidPtrOpDef(context.construct->voidptrType.get()),
         byteptrType
