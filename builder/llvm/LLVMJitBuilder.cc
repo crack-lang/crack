@@ -66,7 +66,7 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
 
         passMan.run(*moduleDef->rep);
     }
-    Function *delFunc = module->getFunction("__del__");
+    Function *delFunc = module->getFunction(":cleanup");
     if (delFunc) {
         moduleDef->cleanup = reinterpret_cast<void (*)()>(
                                 execEng->getPointerToFunction(delFunc)
@@ -220,10 +220,14 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     Function *mainFunc = func;
     LLVMContext &lctx = getGlobalContext();
     llvm::Constant *c =
-        module->getOrInsertFunction("__del__", Type::getVoidTy(lctx), NULL);
+        module->getOrInsertFunction(":cleanup", Type::getVoidTy(lctx), NULL);
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "__del__", func));
+
+    // create a new exStruct variable for this context
+    createFuncStartBlocks(":cleanup");
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+
     closeAllCleanupsStatic(context);
     builder.CreateRetVoid();
 

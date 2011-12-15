@@ -288,21 +288,27 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     // emit the cleanup function for this module
     // we will emit calls to these (for all modules) during run() in the finalir
+    string cleanupFuncName = moduleDef->name + ":cleanup";
     llvm::Constant *c =
-        module->getOrInsertFunction(moduleDef->name+":cleanup",
+        module->getOrInsertFunction(cleanupFuncName,
                                     Type::getVoidTy(lctx), NULL);
     Function *initFunc = func;
     func = llvm::cast<llvm::Function>(c);
     func->setCallingConv(llvm::CallingConv::C);
-    builder.SetInsertPoint(BasicBlock::Create(lctx, "", func));
+
+    // create a new exStruct variable for this context in the standard start
+    // block.
+    createFuncStartBlocks(cleanupFuncName);
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 
     // if the initialization flag is not set, branch to return
-    BasicBlock *cleanupBlock = BasicBlock::Create(lctx, "cleanups", func),
+    BasicBlock *cleanupBlock = BasicBlock::Create(lctx, ":cleanup", func),
                *retBlock = BasicBlock::Create(lctx, "done", func);
     Value *initVal = builder.CreateLoad(moduleInit);
     builder.CreateCondBr(initVal, cleanupBlock, retBlock);
 
     builder.SetInsertPoint(cleanupBlock);
+
     closeAllCleanupsStatic(context);
     builder.CreateBr(retBlock);
 
