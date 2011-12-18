@@ -27,7 +27,7 @@ extlib_LTLIBRARIES = test/testext.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
-EXTENSIONS = _cairo _gl _gtk _pcre _sdl
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -62,6 +62,13 @@ extlib_LTLIBRARIES += _cairo.la
 _cairo_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@
 _cairo_la_CPPFLAGS = @CAIRO_CPPFLAGS@
 _cairo_la_SOURCES = opt/_cairo.cc
+endif
+
+if HAVE_ALSA
+extlib_LTLIBRARIES += _alsa_midi.la
+_alsa_midi_la_LDFLAGS = -avoid-version -module @ALSA_LIBS@
+_alsa_midi_la_CXXFLAGS = @ALSA_CFLAGS@
+_alsa_midi_la_SOURCES = opt/_alsa_midi.cc
 endif
 
 noinst_HEADERS = \

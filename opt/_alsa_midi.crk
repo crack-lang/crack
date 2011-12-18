@@ -1,0 +1,117 @@
+@import crack.extgen generateExtension;
+
+# build with:
+#  ./crack -l lib opt/_alsa_midi.crk && \
+#  g++ -shared -o _alsa_midi.so -lasound _alsa_midi.c
+@generateExtension crack.ext._alsa_midi {
+    @filename 'opt/_alsa_midi.cc'
+    @crack_internal
+
+    @inject '#include <alsa/asoundlib.h>\n';
+    @inject 'snd_seq_event_t *snd_seq_event_alloc() {\n';
+    @inject '    snd_seq_event_t *e = new snd_seq_event_t;\n'
+    @inject '    snd_seq_ev_clear(e);'
+    @inject '    return e; }\n';
+    @inject 'void snd_seq_event_setSource(snd_seq_event_t *event, int port) {\n';
+    @inject '    event->source.port = port; }\n';
+    @inject 'void snd_seq_event_setSubs(snd_seq_event_t *event) {\n'
+    @inject '    event->dest.client = SND_SEQ_ADDRESS_SUBSCRIBERS;\n'
+    @inject '    event->dest.port = SND_SEQ_ADDRESS_UNKNOWN; }\n';
+    @inject 'void snd_seq_event_setDirect(snd_seq_event_t *event) {\n'
+    @inject '    event->queue = SND_SEQ_QUEUE_DIRECT; }\n'
+    @inject 'void snd_seq_event_setNoteOn(snd_seq_event_t *event,';
+    @inject '                             int channel,';
+    @inject '                             int note,';
+    @inject '                             int velocity) {';
+    @inject '    snd_seq_ev_set_noteon(event, channel, note, velocity); }';
+    @inject 'void snd_seq_event_setNoteOff(snd_seq_event_t *event,';
+    @inject '                              int channel,';
+    @inject '                              int note,';
+    @inject '                              int velocity) {';
+    @inject '    snd_seq_ev_set_noteoff(event, channel, note, velocity); }';
+    @inject 'void snd_seq_event_scheduleTick(snd_seq_event_t *event, int queue, ';
+    @inject '                                int relative,';
+    @inject '                                int time) {';
+    @inject '    snd_seq_ev_schedule_tick(event, queue, relative, time); }';
+    @inject 'void SndSeqQueue_setTempo(snd_seq_t *seqp, int queueId, ';
+    @inject '                          int tempo, int ppq) {';
+    @inject '    snd_seq_queue_tempo_t *t;';
+    @inject '    snd_seq_queue_tempo_alloca(&t); ';
+    @inject '    snd_seq_queue_tempo_set_tempo(t, tempo);';
+    @inject '    snd_seq_queue_tempo_set_ppq(t, ppq);';
+    @inject '    snd_seq_set_queue_tempo(seqp, queueId, t); }';
+    @inject 'void SndSeqQueue_start(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {';
+    @inject '    snd_seq_start_queue(seqp, queueId, event); }';
+    @inject 'void SndSeqQueue_stop(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {';
+    @inject '    snd_seq_stop_queue(seqp, queueId, event); }';
+
+    const int
+        # sequence open mode
+        SND_SEQ_OPEN_INPUT, 
+        SND_SEQ_OPEN_OUTPUT, 
+        SND_SEQ_OPEN_DUPLEX,
+        
+        # sequencer port capabilities
+        SND_SEQ_PORT_CAP_WRITE,
+        SND_SEQ_PORT_CAP_SUBS_WRITE,
+        SND_SEQ_PORT_CAP_READ,
+        SND_SEQ_PORT_CAP_SUBS_READ,
+        
+        # port types
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC;
+    
+    @inject 'typedef int Undef;\n'
+    
+    @cname Undef
+    class snd_seq_t;
+    int snd_seq_open(array[snd_seq_t] seqp, byteptr name, int streams, 
+                     int mode
+                     );
+
+    int snd_seq_set_client_name(snd_seq_t seqp, byteptr name);
+    
+    int snd_seq_create_simple_port(snd_seq_t handle, byteptr name,
+                                   int caps,
+                                   int type
+                                   );
+
+    int snd_seq_connect_to(snd_seq_t seq,
+                           int myport,
+                           int dest_client,
+                           int dest_port
+                           );
+
+    class snd_seq_event_t {
+        @cname snd_seq_event_alloc
+        oper new();
+
+        @cname snd_seq_event_setSource
+        void setSource(int port);
+        
+        @cname snd_seq_event_setSubs
+        void setSubs();
+
+        @cname snd_seq_event_setDirect
+        void setDirect();
+        
+        @cname snd_seq_event_setNoteOn
+        void setNoteOn(int channel, int note, int velocity);
+
+        @cname snd_seq_event_setNoteOff
+        void setNoteOff(int channel, int note, int velocity);
+        
+        @cname snd_seq_event_scheduleTick
+        void scheduleTick(int queue, int relative, int time);
+    }                 
+    
+    int snd_seq_event_output(snd_seq_t seqp, snd_seq_event_t event);
+    int snd_seq_drain_output(snd_seq_t seqp);
+
+    int snd_seq_alloc_named_queue(snd_seq_t seqp, byteptr name);
+
+    ## Sets the tempo of all queues created for the client.
+    int SndSeqQueue_setTempo(snd_seq_t seqp, int queueId, int tempo, int ppq);
+    
+    void SndSeqQueue_start(snd_seq_t seqp, int queueId, snd_seq_event_t event);
+    void SndSeqQueue_stop(snd_seq_t seqp, int queueId, snd_seq_event_t event);
+}
