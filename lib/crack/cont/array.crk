@@ -194,6 +194,8 @@ class Array[Elem] {
             }
         }
         
+        @final uint _getIndex() { return __index; }
+        
         bool isTrue() {
             return __index < __arr.count();
         }
@@ -512,6 +514,27 @@ class Array[Elem] {
         }
 #        memmove(__rep + index, __rep + index + 1, __size - index);
         --__size;
+    }
+    
+    void insert(uint index, Elem elem) {
+        if (index > __size)
+            throw IndexError('Index out of range in Array.insert()');
+        
+        # make room for one more
+        if (__size == __cap)
+            realloc(__cap * 2);
+        
+        # move everything up
+        for (uint i = __size; i > index; --i)
+            __rep[i] = __rep[i - 1];
+        
+        __rep[index] = elem;
+        _bind(elem);
+        ++__size;
+    }
+
+    void insert(ArrayIter i, Elem elem) {
+        insert(i._getIndex(), elem);
     }
     
     ## Empty arrays are false, non-empty arrays are true.
