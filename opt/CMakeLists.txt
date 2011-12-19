@@ -96,5 +96,20 @@ if (PKG_CONFIG_FOUND)
                                 ${CAIRO_LDFLAGS}
                             )
         install(TARGETS cairo DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+        macro_log_feature(SDL_FOUND "CairoSDL" "Bindings for Cairo/SDL" "http://www.cairographics.org/")
+        if (SDL_FOUND)
+            add_library(cairosdl SHARED _cairosdl.cc cairosdl.c)
+            set_target_properties(cairosdl
+                                PROPERTIES
+                                OUTPUT_NAME _cairosdl
+                                PREFIX ""
+                                )
+            target_link_libraries( cairosdl
+                                    ${CAIRO_LDFLAGS}
+                                    ${SDL_LIBRARY}
+                                )
+            install(TARGETS cairosdl DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+        endif (SDL_FOUND)
+
     endif (CAIRO_FOUND)
 endif (PKG_CONFIG_FOUND)

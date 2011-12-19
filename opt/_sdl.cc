@@ -53,6 +53,10 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
     type_SDL_Event->finish();
 
 
+    crack::ext::Type *type_SDL_Rect = mod->addType("SDL_Rect", sizeof(SDL_Rect));
+    type_SDL_Rect->finish();
+
+
     crack::ext::Type *type_SDL_KeyboardEvent = mod->addType("SDL_KeyboardEvent", sizeof(SDL_KeyboardEvent));
     type_SDL_KeyboardEvent->finish();
 
@@ -98,6 +102,11 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
                      (void *)SDL_Event_GetType
                      );
        f->addArg(type_SDL_Event, "event");
+
+    f = mod->addFunc(type_int, "SDL_Flip",
+                     (void *)SDL_Flip
+                     );
+       f->addArg(type_SDL_Surface, "screen");
 
     f = mod->addFunc(type_SDL_KeyboardEvent, "SDL_Event_GetKey",
                      (void *)SDL_Event_GetKey

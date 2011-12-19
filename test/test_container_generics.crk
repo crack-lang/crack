@@ -148,6 +148,29 @@ if (!(Array[int]![1, 2, 3] < Array[int]![1, 2, 3, 4]))
 if (Array[int]![1, 2, 3] != Array[int]![1, 2, 3])
     cout `FAILED comparison of equivalent arrays\n`;
 
+# test array insertion
+if (true) {
+    Array[int] arr = [1, 2, 3, 4, 5];
+    arr.insert(0, 0);
+    arr.insert(6, 6);
+    arr.insert(3, 30);
+    if (arr != Array[int]![0, 1, 2, 30, 3, 4, 5, 6])
+        cout `FAILED array insertion\n`;
+}
+
+# array cursor insertion
+if (true) {
+    Array[int] arr = [1, 2, 3, 4, 5];
+    i := arr.iter();
+    arr.insert(i, 0);
+    i.next(); i.next(); i.next();
+    arr.insert(i, 30);
+    while (i) i.next();
+    arr.insert(i, 6);
+    if (arr != Array[int]![0, 1, 2, 30, 3, 4, 5, 6])
+        cout `FAILED array insertion\n`;
+}
+
 # test map/reduce/filter
 
 int plus(int a){

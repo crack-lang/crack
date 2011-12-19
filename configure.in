@@ -51,4 +51,7 @@ AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
 AM_PATH_CAIRO
 AM_CONDITIONAL(HAVE_CAIRO, [test "x$got_cairo" = xyes])
 
+AM_PATH_ALSA(1.0.22, [got_alsa=yes])
+AM_CONDITIONAL(HAVE_ALSA, [test "x$got_alsa" = xyes])
+
 AC_OUTPUT

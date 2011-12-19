@@ -77,7 +77,7 @@ class Array[Elem] {
     uint __cap, __size;
 
     @final
-    void oper []=(int index, Elem elem) {
+    Elem oper []=(int index, Elem elem) {
         uint i;
         if (index < 0)
             i = __size + index;
@@ -88,10 +88,11 @@ class Array[Elem] {
         __rep[i] = elem;
         _bind(elem);
         _release(tmp);
+        return elem;
     }
 
     @final
-    void oper []=(uint index, Elem elem) {
+    Elem oper []=(uint index, Elem elem) {
         if (index >= __size)
             throw IndexError('Index out of range in Array.oper []=');
         
@@ -99,6 +100,7 @@ class Array[Elem] {
         __rep[index] = elem;
         _bind(elem);
         _release(tmp);
+        return elem;
     }
 
     @final
@@ -191,6 +193,8 @@ class Array[Elem] {
                 return next();
             }
         }
+        
+        @final uint _getIndex() { return __index; }
         
         bool isTrue() {
             return __index < __arr.count();
@@ -512,6 +516,28 @@ class Array[Elem] {
         --__size;
     }
     
+    void insert(uint index, Elem elem) {
+        if (index > __size)
+            throw IndexError('Index out of range in Array.insert()');
+        
+        # make room for one more
+        if (__size == __cap)
+            realloc(__cap * 2);
+        
+        # move everything up
+        for (uint i = __size; i > index; --i)
+            __rep[i] = __rep[i - 1];
+        
+        __rep[index] = elem;
+        _bind(elem);
+        ++__size;
+    }
+
+    void insert(ArrayIter i, Elem elem) {
+        insert(i._getIndex(), elem);
+    }
+    
     ## Empty arrays are false, non-empty arrays are true.
     bool isTrue() { return __size; }
 }
+

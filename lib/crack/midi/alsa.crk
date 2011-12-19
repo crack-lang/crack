@@ -1,0 +1,169 @@
+## Copyright 2011 Google Inc.
+## Classes to wrap the ALSA sequencer API.
+
+import crack.io cout, FStr;
+import crack.lang AssertionError, CString, Exception;
+import crack.runtime free;
+import crack.ext._alsa_midi snd_seq_t, snd_seq_event_t, 
+    snd_seq_alloc_named_queue, snd_seq_open, snd_seq_create_simple_port,
+    snd_seq_connect_to, snd_seq_drain_output, snd_seq_event_output, 
+    SndSeqQueue_setTempo, SndSeqQueue_start, SndSeqQueue_stop, SND_SEQ_OPEN_INPUT, 
+    SND_SEQ_OPEN_OUTPUT, SND_SEQ_PORT_CAP_WRITE, SND_SEQ_PORT_CAP_SUBS_WRITE, 
+    SND_SEQ_PORT_CAP_READ, SND_SEQ_PORT_CAP_SUBS_READ, 
+    SND_SEQ_PORT_TYPE_MIDI_GENERIC;
+import crack.net Poller;
+import crack.time TimeDelta;
+import crack.midi.event Event, NoteOn, NoteOff, Track;
+
+class _Event : Object, snd_seq_event_t {
+    
+    ## sets the event data from the midi event.
+    void setMidiEvent(Event event) {
+        Class eventType = event.class;
+        if (eventType.isSubclass(NoteOn)) {
+            e := NoteOn.cast(event);
+            setNoteOn(e.channel, e.note, e.velocity);
+        } else if (eventType.isSubclass(NoteOff)) {
+            e := NoteOff.cast(event);
+            setNoteOff(e.channel, e.note, e.velocity);
+        } else {
+            throw AssertionError(FStr() `Unknown midi event type: \
+$(eventType.name)\n`);
+        }
+    }
+}
+
+class Port;
+class Sequencer;
+class Queue;
+Port _makePort(Sequencer client, int port);
+Queue _makeQueue(Sequencer client, int queueId);
+
+## Wrapper around the sequencer interface.
+class Sequencer {
+    snd_seq_t seq;
+
+    ## streams: some combination of SND_SEQ_OPEN_OUTPUT and SND_SEQ_OPEN_INPUT.
+    ## mode: don't know what this is.
+    oper init(int streams, int mode) {
+        array[snd_seq_t] temp = {1};
+        if (snd_seq_open(temp, "default".buffer, streams, mode))
+            throw Exception('Failed to open client');
+        seq = temp[0];
+        free(temp);
+    }
+
+    ## Creates a new write port with the specified name.
+    Port makeWritePort(CString portName) {
+        return _makePort(this, 
+                         snd_seq_create_simple_port(seq, portName.buffer, 
+                                                 SND_SEQ_PORT_CAP_WRITE |
+                                                 SND_SEQ_PORT_CAP_SUBS_WRITE,
+                                                 SND_SEQ_PORT_TYPE_MIDI_GENERIC
+                                                 )
+                         );
+    }
+
+    Port makeReadPort(CString portName) {
+        return _makePort(this, 
+                         snd_seq_create_simple_port(
+                            seq, 
+                            portName.buffer, 
+                            SND_SEQ_PORT_CAP_READ |
+                            SND_SEQ_PORT_CAP_SUBS_READ,
+                            SND_SEQ_PORT_TYPE_MIDI_GENERIC
+                          )
+                         );
+    }
+    
+    Queue makeQueue(CString queueName) {
+        return _makeQueue(this,
+                          snd_seq_alloc_named_queue(seq, queueName.buffer)
+                          );
+    }
+}
+
+## An alsa midi Port.  Ports in alsa are communication endpoints.  Like 
+## sockets, they can be connected to other ports (through subscription) or can 
+## be used for direct communication by specificically sending events to other 
+## ports.  A port is identified with the client identifier and a port 
+## identifier (scoped within the client).
+class Port {
+    Sequencer client;
+    int port;
+    oper init(Sequencer client, int port) : client = client, port = port {}
+    
+    ## Connect to another port.
+    void connectTo(int otherClient, int otherPort) {
+        snd_seq_connect_to(client.seq, port, otherClient, otherPort);
+    }
+    
+    ## Sends a "direct" event.  Direct events are sent immediately to the 
+    ## subscriber, the event time is ignored.
+    void send(Event event) {
+        _Event e = {};
+        e.setSource(port);
+        e.setSubs();
+        e.setDirect();
+        
+        e.setMidiEvent(event);
+        
+        snd_seq_event_output(client.seq, e);
+        snd_seq_drain_output(client.seq);
+    }
+}
+
+Port _makePort(Sequencer client, int port) {
+    return Port(client, port);
+}
+
+## A queue schedules events to be sent at a specific time (described in midi 
+## ticks from the start of the piece).
+class Queue {
+    Sequencer client;
+    int queueId;
+    int __tempo = 60000000 / 120, __ppq = 96;
+    
+    oper init(Sequencer client, int queueId) : 
+        client = client,
+        queueId = queueId {
+        
+        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+    }
+    
+    ## Adds an event for the given port to the queue.
+    void add(Port port, Event event) {
+        _Event e = {};
+        e.setSource(port.port);
+        e.setSubs();
+        e.scheduleTick(queueId, 0, event.time);
+        cout `event is $(event.time) $event\n`;
+        e.setMidiEvent(event);
+        snd_seq_event_output(client.seq, e);
+        snd_seq_drain_output(client.seq);
+    }
+    
+    ## Sets the tempo as beats-per-minute.  A "beat" is one quarter note.
+    void setTempo(int bpm) {
+        __tempo = 60000000 / bpm;
+        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+    }
+    
+    ## Set the number of pulses (midi ticks) per quarter note.
+    void setPPQ(int ppq) {
+        __ppq = ppq;
+        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+    }
+    
+    void start() { SndSeqQueue_start(client.seq, queueId, null); }
+    void stop() { SndSeqQueue_stop(client.seq, queueId, null); }
+}
+
+Queue _makeQueue(Sequencer client, int queueId) {
+    return Queue(client, queueId);
+}
+
+@export_symbols SND_SEQ_OPEN_INPUT, SND_SEQ_OPEN_OUTPUT, 
+    SND_SEQ_PORT_CAP_WRITE, SND_SEQ_PORT_CAP_SUBS_WRITE, 
+    SND_SEQ_PORT_CAP_READ, SND_SEQ_PORT_CAP_SUBS_READ, 
+    SND_SEQ_PORT_TYPE_MIDI_GENERIC;

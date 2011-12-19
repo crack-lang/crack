@@ -1,0 +1,66 @@
+import crack.runtime exit;
+import crack.ext._sdl SDL_Surface, SDL_Event, SDL_Init, SDL_INIT_VIDEO, SDL_SetVideoMode,
+       SDL_Quit, SDL_FULLSCREEN, SDL_SWSURFACE, SDL_QUIT, SDL_KEYDOWN, 
+       SDL_RESIZABLE, SDL_PollEvent, SDL_Event_GetType, SDL_EventNew, SDL_Flip;
+import crack.ext._cairosdl CAIROSDL_ASHIFT, cairosdl_create, cairosdl_surface_create,
+                           cairosdl_surface_flush;
+import crack.ext._cairo cairo_t, cairo_create, cairo_scale, cairo_set_line_width,
+                        cairo_set_source_rgb, cairo_move_to, cairo_line_to, cairo_arc,
+                        cairo_rel_curve_to, cairo_close_path, cairo_stroke,
+                        cairo_surface_flush, cairo_rel_line_to;
+
+import crack.math PI, sqrt;
+
+SDL_Surface screen;
+SDL_Event event = SDL_EventNew();
+
+int keypress = 0;
+int h = 0;
+int WIDTH = 480;
+int HEIGHT = 480;
+int BPP = 4;
+int DEPTH = 32;
+int eventType;
+
+if (SDL_Init(SDL_INIT_VIDEO) < 0 ) exit(1);
+screen = SDL_SetVideoMode(WIDTH, HEIGHT, DEPTH, SDL_SWSURFACE);
+
+if (screen is null) {
+    SDL_Quit();
+    exit(1);
+}
+
+// Create a Cairo surface
+cairoSurface :=  cairosdl_surface_create (screen);
+
+cr := cairo_create (cairoSurface);
+cairo_scale (cr, WIDTH, HEIGHT);
+
+cairo_set_line_width (cr, 0.01);
+cairo_set_source_rgb (cr, 1, 1, 1);
+
+// Draw some lines and curves
+cairo_move_to (cr, 0.25, 0.25);
+cairo_line_to (cr, 0.5, 0.375);
+cairo_rel_line_to (cr, 0.25, -0.125);
+cairo_arc (cr, 0.5, 0.5, 0.25 * sqrt(2), -0.25 * PI, 0.25 * PI);
+cairo_rel_curve_to (cr, -0.25, -0.125, -0.25, 0.125, -0.5, 0);
+cairo_close_path (cr);
+cairo_stroke (cr);
+cairosdl_surface_flush (cairoSurface);
+SDL_Flip(screen);
+
+// Event loop
+while(keypress == 0) {
+    while(SDL_PollEvent(event) > 0) 
+    {   eventType =  SDL_Event_GetType(event);
+        if (eventType == SDL_QUIT) {
+                keypress = 1;
+        }
+        else if (eventType == SDL_KEYDOWN) {
+                keypress = 1;
+        }
+    }
+}
+
+SDL_Quit();
