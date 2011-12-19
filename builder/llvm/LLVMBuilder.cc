@@ -1694,7 +1694,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     // reveal our type object
     BTypeDef *tp = BTypeDefPtr::cast(type);
     
-    // get the defintion context
+    // get the definition context
     ContextPtr defCtx = context.getDefContext();
     
     // do initialization (unless we're in instance scope - instance variables 

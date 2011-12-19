@@ -4,6 +4,7 @@
 #include "BModuleDef.h"
 #include "model/Namespace.h"
 #include "model/OverloadDef.h"
+#include "model/NullConst.h"
 
 #include "builder/llvm/LLVMBuilder.h"
 #include "builder/BuilderOptions.h"
@@ -137,8 +138,11 @@ void Cacher::writeNamespace(Namespace *ns) {
                  f != ol->endTopFuncs();
                  ++f) {
                 // skip aliases
-                if ((*f)->getOwner() == ns)
-                    node->addOperand(writeFuncDef((*f).get(), owner));
+                if ((*f)->getOwner() == ns) {
+                    MDNode *n = writeFuncDef((*f).get(), owner);
+                    if (n)
+                        node->addOperand(n);
+                }
             }
         }
         else {
@@ -146,7 +150,7 @@ void Cacher::writeNamespace(Namespace *ns) {
             if (i->second->getOwner() != ns)
                 continue;
             if (td = dynamic_cast<TypeDef*>(i->second.get())) {
-                node->addOperand(writeType(td));
+                node->addOperand(writeTypeDef(td));
                 writeNamespace(td);
             }
             else {
@@ -158,7 +162,7 @@ void Cacher::writeNamespace(Namespace *ns) {
 
 }
 
-MDNode *Cacher::writeType(model::TypeDef* t) {
+MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
     assert(bt && "not BTypeDef");
@@ -171,8 +175,15 @@ MDNode *Cacher::writeType(model::TypeDef* t) {
     // operand 1: symbol type
     dList.push_back(constInt(Cacher::type));
 
-    // operand 2: llvm rep
-    dList.push_back(NULL);
+    // operand 2: llvm rep (null initializer)
+    dList.push_back(Constant::getNullValue(bt->rep));
+
+    // operand 3: metatype type (null initializer)
+    BTypeDef *btm = dynamic_cast<BTypeDef *>(bt->meta);
+    if (btm)
+        dList.push_back(Constant::getNullValue(btm->rep));
+    else
+        dList.push_back(NULL);
 
     return MDNode::get(getGlobalContext(), dList.data(), dList.size());
 
@@ -195,8 +206,11 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
     BFuncDef *bf = dynamic_cast<BFuncDef *>(sym);
     if (bf)
         dList.push_back(bf->rep);
-    else
-        dList.push_back(NULL);
+    else {
+        //cout << "skipping " << sym->name << "\n";
+        //dList.push_back(NULL);
+        return NULL;
+    }
 
     // operand 3: typedef owner
     if (owner)
@@ -293,8 +307,29 @@ bool Cacher::readImports() {
 void Cacher::readTypeDef(const std::string &sym,
                          llvm::MDNode *mnode) {
 
-    BTypeDef *t = new BTypeDef(NULL/* model meta type def */, sym, NULL /* XXX llvm type def */);
-    modDef->addDef(t);
+    // operand 2: llvm rep (null initializer)
+    Value *rep = mnode->getOperand(2);
+
+    // operand 3: metatype type (null initializer)
+    // XXX read meta type from llvm ir
+    // XXX create btypedef for it
+    BTypeDefPtr metaType;
+
+    BTypeDefPtr type = new BTypeDef(metaType.get(), // XXX
+                        sym,
+                        rep->getType(),
+                        true,
+                        0 /* nextVTableslot */
+                        );
+
+    // tie the meta-class to the class
+    if (metaType)
+        metaType->meta = type.get();
+
+    // make the class default to initializing to null
+    type->defaultInitializer = new NullConst(type.get());
+
+    modDef->addDef(type.get());
 
 }
 
@@ -320,21 +355,32 @@ void Cacher::readFuncDef(const std::string &sym,
     assert(f && "malformed def node: llvm rep not function");
 
     // model funcdef
-    BFuncDef *newF = new BFuncDef((FuncDef::Flags)flags->getLimitedValue(),
+    // note we don't use FunctionBuilder here because we already have an
+    // llvm rep
+    size_t bargCount = f->getArgumentList().size();
+    FuncDef::Flags bflags = (FuncDef::Flags)flags->getLimitedValue();
+    if (bflags & FuncDef::method)
+        // if method, we adjust the BFuncDef for "this", which exists in
+        // llvm arguments but is only implied in BFuncDef
+        bargCount--;
+    BFuncDef *newF = new BFuncDef(bflags,
                                   sym,
-                                  f->getArgumentList().size());
+                                  bargCount);
     newF->rep = f;
 
+    Namespace *owner = 0;
     if (ownerStr) {
         VarDefPtr o = modDef->lookUp(ownerStr->getString().str());
         assert(o && "owner not found");
         TypeDef *td = dynamic_cast<TypeDef*>(o.get());
         assert(td && "owner not type");
-        newF->setOwner(td);
+        owner = td;
     }
     else {
-        newF->setOwner(modDef);
+        owner = modDef;
     }
+    newF->setOwner(owner);
+    newF->ns = owner;
 
     VarDefPtr vd = modDef->lookUp(rtStr->getString().str());
     TypeDef *td = TypeDefPtr::rcast(vd);
@@ -364,11 +410,11 @@ void Cacher::readFuncDef(const std::string &sym,
     }
 
     OverloadDef *o;
-    vd = modDef->lookUp(sym);
+    vd = owner->lookUp(sym);
     if (!vd) {
         o = new OverloadDef(sym);
         o->addFunc(newF);
-        modDef->addDef(o);
+        owner->addDef(o);
     }
     else {
         o = OverloadDefPtr::rcast(vd);

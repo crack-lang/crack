@@ -47,7 +47,7 @@ protected:
 
     void writeNamespace(model::Namespace* ns);
 
-    llvm::MDNode *writeType(model::TypeDef* t);
+    llvm::MDNode *writeTypeDef(model::TypeDef* t);
     llvm::MDNode *writeVarDef(model::VarDef *, model::TypeDef *owner);
     llvm::MDNode *writeFuncDef(model::FuncDef *, model::TypeDef *owner);
 
