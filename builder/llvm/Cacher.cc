@@ -178,12 +178,13 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     // operand 2: llvm rep (null initializer)
     dList.push_back(Constant::getNullValue(bt->rep));
 
-    // operand 3: metatype type (null initializer)
-    BTypeDef *btm = dynamic_cast<BTypeDef *>(bt->meta);
-    if (btm)
-        dList.push_back(Constant::getNullValue(btm->rep));
-    else
-        dList.push_back(NULL);
+    // operand 3: metatype type (name string)
+    BTypeDef *btm = dynamic_cast<BTypeDef *>(bt->type.get());
+    assert(btm && "no meta class");
+    dList.push_back(MDString::get(getGlobalContext(), btm->name));
+
+    // operand 4: metatype type (null initializer)
+    dList.push_back(Constant::getNullValue(btm->rep));
 
     return MDNode::get(getGlobalContext(), dList.data(), dList.size());
 
@@ -310,12 +311,20 @@ void Cacher::readTypeDef(const std::string &sym,
     // operand 2: llvm rep (null initializer)
     Value *rep = mnode->getOperand(2);
 
-    // operand 3: metatype type (null initializer)
-    // XXX read meta type from llvm ir
-    // XXX create btypedef for it
-    BTypeDefPtr metaType;
+    // operand 3: metatype type (name string)
+    MDString *cname = dyn_cast<MDString>(mnode->getOperand(3));
+    assert(cname && "invalid metatype name");
 
-    BTypeDefPtr type = new BTypeDef(metaType.get(), // XXX
+    // operand 4: metatype type (null initializer)
+    Value *mtrep = mnode->getOperand(4);
+    BTypeDefPtr metaType = new BTypeDef(0,
+                                        cname->getString().str(),
+                                        mtrep->getType(),
+                                        true,
+                                        0 /* nextVTableslot */
+                                        );
+
+    BTypeDefPtr type = new BTypeDef(metaType.get(),
                         sym,
                         rep->getType(),
                         true,
