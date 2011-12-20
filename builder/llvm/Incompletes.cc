@@ -175,7 +175,7 @@ Instruction *IncompleteCatchSelector::clone_impl() const {
 }
 
 void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
-    LandingPadInst *lp = builder.CreateLandingPad(builder.getInt8PtrTy(),
+    LandingPadInst *lp = builder.CreateLandingPad(getType(),
                                                   personalityFunc,
                                                   typeImpls->size()
                                                   );
