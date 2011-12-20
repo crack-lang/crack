@@ -21,24 +21,43 @@ using namespace model;
 
 Value *
 BBuilderContextData::getExceptionLandingPadResult(IRBuilder<> &builder) {
-    VarDefPtr exStruct = context->ns->lookUp(":exStruct");
-    BHeapVarDefImplPtr exStructImpl =
-        BHeapVarDefImplPtr::rcast(exStruct->impl);
-    return builder.CreateLoad(exStructImpl->rep);
+    VarDefPtr exStructVar = context->ns->lookUp(":exStruct");
+    BHeapVarDefImplPtr exStructImpl = 
+        BHeapVarDefImplPtr::rcast(exStructVar->impl);
+    return 
+        builder.CreateLoad(builder.CreateConstGEP2_32(exStructImpl->rep, 0, 0));
 }
 
 BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
-
+        
         Module *mod = func->getParent();
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
             b.CreateCall(f);
 
         // create the resume instruction
-        b.CreateResume(getExceptionLandingPadResult(b));
+        Value *exObj = getExceptionLandingPadResult(b);
+
+        // XXX We used to create an "unwind" instruction here, but that seems 
+        // to cause a problem when creating a module with dependencies on 
+        // classes in an unfinished module, as we can do when specializing a 
+        // generic.  The problem is that _Unwind_Resume is resolved from the 
+        // incorrect module.
+        // To deal with this, we create an explicit call to _Unwind_Resume.  
+        // The only problem here is that we have to call llvm.eh.exception to 
+        // obtain the exception object, even though we might already have one.
+        LLVMContext &lctx = getGlobalContext();
+        Constant *c = mod->getOrInsertFunction("_Unwind_Resume", 
+                                               Type::getVoidTy(lctx),
+                                               Type::getInt8PtrTy(lctx),
+                                               NULL
+                                               );
+        f = cast<Function>(c);
+        b.CreateCall(f, exObj);
+        b.CreateUnreachable();
     }
 
     // assertion to make sure this is the right unwind block
