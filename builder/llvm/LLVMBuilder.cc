@@ -109,6 +109,25 @@ namespace {
         return frame->emitUnwindCleanups(next);
     }
 
+    Value *getExceptionObjectField(Context &context, IRBuilder<> &builder,
+                                   int index
+                                   ) {
+        VarDefPtr exStr = context.ns->lookUp(":exStruct");
+        BHeapVarDefImplPtr exStrImpl = BHeapVarDefImplPtr::arcast(exStr->impl);
+        return builder.CreateLoad(
+            builder.CreateConstGEP2_32(exStrImpl->rep, 0, index)
+        );
+    }
+
+
+    Value *getExceptionObjectValue(Context &context, IRBuilder<> &builder) {
+        return getExceptionObjectField(context, builder, 0);
+    }
+
+    Value *getExceptionSelectorValue(Context &context, IRBuilder<> &builder) {
+        return getExceptionObjectField(context, builder, 1);
+    }
+
     BasicBlock *emitUnwindCleanups(Context &context, Context &outerContext,
                                    BasicBlock *finalBlock
                                    ) {
@@ -313,14 +332,16 @@ namespace {
         return btype.get();
     }
 
-    Value *getExceptionObjectValue(Context &context, IRBuilder<> &builder) {
-        VarDefPtr exStr = context.ns->lookUp(":exStruct");
-        BHeapVarDefImplPtr exStrImpl = BHeapVarDefImplPtr::rcast(exStr->impl);
-        return builder.CreateLoad(
-            builder.CreateConstGEP1_32(exStrImpl->rep, 0)
-        );
+    BBuilderContextData::CatchDataPtr getContextCatchData(Context &context) {
+        ContextPtr catchContext = context.getCatch();
+        if (!catchContext->toplevel) {
+            BBuilderContextDataPtr bdata =
+                BBuilderContextDataPtr::rcast(catchContext->builderData);
+            return bdata->getCatchData();
+        } else {
+            return 0;
+        }
     }
-
 } // anon namespace
 
 void LLVMBuilder::emitFunctionCleanups(Context &context) {
@@ -418,6 +439,7 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
     BasicBlock *cleanups = emitUnwindCleanups(context, *outerContext, final);
     BCleanupFrame *firstCleanupFrame =
         BCleanupFramePtr::rcast(context.cleanupFrame);
+
     return firstCleanupFrame->getLandingPad(cleanups, cdata.get());
 }
 
@@ -1052,8 +1074,12 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
         (bdata = BBuilderContextDataPtr::rcast(context.builderData))
         ) {
         followingBlock = bdata->nextCleanupBlock;
+        BBuilderContextData::CatchDataPtr cdata =
+            getContextCatchData(context);
         if (followingBlock)
-            cleanupBlock = createLandingPad(context, followingBlock, 0);
+            cleanupBlock = createLandingPad(context, followingBlock,
+                                            cdata.get()
+                                            );
     }
 
     // otherwise, create a new normal destinatation block and get the cleanup
@@ -1184,11 +1210,9 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
                                                        );
 
         // generate a switch instruction based on the value of
-        // :exceptionSelector, we'll fill it in with values later.
+        // the selector in :exStruct, we'll fill it in with values later.
         builder.SetInsertPoint(bpos->block);
-        VarDefPtr sel = context.ns->lookUp(":exceptionSelector");
-        BHeapVarDefImplPtr selImpl = BHeapVarDefImplPtr::rcast(sel->impl);
-        Value *selVal = builder.CreateLoad(selImpl->rep);
+        Value *selVal = getExceptionSelectorValue(context, builder);
         cdata->switchInst =
             builder.CreateSwitch(selVal, outerCleanups, 3);
 
@@ -2664,8 +2688,8 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
     BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
     //BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
-    //BTypeDef *byteptrType =
-    //    BTypeDefPtr::arcast(context.construct->byteptrType);
+    BTypeDef *byteptrType =
+        BTypeDefPtr::arcast(context.construct->byteptrType);
     BTypeDef *voidptrType =
         BTypeDefPtr::arcast(context.construct->voidptrType);
 
@@ -2684,7 +2708,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         TypeDefPtr array = context.ns->lookUp("array");
         assert(array.get() && "array not defined in context");
         TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
-        types->push_back(context.construct->byteptrType.get());
+        types->push_back(byteptrType);
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
         FuncBuilder f(context, FuncDef::noFlags,
@@ -2717,7 +2741,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       "__CrackGetException",
                       1
                       );
-        f.addArg("exceptionObject", voidptrType);
+        f.addArg("exceptionObject", byteptrType);
         f.setSymbolName("__CrackGetException");
         f.finish();
     }
