@@ -294,10 +294,10 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
         builder.CreateInvoke(mainCleanup, endBlock, lpPostCleanupBlock);
 
         // exception handling stuff
-        Function *ehExFunc = mod->getFunction("llvm.eh.exception"),
-                 *ehSelFunc = mod->getFunction("llvm.eh.selector"),
-                 *crkExFunc = mod->getFunction("__CrackExceptionPersonality");
-        Type *i8PtrType = builder.getInt8Ty()->getPointerTo();
+        Function *crkExFunc = mod->getFunction("__CrackExceptionPersonality");
+        Type *i8PtrType = builder.getInt8PtrTy();
+        Type *exStructType =
+            StructType::get(i8PtrType, builder.getInt32Ty(), NULL);
 
         BasicBlock *uncaughtHandlerBlock =
             BasicBlock::Create(mod->getContext(), "uncaught_exception",
@@ -306,14 +306,9 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
 
         // first landing pad does cleanups
         builder.SetInsertPoint(lpBlock);
-        Value *ex = builder.CreateCall(ehExFunc);
-        Value *sel = builder.CreateCall4(ehSelFunc, ex,
-                                         builder.CreateBitCast(crkExFunc,
-                                                               i8PtrType
-                                                               ),
-                                         vtableBaseTypeBody,
-                                         Constant::getNullValue(i8PtrType)
-                                         );
+        LandingPadInst *lp =
+          builder.CreateLandingPad(exStructType, crkExFunc, 1);
+        lp->addClause(Constant::getNullValue(i8PtrType));
         builder.CreateInvoke(mainCleanup, uncaughtHandlerBlock,
                              lpPostCleanupBlock
                              );
@@ -328,12 +323,8 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
 
         // post cleanup landing pad
         builder.SetInsertPoint(lpPostCleanupBlock);
-        ex = builder.CreateCall(ehExFunc);
-        sel = builder.CreateCall4(ehSelFunc, ex,
-                                  builder.CreateBitCast(crkExFunc, i8PtrType),
-                                  vtableBaseTypeBody,
-                                  Constant::getNullValue(i8PtrType)
-                                  );
+        lp = builder.CreateLandingPad(exStructType, crkExFunc, 1);
+        lp->addClause(Constant::getNullValue(i8PtrType));
         builder.CreateBr(uncaughtHandlerBlock);
 
         // uncaught exception handler
