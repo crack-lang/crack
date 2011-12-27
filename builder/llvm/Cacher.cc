@@ -241,6 +241,8 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
     vector<Value *> dList;
 
+    BTypeDef *type = dynamic_cast<BTypeDef *>(sym->type.get());
+    assert(type && "writeVarDef: no type");
     BGlobalVarDefImpl *gvar = dynamic_cast<BGlobalVarDefImpl *>(sym->impl.get());
     BInstVarDefImpl *ivar = dynamic_cast<BInstVarDefImpl *>(sym->impl.get());
     assert(gvar || ivar && "not global or instance");
@@ -254,17 +256,24 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
     else
         dList.push_back(constInt(Cacher::global));
 
-    // operand 2: llvm rep or instance var index
+    // operand 2: llvm rep (gvar) or null val (instance var)
     if (gvar)
         dList.push_back(gvar->rep);
     else
-        dList.push_back(constInt(ivar->index));
+        dList.push_back(Constant::getNullValue(type->rep));
 
-    // operand 3: typedef owner
+    // operand 3: type name
+    dList.push_back(MDString::get(getGlobalContext(), type->name));
+
+    // operand 4: typedef owner
     if (owner)
         dList.push_back(MDString::get(getGlobalContext(), owner->name));
     else
         dList.push_back(NULL);
+
+    // operand 5: instance var index
+    if (!gvar)
+        dList.push_back(constInt(ivar->index));
 
     return MDNode::get(getGlobalContext(), dList.data(), dList.size());
 
@@ -305,11 +314,58 @@ bool Cacher::readImports() {
 
 }
 
-void Cacher::readTypeDef(const std::string &sym,
-                         llvm::MDNode *mnode) {
+void Cacher::readVarDefGlobal(const std::string &sym,
+                        llvm::Value *rep,
+                        llvm::MDNode *mnode) {
 
-    // operand 2: llvm rep (null initializer)
-    Value *rep = mnode->getOperand(2);
+    // rep for gvar is the actual global
+
+
+
+}
+
+void Cacher::readVarDefMember(const std::string &sym,
+                        llvm::Value *rep,
+                        llvm::MDNode *mnode) {
+
+    // rep for instance var is null val for member type
+    // XXX rep unused?
+
+    // operand 3: member type name
+    MDString *typeStr = dyn_cast<MDString>(mnode->getOperand(3));
+    assert(typeStr && "readVarDefMember: invalid type string");
+
+    VarDefPtr vd = modDef->lookUp(typeStr->getString().str());
+    TypeDef *td = TypeDefPtr::rcast(vd);
+    assert(td && "readVarDefMember: type not found");
+
+    // operand 4: type owner (class we're a member of)
+    MDString *ownerStr = dyn_cast<MDString>(mnode->getOperand(4));
+    assert(ownerStr && "readVarDefMember: invalid owner");
+
+    VarDefPtr o = modDef->lookUp(ownerStr->getString().str());
+    assert(o && "readVarDefMember: owner not found");
+
+    TypeDef *otd = dynamic_cast<TypeDef*>(o.get());
+    assert(otd && "readVarDefMember: owner not type");
+
+    // operand 5: instance var index
+    ConstantInt *index = dyn_cast<ConstantInt>(mnode->getOperand(5));
+    assert(index && "readVarDefMember: no index");
+
+    BInstVarDefImpl *impl = new BInstVarDefImpl(index->getLimitedValue());
+
+    // the member def itself
+    VarDef *mbr = new VarDef(td, sym);
+    mbr->impl = impl;
+
+    otd->addDef(mbr);
+
+}
+
+void Cacher::readTypeDef(const std::string &sym,
+                         llvm::Value *rep,
+                         llvm::MDNode *mnode) {
 
     // operand 3: metatype type (name string)
     MDString *cname = dyn_cast<MDString>(mnode->getOperand(3));
@@ -337,6 +393,7 @@ void Cacher::readTypeDef(const std::string &sym,
 
     // make the class default to initializing to null
     type->defaultInitializer = new NullConst(type.get());
+    type->complete = true;
 
     modDef->addDef(type.get());
 
@@ -466,14 +523,14 @@ void Cacher::readDefs() {
         case Cacher::method:
             readFuncDef(sym, rep, mnode);
             break;
+        case Cacher::member:
+            readVarDefMember(sym, rep, mnode);
+            break;
         case Cacher::global:
-            // XXX
+            readVarDefGlobal(sym, rep, mnode);
             break;
         case Cacher::type:
-            readTypeDef(sym, mnode);
-            break;
-        case Cacher::member:
-            // XXX
+            readTypeDef(sym, rep, mnode);
             break;
 
         default:
