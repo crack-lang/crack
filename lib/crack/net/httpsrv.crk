@@ -1,0 +1,459 @@
+## HTTP Server Framework.  Usage synopsis:
+##   HTTPServer server = {
+##
+## Copyright 2011 Google Inc.
+
+import crack.ascii strip;
+import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
+import crack.strutil StringArray;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.io cerr, Formatter, StringFormatter, Writer;
+import crack.net InetAddress, Pollable, Poller, Socket, AF_INET, POLLIN, 
+    POLLOUT, POLLERR, SOCK_STREAM;
+import crack.time TimeDelta;
+import crack.sys strerror;
+import crack.fs SystemError;
+import crack.runtime errno;
+import crack.functor Functor1;
+
+@import crack.ann define, interface, implements;
+
+Formatter NULL_FORMATTER = null;
+@define vlog() { cerr }
+
+## Contains the full contents of an HTTP request and provides the means for 
+## communicating back to the client.
+class HTTPRequest {
+    String method, path, version;
+    HashMap[String, String] headers = {};
+    Formatter __clt;
+
+    oper init(Writer client ## the channel to write back to the client.
+              ) :
+        method = method,
+        path = path,
+        version = version,
+        __clt(client) {
+    }
+    
+    ## Sends a reply to the client with the specified code, content type and 
+    ## contents.
+    void sendReply(int code, String contentType, String contents) {
+        __clt `HTTP/1.1 $code Stat
+Content-type: $contentType
+Content-length: $(contents.size)
+
+$contents`;
+    }
+    
+    void sendRedirect(int code, String location) {
+        __clt `HTTP/1.1 $code Stat
+Location: $location
+
+`;
+    }
+}
+
+uintz normalizeIndex(intz index, uintz size) {
+    if (index < 0)
+        index = size + index;
+    
+    # if it's still zero, trim to zero
+    if (index < 0)
+        index = 0;
+    
+    # if greater than the limit, trim to the limit.
+    else if (index > size)
+        index = size;
+    
+    return index;
+}
+
+## Joins an array of path components into a path.
+String joinPath(StringArray path, int start, int end) {
+    size := path.count();
+    s := normalizeIndex(start, size);
+    e := normalizeIndex(end, size);
+
+    # figure out how much space we need for all strings separated by slashes.
+    uintz bufSize;
+    for (elem :in path)
+        bufSize += elem.size;
+    bufSize += size - 1;
+
+    AppendBuffer buf = {bufSize};
+    for (int i = start; i < end; ++i) {
+        if (i == start)
+            buf.append(b'/');
+        buf.extend(path[i]);
+    }
+    buf.size = buf.pos;
+    
+    return String(buf, true);
+}
+        
+
+const int _ST_REQUEST = 0;
+const int _ST_HEADERS= 1;
+const int _ST_BODY = 2;
+
+## Error formatter.  Writes a message to cerr (TODO: to a logger) and sends an 
+## error reply with the message as its parcel.
+class Error : StringFormatter {
+    HTTPRequest req;
+    int code;
+    oper init(HTTPRequest req, int code) : req = req, code = code {}
+
+    void leave() {
+        result := createString();
+        cerr.write(result);
+        req.sendReply(code, "text/plain", result);
+    }
+}
+
+## Request handler interface.  This interface dispatches a handler to 
+## interface methods corresponding to the HTTP GET, PUT and POST methods.
+@interface HTTPRequestHandler {
+    bool onGet(HTTPRequest req) {
+        Error(req, 405) `GET Method not allowed for $(req.path)`;
+        return true;
+    }
+
+    bool onPut(HTTPRequest req) {
+        Error(req, 405) `PUT Method not allowed for $(req.path)`;
+        return true;
+    }
+    
+    bool onPost(HTTPRequest req) {
+        Error(req, 405) `PUT Method not allowed for $(req.path)`;
+        return true;
+    }
+
+    bool oper call(HTTPRequest req) {
+        if (req.method == 'GET')
+            return onGet(req);
+        else if (req.method == 'POST')
+            return onPost(req);
+        else if (req.method == 'PUT')
+            return onPut(req);
+        else {
+            Error(req, 405) `Invalid method $(req.method)`;
+            return false;
+        }
+    }
+        
+}
+
+# we can't store interfaces in arrays yet, so we have to wrap it in another 
+# object.
+class F {
+    Functor1[bool, HTTPRequest] f;
+    oper init(Functor1[bool, HTTPRequest] f) : f = f {}
+}
+    
+class HandlerArray : Array[F] {}
+
+class OutQueue : Array[String] @implements Writer {
+    void write(Buffer data) {
+        if (data.isa(String))
+            append(String.cast(data));
+        else
+            append(String(data));
+    }
+}
+
+## An HTTP Server.
+##
+## TODO: make this class proactor based.
+class HTTPServer {
+    
+    class Client {
+        ManagedBuffer inbuf = {1024};
+        HTTPServer server;
+        HTTPRequest request;
+        HandlerArray handlers;
+        Socket sock;
+        int state;
+        
+        OutQueue outQueue = {};
+        
+        ## the next input position
+        uint inPos;
+        
+        ## the index of the first byte in the buffer that has been read but 
+        ## not processed.
+        uint pos;
+        
+        oper init(Socket sock, HandlerArray handlers) : 
+            sock = sock, 
+            handlers = handlers {
+        }
+        
+        ## Returns a byteptr to the current input buffer read position.
+        @final byteptr getInputBuf() {
+            if (inbuf.size - inPos < 1024)
+                # since the start size is 1024, we can assume that we will 
+                # grow to accomodate a 1024 byte buffer.
+                inbuf.grow(inbuf.size * 2);
+            return inbuf.buffer + pos;
+        }
+
+        @final void compressBuffer(uintz start) {
+            inPos -= start;
+            inbuf.move(0, start, inPos);
+            pos = 0;
+        }
+
+        @final void __badRequest() {
+            cerr `Invalid request from $(this)\n`;
+        }        
+        
+        @final void processRequestLine(uintz start, uintz end) {
+            request = HTTPRequest(outQueue);
+
+            # find the first space
+            methodEnd := inbuf.lfind(b' ', start);
+            if (methodEnd == -1 || methodEnd >= end) {
+                __badRequest();
+                return;
+            }
+            request.method = String(inbuf.buffer + start, methodEnd, false);
+            
+            # find the next non-space 
+            pathStart := methodEnd;
+            while (inbuf.buffer[pathStart] == b' ' && pathStart < end) 
+                ++pathStart;
+            if (pathStart == end) {
+                __badRequest();
+                return;
+            }
+
+            # find the path end            
+            pathEnd := inbuf.lfind(b' ', pathStart);
+            if (pathEnd == -1 || pathEnd > end) {
+                __badRequest();
+                return
+            }
+
+            # find the protocol version            
+            request.path = String(inbuf.buffer + pathStart, 
+                                  pathEnd - pathStart,
+                                  false
+                                  );
+            
+            # deal with HTTP 1.0
+            if (pathEnd == end) {
+                state = _ST_REQUEST;
+                return;
+            }
+
+            # find the next non-space
+            verStart := pathEnd;
+            while ((c := inbuf.buffer[verStart]) == b' ' && verStart < end)
+                ++verStart;
+            if (verStart == end) {
+                __badRequest();
+                return;
+            }
+            request.version = String(inbuf.buffer + verStart,
+                                     end - verStart,
+                                     false
+                                     );
+            @vlog() `got header $(request.version)\n`;
+            state = _ST_HEADERS;
+        }
+
+        @final void processRequest() {
+            for (handler :in handlers) {
+                if (handler.f(request))
+                    break;
+            }
+            
+            if (request.method != 'POST' && request.method != 'PUT')
+                state = _ST_REQUEST;
+            request = HTTPRequest(outQueue);
+        }
+        
+        @final void processHeaderLine(uintz start, uintz end) {
+            line := String(inbuf.buffer + start, end - start, false);
+            @vlog() `processing header line: $(line.getRepr())\n`;
+            if (!line) {
+                state = _ST_BODY;
+                processRequest();
+                return;
+            }
+            # find the first colon
+            sep := line.lfind(b':');
+            @vlog() `adding $(line.slice(0, sep)) $(line.slice(sep + 1))\n`;
+            request.headers[line.slice(0, sep)] = strip(line.slice(sep + 1));
+        }
+                    
+        @final void parseNext(uint amtRead) {
+            end := inPos + amtRead;
+            inPos += amtRead;
+            while (true) {
+                if (state == _ST_REQUEST || state == _ST_HEADERS) {
+                    
+                    # find the first newline
+                    int p;
+                    for (p = pos; inbuf.buffer[p] != b'\n' && p < end; ++p);
+                    
+                    # if we got one, process the request line
+                    if (p < end) {
+                        
+                        start := pos;
+                        pos = p + 1;
+
+                        # ignore a carrriage-return
+                        if (p > 1 && inbuf.buffer[p - 1] == b'\r')
+                            --p;
+                    
+                        if (state == _ST_REQUEST)
+                            processRequestLine(start, p);
+                        else
+                            processHeaderLine(start, p);
+
+                    } else {
+                        # XXX verify that we haven't yet exceeded the maximum 
+                        # request line length
+                        # no complete line yet
+                        break;
+                    }
+                } else {
+                    # XXX post/put data, send to client handler
+                    compressBuffer(end);
+                    return;
+                }
+            }
+
+            compressBuffer(pos);
+        }
+
+        @final bool readChunk() {
+            amtRead := sock.read(WriteBuffer(getInputBuf(), 1024));
+            if (!amtRead) {
+                return false;
+            } else {
+                parseNext(amtRead);
+                return true;
+            }
+        }
+    } // end of Client
+    
+    int __port;
+    Socket __sock = {AF_INET, SOCK_STREAM, 0};
+    HashMap[int, Client] __clients = {};
+    Poller __poller = {};
+    Array[Pollable] __toRemove = {};
+    HandlerArray __handlers = {};
+
+    oper init(int port) {
+        if (!__sock.bind(InetAddress(0, port))) 
+            throw SystemError('bind failed', errno());
+        if (!__sock.listen(5)) 
+            throw SystemError('listen failed', errno());
+        if (!__sock.setReuseAddr(true))
+            @vlog() `WARN: reuseaddr failed: $(strerror())\n`;
+        __poller.add(__sock, POLLIN);
+    }
+
+    void __accept() {
+        clientAccepted := __sock.accept();
+        @vlog() `  got connection from $(clientAccepted.addr) with ref count \
+$(clientAccepted.sock.refCount)\n`;
+        __poller.add(clientAccepted.sock, POLLIN);
+        __clients[clientAccepted.sock.fd] = 
+            Client(clientAccepted.sock, __handlers);
+    }
+    
+    void __processClientRead(Pollable p) {
+        client := __clients[p.getFD()];
+        if (!client.readChunk()) {
+            @vlog() `deleting client $(p.getFD())\n`;
+            __clients.delete(p.getFD());
+            # XXX should do a deferred close here
+            client.sock.close();
+            __toRemove.append(p);
+        }
+    }
+    
+    void __processClientWrite(Pollable p) {
+        # find the client
+        client := __clients[p.getFD()];
+        
+        # XXX this is rubbish.  Fix it
+        while (client.outQueue) {
+            @vlog() `writing $(client.outQueue[0].getRepr())\n`;
+            client.sock.send(client.outQueue[0], 0);
+            client.outQueue.delete(0);
+        }
+    }
+
+    ## Adds the given handler to the chain.  Handlers are called in the order 
+    ## in which they were added until one of them returns true.
+    void addHandler(Functor1[bool, HTTPRequest] handler) {
+        __handlers.append(F(handler));
+    }
+    
+    ## Process a single event.
+    ## If 'timeout' is not null, it is the timeout to wait for the next event.
+    void processOnce(TimeDelta timeout) {
+        
+        # go through the clients, change their events
+        for (clientItem :in __clients)
+            if (clientItem.val.outQueue)
+                __poller.setEvents(clientItem.val.sock, POLLIN | POLLOUT);
+            else
+                __poller.setEvents(clientItem.val.sock, POLLIN);
+        
+        @vlog() `waiting for an event\n`;
+        result := __poller.wait(timeout);
+        @vlog() `got events: $result\n`;
+        while (evt := __poller.nx()) {
+            @vlog() `  event is on $(evt.pollable.getFD())\n`;
+            # if it's the server socket, do an accept
+            if (evt.pollable is __sock) {
+                @vlog() `  got new connection\n`;
+                __accept();
+            # client events
+            } else {
+                if (POLLIN & evt.revents) {
+                    @vlog() `  got client read\n`;
+                    __processClientRead(evt.pollable);
+                } else if (POLLOUT & evt.revents) {
+                    @vlog() `  got client writable\n`;
+                    __processClientWrite(evt.pollable);
+                } else if (POLLERR & evt.revents) {
+                    @vlog() `  error on socket $(evt.pollable)\n`;
+                } else {
+                    @vlog() `  wtf???  pollable = $(evt.pollable), events = \
+$(evt.events), revents = $(evt.revents)\n`;
+                }
+            }
+        }
+        
+        # remove pollables that we're done with.
+        if (__toRemove) {
+            for (p :in __toRemove) {
+                @vlog() `removing $p\n`;
+                __poller.remove(p);
+            }
+            while (__toRemove)
+                __toRemove.delete(0);
+            @vlog() `removals finished\n`;
+        }
+        
+    }
+    
+    void run() {
+        while (true) {
+            processOnce(null);
+        }
+    }
+    
+    int getPort() { return __port; }
+}
+
+
+
