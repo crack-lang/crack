@@ -171,6 +171,9 @@ class Buffer : Object {
         # deal with the simple case
         if (this is other)
             return 0;
+            
+        if (other is null)
+            return 1;
 
         # if the other object is a string, do string comparison.
         if (other.isa(Buffer)) {
