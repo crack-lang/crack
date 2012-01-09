@@ -1,0 +1,65 @@
+import crack.io cout, FStr;
+import crack.strutil StringArray;
+import crack.cont.array Array;
+import crack.json JsonParser;
+
+JsonParser parser = {};
+StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
+                           '{"one":1}', '{"two":"two"}', '{"three":1.0}',
+                           '[1,2,3]', '[1, "2", 3e0, {}]', '
+{
+  "Material": "rna",
+  "Temperature": 37.0,
+  "Sodium": 1.0,
+  "AdditionalComplexes": [
+
+  ],
+  "MaxComplexSize": 1,
+  "Strands": {
+    "S": {
+      "ConcScale": "uM",
+      "Conc": 1.0,
+      "Sequence": "CGAUGCAUGC",
+      "Pos": 0
+    }
+  },
+  "Pseudoknots": "false",
+  "MinConcScale": "uM",
+  "Magnesium": 0.0,
+  "Dangles": "some",
+  "MaxHistograms": 10,
+  "MinConc": 0.0,
+  "Strands order": [
+    "S"
+  ],
+  "MaxConcFrac": 0.01
+}'];
+
+StringArray testResults =  ['/\n\r\b\t\\\"', 'true', 'false', 'null', 
+                            '{one: 1}', '{two: two}', '{three: 1.000000}', 
+                           '[1, 2, 3]', '[1, 2, 3.000000, {}]', '{Dangles: some, Strands order: [S], Sodium: 1.000000, MaxComplexSize: 1, Material: rna, MinConcScale: uM, MinConc: 0.000000, Magnesium: 0.000000, Pseudoknots: false, MaxHistograms: 10, MaxConcFrac: 0.010000, Strands: {S: {Conc: 1.000000, Pos: 0, ConcScale: uM, Sequence: CGAUGCAUGC}}, AdditionalComplexes: [], Temperature: 37.000000}'];
+Array[uint] failed = {};
+StringArray failedResults = {};
+uint i = 0;
+
+for (input :in testStrings){
+    parseVal := parser.parse(input);
+    result := FStr() `$parseVal`;
+    if (result != testResults[i]){
+        failed.append(i);
+        failedResults.append(result);
+    }
+    i++;
+}
+
+i = 0;
+if (failed.count() > 0){
+    cout `Tests failed:\n`;
+    for (fi :in failed){
+        cout `$(testStrings[fi]) -> $(failedResults[i]), expected $(testResults[fi])\n`;
+        i++;
+    }
+}
+else
+    cout `ok\n`;
+
