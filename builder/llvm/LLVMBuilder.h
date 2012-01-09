@@ -88,7 +88,9 @@ class LLVMBuilder : public Builder {
          * common module initialization that happens in all builders
          * during initializeImport
          */
-        void initializeImportCommon(model::ModuleDef* m);
+        void initializeImportCommon(model::ModuleDef* m,
+                                    const std::vector<std::string> &symbols
+                                    );
 
         /**
           * get a realpath source path for the module
@@ -427,6 +429,13 @@ class LLVMBuilder : public Builder {
         virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          );
+
+        // used by Cacher for maintaining a global (cross module)
+        // cache map of vardefs. this is not part of the base Builder
+        // interface
+        virtual void registerDef(model::Context &context,
+                                 model::VarDef *varDef
+                                 ) { }
 
         virtual void setArgv(int argc, char **argv);        
         

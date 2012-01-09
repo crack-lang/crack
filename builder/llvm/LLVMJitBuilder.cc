@@ -326,6 +326,49 @@ void LLVMJitBuilder::dump() {
     passMan.run(*module);
 }
 
+void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
+
+    // here we keep track of which external functions and globals came from
+    // which module, so we can do a mapping in cacheMode
+    if (!options->cacheMode)
+        return;
+
+    // make sure cacheMap is initialized
+    // a single copy of the map exists in the rootBuilder
+    if (!cacheMap) {
+        if (rootBuilder) {
+            LLVMJitBuilder *rb = LLVMJitBuilderPtr::cast(rootBuilder.get());
+            if (rb->cacheMap)
+                cacheMap = rb->cacheMap;
+            else
+                cacheMap = rb->cacheMap = new CacheMapType();
+        }
+        else {
+            assert(0 && "non rootBuilder registerDef called");
+        }
+    }
+
+    // get rep from either a BFuncDef or varDef->impl global, then use that as
+    // value to cacheMap
+    BGlobalVarDefImpl *bgbl;
+    BFuncDef *fd;
+    if (varDef->impl && (bgbl = dynamic_cast<BGlobalVarDefImpl*>(varDef->impl.get()))) {
+        // global        
+        cacheMap->insert(CacheMapType::value_type(varDef->getFullName(),bgbl->rep));
+    }
+    else if (fd = dynamic_cast<BFuncDef*>(varDef)) {
+        // funcdef
+        cacheMap->insert(CacheMapType::value_type(varDef->getFullName(),fd->rep));
+        }
+    else {
+        //assert(0 && "registerDef: unknown varDef type");
+        // this happens in a call from parser (not cacher) on e.g. classes,
+        // which we don't care about here
+        return;
+    }
+
+}
+
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                                                    const std::string &canonicalName,
                                                    const std::string &path,
@@ -340,6 +383,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         // find the main function
         module = bmod->rep;
 
+        // XXX move this to Cacher::getEntryFunction() to hide metadata impl
         NamedMDNode *node = module->getNamedMetadata("crack_entry_func");
         assert(node && "no crack_entry_func");
         MDNode *funcNode = node->getOperand(0);
@@ -357,7 +401,10 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         // searching for the symbol in the current process, which works because
         // when the extension was imported, we've already dlopen'd it)
         Function *ext_f;
+        GlobalVariable *ext_g;
+        GlobalValue *gval;
         MDString *sym;
+        // XXX move this to Cacher::getExterns() to hide metadata impl
         NamedMDNode *externs = module->getNamedMetadata("crack_externs");
         assert(externs && "no crack_externs node");
         MDNode *symNode = externs->getOperand(0);
@@ -366,36 +413,53 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
             sym = dyn_cast<MDString>(symNode->getOperand(i));
             assert(sym && "malformed crack_externs");
 
+            CacheMapType::const_iterator cmi = cacheMap->find(sym->getString().str());
+            assert(cmi != cacheMap->end() && "external not found");
+
+            gval = cmi->second;
+
             Function *decl = module->getFunction(sym->getString());
-            assert(decl->isDeclaration() && "declared extern wasn't a decl");
+            if (decl) {
+                assert(decl->isDeclaration() &&
+                       "declared extern function wasn't a decl");
 
-            // find the function with this symbol name by searching through
-            // the modules that have already been added to the JIT
-            // we always expect it because 1) imports for this module have
-            // already been loaded and 2) the imports would have missed if
-            // their source digest didn't match (i.e. symbols changed) causing
-            // us to miss as well before now
-            // XXX this is noted as being a slow function. we have the potential
-            // to speed this up by keeping track of symbols in our own table
-            // local to LLVMJitBuilder as they are imported
-            ext_f = execEng->FindFunctionNamed(sym->getString().str().c_str());
-            assert(ext_f && "extern not found in JIT");
+                // find the function with this symbol name by searching through
+                // the modules that have already been added to the JIT
+                // we always expect it because 1) imports for this module have
+                // already been loaded and 2) the imports would have missed if
+                // their source digest didn't match (i.e. symbols changed) causing
+                // us to miss as well before now
+                ext_f = dyn_cast<Function>(gval);
+                assert(ext_f && "extern not found in JIT");
 
-            // materializing will ensure the function is codegen'd
-            if (ext_f->isMaterializable()) {
-                if (ext_f->Materialize()) {
-                    cerr << "materialize fail: " << ext_f->getNameStr()
-                         << endl;
-                    return NULL;
+                // materializing will ensure the function is codegen'd
+                if (ext_f->isMaterializable()) {
+                    if (ext_f->Materialize()) {
+                        cerr << "materialize fail: " << ext_f->getNameStr()
+                             << endl;
+                        return NULL;
+                    }
                 }
+
+                // after potentially materializing, ext_f should be a def
+                assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
+
+                void *realAddr = execEng->getPointerToFunction(ext_f);
+                assert(realAddr && "unable to resolve ext_f");
+                execEng->addGlobalMapping(decl, realAddr);
             }
-
-            // after potentially materializing, ext_f should be a def
-            assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
-
-            void *realAddr = execEng->getPointerToFunction(ext_f);
-            assert(realAddr && "unable to resolve ext_f");
-            execEng->addGlobalMapping(decl, realAddr);
+            else {
+                // map globals
+                GlobalVariable *gbl = module->getGlobalVariable(sym->getString());
+                assert(gbl && "declared extern was not function or global");
+                assert(gbl->isDeclaration() && "declared global wasn't a decl");
+                // now find the defining module
+                ext_g = dyn_cast<GlobalVariable>(gval);
+                assert(ext_g && "extern not found in JIT");
+                void* realAddr = execEng->getPointerToGlobal(ext_g);
+                assert(realAddr && "unable to resolve global");
+                execEng->addGlobalMapping(gbl, realAddr);
+            }
 
         }
 

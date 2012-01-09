@@ -51,7 +51,9 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                  model::ModuleDef *owner
                                                  );
 
-        virtual void initializeImport(model::ModuleDef*, bool annotation);
+        virtual void initializeImport(model::ModuleDef*,
+                                      const std::vector<std::string> &symbols,
+                                      bool annotation);
 
         virtual void *loadSharedLibrary(const std::string &name);
 

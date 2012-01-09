@@ -390,11 +390,12 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
 }
 
 void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
+                                         const std::vector<std::string> &symbols,
                                          bool annotation) {
 
     assert(!annotation && "annotation given to linker builder");
 
-    initializeImportCommon(m);
+    initializeImportCommon(m, symbols);
 
     // we add a call into our module's :main function
     // to run the top level function of the imported module

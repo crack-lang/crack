@@ -2456,11 +2456,6 @@ void Parser::parseImportStmt(Namespace *ns) {
                           " recursively."
                          )
                );
-      else
-         builder.initializeImport(mod.get(),
-                                  // HACK check for annotation?
-                                  ns == context->compileNS.get()
-                                  );
 
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
@@ -2494,6 +2489,11 @@ void Parser::parseImportStmt(Namespace *ns) {
          error(tok, ex.getMessage());
       }
    } else {
+       builder.initializeImport(mod.get(),
+                                syms,
+                                // HACK check for annotation?
+                                ns == context->compileNS.get()
+                                );
       // alias all of the names in the new module
       for (vector<string>::iterator iter = syms.begin();
            iter != syms.end();
