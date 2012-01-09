@@ -1,0 +1,10 @@
+%%TEST%%
+JSON parsing
+%%ARGS%%
+
+%%FILE%%
+import test.test_json;
+%%EXPECT%%
+ok
+%%STDIN%%
+
