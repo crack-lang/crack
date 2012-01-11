@@ -468,7 +468,9 @@ void Cacher::readFuncDef(const std::string &sym,
     assert(rep && "no rep");
 
     // operand 3: typedef owner (if exists)
-    MDString *ownerStr = dyn_cast<MDString>(mnode->getOperand(3));
+    MDString *ownerStr(0);
+    if (mnode->getOperand(3))
+        ownerStr = dyn_cast<MDString>(mnode->getOperand(3));
 
     // operand 4: func flags
     ConstantInt *flags = dyn_cast<ConstantInt>(mnode->getOperand(4));
@@ -537,20 +539,27 @@ void Cacher::readFuncDef(const std::string &sym,
         }
     }
 
-    OverloadDef *o;
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, newF);
+
+    OverloadDef *o(0);
     vd = owner->lookUp(sym);
-    if (!vd) {
+    if (vd)
+        o = OverloadDefPtr::rcast(vd);
+
+    // at this point o may be null here if 1) vd is null 2) vd is not an
+    // overloaddef. 2 can happen when a function is overriding an existing
+    // definition
+    if (!vd || !o) {
         o = new OverloadDef(sym);
         o->addFunc(newF);
         owner->addDef(o);
-
-        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-        b.registerDef(context, newF);
+    }
+    else if (o) {
+        o->addFunc(newF);
     }
     else {
-        o = OverloadDefPtr::rcast(vd);
-        assert(o && "not an overload");
-        o->addFunc(newF);
+        assert(0 && "readFuncDef: maybe unreachable");
     }
 
 
