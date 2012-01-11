@@ -1,7 +1,7 @@
 // Command line argument processor
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
-import crack.lang die, cmp, free; 
+import crack.lang die, cmp, free, Formatter; 
 import crack.strutil ljust;
 import crack.cont.array Array;
 import crack.math strtoi, strtof;
@@ -102,8 +102,8 @@ class Option {
          return FStr() `$(short)/$(long)/[$(typeNames[type])]=(null)`;
    }
 
-   void writeTo(Writer out) {
-      out.write(getRepr());
+   void writeTo(Formatter fmt) {
+      fmt.format(getRepr());
    }
 }
 
@@ -467,17 +467,17 @@ class CmdOptions {
       }
    }
 
-   void writeTo(Writer out) {
-      out.write('[');
+   void writeTo(Formatter fmt) {
+      fmt.format(fmt.ARRAYSTART);
       bool first = true;
       for (elem :in options) {
          if (!first)
-            out.write(', ');
+            fmt.format(fmt.ELEMSEP);
          else
             first = false;
-         out.write(elem.getRepr());
+         fmt.format(elem.getRepr());
       }
-      out.write(']');
+      fmt.format(fmt.ARRAYEND);
    }
 
    /// Write a usage message to the writer.

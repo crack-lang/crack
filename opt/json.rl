@@ -14,17 +14,101 @@
 // For more info on JSON, see http://json.org/
 
 import crack.runtime exit, memmove;
-import crack.lang WriteBuffer, AppendBuffer, ManagedBuffer, Buffer, Exception, Writer, CString;
-import crack.io cout, cerr, cin, FStr;
+import crack.lang WriteBuffer, AppendBuffer, ManagedBuffer, Buffer, Exception, 
+                  Writer, CString, Formatter;
+import crack.io cout, cerr, cin, FStr, StandardFormatter, StringWriter;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
+import crack.cont.treemap TreeMap;
 import crack.math atoi, INFINITY, NAN, strtof;
 @import crack.ann define;
 
+// Define a formatter class to override string formatting
+class JsonFormatter : StandardFormatter {
+    oper init(Writer rep) : StandardFormatter(rep) {}
+
+    String encodeString(String data) {
+        AppendBuffer buf = {data.size + 2};
+
+        buf.append(b'"');
+        for (uint i = 0; i < data.size; ++i) {
+            ch := data.buffer[i];
+            if (ch == b'"' || ch == b'\\'){
+                buf.append(b'\\');
+                buf.append(ch);
+            } else if (ch == b'\n'){
+                buf.append(b'\\');
+                buf.append(b'n');
+            } else if (ch == b'\t'){
+                buf.append(b'\\');
+                buf.append(b't');
+            } else if (ch == 12){ // FF
+                buf.append(b'\\');
+                buf.append(b'f');
+            } else if (ch == b'\r'){
+                buf.append(b'\\');
+                buf.append(b'r');
+            } else if (ch == b'/'){
+                buf.append(b'\\');
+                buf.append(b'/');
+            } else if (ch == 8){ // BS
+                buf.append(b'\\');
+                buf.append(b'b');
+            } else if (ch < 32 || ch > 127) {
+                buf.append(b'\\');
+                buf.append(b'0' + (ch >> 6));
+                buf.append(b'0' + ((ch & 56) >> 3));
+                buf.append(b'0' + (ch & 7));
+            } else {
+                buf.append(ch)
+            }
+        }
+        buf.append(b'"');
+
+        buf.size = buf.pos;
+        return String(buf, true);
+    }
+
+    void format(StaticString data) {
+        write(encodeString(data));
+    }
+
+    void format(String data) {
+        write(encodeString(data));
+    }
+
+    // For general objects, format() just calls the object's writeTo()
+    // method.
+    void format(Object obj) {
+        if (obj is null)
+            write(NULL);
+        else if (obj.isa(String))
+            format(String.cast(obj));
+        else
+            obj.writeTo(this);
+    }
+}
+
+class JsonStringFormatter : JsonFormatter {
+    StringWriter _writer;
+    oper init() : JsonFormatter (null) {
+        _writer = StringWriter();
+        rep = _writer;
+    }
+
+    // Return a string containing everything that has been written so far.
+    String string() {
+        retval := _writer.string();
+        _writer = StringWriter();
+        rep = _writer;
+        return retval;
+    }
+}
+
+
 @define writeValue() {
-    void writeTo(Writer out) {
-        FStr fmt = {};
-        out.write(fmt `$value`);
+    void writeTo(Formatter fmt) {
+        fmt.format(value);
     }
 }
 
@@ -100,24 +184,49 @@ class JsonParser {
 
         @define writeJsonValue(Type){
             if (result.isa(Type)) { 
-                out.write( fmt `$(Type.cast(result))`);
+                fmt.format(Type.cast(result));
             }
         }
 
-        void writeTo(Writer out) {
-            FStr fmt = {};
+        @define writeJsonValueFmt(Type){
+            if (result.isa(Type)) {
+                fmt.write('<');
+                fmt.format($Type);
+                fmt.write('>');
+                fmt.format(Type.cast(result));
+            }
+        }
+
+        void writeTo(Formatter fmt) {
             if (result is null){
-              out.write(fmt `null`);
+              fmt.format(fmt.NULL);
               return;
             }
+
             @writeJsonValue(JsonInt)
             else @writeJsonValue(JsonBool)
             else @writeJsonValue(JsonFloat)
             else @writeJsonValue(JsonObject)
             else @writeJsonValue(JsonArray)
             else @writeJsonValue(String)
-            else out.write(fmt `UNKNOWN`);
+            else fmt.format('UNKNOWN');
         }
+
+        void _writeTo(Formatter fmt) {
+            if (result is null){
+              fmt.format(fmt.NULL);
+              return;
+            }
+
+            @writeJsonValueFmt(JsonInt)
+            else @writeJsonValueFmt(JsonBool)
+            else @writeJsonValueFmt(JsonFloat)
+            else @writeJsonValueFmt(JsonObject)
+            else @writeJsonValueFmt(JsonArray)
+            else @writeJsonValueFmt(String)
+            else fmt.format('UNKNOWN');
+        }
+
     }
 
     %%{

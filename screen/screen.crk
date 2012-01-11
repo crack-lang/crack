@@ -1,7 +1,8 @@
 // A test suite for crack
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
-import crack.io cout, cerr, Formatter, Writer, StringWriter, StringFormatter, FStr;
+import crack.lang Formatter;
+import crack.io cout, cerr, StandardFormatter, Writer, StringWriter, StringFormatter, FStr;
 import crack.sys argv, exit;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
@@ -259,11 +260,11 @@ class Test {
 
     void _dump(Writer out) {
         for (t :in _data.sections)
-            Formatter(out) `[$(t.key)]:\n$(t.val)`;
+            StandardFormatter(out) `[$(t.key)]:\n$(t.val)`;
     }
 
-    void writeTo(Writer out) {
-        Formatter(out) `[$(_data.fInfo)]: $(_data.desc)\n`;
+    void writeTo(Formatter fmt) {
+        fmt `[$(_data.fInfo)]: $(_data.desc)\n`;
     }
 
 }

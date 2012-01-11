@@ -3,11 +3,11 @@ interpolation operator
 %%ARGS%%
 
 %%FILE%%
-import crack.io FDWriter, Formatter;
+import crack.io FDWriter, StandardFormatter;
 
-    class F : Formatter {
+    class F : StandardFormatter {
         bool enabled;
-        oper init(int fd) : Formatter(FDWriter(fd)), enabled = true {}
+        oper init(int fd) : StandardFormatter(FDWriter(fd)), enabled = true {}
         bool isTrue() { return enabled; }
     };
     out := F(1);

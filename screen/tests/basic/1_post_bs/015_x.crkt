@@ -3,8 +3,8 @@ IO classes
 %%ARGS%%
 
 %%FILE%%
-import crack.io FDWriter, Formatter, Writer;
-     f := Formatter(FDWriter(1));
+import crack.io FDWriter, StandardFormatter, Writer;
+     f := StandardFormatter(FDWriter(1));
      f.format("string");
      int32 i32 = -100;
      f.format(i32);

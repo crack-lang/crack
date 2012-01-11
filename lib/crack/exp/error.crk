@@ -14,7 +14,7 @@
 #   }
 
 import crack.lang abort;
-import crack.io cerr, Formatter, StringWriter, Writer;
+import crack.io cerr, StandardFormatter, StringWriter, Writer;
 
 class ErrorHandler {
     
@@ -39,11 +39,11 @@ class ErrorHandler {
         }
     }
     
-    class ErrorFormatter : Formatter {
+    class ErrorFormatter : StandardFormatter {
         ErrorHandler __handler;
 
         oper init(ErrorHandler handler) :
-            Formatter(handler.writer),
+            StandardFormatter(handler.writer),
             __handler = handler {
         }
         

@@ -2,7 +2,7 @@
 # Basic input/output classes.
 
 import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
-    ManagedBuffer, Writer;
+    ManagedBuffer, Writer, Formatter;
 import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
     read;
 
@@ -149,8 +149,8 @@ uint _format(int64 val, byteptr buf, uint size) {
     return i;
 }
 
-## Formatter base class - got a format() method for anything.
-class Formatter : Object, Writer {
+## StandardFormatter class - got a format() method for anything.
+class StandardFormatter : Formatter {
 
     Writer rep;
 
@@ -240,10 +240,11 @@ class Formatter : Object, Writer {
     }
 
     Object _iface_getWriterObject() { return this; }
+    Object _iface_getFormatterObject() { return this; }
 }
 
-cout := Formatter(FDWriter(1));
-cerr := Formatter(FDWriter(2));
+cout := StandardFormatter(FDWriter(1));
+cerr := StandardFormatter(FDWriter(2));
 cin := FDReader(0);
 
 ## Allows you to construct a string by writing to it.
@@ -319,16 +320,16 @@ class StringReader : Object, Reader {
     Object _iface_getReaderObject() { return this; }
 }
 
-## Convenience wrapper, equivalent to Formatter(StringWriter())
-class StringFormatter : Formatter {
+## Convenience wrapper, equivalent to StandardFormatter(StringWriter())
+class StringFormatter : StandardFormatter {
 
     StringWriter _writer = {};
 
-    oper init(uint initBufSize) : Formatter(null), _writer(initBufSize) {
+    oper init(uint initBufSize) : StandardFormatter(null), _writer(initBufSize) {
         rep = _writer;
     }
 
-    oper init() : Formatter(null) { rep = _writer; }
+    oper init() : StandardFormatter(null) { rep = _writer; }
 
     ## see: StringWriter.createString()
     ## Deprecated.  Use makeString() or string() instead.

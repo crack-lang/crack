@@ -3,8 +3,8 @@
 
 import crack.runtime free;
 import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer, 
-    WriteBuffer;
-import crack.io cout, Formatter, Reader, Writer;
+    WriteBuffer, Formatter;
+import crack.io cout, Reader, Writer;
 
 BUFSIZE := uint(1024);
 
@@ -82,8 +82,7 @@ class SerialReader {
         return CString(mbuf.orphan(), size, true);
     }
 
-    void writeTo(Writer out) {
-        Formatter o = {out};
+    void writeTo(Formatter o) {
         o `$(String(buf, 0, pos).getRepr())\n`;
         o `$(String(buf, pos, buf.size - pos).getRepr())\n`;
     }

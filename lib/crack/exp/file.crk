@@ -2,8 +2,8 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Portions Copyright 2010 Google Inc.
 
-import crack.io cout, FStr, Formatter, Writer, FDReader, FDWriter;
-import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer;
+import crack.io cout, FStr, StandardFormatter, Writer, FDReader, FDWriter;
+import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer, Formatter;
 import crack.io.readers LineReader;
 import crack.sys strerror;
 
@@ -23,8 +23,8 @@ class FileInfo: Object {
         return (fnmatch(CString(pattern).buffer, CString(name).buffer) == 0);
     }
 
-    void writeTo(Writer out) {
-        Formatter(out) `$name`;
+    void writeTo(Formatter fmt) {
+        fmt `$name`;
     }
   
     bool exists() {

@@ -1,8 +1,8 @@
 # Copyright 2010 Google Inc.
 
 import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
-    InvalidStateError, ManagedBuffer, WriteBuffer;
-import crack.io Formatter, FStr, Reader, Writer, cout;
+    InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
+import crack.io FStr, Reader, Writer, cout;
 import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
@@ -83,8 +83,7 @@ class InetAddress : Address {
         return InetAddress(i.addr, i.port);
     }
     
-    void writeTo(Writer out) {
-        Formatter fmt = {out};
+    void writeTo(Formatter fmt) {
         i := SockAddrIn.unsafeCast(_addr);
         addr := i.addr;
         fmt `$(addr >> 24).$((addr >> 8) & 0xff).$((addr >> 16) & 0xff)\
@@ -212,8 +211,8 @@ class Socket : Pollable @implements Reader, Writer {
         return Accepted(Socket(rc), addr);
     }
     
-    void writeTo(Writer out) {
-        Formatter(out) `Socket(fd: $fd)`;
+    void writeTo(Formatter fmt) {
+        fmt `Socket(fd: $fd)`;
     }
     
     # Reader interface

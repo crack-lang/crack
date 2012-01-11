@@ -1,7 +1,7 @@
 import crack.io cout, FStr;
 import crack.strutil StringArray;
 import crack.cont.array Array;
-import crack.json JsonParser;
+import crack.json JsonParser, JsonStringFormatter;
 
 JsonParser parser = {};
 StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
@@ -35,16 +35,20 @@ StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
   "MaxConcFrac": 0.01
 }'];
 
-StringArray testResults =  ['/\n\r\b\t\\\"', 'true', 'false', 'null', 
-                            '{one: 1}', '{two: two}', '{three: 1.000000}', 
-                           '[1, 2, 3]', '[1, 2, 3.000000, {}]', '{Dangles: some, Strands order: [S], Sodium: 1.000000, MaxComplexSize: 1, Material: rna, MinConcScale: uM, MinConc: 0.000000, Magnesium: 0.000000, Pseudoknots: false, MaxHistograms: 10, MaxConcFrac: 0.010000, Strands: {S: {Conc: 1.000000, Pos: 0, ConcScale: uM, Sequence: CGAUGCAUGC}}, AdditionalComplexes: [], Temperature: 37.000000}'];
+StringArray testResults =  [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null', 
+                            '{"one": 1}', '{"two": "two"}', '{"three": 1.000000}', 
+                           '[1, 2, 3]', '[1, "2", 3.000000, {}]', 
+                            '{"Dangles": "some", "Strands order": ["S"], "Sodium": 1.000000, "MaxComplexSize": 1, "Material": "rna", "MinConcScale": "uM", "MinConc": 0.000000, "Magnesium": 0.000000, "Pseudoknots": "\false", "MaxHistograms": 10, "MaxConcFrac": 0.010000, "Strands": {"S": {"Conc": 1.000000, "Pos": 0, "ConcScale": "uM", "Sequence": "CGAUGCAUGC"}}, "AdditionalComplexes": [], "Temperature": 37.000000}'];
 Array[uint] failed = {};
 StringArray failedResults = {};
 uint i = 0;
+JsonStringFormatter jfmt = {};
 
 for (input :in testStrings){
     parseVal := parser.parse(input);
-    result := FStr() `$parseVal`;
+
+    jfmt.format(parseVal);
+    result := jfmt.string();
     if (result != testResults[i]){
         failed.append(i);
         failedResults.append(result);
@@ -56,7 +60,7 @@ i = 0;
 if (failed.count() > 0){
     cout `Tests failed:\n`;
     for (fi :in failed){
-        cout `$(testStrings[fi]) -> $(failedResults[i]), expected $(testResults[fi])\n`;
+        cout `$(testStrings[fi]) ->\n$(failedResults[i]), expected\n$(testResults[fi])\n`;
         i++;
     }
 }

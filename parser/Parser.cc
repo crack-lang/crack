@@ -842,13 +842,14 @@ ExprPtr Parser::parseIString(Expr *expr) {
          funcCall->receiver = reg;
       seq->add(funcCall.get());
    }
-   
+
    // parse all of the subtokens
    Token tok;
    while (!(tok = getToken()).isIstrEnd()) {
       ExprPtr arg;
       if (tok.isString()) {
-         arg = context->getStrConst(tok.getData());
+          if (tok.getData().size() == 0) continue;
+          arg = context->getStrConst(tok.getData());
       } else if (tok.isIdent()) {
          // get a variable definition
          arg = createVarRef(0, tok);
@@ -2009,8 +2010,10 @@ bool Parser::parseDef(TypeDef *&type) {
             initializer = parseInitializer(type);
             // make sure the initializer matches the declared type.
             initializer = initializer->convert(*context, type);
-            if (!initializer)
+            if (!initializer){
+              initializer->writeTo(std::cerr);
                error(tok3, "Incorrect type for initializer.");
+             }
 
             context->emitVarDef(type, tok2, initializer.get());
    

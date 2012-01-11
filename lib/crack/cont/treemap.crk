@@ -1,8 +1,8 @@
 # Copyright 2011 Google Inc
 # Generic tree map implementation
 
-import crack.lang cmp, AssertionError, KeyError;
-import crack.io cout, Formatter, Writer;
+import crack.lang cmp, AssertionError, KeyError, Formatter;
+import crack.io cout, Writer;
 
 class TreeMap[KeyT, ValT] {
 
@@ -621,17 +621,16 @@ class TreeMap[KeyT, ValT] {
     
     Iter iter() { return Iter(this, __root); }
 
-    void writeTo(Writer out) {
-        Formatter f = {out};
-        f `{`;
-        uint i = 0;
+    void writeTo(Formatter fmt) {
+        fmt.format(fmt.MAPSTART);
+        bool first = true;
         for (item :in this){
-            if (i > 0) f `, `;
-            f `$(item.key): $(item.val)`;
-            i++;
+            if (!first) fmt.format(fmt.ELEMSEP);
+            else first = false;
+            fmt.format(item.key);
+            fmt.format(fmt.KEYVALSEP);
+            fmt.format(item.val);
         }
-        f `}`;
+        fmt.format(fmt.MAPEND);
     }
-
-
 }
