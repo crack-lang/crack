@@ -211,15 +211,6 @@ class JsonParser {
             }
         }
 
-        @define writeJsonValueFmt(Type){
-            if (result.isa(Type)) {
-                fmt.write('<');
-                fmt.format($Type);
-                fmt.write('>');
-                fmt.format(Type.cast(result));
-            }
-        }
-
         void writeTo(Formatter fmt) {
             if (result is null){
               fmt.format(fmt.NULL);
@@ -232,21 +223,6 @@ class JsonParser {
             else @writeJsonValue(JsonObject)
             else @writeJsonValue(JsonArray)
             else @writeJsonValue(String)
-            else fmt.format('UNKNOWN');
-        }
-
-        void _writeTo(Formatter fmt) {
-            if (result is null){
-              fmt.format(fmt.NULL);
-              return;
-            }
-
-            @writeJsonValueFmt(JsonInt)
-            else @writeJsonValueFmt(JsonBool)
-            else @writeJsonValueFmt(JsonFloat)
-            else @writeJsonValueFmt(JsonObject)
-            else @writeJsonValueFmt(JsonArray)
-            else @writeJsonValueFmt(String)
             else fmt.format('UNKNOWN');
         }
 
@@ -508,6 +484,19 @@ class JsonParser {
             memo = p;
         }
 
+        action parse_number_start {
+            memo = p;
+        }
+
+        action parse_number {
+            chr = (data[memo] - 48) *64;
+            chr += (data[memo+1] - 48)*8;
+            chr += (data[memo+2] - 48);
+            append_buf.append(chr);
+            memo = p + 1;
+            fexec p + 1;
+        }
+
         action escapeString {
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo - 1);
@@ -543,6 +532,7 @@ class JsonParser {
         main := '"' >startString
                 ( ( ^(["\\]|0..0x1f)
                   | '\\' ["\\/bfnrt] @escapeString
+                  | '\\' ([0..3] >parse_number_start [0-7]{2}) @parse_number
                   )* %parse_string
                 ) '"' @exit;
     }%%
@@ -792,8 +782,6 @@ class JsonParser {
             return parseStrict();
         }
     }
-
-
 
 //------------------------------------------------------------------------------
 
