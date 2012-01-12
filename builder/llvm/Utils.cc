@@ -145,14 +145,12 @@ void createClassImpl(Context &context, BTypeDef *type) {
     for (int i = 0; i < type->parents.size(); ++i) {
         // get the pointer to the inner "Class" object of "Class[BaseName]"
         BTypeDefPtr base = BTypeDefPtr::arcast(type->parents[i]);
-        BGlobalVarDefImplPtr impl = BGlobalVarDefImplPtr::arcast(base->impl);
 
-        // extract the initializer from the rep (which is the global
-        // variable for the _pointer_ to the class)
+        // get the class body global variable
         Constant *baseClassPtr = base->classInst;
         
         // make sure that this is in the module
-        if (cast<GlobalValue>(impl->rep)->getParent() != llvmBuilder.module) {
+        if (cast<GlobalValue>(baseClassPtr)->getParent() != llvmBuilder.module) {
             const string &name = baseClassPtr->getName();
             Type *classInstType =
                 cast<PointerType>(baseClassPtr->getType())->getElementType();
