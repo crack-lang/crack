@@ -20,7 +20,8 @@ import crack.io cout, cerr, cin, FStr, StandardFormatter, StringWriter;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.cont.treemap TreeMap;
-import crack.math atoi, INFINITY, NAN, strtof;
+import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
+                        FP_NORMAL, FP_ZERO, sign;
 @import crack.ann define;
 
 // Define a formatter class to override string formatting
@@ -75,6 +76,28 @@ class JsonFormatter : StandardFormatter {
 
     void format(String data) {
         write(encodeString(data));
+    }
+
+    void format(float32 value) {
+        int fptype = fpclassify(value);
+
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
+    }
+
+    void format(float64 value) {
+        int fptype = fpclassify(value);
+        
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
     }
 
     // For general objects, format() just calls the object's writeTo()
@@ -254,7 +277,7 @@ class JsonParser {
         end_array           = ']';
         begin_string        = '"';
         begin_name          = begin_string;
-        begin_number        = digit | '-';
+        begin_number        = ('-' | digit);
     }%%
 
 //------------------------------------------------------------------------------
@@ -311,7 +334,7 @@ class JsonParser {
         }
 
         action parse_number {
-            if (pe > fpc + 9 - (quirksMode ? 1 : 0) && false) {
+            if (pe > fpc + 9 && bufferString(p, p+9) == "-Infinity") {
                 if (allowNaN) {
                     result = JsonFloat(-INFINITY);
                     fexec p + 10;
@@ -321,11 +344,13 @@ class JsonParser {
                     throw unexpectedToken(data, p, pe);
                 }
             }
+
             res = parseFloat(fpc, pe);
             if (!(res is null)) {
                 result = res.result;
                 fexec res.p;
             }
+
             res = parseInteger(fpc, pe);
             if (!(res is null)) {
                 result = res.result;
@@ -398,8 +423,9 @@ class JsonParser {
 
         %% write exec;
 
-        if (cs >= JSON_value_first_final)
+        if (cs >= JSON_value_first_final){
             return ParserResult(result, p);
+        }
 
         return null;
     }
@@ -546,7 +572,7 @@ class JsonParser {
 
         write data;
 
-        action parse_value {
+        action parse_elem {
             res = parseValue(fpc, pe);
             if (res is null) {
                 fhold;
@@ -562,11 +588,11 @@ class JsonParser {
             fbreak;
         }
 
-        next_element = value_separator ignore* begin_value >parse_value;
+        next_element = value_separator ignore* begin_value >parse_elem;
 
         main := begin_array
                 ignore*
-                ( ( begin_value >parse_value
+                ( ( begin_value >parse_elem
                     ignore* )
                   ( ignore*
                     next_element

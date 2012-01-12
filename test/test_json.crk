@@ -2,6 +2,7 @@ import crack.io cout, FStr;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.json JsonParser, JsonStringFormatter;
+import crack.math NAN, INFINITY, FP_NORMAL, FP_ZERO, FP_INFINITE, FP_NAN;
 
 JsonParser parser = {};
 StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
@@ -64,6 +65,33 @@ if (failed.count() > 0){
         i++;
     }
 }
-else
-    cout `ok\n`;
 
+// Test encoding of regular Crack structures
+uints := Array[uint]![1,2,3,4,5,6,7];
+ints := Array[int]![-1, -2, -3, -4, 5, 6, 7];
+floats := Array[float64]![0, 1, -NAN, NAN, INFINITY, -INFINITY];
+
+StringArray nativeExpected = ['[1, 2, 3, 4, 5, 6, 7]', 
+                            '[-1, -2, -3, -4, 5, 6, 7]',
+                            '[0.000000, 1.000000, NaN, NaN, Infinity, -Infinity]'];
+
+StringArray encodeResults = {};
+
+jfmt.format(uints);
+encodeResults.append(jfmt.string());
+jfmt.format(ints);
+encodeResults.append(jfmt.string());
+jfmt.format(floats);
+encodeResults.append(jfmt.string());
+
+i = 0;
+for (encoded :in encodeResults){
+    parseVal := parser.parse(encoded);
+    jfmt.format(parseVal);
+    result := jfmt.string();
+    if (result != nativeExpected[i])
+        cout `$encoded ->\$result, expected\n$(nativeExpected[i])\n`;
+    i++;
+}
+
+cout `ok\n`;
