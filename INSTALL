@@ -3,7 +3,7 @@ Installation
 ============
 
 Crack can be built using either autoconf or CMake.  In either case, you'll 
-need LLVM 2.9 built with RTTI support.
+need LLVM 3.0 built with RTTI support.
 
 LLVM 2.7 was available as a package in Ubuntu Lucid, and was built with RTTI 
 support, but the configuration was broken for us.  It attempts to link in the 
@@ -14,13 +14,13 @@ LLVM from source.
 Autoconf Install Instructions
 -----------------------------
 
-Build LLVM 2.9 (if it is available as a package on your distro, you can just 
+Build LLVM 3.0 (if it is available as a package on your distro, you can just 
 apt-get it):
 
-$ tar -xvzf llvm-2.9.tgz
-$ cd llvm-2.9
+$ tar -xvzf llvm-3.0.tgz
+$ cd llvm-3.0.src
 $ ./configure
-$ make REQUIRES_RTTI=1
+$ make
 $ make install
 
 Build Crack:

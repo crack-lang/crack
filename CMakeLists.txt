@@ -12,7 +12,7 @@ endif(COMMAND cmake_policy)
 project (crack)
 
 set(CRACK_VERSION "0.6")
-set(CRACKLANG_API_VERSION "3.0.0")
+set(CRACKLANG_API_VERSION "3.0.1")
 set(NATRUN_API_VERSION "2.0.0")
 
 set(LLVM_MIN_VERSION       "3000000")
