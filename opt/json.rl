@@ -28,7 +28,7 @@ import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
 class JsonFormatter : StandardFormatter {
     oper init(Writer rep) : StandardFormatter(rep) {}
 
-    String encodeString(String data) {
+    String encodeString(Buffer data) {
         AppendBuffer buf = {data.size + 2};
 
         buf.append(b'"');
@@ -74,6 +74,13 @@ class JsonFormatter : StandardFormatter {
         write(encodeString(data));
     }
 
+    void format(Buffer data) {
+        if (data.isa(String))
+            write(encodeString(data));
+        else
+            write(data);
+    }
+
     void format(String data) {
         write(encodeString(data));
     }
@@ -100,15 +107,16 @@ class JsonFormatter : StandardFormatter {
         }
     }
 
-    // For general objects, format() just calls the object's writeTo()
+    // For general objects, format() just calls the object's formatTo()
     // method.
     void format(Object obj) {
         if (obj is null)
             write(NULL);
         else if (obj.isa(String))
             format(String.cast(obj));
-        else
-            obj.writeTo(this);
+        else {
+            obj.formatTo(this);
+        }
     }
 }
 
@@ -130,7 +138,7 @@ class JsonStringFormatter : JsonFormatter {
 
 
 @define writeValue() {
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(value);
     }
 }
@@ -205,27 +213,26 @@ class JsonParser {
         oper init(Object result, uint p) : result = result, p = p {
         }
 
-        @define writeJsonValue(Type){
-            if (result.isa(Type)) { 
+        @define formatJsonValue(Type){
+            if (result.isa(Type)) {
                 fmt.format(Type.cast(result));
             }
         }
 
-        void writeTo(Formatter fmt) {
+        void formatTo(Formatter fmt) {
             if (result is null){
               fmt.format(fmt.NULL);
               return;
             }
 
-            @writeJsonValue(JsonInt)
-            else @writeJsonValue(JsonBool)
-            else @writeJsonValue(JsonFloat)
-            else @writeJsonValue(JsonObject)
-            else @writeJsonValue(JsonArray)
-            else @writeJsonValue(String)
+            @formatJsonValue(JsonInt)
+            else @formatJsonValue(JsonBool)
+            else @formatJsonValue(JsonFloat)
+            else @formatJsonValue(JsonObject)
+            else @formatJsonValue(JsonArray)
+            else @formatJsonValue(String)
             else fmt.format('UNKNOWN');
         }
-
     }
 
     %%{

@@ -195,7 +195,7 @@ class List[Elem] {
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {
@@ -462,7 +462,7 @@ class DList[Elem] {
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {

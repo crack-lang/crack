@@ -12,8 +12,8 @@ class PriorityQueue[Elem] {
 
     Array[Elem] __data = { };
 
-    void writeTo(Formatter fmt) {
-        __data.writeTo(fmt);
+    void formatTo(Formatter fmt) {
+        __data.formatTo(fmt);
     }
 
     @final

@@ -133,7 +133,7 @@ class NoteOn : NoteEvent {
         }
     }
     
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `ch: $channel, note $note on, velocity $velocity`;
     }
 }
@@ -162,7 +162,7 @@ class NoteOff : NoteEvent {
         }
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `ch: $channel, note $note off, velocity $velocity`;
     }
 }
@@ -188,7 +188,7 @@ class ProgramChange : ChannelEvent {
         return StatAndString(status, byteptr![status, program], 2);
     }
     
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `ch: $channel, change to program $program`;
     }
 }
@@ -227,7 +227,7 @@ class PitchWheel : ChannelEvent {
         }
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `ch: $channel, pitch wheel to $value`;
     }
 }
@@ -259,7 +259,7 @@ class ControlChange : ChannelEvent {
         }
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `ch: #channel, control $controller changed to $value`;
     }
 }
@@ -283,7 +283,7 @@ class SysEx : Event {
         return StatAndString(0xF0, temp.string());
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f `SysEx: `;
         for (uintz i = 0; i < data.size; ++i)
             f `$(radix(data[i], 16))`;

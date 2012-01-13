@@ -2,7 +2,7 @@
 # Generic tree map implementation
 
 import crack.lang cmp, AssertionError, KeyError, Formatter;
-import crack.io cout, Writer;
+import crack.io cout, Writer, StandardFormatter;
 
 class TreeMap[KeyT, ValT] {
 
@@ -621,7 +621,7 @@ class TreeMap[KeyT, ValT] {
     
     Iter iter() { return Iter(this, __root); }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(fmt.MAPSTART);
         bool first = true;
         for (item :in this){

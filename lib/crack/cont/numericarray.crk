@@ -1,7 +1,7 @@
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, 
        Formatter;
 import crack.math abs, log2;
-import crack.io cout, Writer, FStr;
+import crack.io cout, Writer, FStr, StandardFormatter;
 import crack.algorithm QuickSort;
 import crack.cont.array Array, ArrayData;
 @import crack.ann define;
@@ -713,10 +713,10 @@ class NumericArray[Elem] {
         fmt.format(fmt.ARRAYEND);
     }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         _writeLevel(fmt, strides, offsets, shape, dims);
     }
-    
+
     oper del(){
         T = null;
     }

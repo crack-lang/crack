@@ -102,7 +102,7 @@ class Option {
          return FStr() `$(short)/$(long)/[$(typeNames[type])]=(null)`;
    }
 
-   void writeTo(Formatter fmt) {
+   void formatTo(Formatter fmt) {
       fmt.format(getRepr());
    }
 }
@@ -467,7 +467,7 @@ class CmdOptions {
       }
    }
 
-   void writeTo(Formatter fmt) {
+   void formatTo(Formatter fmt) {
       fmt.format(fmt.ARRAYSTART);
       bool first = true;
       for (elem :in options) {

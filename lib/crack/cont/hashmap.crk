@@ -298,7 +298,7 @@ class HashMap[Key, Value] {
 
     Iter iter() { return Iter(this); }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(fmt.MAPSTART);
         bool first = true;
         for (item :in this){

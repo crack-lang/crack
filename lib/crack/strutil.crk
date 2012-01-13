@@ -12,7 +12,7 @@ class StringArray : Array[String] {
     oper init(uint size) : Array[String](size) {}
     oper init() {}    
     
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {

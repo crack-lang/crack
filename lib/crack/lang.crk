@@ -114,11 +114,9 @@ class Object : VTableBase {
         return this.class.isSubclass(cls);
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         _formatObject(f, this);
     }
-
-
 };
 
 class Buffer;
@@ -184,7 +182,7 @@ class Buffer : Object {
         return (size == 0);
     }
 
-    void writeTo(Formatter f) {
+    void formatTo(Formatter f) {
         f.write(this);
     }
 
@@ -935,12 +933,12 @@ class Exception : Object {
         }
         out.write(StaticString('\n'));
     }
-    
+
     void writeTo(Writer out) {
         _writeTo(out);
     }
-    
-    void writeTo(Formatter fmt){
+
+    void formatTo(Formatter fmt){
         _writeTo(fmt);
     }
 }

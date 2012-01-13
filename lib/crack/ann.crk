@@ -181,10 +181,15 @@ class NodeListImpl : NodeList {
     void __write(Formatter fmt, Node node) {
         if (node.next)
             __write(fmt, node.next);
-        node.writeTo(fmt);
+        node.formatTo(fmt);
     }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
+        __write(fmt, first);
+    }
+
+    void writeTo(Writer out) {
+        StandardFormatter fmt = {out};
         __write(fmt, first);
     }
 
@@ -219,7 +224,7 @@ class Tok : Node {
         return tok.getLocation();
     }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         if (tok.isString()) {
             fmt.format(' ');
             fmt.format(String(tok.getText()).getRepr());
@@ -228,6 +233,17 @@ class Tok : Node {
             fmt.format(StaticString(tok.getText()));
         }
     }
+
+    void writeTo(Writer out) {
+        if (tok.isString()) {
+            out.write(' ');
+            out.write(String(tok.getText()).getRepr());
+        } else {
+            out.write(' ');
+            out.write(StaticString(tok.getText()));
+        }
+    }
+
 
     void writeTo(MacroSerializer dst) {
 
@@ -295,7 +311,7 @@ class Arg : Node {
         return sf.cString();
     }
 
-    void writeTo(Formatter fmt) { fmt `arg: $argIndex\n`; }
+    void formatTo(Formatter fmt) { fmt `arg: $argIndex\n`; }
     Location getLocation() { return loc; }
 
     oper init(MacroDeserializer src) {
@@ -786,10 +802,17 @@ void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
 class TokenWriter {
     NodeList tokens;
     oper init(NodeList tokens) : tokens = tokens {}
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         for (tok :in tokens) {
             fmt.format(tok.toString(null));
             fmt.format(' ');
+        }
+    }
+
+    void writeTo(Writer out) {
+        for (tok :in tokens) {
+            out.write(tok.toString(null));
+            out.write(' ');
         }
     }
 }

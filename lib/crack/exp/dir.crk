@@ -98,9 +98,8 @@ class Directory : Object, Openable {
             return null;
     }
 
-    void writeTo(Formatter fmt) {
-        fmt `$name`;
+    void formatTo(Formatter fmt) {
+        fmt.format(name);
     }
-
 }
 

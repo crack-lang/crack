@@ -5,6 +5,8 @@ import crack.json JsonParser, JsonStringFormatter;
 import crack.math NAN, INFINITY, FP_NORMAL, FP_ZERO, FP_INFINITE, FP_NAN;
 
 JsonParser parser = {};
+JsonStringFormatter jfmt = {};
+
 StringArray testStrings = [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null',
                            '{"one":1}', '{"two":"two"}', '{"three":1.0}',
                            '[1,2,3]', '[1, "2", 3e0, {}]', '
@@ -43,7 +45,6 @@ StringArray testResults =  [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null',
 Array[uint] failed = {};
 StringArray failedResults = {};
 uint i = 0;
-JsonStringFormatter jfmt = {};
 
 for (input :in testStrings){
     parseVal := parser.parse(input);
@@ -90,7 +91,7 @@ for (encoded :in encodeResults){
     jfmt.format(parseVal);
     result := jfmt.string();
     if (result != nativeExpected[i])
-        cout `$encoded ->\$result, expected\n$(nativeExpected[i])\n`;
+        cout `$encoded -> $result, expected\n$(nativeExpected[i])\n`;
     i++;
 }
 

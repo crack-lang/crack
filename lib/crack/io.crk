@@ -141,7 +141,7 @@ uint _format(int64 val, byteptr buf, uint size) {
         # beginning
         raw := uint64(-val);
         i = _format(raw, buf, size) - 1;
-        buf[i] = 45; # 45 == '-'
+        buf[i] = b'-';
     } else {
         raw := uint64(val);
         i = _format(raw, buf, size);
@@ -162,6 +162,10 @@ class StandardFormatter : Formatter {
     }
 
     void write(Buffer data) {
+        rep.write(data);
+    }
+
+    void format(Buffer data) {
         rep.write(data);
     }
 
@@ -225,13 +229,14 @@ class StandardFormatter : Formatter {
             write('false');
     }
 
-    ## For general objects, format() just calls the object's writeTo()
+    ## For general objects, format() just calls the object's formatTo()
     ## method.
     void format(Object obj) {
         if (obj is null)
             write('null');
-        else
-            obj.writeTo(this);
+        else {
+            obj.formatTo(this);
+        }
     }
 
     ## So we can deal with plain null-terminated strings.

@@ -263,7 +263,7 @@ class Test {
             StandardFormatter(out) `[$(t.key)]:\n$(t.val)`;
     }
 
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt `[$(_data.fInfo)]: $(_data.desc)\n`;
     }
 

@@ -83,7 +83,7 @@ class InetAddress : Address {
         return InetAddress(i.addr, i.port);
     }
     
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         i := SockAddrIn.unsafeCast(_addr);
         addr := i.addr;
         fmt `$(addr >> 24).$((addr >> 8) & 0xff).$((addr >> 16) & 0xff)\
@@ -211,7 +211,7 @@ class Socket : Pollable @implements Reader, Writer {
         return Accepted(Socket(rc), addr);
     }
     
-    void writeTo(Formatter fmt) {
+    void formatTo(Formatter fmt) {
         fmt `Socket(fd: $fd)`;
     }
     
