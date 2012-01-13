@@ -111,18 +111,31 @@ void Cacher::writeMetadata() {
     for (LLVMBuilder::ModFuncMap::const_iterator i = b.moduleFuncs.begin();
          i != b.moduleFuncs.end();
          ++i) {
+
+        // only include it if it's a decl...
         if (!i->second->isDeclaration())
             continue;
-        // only include it if it's a decl and it's defined in another module
+
+        Namespace *owningNS = i->first->getOwner();
+        assert(owningNS && "no owner");
+
+        // skips anything in builtin namespace
+        if (owningNS->getNamespaceName().substr(0,8) == ".builtin") {
+            continue;
+        }
+
+        // and it's defined in another module
         // but skip externals from extensions, since these are found by
         // the jit through symbol searching the process
-        assert(i->first->getOwner() && "no owner");
-        ModuleDefPtr owner = i->first->getOwner()->getModule();
-        if ((owner && owner->fromExtension) ||
-            (i->first->getOwner() == modDef->getParent(0).get()))
+        ModuleDefPtr owningModule = owningNS->getModule();
+        if ((owningModule && owningModule->fromExtension) ||
+            (owningNS == modDef->getParent(0).get())) {
             continue;
+        }
+
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
     }
+
     // globals
     for (LLVMBuilder::ModVarMap::const_iterator i = b.moduleVars.begin();
          i != b.moduleVars.end();
@@ -131,8 +144,10 @@ void Cacher::writeMetadata() {
             continue;
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
     }
-    node->addOperand(MDNode::get(getGlobalContext(), dList));
-    dList.clear();
+    if (dList.size()) {
+        node->addOperand(MDNode::get(getGlobalContext(), dList));
+        dList.clear();
+    }
 
     // crack_defs: the symbols defined in this module that we need to rebuild
     // at compile time in order to use this cached module to compile fresh code
@@ -175,7 +190,10 @@ void Cacher::writeNamespace(Namespace *ns) {
             }
             else {
                 // VarDef
-                node->addOperand(writeVarDef(i->second.get(), owner));
+
+                // XXX hack to not write exStruct
+                if (i->second->name != ":exStruct")
+                    node->addOperand(writeVarDef(i->second.get(), owner));
             }
         }
     }
@@ -532,7 +550,7 @@ void Cacher::readFuncDef(const std::string &sym,
             assert(aSym && "function arg: missing symbol");
             aTypeStr = dyn_cast<MDString>(mnode->getOperand(i+1));
             assert(aTypeStr && "function arg: missing type");
-            aTypeV = context.ns->lookUp(aTypeStr->getString().str());
+            aTypeV = modDef->lookUp(aTypeStr->getString().str());
             aType = TypeDefPtr::rcast(aTypeV);
             assert(aType && "function arg: type not found");
             newF->args[ai] = new ArgDef(aType, aSym->getString().str());
@@ -737,7 +755,8 @@ void Cacher::saveToCache() {
                                         "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
-            cerr << "unable to find writeable directory for cache: caching skipped"
+            cerr << "unable to find writable directory for cache, won't cache: "
+                 << modDef->path
                  << endl;
         return;
     }

@@ -411,60 +411,62 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         // XXX move this to Cacher::getExterns() to hide metadata impl
         NamedMDNode *externs = module->getNamedMetadata("crack_externs");
         assert(externs && "no crack_externs node");
-        MDNode *symNode = externs->getOperand(0);
-        for (int i = 0; i < symNode->getNumOperands(); ++i) {
+        if (externs->getNumOperands()) {
+            MDNode *symNode = externs->getOperand(0);
+            for (int i = 0; i < symNode->getNumOperands(); ++i) {
 
-            sym = dyn_cast<MDString>(symNode->getOperand(i));
-            assert(sym && "malformed crack_externs");
+                sym = dyn_cast<MDString>(symNode->getOperand(i));
+                assert(sym && "malformed crack_externs");
 
-            CacheMapType::const_iterator cmi = cacheMap->find(sym->getString().str());
-            assert(cmi != cacheMap->end() && "external not found");
+                CacheMapType::const_iterator cmi = cacheMap->find(sym->getString().str());
+                assert(cmi != cacheMap->end() && "external not found");
 
-            gval = cmi->second;
+                gval = cmi->second;
 
-            Function *decl = module->getFunction(sym->getString());
-            if (decl) {
-                assert(decl->isDeclaration() &&
-                       "declared extern function wasn't a decl");
+                Function *decl = module->getFunction(sym->getString());
+                if (decl) {
+                    assert(decl->isDeclaration() &&
+                           "declared extern function wasn't a decl");
 
-                // find the function with this symbol name by searching through
-                // the modules that have already been added to the JIT
-                // we always expect it because 1) imports for this module have
-                // already been loaded and 2) the imports would have missed if
-                // their source digest didn't match (i.e. symbols changed) causing
-                // us to miss as well before now
-                ext_f = dyn_cast<Function>(gval);
-                assert(ext_f && "extern not found in JIT");
+                    // find the function with this symbol name by searching through
+                    // the modules that have already been added to the JIT
+                    // we always expect it because 1) imports for this module have
+                    // already been loaded and 2) the imports would have missed if
+                    // their source digest didn't match (i.e. symbols changed) causing
+                    // us to miss as well before now
+                    ext_f = dyn_cast<Function>(gval);
+                    assert(ext_f && "extern not found in JIT");
 
-                // materializing will ensure the function is codegen'd
-                if (ext_f->isMaterializable()) {
-                    if (ext_f->Materialize()) {
-                        cerr << "materialize fail: " << ext_f->getNameStr()
-                             << endl;
-                        return NULL;
+                    // materializing will ensure the function is codegen'd
+                    if (ext_f->isMaterializable()) {
+                        if (ext_f->Materialize()) {
+                            cerr << "materialize fail: " << ext_f->getNameStr()
+                                 << endl;
+                            return NULL;
+                        }
                     }
+
+                    // after potentially materializing, ext_f should be a def
+                    assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
+
+                    void *realAddr = execEng->getPointerToFunction(ext_f);
+                    assert(realAddr && "unable to resolve ext_f");
+                    execEng->addGlobalMapping(decl, realAddr);
+                }
+                else {
+                    // map globals
+                    GlobalVariable *gbl = module->getGlobalVariable(sym->getString());
+                    assert(gbl && "declared extern was not function or global");
+                    assert(gbl->isDeclaration() && "declared global wasn't a decl");
+                    // now find the defining module
+                    ext_g = dyn_cast<GlobalVariable>(gval);
+                    assert(ext_g && "extern not found in JIT");
+                    void* realAddr = execEng->getPointerToGlobal(ext_g);
+                    assert(realAddr && "unable to resolve global");
+                    execEng->addGlobalMapping(gbl, realAddr);
                 }
 
-                // after potentially materializing, ext_f should be a def
-                assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
-
-                void *realAddr = execEng->getPointerToFunction(ext_f);
-                assert(realAddr && "unable to resolve ext_f");
-                execEng->addGlobalMapping(decl, realAddr);
             }
-            else {
-                // map globals
-                GlobalVariable *gbl = module->getGlobalVariable(sym->getString());
-                assert(gbl && "declared extern was not function or global");
-                assert(gbl->isDeclaration() && "declared global wasn't a decl");
-                // now find the defining module
-                ext_g = dyn_cast<GlobalVariable>(gval);
-                assert(ext_g && "extern not found in JIT");
-                void* realAddr = execEng->getPointerToGlobal(ext_g);
-                assert(realAddr && "unable to resolve global");
-                execEng->addGlobalMapping(gbl, realAddr);
-            }
-
         }
 
         doRunOrDump(context);
