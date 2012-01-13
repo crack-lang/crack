@@ -171,6 +171,21 @@ static uintptr_t readEncodedPointer(const uint8_t** data, uint8_t encoding) {
     return result;
 }
 
+static void *getTTypePtr(void **classInfo, int index, uint8_t ttypeEncoding) {
+    switch (ttypeEncoding & 0xF) {
+        case DW_EH_PE_absptr:
+            return classInfo[index];
+        case DW_EH_PE_udata4:
+            return (void *)((uint32_t *)classInfo)[index];
+        case DW_EH_PE_udata8:
+            return (void *)((uint64_t *)classInfo)[index];
+        default:
+            cerr << "Unexpected type pointer encoding type: " << 
+                ttypeEncoding << endl;
+            abort();
+    }
+}
+
 /// Deals with Dwarf actions matching our type infos. 
 /// Returns whether or not a dwarf emitted 
 /// action matches the supplied exception type. If such a match succeeds, 
@@ -190,6 +205,7 @@ static uintptr_t readEncodedPointer(const uint8_t** data, uint8_t encoding) {
 /// @returns whether or not a type info was found. False is returned if only
 ///          a cleanup was found
 static bool handleActionValue(int64_t *resultAction,
+                              uint8_t ttypeEncoding,
                               void **classInfo, 
                               uintptr_t actionEntry, 
                               uint64_t exceptionClass, 
@@ -242,7 +258,10 @@ static bool handleActionValue(int64_t *resultAction,
             // if we got an exception and there is no "match" function, 
             // translate it to an abort.
             if (!runtimeHooks.exceptionMatchFunc) abort();
-            if (runtimeHooks.exceptionMatchFunc(classInfo[-typeOffset], 
+            void *curClassType = getTTypePtr(classInfo, -typeOffset, 
+                                             ttypeEncoding
+                                             );
+            if (runtimeHooks.exceptionMatchFunc(curClassType, 
                                                 crackExceptionObject
                                                 )
                 ) {
@@ -391,6 +410,7 @@ _Unwind_Reason_Code handleLsda(int version,
                 exceptionMatched = handleActionValue
                                    (
                                        &actionValue,
+                                       ttypeEncoding,
                                        classInfo, 
                                        actionEntry, 
                                        exceptionClass, 

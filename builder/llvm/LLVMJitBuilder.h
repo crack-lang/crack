@@ -23,6 +23,9 @@ class LLVMJitBuilder : public LLVMBuilder {
         
         std::vector< std::pair<llvm::Function *, llvm::Function *> > externals;
 
+        typedef std::map<std::string, llvm::GlobalValue *> CacheMapType;
+        CacheMapType *cacheMap;
+
         virtual void run();
 
         virtual void dump();
@@ -48,7 +51,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                          llvm::GlobalValue *externalDef
                                          );
 
-        LLVMJitBuilder(void) : execEng(0) { }
+        LLVMJitBuilder(void) : execEng(0), cacheMap(0) { }
 
         virtual void *getFuncAddr(llvm::Function *func);
 
@@ -71,11 +74,20 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual bool isExec() { return true; }
 
-        virtual void finishBuild(model::Context &context) { }
-
-        virtual void initializeImport(model::ModuleDef* m, bool annotation) {
-            initializeImportCommon(m);
+        virtual void finishBuild(model::Context &context) {
+            if (cacheMap)
+                delete cacheMap;
         }
+
+        virtual void initializeImport(model::ModuleDef* m,
+                                      const std::vector<std::string> &symbols,
+                                      bool annotation) {
+            initializeImportCommon(m, symbols);
+        }
+
+        virtual void registerDef(model::Context &context,
+                                 model::VarDef *varDef
+                                 );
 
         virtual model::ModuleDefPtr materializeModule(model::Context &context,
                                               const std::string &canonicalName,

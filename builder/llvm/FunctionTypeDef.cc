@@ -17,8 +17,9 @@ using namespace model;
 using namespace builder::mvll;
 
 FunctionTypeDef::FunctionTypeDef(TypeDef *metaType, const std::string &name,
-                           const Type *rep
-                           ) : BTypeDef(metaType, name, rep) {
+                                 Type *rep
+                                 ) :
+    BTypeDef(metaType, name, rep) {
 
     defaultInitializer = new NullConst(this);
     generic = new SpecializationCache();
@@ -44,7 +45,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     BTypeDef *returnCType = BTypeDefPtr::rcast((*types)[0]);
 
     // remaining types are function arguments
-    std::vector<const Type*> fun_args;
+    std::vector<Type *> fun_args;
 
     if (arity) {
         for (int i = 1; i < arity+1; ++i) {
@@ -71,7 +72,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     tempSpec->setOwner(this);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
-    // create the implementation (this can be called before the meta-class is 
+    // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
         createClassImpl(context, tempSpec.get());

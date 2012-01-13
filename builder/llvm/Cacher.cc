@@ -47,7 +47,7 @@ void Cacher::addNamedStringNode(const string &key, const string &val) {
 
     node = modDef->rep->getOrInsertNamedMetadata(key);
     dList.push_back(MDString::get(getGlobalContext(), val));
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), 1));
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
 
 }
 
@@ -81,37 +81,57 @@ void Cacher::writeMetadata() {
     // crack_imports: operand list points to import nodes
     // import node: 0: canonical name 1: source digest
     node = module->getOrInsertNamedMetadata("crack_imports");
-    for (vector<BModuleDef*>::const_iterator varIter = modDef->importList.begin();
-         varIter != modDef->importList.end();
-         ++varIter
+    for (BModuleDef::ImportListType::const_iterator iIter = modDef->importList.begin();
+         iIter != modDef->importList.end();
+         ++iIter
          ) {
+        // op 1: canonical name
         dList.push_back(MDString::get(getGlobalContext(),
-                                      (*varIter)->getFullName()));
+                                      (*iIter).first->getFullName()));
+        // op 2: digest
         dList.push_back(MDString::get(getGlobalContext(),
-                                      (*varIter)->digest.asHex()));
-        node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+                                      (*iIter).first->digest.asHex()));
+
+        // op 3..n: symbols to be imported (aliased)
+        for (vector<string>::const_iterator sIter = (*iIter).second.begin();
+             sIter != (*iIter).second.end();
+             ++sIter) {
+            dList.push_back(MDString::get(getGlobalContext(), *sIter));
+        }
+
+        node->addOperand(MDNode::get(getGlobalContext(), dList));
         dList.clear();
     }
 
     // crack_externs: these we need to resolve upon load. in the JIT, that means
-    // global mappings
+    // global mappings. we need to resolve functions and globals
     node = module->getOrInsertNamedMetadata("crack_externs");
     LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    // functions
     for (LLVMBuilder::ModFuncMap::const_iterator i = b.moduleFuncs.begin();
          i != b.moduleFuncs.end();
          ++i) {
+        if (!i->second->isDeclaration())
+            continue;
         // only include it if it's a decl and it's defined in another module
         // but skip externals from extensions, since these are found by
         // the jit through symbol searching the process
         assert(i->first->getOwner() && "no owner");
         ModuleDefPtr owner = i->first->getOwner()->getModule();
-        if ((!i->second->isDeclaration()) ||
-            (owner && owner->fromExtension) ||
+        if ((owner && owner->fromExtension) ||
             (i->first->getOwner() == modDef->getParent(0).get()))
             continue;
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
     }
-    node->addOperand(MDNode::get(getGlobalContext(), dList.data(), dList.size()));
+    // globals
+    for (LLVMBuilder::ModVarMap::const_iterator i = b.moduleVars.begin();
+         i != b.moduleVars.end();
+         ++i) {
+        if (!i->second->isDeclaration())
+            continue;
+        dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
+    }
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
     dList.clear();
 
     // crack_defs: the symbols defined in this module that we need to rebuild
@@ -186,7 +206,7 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     // operand 4: metatype type (null initializer)
     dList.push_back(Constant::getNullValue(btm->rep));
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 
@@ -233,7 +253,12 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->type->name));
     }
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    // we register with the cache map because a cached module may be
+    // on this depended one for this run
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, sym);
+
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 
@@ -274,17 +299,25 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
     // operand 5: instance var index
     if (!gvar)
         dList.push_back(constInt(ivar->index));
+    else
+        dList.push_back(NULL);
 
-    return MDNode::get(getGlobalContext(), dList.data(), dList.size());
+    // we register with the cache map because a cached module may be
+    // on this depended one for this run
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, sym);
+
+    return MDNode::get(getGlobalContext(), dList);
 
 }
 
 bool Cacher::readImports() {
 
     MDNode *mnode;
-    MDString *cname, *digest;
+    MDString *cname, *digest, *symStr;
     SourceDigest iDigest;
     BModuleDefPtr m;
+    VarDefPtr symVal;
     NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_imports");
 
     assert(imports && "missing crack_imports node");
@@ -293,11 +326,11 @@ bool Cacher::readImports() {
 
         mnode = imports->getOperand(i);
 
-        // canonical name
+        // op 1: canonical name
         cname = dyn_cast<MDString>(mnode->getOperand(0));
         assert(cname && "malformed import node: canonical name");
 
-        // source digest
+        // op 2: source digest
         digest = dyn_cast<MDString>(mnode->getOperand(1));
         assert(digest && "malformed import node: digest");
 
@@ -307,6 +340,18 @@ bool Cacher::readImports() {
         m = context.construct->loadModule(cname->getString().str());
         if (m->digest != iDigest)
             return false;
+
+        // op 3..n: imported (namespace aliased) symbols from m
+        for (unsigned si = 2; si < mnode->getNumOperands(); ++si) {
+            symStr = dyn_cast<MDString>(mnode->getOperand(si));
+            assert(symStr && "malformed import node: symbol name");
+            symVal = m->lookUp(symStr->getString().str());
+            // if we failed to lookup the symbol, then something is wrong
+            // with our digest mechanism
+            assert(symVal.get() && "import: inconsistent state");
+            modDef->addAlias(symVal.get());
+        }
+
 
     }
 
@@ -320,7 +365,25 @@ void Cacher::readVarDefGlobal(const std::string &sym,
 
     // rep for gvar is the actual global
 
+    // operand 3: type name
+    MDString *typeStr = dyn_cast<MDString>(mnode->getOperand(3));
+    assert(typeStr && "readVarDefGlobal: invalid type string");
 
+    VarDefPtr vd = modDef->lookUp(typeStr->getString().str());
+    TypeDef *td = TypeDefPtr::rcast(vd);
+    assert(td && "readVarDefGlobal: type not found");
+
+    GlobalVariable *lg = dyn_cast<GlobalVariable>(rep);
+    assert(lg && "readVarDefGlobal: not GlobalVariable rep");
+    BGlobalVarDefImpl *impl = new BGlobalVarDefImpl(lg);
+
+    // the member def itself
+    VarDef *g = new VarDef(td, sym);
+    g->impl = impl;
+    modDef->addDef(g);
+
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, g);
 
 }
 
@@ -406,7 +469,9 @@ void Cacher::readFuncDef(const std::string &sym,
     assert(rep && "no rep");
 
     // operand 3: typedef owner (if exists)
-    MDString *ownerStr = dyn_cast<MDString>(mnode->getOperand(3));
+    MDString *ownerStr(0);
+    if (mnode->getOperand(3))
+        ownerStr = dyn_cast<MDString>(mnode->getOperand(3));
 
     // operand 4: func flags
     ConstantInt *flags = dyn_cast<ConstantInt>(mnode->getOperand(4));
@@ -475,17 +540,27 @@ void Cacher::readFuncDef(const std::string &sym,
         }
     }
 
-    OverloadDef *o;
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, newF);
+
+    OverloadDef *o(0);
     vd = owner->lookUp(sym);
-    if (!vd) {
+    if (vd)
+        o = OverloadDefPtr::rcast(vd);
+
+    // at this point o may be null here if 1) vd is null 2) vd is not an
+    // overloaddef. 2 can happen when a function is overriding an existing
+    // definition
+    if (!vd || !o) {
         o = new OverloadDef(sym);
         o->addFunc(newF);
         owner->addDef(o);
     }
-    else {
-        o = OverloadDefPtr::rcast(vd);
-        assert(o && "not an overload");
+    else if (o) {
         o->addFunc(newF);
+    }
+    else {
+        assert(0 && "readFuncDef: maybe unreachable");
     }
 
 

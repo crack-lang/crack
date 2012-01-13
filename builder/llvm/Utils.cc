@@ -107,8 +107,8 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
     // get the LLVM class structure type from out of the meta class rep.
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
-    const PointerType *classPtrType = cast<PointerType>(classType->rep);
-    const StructType *classStructType =
+    PointerType *classPtrType = cast<PointerType>(classType->rep);
+    StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
 
     // create a global variable holding the class object.
@@ -137,8 +137,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
             ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
 
     // numBases
-    const Type *uintType = 
-        BTypeDefPtr::arcast(context.construct->uintType)->rep;
+    Type *uintType = BTypeDefPtr::arcast(context.construct->uintType)->rep;
     classStructVals[1] = ConstantInt::get(uintType, type->parents.size());
 
     // bases
@@ -146,16 +145,14 @@ void createClassImpl(Context &context, BTypeDef *type) {
     for (int i = 0; i < type->parents.size(); ++i) {
         // get the pointer to the inner "Class" object of "Class[BaseName]"
         BTypeDefPtr base = BTypeDefPtr::arcast(type->parents[i]);
-        BGlobalVarDefImplPtr impl = BGlobalVarDefImplPtr::arcast(base->impl);
 
-        // extract the initializer from the rep (which is the global
-        // variable for the _pointer_ to the class)
+        // get the class body global variable
         Constant *baseClassPtr = base->classInst;
         
         // make sure that this is in the module
-        if (cast<GlobalValue>(impl->rep)->getParent() != llvmBuilder.module) {
+        if (cast<GlobalValue>(baseClassPtr)->getParent() != llvmBuilder.module) {
             const string &name = baseClassPtr->getName();
-            const Type *classInstType =
+            Type *classInstType =
                 cast<PointerType>(baseClassPtr->getType())->getElementType();
             
             // see if we've already got a copy in this module
@@ -186,7 +183,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
             basesVal[i] =
                 ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
     }
-    const ArrayType *baseArrayType =
+    ArrayType *baseArrayType =
         ArrayType::get(classType->rep, type->parents.size());
     Constant *baseArrayInit = ConstantArray::get(baseArrayType, basesVal);
     GlobalVariable *basesGVar =
@@ -205,9 +202,9 @@ void createClassImpl(Context &context, BTypeDef *type) {
         ConstantStruct::get(classStructType, classStructVals);
 
     // extract the meta class structure types from our meta-class
-    const PointerType *metaClassPtrType =
+    PointerType *metaClassPtrType =
         cast<PointerType>(BTypeDefPtr::arcast(type->type)->rep);
-    const StructType *metaClassStructType =
+    StructType *metaClassStructType =
         cast<StructType>(metaClassPtrType->getElementType());
 
     // initialize the structure based on whether we're implementing an 
@@ -273,20 +270,17 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
                      );
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     metaType->addBaseClass(classType);
-    const PointerType *classPtrType = cast<PointerType>(classType->rep);
-    const StructType *classStructType =
+    PointerType *classPtrType = cast<PointerType>(classType->rep);
+    StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
-    llvmBuilder.module->addTypeName(".struct.metaBase."+canonicalName,
-                                    classStructType);
 
     // Create a struct representation of the meta class.  This just has the
     // Class class as its only field.
-    vector<const Type *> fields(1);
+    vector<Type *> fields(1);
     fields[0] = classStructType;
-    const StructType *metaClassStructType = StructType::get(lctx, fields);
-    llvmBuilder.module->addTypeName(".struct.metaClass."+canonicalName,
-                                    metaClassStructType);
-    const Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
+    StructType *metaClassStructType =
+        StructType::create(lctx, fields, ".struct.metaClass." + canonicalName);
+    Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
 
