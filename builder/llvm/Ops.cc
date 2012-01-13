@@ -1,5 +1,5 @@
 // Copyright 2010 Google Inc, Shannon Weyrick <weyrick@mozek.us>
-                
+
 #include "Ops.h"
 #include "LLVMBuilder.h"
 
@@ -95,7 +95,7 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
             result = ci->fold##opCode(rval.get());                          \
         return result ? result : this;                                      \
     }
-    
+
 
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
@@ -229,10 +229,10 @@ BinOpDef::BinOpDef(TypeDef *argType,
                    bool isMethod,
                    bool reversed
                    ) :
-    OpDef(resultType, 
+    OpDef(resultType,
           (isMethod ? FuncDef::method : FuncDef::noFlags) |
-           (reversed ? FuncDef::reverse : FuncDef::noFlags), 
-          name, 
+           (reversed ? FuncDef::reverse : FuncDef::noFlags),
+          name,
           isMethod ? 1 : 2
           ) {
 
@@ -241,7 +241,7 @@ BinOpDef::BinOpDef(TypeDef *argType,
         args[arg++] = new ArgDef(argType, "lhs");
     args[arg] = new ArgDef(argType, "rhs");
 }
-    
+
 
 // TruncOpCall
 ResultExprPtr TruncOpCall::emit(Context &context) {
@@ -296,7 +296,7 @@ ExprPtr BitNotOpCall::foldConstants() {
         val = receiver;
     else
         val = args[0];
-    
+
     IntConstPtr v = IntConstPtr::rcast(val);
     if (v)
         return v->foldBitNot();
@@ -308,13 +308,13 @@ ExprPtr BitNotOpCall::foldConstants() {
 BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
                          bool isMethod
                          ) :
-    OpDef(resultType, isMethod ? FuncDef::method :FuncDef::noFlags, name, 
+    OpDef(resultType, isMethod ? FuncDef::method :FuncDef::noFlags, name,
           isMethod ? 0 : 1
           ) {
     if (!isMethod)
         args[0] = new ArgDef(resultType, "operand");
 }
-            
+
 // LogicAndOpCall
 ResultExprPtr LogicAndOpCall::emit(Context &context) {
 
@@ -345,6 +345,7 @@ ResultExprPtr LogicAndOpCall::emit(Context &context) {
     // now we phi for result
     PHINode* p = builder.builder.CreatePHI(
             BTypeDefPtr::arcast(context.construct->boolType)->rep,
+            2,
             "and_R");
     p->addIncoming(oVal, oBlock);
     p->addIncoming(tVal, tBlock);
@@ -392,6 +393,7 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
     builder.builder.SetInsertPoint(tBlock);
     PHINode *p = builder.builder.CreatePHI(
             BTypeDefPtr::arcast(context.construct->boolType)->rep,
+            2,
             "or_R"
             );
     p->addIncoming(oVal, oBlock);
@@ -429,7 +431,7 @@ ExprPtr NegOpCall::foldConstants() {
         val = receiver;
     else
         val = args[0];
-    
+
     IntConstPtr v = IntConstPtr::rcast(val);
     if (v)
         return v->foldNeg();
@@ -441,7 +443,7 @@ ExprPtr NegOpCall::foldConstants() {
 NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
                    bool isMethod
                    ) :
-        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name, 
+        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name,
               isMethod ? 0 : 1
               ) {
     if (!isMethod)
@@ -481,7 +483,7 @@ ExprPtr FNegOpCall::foldConstants() {
 FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name,
                      bool isMethod
                      ) :
-        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name, 
+        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name,
               isMethod ? 0 : 1
               ) {
     if (!isMethod)
@@ -555,7 +557,7 @@ ResultExprPtr ArraySetItemCall::emit(Context &context) {
 
     return new BResultExpr(this, v);
 }
-    
+
 // ArrayAllocCall
 ResultExprPtr ArrayAllocCall::emit(Context &context) {
     LLVMBuilder &builder =
@@ -598,9 +600,9 @@ ResultExprPtr BoolOpCall::emit(Context &context) {
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    builder.lastValue = 
+    builder.lastValue =
         builder.builder.CreateICmpNE(
-            builder.lastValue, 
+            builder.lastValue,
             Constant::getNullValue(builder.lastValue->getType())
         );
 
@@ -630,8 +632,8 @@ ResultExprPtr VoidPtrOpCall::emit(Context &context) {
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    builder.lastValue = builder.builder.CreateBitCast(builder.lastValue, 
-                                                      builder.llvmVoidPtrType 
+    builder.lastValue = builder.builder.CreateBitCast(builder.lastValue,
+                                                      builder.llvmVoidPtrType
                                                       );
 
     return new BResultExpr(this, builder.lastValue);
@@ -640,7 +642,7 @@ ResultExprPtr VoidPtrOpCall::emit(Context &context) {
 // PtrToIntOpCall
 ResultExprPtr PtrToIntOpCall::emit(Context &context) {
     args[0]->emit(context)->handleTransient(context);
-    
+
     LLVMBuilder &builder =
         dynamic_cast<LLVMBuilder &>(context.builder);
     BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
@@ -648,7 +650,7 @@ ResultExprPtr PtrToIntOpCall::emit(Context &context) {
                                                        type->rep
                                                        );
     return new BResultExpr(this, builder.lastValue);
-}  
+}
 
 // UnsafeCastCall
 ResultExprPtr UnsafeCastCall::emit(Context &context) {
@@ -684,18 +686,18 @@ namespace {
         ref = VarRefPtr::cast(receiver);
         if (!ref)
             context.error("Integer ++ operators can only be used on variables.");
-    
+
         receiverResult = receiver->emit(context);
         LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
         receiverVal = builder.lastValue;
         t = BTypeDefPtr::acast(type);
         return builder;
     }
-    
-    ResultExprPtr emitAssign(Context &context, VarRef *ref, 
+
+    ResultExprPtr emitAssign(Context &context, VarRef *ref,
                              ResultExpr *mutated
                              ) {
-        // create a field assignment or variable assignment expression, as 
+        // create a field assignment or variable assignment expression, as
         // appropriate.
         AssignExprPtr assign;
         BFieldRef *fieldRef;
@@ -709,7 +711,7 @@ namespace {
         return assign->emit(context);
     }
 
-    inline ResultExprPtr endPreIncrDecr(Context &context, 
+    inline ResultExprPtr endPreIncrDecr(Context &context,
                                         LLVMBuilder &builder,
                                         VarRef *ref,
                                         Expr *mutatedResult,
@@ -720,7 +722,7 @@ namespace {
         return emitAssign(context, ref, mutated.get());
     }
 } // anon namespace
-        
+
 
 // PreIncrIntOpCall
 ResultExprPtr PreIncrIntOpCall::emit(Context &context) {
@@ -731,11 +733,11 @@ ResultExprPtr PreIncrIntOpCall::emit(Context &context) {
     LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
                                          type.get(),
                                          t,
-                                         receiverResult, 
+                                         receiverResult,
                                          receiverVal
                                          );
     receiverResult->handleTransient(context);
-    builder.lastValue = builder.builder.CreateAdd(builder.lastValue, 
+    builder.lastValue = builder.builder.CreateAdd(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
     return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
@@ -749,12 +751,12 @@ ResultExprPtr PreDecrIntOpCall::emit(Context &context) {
     Value *receiverVal;
     LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
                                          type.get(),
-                                         t, 
-                                         receiverResult, 
+                                         t,
+                                         receiverResult,
                                          receiverVal
                                          );
     receiverResult->handleTransient(context);
-    builder.lastValue = builder.builder.CreateSub(builder.lastValue, 
+    builder.lastValue = builder.builder.CreateSub(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
     return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
@@ -767,15 +769,15 @@ ResultExprPtr PostIncrIntOpCall::emit(Context &context) {
     ResultExprPtr receiverResult;
     Value *receiverVal;
     LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
-                                         type.get(), 
-                                         t, 
-                                         receiverResult, 
+                                         type.get(),
+                                         t,
+                                         receiverResult,
                                          receiverVal
                                          );
-    Value *mutatedVal = builder.builder.CreateAdd(builder.lastValue, 
+    Value *mutatedVal = builder.builder.CreateAdd(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this, 
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);
@@ -791,14 +793,14 @@ ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
     Value *receiverVal;
     LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
                                          type.get(),
-                                         t, 
-                                         receiverResult, 
+                                         t,
+                                         receiverResult,
                                          receiverVal
                                          );
-    Value *mutatedVal = builder.builder.CreateSub(builder.lastValue, 
+    Value *mutatedVal = builder.builder.CreateSub(builder.lastValue,
                                                  ConstantInt::get(t->rep, 1)
                                                  );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this, 
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);

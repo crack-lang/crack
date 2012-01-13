@@ -19,7 +19,7 @@ using namespace std;
 using namespace builder::mvll;
 
 // XXX defined in LLVMBuilder.cc
-extern const Type * llvmIntType;
+extern Type * llvmIntType;
 
 namespace {
     // utility
@@ -45,7 +45,7 @@ void * IncompleteInstVarRef::operator new(size_t s) {
     return User::operator new(s, 1);
 }
 
-IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
+IncompleteInstVarRef::IncompleteInstVarRef(Type *type,
                                            Value *aggregate,
                                            BFieldDefImpl *fieldImpl,
                                            BasicBlock *parent
@@ -60,7 +60,7 @@ IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
     Op<0>() = aggregate;
 }
 
-IncompleteInstVarRef::IncompleteInstVarRef(const Type *type,
+IncompleteInstVarRef::IncompleteInstVarRef(Type *type,
                                            Value *aggregate,
                                            BFieldDefImpl *fieldImpl,
                                            Instruction *insertBefore
@@ -89,7 +89,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
      return User::operator new(s, 2);
  }
 
- IncompleteInstVarAssign::IncompleteInstVarAssign(const Type *type,
+ IncompleteInstVarAssign::IncompleteInstVarAssign(Type *type,
                                                   Value *aggregate,
                                                   BFieldDefImpl *fieldDefImpl,
                                                   Value *rval,
@@ -106,7 +106,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
      Op<1>() = rval;
  }
 
- IncompleteInstVarAssign::IncompleteInstVarAssign(const Type *type,
+ IncompleteInstVarAssign::IncompleteInstVarAssign(Type *type,
                                                   Value *aggregate,
                                                   BFieldDefImpl *fieldDefImpl,
                                                   Value *rval,
@@ -139,36 +139,30 @@ void *IncompleteCatchSelector::operator new(size_t s) {
     return User::operator new(s, 0);
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
-                                                 Value *exception, 
+IncompleteCatchSelector::IncompleteCatchSelector(Type *type,
                                                  Value *personalityFunc,
                                                  BasicBlock *parent
                                                  ) :
     PlaceholderInstruction(
-        Type::getInt32Ty(getGlobalContext()),
+        type,
         parent,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
     ),
-    ehSelector(ehSelector),
-    exception(exception),
     personalityFunc(personalityFunc),
     typeImpls(0) {
 }
 
-IncompleteCatchSelector::IncompleteCatchSelector(Value *ehSelector,
-                                                 Value *exception,
+IncompleteCatchSelector::IncompleteCatchSelector(Type *type,
                                                  Value *personalityFunc,
                                                  Instruction *insertBefore
                                                  ) :
     PlaceholderInstruction(
-        Type::getInt32Ty(getGlobalContext()),
+        type,
         insertBefore,
         OperandTraits<IncompleteCatchSelector>::op_begin(this),
         OperandTraits<IncompleteCatchSelector>::operands(this)
     ),
-    ehSelector(ehSelector),
-    exception(exception),
     personalityFunc(personalityFunc),
     typeImpls(0) {
 }
@@ -177,21 +171,19 @@ IncompleteCatchSelector::~IncompleteCatchSelector() {
 }
 
 Instruction *IncompleteCatchSelector::clone_impl() const {
-    return new IncompleteCatchSelector(ehSelector, exception, personalityFunc);
+    return new IncompleteCatchSelector(getType(), personalityFunc);
 }
 
 void IncompleteCatchSelector::insertInstructions(IRBuilder<> &builder) {
+    LandingPadInst *lp = builder.CreateLandingPad(getType(),
+                                                  personalityFunc,
+                                                  typeImpls->size()
+                                                  );
     vector<Value *> args(3 + typeImpls->size());
-    args[0] = exception;
-    args[1] = personalityFunc;
-    int i;
-    for (i = 0; i < typeImpls->size(); ++i)
-        args[i + 2] = (*typeImpls)[i];
-    args[i + 2] = Constant::getNullValue(builder.getInt8Ty()->getPointerTo());
-    replaceAllUsesWith(
-        builder.CreateCall(ehSelector, args.begin(), args.end())
-    );
-}    
+    for (int i = 0; i < typeImpls->size(); ++i)
+        lp->addClause((*typeImpls)[i]);
+    replaceAllUsesWith(lp);
+}
 
 // IncompleteNarrower
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteNarrower, Value);
@@ -327,7 +319,7 @@ void IncompleteVTableInit::emitInitOfFirstVTable(IRBuilder<> &builder,
             // convert the vtable to {}*
             const PointerType *emptyStructPtrType =
                     cast<PointerType>(vtableBaseType->rep);
-            const Type *emptyStructType =
+            Type *emptyStructType =
                     emptyStructPtrType->getElementType();
             Value *castVTable =
                     builder.CreateBitCast(vtable, emptyStructType);
@@ -397,7 +389,7 @@ void IncompleteVTableInit::insertInstructions(IRBuilder<> &builder) {
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteVirtualFunc, Value);
 Value * IncompleteVirtualFunc::getVTableReference(IRBuilder<> &builder,
                                                   BTypeDef *vtableBaseType,
-                                                  const Type *finalVTableType,
+                                                  Type *finalVTableType,
                                                   BTypeDef *curType,
                                                   Value *inst
                                                   ) {
@@ -468,8 +460,7 @@ Value *IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
             builder.CreateStructGEP(vtable, funcDef->vtableSlot);
     Value *funcPtr = builder.CreateLoad(funcFieldRef);
     Value *result = builder.CreateInvoke(funcPtr, normalDest, unwindDest,
-                                         args.begin(), 
-                                         args.end()
+                                         args
                                          );
     return result;
 }
@@ -581,7 +572,7 @@ Value * IncompleteVirtualFunc::emitCall(Context &context,
                                         Value *receiver,
                                         const vector<Value *> &args,
                                         BasicBlock *normalDest,
-                                        BasicBlock *unwindDest       
+                                        BasicBlock *unwindDest
                                                ) {
     // do some conversions that we need to do either way.
     LLVMBuilder &llvmBuilder =
@@ -630,35 +621,34 @@ Instruction * IncompleteSpecialize::clone_impl() const {
                                     );
 }
 
-IncompleteSpecialize::IncompleteSpecialize
-        (const Type *type,
-         Value *value,
-         const TypeDef::AncestorPath &ancestorPath,
-         Instruction *insertBefore
-                                     ) :
-    PlaceholderInstruction(
-            type,
-            insertBefore,
-            OperandTraits<IncompleteSpecialize>::op_begin(this),
-            OperandTraits<IncompleteSpecialize>::operands(this)
-            ),
+IncompleteSpecialize::IncompleteSpecialize(
+    Type *type,
+    Value *value,
+    const TypeDef::AncestorPath &ancestorPath,
+    Instruction *insertBefore
+) : PlaceholderInstruction(
+        type,
+        insertBefore,
+        OperandTraits<IncompleteSpecialize>::op_begin(this),
+        OperandTraits<IncompleteSpecialize>::operands(this)
+    ),
     value(value),
     ancestorPath(ancestorPath) {
+
     Op<0>() = value;
 }
 
-IncompleteSpecialize::IncompleteSpecialize
-        (const Type *type,
-         Value *value,
-         const TypeDef::AncestorPath &ancestorPath,
-         BasicBlock *parent
-         ) :
-    PlaceholderInstruction(
-            type,
-            parent,
-            OperandTraits<IncompleteSpecialize>::op_begin(this),
-            OperandTraits<IncompleteSpecialize>::operands(this)
-            ),
+IncompleteSpecialize::IncompleteSpecialize(
+    Type *type,
+    Value *value,
+    const TypeDef::AncestorPath &ancestorPath,
+    BasicBlock *parent
+) : PlaceholderInstruction(
+        type,
+        parent,
+        OperandTraits<IncompleteSpecialize>::op_begin(this),
+        OperandTraits<IncompleteSpecialize>::operands(this)
+    ),
     value(value),
     ancestorPath(ancestorPath) {
     Op<0>() = value;
@@ -666,7 +656,7 @@ IncompleteSpecialize::IncompleteSpecialize
 
 Value * IncompleteSpecialize::emitSpecializeInner(
         IRBuilder<> &builder,
-        const Type *type,
+        Type *type,
         Value *value,
         const TypeDef::AncestorPath &ancestorPath
         ) {
@@ -727,4 +717,72 @@ Value *IncompleteSpecialize::emitSpecialize(
         return placeholder;
     }
 
+}
+
+// IncompleteSizeOf
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteSizeOf, Value);
+void * IncompleteSizeOf::operator new(size_t s) {
+    return User::operator new(s, 0);
+}
+
+Instruction *IncompleteSizeOf::clone_impl() const {
+    return new IncompleteSizeOf(type, intType);
+}
+
+IncompleteSizeOf::IncompleteSizeOf(Type *type,
+                                   Type *intType,
+                                   Instruction *insertBefore
+                                   ) :
+    type(type),
+    intType(intType),
+    PlaceholderInstruction(
+        IntegerType::get(type->getContext(), 32),
+        insertBefore,
+        OperandTraits<IncompleteSizeOf>::op_begin(this),
+        OperandTraits<IncompleteSizeOf>::operands(this)
+        ) {
+}
+
+IncompleteSizeOf::IncompleteSizeOf(Type *type,
+                                   Type *intType,
+                                   BasicBlock *parent
+                                   ) :
+    type(type),
+    intType(intType),
+    PlaceholderInstruction(
+        IntegerType::get(type->getContext(), 32),
+        parent,
+        OperandTraits<IncompleteSizeOf>::op_begin(this),
+        OperandTraits<IncompleteSizeOf>::operands(this)
+        ) {
+}
+
+Value *IncompleteSizeOf::emitInner(Type *type, Type *intType,
+                                   IRBuilder<> &builder
+                                   ) {
+    Value *null = Constant::getNullValue(type);
+    Value *offset = builder.CreateConstGEP1_32(null, 1);
+    return builder.CreatePtrToInt(offset, intType);
+}
+
+void IncompleteSizeOf::insertInstructions(IRBuilder<> &builder) {
+    replaceAllUsesWith(emitInner(type, intType, builder));
+}
+
+Value *IncompleteSizeOf::emitSizeOf(Context &context,
+                                    BTypeDef *type,
+                                    Type *intType
+                                    ) {
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    if (type->complete) {
+        return emitInner(type->rep, intType, b.builder);
+    } else {
+        IncompleteSizeOf *placeholder =
+            new IncompleteSizeOf(type->rep, intType,
+                                 b.builder.GetInsertBlock()
+                                 );
+        type->addPlaceholder(placeholder);
+        return placeholder;
+    }
 }

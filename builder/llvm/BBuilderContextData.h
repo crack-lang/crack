@@ -7,6 +7,7 @@
 #include "model/BuilderContextData.h"
 #include "model/Context.h"
 #include <spug/RCPtr.h>
+#include <llvm/Support/IRBuilder.h>
 
 namespace llvm {
     class Function;
@@ -76,12 +77,14 @@ public:
         void fixAllSelectors(llvm::Module *module);
     };
 
+    model::Context *context;
     llvm::Function *func;
     llvm::BasicBlock *block,
         *unwindBlock,      // the unwind block for the catch/function
         *nextCleanupBlock; // the current next cleanup block
 
-    BBuilderContextData() :
+    BBuilderContextData(model::Context *context) :
+            context(context),
             func(0),
             block(0),
             unwindBlock(0),
@@ -90,7 +93,7 @@ public:
     
     static BBuilderContextData *get(model::Context *context) {
         if (!context->builderData)
-            context->builderData = new BBuilderContextData();
+            context->builderData = new BBuilderContextData(context);
         return BBuilderContextDataPtr::rcast(context->builderData);
     }
     
@@ -105,6 +108,7 @@ public:
         catchData = 0;
     }
 
+    llvm::Value *getExceptionLandingPadResult(llvm::IRBuilder<> &builder);
     llvm::BasicBlock *getUnwindBlock(llvm::Function *func);
 
 private:

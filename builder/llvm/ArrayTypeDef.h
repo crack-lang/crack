@@ -19,7 +19,7 @@ class ArrayTypeDef : public BTypeDef {
 public:
     ArrayTypeDef(model::TypeDef *metaType,
                  const std::string &name,
-                 const llvm::Type *rep
+                 llvm::Type *rep
                  );
 
     // specializations of array types actually create a new type

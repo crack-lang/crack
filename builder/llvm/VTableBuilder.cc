@@ -126,7 +126,7 @@ void VTableBuilder::emit(BTypeDef *type) {
          ) {
         // populate the types array
         vector<Constant *> &entries = iter->second->entries;
-        vector<const Type *> vtableTypes(entries.size());
+        vector<Type *> vtableTypes(entries.size());
         int i = 0;
         for (vector<Constant *>::iterator entryIter =
              entries.begin();
@@ -138,9 +138,10 @@ void VTableBuilder::emit(BTypeDef *type) {
         }
 
         // create a constant structure that actually is the vtable
-        const StructType *vtableStructType =
-            StructType::get(getGlobalContext(), vtableTypes);
-        module->addTypeName("struct" + iter->second->name, vtableStructType);
+        StructType *vtableStructType =
+            StructType::create(getGlobalContext(), vtableTypes,
+                               "struct" + iter->second->name
+                               );
         type->vtables[iter->first] =
                 new GlobalVariable(*module, vtableStructType,
                                    true, // isConstant
