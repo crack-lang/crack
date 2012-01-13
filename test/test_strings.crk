@@ -228,6 +228,8 @@ capWords = capitalize(words, 1);
 if (capWords != "This is a heading")
     cout `Failed to capitalize first word in string, got $capWords\n`;
 
+if ('foo' == null)
+    cout `Failed comparison to null\n`;
 
 cout `ok\n`;
 

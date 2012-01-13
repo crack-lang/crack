@@ -172,6 +172,10 @@ class Buffer : Object {
         if (this is other)
             return 0;
 
+        # check for null
+        if (other is null)
+            return 1;
+
         # if the other object is a string, do string comparison.
         if (other.isa(Buffer)) {
             os := Buffer.unsafeCast(other);
