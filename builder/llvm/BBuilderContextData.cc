@@ -12,20 +12,35 @@
 #include "model/Expr.h"
 #include "BTypeDef.h"
 #include "Incompletes.h"
+#include "VarDefs.h"
 
 using namespace std;
 using namespace llvm;
 using namespace builder::mvll;
+using namespace model;
+
+Value *
+BBuilderContextData::getExceptionLandingPadResult(IRBuilder<> &builder) {
+    VarDefPtr exStructVar = context->ns->lookUp(":exStruct");
+    BHeapVarDefImplPtr exStructImpl = 
+        BHeapVarDefImplPtr::rcast(exStructVar->impl);
+    return 
+        builder.CreateLoad(builder.CreateConstGEP2_32(exStructImpl->rep, 0, 0));
+}
 
 BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
+        
         Module *mod = func->getParent();
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
             b.CreateCall(f);
-        
+
+        // create the resume instruction
+        Value *exObj = getExceptionLandingPadResult(b);
+
         // XXX We used to create an "unwind" instruction here, but that seems 
         // to cause a problem when creating a module with dependencies on 
         // classes in an unfinished module, as we can do when specializing a 
@@ -41,19 +56,7 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
                                                NULL
                                                );
         f = cast<Function>(c);
-
-        // Working around what I think is another bug in LLVM - in some 
-        // circumstances, if we just call _Unwind_Resume, the exception 
-        // personality functions don't get called and we get a null 
-        // exception object.  Introducing a call to a 
-        // No-op function makes this go away.
-        c = mod->getOrInsertFunction("__CrackNOP", Type::getVoidTy(lctx),
-                                     NULL
-                                     );
-        Function *nopFn = cast<Function>(c);
-        b.CreateCall(nopFn);
-        Function *exFn = getDeclaration(mod, Intrinsic::eh_exception);
-        b.CreateCall(f, b.CreateCall(exFn));
+        b.CreateCall(f, exObj);
         b.CreateUnreachable();
     }
 
@@ -78,7 +81,7 @@ void BBuilderContextData::CatchData::populateClassImpls(
 }
 
 void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
-    // fix all of the incomplete selector functions now that we have all of 
+    // fix all of the incomplete selector functions now that we have all of
     // the catch clauses.
     for (vector<IncompleteCatchSelector *>::iterator iter = selectors.begin();
         iter != selectors.end();
@@ -87,20 +90,20 @@ void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
         // get all of the class implementation objects into a Value vector
         vector<Value *> typeImpls;
         populateClassImpls(typeImpls, module);
-        
+
         // fix the incomplete selector
         (*iter)->typeImpls = &typeImpls;
-        (*iter)->fix();        
+        (*iter)->fix();
     }
-    
+
     // fix the switch instruction
-    const Type *int32Ty = Type::getInt32Ty(getGlobalContext());
+    Type *int32Ty = Type::getInt32Ty(getGlobalContext());
     for (int i = 0; i < catches.size(); ++i) {
-        ConstantInt *index = 
+        ConstantInt *index =
             cast<ConstantInt>(ConstantInt::get(int32Ty, i + 1));
         switchInst->addCase(index, catches[i].block);
     }
-    
+
     // do the same for all nested try/catches
     for (int childIndex = 0; childIndex < nested.size(); ++childIndex) {
         CatchData &child = *nested[childIndex];
@@ -113,14 +116,13 @@ void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
             for (int j = 0; j < child.catches.size(); ++j)
                 if (!branch.type->isDerivedFrom(child.catches[j].type.get()))
                     catchesToAdd.push_back(branch);
-            
+
             for (int j = 0; j < catchesToAdd.size(); ++j)
                 child.catches.push_back(catchesToAdd[j]);
         }
-                    
+
 
         // fix all of the selectors in the child
         child.fixAllSelectors(module);
     }
 }
-    

@@ -15,7 +15,7 @@ namespace builder { namespace mvll {
  */    
 class PlaceholderInstruction : public llvm::Instruction {
     public:
-        PlaceholderInstruction(const llvm::Type *type,
+        PlaceholderInstruction(llvm::Type *type,
                                llvm::BasicBlock *parent,
                                llvm::Use *ops = 0, 
                                unsigned opCount = 0
@@ -23,7 +23,7 @@ class PlaceholderInstruction : public llvm::Instruction {
             Instruction(type, OtherOpsEnd + 1, ops, opCount, parent) {
         }
 
-        PlaceholderInstruction(const llvm::Type *type,
+        PlaceholderInstruction(llvm::Type *type,
                                llvm::Instruction *insertBefore = 0,
                                llvm::Use *ops = 0,
                                unsigned opCount = 0

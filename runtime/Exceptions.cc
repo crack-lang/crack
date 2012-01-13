@@ -114,7 +114,11 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
         assert(rc == 0 && "unable to store exception key");
     }
     uex->user_data = crackExceptionObject;
-    _Unwind_RaiseException(uex);
+    _Unwind_Reason_Code urc;
+    if (urc = _Unwind_RaiseException(uex)) {
+        cerr << "Failed to raise exception, reason code = " << urc << endl;
+        abort();
+    }
 }
 
 /** 

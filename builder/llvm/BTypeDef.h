@@ -30,7 +30,7 @@ class BTypeDef : public model::TypeDef {
 public:
     unsigned fieldCount;
     llvm::GlobalVariable *classInst;
-    llvm::PATypeHolder rep;
+    llvm::Type *rep;
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
     typedef std::vector< std::pair<BTypeDefPtr, model::ContextPtr> >
@@ -39,10 +39,10 @@ public:
 
     // mapping from base types to their vtables.
     std::map<BTypeDef *, llvm::Constant *> vtables;
-    llvm::PATypeHolder firstVTableType;
+    llvm::Type *firstVTableType;
 
     BTypeDef(TypeDef *metaType, const std::string &name,
-             const llvm::Type *rep,
+             llvm::Type *rep,
              bool pointer = false,
              unsigned nextVTableSlot = 0
              ) :
@@ -61,10 +61,10 @@ public:
 
     /**
      * Create all of the vtables for 'type'.
-     * 
+     *
      * @param vtb the vtable builder
      * @param name the name stem for the VTable global variables.
-     * @param firstVTable if true, we have not yet discovered the first 
+     * @param firstVTable if true, we have not yet discovered the first
      *  vtable in the class schema.
      */
     void createAllVTables(VTableBuilder &vtb, const std::string &name,
@@ -75,22 +75,22 @@ public:
      * Add a base class to the type.
      */
     void addBaseClass(BTypeDef *base);
-    
+
     /**
-     * register a placeholder instruction to be replaced when the class is 
+     * register a placeholder instruction to be replaced when the class is
      * completed.
      */
     void addPlaceholder(PlaceholderInstruction *inst);
-    
+
     /**
      * Find the ancestor with our first vtable.
      */
     BTypeDef *findFirstVTable(BTypeDef *vtableBaseType);
-    
+
     /**
-     * Get the global variable, creating an extern instance in the module if 
+     * Get the global variable, creating an extern instance in the module if
      * it lives in another module.
-     * @param execEng the execution engine (may be null if this is unknown or 
+     * @param execEng the execution engine (may be null if this is unknown or
      *  there is no execution engine)
      */
     llvm::GlobalVariable *getClassInstRep(llvm::Module *module,
@@ -98,18 +98,18 @@ public:
                                           );
 
     /**
-     * Add a dependent type - this is a nested type that is derived from an 
-     * incomplete enclosing type.  fixIncompletes() will be called on all of 
+     * Add a dependent type - this is a nested type that is derived from an
+     * incomplete enclosing type.  fixIncompletes() will be called on all of
      * the dependents during the completion of the receiver.
      */
     void addDependent(BTypeDef *type, model::Context *context);
 
-    /** 
-     * Fix all incomplete instructions and incomplete children and set the 
+    /**
+     * Fix all incomplete instructions and incomplete children and set the
      * "complete" flag.
      */
     void fixIncompletes(model::Context &context);
-    
+
 };
 
 } // end namespace builder::vmll

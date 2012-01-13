@@ -7,6 +7,7 @@
 #include <llvm/Support/IRBuilder.h>
 #include "builder/Builder.h"
 #include "BTypeDef.h"
+#include "BBuilderContextData.h"
 
 namespace llvm {
     class Module;
@@ -31,6 +32,7 @@ class LLVMBuilder : public Builder {
 
         llvm::Function *callocFunc;
         DebugInfo *debugInfo;
+        BTypeDefPtr exStructType;
         
         // emit all cleanups for context and all parent contextts up to the 
         // level of the function
@@ -40,6 +42,13 @@ class LLVMBuilder : public Builder {
         std::map<llvm::Function *, void *> primFuncs;
         
         LLVMBuilderPtr rootBuilder;
+        
+        BTypeDef *getExStructType() {
+            if (rootBuilder)
+                return rootBuilder->exStructType.get();
+            else
+                return exStructType.get();
+        }
 
         /**
          * Creates a new LLVM module and initializes all of the exception 
@@ -146,7 +155,7 @@ class LLVMBuilder : public Builder {
         BModuleDef *bModDef;
         llvm::Module *module;
         llvm::Function *func;
-        const llvm::Type *llvmVoidPtrType;
+        llvm::Type *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *funcBlock;
@@ -190,7 +199,7 @@ class LLVMBuilder : public Builder {
         
         BTypeDefPtr getFuncType(model::Context &context,
                                 model::FuncDef *funcDef,
-                                const llvm::Type *llvmFuncType
+                                llvm::Type *llvmFuncType
                                 );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var,
                                           llvm::Value *initVal = 0
@@ -205,6 +214,17 @@ class LLVMBuilder : public Builder {
 
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);
+
+        /** 
+         * Create a landing pad block. 
+         * @param next the block after the landing pad
+         * @param cdata catch data or null if this is not a catch context.
+         */
+        llvm:: BasicBlock *createLandingPad(
+            model::Context &context,
+            llvm::BasicBlock *next,
+            BBuilderContextData::CatchData *cdata
+        );
 
         virtual void addGlobalVarMapping(llvm::GlobalValue *decl,
                                          llvm::GlobalValue *externalDef

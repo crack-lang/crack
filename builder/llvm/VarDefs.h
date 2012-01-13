@@ -135,7 +135,7 @@ class BFieldDefImpl : public model::VarDefImpl {
 
         // emit a field reference.
         virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
-                                          const llvm::Type *fieldType,
+                                          llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           ) = 0;
 };
@@ -155,7 +155,7 @@ class BInstVarDefImpl : public BFieldDefImpl {
                                      );
 
         virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
-                                          const llvm::Type *fieldType,
+                                          llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           );
 
@@ -176,7 +176,7 @@ class BOffsetFieldDefImpl : public BFieldDefImpl {
                                      );
 
         virtual llvm::Value *emitFieldRef(llvm::IRBuilder<> &builder,
-                                          const llvm::Type *fieldType,
+                                          llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           );
 

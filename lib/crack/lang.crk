@@ -902,7 +902,9 @@ class BadCastError : Exception {
 }
 
 bool exceptionMatchFunc(Class classObj, Object obj) {
-    return obj.isa(classObj);
+    # if the class object is null, this is a "catch all" exception.  Otherwise 
+    # see if the exception object is an instance of the class.
+    return classObj is null || obj.isa(classObj);
 }
 
 void badClassFunc(Class curType, Class newType) {
