@@ -223,12 +223,12 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(mod->getIntType(), "val");
 
     f = mod->addFunc(byteptrType, "printint64",
-                     (void *)crack::runtime::printint
+                     (void *)crack::runtime::printint64
                      );
     f->addArg(mod->getInt64Type(), "val");
 
     f = mod->addFunc(byteptrType, "printuint64",
-                     (void *)crack::runtime::printint
+                     (void *)crack::runtime::printint64
                      );
     f->addArg(mod->getUint64Type(), "val");
 
