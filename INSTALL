@@ -25,8 +25,8 @@ $ make install
 
 Build Crack:
 
-$ tar -xvzf crack-0.6.tar.gz
-$ cd crack-0.6
+$ tar -xvzf crack-0.6.1.tar.gz
+$ cd crack-0.6.1
 $ ./configure
 $ make
 $ make check  # optional
@@ -47,7 +47,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-0.6
+$ cd crack-0.6.1
 $ mkdir build; cd build
 $ cmake ..
 $ make
