@@ -111,13 +111,14 @@ void Cacher::writeMetadata() {
     for (LLVMBuilder::ModFuncMap::const_iterator i = b.moduleFuncs.begin();
          i != b.moduleFuncs.end();
          ++i) {
+        if (!i->second->isDeclaration())
+            continue;
         // only include it if it's a decl and it's defined in another module
         // but skip externals from extensions, since these are found by
         // the jit through symbol searching the process
         assert(i->first->getOwner() && "no owner");
         ModuleDefPtr owner = i->first->getOwner()->getModule();
-        if ((!i->second->isDeclaration()) ||
-            (owner && owner->fromExtension) ||
+        if ((owner && owner->fromExtension) ||
             (i->first->getOwner() == modDef->getParent(0).get()))
             continue;
         dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
