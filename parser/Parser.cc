@@ -2010,10 +2010,8 @@ bool Parser::parseDef(TypeDef *&type) {
             initializer = parseInitializer(type);
             // make sure the initializer matches the declared type.
             initializer = initializer->convert(*context, type);
-            if (!initializer){
-              initializer->writeTo(std::cerr);
+            if (!initializer)
                error(tok3, "Incorrect type for initializer.");
-             }
 
             context->emitVarDef(type, tok2, initializer.get());
    
