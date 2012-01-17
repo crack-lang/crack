@@ -58,10 +58,10 @@ class Process {
     }
 
     oper del() {
-        close(_pd.stdin);
-        close(_pd.stdout);
-        close(_pd.stderr);
+        if (!(_pd is null)) {
+            closeProcess(_pd);
         free(_pd);
+    }
     }
 
     String _readPipe(int pipe) {
@@ -175,6 +175,8 @@ class Process {
     // close are undefined
     void close() {
         closeProcess(_pd);
+        free(_pd);
+        _pd = null;
     }
 
 }
