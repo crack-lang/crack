@@ -254,7 +254,7 @@ static bool handleActionValue(int64_t *resultAction,
 
         // Note: A typeOffset == 0 implies that a cleanup llvm.eh.selector
         //       argument has been matched.
-        if ((typeOffset > 0) && classInfo[-typeOffset]) {
+        if (typeOffset > 0) {
             // if we got an exception and there is no "match" function, 
             // translate it to an abort.
             if (!runtimeHooks.exceptionMatchFunc) abort();
