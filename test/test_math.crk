@@ -3,7 +3,8 @@
 
 // test of math library
 @import crack.ann define;
-import crack.io cout, StringFormatter, Formatter;
+import crack.lang Formatter;
+import crack.io cout, StringFormatter;
 import crack.exp.file File;
 
 // import all the symbols in the module

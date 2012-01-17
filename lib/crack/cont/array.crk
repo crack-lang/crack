@@ -1,8 +1,8 @@
 # Copyright 2011 Google Inc
 # Generic array implementation
 
-import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
-import crack.io cout, Writer, FStr;
+import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, Formatter;
+import crack.io cout, Writer, FStr, StandardFormatter;
 import crack.algorithm QuickSort;
 
 # we use poormac here because the standard macro mechanism depends on this 
@@ -107,6 +107,8 @@ class Array[Elem] {
     uint count() {
         return __size;
     }
+
+    @static bool elemIsNull(Elem e){ return _isNull(e); }
 
     @final
     Elem oper [](uint index) {
@@ -388,24 +390,21 @@ class Array[Elem] {
         return __cap;
     }
 
-    void writeTo(Writer out) {
-        FStr fmt = {};
-        out.write('[');
+    void formatTo(Formatter fmt) {
+        fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {
             if (!first)
-                out.write(', ');
+                fmt.format(fmt.ELEMSEP);
             else
                 first = false;
-            if (_isNull(elem)) out.write('null');
+            if (_isNull(elem)) fmt.format(fmt.NULL);
             else {
-                text := fmt `$elem`;
-                out.write(text);
+                fmt.format(elem)
             }
         }
-        out.write(']');
+        fmt.format(fmt.ARRAYEND);
     }
-
 
     Array _subarray(uint pos, uint len){
         if (pos > __size || pos + len > __size)

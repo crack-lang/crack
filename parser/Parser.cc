@@ -842,13 +842,14 @@ ExprPtr Parser::parseIString(Expr *expr) {
          funcCall->receiver = reg;
       seq->add(funcCall.get());
    }
-   
+
    // parse all of the subtokens
    Token tok;
    while (!(tok = getToken()).isIstrEnd()) {
       ExprPtr arg;
       if (tok.isString()) {
-         arg = context->getStrConst(tok.getData());
+          if (tok.getData().size() == 0) continue;
+          arg = context->getStrConst(tok.getData());
       } else if (tok.isIdent()) {
          // get a variable definition
          arg = createVarRef(0, tok);

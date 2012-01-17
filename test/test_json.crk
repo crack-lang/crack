@@ -1,10 +1,13 @@
 import crack.io cout, FStr;
 import crack.strutil StringArray;
 import crack.cont.array Array;
-import crack.json JsonParser;
+import crack.json JsonParser, JsonStringFormatter;
+import crack.math NAN, INFINITY, FP_NORMAL, FP_ZERO, FP_INFINITE, FP_NAN;
 
 JsonParser parser = {};
-StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
+JsonStringFormatter jfmt = {};
+
+StringArray testStrings = [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null',
                            '{"one":1}', '{"two":"two"}', '{"three":1.0}',
                            '[1,2,3]', '[1, "2", 3e0, {}]', '
 {
@@ -35,16 +38,19 @@ StringArray testStrings = [r'"\/\n\r\b\t\\\""', 'true', 'false', 'null',
   "MaxConcFrac": 0.01
 }'];
 
-StringArray testResults =  ['/\n\r\b\t\\\"', 'true', 'false', 'null', 
-                            '{one: 1}', '{two: two}', '{three: 1.000000}', 
-                           '[1, 2, 3]', '[1, 2, 3.000000, {}]', '{Dangles: some, Strands order: [S], Sodium: 1.000000, MaxComplexSize: 1, Material: rna, MinConcScale: uM, MinConc: 0.000000, Magnesium: 0.000000, Pseudoknots: false, MaxHistograms: 10, MaxConcFrac: 0.010000, Strands: {S: {Conc: 1.000000, Pos: 0, ConcScale: uM, Sequence: CGAUGCAUGC}}, AdditionalComplexes: [], Temperature: 37.000000}'];
+StringArray testResults =  [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null', 
+                            '{"one": 1}', '{"two": "two"}', '{"three": 1.000000}', 
+                           '[1, 2, 3]', '[1, "2", 3.000000, {}]', 
+                            '{"Dangles": "some", "Strands order": ["S"], "Sodium": 1.000000, "MaxComplexSize": 1, "Material": "rna", "MinConcScale": "uM", "MinConc": 0.000000, "Magnesium": 0.000000, "Pseudoknots": "\false", "MaxHistograms": 10, "MaxConcFrac": 0.010000, "Strands": {"S": {"Conc": 1.000000, "Pos": 0, "ConcScale": "uM", "Sequence": "CGAUGCAUGC"}}, "AdditionalComplexes": [], "Temperature": 37.000000}'];
 Array[uint] failed = {};
 StringArray failedResults = {};
 uint i = 0;
 
 for (input :in testStrings){
     parseVal := parser.parse(input);
-    result := FStr() `$parseVal`;
+
+    jfmt.format(parseVal);
+    result := jfmt.string();
     if (result != testResults[i]){
         failed.append(i);
         failedResults.append(result);
@@ -56,10 +62,37 @@ i = 0;
 if (failed.count() > 0){
     cout `Tests failed:\n`;
     for (fi :in failed){
-        cout `$(testStrings[fi]) -> $(failedResults[i]), expected $(testResults[fi])\n`;
+        cout `$(testStrings[fi]) ->\n$(failedResults[i]), expected\n$(testResults[fi])\n`;
         i++;
     }
 }
-else
-    cout `ok\n`;
 
+// Test encoding of regular Crack structures
+uints := Array[uint]![1,2,3,4,5,6,7];
+ints := Array[int]![-1, -2, -3, -4, 5, 6, 7];
+floats := Array[float64]![0, 1, -NAN, NAN, INFINITY, -INFINITY];
+
+StringArray nativeExpected = ['[1, 2, 3, 4, 5, 6, 7]', 
+                            '[-1, -2, -3, -4, 5, 6, 7]',
+                            '[0.000000, 1.000000, NaN, NaN, Infinity, -Infinity]'];
+
+StringArray encodeResults = {};
+
+jfmt.format(uints);
+encodeResults.append(jfmt.string());
+jfmt.format(ints);
+encodeResults.append(jfmt.string());
+jfmt.format(floats);
+encodeResults.append(jfmt.string());
+
+i = 0;
+for (encoded :in encodeResults){
+    parseVal := parser.parse(encoded);
+    jfmt.format(parseVal);
+    result := jfmt.string();
+    if (result != nativeExpected[i])
+        cout `$encoded -> $result, expected\n$(nativeExpected[i])\n`;
+    i++;
+}
+
+cout `ok\n`;

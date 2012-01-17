@@ -2,8 +2,8 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Portions Copyright 2010 Google Inc.
 
-import crack.io cerr, Formatter, Writer;
-import crack.lang die, FreeBase, CString;
+import crack.io cerr, StandardFormatter, Writer;
+import crack.lang die, FreeBase, CString, Formatter;
 import crack.exp.bindings Opaque;
 import crack.cont.list List;
 import crack.exp.file Openable, FileInfo;
@@ -80,11 +80,11 @@ class Directory : Object, Openable {
     }
 
     /// Returns an iterator over the subdirectories (Iter[Directory]).
-    List[Directory] dirs() { 
+    List[Directory] dirs() {
         if (!_isOpened)
             _open();
         if (_isValid)
-            return _dirList; 
+            return _dirList;
         else
             return null;
     }
@@ -93,14 +93,13 @@ class Directory : Object, Openable {
         if (!_isOpened)
             _open();
         if (_isValid)
-            return _fileList; 
+            return _fileList;
         else
-            return null;        
+            return null;
     }
-    
-    void writeTo(Writer out) {
-        Formatter(out) `$name`;
+
+    void formatTo(Formatter fmt) {
+        fmt.format(name);
     }
-    
 }
 

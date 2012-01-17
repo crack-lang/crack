@@ -62,25 +62,25 @@ const double_constant_struct double_constants[] = {
                                     {"HUGE_VAL",      HUGE_VAL},
                                     {"INFINITY",      INFINITY},
                                     {"NAN",           NAN},
-                                    {"FP_INFINITE",   FP_INFINITE},
-                                    {"FP_NAN",        FP_NAN},
-                                    {"FP_NORMAL",     FP_NORMAL},
-                                    {"FP_SUBNORMAL",  FP_SUBNORMAL},
-                                    {"FP_ZERO",       FP_ZERO},
-                                    {"FP_ILOGB0",     FP_ILOGB0},
-                                    {"FP_ILOGBNAN",   FP_ILOGBNAN},
-                                    {"ALL_EXCEPT",    FE_ALL_EXCEPT},
-                                    {"INVALID",       FE_INVALID},
-                                    {"DIVBYZERO",     FE_DIVBYZERO},
-                                    {"OVERFLOW",      FE_OVERFLOW},
-                                    {"UNDERFLOW",     FE_UNDERFLOW},
                                     {NULL, 0}
                                  };
 
 
-const int_constant_struct int_constants[]={{"ERANGE", ERANGE}, 
-                                               {"EINVAL", EINVAL}, 
-                                               {"ENOMEM", ENOMEM}, 
+const int_constant_struct int_constants[]={{"ERANGE",        ERANGE}, 
+                                               {"EINVAL",        EINVAL}, 
+                                               {"ENOMEM",        ENOMEM}, 
+                                               {"FP_INFINITE",   FP_INFINITE},
+                                               {"FP_NAN",        FP_NAN},
+                                               {"FP_NORMAL",     FP_NORMAL},
+                                               {"FP_SUBNORMAL",  FP_SUBNORMAL},
+                                               {"FP_ZERO",       FP_ZERO},
+                                               {"FP_ILOGB0",     FP_ILOGB0},
+                                               {"FP_ILOGBNAN",   FP_ILOGBNAN},
+                                               {"ALL_EXCEPT",    FE_ALL_EXCEPT},
+                                               {"INVALID",       FE_INVALID},
+                                               {"DIVBYZERO",     FE_DIVBYZERO},
+                                               {"OVERFLOW",      FE_OVERFLOW},
+                                               {"UNDERFLOW",     FE_UNDERFLOW},
                                                {NULL, 0}};
 // -----------------------------------------------------------------------------
 // Functions that take a single float argument
@@ -162,15 +162,15 @@ int crk_isinf(float x){
 }
 
 int crk_isnan(float x){
-  return isinf(x);
+  return isnan(x);
 }
 
 int crk_isnormal(float x){
-  return isinf(x);
+  return isnormal(x);
 }
 
 int crk_signbit(float x){
-  return isinf(x);
+  return signbit(x);
 }
 
 OneMacroFuncFloat *one_macros[]={crk_fpclassify, crk_isfinite,
@@ -216,15 +216,15 @@ int crk_isinf_double(double x){
 }
 
 int crk_isnan_double(double x){
-  return isinf(x);
+  return isnan(x);
 }
 
 int crk_isnormal_double(double x){
-  return isinf(x);
+  return isnormal(x);
 }
 
 int crk_signbit_double(double x){
-  return isinf(x);
+  return signbit(x);
 }
 
 int crk_get_errno(){
@@ -286,7 +286,7 @@ void math_init(Module *mod) {
     func->addArg(mod->getFloatType(), "value");
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_macro_names[i], (void *) one_macros_double[i]);
+    Func *funcd = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros_double[i]);
     funcd->addArg(mod->getFloat64Type(), "value");
 #endif
   }

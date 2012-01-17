@@ -2,7 +2,7 @@
 
 import crack.lang cmp, die, free;
 import crack.runtime random;
-import crack.io cout, Formatter, FStr, StringFormatter;
+import crack.io cout, FStr, StringFormatter;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.cont.list List, DList;

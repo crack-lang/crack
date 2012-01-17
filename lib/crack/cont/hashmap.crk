@@ -1,8 +1,8 @@
 # Copyright 2011 Google Inc
 # Generic hash map implementation
 
-import crack.lang makeHashVal, free, AssertionError, KeyError;
-import crack.io cout, Formatter, FStr, Writer;
+import crack.lang makeHashVal, free, AssertionError, KeyError, Formatter;
+import crack.io cout, StandardFormatter, FStr, Writer;
 
 class HashMap[Key, Value] {
     class Item {
@@ -297,19 +297,20 @@ class HashMap[Key, Value] {
     }
 
     Iter iter() { return Iter(this); }
-    
-    void writeTo(Writer out) {
-        Formatter f = {out};
-        f `{`;
-        uint i = 0;
+
+    void formatTo(Formatter fmt) {
+        fmt.format(fmt.MAPSTART);
+        bool first = true;
         for (item :in this){
-            if (i > 0) f `, `;
-            f `$(item.key): $(item.val)`;
-            i++;
+            if (!first) fmt.format(fmt.ELEMSEP);
+            else first = false;
+            fmt.format(item.key);
+            fmt.format(fmt.KEYVALSEP);
+            fmt.format(item.val);
         }
-        f `}`;
+        fmt.format(fmt.MAPEND);
     }
-    
+
     uint count() {
         return _size;
     }

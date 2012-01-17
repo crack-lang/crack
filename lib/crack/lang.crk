@@ -8,11 +8,16 @@ import crack.runtime abort, free, getLocation, strcpy, strlen, malloc,
 
 const bool true = (1 == 1), false = (1 == 0);
 
+class Object;
 class Writer;
+class Formatter;
+class String;
+class StaticString;
 
 void _writeObject(Writer out);
 void _throwAssertionError(byteptr text);
 void _throwIndexError(byteptr text);
+void _formatObject(Formatter f, Object o);
 
 ## Base class for things that you don't want derived from object or VTableBase.
 class FreeBase {};
@@ -64,27 +69,27 @@ class Object : VTableBase {
     }
 
     @final bool oper <(Object other) {
-        return this is null ? !(other is null) : cmp(other) < 0;
+        return this is null ? !(other is null) : (other is null ? false : cmp(other) < 0);
     }
 
     @final bool oper <=(Object other) {
-        return this is null ? true : cmp(other) <= 0;
+        return this is null ? true : (other is null ? false : cmp(other) <= 0);
     }
 
     @final bool oper ==(Object other) {
-        return this is null ? other is null : cmp(other) == 0;
+        return this is null ? other is null : (other is null ? false :cmp(other) == 0);
     }
 
     @final bool oper !=(Object other) {
-        return this is null ? !(other is null) : cmp(other) != 0;
+        return this is null ? !(other is null) : (other is null ? false : cmp(other) != 0);
     }
 
     @final bool oper >=(Object other) {
-        return this is null ? other is null : cmp(other) >= 0;
+        return this is null ? other is null : ( other is null ? false : cmp(other) >= 0);
     }
 
     @final bool oper >(Object other) {
-        return this is null ? false : cmp(other) > 0;
+        return this is null ? false : (other is null ? true : cmp(other) > 0);
     }
 
     ## Returns the hash value of the object.  Hash values have a special 
@@ -109,8 +114,8 @@ class Object : VTableBase {
         return this.class.isSubclass(cls);
     }
 
-    void writeTo(Writer writer) {
-        _writeObject(writer);
+    void formatTo(Formatter f) {
+        _formatObject(f, this);
     }
 };
 
@@ -132,6 +137,34 @@ class Buffer;
     }
 }
 
+@abstract class Formatter : Object, Writer {
+
+    byteptr ARRAYSTART = "[",
+            ARRAYEND = "]",
+            ELEMSEP = ", ",
+            MAPSTART = "{",
+            MAPEND = "}",
+            KEYVALSEP = ": ",
+            NULL = "null";
+
+    @abstract Object _iface_getFormatterObject();
+    @abstract void format(StaticString data);
+    @abstract void format(String data);
+
+    @abstract void format(int32 val);
+    @abstract void format(uint32 val);
+    @abstract void format(int64 val);
+    @abstract void format(uint64 val);
+
+    @abstract void format(float32 val);
+    @abstract void format(float64 val);
+
+    @abstract void format(bool val);
+    @abstract void format(Object obj);
+    @abstract void format(byteptr cstr);
+
+}
+
 ## The buffer base class containing a bytebuf and size.
 class Buffer : Object {
 
@@ -149,8 +182,8 @@ class Buffer : Object {
         return (size == 0);
     }
 
-    void writeTo(Writer writer) {
-        writer.write(this);
+    void formatTo(Formatter f) {
+        f.write(this);
     }
 
     byte oper [](uint index) {
@@ -323,6 +356,10 @@ void _writeObject(Writer out) {
     out.write(Buffer('<Object>', 8));
 }
 
+void _formatObject(Formatter f, Object o) { 
+    f.write(Buffer('<Object>', 8)); 
+}
+
 ## A writable buffer.  You can assume that it is safe to write to one of these.
 class WriteBuffer : Buffer {
 
@@ -432,7 +469,6 @@ class AppendBuffer : ManagedBuffer {
 # these efficiently
 
 class SubString;
-class String;
 class CString;
 SubString _substr(SubString target, uint pos, uint len);
 SubString substr(SubString target, int pos, uint len);
@@ -663,6 +699,10 @@ class String : Buffer {
         buf.size = buf.pos;
         return String(buf, true);
     }
+
+    void writeTo(Formatter f) {
+        f.format(this);
+    }
 };
 
 ## A substring of an existing string object.  Substrings are much
@@ -880,8 +920,8 @@ class Exception : Object {
         __stackTrace[__stackTraceSize++] = frame;
         frame.oper bind();
     }
-    
-    void writeTo(Writer out) {
+
+    void _writeTo(Writer out) {
         for (int i = int(__stackTraceSize - 1); i >= 0; --i) {
             out.write(__stackTrace[i].func);
             out.write(StaticString('\n'));
@@ -892,6 +932,14 @@ class Exception : Object {
             out.write(text);
         }
         out.write(StaticString('\n'));
+    }
+
+    void writeTo(Writer out) {
+        _writeTo(out);
+    }
+
+    void formatTo(Formatter fmt){
+        _writeTo(fmt);
     }
 }
 
@@ -942,6 +990,7 @@ void uncaughtExceptionHandler(Object ex) {
         void write(byteptr string) { write(2, string, strlen(string)); }
         Object _iface_getWriterObject() { return this; }
     }
+
     writer := StdErr();
 
     writer.write('Uncaught Exception:\n');
