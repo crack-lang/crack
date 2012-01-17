@@ -40,6 +40,40 @@ namespace {
     }
 }
 
+Function *Cacher::getEntryFunction() {
+
+    NamedMDNode *node = modDef->rep->getNamedMetadata("crack_entry_func");
+    assert(node && "no crack_entry_func");
+    MDNode *funcNode = node->getOperand(0);
+    assert(funcNode && "malformed crack_entry_func");
+    Function *func = dyn_cast<Function>(funcNode->getOperand(0));
+    assert(func && "entry function not LLVM Function!");
+    return func;
+
+}
+
+void Cacher::getExterns(std::vector<std::string> &symList) {
+
+    assert(symList.size() == 0 && "invalid or nonempty symList");
+
+    NamedMDNode *externs = modDef->rep->getNamedMetadata("crack_externs");
+    assert(externs && "no crack_externs node");
+
+    if (externs->getNumOperands()) {
+        MDString *sym;
+        MDNode *symNode = externs->getOperand(0);
+        for (int i = 0; i < symNode->getNumOperands(); ++i) {
+
+            sym = dyn_cast<MDString>(symNode->getOperand(i));
+            assert(sym && "malformed crack_externs");
+
+            symList.push_back(sym->getString().str());
+
+        }
+    }
+
+}
+
 void Cacher::addNamedStringNode(const string &key, const string &val) {
 
     vector<Value *> dList;

@@ -387,13 +387,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         // find the main function
         module = bmod->rep;
 
-        // XXX move this to Cacher::getEntryFunction() to hide metadata impl
-        NamedMDNode *node = module->getNamedMetadata("crack_entry_func");
-        assert(node && "no crack_entry_func");
-        MDNode *funcNode = node->getOperand(0);
-        assert(funcNode && "malformed crack_entry_func");
-        func = dyn_cast<Function>(funcNode->getOperand(0));
-        assert(func && "entry function not LLVM Function!");
+        // entry function
+        func = c.getEntryFunction();
 
         engineBindModule(bmod);
 
@@ -407,23 +402,23 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         Function *ext_f;
         GlobalVariable *ext_g;
         GlobalValue *gval;
-        MDString *sym;
-        // XXX move this to Cacher::getExterns() to hide metadata impl
-        NamedMDNode *externs = module->getNamedMetadata("crack_externs");
-        assert(externs && "no crack_externs node");
-        if (externs->getNumOperands()) {
-            MDNode *symNode = externs->getOperand(0);
-            for (int i = 0; i < symNode->getNumOperands(); ++i) {
 
-                sym = dyn_cast<MDString>(symNode->getOperand(i));
-                assert(sym && "malformed crack_externs");
+        vector<string> symList;
+        c.getExterns(symList);
 
-                CacheMapType::const_iterator cmi = cacheMap->find(sym->getString().str());
+        if (symList.size()) {
+
+            for (vector<string>::const_iterator i = symList.begin();
+                 i != symList.end();
+                 ++i
+                 ) {
+
+                CacheMapType::const_iterator cmi = cacheMap->find(*i);
                 assert(cmi != cacheMap->end() && "external not found");
 
                 gval = cmi->second;
 
-                Function *decl = module->getFunction(sym->getString());
+                Function *decl = module->getFunction(*i);
                 if (decl) {
                     assert(decl->isDeclaration() &&
                            "declared extern function wasn't a decl");
@@ -455,7 +450,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                 }
                 else {
                     // map globals
-                    GlobalVariable *gbl = module->getGlobalVariable(sym->getString());
+                    GlobalVariable *gbl = module->getGlobalVariable(*i);
                     assert(gbl && "declared extern was not function or global");
                     assert(gbl->isDeclaration() && "declared global wasn't a decl");
                     // now find the defining module

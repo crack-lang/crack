@@ -5,11 +5,13 @@
 
 #include "model/Context.h"
 #include <string>
+#include <vector>
 
 namespace llvm {
     class Module;
     class MDNode;
     class Value;
+    class Function;
 }
 
 namespace model {
@@ -68,6 +70,10 @@ public:
 
     Cacher(model::Context &c, builder::BuilderOptions* o, BModuleDef *m = NULL):
         modDef(m), context(c), options(o) { }
+
+    llvm::Function *getEntryFunction();
+
+    void getExterns(std::vector<std::string> &symList);
 
     BModuleDef *maybeLoadFromCache(const std::string &canonicalName,
                                    const std::string &path);
