@@ -1,7 +1,8 @@
 # Copyright 2011 Google Inc.
 # Singly and Doubly Linked-list Generics
 
-import crack.lang AssertionError, IndexError, InvalidArgumentError, Writer;
+import crack.lang AssertionError, IndexError, InvalidArgumentError, Writer, 
+                  Formatter;
 import crack.io FStr;
 
 # we use poormac here because the standard macro mechanism depends on this 
@@ -194,22 +195,20 @@ class List[Elem] {
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
 
-    void writeTo(Writer out) {
-        FStr fmt = {};
-        out.write('[');
+    void formatTo(Formatter fmt) {
+        fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {
             if (!first)
-                out.write(', ');
+                fmt.format(fmt.ELEMSEP);
             else
                 first = false;
-            if (_isNull(elem)) out.write('null');
+            if (_isNull(elem)) fmt.format(fmt.NULL);
             else {
-                text := fmt `$elem`;
-                out.write(text);
+                fmt.format(elem);
             }
         }
-        out.write(']');
+        fmt.format(fmt.ARRAYEND);
     }
 }
 
@@ -463,21 +462,19 @@ class DList[Elem] {
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
 
-    void writeTo(Writer out) {
-        FStr fmt = {};
-        out.write('[');
+    void formatTo(Formatter fmt) {
+        fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {
             if (!first)
-                out.write(', ');
+                fmt.format(fmt.ELEMSEP);
             else
                 first = false;
-            if (_isNull(elem)) out.write('null');
+            if (_isNull(elem)) fmt.format(fmt.NULL);
             else {
-                text := fmt `$elem`;
-                out.write(text);
+                fmt.format(elem);
             }
         }
-        out.write(']');
+        fmt.format(fmt.ARRAYEND);
     }
 }

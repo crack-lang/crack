@@ -2,8 +2,8 @@
 # Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.lang free, FreeBase;
-import crack.lang CString, Buffer, Writer;
-import crack.io cout, FStr, Formatter;
+import crack.lang CString, Buffer, Writer, Formatter;
+import crack.io cout, FStr;
 import crack.cont.array Array;
 
 import crack.ext._cairo
@@ -786,12 +786,10 @@ class Matrix {
         return transform_point(x);
     }
 
-    void writeTo(Writer out) {
-        out.write(FStr() `[[$(matrix.xx),  $(matrix.yx)], [$(matrix.xy),  $(matrix.yy)]], [$(matrix.x0),  $(matrix.y0)]\n`);
-    }
-
     void format(Formatter fmt){
-        writeTo(fmt.rep);
+        fmt `$(fmt.ARRAYSTART)$(fmt.ARRAYSTART)$(matrix.xx)$(fmt.ELEMSEP)$(matrix.yx)$(fmt.ARRAYEND)$(fmt.ELEMSEP)`;
+        fmt `$(fmt.ARRAYSTART)$(matrix.xy)$(fmt.ELEMSEP)$(matrix.yy)$(fmt.ARRAYEND)$(fmt.ARRAYEND)$(fmt.ELEMSEP)`
+        fmt `$(fmt.ARRAYSTART)$(matrix.x0)$(fmt.ELEMSEP)$(matrix.y0)$(fmt.ARRAYEND)\n`);
     }
 
 } // Matrix

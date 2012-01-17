@@ -8,7 +8,7 @@ import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.io cerr, Formatter, StringFormatter, Writer;
+import crack.io cerr, StandardFormatter, StringFormatter, Writer;
 import crack.net InetAddress, Pollable, Poller, Socket, AF_INET, POLLIN, 
     POLLOUT, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
@@ -19,7 +19,7 @@ import crack.functor Functor1;
 
 @import crack.ann define, interface, implements;
 
-Formatter NULL_FORMATTER = null;
+StandardFormatter NULL_FORMATTER = null;
 @define vlog() { cerr }
 
 ## Contains the full contents of an HTTP request and provides the means for 
@@ -27,7 +27,7 @@ Formatter NULL_FORMATTER = null;
 class HTTPRequest {
     String method, path, version;
     HashMap[String, String] headers = {};
-    Formatter __clt;
+    StandardFormatter __clt;
 
     oper init(Writer client ## the channel to write back to the client.
               ) :

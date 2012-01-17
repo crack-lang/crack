@@ -1,6 +1,7 @@
-import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError;
+import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, 
+       Formatter;
 import crack.math abs, log2;
-import crack.io cout, Writer, FStr;
+import crack.io cout, Writer, FStr, StandardFormatter;
 import crack.algorithm QuickSort;
 import crack.cont.array Array, ArrayData;
 @import crack.ann define;
@@ -667,25 +668,25 @@ class NumericArray[Elem] {
             throw AssertionError("flatten only implemented for 1D and 2D arrays");
     }
 
-    void _writeLevel(Writer out, Array[uintz] wstrides, Array[uintz] woffsets, 
+    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
                 Array[uint] wshape, uint dim);
 
-    void _writeLevel(Writer out, Array[uintz] wstrides, Array[uintz] woffsets, 
+    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
                 Array[uint] wshape, uint dim){
-        out.write('[');
+        fmt.format(fmt.ARRAYSTART);
         if (dim == 1){
             bool first = true;
             uintz offset = woffsets[dim - 1];
             uintz stride = wstrides[dim - 1];
             for (uint i = 0; i < wshape[0]; i++){
                 if (!first)
-                    out.write(', ');
+                    fmt.write(', ');
                 else
                     first = false;
                 Elem elem = (__rep + offset + stride * i)[0];
-                if (_isNull(elem)) out.write('null');
+                if (_isNull(elem)) fmt.format(fmt.NULL);
                 else {
-                    out.write(FStr() `$elem`);
+                    fmt.format(elem);
                 }
             }
         } 
@@ -699,23 +700,23 @@ class NumericArray[Elem] {
 
             for (uint i = 0; i < wshape[dim - 1]; i++){
                 if (!first)
-                    out.write(', ');
+                    fmt.format(fmt.ELEMSEP);
                 else
                     first = false;
-                _writeLevel(out, nstrides, noffsets, nshape, dim - 1);
+                _writeLevel(fmt, nstrides, noffsets, nshape, dim - 1);
                 uintz noffset = noffsets[dim - 2] + stride;
                 noffsets[dim - 2] = noffset;
             }
             
         }
         
-        out.write(']');
+        fmt.format(fmt.ARRAYEND);
     }
 
-    void writeTo(Writer out) {
-        _writeLevel(out, strides, offsets, shape, dims);
+    void formatTo(Formatter fmt) {
+        _writeLevel(fmt, strides, offsets, shape, dims);
     }
-    
+
     oper del(){
         T = null;
     }

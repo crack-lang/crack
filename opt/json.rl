@@ -14,17 +14,132 @@
 // For more info on JSON, see http://json.org/
 
 import crack.runtime exit, memmove;
-import crack.lang WriteBuffer, AppendBuffer, ManagedBuffer, Buffer, Exception, Writer, CString;
-import crack.io cout, cerr, cin, FStr;
+import crack.lang WriteBuffer, AppendBuffer, ManagedBuffer, Buffer, Exception, 
+                  Writer, CString, Formatter;
+import crack.io cout, cerr, cin, FStr, StandardFormatter, StringWriter;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.math atoi, INFINITY, NAN, strtof;
+import crack.cont.treemap TreeMap;
+import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
+                        FP_NORMAL, FP_ZERO, sign;
 @import crack.ann define;
 
+// Define a formatter class to override string formatting
+class JsonFormatter : StandardFormatter {
+    oper init(Writer rep) : StandardFormatter(rep) {}
+
+    String encodeString(Buffer data) {
+        AppendBuffer buf = {data.size + 2};
+
+        buf.append(b'"');
+        for (uint i = 0; i < data.size; ++i) {
+            ch := data.buffer[i];
+            if (ch == b'"' || ch == b'\\'){
+                buf.append(b'\\');
+                buf.append(ch);
+            } else if (ch == b'\n'){
+                buf.append(b'\\');
+                buf.append(b'n');
+            } else if (ch == b'\t'){
+                buf.append(b'\\');
+                buf.append(b't');
+            } else if (ch == 12){ // FF
+                buf.append(b'\\');
+                buf.append(b'f');
+            } else if (ch == b'\r'){
+                buf.append(b'\\');
+                buf.append(b'r');
+            } else if (ch == b'/'){
+                buf.append(b'\\');
+                buf.append(b'/');
+            } else if (ch == 8){ // BS
+                buf.append(b'\\');
+                buf.append(b'b');
+            } else if (ch < 32 || ch > 127) {
+                buf.append(b'\\');
+                buf.append(b'0' + (ch >> 6));
+                buf.append(b'0' + ((ch & 56) >> 3));
+                buf.append(b'0' + (ch & 7));
+            } else {
+                buf.append(ch)
+            }
+        }
+        buf.append(b'"');
+
+        buf.size = buf.pos;
+        return String(buf, true);
+    }
+
+    void format(StaticString data) {
+        write(encodeString(data));
+    }
+
+    void format(Buffer data) {
+        if (data.isa(String))
+            write(encodeString(data));
+        else
+            write(data);
+    }
+
+    void format(String data) {
+        write(encodeString(data));
+    }
+
+    void format(float32 value) {
+        int fptype = fpclassify(value);
+
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
+    }
+
+    void format(float64 value) {
+        int fptype = fpclassify(value);
+        
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
+    }
+
+    // For general objects, format() just calls the object's formatTo()
+    // method.
+    void format(Object obj) {
+        if (obj is null)
+            write(NULL);
+        else if (obj.isa(String))
+            format(String.cast(obj));
+        else {
+            obj.formatTo(this);
+        }
+    }
+}
+
+class JsonStringFormatter : JsonFormatter {
+    StringWriter _writer;
+    oper init() : JsonFormatter (null) {
+        _writer = StringWriter();
+        rep = _writer;
+    }
+
+    // Return a string containing everything that has been written so far.
+    String string() {
+        retval := _writer.string();
+        _writer = StringWriter();
+        rep = _writer;
+        return retval;
+    }
+}
+
+
 @define writeValue() {
-    void writeTo(Writer out) {
-        FStr fmt = {};
-        out.write(fmt `$value`);
+    void formatTo(Formatter fmt) {
+        fmt.format(value);
     }
 }
 
@@ -98,25 +213,25 @@ class JsonParser {
         oper init(Object result, uint p) : result = result, p = p {
         }
 
-        @define writeJsonValue(Type){
-            if (result.isa(Type)) { 
-                out.write( fmt `$(Type.cast(result))`);
+        @define formatJsonValue(Type){
+            if (result.isa(Type)) {
+                fmt.format(Type.cast(result));
             }
         }
 
-        void writeTo(Writer out) {
-            FStr fmt = {};
+        void formatTo(Formatter fmt) {
             if (result is null){
-              out.write(fmt `null`);
+              fmt.format(fmt.NULL);
               return;
             }
-            @writeJsonValue(JsonInt)
-            else @writeJsonValue(JsonBool)
-            else @writeJsonValue(JsonFloat)
-            else @writeJsonValue(JsonObject)
-            else @writeJsonValue(JsonArray)
-            else @writeJsonValue(String)
-            else out.write(fmt `UNKNOWN`);
+
+            @formatJsonValue(JsonInt)
+            else @formatJsonValue(JsonBool)
+            else @formatJsonValue(JsonFloat)
+            else @formatJsonValue(JsonObject)
+            else @formatJsonValue(JsonArray)
+            else @formatJsonValue(String)
+            else fmt.format('UNKNOWN');
         }
     }
 
@@ -145,7 +260,7 @@ class JsonParser {
         end_array           = ']';
         begin_string        = '"';
         begin_name          = begin_string;
-        begin_number        = digit | '-';
+        begin_number        = ('-' | digit);
     }%%
 
 //------------------------------------------------------------------------------
@@ -202,7 +317,7 @@ class JsonParser {
         }
 
         action parse_number {
-            if (pe > fpc + 9 - (quirksMode ? 1 : 0) && false) {
+            if (pe > fpc + 9 && bufferString(p, p+9) == "-Infinity") {
                 if (allowNaN) {
                     result = JsonFloat(-INFINITY);
                     fexec p + 10;
@@ -212,11 +327,13 @@ class JsonParser {
                     throw unexpectedToken(data, p, pe);
                 }
             }
+
             res = parseFloat(fpc, pe);
             if (!(res is null)) {
                 result = res.result;
                 fexec res.p;
             }
+
             res = parseInteger(fpc, pe);
             if (!(res is null)) {
                 result = res.result;
@@ -289,8 +406,9 @@ class JsonParser {
 
         %% write exec;
 
-        if (cs >= JSON_value_first_final)
+        if (cs >= JSON_value_first_final){
             return ParserResult(result, p);
+        }
 
         return null;
     }
@@ -373,6 +491,19 @@ class JsonParser {
             memo = p;
         }
 
+        action parse_number_start {
+            memo = p;
+        }
+
+        action parse_number {
+            chr = (data[memo] - 48) *64;
+            chr += (data[memo+1] - 48)*8;
+            chr += (data[memo+2] - 48);
+            append_buf.append(chr);
+            memo = p + 1;
+            fexec p + 1;
+        }
+
         action escapeString {
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo - 1);
@@ -408,6 +539,7 @@ class JsonParser {
         main := '"' >startString
                 ( ( ^(["\\]|0..0x1f)
                   | '\\' ["\\/bfnrt] @escapeString
+                  | '\\' ([0..3] >parse_number_start [0-7]{2}) @parse_number
                   )* %parse_string
                 ) '"' @exit;
     }%%
@@ -437,7 +569,7 @@ class JsonParser {
 
         write data;
 
-        action parse_value {
+        action parse_elem {
             res = parseValue(fpc, pe);
             if (res is null) {
                 fhold;
@@ -453,11 +585,11 @@ class JsonParser {
             fbreak;
         }
 
-        next_element = value_separator ignore* begin_value >parse_value;
+        next_element = value_separator ignore* begin_value >parse_elem;
 
         main := begin_array
                 ignore*
-                ( ( begin_value >parse_value
+                ( ( begin_value >parse_elem
                     ignore* )
                   ( ignore*
                     next_element
@@ -657,8 +789,6 @@ class JsonParser {
             return parseStrict();
         }
     }
-
-
 
 //------------------------------------------------------------------------------
 

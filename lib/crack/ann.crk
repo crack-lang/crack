@@ -14,8 +14,8 @@
 
 import crack.runtime free;
 import crack.lang die, CString, IndexError, InvalidArgumentError,
-    AssertionError;
-import crack.io cout, FStr, StringFormatter, StringWriter, Formatter, Reader,
+    AssertionError, Formatter;
+import crack.io cout, FStr, StringFormatter, StringWriter, StandardFormatter, Reader,
     Writer;
 import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING,
     TOK_POPERRCTX;
@@ -178,14 +178,19 @@ class NodeListImpl : NodeList {
         }
     }
 
-    void __write(Writer out, Node node) {
+    void __write(Formatter fmt, Node node) {
         if (node.next)
-            __write(out, node.next);
-        node.writeTo(out);
+            __write(fmt, node.next);
+        node.formatTo(fmt);
+    }
+
+    void formatTo(Formatter fmt) {
+        __write(fmt, first);
     }
 
     void writeTo(Writer out) {
-        __write(out, first);
+        StandardFormatter fmt = {out};
+        __write(fmt, first);
     }
 
     NodeIter iter() { return NodeIter(first); }
@@ -219,6 +224,16 @@ class Tok : Node {
         return tok.getLocation();
     }
 
+    void formatTo(Formatter fmt) {
+        if (tok.isString()) {
+            fmt.format(' ');
+            fmt.format(String(tok.getText()).getRepr());
+        } else {
+            fmt.format(' ');
+            fmt.format(StaticString(tok.getText()));
+        }
+    }
+
     void writeTo(Writer out) {
         if (tok.isString()) {
             out.write(' ');
@@ -228,6 +243,7 @@ class Tok : Node {
             out.write(StaticString(tok.getText()));
         }
     }
+
 
     void writeTo(MacroSerializer dst) {
 
@@ -295,7 +311,7 @@ class Arg : Node {
         return sf.cString();
     }
 
-    void writeTo(Writer out) { Formatter(out) `arg: $argIndex\n`; }
+    void formatTo(Formatter fmt) { fmt `arg: $argIndex\n`; }
     Location getLocation() { return loc; }
 
     oper init(MacroDeserializer src) {
@@ -786,6 +802,13 @@ void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
 class TokenWriter {
     NodeList tokens;
     oper init(NodeList tokens) : tokens = tokens {}
+    void formatTo(Formatter fmt) {
+        for (tok :in tokens) {
+            fmt.format(tok.toString(null));
+            fmt.format(' ');
+        }
+    }
+
     void writeTo(Writer out) {
         for (tok :in tokens) {
             out.write(tok.toString(null));

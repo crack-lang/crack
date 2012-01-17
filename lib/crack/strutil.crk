@@ -1,6 +1,6 @@
-
+import crack.lang Formatter;
 import crack.lang Buffer, AppendBuffer, CString, InvalidArgumentError;
-import crack.io Formatter, Writer, cout;
+import crack.io Writer, cout;
 import crack.cont.array Array, ArrayData;
 
 class StringArray : Array[String] {
@@ -12,17 +12,17 @@ class StringArray : Array[String] {
     oper init(uint size) : Array[String](size) {}
     oper init() {}    
     
-    void writeTo(Writer out) {
-        out.write('[');
+    void formatTo(Formatter fmt) {
+        fmt.format(fmt.ARRAYSTART);
         bool first = true;
         for (elem :in this) {
             if (!first)
-                out.write(', ');
+                fmt.format(fmt.ELEMSEP);
             else
                 first = false;
-            out.write(elem.getRepr());
+            fmt.format(elem.getRepr());
         }
-        out.write(']');
+        fmt.format(fmt.ARRAYEND);
     }
 
     ## Returns a primitive array based on the array (useful for communicating 

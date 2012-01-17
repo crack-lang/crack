@@ -7,7 +7,7 @@ import crack.runtime basename, chdir, errno, fileExists, free, fileRemove,
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
-    InvalidStateError, ManagedBuffer;
+    InvalidStateError, ManagedBuffer, Formatter;
 import crack.io.readers FullReader;
 @import crack.ann define;
 
@@ -164,8 +164,8 @@ class RealPath : Path {
     oper init(String realPath) : __path = CString(realPath) {}
     oper init(CString realPath) : __path = realPath {}
 
-    void writeTo(Writer out) {
-        out.write(__path);
+    void formatTo(Formatter fmt) {
+        fmt.format(__path);
     }
 
     Path oper [](String child) {

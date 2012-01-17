@@ -2,7 +2,7 @@
 # Code for dealing with time.
 
 import crack.runtime InternalDate, strftime, strlen;
-import crack.lang AssertionError, ManagedBuffer;
+import crack.lang AssertionError, ManagedBuffer, Formatter;
 import crack.io FStr;
 import crack.runtime TimeVal;
 import crack.cont.array Array;
@@ -72,10 +72,9 @@ class Date : Object, InternalDate {
         return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
    }
 
-   void writeTo(Writer out) {
-        result := FStr() `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
-        if (tm_isdst) result += "DST";
-        out.write(result);
+   void formatTo(Formatter out) {
+        out `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
+        if (tm_isdst) out `DST`;
    }
 }
 
