@@ -32,6 +32,8 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void doRunOrDump(model::Context &context);
 
+        void ensureCacheMap();
+
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
@@ -83,8 +85,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                       const std::vector<std::string> &symbols,
                                       bool annotation) {
             initializeImportCommon(m, symbols);
-        }
-
+        }        
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef
                                  );

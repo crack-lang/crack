@@ -330,13 +330,7 @@ void LLVMJitBuilder::dump() {
     passMan.run(*module);
 }
 
-void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
-
-    // here we keep track of which external functions and globals came from
-    // which module, so we can do a mapping in cacheMode
-    if (!options->cacheMode)
-        return;
-
+void LLVMJitBuilder::ensureCacheMap() {
     // make sure cacheMap is initialized
     // a single copy of the map exists in the rootBuilder
     if (!cacheMap) {
@@ -351,6 +345,16 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
             assert(0 && "non rootBuilder registerDef called");
         }
     }
+}
+
+void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
+
+    // here we keep track of which external functions and globals came from
+    // which module, so we can do a mapping in cacheMode
+    if (!options->cacheMode)
+        return;
+
+    ensureCacheMap();
 
     // get rep from either a BFuncDef or varDef->impl global, then use that as
     // value to cacheMap
@@ -391,6 +395,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
         func = c.getEntryFunction();
 
         engineBindModule(bmod);
+        ensureCacheMap();
 
         // poor man's link - global mappings
         // here we loop through all the externs of the
@@ -412,7 +417,6 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                  i != symList.end();
                  ++i
                  ) {
-
                 CacheMapType::const_iterator cmi = cacheMap->find(*i);
                 assert(cmi != cacheMap->end() && "external not found");
 
