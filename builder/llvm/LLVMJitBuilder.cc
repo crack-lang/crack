@@ -73,6 +73,24 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
                              );
     }
 
+    // if we have a cacher, make sure that all globals are registered there.
+    if (options->cacheMode) {
+        // make sure we have a cache map
+        ensureCacheMap();
+
+        Module *module = moduleDef->rep;
+        for (Module::global_iterator iter = module->global_begin();
+             iter != module->global_end();
+             ++iter
+             ) {
+            if (cacheMap->find(iter->getName()) == cacheMap->end())
+                cacheMap->insert(CacheMapType::value_type(iter->getName(),
+                                                          iter
+                                                          )
+                                 );
+        }
+    }
+
     // mark the module as finished
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
@@ -300,8 +318,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     }
 
     doRunOrDump(context);
-
 }
+
 void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     // dump or run the module depending on the mode.
@@ -340,9 +358,9 @@ void LLVMJitBuilder::ensureCacheMap() {
                 cacheMap = rb->cacheMap;
             else
                 cacheMap = rb->cacheMap = new CacheMapType();
-        }
-        else {
-            assert(0 && "non rootBuilder registerDef called");
+        } else {
+            // this is the root builder
+            cacheMap = new CacheMapType();
         }
     }
 }
@@ -361,7 +379,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     BGlobalVarDefImpl *bgbl;
     BFuncDef *fd;
     if (varDef->impl && (bgbl = dynamic_cast<BGlobalVarDefImpl*>(varDef->impl.get()))) {
-        // global        
+        // global
         cacheMap->insert(CacheMapType::value_type(varDef->getFullName(),bgbl->rep));
     }
     else if (fd = dynamic_cast<BFuncDef*>(varDef)) {
@@ -377,10 +395,12 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 }
 
-model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
-                                                   const std::string &canonicalName,
-                                                   const std::string &path,
-                                                   model::ModuleDef *owner) {
+model::ModuleDefPtr LLVMJitBuilder::materializeModule(
+    Context &context,
+    const string &canonicalName,
+    const std::string &path,
+    ModuleDef *owner
+) {
 
     Cacher c(context, options.get());
     BModuleDef *bmod = c.maybeLoadFromCache(canonicalName, path);
@@ -418,7 +438,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                  ++i
                  ) {
                 CacheMapType::const_iterator cmi = cacheMap->find(*i);
-                assert(cmi != cacheMap->end() && "external not found");
+                if (cmi == cacheMap->end())
+                    continue;
 
                 gval = cmi->second;
 
@@ -427,12 +448,13 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                     assert(decl->isDeclaration() &&
                            "declared extern function wasn't a decl");
 
-                    // find the function with this symbol name by searching through
-                    // the modules that have already been added to the JIT
-                    // we always expect it because 1) imports for this module have
-                    // already been loaded and 2) the imports would have missed if
-                    // their source digest didn't match (i.e. symbols changed) causing
-                    // us to miss as well before now
+                    // find the function with this symbol name by searching
+                    // through the modules that have already been added to
+                    // the JIT we always expect it because 1) imports for
+                    // this module have already been loaded and 2) the
+                    // imports would have missed if their source digest
+                    // didn't match (i.e. symbols changed) causing us to miss
+                    // as well before now
                     ext_f = dyn_cast<Function>(gval);
                     assert(ext_f && "extern not found in JIT");
 
@@ -465,6 +487,31 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(model::Context &context,
                     execEng->addGlobalMapping(gbl, realAddr);
                 }
 
+            }
+        }
+
+//        cerr << "External globals in " << module->getModuleIdentifier() <<
+//            ":" << endl;
+        for (Module::const_global_iterator iter = module->global_begin();
+             iter != module->global_end();
+             ++iter
+             ) {
+            if (!iter->hasInitializer()) {
+//                string name = iter->getName();
+//                cerr << "extern " << name << endl;
+
+                // now find the defining module
+                CacheMapType::const_iterator globalDefIter =
+                    cacheMap->find(iter->getName());
+                if (globalDefIter != cacheMap->end()) {
+                    void *realAddr =
+                        execEng->getPointerToGlobal(globalDefIter->second);
+                    assert(realAddr && "unable to resolve global");
+                    execEng->addGlobalMapping(iter, realAddr);
+                } else {
+                    string name = iter->getName();
+                    cerr << "unable to resolve " << name << endl;
+                }
             }
         }
 
