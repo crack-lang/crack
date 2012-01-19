@@ -8,6 +8,7 @@
 #   -r recompile the screen program
 #   -j run screen in JIT mode
 #   -v turn on verbose output
+#   -d <test-dir> specify test directory (defaults to basic tests)
 
 root=${SOURCES_ROOT:-"$(dirname $(dirname $0))"}
 builddir=${BUILD_ROOT:-$(test -f "$root/build/crack" && 
@@ -19,6 +20,7 @@ echo
 
 lib_paths="$root/lib:$root/screen:$builddir/lib"
 builders="-bjit"
+test_dir="$root/screen/tests/basic"
 opts=""
 screen_jit=false
 screen_recompile=false
@@ -34,8 +36,10 @@ fi
 
 run_screen() {
     if $screen_jit; then
-        $builddir/crack -l "$lib_paths" $root/screen/screen.crk -t "$builddir" -l "$lib_paths" \
-            -c "$builddir/crack" -s "$root" -o "$builddir/screen/output" "$builders" \
+        $builddir/crack -l "$lib_paths" $root/screen/screen.crk \
+            -t "$builddir" -l "$lib_paths" \
+            -c "$builddir/crack" -s "$root" -o "$builddir/screen/output" \
+            "$builders" \
             $opts "$@"
         return
     fi
@@ -50,7 +54,7 @@ run_screen() {
         -t "$builddir" -o "$builddir/screen/output" "$builders" $opts "$@"
 }
 
-args=$(getopt fnrjv "$@")
+args=$(getopt 'fnrjvd:' "$@")
 eval set -- "$args"
 
 # process options
@@ -62,6 +66,7 @@ while true; do
         -r) screen_recompile=true ;;
         -j) screen_jit=true ;;
         -v) opts="$opts -v" ;;
+        -d) test_dir="$2"; shift ;;
         --) shift ; break ;;
     esac
     
@@ -80,7 +85,7 @@ done
 if [ -n "$tests" ]; then
     run_screen $tests
 else
-    run_screen -d "$root/screen/tests/basic"
+    run_screen -d "$test_dir"
 fi
 
 exit $?
