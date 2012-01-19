@@ -417,88 +417,12 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         engineBindModule(bmod);
         ensureCacheMap();
 
-        // poor man's link - global mappings
-        // here we loop through all the externs of the
-        // loaded bitcode and try to resolve them from other modules already
-        // loaded into the JIT. Note that externs from extensions are not
-        // mapped, as these are handled by the JIT without our help (by
-        // searching for the symbol in the current process, which works because
-        // when the extension was imported, we've already dlopen'd it)
-        Function *ext_f;
-        GlobalVariable *ext_g;
-        GlobalValue *gval;
-
-        vector<string> symList;
-        c.getExterns(symList);
-
-        if (symList.size()) {
-
-            for (vector<string>::const_iterator i = symList.begin();
-                 i != symList.end();
-                 ++i
-                 ) {
-                CacheMapType::const_iterator cmi = cacheMap->find(*i);
-                if (cmi == cacheMap->end())
-                    continue;
-
-                gval = cmi->second;
-
-                Function *decl = module->getFunction(*i);
-                if (decl) {
-                    assert(decl->isDeclaration() &&
-                           "declared extern function wasn't a decl");
-
-                    // find the function with this symbol name by searching
-                    // through the modules that have already been added to
-                    // the JIT we always expect it because 1) imports for
-                    // this module have already been loaded and 2) the
-                    // imports would have missed if their source digest
-                    // didn't match (i.e. symbols changed) causing us to miss
-                    // as well before now
-                    ext_f = dyn_cast<Function>(gval);
-                    assert(ext_f && "extern not found in JIT");
-
-                    // materializing will ensure the function is codegen'd
-                    if (ext_f->isMaterializable()) {
-                        if (ext_f->Materialize()) {
-                            cerr << "materialize fail: " << ext_f->getNameStr()
-                                 << endl;
-                            return NULL;
-                        }
-                    }
-
-                    // after potentially materializing, ext_f should be a def
-                    assert(!ext_f->isDeclaration() && "ext_f: got a decl not a def");
-
-                    void *realAddr = execEng->getPointerToFunction(ext_f);
-                    assert(realAddr && "unable to resolve ext_f");
-                    execEng->addGlobalMapping(decl, realAddr);
-                }
-                else {
-                    // map globals
-                    GlobalVariable *gbl = module->getGlobalVariable(*i);
-                    assert(gbl && "declared extern was not function or global");
-                    assert(gbl->isDeclaration() && "declared global wasn't a decl");
-                    // now find the defining module
-                    ext_g = dyn_cast<GlobalVariable>(gval);
-                    assert(ext_g && "extern not found in JIT");
-                    void* realAddr = execEng->getPointerToGlobal(ext_g);
-                    assert(realAddr && "unable to resolve global");
-                    execEng->addGlobalMapping(gbl, realAddr);
-                }
-
-            }
-        }
-
-//        cerr << "External globals in " << module->getModuleIdentifier() <<
-//            ":" << endl;
+        // try to resolve unresolved globals from the cache
         for (Module::const_global_iterator iter = module->global_begin();
              iter != module->global_end();
              ++iter
              ) {
-            if (!iter->hasInitializer()) {
-//                string name = iter->getName();
-//                cerr << "extern " << name << endl;
+            if (iter->isDeclaration()) {
 
                 // now find the defining module
                 CacheMapType::const_iterator globalDefIter =
@@ -508,9 +432,26 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                         execEng->getPointerToGlobal(globalDefIter->second);
                     assert(realAddr && "unable to resolve global");
                     execEng->addGlobalMapping(iter, realAddr);
-                } else {
-                    string name = iter->getName();
-                    cerr << "unable to resolve " << name << endl;
+                }
+            }
+        }
+
+        // now try to resolve functions
+        for (Module::const_iterator iter = module->begin();
+             iter != module->end();
+             ++iter
+             ) {
+            if (iter->isDeclaration() &&
+                !iter->isMaterializable()) {
+                // now find the defining module
+                CacheMapType::const_iterator globalDefIter =
+                    cacheMap->find(iter->getName());
+                if (globalDefIter != cacheMap->end()) {
+                    Function *f = dyn_cast<Function>(globalDefIter->second);
+                    void *realAddr = execEng->getPointerToFunction(f);
+                    assert(realAddr && "unable to resolve function");
+                    string name = f->getName();
+                    execEng->addGlobalMapping(iter, realAddr);
                 }
             }
         }
