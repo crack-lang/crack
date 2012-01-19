@@ -34,6 +34,8 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void ensureCacheMap();
 
+        void setupCleanup(BModuleDef *moduleDef);
+
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);

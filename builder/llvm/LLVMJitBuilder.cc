@@ -41,6 +41,15 @@ void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
         dump();
 }
 
+void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
+    Function *delFunc = module->getFunction(":cleanup");
+    if (delFunc) {
+        moduleDef->cleanup = reinterpret_cast<void (*)()>(
+                                execEng->getPointerToFunction(delFunc)
+                             );
+    }
+}
+
 void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // note, this->module and moduleDef->rep should be ==
 
@@ -66,12 +75,8 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
 
         passMan.run(*moduleDef->rep);
     }
-    Function *delFunc = module->getFunction(":cleanup");
-    if (delFunc) {
-        moduleDef->cleanup = reinterpret_cast<void (*)()>(
-                                execEng->getPointerToFunction(delFunc)
-                             );
-    }
+
+    setupCleanup(moduleDef);
 
     // if we have a cacher, make sure that all globals are registered there.
     if (options->cacheMode) {
@@ -455,6 +460,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                 }
             }
         }
+
+        setupCleanup(bmod);
 
         doRunOrDump(context);
 
