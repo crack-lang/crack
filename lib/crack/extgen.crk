@@ -583,10 +583,12 @@ class ExtensionData {
         @setBuiltinType('bool', 'Bool');
         @setBuiltinType('byteptr', 'Byteptr');
         @setBuiltinType('byte', 'Byte');
+        @setConstType('int16', 'Int16', 'int16_t');
         @setConstType('int32', 'Int32', 'int');
         @setConstType('int64', 'Int64', 'int64_t');
+        @setConstType('uint16', 'Uint16', 'int16_t');
         @setConstType('uint32', 'Uint32', 'int');
-        @setConstType('uint64', 'Uint64', 'int64_t');
+        @setConstType('uint64', 'Uint64', 'uint64_t');
         @setConstType('int', 'Int', 'int');
         @setConstType('uint', 'Uint', 'int');
         @setConstType('intz', 'Intz', 'intz');

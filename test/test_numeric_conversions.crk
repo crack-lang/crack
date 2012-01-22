@@ -6,6 +6,8 @@ int i;
 uint u;
 intz iz;
 uintz uz;
+int16 i16;
+uint16 u16;
 int32 i32;
 uint32 u32;
 int64 i64;
@@ -51,6 +53,27 @@ if (1) {
     @ca(f, uz)
     @ca(f32, uz)
     @ca(f64, uz)
+
+    i16 = 100;
+    @ca(i, i16)
+    @ca(u, i16)
+    @ca(iz, i16)
+    @ca(uz, i16)
+    @ca(i32, i16)
+    @ca(i64, i16)
+    @ca(f, i16)
+    @ca(f64, i16)
+
+    u16 = 100;
+    @ca(i, u16)
+    @ca(u, u16)
+    @ca(iz, u16)
+    @ca(uz, u16)
+    @ca(u32, u16)
+    @ca(u64, u16)
+    @ca(f, u16)
+    @ca(f64, u16)
+
     i32 = 100;
     @ca(i, i32)
     @ca(u, i32)
@@ -67,6 +90,7 @@ if (1) {
     @ca(u64, u32)
     @ca(f, u32)
     @ca(f64, u32)
+
     @ca(i, i64)
     @ca(u, i64)
     @ca(iz, i64)
@@ -78,6 +102,7 @@ if (1) {
     @ca(uz, u64)
     @ca(u64, u64)
     @ca(f, u64)
+
     @ca(i, f)
     @ca(u, f)
     @ca(iz, f)
@@ -113,6 +138,8 @@ if (1) {
         @ce(uint, valType)
         @ce(intz, valType)
         @ce(uintz, valType)
+        @ce(int16, valType)
+        @ce(uint16, valType)
         @ce(int32, valType)
         @ce(uint32, valType)
         @ce(int64, valType)
@@ -126,6 +153,8 @@ if (1) {
     @ces(uint)
     @ces(intz)
     @ces(uintz)
+    @ces(int16)
+    @ces(uint16)
     @ces(int32)
     @ces(uint32)
     @ces(int64)

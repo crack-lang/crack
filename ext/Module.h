@@ -32,8 +32,10 @@ class Module {
             boolType,
             byteptrType,
             byteType,
+            int16Type,
             int32Type,
             int64Type,
+            uint16Type,
             uint32Type,
             uint64Type,
             intType,
@@ -72,8 +74,10 @@ class Module {
         Type *getBoolType();
         Type *getByteptrType();
         Type *getByteType();
+        Type *getInt16Type();
         Type *getInt32Type();
         Type *getInt64Type();
+        Type *getUint16Type();
         Type *getUint32Type();
         Type *getUint64Type();
         Type *getIntType();

@@ -132,9 +132,52 @@ if (d1 != 1.0)
 
 
 // int16 -> float32
+int16 i16 = -5; 
+f1 = i16;
+if (f1 != -5.0)
+    puts("fail int16 -> float32");
+
+// int16 -> float64, explicit
+i16 = -5;
+f1 = int16(i16);
+if (f1 != -5.0)
+    puts("fail int16 -> float32, explicit");
+
 // uint16 -> float32
+uint16 u16 = 5; 
+f1 = u16;
+if (f1 != 5.0)
+    puts("fail uint16 -> float32");
+
+// uint16 -> float32, explicit
+u16 = 5;
+f1 = float32(u16);
+if (f1 != 5.0)
+    puts("fail uint16 -> float32, explicit");
+
 // int16 -> float64
+i16 = -5; 
+d1 = i16;
+if (d1 != -5.0)
+    puts("fail int16 -> float64");
+
+// int16 -> float64, explicit
+i16 = -5;
+d1 = int16(i16);
+if (d1 != -5.0)
+    puts("fail int16 -> float64, explicit");
+
 // uint16 -> float64
+u16 = 5; 
+d1 = u16;
+if (d1 != 5.0)
+    puts("fail uint16 -> float64");
+
+// uint16 -> float64, explicit
+u16 = 5;
+d1 = float64(u16);
+if (d1 != 5.0)
+    puts("fail uint16 -> float64, explicit");
 
 // int32 -> float64
 int32 i = -5; 
@@ -201,6 +244,26 @@ d1 = 1.234;
 f1 = float32(d1);
 if (f1 != 1.234)
     puts("fail truncate to float32");
+
+f1 = 1.234;
+i = int16(f1);
+if (i != 1)
+    puts("fail truncate to int16");
+
+f1 = 2.234;
+ui = uint16(f1);
+if (ui != 2)
+    puts("fail truncate to uint16");
+
+d1 = 1.234;
+i = int16(d1);
+if (i != 1)
+    puts("fail truncate double to int16");
+
+d1 = 2.234;
+ui = uint16(d1);
+if (ui != 2)
+    puts("fail truncate double to uint16");
 
 f1 = 1.234;
 i = int32(f1);
