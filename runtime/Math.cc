@@ -349,6 +349,11 @@ void math_init(Module *mod) {
 
   // gettimofday wrapper
   Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
+
+  // random numbers
+  Func* rand_func = mod->addFunc(mod->getIntType(), "rand", (void *)rand);
+  Func* srand_func = mod->addFunc(mod->getVoidType(), "srand", (void *)srand);
+  srand_func->addArg(mod->getUintType(), "value");
 }
 
 

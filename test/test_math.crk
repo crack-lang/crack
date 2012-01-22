@@ -15,7 +15,7 @@ import crack.math  sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     round, trunc, fpclassify, isfinite, isinf, isnan,
                     isnormal, sign, fmod, remainder, copysign, nextafter,
                     fdim, pow, testexcept, clearexcept, errno, setErrno, 
-                    max, min,
+                    max, min, rand, srand,
                     HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
                     FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
                     ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
@@ -79,5 +79,10 @@ while (i<=intervals){
 }
 
 resultString:=fmt.string();
+
+// Random numbers
+srand(10);
+int r;
+for(i=0; i<10; i++) r=rand();
 
 cout `ok\n`;
