@@ -66,6 +66,12 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
             val.sval < static_cast<int64_t>(INT32_MIN))
             return 0;
             // context.error = "Constant out of range of int32"
+    } else if (newType == context.construct->int16Type) {
+        if (reqUnsigned ||
+            val.sval > static_cast<int64_t>(INT16_MAX) ||
+            val.sval < static_cast<int64_t>(INT16_MIN))
+            return 0;
+            // context.error = "Constant out of range of int16"
     } else if (newType == context.construct->float32Type ||
                newType == context.construct->float64Type ||
                newType == context.construct->floatType
@@ -86,6 +92,15 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
             )
             return 0;
             // context.error = "Constant out of range of uint32"
+    } else if (newType == context.construct->uint16Type) {
+        if ((uneg && (val.sval < -static_cast<uint64_t>(UINT16_MAX + 1) ||
+                      val.sval >= 0
+                      )
+             ) ||
+            (!uneg && val.uval > static_cast<uint64_t>(UINT16_MAX))
+            )
+            return 0;
+            // context.error = "Constant out of range of uint16"
     } else if (newType == context.construct->byteType) {
         // to convert to a byte either
         // 1) we're uneg and in -255 .. -1
@@ -131,8 +146,7 @@ TypeDef *IntConst::selectType(Context &context, int64_t val) {
     // unsigned int 64
     if (val > INT32_MAX || val < INT32_MIN)
         return context.construct->int64Type.get();
-    else
-        return context.construct->intType.get();
+    else return context.construct->intType.get();
 }
 
 #define HIBIT(c) (c)->val.sval & 0x8000000000000000 ? true : false

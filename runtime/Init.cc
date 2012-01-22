@@ -43,7 +43,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     Type *intType = mod->getIntType();
     Type *intzType = mod->getIntzType();
     Type *uintzType = mod->getUintzType();
+    Type *uint16Type = mod->getUint16Type();
     Type *uint32Type = mod->getUint32Type();
+    Type *int16Type = mod->getInt16Type();
     Type *int32Type = mod->getInt32Type();
     Type *uintType = mod->getUintType();
     Type *byteType = mod->getByteType();

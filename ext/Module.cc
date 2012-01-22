@@ -55,10 +55,12 @@ GET_TYPE(Voidptr, voidptr)
 GET_TYPE(Bool, bool)
 GET_TYPE(Byteptr, byteptr)
 GET_TYPE(Byte, byte)
+GET_TYPE(Int16, int16)
 GET_TYPE(Int32, int32)
 GET_TYPE(Int64, int64)
 GET_TYPE(Int, int)
 GET_TYPE(Intz, intz)
+GET_TYPE(Uint16, uint16)
 GET_TYPE(Uint32, uint32)
 GET_TYPE(Uint64, uint64)
 GET_TYPE(Uint, uint)
@@ -104,7 +106,7 @@ Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward) {
     else
         result = new Type(this, name, context, instSize);
 
-	types[name] = result;
+    types[name] = result;
     return result;
 }
 

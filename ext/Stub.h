@@ -49,8 +49,10 @@ class Module {
         Type *getBoolType();
         Type *getByteptrType();
         Type *getByteType();
+        Type *getInt16Type();
         Type *getInt32Type();
         Type *getInt64Type();
+        Type *getUint16Type();
         Type *getUint32Type();
         Type *getUint64Type();
         Type *getIntType();

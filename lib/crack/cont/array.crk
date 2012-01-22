@@ -26,8 +26,10 @@ $$
 @_nobind bool
 @_nobind byte
 @_nobind int
+@_nobind int16
 @_nobind int32
 @_nobind uint
+@_nobind uint16
 @_nobind uint32
 @_nobind int64
 @_nobind uint64

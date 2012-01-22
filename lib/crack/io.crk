@@ -177,6 +177,23 @@ class StandardFormatter : Formatter {
         write(data);
     }
 
+    void format(int16 val) {
+        buffer := ManagedBuffer(6);
+
+        # have to convert so it will match the later _format method.
+        int64 v = val;
+        start := _format(v, buffer.buffer, buffer.size);
+        write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+
+    void format(uint16 val) {
+        buffer := ManagedBuffer(5);
+
+        # _format(uint32) comes first so we don't have to type convert
+        start := _format(val, buffer.buffer, buffer.size);
+        write(Buffer(buffer.buffer + start, buffer.size - start));
+    }
+
     void format(int32 val) {
         buffer := ManagedBuffer(11);
 

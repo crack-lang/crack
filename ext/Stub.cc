@@ -21,8 +21,10 @@ Type *Module::getVoidptrType() { }
 Type *Module::getBoolType() { }
 Type *Module::getByteptrType() { }
 Type *Module::getByteType() { }
+Type *Module::getInt16Type() { }
 Type *Module::getInt32Type() { }
 Type *Module::getInt64Type() { }
+Type *Module::getUint16Type() { }
 Type *Module::getUint32Type() { }
 Type *Module::getUint64Type() { }
 Type *Module::getIntType() { }

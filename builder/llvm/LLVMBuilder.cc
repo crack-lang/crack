@@ -1755,7 +1755,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
 
     // reveal our type object
     BTypeDef *tp = BTypeDefPtr::cast(type);
-    
+
     // get the definition context
     ContextPtr defCtx = context.getDefContext();
 
@@ -2076,6 +2076,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->byteType = byteType;
     deferMetaClass.push_back(byteType);
 
+    BTypeDef *int16Type = createIntPrimType(context, Type::getInt16Ty(lctx),
+                                            "int16"
+                                            );
+    gd->int16Type = int16Type;
+    deferMetaClass.push_back(int16Type);
+
     BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "int32"
                                             );
@@ -2087,6 +2093,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             );
     gd->int64Type = int64Type;
     deferMetaClass.push_back(int64Type);
+
+    BTypeDef *uint16Type = createIntPrimType(context, Type::getInt16Ty(lctx),
+                                            "uint16"
+                                            );
+    gd->uint16Type = uint16Type;
+    deferMetaClass.push_back(uint16Type);
 
     BTypeDef *uint32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "uint32"
@@ -2202,6 +2214,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new shift##ShrOpDef(type, 0, ns), ns);
 
     INTOPS(byteType, U, L, 0)
+    INTOPS(int16Type, S, A, 0)
+    INTOPS(uint16Type, U, L, 0)
     INTOPS(int32Type, S, A, 0)
     INTOPS(uint32Type, U, L, 0)
     INTOPS(int64Type, S, A, 0)
@@ -2278,12 +2292,28 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new LogicOrOpDef(boolType, boolType));
 
     // implicit conversions (no loss of precision)
+    context.addDef(new ZExtOpDef(int16Type, "oper to .builtin.int16"), byteType);
     context.addDef(new ZExtOpDef(int32Type, "oper to .builtin.int32"), byteType);
     context.addDef(new ZExtOpDef(int64Type, "oper to .builtin.int64"), byteType);
+    context.addDef(new ZExtOpDef(uint16Type, "oper to .builtin.uint16"), byteType);
     context.addDef(new ZExtOpDef(uint32Type, "oper to .builtin.uint32"), byteType);
     context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), byteType);
+
+    context.addDef(new ZExtOpDef(int32Type, "oper to .builtin.int32"), int16Type);
+    context.addDef(new ZExtOpDef(int64Type, "oper to .builtin.int64"), int16Type);
+    context.addDef(new ZExtOpDef(int32Type, "oper to .builtin.int32"), uint16Type);
+    context.addDef(new ZExtOpDef(int64Type, "oper to .builtin.int64"), uint16Type);
+    context.addDef(new ZExtOpDef(uint32Type, "oper to .builtin.uint32"), uint16Type);
+    context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), uint16Type);
+
     context.addDef(new UIToFPOpDef(float32Type, "oper to .builtin.float32"), byteType);
     context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), byteType);
+
+    context.addDef(new SIToFPOpDef(float32Type, "oper to .builtin.float32"), int16Type);
+    context.addDef(new SIToFPOpDef(float64Type, "oper to .builtin.float64"), int16Type);
+    context.addDef(new UIToFPOpDef(float32Type, "oper to .builtin.float32"), uint16Type);
+    context.addDef(new UIToFPOpDef(float64Type, "oper to .builtin.float64"), uint16Type);
+
     context.addDef(new SExtOpDef(int64Type, "oper to .builtin.int64"), int32Type);
     context.addDef(new SIToFPOpDef(float64Type, "oper to .builtin.float64"), int32Type);
     context.addDef(new ZExtOpDef(uint64Type, "oper to .builtin.uint64"), uint32Type);
@@ -2297,6 +2327,19 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), byteType);
     context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), byteType);
     context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), byteType);
+
+    context.addDef(new ZExtOpDef(intType, "oper to .builtin.int"), uint16Type);
+    context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), uint16Type);
+    context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), uint16Type);
+    context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), uint16Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uint16Type);
+
+    context.addDef(new ZExtOpDef(intType, "oper to .builtin.int"), int16Type);
+    context.addDef(new ZExtOpDef(uintType, "oper to .builtin.uint"), int16Type);
+    context.addDef(new ZExtOpDef(intzType, "oper to .builtin.intz"), int16Type);
+    context.addDef(new ZExtOpDef(uintzType, "oper to .builtin.uintz"), int16Type);
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int16Type);
+
 
     if (intIs32Bit) {
         context.addDef(new NoOpDef(intType, "oper to .builtin.int"), int32Type);
@@ -2351,6 +2394,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.addDef(new NoOpDef(floatType, "oper to .builtin.float"), float64Type);
         context.addDef(new NoOpDef(float64Type, "oper to .builtin.float64"), floatType);
     }
+    context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int16Type);
+    context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uint16Type);
     context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int32Type);
     context.addDef(new UIToFPOpDef(floatType, "oper to .builtin.float"), uint32Type);
     context.addDef(new SIToFPOpDef(floatType, "oper to .builtin.float"), int64Type);
@@ -2401,6 +2446,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new NoOpDef(intType, "oper to .builtin.int"), uintType);
     context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), intzType);
     context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), uintzType);
+
     if (intIs32Bit == ptrIs32Bit) {
         context.addDef(new NoOpDef(intzType, "oper to .builtin.intz"), intType);
         context.addDef(new NoOpDef(uintzType, "oper to .builtin.uintz"), intType);
@@ -2445,6 +2491,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // add the increment and decrement operators
     context.addDef(new PreIncrIntOpDef(byteType, "oper ++x"), byteType);
+    context.addDef(new PreIncrIntOpDef(int16Type, "oper ++x"), int16Type);
+    context.addDef(new PreIncrIntOpDef(uint16Type, "oper ++x"), uint16Type);
     context.addDef(new PreIncrIntOpDef(int32Type, "oper ++x"), int32Type);
     context.addDef(new PreIncrIntOpDef(uint32Type, "oper ++x"), uint32Type);
     context.addDef(new PreIncrIntOpDef(int64Type, "oper ++x"), int64Type);
@@ -2453,7 +2501,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PreIncrIntOpDef(uintType, "oper ++x"), uintType);
     context.addDef(new PreIncrIntOpDef(intzType, "oper ++x"), intzType);
     context.addDef(new PreIncrIntOpDef(uintzType, "oper ++x"), uintzType);
+
     context.addDef(new PreDecrIntOpDef(byteType, "oper --x"), byteType);
+    context.addDef(new PreDecrIntOpDef(int16Type, "oper --x"), int16Type);
+    context.addDef(new PreDecrIntOpDef(uint16Type, "oper --x"), uint16Type);
     context.addDef(new PreDecrIntOpDef(int32Type, "oper --x"), int32Type);
     context.addDef(new PreDecrIntOpDef(uint32Type, "oper --x"), uint32Type);
     context.addDef(new PreDecrIntOpDef(int64Type, "oper --x"), int64Type);
@@ -2462,7 +2513,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PreDecrIntOpDef(uintType, "oper --x"), uintType);
     context.addDef(new PreDecrIntOpDef(intzType, "oper --x"), intzType);
     context.addDef(new PreDecrIntOpDef(uintzType, "oper --x"), uintzType);
+
     context.addDef(new PostIncrIntOpDef(byteType, "oper x++"), byteType);
+    context.addDef(new PostIncrIntOpDef(int16Type, "oper x++"), int16Type);
+    context.addDef(new PostIncrIntOpDef(uint16Type, "oper x++"), uint16Type);
     context.addDef(new PostIncrIntOpDef(int32Type, "oper x++"), int32Type);
     context.addDef(new PostIncrIntOpDef(uint32Type, "oper x++"), uint32Type);
     context.addDef(new PostIncrIntOpDef(int64Type, "oper x++"), int64Type);
@@ -2471,7 +2525,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PostIncrIntOpDef(uintType, "oper x++"), uintType);
     context.addDef(new PostIncrIntOpDef(intzType, "oper x++"), intzType);
     context.addDef(new PostIncrIntOpDef(uintzType, "oper x++"), uintzType);
+
     context.addDef(new PostDecrIntOpDef(byteType, "oper x--"), byteType);
+    context.addDef(new PostDecrIntOpDef(int16Type, "oper x--"), int16Type);
+    context.addDef(new PostDecrIntOpDef(uint16Type, "oper x--"), uint16Type);
     context.addDef(new PostDecrIntOpDef(int32Type, "oper x--"), int32Type);
     context.addDef(new PostDecrIntOpDef(uint32Type, "oper x--"), uint32Type);
     context.addDef(new PostDecrIntOpDef(int64Type, "oper x--"), int64Type);
@@ -2486,6 +2543,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addNopNew(context, uint64Type);
     addNopNew(context, int32Type);
     addNopNew(context, uint32Type);
+    addNopNew(context, int16Type);
+    addNopNew(context, uint16Type);
     addNopNew(context, byteType);
     addNopNew(context, float32Type);
     addNopNew(context, float64Type);
@@ -2499,30 +2558,56 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addExplicitTruncate(context, int64Type, uint64Type);
     addExplicitTruncate(context, int64Type, int32Type);
     addExplicitTruncate(context, int64Type, uint32Type);
+    addExplicitTruncate(context, int64Type, int16Type);
+    addExplicitTruncate(context, int64Type, uint16Type);
     addExplicitTruncate(context, int64Type, byteType);
+
     addExplicitTruncate(context, uint64Type, int64Type);
     addExplicitTruncate(context, uint64Type, int32Type);
     addExplicitTruncate(context, uint64Type, uint32Type);
+    addExplicitTruncate(context, uint64Type, int16Type);
+    addExplicitTruncate(context, uint64Type, uint16Type);
     addExplicitTruncate(context, uint64Type, byteType);
+
     addExplicitTruncate(context, int32Type, byteType);
+    addExplicitTruncate(context, int32Type, uint16Type);
+    addExplicitTruncate(context, int32Type, int16Type);
     addExplicitTruncate(context, int32Type, uint32Type);
-    addExplicitTruncate(context, int32Type, uint32Type);
+
     addExplicitTruncate(context, uint32Type, byteType);
+    addExplicitTruncate(context, uint32Type, int16Type);
+    addExplicitTruncate(context, uint32Type, uint16Type);
     addExplicitTruncate(context, uint32Type, int32Type);
+
+    addExplicitTruncate(context, int16Type, byteType);
+    addExplicitTruncate(context, int16Type, uint16Type);
+
+    addExplicitTruncate(context, uint16Type, byteType);
+    addExplicitTruncate(context, uint16Type, int16Type);
+
+    addExplicitTruncate(context, intType, int16Type);
+    addExplicitTruncate(context, intType, uint16Type);
     addExplicitTruncate(context, intType, int32Type);
     addExplicitTruncate(context, intType, uint32Type);
     addExplicitTruncate(context, intType, byteType);
+
+    addExplicitTruncate(context, uintType, int16Type);
+    addExplicitTruncate(context, uintType, uint16Type);
     addExplicitTruncate(context, uintType, int32Type);
     addExplicitTruncate(context, uintType, uint32Type);
     addExplicitTruncate(context, uintType, byteType);
 
     addExplicitFPTruncate<FPTruncOpCall>(context, float64Type, float32Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float32Type, byteType);
+    addExplicitFPTruncate<FPToSIOpCall>(context, float32Type, int16Type);
+    addExplicitFPTruncate<FPToUIOpCall>(context, float32Type, uint16Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float32Type, int32Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float32Type, uint32Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float32Type, int64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float32Type, uint64Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, byteType);
+    addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int16Type);
+    addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint16Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int32Type);
     addExplicitFPTruncate<FPToUIOpCall>(context, float64Type, uint32Type);
     addExplicitFPTruncate<FPToSIOpCall>(context, float64Type, int64Type);

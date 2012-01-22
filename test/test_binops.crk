@@ -4,6 +4,16 @@
 import crack.io cout;
 @import crack.ann define;
 
+void expect(int16 actual, String code, int16 expected) {
+    if (actual != expected)
+        cout `For operation: $code Expected: $expected, got $actual\n`;
+}
+
+void expect(uint16 actual, String code, uint16 expected) {
+    if (actual != expected)
+        cout `For operation: $code Expected: $expected, got $actual\n`;
+}
+
 void expect(int32 actual, String code, int32 expected) {
     if (actual != expected)
         cout `For operation: $code Expected: $expected, got $actual\n`;
@@ -13,6 +23,7 @@ void expect(uint32 actual, String code, uint32 expected) {
     if (actual != expected)
         cout `For operation: $code Expected: $expected, got $actual\n`;
 }
+
 
 void expect(byte actual, String code, byte expected) {
     if (actual != expected)
@@ -30,22 +41,32 @@ void expect(int64 actual, String code, int64 expected) {
 }
 
 expect(byte(1 | 2), "byte: 1 | 2", byte(3));
+expect(int16(1) | int16(2), "int16: 1 | 2", int16(3));
+expect(uint32(1) | uint16(2), "uint16: 1 | 2", 3);
 expect(int32(1) | int32(2), "int32: 1 | 2", int32(3));
 expect(uint32(1) | uint32(2), "uint32: 1 | 2", 3);
 expect(int64(1) | int64(2), "int64: 1 | 2", int64(3));
 expect(uint64(1) | uint64(2), "uint64: 1 | 2", 3);
 
 expect(byte(7) & byte(1), "byte: 7 & 1", 1);
+expect(int16(7) & int16(1), "int16: 7 & 1", 1);
+expect(uint16(7) & uint16(1), "uint32: 7 & 1", 1);
 expect(int32(7) & int32(1), "int32: 7 & 1", 1);
 expect(uint32(7) & uint32(1), "uint32: 7 & 1", 1);
 expect(int64(7) & int64(1), "int64: 7 & 1", 1);
 expect(uint64(7) & uint64(1), "uint64: 7 & 1", 1);
 
 expect(byte(1) << byte(4), "byte: 1 << 4", 16);
+expect(int16(1) << int16(4), "int16: 1 << 4", 16);
+expect(uint16(1) << uint16(4), "uint16: 1 << 4", 16);
 expect(int32(1) << int32(4), "int32: 1 << 4", 16);
 expect(uint32(1) << uint32(4), "uint32: 1 << 4", 16);
 expect(int64(1) << int64(4), "int64: 1 << 4", 16);
 expect(uint64(1) << uint64(4), "uint64: 1 << 4", 16);
+
+expect(int16(-4) >> int16(1), "int16: -4 >> 1", -2);
+expect(uint16(-4) >> uint16(1), "uint16: -4 >> 1", 32766);
+
 
 expect(int32(-4) >> int32(1), "int32: -4 >> 1", -2);
 expect(uint32(-4) >> uint32(1), "uint32: -4 >> 1", 2147483646);
@@ -64,7 +85,8 @@ expect(2 ^ 3 & 1, "2 ^ 3 & 1", 3);
 
 @define ct(l, op, r, t, v) {
     if (1) {
-        l lv = 1; r rv = 2;
+        l lv = 1; 
+        r rv = 2;
         ln := $l;
         rn := $r;
         opn := $op;
@@ -113,14 +135,42 @@ expect(2 ^ 3 & 1, "2 ^ 3 & 1", 3);
 
 void main() {
     @cit(byte, byte, byte)
+
+    @cit(byte, int16, int16)
+    @cit(int16, byte, int16)
+
+    @cit(byte, uint16, uint16)
+    @cit(uint16, byte, uint16)
+
+    @cit(int16, int32, int32)
+    @cit(int32, int16, int32)
+    @cit(int16, uint32, int64)
+    @cit(uint32, int16, int64)
+
+    @cit(uint16, int32, int32)
+    @cit(int32, uint16, int32)
+    @cit(uint16, uint32, uint32)
+    @cit(uint32, uint16, uint32)
+
     @cit(byte, int32, int32)
     @cit(int32, byte, int32)
     @cit(byte, uint32, uint32)
     @cit(uint32, byte, uint32)
+
     @cit(byte, int64, int64)
     @cit(int64, byte, int64)
     @cit(byte, uint64, uint64)
     @cit(uint64, byte, uint64)
+    
+    @cit(int16, int16, int16)
+    @cit(int16, int64, int64)
+    @cit(int64, int16, int64)
+
+    @cit(uint16, uint16, uint16)
+    @cit(uint16, int64, int64)
+    @cit(int64, uint16, int64)
+    @cit(uint16, uint64, uint64)
+    @cit(uint64, uint16, uint64)
     
     @cit(int32, int32, int32)
     @cit(int32, uint32, int64)

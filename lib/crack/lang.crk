@@ -151,7 +151,9 @@ class Buffer;
     @abstract void format(StaticString data);
     @abstract void format(String data);
 
+    @abstract void format(int16 val);
     @abstract void format(int32 val);
+    @abstract void format(uint16 val);
     @abstract void format(uint32 val);
     @abstract void format(int64 val);
     @abstract void format(uint64 val);
@@ -1103,7 +1105,9 @@ int cmp(bool a, bool b) {
 }
 
 @lightcmp byte
+@lightcmp int16
 @lightcmp int32
+@heavycmp uint16
 @heavycmp uint32
 @heavycmp int64
 @heavycmp uint64
@@ -1129,6 +1133,8 @@ uint makeHashVal(Object obj) { return obj.makeHashVal(); }
 $$
 
 @lighthash byte
+@lighthash int16
+@lighthash uint16
 @lighthash int32
 @lighthash uint32
 
