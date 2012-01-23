@@ -17,11 +17,23 @@ class LocationMap {
    private:
       std::string name;
       int lineNumber;
+      
+      typedef std::pair<std::string, int> LocTuple;
+      typedef std::map<LocTuple, Location> LocMap;
+      LocMap locMap;
+      Location lastLoc;
 
    public:
 
       /** sets the current source name and optionally the line number */
       void setName(const char *newName, int newLineNumber = 1) {
+         LocMap::iterator item =
+            locMap.find(LocTuple(newName, newLineNumber));
+         if (item != locMap.end()) {
+            lastLoc = item->second;
+         } else {
+            lastLoc = new LocationImpl(newName, newLineNumber);
+         }            
 	 name = newName;
 	 lineNumber = newLineNumber;
       }
@@ -33,22 +45,23 @@ class LocationMap {
 
       /** returns a location object for the current location */
       Location getLocation() const {
-	 return Location(name.c_str(), lineNumber);
+         return lastLoc;
       }
       
       /** Returns a Location object for the specified location */
-      Location getLocation(const char *name, int lineNumber) const {
-         return Location(name, lineNumber);
+      Location getLocation(const char *name, int lineNumber) {
+         setName(name, lineNumber);
+         return lastLoc;
       }
 
       /** increment the line number */
       void incrementLineNumber() {
-	 ++lineNumber;
+         setName(lastLoc->name.c_str(), lastLoc->lineNumber + 1);
       }
       
       /** Decrement the line number (needed for character putbacks) */
       void decrementLineNumber() {
-         --lineNumber;
+         setName(lastLoc->name.c_str(), lastLoc->lineNumber - 1);
       }
 };
 

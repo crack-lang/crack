@@ -3,33 +3,35 @@
 #ifndef LOCATION_H
 #define LOCATION_H
 
+#include <spug/RCBase.h>
+#include <spug/RCPtr.h>
 #include <iostream>
 #include <string>
+#include <map>
 
 namespace parser {
 
 // forward declaration of Location map so we can befriend it.
 class LocationMap;
 
-/**
- * Describes a location in source code.
- *
- * These are managed in the LocationMap
- */
-class Location {
+class LocationImpl : public spug::RCBase {
+
    friend class LocationMap;
    private:
       std::string name;
       int lineNumber;
 
-      Location(const char *name, int lineNumber);
+      LocationImpl(const char *name, int lineNumber) :
+         name(name),
+         lineNumber(lineNumber) {
+      }
 
    public:
 
       /** so that we can construct one of these prior to assigning it */
-      Location();
+      LocationImpl();
 
-      /** 
+      /**
        * Returns the file/stream name.  The name is guaranteed to be in
        * existence for as long as the instance is
        */
@@ -42,17 +44,54 @@ class Location {
 	 return lineNumber;
       }
 
-      bool operator ==(const Location &other) const {
+      bool operator ==(const LocationImpl &other) const {
 	 return name == other.name && lineNumber == other.lineNumber;
       }
 
-      bool operator !=(const Location &other) const {
+      bool operator !=(const LocationImpl &other) const {
 	 return !(*this == other);
       }
 
       friend std::ostream &
-      operator <<(std::ostream &out, const Location &loc) {
+      operator <<(std::ostream &out, const LocationImpl &loc) {
 	 return out << loc.name << ':' << std::dec << loc.lineNumber;
+      }
+
+};
+
+SPUG_RCPTR(LocationImpl);
+
+/**
+ * Describes a location in source code.
+ *
+ * These are managed in the LocationMap
+ */
+class Location : public LocationImplPtr {
+   friend class LocationMap;
+   private:
+      Location(LocationImpl *impl) : LocationImplPtr(impl) {}
+
+   public:
+
+      /** so that we can construct one of these prior to assigning it */
+      Location() {}
+
+      /**
+       * Returns the file/stream name.  The name is guaranteed to be in
+       * existence for as long as the instance is
+       */
+      const char *getName() const {
+         return get()->getName();
+      }
+
+      /** returns the source line number */
+      int getLineNumber() const {
+         return get()->getLineNumber();
+      }
+
+      friend std::ostream &
+      operator <<(std::ostream &out, const Location &loc) {
+         return out << *loc;
       }
 };
 

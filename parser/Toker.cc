@@ -11,16 +11,6 @@
 using namespace std;
 using namespace parser;
 
-Location::Location() :
-    name(""),
-    lineNumber(0) {
-}
-
-Location::Location(const char *name, int lineNumber) :
-    name(name),
-    lineNumber(lineNumber) {
-}
-
 bool Toker::getChar(char &ch) {
     bool result;
     if (putbackIndex < putbackSize) {
