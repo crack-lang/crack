@@ -788,8 +788,8 @@ class Matrix {
 
     void format(Formatter fmt){
         fmt `$(fmt.ARRAYSTART)$(fmt.ARRAYSTART)$(matrix.xx)$(fmt.ELEMSEP)$(matrix.yx)$(fmt.ARRAYEND)$(fmt.ELEMSEP)`;
-        fmt `$(fmt.ARRAYSTART)$(matrix.xy)$(fmt.ELEMSEP)$(matrix.yy)$(fmt.ARRAYEND)$(fmt.ARRAYEND)$(fmt.ELEMSEP)`
-        fmt `$(fmt.ARRAYSTART)$(matrix.x0)$(fmt.ELEMSEP)$(matrix.y0)$(fmt.ARRAYEND)\n`);
+        fmt `$(fmt.ARRAYSTART)$(matrix.xy)$(fmt.ELEMSEP)$(matrix.yy)$(fmt.ARRAYEND)$(fmt.ARRAYEND)$(fmt.ELEMSEP)`;
+        fmt `$(fmt.ARRAYSTART)$(matrix.x0)$(fmt.ELEMSEP)$(matrix.y0)$(fmt.ARRAYEND)\n`;
     }
 
 } // Matrix

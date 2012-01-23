@@ -204,6 +204,14 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(voidType, "srandom", (void *)srandom);
     f->addArg(uintType, "seed");
 
+    f = mod->addFunc(byteptrType, "initstate", (void *)initstate);
+    f->addArg(uintType, "seed");
+    f->addArg(byteptrType, "state");
+    f->addArg(uintType, "n");
+
+    f = mod->addFunc(byteptrType, "setstate", (void *)initstate);
+    f->addArg(byteptrType, "state");
+
     f = mod->addFunc(byteptrType, "puts",
                      (void *)crack::runtime::puts
                      );

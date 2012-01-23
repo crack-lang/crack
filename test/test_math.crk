@@ -14,15 +14,15 @@ import crack.math  sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
                     round, trunc, fpclassify, isfinite, isinf, isnan,
                     isnormal, sign, fmod, remainder, copysign, nextafter,
-                    fdim, pow, testexcept, clearexcept, errno, setErrno, 
-                    max, min, rand, srand,
+                    fdim, pow, testexcept, clearexcept, errno, setErrno, max, min, 
                     HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
                     FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
                     ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
                     UNDERFLOW, ERANGE,  
                     E, LOG2E, LOG10E, LN2, LN10, LNPI, PI, PI_2, PI_4, PI1, 
                     PI2, SQRTPI2, SQRT2, SQRT3, SQRT1_2, SQRTPI, GAMMA;
-                    
+
+import crack.random random, srandom, setstate, initstate;
 
 fmt := StringFormatter();
 
@@ -81,8 +81,16 @@ while (i<=intervals){
 resultString:=fmt.string();
 
 // Random numbers
-srand(10);
+srandom(10);
 int r;
-for(i=0; i<10; i++) r=rand();
+for(i=0; i<10; i++) r=random();
+
+array[byte] rstate=[95, 8, 121];
+state := initstate(10, byteptr(rstate), 3);
+
+state2 := setstate(state);
+for (i=0;i<3;i++)
+    if (state[i] != state2[i])
+        cout `Random state mismatch\n`;
 
 cout `ok\n`;
