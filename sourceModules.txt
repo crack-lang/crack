@@ -6,6 +6,7 @@ ext/Type.cc
 model/Annotation.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
+model/Deserializer.cc
 model/GetRegisterExpr.cc
 model/StrConst.cc
 model/AssignExpr.cc
@@ -29,6 +30,7 @@ model/LocalNamespace.cc
 model/MultiExpr.cc
 model/NullConst.cc
 model/Namespace.cc
+model/Serializer.cc
 model/CleanupFrame.cc
 model/TernaryExpr.cc
 model/TypeDef.cc

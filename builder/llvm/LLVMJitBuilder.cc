@@ -408,7 +408,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 ) {
 
     Cacher c(context, options.get());
-    BModuleDef *bmod = c.maybeLoadFromCache(canonicalName, path);
+    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName, path);
 
     if (bmod) {
 
@@ -419,7 +419,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         // entry function
         func = c.getEntryFunction();
 
-        engineBindModule(bmod);
+        engineBindModule(bmod.get());
         ensureCacheMap();
 
         // try to resolve unresolved globals from the cache
@@ -461,7 +461,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
             }
         }
 
-        setupCleanup(bmod);
+        setupCleanup(bmod.get());
 
         doRunOrDump(context);
 

@@ -15,8 +15,9 @@ namespace llvm {
 }
 
 namespace model {
-    class VarDef;
     class Namespace;
+    class TypeDef;
+    class VarDef;
 }
 
 namespace builder {
@@ -25,7 +26,8 @@ class BuilderOptions;
 
 namespace mvll {
 
-class BModuleDef;
+SPUG_RCPTR(BModuleDef);
+SPUG_RCPTR(BTypeDef);
 
 class Cacher {
 
@@ -36,10 +38,11 @@ class Cacher {
         function,
         member,
         method,
-        type
+        type,
+        generic
     };
 
-    BModuleDef *modDef;
+    BModuleDefPtr modDef;
     model::Context &context;
     const builder::BuilderOptions *options;
 
@@ -56,7 +59,10 @@ protected:
     void readVarDefMember(const std::string &, llvm::Value *, llvm::MDNode *);
     void readVarDefGlobal(const std::string &, llvm::Value *, llvm::MDNode *);
     void readFuncDef(const std::string &, llvm::Value *, llvm::MDNode *);
+    BTypeDefPtr readMetaType(llvm::MDNode *mnode);
+    void finishType(model::TypeDef *type, BTypeDef *metaType);
     void readTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
+    void readGenericTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
 
     void writeBitcode(const std::string &path);
 
@@ -75,8 +81,8 @@ public:
 
     void getExterns(std::vector<std::string> &symList);
 
-    BModuleDef *maybeLoadFromCache(const std::string &canonicalName,
-                                   const std::string &path);
+    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName,
+                                     const std::string &path);
     void saveToCache();
 
 };
