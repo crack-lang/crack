@@ -5,6 +5,8 @@
 
 #include "parser/Token.h"
 #include "GenericParm.h"
+#include "Namespace.h"
+#include "VarDef.h"
 
 namespace parser {
     class Toker;
@@ -12,16 +14,24 @@ namespace parser {
 
 namespace model {
 
+class Deserializer;
+class Serializer;
+
 SPUG_RCPTR(Namespace);
 
 /** Stores information used to replay a generic. */
 class Generic {
+    private:
+        static void serializeToken(Serializer &out, const parser::Token &tok);
+        static parser::Token deserializeToken(Deserializer &src);
+
     public:
         // the generic parameters
         GenericParmVec parms;
         
         // the body of the generic, stored in reverse order.
-        std::vector<parser::Token> body;
+        typedef std::vector<parser::Token> TokenVec;
+        TokenVec body;
         
         // the original context Namespace and compile namespace
         NamespacePtr ns, compileNS;
@@ -36,6 +46,12 @@ class Generic {
         
         /** Replay the body into the tokenizer. */
         void replay(parser::Toker &toker);
+
+        /** Serialization API. */
+        /** @{ */
+        void serialize(Serializer &out) const;
+        static Generic *deserialize(Deserializer &src);
+        /** @} */
 };
 
 } // namespace model

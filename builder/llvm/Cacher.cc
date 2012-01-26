@@ -2,8 +2,11 @@
 
 #include "Cacher.h"
 #include "BModuleDef.h"
+#include "model/Deserializer.h"
+#include "model/Generic.h"
 #include "model/Namespace.h"
 #include "model/OverloadDef.h"
+#include "model/Serializer.h"
 #include "model/NullConst.h"
 #include "model/ConstVarDef.h"
 
@@ -16,6 +19,7 @@
 #include "builder/llvm/Consts.h"
 
 #include <assert.h>
+#include <sstream>
 #include <vector>
 
 #include <llvm/Module.h>
@@ -188,7 +192,7 @@ void Cacher::writeMetadata() {
     // crack_defs: the symbols defined in this module that we need to rebuild
     // at compile time in order to use this cached module to compile fresh code
     // from
-    writeNamespace(modDef);
+    writeNamespace(modDef.get());
 
     //module->dump();
 
@@ -220,9 +224,12 @@ void Cacher::writeNamespace(Namespace *ns) {
             // skip aliases
             if (i->second->getOwner() != ns)
                 continue;
-            if (td = dynamic_cast<TypeDef*>(i->second.get())) {
-                node->addOperand(writeTypeDef(td));
-                writeNamespace(td);
+            if (td = TypeDefPtr::rcast(i->second)) {
+                MDNode *typeNode = writeTypeDef(td);
+                if (typeNode) {
+                    node->addOperand(typeNode);
+                    writeNamespace(td);
+                }
             }
             else {
 
@@ -246,7 +253,7 @@ void Cacher::writeNamespace(Namespace *ns) {
 MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
-    assert(bt && "not BTypeDef");
+    assert((bt || t->generic) && "not BTypeDef");
 
     vector<Value *> dList;
 
@@ -254,18 +261,27 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     dList.push_back(MDString::get(getGlobalContext(), t->name));
 
     // operand 1: symbol type
-    dList.push_back(constInt(Cacher::type));
+    dList.push_back(constInt(t->generic ? Cacher::generic : Cacher::type));
 
-    // operand 2: llvm rep (null initializer)
-    dList.push_back(Constant::getNullValue(bt->rep));
+    // operand 2: if this is a generic, operand 2 is the serialized generic
+    // value.  Otherwise it is the initializer.
+    if (t->generic) {
+        ostringstream tmp;
+        model::Serializer ser(tmp);
+        t->genericInfo->serialize(ser);
+        dList.push_back(MDString::get(getGlobalContext(), tmp.str()));
+    } else {
+        dList.push_back(Constant::getNullValue(bt->rep));
+    }
 
     // operand 3: metatype type (name string)
-    BTypeDef *btm = dynamic_cast<BTypeDef *>(bt->type.get());
-    assert(btm && "no meta class");
-    dList.push_back(MDString::get(getGlobalContext(), btm->name));
+    TypeDef *metaClass = t->type.get();
+    assert(metaClass && "no meta class");
+    dList.push_back(MDString::get(getGlobalContext(), metaClass->name));
 
     // operand 4: metatype type (null initializer)
-    dList.push_back(Constant::getNullValue(btm->rep));
+    Type *metaTypeRep = BTypeDefPtr::acast(metaClass)->rep;
+    dList.push_back(Constant::getNullValue(metaTypeRep));
 
     return MDNode::get(getGlobalContext(), dList);
 
@@ -587,10 +603,7 @@ void Cacher::readVarDefMember(const std::string &sym,
 
 }
 
-void Cacher::readTypeDef(const std::string &sym,
-                         llvm::Value *rep,
-                         llvm::MDNode *mnode) {
-
+BTypeDefPtr Cacher::readMetaType(MDNode *mnode) {
     // operand 3: metatype type (name string)
     MDString *cname = dyn_cast<MDString>(mnode->getOperand(3));
     assert(cname && "invalid metatype name");
@@ -603,24 +616,54 @@ void Cacher::readTypeDef(const std::string &sym,
                                         true,
                                         0 /* nextVTableslot */
                                         );
+    return metaType;
+}
 
+void Cacher::finishType(TypeDef *type, BTypeDef *metaType) {
+    // tie the meta-class to the class
+    if (metaType)
+        metaType->meta = type;
+
+    // make the class default to initializing to null
+    type->defaultInitializer = new NullConst(type);
+    type->complete = true;
+
+    modDef->addDef(type);
+}
+
+void Cacher::readTypeDef(const std::string &sym,
+                         llvm::Value *rep,
+                         llvm::MDNode *mnode) {
+
+    BTypeDefPtr metaType = readMetaType(mnode);
     BTypeDefPtr type = new BTypeDef(metaType.get(),
                         sym,
                         rep->getType(),
                         true,
                         0 /* nextVTableslot */
                         );
+    finishType(type.get(), metaType.get());
+}
 
-    // tie the meta-class to the class
-    if (metaType)
-        metaType->meta = type.get();
+void Cacher::readGenericTypeDef(const std::string &sym,
+                                llvm::Value *rep,
+                                llvm::MDNode *mnode) {
 
-    // make the class default to initializing to null
-    type->defaultInitializer = new NullConst(type.get());
-    type->complete = true;
+    BTypeDefPtr metaType = readMetaType(mnode);
+    TypeDefPtr type = new TypeDef(metaType.get(), sym, true);
 
-    modDef->addDef(type.get());
+    // read the generic info
+    string srcString = dyn_cast<MDString>(rep)->getString();
+    istringstream srcStream(srcString);
+    model::Deserializer src(srcStream);
+    type->genericInfo = Generic::deserialize(src);
+    type->generic = new TypeDef::SpecializationCache();
 
+    // store the module namespace in the generic info
+    // XXX should also be storing the compile namespace
+    type->genericInfo->ns = modDef.get();
+
+    finishType(type.get(), metaType.get());
 }
 
 void Cacher::readFuncDef(const std::string &sym,
@@ -669,7 +712,7 @@ void Cacher::readFuncDef(const std::string &sym,
         owner = td;
     }
     else {
-        owner = modDef;
+        owner = modDef.get();
     }
     newF->setOwner(owner);
     newF->ns = owner;
@@ -771,6 +814,9 @@ void Cacher::readDefs() {
         case Cacher::constant:
             readConstant(sym, rep, mnode);
             break;
+        case Cacher::generic:
+            readGenericTypeDef(sym, rep, mnode);
+            break;
 
         default:
             assert(0 && "unhandled def type");
@@ -842,8 +888,8 @@ void Cacher::writeBitcode(const string &path) {
 
 }
 
-BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
-                                       const string &path) {
+BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
+                                         const string &path) {
 
     string cacheFile = getCacheFilePath(options,
                                         path,
@@ -884,7 +930,6 @@ BModuleDef *Cacher::maybeLoadFromCache(const string &canonicalName,
     }
     else {
         // during meta data read, we determined we will miss
-        delete modDef;
         delete module;
         return NULL;
     }

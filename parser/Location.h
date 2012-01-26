@@ -21,12 +21,12 @@ class LocationImpl : public spug::RCBase {
       std::string name;
       int lineNumber;
 
+   public:
+
       LocationImpl(const char *name, int lineNumber) :
          name(name),
          lineNumber(lineNumber) {
       }
-
-   public:
 
       /** so that we can construct one of these prior to assigning it */
       LocationImpl();
@@ -69,9 +69,14 @@ SPUG_RCPTR(LocationImpl);
 class Location : public LocationImplPtr {
    friend class LocationMap;
    private:
-      Location(LocationImpl *impl) : LocationImplPtr(impl) {}
 
    public:
+
+      /**
+       * You probably don't want to use this: use LocationMap::getLocation()
+       * to keep them cached instead.
+       */
+      Location(LocationImpl *impl) : LocationImplPtr(impl) {}
 
       /** so that we can construct one of these prior to assigning it */
       Location() {}
