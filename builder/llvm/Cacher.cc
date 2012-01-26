@@ -5,6 +5,7 @@
 #include "model/Namespace.h"
 #include "model/OverloadDef.h"
 #include "model/NullConst.h"
+#include "model/ConstVarDef.h"
 
 #include "builder/llvm/LLVMBuilder.h"
 #include "builder/BuilderOptions.h"
@@ -12,6 +13,7 @@
 #include "builder/llvm/BFuncDef.h"
 #include "builder/util/CacheFiles.h"
 #include "builder/util/SourceDigest.h"
+#include "builder/llvm/Consts.h"
 
 #include <assert.h>
 #include <vector>
@@ -223,11 +225,18 @@ void Cacher::writeNamespace(Namespace *ns) {
                 writeNamespace(td);
             }
             else {
+
                 // VarDef
 
                 // XXX hack to not write exStruct
-                if (i->second->name != ":exStruct")
+                if (i->second->name == ":exStruct")
+                    continue;
+
+                if (i->second.get()->isConstant())
+                    node->addOperand(writeConstant(i->second.get(), owner));
+                else
                     node->addOperand(writeVarDef(i->second.get(), owner));
+
             }
         }
     }
@@ -304,6 +313,58 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->name));
         dList.push_back(MDString::get(getGlobalContext(), (*i)->type->name));
     }
+
+    // we register with the cache map because a cached module may be
+    // on this depended one for this run
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, sym);
+
+    return MDNode::get(getGlobalContext(), dList);
+
+}
+
+MDNode *Cacher::writeConstant(VarDef *sym, TypeDef *owner) {
+
+    vector<Value *> dList;
+
+    BTypeDef *type = dynamic_cast<BTypeDef *>(sym->type.get());
+
+    // int and float will be ConstVarDef so we can get at the value
+    ConstVarDef *ivar = dynamic_cast<ConstVarDef *>(sym);
+
+    // operand 0: symbol name (not canonical)
+    dList.push_back(MDString::get(getGlobalContext(), sym->name));
+
+    // operand 1: symbol type
+    dList.push_back(constInt(Cacher::constant));
+
+    // operand 2: int or float value, if we have one
+    if (ivar) {
+        BIntConst *bi = dynamic_cast<BIntConst *>(ivar->expr.get());
+        if (bi) {
+            dList.push_back(bi->rep);
+        }
+        else {
+            BFloatConst *bf = dynamic_cast<BFloatConst *>(ivar->expr.get());
+            assert(bf && "unknown ConstVarDef: not int or float");
+            dList.push_back(bf->rep);
+        }
+    }
+    else {
+        // const object, no rep
+        dList.push_back(NULL);
+    }
+
+    // operand 3: type name
+    dList.push_back(MDString::get(getGlobalContext(), type->name));
+
+    /*
+    // operand 4: typedef owner (XXX future?)
+    if (owner)
+        dList.push_back(MDString::get(getGlobalContext(), owner->name));
+    else
+        dList.push_back(NULL);
+    */
 
     // we register with the cache map because a cached module may be
     // on this depended one for this run
@@ -436,6 +497,54 @@ void Cacher::readVarDefGlobal(const std::string &sym,
 
     LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
     b.registerDef(context, g);
+
+}
+
+void Cacher::readConstant(const std::string &sym,
+                        llvm::Value *rep,
+                        llvm::MDNode *mnode) {
+
+    VarDef *cnst;
+
+    // operand 3: type
+    MDString *typeStr = dyn_cast<MDString>(mnode->getOperand(3));
+    assert(typeStr && "readConstant: invalid type string");
+
+    VarDefPtr vd = modDef->lookUp(typeStr->getString().str());
+    TypeDef *td = TypeDefPtr::rcast(vd);
+    assert(td && "readConstant: type not found");
+
+    if (rep) {
+        ConstVarDef *cvar;
+        if (rep->getType()->isIntegerTy()) {
+            ConstantInt *ival = dyn_cast<ConstantInt>(rep);
+            assert(ival && "not ConstantInt");
+            Expr *iexpr = new BIntConst(dynamic_cast<BTypeDef*>(td),
+                                        ival->getLimitedValue());
+            cvar = new ConstVarDef(td, sym, iexpr);
+        }
+        else {
+            assert(rep->getType()->isFloatingPointTy() && "not int or float");
+            ConstantFP *fval = dyn_cast<ConstantFP>(rep);
+            assert(fval && "not ConstantFP");
+            Expr *iexpr = new BFloatConst(dynamic_cast<BTypeDef*>(td),
+                                          // XXX convertToDouble?? llvm asserts
+                                         fval->getValueAPF().convertToFloat());
+            cvar = new ConstVarDef(td, sym, iexpr);
+        }
+        cnst = cvar;
+    }
+    else {
+        // class
+        cnst = new VarDef(td, sym);
+        cnst->constant = true;
+    }
+
+    // the member def itself
+    modDef->addDef(cnst);
+
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+    b.registerDef(context, cnst);
 
 }
 
@@ -658,6 +767,9 @@ void Cacher::readDefs() {
             break;
         case Cacher::type:
             readTypeDef(sym, rep, mnode);
+            break;
+        case Cacher::constant:
+            readConstant(sym, rep, mnode);
             break;
 
         default:

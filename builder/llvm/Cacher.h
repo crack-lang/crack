@@ -36,7 +36,8 @@ class Cacher {
         function,
         member,
         method,
-        type
+        type,
+        constant
     };
 
     BModuleDef *modDef;
@@ -50,9 +51,11 @@ protected:
     void writeNamespace(model::Namespace* ns);
 
     llvm::MDNode *writeTypeDef(model::TypeDef* t);
+    llvm::MDNode *writeConstant(model::VarDef *, model::TypeDef *owner);
     llvm::MDNode *writeVarDef(model::VarDef *, model::TypeDef *owner);
     llvm::MDNode *writeFuncDef(model::FuncDef *, model::TypeDef *owner);
 
+    void readConstant(const std::string &, llvm::Value *, llvm::MDNode *);
     void readVarDefMember(const std::string &, llvm::Value *, llvm::MDNode *);
     void readVarDefGlobal(const std::string &, llvm::Value *, llvm::MDNode *);
     void readFuncDef(const std::string &, llvm::Value *, llvm::MDNode *);
