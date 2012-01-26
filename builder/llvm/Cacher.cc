@@ -898,22 +898,26 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
         return NULL;
 
     if (options->verbosity >= 2)
-        cerr << "attempting to load " << canonicalName << " from file: "
+        cerr << "[" << canonicalName << "] cache: maybeLoad "
              << cacheFile << endl;
 
     OwningPtr<MemoryBuffer> fileBuf;
     if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
         if (options->verbosity >= 2)
-            cerr << "getFile: " << ec.message() << endl;
+            cerr << "[" << canonicalName <<
+                    "] cache: not cached or inaccessible" << endl;
         return NULL;
     }
 
     string errMsg;
-    Module *module = getLazyBitcodeModule(fileBuf.take(), getGlobalContext(), &errMsg);
+    Module *module = getLazyBitcodeModule(fileBuf.take(),
+                                          getGlobalContext(),
+                                          &errMsg);
     if (!module) {
         fileBuf.reset();
         if (options->verbosity >= 1)
-            cerr << "failed to load bitcode: " << errMsg << endl;
+            cerr << "[" << canonicalName <<
+                    "] cache: exists but unable to load bitcode" << endl;
         return NULL;
     }
 
@@ -926,6 +930,9 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
 
     if (readMetadata()) {
         // cache hit
+        if (options->verbosity >= 2)
+            cerr << "[" << canonicalName <<
+                    "] cache materialized" << endl;
         return modDef;
     }
     else {
@@ -953,7 +960,8 @@ void Cacher::saveToCache() {
     }
 
     if (options->verbosity >= 2)
-        cerr << "caching " << modDef->getFullName() << " from " << modDef->path
+        cerr << "[" << modDef->getFullName() << "] cache: saved from "
+             << modDef->path
              << " to file: " << cacheFile << endl;
 
     // digest the source file
