@@ -119,7 +119,6 @@ void Cacher::writeMetadata() {
     Module *module = modDef->rep;
 
     // crack_imports: operand list points to import nodes
-    // import node: 0: canonical name 1: source digest
     node = module->getOrInsertNamedMetadata("crack_imports");
     for (BModuleDef::ImportListType::const_iterator iIter = modDef->importList.begin();
          iIter != modDef->importList.end();
@@ -133,6 +132,29 @@ void Cacher::writeMetadata() {
                                       (*iIter).first->digest.asHex()));
 
         // op 3..n: symbols to be imported (aliased)
+        for (vector<string>::const_iterator sIter = (*iIter).second.begin();
+             sIter != (*iIter).second.end();
+             ++sIter) {
+            dList.push_back(MDString::get(getGlobalContext(), *sIter));
+        }
+
+        node->addOperand(MDNode::get(getGlobalContext(), dList));
+        dList.clear();
+    }
+
+    // crack_shlib_imports: operand list points to shared lib import nodes
+    node = module->getOrInsertNamedMetadata("crack_shlib_imports");
+    for (BModuleDef::ShlibImportListType::const_iterator iIter =
+         modDef->shlibImportList.begin();
+         iIter != modDef->shlibImportList.end();
+         ++iIter
+         ) {
+
+        // op 1: shared lib name
+        dList.push_back(MDString::get(getGlobalContext(),
+                                      (*iIter).first));
+
+        // op 2..n: symbols to be imported
         for (vector<string>::const_iterator sIter = (*iIter).second.begin();
              sIter != (*iIter).second.end();
              ++sIter) {
@@ -487,6 +509,31 @@ bool Cacher::readImports() {
 
     }
 
+    imports = modDef->rep->getNamedMetadata("crack_shlib_imports");
+    assert(imports && "missing crack_shlib_imports node");
+
+    vector<string> symList;
+    for (int i = 0; i < imports->getNumOperands(); ++i) {
+
+        mnode = imports->getOperand(i);
+
+        // op 1: lib name
+        cname = dyn_cast<MDString>(mnode->getOperand(0));
+        assert(cname && "malformed shlib import node: lib name");
+
+        // op 2..n: imported symbols from m
+        for (unsigned si = 1; si < mnode->getNumOperands(); ++si) {
+            symStr = dyn_cast<MDString>(mnode->getOperand(si));
+            assert(symStr && "malformed shlib import node: symbol name");
+            shlibImported[symStr->getString().str()] = true;
+            symList.push_back(symStr->getString().str());
+        }
+
+        context.builder.importSharedLibrary(cname->getString().str(),
+                                            symList, context, modDef.get());
+
+    }
+
     return true;
 
 }
@@ -679,6 +726,12 @@ void Cacher::readFuncDef(const std::string &sym,
                          llvm::MDNode *mnode) {
 
     assert(rep && "no rep");
+
+    // if this symbol was defined in a shared library, skip reading
+    // XXX this may change depending on how exporting of second order symbols
+    // works out in the cache.
+    if (shlibImported.find(sym) != shlibImported.end())
+        return;
 
     // operand 3: typedef owner (if exists)
     MDString *ownerStr(0);
@@ -937,6 +990,7 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
     modDef->digest = SourceDigest::fromFile(path);
 
     if (readMetadata()) {
+
         // cache hit
         if (options->verbosity >= 2)
             cerr << "[" << canonicalName <<

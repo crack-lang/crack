@@ -2893,9 +2893,15 @@ void LLVMBuilder::importSharedLibrary(const string &name,
          iter != symbols.end();
          ++iter
          ) {
+
         void *sym = dlsym(handle, iter->c_str());
         if (!sym)
             throw spug::Exception(dlerror());
+
+        // save for caching (when called from parser). when called from Cacher,
+        // we don't save (and don't need to since we're already cached)
+        if (bModDef)
+            bModDef->shlibImportList[name] = symbols;
 
         // store a stub for the symbol
         ns->addDef(new StubDef(context.construct->voidType.get(),
@@ -2904,6 +2910,7 @@ void LLVMBuilder::importSharedLibrary(const string &name,
                                )
                    );
     }
+
 }
 
 void LLVMBuilder::registerImportedDef(Context &context, VarDef *varDef) {

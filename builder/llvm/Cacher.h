@@ -6,6 +6,7 @@
 #include "model/Context.h"
 #include <string>
 #include <vector>
+#include <map>
 
 namespace llvm {
     class Module;
@@ -46,6 +47,10 @@ class Cacher {
     BModuleDefPtr modDef;
     model::Context &context;
     builder::BuilderOptions *options;
+
+    // vardefs which were created as a result of shared lib import
+    // we skip these in crack_defs
+    std::map<std::string, bool> shlibImported;
 
 protected:
     void addNamedStringNode(const std::string &key, const std::string &val);

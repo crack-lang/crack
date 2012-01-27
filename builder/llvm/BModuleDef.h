@@ -36,7 +36,10 @@ public:
     // list of modules imported by this one, along with its imported symbols
     typedef std::map<BModuleDef*, std::vector<std::string> > ImportListType;
     ImportListType importList;
-    
+    // list of shared libraries imported, along with imported symbols
+    typedef std::map<std::string, std::vector<std::string> > ShlibImportListType;
+    ShlibImportListType shlibImportList;
+
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
                llvm::Module *rep0
