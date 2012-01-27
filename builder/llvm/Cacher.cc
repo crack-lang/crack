@@ -252,6 +252,9 @@ void Cacher::writeNamespace(Namespace *ns) {
 
 MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
+    if (options->verbosity >= 2)
+        cerr << "writing type " << t->name << " in module " << modDef->name <<
+            endl;
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
     assert((bt || t->generic) && "not BTypeDef");
 
@@ -500,6 +503,8 @@ void Cacher::readVarDefGlobal(const std::string &sym,
 
     VarDefPtr vd = modDef->lookUp(typeStr->getString().str());
     TypeDef *td = TypeDefPtr::rcast(vd);
+    if (!td) cerr << "unable to get type " << typeStr->getString().str() <<
+        endl;
     assert(td && "readVarDefGlobal: type not found");
 
     GlobalVariable *lg = dyn_cast<GlobalVariable>(rep);
@@ -577,6 +582,9 @@ void Cacher::readVarDefMember(const std::string &sym,
 
     VarDefPtr vd = modDef->lookUp(typeStr->getString().str());
     TypeDef *td = TypeDefPtr::rcast(vd);
+    if (!td)
+        cerr << "Type " << typeStr->getString().str() <<
+            " not found in module " << modDef->name << endl;
     assert(td && "readVarDefMember: type not found");
 
     // operand 4: type owner (class we're a member of)

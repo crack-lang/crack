@@ -10,12 +10,12 @@ namespace builder {
 
 class BuilderOptions;
 
-std::string getCacheFilePath(const BuilderOptions* o,
+std::string getCacheFilePath(BuilderOptions* o,
                              const std::string &path,
                              const std::string &destExt
                              );
 
-void initCacheDirectory(BuilderOptions *o);
+bool initCacheDirectory(BuilderOptions *o);
 
 } // end namespace builder
 

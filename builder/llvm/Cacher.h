@@ -45,7 +45,7 @@ class Cacher {
 
     BModuleDefPtr modDef;
     model::Context &context;
-    const builder::BuilderOptions *options;
+    builder::BuilderOptions *options;
 
 protected:
     void addNamedStringNode(const std::string &key, const std::string &val);

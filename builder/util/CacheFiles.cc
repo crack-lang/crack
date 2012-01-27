@@ -56,7 +56,7 @@ namespace {
     }
 }
 
-void initCacheDirectory(BuilderOptions *options) {
+bool initCacheDirectory(BuilderOptions *options) {
 
     string path;
 
@@ -76,7 +76,7 @@ void initCacheDirectory(BuilderOptions *options) {
             if (options->verbosity)
                 cerr << "unable to set default cache path, caching disabled\n";
             options->cacheMode = false;
-            return;
+            return false;
         }
         if (path.at(path.size()-1) != '/')
             path.push_back('/');
@@ -95,11 +95,13 @@ void initCacheDirectory(BuilderOptions *options) {
             cerr << "no access to create/use cache path, caching disabled: " <<
                     path << "\n";
         options->cacheMode = false;
+        return false;
     }
 
+    return true;
 }
 
-string getCacheFilePath(const BuilderOptions* options,
+string getCacheFilePath(BuilderOptions* options,
                         const std::string &path,
                         const std::string &destExt) {
 
@@ -107,11 +109,14 @@ string getCacheFilePath(const BuilderOptions* options,
     BuilderOptions::StringMap::const_iterator i =
             options->optionMap.find("cachePath");
 
-    //assert(i != options->optionMap.end() && "cachePath empty");
-    // XXX this only happens for bootstrap module load, before initCacheDirectory
-    // is called. how can we cache boot straps somewhere?
-    if (i == options->optionMap.end())
-        return string();
+    // if we didn't find the cache path, try initializing the cache directory
+    // before failing.
+    if (i == options->optionMap.end()) {
+        if (!initCacheDirectory(options))
+            return string();
+        else
+            i = options->optionMap.find("cachePath");
+    }
 
     string finalPath = i->second;
 
