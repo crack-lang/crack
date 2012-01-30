@@ -3,7 +3,7 @@
 import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
     memcpy, memset, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
     EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC, 
-    EXCEPTION_UNCAUGHT_FUNC;
+    EXCEPTION_UNCAUGHT_FUNC, printuint64;
 @import crack._poormac define;
 
 const bool true = (1 == 1), false = (1 == 0);
@@ -195,6 +195,8 @@ class Buffer : Object {
     }
 
     byte oper [](int index) {
+        if (index < 0)
+            index = size + index;
         if (index < 0 || index >= size)
             _throwIndexError('string index out of bounds');
         return buffer[uint(index)];
