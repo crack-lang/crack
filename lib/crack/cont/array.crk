@@ -33,6 +33,8 @@ $$
 @_nobind uint32
 @_nobind int64
 @_nobind uint64
+@_nobind intz
+@_nobind uintz
 @_nobind float
 @_nobind float32
 @_nobind float64
@@ -517,6 +519,12 @@ class Array[Elem] {
         --__size;
     }
     
+    void deleteAll() {
+        for (uintz i = 0; i < __size; ++i)
+            _release(__rep[i]);
+        __size = 0;
+    }
+
     void insert(uint index, Elem elem) {
         if (index > __size)
             throw IndexError('Index out of range in Array.insert()');

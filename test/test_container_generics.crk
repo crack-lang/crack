@@ -273,6 +273,12 @@ if (true) {
         cout `FAILED count after extend\n`;
 }
 
+stringA.deleteAll();
+if (stringA.count() != 0)
+    cout `FAILED deleteAll() count\n`;
+if (stringA != Array[String]![])
+    cout `FAILED deleteAll() equality with empty array\n`;
+
 # --- List tests ---
 
 @define concat(Type) {
@@ -562,3 +568,4 @@ if (j)
     cout `priority queue pop() fail (null)\n`;
 
 cout `ok\n`;
+
