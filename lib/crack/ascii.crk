@@ -35,6 +35,24 @@ String radix(uintz val, uint base) {
     return String(cur, size, false);
 }
 
+## Parse a base 10 integer.
+int parseInt(String rep) {
+    int i, sign = 1, val;
+    if (rep[0] == b'-') {
+        ++i;
+        sign = -1;
+    }
+    
+    while (i < rep.size) {
+        b := rep[i++];
+        if (b >= b'0' && b <= b'9')
+            val = val * 10 + b - b'0';
+        else
+            break;
+    }
+
+    return val * sign;
+}
 
 String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset, 
                     uint num)

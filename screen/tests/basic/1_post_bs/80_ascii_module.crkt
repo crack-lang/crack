@@ -3,7 +3,7 @@ ascii module
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-import crack.ascii radix, strip, toUpper, toLower, isSpace, isDigit;
+import crack.ascii radix, strip, parseInt, toUpper, toLower, isSpace, isDigit;
 
 if (radix(0, 10) != '0')
     cout `FAILED radix(0)\n`;
@@ -50,6 +50,15 @@ if (!isDigit(b'0') || !isDigit(b'9') || !isDigit(b'5'))
 # check one outside the range
 if (isDigit(b'/') || isDigit(b':'))
     cout `FAILED isDigit check on non-digit.\n`;
+
+if (parseInt('100') != 100)
+    cout `FAILED parseInt(100)\n`;
+
+if (parseInt('0') != 0)
+    cout `FAILED parseInt(0)\n`;
+
+if (parseInt('-23') != -23)
+    cout `FAILED parseInt(-23)\n`;
 
 cout `ok\n`;
 %%EXPECT%%
