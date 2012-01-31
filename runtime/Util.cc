@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 namespace crack { namespace runtime {
 
@@ -73,6 +74,17 @@ int is_file(const char *path) {
 bool fileExists(const char *path) {
     struct stat st;
     return stat(path, &st) == 0;
+}
+
+int setNonBlocking(int fd, int val) {
+    int flags = fcntl(fd, F_GETFL);
+    if (flags < 0)
+        return -1;
+    if (val)
+        flags |= O_NONBLOCK;
+    else
+        flags &= ~O_NONBLOCK;
+    return fcntl(fd, F_SETFL, flags);
 }
 
 }}

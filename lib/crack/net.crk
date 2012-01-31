@@ -12,7 +12,8 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, 
     SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
     SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
-    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
+    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY, setNonBlocking, EAGAIN,
+    EWOULDBLOCK, errno;
 
 @import crack.ann implements;
 
@@ -42,7 +43,7 @@ class PollEvent : Object, PollEvt {
 
     oper init(SockAddr addr) : _addr = addr {}
     oper del() { free(_addr); }
-    
+
     @abstract Address create();
 }
 
@@ -179,7 +180,11 @@ class Socket : Pollable @implements Reader, Writer {
     bool setReuseAddr(bool val) {
         return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, val ? 1 : 0) == 0;
     }
-    
+
+    bool setNonBlocking(bool val) {
+        return setNonBlocking(fd, val);
+    }
+
     int send(Buffer data, int flags) {
         return send(fd, data.buffer, data.size, flags);
     }
@@ -214,12 +219,16 @@ class Socket : Pollable @implements Reader, Writer {
     void formatTo(Formatter fmt) {
         fmt `Socket(fd: $fd)`;
     }
-    
+
     # Reader interface
     uint read(WriteBuffer buffer) {
         rc := recv(buffer, 0);
-        if (rc < 0)
-            throw Exception(FStr() `Error writing to socket: $(strerror())`);
+        if (rc < 0) {
+            // don't error on non blocking
+            if (errno() == EAGAIN || errno() == EWOULDBLOCK)
+                return 0;
+            throw Exception(FStr() `Error reading from socket: $rc $(strerror())`);
+        }
         return uint(rc);
     }
     

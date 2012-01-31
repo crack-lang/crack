@@ -21,6 +21,7 @@ void printuint64(uint64_t val);
 
 int is_file(const char *path);
 bool fileExists(const char *path);
+int setNonBlocking(int fd, int val);
 
 }}
 

@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <signal.h>
+#include <errno.h>
 #include "debug/DebugTools.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
@@ -303,6 +304,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "POLLHUP", POLLHUP);
     mod->addConstant(intType, "POLLNVAL", POLLNVAL);
     mod->addConstant(uint32Type, "INADDR_ANY", static_cast<int>(INADDR_ANY));
+
+    mod->addConstant(intType, "EAGAIN", EAGAIN);
+    mod->addConstant(intType, "EWOULDBLOCK", EWOULDBLOCK);
     
     f = mod->addFunc(uint32Type, "makeIPV4", 
                      (void*)crack::runtime::makeIPV4);
@@ -664,6 +668,11 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     f = mod->addFunc(voidType, "exit", (void *)exit, "exit");
     f->addArg(intType, "status");
+
+    f = mod->addFunc(intType, "setNonBlocking",
+                     (void *)crack::runtime::setNonBlocking);
+    f->addArg(intType, "fd");
+    f->addArg(boolType, "val");
 
     // Add math functions
     crack::runtime::math_init(mod);

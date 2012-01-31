@@ -4,7 +4,7 @@
 import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
     ManagedBuffer, Writer, Formatter;
 import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
-    read;
+    read, setNonBlocking;
 
 # we need Writer to be in crack.lang, but it belongs here.
 @export_symbols Writer;
@@ -20,6 +20,12 @@ class FileHandle : Object {
         close(fd);
         fd = -1;
     }
+
+    ## Set the file handle's non blocking status
+    void setNonBlocking(bool val) {
+        setNonBlocking(fd, val);
+    }
+
 }
 
 ## Writer for a file descriptor.
