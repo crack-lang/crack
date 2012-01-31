@@ -22,8 +22,8 @@ class FileHandle : Object {
     }
 
     ## Set the file handle's non blocking status
-    void setNonBlocking(bool val) {
-        setNonBlocking(fd, val);
+    int setNonBlocking(bool val) {
+        return setNonBlocking(fd, val);
     }
 
 }

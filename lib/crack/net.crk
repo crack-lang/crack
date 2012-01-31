@@ -181,7 +181,7 @@ class Socket : Pollable @implements Reader, Writer {
         return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, val ? 1 : 0) == 0;
     }
 
-    bool setNonBlocking(bool val) {
+    int setNonBlocking(bool val) {
         return setNonBlocking(fd, val);
     }
 
