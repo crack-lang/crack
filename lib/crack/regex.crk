@@ -1,6 +1,7 @@
 ## Regular expressions (based on PCRE)
 
-import crack.lang free, AppendBuffer, Buffer, CString, Exception, SubString;
+import crack.lang free, AppendBuffer, Buffer, CString, Exception, SubString,
+                  Formatter;
 import crack.io cerr, FStr, StringFormatter, StringWriter, Writer;
 import crack.exp.bindings ByteptrWrapper, Opaque;
 import crack.functor Functor2;
@@ -103,6 +104,15 @@ $__captureCount)`
         i := __getIndex(name);
         return group(i);
     }
+
+    void formatTo(Formatter fmt) {
+        i := 0;
+        while (i < __captureCount) {
+            fmt `Match $i: [$(group(i))]\n`;
+            i++;
+        }
+    }
+
 };
 
 ## A compiled regular expression.
