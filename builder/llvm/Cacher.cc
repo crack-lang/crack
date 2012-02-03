@@ -227,10 +227,10 @@ void Cacher::writeNamespace(Namespace *ns) {
     TypeDef *owner = dynamic_cast<TypeDef*>(ns);
     NamedMDNode *node = modDef->rep->getOrInsertNamedMetadata("crack_defs");
 
-    for (Namespace::VarDefMap::const_iterator i = ns->beginDefs();
-         i != ns->endDefs();
+    for (Namespace::VarDefVec::const_iterator i = ns->beginOrderedForCache();
+         i != ns->endOrderedForCache();
          ++i) {
-        if (ol = dynamic_cast<OverloadDef*>(i->second.get())) {
+        if (ol = dynamic_cast<OverloadDef*>((*i).get())) {
             for (OverloadDef::FuncList::const_iterator f = ol->beginTopFuncs();
                  f != ol->endTopFuncs();
                  ++f) {
@@ -244,9 +244,9 @@ void Cacher::writeNamespace(Namespace *ns) {
         }
         else {
             // skip aliases
-            if (i->second->getOwner() != ns)
+            if ((*i)->getOwner() != ns)
                 continue;
-            if (td = TypeDefPtr::rcast(i->second)) {
+            if (td = TypeDefPtr::rcast(*i)) {
                 MDNode *typeNode = writeTypeDef(td);
                 if (typeNode) {
                     node->addOperand(typeNode);
@@ -258,13 +258,13 @@ void Cacher::writeNamespace(Namespace *ns) {
                 // VarDef
 
                 // XXX hack to not write exStruct
-                if (i->second->name == ":exStruct")
+                if ((*i)->name == ":exStruct")
                     continue;
 
-                if (i->second.get()->isConstant())
-                    node->addOperand(writeConstant(i->second.get(), owner));
+                if ((*i)->isConstant())
+                    node->addOperand(writeConstant((*i).get(), owner));
                 else
-                    node->addOperand(writeVarDef(i->second.get(), owner));
+                    node->addOperand(writeVarDef((*i).get(), owner));
 
             }
         }

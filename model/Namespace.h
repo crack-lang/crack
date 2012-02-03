@@ -37,6 +37,10 @@ class Namespace : public virtual spug::RCBase {
         // correct order.
         VarDefVec ordered;
 
+        // ordered list of _all_ vardefs. XXX this is only needed for
+        // caching currently
+        VarDefVec orderedForCache;
+
         // fully qualified namespace name, e.g. "crack.io"
         std::string canonicalName;
 
@@ -137,6 +141,17 @@ class Namespace : public virtual spug::RCBase {
             return ordered.end();
         }
         /// @}
+
+        /** XXX Cache ordered vector */
+        /// @{
+        VarDefVec::const_iterator beginOrderedForCache() const {
+            return orderedForCache.begin();
+        }
+        VarDefVec::const_iterator endOrderedForCache() const {
+            return orderedForCache.end();
+        }
+        /// @}
+
 };
 
 } // namespace model

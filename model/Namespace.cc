@@ -15,6 +15,7 @@ void Namespace::storeDef(VarDef *def) {
            "it is illegal to store a FuncDef directly (should be wrapped "
            "in an OverloadDef)");
     defs[def->name] = def;
+    orderedForCache.push_back(def);
 }
 
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
