@@ -248,6 +248,7 @@ class Socket : Pollable @implements Reader, Writer {
 class Poller {
     Array[Pollable] __pollables;
     PollSet __fds;
+    TimeVal __pollTimeout;
     uint __nextIndex;
     uint __capacity;
     int __iter;
@@ -255,9 +256,16 @@ class Poller {
     oper init() : 
         __pollables(256),
         __fds = PollSet(256),
+        __pollTimeout(0,0),
         __capacity = 256 {
     }
     
+    oper del() {
+        __fds.destroy();
+        // XXX no mem mangement for TimeVal
+        free(__pollTimeout);
+    }
+
     void grow(uint newCapacity) {
         if (newCapacity < __capacity)
             throw Exception('cannot shrink');
@@ -317,8 +325,12 @@ class Poller {
     ## there was a timeout.
     int wait(TimeDelta timeout) {
         __iter = 0;
-        return __fds.poll(__nextIndex, 
-                          timeout ? TimeVal(timeout.secs, timeout.nsecs) : null,
+        if (timeout) {
+            __pollTimeout.secs = timeout.secs;
+            __pollTimeout.nsecs = timeout.nsecs;
+        }
+        return __fds.poll(__nextIndex,
+                          timeout ? __pollTimeout : null,
                           null
                           );
     }
