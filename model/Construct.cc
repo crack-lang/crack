@@ -387,6 +387,34 @@ ModuleDefPtr Construct::loadModule(const string &canonicalName) {
 
 }
 
+ModuleDefPtr Construct::loadFromCache(const string &canonicalName,
+                                      const string &path
+                                      ) {
+    if (!rootBuilder->options->cacheMode)
+        return 0;
+
+    // create a new builder, context and module
+    BuilderPtr builder = rootBuilder->createChildBuilder();
+    builderStack.push(builder);
+    ContextPtr context =
+        new Context(*builder, Context::module, rootContext.get(),
+                    new GlobalNamespace(rootContext->ns.get(), 
+                                        canonicalName
+                                        ),
+                    new GlobalNamespace(rootContext->compileNS.get(),
+                                        canonicalName
+                                        )
+                    );
+    context->toplevel = true;
+
+    ModuleDefPtr modDef = context->materializeModule(canonicalName, path);
+    if (modDef && rootBuilder->options->statsMode)
+        stats->cachedCount++;
+    
+    builderStack.pop();
+    return modDef;
+}
+
 ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                                    Construct::StringVecIter moduleNameEnd,
                                    string &canonicalName
@@ -465,9 +493,9 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
             cached = true;
             if (rootBuilder->options->statsMode)
                 stats->cachedCount++;
-        }
-        else
+        } else {
             modDef = context->createModule(canonicalName, modPath.path);
+        }
 
         moduleCache[canonicalName] = modDef;
 
@@ -476,16 +504,11 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                 ifstream src(modPath.path.c_str());
                 // parse from scratch
                 parseModule(*context, modDef.get(), modPath.path, src);
-                // allow builder to cache after parse
-                if (rootBuilder->options->cacheMode)
-                    context->cacheModule(modDef);
-            }
-            else {
+            } else {
                 // directory
                 modDef->close(*context);
             }
-        }
-        else {
+        } else {
             // XXX hook to run/finish cached module
         }
 
@@ -615,11 +638,7 @@ int Construct::runScript(istream &src, const string &name) {
         if (!cached) {
             parseModule(*context, modDef.get(), name, src);
             loadedModules.push_back(modDef);
-            // allow builder to cache after parse
-            if (rootBuilder->options->cacheMode)
-                context->cacheModule(modDef);
-        }
-        else {
+        } else {
             // XXX hook to run/finish cached module
         }
     } catch (const ParseError &ex) {
@@ -642,4 +661,16 @@ int Construct::runScript(istream &src, const string &name) {
 
 builder::Builder &Construct::getCurBuilder() {
     return *builderStack.top();
+}
+
+void Construct::registerDef(VarDef *def) {
+    registry[def->getFullName()] = def;
+}
+
+VarDefPtr Construct::getRegisteredDef(const std::string &name) {
+    VarDefMap::iterator iter = registry.find(name);
+    if (iter != registry.end())
+        return iter->second;
+    else
+        return 0;
 }

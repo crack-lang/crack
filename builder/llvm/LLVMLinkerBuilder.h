@@ -69,8 +69,6 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                               model::ModuleDef *owner
                                               );
 
-        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod);
-
 };
 
 } } // namespace

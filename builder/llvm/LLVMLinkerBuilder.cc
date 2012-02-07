@@ -381,9 +381,13 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
     builder.CreateCall(registerFunc, args);
 
+    if (rootBuilder->options->cacheMode) {
+        Cacher c(context, options.get(), BModuleDefPtr::acast(moduleDef));
+        c.saveToCache();
+    }
+
     if (debugInfo)
         delete debugInfo;
-
 }
 
 void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
@@ -444,12 +448,5 @@ model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(model::Context &context
 
     Cacher c(context, options.get());
     return c.maybeLoadFromCache(canonicalName, path);
-
-}
-
-void LLVMLinkerBuilder::cacheModule(model::Context &context, model::ModuleDefPtr mod) {
-
-    Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
-    c.saveToCache();
 
 }

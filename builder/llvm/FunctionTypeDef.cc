@@ -66,7 +66,7 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
 
     BTypeDefPtr tempSpec =
             new BTypeDef(type.get(),
-                         getSpecializedName(types),
+                         getSpecializedName(types, true),
                          llvmFunPtrType
                          );
     tempSpec->setOwner(this);

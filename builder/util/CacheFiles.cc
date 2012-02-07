@@ -120,8 +120,11 @@ string getCacheFilePath(BuilderOptions* options,
 
     string finalPath = i->second;
 
-    char *rpath = realpath(path.c_str(), NULL);
-    assert(rpath && "unable to realpath");
+    // get the canonicalized path - if that doesn't work, we have to assume
+    // that this is a path to a nonexistent file.
+    char rpath[PATH_MAX + 1];
+    if (!realpath(path.c_str(), rpath))
+        strcpy(rpath, path.c_str());
     assert(*rpath == '/' && "not absolute");
 
     char *rpathd = strdup(rpath);
@@ -144,7 +147,6 @@ string getCacheFilePath(BuilderOptions* options,
     finalPath.push_back('.');
     finalPath.append(destExt);
 
-    free(rpath);
     free(rpathd);
     free(rpathf);
 

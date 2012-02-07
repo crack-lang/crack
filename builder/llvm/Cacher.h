@@ -65,6 +65,7 @@ protected:
 
     void readConstant(const std::string &, llvm::Value *, llvm::MDNode *);
     void readVarDefMember(const std::string &, llvm::Value *, llvm::MDNode *);
+    model::TypeDefPtr resolveType(const std::string &name);
     void readVarDefGlobal(const std::string &, llvm::Value *, llvm::MDNode *);
     void readFuncDef(const std::string &, llvm::Value *, llvm::MDNode *);
     BTypeDefPtr readMetaType(llvm::MDNode *mnode);

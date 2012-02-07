@@ -700,8 +700,8 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
 
 ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
     BStrConst *bval = BStrConstPtr::cast(val);
-    // if the global string hasn't been defined yet, create it
-    if (!bval->rep) {
+    // if the global string hasn't been defined yet in this module, create it
+    if (!bval->rep || bval->module != module) {
         // we have to do this the hard way because strings may contain
         // embedded nulls (IRBuilder.CreateGlobalStringPtr expects a
         // null-terminated string)
@@ -723,6 +723,7 @@ ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
         bval->rep = builder.CreateInBoundsGEP(gvar,
                                               ArrayRef<Value *>(args, 2)
                                               );
+        bval->module = module;
     }
     lastValue = bval->rep;
     return new BResultExpr(val, lastValue);

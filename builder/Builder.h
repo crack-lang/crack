@@ -419,14 +419,6 @@ class Builder : public spug::RCBase {
                                                       ) = 0;
 
         /**
-         * Save a module to a builder specific cache, which can later be materialized
-         * @param context the module context
-         * @param mod the module def to cache
-         */
-        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod) = 0;
-
-
-        /**
          * Create a new cleanup frame.
          */
         virtual model::CleanupFramePtr

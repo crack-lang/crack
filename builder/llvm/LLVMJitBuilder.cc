@@ -228,6 +228,24 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     return bModDef;
 }
 
+void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
+
+    assert(BModuleDefPtr::cast(mod)->rep == module);
+
+    // encode main function location in bitcode metadata
+    vector<Value *> dList;
+    NamedMDNode *node;
+
+    node = module->getOrInsertNamedMetadata("crack_entry_func");
+    dList.push_back(func);
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
+
+    Cacher c(context, context.construct->rootBuilder->options.get(),
+             BModuleDefPtr::cast(mod));
+    c.saveToCache();
+
+}
+
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
@@ -263,10 +281,11 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // module.  So this loop replaces all such calls with the correct instance
     // of the function.
     Function *ehEx = getDeclaration(module, Intrinsic::eh_exception);
-    for (Module::iterator func = module->begin(); func != module->end();
-         ++func
+    for (Module::iterator funcIter = module->begin(); funcIter != module->end();
+         ++funcIter
          )
-        for (Function::iterator block = func->begin(); block != func->end();
+        for (Function::iterator block = funcIter->begin();
+             block != funcIter->end();
              ++block
              )
             for (BasicBlock::iterator inst = block->begin();
@@ -323,6 +342,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     }
 
     doRunOrDump(context);
+    if (rootBuilder->options->cacheMode)
+        cacheModule(context, moduleDef);
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -468,21 +489,5 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     }
 
     return bmod;
-
-}
-
-void LLVMJitBuilder::cacheModule(model::Context &context,
-                                 model::ModuleDefPtr mod) {
-
-    // encode main function location in bitcode metadata
-    vector<Value *> dList;
-    NamedMDNode *node;
-
-    node = module->getOrInsertNamedMetadata("crack_entry_func");
-    dList.push_back(func);
-    node->addOperand(MDNode::get(getGlobalContext(), dList));
-
-    Cacher c(context, options.get(), BModuleDefPtr::rcast(mod));
-    c.saveToCache();
 
 }

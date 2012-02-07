@@ -211,9 +211,6 @@ class Context : public spug::RCBase {
                                        ModuleDef *owner = 0
                                        );
 
-        // cache a module
-        void cacheModule(ModuleDefPtr mod);
-
         /** 
          * Get or create a string constant.  This can be either a
          * "StaticString(StrConst, uint size)" expression if StaticString is 

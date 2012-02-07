@@ -10,7 +10,8 @@ using namespace builder::mvll;
 
 BStrConst::BStrConst(TypeDef *type, const std::string &val) :
         StrConst(type, val),
-        rep(0) {
+        rep(0),
+        module(0) {
 }
     
 BIntConst::BIntConst(BTypeDef *type, int64_t val) :

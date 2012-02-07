@@ -11,6 +11,7 @@
 
 namespace llvm {
     class Value;
+    class Module;
 }
 
 namespace model {
@@ -28,6 +29,7 @@ class BStrConst : public model::StrConst {
 public:
     // XXX need more specific type?
     llvm::Value *rep;
+    llvm::Module *module;
     BStrConst(model::TypeDef *type, const std::string &val);
 };
     

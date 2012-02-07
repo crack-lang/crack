@@ -34,7 +34,7 @@ class TypeDef : public VarDef, public Namespace {
 
     protected:
         TypeDef *findSpecialization(TypeVecObj *types);
-        std::string getSpecializedName(TypeVecObj *types);
+        std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
 
     public:

@@ -36,6 +36,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void setupCleanup(BModuleDef *moduleDef);
 
+        void cacheModule(model::Context &context, model::ModuleDef *moduleDef);
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
@@ -97,9 +98,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                                               const std::string &path,
                                               model::ModuleDef *owner
                                               );
-
-        virtual void cacheModule(model::Context &context, model::ModuleDefPtr mod);
-
 };
 
 } } // namespace

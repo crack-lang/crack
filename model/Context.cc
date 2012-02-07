@@ -217,10 +217,6 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName,
     return result;
 }
 
-void Context::cacheModule(ModuleDefPtr mod) {
-    builder.cacheModule(*this, mod);
-}
-
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {
     
     // look up the raw string constant

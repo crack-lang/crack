@@ -88,6 +88,13 @@ class Construct : public spug::RCBase {
 
         // hook into the runtime module's uncaught exception function.        
         bool (*uncaughtExceptionFunc)();
+        
+        // TODO: refactor this out of Namespace
+        typedef std::map<std::string, VarDefPtr> VarDefMap;
+        
+        // A global mapping of definitions stored by their canonical names.  
+        // Use of the registry is optional.  It currently facilitates caching.
+        VarDefMap registry;
 
     public: // XXX should be private
         // if non-null, this is the alternate construct used for annotations.  
@@ -255,6 +262,15 @@ class Construct : public spug::RCBase {
                                    );
 
         /**
+         * Try to load the module from the cache (if caching is enabled and 
+         * the module is cached).  Returns the module if it was loaded, null 
+         * if not.
+         */
+        ModuleDefPtr loadFromCache(const std::string &canonicalName,
+                                   const std::string &path
+                                   );
+
+        /**
          * Load the named module and returns it.  Returns null if the module 
          * could not be found, raises an exception if there were errors 
          * parsing the module.
@@ -295,6 +311,20 @@ class Construct : public spug::RCBase {
          * Returns the current builder.
          */        
         builder::Builder &getCurBuilder();
+        
+        /**
+         * Register the definition in the global registry, storing it by its 
+         * canonical name.  You must be able to call getFullName() on def to 
+         * retrieve the canonical name, which generally means that the 
+         * definition must have an owner.
+         */
+        void registerDef(VarDef *def);
+        
+        /**
+         * Returns the definition registered with registerDef(), or null if 
+         * no definition with the name was ever registered.
+         */
+        VarDefPtr getRegisteredDef(const std::string &canonicalName);
 };
 
 } // namespace model

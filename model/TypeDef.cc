@@ -690,10 +690,10 @@ void TypeDef::addDestructorCleanups(Context &context) {
     initializersEmitted = true;
 }
 
-string TypeDef::getSpecializedName(TypeVecObj *types) {
+string TypeDef::getSpecializedName(TypeVecObj *types, bool fullName) {
     // construct the module name from the class name plus type parameters
     ostringstream tmp;
-    tmp << getFullName() << '[';
+    tmp << (fullName ? getFullName() : name) << '[';
     int last = types->size()-1;
     for (int i = 0; i <= last; ++i) {
         tmp << (*types)[i]->getFullName();
@@ -713,81 +713,121 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     TypeDef *result = findSpecialization(types);
     if (result)
         return result;
-
+    
     // construct the module name from the class name plus type parameters
-    string moduleName = getSpecializedName(types);
+    string moduleName = getSpecializedName(types, true);
+    string newTypeName = getSpecializedName(types, false);
+    string modulePath = genericInfo->ns->getRealModule()->path + ".gen/" +
+                        newTypeName;
+    
+    // the name that the specialization will be stored as in the 
+    // specialization module.  This varies depending on whether we are 
+    // building the specialization or loading from the precompiled module cache.
+    string nameInModule;
 
-    // make sure we've got the right number of arguments
-    if (types->size() != genericInfo->parms.size())
-        context.error(SPUG_FSTR("incorrect number of arguments for generic " <<
-                                moduleName << ".  Expected " <<
-                                genericInfo->parms.size() << " got " <<
-                                types->size()
-                                )
-                      );
-    
-    // create an ephemeral module for the new class
-    Context *rootContext = context.construct->rootContext.get();
-    NamespacePtr compileNS =
-        new GlobalNamespace(rootContext->compileNS.get(),
-                            moduleName
-                            );
-    BuilderPtr moduleBuilder = 
-        context.construct->rootBuilder->createChildBuilder();
-    ContextPtr modContext =
-        new Context(*moduleBuilder, Context::module, rootContext,
-                    new GlobalNamespace(rootContext->ns.get(),
-                                        moduleName
-                                        )
-                    );
-    modContext->toplevel = true;
-    
-    // create the new module with the current module as the owner.        
-    ModuleDef *currentModule = 
-        ModuleDefPtr::rcast(context.getModuleContext()->ns);
-    ModuleDefPtr module = modContext->createModule(moduleName, "", currentModule);
-    
-    // XXX this is confusing: there's a "owner" that's part of some kinds of 
-    // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
-    // here so that we can accept protected variables from the original 
-    // module's context
-    module->setOwner(genericInfo->ns->getRealModule().get());
-    
-    // alias all global symbols in the original module and original compile 
-    // namespace.
-    modContext->ns->aliasAll(genericInfo->ns.get());
-    modContext->compileNS->aliasAll(genericInfo->compileNS.get());
-    
-    // alias the template arguments to their parameter names
-    for (int i = 0; i < types->size(); ++i)
-        modContext->ns->addAlias(genericInfo->parms[i]->name, (*types)[i].get());
-    
-    istringstream fakeInput;
-    Toker toker(fakeInput, moduleName.c_str());
-    genericInfo->replay(toker);
-    toker.putBack(Token(Token::ident, name, Location()));
-    toker.putBack(Token(Token::classKw, "class", Location()));
-    if (abstract)
-        modContext->nextClassFlags =
-            static_cast<Flags>(model::TypeDef::explicitFlags |
-                               model::TypeDef::abstractClass
-                               );
+    // check the precompiled module cache
+    ModuleDefPtr module =
+        context.construct->loadFromCache(moduleName, modulePath);
 
-    modContext->pushErrorContext(SPUG_FSTR("in generic instantiation at " <<
-                                           context.getLocation()
-                                           )
-                                 );
-    Parser parser(toker, modContext.get());
-    parser.parse();
-    module->close(*modContext);
-    modContext->popErrorContext();
+    if (!module) {
 
-    // cache the module    
-    context.construct->registerModule(module.get());
+        // make sure we've got the right number of arguments
+        if (types->size() != genericInfo->parms.size())
+            context.error(SPUG_FSTR("incorrect number of arguments for "
+                                    "generic " << moduleName << 
+                                    ".  Expected " <<
+                                    genericInfo->parms.size() << " got " <<
+                                    types->size()
+                                    )
+                        );
+        
+        // create an ephemeral module for the new class
+        Context *rootContext = context.construct->rootContext.get();
+        NamespacePtr compileNS =
+            new GlobalNamespace(rootContext->compileNS.get(),
+                                moduleName
+                                );
+        BuilderPtr moduleBuilder = 
+            context.construct->rootBuilder->createChildBuilder();
+        ContextPtr modContext =
+            new Context(*moduleBuilder, Context::module, rootContext,
+                        new GlobalNamespace(rootContext->ns.get(),
+                                            moduleName
+                                            )
+                        );
+        modContext->toplevel = true;
+        
+        // create the new module with the current module as the owner.  Use 
+        // the newTypeName instead of moduleName, the name will be 
+        // canonicalized by its owner.    
+        ModuleDef *currentModule = 
+            ModuleDefPtr::rcast(context.getModuleContext()->ns);
+        module = modContext->createModule(newTypeName, "", currentModule);
+        
+        // XXX this is confusing: there's a "owner" that's part of some kinds of 
+        // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
+        // here so that we can accept protected variables from the original 
+        // module's context
+        module->setOwner(genericInfo->ns->getRealModule().get());
+        
+        // alias all global symbols in the original module and original compile 
+        // namespace.
+        modContext->ns->aliasAll(genericInfo->ns.get());
+        modContext->compileNS->aliasAll(genericInfo->compileNS.get());
+        
+        // alias the template arguments to their parameter names
+        for (int i = 0; i < types->size(); ++i)
+            modContext->ns->addAlias(genericInfo->parms[i]->name, (*types)[i].get());
+        
+        istringstream fakeInput;
+        Toker toker(fakeInput, moduleName.c_str());
+        genericInfo->replay(toker);
+        toker.putBack(Token(Token::ident, name, Location()));
+        toker.putBack(Token(Token::classKw, "class", Location()));
+        if (abstract)
+            modContext->nextClassFlags =
+                static_cast<Flags>(model::TypeDef::explicitFlags |
+                                   model::TypeDef::abstractClass
+                                   );
     
+        Location instantiationLoc = context.getLocation();
+        if (instantiationLoc)
+            modContext->pushErrorContext(SPUG_FSTR("in generic instantiation "
+                                                   "at " << instantiationLoc
+                                                   )
+                                         );
+        else
+            // XXX I think we should never get here now that we're 
+            // materializing generic modules.
+            modContext->pushErrorContext(SPUG_FSTR("In generic instantiation "
+                                                   "from compiled module "
+                                                   "(this  should never "
+                                                   "happen!)"
+                                                   )
+                                         );
+        Parser parser(toker, modContext.get());
+        parser.parse();
+
+        // set the source name (this isn't the real source name, it's used for 
+        // construction of the cache)
+        module->path = modulePath;
+    
+        module->close(*modContext);
+        modContext->popErrorContext();
+
+        // store the module in the in-memory cache
+        context.construct->registerModule(module.get());
+
+        nameInModule = name;
+    } else {
+        nameInModule = newTypeName;
+    }
+
+    // 
     // extract the type out of the newly created module and store it in the 
     // specializations cache
-    result = TypeDefPtr::rcast(module->lookUp(name));
+    result = TypeDefPtr::rcast(module->lookUp(nameInModule));
+    result->name = newTypeName;
     assert(result);
     (*generic)[types] = result;
     
