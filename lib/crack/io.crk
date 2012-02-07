@@ -2,12 +2,12 @@
 # Basic input/output classes.
 
 import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
-    ManagedBuffer, Writer, Formatter;
+    ManagedBuffer, Writer, Exception, Formatter;
 import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
-    read, setNonBlocking;
+    read, c_strerror, setNonBlocking;
 
-# we need Writer to be in crack.lang, but it belongs here.
-@export_symbols Writer;
+# we need Writer and Formatter to be in crack.lang, but they belongs here.
+@export_symbols Writer, Formatter;
 
 ## Wraps a file handle and provides methods common to all file handles.
 class FileHandle : Object {
@@ -97,7 +97,10 @@ class FDReader : FileHandle, Reader {
 
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
-        return uint(read(fd, buf.buffer, buf.size));
+        int rc = read(fd, buf.buffer, buf.size);
+        if (rc == -1)
+            throw Exception(String(c_strerror()));
+        return rc;
     }
 
     Object _iface_getReaderObject() { return this; }
@@ -398,3 +401,4 @@ class FStr : StringFormatter {
         return result;
     }
 }
+
