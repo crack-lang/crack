@@ -8,6 +8,7 @@ import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, Formatter;
+import crack.lang SystemError;
 import crack.io.readers FullReader;
 @import crack.ann define;
 
@@ -20,18 +21,6 @@ class NoEntryError : Exception {
 ## request operation.
 class AccessDeniedError : Exception {
     oper init(String text) : Exception(text) {}
-}
-
-## This gets thrown when there was an operating system error that doesn't
-## cleanly map to a Crack exception.  Try to reserve throwing this for that
-## case, because processing this error will be platform dependent.
-class SystemError : Exception {
-    int __errno;
-
-    oper init(String context, int _errno) :
-        Exception(FStr() `$context: $(strerror())`),
-        __errno = _errno {
-    }
 }
 
 class Path;
@@ -204,16 +193,14 @@ class RealPath : Path {
     Reader reader() {
         fd := open(__path.buffer, O_RDONLY, 0);
         if (fd == -1)
-            throw SystemError('Opening ' + __path, errno());
+            throw SystemError('Opening ' + __path);
         return OwningFDReader(fd);
     }
 
     Writer writer() {
         fd := open(__path.buffer, O_CREAT | O_WRONLY, 0777);
         if (fd == -1)
-            throw SystemError(FStr() `opening $__path: $(strerror())`,
-                              errno()
-                              );
+            throw SystemError(FStr() `opening $__path`);
         return OwningFDWriter(fd);
     }
 
@@ -223,9 +210,7 @@ class RealPath : Path {
 
     void delete() {
         if (fileRemove(__path.buffer))
-            throw SystemError(FStr() `Removing $__path: $(strerror())`,
-                              errno()
-                              );
+            throw SystemError(FStr() `Removing $__path`);
     }
 
 
@@ -238,9 +223,7 @@ class RealPath : Path {
         result := uint64(st.st_size);
         free(st);
         if (rc)
-            throw SystemError(FStr() `stating $__path: $(strerror())`,
-                              errno()
-                              );
+            throw SystemError(FStr() `stating $__path`);
         return result;
     }
 

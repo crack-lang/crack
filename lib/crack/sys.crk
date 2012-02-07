@@ -2,15 +2,12 @@
 ## Copyright 2010 Google Inc.
 
 import crack.lang IndexError, InvalidResourceError, CString, 
-                   InvalidArgumentError, Exception;
+    InvalidArgumentError, SystemError;
 import crack.io FStr, cout;
-import crack.runtime c_strerror, exit, get_environ, putenv, getenv, setenv, unsetenv, 
-    errno, EINVAL, ENOMEM;
+import crack.runtime c_strerror, errno, exit, get_environ, putenv, getenv, 
+    setenv, unsetenv, EINVAL, ENOMEM;
 import crack.strutil StringArray;
 import crack.cont.hashmap HashMap;
-
-## Returns the last error string recorded at the C library level.
-String strerror() { return String(c_strerror()); }
 
 StringArray _createArgv() {
     v := __getArgv();
@@ -83,7 +80,9 @@ string $(e[i])\n`);
       if (err == EINVAL)
          throw InvalidArgumentError(FStr() `Invalid key/value pair $key,$val`);
       else if (err == ENOMEM)
-         throw Exception('Insufficient memory to add a new variable to the environment');
+         throw SystemError('Insufficient memory to add a new variable to the '
+                           'environment'
+                           );
 
       newval := getenv(ckey.buffer);
       return _setptr(key, newval);
@@ -108,6 +107,9 @@ string $(e[i])\n`);
       return HashMap[String, String].get(key);
    }
 }
+
+## Returns the last error string recorded at the C library level.
+String strerror() { return String(c_strerror()); }
 
 ## The "argv" variable.
 argv := _createArgv();

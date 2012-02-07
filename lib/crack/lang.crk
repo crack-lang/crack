@@ -1,9 +1,9 @@
 # Copyright 2010 Google Inc.
 
-import crack.runtime abort, free, getLocation, strcpy, strlen, malloc, 
-    memcpy, memset, memcmp, memmove, registerHook, write, BAD_CAST_FUNC, 
-    EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, EXCEPTION_RELEASE_FUNC, 
-    EXCEPTION_UNCAUGHT_FUNC, printuint64;
+import crack.runtime abort, c_strerror, errno, free, getLocation, strcpy, 
+    strlen, malloc, memcpy, memset, memcmp, memmove, registerHook, write, 
+    BAD_CAST_FUNC, EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, 
+    EXCEPTION_RELEASE_FUNC, EXCEPTION_UNCAUGHT_FUNC, printuint64;
 @import crack._poormac define;
 
 const bool true = (1 == 1), false = (1 == 0);
@@ -1049,6 +1049,33 @@ void _throwIndexError(byteptr text) {
 
 ## Raised when an invalid key is passed to a function in a key-value interface.
 @except KeyError
+
+## This gets thrown when there was an operating system error that doesn't
+## cleanly map to a Crack exception.  Try to reserve throwing this for that
+## case, because processing this error will be platform dependent.
+class SystemError : Exception {
+    int __errno;
+
+    String __makeMessage(String context) {
+        AppendBuffer buf = {context.size + 40};
+        buf.extend(context);
+        buf.extend(': ', 2);
+        byteptr error = c_strerror();
+        buf.extend(error, strlen(error));
+        return String(buf, true);
+    }
+
+    oper init(String context, int _errno) :
+        Exception(__makeMessage(context)),
+        __errno = _errno {
+    }
+    
+    oper init(String context) :
+        Exception(__makeMessage(context)),
+        __errno = errno() {
+    }
+
+}
 
 # misc functions
 
