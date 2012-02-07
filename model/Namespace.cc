@@ -55,6 +55,24 @@ void Namespace::removeDef(VarDef *def) {
     VarDefMap::iterator iter = defs.find(def->name);
     assert(iter != defs.end());
     defs.erase(iter);
+
+    // remove it from the ordered defs
+    for (VarDefVec::iterator iter = ordered.begin();
+         iter != ordered.end();
+         ++iter
+         ) {
+        ordered.erase(iter);
+        break;
+    }
+    
+    // remove it from the ordered for cache defs
+    for (VarDefVec::iterator iter = orderedForCache.begin();
+         iter != orderedForCache.end();
+         ++iter
+         ) {
+        orderedForCache.erase(iter);
+        break;
+    }
 }
 
 void Namespace::addAlias(VarDef *def) {
