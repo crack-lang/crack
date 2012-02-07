@@ -200,18 +200,9 @@ crack_LDADD = libCrackLang.la $(LDFLAGS)
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
-doc/Manual.html: doc/Manual.nml doc/Manual.template
-	@if which nml2html >/dev/null; then \
-	   if test -e "$@" -a ! -w $@; then \
-	       echo "Not generating $@: access denied."; \
-	   else \
-               echo generating $@; \
-               nml2html -t doc/Manual.template doc/Manual.nml; \
-           fi; \
-	else \
-	   echo "To regenerate the manual, you need the nml2html tool and "; \
-	   echo "the spug libraries."; \
-	fi
+doc/Manual.html: doc/Manual.nml doc/Manual.template crack
+	./crack -l lib $(srcdir)/tools/nml2html.crk -t doc/Manual.template \
+	   doc/Manual.nml
 
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)

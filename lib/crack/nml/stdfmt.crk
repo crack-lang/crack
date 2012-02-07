@@ -1,0 +1,140 @@
+## Standard formatter containing utility functionality needed by all 
+## text-oriented formatters.
+## Copyright 2011, Google Inc.
+
+import crack.io cerr;  # XXX DEBUG
+import crack.ascii isSpace;
+import crack.regex Regex;
+
+const _WSRX := Regex(r'\s+');
+
+## Contains utilities useful to all formatters.
+@abstract class StdFormatter {
+
+    String buf = '';
+    int maxLineWidth = 80;
+    bool __atLineStart = true;
+
+    oper init() {}
+
+    ## Must be implemented by subclass.  Writes the raw data to the final
+    ## consumer.
+    @abstract void _commit(String data);
+
+    ## Derived classes may overload this to implement their own indentation.
+    String _makeLine(String line) {
+        return line;
+    }
+
+    ## Flushes up to and including position /pos/ in the buffer.
+    void _flush(int pos) {
+        line := buf.slice(0, pos);
+        __atLineStart = line == '\n';
+        ++pos;
+        _commit(line);
+        buf = _makeLine(buf.slice(pos));
+    }
+
+    ## Used by the formatting functions to write information to the
+    ## buffered output stream.  The output will be buffered unless it
+    ## contains a newline, in which case the buffer will be committed up
+    ## to the last newline.
+    void _write(String str) {
+
+        buf += str;
+
+        # if the buffer now contains a newline, flush up to the newline
+        lastNewline := buf.rfind('\n');
+        if (lastNewline >= 0)
+            _flush(lastNewline);
+    }
+
+    ## Returns true if the given line is too long to fit on the
+    ## rendering destination.
+    ##
+    ## By default, this compares the length of the line to *maxLineWidth*.
+    ## derived classes should override this to implement layout rules that
+    ## take into account things like font size.
+    bool _tooLong(String line) {
+        return line.size > maxLineWidth;
+    }
+
+    ## Called when the receiver's buffer exceeds the maximum line length.
+    ## Flushes the receiver up to the point of the last whitespace region
+    ## under the maximum line length.
+    ## 
+    ## If the buffer has no whitspace zone below the maximum line space,
+    ## flushes up to the first white space.
+    void _reduce() {
+
+        # find the first whitespace
+        nextWS := _WSRX.search(buf);
+      
+        # if the first whitespace is beyond the maximum line width, truncate
+        # at the first whitespace
+        if (!nextWS) {
+            _commit(buf);
+            buf = _makeLine('');
+            return;
+        } else if (nextWS.begin() > maxLineWidth) {
+            # write and truncate the first part of the buffer
+            _commit(buf.slice(0, nextWS.begin()) + '\n');
+            buf = _makeLine(buf.slice(nextWS.end()));
+            return;
+        }
+         
+        while (true) {
+            lastWS := nextWS;
+            nextWS = _WSRX.search(buf, lastWS.end());
+            if (!nextWS || nextWS.begin() > maxLineWidth) {
+                # write and truncate the first part of the buffer
+                _commit(buf.slice(0, lastWS.begin()) + '\n');
+                buf = _makeLine(buf.substr(lastWS.end()));
+                return;
+            }
+        }
+    }
+
+    ## Used to indicate that white space is needed between the previous
+    ## written object and the next one.  This function will add the
+    ## appropriate amount of whitespace (possibly none) depending on the
+    ## state of the buffer.
+    ##
+    ## If the buffer exceeds the maximum line width (/maxLineWidth/), part of
+    ## it will be committed using @_reduce().
+    void _writeSpace() {
+        # if there is a non-whitespace character at the end of the string,
+        # add whitespace to it.
+        if (buf && !isSpace(buf[-1]))
+            buf += ' ';
+        
+
+        # if we have exceeded our boundaries, flush part of the buffer.
+        if (_tooLong(buf))
+            _reduce();
+    }
+
+    ## Returns true if we are currently at the beginning of a line (if the
+    ## last thing written was a newline or nothing has been written)
+    bool _atLineStart() {
+        return __atLineStart && !buf || buf[-1] == b'\n';
+    }
+
+    ## Writes a newline if we are not already at the beginning of a line.
+    void _startLine() {
+        if (!_atLineStart())
+            _write('\n');
+    }
+
+    ## Returns true if the current line is empty (consists entirely of
+    ## whitespace).
+    bool _curIsEmpty() {
+        return isSpace(buf);
+    }
+
+    ## Closes the formatting of the block, committing the contents of the
+    ## buffer.
+    void close() {
+        _commit(buf);
+    }
+}

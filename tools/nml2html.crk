@@ -1,0 +1,36 @@
+## Generates an HTML page from an NML file
+## Copyright 2012 Google Inc.
+
+import crack.io cout;
+import crack.strutil StringArray;
+import crack.sys argv;
+import crack.fs makePath;
+import crack.cmdline CmdOptions, Option, CMD_STR;
+import crack.nml.parse DocParser;
+import crack.nml.html HTMLFormatter;
+
+CmdOptions opts = [Option('template', 't', 'Template file', '', CMD_STR)];
+srcFiles := opts.parse(argv);
+template := opts.getString('template');
+
+bool gotFiles;
+for (arg :in srcFiles.subarray(1)) {
+    src := makePath(arg);
+    parser := DocParser(src.makeFullReader(), arg);
+    doc := parser.parseDoc();
+    
+    // get the destination file name
+    String outFilename;
+    if (arg.slice(-4) == '.nml')
+        outFilename = arg.slice(0, -4) + '.html';
+    else
+        outFilename = arg + '.html';
+    
+    formatter := HTMLFormatter(makePath(outFilename).writer());
+    if (template) {
+        template := makePath(template).makeFullReader();
+        formatter.expandTemplate(template, doc);
+    } else {
+        formatter.formatAll(doc);
+    }
+}

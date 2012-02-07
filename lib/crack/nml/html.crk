@@ -1,0 +1,573 @@
+
+import crack.ascii isDigit, parseInt, strip, toLower;
+import crack.cont.array Array;
+import crack.io cout, Formatter, FStr, StringFormatter, StringWriter, Writer;
+import crack.io.readers FullReader;
+import crack.lang AssertionError;
+import crack.regex Match, Regex;
+import crack.nml.block getHeader, TextBlock;
+import crack.nml.stdfmt StdFormatter;
+
+# regular expressions for substitution of HTML characters that need to
+# be escaped
+_specialrx := Regex(r'[<>&]');
+_headerRx := Regex(r'\d+');
+
+void _encodeSubst(Match mx, Writer out) {
+    if (mx.group() == '<')
+        out.write('&lt;');
+    else if (mx.group() == '>')
+        out.write('&gt;');
+    else if (mx.group() == '&')
+        out.write('&amp;');
+}
+
+## Utility method to encode text as HTML (escaping the appropriate
+## characters).  Returns the HTML encoded representation of /text/.
+String encode(String text) {
+    return _specialrx.subst(text, _encodeSubst);
+}
+
+## Convert a header to a form suitable for use as an anchor.
+void headerToAnchor(Formatter out, Array[Object] words) {
+    bool first = true;
+    for (word :in words) {
+        if (!first)
+            out.write('_');
+        else
+            first = false;
+
+        if (word.isa(String))
+            toLower(String.cast(word)).writeTo(out);
+        else
+            headerToAnchor(out, TextBlock.cast(word).words);
+    }
+}
+        
+String headerToAnchor(Array[Object] words) {
+    StringFormatter out = {};
+    headerToAnchor(out, words);
+    return out.createString();
+}
+
+const int _NEWLINE = 0,
+          _PUNCT = 1,
+          _WORD = 2,
+          _PERIOD = 3;
+
+const Regex _PUNCT_RX = Regex(r'.*[^\w\.]$'),
+            _WORD_RX = Regex(r'\w+'),
+            _PERIOD_RX = Regex(r'.*\.');
+   
+# used to define the maximum line width for the output.
+const int _MAX_LINE_WIDTH = 79;
+
+class HTMLFormatter : StdFormatter {
+    
+    Writer __out;
+    int __last;
+    
+    oper init(Writer out) : __out = out, __last = _NEWLINE {}
+
+    class TagPair {
+        String start, end;
+        oper init(String start, String end) : start = start, end = end {}
+    }
+    
+    ## Returns a tuple of the leading and trailing tags for the given type.
+    @static TagPair _getTags(String type) {
+        if (type == 'para')
+            return TagPair('\n<P>', '');
+        else if (type == 'underline')
+            return TagPair('<U>', '</U>');
+        else if (type == 'italic')
+            return TagPair('<I>', '</I>');
+        else if (type == 'bold')
+            return TagPair('<B>', '</B>');
+        else if (type == 'tele')
+            return TagPair('<TT>', '</TT>');
+        else if (type == 'definitionList')
+            return TagPair('\n<DL>', '\n</DL>\n');
+        else if (type == 'definitionItem')
+            return TagPair('<DT>', '');
+        else if (type == 'prelit' || type == 'pre')
+            return TagPair('\n<PRE>\n', '</PRE>');
+        else if (type == 'table')
+            return TagPair('\n<TABLE border="1">', '</TABLE>\n');
+        else if (type == 'row')
+            return TagPair('\n<TR>', '</TR>');
+        else if (type == 'col')
+            return TagPair('<TD>', '</TD>');
+        else
+            return TagPair('', '');
+    }
+
+    ## Converts '>', '<' and '&' to HTML escape sequences.
+    @static String _fix(String val) {
+        return encode(val);
+    }
+
+    ## Fixes a reference.  Used to transform the first element of a "ref"
+    ## block or "img" block.  Default is to convert it to a string, derived
+    ## classes may override to provide more sophisticated referencing
+    ## behavior.
+    ## 
+    ## parms:
+    ##  ref: Should be a String or TextBlock
+    @static String _fixRef(Object ref) {
+        
+        if (ref.isa(String)) {
+            return String.cast(ref);
+        } else {
+            block := TextBlock.cast(ref);
+            StringWriter tmp = {};
+            block.flattenTo(tmp);
+            return tmp.createString();
+        }
+    }
+
+    ## Implements StdFormatter._commit(), writing the data to the output file.
+    void _commit(String data) {
+        __out.write(data);
+    }
+
+    void format(Object block_or_text);
+
+    ## Writes a list of words and subblocks.
+    void _writeWords(Array[Object] blocks) {
+
+        # the /needSpace/ variable is used to indicate to the next cycle
+        # through the following for loop that the previous object needed
+        # to be followed by whitespace.
+        bool needSpace;
+      
+        for (cur :in blocks) {
+            if (cur.isa(String)) {
+                # if we need some whitespace, write it.  Otherwise indicate 
+                # that we need some space next time.
+                if (needSpace)
+                    _writeSpace();
+                else
+                    needSpace = true;
+                
+                _write(_fix(String.cast(cur)));
+            } else {
+                format(TextBlock.cast(cur));
+                needSpace = false;
+            }
+        }
+    }
+
+    ## Formats the block as its HTML equivalent.
+    void format(Object block_or_text) {
+        if (block_or_text.isa(String)) {
+            _write(String.cast(block_or_text));
+            return;
+        }
+        
+        TextBlock block = TextBlock.cast(block_or_text);
+        if (!block.tightLeft)
+            _writeSpace();
+
+        if (block.type == 'definitionItem') {
+            if (block.words.count() != 2)
+                throw AssertionError(FStr() `Definition item does not have \
+two words: $(block)\n`);
+            _write("<DT>");
+            format(block.words[0]);
+            _write('\n<DD>');
+            format(block.words[1]);
+            _write('<P>\n');
+        } else if (block.type == 'unorderedList') {
+            _write('\n<UL>\n');
+            for (x :in block.words) {
+                _write('\n<LI>');
+                format(x);
+            }
+            _write('\n</UL>\n');
+        } else if (block.type == 'ref') {
+            _write('<A HREF="' + _fixRef(block.words[0]) + '">');
+            _writeWords(block.words.subarray(1));
+            _write('</A>');
+        } else if (block.type == 'img') {
+            _write('<IMG SRC="' + _fixRef(block.words[0]) + '">');
+        } else if (block.type == 'n') {
+            _write('<BR>\n');
+        } else if (block.type.size == 1 && isDigit(block.type[0])) {
+            _write('\n<A NAME="');
+            _write(headerToAnchor(block.words));
+            _write('">');
+            _write('\n<H' + block.type + '>');
+            _writeWords(block.words);
+            _write('</H' + block.type + '></A>\n');
+        } else if (block.type == 'X') {
+            # XXX should be a lot more flexible
+            _write('<A HREF="#');
+            _write(headerToAnchor(block.words));
+            _write('">');
+            _writeWords(block.words);
+            _write('</A>');
+        } else if (block.type == 'C') {
+            _write('\n<!--');
+            _writeWords(block.words);
+            _write('-->\n');
+        } else if (block.type == 'doc' || block.type == 'text') {
+	   _writeWords(block.words)
+        } else {
+            pair := _getTags(block.type);
+            _write(pair.start);
+            _writeWords(block.words);
+            _write(pair.end);
+        }
+      
+        if (!block.tightRight)
+            _writeSpace();
+    }
+
+    String __makeIndent(int level) {
+        StringWriter indentStr = {2 * level};
+        for (int i = 0; i < level; ++i)
+            indentStr.write('  ');
+        return indentStr.string();
+    }
+
+    void __emitHeaders(Array[Object] headerList, int level) {
+        # if the list is empty, we do nothing
+        if (headerList) {
+            indent := __makeIndent(level);
+            baseIndent := __makeIndent(level - 1);
+            _write('\n');
+            _write(baseIndent);
+            _write('<OL>');
+    
+            for (item :in headerList) {
+                if (item.isa(Array[Object])) {
+                    __emitHeaders(Array[Object].cast(item), level + 1);
+                } else {
+                    tb := TextBlock.cast(item);
+                    _write('\n');
+                    _write(indent);
+                    _write('<LI><A HREF="#');
+                    _write(headerToAnchor(tb.words));
+                    _write('">');
+                    _writeWords(tb.words);
+                    _write('</A>');
+                }
+            }
+            
+            _write('\n');
+            _write(baseIndent);
+            _write('</OL>');
+        }
+    }
+               
+    void generateIndex(Array[Object] words) {
+
+        level := 1;
+        Array[Object] curList = {};
+        Array[Array[Object]] stack = [curList];
+
+        # generate the headers as a recursive list
+        int headerLevel;
+        for (block :in words) {
+            if (block.isa(TextBlock) &&
+                _headerRx.match( (tb := TextBlock.cast(block)).type )
+                ) {
+                headerLevel = parseInt(tb.type);
+            
+                # for a greater header level, insert a new list
+                while (headerLevel > level) {
+                    parent := curList;
+                    curList = Array[Object]![];
+                    stack.append(curList);
+                    parent.append(curList);
+                    ++level;
+                }
+            
+                # for a lesser header level, pop to that level
+                while (headerLevel < level) {
+                    stack.pop();
+                    --level;
+                    curList = stack[-1];
+                }
+    
+                curList.append(block);
+            }
+        }
+      
+        # now emit them
+        __emitHeaders(stack[0], 1);
+    }
+
+    ## Formats /text/ (an NML @TextBlock) as a complete HTML document.
+    void formatAll(TextBlock text) {
+        __out.write('<HTML>');
+ 
+        # see if we there's a title, write it if there is
+        header := getHeader(text);
+        if (header) {
+            __out.write('<HEAD><TITLE>');
+            __out.write(encode(header));
+            __out.write('</TITLE></HEAD>\n');
+        }
+	
+        # generate an index
+        generateIndex(text.words);
+
+        __out.write('<BODY>');
+        format(text);
+        close();
+        __out.write('</BODY></HTML>');
+    }
+    
+    void expandTemplate(FullReader src, TextBlock block) {
+        for (line :in src) {
+            line = strip(line);
+            if (line == '&expand') {
+                format(block);
+            } else if (line == '&title') {
+                header := getHeader(block);
+                if (header) {
+                    __out.write(encode(header));
+                    __out.write('\n');
+                }
+            } else if (line == '&toc') {
+                generateIndex(block.words);
+            } else {
+                __out.write(line);
+            }
+        }
+    }
+}
+
+/*
+ 
+class HTMLFormatter(StdFormatter):
+   """
+      An HTML Formatter formats TextBlock objects into HTML.
+   """
+   
+   # states of the last word written (used to determine how much whitespace
+   # to put before the next word.
+   newline = 0
+   punct = 1
+   word = 2
+   period = 3
+   
+   # regular expressions for determining if the current word matches
+   # one of the above states
+   punctrx = re.compile(r'.*[^\w\.]$')
+   wordrx = re.compile(r'\w+')
+   periodrx = re.compile(r'.*\.')
+   
+   # used to define the maximum line width for the output.
+   maxLineWidth = 79
+   
+   def __init__(self, out):
+      """
+         Constructs an HTML formatted from an output stream.
+      """
+      StdFormatter.__init__(self)
+      self.out = out
+      self.last = HTMLFormatter.newline
+
+   def _getTags(self, type):
+      """
+         Returns a tuple of the leading and trailing tags for the given type.
+      """
+      if type == 'para':
+         return '\n<P>', ''
+      elif type == 'underline':
+         return '<U>', '</U>'
+      elif type == 'italic':
+         return '<I>', '</I>'
+      elif type == 'bold':
+         return '<B>', '</B>'
+      elif type == 'tele':
+         return '<TT>', '</TT>'
+      elif type == 'definitionList':
+         return '\n<DL>', '\n</DL>\n'
+      elif type == 'definitionItem':
+         return '<DT>', ''
+      elif type == 'prelit' or type == 'pre':
+         return '\n<PRE>\n', '</PRE>'
+      elif type == 'table':
+         return '\n<TABLE border="1">', '</TABLE>\n'
+      elif type == 'row':
+         return '\n<TR>', '</TR>'
+      elif type == 'col':
+         return '<TD>', '</TD>'
+      else:
+         return '', ''
+
+   def _fix(self, val):
+      """
+         Converts '>', '<' and '&' to HTML escape sequences.
+      """
+      return encode(val)
+
+   def _fixRef(self, ref):
+      """
+	 Fixes a reference.  Used to transform the first element of a "ref"
+	 block or "img" block.  Default is to convert it to a string, derived
+	 classes may override to provide more sophisticated referencing
+	 behavior.
+
+	 parms:
+	    ref::
+	       [string or @TextBlock]
+      """
+      return str(ref)
+
+   def format(self, block):
+      """
+         Formats the block as its HTML equivalent.
+      """
+
+      if not block.tightLeft:
+         self._writeSpace()
+
+      if block.type == 'definitionItem':
+         self._write("<DT>")
+         self.format(block.words[0])
+         self._write('\n<DD>')
+         self.format(block.words[1])
+         self._write('<P>\n')
+      elif block.type == 'unorderedList':
+         self._write('\n<UL>\n')
+         for x in block.words:
+            self._write('\n<LI>')
+            self.format(x)
+         self._write('\n</UL>\n')
+      elif block.type == 'ref':
+         self._write('<A HREF="' + self._fixRef(block.words[0]) + '">')
+         self._writeWords(block.words[1:])
+         self._write('</A>')
+      elif block.type == 'img':
+         self._write('<IMG SRC="' + self._fixRef(block.words[0]) + '">')
+      elif block.type == 'n':
+         self._write('<BR>\n')
+      elif len(block.type) == 1 and block.type in string.digits:
+         self._write('\n<A NAME="')
+         self._write(headerToAnchor(block.words))
+         self._write('">')
+         self._write('\n<H' + block.type + '>')
+         self._writeWords(block.words)
+         self._write('</H' + block.type + '></A>\n')
+      elif block.type == 'X':
+         # XXX should be a lot more flexible
+         self._write('<A HREF="#')
+         self._write(string.lower(string.join(map(str, block.words), '_')))
+         self._write('">')
+         self._writeWords(block.words)
+         self._write('</A>')
+      elif block.type == 'C':
+         self._write('\n<!--')
+         self._writeWords(block.words)
+         self._write('-->\n')
+      elif block.type in ('doc', 'text'):
+	 self._writeWords(block.words)
+      else:
+         lead, trail = self._getTags(block.type)
+         self._write(lead)
+         self._writeWords(block.words)
+         self._write(trail)
+      
+      if not block.tightRight:
+         self._writeSpace()
+
+   def _writeWords(self, words):
+      """
+         Writes a list of words and subblocks.
+      """
+      # the /needSpace/ variable is used to indicate to the next cycle
+      # through the following for loop that the previous object needed
+      # to be followed by whitespace.
+      needSpace = 0
+      
+      for cur in words:
+         if type(cur) is StringType:
+         
+            # if we need some whitespace, write it.  Otherwise indicate that
+            # we need some space next time.
+            if needSpace:
+               self._writeSpace()
+            else:
+               needSpace = 1
+               
+            self._write(self._fix(cur))
+         else:
+            self.format(cur)
+            needSpace = 0
+      
+   def __emitHeaders(self, headerList, level):
+      # if the list is empty, we do nothing
+      if headerList:
+         indent = '  ' * level
+         baseIndent = ('  ' * (level - 1))
+         self._write('\n%s<OL>' % baseIndent)
+
+         for item in headerList:
+            if isinstance(item, list):
+               self.__emitHeaders(item, level + 1)
+            else:
+               self._write('\n%s<LI><A HREF="#%s">' %
+                               (indent, headerToAnchor(item.words))
+                              )
+               self._writeWords(item.words)
+               self._write('</A>')
+         
+         self._write('\n%s</OL>' % baseIndent)
+               
+   def generateIndex(self, words):
+
+      level = 1
+      headerRx = re.compile(r'\d+')
+      curList = []
+      stack = [curList]
+
+      # generate the headers as a recursive list
+      for block in words:
+         if isinstance(block, TextBlock) and headerRx.match(block.type):
+            headerLevel = int(block.type)
+            
+            # for a greater header level, insert a new list
+            while headerLevel > level:
+               parent = curList
+               curList = []
+               stack.append(curList)
+               parent.append(curList)
+               level += 1
+            
+            # for a lesser header level, pop to that level
+            while headerLevel < level:
+               stack.pop()
+               level -= 1
+               curList = stack[-1]
+
+            curList.append(block)
+      
+      # now emit them
+      self.__emitHeaders(stack[0], 1)
+
+   def formatAll(self, text):
+      """
+         Formats /text/ (an NML @TextBlock) as a complete HTML document.
+      """
+      self.out.write('<HTML>')
+ 
+      # see if we there's a title, write it if there is
+      header = getHeader(text)
+      if header:
+	 self.out.write('<HEAD><TITLE>')
+	 self.out.write(encode(header))
+	 self.out.write('</TITLE></HEAD>\n')
+	
+      # generate an index
+      self.generateIndex(text.words)
+
+      self.out.write('<BODY>')
+      self.format(text)
+      self.close()
+      self.out.write('</BODY></HTML>')
+*/

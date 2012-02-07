@@ -1,0 +1,836 @@
+# Copyright 2011 Google Inc.
+
+import crack.lang AssertionError, Exception, CString; # XXX remove CStrign
+import crack.io cout, FStr, StringFormatter, StringReader, Writer;
+import crack.io.readers LineReader;
+import crack.nml.block AnyBlockType, TextBlock, BlockType, 
+    ANY_BLOCK_TEMPLATE;
+import crack.regex escape, Match, Regex;
+import crack.process Process;
+import crack.cont.hashmap HashMap;
+import crack.strutil StringArray;
+import crack.ascii strip;
+
+special := Regex(r'(\\\\.)|_|\*|#|/');
+
+## DocParseError is thrown when an error occurs while parsing a document.
+class DocParseError : Exception {
+    String fileName;
+    int lineNum;
+    TextBlock block;
+    
+    oper init(String text, String fileName, int lineNum, TextBlock block) :
+        Exception(text),
+        fileName = fileName,
+        lineNum = lineNum,
+        block = block {
+    }
+
+    String toString() {
+        StringFormatter out = {};
+        out `$fileName:$lineNum: `;
+        if (block) {
+            if (fileName == block.sourceName)
+                out `parsing $(block.type) from line $(block.lineNumber) $text`;
+            else
+                out `parsing $(block.type) from line \
+$(block.sourceName):$(block.lineNumber) $text`;
+        }
+        
+        return out.createString();
+    }
+}
+
+## Builds and returns the regular expression that defines all start tag
+## character sequences.
+Regex _makeSpecial(HashMap[byte, BlockType] types) {
+    StringFormatter special = {};
+    for (x :in types)
+        special `$(x.val.tag)|`;
+
+    special `$(r'(\\.)')`;   
+    return Regex(special.createString());
+}
+
+bool isSpace(byte ch) {
+    return ch == b' ' || ch == b'\n' || ch == b'\r' || ch == b'\t';
+}
+
+String show(String val) {
+    cout `got $val\n`;
+    return val;
+}
+
+HashMap[byte, BlockType] _TYPES = {};
+_TYPES[b'/'] = BlockType('italic', '/', Regex('/'));
+_TYPES[b'*'] = BlockType('bold', r'\*', Regex(r'\*'));
+_TYPES[b'_'] = BlockType('underline', '_', Regex('_'));
+_TYPES[b'#'] = BlockType('tele', '#', Regex('#'));
+_TYPES[b'`'] = BlockType('literal', '`', Regex('`'));
+_TYPES[b'\\'] = AnyBlockType();
+
+_wsrx := Regex(r'^\s+');
+_definitionrx := Regex(r'.*[^\\]::\s*$');
+_unorderedrx := Regex(r'\s*-\s+');
+_prelitStartrx := Regex(r'\s*\{\{\s*$');
+_prelitEndrx := Regex(r'\s*\}\}\s*$');
+_preStartrx := Regex(r'\s*\[\[\s*$');
+_preEndrx := Regex(r'\s*\]\]\s*$');
+_blockTerminatorrx := Regex(r'^(.*[^\\]::\s*|\s*-\s+.*)$');
+_underlinerx := Regex(r'\s*(={3,}|-{3,}|\'{3,})\s*$');
+_definitiontokrx := Regex(r'.*(::\s*\n)');
+
+_special := _makeSpecial(_TYPES);
+
+# characters that are terminators that have special meaning in regular
+# expressions.
+_rxspecial := ')]}';
+
+## Returns true if 'text' is entirely whitespace
+bool allWhitespace(String text) {
+    return (m := _wsrx.match(text)) && m.begin() == 0 && m.end() == text.size;
+}
+
+class DocParser2 {
+    String buffer = '', nextLine = null;
+    String srcName;
+    LineReader src;
+    int tabSize = 8;
+    
+    ## Constructs a DocParser from the given source stream.
+    oper init(LineReader src, String srcName) : src = src, srcName = srcName {}
+    
+    
+    void parseText(TextBlock block) {
+        String curWord;
+        int wordStart;
+        for (int i; i < buffer.size; ++i) {
+            if (isSpace(buffer[i]))
+                if (wordStart < i)
+                    block.append(buffer.slice(wordStart, i));
+        }
+    }
+}
+
+## A Document parser is used to parse a TextBlock out of a stream.
+class DocParser {
+
+    String buffer = '', nextLine = null;
+    LineReader src;
+    int tabSize = 8;
+    bool debugMode = false;
+    String srcName;
+    int lineNum = 1;
+    String debugOut = '';
+    HashMap[String, Regex] terminatorRxSet = {};
+    
+
+    ## Constructs a DocParser from the given source stream.
+    oper init(LineReader src, String srcName) : src = src, srcName = srcName {}
+
+    ## If in debug mode, prints a loc followed by blk.debug() (blk is expected
+    ## to be a text block).
+    void _debug(String context, TextBlock blk) {
+        if (debugMode)
+            1;
+#            debugOut = blk.debug(debugOut);
+    }
+
+    ## Warns the user of things that could be manifestations of errors.
+    void _warn(String msg, TextBlock block) {
+        cout `Warning: line $lineNum: while parsing $(block.type) block from \
+line $lineNum: $msg\n`;
+    }
+
+    ## Pulls a line from the source stream, takes it from the /nextLine/
+    ## variable if it is not *null*.
+    String _pullLine() {
+        String line;
+        if (nextLine) {
+            line = nextLine;
+            nextLine = null;
+        } else {
+            line = src.readLine();
+            ++lineNum;
+        }
+        return line;
+    }
+
+    ## Returns the current line of the buffer, returns null if the source
+    ## stream has terminated.
+    String _getCurLine() {
+        if (!buffer)
+            buffer = _pullLine();
+         
+        return buffer;
+     }
+   
+    ## Returns the next line of the stream (following the current line).
+    String _getNextLine() {
+        if (nextLine is null) {
+            nextLine = src.readLine();
+            ++lineNum;
+        }
+        return nextLine;
+    }
+   
+    ## Like getCurLine(), but keeps reading lines until it encounters
+    ## a line devoid of whitespace or the until end of the file.
+    String _getNextFullLine() {
+        
+        # if there's nothing in the buffer, get the next line
+        if (!buffer) {
+            buffer = _pullLine();
+            if (!buffer)
+                return null;
+        }
+      
+        # keep reading until we get a line without whitespace
+        ws := _wsrx.search(buffer);
+        while (ws && ws.group() == buffer) {
+            buffer = _pullLine();
+            if (!buffer) break;
+            ws = _wsrx.search(buffer);
+        }
+      
+        return buffer;
+    }
+
+    ## 'Harvests' the entire buffer or up till the regular expression
+    ## match if one is supplied.
+    ## 
+    ## If no regular expression is given, returns the entire buffer
+    ## and replaces it with an empty string.
+    ## 
+    ## If a regular expression is provided, returns up to the beginning
+    ## of the regular expression and truncates up to the end of the regular
+    ## expression.  In this mode of operation, the buffer is never left empty,
+    ## because the parser expects it to contain the remainder of the current
+    ## line.  If /replacement/ is provided, it is appended to the end of the
+    ## value to be returned.
+    String _harvestBuffer(Match mx, String replacement) {
+        String crop;
+        if (mx) {
+            crop = buffer.slice(0, mx.begin());
+            if (replacement)
+                crop = crop + replacement;
+            buffer = buffer.slice(mx.end());
+            if (!buffer)
+                buffer = '\n';
+        } else {
+            crop = buffer;
+            buffer = '';
+        }
+        return crop;
+    }
+    
+    ## Harvests the entire buffer.
+    String _harvestBuffer() { return _harvestBuffer(null, null); }
+    
+    ## Harvests the entire buffer up to the beginning of the match.
+    String _harvestBuffer(Match mx) { return _harvestBuffer(mx, null); }
+
+    ## Sets the current line to /newCur/.  *Deprecated*.  Use 
+    ## _harvestBuffer()
+    void _setCurLine(String newCur) {
+        buffer = newCur;
+    }
+
+    ## Returns a match object for the next special character sequence or
+    ## terminator (as supplied), whichever comes first.
+    ##
+    ## Returns *null* if neither is available.
+    Match _searchSpecial(String target, int startPos, Regex terminator) {
+   
+        # first search for special characters, if there are any obvious
+        # reasons not to care about searching for the terminator after this,
+        # return it
+        specialMatch := _special.search(target, startPos);
+        if (!terminator || specialMatch && specialMatch.group() == terminator)
+            return specialMatch;
+        
+        # search for instances of the terminator.  If we find one, create a
+        # bogus match object for it.
+        termMatch := terminator.search(target);
+        
+        # return the first matching expression
+        if (specialMatch && termMatch) {
+            if (specialMatch.begin() < termMatch.begin())
+                return specialMatch;
+            else
+                return termMatch;
+        } else if (specialMatch) {
+            return specialMatch;
+        } else {
+           return termMatch;
+        }
+    }
+        
+
+    # Parses a literal text block.  Literal blocks have no special
+    # character sequences except for the terminator and escape characters.
+    TextBlock _parseLiteral(TextBlock txt, Regex term) {
+      
+        lastMatch := 0;
+      
+        # create a special regular expression that will match a terminator
+        # or escape sequence
+        termrx := Regex(r'(\\.)|' + term.pattern);
+        
+        # assume that we don't have a full line for starters
+        fullLine := 0;
+        
+        while (true) {
+        
+            # get the next line and make sure that we got one.
+            line := _getCurLine();
+            if (!line)
+               throw DocParseError('Premature end of file', srcName, lineNum,
+                                   txt
+                                   );
+   
+            # search for the first instance of an escape sequence or the
+            # terminator
+            special := termrx.search(line, lastMatch);
+           
+            # if an escape sequence was found, remove the backslash
+            if (special && special.group()[0] == b'\\') {
+                line = line.slice(0, special.begin()) + 
+                     line.slice(special.begin() + 1);
+                _setCurLine(line);
+                lastMatch = special.end() - 1;
+
+            # if the terminator was found, we're done
+            } else if (special) {
+                txt.consume(line.slice(0, special.begin()));
+              
+                # truncate up to and including the terminator, if this leaves
+                # us with an empty line, tack on a newline.
+                line = line.slice(special.end());
+                if (!line)
+                    line = '\n';
+
+                _setCurLine(line);
+                return txt;
+            # otherwise, add all of the words in the line to the block
+            } else {
+           
+                # warn the user of embedded block terminators
+                if ( fullLine &&
+                     (_wsrx.search(line) || _blockTerminatorrx.search(line)))
+                    _warn("Unexpected block terminator.", txt);
+           
+                txt.consume(line);
+                _setCurLine('');
+                fullLine = 1;
+                lastMatch = 0;
+            }
+        }
+        
+        // should never get here.
+        return null;
+    }
+
+    # Preformatted literals are basically just blocks of text that are
+    # interred by the block as a single string.  The only characters
+    # that are special are the terminator and the necessary escape characters
+    # (`\<terminator> and \\\\`).
+    # 
+    # For a line terminated preformatted literal, /lineTerm/ must contain
+    # a regular expression that matches the entire contents of the line,
+    # excluding trailing and leading whitespace.
+    TextBlock _parsePreformattedLiteral(TextBlock txt, Regex lineTerm, 
+                                        Regex term
+                                        ) {
+   
+        
+        Match special;
+        
+        Regex termrx = term;
+        if (!lineTerm) {
+       
+            # construct a regular expression for the terminator and two
+            # escape sequences
+            termrx = Regex(r'(\\\\)|(\\' + term.pattern + ')|(' + 
+                            term.pattern + ')'
+                           );
+        }
+       
+        # last position that we searched on
+        lastPos := 0;
+        
+        while (true) {
+            line := _getCurLine();
+            
+            if (!line)
+                throw DocParseError("Unexpected end of file.", srcName, 
+                                    lineNum,
+                                    txt
+                                    );
+            
+            # if this is line terminated, check whether the line matches
+            # the line terminator
+            if (lineTerm && lineTerm.match(line)) {
+                # discard the contents of the buffer
+                _harvestBuffer();
+                return txt;
+            } else if (lineTerm) {
+            
+                # want to move on at this point because the rest of the body
+                # of the loop deals with non-line-terminated blocks
+                txt.consume(_harvestBuffer());
+                continue;
+            }
+   
+            # check to see if the line has any special stuff in it
+            if (termrx)
+                special = termrx.search(line, lastPos);
+            if (special) {
+        
+                # if this is a terminator, end this now.
+                if (special.group(3)) {
+                    # just stick everything into it and go
+                    txt.consume(_harvestBuffer(special));
+                    return txt;
+                } else {
+                    txt.consume(_harvestBuffer(special));
+                    txt.consume(special.group().substr(0, 1));
+                    lastPos = 0;
+                }
+            } else {
+                # no special characters: just consume it
+                txt.consume(_harvestBuffer());
+                lastPos = 0;
+            }
+        }
+        
+        return null;
+    }
+
+    void parseAnything(TextBlock block, int indent);
+
+    ## Parses and executes an "exec" block, reading the output of
+    ## the executed command and then parsing it as an NML document.
+    TextBlock _parseExec(TextBlock txt, Regex term) {
+        tmp := TextBlock(srcName, lineNum, 'literal', false);
+        startLineNum := lineNum;
+        _parseLiteral(tmp, term);
+        newSrc := Process(tmp.makeString()).getStdOut();
+        name := FStr() `exec block at $srcName:$startLineNum`;
+        tmpParser := DocParser(LineReader(StringReader(newSrc)), name);
+        tmpParser.parseAnything(txt, 0);
+        return txt;
+    }
+
+    ## Computes the level of indentation for the given /line/.
+    int _levelOfIndent(String line) {
+   
+        if (!line)
+            return 0;
+
+        int col;        
+        for (int i = 0; i < line.size; ++i) {
+            ch := line[i];
+            if (ch == b' ')
+                ++col;
+            else if (ch == b'\t')
+                col = (col / tabSize + 1) * tabSize;
+            else
+                break;
+        }
+        return col;
+    }
+
+    ## Parses the next text block.
+    ## type: the block type.
+    ## term: the terminator string or regular expression.  If this value is 
+    ##     *null*, the text block returns on an empty (all whitepsace) line 
+    ##     or a line matching one of the kinds of line that starts a new 
+    ##     block.
+    ## tightLeft: If true, the text block binds tightly (with no interspersed
+    ##     whitespace) to the text to the left of it.
+    ## indent: If this is not zero, it represent the level of indentation 
+    ##     that the text block must maintain.  If a line is encountered that 
+    ##     is below that level of indentation, block processing is terminated.
+    TextBlock _parseText(String type, Regex term, bool tightLeft, int indent) {
+
+        txt := TextBlock(srcName, lineNum, type, tightLeft);
+  
+        if (txt.preformatted && txt.literal)
+           return _parsePreformattedLiteral(txt, null, term);
+        else if (txt.isExec)
+           return _parseExec(txt, term);
+        else if (txt.literal)
+           return _parseLiteral(txt, term);
+  
+        lastMatch := 0;
+        checkSpecialTerm := true;
+        
+        while (true) {
+            # get the next line of the buffer
+            line := _getCurLine();
+            
+            # make sure that there was one
+            if (!line && term)
+               throw DocParseError('Premature end of file', srcName, lineNum,
+                                   txt
+                                   );
+            else if (!line)
+               return txt;
+            
+            # if we are checking indentation, and the next line has
+            # lower indentation than the current level, return
+            if (checkSpecialTerm && indent && indent > _levelOfIndent(line))
+               return txt;
+            
+            # if there's no terminator, we need to check for all of the
+            # conditions that constitute a new block - empty line and
+            # special format header lines
+            if (checkSpecialTerm && !term) {
+               ws := _wsrx.match(line);
+               if (ws && ws.group() == line || _blockTerminatorrx.match(line))
+                  return txt;
+            
+            # see if the regular expression matches the current line
+            } else if (checkSpecialTerm && term && term.match(line))
+               return txt;
+   
+            # if we are not parsing a block formatter and we encounter
+            # a block terminator, issue a warning (this probably means that
+            # an end terminator is missing)
+            if (checkSpecialTerm && term && txt.words &&
+                (allWhitespace(line) || _blockTerminatorrx.match(line)))
+                _warn("Block terminator encountered.", txt);
+            
+            # if the terminator is a regular expression (and not just a simple
+            # string) search for special characters excluding the termination 
+            # sequence.  Otherwise, search for the termination sequence as 
+            # well
+            Match match;
+#            if (term && term.pattern == escape(term.pattern)) {
+            if (term)
+                match = _searchSpecial(line, lastMatch, term);
+            else
+                match = _searchSpecial(line, lastMatch, null);
+              
+            # first of all, if we matched a backslash expression, remove the
+            # backslash from the line and set the lastMatch pointer to the
+            # location after the backslash
+            if (match && match.group()[0] == b'\\' && match.group().size == 2) {
+                _setCurLine(line.slice(0, match.begin()) + 
+                             line.slice(match.end() - 1)
+                            );
+                lastMatch = match.end() - 1;
+                
+                # since we don't have a complete line, turn off checking for
+                # special termination conditions
+                checkSpecialTerm = false;
+               
+            } else if (match) {
+            
+                matchVal := match.group();
+    
+                # add the words before the special character to the document
+                txt.consume(_harvestBuffer(match));
+                
+                # reset the lastMatch pointer (since we`re done with it)
+                lastMatch = 0;
+             
+                # if the special character is the terminating character for
+                # the current text block, return now
+                if (term && term.match(matchVal))
+                   return txt;
+    
+                # get the child information
+                childType := _TYPES[matchVal[0]];
+    
+                # parse a new text block ending with the matching terminator
+                childBlock := _parseText(childType.getName(matchVal), 
+                                         childType.getTerminator(matchVal),
+                                         false,
+                                         0
+                                         );
+                
+                _debug("Child: ", childBlock);
+    
+                # if the last character before where we start is a whitespace
+                # character, mark the fact that we need whitespace before the
+                # textblock.
+                loc := match.begin() - 1;
+                if (loc >= 0 && !isSpace(line[loc]))
+                   childBlock.tightLeft = 1;
+                else
+                   childBlock.tightLeft = 0;
+    
+                # add the new child to the list of children for the block
+                txt.addChild(childBlock);
+                
+                # if there is whitepsace immediately after the child block, the
+                # child block binds tightly to the right
+                line = _getCurLine();
+                if (line && !isSpace(line[0]))
+                   childBlock.tightRight = 1;
+                
+                # if we care about indentation or structure, we need to indicate
+                # that we do not currently have a complete line so that
+                # checking for structural termination conditions is turned off
+                checkSpecialTerm = false;
+            
+            } else {
+                # add the entire line to the text block, reset everything to
+                # indicate that we`ve consumed it.
+                txt.consume(_harvestBuffer());
+                lastMatch = 0;
+                
+                # turn on checking for special termination conditions (since we've
+                # got a complete line)
+                checkSpecialTerm = 1;
+            }
+        }
+        
+        return null;
+    }
+
+    Regex _getTerminatorRx(String str) {
+        term := terminatorRxSet.get(str);
+        if (!term)
+            terminatorRxSet[str] = term = Regex(str);
+        return term;
+    }
+
+    ## Parses a definition list block.
+    TextBlock _parseDefinitionList(int indent) {
+
+        # create a new definition list
+        dl := TextBlock(srcName, lineNum, 'definitionList', false);
+  
+        # trick to get the string that the line actually terminates with
+        line := _getNextFullLine();
+        termStr := _definitiontokrx.match(line).group(1);
+        term := _getTerminatorRx(termStr);
+  
+        # get the item being defined, which should be a text block
+        item := _parseText('text', term, false, 0);
+        
+        _debug("Defined: ", item);
+        
+        while (true) {
+            # get the next line, if the indentation is less than the current 
+            # level
+            line = _getNextFullLine();
+            lineIndent := _levelOfIndent(line);
+            if (lineIndent < indent)
+                throw DocParseError("Greater indentation expected following "
+                                     "definition term.",
+                                    srcName,
+                                    lineNum,
+                                    item
+                                    );
+            
+            definition := TextBlock(srcName, lineNum, 'doc', false);
+            parseAnything(definition, lineIndent);
+            _debug("Definition: ", definition);
+            
+            # create a new definition item block containing the item and its
+            # definition
+            block := TextBlock(srcName, lineNum, 'definitionItem', false);
+            block.addChild(item);
+            block.addChild(definition);
+            
+            # add the item to the definition list
+            dl.addChild(block);
+            
+            # get the next line
+            line = _getNextFullLine();
+            lineIndent = _levelOfIndent(line);
+            
+            # if the next line is not a definition, we're done.
+            if (!line || lineIndent < indent || !_definitionrx.match(line))
+                return dl;
+   
+            # get the line terminator
+            term = _getTerminatorRx(_definitiontokrx.match(line).group(1));
+            
+            # reset item to the next definition.
+            item = _parseText('text', term, false, 0);
+            
+            _debug("Defined: ", item);
+        }
+        
+        return null;
+    }
+
+    ## Parses an unordered list.
+    TextBlock _parseUnorderedList(int indent) {
+        String line;
+   
+        # quick little procedure to replace the hyphen
+        String replaceHyphen(DocParser parser, String l) {
+            String line = l;
+            pos := line.lfind('-');
+            line = line.slice(0, pos) + ' ' + line.slice(pos + 1);
+            parser._setCurLine(line);
+            return line;
+        }
+     
+        ol := TextBlock(srcName, lineNum, 'unorderedList', false);
+     
+        # replace the leading hyphen in the current line with a space
+        line = _getCurLine();
+        line = replaceHyphen(this, line);
+        
+        # get the current indentation
+        lineIndent := _levelOfIndent(line);
+        
+        while (true) {
+            # create a new doc block for the item
+            item := TextBlock(srcName, lineNum, 'doc', false);
+            parseAnything(item, lineIndent);
+            
+            # add the new item to the list
+            ol.addChild(item);
+            
+            # get the next line with stuff in it
+            line = _getNextFullLine();
+            if (!line)
+                return ol;
+            
+            # if its indentation is less than that of the unordered list itself,
+            # quit now
+            lineIndent = _levelOfIndent(line);
+            if (lineIndent < indent)
+                return ol;
+   
+            # if it is something other than an unordered list element, quit now
+            if (!_unorderedrx.match(line))
+                return ol;
+   
+            # go through the replacement game again
+            line = replaceHyphen(this, line);
+            
+            # get the current indentation
+            lineIndent = _levelOfIndent(line);
+        }
+        
+        return null;
+    }
+
+    ## Create, parse and return the next paragraph.
+    TextBlock _parsePara(int indent) {
+        tmp := _parseText('para', null, false, indent);
+        _debug("Para: ", tmp);
+        return tmp;
+    }
+
+    ## Not entirely sure where this fits in: parses meta-level structures,
+    ## recognizes special sequences for unordered lists and definition lists
+    ## and paragraphs.
+    void parseAnything(TextBlock block, int indent) {
+   
+        while (true) {
+            line := _getNextFullLine();
+            
+            # if this is the end of the file, we're done
+            if (!line)
+               return;
+            
+            # if this line is indented less than the current level of indent,
+            # return.
+            if (_levelOfIndent(line) < indent)
+                return;
+            
+            # if this is a definition, parse a definition list
+            if (_definitionrx.match(line)) {
+                #cout `def list\n`;
+                tmp := _parseDefinitionList(indent);
+                _debug("Definition list: ", tmp);
+                block.addChild(tmp);
+
+            # if this is an unordered list item, parse an unordered list
+            } else if (_unorderedrx.match(line)) {
+                #cout `unordered list\n`;
+                tmp := _parseUnorderedList(indent);
+                _debug('Unordered list: ', tmp);
+                block.addChild(tmp);
+
+            # if this is a preformatted literal block start, parse one
+            } else if (_prelitStartrx.match(line)) {
+                #cout `prelit\n`;
+                _harvestBuffer();
+                tmp := TextBlock(srcName, lineNum, 'prelit', false);
+                _parsePreformattedLiteral(tmp, _prelitEndrx, null);
+                _debug('Preformatted literal: ', tmp);
+                block.addChild(tmp);
+            
+            # if this is preformatted, parse a preformatted block
+            } else if (_preStartrx.match(line)) {
+                #cout `preformatted\n`;
+                _harvestBuffer();
+                tmp := _parseText('pre', _preEndrx, false,
+                                  _levelOfIndent(line)
+                                  );
+                _harvestBuffer();
+                _debug('preformatted: ', tmp);
+                block.addChild(tmp);
+   
+            # if this is a line of text followed by an "underline line",
+            # treat it as a header
+            } else if (line && (nextLine := _getNextLine()) && 
+                       _underlinerx.match(nextLine)) {
+                #cout `header\n`;
+                underline := strip(nextLine)[0];
+                String header;
+                if (underline == b'=')
+                    header = '1';
+                else if (underline == b'-')
+                    header = '2';
+                else if (underline == b"'")
+                    header = '3';
+                else
+                    throw AssertionError(
+                        FStr() `Unknown underline type $underline\n`
+                    );
+                tmp := _parseText(header, _underlinerx, false, 
+                                  _levelOfIndent(line)
+                                  );
+                _harvestBuffer();
+                _debug('header: ', tmp);
+                block.addChild(tmp);
+            # if this is just an ordinary line, parse it as a paragraph
+            } else if (line) {
+                #cout `parsing para\n`;
+                block.addChild(_parsePara(indent));
+            }
+        }
+    }
+
+    ## Parse (and return) the entire document from the stream.
+    TextBlock parseDoc() {
+        doc := TextBlock(srcName, lineNum, 'doc', false);
+        parseAnything(doc, 0);
+        return doc;
+    }
+}
+
+
+Regex _makeSpecialChars() {
+    StringFormatter tmp = {};
+    first := true;
+    for (item :in _TYPES) {
+        tmp `$(first ? '' : '|')$(item.key)`;
+        first = false;
+    }
+    return Regex(tmp.createString());
+}
+    
+_specialChars := _makeSpecialChars();
+
+## This function is used to take a string that contains literal text
+## and escape all special NML characters in it.  Block level formatting
+## sequences are not considered.
+String escapeString(String str) {
+    void replacer(Match match, Writer out) {
+        out.write('\\' + match.group());
+    }
+    return _specialChars.subst(str, replacer);
+}

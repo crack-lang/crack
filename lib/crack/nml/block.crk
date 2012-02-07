@@ -1,0 +1,378 @@
+#==============================================================================
+#
+#  $Id: block.py 891 2005-11-27 23:12:47Z mike $
+#
+#  Contains the definition of a TextBlock and BlockType.  These structures
+#  define NML objects.
+#
+#  Copyright (C) 1998 Michael A. Muller
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+#  $Log: block.py,v $
+#  Revision 1.9  2005/03/06 17:30:22  mike
+#  Added support for extracting and displaying a title (obtained from the first
+#  header in the document)
+#
+#  Revision 1.8  2002/04/28 19:09:28  mike
+#  Added support for tables.
+#
+#  Revision 1.7  2000/02/13 22:08:52  mike
+#  Doc fixes.
+#
+#  Revision 1.6  1999/05/23 17:55:34  mike
+#  Fixed comments and added a warning message if block formatting constructs
+#  are discovered in a text formatting entry.
+#
+#  Revision 1.5  1999/02/03 01:48:50  mike
+#  Fixed tabs and comments, added support for comment and reference types.
+#
+#  Revision 1.4  1998/11/03 00:43:48  mike
+#  Purely cosmetic
+#
+#  Revision 1.3  1998/08/14 15:26:59  mike
+#  Added documentation for "exec" block types.
+#
+#  Revision 1.2  1998/06/14 00:45:06  mike
+#  Just added a comment for the 'n' (linebreak/newline) type.
+#
+#  Revision 1.1  1998/06/11 01:34:05  mike
+#  Initial revision
+#
+#
+#==============================================================================
+
+import crack.lang InvalidArgumentError;
+import crack.io cout, Formatter, FStr, Writer, StringFormatter, StringWriter;
+import crack.cont.array Array;
+import crack.strutil split;
+import crack.regex Regex;
+
+## Contains information about block types.
+class BlockType {
+
+    String name;
+    String tag;
+    Regex terminator;
+
+    oper init(String name,       ## name of the type
+              String tag,        ## Start of the block
+              Regex terminator   ## End of the block
+              ) :
+        name = name,
+        tag = tag,
+        terminator = terminator {
+    }
+
+    String getName(String pattern) {
+        return name;
+    }
+   
+    Regex getTerminator(String pattern) {
+        return terminator;
+    }
+}
+
+ANY_BLOCK_TEMPLATE := r'\\([\w\.]+)([\[\{\(<"\'])';
+
+BRACKRX := Regex(r'\]');
+CBRACKRX := Regex(r'\}');
+RPARENRX := Regex(r'\)');
+GTRX := Regex(r'>');
+SQRX := Regex(r"'");
+DQRX := Regex(r'"');
+
+## Contains information about the generalized block format: \\name( ... )
+## Generalized blocks can use parens, square, curly, or angle brackets
+## or single or double quotes as delimiters.
+class AnyBlockType : BlockType {
+
+    Regex templateRx = {ANY_BLOCK_TEMPLATE};
+
+    oper init() : BlockType('', ANY_BLOCK_TEMPLATE, null) {}   
+   
+    String getName(String pattern) {
+        return templateRx.match(pattern).group(1);
+    }
+   
+    Regex getTerminator(String pattern) {
+        initiator := templateRx.match(pattern).group(2);
+        i := initiator[0];
+        if (i == b'[') return BRACKRX;
+        else if (i == b'{') return CBRACKRX;
+        else if (i == b'(') return RPARENRX;
+        else if (i == b'<') return GTRX;
+        else if (i == b'"') return DQRX;
+        else if (i == b"'") return SQRX;
+        else throw InvalidArgumentError("Invalid pattern");
+    }
+}
+
+## Represents a block of text with a particular style.
+## 
+## These are the standard types of text blocks:
+## *doc*::
+##       Document type.  A structural type which can contain other structural
+##       types.
+## *para*::
+##       Paragragh type.  A structural type which can not contain other
+##       structural types.
+## *unorderedList*::
+##       Unordered list.  A structural type in which each of the words are 
+##       of type *doc*.
+## *definitionList*::
+##       Definition list.  A structural type in which each of the words are
+##       of type *definitionItem*.
+## *definitionItem*::
+##       An item in a definition list.  A structural type that always contains 
+##       exactly two words: a *text* item and a *doc* item.
+## *table*::
+##       A table object.  Contents should only be *row* objects.
+## *row*::
+##       A table row.  Should only be embedded in a *table*, and contents 
+##       should ony be *column* objects.
+## *col*::
+##       A table column.  Should only be embedded in a *row* objects.
+## *text*::
+##       A block of text that can contain only non-structural types.
+## *underline*::
+##       Underlined text.
+## *bold*::
+##       Boldfaced text.
+## *italic*::
+##       Italic text.
+## *ref*::
+##       Reference to a text location.  In this case, the first word is a
+##       reference, the remainder is the anchor text.
+## *img*::
+##       The first word of the text is the name of an image file.  The remainder
+##       of the text is ignored.
+## *exec*::
+##       Executes its contents as a shell command.  In the event of an error, 
+##       raises a parsing error.  Output from the command is treated as NML
+##       source which is parsed in context.
+## *n*::
+##       Force a newline at this point in the enclosing text.  All of the
+##       words are ignored.
+## *X*::
+##       The enclosed text is a cross reference (XXX this is very weak
+##       at this time - only can be used to reference other parts of the
+##       same document).
+## *C*::
+##       The enclosed text is a comment, and should not be visible when
+##       the document is rendered.
+##       
+## There are a variety of special types of text blocks:
+## *literal*::
+##       backquoted type - everything in it is literal except the backslash.
+## *prelit*::
+##       `preformatted/literal` type.  Everything in it is literal and the
+##       raw format (extraneous whitespace) of the original should
+##       be preserved.  This type only has one word.
+## *pre*::
+##       Preformatted.  Raw format of the original should be preserved.
+## *date*::
+##          The block contents is the document date.
+## *title*::
+##          The block contents is the document title.
+## /namespace.type/::
+##          Block types that are specific to a particularly renderer can use
+##          a block type of this form to force them to be ignored by other
+##          renderers.
+class TextBlock {
+
+    String sourceName;
+    int lineNumber;
+    String type;
+    bool tightLeft, tightRight = false, literal, preformatted, isExec,
+        blankLineTerminated;
+    Array[Object] words = {};
+   
+    ## Constructs a text block.
+    ## sourceName: Name of the source file.
+    ## lineNumber: line number of where the block appears in source.
+    ## /typeName/::
+    ##       Type name of the block.
+    ## /tightLeft/::
+    ##       If specified, indicates whether the block binds tightly (without
+    ##       whitespace) to the information to the left of it.
+    oper init(String sourceName, int lineNumber, String typeName,
+              bool tightLeft
+              ) :
+        sourceName = sourceName,
+        lineNumber = lineNumber,
+        type = typeName,
+        tightLeft = tightLeft {
+   
+        # *literal*, *prelit* and *C* types are both literal.
+        literal = type == 'literal' || type == 'prelit' || type == 'C';
+        
+        # *pre*, *prelit* and *C* types are both preformatted.
+        preformatted = type == 'pre' || type == 'prelit' || type == 'C';
+  
+        # exec types are very special
+        isExec = type == 'exec';
+  
+        blankLineTerminated = type == 'para';
+    }
+    
+    ## adds the given sequence of /words/ to the receiver.
+    void addWords(Array[Object] moreWords) {
+        words.extend(moreWords);
+    }
+
+    ## Adds a child text block to the receiver.
+    void addChild(TextBlock child) {
+        words.append(child);
+    }
+    
+    void append(Object child) { words.append(child); }
+
+    ## Consumes a string in a manner appropriate to the text block.
+    void consume(String str) {
+        if (preformatted) {
+  
+            # was there a last word?
+            Object lastWord;
+            if (words)
+                lastWord = words[-1];
+            else
+                lastWord = null;
+   
+            # if the last word was also a string, just append this word
+            # to the last word         
+            if (lastWord && lastWord.isa(String))
+                words[-1] = String.cast(lastWord) + str;
+            else
+               # otherwise, just append
+               words.append(str);
+        } else {
+            for (word :in split(str))
+                if (word)
+                    words.append(word);
+        }
+    }
+         
+    ## Finds the first block with type /blockType/ in all of the child
+    ## blocks.  Returns null if the block type is not found.
+    TextBlock find(String blockType) {
+        for (child :in words) {
+            if (child.isa(TextBlock)) {
+                block := TextBlock.cast(child);
+                if (block.type == blockType) {
+                    return block;
+            
+                } else {
+                    result := block.find(blockType);
+                    if (!(result is null))
+                        return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    ## Prints the block in a form useful to der programmer.  Returns the last
+    ## line as a string.
+    String debug(String soFar) {
+        if (soFar.size > 76) {
+            cout `$soFar\n`;
+            soFar = '';
+        }
+        soFar = soFar + ' \\' + type + '(';
+      
+        for (x :in words) {
+            if (x.isa(String)) {
+                wordStr := String.cast(x);
+                if (soFar.size + wordStr.size + 1 > 79) {
+                    cout `$soFar\n`;
+                    soFar = ''
+                }
+                soFar = soFar + ' ' + wordStr;
+            } else {
+                block := TextBlock.cast(x);
+                soFar = block.debug(soFar);
+            }
+        }
+
+        if (soFar.size > 78) {
+            cout `$soFar\n`;
+            soFar = '';
+        }
+        
+        soFar = soFar + ')';
+
+        return soFar
+    }
+    
+    void formatTo(Formatter out) {
+        first := true;
+        out `\\$type{`;
+        for (child :in words) {
+            if (!first)
+                out ` `;
+            if (child.isa(String))
+                out `$(String.cast(child).getRepr())`;
+            else
+                child.formatTo(out);
+        }
+        out.write('}');
+    }
+    
+    String makeString() {
+        StringFormatter out = {};
+        formatTo(out);
+        return out.createString();
+    }
+    
+    void flattenTo(Writer out) {
+        first := true;
+        for (child :in words) {
+            if (!first) {
+                out.write(' ');
+            } else {
+                first = false;
+            }
+            
+            if (child.isa(String))
+                out.write(String.cast(child));
+            else
+                TextBlock.cast(child).flattenTo(out);
+        }
+    }
+}
+
+## A utility function which finds the first header in the text and returns
+## it as a string.  This is useful for extracting the title from a
+## document.
+##
+## Returns *None* if no header was found.
+String getHeader(TextBlock block) {
+    for (child :in block.words) {
+        if (child.isa(TextBlock)) {
+            childBlock := TextBlock.cast(child);
+            if (childBlock.type >= '0' && childBlock.type <= '9')  {
+                StringFormatter tmp = {};
+                childBlock.flattenTo(tmp);
+                return tmp.makeString();
+            } else {
+                header := getHeader(childBlock);
+                if (!(header is null))
+                    return header;
+            }
+        }
+    }
+    return null;
+}
