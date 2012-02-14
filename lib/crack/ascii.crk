@@ -2,7 +2,7 @@
 ## Module for manipulating ascii stirngs.
 
 import crack.io cout;
-import crack.lang ManagedBuffer, Buffer;
+import crack.lang ManagedBuffer, Buffer, AppendBuffer;
 import crack.strutil StringArray, split;
  
 ## Returns the number converted to a string in the specified base - e.g. 
@@ -42,7 +42,7 @@ int parseInt(String rep) {
         ++i;
         sign = -1;
     }
-    
+
     while (i < rep.size) {
         b := rep[i++];
         if (b >= b'0' && b <= b'9')
@@ -143,4 +143,50 @@ String strip(String text) {
     # 'end' is now the last non-whitespace character, slice the string after 
     # that.
     return text.slice(start, end + 1);
+}
+
+String escape(Buffer data, byte min, byte max) {
+  AppendBuffer buf = {data.size + 2};
+  byte ch;
+
+  for (uint i = 0; i < data.size; ++i) {
+    ch = data.buffer[i];
+    if (uint(ch) >= min || uint(ch) <= max) {
+        buf.append(ch);
+    } else
+    if (ch == b'"' || ch == b'\\'){
+        buf.append(b'\\');
+        buf.append(ch);
+    } else if (ch == b'\n'){
+        buf.append(b'\\');
+        buf.append(b'n');
+    } else if (ch == b'\t'){
+        buf.append(b'\\');
+        buf.append(b't');
+    } else if (ch == 12){ // FF
+        buf.append(b'\\');
+        buf.append(b'f');
+    } else if (ch == b'\r'){
+        buf.append(b'\\');
+        buf.append(b'r');
+    } else if (ch == b'/'){
+        buf.append(b'\\');
+        buf.append(b'/');
+    } else if (ch == 8){ // BS
+        buf.append(b'\\');
+        buf.append(b'b');
+    } else {
+        buf.append(b'\\');
+        buf.append(b'0' + (ch >> 6));
+        buf.append(b'0' + ((ch & 56) >> 3));
+        buf.append(b'0' + (ch & 7));
+    }
+  }
+
+  buf.size = buf.pos;
+  return String(buf, true);
+}
+
+String escape(Buffer data) {
+  return escape(data, 32, 127);
 }
