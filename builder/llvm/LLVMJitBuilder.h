@@ -98,6 +98,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                               const std::string &path,
                                               model::ModuleDef *owner
                                               );
+        virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
 };
 
 } } // namespace

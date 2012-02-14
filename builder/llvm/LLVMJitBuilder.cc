@@ -33,6 +33,28 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
+ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
+
+    BModuleDefPtr bMod = BModuleDefPtr::rcast(LLVMBuilder::registerPrimFuncs(context));
+
+    if (!options->cacheMode)
+        return bMod;
+
+    // if we're caching, register .builtin definitions in the cache
+    ensureCacheMap();
+    for (Module::iterator iter = module->begin();
+         iter != module->end();
+         ++iter
+         ) {
+        if (!iter->isDeclaration()) {
+            cacheMap->insert(CacheMapType::value_type(iter->getName().str(),
+                                                      iter));
+        }
+    }
+
+    return bMod;
+
+}
 
 void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
     // note, this->module and moduleDef->rep should be ==
@@ -476,28 +498,9 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                     Function *f = dyn_cast<Function>(globalDefIter->second);
                     void *realAddr = execEng->getPointerToFunction(f);
                     assert(realAddr && "unable to resolve function");
-                    string name = f->getName();
                     execEng->addGlobalMapping(iter, realAddr);
                 }
             }
-        }
-
-        // special handling for .builtin.isSubclass
-        // without caching this works because the parser does the normal global
-        // mapping when isSubclass is used. but with caching, since .builtin is
-        // only implicitly imported, it's not on our import list and it's not
-        // handling above. currently, this is the only .builtin function that
-        // needs special handling. if that changes, it would be better to add
-        // it to the meta data instead
-        Function *lclSubclass;
-        if (lclSubclass = module->getFunction(".builtin.Class.isSubclass")) {
-            assert(lclSubclass->isDeclaration());
-            Function *biSubclass = LLVMJitBuilderPtr::cast(
-              rootBuilder.get())->module->getFunction(".builtin.Class.isSubclass");
-            assert(biSubclass && "isSubclass not found in .builtin");
-            void *realAddr = execEng->getPointerToFunction(biSubclass);
-            assert(realAddr && "unable to resolve function");
-            execEng->addGlobalMapping(lclSubclass, realAddr);
         }
 
         setupCleanup(bmod.get());
