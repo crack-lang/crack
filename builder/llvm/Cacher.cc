@@ -57,6 +57,7 @@ Function *Cacher::getEntryFunction() {
     assert(funcNode && "malformed crack_entry_func");
     Function *func = dyn_cast<Function>(funcNode->getOperand(0));
     assert(func && "entry function not LLVM Function!");
+    func->Materialize();
     return func;
 
 }
