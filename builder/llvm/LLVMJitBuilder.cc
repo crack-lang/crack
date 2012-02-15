@@ -35,10 +35,11 @@ using namespace builder::mvll;
 
 ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
-    BModuleDefPtr bMod = BModuleDefPtr::rcast(LLVMBuilder::registerPrimFuncs(context));
-
+    ModuleDefPtr mod = LLVMBuilder::registerPrimFuncs(context);
     if (!options->cacheMode)
-        return bMod;
+        return mod;
+
+    BModuleDefPtr bMod = BModuleDefPtr::rcast(mod);
 
     // if we're caching, register .builtin definitions in the cache
     ensureCacheMap();
