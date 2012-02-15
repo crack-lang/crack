@@ -1,0 +1,32 @@
+import crack.ffmt.ini iniParser;
+import crack.io cout;
+
+iniData := r"
+; This is an example .INI file
+[Settings]
+author=Some Guy\061
+name= Screenlets Widescreen
+description=A\twide\nscreen\060
+width =1440
+height=900
+email=muhammedu@gmail.com
+ampmenabled=1
+homepageURL=
+downloadURL=
+refreshhourinterval=60
+hourimages=24
+
+; Some Cyrillic to test non-ASCII chars
+Comment[ru]=Управление питанием для окружения рабочего стола Xfce
+
+[Animation]    
+
+[WallpaperClock]
+specVersion=1.0
+specampmenabled=1
+description=Default
+";
+
+iniParser.maxErr = 100;
+iniValues := iniParser.parse(iniData);
+if (iniParser.errors().count() == 0) cout `ok\n`;

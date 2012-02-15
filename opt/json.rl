@@ -22,67 +22,33 @@ import crack.cont.hashmap HashMap;
 import crack.cont.treemap TreeMap;
 import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
                         FP_NORMAL, FP_ZERO, sign;
+import crack.ascii escape;
 @import crack.ann define;
 
 // Define a formatter class to override string formatting
 class JsonFormatter : StandardFormatter {
     oper init(Writer rep) : StandardFormatter(rep) {}
 
-    String encodeString(Buffer data) {
-        AppendBuffer buf = {data.size + 2};
-
-        buf.append(b'"');
-        for (uint i = 0; i < data.size; ++i) {
-            ch := data.buffer[i];
-            if (ch == b'"' || ch == b'\\'){
-                buf.append(b'\\');
-                buf.append(ch);
-            } else if (ch == b'\n'){
-                buf.append(b'\\');
-                buf.append(b'n');
-            } else if (ch == b'\t'){
-                buf.append(b'\\');
-                buf.append(b't');
-            } else if (ch == 12){ // FF
-                buf.append(b'\\');
-                buf.append(b'f');
-            } else if (ch == b'\r'){
-                buf.append(b'\\');
-                buf.append(b'r');
-            } else if (ch == b'/'){
-                buf.append(b'\\');
-                buf.append(b'/');
-            } else if (ch == 8){ // BS
-                buf.append(b'\\');
-                buf.append(b'b');
-            } else if (ch < 32 || ch > 127) {
-                buf.append(b'\\');
-                buf.append(b'0' + (ch >> 6));
-                buf.append(b'0' + ((ch & 56) >> 3));
-                buf.append(b'0' + (ch & 7));
-            } else {
-                buf.append(ch)
-            }
-        }
-        buf.append(b'"');
-
-        buf.size = buf.pos;
-        return String(buf, true);
-    }
-
     void format(StaticString data) {
-        write(encodeString(data));
+        write('"');
+        write(escape(data, 32, 127));
+        write('"');
     }
 
     void format(Buffer data) {
-        if (data.isa(String))
-            write(encodeString(data));
+        if (data.isa(String)){
+            write('"');
+            write(escape(data, 32, 127));
+            write('"');
+        }
         else
             write(data);
     }
 
     void format(String data) {
-        write(encodeString(data));
+        write('"');
+        write(escape(data, 32, 127));
+        write('"');
     }
 
     void format(float32 value) {

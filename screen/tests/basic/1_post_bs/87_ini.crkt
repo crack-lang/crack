@@ -1,0 +1,10 @@
+%%TEST%%
+INI file parsing
+%%ARGS%%
+
+%%FILE%%
+import test.test_ini;
+%%EXPECT%%
+ok
+%%STDIN%%
+

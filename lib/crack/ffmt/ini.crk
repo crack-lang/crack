@@ -1,0 +1,479 @@
+
+# line 1 "opt/ini.rl"
+// INI file parser
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// 2/11/2012
+
+import crack.io FStr;
+import crack.lang Formatter, AppendBuffer, Buffer;
+import crack.cont.treemap TreeMap;
+import crack.cont.array Array;
+import crack.ascii escape;
+
+class IniError {
+  String msg;
+  uint line, col;
+
+  oper init(String msg, uint line, uint col): msg = msg, line = line, col = col
+  { }
+
+  void formatTo(Formatter fmt){
+    fmt `$msg:$line:$col`;
+  }
+}
+
+class IniParser {
+
+    uint maxErr = 1;
+    Array[IniError] _errors;
+    TreeMap[String, TreeMap[String, String]] _resultMap;
+    TreeMap[String, String] _sectionMap;
+
+    
+# line 34 "lib/crack/ffmt/ini.crk"
+Array[uint] _IniParser_actions = [
+  0, 1, 2, 1, 5, 1, 6, 1, 
+  7, 1, 8, 1, 9, 1, 10, 1, 
+  11, 1, 12, 2, 3, 0, 2, 4, 
+  3, 2, 7, 8, 2, 8, 2, 3, 
+  4, 1, 3, 3, 13, 1, 3
+];
+
+Array[uint] _IniParser_trans_keys = [
+  0, 0, 9, 32, 10, 13, 
+  9, 122, 9, 61, 0, 
+  92, 0, 92, 34, 116, 
+  48, 55, 48, 55, 65, 122, 
+  45, 122, 9, 32, 9, 
+  122, 0
+];
+
+Array[uint] _IniParser_key_spans = [
+  0, 24, 4, 114, 53, 93, 93, 83, 
+  8, 8, 58, 78, 24, 114
+];
+
+Array[uint] _IniParser_index_offsets = [
+  0, 0, 25, 30, 145, 199, 293, 387, 
+  471, 480, 489, 548, 627, 652
+];
+
+Array[uint] _IniParser_indicies = [
+  0, 2, 1, 1, 2, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 0, 
+  1, 4, 3, 3, 4, 3, 5, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 5, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 6, 1, 1, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 1, 
+  1, 1, 7, 1, 1, 1, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 1, 6, 1, 6, 1, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  1, 8, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  8, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 7, 1, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  10, 11, 9, 9, 11, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 12, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 14, 13, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 11, 
+  9, 9, 11, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 13, 13, 13, 13, 13, 13, 13, 
+  13, 14, 13, 15, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 16, 
+  15, 16, 1, 1, 16, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 15, 1, 1, 
+  1, 1, 1, 15, 1, 1, 1, 15, 
+  1, 1, 1, 1, 1, 1, 1, 15, 
+  1, 1, 1, 15, 1, 15, 1, 17, 
+  17, 17, 17, 17, 17, 17, 17, 1, 
+  18, 18, 18, 18, 18, 18, 18, 18, 
+  1, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 1, 1, 1, 1, 19, 
+  1, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 1, 19, 1, 1, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 1, 1, 1, 1, 1, 1, 1, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 1, 1, 20, 1, 19, 1, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 19, 19, 19, 19, 19, 19, 
+  19, 19, 1, 21, 22, 1, 1, 22, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 21, 1, 0, 2, 1, 1, 
+  2, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 0, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 3, 1, 
+  1, 1, 1, 1, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 23, 1, 
+  1, 1, 6, 1, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 1, 0
+];
+
+Array[uint] _IniParser_trans_targs = [
+  1, 0, 13, 2, 13, 4, 3, 5, 
+  4, 6, 5, 13, 5, 6, 7, 6, 
+  8, 9, 6, 11, 12, 12, 13, 10
+];
+
+Array[uint] _IniParser_trans_actions = [
+  0, 0, 31, 0, 22, 7, 0, 25, 
+  0, 1, 28, 35, 9, 0, 11, 17, 
+  13, 0, 15, 0, 5, 0, 19, 3
+];
+
+uint IniParser_start = 13;
+uint IniParser_first_final = 13;
+uint IniParser_error = 0;
+
+uint  IniParser_en_main = 13;
+
+
+# line 182 "opt/ini.rl"
+
+
+    # parser method ------------------------------------------------------------
+    oper init() {}
+
+    TreeMap[String, TreeMap[String, String]] parse(String inputString, uint p0, uint pe0) {
+        AppendBuffer appendBuf = {128}; // String to hold the value
+        _errors = Array[IniError]();      // reset _errors
+
+        // Placeholders for section, key, and value strings
+        String sectionName = null, key = null, value = null;
+
+        // column and line counters for error messages
+        uint line = 1, col = 1;
+
+        byteptr data = inputString.buffer;
+        uint data_size = inputString.size;
+
+        uint p = p0, pe = pe0, okp = 0, eof = data_size;
+        uint cs = IniParser_error, lineOffset, marker;
+        byte chr;
+
+        
+# line 204 "lib/crack/ffmt/ini.crk"
+  cs = IniParser_start;
+
+# line 205 "opt/ini.rl"
+
+        
+# line 210 "lib/crack/ffmt/ini.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _IniParser_index_offsets[cs];
+      _slen = _IniParser_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _IniParser_trans_keys[_keys] <= data[p] && 
+         data[p] <= _IniParser_trans_keys[_keys + 1]) 
+        _trans = _IniParser_indicies[ _inds + data[p] - _IniParser_trans_keys[_keys] ]; 
+      else _trans =_IniParser_indicies[ _inds + _slen ];
+
+    cs = _IniParser_trans_targs[_trans];
+
+    if (_IniParser_trans_actions[_trans] != 0) {
+      _acts = _IniParser_trans_actions[_trans];
+      _nacts = _IniParser_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _IniParser_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 36 "opt/ini.rl" # end of line directive
+    
+          p = p - 1;
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 40 "opt/ini.rl" # end of line directive
+    
+          if (p > okp)
+            _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
+          if (_errors.count() >= maxErr) return _resultMap;
+            // ACTION
+    }
+    else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
+# line 46 "opt/ini.rl" # end of line directive
+    
+          if (p > okp) {
+            String msg;
+            if (data[p] == b'=')
+              msg = "Invalid key syntax ";
+            else
+              msg = "Invalid value syntax ";
+            _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
+          }
+          if (_errors.count() >= maxErr) return _resultMap;
+            // ACTION
+    }
+    else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
+# line 58 "opt/ini.rl" # end of line directive
+    
+          if (lineOffset < p && data[p] < 32) line+=1;
+          lineOffset = p+1;
+          okp = p+1;
+            // ACTION
+    }
+    else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
+# line 64 "opt/ini.rl" # end of line directive
+    
+          okp = p+1;
+            // ACTION
+    }
+    else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
+# line 68 "opt/ini.rl" # end of line directive
+    
+          if (p==lineOffset) {
+            if (_sectionMap != null && sectionName != null){
+              _resultMap[sectionName] = _sectionMap;
+            }
+            _sectionMap = null;
+            sectionName = null;
+            okp = p+1;
+          }
+            // ACTION
+    }
+    else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
+# line 79 "opt/ini.rl" # end of line directive
+    
+          sectionName = inputString.slice(okp, p);
+          _sectionMap = TreeMap[String, String]();
+          _resultMap[sectionName] = _sectionMap;
+          okp = p+1;
+            // ACTION
+    }
+    else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
+# line 86 "opt/ini.rl" # end of line directive
+    
+          if (marker < lineOffset) {
+            key = inputString.slice(lineOffset, p);
+            marker = p;
+          }
+          okp = p+1;
+            // ACTION
+    }
+    else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
+# line 94 "opt/ini.rl" # end of line directive
+    
+          appendBuf.pos = 0;
+          okp = p+1;
+            // ACTION
+    }
+    else  if (_tempval  == 9) { // FROM_STATE_ACTION_SWITCH
+# line 99 "opt/ini.rl" # end of line directive
+    
+            if (p>okp){
+              appendBuf.extend(data + uintz(okp), p - okp);
+              okp = p;
+          }
+            // ACTION
+    }
+    else  if (_tempval  == 10) { // FROM_STATE_ACTION_SWITCH
+# line 106 "opt/ini.rl" # end of line directive
+    
+          okp = p;
+            // ACTION
+    }
+    else  if (_tempval  == 11) { // FROM_STATE_ACTION_SWITCH
+# line 110 "opt/ini.rl" # end of line directive
+    
+            chr = (data[okp] - 48) *64;
+            chr += (data[okp+1] - 48)*8;
+            chr += (data[okp+2] - 48);
+            appendBuf.append(chr);
+
+            okp = p + 1;
+            p = ( p + 1) - 1; //EXEC
+
+            // ACTION
+    }
+    else  if (_tempval  == 12) { // FROM_STATE_ACTION_SWITCH
+# line 120 "opt/ini.rl" # end of line directive
+    
+            if (p > okp)
+                appendBuf.extend(data + uintz(okp), p - okp - 1);
+            chr = data[p];
+            if (chr == b'"' || chr == b'\\' || chr == b'/')
+                appendBuf.append(chr);
+            else if (chr == b"b")
+                appendBuf.append(b"\b");
+            else if (chr == b"n")
+                appendBuf.append(b"\n");
+            else if (chr == b"f")
+                appendBuf.append(b"\f");
+            else if (chr == b"r")
+                appendBuf.append(b"\r");
+            else if (chr == b"t")
+                appendBuf.append(b"\t");
+            okp = p + 1;
+            p = ( p + 1) - 1; //EXEC
+
+            // ACTION
+    }
+    else  if (_tempval  == 13) { // FROM_STATE_ACTION_SWITCH
+# line 140 "opt/ini.rl" # end of line directive
+    
+          if (p > okp)
+              appendBuf.extend(data + uintz(okp), p - okp);
+          value = String(appendBuf, 0, appendBuf.pos);
+
+          _sectionMap[key] = value;
+          okp = p+1;
+            // ACTION
+    }
+# line 413 "lib/crack/ffmt/ini.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 207 "opt/ini.rl"
+
+        return _resultMap;
+    }
+
+    TreeMap[String, TreeMap[String, String]] parse(String inputString) {
+        _resultMap = TreeMap[String, TreeMap[String, String]]();
+        TreeMap[String, String] _sectionMap = null;
+
+        return parse(inputString, 0, inputString.size);
+    }
+
+    void reset(){
+      _resultMap = null;
+      _sectionMap = null;
+      _errors =  null;
+    }
+
+    TreeMap[String, TreeMap[String, String]] results(){
+      return _resultMap;
+    }
+
+    Array[IniError] errors(){
+      return _errors;
+    }
+
+    void formatTo(Formatter fmt){
+      if (_resultMap is null)
+        fmt.write('null');
+      else {
+        for (section :in _resultMap){
+          fmt `[$(section.key)]\n`;
+          for (vitem :in section.val)
+            fmt `$(vitem.key)=$(escape(vitem.val, 32, 255))\n`
+        }
+      }
+    }
+
+}
+
+iniParser := IniParser();
