@@ -267,40 +267,76 @@ u_int64_t crk_gettimeofday(void){
 
 //------------------------------------------------------------------------------
 void math_init(Module *mod) {
-  int i;
+  int i, j, numtypes=4;
+  char buffer[100];
+  char postfixes[][4] = {"", "f", "32", "64", ""};
+  Type *functypes[] = {mod->getFloatType(), mod->getFloatType(),
+                       mod->getFloat32Type(), mod->getFloat64Type(),
+                       mod->getFloat64Type()};
+  Func *func, *funcd;
+
+#if FLT_EVAL_METHOD==0
+  numtypes=3;
+#endif
 
   // One argument functions
   for(i=0;one_funcs[i];i++){
-    Func *func = mod->addFunc(mod->getFloatType(), one_names[i].funcname, (void *) one_funcs[i]);
-    func->addArg(mod->getFloatType(), arg_names[one_names[i].argname]);
+    for (j=0; j<numtypes; j++){
+      strcpy(buffer, one_names[i].funcname);
+      strcat(buffer, postfixes[j]);
+      func = mod->addFunc(functypes[j], buffer, (void *) one_funcs[i]);
+      func->addArg(functypes[j], arg_names[one_names[i].argname]);
+    }
 
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), one_names[i].funcname, (void *) one_funcs_double[i]);
-    funcd->addArg(mod->getFloat64Type(), arg_names[one_names[i].argname]);
+    for (j=numtypes; j<5; j++){
+      strcpy(buffer, one_names[i].funcname);
+      strcat(buffer, postfixes[j]);
+      funcd = mod->addFunc(functypes[j], buffer, (void *) one_funcs_double[i]);
+      funcd->addArg(functypes[j], arg_names[one_names[i].argname]);
+    }
 #endif
   }
 
   for(i=0;one_macros[i];i++){
-    Func *func = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros[i]);
-    func->addArg(mod->getFloatType(), "value");
+    for (j=0; j<numtypes; j++){
+      strcpy(buffer, one_macro_names[i]);
+      strcat(buffer, postfixes[j]);
+      func = mod->addFunc(mod->getIntType(), buffer, (void *) one_macros[i]);
+      func->addArg(functypes[j], "value");
+    }
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros_double[i]);
-    funcd->addArg(mod->getFloat64Type(), "value");
+    for (j=numtypes; j<5; j++){
+      strcpy(buffer, one_macro_names[i]);
+      strcat(buffer, postfixes[j]);
+      funcd = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros_double[i]);
+      funcd->addArg(functypes[j], "value");
+    }
 #endif
   }
 
    // Two argument functions
   for(i=0;two_funcs[i];i++){
-    Func *func = mod->addFunc(mod->getFloatType(), two_names[i].funcname, (void *) two_funcs[i]);
-    func->addArg(mod->getFloatType(), arg_names[two_names[i].argname1]);
-    func->addArg(mod->getFloatType(), arg_names[two_names[i].argname2]);
+    for (j=0; j<numtypes; j++){
+      strcpy(buffer, two_names[i].funcname);
+      strcat(buffer, postfixes[j]);
+
+      func = mod->addFunc(functypes[j], buffer, (void *) two_funcs[i]);
+      func->addArg(functypes[j], arg_names[two_names[i].argname1]);
+      func->addArg(functypes[j], arg_names[two_names[i].argname2]);
+    }
 #if FLT_EVAL_METHOD==0
 // double and float are distinct types
-    Func *funcd = mod->addFunc(mod->getFloat64Type(), two_names[i].funcname, (void *) two_funcs_double[i]);
-    funcd->addArg(mod->getFloat64Type(), arg_names[two_names[i].argname1]);
-    funcd->addArg(mod->getFloat64Type(), arg_names[two_names[i].argname2]);
+    for (j=numtypes; j<5; j++){
+      strcpy(buffer, two_names[i].funcname);
+      strcat(buffer, postfixes[j]);
+
+      funcd = mod->addFunc(functypes[j], two_names[i].funcname, (void *) two_funcs_double[i]);
+      funcd->addArg(functypes[j], arg_names[two_names[i].argname1]);
+      funcd->addArg(functypes[j], arg_names[two_names[i].argname2]);
+    }
 #endif
   }
 
@@ -314,7 +350,7 @@ void math_init(Module *mod) {
   }
 
   // Math error handling
-  Func *func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
+  func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
   func->addArg(mod->getIntType(), "errors");
   func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
   func->addArg(mod->getIntType(), "errors");
