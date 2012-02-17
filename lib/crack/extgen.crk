@@ -777,6 +777,26 @@ $(generic.getParamCount()) parameters.`;
                 constClasses.append(constClassInfo(args[0], args[1]));
             }
             else if (ann == 'boundclass' && symbolFilename) {
+            /// For C libraries with consistent function names, produces
+            /// a Crack class definition of all functions with a specified
+            /// prefix and first argument
+            /// E.g. @boundclass(Cairo, cr, cairo, _, cairo_t)
+            /// The arguments are:
+            /// - Crack class name
+            /// - object's C name in the library
+            /// - prefix of the functions to put in the class
+            /// - separator after prefix
+            /// - type of the C object
+
+            /// For the function
+            ///     cairo_move_to(cairo_t cr, float64 x, float64 y)
+            /// example produces
+            /// class Cairo {
+            ///     cairo_t cr;
+            ///     move_to(float64 x, float64 y) {
+            ///         cairo_move_to(cr, x, y);
+            ///     }
+            /// }
                 args := _parseArgList(ctx);
                 if (args.count() != 5)
                     error(ctx, tok) `boundclass annotation takes 5 arguments`;
@@ -788,6 +808,8 @@ $(generic.getParamCount()) parameters.`;
                 _parseIfdef(ann, ctx);
             }
             else if (ann == 'cname') {
+            /// Specifies the C name of a function if different from the
+            /// Crack name
                 tok = ctx.getToken();
                 if (!tok.isIdent())
                     error(ctx, tok) `Expected identifier in cname annotation`;
