@@ -1,0 +1,161 @@
+import crack.lang KeyError;
+import crack.cont.hashmap OrderedHashMap, HashMap;
+import crack.io cout, FStr;
+import crack.random random, srandom, initstate, setstate;
+import crack.math usecs;
+import crack.ascii radix;
+
+
+OrderedHashMap[String, String] map = {};
+
+bool testExpected(String testName, OrderedHashMap[String, String] map, String expected){
+  real := FStr() `$map`;
+  success := real == expected;
+  if (!success)
+    cout `$testName: failed\nexpected: '$expected'\nfound   : '$real'\n`;
+  return success;
+}
+
+bool testExpected(String testName, String key, String value, String expected){
+  real := FStr() `$key: $value`;
+  success := real == expected;
+  if (!success)
+    cout `$testName: failed\nexpected: '$expected'\nfound   : '$real'\n`;
+  return success;
+}
+
+bool testExpected(String testName, String value, String expected){
+  success := value == expected;
+  if (!success)
+    cout `$testName: failed\nexpected: '$expected'\nfound   : '$value'\n`;
+  return success;
+}
+
+bool testExpected(String testName, Object value, Object expected){
+  success := value == expected;
+  if (!success)
+    cout `$testName: failed\nexpected: '$expected'\nfound   : '$value'\n`;
+  return success;
+}
+
+
+# Test assignment
+map.append("key", "val");
+map["key2"] = "val2";
+map.append("key3", "val3");
+testExpected("Simple assign and append", map, "{key: val, key2: val2, key3: val3}");
+
+# Test linked list methods
+map.pushHead("key0", "val0");
+testExpected("pushHead", map, "{key0: val0, key: val, key2: val2, key3: val3}");
+
+map.pushTail("key4", "val4");
+testExpected("pushTail", map, "{key0: val0, key: val, key2: val2, key3: val3, key4: val4}");
+
+item := map.popTail();
+testExpected("popTail", map, "{key0: val0, key: val, key2: val2, key3: val3}");
+testExpected("popTailItem", item.key, item.val, "key4: val4");
+
+item = map.popHead();
+testExpected("popHead", map, "{key: val, key2: val2, key3: val3}");
+testExpected("popHeadItem", item.key, item.val, "key0: val0");
+
+item = map[0];
+testExpected("Integer index 0", item.key, item.val, "key: val");
+
+item = map[1];
+testExpected("Integer index 1", item.key, item.val, "key2: val2");
+
+item = map[2];
+testExpected("Integer index 2", item.key, item.val, "key3: val3");
+
+# Test value lookups
+value := map["key"];
+testExpected("Key 'key'", value, "val");
+
+value = map["key2"];
+testExpected("Key 'key2'", value, "val2");
+
+value = map["key3"];
+testExpected("Key 'key3'", value, "val3");
+
+# Overwrite an existing value
+map["key"] = "New key";
+value = map["key"];
+testExpected("Overwrite existing value", value, "New key");
+
+# Delete values
+map.delete(0);
+testExpected("Delete integer index 0", map, "{key2: val2, key3: val3}");
+
+map.delete(1);
+testExpected("Delete integer index 1", map, "{key2: val2}");
+
+map.delete(0);
+testExpected("Delete integer index 0 a second time", map, "{}");
+
+# Get methods for an empty map
+item = map.getItem("key");
+testExpected("getItem of empty map", item, null);
+
+value = map.get("key");
+testExpected("get of empty map", value, null);
+
+value = map.get("key", "default");
+testExpected("get of empty map with default", value, "default");
+
+try {
+  value = map["key"];
+  cout `Catching KeyError failed\n`;
+}
+catch (KeyError ke) {
+}
+
+# Get methods for an non-empty map
+map["3"] = "Three";
+map["2"] = "Two";
+map["1"] = "One";
+testExpected("Multiple assignment", map, "{3: Three, 2: Two, 1: One}");
+
+item = map.getItem("1");
+testExpected("getItem of non-empty map", item.key, item.val, "1: One");
+
+value = map.get("2");
+testExpected("get of nonempty map", value, "Two");
+
+value = map.get("key", "default");
+testExpected("get of non-empty map with default", value, "default");
+
+value = map.get("3", "default");
+testExpected("get of non-empty map with default", value, "Three");
+
+if (map.contains("key") || !map.contains("3"))
+  cout `Contains method failed\n`;
+
+try {
+  value = map["3"];
+}
+catch (KeyError ke) {
+  cout `Catching KeyError false positive\n`;
+}
+
+# Test scaling
+
+us := usecs();
+srandom(uint(us));
+map.clear();
+int r;
+
+for (uint i=0; i<100000; i++){
+  r = random();
+  map[radix(uintz(r),16)] = radix(i,10);
+}
+
+map.clear();
+
+# This causes the compiler to segfault
+#~ for (itm :in map){
+#~   cout `$(itm.key): $(itm.val)\n`;
+#~ }
+
+cout `ok\n`;
