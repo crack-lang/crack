@@ -152,8 +152,8 @@ class Buffer;
     @abstract void format(String data);
 
     @abstract void format(int16 val);
-    @abstract void format(int32 val);
     @abstract void format(uint16 val);
+    @abstract void format(int32 val);
     @abstract void format(uint32 val);
     @abstract void format(int64 val);
     @abstract void format(uint64 val);
