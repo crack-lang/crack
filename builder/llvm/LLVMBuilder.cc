@@ -2202,10 +2202,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new signed##RemOpDef(type, 0, ns), ns);                        \
     context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                      \
     context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                      \
-    context.addDef(new ICmpSGTOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmpSLTOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmpSGEOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmpSLEOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmp##signed##GTOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmp##signed##LTOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmp##signed##GEOpDef(type, boolType, ns), ns);                     \
+    context.addDef(new ICmp##signed##LEOpDef(type, boolType, ns), ns);                     \
     context.addDef(new NegOpDef(type, "oper -", ns), ns);                         \
     context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                      \
     context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
