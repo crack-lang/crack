@@ -653,6 +653,14 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                              );
 
         elemFunc = lookUpNoArgs("elem", true, iterCall->type.get());
+        if (!elemFunc)
+            // XXX change getFullName() to getDisplayName() once it exists.
+            error(SPUG_FSTR("Iterator type " << 
+                            iterCall->type->getFullName() <<
+                            " does not have an 'elem()' method."
+                            )
+                  );
+                            
         
         if (defineVar) {
             warnOnHide(name);

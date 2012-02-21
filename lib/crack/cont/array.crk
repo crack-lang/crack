@@ -98,7 +98,8 @@ class Array[Elem] {
     @final
     Elem oper []=(uint index, Elem elem) {
         if (index >= __size)
-            throw IndexError('Index out of range in Array.oper []=');
+            throw IndexError(FStr() `Index out of range in Array.oper []= \
+(index = $index, size = $__size)`);
         
         tmp := __rep[index];
         __rep[index] = elem;
@@ -117,7 +118,8 @@ class Array[Elem] {
     @final
     Elem oper [](uint index) {
         if (index >= __size)
-            throw IndexError('Index out of range in Array.oper []');
+            throw IndexError(FStr() `Index out of range in Array.oper [] \
+(index = $index, size = $__size)`);
         
         return __rep[index];
     }

@@ -1,6 +1,7 @@
 // Algorithms
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 import crack.lang cmp;
+import crack.io cout;
 
 ## Base class version of quick-sort, can be applied to primitive arrays.
 class QuickSortPrim[Elem] {
@@ -13,28 +14,40 @@ class QuickSortPrim[Elem] {
     }
 
     @static
-    void _quickSort3(Elem A, uintz l, uintz r) {
+    void _quickSort3(Elem A, intz l, intz r) {
 
         // this is based on a 3-partition version from a talk by Robert Sedgewick
         // and Jon Bentley
         // http://www.cs.princeton.edu/~rs/talks/QuicksortIsOptimal.pdf
-        uintz i = l-1;
-        uintz j = r;
-        uintz p = l-1;
-        uintz q = r; 
+        intz i = l-1;
+        intz j = r;
+        intz p = l-1;
+        intz q = r; 
 
         if (r <= l)
             return;
+        
+        # 'v' is our pivot - set 'v' to the right-most value in the span
         v := A[r];
 
         while (true) {
+            # set i to the leftmost index that is >= v
             while (cmp(A[++i], v) < 0);
+            
+            # set j to the rightmost index left of v that is <= v
             while (cmp(v, A[--j]) < 0) 
                 if (j == l) 
                     break;
+
+            # if we've met or passed in the middle, we're done
             if (i >= j) 
                 break;
+            
+            # swap i and j to put them on the correct sides of the pivot
             _swap(A, i, j);
+            
+            # if the i and j values are equal to the key, migrate them to the 
+            # far left or right of the range.
             if (cmp(A[i], v) == 0) { 
                 p++; 
                 _swap(A, p, i);
@@ -45,22 +58,32 @@ class QuickSortPrim[Elem] {
             }
         }
 
+        # move the pivot to the center
         _swap(A, i, r);
+        
+        # set i and j to immediately left and right of center
         j = i-1; 
         i = i+1;
 
+        # move all of the far left elements equal to the pivot to left of 
+        # center.
         for (k := l; k < p; k++) {
-            _swap(A, k, j);
+            if (k != j) {
+                _swap(A, k, j);
+            }
             j--;
         }
 
+        # move all of the far right elements equal to the pivot to right of 
+        # center.
         for (k := r-1; k > q; k--) {
             _swap(A, i, k);
             i++;
         }
-
+        
         _quickSort3(A, l, j);
         _quickSort3(A, i, r);
+        
     }
 
     @static
@@ -98,8 +121,10 @@ class InsertionSortPrim[Elem] {
             while (j < count) {
                 key := A[j];
                 i = j-1;
-                while (i >= 0 && cmp (A[i], key) > 0) {
+                while (cmp (A[i], key) > 0) {
                     _swap(A, i+1, i);
+                    if (i == 0)
+                        break;
                     i--;
                 }
                 A[i+1] = key;
@@ -212,3 +237,4 @@ class HeapSort[SeqT] : HeapSortPrim[SeqT] {
         _heapSort(A, A.count());
     }
 }
+

@@ -1,0 +1,17 @@
+%%TEST%%
+for..in iteration on an iterator with no elem() method.
+%%ARGS%%
+%%FILE%%
+class I {
+    void next() {}
+}
+
+class A {
+    I iter() { return I(); }
+}
+
+for (x :in A());
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:9: Iterator type %SCRIPTNAME%.I does not have an 'elem()' method.
+%%STDIN%%
+
