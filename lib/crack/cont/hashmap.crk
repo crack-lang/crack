@@ -374,6 +374,11 @@ class OrderedHashMap[Key, Value] {
             if (b!=0) return b;
             return val.cmp(it.val);
         }
+
+        void formatToDebug(Formatter fmt){
+            fmt `$prev <- $key: $val -> $next\n`;
+        }
+
     }
     array[Item] _items;
     Item head, tail;
@@ -384,7 +389,7 @@ class OrderedHashMap[Key, Value] {
         oper init(Item item0) : _item = item0, __first = true { }
         oper init(OrderedHashMap map) : _item = map.head, __first = true {}
 
-        Item item() {
+        Item elem() {
             if (_item)
                 return _item;
             else
@@ -452,10 +457,15 @@ class OrderedHashMap[Key, Value] {
     @final
     void clear(uint newcap) {
         item := head;
+        Item tmp;
         while (item) {
-            item.prev = null;
-            item = item.next;
+            tmp = item;
+            item = tmp.next;
+            tmp.prev = null;
+            tmp.next = null;
         }
+
+        head = tail = null;
 
         _free();
         _items = array[Item](newcap);
@@ -851,14 +861,21 @@ class OrderedHashMap[Key, Value] {
     void formatTo(Formatter fmt) {
         fmt.format(fmt.MAPSTART);
         bool first = true;
-        itr := iter();
-        while (itr) {
-#~          for (itm in this){
-            itm := itr.item();
+         for (itm :in this){
             if (!first) fmt.format(fmt.ELEMSEP);
             else first = false;
             fmt.format(itm);
-            itr.next();
+        }
+        fmt.format(fmt.MAPEND);
+    }
+
+    void formatToDebug(Formatter fmt) {
+        fmt.format(fmt.MAPSTART);
+        bool first = true;
+         for (itm :in this){
+            if (!first) fmt.format(fmt.ELEMSEP);
+            else first = false;
+            itm.formatToDebug(fmt);
         }
         fmt.format(fmt.MAPEND);
     }
@@ -866,7 +883,11 @@ class OrderedHashMap[Key, Value] {
     uint count() {
         return _size;
     }
-    
+
+    uint cap(){
+        return _cap;
+    }
+
     ## A HashMap is true if it has elements.
     bool isTrue() { return _size; }
     

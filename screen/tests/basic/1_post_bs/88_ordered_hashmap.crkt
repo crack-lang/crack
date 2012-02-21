@@ -1,0 +1,10 @@
+%%TEST%%
+Ordered HashMap
+%%ARGS%%
+
+%%FILE%%
+import test.test_ordered_hashmap;
+%%EXPECT%%
+ok
+%%STDIN%%
+
