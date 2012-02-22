@@ -210,7 +210,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "state");
     f->addArg(uintType, "n");
 
-    f = mod->addFunc(byteptrType, "setstate", (void *)initstate);
+    f = mod->addFunc(byteptrType, "setstate", (void *)setstate);
     f->addArg(byteptrType, "state");
 
     f = mod->addFunc(byteptrType, "puts",
