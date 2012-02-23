@@ -8,7 +8,7 @@ import crack.process Process;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AssertionError, SubString;
-import crack.regex Regex;
+import crack.regex Regex, PCRE_MULTILINE;
 
 import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
 import testdata TestData;
@@ -91,8 +91,8 @@ class BuilderTestHarness {
 
     Result compareOutputRegex(String expectedRegex, String actual) {
 
-        rx := Regex(expectedRegex + "\w*");
-        m := rx.search(actual.rtrim());
+        rx := Regex(expectedRegex.rtrim(), PCRE_MULTILINE);
+        m := rx.match(actual.rtrim());
 
         if (m is null) {
             _fail();
