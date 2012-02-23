@@ -19,8 +19,10 @@ void crack_ext__pcre_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
     crack::ext::Type *type_byte = mod->getByteType();
+    crack::ext::Type *type_int16 = mod->getInt16Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
+    crack::ext::Type *type_uint16 = mod->getUint16Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
@@ -86,4 +88,96 @@ void crack_ext__pcre_cinit(crack::ext::Module *mod) {
        f->addArg(type_PCRE, "pcre");
        f->addArg(type_byteptr, "name");
 
+
+    mod->addConstant(type_int, "PCRE_ANCHORED",
+                     static_cast<int>(PCRE_ANCHORED)
+                     );
+
+    mod->addConstant(type_int, "PCRE_DOTALL",
+                     static_cast<int>(PCRE_DOTALL)
+                     );
+
+    mod->addConstant(type_int, "PCRE_AUTO_CALLOUT",
+                     static_cast<int>(PCRE_AUTO_CALLOUT)
+                     );
+
+    mod->addConstant(type_int, "PCRE_BSR_ANYCRLF",
+                     static_cast<int>(PCRE_BSR_ANYCRLF)
+                     );
+
+    mod->addConstant(type_int, "PCRE_BSR_UNICODE",
+                     static_cast<int>(PCRE_BSR_UNICODE)
+                     );
+
+    mod->addConstant(type_int, "PCRE_CASELESS",
+                     static_cast<int>(PCRE_CASELESS)
+                     );
+
+    mod->addConstant(type_int, "PCRE_DOLLAR_ENDONLY",
+                     static_cast<int>(PCRE_DOLLAR_ENDONLY)
+                     );
+
+    mod->addConstant(type_int, "PCRE_DOTALL",
+                     static_cast<int>(PCRE_DOTALL)
+                     );
+
+    mod->addConstant(type_int, "PCRE_DUPNAMES",
+                     static_cast<int>(PCRE_DUPNAMES)
+                     );
+
+    mod->addConstant(type_int, "PCRE_EXTENDED",
+                     static_cast<int>(PCRE_EXTENDED)
+                     );
+
+    mod->addConstant(type_int, "PCRE_EXTRA",
+                     static_cast<int>(PCRE_EXTRA)
+                     );
+
+    mod->addConstant(type_int, "PCRE_FIRSTLINE",
+                     static_cast<int>(PCRE_FIRSTLINE)
+                     );
+
+    mod->addConstant(type_int, "PCRE_JAVASCRIPT_COMPAT",
+                     static_cast<int>(PCRE_JAVASCRIPT_COMPAT)
+                     );
+
+    mod->addConstant(type_int, "PCRE_MULTILINE",
+                     static_cast<int>(PCRE_MULTILINE)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NEWLINE_CR",
+                     static_cast<int>(PCRE_NEWLINE_CR)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NEWLINE_LF",
+                     static_cast<int>(PCRE_NEWLINE_LF)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NEWLINE_CRLF",
+                     static_cast<int>(PCRE_NEWLINE_CRLF)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NEWLINE_ANYCRLF",
+                     static_cast<int>(PCRE_NEWLINE_ANYCRLF)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NEWLINE_ANY",
+                     static_cast<int>(PCRE_NEWLINE_ANY)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NO_AUTO_CAPTURE",
+                     static_cast<int>(PCRE_NO_AUTO_CAPTURE)
+                     );
+
+    mod->addConstant(type_int, "PCRE_UNGREEDY",
+                     static_cast<int>(PCRE_UNGREEDY)
+                     );
+
+    mod->addConstant(type_int, "PCRE_UTF8",
+                     static_cast<int>(PCRE_UTF8)
+                     );
+
+    mod->addConstant(type_int, "PCRE_NO_UTF8_CHECK",
+                     static_cast<int>(PCRE_NO_UTF8_CHECK)
+                     );
 }

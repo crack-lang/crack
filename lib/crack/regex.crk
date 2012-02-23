@@ -8,8 +8,19 @@ import crack.functor Functor2;
 @import crack.ann define;
 
 import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
-                       pcre_get_stringnumber, PCRE;
+    pcre_get_stringnumber, PCRE, PCRE_ANCHORED, PCRE_AUTO_CALLOUT, 
+    PCRE_BSR_ANYCRLF, PCRE_BSR_UNICODE, PCRE_CASELESS, PCRE_DOLLAR_ENDONLY, 
+    PCRE_DOTALL, PCRE_DUPNAMES, PCRE_EXTENDED, PCRE_EXTRA, PCRE_FIRSTLINE, 
+    PCRE_JAVASCRIPT_COMPAT, PCRE_MULTILINE, PCRE_NEWLINE_CR, PCRE_NEWLINE_LF, 
+    PCRE_NEWLINE_CRLF, PCRE_NEWLINE_ANYCRLF, PCRE_NEWLINE_ANY, 
+    PCRE_NO_AUTO_CAPTURE, PCRE_UNGREEDY, PCRE_UTF8, PCRE_NO_UTF8_CHECK;
 
+@export_symbols PCRE_ANCHORED, PCRE_AUTO_CALLOUT, 
+    PCRE_BSR_ANYCRLF, PCRE_BSR_UNICODE, PCRE_CASELESS, PCRE_DOLLAR_ENDONLY, 
+    PCRE_DOTALL, PCRE_DUPNAMES, PCRE_EXTENDED, PCRE_EXTRA, PCRE_FIRSTLINE, 
+    PCRE_JAVASCRIPT_COMPAT, PCRE_MULTILINE, PCRE_NEWLINE_CR, PCRE_NEWLINE_LF, 
+    PCRE_NEWLINE_CRLF, PCRE_NEWLINE_ANYCRLF, PCRE_NEWLINE_ANY, 
+    PCRE_NO_AUTO_CAPTURE, PCRE_UNGREEDY, PCRE_UTF8, PCRE_NO_UTF8_CHECK;
 
 int _PCRE_INFO_CAPTURECOUNT = 2;
 
@@ -121,13 +132,16 @@ class Regex : _RegexBase {
     ## the original pattern
     CString pattern;
     
+    ## regex compile options.
+    int __options;
+    
     # the number of sub-expressions to capture.
     uint __captureCount;
 
     void __init() {
         array[int] intReturns = {2};
         array[byteptr] errorText = {1};
-        _rx = pcre_compile2(pattern.buffer, 0, intReturns, errorText,
+        _rx = pcre_compile2(pattern.buffer, __options, intReturns, errorText,
                             intReturns + 1,
                             null
                             );
@@ -154,6 +168,20 @@ class Regex : _RegexBase {
     }
     
     oper init(String pattern) : _RegexBase(null), pattern = CString(pattern) {
+        __init();
+    }
+    
+    oper init(CString pattern, int options) : 
+        _RegexBase(null), 
+        pattern = pattern,
+        __options = options {
+        __init();
+    }
+    
+    oper init(String pattern, int options) : 
+        _RegexBase(null), 
+        pattern = CString(pattern),
+        __options = options {
         __init();
     }
     
