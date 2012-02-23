@@ -115,7 +115,8 @@ void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     // make sure this isn't a primitive class (we use the "pointer" attribute 
     // to make this determination)
     if (!pointer)
-        context.error(SPUG_FSTR("You may not inherit from " << getFullName() <<
+        context.error(SPUG_FSTR("You may not inherit from " << 
+                                getDisplayName() <<
                                  " because it's a primitive class."
                                 )
                       );
@@ -139,7 +140,7 @@ void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     // make sure that we're not already in the ancestor list
     for (size_t i = 0; i < initAncSize; ++i)
         if (ancestors[i] == this)
-            context.error(SPUG_FSTR("Class " << getFullName() <<
+            context.error(SPUG_FSTR("Class " << getDisplayName() <<
                                      " is already an ancestor."
                                     )
                           );
@@ -711,8 +712,11 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     
     // check the cache
     TypeDef *result = findSpecialization(types);
-    if (result)
+    if (result) {
+        // record a dependency on the owner's module and return the result.
+        context.recordDependency(result->getOwner()->getModule().get());
         return result;
+    }
     
     // construct the module name from the class name plus type parameters
     string moduleName = getSpecializedName(types, true);
@@ -826,12 +830,35 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // 
     // extract the type out of the newly created module and store it in the 
     // specializations cache
-    result = TypeDefPtr::rcast(module->lookUp(nameInModule));
-    result->name = newTypeName;
+    result = TypeDefPtr::rcast(module->lookUp(name));
+    result->genericParms = *types;
     assert(result);
     (*generic)[types] = result;
+
+    // record a dependency on the owner's module
+    context.recordDependency(result->getOwner()->getModule().get());
     
     return result;
+}
+
+string TypeDef::getDisplayName() const {
+    if (genericParms.size()) {
+        ostringstream tmp;
+        tmp << VarDef::getDisplayName() << '(';
+        bool first = false;
+        for (TypeVec::const_iterator iter = genericParms.begin();
+             iter != genericParms.end();
+             ++iter
+             ) {
+            tmp << (*iter)->getDisplayName();
+            if (first)
+                first = false;
+            else
+                tmp << ", ";
+        }
+    } else {
+        return VarDef::getDisplayName();
+    }
 }
 
 bool TypeDef::isConstant() {

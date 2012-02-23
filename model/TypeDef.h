@@ -88,6 +88,9 @@ class TypeDef : public VarDef, public Namespace {
         SpecializationCache *generic;
         Generic *genericInfo;
         
+        // defined for a generic instantiation
+        TypeVec genericParms;
+        
         // the number of bytes of padding required by the type after the 
         // instance variables (this exists so we can define extension types, 
         // whose instances consist entirely of padding with no instance 
@@ -300,6 +303,7 @@ class TypeDef : public VarDef, public Namespace {
             fullName.clear();
         }
 
+        virtual std::string getDisplayName() const;
         virtual bool isConstant();
         
         /**

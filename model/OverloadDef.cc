@@ -237,3 +237,19 @@ void OverloadDef::dump(ostream &out, const string &prefix) const {
          )
         (*parent)->dump(out, prefix);
 }
+
+void OverloadDef::display(ostream &out, const string &prefix) const {
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         ) {
+        (*iter)->display(out, prefix + "  ");
+        out << '\n';
+    }
+
+    for (ParentVec::const_iterator parent = parents.begin();
+         parent != parents.end();
+         ++parent
+         )
+        (*parent)->display(out, prefix);
+}

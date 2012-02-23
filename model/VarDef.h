@@ -53,6 +53,13 @@ class VarDef : public virtual spug::RCBase {
         std::string getFullName() const;
         
         /**
+         * Returns the display name of the definition.  This is the name to be 
+         * displayed in error messages.  It is the same as the result of 
+         * getFullName() except for builtins and symbols in the main module.
+         */
+        virtual std::string getDisplayName() const;
+        
+        /**
          * Set namespace owner
          */
         virtual void setOwner(Namespace *o) {

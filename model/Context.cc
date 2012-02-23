@@ -285,7 +285,8 @@ void Context::checkForUnresolvedForwards() {
                  )
                 if ((*fi)->flags & FuncDef::forward)
                     error(SPUG_FSTR("Forward declared function not defined at "
-                                     "the end of the block: " << **fi
+                                     "the end of the block: " << 
+                                     (*fi)->getDisplayName()
                                     )
                           );
         }
@@ -654,9 +655,8 @@ void Context::expandIteration(const std::string &name, bool defineVar,
 
         elemFunc = lookUpNoArgs("elem", true, iterCall->type.get());
         if (!elemFunc)
-            // XXX change getFullName() to getDisplayName() once it exists.
             error(SPUG_FSTR("Iterator type " << 
-                            iterCall->type->getFullName() <<
+                            iterCall->type->getDisplayName() <<
                             " does not have an 'elem()' method."
                             )
                   );
@@ -745,7 +745,7 @@ void Context::maybeExplainOverload(std::ostream &out,
 
     // explain the overload
     out << "\nPossible overloads for " << varName << ":\n";
-    overload->dump(out);
+    overload->display(out);
 
 }
 
@@ -964,6 +964,12 @@ void Context::checkAccessible(VarDef *var) {
                   );
         }
     }
+}
+
+void Context::recordDependency(ModuleDef *module) {
+    // indicate that our module depends on this other one.
+    ContextPtr modCtx = getModuleContext();
+    ModuleDefPtr::arcast(modCtx->ns->getModule())->recordDependency(module);
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

@@ -94,7 +94,7 @@ namespace {
     string earlyCanonicalize(Context &context, const string &name) {
         string canonicalName(context.parent->ns->getNamespaceName());
         if (canonicalName.empty())
-            canonicalName = "builtin";
+            canonicalName = ".builtin";
         canonicalName.append("."+name);
         return canonicalName;
     }

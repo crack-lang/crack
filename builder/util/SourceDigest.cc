@@ -53,6 +53,13 @@ SourceDigest SourceDigest::fromFile(const std::string &path) {
 
 }
 
+SourceDigest SourceDigest::fromStr(const string &str) {
+    SourceDigest d;
+    istringstream src(str);
+    md5_hashSourceText(src, d.digest);
+    return d;
+}
+
 SourceDigest SourceDigest::fromHex(const std::string &d) {
     SourceDigest result;
     if (d.length() != SourceDigest::digest_size*2)

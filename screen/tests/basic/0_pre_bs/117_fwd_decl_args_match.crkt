@@ -9,7 +9,7 @@ void f(int a);
      }
 %%EXPECT%%
 ParseError: %OUTDIR%117_fwd_decl_args_match.crk:2: Argument list of function f doesn't match the names of its forward declaration:
-    forward: (.builtin.int a)
-    defined: (.builtin.int b)
+    forward: (int a)
+    defined: (int b)
 %%STDIN%%
 

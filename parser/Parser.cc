@@ -874,7 +874,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
-                         arg->type->getFullName()
+                         arg->type->getDisplayName()
                          )
                );
       
@@ -1361,7 +1361,7 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
    if (typeDef && !typeDef->generic)
       error(lbrack, 
             SPUG_FSTR("You cannot specialize non-generic type " <<
-                       typeDef->getFullName()
+                       typeDef->getDisplayName()
                       )
             );
    
@@ -1553,7 +1553,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          // try to find it in our base classes
          if (!type->isParent(base.get()))
             error(tok, 
-                  SPUG_FSTR(base->getFullName() << 
+                  SPUG_FSTR(base->getDisplayName() << 
                              " is not a direct base class of " <<
                              type->name
                             )
@@ -1568,7 +1568,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          FuncDefPtr operInit = context->lookUp("oper init", args, base.get());
          if (!operInit || operInit->getOwner() != base.get())
             error(tok, SPUG_FSTR("No matching constructor found for " <<
-                                  base->getFullName()
+                                  base->getDisplayName()
                                  )
                   );
          
@@ -1577,7 +1577,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
          funcCall->receiver = receiver;
          if (!inits->addBaseInitializer(base.get(), funcCall.get()))
             error(tok, 
-                  SPUG_FSTR("Base class " << base->getFullName() <<
+                  SPUG_FSTR("Base class " << base->getDisplayName() <<
                              " already initialized."
                             )
                   );
@@ -1739,9 +1739,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (override && override->returnType != returnType)
       error(nameTok,
             SPUG_FSTR("Function return type of " << 
-                       returnType->getFullName() <<
+                       returnType->getDisplayName() <<
                        " does not match that of the function it overrides (" <<
-                       override->returnType->getFullName() << ")"
+                       override->returnType->getDisplayName() << ")"
                        )
             );
 
@@ -1774,11 +1774,10 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          addFuncDef(funcDef.get());
       } else if (override) {
          // forward declarations of overrides don't make any sense.
+         TypeDef *base = TypeDefPtr::acast(override->getOwner());
          warn(tok3, SPUG_FSTR("Unnecessary forward declaration for overriden "
                                "function " << name << " (defined in ancestor "
-                               "class " << 
-                               override->getOwner()->getNamespaceName() <<
-                               ")"
+                               "class " << base->getDisplayName() << ")"
                               )
               );
       } else {
@@ -2649,7 +2648,8 @@ ContextPtr Parser::parseThrowStmt() {
       ExprPtr expr = parseExpression();
 
       if (!expr->type->isDerivedFrom(context->construct->vtableBaseType.get()))
-         error(tok, SPUG_FSTR("Object of type " << expr->type->getFullName() <<
+         error(tok, SPUG_FSTR("Object of type " << 
+                              expr->type->getDisplayName() <<
                                " is not derived from VTableBase."
                               )
                );
@@ -2748,7 +2748,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
          // check for instance scope
          if (context->scope != Context::composite)
             error(tok, 
-                  SPUG_FSTR("oper to " << type->getFullName() << 
+                  SPUG_FSTR("oper to " << type->getDisplayName() << 
                              " can only be defined in a class scope."
                             )
                   );
@@ -2758,8 +2758,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
          if (!returnType)
             returnType = type.get();
          else if (returnType != type.get())
-            error(tok, SPUG_FSTR("oper to " << type->getFullName() <<
-                                 " must return " << type->getFullName()
+            error(tok, SPUG_FSTR("oper to " << type->getDisplayName() <<
+                                 " must return " << type->getDisplayName()
                                  )
                   );
 

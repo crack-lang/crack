@@ -5,9 +5,9 @@ uncaught exceptions
 %%FILE%%
 import crack.lang Exception;
      throw Exception("badness transpired");
-%%EXPECT%%
+%%REXPECT%%
 Uncaught Exception:
-%SCRIPTNAME%:main
+\.main\._.*:main
 Exception: badness transpired
 %%STDIN%%
 

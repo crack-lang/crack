@@ -85,7 +85,8 @@ class FuncDef : public VarDef {
         bool isOverridable() const;
         
         virtual bool hasInstSlot();
-        virtual bool isStatic() const;
+        virtual bool isStatic() const;        
+        virtual std::string getDisplayName() const;
         
         /**
          * Returns true if the function is an override of a virtual method
@@ -125,9 +126,11 @@ class FuncDef : public VarDef {
         
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
+        void display(std::ostream &out, const std::string &prefix = "") const;
 
         /** Allow us to write the argument list. */
         static void dump(std::ostream &out, const ArgVec &args);
+        static void display(std::ostream &out, const ArgVec &args);
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
@@ -138,7 +141,7 @@ inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {
 inline std::ostream &operator <<(std::ostream &out, 
                                  const FuncDef::ArgVec &args
                                  ) {
-    FuncDef::dump(out, args);
+    FuncDef::display(out, args);
     return out;
 }
 

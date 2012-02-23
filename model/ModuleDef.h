@@ -60,6 +60,13 @@ class ModuleDef : public VarDef, public Namespace {
             fullName.clear();
         }
 
+        /**
+         * Record a dependency on another module.  See 
+         * model::Context::recordDependency() for more info.
+         * Derived classes should override if it's important.
+         */
+        virtual void recordDependency(ModuleDef *other) {}
+
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();
 };

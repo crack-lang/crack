@@ -149,6 +149,7 @@ class OverloadDef : public VarDef {
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
+        void display(std::ostream &out, const std::string &prefix = "") const;
 };
 
 } // namespace model

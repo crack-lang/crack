@@ -44,6 +44,23 @@ std::string VarDef::getFullName() const {
     return fullName;
 }
 
+std::string VarDef::getDisplayName() const {
+    assert(owner && "no owner defined when getting display name");
+    std::string module = owner->getNamespaceName();
+    if (!module.compare(0, 6, ".main.")) {
+        // find the next namespace after the main script
+        size_t pos = module.find('.', 6);
+        if (pos != string::npos)
+            return module.substr(pos + 1) + "." + name;
+        else
+            return name;
+    } else if (module == ".builtin") {
+        return name;
+    } else {
+        return getFullName();
+    }
+}
+
 bool VarDef::isConstant() {
     return constant;
 }

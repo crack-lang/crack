@@ -1,7 +1,9 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 
 #include "CacheFiles.h"
+
 #include "builder/BuilderOptions.h"
+#include "spug/StringFmt.h"
 
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -102,7 +104,7 @@ bool initCacheDirectory(BuilderOptions *options) {
 }
 
 string getCacheFilePath(BuilderOptions* options,
-                        const std::string &path,
+                        const std::string &canonicalName,
                         const std::string &destExt) {
 
     // at this point, initCacheDirectory should have ensured we have a path
@@ -118,8 +120,9 @@ string getCacheFilePath(BuilderOptions* options,
             i = options->optionMap.find("cachePath");
     }
 
-    string finalPath = i->second;
+    return SPUG_FSTR(i->second << "/" << canonicalName << '.' << destExt);
 
+#if 0
     // get the canonicalized path - if that doesn't work, we have to assume
     // that this is a path to a nonexistent file.
     char rpath[PATH_MAX + 1];
@@ -153,7 +156,7 @@ string getCacheFilePath(BuilderOptions* options,
     // XXX add in opt level?
 
     return finalPath;
-
+#endif
 }
 
 }

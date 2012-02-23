@@ -2,6 +2,7 @@
 
 #include "FuncDef.h"
 
+#include <sstream>
 #include "Context.h"
 #include "ArgDef.h"
 #include "Expr.h"
@@ -116,6 +117,12 @@ bool FuncDef::isStatic() const {
     return !(flags & method);
 }
 
+string FuncDef::getDisplayName() const {
+    ostringstream out;
+    display(out, "");
+    return out.str();
+}
+
 bool FuncDef::isVirtualOverride() const {
     return flags & virtualized && pathToFirstDeclaration.size();
 }
@@ -160,4 +167,25 @@ void FuncDef::dump(ostream &out, const ArgVec &args) {
         out << (*iter)->type->getFullName() << ' ' << (*iter)->name;
     }
     out << ")";    
+}
+
+void FuncDef::display(ostream &out, const ArgVec &args) {
+    out << '(';
+    bool first = true;
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
+         ++iter
+         ) {
+        if (!first)
+            out << ", ";
+        else
+            first = false;
+        out << (*iter)->type->getDisplayName() << ' ' << (*iter)->name;
+    }
+    out << ")";    
+}
+
+void FuncDef::display(ostream &out, const string &prefix) const {
+    out << prefix << returnType->getDisplayName() << " " << 
+        VarDef::getDisplayName();
+    display(out, args);
 }

@@ -174,14 +174,11 @@ static int GenerateNative(const std::string &OutputFilename,
 
 */
 void createMain(llvm::Module *mod, const BuilderOptions *o,
-                llvm::Value *vtableBaseTypeBody
+                llvm::Value *vtableBaseTypeBody,
+                const string &mainModuleName
                 ) {
 
-    // script entry point we insert into main() function
-    BuilderOptions::StringMap::const_iterator i = o->optionMap.find("mainUnit");
-    assert(i != o->optionMap.end() && "no mainUnit");
-
-    Function *scriptEntry = mod->getFunction(i->second+":main");
+    Function *scriptEntry = mod->getFunction(mainModuleName + ":main");
     assert(scriptEntry && "no main source file specified");
 
     // main cleanup function we insert into main() function, after script

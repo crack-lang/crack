@@ -19,7 +19,8 @@ namespace mvll {
 
 // create main entry IR
 void createMain(llvm::Module *mod, const BuilderOptions *o,
-                llvm::Value *vtableBaseTypeBody
+                llvm::Value *vtableBaseTypeBody,
+                const std::string &mainModuleName
                 );
 
 // optimize a single unit (module)

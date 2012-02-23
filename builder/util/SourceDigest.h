@@ -8,6 +8,9 @@
 
 namespace builder {
 
+/**
+ * Class for creating MD5 digests.
+ */
 class SourceDigest {
 
     // MD5
@@ -22,6 +25,11 @@ public:
 
     static SourceDigest fromFile(const std::string &path);
     static SourceDigest fromHex(const std::string &d);
+
+    /**
+     * Create a source digest of a string.
+     */
+    static SourceDigest fromStr(const std::string &d);
 
     std::string asHex() const;
 

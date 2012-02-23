@@ -56,6 +56,12 @@ public:
         if (cleanup)
             cleanup();
     }
+
+    void recordDependency(ModuleDef *other) {
+        // reference the entry for this module to create an empty import list
+        // if none currently exists.
+        importList[BModuleDefPtr::acast(other)];
+    }
 };
 
 } // end namespace builder::vmll

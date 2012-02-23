@@ -109,6 +109,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     assert(linker && "unable to create Linker");
 
     string errMsg;
+    string mainModuleName;
     for (ModuleListType::iterator i = moduleList->begin();
          i != moduleList->end();
          ++i) {
@@ -121,6 +122,11 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
                     " [" + errMsg + "]\n";
             (*i)->rep->dump();
         }
+
+        // if this is the main module, store its name.
+        string moduleName = (*i)->getNamespaceName();
+        if (!moduleName.compare(0, 6, ".main."))
+            mainModuleName = moduleName;
     }
 
     // final linked IR
@@ -131,7 +137,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     BTypeDef *vtableType =
         BTypeDefPtr::rcast(context.construct->vtableBaseType);
     Value *vtableTypeBody = vtableType->getClassInstRep(finalir, 0);
-    createMain(finalir, options.get(), vtableTypeBody);
+    createMain(finalir, options.get(), vtableTypeBody, mainModuleName);
 
     // possible LTO optimizations
     if (options->optimizeLevel) {

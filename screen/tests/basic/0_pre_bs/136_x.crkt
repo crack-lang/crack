@@ -5,6 +5,6 @@ expression in throw must derive from VTableBase
 %%FILE%%
 class Foo {} throw Foo();
 %%EXPECT%%
-ParseError: %OUTDIR%136_x.crk:1: Object of type %OUTDIR%136_x.crk.Foo is not derived from VTableBase.
+ParseError: %OUTDIR%136_x.crk:1: Object of type Foo is not derived from VTableBase.
 %%STDIN%%
 

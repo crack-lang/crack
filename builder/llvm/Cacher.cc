@@ -280,7 +280,8 @@ void Cacher::writeNamespace(Namespace *ns) {
 MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
     if (options->verbosity >= 2)
-        cerr << "writing type " << t->name << " in module " << modDef->name <<
+        cerr << "writing type " << t->name << " in module " <<
+            modDef->getNamespaceName() <<
             endl;
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
     assert((bt || t->generic) && "not BTypeDef");
@@ -504,7 +505,7 @@ bool Cacher::readImports() {
 
         // load this module. if the digest doesn't match, we miss
         m = context.construct->loadModule(cname->getString().str());
-        if (m->digest != iDigest)
+        if (!m || m->digest != iDigest)
             return false;
 
         // op 3..n: imported (namespace aliased) symbols from m
@@ -1031,7 +1032,7 @@ void Cacher::writeBitcode(const string &path) {
 BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
                                          const string &path) {
 
-    string cacheFile = getCacheFilePath(options, path, "bc");
+    string cacheFile = getCacheFilePath(options, canonicalName, "bc");
     if (cacheFile.empty())
         return NULL;
 
@@ -1094,9 +1095,7 @@ void Cacher::saveToCache() {
     // in all cases, we should probably be caching them.
     if (modDef->path.empty() || Construct::isDir(modDef->path))
         return;
-    string cacheFile = getCacheFilePath(options,
-                                        modDef->path,
-                                        "bc");
+    string cacheFile = getCacheFilePath(options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
             cerr << "unable to find writable directory for cache, won't cache: "

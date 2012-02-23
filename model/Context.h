@@ -485,6 +485,16 @@ class Context : public spug::RCBase {
          */
         void checkAccessible(VarDef *var);
         
+        /**
+         * Used to indicate that somthing in the current context depends on 
+         * the module, and as such the module must be loaded and initialized 
+         * in order for the current module to work.
+         * 
+         * This was added to accomodate generics instantiations, which act 
+         * like an implicit import of a dependent module.
+         */
+        void recordDependency(ModuleDef *module);
+        
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();
 };

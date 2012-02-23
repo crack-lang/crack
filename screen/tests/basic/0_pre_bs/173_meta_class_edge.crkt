@@ -2,7 +2,28 @@
 Meta-class edge cases
 %%ARGS%%
 %%FILE%%
+import crack.runtime strlen;
 import test.preutil streq;
+
+## Returns true if val starts with head and ends with tail
+bool match(byteptr val, byteptr head, byteptr tail) {
+    int i;
+    for (i = 0; head[i]; ++i)
+        if (val[i] != head[i])
+            return 0;
+
+    # make sure 'val' is big enough/
+    tailSize := strlen(tail);
+    valSize := strlen(val);
+    if (i + tailSize > valSize)
+        return 0;
+
+    tailStart := valSize - tailSize;
+    for (i = tailStart; i < valSize; ++i)
+        if (val[i] != tail[i - tailStart])
+            return 0;
+    return 1;
+}
 
 # tests that meta-class names are correctly constructed
 if (1) {
@@ -10,7 +31,7 @@ if (1) {
     Class c;
     if (!streq(typeof(c).name, 'Class'))
         puts('FAILED type name on a Class variable');
-    if (!streq(typeof(A).name, 'Class[%SCRIPTNAME%.A]'))
+    if (!match(typeof(A).name, 'Class[.main.', 'crk.A]'))
         puts('FAILED type name of Class[A]');
     if (!streq(typeof(typeof(A)).name, 'Class'))
         puts('FAILED type name of type of Class[A]');

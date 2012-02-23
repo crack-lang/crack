@@ -5,7 +5,9 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <dlfcn.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <sstream>
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -18,6 +20,7 @@
 #include "TypeDef.h"
 #include "compiler/init.h"
 #include "builder/util/CacheFiles.h"
+#include "builder/util/SourceDigest.h"
 
 using namespace std;
 using namespace model;
@@ -393,6 +396,11 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName,
     if (!rootBuilder->options->cacheMode)
         return 0;
 
+    // see if it's in the in-memory cache    
+    Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
+    if (iter != moduleCache.end())
+        return iter->second;
+
     // create a new builder, context and module
     BuilderPtr builder = rootBuilder->createChildBuilder();
     builderStack.push(builder);
@@ -410,6 +418,7 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName,
     ModuleDefPtr modDef = context->materializeModule(canonicalName, path);
     if (modDef && rootBuilder->options->statsMode)
         stats->cachedCount++;
+    moduleCache[canonicalName] = modDef;
     
     builderStack.pop();
     return modDef;
@@ -601,19 +610,63 @@ bool Construct::loadBootstrapModules() {
     return true;
 }
 
+namespace {
+    
+    // Returns a "brief path" for the filename.  A brief path consists of an 
+    // md5 hash of the absolute path of the directory of the file, followed by 
+    // an underscore and the file name.
+    string briefPath(const string &filename) {
+        
+        // try to expand the name to the real path
+        char path[PATH_MAX];
+        string fullName;
+        if (realpath(filename.c_str(), path))
+            fullName = path;
+        else
+            fullName = filename;
+        
+        // convert the directory to a hash
+        int lastSlash = fullName.rfind('/');
+        if (lastSlash == fullName.size()) {
+            return fullName;
+        } else {
+            ostringstream tmp;
+            tmp << SourceDigest::fromStr(fullName.substr(0, lastSlash)).asHex()
+                << '_' << fullName.substr(lastSlash + 1);
+            return tmp.str();
+        }
+    }            
+    
+    // Converts a script name to its canonical module name.  Module names for 
+    // scripts are of the form ".main._<abs-path-hash>_<escaped-filename>"
+    string modNameFromFile(const string &filename) {
+        ostringstream tmp;
+        tmp << ".main._";
+        string base = briefPath(filename);
+        for (int i = 0; i < base.size(); ++i) {
+            if (isalnum(base[i]))
+                tmp << base[i];
+            else
+                tmp << "_" << hex << static_cast<int>(base[i]);
+        }
+        
+        return tmp.str();
+    }
+}
+
 int Construct::runScript(istream &src, const string &name) {
+    
+    // get the canonical name for the script
+    string canName = modNameFromFile(name);
+    
     // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     builderStack.push(builder);
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), name)
+                    new GlobalNamespace(rootContext->ns.get(), canName)
                     );
     context->toplevel = true;
-
-    // XXX using the name as the canonical name which is not right, need to 
-    // produce a canonical name from the file name, e.g. "foo" -> "foo", 
-    // "foo.crk" -> foo, "anything weird" -> "__main__" or something.
 
     ModuleDefPtr modDef;
     bool cached = false;
@@ -623,7 +676,7 @@ int Construct::runScript(istream &src, const string &name) {
     // because it might have been disabled if
     // we couldn't find an appropriate cache directory
     if (rootBuilder->options->cacheMode) {
-        modDef = context->materializeModule(name, name);
+        modDef = context->materializeModule(canName, name);
     }
     if (modDef) {
         cached = true;
@@ -632,7 +685,7 @@ int Construct::runScript(istream &src, const string &name) {
             stats->cachedCount++;
     }
     else
-        modDef = context->createModule(name, name);
+        modDef = context->createModule(canName, name);
 
     try {
         if (!cached) {
