@@ -1,0 +1,194 @@
+// Logger module
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// 2/23/2012
+
+import crack.lang Formatter;
+import crack.io cout, cerr;
+import crack.time Date;
+import crack.runtime usecs;
+import crack.cont.hashmap HashMap;
+import crack.cont.array Array;
+import crack.ascii escape, strip;
+import crack.strutil split, StringArray;
+import crack.sys argv, env;
+@import crack.ann define;
+
+defaultTimeFormat := "%b %d %H:%M:%S";
+
+uint
+    FATAL = 0, 
+    ERROR = 1, 
+    WARN  = 2, 
+    INFO  = 3,
+    DEBUG = 4;
+
+StringArray levelNames = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG"];
+
+
+// Place to keep the parameters that describe the logger's output format
+class LoggerOptions {
+    uint seq;
+    String timeFormat, sep, eol;
+    Formatter fmt;
+    uint level;
+
+    oper init () {}
+}
+
+
+// This class writes out a field to the log formatter
+class MessageField {
+    LoggerOptions options;
+
+    oper init(LoggerOptions options): options = options {
+    }
+
+    void format(uint level, String msg){
+        options.fmt.format(msg);
+    }
+}
+
+// A field that writes the current time using the strftime in options
+class TimeField : MessageField {
+    Date d;
+
+    oper init(LoggerOptions options): MessageField(options), d() {
+    }
+
+    void format(uint level, String msg){
+        d.setLocalSeconds(int64(usecs()/1000000));
+        options.fmt.format(d.strftime(options.timeFormat));
+    }
+}
+
+// A field that writes an escaped message - this is preferred over the above raw
+// message field
+class EscapeField : MessageField {
+
+    oper init(LoggerOptions options): MessageField(options) {
+    }
+
+    void format(uint level, String msg){
+        options.fmt.format(escape(msg));
+    }
+}
+
+// A field that writes the program name
+class ProgField : MessageField {
+    String progname;
+
+    oper init(LoggerOptions options): MessageField(options) {
+        progname = argv[0];
+    }
+
+    void format(uint level, String msg){
+        options.fmt.format(progname);
+    }
+}
+
+// A field that writes the program name
+class LevelField : MessageField {
+    String progname;
+
+    oper init(LoggerOptions options): MessageField(options) {
+        progname = argv[0];
+    }
+
+    void format(uint level, String msg){
+        options.fmt.write("[");
+        if (level < levelNames.count())
+            options.fmt.write(levelNames[level]);
+        else
+            options.fmt.write("Unknown");
+        options.fmt.write("]");
+    }
+}
+
+class Logger {
+    LoggerOptions options;
+    Array[MessageField] _fields;
+    HashMap[String, MessageField] availableFields;
+
+    void initNamedFields(){
+        availableFields["msg"] = MessageField(options);
+        availableFields["datetime"] = TimeField(options);
+        availableFields["escapemsg"] = EscapeField(options);
+        availableFields["progname"] = ProgField(options);
+        availableFields["severity"] = LevelField(options);
+    }
+
+    void _setDefaultOptions(){
+        options.timeFormat = defaultTimeFormat;
+        options.sep = " ";
+        options.eol = "\n";
+    }
+
+    void setNamedFields(Array[String] fieldNames){
+        _fields.deleteAll();
+        for (name :in fieldNames)
+            _fields.append(availableFields[name]);
+    }
+
+    oper init(Formatter fmt, uint level) :
+                _fields(), options(), availableFields()
+    {
+        options.fmt = fmt;
+        options.level = level;
+        _setDefaultOptions();
+        initNamedFields();
+        setNamedFields(Array[String]!["datetime", "severity", "msg"]);
+    }
+
+    oper init(Formatter fmt, uint level, Array[String] fieldNames) :
+                _fields(), options(), availableFields()
+    {
+        options.fmt = fmt;
+        options.level = level;
+        _setDefaultOptions();
+        initNamedFields();
+        setNamedFields(fieldNames);
+    }
+
+    oper init(Formatter fmt, uint level, String fieldSpec) :
+                _fields(), options(), availableFields()
+    {
+        options.fmt = fmt;
+        options.level = level;
+        _setDefaultOptions();
+        initNamedFields();
+        fieldNames := split(fieldSpec, " ");
+        for (name :in fieldNames){
+            if (name.size > 0)
+                _fields.append(availableFields[name]);
+        }
+    }
+
+    void setDateTimeFormat(String newTimeFormat){
+        options.timeFormat = newTimeFormat;
+    }
+
+    void log(uint lv, String msg){
+        if (lv <= options.level) {
+            bool first = true;
+            for (field :in _fields) {
+                if (first) first = false;
+                else options.fmt.format(options.sep);
+                field.format(lv, msg);
+            }
+            options.fmt.format(options.eol);
+        }
+    }
+
+    @define _namedLogger(levelName, levelValue) {
+        void levelName(String msg){
+          log(levelValue, msg);
+        }
+    }
+
+    @_namedLogger(fatal, FATAL)
+    @_namedLogger(error, ERROR)
+    @_namedLogger(warn, WARN)
+    @_namedLogger(info, INFO)
+    @_namedLogger(debug, DEBUG)
+
+}

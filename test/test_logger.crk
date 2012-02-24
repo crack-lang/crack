@@ -1,0 +1,34 @@
+# Test the logger module
+import crack.logger Logger, DEBUG, FATAL;
+import crack.io cout, StringFormatter;
+import crack.cont.array Array;
+fmt := StringFormatter();
+
+l := Logger(fmt, DEBUG);
+l.log(DEBUG, "This is a debug string");
+l.debug("This is a debug string2");
+l.info("This is an info string");
+l.warn("This is a warning");
+l.error("This is an error");
+l.fatal("This is a fatal error");
+
+fmt = StringFormatter();
+l = Logger(fmt, FATAL, Array[String]!["datetime", "severity", "progname", "escapemsg"]);
+l.log(DEBUG, "This is a debug string");
+l.debug("This is a debug string2");
+l.info("This is an info string");
+l.warn("This is a warning");
+l.error("This is an error");
+
+if (fmt.string().size > 0)
+  cout `Log level error\n`;
+
+l.fatal("This is a fatal error");
+if (fmt.string().size == 0)
+  cout `Log message erroneously filtered\n`;
+
+fmt = StringFormatter();
+l = Logger(fmt, FATAL, " datetime  severity progname escapemsg ");
+l.log(FATAL, "This is a fatal error");
+
+cout `ok\n`;
