@@ -1,5 +1,5 @@
 # Test the logger module
-import crack.logger Logger, DEBUG, FATAL;
+import crack.logger Logger, DEBUG, FATAL, error, LogFormatter;
 import crack.io cout, StringFormatter;
 import crack.cont.array Array;
 fmt := StringFormatter();
@@ -30,5 +30,14 @@ if (fmt.string().size == 0)
 fmt = StringFormatter();
 l = Logger(fmt, FATAL, " datetime  severity progname escapemsg ");
 l.log(FATAL, "This is a fatal error");
+
+# Test formatter protocol
+uint t1 = 10;
+
+fmt = StringFormatter();
+debugLogger := Logger(fmt, DEBUG);
+debug := LogFormatter(debugLogger, DEBUG);
+
+debug `Test $t1 with $("two") variables`;
 
 cout `ok\n`;

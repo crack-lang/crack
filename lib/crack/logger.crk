@@ -3,7 +3,7 @@
 // 2/23/2012
 
 import crack.lang Formatter;
-import crack.io cout, cerr;
+import crack.io cout, cerr, StandardFormatter, StringWriter;
 import crack.time Date;
 import crack.runtime usecs;
 import crack.cont.hashmap HashMap;
@@ -192,3 +192,43 @@ class Logger {
     @_namedLogger(debug, DEBUG)
 
 }
+
+class LogFormatter : StandardFormatter {
+    StringWriter _writer = {};
+    Logger _logger;
+    uint _level;
+
+    oper init(Logger logger, uint level) :
+            StandardFormatter(null), _logger = logger, _level = level
+    {
+        rep = _writer;
+    }
+
+    void enter() {
+        if (!_writer)
+            rep = _writer = StringWriter();
+    }
+
+    void leave() {
+        _logger.log(_level, _writer.createString());
+        _writer = null;
+        rep = null;
+    }
+
+
+}
+
+cerrLogger := Logger(cerr, ERROR);
+void setLogLevel(uint newLevel){
+    cerrLogger.options.level = newLevel;
+}
+
+@define _namedCerrLogger(levelName, levelValue) {
+    levelName := LogFormatter(cerrLogger, levelValue);
+}
+
+@_namedCerrLogger(fatal, FATAL)
+@_namedCerrLogger(error, ERROR)
+@_namedCerrLogger(warn, WARN)
+@_namedCerrLogger(info, INFO)
+@_namedCerrLogger(debug, DEBUG)
