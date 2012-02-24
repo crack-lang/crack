@@ -2,15 +2,16 @@
 // (C) Conrad Steenberg <conrad.steenberg@gmail.com>
 // 2/23/2012
 
-import crack.lang Formatter;
-import crack.io cout, cerr, StandardFormatter, StringWriter;
-import crack.time Date;
-import crack.runtime usecs;
-import crack.cont.hashmap HashMap;
-import crack.cont.array Array;
 import crack.ascii escape, strip;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.exp.file File;
+import crack.io cout, cerr, StandardFormatter, StringWriter;
+import crack.lang Formatter, Writer;
+import crack.runtime usecs;
 import crack.strutil split, StringArray;
 import crack.sys argv, env;
+import crack.time Date;
 @import crack.ann define;
 
 defaultTimeFormat := "%b %d %H:%M:%S";
@@ -129,6 +130,17 @@ class Logger {
             _fields.append(availableFields[name]);
     }
 
+    StringArray getNamedFields(){
+        StringArray fieldNames = {};
+        for (item :in availableFields)
+            fieldNames.append(item.key);
+        return fieldNames;
+    }
+
+    void setNamedField(String name, MessageField field){
+        availableFields[name] = field;
+    }
+    
     oper init(Formatter fmt, uint level) :
                 _fields(), options(), availableFields()
     {
@@ -191,6 +203,26 @@ class Logger {
     @_namedLogger(info, INFO)
     @_namedLogger(debug, DEBUG)
 
+    void setLevel(uint newLevel){
+        options.level = newLevel;
+    }
+
+    void setFormatter(Formatter fmt){
+        options.fmt = fmt;
+    }
+
+    void setFile(String fname){
+        options.fmt = StandardFormatter(File(fname, "w"));
+    }
+
+    void setWriter(Writer w){
+        options.fmt = StandardFormatter(w);
+    }
+
+    void setFile(File file){
+        options.fmt = StandardFormatter(file);
+    }
+
 }
 
 class LogFormatter : StandardFormatter {
@@ -200,6 +232,34 @@ class LogFormatter : StandardFormatter {
 
     oper init(Logger logger, uint level) :
             StandardFormatter(null), _logger = logger, _level = level
+    {
+        rep = _writer;
+    }
+
+    oper init(String fname, uint level, String fieldSpec) :
+            StandardFormatter(null),  _level = level,
+            _logger = Logger(StandardFormatter(File(fname, "w")), level, fieldSpec)
+    {
+        rep = _writer;
+    }
+
+    oper init(Writer w, uint level, String fieldSpec) :
+            StandardFormatter(null),  _level = level,
+            _logger = Logger(StandardFormatter(w), level, fieldSpec)
+    {
+        rep = _writer;
+    }
+
+    oper init(String fname, uint level) :
+            StandardFormatter(null),  _level = level,
+            _logger = Logger(StandardFormatter(File(fname, "w")), level)
+    {
+        rep = _writer;
+    }
+
+    oper init(Writer w, uint level) :
+            StandardFormatter(null),  _level = level,
+            _logger = Logger(StandardFormatter(w), level)
     {
         rep = _writer;
     }
@@ -215,12 +275,59 @@ class LogFormatter : StandardFormatter {
         rep = null;
     }
 
+    void setNamedFields(Array[String] fieldNames){
+        _logger.setNamedFields(fieldNames);
+    }
+
+    void setLoggerLevel(uint newLevel){
+        _logger.setLevel(newLevel);
+    }
+
+    void setLogger(Logger newLogger){
+        _logger = newLogger;
+    }
+
+    void setLevel(uint newLevel){
+        _level = newLevel;
+    }
+
+    void setFormatter(Formatter fmt){
+        _logger.setFormatter(fmt);
+    }
+
+    void setFile(String fname){
+        _logger.setFile(fname);
+    }
+
+    void setFile(File file){
+        _logger.setFile(file);;
+    }
+
+    void setWriter(Writer w){
+        _logger.setWriter(w);;
+    }
 
 }
 
 cerrLogger := Logger(cerr, ERROR);
 void setLogLevel(uint newLevel){
-    cerrLogger.options.level = newLevel;
+    cerrLogger.setLevel(newLevel);
+}
+
+void setLogFormatter(Formatter fmt){
+    cerrLogger.setFormatter(fmt);
+}
+
+void setLogFile(String fname){
+    cerrLogger.setFile(fname);
+}
+
+void setLogFile(File file){
+    cerrLogger.setFile(file)
+}
+
+void setLogWriter(Writer w){
+    cerrLogger.setWriter(w)
 }
 
 @define _namedCerrLogger(levelName, levelValue) {

@@ -1,7 +1,9 @@
 # Test the logger module
-import crack.logger Logger, DEBUG, FATAL, error, LogFormatter;
+import crack.logger Logger, DEBUG, FATAL, ERROR, INFO, error, LogFormatter,
+                    setLogLevel, setLogFile, setLogWriter, setLogFormatter;
 import crack.io cout, StringFormatter;
 import crack.cont.array Array;
+import crack.exp.file File;
 fmt := StringFormatter();
 
 l := Logger(fmt, DEBUG);
@@ -36,8 +38,38 @@ uint t1 = 10;
 
 fmt = StringFormatter();
 debugLogger := Logger(fmt, DEBUG);
-debug := LogFormatter(debugLogger, DEBUG);
+lf := LogFormatter(debugLogger, DEBUG);
 
-debug `Test $t1 with $("two") variables`;
+lf `Test $t1 with $("two") variables`;
+lf.setLoggerLevel(ERROR);  // Sets the log level of the logger
+lf.setLevel(INFO); // Sets the log level of the formatter
+lf `This INFO string will not be logged, because the logger's severity level allows only ERROR and FATAL log messages`;
+
+lf.setLoggerLevel(DEBUG);  // Sets the log level of the logger
+lf.setFile("/dev/null");
+lf `Log to /dev/null`;
+
+lf.setFile(File("/dev/null","w"));
+lf `Log to /dev/null again`;
+
+lf.setWriter(File("/dev/null","w"));
+lf `Log to /dev/null as a writer`;
+
+lf.setLogger(l);
+lf `Log to StringFormatter as a writer`;
+
+# Test these methods for the default logger objects
+setLogLevel(DEBUG);  // Sets the log level of the logger
+setLogFile("/dev/null");
+error `Log to /dev/null`;
+
+setLogFile(File("/dev/null","w"));
+error `Log to /dev/null again`;
+
+setLogWriter(File("/dev/null","w"));
+error `Log to /dev/null as a writer`;
+
+setLogFormatter(fmt);
+error `Log to StringFormatter as a writer`;
 
 cout `ok\n`;
