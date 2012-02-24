@@ -101,14 +101,6 @@ void crack_ext__pcre_cinit(crack::ext::Module *mod) {
                      static_cast<int>(PCRE_AUTO_CALLOUT)
                      );
 
-    mod->addConstant(type_int, "PCRE_BSR_ANYCRLF",
-                     static_cast<int>(PCRE_BSR_ANYCRLF)
-                     );
-
-    mod->addConstant(type_int, "PCRE_BSR_UNICODE",
-                     static_cast<int>(PCRE_BSR_UNICODE)
-                     );
-
     mod->addConstant(type_int, "PCRE_CASELESS",
                      static_cast<int>(PCRE_CASELESS)
                      );
@@ -119,10 +111,6 @@ void crack_ext__pcre_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "PCRE_DOTALL",
                      static_cast<int>(PCRE_DOTALL)
-                     );
-
-    mod->addConstant(type_int, "PCRE_DUPNAMES",
-                     static_cast<int>(PCRE_DUPNAMES)
                      );
 
     mod->addConstant(type_int, "PCRE_EXTENDED",
@@ -137,32 +125,8 @@ void crack_ext__pcre_cinit(crack::ext::Module *mod) {
                      static_cast<int>(PCRE_FIRSTLINE)
                      );
 
-    mod->addConstant(type_int, "PCRE_JAVASCRIPT_COMPAT",
-                     static_cast<int>(PCRE_JAVASCRIPT_COMPAT)
-                     );
-
     mod->addConstant(type_int, "PCRE_MULTILINE",
                      static_cast<int>(PCRE_MULTILINE)
-                     );
-
-    mod->addConstant(type_int, "PCRE_NEWLINE_CR",
-                     static_cast<int>(PCRE_NEWLINE_CR)
-                     );
-
-    mod->addConstant(type_int, "PCRE_NEWLINE_LF",
-                     static_cast<int>(PCRE_NEWLINE_LF)
-                     );
-
-    mod->addConstant(type_int, "PCRE_NEWLINE_CRLF",
-                     static_cast<int>(PCRE_NEWLINE_CRLF)
-                     );
-
-    mod->addConstant(type_int, "PCRE_NEWLINE_ANYCRLF",
-                     static_cast<int>(PCRE_NEWLINE_ANYCRLF)
-                     );
-
-    mod->addConstant(type_int, "PCRE_NEWLINE_ANY",
-                     static_cast<int>(PCRE_NEWLINE_ANY)
                      );
 
     mod->addConstant(type_int, "PCRE_NO_AUTO_CAPTURE",

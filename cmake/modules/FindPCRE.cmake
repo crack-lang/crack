@@ -22,7 +22,7 @@ if (NOT WIN32)
   # in the FIND_PATH() and FIND_LIBRARY() calls
   find_package(PkgConfig)
 
-  pkg_search_module(PCRE libpcre>=7.0)
+  pkg_search_module(PCRE libpcre>=6.0)
 
 endif (NOT WIN32)
 

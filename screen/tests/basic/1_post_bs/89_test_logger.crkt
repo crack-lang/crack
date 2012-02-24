@@ -1,0 +1,10 @@
+%%TEST%%
+Logger module
+%%ARGS%%
+
+%%FILE%%
+import test.test_logger;
+%%EXPECT%%
+ok
+%%STDIN%%
+
