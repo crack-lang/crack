@@ -4885,6 +4885,117 @@ back whatever it reads from a client) written using #Poller#:
     }
 }}
 
+Logging
+-------
+The #crack.logger# module provides classes for logging messages with configurable
+formatting, severity level and output destination.
+
+*Core functionality*
+
+The core of the module is the #Logger# class which implements 5 logging severity
+levels: #FATAL#, #ERROR#, #WARN#, #INFO#, #DEBUG#. Only messages with a severity
+level higher than the minimum for the #Logger# object will output.
+
+An example looks like this:
+
+{{
+import crack.logger Logger, ERROR, DEBUG;
+import crack.io cerr;
+
+l := Logger(cerr, ERROR);
+l.log(DEBUG "This will not be logged");
+l.log(ERROR, "This will be logged");
+}}
+
+The output will look something like this:
+{{
+Feb 24 15:40:35 [ERROR] This will be logged
+}}
+
+The first argument of the constructor can be any #Formatter# object. Other
+convenient constructors are:
+#Logger(String filename, uint level)#, #Logger(File file, uint level)#, and
+#Logger(Writer w, uint level)#.
+
+
+The #Logger# class defines convenience methods #fatal#, #error#, #warn#, #info#,
+#debug# to log messages with the eponymous severity levels:
+{{
+l.debug("This will not be logged");
+l.error("This will be logged");
+}}
+
+*Formatter protocol*
+The #logger# module also provides the #LogFormatter# class that implements the #Formatter#
+protocol. Extending the example above to use a #LogFormatter# instead, we get:
+{{
+  import crack.logger LogFormatter;
+  debug := LogFormatter(l, DEBUG);
+  error := LogFormatter(l, ERROR);
+
+  debug `This message will not be logged`;
+  error `This message will be logged`;
+}}
+
+That it, a #LogFormatter# instance is a formatter that always logs messages with
+the given severity level. The #logger# module defines the formatters #fatal#,
+#error#, #warn#, #info#, #debug# that logs messages to #cerr# using the default
+log format.
+
+The #LogFormatter# class also implements the convenience constructors
+#LogFormatter(String filename, uint level)#, #LogFormatter(File file, uint level)#, and
+#LogFormatter(Writer w, uint level)#. Using these, the severity level of the
+#Logger# and the #LogFormatter# is the same. To change the log level of the
+undelying #Logger# instance, the method #setLoggerLevel(uint level)# can be used.
+The severity level of a #LogFormatter# instance can be changed using the
+#setLevel(uint level)# method.
+
+*Message formatting*
+The #Logger# class implements log message fields, named #msg#, #datetime#,
+#progname#, #escapemsg", and #severity#. The default fields used are
+#datetime#, #severity#, #msg#, leading to the output shown in the example above.
+
+The fields can be specified using the constructors
+#Logger(Formatter fmt, uint level, Array[String] fieldNames)# or using a space
+delimited field specification
+#Logger(Formatter fmt, uint level, String fieldSpec)#, as follows:
+{{{
+l := Logger(cerr, FATAL, "datetime severity progname escapemsg");
+}}}
+
+The #progname# field is simply the value of #argv[0]#, while #escapemsg# is the
+log message with special characters represented using the escape sequences produced
+by the #ascii.escape# module.
+
+The format of the #datetime# field is determined by a string in the #strftime#,
+format, with the default being #"%b %d %H:%M:%S"#. This format is only able to
+produce timestamps with second accuracy, as it relies on the #crack.time.Date#
+class.
+
+*Message fields*
+Field representations are constructed by #MessageField# instances. To add a new
+type of message field, define a class as follows::
+{{
+import crack.runtime usecs;
+
+MilliSecField : MessageField {
+    oper init(LoggerOptions options): MessageField(options) {
+    }
+
+    void format(uint level, String msg){
+        options.fmt.format(usecs()/1000);
+    }
+}
+}}
+
+The field can be registered with the #Logger#, and the fields specified with:
+{{
+  l.setNamedField("msecs", MilliSecField(l.options);
+  l.setNamedFields("datetime msecs severity progname escapemsg");
+}}
+
+
+
 GTK
 ---
 

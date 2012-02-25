@@ -14,7 +14,7 @@ import crack.sys argv, env;
 import crack.time Date;
 @import crack.ann define;
 
-defaultTimeFormat := "%b %d %H:%M:%S";
+defaultTimeFormat := "%Y-%m-%dT%H:%M:%S";
 
 uint
     FATAL = 0, 
@@ -108,14 +108,14 @@ class LevelField : MessageField {
 class Logger {
     LoggerOptions options;
     Array[MessageField] _fields;
-    HashMap[String, MessageField] availableFields;
+    HashMap[String, MessageField] _availableFields;
 
     void initNamedFields(){
-        availableFields["msg"] = MessageField(options);
-        availableFields["datetime"] = TimeField(options);
-        availableFields["escapemsg"] = EscapeField(options);
-        availableFields["progname"] = ProgField(options);
-        availableFields["severity"] = LevelField(options);
+        _availableFields["msg"] = MessageField(options);
+        _availableFields["datetime"] = TimeField(options);
+        _availableFields["escapemsg"] = EscapeField(options);
+        _availableFields["progname"] = ProgField(options);
+        _availableFields["severity"] = LevelField(options);
     }
 
     void _setDefaultOptions(){
@@ -127,22 +127,32 @@ class Logger {
     void setNamedFields(Array[String] fieldNames){
         _fields.deleteAll();
         for (name :in fieldNames)
-            _fields.append(availableFields[name]);
+            _fields.append(_availableFields[name]);
+    }
+
+    void setNamedFields(String fieldSpec){
+        _fields.deleteAll();
+        fieldNames := split(fieldSpec, " ");
+        for (name :in fieldNames){
+            if (name.size > 0)
+                _fields.append(_availableFields[name]);
+        }
+
     }
 
     StringArray getNamedFields(){
         StringArray fieldNames = {};
-        for (item :in availableFields)
+        for (item :in _availableFields)
             fieldNames.append(item.key);
         return fieldNames;
     }
 
     void setNamedField(String name, MessageField field){
-        availableFields[name] = field;
+        _availableFields[name] = field;
     }
     
     oper init(Formatter fmt, uint level) :
-                _fields(), options(), availableFields()
+                _fields(), options(), _availableFields()
     {
         options.fmt = fmt;
         options.level = level;
@@ -152,7 +162,7 @@ class Logger {
     }
 
     oper init(Formatter fmt, uint level, Array[String] fieldNames) :
-                _fields(), options(), availableFields()
+                _fields(), options(), _availableFields()
     {
         options.fmt = fmt;
         options.level = level;
@@ -162,7 +172,7 @@ class Logger {
     }
 
     oper init(Formatter fmt, uint level, String fieldSpec) :
-                _fields(), options(), availableFields()
+                _fields(), options(), _availableFields()
     {
         options.fmt = fmt;
         options.level = level;
@@ -171,7 +181,7 @@ class Logger {
         fieldNames := split(fieldSpec, " ");
         for (name :in fieldNames){
             if (name.size > 0)
-                _fields.append(availableFields[name]);
+                _fields.append(_availableFields[name]);
         }
     }
 
