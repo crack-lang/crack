@@ -556,7 +556,7 @@ line $lineNum: $msg\n`;
                 # if the last character before where we start is a whitespace
                 # character, mark the fact that we need whitespace before the
                 # textblock.
-                loc := match.begin() - 1;
+                int loc = match.begin() - 1;
                 if (loc >= 0 && !isSpace(line[loc]))
                    childBlock.tightLeft = 1;
                 else
