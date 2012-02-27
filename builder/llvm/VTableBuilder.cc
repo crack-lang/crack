@@ -140,7 +140,7 @@ void VTableBuilder::emit(BTypeDef *type) {
         // create a constant structure that actually is the vtable
         StructType *vtableStructType =
             StructType::create(getGlobalContext(), vtableTypes,
-                               "struct" + iter->second->name
+                               iter->second->name
                                );
         type->vtables[iter->first] =
                 new GlobalVariable(*module, vtableStructType,

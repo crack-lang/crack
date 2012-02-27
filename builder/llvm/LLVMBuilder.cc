@@ -1699,7 +1699,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
     curType->setBody(members);
 
     // set the type name
-    curType->setName("struct." + context.parent->ns->getNamespaceName() +
+    curType->setName(context.parent->ns->getNamespaceName() +
                       "." + type->name
                      );
 

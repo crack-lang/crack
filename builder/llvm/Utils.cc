@@ -279,7 +279,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     vector<Type *> fields(1);
     fields[0] = classStructType;
     StructType *metaClassStructType =
-        StructType::create(lctx, fields, ".struct.metaClass." + canonicalName);
+            StructType::create(lctx, fields, canonicalName + ":metaClass");
     Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
