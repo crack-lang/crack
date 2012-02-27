@@ -744,6 +744,13 @@ void Cacher::readTypeDef(const std::string &sym,
                         );
     finishType(type.get(), metaType.get());
     assert(type->getOwner());
+
+    // retrieve the class implementation pointer
+    GlobalVariable *impl = modDef->rep->getGlobalVariable(type->getFullName());
+    type->impl = new BGlobalVarDefImpl(impl);
+    type->classInst =
+        modDef->rep->getGlobalVariable(type->getFullName() + ":body");
+
     context.construct->registerDef(type.get());
 }
 
