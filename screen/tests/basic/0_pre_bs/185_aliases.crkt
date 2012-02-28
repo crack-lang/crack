@@ -8,6 +8,12 @@ alias v = val, fl = float;
 if (v != 100) puts('FAILED type or variable aliasing');
 fl fval = 1.23;
 
+if (1) {
+    alias J = typeof(v);
+    J j = 72;
+    if (j != 72) puts('FAILED alias from typeof');
+}
+
 int f() { return 123; }
 int f(int i) { return i; }
 alias g = f;
