@@ -354,6 +354,11 @@ class Parser {
       model::ExprPtr parseInitializer(model::TypeDef *type);
 
       /**
+       * Parse an alias statement.
+       */
+      void parseAlias();
+
+      /**
        * Parse a definition. Returns false if there was no definition.
        * This will always parse the type specializer if it exists, and will
        * update "type" to point to its specialization.

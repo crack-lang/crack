@@ -1,0 +1,37 @@
+%%TEST%%
+aliases
+%%ARGS%%
+%%FILE%%
+alias I = int;
+I val = 100;
+alias v = val, fl = float;
+if (v != 100) puts('FAILED type or variable aliasing');
+fl fval = 1.23;
+
+int f() { return 123; }
+int f(int i) { return i; }
+alias g = f;
+if (g() != 123) puts('FAILED func alias');
+if (g(456) != 456) puts('FAILED overload alias');
+
+alias aint = array[int];
+aint ai = {10};
+ai[0] = 100;
+if (ai[0] != 100) puts('FAILED generic aliasing');
+
+class A {
+    int j;
+    alias i = j;
+
+    int xmeth() { return 1001; }
+    alias meth = xmeth;
+}
+A a = {};
+a.i = 789;
+if (a.i != 789) puts('FAILED alias within a class');
+if (a.meth() != 1001) puts('FAILED alias of a method');
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

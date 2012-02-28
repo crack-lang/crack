@@ -175,6 +175,10 @@ void Parser::parseClause(bool defsAllowed) {
 
    if (tok.isTypeof()) {
       primaryType = parseTypeof();
+   } else if (tok.isAlias()) {
+      if (!defsAllowed)
+         error(tok, "Aliasing is not allowed in this context.");
+      parseAlias();
    } else if (tok.isIdent()) {
       
       // if the identifier is a type, deal with it later.  Otherwise deal with 
@@ -1953,6 +1957,77 @@ ExprPtr Parser::parseInitializer(TypeDef *type) {
    return initializer;
 }   
 
+// alias name = existing_def, ... ;
+//      ^                        ^
+void Parser::parseAlias() {
+   while (true) {
+      Token tok = getToken();
+      if (!tok.isIdent())
+         unexpected(tok, "Identifier expected after 'alias'.");
+      
+      string aliasName = tok.getData();
+      
+      // make sure the alias doesn't hide anything
+      checkForExistingDef(tok, aliasName);
+      
+      tok = getToken();
+      if (!tok.isAssign())
+         unexpected(tok, "Expected assignment operator in alias definition.");
+
+      // get the context where we're going to define the alias
+      ContextPtr defContext = context->getDefContext();
+        
+      VarDefPtr existing;
+      OverloadDefPtr ovld;
+      tok = getToken();
+      if (tok.isTypeof()) {
+         // parse the typeof
+         existing = parseTypeof();
+      } else if (tok.isIdent()) {
+         // try looking up the reference
+         existing = context->lookUp(tok.getData());
+         if (!existing)
+            error(tok, SPUG_FSTR(tok.getData() << 
+                                 " is not an existing definition."
+                                 )
+                  );
+         
+         // if it's a generic see if we've got a specializer.
+         TypeDef *type;
+         if ((type = TypeDefPtr::rcast(existing)) && type->generic) {
+            tok = getToken();
+            if (tok.isLBracket())
+               existing = parseSpecializer(tok, type);
+            else
+               toker.putBack(tok);
+         }
+         
+         // if it's an overload, we have to create an alias object
+         if (ovld = OverloadDefPtr::rcast(existing)) {
+            existing = ovld = ovld->createAlias();
+            existing->setOwner(defContext->ns.get());
+         }
+      } else {
+         unexpected(tok, "Identifier expected after alias definition.");
+      }
+      
+      defContext->ns->addAlias(aliasName, existing.get());
+      
+      // for overloads, we need to update any necessary intermediate 
+      // overloads.
+      if (ovld && defContext != context)
+         context->insureOverloadPath(defContext.get(), ovld.get());
+      
+      tok = getToken();
+      if (tok.isSemi()) {
+         toker.putBack(tok);
+         return;
+      } else if (!tok.isComma()) {
+         unexpected(tok, "Expected comma or semicolon after alias.");
+      }
+   }
+}
+
 // type var = initializer, var2 ;
 //     ^                         ^
 // type function() { }
@@ -3154,6 +3229,12 @@ void Parser::parseClassBody() {
       } else if (tok.isOper()) {
          state = st_notBase;
          parsePostOper(0);
+         continue;
+
+      // check for "alias" keyword.
+      } else if (tok.isAlias()) {
+         state = st_notBase;
+         parseAlias();
          continue;
       }
       
