@@ -1,0 +1,80 @@
+#!/usr/local/bin/crack
+## Script to generate unit test files.  Run with no args for usage.
+## Copyright 2011 Google Inc.
+
+import crack.sys argv, exit;
+import crack.io cout, FStr;
+import crack.exp.dir Directory;
+import crack.exp.fs RealPath;
+import crack.exp.cmdline CmdOptions, Option, CMD_BOOL;
+import crack.regex escape, Regex;
+
+int parseInt(String rep) {
+    int i, sign = 1, val;
+    if (rep[0] == b'-') {
+        ++i;
+        sign = -1;
+    }
+    
+    while (i < rep.size) {
+        b := rep[i++];
+        if (b >= b'0' && b <= b'9')
+            val = val * 10 + b - b'0';
+        else
+            break;
+    }
+
+    return val * sign;
+}
+
+opts := CmdOptions![
+    Option('nobootstrap', 'n', 
+           'Set to "true" if the test should be run in non-bootstrapped '
+            'mode.',
+           'false',
+           CMD_BOOL
+           ),
+    Option('help', 'h', 'Show usage.', 'false', CMD_BOOL)
+];
+
+usageIntro := 'Script to generate a test case
+
+Usage:
+    test_make [options] <test-mnemonic>';
+
+parsedArgs := opts.parse(argv, false);
+if (opts.getBool('help')) {
+    opts.writeUsage(cout, usageIntro);
+    exit(0);
+} else if (parsedArgs.count() != 2) {
+    opts.writeUsage(cout, usageIntro);
+    exit(1);
+}
+
+noBS := opts.getBool('nobootstrap');
+testMnemonic := parsedArgs[1];
+
+String testDir = noBS ? 'screen/tests/basic/0_pre_bs' :
+                        'screen/tests/basic/1_post_bs';
+
+# find the highest file number
+fileRx := Regex(escape(testDir) + r'/(\d+)_.*');
+int maxId;
+for (file :in Directory(testDir).files()) {
+    if ( (m := fileRx.search(file.name)) && 
+         (curId := parseInt(m.group(1))) > maxId
+        )
+        maxId = curId;
+}
+
+templateFile := FStr() `$(testDir)/$(maxId + 1)_$testMnemonic.crkt`;
+out := RealPath(templateFile).writer();
+out.write('%%TEST%%
+%%ARGS%%
+%%FILE%%
+%%EXPECT%%
+%%STDIN%%
+');
+
+cout `wrote $templateFile\n`;
+     
