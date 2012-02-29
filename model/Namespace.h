@@ -105,6 +105,7 @@ class Namespace : public virtual spug::RCBase {
          */
         virtual void addAlias(VarDef *def);
         virtual void addAlias(const std::string &name, VarDef *def);
+        virtual void addAliasNew(const std::string &name, VarDef *def);
         
         /** 
          * Alias all symbols from the other namespace and all of its ancestor 

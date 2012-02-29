@@ -98,7 +98,7 @@ class LLVMBuilder : public Builder {
          * during initializeImport
          */
         void initializeImportCommon(model::ModuleDef* m,
-                                    const std::vector<std::string> &symbols
+                                    const model::ImportedDefVec &symbols
                                     );
 
         /**
@@ -442,10 +442,10 @@ class LLVMBuilder : public Builder {
         virtual void *loadSharedLibrary(const std::string &name);
 
         virtual void importSharedLibrary(const std::string &name,
-                                       const std::vector<std::string> &symbols,
-                                       model::Context &context,
-                                       model::Namespace *ns
-                                       );
+                                         const model::ImportedDefVec &symbols,
+                                         model::Context &context,
+                                         model::Namespace *ns
+                                         );
         virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          );

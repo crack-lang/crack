@@ -85,7 +85,7 @@ class LLVMJitBuilder : public LLVMBuilder {
         }
 
         virtual void initializeImport(model::ModuleDef* m,
-                                      const std::vector<std::string> &symbols,
+                                      const model::ImportedDefVec &symbols,
                                       bool annotation) {
             initializeImportCommon(m, symbols);
         }        

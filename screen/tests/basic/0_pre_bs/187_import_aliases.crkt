@@ -1,0 +1,14 @@
+%%TEST%%
+import aliases
+%%ARGS%%
+%%FILE%%
+import test.testmod7 mf = func, MX = X, v = gvar;
+
+MX mx = {};
+if (mx.f() != 123) puts('FAILED aliased class');
+if (mf() != 456) puts('FAILED aliased func');
+if (v != 789) puts('FAILED aliased global variable');
+puts('ok')
+%%EXPECT%%
+ok
+%%STDIN%%

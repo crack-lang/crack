@@ -406,7 +406,7 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
 }
 
 void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
-                                         const std::vector<std::string> &symbols,
+                                         const ImportedDefVec &symbols,
                                          bool annotation) {
 
     assert(!annotation && "annotation given to linker builder");

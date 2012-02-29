@@ -137,10 +137,11 @@ void Cacher::writeMetadata() {
                                       (*iIter).first->digest.asHex()));
 
         // op 3..n: symbols to be imported (aliased)
-        for (vector<string>::const_iterator sIter = (*iIter).second.begin();
+        for (ImportedDefVec::const_iterator sIter = (*iIter).second.begin();
              sIter != (*iIter).second.end();
              ++sIter) {
-            dList.push_back(MDString::get(getGlobalContext(), *sIter));
+            dList.push_back(MDString::get(getGlobalContext(), sIter->local));
+            dList.push_back(MDString::get(getGlobalContext(), sIter->source));
         }
 
         node->addOperand(MDNode::get(getGlobalContext(), dList));
@@ -160,10 +161,11 @@ void Cacher::writeMetadata() {
                                       (*iIter).first));
 
         // op 2..n: symbols to be imported
-        for (vector<string>::const_iterator sIter = (*iIter).second.begin();
+        for (ImportedDefVec::const_iterator sIter = (*iIter).second.begin();
              sIter != (*iIter).second.end();
              ++sIter) {
-            dList.push_back(MDString::get(getGlobalContext(), *sIter));
+            dList.push_back(MDString::get(getGlobalContext(), sIter->local));
+            dList.push_back(MDString::get(getGlobalContext(), sIter->source));
         }
 
         node->addOperand(MDNode::get(getGlobalContext(), dList));
@@ -481,7 +483,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 bool Cacher::readImports() {
 
     MDNode *mnode;
-    MDString *cname, *digest, *symStr;
+    MDString *cname, *digest, *localStr, *sourceStr;
     SourceDigest iDigest;
     BModuleDefPtr m;
     VarDefPtr symVal;
@@ -510,13 +512,15 @@ bool Cacher::readImports() {
 
         // op 3..n: imported (namespace aliased) symbols from m
         for (unsigned si = 2; si < mnode->getNumOperands(); ++si) {
-            symStr = dyn_cast<MDString>(mnode->getOperand(si));
-            assert(symStr && "malformed import node: symbol name");
-            symVal = m->lookUp(symStr->getString().str());
+            localStr = dyn_cast<MDString>(mnode->getOperand(si++));
+            sourceStr = dyn_cast<MDString>(mnode->getOperand(si++));
+            assert(localStr && "malformed import node: missing local name");
+            assert(sourceStr && "malformed import node: missing source name");
+            symVal = m->lookUp(sourceStr->getString().str());
             // if we failed to lookup the symbol, then something is wrong
             // with our digest mechanism
             assert(symVal.get() && "import: inconsistent state");
-            modDef->addAlias(symVal.get());
+            modDef->addAliasNew(localStr->getString().str(), symVal.get());
         }
 
 
@@ -525,7 +529,7 @@ bool Cacher::readImports() {
     imports = modDef->rep->getNamedMetadata("crack_shlib_imports");
     assert(imports && "missing crack_shlib_imports node");
 
-    vector<string> symList;
+    ImportedDefVec symList;
     for (int i = 0; i < imports->getNumOperands(); ++i) {
 
         mnode = imports->getOperand(i);
@@ -536,10 +540,15 @@ bool Cacher::readImports() {
 
         // op 2..n: imported symbols from m
         for (unsigned si = 1; si < mnode->getNumOperands(); ++si) {
-            symStr = dyn_cast<MDString>(mnode->getOperand(si));
-            assert(symStr && "malformed shlib import node: symbol name");
-            shlibImported[symStr->getString().str()] = true;
-            symList.push_back(symStr->getString().str());
+            localStr = dyn_cast<MDString>(mnode->getOperand(si));
+            sourceStr = dyn_cast<MDString>(mnode->getOperand(si));
+            assert(localStr && "malformed shlib import node: local name");
+            assert(sourceStr && "malformed shlib import node: source name");
+            shlibImported[localStr->getString().str()] = true;
+            symList.push_back(ImportedDef(localStr->getString().str(),
+                                          sourceStr->getString().str()
+                                          )
+                              );
         }
 
         context.builder.importSharedLibrary(cname->getString().str(),

@@ -5,6 +5,7 @@
 
 #include "builder/util/SourceDigest.h"
 #include "model/ModuleDef.h"
+#include "model/ImportedDef.h"
 #include <spug/RCPtr.h>
 #include <string>
 #include <vector>
@@ -34,10 +35,10 @@ public:
     SourceDigest digest;
 
     // list of modules imported by this one, along with its imported symbols
-    typedef std::map<BModuleDef*, std::vector<std::string> > ImportListType;
+    typedef std::map<BModuleDef*, model::ImportedDefVec > ImportListType;
     ImportListType importList;
     // list of shared libraries imported, along with imported symbols
-    typedef std::map<std::string, std::vector<std::string> > ShlibImportListType;
+    typedef std::map<std::string, model::ImportedDefVec > ShlibImportListType;
     ShlibImportListType shlibImportList;
 
     BModuleDef(const std::string &canonicalName,

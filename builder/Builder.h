@@ -9,6 +9,7 @@
 #include "BuilderOptions.h"
 #include "model/FuncCall.h" // for FuncCall::ExprVec
 #include "model/FuncDef.h" // for FuncDef::Flags
+#include "model/ImportedDef.h"
 
 namespace model {
     class AllocExpr;
@@ -464,7 +465,7 @@ class Builder : public spug::RCBase {
          * as StubDef's in 'context'.
          */
         virtual void importSharedLibrary(const std::string &name,
-                                         const std::vector<std::string> &symbols,
+                                         const model::ImportedDefVec &symbols,
                                          model::Context &context,
                                          model::Namespace *ns
                                          ) = 0;
@@ -483,7 +484,7 @@ class Builder : public spug::RCBase {
          * module, i.e. to emit a call to run its top level code
          */
         virtual void initializeImport(model::ModuleDef*,
-                                      const std::vector<std::string> &symbols,
+                                      const model::ImportedDefVec &symbols,
                                       bool annotation) = 0;
 
         /**

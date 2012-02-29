@@ -2742,7 +2742,7 @@ std::string LLVMBuilder::getSourcePath(const std::string &path) {
 }
 
 void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
-                                      const std::vector<std::string> &symbols) {
+                                         const ImportedDefVec &symbols) {
 
     BModuleDef *importedMod = dynamic_cast<BModuleDef*>(m);
 
@@ -2885,17 +2885,17 @@ void *LLVMBuilder::loadSharedLibrary(const std::string &name) {
 }
 
 void LLVMBuilder::importSharedLibrary(const string &name,
-                                    const vector<string> &symbols,
+                                    const ImportedDefVec &symbols,
                                     Context &context,
                                     Namespace *ns
                                     ) {
     void *handle = loadSharedLibrary(name);
-    for (vector<string>::const_iterator iter = symbols.begin();
+    for (ImportedDefVec::const_iterator iter = symbols.begin();
          iter != symbols.end();
          ++iter
          ) {
 
-        void *sym = dlsym(handle, iter->c_str());
+        void *sym = dlsym(handle, iter->source.c_str());
         if (!sym)
             throw spug::Exception(dlerror());
 
@@ -2906,7 +2906,7 @@ void LLVMBuilder::importSharedLibrary(const string &name,
 
         // store a stub for the symbol
         ns->addDef(new StubDef(context.construct->voidType.get(),
-                               *iter,
+                               iter->local,
                                sym
                                )
                    );

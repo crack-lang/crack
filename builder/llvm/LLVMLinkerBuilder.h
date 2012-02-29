@@ -52,7 +52,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                  );
 
         virtual void initializeImport(model::ModuleDef*,
-                                      const std::vector<std::string> &symbols,
+                                      const model::ImportedDefVec &symbols,
                                       bool annotation);
 
         virtual void *loadSharedLibrary(const std::string &name);

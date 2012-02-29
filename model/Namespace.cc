@@ -97,6 +97,22 @@ void Namespace::addAlias(const string &name, VarDef *def) {
     defs[name] = def;
 }
 
+void Namespace::addAliasNew(const string &name, VarDef *def) {
+    // make sure that the symbol is already bound to a context.
+    assert(def->getOwner());
+
+    // overloads should never be aliased - otherwise the new context could 
+    // extend them.
+    OverloadDef *overload = OverloadDefPtr::cast(def);
+    if (overload) {
+        OverloadDefPtr child = overload->createAlias();
+        defs[name] = child.get();
+        child->setOwner(this);
+    } else {
+        defs[name] = def;
+    }
+}
+
 void Namespace::aliasAll(Namespace *other) {
     for (VarDefMap::iterator iter = other->beginDefs();
          iter != other->endDefs();

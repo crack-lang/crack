@@ -128,6 +128,7 @@ noinst_HEADERS = \
     model/GenericParm.h \
     model/GetRegisterExpr.h \
     model/GlobalNamespace.h \
+    model/ImportedDef.h \
     model/Initializers.h \
     model/InstVarDef.h \
     model/IntConst.h \

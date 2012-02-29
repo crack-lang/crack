@@ -20,6 +20,7 @@
 #include "model/FuncCall.h"
 #include "model/GetRegisterExpr.h"
 #include "model/Expr.h"
+#include "model/ImportedDef.h"
 #include "model/Initializers.h"
 #include "model/IntConst.h"
 #include "model/MultiExpr.h"
@@ -2539,12 +2540,27 @@ void Parser::parseImportStmt(Namespace *ns) {
    string name = tok.getData();
    
    // parse all following symbols
-   vector<string> syms;
+   vector<ImportedDef> syms;
    while (true) {
       tok = getToken();
       if (tok.isIdent()) {         
-         syms.push_back(tok.getData());
+         syms.push_back(ImportedDef(tok.getData()));
          tok = getToken();
+         
+         // see if this is "local_name = source_name" notation
+         if (tok.isAssign()) {
+            tok = getToken();
+            if (!tok.isIdent())
+               unexpected(tok, 
+                          SPUG_FSTR("Identifier expected in import alias "
+                                     "expression for " << 
+                                     syms.back().local
+                                     ).c_str()
+                          );
+            syms.back().source = tok.getData();
+            tok = getToken();
+         }
+
          if (tok.isSemi()) {
             break;
          } else if (!tok.isComma()) {
@@ -2570,25 +2586,27 @@ void Parser::parseImportStmt(Namespace *ns) {
                                 ns == context->compileNS.get()
                                 );
       // alias all of the names in the new module
-      for (vector<string>::iterator iter = syms.begin();
+      for (ImportedDefVec::iterator iter = syms.begin();
            iter != syms.end();
            ++iter
            ) {
          // make sure that the symbol is not private
-         if ((*iter)[0] == '_')
+         if (iter->source[0] == '_')
             error(tok,
-                  SPUG_FSTR("Can not import private symbol " << *iter << ".")
+                  SPUG_FSTR("Can not import private symbol " << iter->source << 
+                             "."
+                            )
                   );
          
          // make sure we don't already have it
-         if (ns->lookUp(*iter))
-            error(tok, SPUG_FSTR("imported name " << *iter << 
+         if (ns->lookUp(iter->local))
+            error(tok, SPUG_FSTR("imported name " << iter->local << 
                                   " hides existing definition."
                                  )
                   );
-         VarDefPtr symVal = mod->lookUp(*iter);
+         VarDefPtr symVal = mod->lookUp(iter->source);
          if (!symVal)
-            error(tok, SPUG_FSTR("name " << *iter << 
+            error(tok, SPUG_FSTR("name " << iter->source << 
                                   " is not defined in module " << 
                                   canonicalName
                                  )
@@ -2598,9 +2616,9 @@ void Parser::parseImportStmt(Namespace *ns) {
          // explicitly exported by the module (no implicit second-order 
          // imports).
          if (symVal->getOwner() != mod.get() &&
-             mod->exports.find(*iter) == mod->exports.end()
+             mod->exports.find(iter->source) == mod->exports.end()
              )
-            error(tok, SPUG_FSTR("Name " << *iter <<
+            error(tok, SPUG_FSTR("Name " << iter->source <<
                                   " does not belong to module " <<
                                   canonicalName << ".  Second-order imports " 
                                   "are not allowed.  Import it from " <<
@@ -2610,7 +2628,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                   );
          
          builder.registerImportedDef(*context, symVal.get());
-         ns->addAlias(symVal.get());
+         ns->addAliasNew(iter->local, symVal.get());
       }
    }
 }
