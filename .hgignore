@@ -35,3 +35,4 @@ stamp-h[12]$
 ^lib/crack/runtime.so$
 ^lib/testext.so$
 ^screen/output/
+^cache_tests
