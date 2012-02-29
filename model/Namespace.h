@@ -104,8 +104,17 @@ class Namespace : public virtual spug::RCBase {
          * module context.
          */
         virtual void addAlias(VarDef *def);
-        virtual void addAlias(const std::string &name, VarDef *def);
-        virtual void addAliasNew(const std::string &name, VarDef *def);
+        virtual OverloadDefPtr addAlias(const std::string &name, 
+                                        VarDef *def
+                                        );
+
+        /**
+         * Adds an alias without special processing if 'def' is an overload.  
+         * This is only safe in a situation where we know that the overload 
+         * can never be extended in a new context, which happens to be the 
+         * case when we're aliasing symbols from .builtin to the root module.
+         */
+        virtual void addUnsafeAlias(const std::string &name, VarDef *def);
         
         /** 
          * Alias all symbols from the other namespace and all of its ancestor 

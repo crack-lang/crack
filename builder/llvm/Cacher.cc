@@ -520,7 +520,7 @@ bool Cacher::readImports() {
             // if we failed to lookup the symbol, then something is wrong
             // with our digest mechanism
             assert(symVal.get() && "import: inconsistent state");
-            modDef->addAliasNew(localStr->getString().str(), symVal.get());
+            modDef->addAlias(localStr->getString().str(), symVal.get());
         }
 
 

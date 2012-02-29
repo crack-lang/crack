@@ -781,7 +781,9 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         
         // alias the template arguments to their parameter names
         for (int i = 0; i < types->size(); ++i)
-            modContext->ns->addAlias(genericInfo->parms[i]->name, (*types)[i].get());
+            modContext->ns->addAlias(genericInfo->parms[i]->name, 
+                                     (*types)[i].get()
+                                     );
         
         istringstream fakeInput;
         Toker toker(fakeInput, moduleName.c_str());

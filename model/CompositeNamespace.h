@@ -13,7 +13,7 @@ SPUG_RCPTR(CompositeNamespace);
 /**
  * A virtual namespace that delegates to several other namespaces.
  *
- * All new definitions added to the namespace will be stored in the first 
+ * All new definitions added to the namespace will be stored in the first
  * parent.
  */
 class CompositeNamespace : public Namespace {
@@ -27,7 +27,8 @@ class CompositeNamespace : public Namespace {
         virtual void addDef(VarDef *def);
         virtual void removeDef(VarDef *def);
         virtual void addAlias(VarDef *def);
-        virtual void addAlias(const std::string &name, VarDef *def);
+        virtual OverloadDefPtr addAlias(const std::string &name, VarDef *def);
+        virtual void addUnsafeAlias(const std::string &name, VarDef *def);
         virtual void replaceDef(VarDef *def);
 };
 

@@ -1979,7 +1979,6 @@ void Parser::parseAlias() {
       ContextPtr defContext = context->getDefContext();
         
       VarDefPtr existing;
-      OverloadDefPtr ovld;
       tok = getToken();
       if (tok.isTypeof()) {
          // parse the typeof
@@ -2002,17 +2001,12 @@ void Parser::parseAlias() {
             else
                toker.putBack(tok);
          }
-         
-         // if it's an overload, we have to create an alias object
-         if (ovld = OverloadDefPtr::rcast(existing)) {
-            existing = ovld = ovld->createAlias();
-            existing->setOwner(defContext->ns.get());
-         }
       } else {
          unexpected(tok, "Identifier expected after alias definition.");
       }
       
-      defContext->ns->addAlias(aliasName, existing.get());
+      OverloadDefPtr ovld =
+         defContext->ns->addAlias(aliasName, existing.get());
       
       // for overloads, we need to update any necessary intermediate 
       // overloads.
@@ -2628,7 +2622,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                   );
          
          builder.registerImportedDef(*context, symVal.get());
-         ns->addAliasNew(iter->local, symVal.get());
+         ns->addAlias(iter->local, symVal.get());
       }
    }
 }

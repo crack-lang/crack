@@ -91,13 +91,7 @@ void Namespace::addAlias(VarDef *def) {
     }
 }
 
-void Namespace::addAlias(const string &name, VarDef *def) {
-    // make sure that the symbol is already bound to a context.
-    assert(def->getOwner());
-    defs[name] = def;
-}
-
-void Namespace::addAliasNew(const string &name, VarDef *def) {
+OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
 
@@ -108,9 +102,17 @@ void Namespace::addAliasNew(const string &name, VarDef *def) {
         OverloadDefPtr child = overload->createAlias();
         defs[name] = child.get();
         child->setOwner(this);
+        return child;
     } else {
         defs[name] = def;
+        return 0;
     }
+}
+
+void Namespace::addUnsafeAlias(const string &name, VarDef *def) {
+    // make sure that the symbol is already bound to a context.
+    assert(def->getOwner());
+    defs[name] = def;
 }
 
 void Namespace::aliasAll(Namespace *other) {

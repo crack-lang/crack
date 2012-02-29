@@ -196,7 +196,7 @@ ContextPtr Construct::createRootContext() {
     for (Namespace::VarDefMap::iterator i = builtinContext->ns->beginDefs();
          i != builtinContext->ns->endDefs();
          ++i) {
-         rootContext->ns->addAlias(i->first, i->second.get());
+         rootContext->ns->addUnsafeAlias(i->first, i->second.get());
     }
     
     return rootContext;
@@ -248,14 +248,14 @@ void Construct::loadBuiltinModules() {
     // mostly for legacy reasons
     VarDefPtr a = rtMod->lookUp("puts");
     assert(a && "no puts in runtime");
-    rootContext->ns->addAlias("puts", a.get());
+    rootContext->ns->addUnsafeAlias("puts", a.get());
     a = rtMod->lookUp("__die");
     assert(a && "no __die in runtime");
-    rootContext->ns->addAlias("__die", a.get());
-    rootContext->compileNS->addAlias("__die", a.get());
+    rootContext->ns->addUnsafeAlias("__die", a.get());
+    rootContext->compileNS->addUnsafeAlias("__die", a.get());
     a = rtMod->lookUp("printint");
     if (a)
-        rootContext->ns->addAlias("printint", a.get());
+        rootContext->ns->addUnsafeAlias("printint", a.get());
     
     // for jit builders, get the uncaught exception handler
     if (rootBuilder->isExec()) {
@@ -591,7 +591,7 @@ bool Construct::loadBootstrapModules() {
             rootContext->ns->addAlias(v.get());
         v = mod->lookUp("print");
         if (v)
-            rootContext->ns->addAlias(v.get());
+            rootContext->ns->addUnsafeAlias("print", v.get());
         
         return rootContext->construct->objectType && 
                rootContext->construct->stringType;
