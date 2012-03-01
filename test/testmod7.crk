@@ -1,13 +1,15 @@
 ## Test module for aliases
 ## Copyright 2012 Google Inc.
 
-# something to try later - should be able to import an aliased generic
-#class A[T] {}
-#alias AInt = A[int];
-#@export_symbols AInt;
+class A[T] {
+    T val;
+    oper init() { val = 123; }
+}
+alias AInt = A[int];
 
 class X {
     int f() { return 123; }
 }
 int func() { return 456; }
 int gvar = 789;
+alias _private = gvar;

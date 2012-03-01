@@ -1,0 +1,8 @@
+%%TEST%%
+private aliases
+%%ARGS%%
+%%FILE%%
+import test.testmod7 _private;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1: Can not import private symbol _private.
+%%STDIN%%

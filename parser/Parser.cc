@@ -2020,6 +2020,15 @@ void Parser::parseAlias() {
       if (ovld && defContext != context)
          context->insureOverloadPath(defContext.get(), ovld.get());
       
+      // if this is module context, and this is a public alias for a def not 
+      // owned by the module, add the alias to the list of exports.
+      ModuleDef *mod;
+      if ((mod = ModuleDefPtr::rcast(context->ns)) &&
+          aliasName[0] != '_' &&
+          existing->getOwner() != mod
+          )
+         mod->exports[aliasName] = true;
+      
       tok = getToken();
       if (tok.isSemi()) {
          toker.putBack(tok);
