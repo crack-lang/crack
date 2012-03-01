@@ -1,0 +1,13 @@
+%%TEST%%
+arguments that provide "oper release" are constant.
+%%ARGS%%
+%%FILE%%
+class A {
+    oper release() {}
+}
+void f(A a) {
+    a = A();
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5: You cannot assign to a constant, class or function.
+%%STDIN%%

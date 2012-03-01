@@ -1,0 +1,13 @@
+%%TEST%%
+arguments that do not provide "oper release" are not constant
+%%ARGS%%
+%%FILE%%
+class A {}
+void f(int i, A a) {
+    a = A();
+    i = 100;
+}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

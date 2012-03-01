@@ -1526,6 +1526,13 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
       args.push_back(argDef);
       addDef(argDef.get());
       
+      // if the variable has an "oper release", we can't allow it to be 
+      // assigned because doing so would require that we do a release for a 
+      // binding owned by the caller (due to an optimization).  So mark the 
+      // variable as constant.
+      if (context->lookUpNoArgs("oper release", true, argType.get()))
+         argDef->constant = true;
+      
       // check for a comma
       tok = getToken();
       if (tok.isComma())
