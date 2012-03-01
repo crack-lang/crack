@@ -233,8 +233,12 @@ class TypeDef : public VarDef, public Namespace {
          * @param outerContext this should be the context that the type was 
          *        defined in (it's used to find the module scoped __die() 
          *        function).
+         * @param throws if true, emit the single argument version of the 
+         *        function which throws an exception.  Otherwise emit the two 
+         *        argument version which returns a default value provided by 
+         *        the caller.
          */
-        void createCast(Context &outerContext);
+        void createCast(Context &outerContext, bool throws);
 
         /**
          * Returns true if the class has any abstract functions.

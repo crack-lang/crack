@@ -361,17 +361,26 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     classContext.addDef(newFunc.get());
 }
 
-void TypeDef::createCast(Context &outer) {
+void TypeDef::createCast(Context &outer, bool throws) {
     assert(hasVTable && "Attempt to createCast() on a non-virtual class");
     ContextPtr funcCtx = outer.createSubContext(Context::local);
     funcCtx->toplevel = true;
     funcCtx->returnType = this;
     
-    FuncDef::ArgVec args(1);
-    args[0] = 
+    FuncDef::ArgVec args;
+    args.reserve(2);
+    args.push_back(
         outer.builder.createArgDef(outer.construct->vtableBaseType.get(),
                                    "val"
-                                   );
+                                   )
+    );
+    
+    // if this isn't the throwing variety, add a "defaultValue" arg.
+    if (!throws)
+        args.push_back(
+            outer.builder.createArgDef(this, "defaultValue")
+        );
+
     FuncDefPtr castFunc = outer.builder.emitBeginFunc(*funcCtx,
                                                       FuncDef::noFlags,
                                                       "cast",
@@ -424,22 +433,28 @@ void TypeDef::createCast(Context &outer) {
     // else    
     branchpoint = funcCtx->builder.emitElse(*funcCtx, branchpoint.get(), true);
 
-    // __CrackBadCast(val.class, ThisClass);
-    FuncCall::ExprVec badCastArgs(2);
-    badCastArgs[0] = valClass;
-    badCastArgs[1] = funcCtx->builder.createVarRef(this);
-    f = outer.getParent()->lookUp("__CrackBadCast", badCastArgs);
-    assert(f && "__CrackBadCast missing");
-    call = funcCtx->builder.createFuncCall(f.get());
-    call->args = badCastArgs;
-    funcCtx->createCleanupFrame();
-    call->emit(*funcCtx)->handleTransient(*funcCtx);
-    funcCtx->closeCleanupFrame();
-    
-    // need to "return null" to provide a terminator.
-    TypeDef *vp = outer.construct->voidptrType.get();
-    ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
-    funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
+    if (throws) {
+        // __CrackBadCast(val.class, ThisClass);
+        FuncCall::ExprVec badCastArgs(2);
+        badCastArgs[0] = valClass;
+        badCastArgs[1] = funcCtx->builder.createVarRef(this);
+        f = outer.getParent()->lookUp("__CrackBadCast", badCastArgs);
+        assert(f && "__CrackBadCast missing");
+        call = funcCtx->builder.createFuncCall(f.get());
+        call->args = badCastArgs;
+        funcCtx->createCleanupFrame();
+        call->emit(*funcCtx)->handleTransient(*funcCtx);
+        funcCtx->closeCleanupFrame();
+        
+        // need to "return null" to provide a terminator.
+        TypeDef *vp = outer.construct->voidptrType.get();
+        ExprPtr nullVal = (new NullConst(vp))->convert(*funcCtx, this);
+        funcCtx->builder.emitReturn(*funcCtx, nullVal.get());
+    } else {
+        // return defaultVal;
+        VarRefPtr defaultValRef = funcCtx->builder.createVarRef(args[1].get());
+        funcCtx->builder.emitReturn(*funcCtx, defaultValRef.get());
+    }
 
     // end of story.
     funcCtx->builder.emitEndIf(*funcCtx, branchpoint.get(), true);

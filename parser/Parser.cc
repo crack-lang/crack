@@ -3145,9 +3145,11 @@ TypeDefPtr Parser::parseClassDef() {
    if (flags & TypeDef::abstractClass)
       type->abstract = true;
    
-   // add the "cast" method
-   if (type->hasVTable)
-      type->createCast(*classContext);
+   // add the "cast" methods
+   if (type->hasVTable) {
+      type->createCast(*classContext, true);
+      type->createCast(*classContext, false);
+   }
 
    // create a lexical context which delegates to both the class context and 
    // the parent context.

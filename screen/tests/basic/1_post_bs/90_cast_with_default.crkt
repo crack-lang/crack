@@ -1,0 +1,35 @@
+%%TEST%%
+test of the cast function with a default value.
+%%ARGS%%
+%%FILE%%
+void puts(String s) { puts(s.buffer); }
+
+class A {
+}
+class B : A {
+    int f() { return 123; }
+}
+
+class C {}
+
+A a = B();
+
+if (b := B.cast(a, null)) {
+    if (b.f() != 123) puts('FAILED value of cast with null default');
+} else {
+    puts('FAILED cast with null default');
+}
+
+if (B.cast(C(), null))
+    puts('FAILED defaulting if failed cast');
+
+if (b := B.cast(C(), B())) {
+    if (b.f() != 123) puts('FAILED value of failed cast with default');
+} else {
+    puts('FAILED failed cast with default');
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
