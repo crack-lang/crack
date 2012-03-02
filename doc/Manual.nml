@@ -976,6 +976,53 @@ Forward declared functions must be resolved by the close of the scope where
 they are declared.  In the example above, if we had not defined #g()# by the
 end of the module, we would have gotten an error.
 
+Aliases
+-------
+
+Any definition in Crack can be aliased - that is, we can specify another name
+to refer to it.  This is done using the #alias# statement:
+
+{{
+    void myLongFuncName() {}
+    class MyLongClassName {}
+
+    alias f = myLongFuncName, C = MyLongClassName;
+
+    f();  # equivalent to a call to myLongFuncName()
+    C c = {};  # equivalent to creating an instance of MyLongClassName
+}}
+
+The #alias# statement is followed by comma-separated a list of alias definitions
+of the form "/alias-name/ = /definition/".  A /definition/ can be any
+variable, function, constant or type.
+
+When an alias is defined for an overloaded function, it becomes an alias for
+all overloads of that function that exist in that context at the point where
+the alias is defined.  For example:
+
+{{
+    import crack.io cout;
+
+    void f(int a) { cout `$a\n`; }
+    void f(bool b) { cout `$b\n`; }
+
+    alias g = f;
+
+    void f(String s) { cout `$s\n`; }
+
+    g('test string');
+}}
+
+Perhaps unexpectedly, the code above prints "true".  "g" is an alias for
+#f(int)# and #f(bool)#, but not for #f(String)# because that function wasn't
+defined at the point where the alias was created.
+
+Like all other definitions, aliases are scoped to the block context where they
+are defined.
+
+Aliases can be useful for providing shorter names, but their main value comes
+from defining alternate names for \X(Generics).
+
 Operators
 ---------
 
@@ -1161,7 +1208,16 @@ that you don't really care about.  For example:
 }}
 
 #typeof()# is particularly useful in macros (see \X(The Standard Annotations))
-and \X(Generics) where type information might not be easily accessible.
+and \X(Generics) where type information might not be easily accessible.  We
+can use #typeof()# in an #alias# statement to provide names for types in these
+kinds of situations:
+
+{{
+    alias T = typeof(f());  # make T the return type of the function f().
+
+    T getVal();
+    void setVal(T newVal);
+}}
 
 Classes
 -------
@@ -1868,6 +1924,29 @@ cast to its type:
 If the object is not actually an instance of the type we are casting to, the
 #cast()# function throws a #BadCastError#.
 
+Sometimes you want to be able to perform some action on a value only if it is
+a certain type.  This can be done by checking the type prior to casting, or by
+performing the cast followed by the action in a #try# block, but these
+approaches both have performance problems.  To address this, there is an
+overload of #cast()# which accepts a default value.  If the value cannot be
+cast to the type, the default value is returned.
+
+Typically, this is used with a default value of #null#.  For example, a
+comparison function would typically be implemented as:
+
+{{
+    class A {
+        String foo;
+
+        int cmp(Object other) {
+            if (o := A.cast(other, null))
+                return cmp(foo, o.foo);
+            else
+                return Object.cmp(other);
+        }
+    }
+}}
+
 The #cast()# function is defined for all classes that derive from
 #VTableBase# (including all classes derived from #Object#).  If you attempt
 to cast an object to a type that it is not an instance of, the program will
@@ -2428,7 +2507,18 @@ The general format of the import statement is:
 
 /module-name/ is a dot-delimited module name.  /name-list/ is a comma
 separated list of functions, variables and classes defined in the module that
-you wish to import into the current namespace.
+you wish to import into the current namespace.  A name can also have the form
+"/local-name/ = /source-name/", allowing you to import a definition under a
+different alias.  This feature is typically used to avoid name collisions.
+
+For example, let's say that we had two modules that both define classes names
+"Document."  We could use both types in the same module by importing them with
+aliases:
+
+{{
+    import acme.xml.dom DOMDocument = Document;
+    import libre.word WPDocument = Document;
+}}
 
 Module names correspond directly to directory and file names in the Crack
 "library path."  When resolving a module name, the system:
@@ -2494,7 +2584,23 @@ You can do this by explicitly marking the symbols as safe for import using the
 }}
 
 Note that this mechanism can not be used to make module protected symbols
-importable.  To import a symbol, it must still be public.
+importable.  To import a symbol, it must still be public.  To offer a
+non-public symbol for import, you must define an alias.
+
+Aliases also circumvent the second order import rule: any public alias is
+effectively added to the exported symbols list for the module, making it
+appear as though it were defined in the module itself.  This feature is
+particularly useful for creating aliases for generics:
+
+{{
+    import crack.cont.hashmap HashMap;
+
+    class MyObj {}
+    alias MyMap = HashMap[String, MyObj];
+}}
+
+We can now import #MyMap# from other modules, providing them with a more
+abbreviated name for the type and insulating them from implementation changes.
 
 Protocols
 ---------
