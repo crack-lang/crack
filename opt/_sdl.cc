@@ -13,6 +13,9 @@ uint8_t SDL_KeyboardEvent_GetState(SDL_KeyboardEvent *evt) { return evt->state; 
 SDL_MouseMotionEvent *SDL_Event_GetMotion(SDL_Event *evt) { return &evt->motion; }
 uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent *evt) { return evt->x; }
 uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent *evt) { return evt->y; }
+SDL_ResizeEvent *SDL_Event_GetResize(SDL_Event *evt) { return &evt->resize; }
+int16_t SDL_ResizeEvent_GetW(SDL_ResizeEvent *evt) { return evt->w; }
+int16_t SDL_ResizeEvent_GetH(SDL_ResizeEvent *evt) { return evt->h; }
 
 
 #include "ext/Module.h"
@@ -33,8 +36,10 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
     crack::ext::Type *type_byte = mod->getByteType();
+    crack::ext::Type *type_int16 = mod->getInt16Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
+    crack::ext::Type *type_uint16 = mod->getUint16Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
@@ -67,6 +72,10 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
     crack::ext::Type *type_SDL_MouseMotionEvent = mod->addType("SDL_MouseMotionEvent", sizeof(SDL_MouseMotionEvent));
     type_SDL_MouseMotionEvent->finish();
+
+
+    crack::ext::Type *type_SDL_ResizeEvent = mod->addType("SDL_ResizeEvent", sizeof(SDL_ResizeEvent));
+    type_SDL_ResizeEvent->finish();
 
 
     crack::ext::Type *array = mod->getType("array");
@@ -107,6 +116,13 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
                      (void *)SDL_Flip
                      );
        f->addArg(type_SDL_Surface, "screen");
+
+    f = mod->addFunc(type_int, "SDL_FillRect",
+                     (void *)SDL_FillRect
+                     );
+       f->addArg(type_SDL_Surface, "surface");
+       f->addArg(type_SDL_Rect, "rect");
+       f->addArg(type_uint32, "color");
 
     f = mod->addFunc(type_SDL_KeyboardEvent, "SDL_Event_GetKey",
                      (void *)SDL_Event_GetKey
@@ -167,6 +183,21 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
                      (void *)SDL_MouseMotionEvent_GetY
                      );
        f->addArg(type_SDL_MouseMotionEvent, "evt");
+
+    f = mod->addFunc(type_SDL_ResizeEvent, "SDL_Event_GetResize",
+                     (void *)SDL_Event_GetResize
+                     );
+       f->addArg(type_SDL_Event, "evt");
+
+    f = mod->addFunc(type_int16, "SDL_ResizeEvent_GetW",
+                     (void *)SDL_ResizeEvent_GetW
+                     );
+       f->addArg(type_SDL_ResizeEvent, "evt");
+
+    f = mod->addFunc(type_int16, "SDL_ResizeEvent_GetH",
+                     (void *)SDL_ResizeEvent_GetH
+                     );
+       f->addArg(type_SDL_ResizeEvent, "evt");
 
     f = mod->addFunc(type_void, "SDL_WarpMouse",
                      (void *)SDL_WarpMouse
@@ -334,6 +365,10 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_uint32, "SDL_USEREVENT",
                      static_cast<int>(SDL_USEREVENT)
+                     );
+
+    mod->addConstant(type_uint32, "SDL_VIDEORESIZE",
+                     static_cast<int>(SDL_VIDEORESIZE)
                      );
 
     mod->addConstant(type_uint32, "SDL_NUMEVENTS",

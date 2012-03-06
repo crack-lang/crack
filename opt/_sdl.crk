@@ -19,6 +19,9 @@
     @inject 'SDL_MouseMotionEvent *SDL_Event_GetMotion(SDL_Event *evt) { return &evt->motion; }\n';
     @inject 'uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent *evt) { return evt->x; }\n';
     @inject 'uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent *evt) { return evt->y; }\n';
+    @inject 'SDL_ResizeEvent *SDL_Event_GetResize(SDL_Event *evt) { return &evt->resize; }\n';
+    @inject 'int16_t SDL_ResizeEvent_GetW(SDL_ResizeEvent *evt) { return evt->w; }\n';
+    @inject 'int16_t SDL_ResizeEvent_GetH(SDL_ResizeEvent *evt) { return evt->h; }\n';
     @crack_internal
 
     
@@ -59,6 +62,7 @@
     SDL_Event SDL_EventNew();
     int SDL_Event_GetType(SDL_Event event);
     int SDL_Flip(SDL_Surface screen);
+    int SDL_FillRect(SDL_Surface surface, SDL_Rect rect, uint32 color);
 
     
     class SDL_KeyboardEvent;
@@ -76,6 +80,10 @@
     SDL_MouseMotionEvent SDL_Event_GetMotion(SDL_Event evt);
     uint SDL_MouseMotionEvent_GetX(SDL_MouseMotionEvent evt);
     uint SDL_MouseMotionEvent_GetY(SDL_MouseMotionEvent evt);
+    class SDL_ResizeEvent;
+    SDL_ResizeEvent SDL_Event_GetResize(SDL_Event evt);
+    int16 SDL_ResizeEvent_GetW(SDL_ResizeEvent evt);
+    int16 SDL_ResizeEvent_GetH(SDL_ResizeEvent evt);
     
     void SDL_WarpMouse(uint x, uint y);
 
@@ -95,6 +103,7 @@
                  SDL_EVENT_RESERVED2, 
                  SDL_EVENT_RESERVED3, 
                  SDL_USEREVENT,
+                 SDL_VIDEORESIZE,
                  SDL_NUMEVENTS;
     
     int SDL_PollEvent(SDL_Event event);
