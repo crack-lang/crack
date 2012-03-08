@@ -45,6 +45,9 @@ AM_CONDITIONAL(HAVE_PCRE, [test "x$got_pcre" = xyes])
 AM_PATH_SDL(1.2.14, [got_sdl=yes])
 AM_CONDITIONAL(HAVE_SDL, [test "x$got_sdl" = xyes])
 
+AM_PATH_SDLGFX
+AM_CONDITIONAL(HAVE_SDLGFX, [true]) # [test "x$got_sdlgfx" = xyes])
+
 AM_PATH_GL
 AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
 

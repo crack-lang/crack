@@ -27,7 +27,7 @@ extlib_LTLIBRARIES = test/testext.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
-EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -49,6 +49,14 @@ _sdl_la_LDFLAGS = -avoid-version -module @SDL_LIBS@
 _sdl_la_CXXFLAGS = @SDL_CFLAGS@
 _sdl_la_SOURCES = opt/_sdl.cc
 endif
+
+if HAVE_SDLGFX
+extlib_LTLIBRARIES += _sdlgfx.la
+_sdlgfx_la_LDFLAGS = -avoid-version -module @SDL_LIBS@ @SDLGFX_LIBS@
+_sdlgfx_la_CXXFLAGS = @SDL_CFLAGS@ @SDLGFX_CPPFLAGS@ 
+_sdlgfx_la_SOURCES = opt/_sdlgfx.cc
+endif
+
 
 if HAVE_GL
 extlib_LTLIBRARIES += _gl.la

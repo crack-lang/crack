@@ -1,0 +1,56 @@
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._sdlgfx {
+    @filename 'opt/_sdlgfx.cc'
+    @crack_internal
+    @inject '#include <SDL_gfxPrimitives.h>\n'
+    @crack 'import crack.ext._sdl SDL_Surface;'
+
+    @extern SDL_Surface
+    
+    # the "Color" functions appear to accept a color of the form:
+    # blue green red alpha, 1 byte each, low byte is alpha
+    
+    int pixelColor(SDL_Surface dst, int16 x, int16 y, uint32 color);
+    int pixelRGBA(SDL_Surface dst, int16 x, int16 y, byte r, byte g, byte b, 
+                  byte a);
+
+    int hlineColor(SDL_Surface dst, int16 x1, int16 x2, int16 y, uint32 color);
+    int hlineRGBA(SDL_Surface dst, int16 x1, int16 x2, int16 y, byte r, byte 
+                  g, byte b, byte a);
+
+    int vlineColor(SDL_Surface dst, int16 x, int16 y1, int16 y2, uint32 color);
+    int vlineRGBA(SDL_Surface dst, int16 x, int16 y1, int16 y2, byte r, byte 
+                  g, byte b, byte a);
+
+    int rectangleColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 
+                       y2, uint32 color);
+    int rectangleRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+                      byte r, byte g, byte b, byte a);
+
+    int boxColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+                 uint32 color);
+    int boxRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, byte 
+                r, byte g, byte b, byte a);
+
+
+    int circleColor(SDL_Surface dst, int16 x, int16 y, int16 r, uint32 color);
+    int circleRGBA(SDL_Surface dst, int16 x, int16 y, int16 rad, byte r, byte 
+                   g, byte b, byte a);
+
+
+    int characterColor(SDL_Surface dst, int16 x, int16 y,
+                       byte c, 
+                       int32 color
+                       );
+    int characterRGBA(SDL_Surface dst, int16 x, int16 y,
+                      byte c, byte r, byte g, byte b, byte a
+                      );
+    int stringColor(SDL_Surface dst, int16 x, int16 y, byteptr c,
+                    int32 color
+                    );
+    int stringRGBA(SDL_Surface dst, int16 x, int16 y, byteptr c,
+                   byte r, byte g, byte b, byte a
+                   );
+    void gfxPrimitivesSetFont(byteptr fontdata, int cw, int ch);
+}
