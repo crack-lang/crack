@@ -73,6 +73,8 @@ protected:
     void readTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
     void readGenericTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
 
+    void resolveStructs(llvm::Module *);
+
     void writeBitcode(const std::string &path);
 
     bool readImports();

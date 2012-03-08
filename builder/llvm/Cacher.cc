@@ -18,6 +18,7 @@
 #include "builder/util/CacheFiles.h"
 #include "builder/util/SourceDigest.h"
 #include "builder/llvm/Consts.h"
+#include "builder/llvm/StructResolver.h"
 
 #include <assert.h>
 #include <sstream>
@@ -316,6 +317,10 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     Type *metaTypeRep = BTypeDefPtr::acast(metaClass)->rep;
     dList.push_back(Constant::getNullValue(metaTypeRep));
 
+    // register in canonical map for subsequent cache loads
+    context.construct->registerDef(bt);
+    context.construct->registerDef(metaClass);
+
     return MDNode::get(getGlobalContext(), dList);
 
 }
@@ -505,7 +510,8 @@ bool Cacher::readImports() {
 
         iDigest = SourceDigest::fromHex(digest->getString().str());
 
-        // load this module. if the digest doesn't match, we miss
+        // load this module. if the digest doesn't match, we miss.
+        // note module may come from cache or parser, we won't know
         m = context.construct->loadModule(cname->getString().str());
         if (!m || m->digest != iDigest)
             return false;
@@ -1045,6 +1051,49 @@ void Cacher::writeBitcode(const string &path) {
 
 }
 
+void Cacher::resolveStructs(llvm::Module *module) {
+
+    // resolve duplicate structs to those already existing in our type
+    // system. this solves issues when using separate bitcode modules
+    // without using the llvm linker
+    StructResolver resolver(module);
+
+    // first we get the list we have to resolve
+    // then we lookup the canonical version of each one to create
+    // the map
+    StructResolver::StructMapType typeMap;
+    StructResolver::StructListType dSet = resolver.getDisjointStructs();
+    for (StructResolver::StructListType::iterator i = dSet.begin();
+         i != dSet.end(); ++i) {
+        int pos = i->first.rfind(".");
+        string canonical = i->first.substr(0, pos);        
+        // XXX big hack. meta's are created implicitly by class defs, so their
+        // corresponding class defs have to come first in this list else the
+        // metas won't exist in resolveType. defer them?
+        if (canonical.find("meta") != string::npos) {
+            cout << "skipping meta: " << canonical << "\n";
+            continue;
+        }
+        cout << "mapping ["  << i->first << "] to canonical [" << canonical << "]\n";
+        TypeDefPtr td = resolveType(canonical);
+        BTypeDef *bt = dynamic_cast<BTypeDef *>(td.get());
+        assert(bt);
+        PointerType *a = dyn_cast<PointerType>(bt->rep);
+        assert(a && "expected a PointerType");
+        // we map the struct (the ContainedType), not the pointer to it
+        typeMap[i->second] = a->getElementType();
+    }
+
+    // finally, we resolve using our map. this replaces all instances of
+    // the conflicting type from this module, with the original one actually
+    // in our type system
+    if (!typeMap.empty())
+        resolver.run(&typeMap);
+    else
+        cout << "resolveStructs: typemap was empty\n";
+
+}
+
 BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
                                          const string &path) {
 
@@ -1085,10 +1134,16 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
 
     if (readMetadata()) {
 
+        // after reading our metadata and defining types, we
+        // resolve all disjoint structs from our bitcode to those
+        // already in the crack type system
+        resolveStructs(module);
+
         // cache hit
         if (options->verbosity >= 2)
             cerr << "[" << canonicalName <<
                     "] cache materialized" << endl;
+
         return modDef;
     }
     else {

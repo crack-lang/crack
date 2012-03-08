@@ -263,7 +263,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
 
     BTypeDefPtr metaType =
         new BTypeDef(context.construct->classType.get(),
-                     SPUG_FSTR("Class[" << canonicalName << "]"),
+                     SPUG_FSTR(canonicalName << ":meta"),
                      0,
                      true,
                      0
@@ -279,7 +279,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     vector<Type *> fields(1);
     fields[0] = classStructType;
     StructType *metaClassStructType =
-            StructType::create(lctx, fields, canonicalName + ":metaClass");
+            StructType::create(lctx, fields);
     Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
@@ -292,6 +292,8 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
         context.getDefContext()->addDef(metaType.get());
     createClassImpl(context, metaType.get());
         
+    metaClassStructType->setName(metaType->getFullName());
+
     return metaType;
 }
 

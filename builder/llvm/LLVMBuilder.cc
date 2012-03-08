@@ -251,6 +251,7 @@ namespace {
         BTypeDefPtr metaType;
         BGlobalVarDefImplPtr classImpl;
         type->type = metaType = createMetaClass(context, type->name);
+        context.construct->registerDef(metaType.get());
         metaType->meta = type;
         createClassImpl(context, BTypeDefPtr::acast(type));
     }
@@ -1328,12 +1329,21 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
                                      unsigned int nextVTableSlot
                                      ) {
     BTypeDefPtr type;
-    TypeDef::TypeVec bases;
     BTypeDefPtr metaType = createMetaClass(context, name);
 
-    Type *opaque = StructType::create(getGlobalContext());
+    string canonicalName = context.parent->ns->getNamespaceName() +
+                           "." + name;
+
+    StructType *curType;
+    // we first check to see if a structure with this canonical name exists
+    // if it does, we use it. if it doesn't we create it, and the body and
+    // name get set in emitEndClass
+    curType = module->getTypeByName(canonicalName);
+    if (!curType) {
+        curType = StructType::create(getGlobalContext());
+    }
     type = new BTypeDef(metaType.get(), name,
-                        PointerType::getUnqual(opaque),
+                        PointerType::getUnqual(curType),
                         true,
                         nextVTableSlot
                         );
@@ -1691,17 +1701,23 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // refine the type to the actual type of the structure.
 
-    // extract the struct type out of the pointer type.
+    // we also check and reuse an existing type of the same canonical name
+    // if it exists in this llvm context. this happens in caching scenarios
+    string canonicalName = context.parent->ns->getNamespaceName() +
+                           "." + type->name;
+
+    // extract the struct type out of the existing pointer type
     const PointerType *ptrType =
         cast<PointerType>(type->rep);
     StructType *curType = cast<StructType>(ptrType->getElementType());
 
-    curType->setBody(members);
-
-    // set the type name
-    curType->setName(context.parent->ns->getNamespaceName() +
-                      "." + type->name
-                     );
+    // a type may already have a name here if it existed in the llvm context
+    // when createClass was called. this happens in caching scenarios. only if
+    // it doesn't have a name do we proceed with the body and the name
+    if (!curType->hasName()) {
+        curType->setBody(members);
+        curType->setName(canonicalName);
+    }
 
     // verify that all of the base classes are complete (because we can only
     // inherit from an incomplete base class in the case of a nested derived
@@ -2012,6 +2028,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     classType->meta = classType;
     classType->defaultInitializer = new NullConst(classType);
     context.addDef(classType);
+    context.construct->registerDef(classType);
 
     // some tools for creating meta-classes
     BTypeDefPtr metaType;           // storage for meta-types
@@ -2693,6 +2710,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createClassImpl(context, vtableBaseType);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
+    context.construct->registerDef(vtableBaseType);
     createOperClassFunc(context, vtableBaseType);
 
     // build VTableBase's vtable
