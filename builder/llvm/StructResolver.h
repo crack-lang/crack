@@ -30,6 +30,7 @@ protected:
 
     void mapGlobals();
     void mapFunctions();
+    void mapMetadata();
 
 
 public:

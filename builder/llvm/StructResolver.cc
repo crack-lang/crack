@@ -74,7 +74,8 @@ void StructResolver::run(StructMapType *m) {
     typeMap = m;
     mapGlobals();
     mapFunctions();
-    //module->dump();
+    mapMetadata();
+    module->dump();
 
 }
 
@@ -132,9 +133,11 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         for (StructType::element_iterator e = a->element_begin();
              e != a->element_end();
              ++e) {
-            cout << "\t\t\t---> type: [[[[[\n";
-            (*e)->dump();
-            cout << "]]]]]\n";
+
+            //cout << "\t\t\t---> type: [[[[[\n";
+            //(*e)->dump();
+            //cout << "]]]]]\n";
+
             // accumulate the types. if we find one we have to map, we'll use
             // the accumlated types to create a new structure with the mapped
             // type. if it doesn't contain one, we discard it
@@ -147,8 +150,15 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
                 sVec.push_back(*e);
             }
         }
-        if (modified) {
-            StructType *m = StructType::get(getGlobalContext(), sVec);
+        if (modified) {            
+            StructType *m;
+            StructType *origS = cast<StructType>(t);
+            if (origS->isLiteral()) {
+                m = StructType::get(getGlobalContext(), sVec);
+            }
+            else {
+                m = StructType::create(sVec, origS->getName().str()+":mutated");
+            }
             (*typeMap)[t] = m;
             //return m;
             return maybeGetMappedType(t);
@@ -163,13 +173,14 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
 void StructResolver::mapValue(Value &val) {
 
     // we only care about compsite types
+    /*
     if (!isa<CompositeType>(val.getType())) {
         cout << "\t@@ skipping non composite type\n";
         return;
-    }
+    }*/
 
     cout << "@@ mapValue, before\n";
-    val.dump();
+    //val.dump();
 
     if (visited.find(&val) != visited.end()) {
         cout << "\t@@ already seen\n";
@@ -188,7 +199,7 @@ void StructResolver::mapValue(Value &val) {
     visited[&val] = true;
 
     cout << "@@ mapValue, after\n";
-    val.dump();
+    //val.dump();
 
 }
 
@@ -196,7 +207,7 @@ void StructResolver::mapValue(Value &val) {
 void StructResolver::mapUser(User &val) {
 
     cout << "#mapUser, before\n";
-    val.dump();
+    //val.dump();
 
     cout << "#value itself:\n";
     mapValue(val);
@@ -222,7 +233,7 @@ void StructResolver::mapUser(User &val) {
     }
 
     cout << "#mapUser, after\n";
-    val.dump();
+    //val.dump();
 
 }
 
@@ -250,6 +261,34 @@ void StructResolver::mapFunctions() {
              a != f.arg_end();
              ++a) {
             mapValue(*a);
+        }
+    }
+    //module->dump();
+
+}
+
+void StructResolver::mapMetadata() {
+
+    for (Module::named_metadata_iterator i = module->named_metadata_begin();
+         i != module->named_metadata_end();
+         ++i) {
+        cout << "---------------------------------------] looking at metadata: " << i->getName().str() << "----------------------------------\n";
+        NamedMDNode &m = (*i);
+        // MD nodes in named node
+        for (int o = 0;
+             o < m.getNumOperands();
+             ++o) {
+
+            // operands of nodes
+            MDNode *node = m.getOperand(o);
+            for (int n = 0;
+                 n < node->getNumOperands();
+                 ++n) {
+
+                mapValue(*node->getOperand(n));
+
+            }
+
         }
     }
     //module->dump();
