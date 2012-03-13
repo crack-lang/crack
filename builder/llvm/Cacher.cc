@@ -1147,7 +1147,20 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
         return modDef;
     }
     else {
+
         // during meta data read, we determined we will miss
+
+        // ensure any named structs from the module that we miss on do not remain
+        // in the llvm context struct namespace
+        // XXX is this necessary? a module delete doesn't appear to affect
+        // the llvmcontext
+        vector<StructType*> namedStructs;
+        module->findUsedStructTypes(namedStructs);
+        for (int i=0; i < namedStructs.size(); ++i) {
+            if (namedStructs[i]->hasName())
+                namedStructs[i]->setName("");
+        }
+
         delete module;
         return NULL;
     }
