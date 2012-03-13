@@ -70,6 +70,9 @@ class Parser {
       // the module context, and the current context.
       model::ContextPtr moduleCtx, context;
 
+      // sequential identifier used in nested block namespaces
+      int nestID;
+
       /**
        * This class essentially lets us manage the context stack with the
        * program's stack.  We push the context by creating an instance, and
