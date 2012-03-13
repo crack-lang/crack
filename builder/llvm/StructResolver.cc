@@ -157,7 +157,9 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
                 m = StructType::get(getGlobalContext(), sVec);
             }
             else {
-                m = StructType::create(sVec, origS->getName().str()+":mutated");
+                // take over the name
+                origS->setName("");
+                m = StructType::create(sVec, origS->getName().str());
             }
             (*typeMap)[t] = m;
             //return m;
@@ -262,6 +264,7 @@ void StructResolver::mapFunctions() {
              ++a) {
             mapValue(*a);
         }
+        f.dump();
     }
     //module->dump();
 
@@ -285,7 +288,9 @@ void StructResolver::mapMetadata() {
                  n < node->getNumOperands();
                  ++n) {
 
-                mapValue(*node->getOperand(n));
+                Value *v = node->getOperand(n);
+                if (v)
+                    mapValue(*v);
 
             }
 

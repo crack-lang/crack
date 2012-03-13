@@ -750,6 +750,9 @@ void Cacher::readTypeDef(const std::string &sym,
                          llvm::Value *rep,
                          llvm::MDNode *mnode) {
 
+    PointerType *p = cast<PointerType>(rep->getType());
+    StructType *s = cast<StructType>(p->getElementType());
+
     BTypeDefPtr metaType = readMetaType(mnode);
     BTypeDefPtr type = new BTypeDef(metaType.get(),
                         sym,
@@ -759,6 +762,38 @@ void Cacher::readTypeDef(const std::string &sym,
                         );
     finishType(type.get(), metaType.get());
     assert(type->getOwner());
+
+    if (s->getName().str() != type->getFullName()) {
+
+        // if the type name does not match the structure name, we have the
+        // following scenario:
+        // A is cached, depends on type in B
+        // B is cached, defines type A wants
+        // A is loaded first, bitcode contains structure def from B with
+        // canonical name. Because it was loaded first, it goes into the LLVM
+        // context first. When B is loaded and the same canonical structure is
+        // loaded, it gets the postfix.
+        // The problem is, although A turned out to be the "authoritative" name
+        // for the struct according to LLVM context, it's not the authoritative place
+        // that it is defined in crack. So, we lookup the old one and remove the name.
+        // Then we set the struct name on ours (the authoritative location, because
+        // the crack type is defined here) to the proper canonical name without
+        // the postfix.
+
+        // old, nonauthoritative struct
+        StructType *old = modDef->rep->getTypeByName(type->getFullName());
+        // old must exist since otherwise we would have matched our sym name
+        // already
+        assert(old);
+        // remove the old name
+        old->setName("");
+
+        // set our name
+        s->setName(type->getFullName());
+    }
+
+    assert(s->getName().str() == type->getFullName()
+           && "structure name didn't match canonical");
 
     // retrieve the class implementation pointer
     GlobalVariable *impl = modDef->rep->getGlobalVariable(type->getFullName());
@@ -1071,16 +1106,26 @@ void Cacher::resolveStructs(llvm::Module *module) {
         // corresponding class defs have to come first in this list else the
         // metas won't exist in resolveType. defer them?
         if (canonical.find("meta") != string::npos) {
-            cout << "skipping meta: " << canonical << "\n";
+            cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
             continue;
         }
-        cout << "mapping ["  << i->first << "] to canonical [" << canonical << "]\n";
         TypeDefPtr td = resolveType(canonical);
         BTypeDef *bt = dynamic_cast<BTypeDef *>(td.get());
         assert(bt);
+        // we want to map the struct (the ContainedType), not the pointer to it
         PointerType *a = dyn_cast<PointerType>(bt->rep);
         assert(a && "expected a PointerType");
-        // we map the struct (the ContainedType), not the pointer to it
+        // most classes are single indirection pointers-to-struct, but we have
+        // to special case VTableBase which is **
+        if (canonical == ".builtin.VTableBase") {
+            a = cast<PointerType>(a->getElementType());
+        }
+        StructType *left = dyn_cast<StructType>(i->second);
+        assert(left);
+        StructType *right = dyn_cast<StructType>(a->getElementType());
+        assert(right);
+        assert(left != right);
+        cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
         typeMap[i->second] = a->getElementType();
     }
 
