@@ -111,18 +111,22 @@ FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
     return result;
 }
 
-FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args) {
+FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args,
+                                  bool matchNames
+                                  ) {
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter)
-        if ((*iter)->matches(args))
+        if (!matchNames && (*iter)->matches(args) ||
+            matchNames && (*iter)->matchesWithNames(args)
+            )
             return iter->get();
 
     for (ParentVec::iterator parent = parents.begin();
          parent != parents.end();
          ++parent
          ) {
-        FuncDef *result = (*parent)->getSigMatch(args);
+        FuncDef *result = (*parent)->getSigMatch(args, matchNames);
         if (result)
             return result;
     }

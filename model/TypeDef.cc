@@ -183,7 +183,9 @@ bool TypeDef::matches(const TypeDef &other) const {
     return false;
 }    
 
-FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
+FuncDefPtr TypeDef::createOperInit(Context &classContext, 
+                                   const ArgVec &args
+                                   ) {
     assert(classContext.ns.get() == this); // needed for final addDef()
     ContextPtr funcContext = classContext.createSubContext(Context::local);
     funcContext->toplevel = true;
@@ -193,7 +195,6 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     funcContext->addDef(thisDef.get());
     VarRefPtr thisRef = new VarRef(thisDef.get());
     
-    FuncDef::ArgVec args(0);
     TypeDef *voidType = classContext.construct->voidType.get();
     FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
@@ -214,21 +215,37 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
         if (!overloads)
             continue;
 
-        // we must get a default initializer and it must be specific to the 
-        // base class (not inherited from an ancestor of the base class)
-        FuncDef::ArgVec args;
-        FuncDefPtr baseInit = overloads->getSigMatch(args);
-        if (!baseInit || baseInit->getOwner() != ibase->get())
-            classContext.error(SPUG_FSTR("Cannot create a default constructor "
-                                          "because base class " << 
-                                          (*ibase)->name <<
-                                          " has no default constructor."
-                                         )
-                               );
+        // look for a matching constructor
+        bool useDefaultCons = false;
+        FuncDefPtr baseInit = overloads->getSigMatch(args, true);
+        if (!baseInit || baseInit->getOwner() != ibase->get()) {
+            
+            // we must get a default initializer and it must be specific to the 
+            // base class (not inherited from an ancestor of the base class)
+            useDefaultCons = true;
+            baseInit = overloads->getNoArgMatch(false);
+            if (!baseInit || baseInit->getOwner() != ibase->get())
+                classContext.error(SPUG_FSTR("Cannot create a default "
+                                              "constructor because base "
+                                              "class " << 
+                                              (*ibase)->name <<
+                                              " has no default constructor."
+                                             )
+                                );
+        }
 
         FuncCallPtr funcCall =
             classContext.builder.createFuncCall(baseInit.get());
         funcCall->receiver = thisRef;
+        
+        // construct an argument list if we're not using the default arguments
+        if (!useDefaultCons && args.size()) {
+            for (int i = 0; i < args.size(); ++i)
+                funcCall->args.push_back(
+                    funcContext->builder.createVarRef(args[i].get())
+                );
+        }
+        
         funcCall->emit(*funcContext);
     }
 
@@ -264,6 +281,11 @@ FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     classContext.builder.emitEndFunc(*funcContext, newFunc.get());
     classContext.addDef(newFunc.get());
     return newFunc;
+}
+
+FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
+    FuncDef::ArgVec args(0);
+    return createOperInit(classContext, args);
 }
 
 void TypeDef::createDefaultDestructor(Context &classContext) {

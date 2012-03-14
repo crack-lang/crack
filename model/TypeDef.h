@@ -7,6 +7,7 @@
 #include <map>
 #include <spug/RCPtr.h>
 
+#include "ArgDef.h"
 #include "VarDef.h"
 #include "Namespace.h"
 
@@ -14,9 +15,9 @@ namespace model {
 
 SPUG_RCPTR(Context);
 SPUG_RCPTR(Expr);
+SPUG_RCPTR(FuncDef);
 class Generic;
 class Initializers;
-SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(VarDef);
 
 SPUG_RCPTR(TypeDef);
@@ -204,7 +205,14 @@ class TypeDef : public VarDef, public Namespace {
          * "other" either equals "this" or is a subclass of "this".
          */
         bool matches(const TypeDef &other) const;
-        
+
+        /**
+         * Create a default oper init function with the specified argument 
+         * list.  This requires that all base classes have either a default 
+         * constructor or a constructor exactly matching args.
+         */
+        FuncDefPtr createOperInit(Context &classContext, const ArgVec &args);
+
         /**
          * Create the default initializer.
          */

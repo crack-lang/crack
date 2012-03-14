@@ -61,7 +61,9 @@ class Module {
         TypeMap types;
         bool finished;
     protected:
-        Type *addTypeWorker(const char *name, size_t instSize, bool forward);
+        Type *addTypeWorker(const char *name, size_t instSize, bool forward,
+                            bool hasVTable
+                            );
 
     public:
         Module(model::Context *context);
@@ -94,7 +96,9 @@ class Module {
         Type *getOverloadType();
         
         Type *getType(const char *name);
-        Type *addType(const char *name, size_t instSize);
+        Type *addType(const char *name, size_t instSize, 
+                      bool hasVTable = false
+                      );
         Type *addForwardType(const char *name, size_t instSize);
 
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,

@@ -3,6 +3,7 @@
 #include "ext/Func.h"
 #include "ext/Module.h"
 #include "ext/Type.h"
+#include "ext/util.h"
 
 #include <iostream>
 
@@ -44,6 +45,69 @@ extern "C" void testext_rinit(void) {
     cout << "in testext" << endl;
 }
 
+// a class with virtual functions
+struct MyVirtual {
+    int *delFlag;
+    MyVirtual(int *delFlag = 0) : delFlag(delFlag) {}
+    virtual ~MyVirtual() {
+        if (delFlag)
+            *delFlag = 999;
+    }
+    virtual int vfunc(int val) {
+        return val;
+    }
+};
+
+struct MyVirtual_Proxy;
+
+// its adapter class
+struct MyVirtual_Adapter : public MyVirtual {
+
+    // translation functions for virtuals
+    virtual int vfunc(int val);
+    virtual ~MyVirtual_Adapter();
+
+    // static wrapper functions    
+    static int callVFunc(MyVirtual *inst, int val)  {
+        return inst->MyVirtual::vfunc(val);
+    }
+    static void *operator new(size_t size, void *mem) { return mem; }
+    static void init(void *inst) {
+        new(inst) MyVirtual();
+    }
+    
+    static void init1(void *inst, int *delFlag) {
+        new(inst) MyVirtual(delFlag);
+    }
+    
+    static void operator delete(void *mem) {}
+    static void del(MyVirtual_Adapter *inst) {
+        inst->MyVirtual::~MyVirtual();
+    }
+};
+
+struct MyVirtual_VTable {
+    void *classInst;
+    int (*vfunc)(MyVirtual_Adapter *inst, int val);
+    int (*del)(MyVirtual_Adapter *inst);
+};
+
+struct MyVirtual_Proxy {
+    MyVirtual_VTable *vtable;
+    MyVirtual_Adapter adapter;
+};
+
+// adapter call to dispatch to the Crack vtable
+int MyVirtual_Adapter::vfunc(int val) {
+    MyVirtual_Proxy *inst = getCrackProxy<MyVirtual_Proxy>(this);
+    return inst->vtable->vfunc(this, val);
+}
+
+MyVirtual_Adapter::~MyVirtual_Adapter() {
+    MyVirtual_Proxy *inst = getCrackProxy<MyVirtual_Proxy>(this);
+    inst->vtable->del(this);
+}
+
 extern "C" void testext_cinit(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
@@ -80,4 +144,33 @@ extern "C" void testext_cinit(Module *mod) {
     f = mod->addFunc(mod->getIntType(), "callback", (void *)callback);
     f->addArg(intFuncType, "cb");
 
+    // create a type with virtual methods.  We create a hidden type to 
+    // strictly correspond to the instance area of the underlying type, then 
+    // derive our proxy type from VTableBase and our hidden type.
+    
+    type = mod->addType("MyVirtual", sizeof(MyVirtual_Adapter),
+                        true // hasVTable - necessary for virtual types!
+                        );
+    
+    // we need some constructors to call the C++ class's constructors
+    type->addConstructor("oper init", (void *)MyVirtual_Adapter::init);
+    f = type->addConstructor("oper init", (void *)MyVirtual_Adapter::init1);
+    f->addArg(intArrayType, "delFlag");
+    
+    // the order in which we add virtual methods must correspond to the order 
+    // that they are defined in MyVirtual_VTable.
+    f = type->addMethod(mod->getIntType(), "vfunc",
+                        (void *)MyVirtual_Adapter::callVFunc
+                        );
+    f->addArg(mod->getIntType(), "val");
+    f->setVWrap(true);
+
+    // need a virtual destructor
+    f = type->addMethod(mod->getVoidType(), "oper del",
+                        (void *)MyVirtual_Adapter::del
+                        );
+    f->setVWrap(true);
+
+    // finish the type
+    type->finish();
 }
