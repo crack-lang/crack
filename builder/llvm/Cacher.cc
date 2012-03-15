@@ -785,11 +785,25 @@ void Cacher::readTypeDef(const std::string &sym,
         // old must exist since otherwise we would have matched our sym name
         // already
         assert(old);
+        // we're also expecting that it matches the canonical name, which we
+        // want to steal
+        assert(old->getName() == type->getFullName());
+
+        //cout << "old name: " << old->getName().str() << "\n";
+
         // remove the old name
         old->setName("");
 
-        // set our name
+        // steal canonical name to make our type authoritative
         s->setName(type->getFullName());
+        //cout << "s name: " << s->getName().str() << "\n";
+
+        // now force a conflict so that the _old_ name is postfixed, and it
+        // will get cleaned up on a subsequent ResolveStruct run
+        old->setName(type->getFullName());
+        //cout << "old name now: " << old->getName().str() << "\n";
+        assert(old->getName() != s->getName());
+
     }
 
     assert(s->getName().str() == type->getFullName()
@@ -1106,7 +1120,7 @@ void Cacher::resolveStructs(llvm::Module *module) {
         // corresponding class defs have to come first in this list else the
         // metas won't exist in resolveType. defer them?
         if (canonical.find("meta") != string::npos) {
-            cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
+            //cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
             continue;
         }
         TypeDefPtr td = resolveType(canonical);
@@ -1125,7 +1139,7 @@ void Cacher::resolveStructs(llvm::Module *module) {
         StructType *right = dyn_cast<StructType>(a->getElementType());
         assert(right);
         assert(left != right);
-        cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
+        //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
         typeMap[i->second] = a->getElementType();
     }
 
