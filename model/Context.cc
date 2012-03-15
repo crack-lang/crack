@@ -792,7 +792,7 @@ FuncDefPtr Context::lookUpNoArgs(const std::string &name, bool acceptAlias,
         return 0;
 
     // we can just check for a signature match here - cheaper and easier.
-    FuncDef::ArgVec args;
+    ArgVec args;
     FuncDefPtr result = overload->getNoArgMatch(acceptAlias);
     return result;
 }
@@ -854,7 +854,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     // create the arg list for the signature of an annotation (we don't need 
     // the builder to create an ArgDef here because it's just for a signature 
     // match).
-    FuncDef::ArgVec args(1);
+    ArgVec args(1);
     args[0] = new ArgDef(construct->crackContext.get(), "context");
 
     OverloadDef *ovld = OverloadDefPtr::rcast(result);
