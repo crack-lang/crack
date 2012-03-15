@@ -4833,9 +4833,9 @@ elsewhere on the network, or listeners which wait for new connections.
 We create a socket as an instance of the #Socket# class:
 
 {{
-    import crack.net sockconsts, Socket;
+    import crack.net Socket, AF_INET, SOCK_STREAM;
 
-    s := Socket(sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0);
+    s := Socket(AF_INET, SOCK_STREAM, 0);
 }}
 
 This creates a "stream" (TCP) socket for a reliable connection over the INET
@@ -4844,16 +4844,18 @@ protocol.
 With a little more code, we can create a very basic server program:
 
 {{
-    import crack.net sockconsts, Socket, SockAddrIn;
 
-    Socket srv = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    import crack.net Socket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
+    import crack.exp.error err;
+
+    Socket srv = {AF_INET, SOCK_STREAM, 0};
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
     srv.setReuseAddr(true);
 
     # bind to port 1900 on all interfaces
-    if (!srv.bind(SockAddrIn(sockconsts.INADDR_ANY, 1900)))
+    if (!srv.bind(InetAddress(INADDR_ANY, 1900)))
         err.do() `error binding socket`;
 
     # queue up to 5 connections
@@ -4879,25 +4881,30 @@ With a little more code, we can create a very basic server program:
 A client script might look like this:
 
 {{
-    import crack.net sockconsts, SockAddrIn, Socket;
-    import crack.io cout, ManagedBuffer;
-    import crack.exp.error err, strerror;
+    import crack.sys exit, strerror;
+    import crack.net InetAddress, Socket, AF_INET, SOCK_STREAM;
+    import crack.lang ManagedBuffer;
+    import crack.io cout, cerr;
 
-    Socket s = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    Socket s = {AF_INET, SOCK_STREAM, 0};
 
     # connect to localhost (127.0.0.1)
-    if (!s.connect(SockAddrIn(127, 0, 0, 1, 1900)))
-        err.do() `error connecting: $(strerror())`;
+    if (!s.connect(InetAddress(127, 0, 0, 1, 1900))) {
+        cerr `error connecting: $(strerror())`;
+        exit(1);
+    }
 
     # this time, we'll use send and recv
-    if (s.send('some data', 0) < 0)
-        err.do() `error sending: $(strerror())`;
+    if (s.send('some data', 0) < 0) {
+        cerr `error sending: $(strerror())`;
+        exit(1);
+    }
 
     # receive from the socket
     ManagedBuffer buf = {1024};
     int rc;
     if ((rc = s.recv(buf, 0)) < 0)
-        err.do() `error receiving: $(strerror())`;
+        cerr `error receiving: $(strerror())`;
     buf.size = uint(rc);
 
     cout `got $(String(buf))\n`;
