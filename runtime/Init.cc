@@ -334,7 +334,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     sockAddrInType->addInstVar(uint32Type, "addr", 
                                CRACK_OFFSET(sockaddr_in, sin_addr.s_addr)
                                );
-    sockAddrInType->addInstVar(uintType, "port",
+    sockAddrInType->addInstVar(uint16Type, "port",
                                CRACK_OFFSET(sockaddr_in, sin_port)
                                );
 
