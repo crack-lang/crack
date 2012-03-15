@@ -75,10 +75,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     cdentType->finish();
 
     Type *cdType = mod->addType("Dir", sizeof(crack::runtime::Dir));
-    // XXX should these be part of addType?
-    cdType->addMethod(voidptrType, "oper to .builtin.voidptr", 
-                      (void *)crack::runtime::Dir_toVoidptr
-                      );
+    // XXX should this be part of addType?
     cdType->addMethod(boolType, "oper to .builtin.bool", 
                       (void *)crack::runtime::Dir_toBool
                       );

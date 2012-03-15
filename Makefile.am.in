@@ -192,6 +192,7 @@ extinc_HEADERS = \
     ext/Module.h \
     ext/RCObj.h \
     ext/Type.h \
+    ext/util.h \
     ext/Var.h \
     ext/crack_config.h
 

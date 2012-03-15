@@ -2,7 +2,8 @@
 # Extension tests.
 
 import testext echo, copyArray, MyType, INT_CONST, FLOAT_CONST,
-               callback;
+               callback,
+               MyVirtual;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
@@ -62,5 +63,37 @@ int myCallBack(int x) {
 r := callback(myCallBack);
 if (r != 50)
     cout `callback return fail\n`;
+
+# verify that we call the C++ function without an override
+v := MyVirtual();
+if (v.vfunc(100) != 100)
+    cout `FAILED calling C++ virtual\n`;
+v.oper del();
+
+class DerivedVirtual : MyVirtual {
+    array[int] flags;
+    oper init(array[int] flags) : flags = flags {}
+    int vfunc(int val) {
+        return val + 1;
+    }
+    
+    oper del() {
+        flags[0] = 666;
+    }
+}
+
+# verify that we call the derived function from the crack side
+array[int] flags = [0];
+v = DerivedVirtual(flags);
+if (v.vfunc(100) != 101)
+    cout `FAILED overridind C++ virtual\n`;
+v.oper del();
+if (flags[0] != 666)
+    cout `FAILED overriding destructor\n`;
+
+flags[0] = 0;
+MyVirtual(flags).oper del();
+if (flags[0] != 999)
+    cout `FAILED calling virtual destructor.`;
 
 cout `ok\n`;

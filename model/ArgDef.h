@@ -3,6 +3,8 @@
 #ifndef _model_ArgDef_h_
 #define _model_ArgDef_h_
 
+#include <vector>
+
 #include "VarDef.h"
 
 namespace model {
@@ -17,6 +19,8 @@ class ArgDef : public VarDef {
             VarDef(type, name) {
         }
 };
+
+typedef std::vector<ArgDefPtr> ArgVec;
 
 } // namespace model
 

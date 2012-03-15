@@ -56,6 +56,29 @@ bool Func::isVariadic() const
     return flags & Func::variadic;
 }
 
+void Func::setVWrap(bool vwrapEnabled) {
+    if (vwrapEnabled)
+        flags = static_cast<Func::Flags>(flags | vwrap);
+    else
+        flags = static_cast<Func::Flags>(flags & ~vwrap);
+}
+
+bool Func::getVWrap() const {
+    return flags & vwrap;
+}
+
+void Func::setVirtual(bool virtualizedEnabled) {
+    if (virtualizedEnabled)
+        flags = static_cast<Func::Flags>(flags | virtualized);
+    else
+        flags = static_cast<Func::Flags>(flags & ~virtualized);
+}
+
+// gets the "virtualized" flag
+bool Func::getVirtual() const {
+    return flags & virtualized;
+}
+
 void Func::setBody(const std::string& body)
 {
     funcBody = body;
@@ -70,6 +93,9 @@ void Func::finish() {
     if (finished || !context)
         return;
 
+    // we're going to need this
+    TypeDef *voidType = context->construct->voidType.get();
+
     Builder &builder = context->builder;
     std::vector<ArgDefPtr> realArgs(args.size());
     for (int i = 0; i < args.size(); ++i) {
@@ -80,25 +106,26 @@ void Func::finish() {
     }
 
     FuncDefPtr funcDef;
-    // if this is a method, get the receiver type
-    TypeDefPtr receiverType;
-    if ((flags & method) || (flags & constructor))
-        receiverType = TypeDefPtr::arcast(context->ns);
 
     // if we have a function pointer, create a extern function for it
     if (funcPtr) {
+
+        // if this is a vwrap, use an internal name for the function so as not 
+        // to conflict with the actual virtual function we're creating
+        string externName = (flags & vwrap) ? name + ":vwrap" : name;
         funcDef =
             builder.createExternFunc(*context,
-                                    static_cast<FuncDef::Flags>(flags & 
-                                                                funcDefFlags
-                                                                ),
-                                    name,
-                                    returnType->typeDef,
-                                    receiverType.get(),
-                                    realArgs,
-                                    funcPtr,
-                                    (symbolName.empty())?0:symbolName.c_str()
-                                    );
+                                     static_cast<FuncDef::Flags>(flags & 
+                                                                 funcDefFlags
+                                                                 ),
+                                     externName,
+                                     returnType->typeDef,
+                                     (flags & method) ? receiverType : 0,
+                                     realArgs,
+                                     funcPtr,
+                                     (symbolName.empty()) ? 0 : 
+                                      symbolName.c_str()
+                                     );
 
     // inline the function body in the constructor; reduces overhead
     } else if (!funcBody.empty() && !(flags & constructor)) {
@@ -109,7 +136,7 @@ void Func::finish() {
         if (flags & method) {
             // create the "this" variable
             ArgDefPtr thisDef =
-                context->builder.createArgDef(receiverType.get(), "this");
+                context->builder.createArgDef(receiverType, "this");
             funcContext->addDef(thisDef.get());
         }
 
@@ -131,14 +158,14 @@ void Func::finish() {
         Parser parser(toker, funcContext.get());
         parser.parse();
 
-        if (returnType->typeDef->matches(*context->construct->voidType)) {
+        if (returnType->typeDef->matches(*voidType)) {
             funcContext->builder.emitReturn(*funcContext, 0);
         }
         funcContext->builder.emitEndFunc(*funcContext, funcDef.get());
     }
 
     if (funcDef) {
-        VarDefPtr storedDef = context->addDef(funcDef.get(), receiverType.get());
+        VarDefPtr storedDef = context->addDef(funcDef.get(), receiverType);
 
         // check for a static method, add it to the meta-class
         if (context->scope == Context::instance) {
@@ -154,12 +181,11 @@ void Func::finish() {
     
         // create the "this" variable
         ArgDefPtr thisDef =
-            context->builder.createArgDef(receiverType.get(), "this");
+            context->builder.createArgDef(receiverType, "this");
         funcContext->addDef(thisDef.get());
-        VarRefPtr thisRef = new VarRef(thisDef.get());
+        VarRefPtr thisRef = funcContext->builder.createVarRef(thisDef.get());
         
         // emit the function
-        TypeDef *voidType = context->construct->voidType.get();
         FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
                                                             "oper init",
@@ -171,7 +197,6 @@ void Func::finish() {
         // emit the initializers
         Initializers inits;
         receiverType->emitInitializers(*funcContext, &inits);
-
         
         // if we got a function, emit a call to it.
         if (funcDef) {
@@ -202,9 +227,56 @@ void Func::finish() {
         // close it off
         funcContext->builder.emitReturn(*funcContext, 0);
         funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
-        context->addDef(newFunc.get(), receiverType.get());
+        context->addDef(newFunc.get(), receiverType);
 
         receiverType->createNewFunc(*context, newFunc.get());
+    
+    // is this a virtual wrapper class?
+    } else if (flags & vwrap) {
+        assert(wrapperClass && "class wrapper not specified for wrapped func");
+        ContextPtr funcContext = context->createSubContext(Context::local);
+        funcContext->returnType = returnType->typeDef;
+        funcContext->toplevel = true;
+    
+        // create the "this" variable
+        ArgDefPtr thisDef =
+            context->builder.createArgDef(wrapperClass, "this");
+        funcContext->addDef(thisDef.get());
+        VarRefPtr thisRef = funcContext->builder.createVarRef(thisDef.get());
+        
+        // emit the function
+        FuncDef::Flags realFlags = FuncDef::method | FuncDef::virtualized;
+        FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
+                                                            realFlags,
+                                                            name,
+                                                            returnType->typeDef,
+                                                            realArgs,
+                                                            0
+                                                            );
+
+        // copy the args into the context.
+        for (int i = 0; i < realArgs.size(); ++i) {
+            funcContext->addDef(realArgs[i].get());
+        }
+
+        // create a call to the real function        
+        FuncCallPtr call = context->builder.createFuncCall(funcDef.get());
+        call->receiver = thisRef;
+        
+        for (int i = 0; i < realArgs.size(); ++i) {
+            VarRefPtr ref = 
+                funcContext->builder.createVarRef(realArgs[i].get());
+            call->args.push_back(ref);
+        }
+
+        if (returnType->typeDef != voidType) {
+            funcContext->builder.emitReturn(*funcContext, call.get());
+        } else {
+            call->emit(*funcContext)->handleTransient(*funcContext);
+            funcContext->builder.emitReturn(*funcContext, 0);
+        }
+        funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
+        context->addDef(newFunc.get(), wrapperClass);
     }
 
     finished = true;

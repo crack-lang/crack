@@ -46,7 +46,7 @@ AM_PATH_SDL(1.2.14, [got_sdl=yes])
 AM_CONDITIONAL(HAVE_SDL, [test "x$got_sdl" = xyes])
 
 AM_PATH_SDLGFX
-AM_CONDITIONAL(HAVE_SDLGFX, [true]) # [test "x$got_sdlgfx" = xyes])
+AM_CONDITIONAL(HAVE_SDLGFX, [test "x$got_sdlgfx" = xyes])
 
 AM_PATH_GL
 AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
@@ -54,7 +54,7 @@ AM_CONDITIONAL(HAVE_GL, [test "x$got_gl" = xyes])
 AM_PATH_CAIRO
 AM_CONDITIONAL(HAVE_CAIRO, [test "x$got_cairo" = xyes])
 
-AM_PATH_ALSA(1.0.22, [got_alsa=yes])
+AM_PATH_ALSA(1.0.22, [got_alsa=yes], true)
 AM_CONDITIONAL(HAVE_ALSA, [test "x$got_alsa" = xyes])
 
 AC_OUTPUT

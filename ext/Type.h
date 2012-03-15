@@ -22,12 +22,11 @@ class Type {
     friend class Func;
     friend class Module;
 
-    private:
-        model::TypeDef *typeDef;
-        Module *module;
-        
-        typedef std::vector<Type *> TypeVec;
+    public:
         typedef std::vector<Func *> FuncVec;
+
+    private:        
+        typedef std::vector<Type *> TypeVec;
         
         // Impl holds everything that we need to create a new type
         struct Impl {
@@ -51,7 +50,6 @@ class Type {
             ~Impl();
         };
 
-        Impl *impl;
 
         Type(Module *module, model::TypeDef *typeDef) : 
             module(module),
@@ -70,6 +68,19 @@ class Type {
             finished(false) {
         }
 
+        // verify that the type has been initilized (has a non-null impl)
+        void checkInitialized();
+
+        // verify that the type has been "finished" (presumably before using 
+        // it).
+        void checkFinished();
+
+    protected:
+
+        bool finished;
+        Module *module;
+        Impl *impl;
+        
         Type(Module *module, const std::string &name, 
              model::Context *context, 
              size_t instSize,
@@ -79,18 +90,17 @@ class Type {
             impl(new Impl(name, context, instSize)),
             finished(false) {
         }
-
-        ~Type();
-        
-        // verify that the type has been initilized (has a non-null impl)
-        void checkInitialized();
-
-        // verify that the type has been "finished" (presumably before using 
-        // it).
-        void checkFinished();
-        bool finished;
     
+        ~Type();
+
+        bool isFinished() const;
+        void setClasses(Func *f, model::TypeDef *base, model::TypeDef *wrapper,
+                        model::Context *context);
+        
     public:
+        
+        // this is public, it sucks.  Don't use it.
+        model::TypeDef *typeDef;
         
         /**
          * Add a new base class.
@@ -179,7 +189,7 @@ class Type {
         /**
          * Mark the new type as "finished"
          */
-        void finish();
+        virtual void finish();
 };
     
 }} // namespace crack::ext

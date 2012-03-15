@@ -10,17 +10,18 @@
 #include "model/FloatConst.h"
 #include "model/IntConst.h"
 #include "model/Namespace.h"
+#include "model/OverloadDef.h"
 #include "parser/Toker.h"
 #include "parser/Parser.h"
 #include "Type.h"
 #include "Func.h"
 
+using namespace std;
 using namespace crack::ext;
 using namespace parser;
 using namespace model;
 
-Module::Module(Context *context)  : context(context),
-                                    finished(false) {
+Module::Module(Context *context) : context(context), finished(false) {
     memset(builtinTypes, 0, sizeof(builtinTypes));
 }
 
@@ -73,6 +74,93 @@ GET_TYPE(Object, object)
 GET_TYPE(String, string)
 GET_TYPE(StaticString, staticString)
 
+namespace {
+
+// internal type for types with vtables.
+class VTableType : public Type {
+    
+    private:
+        string proxyName;
+    
+    public:
+        VTableType(Module *module, const string &name, Context *context,
+                   size_t size,
+                   TypeDef *typeDef = 0
+                   ) :
+            Type(module, name + ":ExtUser", context, size, typeDef),
+            proxyName(name) {
+        }
+
+        // propagate all constructors from 'inner' to 'outer'
+        void propagateConstructors(Context &context, TypeDef *inner, 
+                                   TypeDef *outer
+                                   ) {
+            
+            OverloadDefPtr constructors = 
+                OverloadDefPtr::rcast(inner->lookUp("oper init"));
+            
+            if (!constructors)
+                return;
+            
+            for (OverloadDef::FuncList::iterator fi =
+                  constructors->beginTopFuncs();
+                 fi != constructors->endTopFuncs();
+                 ++fi
+                 ) {
+                // create the init function, wrap it in an "oper new"
+                FuncDefPtr operInit = 
+                    outer->createOperInit(context, (*fi)->args);
+                outer->createNewFunc(context, operInit.get());
+            }
+        }
+
+        virtual void finish() {
+            if (isFinished())
+                return;
+
+            // finish the inner class
+            Type::finish();
+            
+            TypeDef::TypeVec bases;
+            bases.reserve(2);
+            bases.push_back(module->getVTableBaseType()->typeDef);
+            bases.push_back(typeDef);
+
+            // create the subcontext and emit the beginning of the class.
+            Context *ctx = impl->context;
+            ContextPtr clsCtx = 
+                new Context(ctx->builder, Context::instance, ctx, 0,
+                            ctx->compileNS.get()
+                );
+            TypeDefPtr td =
+                ctx->builder.emitBeginClass(*clsCtx, proxyName, bases, 0);
+
+            // wrap all of the constructors
+            propagateConstructors(*clsCtx, typeDef, td.get());
+            
+            // wrap all of the vwrapped methods
+            for (FuncVec::iterator fi = impl->funcs.begin(); 
+                 fi != impl->funcs.end();
+                 ++fi
+                 ) {
+                if ((*fi)->getVWrap()) {
+                    setClasses(*fi, typeDef, td.get(), clsCtx.get());
+                    (*fi)->finish();
+                }
+            }
+
+            ctx->builder.emitEndClass(*clsCtx);
+            
+            // replace the inner type with the outer type (we can be cavalier 
+            // about discarding the reference here because Type::finish() 
+            // should have assigned this to a variable)
+            typeDef = td.get();
+            ctx->ns->addDef(typeDef);
+        }        
+};
+
+} // anon namespace
+
 Type *Module::getType(const char *name) {
     
     // try looking it up in the map, first
@@ -90,7 +178,9 @@ Type *Module::getType(const char *name) {
     return type;
 }
 
-Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward) {
+Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward,
+                            bool hasVTable
+                            ) {
 
     TypeMap::iterator i = types.find(name);
     bool found = (i != types.end());
@@ -101,21 +191,29 @@ Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward) {
 
     Type *result;
 
-    if (forward)
-        result = new Type(this, name, context, instSize, context->createForwardClass(name).get());
-    else
+    if (forward) {
+        // we can't currently combine forward and hasVTable because our inner 
+        // TypeDef changes for a vtable class.
+        assert(!hasVTable);
+        result = new Type(this, name, context, instSize, 
+                          context->createForwardClass(name).get()
+                          );
+    } else if (hasVTable) {
+        result = new VTableType(this, name, context, instSize, 0);
+    } else {
         result = new Type(this, name, context, instSize);
+    }
 
     types[name] = result;
     return result;
 }
 
-Type *Module::addType(const char *name, size_t instSize) {
-    return Module::addTypeWorker(name, instSize, false);
+Type *Module::addType(const char *name, size_t instSize, bool hasVTable) {
+    return Module::addTypeWorker(name, instSize, false, hasVTable);
 }
 
 Type *Module::addForwardType(const char *name, size_t instSize) {
-    return Module::addTypeWorker(name, instSize, true);
+    return Module::addTypeWorker(name, instSize, true, false);
 }
 
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
