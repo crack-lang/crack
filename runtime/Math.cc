@@ -1,5 +1,5 @@
 // Copyright (C) 2010 Conrad D. Steenberg
-// Lincensed under LGPLv3
+// Lincensed under LGPLv2
 
 #include <math.h>
 #include <errno.h>
@@ -8,13 +8,14 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <stdio.h>
 #include <string>
+#include <dlfcn.h>
 #include "ext/Module.h"
 #include "ext/Func.h"
 
 using namespace crack::ext;
 using namespace std;
-
 
 namespace crack { namespace runtime {
 
@@ -268,9 +269,11 @@ u_int64_t crk_gettimeofday(void){
 
 //------------------------------------------------------------------------------
 void math_init(Module *mod) {
-  int i, j, numtypes=4;
+  int i, j, numtypes=3;
   char buffer[100];
-  char postfixes[][4] = {"", "f", "32", "64", ""};
+  char symbol_buffer[100];
+  char postfixes[][5] = {"", "f", "32", "64", ""};
+  char symbol_postfixes[][5] = {"f", "f", "f", "", ""};
   Type *functypes[] = {mod->getFloatType(), mod->getFloatType(),
                        mod->getFloat32Type(), mod->getFloat64Type(),
                        mod->getFloat64Type()};
@@ -285,7 +288,12 @@ void math_init(Module *mod) {
     for (j=0; j<numtypes; j++){
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
-      func = mod->addFunc(functypes[j], buffer, (void *) one_funcs[i]);
+
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      func = mod->addFunc(functypes[j], buffer,
+        (void *) one_funcs[i], symbol_buffer);
       func->addArg(functypes[j], arg_names[one_names[i].argname]);
     }
 
@@ -294,7 +302,12 @@ void math_init(Module *mod) {
     for (j=numtypes; j<5; j++){
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
-      funcd = mod->addFunc(functypes[j], buffer, (void *) one_funcs_double[i]);
+
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      funcd = mod->addFunc(functypes[j], buffer,
+        (void *) one_funcs_double[i], symbol_buffer);
       funcd->addArg(functypes[j], arg_names[one_names[i].argname]);
     }
 #endif
@@ -304,7 +317,12 @@ void math_init(Module *mod) {
     for (j=0; j<numtypes; j++){
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
-      func = mod->addFunc(mod->getIntType(), buffer, (void *) one_macros[i]);
+
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      func = mod->addFunc(mod->getIntType(), buffer,
+        (void *) one_macros[i], symbol_buffer);
       func->addArg(functypes[j], "value");
     }
 #if FLT_EVAL_METHOD==0
@@ -312,7 +330,12 @@ void math_init(Module *mod) {
     for (j=numtypes; j<5; j++){
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
-      funcd = mod->addFunc(mod->getIntType(), one_macro_names[i], (void *) one_macros_double[i]);
+
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      funcd = mod->addFunc(mod->getIntType(), one_macro_names[i],
+        (void *) one_macros_double[i], symbol_buffer);
       funcd->addArg(functypes[j], "value");
     }
 #endif
@@ -324,7 +347,11 @@ void math_init(Module *mod) {
       strcpy(buffer, two_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
-      func = mod->addFunc(functypes[j], buffer, (void *) two_funcs[i]);
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      func = mod->addFunc(functypes[j], buffer,
+            (void *) two_funcs[i], symbol_buffer);
       func->addArg(functypes[j], arg_names[two_names[i].argname1]);
       func->addArg(functypes[j], arg_names[two_names[i].argname2]);
     }
@@ -334,7 +361,11 @@ void math_init(Module *mod) {
       strcpy(buffer, two_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
-      funcd = mod->addFunc(functypes[j], two_names[i].funcname, (void *) two_funcs_double[i]);
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
+      funcd = mod->addFunc(functypes[j], two_names[i].funcname,
+        (void *) two_funcs_double[i], symbol_buffer);
       funcd->addArg(functypes[j], arg_names[two_names[i].argname1]);
       funcd->addArg(functypes[j], arg_names[two_names[i].argname2]);
     }
@@ -343,49 +374,50 @@ void math_init(Module *mod) {
 
   // Add constants to module
   for (i=0; double_constants[i].name;i++){
-    mod->addConstant(mod->getFloat64Type(), double_constants[i].name, double_constants[i].value);
+    mod->addConstant(mod->getFloat64Type(), double_constants[i].name,
+      double_constants[i].value);
   }
 
   for (i=0; int_constants[i].name;i++){
-    mod->addConstant(mod->getIntType(), int_constants[i].name, int_constants[i].value);
+    mod->addConstant(mod->getIntType(), int_constants[i].name,
+      int_constants[i].value);
   }
 
   // Math error handling
-  func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
+  func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept, "clearexcept");
   func->addArg(mod->getIntType(), "errors");
-  func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
+  func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept, "testexcept");
   func->addArg(mod->getIntType(), "errors");
-
 
   // Some utility functions
   // Get and set errno
-  Func *get_errno_func = mod->addFunc(mod->getIntType(), "errno", (void *)crk_get_errno);
+  Func *get_errno_func = mod->addFunc(mod->getIntType(), "errno", (void *)crk_get_errno, "errno");
 
-  Func *set_errno_func = mod->addFunc(mod->getVoidType(), "setErrno", (void *)crk_set_errno);
+  Func *set_errno_func = mod->addFunc(mod->getVoidType(), "setErrno", (void *)crk_set_errno, "setErrno");
   set_errno_func->addArg(mod->getIntType(), "value");
 
   // atoi
-  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi);
+  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi, "atoi");
   atoi_func->addArg(mod->getByteptrType(), "str");
 
   // strtoi
-  Func *strtoi_func = mod->addFunc(mod->getIntType(), "strtoi", (void *)crk_strtoi);
+  Func *strtoi_func = mod->addFunc(mod->getIntType(), "strtoi", (void *)crk_strtoi,"strtoi");
   strtoi_func->addArg(mod->getByteptrType(), "str");
 
   // strtof
-  Func *strtof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)crk_strtof);
+  Func *strtof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)crk_strtof, "strtof");
   strtof_func->addArg(mod->getByteptrType(), "str");
 
   // atof like strtof, but no error checking
-  Func *atof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof);
+  Func *atof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof, "atof");
   atof_func->addArg(mod->getByteptrType(), "str");
 
   // strtod
-  Func *strtod_func = mod->addFunc(mod->getFloat64Type(), "strtod", (void *)crk_strtod);
+  Func *strtod_func = mod->addFunc(mod->getFloat64Type(), "strtod", (void *)crk_strtod, "strtod");
   strtod_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
-  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
+  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday, "usecs");
 
 }
 

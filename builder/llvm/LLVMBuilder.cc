@@ -31,6 +31,7 @@
 #include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
@@ -1487,6 +1488,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
     // XXX only needed for linker?
     // if a symbol name wasn't given, we look it up from the dynamic library
     string symName(symbolName?symbolName:"");
+
     if (symName.empty()) {
         Dl_info dinfo;
         int rdl = dladdr(cfunc, &dinfo);
