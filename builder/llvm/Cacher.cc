@@ -517,7 +517,8 @@ bool Cacher::readImports() {
             return false;
 
         // op 3..n: imported (namespace aliased) symbols from m
-        for (unsigned si = 2; si < mnode->getNumOperands(); ++si) {
+        assert(mnode->getNumOperands() % 2 == 0);
+        for (unsigned si = 2; si < mnode->getNumOperands();) {
             localStr = dyn_cast<MDString>(mnode->getOperand(si++));
             sourceStr = dyn_cast<MDString>(mnode->getOperand(si++));
             assert(localStr && "malformed import node: missing local name");
