@@ -5292,6 +5292,16 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
+From 0.6 to 1.0
+---------------
+
+-   Object writing is now done using a Formatter instead of a Writer.  All
+    objects now have a formatTo() method.
+-   WriteBuffers now have a 'cap' field indicating capacity.  AppendBuffer's
+    'pos' field has been eliminated and the 'size' field now serves this
+    function.  Reader.read() is now expected to set the 'size' field of the
+    WriteBuffer it is passed.
+
 From 0.5 to 0.6
 ---------------
 
