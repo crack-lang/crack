@@ -190,7 +190,10 @@ class Socket : Pollable @implements Reader, Writer {
     }
 
     int recv(WriteBuffer buf, int flags) {
-        return recv(fd, buf.buffer, buf.size, flags);
+        rc := recv(fd, buf.buffer, buf.cap, flags);
+        if (rc != -1)
+            buf.size = rc;
+        return rc;
     }
 
     class Accepted {

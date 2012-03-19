@@ -493,7 +493,7 @@ class JsonParser {
         action parse_string {
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo);
-            result = String(append_buf, append_buf.pos, false);
+            result = String(append_buf, append_buf.size, false);
             fexec p + 1;
         }
 
@@ -511,7 +511,7 @@ class JsonParser {
     }%%
 
     ParserResult parseString(uint p, uint pe) {
-        append_buf.pos = 0;
+        append_buf.size = 0;
         String result = null;
         uint cs = EVIL;
         byte chr;

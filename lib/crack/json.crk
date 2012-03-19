@@ -1027,7 +1027,7 @@ uint  JSON_string_en_main = 1;
 
 
     ParserResult parseString(uint p, uint pe) {
-        append_buf.pos = 0;
+        append_buf.size = 0;
         String result = null;
         uint cs = EVIL;
         byte chr;
@@ -1153,7 +1153,7 @@ uint  JSON_string_en_main = 1;
     
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo);
-            result = String(append_buf, append_buf.pos, false);
+            result = String(append_buf, append_buf.size, false);
             p = ( p + 1) - 1; //EXEC
 
             // ACTION

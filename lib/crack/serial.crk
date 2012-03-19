@@ -73,12 +73,12 @@ class SerialReader {
         }
         
         # add null terminator
-        mbuf.buffer[mbuf.size - 1] = 0;
+        mbuf.buffer[mbuf.cap - 1] = 0;
 
         # indicate that we've depleted the buffer
         pos = buf.size;
 
-        size = mbuf.size - 1;
+        size = mbuf.cap - 1;
         return CString(mbuf.orphan(), size, true);
     }
 
@@ -117,8 +117,8 @@ class SerialWriter {
         }
 
         # write the temp buffer and reset it.
-        __dst.write(Buffer(buf.buffer, buf.pos));
-        buf.pos = 0;
+        __dst.write(Buffer(buf.buffer, buf.size));
+        buf.size = 0;
     }
     
     void write(String val) {
@@ -130,5 +130,3 @@ class SerialWriter {
         __dst.flush();
     }
 }
-
-
