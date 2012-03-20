@@ -71,7 +71,10 @@ class Toker {
          st_strint,
          st_rawStr,
          st_rawStrBody,
-         st_rawStrEscape
+         st_rawStrEscape,
+         st_strEscapedIndentedNewline,
+         st_istrEscapedIndentedNewline,
+         st_indentStr
       } state;
       
       // the putback queue
@@ -79,11 +82,31 @@ class Toker {
       char putbackBuf[putbackSize];
       int putbackIndex;
       
+      // stuff for dealing with indentation.
+      
+      // set to true if we are parsing an indented string
+      bool indentedString;
+      
+      // indentLevel and minIndentLevel are only used for 
+      // "escape-newline-whitespace" sequences to keep track of the smallest 
+      // of them.
+      int indentLevel, minIndentLevel;
+      
+      // size of a tab.
+      enum { tabWidth = 8 };
+      
       // get the next character from the stream.
       bool getChar(char &ch);
 
       // put back the character      
       void ungetChar(char ch);
+
+      // initialize all of the indentation state variables for a string, 
+      // initialize for an indented string if indented is true.      
+      void initIndent(bool indented);
+      
+      // reindent the buffer based on the accumulated indentation state.
+      void reindent(std::string &val);
 
    public:
 
