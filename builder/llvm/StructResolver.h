@@ -11,6 +11,7 @@ namespace llvm {
     class Type;
     class User;
     class Value;
+    class Function;
 }
 
 class StructResolver {
@@ -27,6 +28,7 @@ protected:
     llvm::Type *maybeGetMappedType(llvm::Type *t);
     void mapValue(llvm::Value &val);
     void mapUser(llvm::User &val);
+    void mapFunction(llvm::Function &fun);
 
     void mapGlobals();
     void mapFunctions();

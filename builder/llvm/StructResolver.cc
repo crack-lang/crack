@@ -73,6 +73,8 @@ void StructResolver::run(StructMapType *m) {
     if (m->empty())
         return;
 
+    module->MaterializeAll();
+
     typeMap = m;
     mapGlobals();
     mapFunctions();
@@ -183,8 +185,8 @@ void StructResolver::mapValue(Value &val) {
         return;
     }*/
 
-    SR_DEBUG cout << "@@ mapValue, before\n";
-    //val.dump();
+    SR_DEBUG cout << "@@ mapValue ["<<&val<<"], before\n";
+    SR_DEBUG val.dump();
 
     if (visited.find(&val) != visited.end()) {
         SR_DEBUG cout << "\t@@ already seen\n";
@@ -202,8 +204,8 @@ void StructResolver::mapValue(Value &val) {
 
     visited[&val] = true;
 
-    SR_DEBUG cout << "@@ mapValue, after\n";
-    //val.dump();
+    SR_DEBUG cout << "@@ mapValue ["<<&val<<"], after\n";
+    SR_DEBUG val.dump();
 
 }
 
@@ -253,6 +255,27 @@ void StructResolver::mapGlobals() {
 
 }
 
+void StructResolver::mapFunction(Function &fun) {
+
+    // get a FunctionType based on running the existing one through
+    // our mapper. since llvm uniques them, if it's unchanged, we should have
+    // the same FunctionType back
+    vector<Type*> ftArgs;
+    for (Function::arg_iterator a = fun.arg_begin();
+         a != fun.arg_end();
+         ++a) {
+        ftArgs.push_back(maybeGetMappedType(a->getType()));
+    }
+    FunctionType *ft = FunctionType::get(maybeGetMappedType(fun.getReturnType()),
+                                         ftArgs,
+                                         fun.isVarArg());
+    if (ft != fun.getFunctionType()) {
+        SR_DEBUG cout << "mapping function type\n";
+        fun.mutateType(PointerType::getUnqual(ft));
+    }
+
+}
+
 void StructResolver::mapFunctions() {
 
     for (Module::iterator i = module->begin();
@@ -260,14 +283,22 @@ void StructResolver::mapFunctions() {
          ++i) {
         SR_DEBUG cout << "---------------------------------------] looking at function: " << i->getName().str() << "----------------------------------\n";
         Function &f = (*i);
-        // Arguments
-        for (Function::arg_iterator a = f.arg_begin();
-             a != f.arg_end();
-             ++a) {
-            mapValue(*a);
+        SR_DEBUG f.dump();
+        // mutate FunctionType if necessary
+        mapFunction(f);
+        // Body
+        for (Function::iterator b = f.begin();
+             b != f.end();
+             ++b) {
+            for (BasicBlock::iterator inst = (*b).begin();
+                 inst != (*b).end();
+                 ++inst) {
+                mapUser(*inst);
+            }
         }
         SR_DEBUG f.dump();
     }
+
     //module->dump();
 
 }
