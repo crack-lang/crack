@@ -69,7 +69,7 @@ class Module {
         Type *getOverloadType();
         
         Type *getType(const char *name);
-        Type *addType(const char *name, size_t instSize);
+        Type *addType(const char *name, size_t instSize, bool hasVTable);
         Type *addForwardType(const char *name, size_t instSize);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);

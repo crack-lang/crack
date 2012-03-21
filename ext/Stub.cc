@@ -41,7 +41,7 @@ Type *Module::getStaticStringType() { }
 Type *Module::getOverloadType() { }
 
 Type *Module::getType(const char *name) { }
-Type *Module::addType(const char *name, size_t instSize) { }
+Type *Module::addType(const char *name, size_t instSize, bool hasVTable) { }
 Type *Module::addForwardType(const char *name, size_t instSize) { }
 Func *Module::addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName) { }
