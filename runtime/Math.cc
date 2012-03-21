@@ -20,6 +20,7 @@ using namespace std;
 // This version of the code does not wrap the math functions, but needs to specify
 // their symbol names in addFunc
 // Conversely symbols defined in a non-secondary library must _not_ be specified
+
 #ifndef WRAP_SECONDARY_SYMBOLS
 namespace crack { namespace runtime {
 
@@ -43,6 +44,7 @@ typedef int (OneMacroFuncDouble)(double);
 // Structs to hold function and constant info
 typedef struct _one_name_struct{
    const char *funcname;
+   const char *cname;
    arg_values argname;
 } one_name_struct;
 
@@ -91,23 +93,23 @@ const int_constant_struct int_constants[]={{"ERANGE",        ERANGE},
 // -----------------------------------------------------------------------------
 // Functions that take a single float argument
 const one_name_struct  one_names[]={ 
-                              {"sin", ANGLE}, {"cos", ANGLE},
-                              {"tan", ANGLE}, {"sinh", ANGLE}, 
-                              {"cosh", ANGLE}, {"tanh", ANGLE},
-                              {"asin", VALUE}, {"acos", VALUE}, 
-                              {"atan", VALUE}, {"asinh", VALUE},
-                              {"acosh", VALUE}, {"atanh", VALUE},
-                              {"exp", VALUE}, {"exp2", VALUE},
-                              {"log", VALUE}, {"abs", VALUE},
-                              {"log10", VALUE}, {"log1p", VALUE},
-                              {"log2", VALUE}, {"cbrt", VALUE},
-                              {"sqrt", VALUE}, {"erf", VALUE},
-                              {"erfc", VALUE}, {"lgamma", VALUE},
-                              {"tgamma", VALUE}, {"ceil", VALUE},
-                              {"floor", VALUE}, {"nearbyint", VALUE},
-                              { "rint", VALUE}, {"round", VALUE}, 
-                              {"trunc", VALUE}, {"expm1", VALUE},
-                              {NULL, VALUE}
+                              {"sin", "sin", ANGLE}, {"cos", "cos", ANGLE},
+                              {"tan", "tan", ANGLE}, {"sinh", "sinh", ANGLE}, 
+                              {"cosh", "cosh", ANGLE}, {"tanh", "tanh", ANGLE},
+                              {"asin", "asin", VALUE}, {"acos", "acos", VALUE}, 
+                              {"atan", "atan", VALUE}, {"asinh", "asinh", VALUE},
+                              {"acosh", "acosh", VALUE}, {"atanh", "atanh", VALUE},
+                              {"exp", "exp", VALUE}, {"exp2", "exp2", VALUE},
+                              {"log", "log", VALUE}, {"abs", "fabs", VALUE},
+                              {"log10", "log10", VALUE}, {"log1p", "log1p", VALUE},
+                              {"log2", "log2", VALUE}, {"cbrt", "cbrt", VALUE},
+                              {"sqrt", "sqrt", VALUE}, {"erf", "erf", VALUE},
+                              {"erfc", "erfc", VALUE}, {"lgamma", "lgamma", VALUE},
+                              {"tgamma", "tgamma", VALUE}, {"ceil", "ceil", VALUE},
+                              {"floor", "floor", VALUE}, {"nearbyint", "nearbyint", VALUE},
+                              {"rint", "rint", VALUE}, {"round", "round", VALUE}, 
+                              {"trunc", "trunc", VALUE}, {"expm1", "expm1", VALUE},
+                              {NULL, NULL, VALUE}
                            };
 
 // Functions that take 2 float arguments
@@ -293,7 +295,7 @@ void math_init(Module *mod) {
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
-      strcpy(symbol_buffer, one_names[i].funcname);
+      strcpy(symbol_buffer, one_names[i].cname);
       strcat(symbol_buffer, symbol_postfixes[j]);
 
       func = mod->addFunc(functypes[j], buffer,
@@ -307,7 +309,7 @@ void math_init(Module *mod) {
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
-      strcpy(symbol_buffer, one_names[i].funcname);
+      strcpy(symbol_buffer, one_names[i].cname);
       strcat(symbol_buffer, symbol_postfixes[j]);
 
       funcd = mod->addFunc(functypes[j], buffer,
@@ -322,11 +324,8 @@ void math_init(Module *mod) {
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
 
-      strcpy(symbol_buffer, one_names[i].funcname);
-      strcat(symbol_buffer, symbol_postfixes[j]);
-
       func = mod->addFunc(mod->getIntType(), buffer,
-        (void *) one_macros[i], symbol_buffer);
+        (void *) one_macros[i]);
       func->addArg(functypes[j], "value");
     }
 #if FLT_EVAL_METHOD==0
@@ -335,11 +334,8 @@ void math_init(Module *mod) {
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
 
-      strcpy(symbol_buffer, one_names[i].funcname);
-      strcat(symbol_buffer, symbol_postfixes[j]);
-
       funcd = mod->addFunc(mod->getIntType(), one_macro_names[i],
-        (void *) one_macros_double[i], symbol_buffer);
+        (void *) one_macros_double[i]);
       funcd->addArg(functypes[j], "value");
     }
 #endif

@@ -12,7 +12,7 @@ import crack.math  sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     acosh, atanh, atoi, atof, strtof, usecs, exp, exp2,
                     ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
                     erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
-                    round, trunc, fpclassify, isfinite, isinf, isnan,
+                    round, trunc, expm1, fpclassify, isfinite, isinf, isnan,
                     isnormal, sign, fmod, remainder, copysign, nextafter,
                     fdim, pow, testexcept, clearexcept, errno, setErrno, max, min, 
                     HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
@@ -92,5 +92,40 @@ state2 := setstate(state);
 for (i=0;i<3;i++)
     if (state[i] != state2[i])
         cout `Random state mismatch\n`;
+
+
+// Test single argument functions for segfaults only
+sin(1.0);
+cos(1.0);
+tan(1.0);
+sinh(1.0);
+cosh(1.0);
+tanh(1.0);
+asin(1.0);
+acos(1.0);
+atan(1.0);
+asinh(1.0);
+acosh(1.0);
+atanh(1.0);
+exp(1.0);
+exp2(1.0);
+abs(1.0);
+log(1.0);
+log10(1.0);
+log1p(1.0);
+log2(1.0);
+cbrt(1.0);
+sqrt(1.0);
+erf(1.0);
+erfc(1.0);
+lgamma(1.0);
+tgamma(1.0);
+ceil(1.0);
+floor(1.0);
+nearbyint(1.0);
+rint(1.0);
+round(1.0);
+trunc(1.0);
+expm1(1.0);
 
 cout `ok\n`;
