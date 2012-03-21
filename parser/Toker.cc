@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 #include "Toker.h"
 #include "ParseError.h"
 
@@ -42,10 +43,9 @@ void Toker::initIndent(bool indented) {
     }
 }
 
-void Toker::reindent(string &val) {
-    // scan the string for the shortest indent level
+void Toker::evaluateIndentation(const string &val) {
     bool inPrefix = false;
-    int indent = 0;
+    int indent;
     for (int i = 0; i < val.size(); ++i) {
         if (val[i] == '\n') {
             inPrefix = true;
@@ -68,10 +68,12 @@ void Toker::reindent(string &val) {
     
     if (inPrefix && indent && indent < minIndentLevel)
         minIndentLevel = indent;
-    
-    // build a new result, stripping the minimum indentation
+}
+
+void Toker::fixIndentation(string &val) {
     string result;
-    inPrefix = false;
+    bool inPrefix = false;
+    int indent;
     for (int i = 0; i < val.size(); ++i) {
         if (val[i] == '\n') {
             inPrefix = true;
@@ -104,7 +106,7 @@ void Toker::reindent(string &val) {
     
     val = result;
 }
-
+    
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src),
     state(st_none),
@@ -823,17 +825,17 @@ Token Toker::readToken() {
                 break;
 
             case st_istr:
+                // note that we don't reindent in any of these values, 
+                // reindenting of i-strings is done at the next level up.
+
                 if (ch == '`') {
-                    string val = buf.str();
-                    if (indentedString)
-                        reindent(val);
                     if (buf.tellp()) {
                         // if we've accumulated some raw data since the last 
                         // token was returned, return it as a string now and 
                         // putback the '`' so we can do the istrEnd the next 
                         // time.
                         ungetChar(ch);
-                        return Token(Token::string, val,
+                        return Token(Token::string, buf.str(),
                                      locationMap.getLocation()
                                      );
                     } else {
@@ -844,10 +846,7 @@ Token Toker::readToken() {
                     }
                 } else if (ch == '$') {
                     state = st_none;
-                    string val = buf.str();
-                    if (indentedString)
-                        reindent(val);
-                    return Token(Token::string, val,
+                    return Token(Token::string, buf.str(),
                                  locationMap.getLocation()
                                  );
                 } else if (ch == '\\') {
@@ -922,6 +921,50 @@ Token Toker::getToken() {
             state = st_istr;
         return temp;
     } else {
-        return readToken();
+        vector<Token> toks;
+        toks.push_back(readToken());
+
+        // we want to read all of the i-string tokens as a batch so that we 
+        // can apply the indentation transforms to them all collectively. 
+        if (indentedString && toks.front().isIstrBegin()) {
+            
+            // we have to approximate the parser here so that we can go back 
+            // into i-string mode after parsing an expression
+            int parens = 0;
+            while (!toks.back().isIstrEnd() && !toks.back().isEnd()) {
+                Token &tok = toks.back();
+                if (parens) {
+                    if (tok.isLParen()) {
+                        ++parens;
+                    } else if (tok.isRParen()) {
+                        --parens;
+                        if (!parens)
+                            continueIString();
+                    } else if (tok.isIstrBegin()) {
+                        ParseError::abort(tok,
+                                          "Nested i-strings are not "
+                                          "currently supported."
+                                          );
+                    }
+                } else if (tok.isLParen()) {
+                    ++parens;
+                } else if (tok.isIdent()) {
+                    continueIString();
+                }
+                toks.push_back(readToken());
+            }
+            
+            for (int i = 0; i < toks.size(); ++i)
+                if (toks[i].isString())
+                    evaluateIndentation(toks[i].data);
+            for (int i = 0; i < toks.size(); ++i)
+                if (toks[i].isString())
+                    fixIndentation(toks[i].data);
+            
+            // push everything but the first token
+            for (int i = toks.size() - 1; i; --i)
+                tokens.push_back(toks[i]);
+        }
+        return toks[0];
     }
 }

@@ -105,8 +105,20 @@ class Toker {
       // initialize for an indented string if indented is true.      
       void initIndent(bool indented);
       
+      // update minIndentLevel with the smallest indent level in the string.  
+      // This ignores lines consisting entirely of whitespace and newlines at 
+      // the end of the string
+      void evaluateIndentation(const std::string &val);
+      
+      // reformat all indentation in the string, truncating all whitespace
+      // prefixes by minIndentLevel.
+      void fixIndentation(std::string &val);
+      
       // reindent the buffer based on the accumulated indentation state.
-      void reindent(std::string &val);
+      void reindent(std::string &val) {
+         evaluateIndentation(val);
+         fixIndentation(val);
+      }
 
    public:
 

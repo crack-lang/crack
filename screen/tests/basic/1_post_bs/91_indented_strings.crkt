@@ -25,9 +25,9 @@ s := 'test val';
 if (FStr() I`Here is our value:
                $s
              Here it is again:
-               $s
+               $(s)
              ` !=
-    'Here is our value:\ntest val\nHere it is again:\n  test val\n'
+    'Here is our value:\n  test val\nHere it is again:\n  test val\n'
     )
     cerr `FAILED indented i-string with values\n`;
 
