@@ -33,6 +33,8 @@ class Func {
         std::string body() const;
         void setIsVariadic(bool isVariadic);
         bool isVariadic() const;
+        void setVWrap(bool vwrapEnabled);
+        bool getVWrap() const;
         void setSymbolName(const std::string &name);
         void addArg(Type *type, const std::string &name);
         void finish();
