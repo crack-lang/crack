@@ -20,7 +20,6 @@ using namespace std;
 namespace crack { namespace runtime {
 
 // Argument name definitions
-
 enum arg_values{ VALUE, ANGLE, ENUMERATOR, DIVISOR, POWER, SIGN, X, Y, DIRECTION};
 const char *arg_names[]={"value", "angle", "enumerator", "divisor", "power", 
                           "sign", "x", "y", "direction"};
@@ -102,7 +101,7 @@ const one_name_struct  one_names[]={
                               {"erfc", VALUE}, {"lgamma", VALUE},
                               {"tgamma", VALUE}, {"ceil", VALUE},
                               {"floor", VALUE}, {"nearbyint", VALUE},
-                              {"rint", VALUE}, {"round", VALUE}, 
+                              { "rint", VALUE}, {"round", VALUE}, 
                               {"trunc", VALUE}, {"expm1", VALUE},
                               {NULL, VALUE}
                            };
@@ -123,60 +122,23 @@ const two_name_struct   two_names[]={
 const char *one_macro_names[]={"fpclassify", "isfinite", "isinf", "isnan",
                                   "isnormal", "sign", "ilogb", NULL};
 
-#define one_funcs_impl_float(fname) \
-  float crack_##fname(float arg) { return fname(arg);}
 
-one_funcs_impl_float(sinf)
-one_funcs_impl_float(cosf)
-one_funcs_impl_float(tanf)
-one_funcs_impl_float(sinhf)
-one_funcs_impl_float(coshf)
-one_funcs_impl_float(tanhf)
-one_funcs_impl_float(asinf)
-one_funcs_impl_float(acosf)
-one_funcs_impl_float(atanf)
-one_funcs_impl_float(asinhf)
-one_funcs_impl_float(acoshf)
-one_funcs_impl_float(atanhf)
-one_funcs_impl_float(expf)
-one_funcs_impl_float(exp2f)
-one_funcs_impl_float(logf)
-one_funcs_impl_float(fabsf)
-one_funcs_impl_float(log10f)
-one_funcs_impl_float(log1pf)
-one_funcs_impl_float(log2f)
-one_funcs_impl_float(cbrtf)
-one_funcs_impl_float(sqrtf)
-one_funcs_impl_float(erff)
-one_funcs_impl_float(erfcf)
-one_funcs_impl_float(lgammaf)
-one_funcs_impl_float(tgammaf)
-
-one_funcs_impl_float(ceilf)
-one_funcs_impl_float(floorf)
-one_funcs_impl_float(nearbyintf)
-one_funcs_impl_float(rintf)
-one_funcs_impl_float(roundf)
-one_funcs_impl_float(truncf)
-one_funcs_impl_float(expm1f)
-
-
-OneFuncFloat *one_funcs[]= { crack_sinf,  crack_cosf,
-                               crack_tanf,  crack_sinhf,
-                               crack_coshf,  crack_tanhf,
-                               crack_asinf,  crack_acosf,
-                               crack_atanf,  crack_asinhf,
-                               crack_acoshf,  crack_atanhf,
-                               crack_expf,  crack_exp2f,
-                               crack_logf,  crack_fabsf,
-                               crack_log10f,  crack_log1pf,
-                               crack_log2f,  crack_cbrtf,
-                               crack_sqrtf,  crack_erff,
-                               crack_erfcf,  crack_lgammaf,
-                               crack_tgammaf, crack_ceilf,
-                               crack_floorf,  crack_nearbyintf,
-                               crack_rintf,  crack_roundf,
-                               crack_truncf, crack_expm1f, NULL
+OneFuncFloat *one_funcs[]= { sinf,   cosf,
+                               tanf,   sinhf,
+                               coshf,  tanhf,
+                               asinf,  acosf,
+                               atanf,  asinhf,
+                               acoshf, atanhf,
+                               expf,   exp2f,
+                               logf,   fabsf,
+                               log10f, log1pf,
+                               log2f,  cbrtf,
+                               sqrtf,  erff,
+                               erfcf,  lgammaf,
+                               tgammaf,ceilf,
+                               floorf,  nearbyintf,
+                               rintf,  roundf,
+                               truncf, expm1f, NULL
                               };
 
 // Functions that take two arguments
@@ -186,6 +148,7 @@ TwoFuncFloat *two_funcs[]=  { fmodf,     remainderf,
                                 copysignf, nextafterf, hypotf,
                                 fdimf,     powf, NULL
                               };
+
 
 // Bindings for macros that take one argument
 int crk_fpclassify(float x){
@@ -219,85 +182,27 @@ OneMacroFuncFloat *one_macros[]={crk_fpclassify, crk_isfinite,
 
 // -----------------------------------------------------------------------------
 #if FLT_EVAL_METHOD==0
-
-#define one_funcs_impl(fname) \
-  double crack_##fname(double arg) { return fname(arg);}
-
-#define two_funcs_impl(fname) \
-  double crack_##fname(double arg1, double arg2) { return fname(arg1, arg2);}
-
-
-one_funcs_impl(sin)
-one_funcs_impl(cos)
-one_funcs_impl(tan)
-
-one_funcs_impl(sinh)
-one_funcs_impl(cosh)
-one_funcs_impl(tanh)
-
-one_funcs_impl(asin)
-one_funcs_impl(acos)
-one_funcs_impl(atan)
-
-one_funcs_impl(asinh)
-one_funcs_impl(acosh)
-one_funcs_impl(atanh)
-
-one_funcs_impl(exp)
-one_funcs_impl(exp2)
-one_funcs_impl(fabs)
-one_funcs_impl(log)
-
-one_funcs_impl(log10)
-one_funcs_impl(log1p)
-one_funcs_impl(log2)
-
-one_funcs_impl(cbrt)
-one_funcs_impl(sqrt)
-one_funcs_impl(erf)
-one_funcs_impl(erfc)
-
-one_funcs_impl(lgamma)
-one_funcs_impl(tgamma)
-
-one_funcs_impl(ceil)
-one_funcs_impl(floor)
-one_funcs_impl(nearbyint)
-
-one_funcs_impl(rint)
-one_funcs_impl(round)
-one_funcs_impl(trunc)
-one_funcs_impl(expm1)
-
-OneFuncDouble *one_funcs_double[]= { crack_sin,  crack_cos,
-                                       crack_tan,  crack_sinh,
-                                       crack_cosh,  crack_tanh,
-                                       crack_asin,  crack_acos,
-                                       crack_atan,  crack_asinh,
-                                       crack_acosh,  crack_atanh,
-                                       crack_exp,   crack_exp2,
-                                       crack_fabs,  crack_log,
-                                       crack_log10, crack_log1p,
-                                       crack_log2,  crack_cbrt,
-                                       crack_sqrt,  crack_erf,
-                                       crack_erfc,  crack_lgamma,
-                                       crack_tgamma,  crack_ceil,
-                                       crack_floor,  crack_nearbyint,
-                                       crack_rint,  crack_round,
-                                       crack_trunc, crack_expm1, NULL
+OneFuncDouble *one_funcs_double[]= { sin,   cos,
+                                       tan,   sinh,
+                                       cosh,  tanh,
+                                       asin,  acos,
+                                       atan,  asinh,
+                                       acosh, atanh,
+                                       exp,   exp2,
+                                       fabs,  log,
+                                       log10, log1p,
+                                       log2,  cbrt,
+                                       sqrt,  erf,
+                                       erfc,  lgamma,
+                                       tgamma,ceil,
+                                       floor, nearbyint,
+                                       rint,  round,
+                                       trunc, expm1, NULL
                                      };
 
-two_funcs_impl(fmod)
-two_funcs_impl(remainder)
-two_funcs_impl(copysign)
-two_funcs_impl(nextafter)
-two_funcs_impl(hypot)
-two_funcs_impl(fdim)
-two_funcs_impl(pow)
-
-TwoFuncDouble *two_funcs_double[]={  crack_fmod,  crack_remainder,
-                                       crack_copysign,  crack_nextafter,
-                                       crack_hypot,  crack_fdim, crack_pow, NULL};
+TwoFuncDouble *two_funcs_double[]={  fmod,     remainder,
+                                       copysign, nextafter, hypot,
+                                       fdim,     pow, NULL};
 
 // Bindings for macros that take one argument
 int crk_fpclassify_double(double x){
@@ -364,7 +269,7 @@ u_int64_t crk_gettimeofday(void){
 
 //------------------------------------------------------------------------------
 void math_init(Module *mod) {
-  int i, j, numtypes=4;
+  int i, j, numtypes=3;
   char buffer[100];
   char symbol_buffer[100];
   char postfixes[][5] = {"", "f", "32", "64", ""};
@@ -384,8 +289,11 @@ void math_init(Module *mod) {
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       func = mod->addFunc(functypes[j], buffer,
-        (void *) one_funcs[i]);
+        (void *) one_funcs[i], symbol_buffer);
       func->addArg(functypes[j], arg_names[one_names[i].argname]);
     }
 
@@ -395,8 +303,11 @@ void math_init(Module *mod) {
       strcpy(buffer, one_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       funcd = mod->addFunc(functypes[j], buffer,
-        (void *) one_funcs_double[i]);
+        (void *) one_funcs_double[i], symbol_buffer);
       funcd->addArg(functypes[j], arg_names[one_names[i].argname]);
     }
 #endif
@@ -407,8 +318,11 @@ void math_init(Module *mod) {
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       func = mod->addFunc(mod->getIntType(), buffer,
-        (void *) one_macros[i]);
+        (void *) one_macros[i], symbol_buffer);
       func->addArg(functypes[j], "value");
     }
 #if FLT_EVAL_METHOD==0
@@ -417,8 +331,11 @@ void math_init(Module *mod) {
       strcpy(buffer, one_macro_names[i]);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       funcd = mod->addFunc(mod->getIntType(), one_macro_names[i],
-        (void *) one_macros_double[i]);
+        (void *) one_macros_double[i], symbol_buffer);
       funcd->addArg(functypes[j], "value");
     }
 #endif
@@ -430,8 +347,11 @@ void math_init(Module *mod) {
       strcpy(buffer, two_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       func = mod->addFunc(functypes[j], buffer,
-            (void *) two_funcs[i]);
+            (void *) two_funcs[i], symbol_buffer);
       func->addArg(functypes[j], arg_names[two_names[i].argname1]);
       func->addArg(functypes[j], arg_names[two_names[i].argname2]);
     }
@@ -441,8 +361,11 @@ void math_init(Module *mod) {
       strcpy(buffer, two_names[i].funcname);
       strcat(buffer, postfixes[j]);
 
+      strcpy(symbol_buffer, one_names[i].funcname);
+      strcat(symbol_buffer, symbol_postfixes[j]);
+
       funcd = mod->addFunc(functypes[j], two_names[i].funcname,
-        (void *) two_funcs_double[i]);
+        (void *) two_funcs_double[i], symbol_buffer);
       funcd->addArg(functypes[j], arg_names[two_names[i].argname1]);
       funcd->addArg(functypes[j], arg_names[two_names[i].argname2]);
     }
@@ -461,40 +384,40 @@ void math_init(Module *mod) {
   }
 
   // Math error handling
-  func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept);
+  func = mod->addFunc(mod->getIntType(), "clearexcept", (void *) feclearexcept, "clearexcept");
   func->addArg(mod->getIntType(), "errors");
-  func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept);
+  func = mod->addFunc(mod->getIntType(), "testexcept", (void *) fetestexcept, "testexcept");
   func->addArg(mod->getIntType(), "errors");
 
   // Some utility functions
   // Get and set errno
   Func *get_errno_func = mod->addFunc(mod->getIntType(), "errno", (void *)crk_get_errno);
 
-  Func *set_errno_func = mod->addFunc(mod->getVoidType(), "setErrno", (void *)crk_set_errno);
+  Func *set_errno_func = mod->addFunc(mod->getVoidType(), "setErrno", (void *)crk_set_errno, "setErrno");
   set_errno_func->addArg(mod->getIntType(), "value");
 
   // atoi
-  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi);
+  Func *atoi_func = mod->addFunc(mod->getIntType(), "atoi", (void *)atoi, "atoi");
   atoi_func->addArg(mod->getByteptrType(), "str");
 
   // strtoi
-  Func *strtoi_func = mod->addFunc(mod->getIntType(), "strtoi", (void *)crk_strtoi);
+  Func *strtoi_func = mod->addFunc(mod->getIntType(), "strtoi", (void *)crk_strtoi,"strtoi");
   strtoi_func->addArg(mod->getByteptrType(), "str");
 
   // strtof
-  Func *strtof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)crk_strtof);
+  Func *strtof_func = mod->addFunc(mod->getFloatType(), "strtof", (void *)crk_strtof, "strtof");
   strtof_func->addArg(mod->getByteptrType(), "str");
 
   // atof like strtof, but no error checking
-  Func *atof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof);
+  Func *atof_func = mod->addFunc(mod->getFloatType(), "atof", (void *)atof, "atof");
   atof_func->addArg(mod->getByteptrType(), "str");
 
   // strtod
-  Func *strtod_func = mod->addFunc(mod->getFloat64Type(), "strtod", (void *)crk_strtod);
+  Func *strtod_func = mod->addFunc(mod->getFloat64Type(), "strtod", (void *)crk_strtod, "strtod");
   strtod_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
-  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
+  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday, "usecs");
 
 }
 
