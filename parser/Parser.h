@@ -433,7 +433,7 @@ class Parser {
       // needs to be considered (for implementation of a virtual or forward
       // function).
       model::FuncDefPtr checkForOverride(model::VarDef *existingDef,
-                                         const model::FuncDef::ArgVec &argDefs,
+                                         const model::ArgVec &argDefs,
                                          model::Namespace *ownerNS,
                                          const Token &nameTok,
                                          const std::string &name

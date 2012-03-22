@@ -367,35 +367,65 @@ void _formatObject(Formatter f, Object o) {
 ## A writable buffer.  You can assume that it is safe to write to one of these.
 class WriteBuffer : Buffer {
 
-    ## constructor inheritence would be nice
-    oper init(byteptr buffer, uint size) : Buffer(buffer, size) {}
+    ## buffer capacity
+    uint cap;
 
-    ## Move data from an arbitrary byteptr into the buffer.
-    void move(uint start, byteptr ptr, uint count) {
-        if (start + count > size)
-            _throwIndexError('Move target out of bounds');
-        memmove(buffer + start, ptr, count);
+    oper init(byteptr buffer, uint size) : Buffer(buffer, size), cap = size {}
+
+    ## Construct a new buffer from a buffer pointer, an initial size and 
+    ## capacity.
+    oper init(byteptr buffer, uint size, uint cap) : 
+        Buffer(buffer, size), 
+        cap = cap {
     }
 
-    ## move data from one place in the buffer to another place in the buffer.
+    ## Move data from an arbitrary byteptr into the buffer.  The end of the 
+    ## new data must not exceed buffer capacity, if it exceeds the current 
+    ## size the size will be adjusted to fit it.
+    void move(uint start, byteptr ptr, uint count) {
+        if (start + count > cap)
+            _throwIndexError('Move target out of bounds');
+        memmove(buffer + start, ptr, count);
+        if (start + count > size)
+            size = start + count;
+    }
+
+    ## move data from one place in the buffer to another place in the buffer.  
+    ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
     void move(uint newStart, uint oldStart, uint count) {
-        if (oldStart + count > size)
+        if (oldStart + count > cap)
             _throwIndexError('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
+        if (newStart + count > size)
+            size = newStart + count;
     }
 
     ## move a buffer to a place in this buffer.
+    ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
     void move(uint newStart, Buffer buf) {
-        if (newStart + buf.size > size)
+        if (newStart + buf.size > cap)
             _throwIndexError('Move target out of bounds');
         move(newStart, buf.buffer, buf.size);
+        if (newStart + buf.size > size)
+            size = newStart + buf.size;
+    }
+    
+    ## Move the contents of the buffer from pos to size to the beginning of 
+    ## the buffer, and modify size accordingly (the new size is size - pos).
+    ## This effectively truncates the beginning of the buffer without doing 
+    ## any memory allocation/deallocation.
+    void compact(uint pos) {
+        if (pos > size)
+            _throwIndexError('Compress argument out of bounds');
+        move(0, pos, size - pos);
+        size = size - pos;
     }
 };
 
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {
 
-    oper init(uint size) : WriteBuffer(malloc(size), size) {}
+    oper init(uint cap) : WriteBuffer(malloc(cap), 0, cap) {}
     
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
@@ -406,20 +436,20 @@ class ManagedBuffer : WriteBuffer {
         return temp;
     }
 
-    ## Grow the buffer to the new size.
-    void grow(uint newSize) {
-        if (newSize <= size) {
+    ## Grow the buffer to the new capacity.
+    void grow(uint newCap) {
+        if (newCap <= cap) {
             puts('attempt to grow to a smaller or same size.');
             abort();
         }
 
-        newBuffer := malloc(newSize);
+        newBuffer := malloc(newCap);
         if (!(buffer is null)) {
             memcpy(newBuffer, buffer, size);
             free(buffer);
         }
         buffer = newBuffer;
-        size = newSize;
+        cap = newCap;
     }
 
     oper del() {
@@ -430,29 +460,29 @@ class ManagedBuffer : WriteBuffer {
 
 ## AppendBuffer lets you add stuff onto the end of it.
 class AppendBuffer : ManagedBuffer {
-    uint pos;
 
-    oper init(uint size) : ManagedBuffer(size) {}
+    oper init(uint cap) : ManagedBuffer(cap) {}
 
     ## Append a single byte to the buffer, growing if necessary.
     void append(byte c) {
-        if (pos >= size)
-            grow(size * 2);
-        buffer[pos++] = c;
+        if (size >= cap)
+            grow(cap * 2);
+        buffer[size++] = c;
     }
 
-    ## Extend the buffer from the pointer and size
+    ## Extend the buffer from the pointer and size.  That is, concatenate the 
+    ## buffer defined by buf, bufSize onto the end of the current buffer.
     #unsafe
     @final void extend(byteptr buf, uint bufSize) {
-        uint newPos = pos + bufSize;
-        if (newPos > size)
-            # grow to the larger of newPos and size * 2
-            if (newPos > size * 2)
-                grow(newPos);
+        uint newSize = size + bufSize;
+        if (newSize > cap)
+            # grow to the larger of newSize and cap * 2
+            if (newSize > cap * 2)
+                grow(newSize);
             else
-                grow(size * 2);
-        move(pos, buf, bufSize);
-        pos = newPos;
+                grow(cap * 2);
+        move(size, buf, bufSize);
+        size = newSize;
     }
 
     ## Extend the buffer with the (entire) other buffer.
@@ -700,7 +730,6 @@ class String : Buffer {
         }
         buf.append(39);
 
-        buf.size = buf.pos;
         return String(buf, true);
     }
 

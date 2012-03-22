@@ -236,7 +236,7 @@ class _CWD : Path {
 
     CString __getcwd() {
         ManagedBuffer buf = {PATH_MAX};
-        if (getcwd(buf.buffer, buf.size) is null) {
+        if (getcwd(buf.buffer, buf.cap) is null) {
             err := FStr() `Unable to get current directory: $(strerror())`;
             throw SystemError(err, errno());
         }

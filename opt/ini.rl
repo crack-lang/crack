@@ -92,7 +92,7 @@ class IniParser {
         }
 
         action valueStart {
-          appendBuf.pos = 0;
+          appendBuf.size = 0;
           okp = p+1;
         }
 
@@ -140,7 +140,7 @@ class IniParser {
         action valueEnd {
           if (p > okp)
               appendBuf.extend(data + uintz(okp), p - okp);
-          value = String(appendBuf, 0, appendBuf.pos);
+          value = String(appendBuf, 0, appendBuf.size);
 
           _sectionMap[key] = value;
           okp = p+1;

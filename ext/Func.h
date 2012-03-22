@@ -8,6 +8,7 @@
 
 namespace model {
     class Context;
+    class TypeDef;
 }
 
 namespace crack { namespace ext {
@@ -31,11 +32,15 @@ class Func {
             funcDefFlags = 15,
 
             // flags that don't map to FuncDef flags.
-            constructor = 1024
+            constructor = 1024,
+            vwrap = 2048
         };
 
     private:
         model::Context *context;
+        // receiver type gets set for methods, wrapperClass gets set for 
+        // vwrapped types.
+        model::TypeDef *receiverType, *wrapperClass;
         Type *returnType;
         std::string name;
         std::string symbolName;
@@ -53,6 +58,8 @@ class Func {
              Flags flags
              ) :
             context(context),
+            receiverType(0),
+            wrapperClass(0),
             returnType(returnType),
             name(name),
             funcPtr(funcPtr),
@@ -65,6 +72,8 @@ class Func {
              Flags flags
              ) :
             context(context),
+            receiverType(0),
+            wrapperClass(0),
             returnType(returnType),
             name(name),
             funcPtr(0),
@@ -89,6 +98,19 @@ class Func {
 
         // gets whether the Func maps to a variadic function
         bool isVariadic() const;
+        
+        // sets the "vwrap" flag, which indicates that the function is a 
+        // virtual that wraps a call to another function.
+        void setVWrap(bool vwrapEnabled);
+        
+        // gets the "vwrap" flag.
+        bool getVWrap() const;
+        
+        // sets the "virtualized" flag
+        void setVirtual(bool virtualizedEnabled);
+        
+        // gets the "virtualized" flag
+        bool getVirtual() const;
 
         // sets the function body; sets funcPtr to 0
         void setBody(const std::string& body);

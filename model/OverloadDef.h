@@ -82,8 +82,12 @@ class OverloadDef : public VarDef {
         /**
          * Returns the overload with the matching signature if there is one, 
          * NULL if not.
+         * @param matchNames if true, require that the signator match the 
+         *        names of the arg list.  If false, only require that the 
+         *        types match.
          */
-        FuncDef *getSigMatch(const FuncDef::ArgVec &args);
+        FuncDef *getSigMatch(const ArgVec &args, 
+                             bool matchNames = false);
         
         /**
          * Returns the overload with no arguments.  If 'acceptAlias' is false, 
@@ -96,7 +100,7 @@ class OverloadDef : public VarDef {
          * Returns true if the overload includeds a signature for the 
          * specified argument list.
          */
-        bool matches(const FuncDef::ArgVec &args) {
+        bool matches(const ArgVec &args) {
             return getSigMatch(args) ? true : false;
         }
         

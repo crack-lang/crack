@@ -8,8 +8,11 @@
 
 namespace parser {
 
+class Toker;
+
 /** Basic representation of a token. */
 class Token {
+   friend class Toker;
    public:
 
       // the token types

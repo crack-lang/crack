@@ -341,7 +341,6 @@ class SpecializedType : TypeImpl {
                 result.append(ch);
         }
 
-        result.size = result.pos;
         return String(result, true);
     }
 

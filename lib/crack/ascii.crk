@@ -54,8 +54,10 @@ int parseInt(String rep) {
     return val * sign;
 }
 
-String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset, 
-                    uint num)
+String _changeCase(String text, byte lowerBound, byte upperBound, 
+                   byte newOffset, 
+                   uint num
+                   )
 {
     oldBuf := text.buffer;
     ManagedBuffer newVal = {text.size};
@@ -72,6 +74,7 @@ String _changeCase(String text, byte lowerBound, byte upperBound, byte newOffset
         }
     }
 
+    newVal.size = text.size;
     return String(newVal, true);
 }
 
@@ -183,7 +186,6 @@ String escape(Buffer data, byte min, byte max) {
     }
   }
 
-  buf.size = buf.pos;
   return String(buf, true);
 }
 

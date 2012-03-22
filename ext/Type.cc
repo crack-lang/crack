@@ -147,9 +147,22 @@ Type *Type::getSpecialization(const vector<Type *> &params) {
     return type;
 }
 
+bool Type::isFinished() const {
+    return finished || (!impl && typeDef && !typeDef->forward);
+}
+
+
+void Type::setClasses(Func *f, model::TypeDef *base, model::TypeDef *wrapper,
+                      model::Context *context
+                      ) {
+    f->receiverType = base;
+    f->wrapperClass = wrapper;
+    f->context = context;
+}
+
 void Type::finish() {
     // ignore this if we're already finished.
-    if (finished || (!impl && typeDef && !typeDef->forward))
+    if (isFinished())
         return;
     
     Context *ctx = impl->context;
@@ -191,9 +204,14 @@ void Type::finish() {
     for (FuncVec::iterator fi = impl->funcs.begin(); fi != impl->funcs.end();
          ++fi
          ) {
-        // bind the class context to the function, then finish it.
-        (*fi)->context = clsCtx.get();
-        (*fi)->finish();
+        // bind the class to the function, if it's not VWrapped, bind the 
+        // context to it and finish it.  VWrapped functions get finished in 
+        // the outer class.
+        (*fi)->receiverType = typeDef;
+        if (!(*fi)->getVWrap()) {
+            (*fi)->context = clsCtx.get();
+            (*fi)->finish();
+        }
     }
     
     // pad the class to the instance size

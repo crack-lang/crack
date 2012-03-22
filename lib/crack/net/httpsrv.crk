@@ -88,7 +88,6 @@ String joinPath(StringArray path, int start, int end) {
             buf.append(b'/');
         buf.extend(path[i]);
     }
-    buf.size = buf.pos;
     
     return String(buf, true);
 }
@@ -192,10 +191,10 @@ class HTTPServer {
         
         ## Returns a byteptr to the current input buffer read position.
         @final byteptr getInputBuf() {
-            if (inbuf.size - inPos < 1024)
+            if (inbuf.cap - inPos < 1024)
                 # since the start size is 1024, we can assume that we will 
                 # grow to accomodate a 1024 byte buffer.
-                inbuf.grow(inbuf.size * 2);
+                inbuf.grow(inbuf.cap * 2);
             return inbuf.buffer + pos;
         }
 

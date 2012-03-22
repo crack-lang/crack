@@ -1717,7 +1717,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    }
 
    // parse the arguments
-   FuncDef::ArgVec argDefs;
+   ArgVec argDefs;
    parseArgDefs(argDefs, isMethod);
    
    // if we are expecting an argument definition, check for it.
@@ -3331,7 +3331,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
 }
 
 FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
-                                    const FuncDef::ArgVec &argDefs,
+                                    const ArgVec &argDefs,
                                     Namespace *ownerNS,
                                     const Token &nameTok,
                                     const string &name

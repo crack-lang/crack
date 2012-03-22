@@ -363,7 +363,7 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
                                   sym->returnType->getFullName()));
 
     // operand 6..ARITY: pairs of parameter symbol names and their types
-    for (FuncDef::ArgVec::const_iterator i = sym->args.begin();
+    for (ArgVec::const_iterator i = sym->args.begin();
          i != sym->args.end();
          ++i) {
         dList.push_back(MDString::get(getGlobalContext(), (*i)->name));

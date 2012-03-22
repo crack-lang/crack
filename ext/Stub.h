@@ -33,6 +33,8 @@ class Func {
         std::string body() const;
         void setIsVariadic(bool isVariadic);
         bool isVariadic() const;
+        void setVWrap(bool vwrapEnabled);
+        bool getVWrap() const;
         void setSymbolName(const std::string &name);
         void addArg(Type *type, const std::string &name);
         void finish();
@@ -69,7 +71,7 @@ class Module {
         Type *getOverloadType();
         
         Type *getType(const char *name);
-        Type *addType(const char *name, size_t instSize);
+        Type *addType(const char *name, size_t instSize, bool hasVTable);
         Type *addForwardType(const char *name, size_t instSize);
         Func *addFunc(Type *returnType, const char *name, void *funcPtr,
                       const char *symbolName=0);

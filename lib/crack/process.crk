@@ -72,12 +72,10 @@ class Process {
         // extendable buffer used for final string
         wr := AppendBuffer(1024);
         rd := FDReader(pipe);
-        uint size, totalSize;
-        while ((size = rd.read(buf)) != 0) {
-            wr.extend(buf, size);
-            totalSize += size;
-        }
-        return String(wr, totalSize, true); // takes ownership of appendbuffer
+        uint size;
+        while ((size = rd.read(buf)) != 0)
+            wr.extend(buf);
+        return String(wr, true); // takes ownership of appendbuffer
     }
 
     String getStdOut() { 

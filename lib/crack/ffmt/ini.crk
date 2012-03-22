@@ -343,7 +343,7 @@ uint  IniParser_en_main = 13;
     else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
 # line 94 "opt/ini.rl" # end of line directive
     
-          appendBuf.pos = 0;
+          appendBuf.size = 0;
           okp = p+1;
             // ACTION
     }
@@ -403,7 +403,7 @@ uint  IniParser_en_main = 13;
     
           if (p > okp)
               appendBuf.extend(data + uintz(okp), p - okp);
-          value = String(appendBuf, 0, appendBuf.pos);
+          value = String(appendBuf, 0, appendBuf.size);
 
           _sectionMap[key] = value;
           okp = p+1;

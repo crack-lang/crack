@@ -458,7 +458,7 @@ class LLVMBuilder : public Builder {
                                  ) { }
 
         virtual void setArgv(int argc, char **argv);        
-        
+
         // internal functions used by our VarDefImpl to generate the 
         // appropriate variable references.
         void emitMemVarRef(model::Context &context, llvm::Value *val);

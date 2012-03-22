@@ -16,13 +16,13 @@ LineIter _createLineIter(LineReader reader);
 class LineReader {
     Reader r;
     ManagedBuffer buffer = {1024};
-    uint start, end;
+    uint start;
     
     oper init(Reader reader) : r = reader {}
     
     String readLine() {
         while (true) {
-            for (uint i = start; i < end; ++i) {
+            for (uint i = start; i < buffer.size; ++i) {
                 if (buffer.buffer[i] == NEWLINE) {
                     tmp := Buffer(buffer.buffer + start, i + 1 - start);
                     start = i + 1;
@@ -34,27 +34,30 @@ class LineReader {
             
             # compact the buffer
             if (start) {
-                buffer.move(0, start, end - start);
-                end = end - start;
+                buffer.compact(start);
                 start = 0;
             }
             
             # if there's less than 1K of space available, grow the buffer
-            if (end + 1024 > buffer.size)
-                buffer.grow(buffer.size + 1024);
+            if (buffer.size + 1024 > buffer.cap)
+                buffer.grow(buffer.cap + 1024);
             
             # read the next block
-            amtRead := r.read(WriteBuffer(buffer.buffer + end, 1024));
-            end = end + amtRead;
+            amtRead := 
+                r.read(WriteBuffer(buffer.buffer + buffer.size, 0, 1024));
+            buffer.size += amtRead;
             
             # if we are at the end of the file, either return the remaining 
             # chunk or a null pointer if there is no remaining chunk
             if (!amtRead)
-                if (start == end) {
+                if (start == buffer.size) {
                     return null;
                 } else {
-                    result := String(Buffer(buffer.buffer + start, end - start));
-                    start = end;
+                    result := String(buffer.buffer + start,
+                                     buffer.size - start,
+                                     false
+                                     );
+                    start = buffer.size;
                     return result;
                 }
         }
@@ -90,12 +93,12 @@ class FullReader : LineReader @implements Reader {
     ## it as a string.
     String readAll() {
         # start with the current contents of the buffer
-        AppendBuffer result = {end - start};
-        result.extend(buffer.buffer + start, end - start);
+        AppendBuffer result = {buffer.size - start};
+        result.extend(buffer.buffer + start, buffer.size - start);
         
         # reset the buffer
         start = 0;
-        end = 0;
+        buffer.size = 0;
         
         # use a temporary write buffer so we read in chunks
         buf := WriteBuffer(buffer.buffer, 1024);
@@ -107,7 +110,6 @@ class FullReader : LineReader @implements Reader {
             amtRead = r.read(buf);
         }
         
-        result.size = result.pos;
         return String(result, true);
     }
 }

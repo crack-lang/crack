@@ -31,6 +31,7 @@
 #include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
@@ -382,9 +383,11 @@ void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
                                        BTypeDef *&classType,
                                        FuncBuilder &funcBuilder
                                        ) {
-    ContextPtr classCtx = context.getClassContext();
-    assert(classCtx && "method is not nested in a class context.");
-    classType = BTypeDefPtr::arcast(classCtx->ns);
+    if (!classType) {
+        ContextPtr classCtx = context.getClassContext();
+        assert(classCtx && "method is not nested in a class context.");
+        classType = BTypeDefPtr::arcast(classCtx->ns);
+    }
 
     // create the vtable slot for a virtual function
     if (flags & FuncDef::virtualized) {
@@ -1497,6 +1500,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
     // XXX only needed for linker?
     // if a symbol name wasn't given, we look it up from the dynamic library
     string symName(symbolName?symbolName:"");
+
     if (symName.empty()) {
         Dl_info dinfo;
         int rdl = dladdr(cfunc, &dinfo);
@@ -1522,6 +1526,31 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
     // if we've got a receiver, add it to the func builder and store a "this"
     // variable.
     if (receiverType) {
+        // see if there is an existing method to override
+        FuncDefPtr existing;
+        TypeDef *existingOwner = 0;
+        OverloadDefPtr ovld = context.lookUp(name);
+        if (ovld) {
+            existing = ovld->getSigMatch(args);
+            if (existing) {
+                existingOwner = TypeDefPtr::cast(existing->getOwner());
+
+                // ignore it if it's not a method from a base class.
+                if (!existingOwner ||
+                     !receiverType->isDerivedFrom(existingOwner) ||
+                     !(existing->flags & FuncDef::method)
+                    )
+                    existing = 0;
+            }
+        }
+
+        // if we're overriding a virtual in a base class, change the receiver
+        // type to that of the virtual method
+        if (existing) {
+            assert(existing->flags & FuncDef::virtualized);
+            receiverType = existingOwner;
+        }
+
         f.setReceiverType(BTypeDefPtr::acast(receiverType));
         ArgDefPtr thisDef =
             funcCtx->builder.createArgDef(receiverType, "this");

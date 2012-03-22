@@ -69,7 +69,7 @@ class InetAddress : Address {
     }
     
     ## Returns the port number as a host-style integer.
-    uint getPort() {
+    uint16 getPort() {
         return SockAddrIn.unsafeCast(_addr).port;
     }
     
@@ -88,7 +88,7 @@ class InetAddress : Address {
         i := SockAddrIn.unsafeCast(_addr);
         addr := i.addr;
         fmt `$(addr >> 24).$((addr >> 8) & 0xff).$((addr >> 16) & 0xff)\
-.$(addr & 0xff):$(i.port & 0xFFFF)`;
+.$(addr & 0xff):$(i.port)`;
     }
     
     int cmp(Object other) {
@@ -97,7 +97,7 @@ class InetAddress : Address {
         a := SockAddrIn.unsafeCast(_addr);
         b := SockAddrIn.unsafeCast(InetAddress.unsafeCast(other)._addr);
         int rc = a.addr - b.addr; if (rc) return rc;
-        rc = a.port & 0xFFFF - b.port & 0xFFFF;
+        rc = a.port - b.port;
         return rc;
     }
 }
@@ -190,7 +190,10 @@ class Socket : Pollable @implements Reader, Writer {
     }
 
     int recv(WriteBuffer buf, int flags) {
-        return recv(fd, buf.buffer, buf.size, flags);
+        rc := recv(fd, buf.buffer, buf.cap, flags);
+        if (rc != -1)
+            buf.size = rc;
+        return rc;
     }
 
     class Accepted {

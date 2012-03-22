@@ -1,0 +1,44 @@
+%%TEST%%
+indented strings
+%%ARGS%%
+%%FILE%%
+
+import crack.io FStr, cerr;
+
+if (FStr() I`First line.
+             Second line.
+               Indented third line\n` !=
+    'First line.\nSecond line.\n  Indented third line\n'
+    )
+    cerr `FAILED basic indented i-string test\n`;;
+
+if (FStr() I`First line.
+               Indented second line.\
+             ` !=
+    'First line.\n  Indented second line.'
+    )
+    cerr `FAILED indent to escaped-whitespace level test\n`;
+
+# XXX this test is broken, the tokenizer needs complete knowledge of the
+# istring.
+s := 'test val';
+if (FStr() I`Here is our value:
+               $s
+             Here it is again:
+               $(s)
+             ` !=
+    'Here is our value:\n  test val\nHere it is again:\n  test val\n'
+    )
+    cerr `FAILED indented i-string with values\n`;
+
+if (I"Test of a quoted string:
+      first line
+        indented second line" !=
+    'Test of a quoted string:\nfirst line\n  indented second line'
+    )
+    cerr `FAILED indented double-quoted string\n`;
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

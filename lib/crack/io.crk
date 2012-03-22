@@ -64,20 +64,15 @@ class OwningFDWriter : FDWriter {
 
     String read(uint size) {
         b := ManagedBuffer(size);
-
-        # have to qualify with this because of an overloading bug.
-        s := this.read(b);
+        s := read(b);
 
         # if the amount read is most of the buffer, just take ownership of the
         # buffer.
-        if (s >= size * 3 / 4) {
-            b.size = s;
+        if (s >= size * 3 / 4)
             return String(b, true);
-        } else {
+        else
             # otherwise copy.
-            b.size = s;
             return String(b);
-        }
     }
 
     # Since we can't load crack.ann yet, add the interface plumbing manually
@@ -97,9 +92,10 @@ class FDReader : FileHandle, Reader {
 
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
-        int rc = read(fd, buf.buffer, buf.size);
+        int rc = read(fd, buf.buffer, buf.cap);
         if (rc == -1)
             throw Exception(String(c_strerror()));
+        buf.size = rc;
         return rc;
     }
 
@@ -191,16 +187,16 @@ class StandardFormatter : Formatter {
 
         # have to convert so it will match the later _format method.
         int64 v = val;
-        start := _format(v, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(v, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     void format(uint16 val) {
         buffer := ManagedBuffer(5);
 
         # _format(uint32) comes first so we don't have to type convert
-        start := _format(val, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(val, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     void format(int32 val) {
@@ -208,35 +204,35 @@ class StandardFormatter : Formatter {
 
         # have to convert so it will match the later _format method.
         int64 v = val;
-        start := _format(v, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(v, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     void format(uint32 val) {
         buffer := ManagedBuffer(10);
 
         # _format(uint32) comes first so we don't have to type convert
-        start := _format(val, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(val, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     void format(int64 val) {
         buffer := ManagedBuffer(21);
-        start := _format(val, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(val, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     void format(uint64 val) {
         buffer := ManagedBuffer(20);
-        start := _format(val, buffer.buffer, buffer.size);
-        write(Buffer(buffer.buffer + start, buffer.size - start));
+        start := _format(val, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     # this temporarily uses a runtime call, until we implement a float
     # printer in crack
     void format(float32 val) {
         buffer := ManagedBuffer(80);
-        float_str(val, buffer.buffer, buffer.size);
+        float_str(val, buffer.buffer, buffer.cap);
         write(buffer.buffer);
     }
 
@@ -244,7 +240,7 @@ class StandardFormatter : Formatter {
     # printer in crack
     void format(float64 val) {
         buffer := ManagedBuffer(80);
-        float_str(val, buffer.buffer, buffer.size);
+        float_str(val, buffer.buffer, buffer.cap);
         write(buffer.buffer);
     }
 
@@ -291,17 +287,17 @@ class StringWriter : AppendBuffer, Writer {
     ## Return a string containing everything that has been written so far.
     ## Deprecated.  Use makeString() or string() instead.
     String createString() {
-        return String(buffer, pos, false);
+        return String(buffer, size, false);
     }
 
     ## Return a string containing everything that has been written so far.
     String makeString() {
-        return String(buffer, pos, false);
+        return String(buffer, size, false);
     }
 
     ## Return a string containing everything that has been written so far.
     String string() {
-        return String(buffer, pos, false);
+        return String(buffer, size, false);
     }
 
     ## Return a null terminated string containing everything that has been
@@ -309,21 +305,21 @@ class StringWriter : AppendBuffer, Writer {
     ## Deprecated.  Use makeCString() or cString() instead.
     CString createCString() {
         append(0);
-        return CString(buffer, pos - 1, false);
+        return CString(buffer, size - 1, false);
     }
 
     ## Return a null terminated string containing everything that has been
     ## written so far.
     CString makeCString() {
         append(0);
-        return CString(buffer, pos - 1, false);
+        return CString(buffer, size - 1, false);
     }
 
     ## Return a null terminated string containing everything that has been
     ## written so far.
     CString cString() {
         append(0);
-        return CString(buffer, pos - 1, false);
+        return CString(buffer, size - 1, false);
     }
 
     Object _iface_getWriterObject() { return this; }
@@ -342,9 +338,10 @@ class StringReader : Object, Reader {
             return 0;
 
         count :=
-            (__pos + buf.size > __src.size) ? __src.size - __pos : buf.size;
+            (__pos + buf.cap > __src.size) ? __src.size - __pos : buf.cap;
         buf.move(0, __src.buffer + __pos, count);
         __pos += count;
+        buf.size = count;
         return count;
     }
 

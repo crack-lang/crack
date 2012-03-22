@@ -3,8 +3,10 @@
 // Copyright 2003 Michael A. Muller
 // Copyright 2009 Google Inc.
 
+#include <limits.h>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 #include "Toker.h"
 #include "ParseError.h"
 
@@ -31,10 +33,85 @@ void Toker::ungetChar(char ch) {
         locationMap.decrementLineNumber();
 }
 
+void Toker::initIndent(bool indented) {
+    if (indented) {
+        indentedString = true;
+        indentLevel = 0;
+        minIndentLevel = INT_MAX;
+    } else {
+        indentedString = false;
+    }
+}
+
+void Toker::evaluateIndentation(const string &val) {
+    bool inPrefix = false;
+    int indent;
+    for (int i = 0; i < val.size(); ++i) {
+        if (val[i] == '\n') {
+            inPrefix = true;
+            indent = 0;
+        } else if (inPrefix) {
+            if (val[i] == ' ') {
+                indent += 1;
+            } else if (val[i] == '\t') {
+                indent = (indent / tabWidth + 1) * tabWidth;
+            } else if (val[i] == '\n') {
+                // ignore blank lines
+                indent = 0;
+            } else {
+                inPrefix = false;
+                if (indent < minIndentLevel)
+                    minIndentLevel = indent;
+            }
+        }
+    }
+    
+    if (inPrefix && indent && indent < minIndentLevel)
+        minIndentLevel = indent;
+}
+
+void Toker::fixIndentation(string &val) {
+    string result;
+    bool inPrefix = false;
+    int indent;
+    for (int i = 0; i < val.size(); ++i) {
+        if (val[i] == '\n') {
+            inPrefix = true;
+            indent = 0;
+        } else if (inPrefix) {
+            if (val[i] == ' ')
+                indent += 1;
+            else if (val[i] == '\t')
+                indent = (indent / tabWidth + 1) * tabWidth;
+            else {
+                inPrefix = false;
+                if (indent >= minIndentLevel)
+                    indent -= minIndentLevel;
+                result.push_back('\n');
+                result.append(indent, ' ');
+                result.push_back(val[i]);
+            }
+        } else {
+            result.push_back(val[i]);
+        }
+    }
+    
+    // if we ended in a prefix, flush it.
+    if (inPrefix) {
+        result.push_back('\n');
+        if (indent >= minIndentLevel)
+            indent -= minIndentLevel;
+        result.append(indent, ' ');
+    }
+    
+    val = result;
+}
+    
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src),
     state(st_none),
-    putbackIndex(putbackSize) {
+    putbackIndex(putbackSize),
+    indentedString(false) {
     locationMap.setName(sourceName, lineNumber);
 }
 
@@ -131,6 +208,10 @@ Token Toker::readToken() {
                     // deal with r'raw string' tokens
                     buf << ch;
                     state = st_rawStr;
+                } else if (ch == 'I') {
+                    // deal with I'indented string' tokens.
+                    buf << ch;
+                    state = st_indentStr;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
@@ -200,6 +281,7 @@ Token Toker::readToken() {
                     state = st_postaug;
                 } else if (ch == '"' || ch == '\'') {
                     terminator = ch;
+                    initIndent(false);
                     state = st_string;
                     t1 = Token::string;
                 } else if (ch == ':') {
@@ -221,6 +303,7 @@ Token Toker::readToken() {
                 } else if (ch == '~') {
                     return Token(Token::tilde, "~", locationMap.getLocation());
                 } else if (ch == '`') {
+                    initIndent(false);
                     state = st_istr;
                     return Token(Token::istrBegin, "`", 
                                  locationMap.getLocation()
@@ -339,9 +422,29 @@ Token Toker::readToken() {
                     terminator = ch;
                     buf.str("");
                     break;
+                }
+                // fall through to ident processing via st_indentStr
+
+            // indented string
+            case st_indentStr:
+                if (ch == '"' || ch == '\'') {
+                    state = st_string;
+                    initIndent(true);
+                    terminator = ch;
+                    buf.str("");
+                    t1 = Token::string;
+                    break;
+                } else if (state == st_indentStr && ch == '`') {
+                    state = st_istr;
+                    initIndent(true);
+                    return Token(Token::istrBegin, "`", 
+                                 locationMap.getLocation()
+                                 );
                 } else {
+                    // last guy in the chain needs to set the state.
                     state = st_ident;
                 }
+                // fall through to ident processing
 
             case st_ident:
    
@@ -396,7 +499,10 @@ Token Toker::readToken() {
                 // check for the terminator
                 if (ch == terminator) {
                     state = st_none;
-                    return Token(t1, buf.str(), locationMap.getLocation());
+                    string val = buf.str();
+                    if (indentedString)
+                        reindent(val);
+                    return Token(t1, val, locationMap.getLocation());
                 } else if (ch == '\\') {
                     state = st_strEscapeChar;
                 } else {
@@ -431,6 +537,12 @@ Token Toker::readToken() {
                         codeChar = codeLen = 0;
                         break;
                     case '\n':
+                        if (indentedString) {
+                            indentLevel = 0;
+                            state = (state == st_strEscapeChar) ?
+                                st_strEscapedIndentedNewline :
+                                st_istrEscapedIndentedNewline;
+                        }
                         break;
                     default:
                         if (isdigit(ch) && ch < '8') {
@@ -452,6 +564,22 @@ Token Toker::readToken() {
                     state = st_istr;
                 break;
             
+            case st_strEscapedIndentedNewline:
+            case st_istrEscapedIndentedNewline:
+                if (ch == ' ') {
+                    ++indentLevel;
+                } else if (ch == '\t') {
+                    indentLevel = (indentLevel / tabWidth + 1) * tabWidth;
+                } else {
+                    ungetChar(ch);
+                    if (indentLevel < minIndentLevel)
+                        minIndentLevel = indentLevel;
+                    state = (state == st_strEscapedIndentedNewline) ?
+                                st_string : st_istr;
+                                
+                }
+                break;
+
             case st_strOctal:
             case st_istrOctal:
                 
@@ -697,6 +825,9 @@ Token Toker::readToken() {
                 break;
 
             case st_istr:
+                // note that we don't reindent in any of these values, 
+                // reindenting of i-strings is done at the next level up.
+
                 if (ch == '`') {
                     if (buf.tellp()) {
                         // if we've accumulated some raw data since the last 
@@ -790,6 +921,50 @@ Token Toker::getToken() {
             state = st_istr;
         return temp;
     } else {
-        return readToken();
+        vector<Token> toks;
+        toks.push_back(readToken());
+
+        // we want to read all of the i-string tokens as a batch so that we 
+        // can apply the indentation transforms to them all collectively. 
+        if (indentedString && toks.front().isIstrBegin()) {
+            
+            // we have to approximate the parser here so that we can go back 
+            // into i-string mode after parsing an expression
+            int parens = 0;
+            while (!toks.back().isIstrEnd() && !toks.back().isEnd()) {
+                Token &tok = toks.back();
+                if (parens) {
+                    if (tok.isLParen()) {
+                        ++parens;
+                    } else if (tok.isRParen()) {
+                        --parens;
+                        if (!parens)
+                            continueIString();
+                    } else if (tok.isIstrBegin()) {
+                        ParseError::abort(tok,
+                                          "Nested i-strings are not "
+                                          "currently supported."
+                                          );
+                    }
+                } else if (tok.isLParen()) {
+                    ++parens;
+                } else if (tok.isIdent()) {
+                    continueIString();
+                }
+                toks.push_back(readToken());
+            }
+            
+            for (int i = 0; i < toks.size(); ++i)
+                if (toks[i].isString())
+                    evaluateIndentation(toks[i].data);
+            for (int i = 0; i < toks.size(); ++i)
+                if (toks[i].isString())
+                    fixIndentation(toks[i].data);
+            
+            // push everything but the first token
+            for (int i = toks.size() - 1; i; --i)
+                tokens.push_back(toks[i]);
+        }
+        return toks[0];
     }
 }
