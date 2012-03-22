@@ -923,6 +923,12 @@ void Context::popErrorContext() {
 void Context::checkAccessible(VarDef *var) {
     size_t nameSize = var->name.size();
     if (nameSize && var->name[0] == '_') {
+
+        // See if the variable is aliased in the current module.  This is 
+        // to accomodate generic arguments, which can alias private types.
+        if (getModuleContext()->ns->hasAliasFor(var))
+            return;
+
         if (nameSize > 1 && var->name[1] == '_') {
 
             // private variable: if it is owned by a class, we must be 

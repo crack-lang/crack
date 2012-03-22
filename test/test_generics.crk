@@ -101,4 +101,15 @@ if (1) {
         puts('FAILED inheriting from a generic parameter');
 }
 
+# test instantiating an external generic with private types.
+if (1) {
+    class _N {}
+    G[_N] vals;
+    
+    class N {
+        class __M {}
+        G[__M] __carr;
+    }
+}
+
 puts('ok');
