@@ -256,7 +256,7 @@ if (1) {
         # (this will break at some point because we're counting on a two digit 
         # numeric uniquifier at the end of the number, hence the "- 3".  
         # Revisit this when we have proper canonical names)
-        funcs[cur++] = info[0][strlen(info[0]) - 3];
+        funcs[cur++] = info[0][strlen(info[0]) - 1];
         funcs[cur] = 0;
         free(info);
     }
