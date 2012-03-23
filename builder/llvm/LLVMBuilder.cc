@@ -2795,7 +2795,6 @@ void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
 
     assert(bModDef && "no bModDef before initializeImportCommon");
     assert(importedMod && "importedMod was not a BModuleDef");
-
     bModDef->importList[importedMod] = symbols;
 
 }

@@ -193,8 +193,9 @@ void StructResolver::mapValue(Value &val) {
         return;
     }
 
-    if (isa<Constant>(val)) {
-        SR_DEBUG cout << "\t@@ is constant\n";
+    if (isa<Function>(val)) {
+        SR_DEBUG cout << "\t@@ skipping function\n";
+        return;
     }
 
     Type *t = maybeGetMappedType(val.getType());
@@ -214,6 +215,11 @@ void StructResolver::mapUser(User &val) {
 
     SR_DEBUG cout << "#mapUser, before\n";
     //val.dump();
+
+    if (visited.find(&val) != visited.end()) {
+        SR_DEBUG cout << "\t@@ already seen\n";
+        return;
+    }
 
     SR_DEBUG cout << "#value itself:\n";
     mapValue(val);

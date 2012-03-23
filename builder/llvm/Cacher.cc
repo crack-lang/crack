@@ -318,7 +318,10 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     dList.push_back(Constant::getNullValue(metaTypeRep));
 
     // register in canonical map for subsequent cache loads
-    context.construct->registerDef(bt);
+    if (bt)
+        context.construct->registerDef(bt);
+    else
+        context.construct->registerDef(t);
     context.construct->registerDef(metaClass);
 
     return MDNode::get(getGlobalContext(), dList);
