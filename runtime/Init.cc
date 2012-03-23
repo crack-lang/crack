@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <signal.h>
@@ -675,6 +676,32 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)crack::runtime::setNonBlocking);
     f->addArg(intType, "fd");
     f->addArg(boolType, "val");
+
+    // mmap
+    f = mod->addFunc(voidptrType, "mmap", (void *)mmap, "mmap");
+    f->addArg(voidptrType, "start");
+    f->addArg(uintzType, "length"); 
+    f->addArg(intType, "prot");
+    f->addArg(intType, "flags");
+    f->addArg(intType, "fd");   
+    f->addArg(uintzType, "offset");
+
+    // munmap
+    f = mod->addFunc(intType, "munmap", (void *)mmap, "munmap");
+    f->addArg(voidptrType, "start");
+    f->addArg(uintzType, "length"); 
+
+    // mmap protection flags
+    mod->addConstant(intType, "PROT_NONE", PROT_NONE);
+    mod->addConstant(intType, "PROT_EXEC", PROT_EXEC);
+    mod->addConstant(intType, "PROT_READ", PROT_READ);
+    mod->addConstant(intType, "PROT_WRITE", PROT_WRITE);
+    mod->addConstant(intType, "PROT_NONE", PROT_NONE);  
+
+    // mmap mapping flags
+    mod->addConstant(intType, "MAP_FIXED", MAP_FIXED);
+    mod->addConstant(intType, "MAP_SHARED", MAP_SHARED);
+    mod->addConstant(intType, "MAP_PRIVATE", MAP_PRIVATE);
 
     // Add math functions
     crack::runtime::math_init(mod);

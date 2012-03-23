@@ -54,6 +54,25 @@ int parseInt(String rep) {
     return val * sign;
 }
 
+## Parse a boolean
+bool parseBool(String rep) {
+    if (rep.size == 1){
+      if (rep[0] == b't' || rep[0] == b'T'|| rep[0] == b'1')
+        return true;
+      else return false
+    }
+
+    if (rep.size == 4){
+      if ((rep[0] == b't' || rep[0] == b'T') &&
+          (rep[1] == b'r' || rep[1] == b'R') &&
+          (rep[2] == b'u' || rep[2] == b'U') &&
+          (rep[3] == b'e' || rep[3] == b'E'))  
+        return true;
+    }
+    return false;
+}
+
+
 String _changeCase(String text, byte lowerBound, byte upperBound, 
                    byte newOffset, 
                    uint num

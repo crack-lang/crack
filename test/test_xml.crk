@@ -1,0 +1,93 @@
+import crack.xml XmlReader;
+import crack.io cout, FStr;
+import crack.cmdline CmdOptions, Option, CMD_STR, CMD_BOOL;
+import crack.sys argv;
+import crack.runtime exit;
+import crack.exp.file File;
+
+uint errors = 0;
+CmdOptions options = [Option("help", "h", "Show help message", "f", CMD_BOOL),
+                      Option("file", "f", "XML file to parse", "", CMD_STR)
+                     ];
+
+options.parse(argv, false);
+if (options.getBool("help")) {
+  options.printUsage("test_xml");
+  exit(0);
+}
+
+xmlString:='
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeLite Revision="3833" Version="2.0.2">
+  <ArchiveObject Name="highlight_word">
+    <long Value="1" Name="m_value">
+      09384032023
+    </long>
+    <bool Value="True" Name="b_value"/>
+    <float Value="45.67892" Name="f_value"/>
+  </ArchiveObject>
+
+</CodeLite>';
+
+reader := XmlReader();
+elem := reader.parse(xmlString);
+found := FStr() `$elem`;
+expected := '<CodeLite Revision="3833" Version="2.0.2">
+    <ArchiveObject Name="highlight_word">
+        <long Value="1" Name="m_value">
+            09384032023
+        </long>
+        <bool Value="True" Name="b_value"/>
+        <float Value="45.67892" Name="f_value"/>
+    </ArchiveObject>
+</CodeLite>';
+
+longElement := elem.getChildByNameRecursive("long");
+if (!longElement){
+  cout `getChildByNameRecursive failed\n`;
+  errors++;
+}
+
+intVal := longElement.getInt("Value");
+if (intVal != 1){
+  cout `getInt failed\n`;
+  errors++;
+}
+
+boolElement := elem.getChildByNameRecursive("bool");
+if (!boolElement){
+  cout `getChildByNameRecursive failed\n`;
+  errors++;
+}
+
+boolVal := boolElement.getBool("Value");
+if (!boolVal){
+  cout `getBool failed\n`;
+  errors++;
+}
+
+floatElement := elem.getChildByNameRecursive("float");
+if (!floatElement){
+  cout `getChildByNameRecursive failed\n`;
+  errors++;
+}
+
+floatVal := floatElement.getFloat("Value");
+if (floatVal != 45.67892){
+  cout `getFloat failed\n`;
+  errors++;
+}
+//------------------------------------------------------------------------------
+// Optional file test
+
+fname := options.getString("file");
+if (!(fname is null) && fname.size>0) {
+  reader = XmlReader();
+  elem = reader.parseFile(fname);
+  cout `$elem\n`;
+}
+
+if (!errors) {
+  if (found == expected) cout `ok\n`;
+  else cout `$found`;
+}
