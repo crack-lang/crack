@@ -3,7 +3,8 @@ ascii module
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-import crack.ascii radix, strip, parseInt, toUpper, toLower, isSpace, isDigit;
+import crack.ascii radix, strip, parseInt, toUpper, toLower, isSpace, isDigit,
+    fract10;
 
 if (radix(0, 10) != '0')
     cout `FAILED radix(0)\n`;
@@ -34,7 +35,7 @@ if (toUpper('This Is a Test') != 'THIS IS A TEST')
 
 if (toUpper('') != '')
     cout `FAILED toUpper('')\n`;
-    
+
 if (toLower('tHIS iS A tEST') != 'this is a test')
     cout `FAILED toLower()\n`;
 
@@ -59,6 +60,19 @@ if (parseInt('0') != 0)
 
 if (parseInt('-23') != -23)
     cout `FAILED parseInt(-23)\n`;
+
+if (fract10(0, 10) != '0')
+    cout `FAILED fract10(0)\n`;
+
+if (fract10(12, 3) != '012')
+    cout `FAILED value with leading zeroes\n`;
+
+if (fract10(90, 2) != '9')
+    cout `FAILED value with hidden trailing zeroes\n`;
+
+if (fract10(123, 3) != '123')
+    cout `FAILED value with no leading or trailing zeroes\n`;
+
 
 cout `ok\n`;
 %%EXPECT%%
