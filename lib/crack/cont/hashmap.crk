@@ -346,6 +346,9 @@ $expected`);
     }
 }
 
+## An ordered hash map is a combination of a hash-map and a sequence.  The 
+## container supports positional insertion of key-value pairs.  Iteration 
+## traverses the elements according to the positions they were inserted at.
 class OrderedHashMap[Key, Value] {
 
     uint _size, _cap;
@@ -454,8 +457,11 @@ class OrderedHashMap[Key, Value] {
         free(_items);
     }
     
-    @final
-    void clear(uint newcap) {
+    ## Delete all of the contents of the map, converting the map to an empty 
+    ## map with the specified capacity.
+    @final void clear(uint newcap) {
+                  
+        # unhook all of the objects in the linked list
         item := head;
         Item tmp;
         while (item) {
@@ -467,14 +473,16 @@ class OrderedHashMap[Key, Value] {
 
         head = tail = null;
 
+        # free the make
         _free();
         _items = array[Item](newcap);
         _cap = newcap;
         _size = 0;
     }
     
-    @final
-    void clear() {
+    ## Delete all of the contents of the map, converting the map to an empty 
+    ## map with the default capacity.
+    @final void clear() {
         clear(16);
     }
     
@@ -528,6 +536,7 @@ class OrderedHashMap[Key, Value] {
         return item.val;
     }
 
+    ## Add a new key value pair to the map at the end of the sequence.
     Value append(Key key, Value value) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -541,8 +550,9 @@ class OrderedHashMap[Key, Value] {
                 temp = head = tail = Item(hash, key, value, null);
             }
             _setItemNew(i, temp);
+        } else {
+            temp.val = value;
         }
-        else temp.val = value;
         return value;
     }
 
@@ -715,7 +725,7 @@ class OrderedHashMap[Key, Value] {
     Value pushHead(Key key, Value value) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        temp := _items[i] ? _items[i] : null;
+        temp := _items[i];
         if (temp is null) {
             temp = Item(hash, key, value, null);
             if (head) {
@@ -726,18 +736,12 @@ class OrderedHashMap[Key, Value] {
                 head = tail = temp;
             }
             _setItemNew(i, temp);
-        }
-        else if (temp.prev is null) {
-            if (head) {
-                temp.next = head;
-                head.prev = temp;
-                head = temp;
-            } else {
-                head = tail = temp;
-            }
+        } else if (temp.prev is null) {
             temp.val = value;
+        } else {
+            throw KeyError(FStr() I`Key $key already assigned in a position \
+                                    not at the head`);
         }
-        else throw KeyError(FStr() `Key $key already assigned in a position not at the head`);
         return value;
     }
 
@@ -793,7 +797,7 @@ class OrderedHashMap[Key, Value] {
 
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        temp := _items[i] ? _items[i] : null;
+        temp := _items[i];
 
         # The same key is already at the same index
         if (item != null && item.next is temp) { 
