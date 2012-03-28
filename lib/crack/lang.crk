@@ -898,16 +898,23 @@ class CString : String {
 
 }
 
-class StaticString : String {
+## This class is used to represent static strings parsed out of the language 
+## source code (after bootstrapping).  You can safely use it to wrap raw byte 
+## arrays as long as:
+## 1) the arrays have a null character either within them or immediately 
+##    following them (i.e. they are null terminated)
+## 2) they are guaranteed to stay in existence and remain unchanged for the 
+##    life of the StaticString object.
+class StaticString : CString {
 
-    oper init(byteptr data, uint size) : String(data, size, true) {}
+    oper init(byteptr data, uint size) : CString(data, size, true) {}
 
     ## Initialize from a null terminated string.
-    oper init(byteptr data) : String(data, strlen(data), true) {}
+    oper init(byteptr data) : CString(data, strlen(data), true) {}
 
     # override _freeBuffer so we don't...
     void _freeBuffer() {}
-};
+}
 
 class StackFrame : Object {
     String func, file;
