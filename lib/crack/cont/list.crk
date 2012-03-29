@@ -215,8 +215,8 @@ class List[Elem] {
     }
 
     void delete(Elem elem) {
-        if (elem is null) throw InvalidArgumentError("Invalid argument null for delete()");
-        if (head is null || tail is null) throw AssertionError("Cannot delete element from empty list");
+        if (_isNull(elem)) throw InvalidArgumentError("Invalid argument null for delete()");
+        if (_isNull(head) || _isNull(tail)) throw AssertionError("Cannot delete element from empty list");
         if (head.elem == elem &&  head){
             popHead();
         }
