@@ -47,6 +47,7 @@ ResultExprPtr AssignExpr::emit(Context &context) {
     bool gotReleaseFunc = context.lookUpNoArgs("oper release", false,
                                                var->type.get()
                                                );
+    ResultExprPtr assnResult, oldVal;
 
     if (aggregate) {
 
@@ -62,18 +63,25 @@ ResultExprPtr AssignExpr::emit(Context &context) {
             // emit the release call on the result
             VarRefPtr varRef = 
                 context.builder.createFieldRef(aggregate.get(), var.get());
-            varRef->emit(context)->forceCleanup(context);
+            oldVal = varRef->emit(context);
         }
 
-        return context.builder.emitFieldAssign(context, agg.get(), this);
+        assnResult = context.builder.emitFieldAssign(context, agg.get(), this);
     } else {
         if (gotReleaseFunc) {
             // emit a release call on the existing value.
             VarRefPtr varRef = context.builder.createVarRef(var.get());
-            varRef->emit(context)->forceCleanup(context);
+            oldVal = varRef->emit(context);
         }
-        return var->emitAssignment(context, value.get());
+        assnResult = var->emitAssignment(context, value.get());
     }
+
+    // cleanup the old value after assignment (we can't do it before because 
+    // the value expression might have thrown an exception)
+    if (gotReleaseFunc)
+        oldVal->forceCleanup(context);
+
+    return assnResult;
 }
 
 bool AssignExpr::isProductive() const {

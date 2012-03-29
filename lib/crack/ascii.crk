@@ -1,9 +1,10 @@
 ## Copyright 2010 Google Inc
 ## Module for manipulating ascii stirngs.
 
-import crack.io cout;
-import crack.lang ManagedBuffer, Buffer, AppendBuffer;
+import crack.io cout, FStr;
+import crack.lang InvalidArgumentError, ManagedBuffer, Buffer, AppendBuffer;
 import crack.strutil StringArray, split;
+@import crack.ann define;
  
 ## Returns the number converted to a string in the specified base - e.g. 
 ## radix(26, 16) -> '1a'
@@ -35,23 +36,95 @@ String radix(uintz val, uint base) {
     return String(cur, size, false);
 }
 
-## Parse a base 10 integer.
-int parseInt(String rep) {
-    int i, sign = 1, val;
-    if (rep[0] == b'-') {
-        ++i;
-        sign = -1;
+## Returns a string representation of fraction n / 10^denomExp suitable for
+## use after the decimal point in a formatted floating point number.  For
+## example, where n = 120 and denomExp = 4 (120 / 10,000), this  would
+## return "012". Trailing zeroes are not part of the result because they are
+## not significant, leading zeroes are added because they are.
+String fract10(int32 n, uint denomExp) {
+    if (!n) {
+        return '0';
     }
 
-    while (i < rep.size) {
-        b := rep[i++];
-        if (b >= b'0' && b <= b'9')
-            val = val * 10 + b - b'0';
+    # create a null-terminated managed buffer (size is denomExp + 1 for the
+    # null terminator)
+    ManagedBuffer buf = {denomExp + 1};
+    byteptr back = buf.buffer + denomExp + 1;
+    back += -1; back[0] = 0;
+
+    # counts the number of digits that we've traversed
+    int digits;
+
+    # true if we've traversed a non-zero digit (indicating that the
+    # remaining digits must be displayed)
+    bool significant;
+
+    while (n) {
+        dig := n % 10;
+        n /= 10;
+        if (!significant) significant = dig;
+        ++digits;
+        if (digits > denomExp)
+            throw InvalidArgumentError(FStr() `Value $n is > 10^$denomExp`);
+
+        if (significant) {
+            back += -1; back[0] = byte(dig + b'0');
+        }
+    }
+
+    # write out the remaining digits of precision as zeroes
+    while (digits++ < denomExp) {
+        back += -1; back[0] = b'0';
+    }
+
+    return String(back);
+}
+
+# generates parse functions for both signed and unsigned varieties of a type.
+@define parseInteger(type, suffix) {
+    u$$type parseU$$suffix(Buffer b) {
+        u$$type val;
+        p := b.buffer;
+        remaining := b.size;
+        while (remaining && p[0] <= b'9' && p[0] >= b'0') {
+            val = val * 10 + p[0] - b'0';
+            p += 1;
+            --remaining;
+        }
+
+        return val;
+    }
+
+    type parse$$suffix(Buffer b) {
+        if (b[0] == b'-')
+            return -type(parseU$$suffix(Buffer(b.buffer + 1, b.size - 1)));
         else
-            break;
+            return type(parseU$$suffix(b));
+    }
+}
+
+# generate signed and unsigned versions of the parseInt functions.
+@parseInteger(int, Int);
+@parseInteger(intz, Intz);
+@parseInteger(int32, Int32);
+@parseInteger(int64, Int64);
+
+## Parse a boolean
+bool parseBool(Buffer rep) {
+    if (rep.size == 1){
+      if (rep[0] == b't' || rep[0] == b'T'|| rep[0] == b'1')
+        return true;
+      else return false
     }
 
-    return val * sign;
+    if (rep.size == 4){
+      if ((rep[0] == b't' || rep[0] == b'T') &&
+          (rep[1] == b'r' || rep[1] == b'R') &&
+          (rep[2] == b'u' || rep[2] == b'U') &&
+          (rep[3] == b'e' || rep[3] == b'E'))  
+        return true;
+    }
+    return false;
 }
 
 String _changeCase(String text, byte lowerBound, byte upperBound, 

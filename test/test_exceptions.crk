@@ -293,6 +293,35 @@ if (1) {
     
 }
 
+// verify that assignment cleanups work correctly when an exception is thrown 
+// from the value expression.
+if (1) {
+    cleanedUp = 0;
+    Cleanup c;
+    Cleanup f() { throw Exception(); }
+    try {
+        c = f();
+    } catch (Exception e) {
+    }
+    
+    if (cleanedUp)
+        puts('FAILED deferred cleanup during assignment');
+    
+    class A {
+        Cleanup c;
+    }
+    A a = {};
+    try {
+        a.c = f();
+    } catch (Exception e) {
+    }
+    
+    if (cleanedUp)
+        puts('FAILED deferred cleanup during fild assignment');
+}
+if (!cleanedUp)
+    puts('FAILED to ever clean up a cleanup var!');
+
 puts('ok');
 
 // try block ends with a terminator

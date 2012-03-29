@@ -46,6 +46,10 @@ map.append("key3", "val3");
 testExpected("Simple assign and append", map, "{key: val, key2: val2, key3: val3}");
 
 # Test linked list methods
+map.pushHead("key0", "valx");
+testExpected("pushHead", map, "{key0: valx, key: val, key2: val2, key3: val3}");
+
+# push a different value for the same key at the head.
 map.pushHead("key0", "val0");
 testExpected("pushHead", map, "{key0: val0, key: val, key2: val2, key3: val3}");
 

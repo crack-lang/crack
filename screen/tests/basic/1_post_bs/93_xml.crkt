@@ -1,0 +1,10 @@
+%%TEST%%
+XML Parser
+%%ARGS%%
+
+%%FILE%%
+import test.test_xml;
+%%EXPECT%%
+ok
+%%STDIN%%
+

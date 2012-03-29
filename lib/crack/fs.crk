@@ -150,8 +150,8 @@ class RealPath : Path {
 
     CString __path;
 
-    oper init(String realPath) : __path = CString(realPath) {}
     oper init(CString realPath) : __path = realPath {}
+    oper init(String realPath) : __path = CString(realPath) {}
 
     void formatTo(Formatter fmt) {
         fmt.format(__path);

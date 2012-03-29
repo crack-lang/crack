@@ -43,6 +43,15 @@ ModuleDefPtr Namespace::getRealModule() {
     return owner ? owner : mod;
 }
 
+bool Namespace::hasAliasFor(VarDef *def) const {
+    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end(); 
+         ++iter
+         )
+        if (iter->second.get() == def)
+            return true;
+    return false;
+}
+
 void Namespace::addDef(VarDef *def) {
     assert(!def->getOwner());
 

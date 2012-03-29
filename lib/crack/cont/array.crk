@@ -266,6 +266,7 @@ class Array[Elem] {
         uint i;
         while (i < __size) {
             newRep[i] = __rep[i];
+            _bind(newRep[i]);
             i = i + 1;
        }
 

@@ -86,6 +86,11 @@ class Namespace : public virtual spug::RCBase {
         ModuleDefPtr getRealModule();
 
         /**
+         * Returns true if the definition is aliased in the namespace.
+         */
+        bool hasAliasFor(VarDef *def) const;
+
+        /**
          * Add a new definition to the namespace (this may not be used for 
          * FuncDef's, these must be wrapped in an OverloadDef.  See Context 
          * for an easy way to add FuncDef's)

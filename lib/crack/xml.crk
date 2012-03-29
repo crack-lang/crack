@@ -1,0 +1,981 @@
+
+# line 1 "opt/xml.rl"
+// This file is originally from libgdx, the original AUTHORS file referred to
+// below is at http://libgdx.googlecode.com/svn/trunk/gdx/AUTHORS
+
+// Translated from the original Java version
+// Conrad Steenberg <conrad.steenberg@gmail.com>
+// 2/27/2012
+
+// *****************************************************************************
+// * Copyright 2011 See AUTHORS file.
+// * 
+// * Licensed under the Apache License, Version 2.0 (the "License");
+// * you may not use this file except in compliance with the License.
+// * You may obtain a copy of the License at
+// * 
+// *   http://www.apache.org/licenses/LICENSE-2.0
+// * 
+// * Unless required by applicable law or agreed to in writing, software
+// * distributed under the License is distributed on an "AS IS" BASIS,
+// * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// * See the License for the specific language governing permissions and
+// * limitations under the License.
+// *****************************************************************************
+
+import crack.ascii parseInt, parseBool, radix;
+import crack.cont.array Array;
+import crack.cont.hashmap OrderedHashMap;
+import crack.cont.list List;
+import crack.exp.file File;
+import crack.io FStr, cout, cerr, StringFormatter, Reader;
+import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
+                  WriteBuffer, Exception, IndexError, KeyError, CString;
+import crack.math min, strtof;
+import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
+                    stat, fileno;
+import crack.sys strerror;
+
+uint indentWidth = 4;
+
+class ParseError : Exception {
+    oper init(String text) : Exception(text) {}
+    oper init() {}
+}
+
+uint ELEMENT = 0;
+uint COMMENT = 1;
+uint DOCINFO = 2;
+uint CDATA = 3;
+
+/// An XML element class possibly containing a DOM tree
+class Element {
+    String _name;
+    OrderedHashMap[String, String] _attributes;
+    List[Element] _children;
+    String _text;
+    Element _parent;
+    uint _type;
+
+    oper init(String name, Element parent): _name=name, _parent=parent,
+                                            _type = ELEMENT{
+    }
+
+    oper init(String name, Element parent, uint type):  _name=name,
+                                                        _parent=parent,
+                                                        _type = type{
+    }
+
+
+    String getName() {
+        return _name;
+    }
+
+    uint getType() {
+        return _type;
+    }
+
+
+    OrderedHashMap[String, String] getAttributes () {
+        return _attributes;
+    }
+
+    void toString(Formatter fmt, String indent) {
+        fmt `$indent<`;
+        if (_type == COMMENT && _name.size ==0) fmt.write('!--');
+        else if (_type == DOCINFO) fmt.write('?');
+        fmt `$_name`;
+        if (_attributes) {
+            for (entry :in _attributes)
+                fmt ` $(entry.key)="$(entry.val)"`;
+        }
+
+        if (_type == COMMENT) {
+            if (_text && _text.size >0)
+                fmt.write(_text);
+            fmt.write('-->');
+        }
+        else if (!_children && (!_text || _text.size == 0)){
+            if (_type == DOCINFO) fmt.write('?>\n');
+            else fmt.write("/>");
+        }
+        else {
+            fmt.write(">\n");
+            childIndent := indent + " "*indentWidth;
+            if (_text && _text.size > 0) {
+                fmt `$childIndent$_text\n`;
+            }
+            if (_children) {
+                for (child :in _children) {
+                    child.toString(fmt, childIndent);
+                    fmt.write("\n");
+                }
+            }
+            fmt `$indent</$_name>`;
+        }
+    }
+
+    void formatTo(Formatter fmt){
+      toString(fmt, "");
+    }
+
+    uint getChildCount () {
+        if (!_children) return 0;
+        return _children.count();
+    }
+
+    Element getChild (uint i) {
+        if (!_children) throw IndexError(FStr() `Element has no children: $_name`);
+        return _children[i];
+    }
+
+    void addChild(Element element) {
+        if (!_children) _children = List[Element]();
+        _children.append(element);
+    }
+
+    String getText() {
+        return _text;
+    }
+
+    void setText(String text) {
+        this._text = text;
+    }
+
+    void setAttribute(String name, String value) {
+        if (!_attributes) _attributes = OrderedHashMap[String, String]();
+        _attributes[name] = value;
+    }
+
+    void set(String name, String value) {
+        setAttribute(name, value);
+    }
+
+    void removeChild(int index) {
+        if (_children != null) _children.delete(index);
+    }
+
+    void removeChild(Element child) {
+        if (_children != null) _children.delete(child);
+    }
+
+    void remove() {
+        _parent.removeChild(this);
+    }
+
+    Element getParent() {
+        return _parent;
+    }
+
+    /// @param name the name of the child {@link Element}
+    /// @return the first child having the given name or null, does not recurse
+    Element getChildByName(String name) {
+        if (!_children) return null;
+        for (uint i = 0; i < _children.count(); i++) {
+            Element element = _children[i];
+            if (element._name == name) return element;
+        }
+        return null;
+    }
+
+    /// @param name the name of the child {@link Element}
+    /// @return the first child having the given name or null, recurses
+    Element getChildByNameRecursive (String name) {
+        if (!_children) return null;
+        for (uint i = 0; i < _children.count(); i++) {
+            Element element = _children[i];
+            if (element._name == name) return element;
+            Element found = element.getChildByNameRecursive(name);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    /// @param name the name of the children
+    /// @return the children with the given name or an empty {@link Array}
+    Array[Element] getChildrenByName(String name) {
+        Array[Element] result = {};
+        if (!_children) return result;
+        for (uint i = 0; i < _children.count(); i++) {
+            Element child = _children[i];
+            if (child._name == name) result.append(child);
+        }
+        return result;
+    }
+
+    void getChildrenByNameRecursively (String name, Array[Element] result) {
+        if (!_children) return;
+        for (uint i = 0; i < _children.count(); i++) {
+            Element child = _children[i];
+            if (child._name == name) result.append(child);
+            child.getChildrenByNameRecursively(name, result);
+        }
+    }
+
+    /// @param name the name of the children
+    /// @return the children with the given name or an empty {@link Array}
+    Array[Element] getChildrenByNameRecursively (String name) {
+        Array[Element] result = {};
+        getChildrenByNameRecursively(name, result);
+        return result;
+    }
+
+    /// Returns the attribute value with the specified name, or if no
+    /// attribute is found, the text of a child with the name.
+    String get(String name, String defaultValue) {
+        if (_attributes) {
+            String value = _attributes.get(name);
+            if (value) return value;
+        }
+        Element child = getChildByName(name);
+        if (!child) return defaultValue;
+        String value = child.getText();
+        if (!value) return defaultValue;
+        return value;
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute
+    /// is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    String get(String name) {
+        String value = get(name, null);
+        if (!value) throw KeyError(FStr() `Element $(this._name) doesn't have attribute or child: $name`);
+        return value;
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    int getInt (String name, int defaultValue) {
+        String value = get(name, null);
+        if (!value) return defaultValue;
+        return parseInt(value);
+    }
+
+    /// Returns the attribute value with the specified name, or if no
+    /// attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    int getInt(String name) {
+        String value = get(name, null);
+        if (!value) throw KeyError(FStr() `Element $(this._name)  doesn't have attribute or child: $name`);
+        return parseInt(value);
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    float getFloat (String name, float defaultValue) {
+        String value = get(name, null);
+        if (!value) return defaultValue;
+        return strtof(value);
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    float getFloat (String name) {
+        String value = get(name, null);
+        if (!value) throw KeyError(FStr() `Element $(this._name) doesn't have attribute or child: $name`);
+        return strtof(value);
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    bool getBool (String name) {
+        String value = get(name, null);
+        if (!value) throw KeyError(FStr() `Element $(this._name) doesn't have attribute or child: $name`);
+        return parseBool(value);
+    }
+
+    /// Returns the attribute value with the specified name, or if no attribute is found, the text of a child with the name.
+    /// @throws KeyError if no attribute or child was not found.
+    bool getBool (String name, bool defaultValue) {
+        String value = get(name, null);
+        if (!value) return defaultValue;
+        return parseBool(value);
+    }
+}
+
+
+/// Lightweight XML parser. Supports a subset of XML features: elements,
+/// attributes, text, predefined entities, CDATA, mixed content. Namespaces are
+/// parsed as part of the element or attribute name. Prologs and doctypes are
+/// ignored. Only 8-bit character encodings are supported. <br> The default
+/// behavior is to parse the XML into a DOM. Extends this class and override
+/// methods to perform event driven parsing. When this is done, the parse methods
+/// will return null.
+/// @author Nathan Sweet
+class XmlReader {
+
+    byteptr data;
+    uintz data_size = 0, eof = 0, p, pe, cs, ts, te, act, okp;
+    int line = 1, col = 1;
+    String attributeName = null;
+    bool hasBody = false;
+
+    /* EOF char used to flush out that last token. This should be a whitespace
+    * token. */
+
+    uint LAST_CHAR = 0, _level;
+
+    String bufString(byteptr buf, uint size, bool takeOwnership){
+        retval := String(buf, size, takeOwnership);
+        return retval;
+    }
+
+    Array[Element] _elements = {};
+    Element __root, __current;
+    StringFormatter __textBuffer = {64};
+
+    void _text(String text) {
+        String existing = __current.getText();
+        __current.setText(existing ? existing + text : text);
+    }
+
+    void print_elements(){
+        cout `**** elements = [`;
+        for (el :in _elements)
+            cout `$(el._name), `;
+        cout `]\n`;
+    }
+
+    void _open(String name) {
+        if (true) {
+            _level++;
+            Element child = {name, __current};
+            Element parent = __current;
+            if (parent) parent.addChild(child);
+            _elements.append(child);
+            __current = child;
+        }
+    }
+
+    void _open(String name, String text, uint type) {
+        if (true) {
+            Element child = {name, __current, type};
+            child.setText(text);
+            Element parent = __current;
+            if (parent) parent.addChild(child);
+            _elements.append(child);
+            __current = child;
+        }
+    }
+
+    void _setAttribute (String name, String value) {
+        __current.setAttribute(name, value);
+    }
+
+    String _entity(String name) {
+        if (name =="lt") return "<";
+        if (name == "gt") return ">";
+        if (name == "amp") return "&";
+        if (name == "apos") return "'";
+        if (name == "quot") return "\"";
+        return null;
+    }
+
+    void _close(uint s) {
+        _level--;
+        __root = _elements[-1].getParent() ? _elements.pop().getParent() : null; 
+        __current = _elements.count()  > 0 && _elements[-1].getType() != DOCINFO ? _elements[-1] : null;
+    }
+
+    
+# line 503 "opt/xml.rl"
+
+
+    
+# line 386 "lib/crack/xml.crk"
+Array[uint] _xml_actions = [
+  0, 1, 0, 1, 1, 1, 2, 1, 
+  3, 1, 4, 1, 5, 1, 6, 1, 
+  7, 2, 0, 6, 2, 1, 2, 2, 
+  1, 4, 2, 2, 4, 2, 5, 2, 
+  3, 1, 2, 4
+];
+
+Array[uint] _xml_trans_keys = [
+  0, 0, 9, 60, 9, 62, 
+  9, 63, 9, 63, 9, 
+  62, 9, 61, 9, 39, 
+  34, 34, 34, 34, 9, 63, 
+  9, 62, 9, 62, 39, 
+  39, 39, 39, 9, 62, 
+  9, 62, 9, 63, 9, 60, 
+  60, 60, 9, 62, 9, 
+  63, 9, 63, 9, 62, 
+  9, 61, 9, 39, 34, 34, 
+  34, 34, 9, 63, 9, 
+  62, 9, 62, 60, 60, 
+  9, 47, 62, 62, 62, 62, 
+  39, 39, 39, 39, 9, 
+  62, 9, 62, 9, 63, 
+  9, 32, 0, 0, 0
+];
+
+Array[uint] _xml_key_spans = [
+  0, 52, 54, 55, 55, 54, 53, 31, 
+  1, 1, 55, 54, 54, 1, 1, 54, 
+  54, 55, 52, 1, 54, 55, 55, 54, 
+  53, 31, 1, 1, 55, 54, 54, 1, 
+  39, 1, 1, 1, 1, 54, 54, 55, 
+  24, 0
+];
+
+Array[uint] _xml_index_offsets = [
+  0, 0, 53, 108, 164, 220, 275, 329, 
+  361, 363, 365, 421, 476, 531, 533, 535, 
+  590, 645, 701, 754, 756, 811, 867, 923, 
+  978, 1032, 1064, 1066, 1068, 1124, 1179, 1234, 
+  1236, 1276, 1278, 1280, 1282, 1284, 1339, 1394, 
+  1450, 1475
+];
+
+Array[uint] _xml_indicies = [
+  0, 0, 0, 0, 0, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 0, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 2, 1, 2, 2, 2, 
+  2, 2, 3, 3, 3, 3, 3, 3, 
+  3, 3, 3, 3, 3, 3, 3, 3, 
+  3, 3, 3, 3, 2, 3, 3, 3, 
+  3, 3, 3, 3, 3, 3, 3, 3, 
+  3, 3, 3, 1, 3, 3, 3, 3, 
+  3, 3, 3, 3, 3, 3, 3, 3, 
+  3, 3, 1, 3, 5, 5, 5, 5, 
+  5, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 4, 5, 4, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 6, 4, 4, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 7, 8, 4, 10, 10, 10, 10, 
+  10, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 10, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 11, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  1, 12, 13, 9, 15, 15, 15, 15, 
+  15, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 14, 15, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 1, 14, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  16, 1, 14, 17, 17, 17, 17, 17, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 17, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 18, 
+  1, 18, 18, 18, 18, 18, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  18, 1, 19, 1, 1, 1, 1, 20, 
+  1, 22, 21, 24, 23, 10, 10, 10, 
+  10, 10, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 10, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 11, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 12, 11, 1, 25, 25, 25, 
+  25, 25, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 25, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 26, 1, 27, 27, 27, 27, 
+  27, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 27, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 12, 1, 22, 28, 24, 29, 30, 
+  30, 30, 30, 30, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 14, 30, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 14, 14, 14, 1, 14, 14, 
+  14, 14, 14, 14, 14, 14, 14, 14, 
+  14, 14, 14, 16, 26, 14, 31, 31, 
+  31, 31, 31, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 31, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 18, 12, 1, 32, 32, 32, 
+  32, 32, 4, 4, 4, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 4, 4, 32, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 4, 6, 4, 4, 4, 4, 
+  4, 4, 4, 4, 4, 4, 4, 4, 
+  4, 4, 33, 8, 4, 35, 35, 35, 
+  35, 35, 34, 34, 34, 34, 34, 34, 
+  34, 34, 34, 34, 34, 34, 34, 34, 
+  34, 34, 34, 34, 35, 34, 34, 34, 
+  34, 34, 34, 34, 34, 34, 34, 34, 
+  34, 34, 34, 34, 34, 34, 34, 34, 
+  34, 34, 34, 34, 34, 34, 34, 34, 
+  36, 34, 38, 37, 36, 36, 36, 36, 
+  36, 39, 39, 39, 39, 39, 39, 39, 
+  39, 39, 39, 39, 39, 39, 39, 39, 
+  39, 39, 39, 36, 39, 39, 39, 39, 
+  39, 39, 39, 39, 39, 39, 39, 39, 
+  39, 39, 40, 39, 39, 39, 39, 39, 
+  39, 39, 39, 39, 39, 39, 39, 39, 
+  39, 1, 39, 42, 42, 42, 42, 42, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  41, 41, 42, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  41, 43, 41, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  44, 45, 41, 47, 47, 47, 47, 47, 
+  46, 46, 46, 46, 46, 46, 46, 46, 
+  46, 46, 46, 46, 46, 46, 46, 46, 
+  46, 46, 47, 46, 46, 46, 46, 46, 
+  46, 46, 46, 46, 46, 46, 46, 46, 
+  46, 48, 46, 46, 46, 46, 46, 46, 
+  46, 46, 46, 46, 46, 46, 46, 1, 
+  49, 50, 46, 52, 52, 52, 52, 52, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  51, 51, 52, 51, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  51, 1, 51, 51, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 53, 
+  1, 51, 54, 54, 54, 54, 54, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 54, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 55, 1, 
+  55, 55, 55, 55, 55, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 55, 
+  1, 56, 1, 1, 1, 1, 57, 1, 
+  59, 58, 61, 60, 47, 47, 47, 47, 
+  47, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 47, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 48, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 49, 48, 1, 62, 62, 62, 62, 
+  62, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 62, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 63, 1, 64, 64, 64, 64, 64, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 64, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  49, 1, 65, 1, 65, 65, 65, 65, 
+  65, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 65, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 40, 1, 1, 66, 67, 66, 
+  59, 68, 61, 69, 70, 70, 70, 70, 
+  70, 51, 51, 51, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  51, 51, 51, 70, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  51, 51, 1, 51, 51, 51, 51, 51, 
+  51, 51, 51, 51, 51, 51, 51, 51, 
+  53, 63, 51, 71, 71, 71, 71, 71, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 71, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 55, 
+  49, 1, 72, 72, 72, 72, 72, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  41, 72, 41, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 41, 
+  43, 41, 41, 41, 41, 41, 41, 41, 
+  41, 41, 41, 41, 41, 41, 41, 73, 
+  45, 41, 74, 74, 74, 74, 74, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 74, 1, 1, 0
+];
+
+Array[uint] _xml_trans_targs = [
+  1, 0, 2, 3, 3, 4, 11, 40, 
+  17, 5, 4, 11, 40, 15, 5, 6, 
+  7, 6, 7, 8, 13, 9, 10, 9, 
+  10, 12, 40, 12, 14, 14, 16, 16, 
+  4, 40, 19, 18, 20, 19, 20, 21, 
+  33, 21, 22, 29, 31, 39, 23, 22, 
+  29, 31, 37, 23, 24, 25, 24, 25, 
+  26, 35, 27, 28, 27, 28, 30, 31, 
+  30, 32, 34, 41, 36, 36, 38, 38, 
+  22, 31, 40
+];
+
+Array[uint] _xml_trans_actions = [
+  0, 0, 0, 1, 0, 3, 3, 23, 
+  3, 1, 0, 0, 9, 1, 0, 11, 
+  11, 0, 0, 0, 0, 1, 17, 0, 
+  13, 5, 26, 0, 1, 0, 29, 0, 
+  20, 32, 1, 0, 0, 0, 15, 1, 
+  0, 0, 3, 3, 23, 3, 1, 0, 
+  0, 9, 1, 0, 11, 11, 0, 0, 
+  0, 0, 1, 17, 0, 13, 5, 26, 
+  0, 0, 0, 7, 1, 0, 29, 0, 
+  20, 32, 0
+];
+
+uint xml_start = 1;
+uint xml_first_final = 40;
+uint xml_error = 0;
+
+uint  xml_en_elementBody = 18;
+uint  xml_en_main = 1;
+
+
+# line 506 "opt/xml.rl"
+
+    void reset(){
+        p = 0;
+        _elements.deleteAll();
+
+        
+# line 661 "lib/crack/xml.crk"
+  cs = xml_start;
+
+# line 512 "opt/xml.rl"
+
+    }
+
+    oper init () { }
+
+    Array[Element] _parse() {    // Do the first read. 
+        if (data is null)
+            InvalidResourceError(FStr() `Error parsing XML, null data pointer supplied`);
+        uint s;
+        pe = data_size;
+        cs = xml_start;
+
+        // ------ Start exec ---------------------------------------------------------
+        
+# line 679 "lib/crack/xml.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _xml_index_offsets[cs];
+      _slen = _xml_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _xml_trans_keys[_keys] <= data[p] && 
+         data[p] <= _xml_trans_keys[_keys + 1]) 
+        _trans = _xml_indicies[ _inds + data[p] - _xml_trans_keys[_keys] ]; 
+      else _trans =_xml_indicies[ _inds + _slen ];
+
+    cs = _xml_trans_targs[_trans];
+
+    if (_xml_trans_actions[_trans] != 0) {
+      _acts = _xml_trans_actions[_trans];
+      _nacts = _xml_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _xml_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 381 "opt/xml.rl" # end of line directive
+     s = p;     // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 382 "opt/xml.rl" # end of line directive
+    
+            byte c = data[s];
+            if (c == b'!') {
+                if (
+                    data[s + 1] == b'[' && //
+                    data[s + 2] == b'C' && //
+                    data[s + 3] == b'D' && //
+                    data[s + 4] == b'A' && //
+                    data[s + 5] == b'T' && //
+                    data[s + 6] == b'A' && //
+                    data[s + 7] == b'['
+                ) {
+                    s += 8;
+                    p = s + 2;
+                    while (data[p - 2] != b']' || data[p - 1] != b']' || data[p] != b'>')
+                        p++;
+                    _text(bufString(data+s, p - s - 2, false));
+                } else if (pe - p > 4 &&
+                    data[s + 1] == b'-' && 
+                    data[s + 2] == b'-' &&
+                    data[s + 3] != b'>'
+                ) {
+                    while (p<pe) {
+                        if (data[++p] == b'>' && data[p-1] == b'-' && data[p-2] == b'-'){
+                            break;
+                        }
+                    }
+                    if (p==pe)
+                        throw ParseError(FStr() `Unmatched comment open element near $(bufString(data+s, min(80,p-s), false))`);
+                    _open("!--", bufString(data+s+3, p - s-5, false), COMMENT);
+                    hasBody = false;
+                    _close(s);
+                    s=p;
+                }
+                else {
+                    while (data[p] != b'>' && p<pe)
+                        p++;
+                }
+                    cs = 18;// GOTO
+    _trigger_goto = true;
+    _goto_level = _again;
+    break;
+
+
+            }
+            else {
+                if (c == b'?') {
+                    if (_level>0) throw ParseError("Document metadata must appear at the toplevel of the document");
+                    hasBody = false;
+                    _open(bufString(data + s + 1, p - s - 1, false), "", DOCINFO);
+                }
+                else {
+                    hasBody = true;
+                    _open(bufString(data + s, p - s, false));
+                }
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
+# line 435 "opt/xml.rl" # end of line directive
+    
+            hasBody = false;
+            _close(s);
+            s=p;
+                cs = 18;// GOTO
+    _trigger_goto = true;
+    _goto_level = _again;
+    break;
+
+
+            // ACTION
+    }
+    else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
+# line 442 "opt/xml.rl" # end of line directive
+    
+            _close(s);
+            s=p;
+                cs = 18;// GOTO
+    _trigger_goto = true;
+    _goto_level = _again;
+    break;
+
+
+            // ACTION
+    }
+    else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
+# line 447 "opt/xml.rl" # end of line directive
+    
+            if (hasBody)     cs = 18;// GOTO
+    _trigger_goto = true;
+    _goto_level = _again;
+    break;
+
+
+            // ACTION
+    }
+    else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
+# line 450 "opt/xml.rl" # end of line directive
+    
+            attributeName = bufString(data+s, p - s, false);
+            // ACTION
+    }
+    else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
+# line 453 "opt/xml.rl" # end of line directive
+    
+            _setAttribute(attributeName, bufString(data+s, p - s, false));
+            // ACTION
+    }
+    else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
+# line 457 "opt/xml.rl" # end of line directive
+    
+            if (true) { // Crack doesn't have nested blocks yet
+                uint end = p;
+                while (end != s) {
+                    if (data[end - 1] == b' ' ||
+                        data[end - 1] == b'\t' ||
+                        data[end - 1] == b'\n' ||
+                        data[end - 1] == b'\r') {
+                        end--;
+                        continue;
+                    }
+                    break;
+                }
+                uint __ci = s;
+                bool entityFound = false;
+                while (__ci != end) {
+                    if (data[__ci++] != b'&') continue;
+                    uint entityStart = __ci;
+                    while (__ci != end) {
+                        if (data[__ci++] != b';') continue;
+                        __textBuffer.write(bufString(data+s, entityStart - s - 1, false));
+                        String name = bufString(data+entityStart, __ci - entityStart - 1, false);
+                        String value = _entity(name);
+                        __textBuffer.write(value ? value : name);
+                        s = __ci;
+                        entityFound = true;
+                        break;
+                    }
+                }
+                if (entityFound) {
+                    if (s < end) __textBuffer.write(bufString(data+s, end - s, false));
+                    _text(__textBuffer.string());
+                    __textBuffer = StringFormatter(64);
+                } else
+                    _text(bufString(data+s, end - s, false));
+            }
+            // ACTION
+    }
+# line 893 "lib/crack/xml.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 526 "opt/xml.rl"
+        // ------ End exec -----------------------------------------------------------
+
+        /* Check if we failed. */
+        if ( cs == xml_error ) {
+            /* Machine failed before finding a token. */
+            throw ParseError(bufString(data+s, p - s, false));
+        }
+
+        if (p < pe) {
+            uint lineNumber = 1;
+            for (uint i = 0; i < p; i++)
+                if (data[i] == b'\n') lineNumber++;
+            throw InvalidResourceError(FStr() `Error parsing XML on line $lineNumber near: $(bufString(data+p, uint(min(32, pe - p)), false ))`);
+        }
+        uint namedElems = 0;
+        for (uint ei = 0; ei < _elements.count(); ei++){
+            eName := _elements[ei].getName();
+            if (_elements[ei].getParent())
+                throw InvalidResourceError(FStr() `Error parsing XML, unclosed element: $eName`);
+        }
+
+        this.__root = null;
+        return _elements;
+    }
+
+    Array[Element] parse(String xml) {
+        data = xml.buffer;
+        data_size = xml.size;
+        return _parse();
+    }
+
+    Array[Element] parseFile(String fname) {
+        Stat statInfo = {};
+        n := CString(fname);
+        statErrors := stat(n.buffer, statInfo);
+        if (!statErrors){
+            mode := "r";
+            file := fopen(n.buffer, mode.buffer);
+
+            if (file is null) {
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+            }
+            fd := fileno(file);
+
+            data = byteptr(mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+            data_size = statInfo.st_size;
+            if (uintz(data) != uintz(0)-1){
+                Array[Element] retval = _parse();
+                munmap(data, statInfo.st_size);
+                return retval;
+            }
+            else
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+        }
+        return null;
+    }
+
+    void formatTo(Formatter fmt){
+      for (element :in _elements)
+        fmt.format(element);
+    }
+}

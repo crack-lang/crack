@@ -5,8 +5,8 @@
 import crack.sys argv, exit;
 import crack.io cout, FStr;
 import crack.exp.dir Directory;
-import crack.exp.fs RealPath;
-import crack.exp.cmdline CmdOptions, Option, CMD_BOOL;
+import crack.fs RealPath;
+import crack.cmdline CmdOptions, Option, CMD_BOOL;
 import crack.regex escape, Regex;
 
 int parseInt(String rep) {
