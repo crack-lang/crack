@@ -130,6 +130,34 @@ class List[Elem] {
         return elem;
     }
 
+    ## Remove the element from the end of the list and return it.
+    ## This operation is O(N), do not use unless the list is short.
+    Elem popTail() {
+        if (!tail)
+            throw InvalidArgumentError('Attempting to pop from an empty list');
+        if (head == tail) {
+            elem := head.elem;
+            head = tail = null;
+            return elem;
+        }
+
+        Node old, cur;
+        old = head;
+        cur = head;
+
+        while (cur != tail){
+            old = cur;
+            cur = cur.next;
+        }
+        
+        elem := tail.elem;
+        tail = old;
+        --_count;
+        return elem;
+    }
+
+
+
     Node __findNode(uint index) {
         i := index;
         node := head;
@@ -140,7 +168,7 @@ class List[Elem] {
         if (!node) throw AssertionError('List is shorter than its count.');
         return node;
     }
-    
+
     void insert(uint index, Elem elem) {
         # special-case inserting at the beginning
         if (!index) {
@@ -163,6 +191,7 @@ class List[Elem] {
     }
 
     void delete(uint index) {
+        if (head is null || tail is null) throw AssertionError("Cannot delete node from empty list");
         if (index > _count)
             throw IndexError('List index out of range in delete()');
         if (index > 0) {
@@ -184,6 +213,27 @@ class List[Elem] {
         
         _count = _count - 1;
     }
+
+    void delete(Elem elem) {
+        if (elem is null) throw InvalidArgumentError("Invalid argument null for delete()");
+        if (head is null || tail is null) throw AssertionError("Cannot delete element from empty list");
+        if (head.elem == elem &&  head){
+            popHead();
+        }
+        else if (tail.elem == elem && tail){
+            popTail();
+        } else {
+            Node onode, tnode;
+            onode = tnode = head;
+            while (tnode.elem != elem) {
+                onode = tnode;
+                tnode = tnode.next;
+            }
+            onode.next = tnode.next;
+        }
+        _count--;
+    }
+
 
     Elem oper [](uint index) {
         if (index > _count)
@@ -387,6 +437,10 @@ class DList[Elem] {
             head = null;
         --_count;
         return elem;
+    }
+
+    Elem pop(){
+        return popTail();
     }
 
     Node __findNode(uint index) {
