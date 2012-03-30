@@ -2,8 +2,9 @@
 # test of readers
 
 import crack.runtime random;
+import crack.lang AppendBuffer, Buffer;
 import crack.io cout, StringReader, StringWriter;
-import crack.io.readers FullReader;
+import crack.io.readers FullReader, PageBufferReader, PageBufferString;
 
 # Construct a string writer full of random data
 arr := array[int32](10000);
@@ -47,4 +48,42 @@ if (1) {
         cout `FAILED line iteration: bad line count $count != 10000\n`;
 }
 
+if (1) {
+    xmlString:='
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeLite Revision="3833" Version="2.0.2">
+  <!-- This is a comment -->
+  <ArchiveObject Name="highlight_word">
+    <long Value="1" Name="m_value">
+      09384032023
+    </long>
+    <bool Value="True" Name="b_value"/>
+    <float Value="45.67892" Name="f_value"/>
+  </ArchiveObject>
+</CodeLite>';
+
+    uint ps = 20; // page size
+    StringReader temp = { xmlString };
+    PageBufferReader p = {temp, ps};
+    AppendBuffer result = { xmlString.size };
+
+    for (uint i=0; i<p.size || !p.eof; i++)
+        result.append(p[i]);
+    s1 := p.substr(0, ps);
+    s2 := p.substr(ps/2, ps);
+    s3 := p.substr(ps/2, 3*ps);
+
+    p.vacuum(p.size);
+    if (result != Buffer.cast(xmlString))
+        cout `PageBufferReader returned invalid result\n`;
+
+    PageBufferString s = {xmlString};
+    result.size = 0; // reset the result buffer
+
+    for (uint i=0; i<s.size || !s.eof; i++)
+        result.append(s[i]);
+    if (result != Buffer.cast(xmlString))
+        cout `PageBufferString returned invalid result\n`;
+
+}
 cout `ok\n`;

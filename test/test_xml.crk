@@ -7,7 +7,8 @@ import crack.exp.file File;
 
 uint errors = 0;
 CmdOptions options = [Option("help", "h", "Show help message", "f", CMD_BOOL),
-                      Option("file", "f", "XML file to parse", "", CMD_STR)
+                      Option("file", "f", "XML file to parse", "", CMD_STR),
+                      Option("reader", "r", "XML file to parse using a Reader", "", CMD_STR)
                      ];
 
 options.parse(argv, false);
@@ -87,11 +88,23 @@ if (floatVal != 45.67892){
 // Optional file test
 
 fname := options.getString("file");
-if (!(fname is null) && fname.size>0) {
+if (fname && fname.size>0) {
   reader.reset();
   reader = XmlReader();
   elems = reader.parseFile(fname);
   cout `$reader\n`;
+}
+
+rname := options.getString("reader");
+if (rname && rname.size>0) {
+  reader.reset();
+  reader = XmlReader();
+  File file = File(rname, "r");
+  freader := file.reader();
+  if (freader) {
+    elems = reader.parse(freader);
+    cout `$reader\n`;
+  }
 }
 
 if (!errors) {

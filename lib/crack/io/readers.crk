@@ -1,8 +1,10 @@
 # Classes for reading high-level stuff from Readers.
 # Copyright 2010 Google Inc.
 
-import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
-import crack.io cout, FDReader, Reader;
+import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer, IndexError;
+import crack.io cout, cerr, FDReader, Reader;
+import crack.cont.hashmap HashMap;
+import crack.math min;
 
 @import crack.ann implements;
 
@@ -112,4 +114,126 @@ class FullReader : LineReader @implements Reader {
         
         return String(result, true);
     }
+}
+
+## A Buffered reader addressable as an Array
+
+@abstract class PageBuffer {
+    String buffer;
+    bool eof;
+    uint size;
+
+    @abstract byte oper[](uint i);
+    @abstract uint vacuum(uint i);
+    @abstract String substr(uint start, uint len);
+}
+
+class PageBufferReader : PageBuffer {
+    Reader _reader;
+    HashMap[uint, String] _pageMap;
+    uint _pageSize, _firstPage, _currentPage, _pages;
+
+    void _readTo(uint i){
+        uint bi = i/_pageSize; // Buffer index
+        
+        if (_pages>0 && bi == _currentPage) // Already there
+            return;
+        else if (bi <= _currentPage && _pages > 0){
+            buffer = _pageMap[bi];
+            _currentPage = bi;
+            return;
+        }
+        else {
+            while ( _currentPage < bi || _pages == 0) {
+                buffer = _reader.read(_pageSize);
+
+                if (buffer.size < _pageSize) eof = true;
+                if (buffer.size == 0) break;
+
+                size+=buffer.size;
+                _pageMap[_pages++] = buffer;
+                if (_pages > 1)
+                    _currentPage++;
+            }
+        }
+    }
+
+    oper init(Reader r) : _pageMap(), _pageSize=1024, _firstPage=0,
+                          _currentPage=0, _pages=0, _reader = r {
+        eof = false;
+        size = 0;
+        _readTo(0);
+    }
+
+   oper init(Reader r, uint cs) : _pageMap(), _pageSize=cs, _firstPage=0,
+                          _currentPage=0, _pages=0, _reader = r {
+        eof = false;
+        size = 0;
+        _readTo(0);
+    }
+
+    ## Read a byte from "array"
+    byte oper[](uint i){
+        uint bi=i/_pageSize; // buffer index
+        if (_pages == 0 || bi >= _pages ) _readTo(i);
+        if (bi >= _pages)
+            throw IndexError('buffer index out of bounds');
+
+        // Swap in different page
+        if (_currentPage != bi) {
+            _currentPage=bi;
+            buffer = _pageMap.get(bi);
+            if (buffer is null)
+                throw IndexError('attempting to read from discarded page');
+        }
+
+        return buffer[i%_pageSize];
+    }
+
+    ## Purse page buffer of entry numbers lower than the one containing offset i
+    uint vacuum(uint i){
+        uint j=0;
+        for (uint bi = min(i/_pageSize, _pages); bi > 0 && _pageMap.contains(bi-1); bi--){
+            _pageMap.delete(bi-1);
+            j++;
+        }
+        return j;
+    }
+
+    String substr(uint start, uint len){
+        uint end = start + len;
+        uint si=start/_pageSize; // page index
+        uint ei=(start+len)/_pageSize;
+        if (_pages == 0 || si >= _pages ) _readTo(start);
+        if (_pages == 0 || ei >= _pages ) _readTo(end);
+        if (si >= _pages || ei >= _pages)
+            throw IndexError('buffer index out of bounds');
+
+        AppendBuffer retval = {len};
+        String cb;
+        for (uint i = si; i<=ei; i++){
+            cb = _pageMap[i];
+            retval.extend(cb.buffer + (i==si? start%_pageSize : 0),
+                                      (i==si? ((i==ei)? len : _pageSize - start%_pageSize) : (i<ei ? _pageSize : end%_pageSize)));
+        }
+        return String(retval);
+    }
+}
+
+## Simple page buffer where we reference the underlying string directly
+class PageBufferString : PageBuffer {
+
+    oper init(Buffer b){
+        if (b.isa(String))
+            buffer = String.cast(b);
+        else
+            buffer = String(b);
+        eof = true; // Only 1 page, all in memory
+        size = buffer.size;
+    }
+
+    byte oper[](uint i) { return buffer[i] };
+    uint vacuum(uint i) { return 0; }
+    String substr(uint start, uint len){ return buffer.substr(start, len);}
+
 }
