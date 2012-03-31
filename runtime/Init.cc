@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -13,6 +12,8 @@
 #include <netdb.h>
 #include <signal.h>
 #include <errno.h>
+#include <unistd.h>
+
 #include "debug/DebugTools.h"
 #include "ext/Func.h"
 #include "ext/Module.h"
