@@ -19,6 +19,8 @@ SPUG_RCPTR(ModuleDef);
  */
 class ModuleDef : public VarDef, public Namespace {
     public:
+        typedef std::vector<std::string> StringVec;
+
         // the parent namespace.  This should be the root namespace where 
         // builtins are stored.
         NamespacePtr parent;
@@ -69,6 +71,12 @@ class ModuleDef : public VarDef, public Namespace {
 
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();
+        
+        /**
+         * Parse a canonical module name, return it as a vector of name 
+         * components.
+         */
+        static StringVec parseCanonicalName(const std::string &name);
 };
 
 } // namespace model

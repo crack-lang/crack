@@ -373,15 +373,7 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
 ModuleDefPtr Construct::loadModule(const string &canonicalName) {
 
     StringVec name;
-
-    size_t pos = 0;
-    size_t i = canonicalName.find('.');
-    while (i != -1) {
-        name.push_back(canonicalName.substr(pos, i - pos));
-        pos = i + 1;
-        i = canonicalName.find('.', pos);
-    }
-    name.push_back(canonicalName.substr(pos));
+    name = ModuleDef::parseCanonicalName(canonicalName);
 
     string cname;
     ModuleDefPtr m = loadModule(name.begin(), name.end(), cname);

@@ -32,3 +32,43 @@ ModuleDefPtr ModuleDef::getModule() {
     return this;
 }
 
+ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
+    StringVec result;
+
+    // track the level of bracket nesting, we only split "outer" components.
+    int nested = 0;
+    int last = 0;
+
+    int i;
+    for (i = 0; i < name.size(); ++i) {
+        if (!nested) {
+            switch (name[i]) {
+                case '.':
+                    result.push_back(name.substr(last, i - last));
+                    last = i;
+                    break;
+                case '[':
+                    ++nested;
+                    break;
+                case ']':
+                    std::cerr << "Invalid canonical name: [" << name << "]" <<
+                        std::endl;
+                    assert(false);
+                    break;
+            }
+        } else {
+            switch (name[i]) {
+                case '[':
+                    ++nested;
+                    break;
+                case ']':
+                    --nested;
+                    break;
+            }
+        }
+    }
+
+    // add the last segment
+    result.push_back(name.substr(last, i - last));
+    return result;
+}
