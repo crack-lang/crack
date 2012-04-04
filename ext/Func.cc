@@ -93,6 +93,14 @@ void Func::finish() {
     if (finished || !context)
         return;
 
+    // if this is a composite context, get the parent context for cases where we
+    // need it directly.
+    ContextPtr realCtx = context;
+    if (context->scope == Context::composite && context->parent &&
+        context->parent->scope == Context::instance
+        )
+        realCtx = context->parent;
+
     // we're going to need this
     TypeDef *voidType = context->construct->voidType.get();
 
@@ -114,7 +122,7 @@ void Func::finish() {
         // to conflict with the actual virtual function we're creating
         string externName = (flags & vwrap) ? name + ":vwrap" : name;
         funcDef =
-            builder.createExternFunc(*context,
+            builder.createExternFunc(*realCtx,
                                      static_cast<FuncDef::Flags>(flags & 
                                                                  funcDefFlags
                                                                  ),
@@ -168,8 +176,8 @@ void Func::finish() {
         VarDefPtr storedDef = context->addDef(funcDef.get(), receiverType);
 
         // check for a static method, add it to the meta-class
-        if (context->scope == Context::instance) {
-            TypeDef *type = TypeDefPtr::arcast(context->ns);
+        if (realCtx->scope == Context::instance) {
+            TypeDef *type = TypeDefPtr::arcast(realCtx->ns);
             if (type != type->type.get())
                 type->type->addAlias(storedDef.get());
         }
@@ -229,7 +237,7 @@ void Func::finish() {
         funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
         context->addDef(newFunc.get(), receiverType);
 
-        receiverType->createNewFunc(*context, newFunc.get());
+        receiverType->createNewFunc(*realCtx, newFunc.get());
     
     // is this a virtual wrapper class?
     } else if (flags & vwrap) {
