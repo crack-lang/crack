@@ -187,6 +187,7 @@ void Type::finish() {
     TypeDefPtr td =
         ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, typeDef);
     typeDef = td.get();
+    typeDef->aliasBaseMetaTypes();
 
     // create a lexical context which delegates to both the class context and
     // the parent context.

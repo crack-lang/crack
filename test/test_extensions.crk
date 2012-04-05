@@ -2,8 +2,7 @@
 # Extension tests.
 
 import testext echo, copyArray, MyType, INT_CONST, FLOAT_CONST,
-               callback,
-               MyVirtual;
+    callback, MyVirtual, Caller;
 import crack.io cout;
 if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
@@ -70,6 +69,9 @@ if (v.vfunc(100) != 100)
     cout `FAILED calling C++ virtual\n`;
 v.oper del();
 
+if (MyVirtual.statFunc() != 369)
+    cout `FAILED calling static function\n`;
+
 class DerivedVirtual : MyVirtual {
     array[int] flags;
     oper init(array[int] flags) : flags = flags {}
@@ -95,5 +97,17 @@ flags[0] = 0;
 MyVirtual(flags).oper del();
 if (flags[0] != 999)
     cout `FAILED calling virtual destructor.`;
+
+if (Caller().callMyTest() != 100)
+    cout I`FAILED constructing a method to call a static member of an \
+           existing class.\n`;
+
+if (Caller().createMyVirtual().vfunc(100) != 100)
+    cout I`FAILED constructing a method to call a static member of an \
+           existing virtual class.\n`;
+
+if (Caller().statFunc() != 369)
+    cout I`FAILED calling static function with constructed body that calls \
+           another static function!\n`;
 
 cout `ok\n`;

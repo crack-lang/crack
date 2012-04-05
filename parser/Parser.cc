@@ -3141,6 +3141,8 @@ TypeDefPtr Parser::parseClassDef() {
    if (!existing)
       addDef(type.get());
 
+   type->aliasBaseMetaTypes();
+
    // check for an abstract class
    if (flags & TypeDef::abstractClass)
       type->abstract = true;

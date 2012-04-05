@@ -56,6 +56,10 @@ struct MyVirtual {
     virtual int vfunc(int val) {
         return val;
     }
+    
+    static int statFunc() {
+        return 369;
+    }
 };
 
 struct MyVirtual_Proxy;
@@ -171,6 +175,28 @@ extern "C" void testext_cinit(Module *mod) {
                         );
     f->setVWrap(true);
 
+    // adding a static method just to test that we can call it from another 
+    // method defined inline.
+    f = type->addStaticMethod(mod->getIntType(), "statFunc",
+                              (void *)MyVirtual::statFunc
+                              );
+
     // finish the type
+    type->finish();
+    Type *typeMyVirtual = type;
+
+    // verify that we can create a class that calls static methods of a plain 
+    // class and a virtual class.
+    type = mod->addType("Caller", 0);
+    type->addConstructor();
+    type->addMethod(mod->getIntType(), "callMyTest",
+                    "return MyType().a;"
+                    );
+    type->addMethod(typeMyVirtual, "createMyVirtual",
+                    "return MyVirtual();"
+                    );
+    type->addMethod(mod->getIntType(), "statFunc",
+                    "return 369; //return MyVirtual.statFunc();"
+                    );
     type->finish();
 }

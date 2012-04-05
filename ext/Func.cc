@@ -93,13 +93,9 @@ void Func::finish() {
     if (finished || !context)
         return;
 
-    // if this is a composite context, get the parent context for cases where we
-    // need it directly.
-    ContextPtr realCtx = context;
-    if (context->scope == Context::composite && context->parent &&
-        context->parent->scope == Context::instance
-        )
-        realCtx = context->parent;
+    // if this is a composite context, get the parent context for cases where
+    // we need it directly.
+    ContextPtr realCtx = context->getDefContext();
 
     // we're going to need this
     TypeDef *voidType = context->construct->voidType.get();
