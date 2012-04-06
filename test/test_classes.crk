@@ -114,4 +114,15 @@ if (1) {
         puts('FAILED nested inheritence');
 }
 
+# inheritence of class-qualified access
+if (1) {
+    class A {
+        @static int f() { return 123; }
+    }
+    class B : A {}
+    if (B.f() != 123)
+        puts('FAILED derived-class function qualification');
+}
+        
+
 puts('ok');
