@@ -1338,13 +1338,16 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
                            "." + name;
 
     StructType *curType;
+
     // we first check to see if a structure with this canonical name exists
     // if it does, we use it. if it doesn't we create it, and the body and
     // name get set in emitEndClass
-    curType = module->getTypeByName(canonicalName);
-    if (!curType) {
+    BTypeDefPtr existing =
+        BTypeDefPtr::rcast(context.construct->getRegisteredDef(canonicalName));
+    if (existing)
+        curType = cast<StructType>(existing->rep);
+    else
         curType = StructType::create(getGlobalContext());
-    }
     type = new BTypeDef(metaType.get(), name,
                         PointerType::getUnqual(curType),
                         true,
@@ -2795,6 +2798,7 @@ void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
 
     assert(bModDef && "no bModDef before initializeImportCommon");
     assert(importedMod && "importedMod was not a BModuleDef");
+    assert(importedMod->getFullName().find('[') == -1);
     bModDef->importList[importedMod] = symbols;
 
 }
