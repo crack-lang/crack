@@ -92,8 +92,7 @@ public:
 
     void getExterns(std::vector<std::string> &symList);
 
-    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName,
-                                     const std::string &path);
+    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName);
     void saveToCache();
 
 };

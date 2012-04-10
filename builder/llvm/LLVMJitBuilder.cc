@@ -246,7 +246,7 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
                           owner ? BJitModuleDefPtr::acast(owner) : 0
                           );
 
-    bModDef->path = getSourcePath(path);
+    bModDef->sourcePath = getSourcePath(path);
 
     return bModDef;
 }
@@ -447,12 +447,11 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Context &context,
     const string &canonicalName,
-    const std::string &path,
     ModuleDef *owner
 ) {
 
     Cacher c(context, options.get());
-    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName, path);
+    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
 
     if (bmod) {
 

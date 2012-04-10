@@ -70,10 +70,16 @@ class Construct : public spug::RCBase {
         typedef StringVec::const_iterator StringVecIter;
 
         struct ModulePath {
-            std::string path;
+            std::string base, relPath, path;
             bool found, isDir;
             
-            ModulePath(const std::string &path, bool found, bool isDir) :
+            ModulePath(const std::string &base, const std::string &relPath,
+                       const std::string &path, 
+                       bool found, 
+                       bool isDir
+                       ) :
+                base(base),
+                relPath(relPath),
                 path(path),
                 found(found),
                 isDir(isDir) {
@@ -148,6 +154,14 @@ class Construct : public spug::RCBase {
                                      );
 
         /**
+         * Search the specified path for the 'relPath'.
+         */
+        static ModulePath searchPath(const Construct::StringVec &path,
+                                     const std::string &relPath,
+                                     int verbosity = 0
+                                     );
+
+        /**
          * Returns true if 'name' is a valid file.
          */
         static bool isFile(const std::string &name);
@@ -158,11 +172,16 @@ class Construct : public spug::RCBase {
         static bool isDir(const std::string &name);
         
         /**
-         * Join 'base', all of the strings in 'path' and ext into a full path 
-         * name (e.g. "base/p/a/t/h.ext").
+         * Join a file name from a base directory and a relative path.
          */
         static std::string joinName(const std::string &base,
-                                    StringVecIter pathBegin,
+                                    const std::string &rel
+                                    );
+
+        /**
+         * Join a file name from a pair of iterators and an extension.
+         */
+        static std::string joinName(StringVecIter pathBegin,
                                     StringVecIter pathEnd,
                                     const std::string &ext
                                     );
@@ -266,9 +285,7 @@ class Construct : public spug::RCBase {
          * the module is cached).  Returns the module if it was loaded, null 
          * if not.
          */
-        ModuleDefPtr loadFromCache(const std::string &canonicalName,
-                                   const std::string &path
-                                   );
+        ModuleDefPtr loadFromCache(const std::string &canonicalName);
 
         /**
          * Load the named module and returns it.  Returns null if the module 

@@ -408,16 +408,16 @@ class Builder : public spug::RCBase {
          * the event of a cache miss.
          * @param context the module context.
          * @param canonicalName the module's canonical name.
-         * @param path the full path to the existing source on disk
          * @param owner the module's owner - this should be null unless the
          *  module is being defined inside another module that it depends on.
-         * @return a module that has been loaded from the cache, or null if unavailable
+         * @return a module that has been loaded from the cache, or null if 
+         *  unavailable
          */
-        virtual model::ModuleDefPtr materializeModule(model::Context &context,
-                                                      const std::string &canonicalName,
-                                                      const std::string &path,
-                                                      model::ModuleDef *owner
-                                                      ) = 0;
+        virtual model::ModuleDefPtr materializeModule(
+            model::Context &context,
+            const std::string &canonicalName,
+            model::ModuleDef *owner
+        ) = 0;
 
         /**
          * Create a new cleanup frame.

@@ -5,6 +5,7 @@
 #include "builder/Builder.h"
 #include "Context.h"
 
+using namespace std;
 using namespace model;
 
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
@@ -12,12 +13,28 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     Namespace(name),
     parent(parent),
     finished(false),
-    fromExtension(false),
-    path() {
+    fromExtension(false) {
 }
 
 bool ModuleDef::hasInstSlot() {
     return false;
+}
+
+bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
+    int i;
+    string fullSourcePath;
+    for (i = 0; i < libSearchPath.size(); ++i) {
+        fullSourcePath = libSearchPath[i] + "/" + sourcePath;
+        if (Construct::isFile(fullSourcePath))
+            break;
+    }
+
+    // if we didn't find the source file, assume the module is up-to-date
+    // (this will allow us to submit applications as a set of cache files).
+    if (i == libSearchPath.size())
+        return true;
+
+    return matchesSource(fullSourcePath);
 }
 
 void ModuleDef::close(Context &context) {
@@ -45,7 +62,7 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
             switch (name[i]) {
                 case '.':
                     result.push_back(name.substr(last, i - last));
-                    last = i;
+                    last = i + 1;
                     break;
                 case '[':
                     ++nested;

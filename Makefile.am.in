@@ -176,6 +176,7 @@ noinst_HEADERS = \
     spug/RCPtr.h \
     spug/StringFmt.h \
     spug/TypeInfo.h \
+    spug/check.h \
     compiler/init.h \
     Crack.h
 

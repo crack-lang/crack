@@ -19,6 +19,7 @@
 #include "builder/util/SourceDigest.h"
 #include "builder/llvm/Consts.h"
 #include "builder/llvm/StructResolver.h"
+#include "spug/check.h"
 
 #include <assert.h>
 #include <sstream>
@@ -117,7 +118,7 @@ void Cacher::writeMetadata() {
     // encode metadata into the bitcode
     addNamedStringNode("crack_md_version", Cacher::MD_VERSION);
     addNamedStringNode("crack_origin_digest", modDef->digest.asHex());
-    addNamedStringNode("crack_origin_path", modDef->path);
+    addNamedStringNode("crack_origin_path", modDef->sourcePath);
 
     vector<Value *> dList;
     NamedMDNode *node;
@@ -580,10 +581,7 @@ TypeDefPtr Cacher::resolveType(const string &name) {
         for (i = 0; i < name.size(); ++i)
             if (name[i] == '[') break;
 
-        if (i == name.size()) {
-            cerr << "unable to get type " << name << endl;
-            assert(0 && "resolveType: type not found");
-        }
+        SPUG_CHECK(i != name.size(), "type " << name << " not found");
 
         // resolve the basic type
         TypeDefPtr generic = resolveType(name.substr(0, i));
@@ -1052,15 +1050,16 @@ bool Cacher::readMetadata() {
     if (snode != Cacher::MD_VERSION)
         return false;
 
+    modDef->sourcePath = getNamedStringNode("crack_origin_path");
+    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
+
     // compare the digest stored in the bitcode against the current
     // digest of the source file on disk. if they don't match, we miss
     snode = getNamedStringNode("crack_origin_digest");
     SourceDigest bcDigest = SourceDigest::fromHex(snode);
     if (bcDigest != modDef->digest)
         return false;
-
-    modDef->path = getNamedStringNode("crack_origin_path");
-
+    
     // import list
     // if readImports returns false, then one of our dependencies has
     // changed on disk and our own cache therefore fails
@@ -1157,8 +1156,7 @@ void Cacher::resolveStructs(llvm::Module *module) {
 
 }
 
-BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
-                                         const string &path) {
+BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
 
     string cacheFile = getCacheFilePath(options, canonicalName, "bc");
     if (cacheFile.empty())
@@ -1191,10 +1189,6 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
     // if we get here, we've loaded bitcode successfully
     modDef = new BModuleDef(canonicalName, context.ns.get(), module);
 
-    // if cache file exists, we need to get a digest for comparison
-    // if it doesn't exist, we digest it when we save
-    modDef->digest = SourceDigest::fromFile(path);
-
     if (readMetadata()) {
 
         // after reading our metadata and defining types, we
@@ -1206,15 +1200,13 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
         if (options->verbosity >= 2)
             cerr << "[" << canonicalName <<
                     "] cache materialized" << endl;
-
-        return modDef;
     }
     else {
 
         // during meta data read, we determined we will miss
 
-        // ensure any named structs from the module that we miss on do not remain
-        // in the llvm context struct namespace
+        // ensure any named structs from the module that we miss on do not 
+        // remain in the llvm context struct namespace
         // XXX is this necessary? a module delete doesn't appear to affect
         // the llvmcontext
         vector<StructType*> namedStructs;
@@ -1223,11 +1215,8 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
             if (namedStructs[i]->hasName())
                 namedStructs[i]->setName("");
         }
-
-        delete module;
-        return NULL;
     }
-
+    return modDef;
 }
 
 void Cacher::saveToCache() {
@@ -1240,24 +1229,26 @@ void Cacher::saveToCache() {
     // - implicit parent modules (directories containing modules)
     // - stub modules for shared libraries
     // in all cases, we should probably be caching them.
-    if (modDef->path.empty() || Construct::isDir(modDef->path))
+    // XXX modDef->sourcePath should be a relative path, not absolute.  That 
+    // means we need to search the library path for it.
+    if (modDef->sourcePath.empty() || Construct::isDir(modDef->sourcePath))
         return;
     string cacheFile = getCacheFilePath(options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
             cerr << "unable to find writable directory for cache, won't cache: "
-                 << modDef->path
+                 << modDef->sourcePath
                  << endl;
         return;
     }
 
     if (options->verbosity >= 2)
         cerr << "[" << modDef->getFullName() << "] cache: saved from "
-             << modDef->path
+             << modDef->sourcePath
              << " to file: " << cacheFile << endl;
 
     // digest the source file
-    modDef->digest = SourceDigest::fromFile(modDef->path);
+    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
 
     writeMetadata();
     writeBitcode(cacheFile);

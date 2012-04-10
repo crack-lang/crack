@@ -209,9 +209,9 @@ ModuleDefPtr Context::createModule(const string &name,
 }
 
 ModuleDefPtr Context::materializeModule(const string &canonicalName,
-                                        const string &path,
                                         ModuleDef *owner) {
-    ModuleDefPtr result = builder.materializeModule(*this, canonicalName, path, owner);
+    ModuleDefPtr result =
+        builder.materializeModule(*this, canonicalName, owner);
     if (result)
         ns = result;
     return result;

@@ -758,8 +758,6 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // construct the module name from the class name plus type parameters
     string moduleName = getSpecializedName(types, true);
     string newTypeName = getSpecializedName(types, false);
-    string modulePath = genericInfo->ns->getRealModule()->path + ".gen/" +
-                        newTypeName;
     
     // the name that the specialization will be stored as in the 
     // specialization module.  This varies depending on whether we are 
@@ -767,8 +765,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     string nameInModule;
 
     // check the precompiled module cache
-    ModuleDefPtr module =
-        context.construct->loadFromCache(moduleName, modulePath);
+    ModuleDefPtr module = context.construct->loadFromCache(moduleName);
 
     if (!module) {
 
@@ -809,7 +806,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
         // here so that we can accept protected variables from the original 
         // module's context
-        module->setOwner(genericInfo->ns->getRealModule().get());
+        ModuleDefPtr owner = genericInfo->ns->getRealModule();
+        module->setOwner(owner.get());
         
         // alias all global symbols in the original module and original compile 
         // namespace.
@@ -851,9 +849,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         Parser parser(toker, modContext.get());
         parser.parse();
 
-        // set the source name (this isn't the real source name, it's used for 
-        // construction of the cache)
-        module->path = modulePath;
+        // use the source path of the owner
+        module->sourcePath = owner->sourcePath;
     
         module->close(*modContext);
         modContext->popErrorContext();

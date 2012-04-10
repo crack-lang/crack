@@ -11,6 +11,7 @@
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
+#include "spug/check.h"
 #include "builder/Builder.h"
 #include "ext/Module.h"
 #include "Context.h"
@@ -77,14 +78,12 @@ Construct::ModulePath Construct::searchPath(
          pathIter != path.end();
          ++pathIter
          ) {
-        string fullName = joinName(*pathIter, moduleNameBegin, moduleNameEnd,
-                                   extension
-                                   );
-        if (verbosity > 1) {
+        string relPath = joinName(moduleNameBegin, moduleNameEnd, extension);
+        string fullName = joinName(*pathIter, relPath);
+        if (verbosity > 1)
             cerr << "search: " << fullName << endl;
-        }
         if (isFile(fullName))
-            return ModulePath(fullName, true, false);
+            return ModulePath(*pathIter, relPath, fullName, true, false);
     }
     
     // try to find a matching directory.
@@ -93,14 +92,44 @@ Construct::ModulePath Construct::searchPath(
          pathIter != path.end();
          ++pathIter
          ) {
-        string fullName = joinName(*pathIter, moduleNameBegin, moduleNameEnd,
-                                   empty
-                                   );
+        string relPath = joinName(moduleNameBegin, moduleNameEnd, empty);
+        string fullName = joinName(*pathIter, relPath);
         if (isDir(fullName))
-            return ModulePath(fullName, true, true);
+            return ModulePath(*pathIter, relPath, fullName, true, true);
     }
     
-    return ModulePath(empty, false, false);
+    return ModulePath(empty, empty, empty, false, false);
+}
+
+Construct::ModulePath Construct::searchPath(
+    const Construct::StringVec &path,
+    const string &relPath,
+    int verbosity
+) {
+    // try to find a matching file.
+    for (StringVecIter pathIter = path.begin();
+         pathIter != path.end();
+         ++pathIter
+         ) {
+        string fullName = joinName(*pathIter, relPath);
+        if (verbosity > 1)
+            cerr << "search: " << fullName << endl;
+        if (isFile(fullName))
+            return ModulePath(*pathIter, relPath, fullName, true, false);
+    }
+    
+    // try to find a matching directory.
+    string empty;
+    for (StringVecIter pathIter = path.begin();
+         pathIter != path.end();
+         ++pathIter
+         ) {
+        string fullName = joinName(*pathIter, relPath);
+        if (isDir(fullName))
+            return ModulePath(*pathIter, relPath, fullName, true, true);
+    }
+    
+    return ModulePath(empty, empty, empty, false, false);
 }
 
 bool Construct::isFile(const std::string &name) {
@@ -121,26 +150,26 @@ bool Construct::isDir(const std::string &name) {
     return S_ISDIR(st.st_mode);
 }
 
-std::string Construct::joinName(const std::string &base,
-                                Construct::StringVecIter pathBegin,
+std::string Construct::joinName(Construct::StringVecIter pathBegin,
                                 Construct::StringVecIter pathEnd,
                                 const std::string &ext
                                 ) {
-    // not worrying about performance, this only happens during module load.
-    string result = base;
-    
-    // base off current directory if an empty path was specified.
-    if (!result.size())
-        result = ".";
-
-    for (StringVecIter iter = pathBegin;
-         iter != pathEnd;
-         ++iter
-         ) {
-        result += "/" + *iter;
+    string result;
+    StringVecIter iter = pathBegin;
+    if (iter != pathEnd) {
+        result = *iter;
+        ++iter;
     }
-
+    for (; iter != pathEnd; ++iter )
+        result += "/" + *iter;
+    
     return result + ext;
+}
+
+std::string Construct::joinName(const std::string &base,
+                                const std::string &rel
+                                ) {
+    return base + "/" + rel;
 }
 
 Construct::Construct(Builder *builder, Construct *primary) :
@@ -377,14 +406,15 @@ ModuleDefPtr Construct::loadModule(const string &canonicalName) {
 
     string cname;
     ModuleDefPtr m = loadModule(name.begin(), name.end(), cname);
-    assert(cname == canonicalName && "loadModule canonicalName mismatch");
+    SPUG_CHECK(cname == canonicalName, 
+               "canonicalName mismatch.  constructed = " << cname << 
+                ", requested = " << canonicalName
+               );
     return m;
 
 }
 
-ModuleDefPtr Construct::loadFromCache(const string &canonicalName,
-                                      const string &path
-                                      ) {
+ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
     if (!rootBuilder->options->cacheMode)
         return 0;
 
@@ -407,7 +437,7 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName,
                     );
     context->toplevel = true;
 
-    ModuleDefPtr modDef = context->materializeModule(canonicalName, path);
+    ModuleDefPtr modDef = context->materializeModule(canonicalName);
     if (modDef && rootBuilder->options->statsMode)
         stats->cachedCount++;
     moduleCache[canonicalName] = modDef;
@@ -421,19 +451,18 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                                    string &canonicalName
                                    ) {
     // create the dotted canonical name of the module
-    for (StringVecIter iter = moduleNameBegin;
-         iter != moduleNameEnd;
-         ++iter
-         )
-        if (canonicalName.size())
-            canonicalName += "." + *iter;
-        else
-            canonicalName = *iter;
+    StringVecIter iter = moduleNameBegin;
+    if (iter != moduleNameEnd) {
+        canonicalName = *iter;
+        ++iter;
+    }
+    for (; iter != moduleNameEnd; ++iter)
+        canonicalName += "." + *iter;
 
     // check to see if we have it in the cache
-    Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
-    if (iter != moduleCache.end())
-        return iter->second;
+    Construct::ModuleMap::iterator mapi = moduleCache.find(canonicalName);
+    if (mapi != moduleCache.end())
+        return mapi->second;
 
     // load the parent module
     StringVec::const_reverse_iterator rend(moduleNameEnd);
@@ -462,15 +491,8 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         moduleCache[canonicalName] = modDef;
     } else {
         
-        // fall through - not in immediate module cache, not a shared library
+        // not in in-memory cache, not a shared library
 
-        // try to find the module on the source path
-        modPath = searchPath(sourceLibPath, moduleNameBegin, moduleNameEnd, 
-                            ".crk", rootBuilder->options->verbosity
-                            );
-        if (!modPath.found)
-            return 0;
-    
         // create a new builder, context and module
         BuilderPtr builder = rootBuilder->createChildBuilder();
         builderStack.push(builder);
@@ -489,15 +511,32 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         // to materialize the module through its own means (e.g., a cache)
         bool cached = false;
         if (rootBuilder->options->cacheMode && !modPath.isDir)
-            modDef = context->materializeModule(canonicalName, modPath.path);
-        if (modDef) {
+            modDef = context->materializeModule(canonicalName);
+        if (modDef && modDef->matchesSource(sourceLibPath)) {
             cached = true;
             if (rootBuilder->options->statsMode)
                 stats->cachedCount++;
         } else {
+            
+            // if we got a stale module from the cache, use the relative 
+            // source path of that module (avoiding complications from cached 
+            // ephemeral modules).  Otherwise, just look it up in the library 
+            // path.
+            if (modDef)
+                modPath = searchPath(sourceLibPath, modDef->sourcePath,
+                                     rootBuilder->options->verbosity
+                                     );
+            else
+                modPath = searchPath(sourceLibPath, moduleNameBegin, 
+                                     moduleNameEnd, ".crk", 
+                                     rootBuilder->options->verbosity
+                                     );
+            if (!modPath.found)
+                return 0;
             modDef = context->createModule(canonicalName, modPath.path);
         }
 
+        modDef->sourcePath = modPath.relPath;
         moduleCache[canonicalName] = modDef;
 
         if (!cached) {
@@ -668,7 +707,7 @@ int Construct::runScript(istream &src, const string &name) {
     // because it might have been disabled if
     // we couldn't find an appropriate cache directory
     if (rootBuilder->options->cacheMode) {
-        modDef = context->materializeModule(canName, name);
+        modDef = context->materializeModule(canName);
     }
     if (modDef) {
         cached = true;

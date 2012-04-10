@@ -37,7 +37,7 @@ class ModuleDef : public VarDef, public Namespace {
         std::map<std::string, bool> exports;
 
         // path to original source code on disk
-        std::string path;
+        std::string sourcePath;
 
         ModuleDef(const std::string &name, Namespace *parent);
 
@@ -68,6 +68,17 @@ class ModuleDef : public VarDef, public Namespace {
          * Derived classes should override if it's important.
          */
         virtual void recordDependency(ModuleDef *other) {}
+
+        /**        
+         * Returns true if the module matches the source file found along the 
+         * given path.
+         */
+        bool matchesSource(const StringVec &libSearchPath);
+        
+        /**
+         * Returns true if the module matches the specific source file.
+         */
+        virtual bool matchesSource(const std::string &sourcePath) = 0;
 
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();

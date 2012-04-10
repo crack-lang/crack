@@ -63,11 +63,11 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         virtual bool isExec() { return false; }
 
-        virtual model::ModuleDefPtr materializeModule(model::Context &context,
-                                              const std::string &canonicalName,
-                                              const std::string &path,
-                                              model::ModuleDef *owner
-                                              );
+        virtual model::ModuleDefPtr materializeModule(
+            model::Context &context,
+            const std::string &canonicalName,
+            model::ModuleDef *owner
+        );
 
 };
 
