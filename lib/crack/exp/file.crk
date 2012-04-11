@@ -30,7 +30,7 @@ class FileInfo: Object {
     bool exists() {
         return is_file(CString(name).buffer);
     }
-  
+
     String basename(bool stripExtension) {
         path := CString(name); // copies for null termination
         bname := String(basename(path.buffer)); // copies again
@@ -84,7 +84,7 @@ class File : FileInfo,
     LineReader _lReader;
     FDReader _reader;
     FDWriter _writer;
-    
+
     void _open() {
 
         n := CString(name);
@@ -93,18 +93,18 @@ class File : FileInfo,
             _isOpened = false;
             throw Exception(FStr() `$name: $(strerror())`);
         }
-        
+
         _isOpened = true;
-        
+
     }
-    
+
     void _initRead() {
-        
+
         _open();
         _reader = FDReader(fileno(_fd));
         _lReader = LineReader(_reader);
         _isValid = true;
-        
+
     }
 
     void _initWrite() {
@@ -121,18 +121,22 @@ class File : FileInfo,
         return _lReader.readLine();
 
     }
-    
+
     uint read(WriteBuffer buf){
         return _reader.read(buf);
     }
-    
+
+    FDReader reader(){
+        return _reader;
+    }
+
     void write(Buffer data) {
-        
+
         if (_writer is null || !_isValid)
             return;
-        
+
         _writer.write(data);
-        
+
     }
 
     void close() {
@@ -152,18 +156,18 @@ class File : FileInfo,
 
         // parse file mode
         if (_mode.size != 1 ||
-            ((_mode[0] != F_READ) && 
+            ((_mode[0] != F_READ) &&
              (_mode[0] != F_WRITE)))
             throw Exception(
                 FStr() `$name: invalid file mode "$_mode", must be one of \
 "r" or "w"`
             );
-        
+
         if (_mode[0] == F_READ)
             _initRead();
         else
             _initWrite();
-        
+
     }
 
 }

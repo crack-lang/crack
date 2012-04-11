@@ -258,6 +258,13 @@ class TypeDef : public VarDef, public Namespace {
         bool gotAbstractFuncs(std::vector<FuncDefPtr> *abstractFuncs = 0,
                               TypeDef *ancestor = 0
                               );
+
+        /**
+         * Alias definitions in all of the base meta-types in our meta-type.  
+         * This should be done immediately after setting the base classes.
+         */
+        void aliasBaseMetaTypes();
+
         /**
          * Fill in everything that's missing from the class.
          */

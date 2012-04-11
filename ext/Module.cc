@@ -134,6 +134,7 @@ class VTableType : public Type {
                 );
             TypeDefPtr td =
                 ctx->builder.emitBeginClass(*clsCtx, proxyName, bases, 0);
+            td->aliasBaseMetaTypes();
 
             // wrap all of the constructors
             propagateConstructors(*clsCtx, typeDef, td.get());

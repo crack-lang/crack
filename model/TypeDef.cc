@@ -519,6 +519,32 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
     return gotAbstract;
 }
 
+void TypeDef::aliasBaseMetaTypes() {
+    for (TypeVec::iterator base = parents.begin();
+         base != parents.end();
+         ++base
+         ) {
+        TypeDef *meta = (*base)->type.get();
+        assert(meta != base->get());
+        for (VarDefMap::iterator var = meta->beginDefs();
+             var != meta->endDefs();
+             ++var
+             ) {
+            // add all overloads that we haven't already defined.
+            // XXX this check is extremely lame.  First of all, we should be 
+            // separating namespace qualification from attribute/method access 
+            // and we should probably do so explicitly.  Secondly, if we were 
+            // going to continue in the current direction, what we need here 
+            // is to do our checking at the signature level for each function, 
+            // and allow Parser's addDef() to override existing values.
+            if (OverloadDefPtr::rcast(var->second) && 
+                !type->lookUp(var->first) &&
+                var->first != "cast")
+                type->addAlias(var->second.get());
+        }
+    }
+}
+
 void TypeDef::rectify(Context &classContext) {
     
     // if this is an abstract class, make sure we have abstract methods.  If 

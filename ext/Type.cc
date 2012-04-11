@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <iostream>
 #include "builder/Builder.h"
+#include "model/CompositeNamespace.h"
 #include "model/Context.h"
 #include "model/TypeDef.h"
 #include "Func.h"
@@ -186,6 +187,14 @@ void Type::finish() {
     TypeDefPtr td =
         ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, typeDef);
     typeDef = td.get();
+    typeDef->aliasBaseMetaTypes();
+
+    // create a lexical context which delegates to both the class context and
+    // the parent context.
+    NamespacePtr lexicalNS =
+        new CompositeNamespace(typeDef, ctx->ns.get());
+    ContextPtr lexicalContext =
+        clsCtx->createSubContext(Context::composite, lexicalNS.get());
 
     // emit the variables
     for (int vi = 0; vi < impl->instVarVec.size(); ++vi) {
@@ -209,14 +218,14 @@ void Type::finish() {
         // the outer class.
         (*fi)->receiverType = typeDef;
         if (!(*fi)->getVWrap()) {
-            (*fi)->context = clsCtx.get();
+            (*fi)->context = lexicalContext.get();
             (*fi)->finish();
         }
     }
     
     // pad the class to the instance size
     typeDef->padding = impl->instSize;
-	ctx->builder.emitEndClass(*clsCtx);    
+    ctx->builder.emitEndClass(*clsCtx);
 
     if (!typeDef->getOwner())
         ctx->ns->addDef(typeDef);

@@ -26,13 +26,14 @@ import crack.cont.array Array;
 import crack.cont.hashmap OrderedHashMap;
 import crack.cont.list List;
 import crack.exp.file File;
-import crack.io FStr, cout, cerr, StringFormatter, Reader;
+import crack.io FStr, cout, cerr, StringFormatter, Reader, StringWriter;
 import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
                   WriteBuffer, Exception, IndexError, KeyError, CString;
 import crack.math min, strtof;
 import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
                     stat, fileno;
 import crack.sys strerror;
+import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
 
 uint indentWidth = 4;
 
@@ -64,7 +65,6 @@ class Element {
                                                         _type = type{
     }
 
-
     String getName() {
         return _name;
     }
@@ -73,6 +73,10 @@ class Element {
         return _type;
     }
 
+    List[Element] getChildren () {
+      if (!_children) return List[Element]![];
+      else return _children;
+    }
 
     OrderedHashMap[String, String] getAttributes () {
         return _attributes;
@@ -296,14 +300,14 @@ class Element {
 /// attributes, text, predefined entities, CDATA, mixed content. Namespaces are
 /// parsed as part of the element or attribute name. Prologs and doctypes are
 /// ignored. Only 8-bit character encodings are supported. <br> The default
-/// behavior is to parse the XML into a DOM. Extends this class and override
+/// behavior is to parse the XML into a DOM. Extend this class and override
 /// methods to perform event driven parsing. When this is done, the parse methods
 /// will return null.
 /// @author Nathan Sweet
 class XmlReader {
 
-    byteptr data;
-    uintz data_size = 0, eof = 0, p, pe, cs, ts, te, act, okp;
+    PageBuffer data;
+    uint data_size = 0, eof = 0, p, pe, cs, ts, te, act, okp, bufsize = 1024*1024;
     int line = 1, col = 1;
     String attributeName = null;
     bool hasBody = false;
@@ -313,14 +317,20 @@ class XmlReader {
 
     uint LAST_CHAR = 0, _level;
 
-    String bufString(byteptr buf, uint size, bool takeOwnership){
-        retval := String(buf, size, takeOwnership);
-        return retval;
+    void _readTo(uint i){
+        if (i>data.size){
+            try {
+                b:=data[i];
+            }
+            catch (IndexError ex){
+            }
+            pe = data.size;
+        }
     }
 
     Array[Element] _elements = {};
     Element __root, __current;
-    StringFormatter __textBuffer = {64};
+    StringWriter __textBuffer = {64};
 
     void _text(String text) {
         String existing = __current.getText();
@@ -378,10 +388,11 @@ class XmlReader {
     %%{
     machine xml;
 
-        action buffer { s = p; }
+        action buffer { _readTo(p); s = p; }
         action elementStart {
             byte c = data[s];
             if (c == b'!') {
+                _readTo(p+10);
                 if (
                     data[s + 1] == b'[' && //
                     data[s + 2] == b'C' && //
@@ -393,29 +404,33 @@ class XmlReader {
                 ) {
                     s += 8;
                     p = s + 2;
-                    while (data[p - 2] != b']' || data[p - 1] != b']' || data[p] != b'>')
+                    while (p<pe && (data[p - 2] != b']' || data[p - 1] != b']' || data[p] != b'>')){ // TODO optimize this
+                        _readTo(p+1); // update pe
                         p++;
-                    _text(bufString(data+s, p - s - 2, false));
+                    }
+                    _text(data.substr(s, p - s - 2));
                 } else if (pe - p > 4 &&
                     data[s + 1] == b'-' && 
                     data[s + 2] == b'-' &&
                     data[s + 3] != b'>'
                 ) {
                     while (p<pe) {
-                        if (data[++p] == b'>' && data[p-1] == b'-' && data[p-2] == b'-'){
+                        _readTo(++p); // update pe
+                        if (data[p] == b'>' && data[p-1] == b'-' && data[p-2] == b'-'){
                             break;
                         }
                     }
                     if (p==pe)
-                        throw ParseError(FStr() `Unmatched comment open element near $(bufString(data+s, min(80,p-s), false))`);
-                    _open("!--", bufString(data+s+3, p - s-5, false), COMMENT);
+                        throw ParseError(FStr() `Unmatched comment open element near $(data.substr(s, min(80, p-s)))`);
+                    _open("!--", data.substr(s+3, p - s-5), COMMENT);
                     hasBody = false;
                     _close(s);
                     s=p;
                 }
                 else {
-                    while (data[p] != b'>' && p<pe)
-                        p++;
+                    while (p<pe && data[p] != b'>'){
+                        _readTo(++p);
+                    }
                 }
                 fgoto elementBody;
             }
@@ -423,11 +438,11 @@ class XmlReader {
                 if (c == b'?') {
                     if (_level>0) throw ParseError("Document metadata must appear at the toplevel of the document");
                     hasBody = false;
-                    _open(bufString(data + s + 1, p - s - 1, false), "", DOCINFO);
+                    _open(data.substr( s + 1, p - s - 1), "", DOCINFO);
                 }
                 else {
                     hasBody = true;
-                    _open(bufString(data + s, p - s, false));
+                    _open(data.substr( s, p - s));
                 }
             }
         }
@@ -448,10 +463,10 @@ class XmlReader {
             if (hasBody) fgoto elementBody;
         }
         action attributeName {
-            attributeName = bufString(data+s, p - s, false);
+            attributeName = data.substr(s, p - s);
         }
         action attribute {
-            _setAttribute(attributeName, bufString(data+s, p - s, false));
+            _setAttribute(attributeName, data.substr(s, p - s));
         }
 
         action text {
@@ -474,8 +489,8 @@ class XmlReader {
                     uint entityStart = __ci;
                     while (__ci != end) {
                         if (data[__ci++] != b';') continue;
-                        __textBuffer.write(bufString(data+s, entityStart - s - 1, false));
-                        String name = bufString(data+entityStart, __ci - entityStart - 1, false);
+                        __textBuffer.write(data.substr(s, entityStart - s - 1));
+                        String name = data.substr(entityStart, __ci - entityStart - 1);
                         String value = _entity(name);
                         __textBuffer.write(value ? value : name);
                         s = __ci;
@@ -484,11 +499,11 @@ class XmlReader {
                     }
                 }
                 if (entityFound) {
-                    if (s < end) __textBuffer.write(bufString(data+s, end - s, false));
+                    if (s < end) __textBuffer.write(data.substr(s, end - s));
                     _text(__textBuffer.string());
-                    __textBuffer = StringFormatter(64);
+                    __textBuffer = StringWriter(64);
                 } else
-                    _text(bufString(data+s, end - s, false));
+                    _text(data.substr(s, end - s));
             }
         }
 
@@ -517,25 +532,28 @@ class XmlReader {
     Array[Element] _parse() {    // Do the first read. 
         if (data is null)
             InvalidResourceError(FStr() `Error parsing XML, null data pointer supplied`);
-        uint s;
+        uint s, parseLoops = 0;
         pe = data_size;
         cs = xml_start;
-
+        while (parseLoops <2 && p < pe){
         // ------ Start exec ---------------------------------------------------------
         %% write exec;
         // ------ End exec -----------------------------------------------------------
+            _readTo(pe+1); // Update pe just in case we got stuck at the end of a page by accident
+            if (p < pe ) parseLoops++;
+        }
 
         /* Check if we failed. */
         if ( cs == xml_error ) {
             /* Machine failed before finding a token. */
-            throw ParseError(bufString(data+s, p - s, false));
+            throw ParseError(data.substr(s, p - s));
         }
 
         if (p < pe) {
             uint lineNumber = 1;
             for (uint i = 0; i < p; i++)
                 if (data[i] == b'\n') lineNumber++;
-            throw InvalidResourceError(FStr() `Error parsing XML on line $lineNumber near: $(bufString(data+p, uint(min(32, pe - p)), false ))`);
+            throw InvalidResourceError(FStr() `Error parsing XML on line $lineNumber near: $(data.substr(p, min(32, pe-p)))`);
         }
         uint namedElems = 0;
         for (uint ei = 0; ei < _elements.count(); ei++){
@@ -549,10 +567,17 @@ class XmlReader {
     }
 
     Array[Element] parse(String xml) {
-        data = xml.buffer;
+        data = PageBufferString(xml);
         data_size = xml.size;
         return _parse();
     }
+
+    Array[Element] parse(Reader r) {
+        data = PageBufferReader(r); // Reads one block
+        data_size = data.size; 
+        return _parse();
+    }
+
 
     Array[Element] parseFile(String fname) {
         Stat statInfo = {};
@@ -567,11 +592,13 @@ class XmlReader {
             }
             fd := fileno(file);
 
-            data = byteptr(mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
             data_size = statInfo.st_size;
-            if (uintz(data) != uintz(0)-1){
+            tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+            data = PageBufferString(String(byteptr(tdata), data_size, false));
+            
+            if (uintz(tdata) != uintz(0)-1){
                 Array[Element] retval = _parse();
-                munmap(data, statInfo.st_size);
+                munmap(tdata, data_size);
                 return retval;
             }
             else
