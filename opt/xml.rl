@@ -65,7 +65,6 @@ class Element {
                                                         _type = type{
     }
 
-
     String getName() {
         return _name;
     }
@@ -74,6 +73,10 @@ class Element {
         return _type;
     }
 
+    List[Element] getChildren () {
+      if (!_children) return List[Element]![];
+      else return _children;
+    }
 
     OrderedHashMap[String, String] getAttributes () {
         return _attributes;
