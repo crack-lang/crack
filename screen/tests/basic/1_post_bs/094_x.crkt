@@ -1,0 +1,15 @@
+%%TEST%%
+Numeric member initializers
+%%ARGS%%
+
+%%FILE%%
+import crack.io cout;
+class testClass {
+    uint64 status;
+    oper init() : status = 0 {}
+}
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
+
