@@ -207,7 +207,6 @@ class Context : public spug::RCBase {
 
         // possibly load from cache
         ModuleDefPtr materializeModule(const std::string &canonicalName,
-                                       const std::string &path,
                                        ModuleDef *owner = 0
                                        );
 

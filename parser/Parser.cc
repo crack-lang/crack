@@ -2218,7 +2218,12 @@ void Parser::parseConstDef() {
 ContextPtr Parser::parseIfClause() {
    Token tok = getToken();
    ContextPtr terminal;
-   ContextStackFrame cstack(*this, context->createSubContext().get());
+   stringstream nsName;
+   nsName << ++nestID;
+   string nsNameStr = nsName.str();
+   ContextStackFrame cstack(*this, context->createSubContext(context->scope,
+                                                             0,
+                                                             &nsNameStr).get());
    if (tok.isLCurly()) {
       return parseBlock(true, noCallbacks);
    } else {
@@ -3175,6 +3180,7 @@ TypeDefPtr Parser::parseClassDef() {
 
 Parser::Parser(Toker &toker, model::Context *context) : 
    toker(toker),
+   nestID(0),
    moduleCtx(context),
    context(context) {
    

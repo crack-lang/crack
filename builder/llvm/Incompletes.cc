@@ -250,10 +250,7 @@ Value * IncompleteNarrower::emitGEP(IRBuilder<> &builder,
 }
 
 void IncompleteNarrower::insertInstructions(IRBuilder<> &builder) {
-    replaceAllUsesWith(emitGEP(builder, startType, ancestor,
-                               Op<0>()
-                               )
-                       );
+    replaceAllUsesWith(emitGEP(builder, startType, ancestor, Op<0>()));
 }
 
 // IncompleteVTableInit

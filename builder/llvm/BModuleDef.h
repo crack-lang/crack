@@ -63,6 +63,10 @@ public:
         // if none currently exists.
         importList[BModuleDefPtr::acast(other)];
     }
+
+    virtual bool matchesSource(const std::string &source) {
+        return digest == SourceDigest::fromFile(source);
+    }
 };
 
 } // end namespace builder::vmll

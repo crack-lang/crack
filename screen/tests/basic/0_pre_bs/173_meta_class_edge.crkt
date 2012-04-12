@@ -31,7 +31,7 @@ if (1) {
     Class c;
     if (!streq(typeof(c).name, 'Class'))
         puts('FAILED type name on a Class variable');
-    if (!match(typeof(A).name, 'Class[.main.', 'crk.A]'))
+    if (!match(typeof(A).name, '.main.', '.A:meta'))
         puts('FAILED type name of Class[A]');
     if (!streq(typeof(typeof(A)).name, 'Class'))
         puts('FAILED type name of type of Class[A]');

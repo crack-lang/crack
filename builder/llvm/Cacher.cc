@@ -18,6 +18,8 @@
 #include "builder/util/CacheFiles.h"
 #include "builder/util/SourceDigest.h"
 #include "builder/llvm/Consts.h"
+#include "builder/llvm/StructResolver.h"
+#include "spug/check.h"
 
 #include <assert.h>
 #include <sstream>
@@ -116,7 +118,7 @@ void Cacher::writeMetadata() {
     // encode metadata into the bitcode
     addNamedStringNode("crack_md_version", Cacher::MD_VERSION);
     addNamedStringNode("crack_origin_digest", modDef->digest.asHex());
-    addNamedStringNode("crack_origin_path", modDef->path);
+    addNamedStringNode("crack_origin_path", modDef->sourcePath);
 
     vector<Value *> dList;
     NamedMDNode *node;
@@ -316,6 +318,13 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     Type *metaTypeRep = BTypeDefPtr::acast(metaClass)->rep;
     dList.push_back(Constant::getNullValue(metaTypeRep));
 
+    // register in canonical map for subsequent cache loads
+    if (bt)
+        context.construct->registerDef(bt);
+    else
+        context.construct->registerDef(t);
+    context.construct->registerDef(metaClass);
+
     return MDNode::get(getGlobalContext(), dList);
 
 }
@@ -505,13 +514,15 @@ bool Cacher::readImports() {
 
         iDigest = SourceDigest::fromHex(digest->getString().str());
 
-        // load this module. if the digest doesn't match, we miss
+        // load this module. if the digest doesn't match, we miss.
+        // note module may come from cache or parser, we won't know
         m = context.construct->loadModule(cname->getString().str());
         if (!m || m->digest != iDigest)
             return false;
 
         // op 3..n: imported (namespace aliased) symbols from m
-        for (unsigned si = 2; si < mnode->getNumOperands(); ++si) {
+        assert(mnode->getNumOperands() % 2 == 0);
+        for (unsigned si = 2; si < mnode->getNumOperands();) {
             localStr = dyn_cast<MDString>(mnode->getOperand(si++));
             sourceStr = dyn_cast<MDString>(mnode->getOperand(si++));
             assert(localStr && "malformed import node: missing local name");
@@ -570,10 +581,7 @@ TypeDefPtr Cacher::resolveType(const string &name) {
         for (i = 0; i < name.size(); ++i)
             if (name[i] == '[') break;
 
-        if (i == name.size()) {
-            cerr << "unable to get type " << name << endl;
-            assert(0 && "resolveType: type not found");
-        }
+        SPUG_CHECK(i != name.size(), "type " << name << " not found");
 
         // resolve the basic type
         TypeDefPtr generic = resolveType(name.substr(0, i));
@@ -744,6 +752,9 @@ void Cacher::readTypeDef(const std::string &sym,
                          llvm::Value *rep,
                          llvm::MDNode *mnode) {
 
+    PointerType *p = cast<PointerType>(rep->getType());
+    StructType *s = cast<StructType>(p->getElementType());
+
     BTypeDefPtr metaType = readMetaType(mnode);
     BTypeDefPtr type = new BTypeDef(metaType.get(),
                         sym,
@@ -753,6 +764,52 @@ void Cacher::readTypeDef(const std::string &sym,
                         );
     finishType(type.get(), metaType.get());
     assert(type->getOwner());
+
+    if (s->getName().str() != type->getFullName()) {
+
+        // if the type name does not match the structure name, we have the
+        // following scenario:
+        // A is cached, depends on type in B
+        // B is cached, defines type A wants
+        // A is loaded first, bitcode contains structure def from B with
+        // canonical name. Because it was loaded first, it goes into the LLVM
+        // context first. When B is loaded and the same canonical structure is
+        // loaded, it gets the postfix.
+        // The problem is, although A turned out to be the "authoritative" name
+        // for the struct according to LLVM context, it's not the authoritative place
+        // that it is defined in crack. So, we lookup the old one and remove the name.
+        // Then we set the struct name on ours (the authoritative location, because
+        // the crack type is defined here) to the proper canonical name without
+        // the postfix.
+
+        // old, nonauthoritative struct
+        StructType *old = modDef->rep->getTypeByName(type->getFullName());
+        // old must exist since otherwise we would have matched our sym name
+        // already
+        assert(old);
+        // we're also expecting that it matches the canonical name, which we
+        // want to steal
+        assert(old->getName() == type->getFullName());
+
+        //cout << "old name: " << old->getName().str() << "\n";
+
+        // remove the old name
+        old->setName("");
+
+        // steal canonical name to make our type authoritative
+        s->setName(type->getFullName());
+        //cout << "s name: " << s->getName().str() << "\n";
+
+        // now force a conflict so that the _old_ name is postfixed, and it
+        // will get cleaned up on a subsequent ResolveStruct run
+        old->setName(type->getFullName());
+        //cout << "old name now: " << old->getName().str() << "\n";
+        assert(old->getName() != s->getName());
+
+    }
+
+    assert(s->getName().str() == type->getFullName()
+           && "structure name didn't match canonical");
 
     // retrieve the class implementation pointer
     GlobalVariable *impl = modDef->rep->getGlobalVariable(type->getFullName());
@@ -993,15 +1050,16 @@ bool Cacher::readMetadata() {
     if (snode != Cacher::MD_VERSION)
         return false;
 
+    modDef->sourcePath = getNamedStringNode("crack_origin_path");
+    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
+
     // compare the digest stored in the bitcode against the current
     // digest of the source file on disk. if they don't match, we miss
     snode = getNamedStringNode("crack_origin_digest");
     SourceDigest bcDigest = SourceDigest::fromHex(snode);
     if (bcDigest != modDef->digest)
         return false;
-
-    modDef->path = getNamedStringNode("crack_origin_path");
-
+    
     // import list
     // if readImports returns false, then one of our dependencies has
     // changed on disk and our own cache therefore fails
@@ -1045,8 +1103,60 @@ void Cacher::writeBitcode(const string &path) {
 
 }
 
-BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
-                                         const string &path) {
+void Cacher::resolveStructs(llvm::Module *module) {
+
+    // resolve duplicate structs to those already existing in our type
+    // system. this solves issues when using separate bitcode modules
+    // without using the llvm linker
+    StructResolver resolver(module);
+
+    // first we get the list we have to resolve
+    // then we lookup the canonical version of each one to create
+    // the map
+    StructResolver::StructMapType typeMap;
+    StructResolver::StructListType dSet = resolver.getDisjointStructs();
+    for (StructResolver::StructListType::iterator i = dSet.begin();
+         i != dSet.end(); ++i) {
+        int pos = i->first.rfind(".");
+        string canonical = i->first.substr(0, pos);        
+        // XXX big hack. meta's are created implicitly by class defs, so their
+        // corresponding class defs have to come first in this list else the
+        // metas won't exist in resolveType. defer them?
+        if (canonical.find("meta") != string::npos) {
+            //cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
+            continue;
+        }
+        TypeDefPtr td = resolveType(canonical);
+        BTypeDef *bt = dynamic_cast<BTypeDef *>(td.get());
+        assert(bt);
+        // we want to map the struct (the ContainedType), not the pointer to it
+        PointerType *a = dyn_cast<PointerType>(bt->rep);
+        assert(a && "expected a PointerType");
+        // most classes are single indirection pointers-to-struct, but we have
+        // to special case VTableBase which is **
+        if (canonical == ".builtin.VTableBase") {
+            a = cast<PointerType>(a->getElementType());
+        }
+        StructType *left = dyn_cast<StructType>(i->second);
+        assert(left);
+        StructType *right = dyn_cast<StructType>(a->getElementType());
+        assert(right);
+        assert(left != right);
+        //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
+        typeMap[i->second] = a->getElementType();
+    }
+
+    // finally, we resolve using our map. this replaces all instances of
+    // the conflicting type from this module, with the original one actually
+    // in our type system
+    if (!typeMap.empty())
+        resolver.run(&typeMap);
+    else
+        cout << "resolveStructs: typemap was empty\n";
+
+}
+
+BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
 
     string cacheFile = getCacheFilePath(options, canonicalName, "bc");
     if (cacheFile.empty())
@@ -1079,24 +1189,34 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName,
     // if we get here, we've loaded bitcode successfully
     modDef = new BModuleDef(canonicalName, context.ns.get(), module);
 
-    // if cache file exists, we need to get a digest for comparison
-    // if it doesn't exist, we digest it when we save
-    modDef->digest = SourceDigest::fromFile(path);
-
     if (readMetadata()) {
+
+        // after reading our metadata and defining types, we
+        // resolve all disjoint structs from our bitcode to those
+        // already in the crack type system
+        resolveStructs(module);
 
         // cache hit
         if (options->verbosity >= 2)
             cerr << "[" << canonicalName <<
                     "] cache materialized" << endl;
-        return modDef;
     }
     else {
-        // during meta data read, we determined we will miss
-        delete module;
-        return NULL;
-    }
 
+        // during meta data read, we determined we will miss
+
+        // ensure any named structs from the module that we miss on do not 
+        // remain in the llvm context struct namespace
+        // XXX is this necessary? a module delete doesn't appear to affect
+        // the llvmcontext
+        vector<StructType*> namedStructs;
+        module->findUsedStructTypes(namedStructs);
+        for (int i=0; i < namedStructs.size(); ++i) {
+            if (namedStructs[i]->hasName())
+                namedStructs[i]->setName("");
+        }
+    }
+    return modDef;
 }
 
 void Cacher::saveToCache() {
@@ -1109,24 +1229,26 @@ void Cacher::saveToCache() {
     // - implicit parent modules (directories containing modules)
     // - stub modules for shared libraries
     // in all cases, we should probably be caching them.
-    if (modDef->path.empty() || Construct::isDir(modDef->path))
+    // XXX modDef->sourcePath should be a relative path, not absolute.  That 
+    // means we need to search the library path for it.
+    if (modDef->sourcePath.empty() || Construct::isDir(modDef->sourcePath))
         return;
     string cacheFile = getCacheFilePath(options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
         if (options->verbosity >= 1)
             cerr << "unable to find writable directory for cache, won't cache: "
-                 << modDef->path
+                 << modDef->sourcePath
                  << endl;
         return;
     }
 
     if (options->verbosity >= 2)
         cerr << "[" << modDef->getFullName() << "] cache: saved from "
-             << modDef->path
+             << modDef->sourcePath
              << " to file: " << cacheFile << endl;
 
     // digest the source file
-    modDef->digest = SourceDigest::fromFile(modDef->path);
+    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
 
     writeMetadata();
     writeBitcode(cacheFile);

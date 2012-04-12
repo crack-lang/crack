@@ -237,7 +237,7 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     createModuleCommon(context);
 
     bModDef =  new BModuleDef(name, context.ns.get(), module);
-    bModDef->path = getSourcePath(path);
+    bModDef->sourcePath = getSourcePath(path);
 
     return bModDef;
 }
@@ -447,12 +447,12 @@ void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
     type->getClassInstRep(module, 0);
 }
 
-model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(model::Context &context,
-                                                   const std::string &canonicalName,
-                                                   const std::string &path,
-                                                   model::ModuleDef *owner) {
+model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(
+    model::Context &context,
+    const std::string &canonicalName,
+    model::ModuleDef *owner
+) {
 
     Cacher c(context, options.get());
-    return c.maybeLoadFromCache(canonicalName, path);
-
+    return c.maybeLoadFromCache(canonicalName);
 }

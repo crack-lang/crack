@@ -73,6 +73,8 @@ protected:
     void readTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
     void readGenericTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
 
+    void resolveStructs(llvm::Module *);
+
     void writeBitcode(const std::string &path);
 
     bool readImports();
@@ -90,8 +92,7 @@ public:
 
     void getExterns(std::vector<std::string> &symList);
 
-    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName,
-                                     const std::string &path);
+    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName);
     void saveToCache();
 
 };
