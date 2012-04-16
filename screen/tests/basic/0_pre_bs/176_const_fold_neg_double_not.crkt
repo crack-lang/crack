@@ -4,5 +4,5 @@ const folding negated double not
 %%FILE%%
 byte b = -(~~1);
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+ParseError: %SCRIPTNAME%:1: Invalid type int for initializer for variable b of type byte.
 %%STDIN%%

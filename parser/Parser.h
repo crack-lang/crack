@@ -354,7 +354,9 @@ class Parser {
        * Parse a variable definition initializer.  Deals with the special
        * syntax for constructors and sequence constants.
        */
-      model::ExprPtr parseInitializer(model::TypeDef *type);
+      model::ExprPtr parseInitializer(model::TypeDef *type,
+                                      const std::string &varName
+                                      );
 
       /**
        * Parse an alias statement.

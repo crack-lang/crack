@@ -2,6 +2,7 @@
 
 #include "TypeDef.h"
 
+#include <spug/check.h>
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "builder/Builder.h"
@@ -688,17 +689,12 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
                                     )
                            );
         
-        // verify that we can convert the initializer to the type of the 
-        // instance variable.
-        ExprPtr converted = initializer->convert(context, ivar->type.get());
-        if (!converted)
-            context.error(SPUG_FSTR("Invalid type " << 
-                                    initializer->type->name << 
-                                    " for initializer for instance variable "
-                                    << ivar->name << " of type " <<
-                                    ivar->type->name
-                                    )
-                          );
+        SPUG_CHECK(initializer->type->isDerivedFrom(ivar->type.get()),
+                   "initializer for " << ivar->name << " should be of type " <<
+                    ivar->type->getDisplayName() << 
+                    " but is of incompatible type  " <<
+                    initializer->type->getDisplayName()
+                   );
                                     
 
         AssignExprPtr assign = new AssignExpr(thisRef.get(),
