@@ -11,14 +11,6 @@
 #include "model/NullConst.h"
 #include "model/ConstVarDef.h"
 
-#include "builder/llvm/LLVMBuilder.h"
-#include "builder/BuilderOptions.h"
-#include "builder/llvm/VarDefs.h"
-#include "builder/llvm/BFuncDef.h"
-#include "builder/util/CacheFiles.h"
-#include "builder/util/SourceDigest.h"
-#include "builder/llvm/Consts.h"
-#include "builder/llvm/StructResolver.h"
 #include "spug/check.h"
 
 #include <assert.h>
@@ -33,6 +25,16 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/system_error.h>
 #include <llvm/LLVMContext.h>
+
+#include "model/EphemeralImportDef.h"
+#include "builder/BuilderOptions.h"
+#include "builder/util/CacheFiles.h"
+#include "builder/util/SourceDigest.h"
+#include "LLVMBuilder.h"
+#include "VarDefs.h"
+#include "BFuncDef.h"
+#include "Consts.h"
+#include "StructResolver.h"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -111,6 +113,24 @@ string Cacher::getNamedStringNode(const std::string &key) {
     assert(str && "malformed string node 2");
     return str->getString().str();
 
+}
+
+MDNode *Cacher::writeEphemeralImport(BModuleDef *mod) {
+    vector<Value *> dList;
+
+    // operand 0: symbol name (unecessary)
+    dList.push_back(MDString::get(getGlobalContext(), mod->name));
+
+    // operand 1: symbol type
+    dList.push_back(constInt(Cacher::ephemeralImport));
+    
+    // operand 2: canonical name
+    dList.push_back(MDString::get(getGlobalContext(), mod->getFullName()));
+    
+    // operand 3: digest
+    dList.push_back(MDString::get(getGlobalContext(), mod->digest.asHex()));
+
+    return MDNode::get(getGlobalContext(), dList);
 }
 
 void Cacher::writeMetadata() {
@@ -239,7 +259,7 @@ void Cacher::writeNamespace(Namespace *ns) {
     for (Namespace::VarDefVec::const_iterator i = ns->beginOrderedForCache();
          i != ns->endOrderedForCache();
          ++i) {
-        if (ol = dynamic_cast<OverloadDef*>((*i).get())) {
+        if (ol = OverloadDefPtr::rcast(*i)) {
             for (OverloadDef::FuncList::const_iterator f = ol->beginTopFuncs();
                  f != ol->endTopFuncs();
                  ++f) {
@@ -250,8 +270,7 @@ void Cacher::writeNamespace(Namespace *ns) {
                         node->addOperand(n);
                 }
             }
-        }
-        else {
+        } else {
             // skip aliases
             if ((*i)->getOwner() != ns)
                 continue;
@@ -261,8 +280,11 @@ void Cacher::writeNamespace(Namespace *ns) {
                     node->addOperand(typeNode);
                     writeNamespace(td);
                 }
-            }
-            else {
+            } else if (EphemeralImportDef *mod = 
+                        EphemeralImportDefPtr::rcast(*i)) {
+                BModuleDefPtr bmod = BModuleDefPtr::arcast(mod->module);
+                node->addOperand(writeEphemeralImport(bmod.get()));
+            } else {
 
                 // VarDef
 
@@ -503,7 +525,7 @@ bool Cacher::readImports() {
     for (int i = 0; i < imports->getNumOperands(); ++i) {
 
         mnode = imports->getOperand(i);
-
+        
         // op 1: canonical name
         cname = dyn_cast<MDString>(mnode->getOperand(0));
         assert(cname && "malformed import node: canonical name");
@@ -844,6 +866,17 @@ void Cacher::readGenericTypeDef(const std::string &sym,
     context.construct->registerDef(type.get());
 }
 
+void Cacher::readEphemeralImport(MDNode *mnode) {
+    MDString *canName = dyn_cast<MDString>(mnode->getOperand(2));
+    SPUG_CHECK(canName, "Canonical name not specified for import.");
+    MDString *digest = dyn_cast<MDString>(mnode->getOperand(3));
+    SPUG_CHECK(digest, "Digest not specified for import.");
+    BModuleDefPtr mod = 
+        context.construct->loadModule(canName->getString().str());
+    SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
+               "XXX Module digestfrom import doesn't match");
+}
+
 void Cacher::readFuncDef(const std::string &sym,
                          llvm::Value *rep,
                          llvm::MDNode *mnode) {
@@ -971,10 +1004,17 @@ void Cacher::readDefs() {
         //assert(rep && "malformed def node: llvm rep");
 
         int nodeType = type->getLimitedValue();
-        if (nodeType == Cacher::type)
-            readTypeDef(sym, rep, mnode);
-        else if (nodeType == Cacher::generic)
-            readGenericTypeDef(sym, rep, mnode);
+        switch (nodeType) {
+            case Cacher::type:
+                readTypeDef(sym, rep, mnode);
+                break;
+            case Cacher::generic:
+                readGenericTypeDef(sym, rep, mnode);
+                break;
+            case Cacher::ephemeralImport:
+                readEphemeralImport(mnode);
+                break;
+        }
     }
 
     // second pass: everything else
@@ -1008,6 +1048,7 @@ void Cacher::readDefs() {
             break;
         case Cacher::type:
         case Cacher::generic:
+        case Cacher::ephemeralImport:
             // should have done this in the first pass
             break;
         case Cacher::constant:
@@ -1017,10 +1058,7 @@ void Cacher::readDefs() {
         default:
             assert(0 && "unhandled def type");
         }
-
     }
-
-
 }
 
 bool Cacher::readMetadata() {

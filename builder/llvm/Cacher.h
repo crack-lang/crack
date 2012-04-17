@@ -41,7 +41,8 @@ class Cacher {
         method,
         type,
         constant,
-        generic
+        generic,
+        ephemeralImport
     };
 
     BModuleDefPtr modDef;
@@ -62,6 +63,7 @@ protected:
     llvm::MDNode *writeConstant(model::VarDef *, model::TypeDef *owner);
     llvm::MDNode *writeVarDef(model::VarDef *, model::TypeDef *owner);
     llvm::MDNode *writeFuncDef(model::FuncDef *, model::TypeDef *owner);
+    llvm::MDNode *writeEphemeralImport(BModuleDef *mod);
 
     void readConstant(const std::string &, llvm::Value *, llvm::MDNode *);
     void readVarDefMember(const std::string &, llvm::Value *, llvm::MDNode *);
@@ -72,6 +74,7 @@ protected:
     void finishType(model::TypeDef *type, BTypeDef *metaType);
     void readTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
     void readGenericTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
+    void readEphemeralImport(llvm::MDNode *mnode);
 
     void resolveStructs(llvm::Module *);
 
