@@ -54,7 +54,7 @@
 #
 #==============================================================================
 
-import crack.lang InvalidArgumentError;
+import crack.lang AppendBuffer, InvalidArgumentError;
 import crack.io cout, Formatter, FStr, Writer, StringFormatter, StringWriter;
 import crack.cont.array Array;
 import crack.strutil split;
@@ -287,34 +287,37 @@ class TextBlock {
     ## Prints the block in a form useful to der programmer.  Returns the last
     ## line as a string.
     String debug(String soFar) {
-        if (soFar.size > 76) {
-            cout `$soFar\n`;
-            soFar = '';
+        class FLite : AppendBuffer { 
+            oper init() : AppendBuffer(1024) {}
+            void format(String s) { extend(s); }
+            void writeLine() {
+                cout `$this\n`;
+                size = 0;
+            }
         }
-        soFar = soFar + ' \\' + type + '(';
+        FLite fmt = {};
+        fmt.extend(soFar);
+        if (fmt.size > 76)
+            fmt.writeLine();
+        fmt ` \\$type(`;
       
         for (x :in words) {
-            if (x.isa(String)) {
-                wordStr := String.cast(x);
-                if (soFar.size + wordStr.size + 1 > 79) {
-                    cout `$soFar\n`;
-                    soFar = ''
-                }
-                soFar = soFar + ' ' + wordStr;
+            if (wordStr := String.cast(x, null)) {
+                if (fmt.size + wordStr.size + 1 > 79)
+                    fmt.writeLine();
+                fmt ` $wordStr`;
             } else {
                 block := TextBlock.cast(x);
-                soFar = block.debug(soFar);
+                fmt.extend(block.debug(soFar));
             }
         }
 
-        if (soFar.size > 78) {
-            cout `$soFar\n`;
-            soFar = '';
-        }
+        if (fmt.size > 78)
+            fmt.writeLine();
         
-        soFar = soFar + ')';
+        fmt `)`;
 
-        return soFar
+        return String(fmt, true);
     }
     
     void formatTo(Formatter out) {
