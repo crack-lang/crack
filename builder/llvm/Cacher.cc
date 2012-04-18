@@ -183,8 +183,9 @@ void Cacher::writeMetadata() {
          i != b.moduleFuncs.end();
          ++i) {
 
-        // only include it if it's a decl...
-        if (!i->second->isDeclaration())
+        // only include it if it's a decl, and not abstract
+        if (!i->second->isDeclaration() ||
+            i->first->flags & FuncDef::abstract)
             continue;
 
         Namespace *owningNS = i->first->getOwner();
@@ -377,8 +378,11 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
 
     // we register with the cache map because a cached module may be
     // on this depended one for this run
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.registerDef(context, sym);
+    // skip for abstract functions though, since they have no body
+    if ((bf->flags & FuncDef::abstract) == 0) {
+        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+        b.registerDef(context, sym);
+    }
 
     return MDNode::get(getGlobalContext(), dList);
 
@@ -916,8 +920,11 @@ void Cacher::readFuncDef(const std::string &sym,
         }
     }
 
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.registerDef(context, newF);
+    // if not abstract, register
+    if ((bflags & FuncDef::abstract) == 0) {
+        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
+        b.registerDef(context, newF);
+    }
 
     OverloadDef *o(0);
     VarDefPtr vd = owner->lookUp(sym);
