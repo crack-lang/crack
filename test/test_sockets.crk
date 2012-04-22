@@ -1,9 +1,10 @@
 
+import crack.runtime fileExists, fileRemove, c_strerror;
 import crack.cont.array Array;
 import crack.lang die, ManagedBuffer;
 import crack.io cout, FStr;
-import crack.net resolve, Address, InetAddress, Socket, Poller, PollEvent, 
-    AF_INET, INADDR_ANY, POLLIN, POLLERR, SOCK_STREAM;
+import crack.net resolve, Address, InetAddress, Socket, UnixAddress, Poller,
+    PollEvent, AF_INET, AF_UNIX, INADDR_ANY, POLLIN, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
 
 # create a server socket, bind to a port and listen.
@@ -90,5 +91,28 @@ if (FStr() `$localhost` != '[127.0.0.1:0]')
     die('FAILED localhost lookup formatting');
 if (localhost != Array[Address]![InetAddress(127, 0, 0, 1, 0)])
     die('FAILED localhost lookup');
+
+# create a unix domain socket
+if (1) {
+    const UNIX_SOCK_PATH := '/tmp/crack_test.sock';
+    if (fileExists(UNIX_SOCK_PATH.buffer))
+        fileRemove(UNIX_SOCK_PATH.buffer);
+    usrv := Socket(AF_UNIX, SOCK_STREAM, 0);
+    unixAddr := UnixAddress(UNIX_SOCK_PATH);
+    if (!usrv.bind(unixAddr))
+        cout `FAILED error during bind: $(c_strerror())\n`;
+    usrv.listen(5);
+    uclt := Socket(AF_UNIX, SOCK_STREAM, 0);
+    if (!uclt.connect(unixAddr))
+        cout `FAILED error duing connect: $(c_strerror())\n`;
+    conn := usrv.accept();
+    uclt.send('test string', 0);
+    if (conn.sock.recv(buf, 0) != 11 || buf != 'test string')
+        die('FAILED unix sockets');
+    uclt.close();
+    conn.sock.close();
+    usrv.close();
+    fileRemove(UNIX_SOCK_PATH.buffer);
+}
 
 cout `ok\n`;

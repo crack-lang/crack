@@ -7,13 +7,13 @@ import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
 import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
-    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, TimeVal, close, 
-    listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, 
-    AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, 
-    SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
-    SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
-    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY, setNonBlocking, EAGAIN,
-    EWOULDBLOCK, errno;
+    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, SockAddrUn,
+    TimeVal, close, listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET,
+    AF_INET6, AF_IPX, AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK,
+    AF_PACKET, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
+    SOCK_PACKET, SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR,
+    POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
+    setNonBlocking, EAGAIN, EWOULDBLOCK, errno;
 
 @import crack.ann implements;
 
@@ -94,6 +94,17 @@ class InetAddress : Address {
         int rc = a.addr - b.addr; if (rc) return rc;
         rc = a.port - b.port;
         return rc;
+    }
+}
+
+## Address of a UNIX domain socket.
+class UnixAddress : Address {
+    oper init(String name) : Address(SockAddrUn(name.buffer)) {
+    }
+
+    Address create() {
+        i := SockAddrUn.unsafeCast(_addr);
+        return UnixAddress(StaticString(i.getPath()));
     }
 }
 
