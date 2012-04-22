@@ -2,7 +2,7 @@
 
 import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
-import crack.io FStr, Reader, Writer, cout;
+import crack.io FileHandle, FStr, Reader, Writer;
 import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
@@ -23,18 +23,13 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
     POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
 
-## interface for all classes that can be polled.
-@abstract class Pollable {
-    @abstract int getFD();
-}
-
 ## An event received by a poller.
 ## Attributes are:
 ##  pollable: the pollable object.
 ##  events: the original events that we were waiting for
 ##  revents: the events that were triggered
 class PollEvent : Object, PollEvt {
-    Pollable pollable;
+    FileHandle pollable;
 }
 
 ## base class for all kinds of socket addresses.
@@ -134,19 +129,16 @@ Array[Address] resolve(String hostname) {
 }
 
 ## Wrapper around a socket.
-class Socket : Pollable @implements Reader, Writer {
-    int fd;
+class Socket : FileHandle @implements Reader, Writer {
     
     # the address the socket is bound to.
     Address __bound;
 
     oper init(int domain, int type, int protocol) : 
-        fd = socket(domain, type, protocol) {
+        FileHandle(socket(domain, type, protocol)) {
     }
     
-    oper init(int fd) : fd = fd {}
-
-    int getFD() { return fd; }
+    oper init(int fd) : FileHandle(fd) {}
 
     void close() {
         close(fd);
@@ -245,11 +237,11 @@ class Socket : Pollable @implements Reader, Writer {
     }
 }
         
-## A poller is a collection of Pollables that you can use to wait for an event
-## on any of the pollables and then iterate over the set of events that 
+## A poller is a collection of FileHandle's that you can use to wait for an 
+## event on any of the pollables and then iterate over the set of events that 
 ## occurred.
 class Poller {
-    Array[Pollable] __pollables;
+    Array[FileHandle] __pollables;
     PollSet __fds;
     TimeVal __pollTimeout;
     uint __nextIndex;
@@ -282,30 +274,40 @@ class Poller {
         __capacity = newCapacity;
     }
 
-    void add(Pollable p, int events) {
+    ## Add the pollable to be managed by the poller.  'events' is the set of 
+    ## events that we listen for, or'ed together.
+    ## The known events are:
+    ##  POLLIN - p is ready to read.
+    ##  POLLOUT - p is ready to accept data
+    ##  POLLERR - p has an error
+    ## Less commonly used events are:
+    ##  POLLPRI - p has high priority data to read.
+    ##  POLLHUP - p's connection has hung up on it while trying to output.
+    ##  POLLNVAL - p has received an invalid request.
+    void add(FileHandle p, int events) {
         
         # grow if there's not enough space
         if (__nextIndex == __capacity) grow(__capacity * 2);
         
         # add it to the pollables and to the fds.
         __pollables.append(p);
-        __fds.set(__nextIndex, p.getFD(), events, 0);
+        __fds.set(__nextIndex, p.fd, events, 0);
         
         ++__nextIndex;
     }
     
-    void remove(Pollable p) {
+    void remove(FileHandle p) {
         int i;
         for (i = 0; i < __pollables.count() && __pollables[i] != p; ++i) ;
         if (i == __pollables.count())
-            throw InvalidArgumentError(FStr() `Pollable is not in the set`);
+            throw InvalidArgumentError(FStr() `File handle is not in the set`);
         __pollables.delete(i);
         __fds.delete(__nextIndex, i);
         --__nextIndex;
     }
     
     ## Sets the events that we will wait on from the pollable.
-    void setEvents(Pollable pollable, int events) {
+    void setEvents(FileHandle pollable, int events) {
         # find the index of the pollable
         int i;
         for (p :in __pollables)
@@ -315,9 +317,9 @@ class Poller {
                 ++i;
         
         if (i == __pollables.count())
-            throw InvalidArgumentError(FStr() `Pollable not in Poller`);
+            throw InvalidArgumentError(FStr() `File handle not in Poller`);
         
-        __fds.set(i, pollable.getFD(), events, 0);
+        __fds.set(i, pollable.fd, events, 0);
     }
 
     ## Wait for up to timeout or until the next event.  'timeout' may be null, 
