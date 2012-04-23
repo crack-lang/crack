@@ -1,0 +1,10 @@
+%%TEST%%
+Unix Pipes
+%%ARGS%%
+
+%%FILE%%
+import test.test_pipe;
+%%EXPECT%%
+ok
+%%STDIN%%
+

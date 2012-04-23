@@ -1,0 +1,15 @@
+import crack.net Pipe;
+import crack.io cout;
+import crack.io.readers LineReader;
+
+pipe := Pipe();
+pipe.setNonBlocking(true);
+pipe.setReader();
+lineReader := LineReader(pipe);
+
+pipe = Pipe();
+pipe.setNonBlocking(true);
+pipe.setWriter();
+cout `ok\n`;
+
+

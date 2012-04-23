@@ -2,7 +2,7 @@
 
 import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
-import crack.io FileHandle, FStr, Reader, Writer;
+import crack.io FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
 import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
@@ -13,7 +13,7 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     AF_PACKET, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
     SOCK_PACKET, SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR,
     POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
-    setNonBlocking, EAGAIN, EWOULDBLOCK, errno;
+    setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno;
 
 @import crack.ann implements;
 
@@ -207,6 +207,21 @@ class Socket : FileHandle @implements Reader, Writer {
             sock = sock,
             addr = addr {
         }
+
+        void formatTo(Formatter fmt){
+            fmt.write("Accepted(");
+            if (sock is null)
+                fmt.write("<nosock>");
+            else
+                fmt.format(sock);
+            fmt.write(", ");
+
+            if (addr is null)
+                fmt.write("<noaddr>");
+            else
+                fmt.format(addr);
+            fmt.write(")");
+        }
     }
     
     ## Returns null if there was an error, errno should contain the error.
@@ -247,6 +262,105 @@ class Socket : FileHandle @implements Reader, Writer {
             throw Exception('Incomplete write to socket');
     }
 }
+
+## Wrapper around a Pipe.
+class Pipe : FileHandle @implements Reader, Writer {
+    PipeAddr __addr;
+    FDReader __reader = null;
+    FDWriter __writer = null;
+
+    oper init() : FileHandle(-1), __addr(0) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    oper init(int32 flags) : FileHandle(-1), __addr(flags) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    oper init(int32 flags, int32 readfd, int32 writefd) : FileHandle(-1),
+            __addr(flags, readfd, writefd) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    PipeAddr getAddr(){
+        return __addr;
+    }
+
+    bool isOpen(){
+        return __addr.readfd !=-1 || __addr.writefd !=0;
+    }
+
+    int getFD() {
+        if (isOpen() && __addr.readfd !=-1)
+            return __addr.readfd;
+        return __addr.writefd;
+    }
+
+    void close() {
+        if (__addr.readfd != -1){
+            close(__addr.readfd);
+            __reader = null;
+            __addr.readfd = -1;
+        }
+
+        if (__addr.writefd != -1){
+            close(__addr.writefd);
+            __writer = null;
+            __addr.writefd = -1;
+        }
+    }
+
+    bool setReader(){
+        if ((__reader is null) && (__writer is null) && __addr.readfd != -1) {
+            __reader = FDReader(__addr.readfd);
+            fd = __addr.readfd;
+            return true;
+        }
+        return false;
+    }
+
+    bool setWriter(){
+        if ((__reader is null) && (__writer is null) && __addr.writefd != -1) {
+            __writer = FDWriter(__addr.writefd);
+            fd = __addr.writefd;
+            return true;
+        }
+        return false;
+    }
+
+
+    oper del() {
+        close();
+    }
+
+    int setNonBlocking(bool val) {
+        if (__addr.readfd != -1)
+            return setNonBlocking(__addr.readfd, val);
+        if (__addr.writefd != -1)
+            return setNonBlocking(__addr.readfd, val);
+        return 0;
+    }
+
+    void formatTo(Formatter fmt) {
+        if (__addr is null)
+            fmt.write("Pipe(-1, -1, -1)");
+        else
+            fmt `Pipe($(__addr.flags), $(__addr.readfd), $(__addr.writefd))`;
+    }
+
+    # Reader interface
+    uint read(WriteBuffer buffer) {
+        if (__reader is null) return 0;
+        return __reader.read(buffer);
+    }
+
+    # Writer interface
+    void write(Buffer data) {
+        if (__writer is null) return;
+        __writer.write(data);
+    }
+}
+
         
 ## A poller is a collection of FileHandle's that you can use to wait for an 
 ## event on any of the pollables and then iterate over the set of events that 
@@ -365,4 +479,10 @@ class Poller {
         result.pollable = __pollables[uint(__iter++)];
         return result;   
     }
+
+    void formatTo(Formatter fmt) {
+        fmt.write("Poller:");
+        fmt.format(__pollables);
+    }
+
 }

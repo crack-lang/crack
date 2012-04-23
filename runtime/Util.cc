@@ -11,7 +11,9 @@
 #include <iostream>
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
+#include <utime.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -86,5 +88,31 @@ int setNonBlocking(int fd, int val) {
         flags &= ~O_NONBLOCK;
     return fcntl(fd, F_SETFL, flags);
 }
+
+int setUtimes(const char *path,
+                         int64_t atv_usecs,
+                         int64_t mtv_usecs,
+                         bool now
+                         ) {
+    if (!path){
+        errno = ENOENT;
+        return -1;
+    }
+
+    if (now)
+        return utimes(path, NULL);
+
+    struct timeval times[2];
+    int retval;
+
+    times[0].tv_sec = atv_usecs/1000000;
+    times[0].tv_usec = atv_usecs%1000000;
+
+    times[1].tv_sec = atv_usecs/1000000;
+    times[1].tv_usec = atv_usecs%1000000;
+
+    return utimes(path, times);
+}
+
 
 }}

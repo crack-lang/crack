@@ -122,6 +122,11 @@ addrinfo *AddrInfo_create(const char *host, const char *service,
 void AddrInfo_free(addrinfo *info);
 sockaddr_in *AddrInfo_getInAddr(addrinfo *ai);
 
+struct PipeAddr {
+    int32_t flags, readfd, writefd;
+    static void init1(PipeAddr *pipe, int32_t flags);
+    static void init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writefd);
+};
 
 }} // namespace crack::runtime
 

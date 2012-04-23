@@ -263,5 +263,23 @@ sockaddr_in *AddrInfo_getInAddr(addrinfo *ai) {
         return 0;
 }
 
+void PipeAddr::init1(PipeAddr *pipe, int32_t flags) {
+    int pipefd[2] = {-1, -1};
+    int errors = pipe2(pipefd, flags);
+
+    if (errors == 0) {
+        pipe->flags=flags;
+        pipe->readfd = int32_t(pipefd[0]);
+        pipe->writefd = int32_t(pipefd[1]);
+    }
+}
+
+void PipeAddr::init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writefd) {
+    pipe->flags = flags;
+    pipe->readfd = readfd;
+    pipe->writefd = writefd;
+}
+
+
 }} // namespace crack::runtime
 

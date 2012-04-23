@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fenv.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -769,7 +770,7 @@ OneMacroFuncDouble *one_macros_double[]={ crk_fpclassify_double, crk_isfinite_do
 u_int64_t crk_gettimeofday(void){
   struct timeval crk_timeval;
   gettimeofday(&crk_timeval, NULL);
-  return (unsigned long)(crk_timeval.tv_sec*1000000 + crk_timeval.tv_usec); // Time in usecs
+  return (int64_t)(crk_timeval.tv_sec*1000000 + crk_timeval.tv_usec); // Time in usecs
 }
 
 //------------------------------------------------------------------------------
@@ -904,7 +905,7 @@ void math_init(Module *mod) {
   strtod_func->addArg(mod->getByteptrType(), "str");
 
   // gettimofday wrapper
-  Func* time_func = mod->addFunc(mod->getUint64Type(), "usecs", (void *)crk_gettimeofday);
+  Func* time_func = mod->addFunc(mod->getInt64Type(), "usecs", (void *)crk_gettimeofday);
 
 }
 
