@@ -1,6 +1,28 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2010 Google Inc.
 # Script to launch gdb for crack.
 
+in_prog_args=false
+declare -A gdb_args
+declare -A prog_args
+i=0
+
+for arg in "$@"; do
+    if [ "$arg" = '--' ]; then
+        in_prog_args=true
+    elif $in_prog_args; then
+        prog_args[$((++i))]="$arg"
+    else
+        gdb_args[$((++i))]="$arg"
+    fi
+done
+
+type
+
 LIBS=$(dirname $0)/.libs
-LD_LIBRARY_PATH=$LIBS gdb $LIBS/crack "$@"
+if [ -n "${prog_args[*]}" ]; then
+    echo "set args ${prog_args[*]}" >.crack_dbg.args
+    LD_LIBRARY_PATH=$LIBS gdb $LIBS/crack "${gdb_args[@]}" -x .crack_dbg.args
+else
+    LD_LIBRARY_PATH=$LIBS gdb $LIBS/crack "${gdb_args[@]}"
+fi
