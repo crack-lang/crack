@@ -461,6 +461,7 @@ MDNode *Cacher::writeConstant(VarDef *sym, TypeDef *owner) {
 
 MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
+    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
     vector<Value *> dList;
 
     BTypeDef *type = dynamic_cast<BTypeDef *>(sym->type.get());
@@ -480,7 +481,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
     // operand 2: llvm rep (gvar) or null val (instance var)
     if (gvar)
-        dList.push_back(gvar->rep);
+        dList.push_back(gvar->getRep(b));
     else
         dList.push_back(Constant::getNullValue(type->rep));
 
@@ -504,7 +505,6 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
     // we register with the cache map because a cached module may be
     // on this depended one for this run
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
     b.registerDef(context, sym);
 
     return MDNode::get(getGlobalContext(), dList);
@@ -1014,9 +1014,31 @@ void Cacher::readDefs() {
             case Cacher::ephemeralImport:
                 readEphemeralImport(mnode);
                 break;
+
+#define TWO_PASS 1
+#ifndef TWO_PASS
+            // you guys over here...
+            case Cacher::global:
+                readVarDefGlobal(sym, rep, mnode);
+                break;
+            case Cacher::function:
+            case Cacher::method:
+                readFuncDef(sym, rep, mnode);
+                break;
+            case Cacher::member:
+                readVarDefMember(sym, rep, mnode);
+                break;
+            case Cacher::constant:
+                readConstant(sym, rep, mnode);
+                break;
+    
+            default:
+                assert(0 && "unhandled def type");
+#endif
         }
     }
 
+#ifdef TWO_PASS
     // second pass: everything else
     for (int i = 0; i < imports->getNumOperands(); ++i) {
 
@@ -1059,6 +1081,7 @@ void Cacher::readDefs() {
             assert(0 && "unhandled def type");
         }
     }
+#endif
 }
 
 bool Cacher::readMetadata() {
