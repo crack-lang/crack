@@ -4,5 +4,5 @@ const folding double not on an out-of-range value
 %%FILE%%
 byte b = ~~0xFFFFFFFFFFFFFFF0;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+ParseError: %SCRIPTNAME%:1: Invalid type uint64 for initializer for variable b of type byte.
 %%STDIN%%

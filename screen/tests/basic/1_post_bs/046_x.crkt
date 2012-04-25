@@ -6,6 +6,6 @@ instance variable initializer typecheck
 class A { }
      class B { A a; oper init(): a = 5 { } }
 %%EXPECT%%
-ParseError: %OUTDIR%046_x.crk:2: Invalid type int for initializer for instance variable a of type A
+ParseError: %OUTDIR%046_x.crk:2: Invalid type int for initializer for variable a of type A.
 %%STDIN%%
 

@@ -111,12 +111,37 @@ void Func::finish() {
 
     FuncDefPtr funcDef;
 
+    FuncDefPtr override;
+
+    // XXX the functionality in checkForExistingDef() should be refactored out
+    // of the parser.
+    if (flags & method && !(flags & constructor)) {
+        std::istringstream emptyStream;
+        Toker toker(emptyStream, name.c_str());
+        Parser parser(toker, context);
+
+        LocationMap locMap;
+        Token nameTok(Token::ident, name, locMap.getLocation(name.c_str(), 0));
+
+        VarDefPtr existingDef = parser.checkForExistingDef(nameTok, name, true);
+        override = parser.checkForOverride(existingDef.get(), realArgs, context->ns.get(), nameTok, name);
+    }
+
     // if we have a function pointer, create a extern function for it
     if (funcPtr) {
 
         // if this is a vwrap, use an internal name for the function so as not 
         // to conflict with the actual virtual function we're creating
-        string externName = (flags & vwrap) ? name + ":vwrap" : name;
+        string externName;
+        if (flags & vwrap) {
+            externName = name + ":vwrap";
+        } else if (override) {
+            // if this is an override, create a wrapper function
+            externName = name + ":impl";
+        } else {
+            externName = name;
+        }
+
         funcDef =
             builder.createExternFunc(*realCtx,
                                      static_cast<FuncDef::Flags>(flags & 
@@ -150,7 +175,7 @@ void Func::finish() {
                                             name,
                                             returnType->typeDef,
                                             realArgs,
-                                            0
+                                            override.get()
                                             );
 
         for (int i = 0; i < realArgs.size(); ++i) {
@@ -195,7 +220,7 @@ void Func::finish() {
                                                             "oper init",
                                                             voidType,
                                                             realArgs,
-                                                            0
+                                                            override.get()
                                                             );
         
         // emit the initializers
@@ -236,15 +261,18 @@ void Func::finish() {
         receiverType->createNewFunc(*realCtx, newFunc.get());
     
     // is this a virtual wrapper class?
-    } else if (flags & vwrap) {
-        assert(wrapperClass && "class wrapper not specified for wrapped func");
+    } else if ((flags & vwrap) || override) {
+        if (flags & vwrap) {
+            assert(wrapperClass && "class wrapper not specified for wrapped func");
+        }
+
         ContextPtr funcContext = context->createSubContext(Context::local);
         funcContext->returnType = returnType->typeDef;
         funcContext->toplevel = true;
     
         // create the "this" variable
         ArgDefPtr thisDef =
-            context->builder.createArgDef(wrapperClass, "this");
+            context->builder.createArgDef((flags & vwrap) ? wrapperClass : receiverType, "this");
         funcContext->addDef(thisDef.get());
         VarRefPtr thisRef = funcContext->builder.createVarRef(thisDef.get());
         
@@ -255,7 +283,7 @@ void Func::finish() {
                                                             name,
                                                             returnType->typeDef,
                                                             realArgs,
-                                                            0
+                                                            override.get()
                                                             );
 
         // copy the args into the context.
@@ -280,7 +308,7 @@ void Func::finish() {
             funcContext->builder.emitReturn(*funcContext, 0);
         }
         funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
-        context->addDef(newFunc.get(), wrapperClass);
+        context->addDef(newFunc.get(), (flags & vwrap) ? wrapperClass : receiverType);
     }
 
     finished = true;

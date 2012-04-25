@@ -1647,7 +1647,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             
          } else if (tok2.isAssign()) {
             // it's the assignement operator, parse an expression
-            initializer = parseExpression();
+            initializer = parseInitializer(varDef->type.get(), varDef->name);
          } else {
             unexpected(tok2,
                        "expected constructor arg list or assignment operator"
@@ -1946,7 +1946,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
 
 // type var = ... ;
 //           ^   ^
-ExprPtr Parser::parseInitializer(TypeDef *type) {
+ExprPtr Parser::parseInitializer(TypeDef *type, const std::string &varName) {
    ExprPtr initializer;
    
    // check for special initializer syntax.
@@ -1961,6 +1961,16 @@ ExprPtr Parser::parseInitializer(TypeDef *type) {
       toker.putBack(tok);
       initializer = parseExpression();
    }
+
+   // make sure the initializer matches the declared type.
+   TypeDefPtr oldType = initializer->type;
+   initializer = initializer->convert(*context, type);
+   if (!initializer)
+      error(tok, SPUG_FSTR("Invalid type " << oldType->getDisplayName() << 
+                            " for initializer for variable " << varName << 
+                            " of type " << type->getDisplayName() << "."
+                           )
+            );
    
    return initializer;
 }   
@@ -2092,12 +2102,7 @@ bool Parser::parseDef(TypeDef *&type) {
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
             
-            initializer = parseInitializer(type);
-            // make sure the initializer matches the declared type.
-            initializer = initializer->convert(*context, type);
-            if (!initializer)
-               error(tok3, "Incorrect type for initializer.");
-
+            initializer = parseInitializer(type, varName);
             context->emitVarDef(type, tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 
@@ -2181,7 +2186,7 @@ void Parser::parseConstDef() {
                      );
          
          // parse the initializer
-         ExprPtr expr = parseInitializer(type.get());
+         ExprPtr expr = parseInitializer(type.get(), varName.getData());
          context->emitVarDef(type.get(), varName, expr.get(), true);
          
          // see if there are more constants in this definition.

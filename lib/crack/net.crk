@@ -2,18 +2,18 @@
 
 import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
-import crack.io FStr, Reader, Writer, cout;
+import crack.io FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
 import crack.sys strerror;
 import crack.cont.array Array;
 import crack.time TimeDelta;
 import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
-    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, TimeVal, close, 
-    listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, 
-    AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, 
-    SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
-    SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
-    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY, setNonBlocking, EAGAIN,
-    EWOULDBLOCK, errno;
+    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, SockAddrUn,
+    TimeVal, close, listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET,
+    AF_INET6, AF_IPX, AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK,
+    AF_PACKET, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
+    SOCK_PACKET, SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR,
+    POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
+    setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno;
 
 @import crack.ann implements;
 
@@ -23,18 +23,13 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
     POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY;
 
-## interface for all classes that can be polled.
-@abstract class Pollable {
-    @abstract int getFD();
-}
-
 ## An event received by a poller.
 ## Attributes are:
 ##  pollable: the pollable object.
 ##  events: the original events that we were waiting for
 ##  revents: the events that were triggered
 class PollEvent : Object, PollEvt {
-    Pollable pollable;
+    FileHandle pollable;
 }
 
 ## base class for all kinds of socket addresses.
@@ -102,6 +97,17 @@ class InetAddress : Address {
     }
 }
 
+## Address of a UNIX domain socket.
+class UnixAddress : Address {
+    oper init(String name) : Address(SockAddrUn(name.buffer)) {
+    }
+
+    Address create() {
+        i := SockAddrUn.unsafeCast(_addr);
+        return UnixAddress(StaticString(i.getPath()));
+    }
+}
+
 ## Get all of the addresses for the specified hostname.
 Array[Address] resolve(String hostname) {
     Array[Address] result = {};
@@ -134,19 +140,16 @@ Array[Address] resolve(String hostname) {
 }
 
 ## Wrapper around a socket.
-class Socket : Pollable @implements Reader, Writer {
-    int fd;
+class Socket : FileHandle @implements Reader, Writer {
     
     # the address the socket is bound to.
     Address __bound;
 
     oper init(int domain, int type, int protocol) : 
-        fd = socket(domain, type, protocol) {
+        FileHandle(socket(domain, type, protocol)) {
     }
     
-    oper init(int fd) : fd = fd {}
-
-    int getFD() { return fd; }
+    oper init(int fd) : FileHandle(fd) {}
 
     void close() {
         close(fd);
@@ -204,6 +207,21 @@ class Socket : Pollable @implements Reader, Writer {
             sock = sock,
             addr = addr {
         }
+
+        void formatTo(Formatter fmt){
+            fmt.write("Accepted(");
+            if (sock is null)
+                fmt.write("<nosock>");
+            else
+                fmt.format(sock);
+            fmt.write(", ");
+
+            if (addr is null)
+                fmt.write("<noaddr>");
+            else
+                fmt.format(addr);
+            fmt.write(")");
+        }
     }
     
     ## Returns null if there was an error, errno should contain the error.
@@ -244,12 +262,111 @@ class Socket : Pollable @implements Reader, Writer {
             throw Exception('Incomplete write to socket');
     }
 }
+
+## Wrapper around a Pipe.
+class Pipe : FileHandle @implements Reader, Writer {
+    PipeAddr __addr;
+    FDReader __reader = null;
+    FDWriter __writer = null;
+
+    oper init() : FileHandle(-1), __addr(0) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    oper init(int32 flags) : FileHandle(-1), __addr(flags) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    oper init(int32 flags, int32 readfd, int32 writefd) : FileHandle(-1),
+            __addr(flags, readfd, writefd) {
+        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    }
+
+    PipeAddr getAddr(){
+        return __addr;
+    }
+
+    bool isOpen(){
+        return __addr.readfd !=-1 || __addr.writefd !=0;
+    }
+
+    int getFD() {
+        if (isOpen() && __addr.readfd !=-1)
+            return __addr.readfd;
+        return __addr.writefd;
+    }
+
+    void close() {
+        if (__addr.readfd != -1){
+            close(__addr.readfd);
+            __reader = null;
+            __addr.readfd = -1;
+        }
+
+        if (__addr.writefd != -1){
+            close(__addr.writefd);
+            __writer = null;
+            __addr.writefd = -1;
+        }
+    }
+
+    bool setReader(){
+        if ((__reader is null) && (__writer is null) && __addr.readfd != -1) {
+            __reader = FDReader(__addr.readfd);
+            fd = __addr.readfd;
+            return true;
+        }
+        return false;
+    }
+
+    bool setWriter(){
+        if ((__reader is null) && (__writer is null) && __addr.writefd != -1) {
+            __writer = FDWriter(__addr.writefd);
+            fd = __addr.writefd;
+            return true;
+        }
+        return false;
+    }
+
+
+    oper del() {
+        close();
+    }
+
+    int setNonBlocking(bool val) {
+        if (__addr.readfd != -1)
+            return setNonBlocking(__addr.readfd, val);
+        if (__addr.writefd != -1)
+            return setNonBlocking(__addr.readfd, val);
+        return 0;
+    }
+
+    void formatTo(Formatter fmt) {
+        if (__addr is null)
+            fmt.write("Pipe(-1, -1, -1)");
+        else
+            fmt `Pipe($(__addr.flags), $(__addr.readfd), $(__addr.writefd))`;
+    }
+
+    # Reader interface
+    uint read(WriteBuffer buffer) {
+        if (__reader is null) return 0;
+        return __reader.read(buffer);
+    }
+
+    # Writer interface
+    void write(Buffer data) {
+        if (__writer is null) return;
+        __writer.write(data);
+    }
+}
+
         
-## A poller is a collection of Pollables that you can use to wait for an event
-## on any of the pollables and then iterate over the set of events that 
+## A poller is a collection of FileHandle's that you can use to wait for an 
+## event on any of the pollables and then iterate over the set of events that 
 ## occurred.
 class Poller {
-    Array[Pollable] __pollables;
+    Array[FileHandle] __pollables;
     PollSet __fds;
     TimeVal __pollTimeout;
     uint __nextIndex;
@@ -282,30 +399,40 @@ class Poller {
         __capacity = newCapacity;
     }
 
-    void add(Pollable p, int events) {
+    ## Add the pollable to be managed by the poller.  'events' is the set of 
+    ## events that we listen for, or'ed together.
+    ## The known events are:
+    ##  POLLIN - p is ready to read.
+    ##  POLLOUT - p is ready to accept data
+    ##  POLLERR - p has an error
+    ## Less commonly used events are:
+    ##  POLLPRI - p has high priority data to read.
+    ##  POLLHUP - p's connection has hung up on it while trying to output.
+    ##  POLLNVAL - p has received an invalid request.
+    void add(FileHandle p, int events) {
         
         # grow if there's not enough space
         if (__nextIndex == __capacity) grow(__capacity * 2);
         
         # add it to the pollables and to the fds.
         __pollables.append(p);
-        __fds.set(__nextIndex, p.getFD(), events, 0);
+        __fds.set(__nextIndex, p.fd, events, 0);
         
         ++__nextIndex;
     }
     
-    void remove(Pollable p) {
+    void remove(FileHandle p) {
         int i;
         for (i = 0; i < __pollables.count() && __pollables[i] != p; ++i) ;
         if (i == __pollables.count())
-            throw InvalidArgumentError(FStr() `Pollable is not in the set`);
+            throw InvalidArgumentError(FStr() `File handle is not in the set`);
         __pollables.delete(i);
         __fds.delete(__nextIndex, i);
         --__nextIndex;
     }
     
     ## Sets the events that we will wait on from the pollable.
-    void setEvents(Pollable pollable, int events) {
+    void setEvents(FileHandle pollable, int events) {
         # find the index of the pollable
         int i;
         for (p :in __pollables)
@@ -315,9 +442,9 @@ class Poller {
                 ++i;
         
         if (i == __pollables.count())
-            throw InvalidArgumentError(FStr() `Pollable not in Poller`);
+            throw InvalidArgumentError(FStr() `File handle not in Poller`);
         
-        __fds.set(i, pollable.getFD(), events, 0);
+        __fds.set(i, pollable.fd, events, 0);
     }
 
     ## Wait for up to timeout or until the next event.  'timeout' may be null, 
@@ -352,4 +479,10 @@ class Poller {
         result.pollable = __pollables[uint(__iter++)];
         return result;   
     }
+
+    void formatTo(Formatter fmt) {
+        fmt.write("Poller:");
+        fmt.format(__pollables);
+    }
+
 }

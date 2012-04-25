@@ -1,0 +1,33 @@
+%%TEST%%
+member initializers function like normal initializers
+%%ARGS%%
+%%FILE%%
+if (1) {
+    class A {
+        uint64 i;
+        oper init() : i = 100 {}
+    }
+
+    if (A().i != 100)
+        puts('FAIL');
+}
+
+if (1) {
+    class A {
+        int x, y;
+        oper init(int x, int y) : x = x, y = y {}
+    }
+
+    class B {
+        A a;
+        oper init() : a = {1, 2} {}
+    }
+
+    if (B().a.y != 2)
+        puts('FAILED initializer sugar in member initializer');
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

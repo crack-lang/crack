@@ -11,6 +11,7 @@
 #include <malloc.h>
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
 
 #include <iostream>
 
@@ -24,6 +25,36 @@ namespace {
         sa->sin_port = htons(addr->port);
         sa->sin_addr.s_addr = htonl(addr->addr);
     }
+
+    static void set_sockaddr_un(struct sockaddr_un *sa,
+                                crack::runtime::SockAddrUn *addr
+                                ) {
+        sa->sun_family = AF_UNIX;
+        strcpy(sa->sun_path, addr->path);
+    }
+
+    typedef union {
+        sockaddr_in in;
+        sockaddr_un un;
+    } AddrUnion;
+
+    static socklen_t set_sockaddr(AddrUnion &addrs,
+                                  crack::runtime::SockAddr *addr
+                                  ) {
+        socklen_t sz;
+        if (addr->family == AF_INET) {
+            set_sockaddr_in(&addrs.in,
+                            static_cast<crack::runtime::SockAddrIn *>(addr));
+            sz = sizeof(addrs.in);
+        } else {
+            set_sockaddr_un(&addrs.un,
+                            static_cast<crack::runtime::SockAddrUn *>(addr));
+            sz = sizeof(addrs.un);
+        }
+
+        return sz;
+    }
+
 }
 
 // our exported functions
@@ -60,6 +91,15 @@ uint16_t SockAddrIn::crack_ntohs(uint16_t val) {
     return ntohs(val);
 }
 
+void SockAddrUn::init(SockAddrUn *inst, const char *path) {
+    inst->family = AF_UNIX;
+    strncpy(inst->path, path, UNIX_PATH_MAX);
+}
+
+const char *SockAddrUn::getPath(SockAddrUn *inst) {
+    return inst->path;
+}
+
 void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
     inst->secs = secs0;
     inst->nsecs = nsecs0;
@@ -69,26 +109,38 @@ uint32_t makeIPV4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     return (a << 24) | (b << 16) | (c << 8) | d;
 }
 
-int connect(int s, SockAddrIn *addr) {
-    sockaddr_in sa;
-    set_sockaddr_in(&sa, addr);
-    return ::connect(s, (sockaddr *)&sa, sizeof(sa));
+int connect(int s, SockAddr *addr) {
+    AddrUnion addrs;
+    socklen_t sz = set_sockaddr(addrs, addr);
+    return ::connect(s, (sockaddr *)&addrs, sz);
 }
 
-int bind(int s, SockAddrIn *addr) {
-    sockaddr_in sa;
-    set_sockaddr_in(&sa, addr);
-    return ::bind(s, (sockaddr *)&sa, sizeof(sa));
+int bind(int s, SockAddr *addr) {
+    AddrUnion addrs;
+    socklen_t sz = set_sockaddr(addrs, addr);
+    return ::bind(s, (sockaddr *)&addrs, sz);
 }
 
-int accept(int s, SockAddrIn *addr) {
-    sockaddr_in sa;
-    sa.sin_family = AF_INET;
-    socklen_t saSize = sizeof(sa);
-    int newSock = ::accept(s, (sockaddr *)&sa, &saSize);
+int accept(int s, SockAddr *addr) {
+    AddrUnion addrs;
+    addrs.in.sin_family = addr->family;
+    socklen_t saSize = sizeof(addrs);
+    int newSock = ::accept(s, (sockaddr *)&addrs, &saSize);
     if (newSock != -1) {
-        addr->port = ntohs(sa.sin_port);
-        addr->addr = ntohl(sa.sin_addr.s_addr);
+        switch (addrs.in.sin_family) {
+            case AF_INET: {
+                SockAddrIn *in = static_cast<SockAddrIn *>(addr);
+                in->port = ntohs(addrs.in.sin_port);
+                in->addr = ntohl(addrs.in.sin_addr.s_addr);
+                break;
+            }
+            case AF_UNIX: {
+                SockAddrUn *un = static_cast<SockAddrUn *>(addr);
+                assert(un->family == AF_UNIX);
+                strcpy(un->path, addrs.un.sun_path);
+                break;
+            }
+        }
     }
 
     return newSock;
@@ -210,6 +262,24 @@ sockaddr_in *AddrInfo_getInAddr(addrinfo *ai) {
     else
         return 0;
 }
+
+void PipeAddr::init1(PipeAddr *pipe, int32_t flags) {
+    int pipefd[2] = {-1, -1};
+    int errors = pipe2(pipefd, flags);
+
+    if (errors == 0) {
+        pipe->flags=flags;
+        pipe->readfd = int32_t(pipefd[0]);
+        pipe->writefd = int32_t(pipefd[1]);
+    }
+}
+
+void PipeAddr::init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writefd) {
+    pipe->flags = flags;
+    pipe->readfd = readfd;
+    pipe->writefd = writefd;
+}
+
 
 }} // namespace crack::runtime
 

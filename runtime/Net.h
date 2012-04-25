@@ -7,6 +7,10 @@
 #include <signal.h>
 #include <poll.h>
 #include <netdb.h>
+#include <sys/un.h>
+#ifndef UNIX_PATH_MAX
+# define UNIX_PATH_MAX 108
+#endif
 
 namespace crack { namespace runtime {
 
@@ -62,6 +66,13 @@ struct SockAddrIn : public SockAddr {
     static uint16_t crack_ntohs(uint16_t val);
 };
 
+struct SockAddrUn : public SockAddr {
+    char path[UNIX_PATH_MAX];
+
+    static void init(SockAddrUn *inst, const char *path);
+    static const char *getPath(SockAddrUn *inst);
+};
+
 struct TimeVal {
     int32_t secs, nsecs;
 
@@ -74,9 +85,9 @@ struct PollEvt {
 
 Constants *getConstants();
 uint32_t makeIPV4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-int connect(int s, SockAddrIn *addr);
-int bind(int s, SockAddrIn *addr);
-int accept(int s, SockAddrIn *addr);
+int connect(int s, SockAddr *addr);
+int bind(int s, SockAddr *addr);
+int accept(int s, SockAddr *addr);
 int setsockopt_int(int fd, int level, int optname, int val);
 
 sigset_t *SigSet_create();
@@ -111,6 +122,11 @@ addrinfo *AddrInfo_create(const char *host, const char *service,
 void AddrInfo_free(addrinfo *info);
 sockaddr_in *AddrInfo_getInAddr(addrinfo *ai);
 
+struct PipeAddr {
+    int32_t flags, readfd, writefd;
+    static void init1(PipeAddr *pipe, int32_t flags);
+    static void init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writefd);
+};
 
 }} // namespace crack::runtime
 

@@ -354,7 +354,9 @@ class Parser {
        * Parse a variable definition initializer.  Deals with the special
        * syntax for constructors and sequence constants.
        */
-      model::ExprPtr parseInitializer(model::TypeDef *type);
+      model::ExprPtr parseInitializer(model::TypeDef *type,
+                                      const std::string &varName
+                                      );
 
       /**
        * Parse an alias statement.
@@ -421,12 +423,15 @@ class Parser {
 
       model::TypeDefPtr parseClassDef();
 
+   public:
+      // XXX should be protected, once required functionality is migrated out.
       // error checking functions
       model::VarDefPtr checkForExistingDef(const Token &tok,
                                            const std::string &name,
                                            bool overloadOk = false
                                            );
 
+      // XXX should be protected, once required functionality is migrated out.
       // checks if "existingDef" is an OverloadDef that contains an overload
       // matching argDefs.  Raises an error if this is an illegal overload,
       // otherwise returns the function that we're overriding if the override
@@ -439,7 +444,6 @@ class Parser {
                                          const std::string &name
                                          );
 
-   public:
       // current parser state.
       enum State { st_base, st_optElse, st_notBase } state;
 

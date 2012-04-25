@@ -4,5 +4,5 @@ const fold of 'not' on out-of-range value
 %%FILE%%
 byte b = ~0x100;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1: Incorrect type for initializer.
+ParseError: %SCRIPTNAME%:1: Invalid type int for initializer for variable b of type byte.
 %%STDIN%%
