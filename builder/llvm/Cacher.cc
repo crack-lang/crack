@@ -285,7 +285,7 @@ void Cacher::writeNamespace(Namespace *ns) {
 MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
     if (options->verbosity >= 2)
-        cerr << "writing type " << t->name << " in module " <<
+        cerr << "writing type " << t->getFullName() << " in module " <<
             modDef->getNamespaceName() <<
             endl;
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
@@ -318,6 +318,15 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
     // operand 4: metatype type (null initializer)
     Type *metaTypeRep = BTypeDefPtr::acast(metaClass)->rep;
     dList.push_back(Constant::getNullValue(metaTypeRep));
+
+    // operand 5: parent class namespace, relevant to nested classes.
+    Namespace *ownerNS = t->getOwner();
+    if (dynamic_cast<BTypeDef*>(ownerNS)) {
+        dList.push_back(MDString::get(getGlobalContext(), ownerNS->getNamespaceName()));
+    }
+    else {
+        dList.push_back(NULL);
+    }
 
     // register in canonical map for subsequent cache loads
     if (bt)
@@ -740,7 +749,7 @@ BTypeDefPtr Cacher::readMetaType(MDNode *mnode) {
     return metaType;
 }
 
-void Cacher::finishType(TypeDef *type, BTypeDef *metaType) {
+void Cacher::finishType(TypeDef *type, BTypeDef *metaType, NamespacePtr owner) {
     // tie the meta-class to the class
     if (metaType)
         metaType->meta = type;
@@ -749,7 +758,7 @@ void Cacher::finishType(TypeDef *type, BTypeDef *metaType) {
     type->defaultInitializer = new NullConst(type);
     type->complete = true;
 
-    modDef->addDef(type);
+    owner->addDef(type);
 }
 
 void Cacher::readTypeDef(const std::string &sym,
@@ -760,13 +769,25 @@ void Cacher::readTypeDef(const std::string &sym,
     StructType *s = cast<StructType>(p->getElementType());
 
     BTypeDefPtr metaType = readMetaType(mnode);
+
+    // operand 5: parent class namespace, relevant to nested classes.
+    NamespacePtr owner = modDef; // by default, module owns the type
+    Value *pcStr = mnode->getOperand(5);
+    if (pcStr) {
+        MDString *parentClass = dyn_cast<MDString>(pcStr);
+        assert(parentClass && "parentClass not string");
+        TypeDefPtr pType = resolveType(parentClass->getString().str());
+        assert(pType && "can't find parent class");
+        owner = NamespacePtr::arcast(pType);
+    }
+
     BTypeDefPtr type = new BTypeDef(metaType.get(),
                         sym,
                         rep->getType(),
                         true,
                         0 /* nextVTableslot */
                         );
-    finishType(type.get(), metaType.get());
+    finishType(type.get(), metaType.get(), owner);
     assert(type->getOwner());
 
     if (s->getName().str() != type->getFullName()) {
@@ -843,7 +864,7 @@ void Cacher::readGenericTypeDef(const std::string &sym,
     type->genericInfo->ns = modDef.get();
     type->genericInfo->compileNS = new GlobalNamespace(0, "");
 
-    finishType(type.get(), metaType.get());
+    finishType(type.get(), metaType.get(), modDef);
     assert(type->getOwner());
     context.construct->registerDef(type.get());
 }

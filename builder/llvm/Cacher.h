@@ -69,7 +69,8 @@ protected:
     void readVarDefGlobal(const std::string &, llvm::Value *, llvm::MDNode *);
     void readFuncDef(const std::string &, llvm::Value *, llvm::MDNode *);
     BTypeDefPtr readMetaType(llvm::MDNode *mnode);
-    void finishType(model::TypeDef *type, BTypeDef *metaType);
+    void finishType(model::TypeDef *type, BTypeDef *metaType,
+                    model::NamespacePtr owner);
     void readTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
     void readGenericTypeDef(const std::string &, llvm::Value *, llvm::MDNode *);
 
