@@ -21,7 +21,7 @@ echo
 lib_paths="$root/lib:$root/screen:$builddir/lib"
 builders="-bjit"
 test_dir="$root/screen/tests/basic"
-opts=""
+opts="--diff"
 screen_jit=false
 screen_recompile=false
 
