@@ -427,15 +427,25 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     // value to cacheMap
     BGlobalVarDefImpl *bgbl;
     BFuncDef *fd;
-    if (varDef->impl && (bgbl = dynamic_cast<BGlobalVarDefImpl*>(varDef->impl.get()))) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    if (varDef->impl && (bgbl = BGlobalVarDefImplPtr::rcast(varDef->impl))) {
         // global
-        cacheMap->insert(CacheMapType::value_type(varDef->getFullName(),bgbl->rep));
-    }
-    else if (fd = dynamic_cast<BFuncDef*>(varDef)) {
+        cacheMap->insert(
+            CacheMapType::value_type(
+                varDef->getFullName(),
+//                dyn_cast<GlobalValue>(bgbl->getRep(builder))
+                bgbl->rep
+            )
+        );
+    } else if (fd = BFuncDefPtr::cast(varDef)) {
         // funcdef
-        cacheMap->insert(CacheMapType::value_type(varDef->getFullName(),fd->rep));
-        }
-    else {
+        cacheMap->insert(
+            CacheMapType::value_type(varDef->getFullName(),
+//                                     fd->getRep(builder)
+                                     fd->rep
+                                     )
+        );
+    } else {
         //assert(0 && "registerDef: unknown varDef type");
         // this happens in a call from parser (not cacher) on e.g. classes,
         // which we don't care about here
