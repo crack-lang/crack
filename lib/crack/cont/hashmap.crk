@@ -824,7 +824,6 @@ class OrderedHashMap[Key, Value] {
 
         if (_items[i]) {
             item := _items[i];
-             found := item.next;
 
             # Handle the head and tail
             if (item is tail){
@@ -839,7 +838,7 @@ class OrderedHashMap[Key, Value] {
             # if the next item is the tail, reset the tail.
             if (item.next is tail)
                 tail = item;
-            found: = item.next;
+            found := item.next;
 
             # drop the current next item.
             tmp := item.next.next;
