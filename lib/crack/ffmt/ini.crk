@@ -4,11 +4,16 @@
 // (C) Conrad Steenberg <conrad.steenberg@gmail.com>
 // 2/11/2012
 
-import crack.io FStr;
-import crack.lang Formatter, AppendBuffer, Buffer;
-import crack.cont.treemap TreeMap;
+import crack.io FStr, cout;
+import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
+                  WriteBuffer, Exception, IndexError, KeyError, CString;
+import crack.cont.hashmap OrderedHashMap;
 import crack.cont.array Array;
+import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
+                    stat, fileno;
 import crack.ascii escape;
+import crack.sys strerror;
+import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
 
 class IniError {
   String msg;
@@ -26,163 +31,333 @@ class IniParser {
 
     uint maxErr = 1;
     Array[IniError] _errors;
-    TreeMap[String, TreeMap[String, String]] _resultMap;
-    TreeMap[String, String] _sectionMap;
+    OrderedHashMap[String, OrderedHashMap[String, String]] _resultMap;
+    OrderedHashMap[String, String] _sectionMap;
 
     
-# line 34 "lib/crack/ffmt/ini.crk"
+# line 39 "lib/crack/ffmt/ini.crk"
 Array[uint] _IniParser_actions = [
   0, 1, 2, 1, 5, 1, 6, 1, 
   7, 1, 8, 1, 9, 1, 10, 1, 
   11, 1, 12, 2, 3, 0, 2, 4, 
   3, 2, 7, 8, 2, 8, 2, 3, 
-  4, 1, 3, 3, 13, 1, 3
+  4, 1, 3, 3, 13, 1, 3, 4, 
+  3, 0, 13, 1, 4, 4, 3, 13, 
+  1
 ];
 
 Array[uint] _IniParser_trans_keys = [
-  0, 0, 9, 32, 10, 13, 
-  9, 122, 9, 61, 0, 
-  92, 0, 92, 34, 116, 
-  48, 55, 48, 55, 65, 122, 
-  45, 122, 9, 32, 9, 
-  122, 0
+  0, 0, 9, 61, 9, 61, 
+  0, 92, 0, 92, 34, 
+  116, 48, 55, 48, 55, 
+  9, 32, 9, 61, 9, 61, 
+  10, 13, 0, 92, 0, 
+  92, 10, 116, 10, 55, 
+  10, 55, 9, 93, 9, 93, 
+  0, 93, 0, 93, 9, 
+  116, 9, 93, 9, 32, 
+  9, 93, 9, 93, 0, 92, 
+  9, 61, 9, 61, 9, 
+  91, 0
 ];
 
 Array[uint] _IniParser_key_spans = [
-  0, 24, 4, 114, 53, 93, 93, 83, 
-  8, 8, 58, 78, 24, 114
+  0, 53, 53, 93, 93, 83, 8, 8, 
+  24, 53, 53, 4, 93, 93, 107, 46, 
+  46, 85, 85, 94, 94, 108, 85, 24, 
+  85, 85, 93, 53, 53, 83
 ];
 
 Array[uint] _IniParser_index_offsets = [
-  0, 0, 25, 30, 145, 199, 293, 387, 
-  471, 480, 489, 548, 627, 652
+  0, 0, 54, 108, 202, 296, 380, 389, 
+  398, 423, 477, 531, 536, 630, 724, 832, 
+  879, 926, 1012, 1098, 1193, 1288, 1397, 1483, 
+  1508, 1594, 1680, 1774, 1828, 1882
 ];
 
 Array[uint] _IniParser_indicies = [
-  0, 2, 1, 1, 2, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 0, 
-  1, 4, 3, 3, 4, 3, 5, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 5, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 6, 1, 1, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 1, 
-  1, 1, 7, 1, 1, 1, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 1, 6, 1, 6, 1, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  1, 8, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  8, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 7, 1, 9, 
+  1, 2, 0, 0, 2, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 1, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 3, 0, 0, 3, 0, 4, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 4, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 3, 
+  2, 2, 3, 2, 5, 5, 5, 5, 
+  5, 5, 5, 5, 5, 6, 7, 5, 
+  5, 7, 5, 5, 5, 5, 5, 5, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 5, 5, 5, 8, 9, 9, 9, 
   9, 9, 9, 9, 9, 9, 9, 9, 
-  10, 11, 9, 9, 11, 9, 9, 9, 
   9, 9, 9, 9, 9, 9, 9, 9, 
-  9, 9, 9, 9, 9, 9, 9, 12, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 14, 13, 9, 9, 9, 
-  9, 9, 9, 9, 9, 9, 9, 11, 
-  9, 9, 11, 9, 9, 9, 9, 9, 
   9, 9, 9, 9, 9, 9, 9, 9, 
-  9, 9, 9, 9, 9, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 13, 13, 13, 13, 13, 13, 13, 
-  13, 14, 13, 15, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 16, 
-  15, 16, 1, 1, 16, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 15, 1, 1, 
-  1, 1, 1, 15, 1, 1, 1, 15, 
-  1, 1, 1, 1, 1, 1, 1, 15, 
-  1, 1, 1, 15, 1, 15, 1, 17, 
-  17, 17, 17, 17, 17, 17, 17, 1, 
-  18, 18, 18, 18, 18, 18, 18, 18, 
-  1, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 1, 1, 1, 1, 19, 
-  1, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 1, 19, 1, 1, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 1, 1, 1, 1, 1, 1, 1, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 1, 1, 20, 1, 19, 1, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 19, 19, 19, 19, 19, 19, 
-  19, 19, 1, 21, 22, 1, 1, 22, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 21, 1, 0, 2, 1, 1, 
-  2, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 0, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 1, 3, 1, 
-  1, 1, 1, 1, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 23, 1, 
-  1, 1, 6, 1, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 6, 6, 
-  6, 6, 6, 6, 6, 6, 1, 0
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  10, 9, 5, 5, 5, 5, 5, 5, 
+  5, 5, 5, 5, 7, 5, 5, 7, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 5, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 10, 9, 
+  11, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 12, 11, 12, 2, 
+  2, 12, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 11, 2, 2, 2, 2, 2, 
+  11, 2, 2, 2, 11, 2, 2, 2, 
+  2, 2, 2, 2, 11, 2, 2, 2, 
+  11, 2, 11, 2, 13, 13, 13, 13, 
+  13, 13, 13, 13, 2, 14, 14, 14, 
+  14, 14, 14, 14, 14, 2, 15, 16, 
+  2, 2, 16, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 15, 2, 18, 
+  19, 17, 17, 19, 17, 17, 17, 17, 
+  17, 17, 17, 17, 17, 17, 17, 17, 
+  17, 17, 17, 17, 17, 17, 18, 17, 
+  17, 17, 17, 17, 17, 17, 17, 17, 
+  17, 17, 17, 17, 17, 17, 17, 17, 
+  17, 17, 17, 17, 17, 17, 17, 17, 
+  20, 17, 17, 20, 17, 22, 19, 21, 
+  21, 19, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 22, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 20, 21, 
+  21, 20, 21, 19, 21, 21, 19, 21, 
+  23, 23, 23, 23, 23, 23, 23, 23, 
+  23, 24, 25, 23, 23, 25, 23, 23, 
+  23, 23, 23, 23, 23, 23, 23, 23, 
+  23, 23, 23, 23, 23, 23, 23, 23, 
+  26, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 28, 27, 23, 23, 
+  23, 23, 23, 23, 23, 23, 23, 23, 
+  25, 23, 23, 25, 23, 23, 23, 23, 
+  23, 23, 23, 23, 23, 23, 23, 23, 
+  23, 23, 23, 23, 23, 23, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 27, 27, 27, 27, 27, 27, 
+  27, 27, 28, 27, 19, 21, 21, 19, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 29, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  30, 29, 30, 21, 21, 30, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 29, 21, 
+  21, 21, 21, 21, 29, 21, 21, 21, 
+  29, 21, 21, 21, 21, 21, 21, 21, 
+  29, 21, 21, 21, 29, 21, 29, 21, 
+  19, 21, 21, 19, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 31, 31, 
+  31, 31, 31, 31, 31, 31, 21, 19, 
+  21, 21, 19, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 21, 21, 21, 
+  21, 21, 21, 21, 21, 32, 32, 32, 
+  32, 32, 32, 32, 32, 21, 1, 2, 
+  33, 33, 2, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 1, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 34, 
+  33, 33, 34, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  0, 33, 0, 33, 1, 2, 33, 33, 
+  2, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 1, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 34, 33, 33, 
+  34, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 33, 33, 
+  33, 33, 33, 33, 33, 33, 0, 33, 
+  35, 33, 36, 36, 36, 36, 36, 36, 
+  36, 36, 36, 6, 7, 36, 36, 7, 
+  36, 36, 36, 36, 36, 36, 36, 36, 
+  36, 36, 36, 36, 36, 36, 36, 36, 
+  36, 36, 8, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 9, 38, 39, 
+  37, 36, 36, 36, 36, 36, 36, 36, 
+  36, 36, 5, 7, 36, 36, 7, 36, 
+  36, 36, 36, 36, 36, 36, 36, 36, 
+  36, 36, 36, 36, 36, 36, 36, 36, 
+  36, 9, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 37, 37, 37, 37, 
+  37, 37, 37, 37, 9, 38, 39, 37, 
+  2, 2, 40, 40, 2, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 2, 
+  40, 41, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 42, 41, 42, 
+  40, 40, 42, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 2, 41, 43, 40, 40, 40, 
+  40, 41, 40, 40, 40, 41, 40, 40, 
+  40, 40, 40, 40, 40, 41, 40, 40, 
+  40, 41, 40, 41, 40, 2, 2, 40, 
+  40, 2, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 2, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 2, 
+  40, 43, 40, 44, 45, 2, 2, 45, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 44, 2, 2, 2, 40, 40, 
+  2, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 2, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 46, 46, 46, 46, 46, 
+  46, 46, 46, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 2, 40, 
+  43, 40, 2, 2, 40, 40, 2, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 2, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 47, 47, 47, 47, 47, 47, 47, 
+  47, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 40, 40, 40, 40, 
+  40, 40, 40, 40, 2, 40, 43, 40, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 48, 49, 5, 5, 49, 5, 5, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  50, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 10, 9, 51, 45, 
+  0, 0, 45, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 51, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 3, 
+  0, 0, 3, 0, 52, 45, 2, 2, 
+  45, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 52, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 3, 2, 2, 
+  3, 2, 15, 16, 0, 0, 16, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 15, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 2, 17, 0, 2, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 53, 0, 0
 ];
 
 Array[uint] _IniParser_trans_targs = [
-  1, 0, 13, 2, 13, 4, 3, 5, 
-  4, 6, 5, 13, 5, 6, 7, 6, 
-  8, 9, 6, 11, 12, 12, 13, 10
+  1, 2, 0, 3, 2, 4, 3, 29, 
+  3, 4, 5, 4, 6, 7, 4, 8, 
+  29, 9, 10, 29, 12, 11, 10, 13, 
+  12, 29, 12, 13, 14, 13, 15, 16, 
+  13, 18, 19, 27, 20, 20, 21, 26, 
+  22, 20, 24, 23, 23, 29, 25, 20, 
+  26, 29, 26, 28, 28, 17
 ];
 
 Array[uint] _IniParser_trans_actions = [
-  0, 0, 31, 0, 22, 7, 0, 25, 
-  0, 1, 28, 35, 9, 0, 11, 17, 
-  13, 0, 15, 0, 5, 0, 19, 3
+  0, 7, 0, 25, 0, 1, 28, 35, 
+  9, 0, 11, 17, 13, 0, 15, 0, 
+  31, 0, 7, 22, 25, 0, 0, 1, 
+  28, 44, 9, 0, 11, 17, 13, 0, 
+  15, 0, 25, 5, 1, 0, 11, 5, 
+  0, 17, 13, 5, 0, 19, 0, 15, 
+  1, 39, 0, 7, 0, 3
 ];
 
-uint IniParser_start = 13;
-uint IniParser_first_final = 13;
+uint IniParser_start = 29;
+uint IniParser_first_final = 29;
 uint IniParser_error = 0;
 
-uint  IniParser_en_main = 13;
+uint  IniParser_en_main = 29;
 
 
-# line 182 "opt/ini.rl"
+# line 187 "opt/ini.rl"
 
 
     # parser method ------------------------------------------------------------
     oper init() {}
 
-    TreeMap[String, TreeMap[String, String]] parse(String inputString, uint p0, uint pe0) {
+    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString, uint p0, uint pe0) {
         AppendBuffer appendBuf = {128}; // String to hold the value
         _errors = Array[IniError]();      // reset _errors
 
@@ -200,13 +375,13 @@ uint  IniParser_en_main = 13;
         byte chr;
 
         
-# line 204 "lib/crack/ffmt/ini.crk"
+# line 379 "lib/crack/ffmt/ini.crk"
   cs = IniParser_start;
 
-# line 205 "opt/ini.rl"
+# line 210 "opt/ini.rl"
 
         
-# line 210 "lib/crack/ffmt/ini.crk"
+# line 385 "lib/crack/ffmt/ini.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -267,88 +442,88 @@ uint  IniParser_en_main = 13;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 36 "opt/ini.rl" # end of line directive
+# line 41 "opt/ini.rl" # end of line directive
     
           p = p - 1;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 40 "opt/ini.rl" # end of line directive
+# line 45 "opt/ini.rl" # end of line directive
     
-          if (p > okp)
-            _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
-          if (_errors.count() >= maxErr) return _resultMap;
+            if (p > okp)
+                _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
+            if (_errors.count() >= maxErr) return _resultMap;
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
-# line 46 "opt/ini.rl" # end of line directive
+# line 51 "opt/ini.rl" # end of line directive
     
-          if (p > okp) {
-            String msg;
-            if (data[p] == b'=')
-              msg = "Invalid key syntax ";
-            else
-              msg = "Invalid value syntax ";
-            _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
-          }
-          if (_errors.count() >= maxErr) return _resultMap;
+            if (p > okp) {
+                String msg;
+                if (data[p] == b'=')
+                    msg = "Invalid key syntax ";
+                else
+                    msg = "Invalid value syntax ";
+                _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
+            }
+            if (_errors.count() >= maxErr) return _resultMap;
             // ACTION
     }
     else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
-# line 58 "opt/ini.rl" # end of line directive
+# line 63 "opt/ini.rl" # end of line directive
     
-          if (lineOffset < p && data[p] < 32) line+=1;
-          lineOffset = p+1;
-          okp = p+1;
+            if (lineOffset < p && data[p] < 32) line+=1;
+            lineOffset = p+1;
+            okp = p+1;
             // ACTION
     }
     else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
-# line 64 "opt/ini.rl" # end of line directive
+# line 69 "opt/ini.rl" # end of line directive
     
-          okp = p+1;
+            okp = p+1;
             // ACTION
     }
     else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
-# line 68 "opt/ini.rl" # end of line directive
+# line 73 "opt/ini.rl" # end of line directive
     
-          if (p==lineOffset) {
-            if (_sectionMap != null && sectionName != null){
-              _resultMap[sectionName] = _sectionMap;
+            if (p==lineOffset) {
+                if (_sectionMap != null && sectionName != null){
+                  _resultMap[sectionName] = _sectionMap;
+                }
+                _sectionMap = null;
+                sectionName = null;
+                okp = p+1;
             }
-            _sectionMap = null;
-            sectionName = null;
-            okp = p+1;
-          }
             // ACTION
     }
     else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
-# line 79 "opt/ini.rl" # end of line directive
+# line 84 "opt/ini.rl" # end of line directive
     
-          sectionName = inputString.slice(okp, p);
-          _sectionMap = TreeMap[String, String]();
-          _resultMap[sectionName] = _sectionMap;
-          okp = p+1;
+            sectionName = inputString.slice(okp, p);
+            _sectionMap = OrderedHashMap[String, String]();
+            _resultMap[sectionName] = _sectionMap;
+            okp = p+1;
             // ACTION
     }
     else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
-# line 86 "opt/ini.rl" # end of line directive
+# line 91 "opt/ini.rl" # end of line directive
     
-          if (marker < lineOffset) {
-            key = inputString.slice(lineOffset, p);
-            marker = p;
-          }
-          okp = p+1;
+            if (marker < lineOffset) {
+                key = inputString.slice(lineOffset, p);
+                marker = p;
+            }
+            okp = p+1;
             // ACTION
     }
     else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
-# line 94 "opt/ini.rl" # end of line directive
+# line 99 "opt/ini.rl" # end of line directive
     
-          appendBuf.size = 0;
-          okp = p+1;
+            appendBuf.size = 0;
+            okp = p+1;
             // ACTION
     }
     else  if (_tempval  == 9) { // FROM_STATE_ACTION_SWITCH
-# line 99 "opt/ini.rl" # end of line directive
+# line 104 "opt/ini.rl" # end of line directive
     
             if (p>okp){
               appendBuf.extend(data + uintz(okp), p - okp);
@@ -357,13 +532,13 @@ uint  IniParser_en_main = 13;
             // ACTION
     }
     else  if (_tempval  == 10) { // FROM_STATE_ACTION_SWITCH
-# line 106 "opt/ini.rl" # end of line directive
+# line 111 "opt/ini.rl" # end of line directive
     
-          okp = p;
+            okp = p;
             // ACTION
     }
     else  if (_tempval  == 11) { // FROM_STATE_ACTION_SWITCH
-# line 110 "opt/ini.rl" # end of line directive
+# line 115 "opt/ini.rl" # end of line directive
     
             chr = (data[okp] - 48) *64;
             chr += (data[okp+1] - 48)*8;
@@ -376,7 +551,7 @@ uint  IniParser_en_main = 13;
             // ACTION
     }
     else  if (_tempval  == 12) { // FROM_STATE_ACTION_SWITCH
-# line 120 "opt/ini.rl" # end of line directive
+# line 125 "opt/ini.rl" # end of line directive
     
             if (p > okp)
                 appendBuf.extend(data + uintz(okp), p - okp - 1);
@@ -399,17 +574,17 @@ uint  IniParser_en_main = 13;
             // ACTION
     }
     else  if (_tempval  == 13) { // FROM_STATE_ACTION_SWITCH
-# line 140 "opt/ini.rl" # end of line directive
+# line 145 "opt/ini.rl" # end of line directive
     
-          if (p > okp)
-              appendBuf.extend(data + uintz(okp), p - okp);
-          value = String(appendBuf, 0, appendBuf.size);
+            if (p > okp)
+                appendBuf.extend(data + uintz(okp), p - okp);
+            value = String(appendBuf, 0, appendBuf.size);
 
-          _sectionMap[key] = value;
-          okp = p+1;
+            _sectionMap[key] = value;
+            okp = p+1;
             // ACTION
     }
-# line 413 "lib/crack/ffmt/ini.crk" # end of line directive
+# line 588 "lib/crack/ffmt/ini.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -436,16 +611,45 @@ uint  IniParser_en_main = 13;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 207 "opt/ini.rl"
+# line 212 "opt/ini.rl"
 
         return _resultMap;
     }
 
-    TreeMap[String, TreeMap[String, String]] parse(String inputString) {
-        _resultMap = TreeMap[String, TreeMap[String, String]]();
-        TreeMap[String, String] _sectionMap = null;
+    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString) {
+        _resultMap = OrderedHashMap[String, OrderedHashMap[String, String]]();
+        OrderedHashMap[String, String] _sectionMap = null;
 
         return parse(inputString, 0, inputString.size);
+    }
+
+    OrderedHashMap[String, OrderedHashMap[String, String]] parseFile(String fname) {
+        Stat statInfo = {};
+        n := CString(fname);
+        statErrors := stat(n.buffer, statInfo);
+        if (!statErrors){
+            mode := "r";
+            file := fopen(n.buffer, mode.buffer);
+
+            if (file is null) {
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+            }
+            fd := fileno(file);
+
+            data_size := statInfo.st_size;
+            tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+            data := String(byteptr(tdata), data_size, false);
+            
+            if (uintz(tdata) != uintz(0)-1){
+                parse(data);
+                munmap(tdata, data_size);
+                cout `_resultMap=$_resultMap\n`;
+                return _resultMap;
+            }
+            else
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+        }
+        return null;
     }
 
     void reset(){
@@ -454,7 +658,7 @@ uint  IniParser_en_main = 13;
       _errors =  null;
     }
 
-    TreeMap[String, TreeMap[String, String]] results(){
+    OrderedHashMap[String, OrderedHashMap[String, String]] results(){
       return _resultMap;
     }
 

@@ -26,6 +26,10 @@ class FileHandle : Object {
         return setNonBlocking(fd, val);
     }
 
+    void formatTo(Formatter fmt){
+        fmt `FileHandle($fd)`;
+    }
+
 }
 
 ## Writer for a file descriptor.
@@ -38,6 +42,10 @@ class FDWriter : FileHandle, Writer {
 
     void write(Buffer buf) {
         write(fd, buf.buffer, buf.size);
+    }
+
+    void write(byteptr cstr){
+        write(fd, cstr, strlen(cstr));
     }
 
     Object _iface_getWriterObject() { return this; }
@@ -282,6 +290,10 @@ class StringWriter : AppendBuffer, Writer {
 
     void write(Buffer data) {
         extend(data);
+    }
+
+    void write(byteptr cstr){
+        extend(cstr, strlen(cstr));
     }
 
     ## Return a string containing everything that has been written so far.

@@ -13,7 +13,7 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     AF_PACKET, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
     SOCK_PACKET, SOCK_NONBLOCK, SOCK_CLOEXEC, SOL_SOCKET, SO_REUSEADDR,
     POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
-    setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno;
+    setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno, strlen;
 
 @import crack.ann implements;
 
@@ -254,12 +254,21 @@ class Socket : FileHandle @implements Reader, Writer {
     }
     
     # Writer interface
-    void write(Buffer data) {
-        rc := send(data, 0);
+
+    void _write(byteptr cstr, uint len){
+        rc := send(fd, cstr, len, 0);
         if (rc < 0)
             throw Exception(FStr() `Error writing to socket: $(strerror())`);
-        if (rc != data.size)
+        if (rc != len)
             throw Exception('Incomplete write to socket');
+    }
+
+    void write(byteptr cstr){
+        _write(cstr, strlen(cstr));
+    }
+
+    void write(Buffer data) {
+        _write(data.buffer, data.size);
     }
 }
 
@@ -356,6 +365,11 @@ class Pipe : FileHandle @implements Reader, Writer {
 
     # Writer interface
     void write(Buffer data) {
+        if (__writer is null) return;
+        __writer.write(data);
+    }
+
+    void write(byteptr data) {
         if (__writer is null) return;
         __writer.write(data);
     }

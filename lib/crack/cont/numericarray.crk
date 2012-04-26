@@ -675,7 +675,7 @@ class NumericArray[Elem] {
 
     void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
                 Array[uint] wshape, uint dim){
-        fmt.format(fmt.ARRAYSTART);
+        fmt.write(fmt.ARRAYSTART);
         if (dim == 1){
             bool first = true;
             uintz offset = woffsets[dim - 1];
@@ -686,7 +686,7 @@ class NumericArray[Elem] {
                 else
                     first = false;
                 Elem elem = (__rep + offset + stride * i)[0];
-                if (_isNull(elem)) fmt.format(fmt.NULL);
+                if (_isNull(elem)) fmt.write(fmt.NULL);
                 else {
                     fmt.format(elem);
                 }
@@ -702,7 +702,7 @@ class NumericArray[Elem] {
 
             for (uint i = 0; i < wshape[dim - 1]; i++){
                 if (!first)
-                    fmt.format(fmt.ELEMSEP);
+                    fmt.write(fmt.ELEMSEP);
                 else
                     first = false;
                 _writeLevel(fmt, nstrides, noffsets, nshape, dim - 1);
@@ -712,7 +712,7 @@ class NumericArray[Elem] {
             
         }
         
-        fmt.format(fmt.ARRAYEND);
+        fmt.write(fmt.ARRAYEND);
     }
 
     void formatTo(Formatter fmt) {

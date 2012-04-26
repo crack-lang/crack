@@ -3,6 +3,15 @@ import crack.io cout;
 
 iniData := r"
 ; This is an example .INI file
+[00Classic]
+comment: classic test with multiloop
+s01: ..(((...(((.....)))..(((....))).)))....
+s02: ..(((...(((.....)))....(((....)))...)))...
+[072.5DRotation]
+comment: Test 2.5D rotation
+s01: ..((((((((...(((((...))))).......))))))))
+s02: ..(((((((...(((((...))))).......)))))))
+s03: ..((((((...(((((...))))).......))))))
 [Settings]
 author=Some Guy\061
 name= Screenlets Widescreen
