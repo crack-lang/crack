@@ -61,10 +61,11 @@ void VTableBuilder::addToAncestor(BTypeDef *ancestor, BFuncDef *func) {
     // insert the function
     vector<Constant *> &entries = targetVTable->entries;
     accomodate(entries, func->vtableSlot);
+    Function *funcRep = func->getRep(*builder);
     entries[func->vtableSlot] = 
         (func->flags & FuncDef::abstract) ?
-            Constant::getNullValue(func->rep->getType()) :
-            (Constant*)func->getRep(*builder);
+            Constant::getNullValue(funcRep->getType()) :
+            (Constant*)funcRep;
 }
 
 // add the function to all vtables.
@@ -75,10 +76,11 @@ void VTableBuilder::addToAll(BFuncDef *func) {
          ) {
         vector<Constant *> &entries = iter->second->entries;
         accomodate(entries, func->vtableSlot);
+        Function *funcRep = func->getRep(*builder);
         entries[func->vtableSlot] =
             (func->flags & FuncDef::abstract) ?
-                Constant::getNullValue(func->rep->getType()) :
-                (Constant*)func->getRep(*builder);
+                Constant::getNullValue(funcRep->getType()) :
+                (Constant*)funcRep;
     }
 }
 

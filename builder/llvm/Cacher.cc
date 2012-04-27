@@ -197,10 +197,10 @@ void Cacher::writeMetadata() {
     // crack_externs: these we need to resolve upon load. in the JIT, that means
     // global mappings. we need to resolve functions and globals
     node = module->getOrInsertNamedMetadata("crack_externs");
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
     // functions
-    for (LLVMBuilder::ModFuncMap::const_iterator i = b.moduleFuncs.begin();
-         i != b.moduleFuncs.end();
+    for (LLVMBuilder::ModFuncMap::const_iterator i = 
+            builder->moduleFuncs.begin();
+         i != builder->moduleFuncs.end();
          ++i) {
 
         // only include it if it's a decl, and not abstract
@@ -229,8 +229,8 @@ void Cacher::writeMetadata() {
     }
 
     // globals
-    for (LLVMBuilder::ModVarMap::const_iterator i = b.moduleVars.begin();
-         i != b.moduleVars.end();
+    for (LLVMBuilder::ModVarMap::const_iterator i = builder->moduleVars.begin();
+         i != builder->moduleVars.end();
          ++i) {
         if (!i->second->isDeclaration())
             continue;
@@ -352,10 +352,10 @@ MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
     // register in canonical map for subsequent cache loads
     if (bt)
-        context.construct->registerDef(bt);
+        context->construct->registerDef(bt);
     else
-        context.construct->registerDef(t);
-    context.construct->registerDef(metaClass);
+        context->construct->registerDef(t);
+    context->construct->registerDef(metaClass);
 
     return MDNode::get(getGlobalContext(), dList);
 
@@ -375,9 +375,9 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
         dList.push_back(constInt(Cacher::function));
 
     // operand 2: llvm rep
-    BFuncDef *bf = dynamic_cast<BFuncDef *>(sym);
+    BFuncDef *bf = BFuncDefPtr::cast(sym);
     if (bf)
-        dList.push_back(bf->rep);
+        dList.push_back(bf->getRep(*builder));
     else {
         //cout << "skipping " << sym->name << "\n";
         //dList.push_back(NULL);
@@ -411,8 +411,7 @@ MDNode *Cacher::writeFuncDef(FuncDef *sym, TypeDef *owner) {
     // on this depended one for this run
     // skip for abstract functions though, since they have no body
     if ((bf->flags & FuncDef::abstract) == 0) {
-        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-        b.registerDef(context, sym);
+        builder->registerDef(*context, sym);
     }
 
     return MDNode::get(getGlobalContext(), dList);
@@ -465,8 +464,7 @@ MDNode *Cacher::writeConstant(VarDef *sym, TypeDef *owner) {
 
     // we register with the cache map because a cached module may be
     // on this depended one for this run
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.registerDef(context, sym);
+    builder->registerDef(*context, sym);
 
     return MDNode::get(getGlobalContext(), dList);
 
@@ -474,7 +472,6 @@ MDNode *Cacher::writeConstant(VarDef *sym, TypeDef *owner) {
 
 MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
     vector<Value *> dList;
 
     BTypeDef *type = dynamic_cast<BTypeDef *>(sym->type.get());
@@ -494,7 +491,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
     // operand 2: llvm rep (gvar) or null val (instance var)
     if (gvar)
-        dList.push_back(gvar->getRep(b));
+        dList.push_back(gvar->getRep(*builder));
     else
         dList.push_back(Constant::getNullValue(type->rep));
 
@@ -518,7 +515,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 
     // we register with the cache map because a cached module may be
     // on this depended one for this run
-    b.registerDef(context, sym);
+    builder->registerDef(*context, sym);
 
     return MDNode::get(getGlobalContext(), dList);
 
@@ -551,7 +548,7 @@ bool Cacher::readImports() {
 
         // load this module. if the digest doesn't match, we miss.
         // note module may come from cache or parser, we won't know
-        m = context.construct->loadModule(cname->getString().str());
+        m = context->construct->loadModule(cname->getString().str());
         if (!m || m->digest != iDigest)
             return false;
 
@@ -597,8 +594,9 @@ bool Cacher::readImports() {
                               );
         }
 
-        context.builder.importSharedLibrary(cname->getString().str(),
-                                            symList, context, modDef.get());
+        builder->importSharedLibrary(cname->getString().str(), symList, 
+                                     *context, modDef.get()
+                                     );
 
     }
 
@@ -608,7 +606,7 @@ bool Cacher::readImports() {
 
 TypeDefPtr Cacher::resolveType(const string &name) {
     TypeDefPtr td =
-        TypeDefPtr::rcast(context.construct->getRegisteredDef(name));
+        TypeDefPtr::rcast(context->construct->getRegisteredDef(name));
 
     if (!td) {
         // is it a generic?
@@ -629,7 +627,7 @@ TypeDefPtr Cacher::resolveType(const string &name) {
             parms->push_back(resolveType(name.substr(start, i - start)));
         }
 
-        return generic->getSpecialization(context, parms.get());
+        return generic->getSpecialization(*context, parms.get());
     }
 
     if (options->verbosity > 2)
@@ -666,8 +664,7 @@ void Cacher::readVarDefGlobal(const std::string &sym,
     g->impl = impl;
     modDef->addDef(g);
 
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.registerDef(context, g);
+    builder->registerDef(*context, g);
 
 }
 
@@ -713,8 +710,7 @@ void Cacher::readConstant(const std::string &sym,
     // the member def itself
     modDef->addDef(cnst);
 
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.registerDef(context, cnst);
+    builder->registerDef(*context, cnst);
 
 }
 
@@ -864,7 +860,7 @@ void Cacher::readTypeDef(const std::string &sym,
     type->classInst =
         modDef->rep->getGlobalVariable(type->getFullName() + ":body");
 
-    context.construct->registerDef(type.get());
+    context->construct->registerDef(type.get());
 }
 
 void Cacher::readGenericTypeDef(const std::string &sym,
@@ -888,7 +884,7 @@ void Cacher::readGenericTypeDef(const std::string &sym,
 
     finishType(type.get(), metaType.get(), modDef);
     assert(type->getOwner());
-    context.construct->registerDef(type.get());
+    context->construct->registerDef(type.get());
 }
 
 void Cacher::readEphemeralImport(MDNode *mnode) {
@@ -897,7 +893,7 @@ void Cacher::readEphemeralImport(MDNode *mnode) {
     MDString *digest = dyn_cast<MDString>(mnode->getOperand(3));
     SPUG_CHECK(digest, "Digest not specified for import.");
     BModuleDefPtr mod = 
-        context.construct->loadModule(canName->getString().str());
+        context->construct->loadModule(canName->getString().str());
     SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
                "XXX Module digestfrom import doesn't match");
 }
@@ -943,7 +939,7 @@ void Cacher::readFuncDef(const std::string &sym,
     BFuncDef *newF = new BFuncDef(bflags,
                                   sym,
                                   bargCount);
-    newF->rep = f;
+    newF->setRep(f);
 
     NamespacePtr owner;
     if (ownerStr)
@@ -976,8 +972,7 @@ void Cacher::readFuncDef(const std::string &sym,
 
     // if not abstract, register
     if ((bflags & FuncDef::abstract) == 0) {
-        LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-        b.registerDef(context, newF);
+        builder->registerDef(*context, newF);
     }
 
     OverloadDef *o(0);
@@ -1042,10 +1037,6 @@ void Cacher::readDefs() {
             case Cacher::ephemeralImport:
                 readEphemeralImport(mnode);
                 break;
-
-#define TWO_PASS 1
-#ifndef TWO_PASS
-            // you guys over here...
             case Cacher::global:
                 readVarDefGlobal(sym, rep, mnode);
                 break;
@@ -1062,54 +1053,8 @@ void Cacher::readDefs() {
     
             default:
                 assert(0 && "unhandled def type");
-#endif
         }
     }
-
-#ifdef TWO_PASS
-    // second pass: everything else
-    for (int i = 0; i < imports->getNumOperands(); ++i) {
-
-        mnode = imports->getOperand(i);
-
-        // operand 0: symbol name
-        mstr = dyn_cast<MDString>(mnode->getOperand(0));
-        assert(mstr && "malformed def node: symbol name");
-        sym = mstr->getString().str();
-
-        // operand 1: symbol type
-        ConstantInt *type = dyn_cast<ConstantInt>(mnode->getOperand(1));
-        assert(type && "malformed def node: symbol type");
-
-        // operand 2: llvm rep
-        rep = mnode->getOperand(2);
-        //assert(rep && "malformed def node: llvm rep");
-
-        switch (type->getLimitedValue()) {
-        case Cacher::function:
-        case Cacher::method:
-            readFuncDef(sym, rep, mnode);
-            break;
-        case Cacher::member:
-            readVarDefMember(sym, rep, mnode);
-            break;
-        case Cacher::global:
-            readVarDefGlobal(sym, rep, mnode);
-            break;
-        case Cacher::type:
-        case Cacher::generic:
-        case Cacher::ephemeralImport:
-            // should have done this in the first pass
-            break;
-        case Cacher::constant:
-            readConstant(sym, rep, mnode);
-            break;
-
-        default:
-            assert(0 && "unhandled def type");
-        }
-    }
-#endif
 }
 
 bool Cacher::readMetadata() {
@@ -1117,17 +1062,17 @@ bool Cacher::readMetadata() {
     string snode;
 
     // register everything in the builtin module if we haven't already
-    if (!context.construct->getRegisteredDef(".builtin.int")) {
+    if (!context->construct->getRegisteredDef(".builtin.int")) {
 
         // for some reason, we have two levels of ancestry in builtin.
-        Namespace *bi = context.construct->builtinMod.get();
+        Namespace *bi = context->construct->builtinMod.get();
         while (bi) {
             for (Namespace::VarDefMap::iterator iter = bi->beginDefs();
                 iter != bi->endDefs();
                 ++iter
                 ) {
                 if (TypeDefPtr typeDef = TypeDefPtr::rcast(iter->second))
-                    context.construct->registerDef(typeDef.get());
+                    context->construct->registerDef(typeDef.get());
             }
 
             bi = bi->getParent(0).get();
@@ -1245,7 +1190,26 @@ void Cacher::resolveStructs(llvm::Module *module) {
 
 }
 
+Cacher::Cacher(model::Context &c, builder::BuilderOptions *o, 
+               BModuleDef *m
+               ) :
+    modDef(m), 
+    parentContext(c),
+    options(o) {
+}
+
 BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
+
+    // create a builder and module context
+    builder = 
+        LLVMBuilderPtr::rcast(parentContext.builder.createChildBuilder());
+    context = new Context(*builder, Context::module, &parentContext,
+                          new GlobalNamespace(parentContext.ns.get(),
+                                              canonicalName
+                                              ),
+                          0 // no compile namespace necessary
+                          );
+    context->toplevel = true;
 
     string cacheFile = getCacheFilePath(options, canonicalName, "bc");
     if (cacheFile.empty())
@@ -1276,7 +1240,8 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
     }
 
     // if we get here, we've loaded bitcode successfully
-    modDef = new BModuleDef(canonicalName, context.ns.get(), module);
+    modDef = builder->instantiateModule(*context, canonicalName, module);
+    builder->module = module;
 
     if (readMetadata()) {
 
@@ -1309,6 +1274,10 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
 }
 
 void Cacher::saveToCache() {
+    
+    // we can reuse the existing context and builder for this
+    context = &parentContext;
+    builder = LLVMBuilderPtr::cast(&parentContext.builder);
 
     assert(modDef && "empty modDef for saveToCache");
 

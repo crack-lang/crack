@@ -481,7 +481,7 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     }
 }
 
-Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
+Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
         // not found, create a new one and map it to the existing function
@@ -489,14 +489,14 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
         // prevents an abort if we lookup a pointer to a function that hasn't
         // been defined yet.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
-        Function *func = Function::Create(bfuncDef->rep->getFunctionType(),
+        Function *func = Function::Create(funcRep->getFunctionType(),
                                           Function::ExternalWeakLinkage,
-                                          bfuncDef->rep->getName(),
+                                          funcRep->getName(),
                                           module
                                           );
 
         // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalFuncMapping(func, bfuncDef->rep);
+        addGlobalFuncMapping(func, funcRep);
 
         // low level symbol name
         if (!bfuncDef->symbolName.empty())
@@ -510,26 +510,26 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef) {
     }
 }
 
-GlobalVariable *LLVMBuilder::getModVar(model::VarDefImpl *varDefImpl) {
+GlobalVariable *LLVMBuilder::getModVar(VarDefImpl *varDefImpl,
+                                       GlobalVariable *gvar
+                                       ) {
     ModVarMap::iterator iter = moduleVars.find(varDefImpl);
     if (iter == moduleVars.end()) {
-        BGlobalVarDefImpl *bvar = BGlobalVarDefImplPtr::acast(varDefImpl);
-
         // extract the raw type
-        Type *type = bvar->rep->getType()->getElementType();
+        Type *type = gvar->getType()->getElementType();
 
-        assert(!module->getGlobalVariable(bvar->rep->getName()) &&
+        assert(!module->getGlobalVariable(gvar->getName()) &&
                "global variable redefined"
                );
         GlobalVariable *global =
-            new GlobalVariable(*module, type, bvar->rep->isConstant(),
+            new GlobalVariable(*module, type, gvar->isConstant(),
                                GlobalValue::ExternalLinkage,
                                0, // initializer: null for externs
-                               bvar->rep->getName()
+                               gvar->getName()
                                );
 
         // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalVarMapping(global, bvar->rep);
+        addGlobalVarMapping(global, gvar);
 
         moduleVars[varDefImpl] = global;
         return global;
@@ -1439,7 +1439,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         realArgs = &existing->args;
     }
 
-    func = funcDef->rep;
+    func = funcDef->getRep(*this);
 
     createFuncStartBlocks(name);
 
@@ -1562,7 +1562,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
 
     f.setArgs(args);
     f.finish(false);
-    primFuncs[f.funcDef->rep] = cfunc;
+    primFuncs[f.funcDef->getRep(*this)] = cfunc;
     return f.funcDef;
 }
 
@@ -1610,16 +1610,17 @@ namespace {
         funcBuilder.finish(false);
         context.addDef(funcBuilder.funcDef.get(), objClass);
 
+        LLVMBuilder &lb = dynamic_cast<LLVMBuilder &>(context.builder);
         BasicBlock *block = BasicBlock::Create(getGlobalContext(),
                                                "oper class",
-                                               funcBuilder.funcDef->rep
+                                               funcBuilder.funcDef->getRep(lb)
                                                );
 
         // body of the function: load the class instance global variable
         IRBuilder<> builder(block);
         BGlobalVarDefImpl *impl =
             BGlobalVarDefImplPtr::arcast(objClass->impl);
-        Value *val = builder.CreateLoad(impl->rep);
+        Value *val = builder.CreateLoad(impl->getRep(lb));
 
         // extract the Class instance from it and return it.
         val = builder.CreateConstGEP2_32(val, 0, 0);

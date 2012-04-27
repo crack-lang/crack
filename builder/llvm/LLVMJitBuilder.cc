@@ -10,6 +10,7 @@
 #include "BBuilderContextData.h"
 #include "debug/DebugTools.h"
 #include "Cacher.h"
+#include "spug/check.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -67,9 +68,9 @@ void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
 void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     Function *delFunc = module->getFunction(":cleanup");
     if (delFunc) {
-        moduleDef->cleanup = reinterpret_cast<void (*)()>(
-                                execEng->getPointerToFunction(delFunc)
-                             );
+        void *addr = execEng->getPointerToFunction(delFunc);
+        SPUG_CHECK(addr, "Unable to resolve cleanup function");
+        moduleDef->cleanup = reinterpret_cast<void (*)()>(addr);
     }
 }
 
@@ -173,6 +174,8 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
     // add the global mapping.
     if (real->getParent()->getNamedMetadata("crack_finished")) {
         void *realAddr = execEng->getPointerToFunction(real);
+        SPUG_CHECK(realAddr,
+                   "no address for function " << string(real->getName()));
         execEng->addGlobalMapping(pointer, realAddr);
     } else {
         // push this on the list of externals - we used to assign a global mapping
@@ -195,11 +198,15 @@ void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
 }
 
 void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
-    return execEng->getPointerToFunction(func);
+    void *addr = execEng->getPointerToFunction(func);
+    SPUG_CHECK(addr,
+               "Unable to resolve function " << string(func->getName()));
+    return addr;
 }
 
 void LLVMJitBuilder::run() {
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
+    SPUG_CHECK(fptr, "no address for function " << string(func->getName()));
     fptr();
 }
 
@@ -344,6 +351,10 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // resolve all externals
     for (int i = 0; i < externals.size(); ++i) {
         void *realAddr = execEng->getPointerToFunction(externals[i].second);
+        SPUG_CHECK(realAddr,
+                   "no address for function " <<
+                    string(externals[i].second->getName())
+                   );
         execEng->addGlobalMapping(externals[i].first, realAddr);
     }
     externals.clear();
@@ -433,16 +444,14 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
         cacheMap->insert(
             CacheMapType::value_type(
                 varDef->getFullName(),
-//                dyn_cast<GlobalValue>(bgbl->getRep(builder))
-                bgbl->rep
+                dyn_cast<GlobalValue>(bgbl->getRep(builder))
             )
         );
     } else if (fd = BFuncDefPtr::cast(varDef)) {
         // funcdef
         cacheMap->insert(
             CacheMapType::value_type(varDef->getFullName(),
-//                                     fd->getRep(builder)
-                                     fd->rep
+                                     fd->getRep(builder)
                                      )
         );
     } else {
@@ -507,7 +516,10 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                 if (globalDefIter != cacheMap->end()) {
                     Function *f = dyn_cast<Function>(globalDefIter->second);
                     void *realAddr = execEng->getPointerToFunction(f);
-                    assert(realAddr && "unable to resolve function");
+                    SPUG_CHECK(realAddr,
+                               "Unable to resolve function " <<
+                                string(f->getName())
+                               );
                     execEng->addGlobalMapping(iter, realAddr);
                 }
             }

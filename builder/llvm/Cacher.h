@@ -29,6 +29,7 @@ namespace mvll {
 
 SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(BTypeDef);
+SPUG_RCPTR(LLVMBuilder);
 
 class Cacher {
 
@@ -46,8 +47,10 @@ class Cacher {
     };
 
     BModuleDefPtr modDef;
-    model::Context &context;
+    model::ContextPtr context;
+    model::Context &parentContext;
     builder::BuilderOptions *options;
+    builder::mvll::LLVMBuilderPtr builder;
 
     // vardefs which were created as a result of shared lib import
     // we skip these in crack_defs
@@ -89,8 +92,9 @@ protected:
 
 public:
 
-    Cacher(model::Context &c, builder::BuilderOptions* o, BModuleDef *m = NULL):
-        modDef(m), context(c), options(o) { }
+    Cacher(model::Context &c, builder::BuilderOptions *o,
+           BModuleDef *m = NULL
+           );
 
     llvm::Function *getEntryFunction();
 

@@ -20,7 +20,7 @@ void BFuncDef::setOwner(model::Namespace *o) {
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
     if (rep->getParent() != builder.module)
-        return builder.getModFunc(this);
+        return builder.getModFunc(this, rep);
     else
         return rep;
 }

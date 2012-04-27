@@ -5,6 +5,7 @@
 
 #include "model/FuncDef.h"
 #include "model/Namespace.h"
+#include "spug/check.h"
 #include "LLVMBuilder.h"
 #include "BTypeDef.h"
 
@@ -18,11 +19,12 @@ namespace mvll {
 SPUG_RCPTR(BFuncDef);
 
 class BFuncDef : public model::FuncDef {
-public:
+private:
     // this holds the function object for the last module to request
     // it.
     llvm::Function *rep;
 
+public:
     // low level symbol name as used by llvm::Function *rep
     // this should be empty, unless it needs to link against an external symbol
     // when it's empty, rep->name will default to the crack canonical name,
@@ -59,6 +61,17 @@ public:
      * Returns the module-specific Function object for the function.
      */
     llvm::Function *getRep(LLVMBuilder &builder);
+
+    /**
+     * Set the low-level function.
+     */
+    void setRep(llvm::Function *newRep) {
+        SPUG_CHECK(!rep,
+                   "Representation for function " << name <<
+                    " already defined."
+                   );
+        rep = newRep;
+    }
 
     virtual void *getFuncAddr(Builder &builder);
 
