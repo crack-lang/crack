@@ -19,7 +19,11 @@ void BFuncDef::setOwner(model::Namespace *o) {
 }
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
-    if (rep->getParent() != builder.module)
+    
+    // load the function for the correct module, but not for abstract methods 
+    // (that would result in an "extern" method for an abstract method, which 
+    // is an unresolved external)
+    if (!(flags & FuncDef::abstract) && rep->getParent() != builder.module)
         return builder.getModFunc(this, rep);
     else
         return rep;
