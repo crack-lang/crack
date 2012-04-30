@@ -314,12 +314,20 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SOCK_RAW", SOCK_RAW);
     mod->addConstant(intType, "SOCK_RDM", SOCK_RDM);
     mod->addConstant(intType, "SOCK_PACKET", SOCK_PACKET);
-#ifdef SOCK_NONBLOCK
+
+// If these flags are not defined, set them to 0
+
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK 0
+#endif
     mod->addConstant(intType, "SOCK_NONBLOCK", SOCK_NONBLOCK);
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
 #endif
-#ifdef SOCK_CLOEXEC
+
     mod->addConstant(intType, "SOCK_CLOEXEC", SOCK_CLOEXEC);
-#endif
+
     mod->addConstant(intType, "SOL_SOCKET", SOL_SOCKET);
     mod->addConstant(intType, "SO_REUSEADDR", SO_REUSEADDR);
     mod->addConstant(intType, "POLLIN", POLLIN);
