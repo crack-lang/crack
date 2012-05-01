@@ -139,6 +139,15 @@ class File : FileInfo,
 
     }
 
+    void write(byteptr data) {
+
+        if (_writer is null || !_isValid)
+            return;
+
+        _writer.write(data);
+
+    }
+
     void close() {
         if (_isOpened) {
             fclose(_fd);

@@ -174,7 +174,8 @@ std::string Construct::joinName(const std::string &base,
 
 Construct::Construct(Builder *builder, Construct *primary) :
     rootBuilder(builder),
-    uncaughtExceptionFunc(0) {
+    uncaughtExceptionFunc(0),
+    migrationWarnings(false) {
 
     if (builder->options->statsMode)
         stats = new ConstructStats();

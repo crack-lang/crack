@@ -2,11 +2,16 @@
 // (C) Conrad Steenberg <conrad.steenberg@gmail.com>
 // 2/11/2012
 
-import crack.io FStr;
-import crack.lang Formatter, AppendBuffer, Buffer;
-import crack.cont.treemap TreeMap;
+import crack.io FStr, cout;
+import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
+                  WriteBuffer, Exception, IndexError, KeyError, CString;
+import crack.cont.hashmap OrderedHashMap;
 import crack.cont.array Array;
+import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
+                    stat, fileno;
 import crack.ascii escape;
+import crack.sys strerror;
+import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
 
 class IniError {
   String msg;
@@ -24,8 +29,8 @@ class IniParser {
 
     uint maxErr = 1;
     Array[IniError] _errors;
-    TreeMap[String, TreeMap[String, String]] _resultMap;
-    TreeMap[String, String] _sectionMap;
+    OrderedHashMap[String, OrderedHashMap[String, String]] _resultMap;
+    OrderedHashMap[String, String] _sectionMap;
 
     %%{
         machine IniParser;
@@ -38,62 +43,62 @@ class IniParser {
         }
 
         action errorHandler {
-          if (p > okp)
-            _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
-          if (_errors.count() >= maxErr) return _resultMap;
+            if (p > okp)
+                _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
+            if (_errors.count() >= maxErr) return _resultMap;
         }
 
         action keyError {
-          if (p > okp) {
-            String msg;
-            if (data[p] == b'=')
-              msg = "Invalid key syntax ";
-            else
-              msg = "Invalid value syntax ";
-            _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
-          }
-          if (_errors.count() >= maxErr) return _resultMap;
+            if (p > okp) {
+                String msg;
+                if (data[p] == b'=')
+                    msg = "Invalid key syntax ";
+                else
+                    msg = "Invalid value syntax ";
+                _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
+            }
+            if (_errors.count() >= maxErr) return _resultMap;
         }
 
         action incLineNum {
-          if (lineOffset < p && data[p] < 32) line+=1;
-          lineOffset = p+1;
-          okp = p+1;
+            if (lineOffset < p && data[p] < 32) line+=1;
+            lineOffset = p+1;
+            okp = p+1;
         }
 
         action commentHandler {
-          okp = p+1;
+            okp = p+1;
         }
 
         action startSection {
-          if (p==lineOffset) {
-            if (_sectionMap != null && sectionName != null){
-              _resultMap[sectionName] = _sectionMap;
+            if (p==lineOffset) {
+                if (_sectionMap != null && sectionName != null){
+                  _resultMap[sectionName] = _sectionMap;
+                }
+                _sectionMap = null;
+                sectionName = null;
+                okp = p+1;
             }
-            _sectionMap = null;
-            sectionName = null;
-            okp = p+1;
-          }
         }
 
         action endSection {
-          sectionName = inputString.slice(okp, p);
-          _sectionMap = TreeMap[String, String]();
-          _resultMap[sectionName] = _sectionMap;
-          okp = p+1;
+            sectionName = inputString.slice(okp, p);
+            _sectionMap = OrderedHashMap[String, String]();
+            _resultMap[sectionName] = _sectionMap;
+            okp = p+1;
         }
 
         action keyEnd {
-          if (marker < lineOffset) {
-            key = inputString.slice(lineOffset, p);
-            marker = p;
-          }
-          okp = p+1;
+            if (marker < lineOffset) {
+                key = inputString.slice(lineOffset, p);
+                marker = p;
+            }
+            okp = p+1;
         }
 
         action valueStart {
-          appendBuf.size = 0;
-          okp = p+1;
+            appendBuf.size = 0;
+            okp = p+1;
         }
 
         action regularString {
@@ -104,7 +109,7 @@ class IniParser {
         }
 
         action parseNumberStart {
-          okp = p;
+            okp = p;
         }
 
         action parseNumber {
@@ -138,12 +143,12 @@ class IniParser {
         }
 
         action valueEnd {
-          if (p > okp)
-              appendBuf.extend(data + uintz(okp), p - okp);
-          value = String(appendBuf, 0, appendBuf.size);
+            if (p > okp)
+                appendBuf.extend(data + uintz(okp), p - okp);
+            value = String(appendBuf, 0, appendBuf.size);
 
-          _sectionMap[key] = value;
-          okp = p+1;
+            _sectionMap[key] = value;
+            okp = p+1;
         }
 
         action emptyLine {
@@ -151,11 +156,11 @@ class IniParser {
         }
 
         # Machine definitions --------------------------------------------------
-        varAlpha = [a-zA-Z_];
+        varAlpha = [a-zA-Z_0-9];
         varAlphaNum = [a-zA-Z_0-9\-]*;
         varGen = [a-zA-Z_0-9\-\[\]]*;
-        varName = varAlpha varAlphaNum;
-        varNameGen = varAlpha varGen;
+        varName = [^ \t\r\n\[\]]+;
+        varNameGen = [^ \t\r\n=:]+;
 
         ws = [ \t]+;
         eol = [\r\n];
@@ -166,7 +171,7 @@ class IniParser {
         section = '[' >startSection varName ']' >endSection ws? 
                    eol >incLineNum @hold;
 
-        keyval = varNameGen (ws? >keyEnd) '=' >keyEnd >valueStart (ws? @valueStart)
+        keyval = varNameGen (ws? >keyEnd) ('='|':') >keyEnd >valueStart (ws? @valueStart)
                  (   (0..0x1f -- eol) >keyError
                   | '\\' >regularString ["\\/bfnrt] >escapeString
                   | '\\' >regularString ([0..3] >parseNumberStart [0-7]{2}) @parseNumber
@@ -184,7 +189,7 @@ class IniParser {
     # parser method ------------------------------------------------------------
     oper init() {}
 
-    TreeMap[String, TreeMap[String, String]] parse(String inputString, uint p0, uint pe0) {
+    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString, uint p0, uint pe0) {
         AppendBuffer appendBuf = {128}; // String to hold the value
         _errors = Array[IniError]();      // reset _errors
 
@@ -208,11 +213,40 @@ class IniParser {
         return _resultMap;
     }
 
-    TreeMap[String, TreeMap[String, String]] parse(String inputString) {
-        _resultMap = TreeMap[String, TreeMap[String, String]]();
-        TreeMap[String, String] _sectionMap = null;
+    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString) {
+        _resultMap = OrderedHashMap[String, OrderedHashMap[String, String]]();
+        OrderedHashMap[String, String] _sectionMap = null;
 
         return parse(inputString, 0, inputString.size);
+    }
+
+    OrderedHashMap[String, OrderedHashMap[String, String]] parseFile(String fname) {
+        Stat statInfo = {};
+        n := CString(fname);
+        statErrors := stat(n.buffer, statInfo);
+        if (!statErrors){
+            mode := "r";
+            file := fopen(n.buffer, mode.buffer);
+
+            if (file is null) {
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+            }
+            fd := fileno(file);
+
+            data_size := statInfo.st_size;
+            tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+            data := String(byteptr(tdata), data_size, false);
+            
+            if (uintz(tdata) != uintz(0)-1){
+                parse(data);
+                munmap(tdata, data_size);
+                cout `_resultMap=$_resultMap\n`;
+                return _resultMap;
+            }
+            else
+                throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+        }
+        return null;
     }
 
     void reset(){
@@ -221,7 +255,7 @@ class IniParser {
       _errors =  null;
     }
 
-    TreeMap[String, TreeMap[String, String]] results(){
+    OrderedHashMap[String, OrderedHashMap[String, String]] results(){
       return _resultMap;
     }
 

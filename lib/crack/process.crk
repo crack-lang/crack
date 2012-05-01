@@ -7,7 +7,9 @@ import crack.runtime close, runChildProcess, waitProcess, signalProcess,
 import crack.io FDReader, FDWriter, StringFormatter, FStr;
 import crack.lang ManagedBuffer, AppendBuffer;
 import crack.strutil StringArray, split;
+import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
+
 
 // see Process.h in  runtime
 int CRK_PROC_STILL_RUNNING = 0x100;
@@ -75,15 +77,22 @@ class Process {
 
     oper del() {
         if (!(_pd is null)) {
-            closeProcess(_pd);
+            for (_fd :in Array[int]![_pd.stdin, _pd.stderr, _pd.stdout]){
+                if (_fd != -1) close(_fd); // discard return values
+            }
+
         free(_pd);
+        }
     }
+
+    PipeDesc getPipeDesc(){
+        return _pd;
     }
 
     String _readPipe(int pipe) {
         if (pipe < 0)
             return ""; // XXX null?
-        // paged reads        
+        // paged reads
         buf := ManagedBuffer(1024);
         // extendable buffer used for final string
         wr := AppendBuffer(1024);
@@ -94,15 +103,15 @@ class Process {
         return String(wr, true); // takes ownership of appendbuffer
     }
 
-    String getStdOut() { 
+    String getStdOut() {
         if (_returnCode != CRK_PROC_FAILED)
             return _readPipe(_pd.stdout);
         else
             return "";
     }
-    
-    String getStdErr() { 
-        if (_returnCode != CRK_PROC_FAILED)        
+
+    String getStdErr() {
+        if (_returnCode != CRK_PROC_FAILED)
             return _readPipe(_pd.stderr);
         else
             return "";
@@ -128,7 +137,7 @@ class Process {
             _returnCode = waitProcess(_pid, 0);
         return getReturnCode();
     }
-    
+
     void _maybePoll() {
         if (_returnCode & CRK_PROC_KILLED ||
             _returnCode & CRK_PROC_STOPPED ||

@@ -27,6 +27,7 @@
 #include <llvm/Instructions.h>
 #include <llvm/Linker.h>
 #include <llvm/Support/Program.h>
+#include <llvm/Support/PathV1.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
@@ -724,11 +725,50 @@ void nativeCompile(llvm::Module *module,
              LibPaths.push_back(path::parent_path(*i));
          }
 
+#if __GNUC__ > 4 && __GNUC_MINOR__ > 2
          NativeLinkItems.push_back(pair<string,bool>(":"+
                                                     string(path::stem(*i))+
                                                     string(path::extension(*i)),
                                                     true // .so
                                                     ));
+#else
+         string rtp = string(path::stem(*i)) + string(path::extension(*i));
+         Path sPath;
+         bool foundModule = false;
+
+        // We have to manually search for the linkitem
+          for (unsigned index = 0; index < LibPaths.size(); index++) {
+              sPath = Path(LibPaths[index]);
+              sPath.appendComponent(rtp);
+
+              if (o->verbosity > 2)
+                  cerr << "search: " << sPath.str() << endl;
+
+              char *rp = realpath(sPath.c_str(), NULL);
+              if (!rp) {
+                  switch (errno) {
+                      case EACCES:
+                      case ELOOP:
+                      case ENAMETOOLONG:
+                      case ENOENT:
+                      case ENOTDIR:
+                          break;
+                      default:
+                          perror("realpath");
+                  }
+                  continue;
+              } else {
+                free(rp);
+                foundModule = true;
+                break;
+              }
+          }
+
+         NativeLinkItems.push_back(pair<string,bool>(foundModule ? sPath.str() : rtp,
+                                                      false // .so
+                                                     ));
+
+#endif
     }
 
     // native runtime lib is required

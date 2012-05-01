@@ -125,6 +125,7 @@ class Buffer;
 
     ## Write the buffer to the writer.
     @abstract void write(Buffer data);
+    @abstract void write(byteptr cstr);
 
     ## Flush the contents of the buffer.
     void flush() {}

@@ -301,16 +301,16 @@ class HashMap[Key, Value] {
     Iter iter() { return Iter(this); }
 
     void formatTo(Formatter fmt) {
-        fmt.format(fmt.MAPSTART);
+        fmt.write(fmt.MAPSTART);
         bool first = true;
         for (item :in this){
-            if (!first) fmt.format(fmt.ELEMSEP);
+            if (!first) fmt.write(fmt.ELEMSEP);
             else first = false;
             fmt.format(item.key);
-            fmt.format(fmt.KEYVALSEP);
+            fmt.write(fmt.KEYVALSEP);
             fmt.format(item.val);
         }
-        fmt.format(fmt.MAPEND);
+        fmt.write(fmt.MAPEND);
     }
 
     uint count() {
@@ -370,12 +370,6 @@ class OrderedHashMap[Key, Value] {
             fmt.format(key);
             fmt.format(fmt.KEYVALSEP);
             fmt.format(val);
-        }
-
-        int cmp(Item it){
-            int b = key.cmp(it.key);
-            if (b!=0) return b;
-            return val.cmp(it.val);
         }
 
         void formatToDebug(Formatter fmt){
@@ -712,7 +706,6 @@ class OrderedHashMap[Key, Value] {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         if (_items[i]) {
-#            cout `deleting item $key at $i\n`;
             _items[i].oper release();
             _items[i] = null;
             --_size;
@@ -825,6 +818,33 @@ class OrderedHashMap[Key, Value] {
         _setItemNew(i, newItem);
     }
 
+    void deleteKey(Key key){
+        hash := makeHashVal(key);
+        i := __findSlot(hash, key);
+
+        if (_items[i]) {
+            item := _items[i];
+
+            # Handle the head and tail
+            if (item is tail){
+                popTail();
+                return;
+            }
+            else if (item is head){
+                popHead();
+                return;
+            }
+
+            item.prev.next = item.next;
+            item.next.prev = item.prev;
+
+            _deleteHash(item.key);
+
+        } else {
+            throw KeyError(FStr() `Invalid key: $key`);
+        }
+    }
+
     void delete(uint index) {
         if (index > _size)
             throw IndexError('List index out of range in delete()');
@@ -848,7 +868,7 @@ class OrderedHashMap[Key, Value] {
             _deleteHash(head.key);
             tmp := head.next;
             if (head is tail)
-                tail = tmp;
+                tail = tmp; // null
             head = tmp;
             if (tmp)
                 tmp.prev = null;
@@ -863,25 +883,25 @@ class OrderedHashMap[Key, Value] {
     }
 
     void formatTo(Formatter fmt) {
-        fmt.format(fmt.MAPSTART);
+        fmt.write(fmt.MAPSTART);
         bool first = true;
          for (itm :in this){
-            if (!first) fmt.format(fmt.ELEMSEP);
+            if (!first) fmt.write(fmt.ELEMSEP);
             else first = false;
             fmt.format(itm);
         }
-        fmt.format(fmt.MAPEND);
+        fmt.write(fmt.MAPEND);
     }
 
     void formatToDebug(Formatter fmt) {
-        fmt.format(fmt.MAPSTART);
+        fmt.write(fmt.MAPSTART);
         bool first = true;
          for (itm :in this){
-            if (!first) fmt.format(fmt.ELEMSEP);
+            if (!first) fmt.write(fmt.ELEMSEP);
             else first = false;
             itm.formatToDebug(fmt);
         }
-        fmt.format(fmt.MAPEND);
+        fmt.write(fmt.MAPEND);
     }
 
     uint count() {
