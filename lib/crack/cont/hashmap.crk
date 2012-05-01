@@ -152,7 +152,7 @@ class HashMap[Key, Value] {
         if (_items[i])
             return _items[i].val;
         else
-            throw KeyError(FStr() `Invalid key: $key`);
+            throw KeyError(FStr() `Unknown key: $key`);
     }
 
     ## Returns the value associated with the specified key, null if the key is 
@@ -294,7 +294,7 @@ class HashMap[Key, Value] {
             --_size;
             __findNewOccupant(i);
         } else {
-            throw KeyError(FStr() `Invalid key: $key`);
+            throw KeyError(FStr() `Unknown key: $key`);
         }
     }
 
@@ -573,7 +573,7 @@ class OrderedHashMap[Key, Value] {
         if (_items[i])
             return _items[i].val;
         else
-            throw KeyError(FStr() `Invalid key: $key`);
+            throw KeyError(FStr() `Unknown key: $key`);
     }
 
     ## Returns the item associated with the specified key, null if the key is 
@@ -711,7 +711,7 @@ class OrderedHashMap[Key, Value] {
             --_size;
             __findNewOccupant(i);
         } else {
-            throw KeyError(FStr() `Invalid key: $key`);
+            throw KeyError(FStr() `Unknown key: $key`);
         }
     }
 

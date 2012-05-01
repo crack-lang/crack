@@ -4,7 +4,7 @@
 import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
     ManagedBuffer, Writer, Exception, Formatter;
 import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
-    read, c_strerror, setNonBlocking;
+    read, c_strerror, setNonBlocking, errno, EAGAIN, EWOULDBLOCK;
 
 # we need Writer and Formatter to be in crack.lang, but they belongs here.
 @export_symbols Writer, Formatter;
@@ -101,8 +101,12 @@ class FDReader : FileHandle, Reader {
     ## Read up to 'size' bytes from the file descriptor into the buffer.
     uint read(WriteBuffer buf) {
         int rc = read(fd, buf.buffer, buf.cap);
-        if (rc == -1)
-            throw Exception(String(c_strerror()));
+        if (rc == -1) {
+            int en = errno();
+            // don't throw if this is a blocking issue (fd may be nonblocking)
+            if (en != EAGAIN && en != EWOULDBLOCK)
+                throw Exception(String(c_strerror()));
+        }
         buf.size = rc;
         return rc;
     }

@@ -8,19 +8,19 @@ import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.io cerr, StandardFormatter, StringFormatter, Writer;
-import crack.net InetAddress, Pollable, Poller, Socket, AF_INET, POLLIN, 
+import crack.io cerr, StandardFormatter, StringFormatter, Writer, FileHandle;
+import crack.net InetAddress, Poller, Socket, AF_INET, POLLIN,
     POLLOUT, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
 import crack.sys strerror;
-import crack.fs SystemError;
+import crack.lang SystemError;
 import crack.runtime errno;
 import crack.functor Functor1;
+import crack.logger debug, info;
 
 @import crack.ann define, interface, implements;
 
 StandardFormatter NULL_FORMATTER = null;
-@define vlog() { cerr }
 
 ## Contains the full contents of an HTTP request and provides the means for 
 ## communicating back to the client.
@@ -259,7 +259,7 @@ class HTTPServer {
                                      end - verStart,
                                      false
                                      );
-            @vlog() `got header $(request.version)\n`;
+            info `got header $(request.version)\n`;
             state = _ST_HEADERS;
         }
 
@@ -276,7 +276,7 @@ class HTTPServer {
         
         @final void processHeaderLine(uintz start, uintz end) {
             line := String(inbuf.buffer + start, end - start, false);
-            @vlog() `processing header line: $(line.getRepr())\n`;
+            info `processing header line: $(line.getRepr())\n`;
             if (!line) {
                 state = _ST_BODY;
                 processRequest();
@@ -284,7 +284,7 @@ class HTTPServer {
             }
             # find the first colon
             sep := line.lfind(b':');
-            @vlog() `adding $(line.slice(0, sep)) $(line.slice(sep + 1))\n`;
+            info `adding $(line.slice(0, sep)) $(line.slice(sep + 1))\n`;
             request.headers[line.slice(0, sep)] = strip(line.slice(sep + 1));
         }
                     
@@ -342,9 +342,9 @@ class HTTPServer {
     
     int __port;
     Socket __sock = {AF_INET, SOCK_STREAM, 0};
-    HashMap[int, Client] __clients = {};
+    HashMap[FileHandle, Client] __clients = {};
     Poller __poller = {};
-    Array[Pollable] __toRemove = {};
+    Array[FileHandle] __toRemove = {};
     HandlerArray __handlers = {};
 
     oper init(int port) {
@@ -353,37 +353,37 @@ class HTTPServer {
         if (!__sock.listen(5)) 
             throw SystemError('listen failed', errno());
         if (!__sock.setReuseAddr(true))
-            @vlog() `WARN: reuseaddr failed: $(strerror())\n`;
+            info `WARN: reuseaddr failed: $(strerror())\n`;
         __poller.add(__sock, POLLIN);
     }
 
     void __accept() {
         clientAccepted := __sock.accept();
-        @vlog() `  got connection from $(clientAccepted.addr) with ref count \
-$(clientAccepted.sock.refCount)\n`;
+        info `  got connection from $(clientAccepted.addr) with ref count \
+$(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)\n`;
         __poller.add(clientAccepted.sock, POLLIN);
-        __clients[clientAccepted.sock.fd] = 
+        __clients[FileHandle(clientAccepted.sock.fd)] =
             Client(clientAccepted.sock, __handlers);
     }
     
-    void __processClientRead(Pollable p) {
-        client := __clients[p.getFD()];
+    void __processClientRead(FileHandle p) {
+        client := __clients[p];
         if (!client.readChunk()) {
-            @vlog() `deleting client $(p.getFD())\n`;
-            __clients.delete(p.getFD());
+            info `deleting client $p)\n`;
+            __clients.delete(p);
             # XXX should do a deferred close here
             client.sock.close();
             __toRemove.append(p);
         }
     }
     
-    void __processClientWrite(Pollable p) {
+    void __processClientWrite(FileHandle p) {
         # find the client
-        client := __clients[p.getFD()];
+        client := __clients[p];
         
         # XXX this is rubbish.  Fix it
         while (client.outQueue) {
-            @vlog() `writing $(client.outQueue[0].getRepr())\n`;
+            info `writing $(client.outQueue[0].getRepr())\n`;
             client.sock.send(client.outQueue[0], 0);
             client.outQueue.delete(0);
         }
@@ -406,27 +406,27 @@ $(clientAccepted.sock.refCount)\n`;
             else
                 __poller.setEvents(clientItem.val.sock, POLLIN);
         
-        @vlog() `waiting for an event\n`;
+        debug `waiting for an event\n`;
         result := __poller.wait(timeout);
-        @vlog() `got events: $result\n`;
+        debug `got events: $result\n`;
         while (evt := __poller.nx()) {
-            @vlog() `  event is on $(evt.pollable.getFD())\n`;
+            info `  event is on $(evt.pollable)\n`;
             # if it's the server socket, do an accept
             if (evt.pollable is __sock) {
-                @vlog() `  got new connection\n`;
+                info `  got new connection\n`;
                 __accept();
             # client events
             } else {
                 if (POLLIN & evt.revents) {
-                    @vlog() `  got client read\n`;
+                    info `  got client read\n`;
                     __processClientRead(evt.pollable);
                 } else if (POLLOUT & evt.revents) {
-                    @vlog() `  got client writable\n`;
+                    info `  got client writable\n`;
                     __processClientWrite(evt.pollable);
                 } else if (POLLERR & evt.revents) {
-                    @vlog() `  error on socket $(evt.pollable)\n`;
+                    info `  error on socket $(evt.pollable)\n`;
                 } else {
-                    @vlog() `  wtf???  pollable = $(evt.pollable), events = \
+                    info `  wtf???  pollable = $(evt.pollable), events = \
 $(evt.events), revents = $(evt.revents)\n`;
                 }
             }
@@ -435,12 +435,12 @@ $(evt.events), revents = $(evt.revents)\n`;
         # remove pollables that we're done with.
         if (__toRemove) {
             for (p :in __toRemove) {
-                @vlog() `removing $p\n`;
+                info `removing $p\n`;
                 __poller.remove(p);
             }
             while (__toRemove)
                 __toRemove.delete(0);
-            @vlog() `removals finished\n`;
+            info `removals finished\n`;
         }
         
     }

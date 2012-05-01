@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <iostream>
 
@@ -264,14 +265,16 @@ sockaddr_in *AddrInfo_getInAddr(addrinfo *ai) {
         return 0;
 }
 
-void PipeAddr::init1(PipeAddr *pipe, int32_t flags) {
+void PipeAddr::init1(PipeAddr *pipeAddr, int32_t flags) {
     int pipefd[2] = {-1, -1};
-    int errors = pipe2(pipefd, flags);
+    int errors = pipe(pipefd);
 
     if (errors == 0) {
-        pipe->flags=flags;
-        pipe->readfd = int32_t(pipefd[0]);
-        pipe->writefd = int32_t(pipefd[1]);
+        pipeAddr->flags=flags;
+        pipeAddr->readfd = int32_t(pipefd[0]);
+        pipeAddr->writefd = int32_t(pipefd[1]);
+        if (fcntl(pipefd[0], F_SETFL, flags)!=-1) return;
+        fcntl(pipefd[1], F_SETFL, flags);
     }
 }
 
