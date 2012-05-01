@@ -58,11 +58,7 @@ public:
             cleanup();
     }
 
-    void recordDependency(ModuleDef *other) {
-        // reference the entry for this module to create an empty import list
-        // if none currently exists.
-        importList[BModuleDefPtr::acast(other)];
-    }
+    void recordDependency(ModuleDef *other);
 
     virtual bool matchesSource(const std::string &source) {
         return digest == SourceDigest::fromFile(source);

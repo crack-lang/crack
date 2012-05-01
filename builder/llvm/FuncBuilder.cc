@@ -103,7 +103,7 @@ void FuncBuilder::finish(bool storeDef) {
     // pointer
     funcDef->impl = new BConstDefImpl(func);
 
-    funcDef->rep = func;
+    funcDef->setRep(func);
     if (storeDef)
         context.addDef(funcDef.get());
 }

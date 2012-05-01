@@ -75,8 +75,11 @@ public:
 
 SPUG_RCPTR(BGlobalVarDefImpl);
 class BGlobalVarDefImpl : public BMemVarDefImpl {
-public:
+private:
+    // global var rep's are module specific, this variable points to the
+    // value for the module most recently evaluated by getRep().
     llvm::GlobalVariable *rep;
+public:
 
     BGlobalVarDefImpl(llvm::GlobalVariable *rep) : rep(rep) {}
 

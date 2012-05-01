@@ -140,14 +140,6 @@ class LLVMBuilder : public Builder {
          */
         virtual void fixClassInstRep(BTypeDef *type) = 0;
 
-        /**
-         * Instantiates the BModuleDef subclass appropriate for the builder.
-         */
-        virtual BModuleDef *instantiateModule(model::Context &context,
-                                              const std::string &name,
-                                              llvm::Module *module
-                                              );
-        
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -178,6 +170,14 @@ class LLVMBuilder : public Builder {
         // been defined.
         std::vector<BTypeDefPtr> deferMetaClass;
 
+        /**
+         * Instantiates the BModuleDef subclass appropriate for the builder.
+         */
+        virtual BModuleDef *instantiateModule(model::Context &context,
+                                              const std::string &name,
+                                              llvm::Module *module
+                                              );
+
         /** 
          * Returns true if cleanups should be suppressed (i.e. after a throw) 
          */
@@ -189,13 +189,16 @@ class LLVMBuilder : public Builder {
             moduleFuncs[funcDef] = func;
         }
 
-        llvm::Function *getModFunc(model::FuncDef *funcDef);
+        llvm::Function *getModFunc(model::FuncDef *funcDef,
+                                   llvm::Function *funcRep);
 
         void setModVar(model::VarDefImpl *varDef, llvm::GlobalVariable *var) {
             moduleVars[varDef] = var;
         }
 
-        llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef);
+        llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef,
+                                        llvm::GlobalVariable *gvar
+                                        );
         
         BTypeDefPtr getFuncType(model::Context &context,
                                 model::FuncDef *funcDef,
