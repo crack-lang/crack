@@ -1,0 +1,12 @@
+%%TEST%%
+HTTP Server
+%%ARGS%%
+
+%%FILE%%
+import crack.net.httpsrv;
+import crack.io cout;
+cout `ok`;
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -160,6 +160,9 @@ class OutQueue : Array[String] @implements Writer {
         else
             append(String(data));
     }
+    void write(byteptr data) {
+        append(String(data));
+    }
 }
 
 ## An HTTP Server.
