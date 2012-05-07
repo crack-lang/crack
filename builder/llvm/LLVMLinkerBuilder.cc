@@ -340,7 +340,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
                                );
             ArrayType *byteArrType =
                 ArrayType::get(byteType, name.size() + 1);
-            Constant *funcName = ConstantArray::get(lctx, name, true);
+            Constant *funcName = ConstantDataArray::getString(lctx, name, true);
             GlobalVariable *nameGVar =
                 new GlobalVariable(*module, byteArrType, true, // is constant
                                    GlobalValue::InternalLinkage,

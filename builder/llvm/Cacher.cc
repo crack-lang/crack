@@ -225,7 +225,7 @@ void Cacher::writeMetadata() {
             continue;
         }
 
-        dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
+        dList.push_back(MDString::get(getGlobalContext(), i->second->getName()));
     }
 
     // globals
@@ -234,7 +234,7 @@ void Cacher::writeMetadata() {
          ++i) {
         if (!i->second->isDeclaration())
             continue;
-        dList.push_back(MDString::get(getGlobalContext(), i->second->getNameStr()));
+        dList.push_back(MDString::get(getGlobalContext(), i->second->getName()));
     }
     if (dList.size()) {
         node->addOperand(MDNode::get(getGlobalContext(), dList));
