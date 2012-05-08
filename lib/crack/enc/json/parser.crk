@@ -1,0 +1,2060 @@
+
+# line 1 "opt/json.rl"
+//
+// A JSON parser based on the Ragel state machine from http://flori.github.com/json/
+// This is a derivative work as defined by the license at 
+// http://www.ruby-lang.org/en/LICENSE.txt
+// The LGPLv3 license of Crack fulfills the requirements of 2.a and 3.a of that license
+
+// To convert the Ragel source file to a .crk file use Ragel from
+// www.bitbucket.org/hengestone/ragel-crack until the patch -s merged using
+// ragel -K -F0 json.rl -o json.crk
+
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// 12/10/2011
+
+// For more info on JSON, see http://json.org/
+
+import crack.cont.array Array;
+import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer;
+import crack.enc.json.lib JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
+    JsonString, UnexpectedToken, ParseException;
+import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
+    FP_NORMAL, FP_ZERO, sign;
+import crack.io Formatter, FStr, cerr;
+@import crack.ann define;
+
+class JsonParser {
+
+  /* EOF char used to flush out that last token. This should be a whitespace
+   * token. */
+
+    uint LAST_CHAR = 0, EVIL = 6666;
+
+    ManagedBuffer buf;
+    AppendBuffer append_buf = {128};
+    uint data_size = 0, eof = 0, have = 0, maxNesting = 10, currentNesting = 0;
+    uint line = 1, col = 1;
+    byteptr data;
+    bool allowNaN = true, quirksMode = true;
+
+
+    class ParserResult {
+
+        /**
+         * The result of the successful parsing. Should never be
+         * <code>null</code>.
+         */
+        Object result;
+
+        /**
+         * The point where the parser returned.
+         */
+        uint p;
+
+        oper init(Object result, uint p) : result = result, p = p {
+        }
+
+        @define formatJsonValue(Type){
+            if (result.isa(Type)) {
+                fmt.format(Type.cast(result));
+            }
+        }
+
+        void formatTo(Formatter fmt) {
+            if (result is null){
+              fmt.format(fmt.NULL);
+              return;
+            }
+
+            @formatJsonValue(JsonInt)
+            else @formatJsonValue(JsonBool)
+            else @formatJsonValue(JsonFloat)
+            else @formatJsonValue(JsonObject)
+            else @formatJsonValue(JsonArray)
+            else @formatJsonValue(String)
+            else fmt.format('UNKNOWN');
+        }
+    }
+
+    
+# line 230 "opt/json.rl"
+
+
+//------------------------------------------------------------------------------
+
+
+    String bufferString(uint bi, uint ei){
+        return String(Buffer(data + uintz(bi), ei - bi));
+    }
+
+    int _atoi(uint bi, uint ei){
+        return atoi(CString(data + uintz(bi), ei - bi, false));
+    }
+
+    // Forward declarations
+    ParserResult parseValue(uint p, uint pe);
+    ParserResult parseFloat(uint p, uint pe);
+    ParserResult parseInteger(uint p, uint pe);
+    ParserResult parseString(uint p, uint pe);
+    ParserResult parseArray(uint p, uint pe);
+    ParserResult parseObject(uint p, uint pe);
+
+    
+# line 231 "lib/crack/json.crk"
+Array[uint] _JSON_value_actions = [
+  0, 1, 0, 1, 1, 1, 2, 1, 
+  3, 1, 4, 1, 5, 1, 6, 1, 
+  7, 1, 8, 1, 9
+];
+
+Array[uint] _JSON_value_trans_keys = [
+  0, 0, 34, 123, 110, 110, 
+  102, 102, 105, 105, 110, 
+  110, 105, 105, 116, 116, 
+  121, 121, 97, 97, 78, 78, 
+  97, 97, 108, 108, 115, 
+  115, 101, 101, 117, 117, 
+  108, 108, 108, 108, 114, 114, 
+  117, 117, 101, 101, 0, 
+  0, 0
+];
+
+Array[uint] _JSON_value_key_spans = [
+  0, 90, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 0
+];
+
+Array[uint] _JSON_value_index_offsets = [
+  0, 0, 91, 93, 95, 97, 99, 101, 
+  103, 105, 107, 109, 111, 113, 115, 117, 
+  119, 121, 123, 125, 127, 129
+];
+
+Array[uint] _JSON_value_indicies = [
+  0, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 2, 1, 1, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 3, 
+  1, 1, 1, 1, 4, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 5, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 6, 1, 1, 1, 
+  1, 1, 1, 1, 7, 1, 1, 1, 
+  1, 1, 8, 1, 1, 1, 1, 1, 
+  1, 9, 1, 10, 1, 11, 1, 12, 
+  1, 13, 1, 14, 1, 15, 1, 16, 
+  1, 17, 1, 18, 1, 19, 1, 20, 
+  1, 21, 1, 22, 1, 23, 1, 24, 
+  1, 25, 1, 26, 1, 27, 1, 28, 
+  1, 1, 0
+];
+
+Array[uint] _JSON_value_trans_targs = [
+  21, 0, 21, 2, 9, 21, 11, 15, 
+  18, 21, 3, 4, 5, 6, 7, 8, 
+  21, 10, 21, 12, 13, 14, 21, 16, 
+  17, 21, 19, 20, 21
+];
+
+Array[uint] _JSON_value_trans_actions = [
+  13, 0, 11, 0, 0, 15, 0, 0, 
+  0, 17, 0, 0, 0, 0, 0, 0, 
+  9, 0, 7, 0, 0, 0, 3, 0, 
+  0, 1, 0, 0, 5
+];
+
+Array[uint] _JSON_value_from_state_actions = [
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 19
+];
+
+uint JSON_value_start = 1;
+uint JSON_value_first_final = 21;
+uint JSON_value_error = 0;
+
+uint  JSON_value_en_main = 1;
+
+
+# line 364 "opt/json.rl"
+
+
+    ParserResult parseValue(uint p, uint pe) {
+        Object result = null;
+        ParserResult res = null;
+        uint cs = EVIL;
+
+        
+# line 318 "lib/crack/json.crk"
+  cs = JSON_value_start;
+
+# line 372 "opt/json.rl"
+
+        
+# line 324 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _acts = _JSON_value_from_state_actions[cs];
+      _nacts = _JSON_value_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_value_actions[_acts - 1];
+
+      # start from state action switch
+    if (_tempval  == 9) { // FROM_STATE_ACTION_SWITCH
+# line 349 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 383 "lib/crack/json.crk" # end of line directive
+      # end from state action switch
+      }
+
+      if (_trigger_goto) continue;
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_value_index_offsets[cs];
+      _slen = _JSON_value_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_value_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_value_trans_keys[_keys + 1]) 
+        _trans = _JSON_value_indicies[ _inds + data[p] - _JSON_value_trans_keys[_keys] ]; 
+      else _trans =_JSON_value_indicies[ _inds + _slen ];
+
+    cs = _JSON_value_trans_targs[_trans];
+
+    if (_JSON_value_trans_actions[_trans] != 0) {
+      _acts = _JSON_value_trans_actions[_trans];
+      _nacts = _JSON_value_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_value_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 257 "opt/json.rl" # end of line directive
+    
+            result = null;
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 261 "opt/json.rl" # end of line directive
+    
+            result = JsonBool(false);
+            // ACTION
+    }
+    else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
+# line 265 "opt/json.rl" # end of line directive
+    
+            result = JsonBool(true);
+            // ACTION
+    }
+    else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
+# line 269 "opt/json.rl" # end of line directive
+    
+            if (allowNaN) {
+                result = JsonFloat(NAN);
+            } else {
+                throw UnexpectedToken(data, p - 2, pe);
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
+# line 277 "opt/json.rl" # end of line directive
+    
+            if (allowNaN) {
+                result = JsonFloat(INFINITY)
+            } else {
+                throw UnexpectedToken(data, p - 7, pe);
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
+# line 285 "opt/json.rl" # end of line directive
+    
+            if (pe > p + 9 && bufferString(p, p+9) == "-Infinity") {
+                if (allowNaN) {
+                    result = JsonFloat(-INFINITY);
+                    p = ( p + 10) - 1; //EXEC
+
+                    p = p - 1;
+                        p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+                } else {
+                    throw UnexpectedToken(data, p, pe);
+                }
+            }
+
+            res = parseFloat(p, pe);
+            if (!(res is null)) {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+
+            res = parseInteger(p, pe);
+            if (!(res is null)) {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+    else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
+# line 312 "opt/json.rl" # end of line directive
+    
+            res = parseString(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
+# line 323 "opt/json.rl" # end of line directive
+    
+            currentNesting++;
+            res = parseArray(p, pe);
+            currentNesting--;
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
+# line 336 "opt/json.rl" # end of line directive
+    
+            currentNesting++;
+            res = parseObject(p, pe);
+            currentNesting--;
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+# line 552 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 374 "opt/json.rl"
+
+        if (cs >= JSON_value_first_final){
+            return ParserResult(result, p);
+        }
+
+        return null;
+    }
+
+    
+# line 589 "lib/crack/json.crk"
+Array[uint] _JSON_integer_actions = [
+  0, 1, 0
+];
+
+Array[uint] _JSON_integer_trans_keys = [
+  0, 0, 45, 57, 48, 57, 
+  48, 57, 0, 0, 48, 
+  57, 0
+];
+
+Array[uint] _JSON_integer_key_spans = [
+  0, 13, 10, 10, 0, 10
+];
+
+Array[uint] _JSON_integer_index_offsets = [
+  0, 0, 14, 25, 36, 37
+];
+
+Array[uint] _JSON_integer_indicies = [
+  0, 1, 1, 2, 3, 3, 3, 3, 
+  3, 3, 3, 3, 3, 1, 2, 3, 
+  3, 3, 3, 3, 3, 3, 3, 3, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 4, 1, 3, 3, 3, 
+  3, 3, 3, 3, 3, 3, 3, 4, 
+  0
+];
+
+Array[uint] _JSON_integer_trans_targs = [
+  2, 0, 3, 5, 4
+];
+
+Array[uint] _JSON_integer_trans_actions = [
+  0, 0, 0, 0, 1
+];
+
+uint JSON_integer_start = 1;
+uint JSON_integer_first_final = 3;
+uint JSON_integer_error = 0;
+
+uint  JSON_integer_en_main = 1;
+
+
+# line 393 "opt/json.rl"
+
+
+    ParserResult parseInteger(uint p, uint pe) {
+        uint cs = EVIL;
+        uint memo = p;
+
+        
+# line 641 "lib/crack/json.crk"
+  cs = JSON_integer_start;
+
+# line 400 "opt/json.rl"
+
+        
+# line 647 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_integer_index_offsets[cs];
+      _slen = _JSON_integer_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_integer_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_integer_trans_keys[_keys + 1]) 
+        _trans = _JSON_integer_indicies[ _inds + data[p] - _JSON_integer_trans_keys[_keys] ]; 
+      else _trans =_JSON_integer_indicies[ _inds + _slen ];
+
+    cs = _JSON_integer_trans_targs[_trans];
+
+    if (_JSON_integer_trans_actions[_trans] != 0) {
+      _acts = _JSON_integer_trans_actions[_trans];
+      _nacts = _JSON_integer_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_integer_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 387 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 719 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 402 "opt/json.rl"
+
+        if (cs < JSON_integer_first_final) {
+            return null;
+        }
+
+        JsonInt number = { atoi(CString(data + uintz(memo), p - memo, false)) };
+
+        return ParserResult(number, p + 1);
+    }
+
+    
+# line 758 "lib/crack/json.crk"
+Array[uint] _JSON_float_actions = [
+  0, 1, 0
+];
+
+Array[uint] _JSON_float_trans_keys = [
+  0, 0, 45, 57, 48, 57, 
+  46, 101, 48, 57, 43, 
+  57, 48, 57, 46, 101, 
+  45, 101, 0, 0, 45, 101, 
+  0
+];
+
+Array[uint] _JSON_float_key_spans = [
+  0, 13, 10, 56, 10, 15, 10, 56, 
+  57, 0, 57
+];
+
+Array[uint] _JSON_float_index_offsets = [
+  0, 0, 14, 25, 82, 93, 109, 120, 
+  177, 235, 236
+];
+
+Array[uint] _JSON_float_indicies = [
+  0, 1, 1, 2, 3, 3, 3, 3, 
+  3, 3, 3, 3, 3, 1, 2, 3, 
+  3, 3, 3, 3, 3, 3, 3, 3, 
+  1, 4, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  5, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  5, 1, 6, 6, 6, 6, 6, 6, 
+  6, 6, 6, 6, 1, 7, 1, 7, 
+  1, 1, 8, 8, 8, 8, 8, 8, 
+  8, 8, 8, 8, 1, 8, 8, 8, 
+  8, 8, 8, 8, 8, 8, 8, 1, 
+  4, 1, 3, 3, 3, 3, 3, 3, 
+  3, 3, 3, 3, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 5, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 5, 
+  1, 1, 1, 9, 6, 6, 6, 6, 
+  6, 6, 6, 6, 6, 6, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 5, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 5, 9, 1, 1, 1, 9, 8, 
+  8, 8, 8, 8, 8, 8, 8, 8, 
+  8, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 1, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 9, 9, 9, 9, 
+  9, 9, 9, 9, 1, 9, 0
+];
+
+Array[uint] _JSON_float_trans_targs = [
+  2, 0, 3, 7, 4, 5, 8, 6, 
+  10, 9
+];
+
+Array[uint] _JSON_float_trans_actions = [
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 1
+];
+
+uint JSON_float_start = 1;
+uint JSON_float_first_final = 8;
+uint JSON_float_error = 0;
+
+uint  JSON_float_en_main = 1;
+
+
+# line 427 "opt/json.rl"
+
+
+    ParserResult parseFloat(uint p, uint pe) {
+        uint cs = EVIL;
+        uint memo = p;
+
+        
+# line 846 "lib/crack/json.crk"
+  cs = JSON_float_start;
+
+# line 434 "opt/json.rl"
+
+        
+# line 852 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_float_index_offsets[cs];
+      _slen = _JSON_float_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_float_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_float_trans_keys[_keys + 1]) 
+        _trans = _JSON_float_indicies[ _inds + data[p] - _JSON_float_trans_keys[_keys] ]; 
+      else _trans =_JSON_float_indicies[ _inds + _slen ];
+
+    cs = _JSON_float_trans_targs[_trans];
+
+    if (_JSON_float_trans_actions[_trans] != 0) {
+      _acts = _JSON_float_trans_actions[_trans];
+      _nacts = _JSON_float_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_float_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 418 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 924 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 436 "opt/json.rl"
+
+        if (cs < JSON_float_first_final) {
+            return null;
+        }
+
+        JsonFloat number = { strtof(CString(data + uintz(memo), p - memo, false)) };
+        return ParserResult(number, p + 1);
+    }
+
+    
+# line 962 "lib/crack/json.crk"
+Array[uint] _JSON_string_actions = [
+  0, 1, 0, 1, 1, 1, 2, 1, 
+  3, 2, 4, 5
+];
+
+Array[uint] _JSON_string_trans_keys = [
+  0, 0, 34, 34, 0, 92, 
+  34, 116, 48, 55, 48, 
+  55, 0, 0, 0
+];
+
+Array[uint] _JSON_string_key_spans = [
+  0, 1, 93, 83, 8, 8, 0
+];
+
+Array[uint] _JSON_string_index_offsets = [
+  0, 0, 2, 96, 180, 189, 198
+];
+
+Array[uint] _JSON_string_indicies = [
+  0, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 2, 2, 3, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 2, 4, 2, 
+  5, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 6, 5, 6, 1, 
+  1, 6, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 5, 1, 1, 1, 1, 1, 
+  5, 1, 1, 1, 5, 1, 1, 1, 
+  1, 1, 1, 1, 5, 1, 1, 1, 
+  5, 1, 5, 1, 7, 7, 7, 7, 
+  7, 7, 7, 7, 1, 8, 8, 8, 
+  8, 8, 8, 8, 8, 1, 1, 0
+];
+
+Array[uint] _JSON_string_trans_targs = [
+  2, 0, 2, 6, 3, 2, 4, 5, 
+  2
+];
+
+Array[uint] _JSON_string_trans_actions = [
+  1, 0, 0, 9, 0, 7, 3, 0, 
+  5
+];
+
+uint JSON_string_start = 1;
+uint JSON_string_first_final = 6;
+uint JSON_string_error = 0;
+
+uint  JSON_string_en_main = 1;
+
+
+# line 511 "opt/json.rl"
+
+
+    ParserResult parseString(uint p, uint pe) {
+        append_buf.size = 0;
+        String result = null;
+        uint cs = EVIL;
+        byte chr;
+
+        uint memo = p;
+
+        
+# line 1039 "lib/crack/json.crk"
+  cs = JSON_string_start;
+
+# line 522 "opt/json.rl"
+
+        
+# line 1045 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_string_index_offsets[cs];
+      _slen = _JSON_string_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_string_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_string_trans_keys[_keys + 1]) 
+        _trans = _JSON_string_indicies[ _inds + data[p] - _JSON_string_trans_keys[_keys] ]; 
+      else _trans =_JSON_string_indicies[ _inds + _slen ];
+
+    cs = _JSON_string_trans_targs[_trans];
+
+    if (_JSON_string_trans_actions[_trans] != 0) {
+      _acts = _JSON_string_trans_actions[_trans];
+      _nacts = _JSON_string_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_string_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 451 "opt/json.rl" # end of line directive
+    
+            memo++;
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 460 "opt/json.rl" # end of line directive
+    
+            memo = p;
+            // ACTION
+    }
+    else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
+# line 464 "opt/json.rl" # end of line directive
+    
+            chr = (data[memo] - 48) *64;
+            chr += (data[memo+1] - 48)*8;
+            chr += (data[memo+2] - 48);
+            append_buf.append(chr);
+            memo = p + 1;
+            p = ( p + 1) - 1; //EXEC
+
+            // ACTION
+    }
+    else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
+# line 473 "opt/json.rl" # end of line directive
+    
+            if (p > memo)
+                append_buf.extend(data + uintz(memo), p - memo - 1);
+            chr = data[p];
+            if (chr == b'"' || chr == b'\\' || chr == b'/')
+                append_buf.append(chr);
+            else if (chr == b"b")
+                append_buf.append(b"\b");
+            else if (chr == b"n")
+                append_buf.append(b"\n");
+            else if (chr == b"f")
+                append_buf.append(b"\f");
+            else if (chr == b"r")
+                append_buf.append(b"\r");
+            else if (chr == b"t")
+                append_buf.append(b"\t");
+            memo = p + 1;
+            p = ( p + 1) - 1; //EXEC
+
+            // ACTION
+    }
+    else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
+# line 493 "opt/json.rl" # end of line directive
+    
+            if (p > memo)
+                append_buf.extend(data + uintz(memo), p - memo);
+            result = JsonString(append_buf, false);
+            p = ( p + 1) - 1; //EXEC
+
+            // ACTION
+    }
+    else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
+# line 500 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 1174 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 524 "opt/json.rl"
+
+        if (cs >= JSON_string_first_final && !(result is null)) {
+            return ParserResult(result, p + 1);
+        } else {
+            return null;
+        }
+    }
+
+    
+# line 1211 "lib/crack/json.crk"
+Array[uint] _JSON_array_actions = [
+  0, 1, 0, 1, 1
+];
+
+Array[uint] _JSON_array_trans_keys = [
+  0, 0, 91, 91, 9, 123, 
+  9, 93, 9, 123, 42, 
+  47, 42, 42, 42, 47, 
+  10, 10, 42, 47, 42, 42, 
+  42, 47, 10, 10, 42, 
+  47, 42, 42, 42, 47, 
+  10, 10, 0, 0, 0
+];
+
+Array[uint] _JSON_array_key_spans = [
+  0, 1, 115, 85, 115, 6, 1, 6, 
+  1, 6, 1, 6, 1, 6, 1, 6, 
+  1, 0
+];
+
+Array[uint] _JSON_array_index_offsets = [
+  0, 0, 2, 118, 204, 320, 327, 329, 
+  336, 338, 345, 347, 354, 356, 363, 365, 
+  372, 374
+];
+
+Array[uint] _JSON_array_indicies = [
+  0, 1, 0, 0, 1, 1, 0, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 0, 1, 2, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 2, 1, 
+  3, 2, 2, 2, 2, 2, 2, 2, 
+  2, 2, 2, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 2, 1, 1, 1, 1, 2, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 2, 1, 4, 1, 
+  1, 1, 1, 1, 1, 1, 1, 2, 
+  1, 1, 1, 1, 1, 1, 1, 2, 
+  1, 1, 1, 1, 1, 2, 1, 1, 
+  1, 1, 1, 1, 2, 1, 5, 5, 
+  1, 1, 5, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 5, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 6, 1, 1, 7, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 4, 1, 6, 6, 1, 1, 
+  6, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 6, 1, 2, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  2, 1, 8, 2, 2, 2, 2, 2, 
+  2, 2, 2, 2, 2, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 2, 1, 1, 1, 
+  1, 2, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 2, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 2, 1, 1, 1, 1, 1, 1, 
+  1, 2, 1, 1, 1, 1, 1, 2, 
+  1, 1, 1, 1, 1, 1, 2, 1, 
+  9, 1, 1, 1, 1, 10, 1, 11, 
+  9, 11, 9, 9, 9, 9, 6, 9, 
+  6, 10, 12, 1, 1, 1, 1, 13, 
+  1, 14, 12, 14, 12, 12, 12, 12, 
+  5, 12, 5, 13, 15, 1, 1, 1, 
+  1, 16, 1, 17, 15, 17, 15, 15, 
+  15, 15, 0, 15, 0, 16, 1, 0
+];
+
+Array[uint] _JSON_array_trans_targs = [
+  2, 0, 3, 13, 17, 3, 4, 9, 
+  5, 6, 8, 7, 10, 12, 11, 14, 
+  16, 15
+];
+
+Array[uint] _JSON_array_trans_actions = [
+  0, 0, 1, 0, 3, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0
+];
+
+uint JSON_array_start = 1;
+uint JSON_array_first_final = 17;
+uint JSON_array_error = 0;
+
+uint  JSON_array_en_main = 1;
+
+
+# line 565 "opt/json.rl"
+
+
+    ParserResult parseArray(uint p, uint pe) {
+        if (maxNesting > 0 && currentNesting > maxNesting) {
+            throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
+        }
+
+        JsonArray result = {};
+        ParserResult res = null;
+
+        uint cs = EVIL;
+
+        
+# line 1321 "lib/crack/json.crk"
+  cs = JSON_array_start;
+
+# line 578 "opt/json.rl"
+
+        
+# line 1327 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_array_index_offsets[cs];
+      _slen = _JSON_array_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_array_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_array_trans_keys[_keys + 1]) 
+        _trans = _JSON_array_indicies[ _inds + data[p] - _JSON_array_trans_keys[_keys] ]; 
+      else _trans =_JSON_array_indicies[ _inds + _slen ];
+
+    cs = _JSON_array_trans_targs[_trans];
+
+    if (_JSON_array_trans_actions[_trans] != 0) {
+      _acts = _JSON_array_trans_actions[_trans];
+      _nacts = _JSON_array_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_array_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 538 "opt/json.rl" # end of line directive
+    
+            res = parseValue(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result.append(res.result);
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 549 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 1418 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 580 "opt/json.rl"
+
+        if (cs >= JSON_array_first_final) {
+            return ParserResult(result, p + 1);
+        } else {
+            throw UnexpectedToken(data, p, pe);
+        }
+    }
+
+    
+# line 1455 "lib/crack/json.crk"
+Array[uint] _JSON_object_actions = [
+  0, 1, 0, 1, 1, 1, 2
+];
+
+Array[uint] _JSON_object_trans_keys = [
+  0, 0, 123, 123, 9, 125, 
+  9, 58, 42, 47, 42, 
+  42, 42, 47, 10, 10, 
+  9, 123, 9, 125, 9, 47, 
+  42, 47, 42, 42, 42, 
+  47, 10, 10, 42, 47, 
+  42, 42, 42, 47, 10, 10, 
+  42, 47, 42, 42, 42, 
+  47, 10, 10, 42, 47, 
+  42, 42, 42, 47, 10, 10, 
+  0, 0, 0
+];
+
+Array[uint] _JSON_object_key_spans = [
+  0, 1, 117, 50, 6, 1, 6, 1, 
+  115, 117, 39, 6, 1, 6, 1, 6, 
+  1, 6, 1, 6, 1, 6, 1, 6, 
+  1, 6, 1, 0
+];
+
+Array[uint] _JSON_object_index_offsets = [
+  0, 0, 2, 120, 171, 178, 180, 187, 
+  189, 305, 423, 463, 470, 472, 479, 481, 
+  488, 490, 497, 499, 506, 508, 515, 517, 
+  524, 526, 533, 535
+];
+
+Array[uint] _JSON_object_indicies = [
+  0, 1, 0, 0, 1, 1, 0, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 0, 1, 2, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  3, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 4, 1, 
+  5, 5, 1, 1, 5, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 5, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 6, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 7, 1, 8, 1, 1, 1, 1, 
+  9, 1, 10, 8, 10, 8, 8, 8, 
+  8, 5, 8, 5, 9, 7, 7, 1, 
+  1, 7, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 7, 1, 11, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 11, 1, 12, 11, 11, 11, 11, 
+  11, 11, 11, 11, 11, 11, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 11, 1, 1, 
+  1, 1, 11, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 11, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 11, 1, 1, 1, 1, 1, 
+  1, 1, 11, 1, 1, 1, 1, 1, 
+  11, 1, 1, 1, 1, 1, 1, 11, 
+  1, 13, 13, 1, 1, 13, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  13, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 14, 1, 1, 15, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 4, 1, 14, 
+  14, 1, 1, 14, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 14, 1, 
+  2, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 16, 1, 17, 
+  1, 1, 1, 1, 18, 1, 19, 17, 
+  19, 17, 17, 17, 17, 14, 17, 14, 
+  18, 20, 1, 1, 1, 1, 21, 1, 
+  22, 20, 22, 20, 20, 20, 20, 13, 
+  20, 13, 21, 23, 1, 1, 1, 1, 
+  24, 1, 25, 23, 25, 23, 23, 23, 
+  23, 7, 23, 7, 24, 26, 1, 1, 
+  1, 1, 27, 1, 28, 26, 28, 26, 
+  26, 26, 26, 0, 26, 0, 27, 1, 
+  0
+];
+
+Array[uint] _JSON_object_trans_targs = [
+  2, 0, 3, 23, 27, 3, 4, 8, 
+  5, 7, 6, 9, 19, 9, 10, 15, 
+  11, 12, 14, 13, 16, 18, 17, 20, 
+  22, 21, 24, 26, 25
+];
+
+Array[uint] _JSON_object_trans_actions = [
+  0, 0, 3, 0, 5, 0, 0, 0, 
+  0, 0, 0, 1, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0, 0
+];
+
+uint JSON_object_start = 1;
+uint JSON_object_first_final = 27;
+uint JSON_object_error = 0;
+
+uint  JSON_object_en_main = 1;
+
+
+# line 631 "opt/json.rl"
+
+
+    ParserResult parseObject(uint p, uint pe) {
+        String lastName = null;
+        ParserResult res = null;
+        if (maxNesting > 0 && currentNesting > maxNesting) {
+            throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
+        }
+
+        JsonObject result = {};
+
+        uint cs = EVIL;
+
+        
+# line 1595 "lib/crack/json.crk"
+  cs = JSON_object_start;
+
+# line 645 "opt/json.rl"
+
+        
+# line 1601 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_object_index_offsets[cs];
+      _slen = _JSON_object_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_object_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_object_trans_keys[_keys + 1]) 
+        _trans = _JSON_object_indicies[ _inds + data[p] - _JSON_object_trans_keys[_keys] ]; 
+      else _trans =_JSON_object_indicies[ _inds + _slen ];
+
+    cs = _JSON_object_trans_targs[_trans];
+
+    if (_JSON_object_trans_actions[_trans] != 0) {
+      _acts = _JSON_object_trans_actions[_trans];
+      _nacts = _JSON_object_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_object_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 594 "opt/json.rl" # end of line directive
+    
+            res = parseValue(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                if (!(lastName is null))
+                    result[lastName] = res.result;
+                else
+                    throw ParseException(FStr() `No key for mapping`, line, col);
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 608 "opt/json.rl" # end of line directive
+    
+            res = parseString(p, pe);
+
+            if (res is null) {
+                throw ParseException(FStr() `Expected a string while parsing object key, got $(bufferString(p, pe))`, line, col);
+            } else {
+                lastName = String.cast(res.result);
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
+# line 619 "opt/json.rl" # end of line directive
+    
+            p = p - 1;
+                p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            // ACTION
+    }
+# line 1709 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 647 "opt/json.rl"
+
+        if (cs < JSON_object_first_final) {
+            return null;
+        }
+        return ParserResult(result, p + 1);
+    }
+
+    
+# line 1745 "lib/crack/json.crk"
+Array[uint] _JSON_actions = [
+  0, 1, 0, 1, 1
+];
+
+Array[uint] _JSON_trans_keys = [
+  0, 0, 9, 123, 42, 47, 
+  42, 42, 42, 47, 10, 
+  10, 42, 47, 42, 42, 
+  42, 47, 10, 10, 9, 47, 
+  0
+];
+
+Array[uint] _JSON_key_spans = [
+  0, 115, 6, 1, 6, 1, 6, 1, 
+  6, 1, 39
+];
+
+Array[uint] _JSON_index_offsets = [
+  0, 0, 116, 123, 125, 132, 134, 141, 
+  143, 150, 152
+];
+
+Array[uint] _JSON_indicies = [
+  0, 0, 1, 1, 0, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 0, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 2, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 3, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 4, 1, 5, 1, 1, 1, 
+  1, 6, 1, 7, 5, 7, 5, 5, 
+  5, 5, 0, 5, 0, 6, 8, 1, 
+  1, 1, 1, 9, 1, 10, 8, 10, 
+  8, 8, 8, 8, 11, 8, 11, 9, 
+  11, 11, 1, 1, 11, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 11, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 12, 1, 
+  0
+];
+
+Array[uint] _JSON_trans_targs = [
+  1, 0, 2, 10, 10, 3, 5, 4, 
+  7, 9, 8, 10, 6
+];
+
+Array[uint] _JSON_trans_actions = [
+  0, 0, 0, 3, 1, 0, 0, 0, 
+  0, 0, 0, 0, 0
+];
+
+uint JSON_start = 1;
+uint JSON_first_final = 10;
+uint JSON_error = 0;
+
+uint  JSON_en_main = 1;
+
+
+# line 688 "opt/json.rl"
+
+
+    ParserResult parseStrict() {
+        Object result = null;
+        ParserResult res = null;
+
+        uint cs = EVIL;
+        uint p = 0;
+        uint pe = p + data_size;
+
+        
+# line 1825 "lib/crack/json.crk"
+  cs = JSON_start;
+
+# line 699 "opt/json.rl"
+
+        
+# line 1831 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_index_offsets[cs];
+      _slen = _JSON_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_trans_keys[_keys + 1]) 
+        _trans = _JSON_indicies[ _inds + data[p] - _JSON_trans_keys[_keys] ]; 
+      else _trans =_JSON_indicies[ _inds + _slen ];
+
+    cs = _JSON_trans_targs[_trans];
+
+    if (_JSON_trans_actions[_trans] != 0) {
+      _acts = _JSON_trans_actions[_trans];
+      _nacts = _JSON_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 660 "opt/json.rl" # end of line directive
+    
+            currentNesting = 1;
+            res = parseObject(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+    else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
+# line 672 "opt/json.rl" # end of line directive
+    
+            currentNesting = 1;
+            res = parseArray(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+# line 1931 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 701 "opt/json.rl"
+
+        if (cs >= JSON_first_final && p == pe) {
+            return res;
+        } else {
+            throw UnexpectedToken(data, p, pe);
+        }
+    }
+
+    
+# line 1968 "lib/crack/json.crk"
+Array[uint] _JSON_quirks_mode_actions = [
+  0, 1, 0
+];
+
+Array[uint] _JSON_quirks_mode_trans_keys = [
+  0, 0, 9, 123, 42, 47, 
+  42, 42, 42, 47, 10, 
+  10, 42, 47, 42, 42, 
+  42, 47, 10, 10, 9, 47, 
+  0
+];
+
+Array[uint] _JSON_quirks_mode_key_spans = [
+  0, 115, 6, 1, 6, 1, 6, 1, 
+  6, 1, 39
+];
+
+Array[uint] _JSON_quirks_mode_index_offsets = [
+  0, 0, 116, 123, 125, 132, 134, 141, 
+  143, 150, 152
+];
+
+Array[uint] _JSON_quirks_mode_indicies = [
+  0, 0, 1, 1, 0, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 0, 
+  1, 2, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 2, 1, 3, 2, 
+  2, 2, 2, 2, 2, 2, 2, 2, 
+  2, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  2, 1, 1, 1, 1, 2, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 2, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 2, 1, 1, 
+  1, 1, 1, 1, 1, 2, 1, 1, 
+  1, 1, 1, 2, 1, 1, 1, 1, 
+  1, 1, 2, 1, 4, 1, 1, 1, 
+  1, 5, 1, 6, 4, 6, 4, 4, 
+  4, 4, 7, 4, 7, 5, 8, 1, 
+  1, 1, 1, 9, 1, 10, 8, 10, 
+  8, 8, 8, 8, 0, 8, 0, 9, 
+  7, 7, 1, 1, 7, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 1, 7, 
+  1, 1, 1, 1, 1, 1, 1, 1, 
+  1, 1, 1, 1, 1, 1, 11, 1, 
+  0
+];
+
+Array[uint] _JSON_quirks_mode_trans_targs = [
+  1, 0, 10, 6, 3, 5, 4, 10, 
+  7, 9, 8, 2
+];
+
+Array[uint] _JSON_quirks_mode_trans_actions = [
+  0, 0, 1, 0, 0, 0, 0, 0, 
+  0, 0, 0, 0
+];
+
+uint JSON_quirks_mode_start = 1;
+uint JSON_quirks_mode_first_final = 10;
+uint JSON_quirks_mode_error = 0;
+
+uint  JSON_quirks_mode_en_main = 1;
+
+
+# line 727 "opt/json.rl"
+
+
+    ParserResult parseQuirksMode() {
+        Object result = null;
+        ParserResult res = null;
+
+        uint cs = EVIL;
+        uint p = 0;
+        uint pe = p + data_size;
+
+        
+# line 2048 "lib/crack/json.crk"
+  cs = JSON_quirks_mode_start;
+
+# line 738 "opt/json.rl"
+
+        
+# line 2054 "lib/crack/json.crk"
+#  ragel flat exec
+
+  bool testEof = false;
+  uint _slen = 0;
+  uint _trans = 0;
+  uint _keys = 0;
+  uint _inds = 0;
+  uint _acts = 0;
+  uint _nacts = 0;
+  uint _tempval = 0;
+  uint _goto_level = 0;
+  uint _resume = 10;
+  uint _eof_trans = 15;
+  uint _again = 20;
+  uint _test_eof = 30;
+  uint _out = 40;
+
+  while(true) { # goto loop
+    bool _trigger_goto = false;
+    if (_goto_level <= 0) {
+
+# noEnd
+      if (p == pe){
+        _goto_level = _test_eof;
+        continue;
+      }
+
+
+# errState != 0
+      if (cs == 0){
+        _goto_level = _out;
+       continue;
+      }
+    } # _goto_level <= 0
+
+     if (_goto_level <= _resume){
+      _keys = cs << 1; // LOCATE_TRANS
+      _inds = _JSON_quirks_mode_index_offsets[cs];
+      _slen = _JSON_quirks_mode_key_spans[cs];
+
+      if (   _slen > 0 && 
+         _JSON_quirks_mode_trans_keys[_keys] <= data[p] && 
+         data[p] <= _JSON_quirks_mode_trans_keys[_keys + 1]) 
+        _trans = _JSON_quirks_mode_indicies[ _inds + data[p] - _JSON_quirks_mode_trans_keys[_keys] ]; 
+      else _trans =_JSON_quirks_mode_indicies[ _inds + _slen ];
+
+    cs = _JSON_quirks_mode_trans_targs[_trans];
+
+    if (_JSON_quirks_mode_trans_actions[_trans] != 0) {
+      _acts = _JSON_quirks_mode_trans_actions[_trans];
+      _nacts = _JSON_quirks_mode_actions[_acts];
+      _acts += 1;
+
+      while (_nacts > 0) {
+        _nacts -= 1;
+        _acts += 1;
+        _tempval = _JSON_quirks_mode_actions[_acts - 1];
+
+     # start action switch
+    if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
+# line 715 "opt/json.rl" # end of line directive
+    
+            res = parseValue(p, pe);
+            if (res is null) {
+                p = p - 1;
+                    p += 1;
+    _trigger_goto = true;
+    _goto_level = _out;
+    break;
+
+
+            } else {
+                result = res.result;
+                p = ( res.p) - 1; //EXEC
+
+            }
+            // ACTION
+    }
+# line 2133 "lib/crack/json.crk" # end of line directive
+    # end action switch
+      } # while _nacts
+    }
+
+    if (_trigger_goto) continue;
+    } # endif 
+
+    if (_goto_level <= _again) {
+      if (cs == 0) {
+        _goto_level = _out;
+        continue;
+      }
+      p += 1;
+      if (p != pe) {
+        _goto_level = _resume;
+        continue;
+      }
+    } # _goto_level <= _again
+
+    if (_goto_level <= _test_eof) {
+    } # _goto_level <= _test_eof
+
+    if (_goto_level <= _out) break;
+    } # endif _goto_level <= out
+
+  # end of execute block
+# line 740 "opt/json.rl"
+
+        if (cs >= JSON_quirks_mode_first_final && p == pe) {
+            return res;
+        } else {
+            throw UnexpectedToken(data, p, pe);
+        }
+    }
+
+    oper init() {
+    }
+
+    ParserResult parse() {
+        if (quirksMode) {
+            return parseQuirksMode();
+        } else {
+            return parseStrict();
+        }
+    }
+
+//------------------------------------------------------------------------------
+
+    ParserResult parse(String buf0) {
+        data = buf0.buffer;
+        data_size = buf0.size;
+        return parse();
+    }
+}
