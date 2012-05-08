@@ -37,8 +37,8 @@ unsigned int rand(unsigned int low, unsigned int high) {
 
 // this is temporary until we implement float printing in crack
 // assumes caller allocates and owns buffer
-void float_str(double d, char* buf, unsigned int size) {
-    snprintf(buf, size, "%f", d);
+int float_str(double d, char* buf, unsigned int size) {
+    return snprintf(buf, size, "%f", d);
 }
 
 void puts(char *str) {
