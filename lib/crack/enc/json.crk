@@ -1,0 +1,12 @@
+## Front-end to JSON module
+## Copyright 2011 Google Inc.
+
+import crack.enc.json.parser JsonParser;
+import crack.enc.json.lib UnexpectedToken, ParseException, JsonFormatter,
+    JsonStringFormatter, JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool,
+    JsonString;
+
+@export_symbols JsonParser, UnexpectedToken, ParseException, JsonFormatter,
+    JsonStringFormatter, JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool,
+    JsonString;
+
