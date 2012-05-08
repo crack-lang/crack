@@ -13,140 +13,14 @@
 
 // For more info on JSON, see http://json.org/
 
-import crack.runtime exit, memmove;
-import crack.lang WriteBuffer, AppendBuffer, ManagedBuffer, Buffer, Exception, 
-                  Writer, CString, Formatter;
-import crack.io cout, cerr, cin, FStr, StandardFormatter, StringWriter;
 import crack.cont.array Array;
-import crack.cont.hashmap HashMap;
-import crack.cont.treemap TreeMap;
+import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer;
+import crack.json_common JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
+    JsonString, UnexpectedToken, ParseException;
 import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
-                        FP_NORMAL, FP_ZERO, sign;
-import crack.ascii escape;
+    FP_NORMAL, FP_ZERO, sign;
+import crack.io Formatter;
 @import crack.ann define;
-
-// Define a formatter class to override string formatting
-class JsonFormatter : StandardFormatter {
-    oper init(Writer rep) : StandardFormatter(rep) {}
-
-    void format(StaticString data) {
-        write('"');
-        write(escape(data, 32, 127));
-        write('"');
-    }
-
-    void format(Buffer data) {
-        if (data.isa(String)){
-            write('"');
-            write(escape(data, 32, 127));
-            write('"');
-        }
-        else
-            write(data);
-    }
-
-    void format(String data) {
-        write('"');
-        write(escape(data, 32, 127));
-        write('"');
-    }
-
-    void format(float32 value) {
-        int fptype = fpclassify(value);
-
-        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
-        else {
-            if (value < 0) write('-');
-            if (fptype == FP_NAN) write('NaN');
-            else if (fptype == FP_INFINITE) write('Infinity');
-        }
-    }
-
-    void format(float64 value) {
-        int fptype = fpclassify(value);
-        
-        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
-        else {
-            if (value < 0) write('-');
-            if (fptype == FP_NAN) write('NaN');
-            else if (fptype == FP_INFINITE) write('Infinity');
-        }
-    }
-
-    // For general objects, format() just calls the object's formatTo()
-    // method.
-    void format(Object obj) {
-        if (obj is null)
-            write(NULL);
-        else if (obj.isa(String))
-            format(String.cast(obj));
-        else {
-            obj.formatTo(this);
-        }
-    }
-}
-
-class JsonStringFormatter : JsonFormatter {
-    StringWriter _writer;
-    oper init() : JsonFormatter (null) {
-        _writer = StringWriter();
-        rep = _writer;
-    }
-
-    // Return a string containing everything that has been written so far.
-    String string() {
-        retval := _writer.string();
-        _writer = StringWriter();
-        rep = _writer;
-        return retval;
-    }
-}
-
-
-@define writeValue() {
-    void formatTo(Formatter fmt) {
-        fmt.format(value);
-    }
-}
-
-class unexpectedToken : Exception {
-    oper init(byteptr data, uint p, uint pe){
-        cerr `$p: $(String(Buffer(data + uintz(p), pe - p)))\n`;
-    }
-}
-
-class parseException : Exception {
-    oper init(String text0, uint line, uint col){
-        text = FStr() `$(text0):$line:$col`;
-    }
-}
-
-class JsonObject : HashMap[String, Object] {
-}
-
-class JsonArray : Array[Object] {
-}
-
-class JsonScalar {
-}
-
-class JsonInt : JsonScalar {
-    int value;
-    oper init(int value): value = value {}
-    @writeValue()
-}
-
-class JsonFloat : JsonScalar {
-    float value;
-    oper init(float value): value = value {}
-    @writeValue()
-}
-
-class JsonBool : JsonScalar {
-    bool value;
-    oper init(bool value): value = value {}
-    @writeValue()
-}
 
 class JsonParser {
 
@@ -270,7 +144,7 @@ class JsonParser {
             if (allowNaN) {
                 result = JsonFloat(NAN);
             } else {
-                throw unexpectedToken(data, p - 2, pe);
+                throw UnexpectedToken(data, p - 2, pe);
             }
         }
 
@@ -278,7 +152,7 @@ class JsonParser {
             if (allowNaN) {
                 result = JsonFloat(INFINITY)
             } else {
-                throw unexpectedToken(data, p - 7, pe);
+                throw UnexpectedToken(data, p - 7, pe);
             }
         }
 
@@ -290,7 +164,7 @@ class JsonParser {
                     fhold;
                     fbreak;
                 } else {
-                    throw unexpectedToken(data, p, pe);
+                    throw UnexpectedToken(data, p, pe);
                 }
             }
 
@@ -493,7 +367,7 @@ class JsonParser {
         action parse_string {
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo);
-            result = String(append_buf, append_buf.size, false);
+            result = JsonString(append_buf, false);
             fexec p + 1;
         }
 
@@ -566,7 +440,7 @@ class JsonParser {
 
     ParserResult parseArray(uint p, uint pe) {
         if (maxNesting > 0 && currentNesting > maxNesting) {
-            throw parseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
+            throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
         }
 
         JsonArray result = {};
@@ -581,7 +455,7 @@ class JsonParser {
         if (cs >= JSON_array_first_final) {
             return ParserResult(result, p + 1);
         } else {
-            throw unexpectedToken(data, p, pe);
+            throw UnexpectedToken(data, p, pe);
         }
     }
 
@@ -600,7 +474,7 @@ class JsonParser {
                 if (!(lastName is null))
                     result[lastName] = res.result;
                 else
-                    throw parseException(FStr() `No key for mapping`, line, col);
+                    throw ParseException(FStr() `No key for mapping`, line, col);
                 fexec res.p;
             }
         }
@@ -609,7 +483,7 @@ class JsonParser {
             res = parseString(fpc, pe);
 
             if (res is null) {
-                throw parseException(FStr() `Expected a string while parsing object key, got $(bufferString(p, pe))`, line, col);
+                throw ParseException(FStr() `Expected a string while parsing object key, got $(bufferString(p, pe))`, line, col);
             } else {
                 lastName = String.cast(res.result);
                 fexec res.p;
@@ -634,7 +508,7 @@ class JsonParser {
         String lastName = null;
         ParserResult res = null;
         if (maxNesting > 0 && currentNesting > maxNesting) {
-            throw parseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
+            throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
         }
 
         JsonObject result = {};
@@ -702,7 +576,7 @@ class JsonParser {
         if (cs >= JSON_first_final && p == pe) {
             return res;
         } else {
-            throw unexpectedToken(data, p, pe);
+            throw UnexpectedToken(data, p, pe);
         }
     }
 
@@ -741,7 +615,7 @@ class JsonParser {
         if (cs >= JSON_quirks_mode_first_final && p == pe) {
             return res;
         } else {
-            throw unexpectedToken(data, p, pe);
+            throw UnexpectedToken(data, p, pe);
         }
     }
 

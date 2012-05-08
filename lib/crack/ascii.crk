@@ -222,42 +222,41 @@ String strip(String text) {
 }
 
 String escape(Buffer data, byte min, byte max) {
-  AppendBuffer buf = {data.size + 2};
-  byte ch;
+    AppendBuffer buf = {data.size + 2};
+    byte ch;
 
-  for (uint i = 0; i < data.size; ++i) {
-    ch = data.buffer[i];
-    if (uint(ch) >= min || uint(ch) <= max) {
-        buf.append(ch);
-    } else
-    if (ch == b'"' || ch == b'\\'){
-        buf.append(b'\\');
-        buf.append(ch);
-    } else if (ch == b'\n'){
-        buf.append(b'\\');
-        buf.append(b'n');
-    } else if (ch == b'\t'){
-        buf.append(b'\\');
-        buf.append(b't');
-    } else if (ch == 12){ // FF
-        buf.append(b'\\');
-        buf.append(b'f');
-    } else if (ch == b'\r'){
-        buf.append(b'\\');
-        buf.append(b'r');
-    } else if (ch == b'/'){
-        buf.append(b'\\');
-        buf.append(b'/');
-    } else if (ch == 8){ // BS
-        buf.append(b'\\');
-        buf.append(b'b');
-    } else {
-        buf.append(b'\\');
-        buf.append(b'0' + (ch >> 6));
-        buf.append(b'0' + ((ch & 56) >> 3));
-        buf.append(b'0' + (ch & 7));
+    for (uint i = 0; i < data.size; ++i) {
+        ch = data.buffer[i];
+        if (uint(ch) >= min && uint(ch) <= max) {
+            buf.append(ch);
+        } else if (ch == b'"' || ch == b'\\') {
+            buf.append(b'\\');
+            buf.append(ch);
+        } else if (ch == b'\n'){
+            buf.append(b'\\');
+            buf.append(b'n');
+        } else if (ch == b'\t'){
+            buf.append(b'\\');
+            buf.append(b't');
+        } else if (ch == 12) { // FF
+            buf.append(b'\\');
+            buf.append(b'f');
+        } else if (ch == b'\r'){
+            buf.append(b'\\');
+            buf.append(b'r');
+        } else if (ch == b'/'){
+            buf.append(b'\\');
+            buf.append(b'/');
+        } else if (ch == 8){ // BS
+            buf.append(b'\\');
+            buf.append(b'b');
+        } else {
+            buf.append(b'\\');
+            buf.append(b'0' + (ch >> 6));
+            buf.append(b'0' + ((ch & 56) >> 3));
+            buf.append(b'0' + (ch & 7));
+        }
     }
-  }
 
   return String(buf, true);
 }
