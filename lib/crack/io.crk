@@ -174,7 +174,7 @@ class StandardFormatter : Formatter {
     oper init(Writer rep) : rep = rep {}
 
     void write(byteptr data) {
-        rep.write(Buffer(data, strlen(date)));
+        rep.write(Buffer(data, strlen(data)));
     }
 
     void write(Buffer data) {
