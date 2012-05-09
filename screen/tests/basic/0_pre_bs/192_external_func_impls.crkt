@@ -1,0 +1,9 @@
+%%TEST%%
+external function indirection
+%%ARGS%%
+%%FILE%%
+void f(function[byteptr, byteptr] g) { g('ok'); }
+f(puts);
+%%EXPECT%%
+ok
+%%STDIN%%
