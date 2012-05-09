@@ -229,6 +229,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)crack::runtime::puts
                      );
     f->addArg(mod->getByteptrType(), "str");
+    f = mod->addFunc(byteptrType, "putc",
+                     (void *)crack::runtime::__putc
+                     );
+    f->addArg(mod->getByteType(), "byte");
 
     f = mod->addFunc(byteptrType, "__die",
                      (void *)crack::runtime::__die

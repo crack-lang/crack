@@ -13,6 +13,7 @@ char* strerror(void);
 void float_str(double, char* buf, unsigned int size);
 unsigned int rand(unsigned int low, unsigned int high);
 void puts(char *str);
+void __putc(char byte);
 void __die(const char *message);
 void printfloat(float val);
 void printint(int val);

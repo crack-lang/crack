@@ -279,6 +279,9 @@ void Construct::loadBuiltinModules() {
     VarDefPtr a = rtMod->lookUp("puts");
     assert(a && "no puts in runtime");
     rootContext->ns->addUnsafeAlias("puts", a.get());
+    a = rtMod->lookUp("putc");
+    assert(a && "no putc in runtime");
+    rootContext->ns->addUnsafeAlias("putc", a.get());
     a = rtMod->lookUp("__die");
     assert(a && "no __die in runtime");
     rootContext->ns->addUnsafeAlias("__die", a.get());

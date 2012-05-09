@@ -45,6 +45,10 @@ void puts(char *str) {
     ::puts(str);
 }
 
+void __putc(char byte) {
+    ::putchar(byte);
+}
+
 void __die(const char *message) {
     std::cout << message << std::endl;
     abort();
