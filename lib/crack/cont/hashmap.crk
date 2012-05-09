@@ -301,16 +301,14 @@ class HashMap[Key, Value] {
     Iter iter() { return Iter(this); }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.MAPSTART);
+        fmt `[`;
         bool first = true;
         for (item :in this){
-            if (!first) fmt.write(fmt.ELEMSEP);
+            if (!first) fmt `, `;
             else first = false;
-            fmt.format(item.key);
-            fmt.write(fmt.KEYVALSEP);
-            fmt.format(item.val);
+            fmt `$(item.key): $(item.val)`;
         }
-        fmt.write(fmt.MAPEND);
+        fmt `]`;
     }
 
     uint count() {
@@ -367,9 +365,7 @@ class OrderedHashMap[Key, Value] {
         }
 
         void formatTo(Formatter fmt){
-            fmt.format(key);
-            fmt.format(fmt.KEYVALSEP);
-            fmt.format(val);
+            fmt `$key: $val`;
         }
 
         void formatToDebug(Formatter fmt){
@@ -883,25 +879,25 @@ class OrderedHashMap[Key, Value] {
     }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.MAPSTART);
+        fmt `[`;
         bool first = true;
          for (itm :in this){
-            if (!first) fmt.write(fmt.ELEMSEP);
+            if (!first) fmt `, `;
             else first = false;
             fmt.format(itm);
         }
-        fmt.write(fmt.MAPEND);
+        fmt `]`;
     }
 
     void formatToDebug(Formatter fmt) {
-        fmt.write(fmt.MAPSTART);
+        fmt `[`;
         bool first = true;
-         for (itm :in this){
-            if (!first) fmt.write(fmt.ELEMSEP);
+         for (itm :in this) {
+            if (!first) fmt `, `;
             else first = false;
             itm.formatToDebug(fmt);
         }
-        fmt.write(fmt.MAPEND);
+        fmt `]`;
     }
 
     uint count() {

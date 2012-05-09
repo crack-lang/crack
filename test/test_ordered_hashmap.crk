@@ -43,25 +43,25 @@ bool testExpected(String testName, Object value, Object expected){
 map.append("key", "val");
 map["key2"] = "val2";
 map.append("key3", "val3");
-testExpected("Simple assign and append", map, "{key: val, key2: val2, key3: val3}");
+testExpected("Simple assign and append", map, "[key: val, key2: val2, key3: val3]");
 
 # Test linked list methods
 map.pushHead("key0", "valx");
-testExpected("pushHead", map, "{key0: valx, key: val, key2: val2, key3: val3}");
+testExpected("pushHead", map, "[key0: valx, key: val, key2: val2, key3: val3]");
 
 # push a different value for the same key at the head.
 map.pushHead("key0", "val0");
-testExpected("pushHead", map, "{key0: val0, key: val, key2: val2, key3: val3}");
+testExpected("pushHead", map, "[key0: val0, key: val, key2: val2, key3: val3]");
 
 map.pushTail("key4", "val4");
-testExpected("pushTail", map, "{key0: val0, key: val, key2: val2, key3: val3, key4: val4}");
+testExpected("pushTail", map, "[key0: val0, key: val, key2: val2, key3: val3, key4: val4]");
 
 item := map.popTail();
-testExpected("popTail", map, "{key0: val0, key: val, key2: val2, key3: val3}");
+testExpected("popTail", map, "[key0: val0, key: val, key2: val2, key3: val3]");
 testExpected("popTailItem", item.key, item.val, "key4: val4");
 
 item = map.popHead();
-testExpected("popHead", map, "{key: val, key2: val2, key3: val3}");
+testExpected("popHead", map, "[key: val, key2: val2, key3: val3]");
 testExpected("popHeadItem", item.key, item.val, "key0: val0");
 
 item = map[0];
@@ -90,13 +90,13 @@ testExpected("Overwrite existing value", value, "New key");
 
 # Delete values
 map.delete(0);
-testExpected("Delete integer index 0", map, "{key2: val2, key3: val3}");
+testExpected("Delete integer index 0", map, "[key2: val2, key3: val3]");
 
 map.delete(1);
-testExpected("Delete integer index 1", map, "{key2: val2}");
+testExpected("Delete integer index 1", map, "[key2: val2]");
 
 map.delete(0);
-testExpected("Delete integer index 0 a second time", map, "{}");
+testExpected("Delete integer index 0 a second time", map, "[]");
 
 # Get methods for an empty map
 item = map.getItem("key");
@@ -119,7 +119,7 @@ catch (KeyError ke) {
 map["3"] = "Three";
 map["2"] = "Two";
 map["1"] = "One";
-testExpected("Multiple assignment", map, "{3: Three, 2: Two, 1: One}");
+testExpected("Multiple assignment", map, "[3: Three, 2: Two, 1: One]");
 
 item = map.getItem("1");
 testExpected("getItem of non-empty map", item.key, item.val, "1: One");
