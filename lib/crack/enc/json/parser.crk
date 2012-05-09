@@ -63,7 +63,7 @@ class JsonParser {
 
         void formatTo(Formatter fmt) {
             if (result is null){
-              fmt.format(fmt.NULL);
+              fmt `null`;
               return;
             }
 

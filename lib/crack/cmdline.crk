@@ -468,16 +468,16 @@ class CmdOptions {
    }
 
    void formatTo(Formatter fmt) {
-      fmt.format(fmt.ARRAYSTART);
+      fmt `[`;
       bool first = true;
       for (elem :in options) {
          if (!first)
-            fmt.format(fmt.ELEMSEP);
+            fmt `, `;
          else
             first = false;
          fmt.format(elem.getRepr());
       }
-      fmt.format(fmt.ARRAYEND);
+      fmt `]`;
    }
 
    /// Write a usage message to the writer.
