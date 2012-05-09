@@ -238,7 +238,7 @@ class Socket : FileHandle @implements Reader, Writer {
     }
     
     void formatTo(Formatter fmt) {
-        fmt `Socket(fd: $fd)`;
+        fmt `Socket (fd: $fd)`;
     }
 
     # Reader interface

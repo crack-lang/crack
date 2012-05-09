@@ -4,7 +4,7 @@
 ## Copyright 2011 Google Inc.
 
 import crack.ascii strip;
-import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer;
+import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer, Formatter;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
@@ -176,25 +176,28 @@ class HTTPServer {
         HTTPRequest request;
         HandlerArray handlers;
         Socket sock;
+        InetAddress addr;
         int state;
         
         OutQueue outQueue = {};
-        
-        ## the next input position
-        uint inPos;
-        
+                
         ## the index of the first byte in the buffer that has been read but 
         ## not processed.
         uint pos;
         
-        oper init(Socket sock, HandlerArray handlers) : 
+        oper init(Socket sock, InetAddress addr, HandlerArray handlers) :
             sock = sock, 
+            addr = addr,
             handlers = handlers {
         }
-        
+
+        void formatTo(Formatter fmt) {
+            fmt `Client: $sock, $addr `;
+        }
+
         ## Returns a byteptr to the current input buffer read position.
         @final byteptr getInputBuf() {
-            if (inbuf.cap - inPos < 1024)
+            if (inbuf.cap - inbuf.size < 1024)
                 # since the start size is 1024, we can assume that we will 
                 # grow to accomodate a 1024 byte buffer.
                 inbuf.grow(inbuf.cap * 2);
@@ -202,8 +205,7 @@ class HTTPServer {
         }
 
         @final void compressBuffer(uintz start) {
-            inPos -= start;
-            inbuf.move(0, start, inPos);
+            inbuf.move(0, start, inbuf.size);
             pos = 0;
         }
 
@@ -221,7 +223,7 @@ class HTTPServer {
                 return;
             }
             request.method = String(inbuf.buffer + start, methodEnd, false);
-            
+
             # find the next non-space 
             pathStart := methodEnd;
             while (inbuf.buffer[pathStart] == b' ' && pathStart < end) 
@@ -292,8 +294,8 @@ class HTTPServer {
         }
                     
         @final void parseNext(uint amtRead) {
-            end := inPos + amtRead;
-            inPos += amtRead;
+            end := inbuf.size + amtRead;
+            inbuf.size += amtRead;
             while (true) {
                 if (state == _ST_REQUEST || state == _ST_HEADERS) {
                     
@@ -365,8 +367,10 @@ class HTTPServer {
         info `  got connection from $(clientAccepted.addr) with ref count \
 $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)\n`;
         __poller.add(clientAccepted.sock, POLLIN);
-        __clients[FileHandle(clientAccepted.sock.fd)] =
-            Client(clientAccepted.sock, __handlers);
+        __clients[clientAccepted.sock] =
+            Client(clientAccepted.sock,
+                   InetAddress.cast(clientAccepted.addr),
+                   __handlers);
     }
     
     void __processClientRead(FileHandle p) {
