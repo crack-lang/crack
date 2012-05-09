@@ -578,6 +578,7 @@ class TreeMap[KeyT, ValT] {
             throw KeyError('node not found in RBTree.delete()');
 
         # delete the node
+        cout `xxx deleteing $(node.key)\n`;
         if (node.delete())
         # set the root to null if it was the root node with no children
             __root = null;
@@ -622,15 +623,13 @@ class TreeMap[KeyT, ValT] {
     Iter iter() { return Iter(this, __root); }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.MAPSTART);
+        fmt `[`;
         bool first = true;
         for (item :in this){
-            if (!first) fmt.write(fmt.ELEMSEP);
+            if (!first) fmt `, `;
             else first = false;
-            fmt.format(item.key);
-            fmt.write(fmt.KEYVALSEP);
-            fmt.format(item.val);
+            fmt `$(item.key): $(item.val)`;
         }
-        fmt.write(fmt.MAPEND);
+        fmt `]`;
     }
 }

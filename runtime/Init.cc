@@ -199,7 +199,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)crack::runtime::strerror
                      );
     
-    f = mod->addFunc(mod->getVoidType(), "float_str", 
+    f = mod->addFunc(mod->getIntType(), "float_str", 
                      (void *)crack::runtime::float_str
                      );
     f->addArg(mod->getFloat64Type(), "val");
