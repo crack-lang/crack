@@ -2,7 +2,7 @@
 external function indirection
 %%ARGS%%
 %%FILE%%
-void f(function[byteptr, byteptr] g) { g('ok'); }
+void f(function[int, byteptr] g) { g('ok'); }
 f(puts);
 %%EXPECT%%
 ok
