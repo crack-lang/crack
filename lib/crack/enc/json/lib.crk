@@ -1,0 +1,172 @@
+// A JSON parser based on the Ragel state machine from http://flori.github.com/json/
+// This is a derivative work as defined by the license at
+// http://www.ruby-lang.org/en/LICENSE.txt
+// The LGPLv3 license of Crack fulfills the requirements of 2.a and 3.a of that license
+
+// To convert the Ragel source file to a .crk file use Ragel from
+// www.bitbucket.org/hengestone/ragel-crack until the patch -s merged using
+// ragel -K -F0 json.rl -o json.crk
+
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// 12/10/2011
+// Portions Copyright 2012, Google Inc.
+
+import crack.lang AssertionError, ManagedBuffer, Exception;
+import crack.io cout, cerr, cin, Formatter, FStr, StandardFormatter,
+    StringWriter, Writer;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.ascii escape;
+import crack.math fpclassify, FP_INFINITE, FP_NAN, FP_NORMAL, FP_ZERO;
+@import crack.ann define;
+
+@define writeValue() {
+    void formatTo(Formatter fmt) {
+        fmt.format(value);
+    }
+}
+
+class UnexpectedToken : Exception {
+    oper init(byteptr data, uint p, uint pe) :
+        Exception(String(data + uintz(p), pe - p, false)) {
+    }
+}
+
+class ParseException : Exception {
+    oper init(String text0, uint line, uint col) :
+        Exception(FStr() `$(text0):$line:$col`) {
+    }
+}
+
+// Define a formatter class to override string formatting
+class JsonFormatter : StandardFormatter {
+    oper init(Writer rep) : StandardFormatter(rep) {}
+
+    void format(String data) {
+        this `"$(escape(data, 32, 127))"`;
+    }
+
+    void format(float32 value) {
+        int fptype = fpclassify(value);
+
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
+    }
+
+    void format(float64 value) {
+        int fptype = fpclassify(value);
+
+        if (fptype == FP_NORMAL || fptype == FP_ZERO) StandardFormatter.format(value);
+        else {
+            if (value < 0) write('-');
+            if (fptype == FP_NAN) write('NaN');
+            else if (fptype == FP_INFINITE) write('Infinity');
+        }
+    }
+
+    // For general objects, format() just calls the object's formatTo()
+    // method.
+    void format(Object obj) {
+        if (obj is null)
+            this `null`;
+        else if (obj.isa(String))
+            format(String.cast(obj));
+        else {
+            obj.formatTo(this);
+        }
+    }
+}
+
+class JsonStringFormatter : JsonFormatter {
+    StringWriter _writer;
+    oper init() : JsonFormatter (null) {
+        _writer = StringWriter();
+        rep = _writer;
+    }
+
+    // Return a string containing everything that has been written so far.
+    String string() {
+        retval := _writer.string();
+        _writer = StringWriter();
+        rep = _writer;
+        return retval;
+    }
+}
+
+class JsonObject : HashMap[String, Object] {
+    void formatTo(Formatter out) {
+        out `{`;
+        bool first = true;
+        for (item :in this) {
+            if (first)
+                first = false;
+            else
+                out `, `;
+            out `$(item.key): $(item.val)`;
+        }
+
+        out `}`;
+    }
+}
+
+class JsonArray : Array[Object] {
+    void formatTo(Formatter out) {
+        out `[`;
+        bool first = true;
+        for (elem :in this) {
+            if (first)
+                first = false;
+            else
+                out `, `;
+            out `$elem`;
+        }
+        out `]`;
+    }
+}
+
+class JsonInt {
+    int value;
+    oper init(int value): value = value {}
+    @writeValue()
+}
+
+class JsonFloat {
+    float value;
+    oper init(float value): value = value {}
+    void formatTo(Formatter fmt) {
+        if (((valueClass := fpclassify(value)) != FP_NORMAL) &&
+            valueClass != FP_ZERO
+            ) {
+            if (value < 0)
+                fmt `-`;
+            if (valueClass == FP_NAN)
+                fmt `NaN`;
+            else if (valueClass == FP_INFINITE)
+                fmt `Infinity`;
+            else
+                throw AssertionError(FStr() `Unclassifiable value: $value`);
+        } else {
+            fmt.format(value);
+        }
+    }
+}
+
+class JsonBool {
+    bool value;
+    oper init(bool value): value = value {}
+    @writeValue()
+}
+
+class JsonString : String {
+    oper init(ManagedBuffer buffer, bool takeOwnership) :
+        String(buffer, takeOwnership) {
+    }
+
+    void formatTo(Formatter out) {
+        out `"$(escape(this, 32, 127))"`;
+    }
+}

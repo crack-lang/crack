@@ -248,19 +248,16 @@ class List[Elem] {
     bool isTrue() { return _count; }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.ARRAYSTART);
+        fmt `[`;
         bool first = true;
         for (elem :in this) {
             if (!first)
-                fmt.write(fmt.ELEMSEP);
+                fmt `, `;
             else
                 first = false;
-            if (_isNull(elem)) fmt.write(fmt.NULL);
-            else {
-                fmt.format(elem);
-            }
+            fmt.format(elem);
         }
-        fmt.write(fmt.ARRAYEND);
+        fmt `]`;
     }
 }
 
@@ -519,18 +516,18 @@ class DList[Elem] {
     bool isTrue() { return _count; }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.ARRAYSTART);
+        fmt `[`;
         bool first = true;
         for (elem :in this) {
             if (!first)
-                fmt.write(fmt.ELEMSEP);
+                fmt `, `;
             else
                 first = false;
-            if (_isNull(elem)) fmt.write(fmt.NULL);
+            if (_isNull(elem)) fmt `null`;
             else {
-                fmt.format(elem);
+                fmt `$elem`;
             }
         }
-        fmt.write(fmt.ARRAYEND);
+        fmt `]`;
     }
 }

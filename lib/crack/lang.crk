@@ -125,7 +125,6 @@ class Buffer;
 
     ## Write the buffer to the writer.
     @abstract void write(Buffer data);
-    @abstract void write(byteptr cstr);
 
     ## Flush the contents of the buffer.
     void flush() {}
@@ -140,17 +139,8 @@ class Buffer;
 
 @abstract class Formatter : Object, Writer {
 
-    byteptr ARRAYSTART = "[",
-            ARRAYEND = "]",
-            ELEMSEP = ", ",
-            MAPSTART = "{",
-            MAPEND = "}",
-            KEYVALSEP = ": ",
-            NULL = "null";
-
     @abstract Object _iface_getFormatterObject();
     @abstract void format(StaticString data);
-    @abstract void format(String data);
 
     @abstract void format(int16 val);
     @abstract void format(uint16 val);
@@ -734,8 +724,8 @@ class String : Buffer {
         return String(buf, true);
     }
 
-    void writeTo(Formatter f) {
-        f.format(this);
+    void formatTo(Formatter f) {
+        f.write(this);
     }
 };
 

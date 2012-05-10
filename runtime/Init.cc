@@ -199,7 +199,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)crack::runtime::strerror
                      );
     
-    f = mod->addFunc(mod->getVoidType(), "float_str", 
+    f = mod->addFunc(mod->getIntType(), "float_str", 
                      (void *)crack::runtime::float_str
                      );
     f->addArg(mod->getFloat64Type(), "val");
@@ -229,6 +229,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)crack::runtime::puts
                      );
     f->addArg(mod->getByteptrType(), "str");
+    f = mod->addFunc(byteptrType, "putc",
+                     (void *)crack::runtime::__putc
+                     );
+    f->addArg(mod->getByteType(), "byte");
 
     f = mod->addFunc(byteptrType, "__die",
                      (void *)crack::runtime::__die

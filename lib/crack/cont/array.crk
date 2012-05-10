@@ -398,19 +398,16 @@ class Array[Elem] {
     }
 
     void formatTo(Formatter fmt) {
-        fmt.write(fmt.ARRAYSTART);
+        fmt `[`;
         bool first = true;
         for (elem :in this) {
             if (!first)
-                fmt.write(fmt.ELEMSEP);
+                fmt `, `;
             else
                 first = false;
-            if (_isNull(elem)) fmt.write(fmt.NULL);
-            else {
-                fmt.format(elem)
-            }
+            fmt.format(elem)
         }
-        fmt.write(fmt.ARRAYEND);
+        fmt `]`;
     }
 
     Array _subarray(uint pos, uint len){

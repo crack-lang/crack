@@ -174,23 +174,14 @@ class StandardFormatter : Formatter {
     oper init(Writer rep) : rep = rep {}
 
     void write(byteptr data) {
-        // StaticString will construct with strlen
-        write(StaticString(data));
+        rep.write(Buffer(data, strlen(data)));
     }
 
     void write(Buffer data) {
         rep.write(data);
     }
 
-    void format(Buffer data) {
-        rep.write(data);
-    }
-
     void format(StaticString data) {
-        write(data);
-    }
-
-    void format(String data) {
         write(data);
     }
 
@@ -244,16 +235,16 @@ class StandardFormatter : Formatter {
     # printer in crack
     void format(float32 val) {
         buffer := ManagedBuffer(80);
-        float_str(val, buffer.buffer, buffer.cap);
-        write(buffer.buffer);
+        buffer.size = float_str(val, buffer.buffer, buffer.cap);
+        write(buffer);
     }
 
     # this temporarily uses a runtime call, until we implement a float
     # printer in crack
     void format(float64 val) {
         buffer := ManagedBuffer(80);
-        float_str(val, buffer.buffer, buffer.cap);
-        write(buffer.buffer);
+        buffer.size = float_str(val, buffer.buffer, buffer.cap);
+        write(buffer);
     }
 
     void format(bool val) {
@@ -266,16 +257,16 @@ class StandardFormatter : Formatter {
     ## For general objects, format() just calls the object's formatTo()
     ## method.
     void format(Object obj) {
-        if (obj is null)
+        if (obj is null) {
             write('null');
-        else {
+        } else {
             obj.formatTo(this);
         }
     }
 
     ## So we can deal with plain null-terminated strings.
     void format(byteptr cstr) {
-        write(cstr);
+        write(Buffer(cstr, strlen(cstr)));
     }
 
     Object _iface_getWriterObject() { return this; }
