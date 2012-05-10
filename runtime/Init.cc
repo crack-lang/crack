@@ -225,17 +225,17 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(byteptrType, "setstate", (void *)setstate);
     f->addArg(byteptrType, "state");
 
-    f = mod->addFunc(byteptrType, "puts",
-                     (void *)crack::runtime::puts
+    f = mod->addFunc(intType, "puts",
+                     (void *)crack::runtime::crk_puts
                      );
     f->addArg(mod->getByteptrType(), "str");
-    f = mod->addFunc(byteptrType, "putc",
-                     (void *)crack::runtime::__putc
+    f = mod->addFunc(intType, "putc",
+                     (void *)crack::runtime::crk_putc
                      );
     f->addArg(mod->getByteType(), "byte");
 
     f = mod->addFunc(byteptrType, "__die",
-                     (void *)crack::runtime::__die
+                     (void *)crack::runtime::crk_die
                      );
     f->addArg(mod->getByteptrType(), "message");
 

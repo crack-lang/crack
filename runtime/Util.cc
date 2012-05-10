@@ -41,15 +41,15 @@ int float_str(double d, char* buf, unsigned int size) {
     return snprintf(buf, size, "%f", d);
 }
 
-void puts(char *str) {
-    ::puts(str);
+int crk_puts(char *str) {
+    return puts(str);
 }
 
-void __putc(char byte) {
-    ::putchar(byte);
+int crk_putc(char byte) {
+    return putchar(byte);
 }
 
-void __die(const char *message) {
+void crk_die(const char *message) {
     std::cout << message << std::endl;
     abort();
 }
