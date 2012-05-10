@@ -101,7 +101,7 @@ void FuncBuilder::finish(bool storeDef) {
 
     // create an implementation object to return the function
     // pointer
-    funcDef->impl = new BConstDefImpl(func);
+    funcDef->impl = new BConstDefImpl(funcDef.get(), func);
 
     funcDef->setRep(func);
     if (storeDef)

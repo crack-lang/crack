@@ -8,6 +8,7 @@
 #include "model/AssignExpr.h"
 
 #include <llvm/GlobalVariable.h>
+#include <llvm/Function.h>
 
 using namespace llvm;
 using namespace model;
@@ -76,6 +77,8 @@ Value * BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
 ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
+    if (rep->getParent() != b.module)
+        rep = b.getModFunc(func, rep);
     b.lastValue = rep;
     return new BResultExpr((Expr*)var, b.lastValue);
 }

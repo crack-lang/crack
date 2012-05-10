@@ -87,11 +87,17 @@ public:
 
 };
 
+// these are actually only used for function implementations.
 class BConstDefImpl : public model::VarDefImpl {
-public:
-    llvm::Constant *rep;
+private:
+    // we use a raw pointer here because a FuncDef owns its impl.
+    model::FuncDef *func;
+    llvm::Function *rep;
 
-    BConstDefImpl(llvm::Constant *rep) : rep(rep) {}
+public:
+
+    BConstDefImpl(model::FuncDef *func, llvm::Function *rep) : 
+        func(func), rep(rep) {}
 
     virtual model::ResultExprPtr emitRef(model::Context &context,
                                          model::VarRef *var);
