@@ -88,6 +88,11 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                              );
     arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
     context.addDef(arrayAlloc.get(), arrayType);
+    
+    context.addDef(new PreIncrPtrOpDef(arrayType, "oper ++x"), arrayType);
+    context.addDef(new PreDecrPtrOpDef(arrayType, "oper --x"), arrayType);
+    context.addDef(new PostIncrPtrOpDef(arrayType, "oper x++"), arrayType);
+    context.addDef(new PostDecrPtrOpDef(arrayType, "oper x--"), arrayType);
 }
 
 namespace {

@@ -487,6 +487,10 @@ UNOP_DEF(PreIncrInt);
 UNOP_DEF(PreDecrInt);
 UNOP_DEF(PostIncrInt);
 UNOP_DEF(PostDecrInt);
+UNOP_DEF(PreIncrPtr);
+UNOP_DEF(PreDecrPtr);
+UNOP_DEF(PostIncrPtr);
+UNOP_DEF(PostDecrPtr);
 
 #define FPTRUNCOP_DEF(opCode) \
     class opCode##OpCall : public model::FuncCall {                         \
