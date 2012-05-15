@@ -498,7 +498,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(int32Type, "nsecs");
     
     f = timeValType->addMethod(voidType, "setToNow",
-                               (void *)gettimeofday
+                               (void *)&crack::runtime::TimeVal::setToNow
                                );
     f->addArg(voidptrType, "tz");
 

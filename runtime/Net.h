@@ -77,6 +77,7 @@ struct TimeVal {
     int32_t secs, nsecs;
 
     static void init(TimeVal *inst, int32_t secs0, int32_t nsecs0);
+    static void setToNow(TimeVal *inst, void *tz);
 };
 
 struct PollEvt {

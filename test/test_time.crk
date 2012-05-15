@@ -2,8 +2,8 @@
 import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen;
 import crack.lang ManagedBuffer;
 import crack.cmdline CmdOptions;
-import crack.io cout;
-import crack.time Date;
+import crack.io cout, FStr;
+import crack.time Date, Time, TimeDelta;
 import crack.sys argv;
 
 sys_options :=  CmdOptions("--verbose=b/false");
@@ -94,5 +94,14 @@ len = dateString2.size;
 
 if (dateString2 != 'Thursday January 01 1970')
    cout `Date.strftime format mismatch, got '$dateString2', len = $len\n`;
+
+if (FStr() `$(TimeDelta(15, 123000000))` != '15.123')
+   cout `TimeDelta formatting failed\n`;
+
+if (Time(100, 123) - Time(99, 100) != TimeDelta(1, 23))
+   cout `FAILED basic Time subtraction\n`;
+
+if (Time(100, 123) - Time(99, 999999999) != TimeDelta(0, 124))
+   cout `FAILED wrap-around subtraction\n`;
 
 cout `ok\n`;
