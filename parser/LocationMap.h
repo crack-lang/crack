@@ -26,7 +26,7 @@ class LocationMap {
    public:
 
       /** sets the current source name and optionally the line number */
-      void setName(const char *newName, int newLineNumber = 1) {
+      void setName(const std::string &newName, int newLineNumber = 1) {
          LocMap::iterator item =
             locMap.find(LocTuple(newName, newLineNumber));
          if (item != locMap.end()) {
