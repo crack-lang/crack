@@ -27,7 +27,7 @@ extlib_LTLIBRARIES = test/testext.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
-EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth 
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -77,6 +77,13 @@ extlib_LTLIBRARIES += _alsa_midi.la
 _alsa_midi_la_LDFLAGS = -avoid-version -module @ALSA_LIBS@
 _alsa_midi_la_CXXFLAGS = @ALSA_CFLAGS@
 _alsa_midi_la_SOURCES = opt/_alsa_midi.cc
+endif
+
+if HAVE_FLUIDSYNTH
+extlib_LTLIBRARIES += _fluidsynth.la
+_fluidsynth_la_LDFLAGS = -avoid-version -module @FLUIDSYNTH_LIBS@
+_fluidsynth_la_CXXFLAGS = @FLUIDSYNTH_CPPFLAGS@
+_fluidsynth_la_SOURCES = opt/_fluidsynth.cc
 endif
 
 noinst_HEADERS = \

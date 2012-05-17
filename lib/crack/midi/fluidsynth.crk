@@ -1,0 +1,60 @@
+## High-level interface for the fluidsynth module.
+## Copyright 2011, Google Inc.
+
+import crack.io cout;
+import crack.lang CString;
+import crack.ext._fluidsynth fluid_synth_t, fluid_settings_t,
+    fluid_audio_driver_t, delete_fluid_settings, delete_fluid_synth,
+    new_fluid_settings, new_fluid_synth, fluid_synth_noteon,
+    fluid_synth_noteoff, new_fluid_audio_driver, fluid_synth_sfload;
+
+class FluidSettings {
+    fluid_settings_t _rep;
+    oper init() {
+        _rep = new_fluid_settings();
+    }
+
+    oper del() {
+        delete_fluid_settings(_rep);
+    }
+}
+
+class FluidSynth {
+    fluid_synth_t __rep;
+    FluidSettings __settings;
+    fluid_audio_driver_t __driver;
+    oper init(FluidSettings settings) :
+        __rep = new_fluid_synth(settings._rep),
+        __settings = settings,
+        __driver = new_fluid_audio_driver(settings._rep, __rep) {
+    }
+
+    oper del() {
+        # XXX delete driver
+        delete_fluid_synth(__rep);
+    }
+
+    void loadFont(CString name, bool resetPresets) {
+        fluid_synth_sfload(__rep, name.buffer, resetPresets ? 1 : 0);
+    }
+
+    void loadFont(StaticString name, bool resetPresets) {
+        fluid_synth_sfload(__rep, name.buffer, resetPresets ? 1 : 0);
+    }
+
+    void loadFont(String name, bool resetPresets) {
+        loadFont(CString(name), resetPresets);
+    }
+
+    void noteOn(int channel, int note, int velocity) {
+        fluid_synth_noteon(__rep, channel, note, velocity);
+    }
+
+    void noteOff(int channel, int note) {
+        fluid_synth_noteoff(__rep, channel, note);
+    }
+}
+
+
+
+

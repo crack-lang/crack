@@ -57,4 +57,7 @@ AM_CONDITIONAL(HAVE_CAIRO, [test "x$got_cairo" = xyes])
 AM_PATH_ALSA(1.0.22, [got_alsa=yes], true)
 AM_CONDITIONAL(HAVE_ALSA, [test "x$got_alsa" = xyes])
 
+AM_PATH_FLUIDSYNTH
+AM_CONDITIONAL(HAVE_FLUIDSYNTH, [test "x$got_fluidsynth" = xyes])
+
 AC_OUTPUT
