@@ -137,7 +137,7 @@ void Func::finish() {
             externName = name + ":vwrap";
         } else if (override) {
             // if this is an override, create a wrapper function
-            externName = name + ":impl";
+            externName = name + ":impl_" + receiverType->name;
         } else {
             externName = name;
         }
