@@ -106,6 +106,7 @@ class FDReader : FileHandle, Reader {
             // don't throw if this is a blocking issue (fd may be nonblocking)
             if (en != EAGAIN && en != EWOULDBLOCK)
                 throw Exception(String(c_strerror()));
+            rc = 0;
         }
         buf.size = rc;
         return rc;
