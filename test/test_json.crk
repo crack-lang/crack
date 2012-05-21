@@ -40,7 +40,19 @@ StringArray testStrings = [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null',
 StringArray testResults =  [r'"/\n\r\b\t\"\017"', 'true', 'false', 'null',
                             '{"one": 1}', '{"two": "two"}', '{"three": 1.000000}',
                            '[1, 2, 3]', '[1, "2", 3.000000, {}]',
-                            '{"Dangles": "some", "Strands order": ["S"], "Sodium": 1.000000, "MaxComplexSize": 1, "Material": "rna", "MinConcScale": "uM", "MinConc": 0.000000, "Magnesium": 0.000000, "Pseudoknots": "\false", "MaxHistograms": 10, "MaxConcFrac": 0.010000, "Strands": {"S": {"Conc": 1.000000, "Pos": 0, "ConcScale": "uM", "Sequence": "CGAUGCAUGC"}}, "AdditionalComplexes": [], "Temperature": 37.000000}'];
+
+                            # XXX object contents are currently subject to the
+                            # whims of hash order.
+                            I'{"Strands order": ["S"], "MaxHistograms": 10, \
+                              "MaxConcFrac": 0.010000, "Sodium": 1.000000, \
+                              "Pseudoknots": "false", "Magnesium": 0.000000, \
+                              "Strands": {"S": {"Conc": 1.000000, "Pos": 0, \
+                                                "ConcScale": "uM", \
+                                                "Sequence": "CGAUGCAUGC"}}, \
+                              "Material": "rna", "AdditionalComplexes": [], \
+                              "MinConcScale": "uM", "Dangles": "some", \
+                              "MaxComplexSize": 1, "MinConc": 0.000000, \
+                              "Temperature": 37.000000}'];
 Array[uint] failed = {};
 StringArray failedResults = {};
 uint i = 0;

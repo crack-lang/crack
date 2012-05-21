@@ -6,6 +6,27 @@ import crack.lang makeHashVal, free, AssertionError, KeyError, Formatter,
 import crack.io cout, StandardFormatter, FStr, Writer;
 import crack.math log2, abs;
 
+# optimal bucket count sizes (these are prime numbers and guaranteed to be 
+# relatively prime to all hash values, reducing the number of collisions and 
+# substantially improving performance)
+const array[uint] _BUCKET_COUNT = [
+    17, 37, 67, 131, 257, 521, 1031, 2053, 4099, 8209, 16411, 32771, 65537, 
+    131101, 262147, 524309, 1048583, 2097169, 4194319, 8388617, 16777259, 
+    33554467, 67108879, 134217757, 268435459, 536870923, 1073741827, 
+    2147483659, 0
+];
+
+uint _increaseCap(uint cap) {
+    # find the next bucket count greater than twice the current one.
+    uint bc;
+    for (int i = 0; (bc = _BUCKET_COUNT[i]) && bc < cap * 2; ++i);
+    if (!bc)
+        throw AssertionError('Hashtable too big!!');
+    
+    return bc;
+}
+
+## A map implementation based on a hashtable.
 class HashMap[Key, Value] {
     class Item {
         uint _hash;
@@ -92,7 +113,7 @@ class HashMap[Key, Value] {
         
         # stash the old array, create a new array with double the capacity.
         oldCap := _cap;
-        _cap = oldCap * 2;
+        _cap = _increaseCap(_cap);
         array[Item] oldItems = _items;
         _items = array[Item](_cap);
         
@@ -171,78 +192,6 @@ class HashMap[Key, Value] {
         return _items[i] ? _items[i].val : default;
     }
     
-    # Check all subsequent slots up to the next empty slot to see if there are 
-    # any items that would like to fill 'index'
-    # Returns 'true if it found a replacement.
-    bool __findNewOccupant2(int index) {
-        bool foundReplacement;
-        last := index;
-        i := int((index + 1) % _cap);
-        while (_items[i]) {
-            if (_items[i]._hash % _cap == index) {
-#                cout `moving $(_items[i].key) which wants to be in $index \
-#to $last\n`;
-                _items[last] = _items[i];
-                _items[i] = null;
-                foundReplacement = true;
-                
-                # first see if there's an item that wants to be in the newly
-                # opened slot.
-                if (__findNewOccupant2(i))
-                    # there was, and we know that the recursive call has left 
-                    # us with a safe contiguous block of items, so we're done.
-                    break;
-                else
-                    # There is not.  See if there's an item that wants to be 
-                    # in the originally opened slot, if so move it to this 
-                    # slot.
-                    last = i;
-            }
-            i = int((i + 1) % _cap);
-        }
-        
-        return foundReplacement;
-    }
-    
-    void __findNewOccupant3(int opening) {
-        
-        # scan through the continguous following items to see if there are any 
-        # that don't belong where they are and would be better served by the 
-        # newly opened position.  
-        # We do some funny math here - basically we want to be able to ask 
-        # the question "would the item at 'i' be better off at slot 
-        # 'opening'"  We can phrase this question concisely as 
-        # "desiredIndex(item) <= 'opening'" if we offset all indeces by the 
-        # container capacity and reserve the use of the 'actualIndex' computed 
-        # from the modulus to the places where we're actually referencing the 
-        # item.  So in this function, we use the variables:
-        #  index: the index under consideration offset by the array capacity
-        #  actualIndex: 
-        
-        # (we defer the modulus operation so we can 
-        # make this determination with a simple '<=' check)
-        i := opening + 1;
-        
-        while (_items[i]) {
-#            cout `does $(_items[i].key) at $i which wants to be at \
-# $(_items[i]._hash % _cap) belong at $opening?\n`;
-#            cout `  opening = $opening, $(_items[i]._hash % _cap <= 
-#                                          opening)\n`;
-            if (_items[i]._hash % _cap <= opening) {
-                # found one!
-#                cout `moving $(_items[i].key) which wants to be in $opening \
-#to $opening\n`;
-                i = int(i % _cap);
-                _items[opening] = _items[i];
-                _items[i] = null;
-                
-                # repeat with the newly vacated opening
-                opening = i;
-            }
-            ++i;
-        }
-    }
-
     void __findNewOccupant(int opening) {
         
         # check if a < b <= c, respecting the modulus operation.
@@ -439,9 +388,17 @@ class OrderedHashMap[Key, Value] {
     @final
     void _free(){
         # release all items
-        for (int i = 0; i < _cap; ++i)
-            if (_items[i])
+        for (int i = 0; i < _cap; ++i) {
+            if (_items[i]) {
+                # break reference cycles, release the object
+                _items[i].prev = null;
                 _items[i].oper release();
+            }
+        }
+
+        # release head & tail references
+        head = null;
+        tail = null;
         
         # free the list
         free(_items);
@@ -450,20 +407,7 @@ class OrderedHashMap[Key, Value] {
     ## Delete all of the contents of the map, converting the map to an empty 
     ## map with the specified capacity.
     @final void clear(uint newcap) {
-                  
-        # unhook all of the objects in the linked list
-        item := head;
-        Item tmp;
-        while (item) {
-            tmp = item;
-            item = tmp.next;
-            tmp.prev = null;
-            tmp.next = null;
-        }
-
-        head = tail = null;
-
-        # free the make
+        # free everything and reallocate
         _free();
         _items = array[Item](newcap);
         _cap = newcap;
@@ -496,9 +440,9 @@ class OrderedHashMap[Key, Value] {
     
     @final void __reallocate() {
         
-        # stash the old array, create a new array with log2 more capacity.
+        # stash the old array, create a new array with over twice the capacity.
         oldCap := _cap;
-        _cap = oldCap + _cap/uint(abs(log2(float(_cap))));
+        _cap = _increaseCap(_cap);
         array[Item] oldItems = _items;
         _items = array[Item](_cap);
         
@@ -530,7 +474,7 @@ class OrderedHashMap[Key, Value] {
     Value append(Key key, Value value) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
-        temp := _items[i] ? _items[i] : null;
+        temp := _items[i];
         if (temp is null) {
             if (tail) {
                 temp = Item(hash, key, value, tail);
@@ -596,70 +540,6 @@ class OrderedHashMap[Key, Value] {
         return _items[i] ? _items[i].val : default;
     }
     
-    # Check all subsequent slots up to the next empty slot to see if there are 
-    # any items that would like to fill 'index'
-    # Returns 'true if it found a replacement.
-    bool __findNewOccupant2(int index) {
-        bool foundReplacement;
-        last := index;
-        i := int((index + 1) % _cap);
-        while (_items[i]) {
-            if (_items[i]._hash % _cap == index) {
-                _items[last] = _items[i];
-                _items[i] = null;
-                foundReplacement = true;
-                
-                # first see if there's an item that wants to be in the newly
-                # opened slot.
-                if (__findNewOccupant2(i))
-                    # there was, and we know that the recursive call has left 
-                    # us with a safe contiguous block of items, so we're done.
-                    break;
-                else
-                    # There is not.  See if there's an item that wants to be 
-                    # in the originally opened slot, if so move it to this 
-                    # slot.
-                    last = i;
-            }
-            i = int((i + 1) % _cap);
-        }
-        
-        return foundReplacement;
-    }
-    
-    void __findNewOccupant3(int opening) {
-        
-        # scan through the continguous following items to see if there are any 
-        # that don't belong where they are and would be better served by the 
-        # newly opened position.  
-        # We do some funny math here - basically we want to be able to ask 
-        # the question "would the item at 'i' be better off at slot 
-        # 'opening'"  We can phrase this question concisely as 
-        # "desiredIndex(item) <= 'opening'" if we offset all indeces by the 
-        # container capacity and reserve the use of the 'actualIndex' computed 
-        # from the modulus to the places where we're actually referencing the 
-        # item.  So in this function, we use the variables:
-        #  index: the index under consideration offset by the array capacity
-        #  actualIndex: 
-        
-        # (we defer the modulus operation so we can 
-        # make this determination with a simple '<=' check)
-        i := opening + 1;
-        
-        while (_items[i]) {
-            if (_items[i]._hash % _cap <= opening) {
-                # found one!
-                i = int(i % _cap);
-                _items[opening] = _items[i];
-                _items[i] = null;
-                
-                # repeat with the newly vacated opening
-                opening = i;
-            }
-            ++i;
-        }
-    }
-
     void __findNewOccupant(int opening) {
         
         # check if a < b <= c, respecting the modulus operation.
@@ -764,6 +644,8 @@ class OrderedHashMap[Key, Value] {
     }
 
     Item __findItem(uint index) {
+        if (index >= _size)
+            throw IndexError('List index out of range in delete()');
         i := index;
         item := head;
         while (i && item) {
@@ -782,6 +664,8 @@ class OrderedHashMap[Key, Value] {
         }
 
         # find the item that's going to be before the new item
+        if (index > _size)
+            throw IndexError('Index out of range in insert()');
         item := __findItem(index - 1);
 
         hash := makeHashVal(key);
@@ -842,10 +726,10 @@ class OrderedHashMap[Key, Value] {
     }
 
     void delete(uint index) {
-        if (index > _size)
-            throw IndexError('List index out of range in delete()');
         if (index > 0) {
             # find the item before it.
+            if (index > _size)
+                throw IndexError('Index out of range in delete()');
             item := __findItem(index - 1);
 
             # if the next item is the tail, reset the tail.
@@ -859,8 +743,11 @@ class OrderedHashMap[Key, Value] {
             if (tmp)
                 tmp.prev = item;
             _deleteHash(found.key);
+
+        # first item is special and easy
+        } else if (!head) {
+            throw IndexError('Index out of range in delete()');
         } else {
-            # first item is special and easy
             _deleteHash(head.key);
             tmp := head.next;
             if (head is tail)
@@ -933,6 +820,29 @@ $expected`);
                     }
                 }
             }
+        }
+        
+        # check the linked list.
+        if (cur := head) {
+            if (cur.prev)
+                throw AssertionError('head has a prev');
+            last := cur;
+            while (cur) {
+                cur = cur.next;
+                if (!(cur.prev is last))
+                    throw AssertionError('Previous is not the last element');
+                
+                index := __findSlot(cur._hash, cur.key);
+                if (!(_items[index] is cur))
+                    throw AssertionError('Item is not in its slot');
+                
+                last = cur;
+            }
+            
+            if (last != tail)
+                throw AssertionError('last != tail');
+        } else if (tail) {
+            throw AssertionError('Got tail but no head!');
         }
     }
 }
