@@ -1518,7 +1518,7 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
       // context (and make sure that the current context is the function 
       // context)
       std::string varName = tok.getData();
-      checkForExistingDef(tok, varName);
+      checkForExistingDef(tok, varName, true);
 
       // XXX need to check for a default variable assignment
       
