@@ -11,11 +11,11 @@
 // 12/10/2011
 // Portions Copyright 2012, Google Inc.
 
-import crack.lang AssertionError, ManagedBuffer, Exception;
+import crack.lang AssertionError, ManagedBuffer, Exception, Buffer;
 import crack.io cout, cerr, cin, Formatter, FStr, StandardFormatter,
     StringWriter, Writer;
 import crack.cont.array Array;
-import crack.cont.hashmap HashMap;
+import crack.cont.hashmap OrderedHashMap;
 import crack.ascii escape;
 import crack.math fpclassify, FP_INFINITE, FP_NAN, FP_NORMAL, FP_ZERO;
 @import crack.ann define;
@@ -42,8 +42,14 @@ class ParseException : Exception {
 class JsonFormatter : StandardFormatter {
     oper init(Writer rep) : StandardFormatter(rep) {}
 
+    void formatString(String data) {
+        write('"');
+        write(escape(data, 32, 127));
+        write('"');
+    }
+
     void format(String data) {
-        this `"$(escape(data, 32, 127))"`;
+        formatString(data);
     }
 
     void format(float32 value) {
@@ -73,8 +79,9 @@ class JsonFormatter : StandardFormatter {
     void format(Object obj) {
         if (obj is null)
             this `null`;
-        else if (obj.isa(String))
-            format(String.cast(obj));
+        else if (obj.isa(String)){
+            formatString(String.cast(obj));
+        }
         else {
             obj.formatTo(this);
         }
@@ -97,7 +104,7 @@ class JsonStringFormatter : JsonFormatter {
     }
 }
 
-class JsonObject : HashMap[String, Object] {
+class JsonObject : OrderedHashMap[String, Object] {
     void formatTo(Formatter out) {
         out `{`;
         bool first = true;
