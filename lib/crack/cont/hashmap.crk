@@ -622,6 +622,9 @@ class OrderedHashMap[Key, Value] {
         if (!head) 
             throw InvalidArgumentError('Attempting to pop from an empty list');
         item := head;
+        if (head is tail)
+            tail = head.next;
+
         head = head.next;
         if (head)
             head.prev = null;
@@ -748,13 +751,7 @@ class OrderedHashMap[Key, Value] {
         } else if (!head) {
             throw IndexError('Index out of range in delete()');
         } else {
-            _deleteHash(head.key);
-            tmp := head.next;
-            if (head is tail)
-                tail = tmp; // null
-            head = tmp;
-            if (tmp)
-                tmp.prev = null;
+            popHead();
         }
     }
 

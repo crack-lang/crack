@@ -299,8 +299,29 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(intType, "chdir", (void *)chdir);
     f->addArg(byteptrType, "path");
 
+    f = mod->addFunc(intType, "fcntl", (void *)crack::runtime::crk_fcntl1);
+    f->addArg(intType, "fd");
+    f->addArg(intType, "cmd");
+
+    f = mod->addFunc(intType, "fcntl", (void *)crack::runtime::crk_fcntl2);
+    f->addArg(intType, "fd");
+    f->addArg(intType, "cmd");
+    f->addArg(int64Type, "arg");
+
+    // Constants for fcntl
+    mod->addConstant(intType, "F_GETFD", F_GETFD);
+    mod->addConstant(intType, "F_SETFD", F_SETFD);
+    mod->addConstant(intType, "F_GETFL", F_GETFL);
+    mod->addConstant(intType, "F_SETFL", F_SETFL);
+    mod->addConstant(intType, "F_GETOWN", F_GETOWN);
+    mod->addConstant(intType, "F_SETOWN", F_SETOWN);
+    mod->addConstant(intType, "F_GETSIG", F_GETSIG);
+    mod->addConstant(intType, "F_SETSIG", F_SETSIG);
+    mod->addConstant(intType, "F_NOTIFY", F_NOTIFY);
+
+
     // Net
-    
+
     mod->addConstant(intType, "AF_UNIX", AF_UNIX);
     mod->addConstant(intType, "AF_LOCAL", AF_LOCAL);
     mod->addConstant(intType, "AF_INET", AF_INET);
@@ -318,19 +339,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SOCK_RAW", SOCK_RAW);
     mod->addConstant(intType, "SOCK_RDM", SOCK_RDM);
     mod->addConstant(intType, "SOCK_PACKET", SOCK_PACKET);
-
-// If these flags are not defined, set them to 0
-
-#ifndef SOCK_NONBLOCK
-#define SOCK_NONBLOCK 0
-#endif
     mod->addConstant(intType, "SOCK_NONBLOCK", SOCK_NONBLOCK);
-
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#endif
-
-    mod->addConstant(intType, "SOCK_CLOEXEC", SOCK_CLOEXEC);
 
     mod->addConstant(intType, "SOL_SOCKET", SOL_SOCKET);
     mod->addConstant(intType, "SO_REUSEADDR", SO_REUSEADDR);
