@@ -32,7 +32,6 @@ struct Constants {
         crk_SOCK_RAW,
         crk_SOCK_RDM,
         crk_SOCK_PACKET,
-        crk_SOCK_NONBLOCK,
         crk_SOL_SOCKET,
         crk_SO_REUSEADDR,
         crk_POLLIN,
