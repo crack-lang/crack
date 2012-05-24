@@ -2934,14 +2934,8 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 void *LLVMBuilder::loadSharedLibrary(const std::string &name) {
     // leak the handle so the library stays mapped for the life of the process.
     void *handle = dlopen(name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
-    if (!handle) {
-        // XXX TODO remove this cerr in favor of the Exception message.
-        // however, we have an issue processing this exception during
-        // import of extensions currently. remove when that's fixed.
-        // weyrick 5/12
-        cerr << dlerror() << endl;
+    if (!handle)
         throw spug::Exception(dlerror());
-    }
     return handle;
 }
 

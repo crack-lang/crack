@@ -619,7 +619,7 @@ bool Construct::loadBootstrapModules() {
         
         return rootContext->construct->objectType && 
                rootContext->construct->stringType;
-    } catch (const ParseError &ex) {
+    } catch (const spug::Exception &ex) {
         cerr << ex << endl;
         return false;
     } catch (...) {
@@ -718,7 +718,7 @@ int Construct::runScript(istream &src, const string &name) {
         } else {
             // XXX hook to run/finish cached module
         }
-    } catch (const ParseError &ex) {
+    } catch (const spug::Exception &ex) {
         cerr << ex << endl;
         return 1;
     } catch (...) {

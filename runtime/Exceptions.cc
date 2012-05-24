@@ -95,8 +95,6 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
             pthread_getspecific(crack::runtime::exceptionObjectKey)
         );
     if (uex) {
-        // XXX what if the exception isn't a crack exception?
-
         // we don't need an atomic reference count for these, they are thread 
         // specific.
         ++uex->ref_count;
@@ -106,6 +104,8 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
         if (runtimeHooks.exceptionReleaseFunc)
             runtimeHooks.exceptionReleaseFunc(uex->user_data);
     } else {
+        // XXX it's possible for this to be called when there is a non-crack 
+        // exception active.  In that case, the results are undefined.
         uex = new _Unwind_Exception();
         uex->exception_class = crackClassId;
         uex->exception_cleanup = __CrackExceptionCleanup;
@@ -124,11 +124,17 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
 /** 
  * Function called to obtain the original crack exception object from the 
  * ABI's exception object.
+ * Should only be called for a Crack exception.
  */
 extern "C" void *__CrackGetException(_Unwind_Exception *uex) {
+    assert(uex->exception_class == crackClassId);
     return uex->user_data;
 } 
 
+/**
+ * Called at the end of a catch-clause that processes the exception.
+ * Should be able to deal with exceptions thrown from any language.
+ */
 extern "C" void __CrackCleanupException(_Unwind_Exception *uex) {
     _Unwind_DeleteException(uex);
 }
@@ -156,7 +162,10 @@ extern "C" void __CrackExceptionFrame() {
             reinterpret_cast<_Unwind_Exception *>(
                 pthread_getspecific(crack::runtime::exceptionObjectKey)
             );
-        runtimeHooks.exceptionFrameFunc(uex->user_data, uex->last_ip);
+        
+        // if this is a crack exception, call the exception frame hook.
+        if (uex)
+            runtimeHooks.exceptionFrameFunc(uex->user_data, uex->last_ip);
     }
 }                               
 
@@ -168,7 +177,7 @@ extern "C" bool __CrackUncaughtException() {
         reinterpret_cast<_Unwind_Exception *>(
             pthread_getspecific(crack::runtime::exceptionObjectKey)
         );
-    if (uex->exception_class = crackClassId) {
+    if (uex && uex->exception_class == crackClassId) {
         if (runtimeHooks.exceptionUncaughtFunc)
             runtimeHooks.exceptionUncaughtFunc(uex->user_data);
         return true;

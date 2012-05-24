@@ -258,6 +258,7 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 	    ln -f .libs/$$ext.so lib/crack/ext; \
 	  fi \
 	done
+	echo 'bad file' >test/bad_extension.so
 
 check: testbed
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen
