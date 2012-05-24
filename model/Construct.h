@@ -24,32 +24,65 @@ SPUG_RCPTR(Construct);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(ConstructStats);
 
-struct ConstructStats: public spug::RCBase {
+#define STATS_GO_STATE(STATE, OPTIONS, CONTEXT) \
+    if (OPTIONS->statsMode) { \
+        CONTEXT.construct->stats->pushState(STATE); \
+    }
 
-    enum CompileState { start=0, builtin, build, run, end };
+#define STATS_END_STATE(OPTIONS, CONTEXT) \
+    if (OPTIONS->statsMode) { \
+        CONTEXT.construct->stats->popState(); \
+    }
 
+class ConstructStats: public spug::RCBase {
+
+public:
+    enum CompileState { start=0, builtin, parser, builder, executor, end };
     typedef std::map<std::string, double> ModuleTiming;
+
+protected:
     unsigned int parsedCount;
     unsigned int cachedCount;
-    CompileState state;
-    double timing[5];
-    ModuleTiming moduleTimes;
+    double timing[end+1];
+    ModuleTiming parseTimes;
+    ModuleTiming buildTimes;
+    ModuleTiming executeTimes;
     struct timeval lastTime;
-    std::string currentModule;
+    model::ModuleDefPtr currentModule;
+    std::stack<CompileState> stateStack;
+
+    void showModuleCounts(std::ostream &out,
+                          const std::string &title,
+                          const ModuleTiming &list) const;
+
+    void stopwatch();
+
+public:
 
     ConstructStats(void): parsedCount(0),
         cachedCount(0),
-        state(start),
         timing(),
-        moduleTimes(),
+        parseTimes(),
+        buildTimes(),
+        executeTimes(),
         lastTime(),
-        currentModule("NONE") {
+        currentModule(0) {
+        stateStack.push(start);
         gettimeofday(&lastTime, NULL);
-        for (int i=0; i<5; i++)
+        for (int i=start; i<=end; i++)
             timing[i] = 0.0;
     }
 
-    void switchState(CompileState newState);
+    void setCurrentModule(const model::ModuleDefPtr m) { currentModule = m; }
+    model::ModuleDefPtr getCurrentModule() const { return currentModule; }
+
+    void pushState(CompileState newState);
+    void popState();
+
+    CompileState getState() const { return stateStack.top(); }
+
+    void incParsed() { parsedCount++; }
+    void incCached() { cachedCount++; }
 
     void write(std::ostream &out) const;
 

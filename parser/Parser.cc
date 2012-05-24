@@ -45,6 +45,18 @@ using namespace std;
 using namespace parser;
 using namespace model;
 
+// po' man's profilin.
+// since this is intrusive, we can ifdef it out here conditionally
+#define BSTATS_GO  STATS_GO_STATE(ConstructStats::builder, \
+                                  context->builder.options, (*context));
+
+#define BSTATS_END STATS_END_STATE(context->builder.options, (*context));
+#define BSTATS_GO2  STATS_GO_STATE(ConstructStats::builder, \
+                                  context.builder.options, context);
+
+#define BSTATS_END2 STATS_END_STATE(context.builder.options, context);
+
+
 void Parser::addDef(VarDef *varDef) {
    FuncDef *func = FuncDefPtr::cast(varDef);
    ContextPtr defContext = context->getDefContext();
@@ -352,8 +364,11 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
                "Break can only be used in the body of a while, for or "
                "switch statement."
                );
+
+      BSTATS_GO
       context->builder.emitBreak(*context, branch);
-      
+      BSTATS_END
+
       tok = getToken();
       if (!tok.isSemi())
          toker.putBack(tok);
@@ -367,7 +382,9 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
                "Continue can only be used in the body of a while or for "
                "loop."
                );
+      BSTATS_GO
       context->builder.emitContinue(*context, branch);
+      BSTATS_END
 
       tok = getToken();
       if (!tok.isSemi())
@@ -443,8 +460,11 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
          // generate all of the cleanups, but not if we already did this (got 
          // a terminal statement) or we're at the top-level module (in which 
          // case we'll want to generate cleanups in a static cleanup function)
-         if (!context->terminal && nested)
+         if (!context->terminal && nested) {
+            BSTATS_GO
             context->builder.closeAllCleanups(*context);
+            BSTATS_END
+         }
          return terminal;
       }
       
@@ -693,9 +713,12 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       }
    }
 
+   BSTATS_GO
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get(),
                                                           squashVirtual
                                                           );
+   BSTATS_END
+
    funcCall->args = args;
    funcCall->receiver = receiver;
    return funcCall;
@@ -761,8 +784,10 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          args[1] = val;
          FuncDefPtr funcDef;
          if (funcDef = lookUpBinOp(tok1.getData(), args)) {
+            BSTATS_GO
             FuncCallPtr funcCall =
                context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->args = args;
             if (funcDef->flags & FuncDef::method)
                funcCall->receiver = 
@@ -777,8 +802,10 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
          const string &tok1Data = tok1.getData();
          const string &oper = tok1Data.substr(0, tok1Data.size() - 1);
          if (funcDef = lookUpBinOp(oper, args)) {
-            FuncCallPtr funcCall = 
+            BSTATS_GO
+            FuncCallPtr funcCall =
                context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->args = args;
             if (funcDef->flags & FuncDef::method)
                funcCall->receiver = 
@@ -842,7 +869,9 @@ ExprPtr Parser::parseIString(Expr *expr) {
    // look up an "enter()" function
    FuncDefPtr func = context->lookUpNoArgs("enter", true, expr->type.get());
    if (func) {
+      BSTATS_GO
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      BSTATS_END
       if (func->flags & FuncDef::method)
          funcCall->receiver = reg;
       seq->add(funcCall.get());
@@ -883,7 +912,9 @@ ExprPtr Parser::parseIString(Expr *expr) {
                          )
                );
       
+      BSTATS_GO
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      BSTATS_END
       funcCall->args = args;
       if (func->flags & FuncDef::method)
          funcCall->receiver = reg;
@@ -892,7 +923,9 @@ ExprPtr Parser::parseIString(Expr *expr) {
 
    func = context->lookUpNoArgs("leave", true, expr->type.get());
    if (func) {
+      BSTATS_GO
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+      BSTATS_END
       if (func->flags & FuncDef::method)
          funcCall->receiver = reg;
       seq->add(funcCall.get());
@@ -987,8 +1020,10 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                     )
                      );
             
+            BSTATS_GO
             FuncCallPtr funcCall =
                context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->receiver = expr;
             expr = funcCall;
             tok = getToken();
@@ -1038,7 +1073,9 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                expr->type->name << " with these arguments."
                                )
                      );
+            BSTATS_GO
             funcCall = context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->receiver = expr;
             funcCall->args = args;
          } else {
@@ -1054,7 +1091,9 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                     )
                      );
             
+            BSTATS_GO
             funcCall = context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->receiver = expr;
             funcCall->args = args;
          }
@@ -1081,8 +1120,10 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                                     " with these arguments: (" << args << ")"
                                     )
                      );
+            BSTATS_GO
             FuncCallPtr funcCall = 
                context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
             funcCall->receiver = expr;
             funcCall->args = args;
             expr = funcCall;
@@ -1101,7 +1142,9 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
             error(tok, SPUG_FSTR(symbol << " is not defined for type "
                                         << expr->type->name));
    
+         BSTATS_GO
          FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+         BSTATS_END
          funcCall->args = args;
          if (funcDef->flags & FuncDef::method)
             funcCall->receiver = expr;
@@ -1129,7 +1172,9 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                             " undefined."
                             )
                   );
+         BSTATS_GO
          FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+         BSTATS_END
          funcCall->args = exprs;
          if (func->flags & FuncDef::method)
             funcCall->receiver =
@@ -1185,7 +1230,11 @@ namespace {
                            "byte long."
                           );
          TypeDef *byteType = context.construct->byteType.get();
-         return context.builder.createIntConst(context, val[1], byteType);
+
+         BSTATS_GO2
+         ExprPtr r = context.builder.createIntConst(context, val[1], byteType);
+         BSTATS_END2
+         return r;
       } else if (val[0] == 'i') {
          if (val.size() < 2 || val.size() > 9)
             context.error("Integer constants from strings must be between one "
@@ -1197,7 +1246,10 @@ namespace {
          for (int i = 1; i < val.size(); ++i)
             n = n << 8 | val[i];
 
-         return context.builder.createIntConst(context, n);
+         BSTATS_GO2
+         ExprPtr r = context.builder.createIntConst(context, n);
+         BSTATS_END2
+         return r;
       }
    
       // if it's not negative, we first try to parse it as unsigned
@@ -1206,15 +1258,21 @@ namespace {
       unsigned long long bigcval = strtoull(val.c_str(), NULL, base);
       if (bigcval <= INT64_MAX) {
          // signed
-         return context.builder.createIntConst(context,
-                                               strtoll(val.c_str(),
-                                                       NULL,
-                                                       base
-                                                       )
-                                               );
+         BSTATS_GO2
+         ExprPtr r = context.builder.createIntConst(context,
+                                                       strtoll(val.c_str(),
+                                                               NULL,
+                                                               base
+                                                               )
+                                                       );
+         BSTATS_END2
+         return r;
       } else {
          // unsigned
-         return context.builder.createUIntConst(context, bigcval);
+         BSTATS_GO2
+         ExprPtr r = context.builder.createUIntConst(context, bigcval);
+         BSTATS_END2
+         return r;
       }
    }
 
@@ -1267,10 +1325,11 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    } else if (tok.isInteger()) {
       expr = parseConstInt(*context, tok.getData(), 10);
    } else if (tok.isFloat()) {
+      BSTATS_GO
       expr = context->builder.createFloatConst(*context,
                                                atof(tok.getData().c_str())
                                                );
-
+      BSTATS_END
    } else if (tok.isOctal()) {
       expr = parseConstInt(*context, tok.getData(), 8);
    } else if (tok.isHex()) {
@@ -1282,10 +1341,13 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
        tok = getToken();
        if (tok.isInteger())
            expr = parseConstInt(*context, tok.getData(), 10);
-       else if(tok.isFloat())
+       else if(tok.isFloat()) {
+           BSTATS_GO
            expr = context->builder.createFloatConst(*context,
                                                     atof(tok.getData().c_str())
                                                     );
+           BSTATS_END
+       }
        else if (tok.isOctal())
            expr = parseConstInt(*context, tok.getData(), 8);
        else if (tok.isHex())
@@ -1319,7 +1381,9 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
                                      << operand->type->name));
 
 
+      BSTATS_GO
       FuncCallPtr funcCall = context->builder.createFuncCall(funcDef.get());
+      BSTATS_END
       funcCall->args = args;
       if (funcDef->flags & FuncDef::method)
          funcCall->receiver = operand;
@@ -1427,7 +1491,9 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
                );
    }
    
+   BSTATS_GO
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+   BSTATS_END
    funcCall->args = args;
    return funcCall;
 }
@@ -1522,7 +1588,9 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
 
       // XXX need to check for a default variable assignment
       
+      BSTATS_GO
       ArgDefPtr argDef = context->builder.createArgDef(argType.get(), varName);
+      BSTATS_END
       args.push_back(argDef);
       addDef(argDef.get());
       
@@ -1584,7 +1652,9 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                                  )
                   );
          
+         BSTATS_GO
          FuncCallPtr funcCall = context->builder.createFuncCall(operInit.get());
+         BSTATS_END
          funcCall->args = args;
          funcCall->receiver = receiver;
          if (!inits->addBaseInitializer(base.get(), funcCall.get()))
@@ -1641,8 +1711,10 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             
             // construct a function call
             FuncCallPtr funcCall;
+            BSTATS_GO
             initializer = funcCall =
                context->builder.createFuncCall(operNew.get());
+            BSTATS_END
             funcCall->args = args;
             
          } else if (tok2.isAssign()) {
@@ -1711,7 +1783,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (isMethod) {
       assert(classCtx && "method not in class context.");
       classTypeDef = TypeDefPtr::arcast(classCtx->ns);
+      BSTATS_GO
       ArgDefPtr argDef = context->builder.createArgDef(classTypeDef, "this");
+      BSTATS_END
       addDef(argDef.get());
       receiver = context->createVarRef(argDef.get());
    }
@@ -1772,6 +1846,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       StubDef *stub;
       FuncDefPtr funcDef;
       if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
+         BSTATS_GO
          funcDef =
             context->builder.createExternFunc(*context, FuncDef::noFlags,
                                               name,
@@ -1781,6 +1856,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               stub->address,
                                               name.c_str()
                                               );
+         BSTATS_END
          stub->getOwner()->removeDef(stub);
          cstack.restore();
          addFuncDef(funcDef.get());
@@ -1829,11 +1905,13 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
             flags = flags | FuncDef::forward;
          }
 
+         BSTATS_GO
          funcDef = context->builder.createFuncForward(*context, flags, name,
                                                       returnType,
                                                       argDefs,
                                                       override.get()
                                                       );
+         BSTATS_END
          runCallbacks(funcForward);
 
          cstack.restore();
@@ -1883,11 +1961,13 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    }
 
    // parse the body
+   BSTATS_GO
    FuncDefPtr funcDef =
       context->builder.emitBeginFunc(*context, flags, name, returnType,
                                      argDefs,
                                      override.get()
                                      );
+   BSTATS_END
 
    // store the new definition in the parent context if it's not already in 
    // there (if there was a forward declaration)
@@ -1914,19 +1994,24 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
-   if (!terminal)
+   if (!terminal) {
       if (context->construct->voidType->matches(*context->returnType)) {
          // remove the cleanup stack - we have already done cleanups at 
          // the block level.
          context->cleanupFrame = 0;
+         BSTATS_GO
          context->builder.emitReturn(*context, 0);
+         BSTATS_END
       } else {
          // XXX we don't have the closing curly brace location, 
          // currently reporting the error on the top brace
          error(tok3, "missing return statement for non-void function.");
       }
+   }
 
+   BSTATS_GO
    context->builder.emitEndFunc(*context, funcDef.get());
+   BSTATS_END
    cstack.restore();
 
    // clear the next function flags (we're done with them)
@@ -2266,7 +2351,9 @@ ContextPtr Parser::parseIfStmt() {
    if (!tok.isRParen())
       unexpected(tok, "expected closing paren");
    
+   BSTATS_GO
    BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
+   BSTATS_END
 
    ContextPtr terminalIf = parseIfClause();
    ContextPtr terminalElse;
@@ -2275,12 +2362,18 @@ ContextPtr Parser::parseIfStmt() {
    state = st_optElse;
    tok = getToken();
    if (tok.isElse()) {
+      BSTATS_GO
       pos = context->builder.emitElse(*context, pos.get(), terminalIf);
+      BSTATS_END
       terminalElse = parseIfClause();
+      BSTATS_GO
       context->builder.emitEndIf(*context, pos.get(), terminalElse);
+      BSTATS_END
    } else {
       toker.putBack(tok);
+      BSTATS_GO
       context->builder.emitEndIf(*context, pos.get(), terminalIf);
+      BSTATS_END
    }
    
    // absorb the flags from the context (an annotation would set flags in the 
@@ -2319,12 +2412,17 @@ void Parser::parseWhileStmt() {
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
+   BSTATS_GO
    BranchpointPtr pos =
       context->builder.emitBeginWhile(*context, cond.get(), false);
+   BSTATS_END
    context->setBreak(pos.get());
    context->setContinue(pos.get());
    ContextPtr terminal = parseIfClause();
+   BSTATS_GO
    context->builder.emitEndWhile(*context, pos.get(), terminal);
+   BSTATS_END
+
 }
 
 // for ( ... ) { ... }
@@ -2411,9 +2509,11 @@ void Parser::parseForStmt() {
       if (tok.isSemi()) {
          // no conditional, create one from a constant
          TypeDef *boolType = context->construct->boolType.get();
+         BSTATS_GO
          cond = context->builder.createIntConst(*context, 1)->convert(*context,
                                                                      boolType
                                                                      );
+         BSTATS_END
       } else {
          toker.putBack(tok);
          cond = parseCondExpr();
@@ -2437,8 +2537,10 @@ void Parser::parseForStmt() {
    }
 
    // emit the loop
+   BSTATS_GO
    BranchpointPtr pos =
       context->builder.emitBeginWhile(*context, cond.get(), afterBody);
+   BSTATS_END
    context->setBreak(pos.get());
    context->setContinue(pos.get());
    
@@ -2454,17 +2556,20 @@ void Parser::parseForStmt() {
    
    // emit the after-body expression if there was one.
    if (afterBody) {
+      BSTATS_GO
       context->builder.emitPostLoop(*context, pos.get(), terminal);
+      BSTATS_END
       context->createCleanupFrame();
       afterBody->emit(*context)->handleTransient(*context);
       context->closeCleanupFrame();
       terminal = false;
    }
 
+   BSTATS_GO
    context->builder.emitEndWhile(*context, pos.get(), terminal);
-   
    // close any variables created for the loop context.
    context->builder.closeAllCleanups(*context);
+   BSTATS_END
 }
 
 void Parser::parseReturnStmt() {
@@ -2484,7 +2589,9 @@ void Parser::parseReturnStmt() {
                           "returning " << context->returnType->name
                          )
                );
+      BSTATS_GO
       context->builder.emitReturn(*context, 0);
+      BSTATS_END
       return;
    }
 
@@ -2516,7 +2623,9 @@ void Parser::parseReturnStmt() {
    }
 
    // emit the return statement
+   BSTATS_GO
    context->builder.emitReturn(*context, expr.get());
+   BSTATS_END
 
    tok = getToken();   
    if (tok.isEnd() || tok.isRCurly())
@@ -2595,16 +2704,20 @@ void Parser::parseImportStmt(Namespace *ns) {
 
    if (!mod) {
       try {
+         BSTATS_GO
          builder.importSharedLibrary(name, syms, *context, ns);
+         BSTATS_END
       } catch (const spug::Exception &ex) {
          error(tok, ex.getMessage());
       }
    } else {
+       BSTATS_GO
        builder.initializeImport(mod.get(),
                                 syms,
                                 // HACK check for annotation?
                                 ns == context->compileNS.get()
                                 );
+       BSTATS_END
       // alias all of the names in the new module
       for (ImportedDefVec::iterator iter = syms.begin();
            iter != syms.end();
@@ -2646,8 +2759,9 @@ void Parser::parseImportStmt(Namespace *ns) {
                                   " instead."
                                  )
                   );
-         
+         BSTATS_GO
          builder.registerImportedDef(*context, symVal.get());
+         BSTATS_END
          ns->addAlias(iter->local, symVal.get());
       }
    }
@@ -2660,7 +2774,9 @@ ContextPtr Parser::parseTryStmt() {
    if (!tok.isLCurly())
       unexpected(tok, "Curly bracket expected after try.");
    
+   BSTATS_GO
    BranchpointPtr pos = context->builder.emitBeginTry(*context);
+   BSTATS_END
 
    // create a subcontext for the try statement
    ContextStackFrame cstack(*this, context->createSubContext().get());
@@ -2698,11 +2814,13 @@ ContextPtr Parser::parseTryStmt() {
       if (!varTok.isIdent())
          unexpected(tok, "variable name expected after exception type.");
 
+      BSTATS_GO
       ExprPtr exceptionObj =
          context->builder.emitCatch(*context, pos.get(), exceptionType.get(),
                                     lastWasTerminal
                                     );
-      
+      BSTATS_END
+
       tok = toker.getToken();
       if (!tok.isRParen())
          unexpected(tok, 
@@ -2723,8 +2841,10 @@ ContextPtr Parser::parseTryStmt() {
          context->emitVarDef(exceptionType.get(), varTok, exceptionObj.get());
          
          // give the builder an opportunity to add an exception cleanup
+         BSTATS_GO
          context->builder.emitExceptionCleanup(*context);
-         
+         BSTATS_END
+
          // XXX add catchLeave callback
          ContextPtr terminalCatch = parseBlock(true, noCallbacks); 
          lastWasTerminal = terminalCatch;
@@ -2744,7 +2864,9 @@ ContextPtr Parser::parseTryStmt() {
       tok = toker.getToken();
       if (!tok.isCatch()) {
          toker.putBack(tok);
+         BSTATS_GO
          context->builder.emitEndTry(*context, pos.get(), lastWasTerminal);
+         BSTATS_END
          return terminal;
       }
    }
@@ -2770,8 +2892,10 @@ ContextPtr Parser::parseThrowStmt() {
       tok = toker.getToken();
       if (!tok.isSemi())
          unexpected(tok, "Semicolon expected after throw expression.");
-      
+
+      BSTATS_GO
       context->builder.emitThrow(*context, expr.get());
+      BSTATS_END
    }
 
    // get the terminal context - if it's a toplevel context, we actually want 
@@ -3144,10 +3268,13 @@ TypeDefPtr Parser::parseClassDef() {
 
    // emit the beginning of the class, hook it up to the class context and 
    // store a reference to it in the parent context.
+   BSTATS_GO
    TypeDefPtr type =
       context->builder.emitBeginClass(*classContext, className, bases,
                                       existing.get()
                                       );
+   BSTATS_END
+
    if (!existing)
       addDef(type.get());
 
@@ -3177,7 +3304,9 @@ TypeDefPtr Parser::parseClassDef() {
    parseClassBody();
 
    type->rectify(*classContext);
+   BSTATS_GO
    classContext->builder.emitEndClass(*classContext);
+   BSTATS_END
    cstack.restore();
    
    return type;

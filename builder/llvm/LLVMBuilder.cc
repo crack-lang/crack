@@ -2039,11 +2039,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
-    ConstructStats::CompileState oldStatState;
-    if (options->statsMode) {
-        oldStatState = context.construct->stats->state;
-        context.construct->stats->switchState(ConstructStats::builtin);
-    }
+    STATS_GO_STATE(ConstructStats::builtin, options, context);
+
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
@@ -2770,9 +2767,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     engineBindModule(bMod.get());
     engineFinishModule(bMod.get());
 
-    if (options->statsMode) {
-        context.construct->stats->switchState(oldStatState);
-    }
+    STATS_END_STATE(options, context);
 
     return bMod;
 
@@ -2805,12 +2800,6 @@ void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
 }
 
 void LLVMBuilder::createModuleCommon(Context &context) {
-
-    ConstructStats::CompileState oldStatState;
-    if (options->statsMode) {
-        oldStatState = context.construct->stats->state;
-        context.construct->stats->switchState(ConstructStats::builtin);
-    }
 
     // name some structs in this module
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
@@ -2915,10 +2904,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
-    }
-
-    if (options->statsMode) {
-        context.construct->stats->switchState(oldStatState);
     }
 
     // create the exception structure for the module main function

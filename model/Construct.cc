@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <sstream>
+#include <algorithm>
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -29,41 +30,83 @@ using namespace parser;
 using namespace builder;
 using namespace crack::ext;
 
-void ConstructStats::write(std::ostream &out) const {
+namespace {
+    typedef pair<string, double> timePair;
+    struct TimeCmp {
+        bool operator()(const timePair &lhs, const timePair &rhs) {
+            return lhs.second > rhs.second;
+        }
+    };
+}
 
-    out << "\n----------------\n";
-    out << "parsed     : " << parsedCount << "\n";
-    out << "cached     : " << cachedCount << "\n";
-    out << "startup    : " << timing[start] << "s\n";
-    out << "builtin    : " << timing[builtin] << "s\n";
-    out << "parse/build: " << timing[build] << "s\n";
-    out << "run        : " << timing[run] << "s\n";
-    double total = 0;
-    for (ModuleTiming::const_iterator i = moduleTimes.begin();
-         i != moduleTimes.end();
+void ConstructStats::showModuleCounts(std::ostream &out,
+                                      const std::string &title,
+                                      const ModuleTiming &list) const {
+
+    vector<timePair> sortedList(list.begin(), list.end());
+    sort(sortedList.begin(), sortedList.end(), TimeCmp());
+
+    out << "------------------------------\n";
+    out << title << "\n";
+    out << "------------------------------\n";
+    for (vector<timePair>::const_iterator i = sortedList.begin();
+         i != sortedList.end();
          ++i) {
-         cout << i->first << ": " << i->second << "s\n";
-         total += i->second;
+        printf("%.10f\t%s\n", i->second, i->first.c_str());
     }
-    out << "total module time: " << total << "s\n";
     out << endl;
 
 }
 
-void ConstructStats::switchState(CompileState newState) {
+void ConstructStats::write(std::ostream &out) const {
+
+    out << "\n------------------------------\n";
+    out << "parsed     : " << parsedCount << "\n";
+    out << "cached     : " << cachedCount << "\n";
+    out << "------------------------------\n";
+    printf("startup \t: %.10f\n", timing[start]);
+    printf("builtin \t: %.10f\n", timing[builtin]);
+    printf("parser  \t: %.10f\n", timing[parser]);
+    printf("builder \t: %.10f\n", timing[builder]);
+    printf("executor\t: %.10f\n\n", timing[executor]);
+    showModuleCounts(out, "Parser Times (exclusive)", parseTimes);
+    showModuleCounts(out, "Builder Times", buildTimes);
+    showModuleCounts(out, "Executor Times", executeTimes);
+    out << endl;
+
+}
+
+void ConstructStats::stopwatch() {
     struct timeval t;
     gettimeofday(&t, NULL);
     double beforeF = (lastTime.tv_usec/1000000.0) + lastTime.tv_sec;
     double nowF = (t.tv_usec/1000000.0) + t.tv_sec;
     double diff = (nowF - beforeF);
-    timing[state] += diff;
-    if (state == build && currentModule != "NONE") {
-        // if we are saving build time, add it to the current module
-        // as well
-        moduleTimes[currentModule] += diff;
+    timing[getState()] += diff;
+    if (currentModule) {
+        switch (getState()) {
+            case parser:
+                parseTimes[currentModule->getFullName()] += diff;
+                break;
+            case builder:
+                buildTimes[currentModule->getFullName()] += diff;
+                break;
+            case executor:
+                executeTimes[currentModule->getFullName()] += diff;
+                break;
+        }
     }
     lastTime = t;
-    state = newState;
+}
+
+void ConstructStats::pushState(CompileState newState) {
+    stopwatch();
+    stateStack.push(newState);
+}
+
+void ConstructStats::popState() {
+    stopwatch();
+    stateStack.pop();
 }
 
 Construct::ModulePath Construct::searchPath(
@@ -314,19 +357,17 @@ void Construct::parseModule(Context &context,
                             ) {
     Toker toker(src, path.c_str());
     Parser parser(toker, &context);
-    string lastModule;
-    ConstructStats::CompileState oldStatState;
+    ModuleDefPtr lastModule;
     if (rootBuilder->options->statsMode) {
-        stats->switchState(ConstructStats::build);
-        lastModule = stats->currentModule;
-        stats->currentModule = module->getFullName();
-        oldStatState = context.construct->stats->state;
-        stats->parsedCount++;
+        stats->pushState(ConstructStats::parser);
+        lastModule = stats->getCurrentModule();
+        stats->setCurrentModule(module);
+        stats->incParsed();
     }
     parser.parse();
     if (rootBuilder->options->statsMode) {
-        stats->switchState(oldStatState);
-        stats->currentModule = lastModule;
+        stats->popState();
+        stats->setCurrentModule(lastModule);
     }
     module->close(context);
 }
@@ -443,7 +484,7 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
 
     ModuleDefPtr modDef = context->materializeModule(canonicalName);
     if (modDef && rootBuilder->options->statsMode)
-        stats->cachedCount++;
+        stats->incCached();
     moduleCache[canonicalName] = modDef;
     
     builderStack.pop();
@@ -508,7 +549,7 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         if (modDef && modDef->matchesSource(sourceLibPath)) {
             cached = true;
             if (rootBuilder->options->statsMode)
-                stats->cachedCount++;
+                stats->incCached();
         } else {
             
             // if we got a stale module from the cache, use the relative 
@@ -706,7 +747,7 @@ int Construct::runScript(istream &src, const string &name) {
         cached = true;
         loadedModules.push_back(modDef);
         if (rootBuilder->options->statsMode)
-            stats->cachedCount++;
+            stats->incCached();
     }
     else
         modDef = context->createModule(canName, name);
@@ -732,7 +773,7 @@ int Construct::runScript(istream &src, const string &name) {
     builderStack.pop();
     rootBuilder->finishBuild(*context);
     if (rootBuilder->options->statsMode)
-        stats->switchState(ConstructStats::end);
+        stats->pushState(ConstructStats::end);
     return 0;
 }
 

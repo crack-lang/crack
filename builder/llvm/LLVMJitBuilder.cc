@@ -383,8 +383,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     // dump or run the module depending on the mode.
-    if (rootBuilder->options->statsMode)
-        context.construct->stats->switchState(ConstructStats::run);
+
+    STATS_GO_STATE(ConstructStats::executor, options, context);
 
     if (options->dumpMode)
         dump();
@@ -392,8 +392,7 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (!options->dumpMode || !context.construct->compileTimeConstruct)
         run();
 
-    if (rootBuilder->options->statsMode)
-        context.construct->stats->switchState(ConstructStats::build);
+    STATS_END_STATE(options, context);
 
 }
 
