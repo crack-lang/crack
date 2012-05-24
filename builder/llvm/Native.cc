@@ -718,11 +718,11 @@ void nativeCompile(llvm::Module *module,
     Linker::ItemList NativeLinkItems;
 
     for (vector<string>::const_iterator i = sharedLibs.begin();
-        i != sharedLibs.end();
-        ++i) {
-
+         i != sharedLibs.end();
+         ++i
+         ) {
         if (path::has_parent_path(*i)) {
-             LibPaths.push_back(path::parent_path(*i));
+            LibPaths.push_back(path::parent_path(*i));
         }
 
 #if __GNUC__ > 4 && __GNUC_MINOR__ > 2
