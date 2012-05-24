@@ -1,18 +1,78 @@
 # Copyright 2010 Google Inc.
 # Code for dealing with time.
 
+import crack.ascii fract10;
 import crack.runtime InternalDate, strftime, strlen;
 import crack.lang AssertionError, ManagedBuffer, Formatter;
-import crack.io FStr;
+import crack.io FStr, cout;
 import crack.runtime TimeVal;
 import crack.cont.array Array;
 import crack.io Writer;
 
+const int32 BILLION = 1000000000;
+
+void _minus(TimeVal a, TimeVal b, TimeVal result) {
+    nsdiff := a.nsecs - b.nsecs;
+    if (nsdiff < 0) {
+        nsdiff = BILLION + a.nsecs - b.nsecs;
+        result.secs = a.secs - b.secs - 1;
+    } else {
+        result.secs = a.secs - b.secs
+    }
+    result.nsecs = nsdiff;
+}
+    
 
 ## A difference in time.
 class TimeDelta : Object, TimeVal {
+    
+    oper init() : TimeVal(0, 0) {}
+
     oper init(int32 secs, int32 nsecs) : 
         TimeVal(secs, nsecs) {
+    }
+
+    void formatTo(Formatter out) {
+        out `$secs.$(fract10(nsecs, 9))`;
+    }
+    
+    int cmp(Object other) {
+        if (o := TimeDelta.cast(other)) {
+            TimeDelta td = {};
+            _minus(this, o, td);
+            return td.secs ? td.secs : td.nsecs;
+        } else {
+            return Object.cmp(other);
+        }
+    }
+}
+
+## An absolute point in time (seconds since the epoch).
+class Time : Object, TimeVal {
+
+    oper init() : TimeVal(0, 0) {}
+    oper init(int32 secs, int32 nsecs) :
+        TimeVal(secs, nsecs) {
+    }
+
+    TimeDelta oper -(Time other) {
+        result := TimeDelta();
+        _minus(this, other, result);
+        return result;
+    }
+    
+    void formatTo(Formatter out) {
+        out `$secs.$(fract10(nsecs, 9))`;
+    }
+
+    int cmp(Object other) {
+        if (o := Time.cast(other)) {
+            TimeDelta td = {};
+            _minus(this, o, td);
+            return td.secs ? td.secs : td.nsecs;
+        } else {
+            return Object.cmp(other);
+        }
     }
 }
 
@@ -20,6 +80,12 @@ TimeDelta seconds(int secs) {
     if (secs > 0xFFFFFFFF || secs < -0xFFFFFFFF)
         throw AssertionError(FStr() `Integer value $secs out of range`);
     return TimeDelta(int32(secs), 0);
+}
+
+Time now() {
+    Time t = {};
+    t.setToNow(null);
+    return t;
 }
 
 bool isLeap(int year){

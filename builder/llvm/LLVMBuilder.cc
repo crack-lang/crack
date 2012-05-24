@@ -2549,6 +2549,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PreIncrIntOpDef(uintType, "oper ++x"), uintType);
     context.addDef(new PreIncrIntOpDef(intzType, "oper ++x"), intzType);
     context.addDef(new PreIncrIntOpDef(uintzType, "oper ++x"), uintzType);
+    context.addDef(new PreIncrPtrOpDef(byteptrType, "oper ++x"), byteptrType);
 
     context.addDef(new PreDecrIntOpDef(byteType, "oper --x"), byteType);
     context.addDef(new PreDecrIntOpDef(int16Type, "oper --x"), int16Type);
@@ -2561,6 +2562,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PreDecrIntOpDef(uintType, "oper --x"), uintType);
     context.addDef(new PreDecrIntOpDef(intzType, "oper --x"), intzType);
     context.addDef(new PreDecrIntOpDef(uintzType, "oper --x"), uintzType);
+    context.addDef(new PreDecrPtrOpDef(byteptrType, "oper --x"), byteptrType);
 
     context.addDef(new PostIncrIntOpDef(byteType, "oper x++"), byteType);
     context.addDef(new PostIncrIntOpDef(int16Type, "oper x++"), int16Type);
@@ -2573,6 +2575,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PostIncrIntOpDef(uintType, "oper x++"), uintType);
     context.addDef(new PostIncrIntOpDef(intzType, "oper x++"), intzType);
     context.addDef(new PostIncrIntOpDef(uintzType, "oper x++"), uintzType);
+    context.addDef(new PostIncrPtrOpDef(byteptrType, "oper x++"), byteptrType);
 
     context.addDef(new PostDecrIntOpDef(byteType, "oper x--"), byteType);
     context.addDef(new PostDecrIntOpDef(int16Type, "oper x--"), int16Type);
@@ -2585,6 +2588,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new PostDecrIntOpDef(uintType, "oper x--"), uintType);
     context.addDef(new PostDecrIntOpDef(intzType, "oper x--"), intzType);
     context.addDef(new PostDecrIntOpDef(uintzType, "oper x--"), uintzType);
+    context.addDef(new PostDecrPtrOpDef(byteptrType, "oper x--"), byteptrType);
 
     // explicit no-op construction
     addNopNew(context, int64Type);
@@ -2915,14 +2919,8 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 void *LLVMBuilder::loadSharedLibrary(const std::string &name) {
     // leak the handle so the library stays mapped for the life of the process.
     void *handle = dlopen(name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
-    if (!handle) {
-        // XXX TODO remove this cerr in favor of the Exception message.
-        // however, we have an issue processing this exception during
-        // import of extensions currently. remove when that's fixed.
-        // weyrick 5/12
-        cerr << dlerror() << endl;
+    if (!handle)
         throw spug::Exception(dlerror());
-    }
     return handle;
 }
 

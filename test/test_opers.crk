@@ -189,4 +189,29 @@ if (1) {
         puts('formatter not released');
 }    
 
+if (1) {
+    byteptr b = '123';
+    if ((++b)[0] != b'2')
+        puts('failed byteptr preincrement');
+    if ((--b)[0] != b'1')
+        puts('failed byteptr predecrement');
+    if ((b++)[0] != b'1' || b[0] != b'2')
+        puts('failed byteptr postincrement');
+    if ((b--)[0] != b'2' || b[0] != b'1')
+        puts('failed byteptr postincrement');
+}
+
+if (1) {
+    array[int] ai = [1, 2, 3];
+    if ((++ai)[0] != 2)
+        puts('failed array preincrement');
+    if ((--ai)[0] != 1)
+        puts('failed array predecrement');
+    if ((ai++)[0] != 1 || ai[0] != 2)
+        puts('failed array postincrement');
+    if ((ai--)[0] != 2 || ai[0] != 1)
+        puts('failed array postincrement');
+}
+    
+
 puts('ok');

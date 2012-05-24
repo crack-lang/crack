@@ -32,8 +32,6 @@ struct Constants {
         crk_SOCK_RAW,
         crk_SOCK_RDM,
         crk_SOCK_PACKET,
-        crk_SOCK_NONBLOCK,
-        crk_SOCK_CLOEXEC,
         crk_SOL_SOCKET,
         crk_SO_REUSEADDR,
         crk_POLLIN,
@@ -60,7 +58,7 @@ struct SockAddrIn : public SockAddr {
 
     static void init2(SockAddrIn *inst, uint32_t addr, unsigned int port);
 
-    static uint32_t crack_htonl(uint32_t val);    
+    static uint32_t crack_htonl(uint32_t val);
     static uint32_t crack_ntohl(uint32_t val);
     static uint16_t crack_htons(uint16_t val);
     static uint16_t crack_ntohs(uint16_t val);
@@ -77,6 +75,7 @@ struct TimeVal {
     int32_t secs, nsecs;
 
     static void init(TimeVal *inst, int32_t secs0, int32_t nsecs0);
+    static void setToNow(TimeVal *inst, void *tz);
 };
 
 struct PollEvt {
@@ -127,6 +126,10 @@ struct PipeAddr {
     static void init1(PipeAddr *pipe, int32_t flags);
     static void init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writefd);
 };
+
+// Two variants of fcntl
+int crk_fcntl1(int fd, int cmd);
+int crk_fcntl2(int fd, int cmd, int64_t arg);
 
 }} // namespace crack::runtime
 

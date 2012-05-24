@@ -1,0 +1,8 @@
+%%TEST%%
+exceptions on bad extensions
+%%ARGS%%
+%%FILE%%
+import test.bad_extension;
+%%REXPECT%%
+spug::Exception: .*/test/bad_extension.so: file too short
+%%STDIN%%

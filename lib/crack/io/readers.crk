@@ -24,6 +24,7 @@ class LineReader {
     
     String readLine() {
         while (true) {
+            
             for (uint i = start; i < buffer.size; ++i) {
                 if (buffer.buffer[i] == NEWLINE) {
                     tmp := Buffer(buffer.buffer + start, i + 1 - start);

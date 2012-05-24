@@ -38,7 +38,7 @@ void headerToAnchor(Formatter out, Array[Object] words) {
             first = false;
 
         if (word.isa(String))
-            toLower(String.cast(word)).writeTo(out);
+            toLower(String.cast(word)).formatTo(out);
         else
             headerToAnchor(out, TextBlock.cast(word).words);
     }

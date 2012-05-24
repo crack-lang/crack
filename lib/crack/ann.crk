@@ -15,10 +15,10 @@
 import crack.runtime free;
 import crack.lang die, CString, IndexError, InvalidArgumentError,
     AssertionError, Exception, Formatter;
-import crack.io cout, FStr, StringFormatter, StringWriter, StandardFormatter, Reader,
-    Writer;
+import crack.io cout, FStr, StringFormatter, StringWriter, StandardFormatter, 
+    Reader, Writer;
 import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING,
-    TOK_POPERRCTX;
+    TOK_POPERRCTX, TOK_LPAREN, TOK_RPAREN, TOK_LCURLY, TOK_RCURLY;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.serial SerialReader, SerialWriter;
@@ -90,6 +90,8 @@ class NodeIter;
     @abstract NodeIter iter();
     @abstract Node getLast();
     @abstract Node getFirst();
+    @abstract void expand(CrackContext ctx, Array[NodeList] args);
+    @abstract String toString(Array[NodeList] args);
 }
 
 @abstract class Node {
@@ -200,6 +202,29 @@ class NodeListImpl : NodeList {
 
     Node getLast() { return last; }
     Node getFirst() { return first; }
+    
+    void expand(CrackContext context, Array[NodeList] args) {
+        for (node :in this)
+            node.expand(context, args);
+    }
+    
+    String toString(Array[NodeList] args) {
+        StringFormatter sf = {};
+        Array[Node] nodeArray = {};
+        for (node :in this)
+            nodeArray.append(node);
+        
+        bool first = true;
+        for (int i = nodeArray.count() - 1; i >= 0; --i) {
+            if (first)
+                first = false;
+            else
+                sf ` `;
+            sf `$(nodeArray[i].toString(args))`;
+        }
+        
+        return sf.string();
+    }
 }
 
 class Tok : Node {
@@ -753,13 +778,18 @@ void readIStr(CrackContext ctx, NodeList nodes) {
     }
 }
 
-NodeList readBlock(CrackContext ctx) {
+## Reads a sequence of tokens between a specified left and right delimiter 
+## which can be nested.  For example, if left and right are TOK_LPAREN and 
+## TOK_RPAREN this function would read the following sequence:
+##    ( 1 + 2 + (3 + 4) )
+##   ^                   ^
+NodeList readDelimited(CrackContext ctx, int left, int right) {
     NodeListImpl result = {};
 
-    # get the opening bracket.
+    # get the opening delimiter.
     tok := ctx.getToken();
-    if (!tok.isLCurly())
-        ctx.error(tok, 'Opening curly bracket expected.'.buffer);
+    if (tok.getType() != left)
+        ctx.error(tok, 'Opening delimiter expected.'.buffer);
     result.pushHead(Tok(tok));
 
     depth := 1;
@@ -767,9 +797,9 @@ NodeList readBlock(CrackContext ctx) {
         tok = ctx.getToken();
         if (tok.isEnd())
             ctx.error(tok, 'Premature end of file'.buffer);
-        if (tok.isLCurly())
+        if (tok.getType() == left)
             ++depth;
-        else if (tok.isRCurly())
+        else if (tok.getType() == right)
             --depth;
         result.pushHead(Tok(tok));
         if (tok.isIstrBegin())
@@ -777,6 +807,11 @@ NodeList readBlock(CrackContext ctx) {
     }
 
     return result;
+}
+
+## Read a curly-bracket delimited block.  See readDelimited() for details
+NodeList readBlock(CrackContext ctx) {
+    return readDelimited(ctx, TOK_LCURLY, TOK_RCURLY);
 }
 
 void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
@@ -855,8 +890,7 @@ void interface(CrackContext ctx) {
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 
     # expand the body and opening bracket
-    for (node :in body)
-        node.expand(ctx, null);
+    body.expand(ctx, null);
 
     # inject the class definition
     loc = nameTok.getLocation();
@@ -913,8 +947,7 @@ void implements(CrackContext ctx) {
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 
     # inject the body
-    for (node :in body)
-        node.expand(ctx, null);
+    body.expand(ctx, null);
 
     # inject the interfaces
     for (node :in interfaces)
@@ -1104,7 +1137,7 @@ void struct(CrackContext ctx) {
     }
     
     result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, 
-                                                       @LINE),
+                                                   @LINE),
                                    ') : '
                                    )
                     );
@@ -1135,4 +1168,23 @@ void struct(CrackContext ctx) {
     # finally, expand the result    
     for (node :in result)
         node.expand(ctx, null);
+}
+
+void assert(CrackContext ctx) {
+    expr := readDelimited(ctx, TOK_LPAREN, TOK_RPAREN);
+    loc := expr.getFirst().getLocation();
+    message := expr.toString(null);
+    ctx.inject(@FILE.buffer, @LINE, 
+               FStr() I`)) { 
+                    import crack.lang AssertionError;
+                    import crack.io FStr;
+                    throw AssertionError(
+                        FStr() \`$(loc.getName()):$(loc.getLineNumber()): \
+                            Assertion failed: \
+                            \$($(message.getRepr()))\\n\`
+                    );
+               } \0`.buffer
+               );
+    expr.expand(ctx, null);
+    ctx.inject(@FILE.buffer, @LINE, 'if (!('.buffer)
 }

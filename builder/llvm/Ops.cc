@@ -807,3 +807,97 @@ ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
     builder.lastValue = receiverVal;
     return receiverResult;
 }
+
+// PreIncrPtrOpCall
+ResultExprPtr PreIncrPtrOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t,
+                                         receiverResult,
+                                         receiverVal
+                                         );
+    receiverResult->handleTransient(context);
+    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    builder.lastValue = builder.builder.CreateGEP(builder.lastValue,
+                                                  ConstantInt::get(intzType->rep, 1)
+                                                  );
+    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+}
+
+// PreDecrPtrOpCall
+ResultExprPtr PreDecrPtrOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t,
+                                         receiverResult,
+                                         receiverVal
+                                         );
+    receiverResult->handleTransient(context);
+    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    builder.lastValue = builder.builder.CreateGEP(builder.lastValue,
+                                                  ConstantInt::get(intzType->rep,
+                                                                   -1
+                                                                   )
+                                                  );
+    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+}
+
+// PostIncrPtrOpCall
+ResultExprPtr PostIncrPtrOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t,
+                                         receiverResult,
+                                         receiverVal
+                                         );
+    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    Value *mutatedVal = builder.builder.CreateGEP(builder.lastValue,
+                                                  ConstantInt::get(intzType->rep,
+                                                                   1
+                                                                   )
+                                                  );
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+                                          mutatedVal
+                                          );
+    assign->handleTransient(context);
+    builder.lastValue = receiverVal;
+    return receiverResult;
+}
+
+// PostDecrPtrOpCall
+ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
+    VarRef *ref;
+    BTypeDef *t;
+    ResultExprPtr receiverResult;
+    Value *receiverVal;
+    LLVMBuilder &builder = beginIncrDecr(receiver.get(), context, ref,
+                                         type.get(),
+                                         t,
+                                         receiverResult,
+                                         receiverVal
+                                         );
+    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    Value *mutatedVal = builder.builder.CreateGEP(builder.lastValue,
+                                                  ConstantInt::get(intzType->rep,
+                                                                   -1
+                                                                   )
+                                                  );
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+                                          mutatedVal
+                                          );
+    assign->handleTransient(context);
+    builder.lastValue = receiverVal;
+    return receiverResult;
+}

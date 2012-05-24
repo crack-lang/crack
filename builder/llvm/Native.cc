@@ -718,55 +718,55 @@ void nativeCompile(llvm::Module *module,
     Linker::ItemList NativeLinkItems;
 
     for (vector<string>::const_iterator i = sharedLibs.begin();
-         i != sharedLibs.end();
-         ++i) {
+        i != sharedLibs.end();
+        ++i) {
 
-         if (path::has_parent_path(*i)) {
+        if (path::has_parent_path(*i)) {
              LibPaths.push_back(path::parent_path(*i));
-         }
+        }
 
 #if __GNUC__ > 4 && __GNUC_MINOR__ > 2
-         NativeLinkItems.push_back(pair<string,bool>(":"+
+        NativeLinkItems.push_back(pair<string,bool>(":"+
                                                     string(path::stem(*i))+
                                                     string(path::extension(*i)),
                                                     true // .so
                                                     ));
 #else
-         string rtp = string(path::stem(*i)) + string(path::extension(*i));
-         Path sPath;
-         bool foundModule = false;
+        string rtp = string(path::stem(*i)) + string(path::extension(*i));
+        Path sPath;
+        bool foundModule = false;
 
         // We have to manually search for the linkitem
-          for (unsigned index = 0; index < LibPaths.size(); index++) {
-              sPath = Path(LibPaths[index]);
-              sPath.appendComponent(rtp);
+        for (unsigned index = 0; index < LibPaths.size(); index++) {
+            sPath = Path(LibPaths[index]);
+            sPath.appendComponent(rtp);
 
-              if (o->verbosity > 2)
-                  cerr << "search: " << sPath.str() << endl;
+            if (o->verbosity > 2)
+                cerr << "search: " << sPath.str() << endl;
 
-              char *rp = realpath(sPath.c_str(), NULL);
-              if (!rp) {
-                  switch (errno) {
-                      case EACCES:
-                      case ELOOP:
-                      case ENAMETOOLONG:
-                      case ENOENT:
-                      case ENOTDIR:
-                          break;
-                      default:
-                          perror("realpath");
-                  }
-                  continue;
-              } else {
+            char *rp = realpath(sPath.c_str(), NULL);
+            if (!rp) {
+                switch (errno) {
+                    case EACCES:
+                    case ELOOP:
+                    case ENAMETOOLONG:
+                    case ENOENT:
+                    case ENOTDIR:
+                        break;
+                    default:
+                        perror("realpath");
+                }
+                continue;
+            } else {
                 free(rp);
                 foundModule = true;
                 break;
-              }
-          }
+           }
+        }
 
-         NativeLinkItems.push_back(pair<string,bool>(foundModule ? sPath.str() : rtp,
-                                                      false // .so
-                                                     ));
+        NativeLinkItems.push_back(
+            pair<string,bool>(foundModule ? sPath.str() : rtp, false)
+        );
 
 #endif
     }

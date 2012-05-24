@@ -1,0 +1,11 @@
+%%TEST%%
+assertions
+%%ARGS%%
+%%FILE%%
+@import crack.ann assert;
+@assert(0 > 1);
+%%REXPECT%%
+Uncaught Exception:
+\.main\..*96_5fassertions_2ecrk:main
+AssertionError: .*/96_assertions.crk:2: Assertion failed: \( 0 > 1 \)
+%%STDIN%%

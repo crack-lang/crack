@@ -447,6 +447,41 @@ PDNTs can be more convenient.
 See the section on \X(Numeric Types) for more information on the philosophy and
 details of how numeric conversions work.
 
+Explicit Conversion
+'''''''''''''''''''
+
+As noted in the section above, we can force a conversion between numeric types
+with an expression of the form /type-name/ *(* /value/ *)*.  This works for
+other types, too, and allows us to do some interesting things.
+
+We can convert any pointer type or aggregate type to a #uintz# representing
+the address of the object:
+
+{{
+    byteptr b = getBytePtr();
+    cout `address of b is $(uintz(b))\n`;
+
+    class A {}  // see "Classes" below.
+    A a = {};
+    cout `address of a is $(uintz(a))\n`;
+}}
+
+We can also convert any pointer type to a #byteptr# or #array#:
+
+{{
+    A a = {};
+    byteptr b = byteptr(a);
+    byteptr c = {a};  # alternate construction syntax works, too.
+    d := byteptr(a);
+
+    ints := array[int](b);
+}}
+
+These conversions, like #byteptr# and #array# operations in general, are
+unsafe.  They allow you to circumvent the static protections in the language
+and read and write to unmanaged regions of memory.  Nevertheless, they have
+some valuable uses, like low-level buffer manipulation.
+
 Strings
 '''''''
 
@@ -5301,6 +5336,9 @@ From 0.6 to 1.0
     'pos' field has been eliminated and the 'size' field now serves this
     function.  Reader.read() is now expected to set the 'size' field of the
     WriteBuffer it is passed.
+-   #StaticString# is now derived from #CString#.
+-   #crack.net.Pollable# has been removed and replaced with
+    #crack.io.FileHandle#.
 
 From 0.5 to 0.6
 ---------------

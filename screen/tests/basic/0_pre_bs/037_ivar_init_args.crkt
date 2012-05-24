@@ -3,8 +3,19 @@ Initialization of instance variables from similarly named args
 %%ARGS%%
 
 %%FILE%%
-int32 a; class X { int a; oper init(int32 a) : a = a {} };
-     X x = {100}; if (x.a == 100) puts("ok"); else puts("FAILED");
+int32 a;
+class X { int a; oper init(int32 a) : a = a {} };
+X x = {100};
+if (x.a == 100) puts("ok"); else puts("FAILED");
+
+# a somewhat related test, verify that we can have an argument with the same
+# name as a function in an enclosing scope.
+class A {
+    void f() {}
+    class B {
+        oper init(int f) {}
+    }
+}
 %%EXPECT%%
 ok
 %%STDIN%%

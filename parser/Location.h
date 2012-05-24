@@ -23,7 +23,7 @@ class LocationImpl : public spug::RCBase {
 
    public:
 
-      LocationImpl(const char *name, int lineNumber) :
+      LocationImpl(const std::string &name, int lineNumber) :
          name(name),
          lineNumber(lineNumber) {
       }

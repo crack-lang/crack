@@ -4,6 +4,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <poll.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -105,6 +106,12 @@ const char *SockAddrUn::getPath(SockAddrUn *inst) {
 void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
     inst->secs = secs0;
     inst->nsecs = nsecs0;
+}
+
+void TimeVal::setToNow(TimeVal *inst, void *tz) {
+    gettimeofday((struct timeval *)inst, (struct timezone *)tz);
+    // TimeVal uses naoseconcs, gettimeofday uses microseconds.
+    inst->nsecs *= 1000;
 }
 
 uint32_t makeIPV4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
@@ -284,6 +291,13 @@ void PipeAddr::init2(PipeAddr *pipe, int32_t flags, int32_t readfd, int32_t writ
     pipe->writefd = writefd;
 }
 
+int crk_fcntl1(int fd, int cmd){
+    return fcntl(fd, cmd);
+}
+
+int crk_fcntl2(int fd, int cmd, int64_t arg){
+    return fcntl(fd, cmd, (long)arg);
+}
 
 }} // namespace crack::runtime
 
