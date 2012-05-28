@@ -1,0 +1,90 @@
+## Copyright 2011 Google Inc.
+## SDL Graphics library wrapper.
+
+@import crack.ann struct;
+import crack.cont.array Array;
+import crack.ext._sdlgfx aalineColor, stringColor, rectangleColor, circleColor, 
+    filledPolygonColor, lineColor;
+import crack.ext._sdl SDL_Flip, SDL_FillRect, SDL_Surface;
+import crack.io cout, Formatter;
+import crack.runtime free;
+import crack.lang CString;
+
+# color constants corresponding to solid colors (no alpha translucency)
+uint32
+    RED = 0xFF0000FF,
+    GREEN = 0xFF00FF,
+    BLUE = 0xFFFF,
+    BLACK = 0xFF,
+    WHITE = 0xFFFFFFFF,
+    CYAN = GREEN | BLUE,
+    YELLOW = RED | GREEN,
+    MAGENTA = RED | BLUE;
+
+## 2D graphics coordinate
+class Coord {
+    int x, y;
+
+    oper init(int x, int y) : x = x, y = y {}
+    
+    void formatTo(Formatter out) {
+        out `Coord($x, $y)`;
+    }
+}
+
+## A polygon, which consists of an array of points.
+class Polygon {
+    Array[Coord] __points = {};
+    
+    ## Array consisting of the x coordinates followed by the y coordinates.
+    array[int16] __raw;
+
+    void __invalidate() {    
+        if (!(__raw is null)) {
+            free(__raw);
+            __raw = null;
+        }
+    }
+    
+    ## Create the raw array if necesssary, 
+    int __getRaw() {
+        if (__raw is null) {
+            int count = __points.count();
+            __raw = array[int16](count * 2);
+            i := 0;
+            for (point :in __points)
+                __raw[i++] = int16(point.x);
+            for (point :in __points)
+                __raw[i++] = int16(point.y);
+            return count;
+        } else {
+            return __points.count();
+        }
+    }
+
+    void append(Coord coord) {
+        __points.append(coord);
+        __invalidate();
+    }
+    
+    void drawFilled(SDL_Surface surface, uint32 color) {
+        int size = __getRaw();
+        filledPolygonColor(surface, __raw, __raw + size, size, color);
+    }
+}
+
+void drawString(SDL_Surface surface, Coord pos, CString text, uint32 color) {
+    stringColor(surface, int16(pos.x), int16(pos.y), text.buffer, color);
+}
+
+void drawLine(SDL_Surface surface, Coord a, Coord b, uint32 color) {
+    lineColor(surface, int16(a.x), int16(a.y), int16(b.x), int16(b.y),
+              color
+              );
+}
+
+void drawAALine(SDL_Surface surface, Coord a, Coord b, uint32 color) {
+    aalineColor(surface, int16(a.x), int16(a.y), int16(b.x), int16(b.y),
+                color
+                );
+}
