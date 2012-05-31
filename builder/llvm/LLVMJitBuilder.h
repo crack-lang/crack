@@ -44,7 +44,8 @@ class LLVMJitBuilder : public LLVMBuilder {
                                           void*);
 
         virtual void engineBindModule(BModuleDef *moduleDef);
-        virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void engineFinishModule(model::Context &context,
+                                        BModuleDef *moduleDef);
         virtual void fixClassInstRep(BTypeDef *type);
         virtual BModuleDef *instantiateModule(model::Context &context,
                                               const std::string &name,

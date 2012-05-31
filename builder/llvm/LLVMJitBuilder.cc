@@ -74,12 +74,14 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     }
 }
 
-void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
+void LLVMJitBuilder::engineFinishModule(Context &context, BModuleDef *moduleDef)
+{
     // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
     // run specific optimizations at different levels
     if (options->optimizeLevel) {
+
         // optimize
         llvm::PassManager passMan;
 
@@ -98,6 +100,7 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
         passMan.add(llvm::createCFGSimplificationPass());
 
         passMan.run(*moduleDef->rep);
+
     }
 
     setupCleanup(moduleDef);
@@ -335,7 +338,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
         verifyModule(*module, llvm::PrintMessageAction);
 
     // let jit or linker finish module before run/link
-    engineFinishModule(BModuleDefPtr::cast(moduleDef));
+    engineFinishModule(context, BModuleDefPtr::cast(moduleDef));
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
@@ -397,8 +400,12 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
 }
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
+
     assert(module);
+    STATS_GO_STATE(ConstructStats::builder, options, context);
     BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
+    STATS_END_STATE(options, context);
+
 }
 
 void LLVMJitBuilder::dump() {

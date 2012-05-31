@@ -38,7 +38,17 @@ bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
 }
 
 void ModuleDef::close(Context &context) {
+    ModuleDefPtr lastModule;
+    if (context.construct->rootBuilder->options->statsMode) {
+        lastModule = context.construct->stats->getCurrentModule();
+        context.construct->stats->setCurrentModule(this);
+        context.construct->stats->pushState(ConstructStats::builder);
+    }
     context.builder.closeModule(context, this);
+    if (context.construct->rootBuilder->options->statsMode) {
+        context.construct->stats->popState();
+        context.construct->stats->setCurrentModule(lastModule);
+    }
 }
 
 NamespacePtr ModuleDef::getParent(unsigned index) {

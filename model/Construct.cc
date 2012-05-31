@@ -96,6 +96,11 @@ void ConstructStats::stopwatch() {
                 break;
         }
     }
+    else {
+        //printf("losing diff: %.10f, state: %d\n", diff, getState());
+        assert(getState() == ConstructStats::start && "missing important stat");
+    }
+
     lastTime = t;
 }
 

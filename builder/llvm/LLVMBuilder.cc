@@ -2045,6 +2045,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
 
+    if (options->statsMode) {
+        context.construct->stats->setCurrentModule(bModDef);
+    }
+
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
 
@@ -2769,9 +2773,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // bind the module to the execution engine
     engineBindModule(bMod.get());
-    engineFinishModule(bMod.get());
+    engineFinishModule(context, bMod.get());
 
     STATS_END_STATE(options, context);
+    if (options->statsMode) {
+        context.construct->stats->setCurrentModule(NULL);
+    }
 
     return bMod;
 
