@@ -273,11 +273,11 @@ if (true) {
         cout `FAILED count after extend\n`;
 }
 
-stringA.deleteAll();
+stringA.clear();
 if (stringA.count() != 0)
-    cout `FAILED deleteAll() count\n`;
+    cout `FAILED clear() count\n`;
 if (stringA != Array[String]![])
-    cout `FAILED deleteAll() equality with empty array\n`;
+    cout `FAILED clear() equality with empty array\n`;
 
 # --- List tests ---
 

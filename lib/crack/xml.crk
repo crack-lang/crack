@@ -664,7 +664,7 @@ uint  xml_en_main = 1;
 
     void reset(){
         p = 0;
-        _elements.deleteAll();
+        _elements.clear();
 
         
 # line 671 "lib/crack/xml.crk"

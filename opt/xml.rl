@@ -521,7 +521,7 @@ class XmlReader {
 
     void reset(){
         p = 0;
-        _elements.deleteAll();
+        _elements.clear();
 
         %% write init;
 

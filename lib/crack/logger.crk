@@ -126,19 +126,18 @@ class Logger {
     }
 
     void setNamedFields(Array[String] fieldNames){
-        _fields.deleteAll();
+        _fields.clear();
         for (name :in fieldNames)
             _fields.append(_availableFields[name]);
     }
 
     void setNamedFields(String fieldSpec){
-        _fields.deleteAll();
+        _fields.clear();
         fieldNames := split(fieldSpec, " ");
         for (name :in fieldNames){
             if (name.size > 0)
                 _fields.append(_availableFields[name]);
         }
-
     }
 
     StringArray getNamedFields(){
@@ -289,6 +288,10 @@ class LogFormatter : StandardFormatter {
 
     void setNamedFields(Array[String] fieldNames){
         _logger.setNamedFields(fieldNames);
+    }
+
+    void setNamedFields(String fieldSpec){
+        _logger.setNamedFields(fieldSpec);
     }
 
     void setLoggerLevel(uint newLevel){

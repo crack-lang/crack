@@ -519,7 +519,7 @@ class Array[Elem] {
         --__size;
     }
     
-    void deleteAll() {
+    void clear() {
         for (uintz i = 0; i < __size; ++i)
             _release(__rep[i]);
         __size = 0;
