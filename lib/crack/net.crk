@@ -337,7 +337,6 @@ class Pipe : FileHandle @implements Reader, Writer {
         return false;
     }
 
-
     oper del() {
         close();
     }

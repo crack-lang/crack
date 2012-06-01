@@ -1,0 +1,94 @@
+// A few tests for lists and linked list appending and popping from the head
+// and tail
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// June 1 2012
+
+import crack.io cout;
+
+import crack.cont.list DList, List;
+List[int] nums = {};
+DList[int] dnums = {};
+
+nums.append(1);
+nums.append(2);
+if (nums.count()!=2) cout `List append failed: $nums\n`;
+
+nums.popHead();
+
+nums.popHead();
+if (nums.count()) cout `List popHead failed: $nums\n`;
+
+nums.append(1);
+nums.append(2);
+if (nums.count()!=2) cout `List append failed: $nums\n`;
+
+nums.popHead();
+
+nums.popHead();
+if (nums.count()) cout `List popHead failed: $nums\n`;
+
+//------------------------------------------------------------------------------
+nums.append(1);
+nums.append(2);
+if (nums.count()!=2) cout `List append failed: $nums\n`;
+
+
+nums.pop();
+
+nums.pop();
+if (nums.count()) cout `List popTail failed: $nums\n`;
+
+nums.append(1);
+nums.append(2);
+if (nums.count()!=2) cout `List append failed: $nums\n`;
+
+
+nums.pop();
+
+nums.pop();
+if (nums.count()) cout `List popTail failed: $nums, $(nums.count())\n`;
+
+//------------------------------------------------------------------------------
+
+dnums.append(1);
+dnums.append(2);
+if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+
+dnums.popHead();
+
+dnums.popHead();
+if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+dnums.append(1);
+dnums.append(2);
+if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+
+
+dnums.popHead();
+
+dnums.popHead();
+if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+//------------------------------------------------------------------------------
+
+dnums.append(1);
+dnums.append(2);
+if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+
+
+dnums.pop();
+
+dnums.pop();
+if (dnums.count()) cout `DList pop failed: $dnums\n`;
+
+dnums.append(1);
+dnums.append(2);
+if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+
+
+dnums.pop();
+
+dnums.pop();
+if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+cout `ok\n`;

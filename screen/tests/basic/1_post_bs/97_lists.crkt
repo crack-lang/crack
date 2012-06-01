@@ -1,0 +1,10 @@
+%%TEST%%
+List and DList
+%%ARGS%%
+
+%%FILE%%
+import test.test_lists;
+%%EXPECT%%
+ok
+%%STDIN%%
+
