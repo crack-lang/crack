@@ -24,17 +24,7 @@ SPUG_RCPTR(Construct);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(ConstructStats);
 
-#define STATS_GO_STATE(STATE, OPTIONS, CONTEXT) \
-    if (OPTIONS->statsMode) { \
-        CONTEXT.construct->stats->pushState(STATE); \
-    }
-
-#define STATS_END_STATE(OPTIONS, CONTEXT) \
-    if (OPTIONS->statsMode) { \
-        CONTEXT.construct->stats->popState(); \
-    }
-
-class ConstructStats: public spug::RCBase {
+class ConstructStats : public spug::RCBase {
 
 public:
     enum CompileState { start=0, builtin, parser, builder, executor, end };
@@ -48,8 +38,8 @@ protected:
     ModuleTiming buildTimes;
     ModuleTiming executeTimes;
     struct timeval lastTime;
-    model::ModuleDefPtr currentModule;
-    std::stack<CompileState> stateStack;
+    model::ModuleDefPtr curModule;
+    CompileState curState;
 
     void showModuleCounts(std::ostream &out,
                           const std::string &title,
@@ -59,32 +49,49 @@ protected:
 
 public:
 
-    ConstructStats(void): parsedCount(0),
-        cachedCount(0),
-        timing(),
-        parseTimes(),
-        buildTimes(),
-        executeTimes(),
-        lastTime(),
-        currentModule(0) {
-        stateStack.push(start);
+    ConstructStats(void):
+        curState(start),
+        parsedCount(0),
+        cachedCount(0) {
         gettimeofday(&lastTime, NULL);
-        for (int i=start; i<=end; i++)
+        for (int i = start; i <= end; i++)
             timing[i] = 0.0;
     }
 
-    void setCurrentModule(const model::ModuleDefPtr m) { currentModule = m; }
-    model::ModuleDefPtr getCurrentModule() const { return currentModule; }
+    void setModule(model::ModuleDef* m) { curModule = m; }
+    model::ModuleDefPtr getModule() const { return curModule; }
 
-    void pushState(CompileState newState);
-    void popState();
-
-    CompileState getState() const { return stateStack.top(); }
+    void setState(CompileState newState) { stopwatch(); curState = newState; }
+    CompileState getState() const { return curState; }
 
     void incParsed() { parsedCount++; }
     void incCached() { cachedCount++; }
 
     void write(std::ostream &out) const;
+
+};
+
+/**
+ * a sentinel class for keeping track of ConstructStats state
+ * it will set a new state (and optionally module) on construction, and restore
+ * both on destruction. if stats are disabled in options, it will ignore the
+ * calls.
+ */
+class StatState {
+    ContextPtr context;
+    ConstructStats::CompileState oldState;
+    model::ModuleDefPtr oldModule;
+public:
+
+    StatState(Context *c, ConstructStats::CompileState newState);
+
+    StatState(Context *c,
+              ConstructStats::CompileState newState,
+              model::ModuleDefPtr newModule);
+
+    bool statsEnabled(void);
+
+    ~StatState();
 
 };
 

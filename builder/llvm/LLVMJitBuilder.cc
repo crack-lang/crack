@@ -387,7 +387,7 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     // dump or run the module depending on the mode.
 
-    STATS_GO_STATE(ConstructStats::executor, options, context);
+    StatState sState(&context, ConstructStats::executor);
 
     if (options->dumpMode)
         dump();
@@ -395,16 +395,13 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (!options->dumpMode || !context.construct->compileTimeConstruct)
         run();
 
-    STATS_END_STATE(options, context);
-
 }
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
-    STATS_GO_STATE(ConstructStats::builder, options, context);
+    StatState sStats(&context, ConstructStats::builder, moduleDef);
     BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
-    STATS_END_STATE(options, context);
 
 }
 

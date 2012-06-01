@@ -2039,14 +2039,16 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
-    STATS_GO_STATE(ConstructStats::builtin, options, context);
+    if (options->statsMode) {
+        context.construct->stats->setState(ConstructStats::builtin);
+    }
 
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
 
     if (options->statsMode) {
-        context.construct->stats->setCurrentModule(bModDef);
+        context.construct->stats->setModule(bModDef);
     }
 
     Construct *gd = context.construct;
@@ -2775,9 +2777,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     engineBindModule(bMod.get());
     engineFinishModule(context, bMod.get());
 
-    STATS_END_STATE(options, context);
     if (options->statsMode) {
-        context.construct->stats->setCurrentModule(NULL);
+        context.construct->stats->setState(ConstructStats::start);
+        context.construct->stats->setModule(NULL);
     }
 
     return bMod;

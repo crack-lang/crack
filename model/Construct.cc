@@ -83,16 +83,16 @@ void ConstructStats::stopwatch() {
     double nowF = (t.tv_usec/1000000.0) + t.tv_sec;
     double diff = (nowF - beforeF);
     timing[getState()] += diff;
-    if (currentModule) {
+    if (curModule) {
         switch (getState()) {
             case parser:
-                parseTimes[currentModule->getFullName()] += diff;
+                parseTimes[curModule->getFullName()] += diff;
                 break;
             case builder:
-                buildTimes[currentModule->getFullName()] += diff;
+                buildTimes[curModule->getFullName()] += diff;
                 break;
             case executor:
-                executeTimes[currentModule->getFullName()] += diff;
+                executeTimes[curModule->getFullName()] += diff;
                 break;
         }
     }
@@ -104,14 +104,36 @@ void ConstructStats::stopwatch() {
     lastTime = t;
 }
 
-void ConstructStats::pushState(CompileState newState) {
-    stopwatch();
-    stateStack.push(newState);
+StatState::StatState(Context *c, ConstructStats::CompileState newState):
+    context(c) {
+    if (!context->construct->rootBuilder->options->statsMode)
+        return;
+    oldState = context->construct->stats->getState();
+    context->construct->stats->setState(newState);
 }
 
-void ConstructStats::popState() {
-    stopwatch();
-    stateStack.pop();
+StatState::StatState(Context *c,
+          ConstructStats::CompileState newState,
+          model::ModuleDefPtr newModule):
+    context(c) {
+    if (!context->construct->rootBuilder->options->statsMode)
+        return;
+    oldState = context->construct->stats->getState();
+    oldModule = context->construct->stats->getModule();
+    context->construct->stats->setState(newState);
+    context->construct->stats->setModule(newModule.get());
+}
+
+bool StatState::statsEnabled(void) {
+    return context->construct->rootBuilder->options->statsMode;
+}
+
+StatState::~StatState() {
+    if (!context->construct->rootBuilder->options->statsMode)
+        return;
+    context->construct->stats->setState(oldState);
+    if (oldModule)
+        context->construct->stats->setModule(oldModule.get());
 }
 
 Construct::ModulePath Construct::searchPath(
@@ -362,18 +384,11 @@ void Construct::parseModule(Context &context,
                             ) {
     Toker toker(src, path.c_str());
     Parser parser(toker, &context);
-    ModuleDefPtr lastModule;
-    if (rootBuilder->options->statsMode) {
-        stats->pushState(ConstructStats::parser);
-        lastModule = stats->getCurrentModule();
-        stats->setCurrentModule(module);
+    StatState sState(&context, ConstructStats::parser, module);
+    if (sState.statsEnabled()) {
         stats->incParsed();
     }
     parser.parse();
-    if (rootBuilder->options->statsMode) {
-        stats->popState();
-        stats->setCurrentModule(lastModule);
-    }
     module->close(context);
 }
 
@@ -778,7 +793,7 @@ int Construct::runScript(istream &src, const string &name) {
     builderStack.pop();
     rootBuilder->finishBuild(*context);
     if (rootBuilder->options->statsMode)
-        stats->pushState(ConstructStats::end);
+        stats->setState(ConstructStats::end);
     return 0;
 }
 
