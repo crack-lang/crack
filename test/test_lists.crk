@@ -6,9 +6,13 @@
 import crack.io cout;
 
 import crack.cont.list DList, List;
+import crack.cont.hashmap OrderedHashMap; // Also uses a list
 List[int] nums = {};
 DList[int] dnums = {};
+OrderedHashMap[int, int] map = {};
 
+//------------------------------------------------------------------------------
+// List
 nums.append(1);
 nums.append(2);
 if (nums.count()!=2) cout `List append failed: $nums\n`;
@@ -49,6 +53,7 @@ nums.pop();
 if (nums.count()) cout `List popTail failed: $nums, $(nums.count())\n`;
 
 //------------------------------------------------------------------------------
+// DList
 
 dnums.append(1);
 dnums.append(2);
@@ -90,5 +95,50 @@ dnums.pop();
 
 dnums.pop();
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+//------------------------------------------------------------------------------
+// OrderedHashMap
+
+map.append(1, 1);
+map.append(2, 2);
+if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+
+map.popHead();
+
+map.popHead();
+if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
+
+map.append(1, 1);
+map.append(2, 1);
+if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+
+
+map.popHead();
+
+map.popHead();
+if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
+
+//------------------------------------------------------------------------------
+
+map.append(1, 1);
+map.append(2, 2);
+if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+
+
+map.pop();
+
+map.pop();
+if (map.count()) cout `OrderedHashMap pop failed: $map\n`;
+
+map.append(1, 1);
+map.append(2, 1);
+if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+
+
+map.pop();
+
+map.pop();
+if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
+
 
 cout `ok\n`;

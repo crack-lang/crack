@@ -160,6 +160,7 @@ class HashMap[Key, Value] {
 
     ## Returns true if the key exists
     bool contains(Key key) {
+        if (!_size) return false; // structure is empty
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         return _items[i];
@@ -500,6 +501,7 @@ class OrderedHashMap[Key, Value] {
 
     ## Returns true if the key exists
     bool contains(Key key) {
+        if (!_size) return false; // structure is empty
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         return _items[i];
@@ -623,11 +625,13 @@ class OrderedHashMap[Key, Value] {
             throw InvalidArgumentError('Attempting to pop from an empty list');
         item := head;
         if (head is tail)
-            tail = head.next;
+            head = tail = null;
+        else
+            head = head.next;
 
-        head = head.next;
         if (head)
             head.prev = null;
+
         _deleteHash(item.key);
         return item;
     }
@@ -644,6 +648,10 @@ class OrderedHashMap[Key, Value] {
             head = null;
         _deleteHash(item.key);
         return item;
+    }
+
+    Item pop() {
+        return popTail();
     }
 
     Item __findItem(uint index) {
