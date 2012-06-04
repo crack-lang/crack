@@ -10,7 +10,7 @@ import crack.algorithm QuickSort;
 @import crack._poormac define;
 
 void _bind(Object obj) { obj.oper bind(); }
-void _release(Object obj) { obj.oper release(); }
+void _release(Object obj) { if (obj) obj.oper release(); }
 bool _isObject(Object obj) { return true; }
 bool _isNull(Object obj) {
     return (obj is null);
@@ -520,8 +520,14 @@ class Array[Elem] {
     }
     
     void clear() {
+        if (!__size) return;
         for (uintz i = 0; i < __size; ++i)
             _release(__rep[i]);
+
+        if (_isObject(__rep[0]))
+            for (uintz i = 0; i < __size; ++i){
+                __rep[i] = null;
+            }
         __size = 0;
     }
 
