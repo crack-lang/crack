@@ -67,7 +67,7 @@ class HashMap[Key, Value] {
     @final
     void _free(){
         # release all items
-        for (int i = 0; i < _cap; ++i)
+        for (int i = 0; i < _size; ++i)
             if (_items[i])
                 _items[i].oper release();
         
@@ -389,7 +389,7 @@ class OrderedHashMap[Key, Value] {
     @final
     void _free(){
         # release all items
-        for (int i = 0; i < _cap; ++i) {
+        for (int i = 0; i < _size; ++i) {
             if (_items[i]) {
                 # break reference cycles, release the object
                 _items[i].prev = null;
@@ -541,7 +541,7 @@ class OrderedHashMap[Key, Value] {
         i := __findSlot(hash, key);
         return _items[i] ? _items[i].val : default;
     }
-    
+
     void __findNewOccupant(int opening) {
         
         # check if a < b <= c, respecting the modulus operation.
@@ -667,6 +667,13 @@ class OrderedHashMap[Key, Value] {
         return item;
     }
 
+    Item getIndex(uint index) {
+        if (index > _size)
+            throw IndexError('List index out of range in []');
+        item := __findItem(index);
+        return item;
+    }
+
     void insert(uint index, Key key, Value value) {
         # special-case inserting at the beginning
         if (!index) {
@@ -761,13 +768,6 @@ class OrderedHashMap[Key, Value] {
         } else {
             popHead();
         }
-    }
-
-    Item oper [](uint index) {
-        if (index > _size)
-            throw IndexError('List index out of range in []');
-        item := __findItem(index);
-        return item;
     }
 
     void formatTo(Formatter fmt) {

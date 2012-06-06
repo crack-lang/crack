@@ -64,13 +64,13 @@ item = map.popHead();
 testExpected("popHead", map, "[key: val, key2: val2, key3: val3]");
 testExpected("popHeadItem", item.key, item.val, "key0: val0");
 
-item = map[0];
+item = map.getIndex(0);
 testExpected("Integer index 0", item.key, item.val, "key: val");
 
-item = map[1];
+item = map.getIndex(1);
 testExpected("Integer index 1", item.key, item.val, "key2: val2");
 
-item = map[2];
+item = map.getIndex(2);
 testExpected("Integer index 2", item.key, item.val, "key3: val3");
 
 # Test value lookups
@@ -158,7 +158,7 @@ for (i=0; i<100000; i++){
     r = random();
     key = radix(uintz(r),16); // Make sure we don't have dupes
   }
-  map[radix(uintz(r),16)] = radix(i,10);
+  map[key] = radix(i,10);
 }
 
 i=0;
