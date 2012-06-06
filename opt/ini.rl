@@ -240,7 +240,6 @@ class IniParser {
             if (uintz(tdata) != uintz(0)-1){
                 parse(data);
                 munmap(tdata, data_size);
-                cout `_resultMap=$_resultMap\n`;
                 return _resultMap;
             }
             else
