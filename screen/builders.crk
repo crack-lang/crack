@@ -107,7 +107,7 @@ class BuilderTestHarness {
 
         String args = {};
 
-        if (_data.sections.contains("ARGS"))
+        if (_data.sections.hasKey("ARGS"))
             args = _data.sections["ARGS"].rtrim();
 
         output.write(_bDef.getNick());
@@ -135,7 +135,7 @@ class BuilderTestHarness {
         _status = T_BINARY;
         _proc = Process(cmd);
 
-        if (_data.sections.contains("STDIN")) {
+        if (_data.sections.hasKey("STDIN")) {
             _proc.putStdIn(_data.sections["STDIN"]);
         }
 
@@ -181,7 +181,7 @@ class BuilderTestHarness {
         StringWriter opts = {};
 
         // options for crack
-        if (_data.sections.contains("OPTS"))
+        if (_data.sections.hasKey("OPTS"))
             opts.write(_data.sections["OPTS"].rtrim());
 
         if (_data.dirConfig) {
@@ -199,7 +199,7 @@ class BuilderTestHarness {
 
         // args for script
 
-        if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
+        if (_data.sections.hasKey("ARGS") && !_bDef.separateBinary()) {
             args := _data.sections["ARGS"].rtrim();
             if (!args.isEmpty()) {
                 cmd = cmd + " " + args;
@@ -216,7 +216,7 @@ class BuilderTestHarness {
         _status = T_CRACK;
         _proc = Process(cmd);
 
-        if (!_bDef.separateBinary() && _data.sections.contains("STDIN"))
+        if (!_bDef.separateBinary() && _data.sections.hasKey("STDIN"))
             _proc.putStdIn(_data.sections["STDIN"]);
 
     }

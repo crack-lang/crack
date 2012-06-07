@@ -31,10 +31,10 @@ if (m.get('undefined', 100) != 100)
 if (m.get('first', -1) != 100)
     cout `FAILED: default values on defined keys don't work\n`;
 
-if (!m.contains('first'))
-    cout `FAILED: contains() fails on an element\n`;
-if (m.contains('bogus'))
-    cout `FAILED: contains() fails on a non-element\n`;
+if (!m.hasKey('first'))
+    cout `FAILED: hasKey() fails on an element\n`;
+if (m.hasKey('bogus'))
+    cout `FAILED: hasKey() fails on a non-element\n`;
 
 Array[String] sa = {};
 

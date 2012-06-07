@@ -126,13 +126,13 @@ class Test {
     // ensure test has required sections and that they contain valid data
     // also check to see if we're skipping this test for some reason
     void checkTemplate() {
-        if (!_data.sections.contains("FILE")) {
+        if (!_data.sections.hasKey("FILE")) {
             _isSkipped = "the template was missing a FILE section";
         }
-        if (!_data.sections.contains("EXPECT") && !_data.sections.contains("REXPECT")) {
+        if (!_data.sections.hasKey("EXPECT") && !_data.sections.hasKey("REXPECT")) {
             _isSkipped = "the template was missing an EXPECT or REXPECT section";
         }
-        if (_data.sections.contains("TEST"))
+        if (_data.sections.hasKey("TEST"))
             _data.desc = _data.sections["TEST"].rtrim();
     }
 
@@ -291,7 +291,7 @@ class TestSuite {
         dcFile := FileInfo(dir.nameWithTrailing() + "options");
         if (dcFile.exists()) {
             sec := Template.load(dcFile.name);
-            if (sec.contains("OPTS")) {
+            if (sec.hasKey("OPTS")) {
                 dc = DirConfig();
                 dc.options = sec["OPTS"].rtrim();
             }

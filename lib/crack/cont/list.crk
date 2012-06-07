@@ -251,7 +251,7 @@ class List[Elem] {
     uint count() { return _count; }
 
     ## Empty lists are false, non-empty lists are true.
-    bool isTrue() { return !head ? false : _count; }
+    bool isTrue() { return _count; }
 
     void formatTo(Formatter fmt) {
         fmt `[`;

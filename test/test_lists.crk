@@ -15,41 +15,41 @@ OrderedHashMap[int, int] map = {};
 // List
 nums.append(1);
 nums.append(2);
-if (nums.count()!=2) cout `List append failed: $nums\n`;
+if (nums.count() != 2) cout `List append failed: $nums\n`;
 
-nums.popHead();
+if (nums.popHead() != 1) cout `List.popHead failed\n`;
 
-nums.popHead();
+if (nums.popHead() != 2) cout `List.popHead failed\n`;
 if (nums.count()) cout `List popHead failed: $nums\n`;
 
 nums.append(1);
 nums.append(2);
-if (nums.count()!=2) cout `List append failed: $nums\n`;
+if (nums.count() != 2) cout `List append failed: $nums\n`;
 
-nums.popHead();
+if (nums.popHead() != 1) cout `List.popHead failed\n`;
 
-nums.popHead();
+if (nums.popHead() != 2) cout `List.popHead failed\n`;
 if (nums.count()) cout `List popHead failed: $nums\n`;
 
 //------------------------------------------------------------------------------
 nums.append(1);
 nums.append(2);
-if (nums.count()!=2) cout `List append failed: $nums\n`;
+if (nums.count() != 2) cout `List append failed: $nums\n`;
 
 
-nums.pop();
+if (nums.pop() != 2) cout `List.pop failed\n`;
 
-nums.pop();
+if (nums.pop() != 1) cout `List.pop failed\n`;
 if (nums.count()) cout `List popTail failed: $nums\n`;
 
 nums.append(1);
 nums.append(2);
-if (nums.count()!=2) cout `List append failed: $nums\n`;
+if (nums.count() != 2) cout `List append failed: $nums\n`;
 
 
-nums.pop();
+if (nums.pop() != 2) cout `List.pop failed\n`;
 
-nums.pop();
+if (nums.pop() != 1) cout `List.pop failed\n`;
 if (nums.count()) cout `List popTail failed: $nums, $(nums.count())\n`;
 
 //------------------------------------------------------------------------------
@@ -57,43 +57,43 @@ if (nums.count()) cout `List popTail failed: $nums, $(nums.count())\n`;
 
 dnums.append(1);
 dnums.append(2);
-if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+if (dnums.count() != 2) cout `DList append failed: $dnums\n`;
 
-dnums.popHead();
+if (dnums.popHead() != 1) cout `DList.popHead failed\n`;
 
-dnums.popHead();
+if (dnums.popHead() != 2) cout `DList.popHead failed\n`;
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
 
 dnums.append(1);
 dnums.append(2);
-if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+if (dnums.count() != 2) cout `DList append failed: $dnums\n`;
 
 
-dnums.popHead();
+if (dnums.popHead() != 1) cout `DList.popHead failed\n`;
 
-dnums.popHead();
+if (dnums.popHead() != 2) cout `DList.popHead failed\n`;
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
 
 //------------------------------------------------------------------------------
 
 dnums.append(1);
 dnums.append(2);
-if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+if (dnums.count() != 2) cout `DList append failed: $dnums\n`;
 
 
-dnums.pop();
+if (dnums.pop() != 2) cout `DList.pop failed\n`;
 
-dnums.pop();
+if (dnums.pop() != 1) cout `DList.pop failed\n`;
 if (dnums.count()) cout `DList pop failed: $dnums\n`;
 
 dnums.append(1);
 dnums.append(2);
-if (dnums.count()!=2) cout `DList append failed: $dnums\n`;
+if (dnums.count() != 2) cout `DList append failed: $dnums\n`;
 
 
-dnums.pop();
+if (dnums.pop() != 2) cout `DList.pop failed\n`;
 
-dnums.pop();
+if (dnums.pop() != 1) cout `DList.pop failed\n`;
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
 
 //------------------------------------------------------------------------------
@@ -103,41 +103,42 @@ map.append(1, 1);
 map.append(2, 2);
 if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
 
-map.popHead();
+if (map.popHead().val != 1) cout `OrderedHashMap.popHead failed\n`;
 
-map.popHead();
+if (map.popHead().val != 2) cout `OrderedHashMap.popHead failed\n`;
 if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
 
 map.append(1, 1);
-map.append(2, 1);
-if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+map.append(2, 2);
+if (map.count() != 2) cout `OrderedHashMap append failed: $map\n`;
 
 
-map.popHead();
+if (map.popHead().val != 1) cout `OrderedHashMap.popHead failed\n`;
 
-map.popHead();
+
+if (map.popHead().val != 2) cout `OrderedHashMap.popHead failed: $map\n`;
 if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
 
 //------------------------------------------------------------------------------
 
 map.append(1, 1);
 map.append(2, 2);
-if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+if (map.count() != 2) cout `OrderedHashMap append failed: $map\n`;
 
 
-map.pop();
+if (map.pop().val != 2) cout `OrderedHashMap.pop failed\n`;
 
-map.pop();
+if (map.pop().val != 1) cout `OrderedHashMap.pop failed\n`;
 if (map.count()) cout `OrderedHashMap pop failed: $map\n`;
 
 map.append(1, 1);
-map.append(2, 1);
-if (map.count()!=2) cout `OrderedHashMap append failed: $map\n`;
+map.append(2, 2);
+if (map.count() != 2) cout `OrderedHashMap append failed: $map\n`;
 
 
-map.pop();
+if (map.pop().val != 2) cout `OrderedHashMap.pop failed\n`;
 
-map.pop();
+if (map.pop().val != 1) cout `OrderedHashMap.pop failed\n`;
 if (map.count()) cout `OrderedHashMap popHead failed: $map\n`;
 
 

@@ -1,4 +1,4 @@
-
+c
 The Crack Programming Language Guide
 ====================================
 
@@ -4760,9 +4760,11 @@ standard math library. A description can be found on
 \ref(`http://en.wikipedia.org/wiki/Math.h` WikiPedia) or a more complete reference at
 \ref(`http://www.dinkumware.com/manuals/?manual=compleat&page=math.html` Dinkumware).
 
-Since Crack allows function overloading, only one function name exists for both
-#float32# and #float64# values. E.g. there is no #sinf# function for #float32#
-values. The #long double# type in C is not currently supported.
+Each function has three versions: one overloaded for different floating
+point types, and one each for #float32# and #float64# values respectively
+with the precision postfix that can be passed to methods expecting an
+unambiguous function type. I.e. there are functions #sin#, #sin32# and
+#sin64#.
 
 The library provides:
 
@@ -5339,6 +5341,15 @@ From 0.6 to 1.0
 -   #StaticString# is now derived from #CString#.
 -   #crack.net.Pollable# has been removed and replaced with
     #crack.io.FileHandle#.
+-   Removed #SOCK_NONBLOCK# and #SOCK_CLOEXEC# for compatibility reasons.
+    Use #fcntl(int fd, int flag)# with #O_NONBLOCK# instead.
+    #FD_CLOEXEC# could be used as a flag where it is supported. It is
+    non-portable, however, and is not defined in the #runtime# module.
+-   Added precision postfix (32 and 64) math functions. Overloaded non-postfix
+    versions are still there.
+-   Renamed #TreeMap#, #HashMap#, and #OrderedHashMap# #contains()# method to
+    #hasKey()#.
+-   Renamed #OrderedHashMap.getIndex()# method to #getItemAt()#.    
 
 From 0.5 to 0.6
 ---------------

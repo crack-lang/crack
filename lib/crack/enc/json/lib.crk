@@ -79,10 +79,9 @@ class JsonFormatter : StandardFormatter {
     void format(Object obj) {
         if (obj is null)
             this `null`;
-        else if (obj.isa(String)){
+        else if (obj.isa(String)) {
             formatString(String.cast(obj));
-        }
-        else {
+        } else {
             obj.formatTo(this);
         }
     }

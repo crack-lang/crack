@@ -67,9 +67,10 @@ class HashMap[Key, Value] {
     @final
     void _free(){
         # release all items
-        for (int i = 0; i < _size; ++i)
-            if (_items[i])
-                _items[i].oper release();
+        for (int i = 0; i < _cap; ++i) {
+            _items[i].oper release();
+            _items[i] = null;
+        }
         
         # free the list
         free(_items);
@@ -159,7 +160,7 @@ class HashMap[Key, Value] {
     }
 
     ## Returns true if the key exists
-    bool contains(Key key) {
+    bool hasKey(Key key) {
         if (!_size) return false; // structure is empty
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -500,7 +501,7 @@ class OrderedHashMap[Key, Value] {
     }
 
     ## Returns true if the key exists
-    bool contains(Key key) {
+    bool hasKey(Key key) {
         if (!_size) return false; // structure is empty
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -667,7 +668,7 @@ class OrderedHashMap[Key, Value] {
         return item;
     }
 
-    Item getIndex(uint index) {
+    Item getItemAt(uint index) {
         if (index > _size)
             throw IndexError('List index out of range in []');
         item := __findItem(index);
