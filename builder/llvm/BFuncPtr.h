@@ -22,7 +22,7 @@ public:
     llvm::Value *rep;
 
     BFuncPtr(llvm::Value *r, size_t argCount) :
-    model::FuncDef(FuncDef::noFlags, r->getNameStr(), argCount),
+    model::FuncDef(FuncDef::noFlags, r->getName(), argCount),
     rep(r) {    }
 
     virtual void *getFuncAddr(builder::Builder &builder) {

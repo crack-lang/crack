@@ -621,7 +621,7 @@ void nativeCompile(llvm::Module *module,
     Triple TheTriple(module->getTargetTriple());
 
     if (TheTriple.getTriple().empty())
-        TheTriple.setTriple(sys::getHostTriple());
+        TheTriple.setTriple(sys::getDefaultTargetTriple());
 
     const Target *TheTarget = 0;
     std::string Err;
@@ -633,10 +633,12 @@ void nativeCompile(llvm::Module *module,
 
     string FeaturesStr;
     string CPU;
+    TargetOptions options;
     std::auto_ptr<TargetMachine>
             target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                                   CPU,
-                                                  FeaturesStr));
+                                                  FeaturesStr,
+                                                  options));
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();
 
@@ -681,7 +683,6 @@ void nativeCompile(llvm::Module *module,
             if (Target.addPassesToEmitFile(PM,
                                            FOS,
                                            cgt,
-                                           CodeGenOpt::None,
                                            o->debugMode // do verify
                                            )) {
                 cerr << "target does not support generation of this"

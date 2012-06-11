@@ -359,8 +359,6 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
 void LLVMBuilder::createLLVMModule(const string &name) {
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
-    getDeclaration(module, Intrinsic::eh_selector);
-    getDeclaration(module, Intrinsic::eh_exception);
 
     // our exception personality function
     vector<Type *> args(5);;
@@ -711,7 +709,7 @@ ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
         // null-terminated string)
         LLVMContext &llvmContext = getGlobalContext();
         Constant *llvmVal =
-            ConstantArray::get(llvmContext, val->val, true);
+            ConstantDataArray::getString(llvmContext, val->val, true);
         GlobalVariable *gvar = new GlobalVariable(*module,
                                                   llvmVal->getType(),
                                                   true, // is constant
