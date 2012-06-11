@@ -1,6 +1,7 @@
 
 import crack.runtime fileExists, fileRemove, c_strerror;
 import crack.cont.array Array;
+import crack.functor Function2;
 import crack.lang die, ManagedBuffer;
 import crack.io cout, FStr;
 import crack.net resolve, Address, InetAddress, Socket, UnixAddress, Poller,
@@ -41,13 +42,17 @@ if (fromServer != 'another test string')
     die('did not receive "another test string" from server');
 
 # test Pollers
+bool ok;
+int clientCallback(Poller poller, PollEvent event) {
+    ok = true;
+    return POLLIN | POLLERR;
+}
 poller := Poller();
 poller.add(accepted.sock, POLLIN | POLLERR);
-poller.add(cln, POLLIN | POLLERR);
+poller.add(cln, Function2[int, Poller, PollEvent](clientCallback));
 cln.send('to server', 0);
 poller.wait(null);
 PollEvent p;
-bool ok;
 while (p = poller.nx()) {
     if (!(p.pollable is accepted.sock)) {
         cout `fd = $(p.fd), events = $(p.events)\n`;
@@ -84,7 +89,7 @@ cln.recv(buf, 0);
 if (poller.wait(TimeDelta(0, 0)) != 0)
     die("waiting on a zero timeout did not return zero!");
 
-# TODO: this has an external dependency on the ability to reolve localhost, 
+# TODO: this has an external dependency on the ability to reolve localhost,
 # please fix.
 localhost := resolve('localhost');
 if (FStr() `$localhost` != '[127.0.0.1:0]')

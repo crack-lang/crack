@@ -5,6 +5,7 @@ import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
 import crack.io FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
 import crack.sys strerror;
 import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
 import crack.time TimeDelta;
 import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
     AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, SockAddrUn,
@@ -14,6 +15,7 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
     SOCK_PACKET, SOL_SOCKET, SO_REUSEADDR,
     POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
     setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno, strlen;
+import crack.functor Functor2;
 
 @import crack.ann implements;
 
@@ -30,6 +32,8 @@ import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free,
 ##  revents: the events that were triggered
 class PollEvent : Object, PollEvt {
     FileHandle pollable;
+    oper init() {}
+    oper init(FileHandle pollable) : pollable = pollable {}
 }
 
 ## base class for all kinds of socket addresses.
@@ -374,12 +378,19 @@ class Pipe : FileHandle @implements Reader, Writer {
     }
 }
 
+class Poller;
+alias PollEventCallback = Functor2[int, Poller, PollEvent];
         
 ## A poller is a collection of FileHandle's that you can use to wait for an 
 ## event on any of the pollables and then iterate over the set of events that 
 ## occurred.
 class Poller {
     Array[FileHandle] __pollables;
+    class CallbackWrapper {
+        PollEventCallback callback;
+        oper init(PollEventCallback callback) : callback = callback {}
+    }
+    HashMap[FileHandle, CallbackWrapper] __callbacks;
     PollSet __fds;
     TimeVal __pollTimeout;
     uint __nextIndex;
@@ -422,7 +433,18 @@ class Poller {
     ##  POLLPRI - p has high priority data to read.
     ##  POLLHUP - p's connection has hung up on it while trying to output.
     ##  POLLNVAL - p has received an invalid request.
+    ##
+    ## Throws InvalidArgumentError if the pollable's file descriptor. is 
+    ## already managed by this poller.
     void add(FileHandle p, int events) {
+        
+        # make sure it's not already present
+        for (cur :in __pollables)
+            if (p.fd == cur.fd)
+                throw InvalidArgumentError(FStr() I`File descriptor $(p.fd) \
+                                                    is already managed by \
+                                                    this poller.`
+                                           );
         
         # grow if there's not enough space
         if (__nextIndex == __capacity) grow(__capacity * 2);
@@ -434,6 +456,18 @@ class Poller {
         ++__nextIndex;
     }
     
+    ## Adds the pollable to be managed by the poller, but also specifies a 
+    ## callback for event processing.  It is the handler that will be 
+    ## responsible for defining the set of events for the pollable (it will 
+    ## be requested to do so initially upon being added and then after 
+    ## handling every request).
+    void add(FileHandle p, PollEventCallback callback) {
+        add(p, callback(this, PollEvent(p)));
+        if (__callbacks is null)
+            __callbacks = HashMap[FileHandle, CallbackWrapper]();
+        __callbacks[p] = CallbackWrapper(callback);
+    }
+    
     void remove(FileHandle p) {
         int i;
         for (i = 0; i < __pollables.count() && __pollables[i] != p; ++i) ;
@@ -441,10 +475,14 @@ class Poller {
             throw InvalidArgumentError(FStr() `File handle is not in the set`);
         __pollables.delete(i);
         __fds.delete(__nextIndex, i);
+        if (__callbacks && __callbacks.get(p))
+            __callbacks.delete(p);
         --__nextIndex;
     }
     
-    ## Sets the events that we will wait on from the pollable.
+    ## Sets the events that we will wait on from the pollable.  Note that you 
+    ## probably don't want to use this if you've added 'pollable' with a 
+    ## handler - in that case the event mask will be set by the handler.
     void setEvents(FileHandle pollable, int events) {
         # find the index of the pollable
         int i;
@@ -483,15 +521,39 @@ class Poller {
             return null;
 
         PollEvent result = {};
-        __iter = __fds.next(__nextIndex, uint(__iter), result);
+        __iter = __fds.next(__nextIndex, __iter, result);
 
         if (__iter == -1)
             return null;
 
-        # store the pollable in the result and return it.
-        result.pollable = __pollables[uint(__iter++)];
+        # store the pollable in the result
+        result.pollable = __pollables[__iter];
+        
+        # if there is a handler, call it and reset the event mask.
+        if (__callbacks && (cbw := __callbacks.get(result.pollable))) {
+            events := cbw.callback(this, result);
+            if (events != result.events)
+                __fds.set(__iter, result.pollable.fd, events, 0);
+        }
+        
+        # increment the iterator
+        ++__iter;
         return result;   
     }
+    
+    ## wait for the next event and then process all events (this is equivalent 
+    ## to "poller.wait(timeout); while (poller.nx()) ;").  This should only be 
+    ## used when all pollables have event handlers.
+    void waitAndProcess(TimeDelta timeout) {
+        wait(timeout);
+        while (nx()) ;
+    }
+
+    ## A poller is true if it contains pollables.
+    bool isTrue() { return __pollables; }
+    
+    ## Return the number of pollables
+    uint count() { return __pollables.count(); }
 
     void formatTo(Formatter fmt) {
         fmt.write("Poller:");
