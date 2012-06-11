@@ -2,6 +2,7 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 
 import crack.lang Formatter;
+import crack.net Poller;
 import crack.io cout, cerr, StandardFormatter, Writer, StringWriter, StringFormatter, FStr;
 import crack.sys argv, exit;
 import crack.exp.dir Directory;
@@ -41,6 +42,10 @@ VarMap getMacros() {
         _macros['BUILDDIR'] = config.buildDir.nameWithTrailing();
         _macros['OUTDIR'] = config.outDir.nameWithTrailing();
         _macros['SCRIPTNAME'] = 'script name not defined!';
+        _macros['CRACKBIN'] = config.crackBin;
+        
+        # this gets filled in from the dir config
+        _macros['OPTS'] = '';
     }
     
     return _macros;
@@ -147,7 +152,7 @@ class Test {
         
     }
 
-    void run() {
+    void run(Poller poller) {
         
         if (_isSkipped) {
             cout `[$(_data.fInfo)]: SKIPPED: $_isSkipped\n`;
@@ -161,7 +166,7 @@ class Test {
 
         // start initial harness
         _activeHarness = 0;
-        _harness[_activeHarness].run();
+        _harness[_activeHarness].run(poller);
 
     }
 
@@ -189,14 +194,14 @@ class Test {
     }
 */
 
-    int tick() {
+    int tick(Poller poller) {
 
         if (_status == T_FINISHED)
             return _status;
 
         // poll the builder process
         // if finished, get/show output, increment activeBuilder
-        if (_harness[_activeHarness].tick() == T_FINISHED) {
+        if (_harness[_activeHarness].tick(poller) == T_FINISHED) {
 
             if (config.verbose)
                 _vOutput.write(_harness[_activeHarness].vOutput.string());
@@ -207,7 +212,7 @@ class Test {
 
             _activeHarness++;
             if (_activeHarness < _harness.count()) {
-                _harness[_activeHarness].run();
+                _harness[_activeHarness].run(poller);
             }
             else {
                 _status = T_FINISHED;
@@ -278,6 +283,7 @@ class TestSuite {
     bool _singleTest = false;
     PriorityQueue[Test] _testList = {};
     CmdOptions _options = {};
+    Poller __poller = {};
     
     void usage() {
         _options.printUsage(FStr() `Usage: $(argv[0]) -c <crack binary> [options]\n`);
@@ -293,7 +299,7 @@ class TestSuite {
             sec := Template.load(dcFile.name);
             if (sec.hasKey("OPTS")) {
                 dc = DirConfig();
-                dc.options = sec["OPTS"].rtrim();
+                getMacros()['OPTS'] = dc.options = sec["OPTS"].rtrim();
             }
         }
 
@@ -330,6 +336,12 @@ class TestSuite {
 
     }
 
+    void __processTestOutput() {
+        // wait for the next events and process them all.
+        if (__poller)
+            __poller.waitAndProcess(null);
+    }
+
     void runTests() {
 
         if (_testList.count() < config.jobs)
@@ -341,21 +353,26 @@ class TestSuite {
             cout `running $(_testList.count()) total tests in $(config.jobs) concurrent jobs`;
         cout ` with output in $(config.outDir)...\n`;
 
-        bool reap(Test t) { return t.tick() != T_FINISHED; }
-
         Array[Test] active = {};
         Test cur;
         while (_testList.count() || active.count()) {
 
+            // process pending events
+            __processTestOutput();
+
             // check active for finished tests, remove
-            active.filter(reap);
+            Array[Test] newActive = {};
+            for (test :in active)
+                if (test.tick(__poller) != T_FINISHED)
+                    newActive.append(test);
+            active = newActive;
 
             // add to active if active.count <= max
             while (_testList.count() &&
                    active.count() < config.jobs) {
                 cur = _testList.pop();
                 active.append(cur);
-                cur.run();
+                cur.run(__poller);
             }
 
         }
