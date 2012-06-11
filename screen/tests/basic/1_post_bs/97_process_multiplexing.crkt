@@ -1,0 +1,57 @@
+%%TEST%%
+process output stream multiplexing
+%%ARGS%%
+%CRACKBIN% %OPTS% %SOURCEDIR%/test/proc_tester.crk
+%%FILE%%
+import crack.io cerr;
+import crack.lang Buffer;
+import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
+    CRK_PIPE_STDERR;
+import crack.strutil StringArray;
+import crack.sys argv;
+
+class MyHandler : ProcessHandlerImpl {
+    uint lastOutLen = 1, lastErrLen = 1;
+
+    void checkLine(String streamName, Buffer line, uint lastLen) {
+        if (line.size != lastLen)
+            cerr I`FAILED $streamName line has bad length: \
+                   $(String(line).getRepr()) (expected $lastLen)\n`;
+        ch := b'a';
+        uint i;
+        for (; i < line.size - 1; ++i) {
+            if (line[i] != ch)
+                cerr I`FAILED, bad value at char $i for $streamName line \
+                       $(String(line).getRepr())\n`;
+
+            if (ch++ == b'z')
+                ch = b'a';
+        }
+
+        if (line[i] != b'\n')
+            cerr I`FAILED line in $streamName doesn't end with newline: \
+                   $(String(line).getRepr())\n`;
+
+    }
+
+    void onOutLine(Buffer line) {
+        checkLine('stdout', line, lastOutLen++);
+    }
+
+    void onErrLine(Buffer line) {
+        checkLine('stderr', line, lastErrLen++);
+    }
+}
+
+StringArray sa = {argv.count() - 1};
+for (elem :in argv.subarray(1))
+    sa.append(elem);
+
+#cerr `got $sa\n`;
+proc := Process(sa, CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
+proc.run(MyHandler());
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
