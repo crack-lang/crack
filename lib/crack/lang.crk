@@ -429,7 +429,10 @@ class ManagedBuffer : WriteBuffer {
 
     ## Grow the buffer to the new capacity.
     void grow(uint newCap) {
-        if (newCap <= cap) {
+        # special case cap = 0 for initialization.
+        if (!newCap) {
+            newCap = 16;
+        } else if (newCap <= cap) {
             puts('attempt to grow to a smaller or same size.');
             abort();
         }
