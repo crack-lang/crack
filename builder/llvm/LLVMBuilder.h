@@ -84,7 +84,10 @@ class LLVMBuilder : public Builder {
          * let the engine "finish" a module before running/linking/dumping
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineFinishModule(BModuleDef *moduleDef) { }
+        virtual void engineFinishModule(model::Context &context,
+                                        BModuleDef *moduleDef
+                                        ) {
+        }
 
         /**
          * common module initialization that happens in all builders

@@ -24,34 +24,75 @@ SPUG_RCPTR(Construct);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(ConstructStats);
 
-struct ConstructStats: public spug::RCBase {
+class ConstructStats : public spug::RCBase {
 
-    enum CompileState { start=0, builtin, build, run, end };
-
+public:
+    enum CompileState { start=0, builtin, parser, builder, executor, end };
     typedef std::map<std::string, double> ModuleTiming;
+
+protected:
     unsigned int parsedCount;
     unsigned int cachedCount;
-    CompileState state;
-    double timing[5];
-    ModuleTiming moduleTimes;
+    double timing[end+1];
+    ModuleTiming parseTimes;
+    ModuleTiming buildTimes;
+    ModuleTiming executeTimes;
     struct timeval lastTime;
-    std::string currentModule;
+    model::ModuleDefPtr curModule;
+    CompileState curState;
 
-    ConstructStats(void): parsedCount(0),
-        cachedCount(0),
-        state(start),
-        timing(),
-        moduleTimes(),
-        lastTime(),
-        currentModule("NONE") {
+    void showModuleCounts(std::ostream &out,
+                          const std::string &title,
+                          const ModuleTiming &list) const;
+
+    void stopwatch();
+
+public:
+
+    ConstructStats(void):
+        curState(start),
+        parsedCount(0),
+        cachedCount(0) {
         gettimeofday(&lastTime, NULL);
-        for (int i=0; i<5; i++)
+        for (int i = start; i <= end; i++)
             timing[i] = 0.0;
     }
 
-    void switchState(CompileState newState);
+    void setModule(model::ModuleDef *m) { curModule = m; }
+    model::ModuleDefPtr getModule() const { return curModule; }
+
+    void setState(CompileState newState) { stopwatch(); curState = newState; }
+    CompileState getState() const { return curState; }
+
+    void incParsed() { parsedCount++; }
+    void incCached() { cachedCount++; }
 
     void write(std::ostream &out) const;
+
+};
+
+/**
+ * a sentinel class for keeping track of ConstructStats state
+ * it will set a new state (and optionally module) on construction, and restore
+ * both on destruction. if stats are disabled in options, it will ignore the
+ * calls.
+ */
+class StatState {
+    ContextPtr context;
+    ConstructStats::CompileState oldState;
+    model::ModuleDef *oldModule;
+public:
+
+    StatState(Context *c, ConstructStats::CompileState newState);
+
+    StatState(Context *c,
+              ConstructStats::CompileState newState,
+              model::ModuleDef *newModule
+              );
+
+    bool statsEnabled(void);
+
+    ~StatState();
 
 };
 

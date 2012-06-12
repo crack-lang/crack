@@ -74,12 +74,15 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     }
 }
 
-void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
+void LLVMJitBuilder::engineFinishModule(Context &context,
+                                        BModuleDef *moduleDef) {
+
     // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
     // run specific optimizations at different levels
     if (options->optimizeLevel) {
+
         // optimize
         llvm::PassManager passMan;
 
@@ -98,6 +101,7 @@ void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
         passMan.add(llvm::createCFGSimplificationPass());
 
         passMan.run(*moduleDef->rep);
+
     }
 
     setupCleanup(moduleDef);
@@ -307,7 +311,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
         verifyModule(*module, llvm::PrintMessageAction);
 
     // let jit or linker finish module before run/link
-    engineFinishModule(BModuleDefPtr::cast(moduleDef));
+    engineFinishModule(context, BModuleDefPtr::cast(moduleDef));
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
@@ -355,8 +359,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     // dump or run the module depending on the mode.
-    if (rootBuilder->options->statsMode)
-        context.construct->stats->switchState(ConstructStats::run);
+
+    StatState sState(&context, ConstructStats::executor);
 
     if (options->dumpMode)
         dump();
@@ -364,14 +368,14 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (!options->dumpMode || !context.construct->compileTimeConstruct)
         run();
 
-    if (rootBuilder->options->statsMode)
-        context.construct->stats->switchState(ConstructStats::build);
-
 }
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
+
     assert(module);
+    StatState sStats(&context, ConstructStats::builder, moduleDef);
     BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
+
 }
 
 void LLVMJitBuilder::dump() {

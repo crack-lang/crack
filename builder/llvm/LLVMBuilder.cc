@@ -2037,14 +2037,17 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
-    ConstructStats::CompileState oldStatState;
     if (options->statsMode) {
-        oldStatState = context.construct->stats->state;
-        context.construct->stats->switchState(ConstructStats::builtin);
+        context.construct->stats->setState(ConstructStats::builtin);
     }
+
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
+
+    if (options->statsMode) {
+        context.construct->stats->setModule(bModDef);
+    }
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
@@ -2770,10 +2773,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // bind the module to the execution engine
     engineBindModule(bMod.get());
-    engineFinishModule(bMod.get());
+    engineFinishModule(context, bMod.get());
 
     if (options->statsMode) {
-        context.construct->stats->switchState(oldStatState);
+        context.construct->stats->setState(ConstructStats::start);
+        context.construct->stats->setModule(NULL);
     }
 
     return bMod;
@@ -2807,12 +2811,6 @@ void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
 }
 
 void LLVMBuilder::createModuleCommon(Context &context) {
-
-    ConstructStats::CompileState oldStatState;
-    if (options->statsMode) {
-        oldStatState = context.construct->stats->state;
-        context.construct->stats->switchState(ConstructStats::builtin);
-    }
 
     // name some structs in this module
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
@@ -2917,10 +2915,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
-    }
-
-    if (options->statsMode) {
-        context.construct->stats->switchState(oldStatState);
     }
 
     // create the exception structure for the module main function

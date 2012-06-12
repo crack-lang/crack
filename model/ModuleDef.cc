@@ -38,6 +38,7 @@ bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
 }
 
 void ModuleDef::close(Context &context) {
+    StatState sState(&context, ConstructStats::builder, this);
     context.builder.closeModule(context, this);
 }
 
