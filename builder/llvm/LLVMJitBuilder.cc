@@ -74,8 +74,9 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     }
 }
 
-void LLVMJitBuilder::engineFinishModule(Context &context, BModuleDef *moduleDef)
-{
+void LLVMJitBuilder::engineFinishModule(Context &context,
+                                        BModuleDef *moduleDef) {
+
     // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can

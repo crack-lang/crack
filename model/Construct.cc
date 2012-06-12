@@ -95,8 +95,7 @@ void ConstructStats::stopwatch() {
                 executeTimes[curModule->getFullName()] += diff;
                 break;
         }
-    }
-    else {
+    } else {
         //printf("losing diff: %.10f, state: %d\n", diff, getState());
         assert(getState() == ConstructStats::start && "missing important stat");
     }
@@ -104,7 +103,7 @@ void ConstructStats::stopwatch() {
     lastTime = t;
 }
 
-StatState::StatState(Context *c, ConstructStats::CompileState newState):
+StatState::StatState(Context *c, ConstructStats::CompileState newState) :
     context(c) {
     if (!context->construct->rootBuilder->options->statsMode)
         return;
@@ -113,15 +112,15 @@ StatState::StatState(Context *c, ConstructStats::CompileState newState):
 }
 
 StatState::StatState(Context *c,
-          ConstructStats::CompileState newState,
-          model::ModuleDefPtr newModule):
+                            ConstructStats::CompileState newState,
+                            model::ModuleDef *newModule) :
     context(c) {
     if (!context->construct->rootBuilder->options->statsMode)
         return;
     oldState = context->construct->stats->getState();
-    oldModule = context->construct->stats->getModule();
+    oldModule = context->construct->stats->getModule().get();
     context->construct->stats->setState(newState);
-    context->construct->stats->setModule(newModule.get());
+    context->construct->stats->setModule(newModule);
 }
 
 bool StatState::statsEnabled(void) {
@@ -133,7 +132,7 @@ StatState::~StatState() {
         return;
     context->construct->stats->setState(oldState);
     if (oldModule)
-        context->construct->stats->setModule(oldModule.get());
+        context->construct->stats->setModule(oldModule);
 }
 
 Construct::ModulePath Construct::searchPath(

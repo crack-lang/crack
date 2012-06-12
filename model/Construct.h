@@ -58,7 +58,7 @@ public:
             timing[i] = 0.0;
     }
 
-    void setModule(model::ModuleDef* m) { curModule = m; }
+    void setModule(model::ModuleDef *m) { curModule = m; }
     model::ModuleDefPtr getModule() const { return curModule; }
 
     void setState(CompileState newState) { stopwatch(); curState = newState; }
@@ -80,14 +80,15 @@ public:
 class StatState {
     ContextPtr context;
     ConstructStats::CompileState oldState;
-    model::ModuleDefPtr oldModule;
+    model::ModuleDef *oldModule;
 public:
 
     StatState(Context *c, ConstructStats::CompileState newState);
 
     StatState(Context *c,
               ConstructStats::CompileState newState,
-              model::ModuleDefPtr newModule);
+              model::ModuleDef *newModule
+              );
 
     bool statsEnabled(void);
 
