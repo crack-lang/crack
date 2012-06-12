@@ -40,7 +40,8 @@ void DebugInfo::emitFunctionDef(const std::string &name,
             loc.getLineNumber(),
             llvm::DIType(),
             false, // local to unit (i.e. like C static)
-            true // is definition
+            true, // is definition,
+            0 // scope line
     );
 
 }

@@ -8,7 +8,7 @@ import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
 import crack.cont.hashmap OrderedHashMap;
 import crack.cont.array Array;
 import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
-                    stat, fileno;
+                    stat, fileno, fclose;
 import crack.ascii escape;
 import crack.sys strerror;
 import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
@@ -240,7 +240,7 @@ class IniParser {
             if (uintz(tdata) != uintz(0)-1){
                 parse(data);
                 munmap(tdata, data_size);
-                cout `_resultMap=$_resultMap\n`;
+                fclose(file);
                 return _resultMap;
             }
             else

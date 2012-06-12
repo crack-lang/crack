@@ -4,10 +4,11 @@
 import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
-import crack.process Process;
+import crack.net Poller;
+import crack.process Process, ProcessHandlerImpl;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
-import crack.lang AssertionError, SubString;
+import crack.lang AppendBuffer, AssertionError, Buffer, SubString;
 import crack.regex Regex, PCRE_MULTILINE;
 
 import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
@@ -40,6 +41,34 @@ class CrackBuilderDef {
     String getBinaryOptions(BuilderTestHarness h) { return ""; }
 }
 
+class TestHandler : ProcessHandlerImpl {
+    AppendBuffer out = {1024}, err = {1024};
+    bool terminated;
+    
+    void onOutData(Buffer data) {
+        out.extend(data);
+    }
+    
+    void onErrData(Buffer data) {
+        err.extend(data);
+    }
+    
+    void onTerminate(int rc) {
+        terminated = true;
+    }
+    
+    String getStdOut() {
+        result := String(out, true);
+        out = AppendBuffer(1024);
+        return result;
+    }
+    
+    String getStdErr() {
+        result := String(err, true);
+        err = AppendBuffer(1024);
+        return result;
+    }    
+}
 
 // execute crack process for specific builder for specific test
 // get output, compare results, decide pass/fail
@@ -60,9 +89,11 @@ class BuilderTestHarness {
     Process _proc;
     String _testBinary;
     bool _runBinary = true;
+    TestHandler processHandler = {};
 
     oper init(CrackBuilderDef d, TestData data) : _bDef = d,
-                                                  _data = data { }
+                                                  _data = data {
+    }
 
 
     String _colorMsg(String c, String msg) {
@@ -103,11 +134,12 @@ class BuilderTestHarness {
         return Result(true);
     }
 
-    void runBinary() {
+    void runBinary(Poller poller) {
+        cerr `running binary, got $(processHandler.getStdOut())\n`;
 
         String args = {};
 
-        if (_data.sections.contains("ARGS"))
+        if (_data.sections.hasKey("ARGS"))
             args = _data.sections["ARGS"].rtrim();
 
         output.write(_bDef.getNick());
@@ -133,12 +165,13 @@ class BuilderTestHarness {
             vOutput.write("\n");
         }
         _status = T_BINARY;
+        processHandler.terminated = false;
         _proc = Process(cmd);
+        _proc.addTo(poller, processHandler);
 
-        if (_data.sections.contains("STDIN")) {
+        if (_data.sections.hasKey("STDIN")) {
             _proc.putStdIn(_data.sections["STDIN"]);
         }
-
     }
 
     void finishBinary() {
@@ -147,10 +180,9 @@ class BuilderTestHarness {
             _fail();
             crackResult = Result(false);
             output.write("binary failed to run\n");
-        }
-        else {
-            nativeOut := _proc.getStdOut();
-            nativeErr := _proc.getStdErr();
+        } else {
+            nativeOut := processHandler.getStdOut();
+            nativeErr := processHandler.getStdErr();
 
             // XXX right now, out stdout and stderr are merged. this will change when we
             // have an explicit stderr section
@@ -158,12 +190,12 @@ class BuilderTestHarness {
                 nativeOut = nativeOut + nativeErr;
 
             expect := _data.sections.get("EXPECT");
-            if (expect is null){
+            if (expect is null) {
                 expect = _data.sections["REXPECT"];
                 binaryResult = compareOutputRegex(expect, nativeOut);
-            }
-            else
+            } else {
                 binaryResult = compareOutput(expect, nativeOut);
+            }
         }
 
         _proc.close();
@@ -171,7 +203,7 @@ class BuilderTestHarness {
 
     }
 
-    void run() {
+    void run(Poller poller) {
 
         if (_bDef.separateBinary()) {
             _testBinary = config.outDir.nameWithTrailing()+
@@ -181,7 +213,7 @@ class BuilderTestHarness {
         StringWriter opts = {};
 
         // options for crack
-        if (_data.sections.contains("OPTS"))
+        if (_data.sections.hasKey("OPTS"))
             opts.write(_data.sections["OPTS"].rtrim());
 
         if (_data.dirConfig) {
@@ -195,11 +227,12 @@ class BuilderTestHarness {
             opts.write(config.libPath);
         }
 
-        cmd := FStr() `$(config.crackBin) -B $(_bDef.getName()) $(opts.string()) $(_data.scriptName)`;
+        cmd := FStr() I`$(config.crackBin) -B $(_bDef.getName()) \
+                        $(opts.string()) $(_data.scriptName)`;
 
         // args for script
 
-        if (_data.sections.contains("ARGS") && !_bDef.separateBinary()) {
+        if (_data.sections.hasKey("ARGS") && !_bDef.separateBinary()) {
             args := _data.sections["ARGS"].rtrim();
             if (!args.isEmpty()) {
                 cmd = cmd + " " + args;
@@ -215,8 +248,9 @@ class BuilderTestHarness {
 
         _status = T_CRACK;
         _proc = Process(cmd);
+        _proc.addTo(poller, processHandler);
 
-        if (!_bDef.separateBinary() && _data.sections.contains("STDIN"))
+        if (!_bDef.separateBinary() && _data.sections.hasKey("STDIN"))
             _proc.putStdIn(_data.sections["STDIN"]);
 
     }
@@ -224,14 +258,15 @@ class BuilderTestHarness {
      void finishCrack() {
         bool isRegex = false;
 
-        compileOut := _proc.getStdOut();
-        compileErr := _proc.getStdErr();
+        compileOut := processHandler.getStdOut();
+        compileErr := processHandler.getStdErr();
         _proc.close();
 
-        vOutput.write(FStr() `code: [$(_proc.getReturnCode())], out: [$compileOut], err [$compileErr]\n`);
+        vOutput.write(FStr() I`code: [$(_proc.getReturnCode())], 
+                               out: [$compileOut], err [$compileErr]\n`);
 
-        // XXX right now, out stdout and stderr are merged. this will change when we
-        // have an explicit stderr section
+        // XXX right now, out stdout and stderr are merged. this will change 
+        // when we have an explicit stderr section
         if (compileErr.size > 0)
             compileOut = compileOut + compileErr;
 
@@ -276,13 +311,12 @@ class BuilderTestHarness {
 
     }
 
-
-    int tick() {
+    int tick(Poller poller) {
 
         if (_status == T_FINISHED)
             return _status;
 
-        if (_proc.isRunning())
+        if (!processHandler.terminated)
             return _status;
 
         // we're in state CRACK or BINARY, and our process is done
@@ -290,11 +324,10 @@ class BuilderTestHarness {
             finishCrack();
             // if we have a separate binary, launch it
             if (_bDef.separateBinary() && _runBinary && crackResult.pass)
-                runBinary();
+                runBinary(poller);
             else
                 _status = T_FINISHED;
-        }
-        else if (_status == T_BINARY) {
+        } else if (_status == T_BINARY) {
             finishBinary();
             _status = T_FINISHED;
         }

@@ -31,10 +31,10 @@ if (m.get('undefined', 100) != 100)
 if (m.get('first', -1) != 100)
     cout `FAILED: default values on defined keys don't work\n`;
 
-if (!m.contains('first'))
-    cout `FAILED: contains() fails on an element\n`;
-if (m.contains('bogus'))
-    cout `FAILED: contains() fails on a non-element\n`;
+if (!m.hasKey('first'))
+    cout `FAILED: hasKey() fails on an element\n`;
+if (m.hasKey('bogus'))
+    cout `FAILED: hasKey() fails on a non-element\n`;
 
 Array[String] sa = {};
 
@@ -273,11 +273,11 @@ if (true) {
         cout `FAILED count after extend\n`;
 }
 
-stringA.deleteAll();
+stringA.clear();
 if (stringA.count() != 0)
-    cout `FAILED deleteAll() count\n`;
+    cout `FAILED clear() count\n`;
 if (stringA != Array[String]![])
-    cout `FAILED deleteAll() equality with empty array\n`;
+    cout `FAILED clear() equality with empty array\n`;
 
 # --- List tests ---
 

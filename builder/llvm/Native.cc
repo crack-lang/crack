@@ -621,7 +621,7 @@ void nativeCompile(llvm::Module *module,
     Triple TheTriple(module->getTargetTriple());
 
     if (TheTriple.getTriple().empty())
-        TheTriple.setTriple(sys::getHostTriple());
+        TheTriple.setTriple(sys::getDefaultTargetTriple());
 
     const Target *TheTarget = 0;
     std::string Err;
@@ -633,10 +633,12 @@ void nativeCompile(llvm::Module *module,
 
     string FeaturesStr;
     string CPU;
+    TargetOptions options;
     std::auto_ptr<TargetMachine>
             target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                                   CPU,
-                                                  FeaturesStr));
+                                                  FeaturesStr,
+                                                  options));
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();
 
@@ -681,7 +683,6 @@ void nativeCompile(llvm::Module *module,
             if (Target.addPassesToEmitFile(PM,
                                            FOS,
                                            cgt,
-                                           CodeGenOpt::None,
                                            o->debugMode // do verify
                                            )) {
                 cerr << "target does not support generation of this"
@@ -718,11 +719,11 @@ void nativeCompile(llvm::Module *module,
     Linker::ItemList NativeLinkItems;
 
     for (vector<string>::const_iterator i = sharedLibs.begin();
-        i != sharedLibs.end();
-        ++i) {
-
+         i != sharedLibs.end();
+         ++i
+         ) {
         if (path::has_parent_path(*i)) {
-             LibPaths.push_back(path::parent_path(*i));
+            LibPaths.push_back(path::parent_path(*i));
         }
 
 #if __GNUC__ > 4 && __GNUC_MINOR__ > 2

@@ -146,24 +146,21 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
             execEng = LLVMJitBuilderPtr::cast(rootBuilder.get())->bindJitModule(mod);
         else {
 
-            llvm::JITEmitDebugInfo = true;
-            llvm::JITExceptionHandling = true;
-
-            // XXX only available in debug builds of llvm?
-            //if (options->verbosity > 3)
-            //    llvm::DebugFlag = true;
-
             // we have to specify all of the arguments for this so we can turn
             // off "allocate globals with code."  In addition to being
             // deprecated in the docs for this function, this option causes
             // seg-faults when we allocate globals under certain conditions.
             InitializeNativeTarget();
-            execEng = ExecutionEngine::create(mod,
-                                              false, // force interpreter
-                                              0, // error string
-                                              CodeGenOpt::Default, // opt lvl
-                                              false // alloc globals with code
-                                              );
+
+            EngineBuilder eb(mod);
+            eb.setOptLevel(CodeGenOpt::Default).
+               setEngineKind(EngineKind::JIT).
+               setAllocateGVsWithCode(false);
+            TargetMachine *tm = eb.selectTarget();
+            tm->Options.JITEmitDebugInfo = true;
+            tm->Options.JITExceptionHandling = true;
+
+            execEng = eb.create(tm);
 
         }
     }
@@ -307,31 +304,6 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 
     // restore the main function
     func = mainFunc;
-
-    // work around for an LLVM bug: When doing one of its internal exception
-    // handling passes, LLVM can insert llvm.eh.exception() intrinsics with
-    // calls to an llvm.eh.exception() function that are not part of the
-    // module.  So this loop replaces all such calls with the correct instance
-    // of the function.
-    Function *ehEx = getDeclaration(module, Intrinsic::eh_exception);
-    for (Module::iterator funcIter = module->begin(); funcIter != module->end();
-         ++funcIter
-         )
-        for (Function::iterator block = funcIter->begin();
-             block != funcIter->end();
-             ++block
-             )
-            for (BasicBlock::iterator inst = block->begin();
-                 inst != block->end();
-                 ++inst
-                 ) {
-                IntrinsicInst *intrInst;
-                if ((intrInst = dyn_cast<IntrinsicInst>(inst)) &&
-                    intrInst->getIntrinsicID() == Intrinsic::eh_exception &&
-                    intrInst->getCalledFunction() != ehEx
-                    )
-                    intrInst->setCalledFunction(ehEx);
-            }
 
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)

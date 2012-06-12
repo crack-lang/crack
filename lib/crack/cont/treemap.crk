@@ -540,7 +540,7 @@ class TreeMap[KeyT, ValT] {
     }
     
     ## Returns true if the container contains the key.
-    bool contains(KeyT key) {
+    bool hasKey(KeyT key) {
         return __root && __root.find(key);
     }
     

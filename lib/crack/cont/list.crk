@@ -125,7 +125,10 @@ class List[Elem] {
         if (!head)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := head.elem;
-        head = head.next;
+        if (head == tail)
+            head = tail = null;
+        else
+            head = head.next;
         --_count;
         return elem;
     }
@@ -138,6 +141,7 @@ class List[Elem] {
         if (head == tail) {
             elem := head.elem;
             head = tail = null;
+            --_count;
             return elem;
         }
 
@@ -156,7 +160,9 @@ class List[Elem] {
         return elem;
     }
 
-
+    Elem pop(){
+        return popTail();
+    }
 
     Node __findNode(uint index) {
         i := index;
@@ -250,12 +256,12 @@ class List[Elem] {
     void formatTo(Formatter fmt) {
         fmt `[`;
         bool first = true;
-        for (elem :in this) {
+        for (node := head; node; node = node.next) {
             if (!first)
                 fmt `, `;
             else
                 first = false;
-            fmt.format(elem);
+            fmt.format(node.elem);
         }
         fmt `]`;
     }
@@ -414,20 +420,26 @@ class DList[Elem] {
         if (!head) 
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := head.elem;
-        head = head.next;
+        if (head == tail)
+            head = tail = null;
+        else
+            head = head.next;
         if (head)
             head.prev = null;
         --_count;
         return elem;
     }
-    
+
     ## Remove the element from the back of the list and return it.
     Elem popTail() {
         if (!tail)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := tail.elem;
         node := tail;
-        tail = node.prev;
+        if (tail == head)
+            tail = head = null;
+        else
+            tail = node.prev;
         if (tail)
             tail.next = null;
         else
@@ -513,7 +525,7 @@ class DList[Elem] {
     uint count() { return _count; }
 
     ## Empty lists are false, non-empty lists are true.
-    bool isTrue() { return _count; }
+    bool isTrue() { return !head ? false : _count; }
 
     void formatTo(Formatter fmt) {
         fmt `[`;

@@ -15,7 +15,7 @@ import crack.lang AssertionError, ManagedBuffer, Exception, Buffer;
 import crack.io cout, cerr, cin, Formatter, FStr, StandardFormatter,
     StringWriter, Writer;
 import crack.cont.array Array;
-import crack.cont.hashmap OrderedHashMap;
+import crack.cont.hashmap OrderedHashMap, HashMap;
 import crack.ascii escape;
 import crack.math fpclassify, FP_INFINITE, FP_NAN, FP_NORMAL, FP_ZERO;
 @import crack.ann define;
@@ -79,10 +79,9 @@ class JsonFormatter : StandardFormatter {
     void format(Object obj) {
         if (obj is null)
             this `null`;
-        else if (obj.isa(String)){
+        else if (obj.isa(String)) {
             formatString(String.cast(obj));
-        }
-        else {
+        } else {
             obj.formatTo(this);
         }
     }

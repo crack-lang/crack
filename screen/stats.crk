@@ -7,8 +7,8 @@ import crack.io FStr;
 
 class Stats {
     List[String] failList = {};
-    uint64 __startTime = 0;
-    uint64 __endTime = 0;
+    int64 __startTime = 0;
+    int64 __endTime = 0;
     void startStopwatch() { __startTime = usecs(); }
     void stopStopwatch() { __endTime = usecs(); }
     float64 getTotalTime() {

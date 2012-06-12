@@ -129,7 +129,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
     string canonicalName(earlyCanonicalize(context, type->name));
 
     // name
-    Constant *nameInit = ConstantArray::get(lctx, type->name, true);
+    Constant *nameInit = ConstantDataArray::getString(lctx, type->name, true);
     GlobalVariable *nameGVar =
             new GlobalVariable(*llvmBuilder.module,
                                nameInit->getType(),
