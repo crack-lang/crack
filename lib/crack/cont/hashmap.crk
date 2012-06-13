@@ -832,9 +832,8 @@ $expected`);
         if (cur := head) {
             if (cur.prev)
                 throw AssertionError('head has a prev');
-            last := cur;
+            Item last;
             while (cur) {
-                cur = cur.next;
                 if (!(cur.prev is last))
                     throw AssertionError('Previous is not the last element');
                 
@@ -843,6 +842,7 @@ $expected`);
                     throw AssertionError('Item is not in its slot');
                 
                 last = cur;
+                cur = cur.next;
             }
             
             if (last != tail)
