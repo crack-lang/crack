@@ -80,7 +80,7 @@ public:
 class StatState {
     ContextPtr context;
     ConstructStats::CompileState oldState;
-    model::ModuleDef *oldModule;
+    model::ModuleDefPtr oldModule;
 public:
 
     StatState(Context *c, ConstructStats::CompileState newState);

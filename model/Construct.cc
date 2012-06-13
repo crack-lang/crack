@@ -112,8 +112,8 @@ StatState::StatState(Context *c, ConstructStats::CompileState newState) :
 }
 
 StatState::StatState(Context *c,
-                            ConstructStats::CompileState newState,
-                            model::ModuleDef *newModule) :
+                     ConstructStats::CompileState newState,
+                     model::ModuleDef *newModule) :
     context(c) {
     if (!context->construct->rootBuilder->options->statsMode)
         return;
@@ -132,7 +132,7 @@ StatState::~StatState() {
         return;
     context->construct->stats->setState(oldState);
     if (oldModule)
-        context->construct->stats->setModule(oldModule);
+        context->construct->stats->setModule(oldModule.get());
 }
 
 Construct::ModulePath Construct::searchPath(
