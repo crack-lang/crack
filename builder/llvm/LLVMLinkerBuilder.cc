@@ -438,7 +438,9 @@ void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
     b.CreateCall(f);
 }
 
-void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
+void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
+                                           BModuleDef *moduleDef
+                                           ) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
 }

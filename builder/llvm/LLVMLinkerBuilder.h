@@ -30,7 +30,9 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         llvm::Function *emitAggregateCleanup(llvm::Module *module);
 
     protected:
-        virtual void engineFinishModule(BModuleDef *moduleDef);
+        virtual void engineFinishModule(model::Context &context,
+                                        BModuleDef *moduleDef
+                                        );
         virtual void fixClassInstRep(BTypeDef *type);
 
     public:

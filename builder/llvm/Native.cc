@@ -90,7 +90,7 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back("-Wl,--add-needed");
 
   // Add in the library and framework paths
-  if (verbosity > 2) {
+  if (verbosity > 3) {
       cerr << "Native link paths:" << endl;
       // verbose linker
       args.push_back("-Wl,--verbose");
