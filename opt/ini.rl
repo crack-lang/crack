@@ -7,8 +7,8 @@ import crack.lang AppendBuffer, InvalidResourceError, Buffer, Formatter,
                   WriteBuffer, Exception, IndexError, KeyError, CString;
 import crack.cont.hashmap OrderedHashMap;
 import crack.cont.array Array;
-import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ, MAP_PRIVATE,
-                    stat, fileno, fclose;
+import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ,
+                       MAP_PRIVATE, stat, fileno, fclose;
 import crack.ascii escape;
 import crack.sys strerror;
 import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
@@ -44,7 +44,9 @@ class IniParser {
 
         action errorHandler {
             if (p > okp)
-                _errors.append(IniError(FStr() `Syntax error near $(inputString.slice(okp, p))`, line, p-lineOffset-1));
+                _errors.append(IniError(FStr()
+                    I`Syntax error near \
+                    $(_sliceBuffer(inputString, okp, p))`, line, p-lineOffset-1));
             if (_errors.count() >= maxErr) return _resultMap;
         }
 
@@ -55,7 +57,8 @@ class IniParser {
                     msg = "Invalid key syntax ";
                 else
                     msg = "Invalid value syntax ";
-                _errors.append(IniError(msg + inputString.slice(okp, p), line, p-lineOffset-1));
+                _errors.append(IniError(msg + _sliceBuffer(inputString, okp, p),
+                                        line, p-lineOffset-1));
             }
             if (_errors.count() >= maxErr) return _resultMap;
         }
@@ -82,7 +85,7 @@ class IniParser {
         }
 
         action endSection {
-            sectionName = inputString.slice(okp, p);
+            sectionName = _sliceBuffer(inputString, okp, p);
             _sectionMap = OrderedHashMap[String, String]();
             _resultMap[sectionName] = _sectionMap;
             okp = p+1;
@@ -90,7 +93,7 @@ class IniParser {
 
         action keyEnd {
             if (marker < lineOffset) {
-                key = inputString.slice(lineOffset, p);
+                key = _sliceBuffer(inputString, lineOffset, p);
                 marker = p;
             }
             okp = p+1;
@@ -189,7 +192,13 @@ class IniParser {
     # parser method ------------------------------------------------------------
     oper init() {}
 
-    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString, uint p0, uint pe0) {
+    String _sliceBuffer(Buffer b, uint start, uint end){
+        return String(b.buffer + uintz(start), end - start, false);
+    }
+
+    OrderedHashMap[String, OrderedHashMap[String, String]]
+        parse(Buffer inputString, uint p0, uint pe0) {
+
         AppendBuffer appendBuf = {128}; // String to hold the value
         _errors = Array[IniError]();      // reset _errors
 
@@ -213,7 +222,9 @@ class IniParser {
         return _resultMap;
     }
 
-    OrderedHashMap[String, OrderedHashMap[String, String]] parse(String inputString) {
+    OrderedHashMap[String, OrderedHashMap[String, String]]
+        parse(Buffer inputString) {
+
         _resultMap = OrderedHashMap[String, OrderedHashMap[String, String]]();
         OrderedHashMap[String, String] _sectionMap = null;
 
@@ -235,7 +246,7 @@ class IniParser {
 
             data_size := statInfo.st_size;
             tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-            data := String(byteptr(tdata), data_size, false);
+            data := Buffer(byteptr(tdata), data_size);
             
             if (uintz(tdata) != uintz(0)-1){
                 parse(data);
