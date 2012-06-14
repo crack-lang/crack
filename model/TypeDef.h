@@ -322,7 +322,6 @@ class TypeDef : public VarDef, public Namespace {
             fullName.clear();
         }
 
-        virtual std::string getDisplayName() const;
         virtual bool isConstant();
         
         /**

@@ -903,26 +903,6 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     return result;
 }
 
-string TypeDef::getDisplayName() const {
-    if (genericParms.size()) {
-        ostringstream tmp;
-        tmp << VarDef::getDisplayName() << '(';
-        bool first = false;
-        for (TypeVec::const_iterator iter = genericParms.begin();
-             iter != genericParms.end();
-             ++iter
-             ) {
-            tmp << (*iter)->getDisplayName();
-            if (first)
-                first = false;
-            else
-                tmp << ", ";
-        }
-    } else {
-        return VarDef::getDisplayName();
-    }
-}
-
 bool TypeDef::isConstant() {
     return true;
 }
