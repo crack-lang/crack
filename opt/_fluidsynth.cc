@@ -20,8 +20,10 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
     crack::ext::Type *type_byte = mod->getByteType();
+    crack::ext::Type *type_int16 = mod->getInt16Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
+    crack::ext::Type *type_uint16 = mod->getUint16Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
@@ -76,6 +78,32 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
        f->addArg(type_fluid_synth_t, "synth");
        f->addArg(type_int, "channel");
        f->addArg(type_int, "key");
+
+    f = mod->addFunc(type_int, "fluid_synth_pitch_bend",
+                     (void *)fluid_synth_pitch_bend
+                     );
+       f->addArg(type_fluid_synth_t, "synth");
+       f->addArg(type_int, "channel");
+       f->addArg(type_int, "val");
+
+    f = mod->addFunc(type_int, "fluid_synth_program_change",
+                     (void *)fluid_synth_program_change
+                     );
+       f->addArg(type_fluid_synth_t, "synth");
+       f->addArg(type_int, "channel");
+       f->addArg(type_int, "program");
+
+    f = mod->addFunc(type_int, "fluid_synth_all_notes_off",
+                     (void *)fluid_synth_all_notes_off
+                     );
+       f->addArg(type_fluid_synth_t, "synth");
+       f->addArg(type_int, "channel");
+
+    f = mod->addFunc(type_int, "fluid_synth_all_sounds_off",
+                     (void *)fluid_synth_all_sounds_off
+                     );
+       f->addArg(type_fluid_synth_t, "synth");
+       f->addArg(type_int, "channel");
 
     f = mod->addFunc(type_fluid_audio_driver_t, "new_fluid_audio_driver",
                      (void *)new_fluid_audio_driver
