@@ -4,11 +4,15 @@
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
     SDL_Event_GetKey,
     SDL_Event_GetMotion,
+    SDL_FillRect,
+    SDL_Flip,
     SDL_KeyboardEvent_GetKeysym,
     SDL_keysym_GetSym, 
     SDL_MouseMotionEvent_GetX,
     SDL_MouseMotionEvent_GetY,
-    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, SDL_Quit, SDL_SetVideoMode, 
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
+    SDL_Quit, SDL_SetVideoMode,
+    SDL_Rect,
     SDL_ResizeEvent,
     SDL_Event_GetResize,
     SDL_ResizeEvent_GetH,
@@ -19,10 +23,28 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL, 
     SDL_QUIT, SDL_RESIZABLE, SDL_VIDEORESIZE;
 import crack.functor Functor0;
-import crack.io cout;
+import crack.io cout, Formatter;
 import crack.cont.array Array;
 import crack.runtime free;
 @import crack.ann define, interface, implements;
+
+alias Surface = SDL_Surface;
+@export_symbols Surface;
+
+## 2D graphics coordinate
+class Coord {
+    int x, y;
+
+    oper init(int x, int y) : x = x, y = y {}
+    
+    Coord oper +(Coord other) { return Coord(x + other.x, y + other.y); }
+    
+    Coord oper +=(Coord other) { x += other.x; y += other.y; return this; }
+    
+    void formatTo(Formatter out) {
+        out `Coord($x, $y)`;
+    }
+}
 
 ## Indicates mouse motion.
 class MouseMotionEvent {
@@ -90,7 +112,7 @@ class App {
     Array[Holder[KeyboardHandler]] keyboardHandlers = {};
     
     ## underlying SDL surface (XXX make protected?)
-    SDL_Surface surface;
+    Surface surface;
 
     ## Set this to the function used to render the graphics.    
     Functor0[void] graphics;
@@ -212,6 +234,11 @@ class App {
         
         return false;
     }
+    
+    ## Flips the current draw surface into video.
+    void flip() {
+        SDL_Flip(surface);
+    }
 
     ## Poll for events and process events and run graphics until terminate() 
     ## is called.    
@@ -219,5 +246,15 @@ class App {
         while (__active)
             runOneCycle();
     }
+    
+    bool isActive() { return __active; }
 }
 
+# primitive graphic functions
+void fillRect(Surface surface, Coord pos, Coord size, uint32 color) {
+    r := SDL_Rect(int16(pos.x), int16(pos.y), uint16(size.x), 
+                  uint16(size.y) 
+                  );
+    SDL_FillRect(surface, r, color >> 8);
+    free(r);
+}
