@@ -1,0 +1,31 @@
+%%TEST%%
+midi events
+%%ARGS%%
+%%FILE%%
+import crack.cont.array Array;
+import crack.io cerr;
+import crack.midi.event merge, NoteOn, Track;
+
+Track t = {'1'}, u = {'2'};
+
+t.append(NoteOn(1, 0, 0, 0));
+t.append(NoteOn(10, 0, 0, 0));
+t.append(NoteOn(20, 0, 0, 0));
+
+u.append(NoteOn(5, 0, 0, 0));
+u.append(NoteOn(10, 0, 0, 0));
+u.append(NoteOn(15, 0, 0, 0));
+
+v := merge('result', Array[Track]![t, u]);
+Array[uint] result = [1, 5, 10, 10, 15, 20];
+i := v.iter();
+for (e :in result) {
+    if (i.elem().time != e)
+        cerr `FAILED after merge, expected $e, got $(i.elem().time)\n`;
+    i.next();
+}
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
