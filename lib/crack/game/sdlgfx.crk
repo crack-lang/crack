@@ -6,6 +6,7 @@ import crack.cont.array Array;
 import crack.ext._sdlgfx aalineColor, stringColor, rectangleColor, circleColor, 
     filledPolygonColor, lineColor;
 import crack.ext._sdl SDL_Flip, SDL_FillRect, SDL_Surface;
+import crack.game.sdl Coord;
 import crack.io cout, Formatter;
 import crack.runtime free;
 import crack.lang CString;
@@ -20,17 +21,6 @@ uint32
     CYAN = GREEN | BLUE,
     YELLOW = RED | GREEN,
     MAGENTA = RED | BLUE;
-
-## 2D graphics coordinate
-class Coord {
-    int x, y;
-
-    oper init(int x, int y) : x = x, y = y {}
-    
-    void formatTo(Formatter out) {
-        out `Coord($x, $y)`;
-    }
-}
 
 ## A polygon, which consists of an array of points.
 class Polygon {
@@ -87,4 +77,8 @@ void drawAALine(SDL_Surface surface, Coord a, Coord b, uint32 color) {
     aalineColor(surface, int16(a.x), int16(a.y), int16(b.x), int16(b.y),
                 color
                 );
+}
+
+void drawRect(SDL_Surface surface, Coord a, Coord b, uint32 color) {
+    rectangleColor(surface, int16(a.x), int16(a.y), int16(b.x), int16(b.y), color);
 }
