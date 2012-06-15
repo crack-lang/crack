@@ -44,6 +44,19 @@
     @inject '    snd_seq_start_queue(seqp, queueId, event); }';
     @inject 'void SndSeqQueue_stop(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {';
     @inject '    snd_seq_stop_queue(seqp, queueId, event); }';
+    @inject I'
+        snd_seq_ev_note_t *snd_seq_event_getNote(snd_seq_event_t *event) {
+            return &event->data.note;
+        }
+        
+        snd_seq_ev_ctrl_t *snd_seq_event_getControl(snd_seq_event_t *event) {
+            return &event->data.control;
+        }
+        
+        snd_seq_ev_ext_t *snd_seq_event_getExt(snd_seq_event_t *event) {
+            return &event->data.ext;
+        }
+    ';
 
     const int
         # sequence open mode
@@ -58,7 +71,68 @@
         SND_SEQ_PORT_CAP_SUBS_READ,
         
         # port types
-        SND_SEQ_PORT_TYPE_MIDI_GENERIC;
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC,
+        
+        # event types
+        SND_SEQ_EVENT_SYSTEM, 
+        SND_SEQ_EVENT_RESULT, 
+        SND_SEQ_EVENT_NOTE, 
+        SND_SEQ_EVENT_NOTEON, 
+        SND_SEQ_EVENT_NOTEOFF,
+        SND_SEQ_EVENT_KEYPRESS,
+        SND_SEQ_EVENT_CONTROLLER, 
+        SND_SEQ_EVENT_PGMCHANGE, 
+        SND_SEQ_EVENT_CHANPRESS, 
+        SND_SEQ_EVENT_PITCHBEND, 
+        SND_SEQ_EVENT_CONTROL14, 
+        SND_SEQ_EVENT_NONREGPARAM, 
+        SND_SEQ_EVENT_REGPARAM, 
+        SND_SEQ_EVENT_SONGPOS, 
+        SND_SEQ_EVENT_SONGSEL, 
+        SND_SEQ_EVENT_QFRAME, 
+        SND_SEQ_EVENT_TIMESIGN, 
+        SND_SEQ_EVENT_KEYSIGN, 
+        SND_SEQ_EVENT_START, 
+        SND_SEQ_EVENT_CONTINUE, 
+        SND_SEQ_EVENT_STOP, 
+        SND_SEQ_EVENT_SETPOS_TICK, 
+        SND_SEQ_EVENT_SETPOS_TIME, 
+        SND_SEQ_EVENT_TEMPO, 
+        SND_SEQ_EVENT_CLOCK, 
+        SND_SEQ_EVENT_TICK, 
+        SND_SEQ_EVENT_QUEUE_SKEW, 
+        SND_SEQ_EVENT_SYNC_POS, 
+        SND_SEQ_EVENT_TUNE_REQUEST, 
+        SND_SEQ_EVENT_RESET, 
+        SND_SEQ_EVENT_SENSING, 
+        SND_SEQ_EVENT_ECHO, 
+        SND_SEQ_EVENT_OSS, 
+        SND_SEQ_EVENT_CLIENT_START, 
+        SND_SEQ_EVENT_CLIENT_EXIT, 
+        SND_SEQ_EVENT_CLIENT_CHANGE, 
+        SND_SEQ_EVENT_PORT_START, 
+        SND_SEQ_EVENT_PORT_EXIT, 
+        SND_SEQ_EVENT_PORT_CHANGE, 
+        SND_SEQ_EVENT_PORT_SUBSCRIBED, 
+        SND_SEQ_EVENT_PORT_UNSUBSCRIBED, 
+        SND_SEQ_EVENT_USR0, 
+        SND_SEQ_EVENT_USR1, 
+        SND_SEQ_EVENT_USR2, 
+        SND_SEQ_EVENT_USR3, 
+        SND_SEQ_EVENT_USR4, 
+        SND_SEQ_EVENT_USR5, 
+        SND_SEQ_EVENT_USR6, 
+        SND_SEQ_EVENT_USR7, 
+        SND_SEQ_EVENT_USR8, 
+        SND_SEQ_EVENT_USR9, 
+        SND_SEQ_EVENT_SYSEX, 
+        SND_SEQ_EVENT_BOUNCE, 
+        SND_SEQ_EVENT_USR_VAR0, 
+        SND_SEQ_EVENT_USR_VAR1, 
+        SND_SEQ_EVENT_USR_VAR2, 
+        SND_SEQ_EVENT_USR_VAR3, 
+        SND_SEQ_EVENT_USR_VAR4, 
+        SND_SEQ_EVENT_NONE;
     
     @inject 'typedef int Undef;\n'
     
@@ -81,6 +155,22 @@
                            int dest_port
                            );
 
+    class snd_seq_ev_note_t {
+        byte channel, note, velocity, off_velocity;
+        uint duration;
+    }
+    
+    class snd_seq_ev_ctrl_t {
+        byte channel;
+        uint param;
+        int value;
+    }
+    
+    class snd_seq_ev_ext_t {
+        uint len;
+        byteptr ptr;
+    }
+
     class snd_seq_event_t {
         @cname snd_seq_event_alloc
         oper new();
@@ -102,10 +192,24 @@
         
         @cname snd_seq_event_scheduleTick
         void scheduleTick(int queue, int relative, int time);
+        
+        @cname snd_seq_event_getNote
+        snd_seq_ev_note_t getNote();
+        
+        @cname snd_seq_event_getControl
+        snd_seq_ev_ctrl_t getControl();
+        
+        @cname snd_seq_event_getExt
+        snd_seq_ev_ext_t getExt();
+        
+        byte type;
+        byte flags, tag, queue;
     }                 
     
     int snd_seq_event_output(snd_seq_t seqp, snd_seq_event_t event);
     int snd_seq_drain_output(snd_seq_t seqp);
+    int snd_seq_event_input(snd_seq_t seqp, array[snd_seq_event_t] event);
+    int snd_seq_event_input_pending(snd_seq_t seqp, int fetch_sequencer);
 
     int snd_seq_alloc_named_queue(snd_seq_t seqp, byteptr name);
 
