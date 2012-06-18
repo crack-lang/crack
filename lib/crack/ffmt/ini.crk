@@ -16,26 +16,30 @@ import crack.sys strerror;
 import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
 
 class IniError {
-  String msg;
-  uint line, col;
+    String msg;
+    uint line, col;
 
-  oper init(String msg, uint line, uint col): msg = msg, line = line, col = col
-  { }
+    oper init(String msg, uint line, uint col) :
+        msg = msg, 
+        line = line, 
+        col = col { 
+    }
 
-  void formatTo(Formatter fmt){
-    fmt `$msg:$line:$col`;
-  }
+    void formatTo(Formatter fmt) {
+        fmt `$msg:$line:$col`;
+    }
 }
 
 class IniParser {
 
     uint maxErr = 1;
     Array[IniError] _errors;
-    OrderedHashMap[String, OrderedHashMap[String, String]] _resultMap;
+    alias MapMap = OrderedHashMap[String, OrderedHashMap[String, String]];
+    MapMap _resultMap;
     OrderedHashMap[String, String] _sectionMap;
 
     
-# line 39 "lib/crack/ffmt/ini.crk"
+# line 43 "lib/crack/ffmt/ini.crk"
 Array[uint] _IniParser_actions = [
   0, 1, 2, 1, 5, 1, 6, 1, 
   7, 1, 8, 1, 9, 1, 10, 1, 
@@ -351,18 +355,17 @@ uint IniParser_error = 0;
 uint  IniParser_en_main = 29;
 
 
-# line 190 "opt/ini.rl"
+# line 202 "opt/ini.rl"
 
 
     # parser method ------------------------------------------------------------
     oper init() {}
 
-    String _sliceBuffer(Buffer b, uint start, uint end){
+    String _sliceBuffer(Buffer b, uint start, uint end) {
         return String(b.buffer + uintz(start), end - start, false);
     }
 
-    OrderedHashMap[String, OrderedHashMap[String, String]]
-        parse(Buffer inputString, uint p0, uint pe0) {
+    MapMap parse(Buffer inputString, uint p0, uint pe0) {
 
         AppendBuffer appendBuf = {128}; // String to hold the value
         _errors = Array[IniError]();      // reset _errors
@@ -381,13 +384,13 @@ uint  IniParser_en_main = 29;
         byte chr;
 
         
-# line 385 "lib/crack/ffmt/ini.crk"
+# line 388 "lib/crack/ffmt/ini.crk"
   cs = IniParser_start;
 
-# line 219 "opt/ini.rl"
+# line 230 "opt/ini.rl"
 
         
-# line 391 "lib/crack/ffmt/ini.crk"
+# line 394 "lib/crack/ffmt/ini.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -448,23 +451,28 @@ uint  IniParser_en_main = 29;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 41 "opt/ini.rl" # end of line directive
+# line 45 "opt/ini.rl" # end of line directive
     
-          p = p - 1;
+            p = p - 1;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 45 "opt/ini.rl" # end of line directive
+# line 49 "opt/ini.rl" # end of line directive
     
             if (p > okp)
-                _errors.append(IniError(FStr()
-                    I`Syntax error near \
-                    $(_sliceBuffer(inputString, okp, p))`, line, p-lineOffset-1));
+                _errors.append(
+                    IniError(
+                        FStr() I`Syntax error near \
+                                $(_sliceBuffer(inputString, okp, p))`,
+                        line,
+                        p - lineOffset - 1
+                    )
+                );
             if (_errors.count() >= maxErr) return _resultMap;
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
-# line 53 "opt/ini.rl" # end of line directive
+# line 62 "opt/ini.rl" # end of line directive
     
             if (p > okp) {
                 String msg;
@@ -473,85 +481,88 @@ uint  IniParser_en_main = 29;
                 else
                     msg = "Invalid value syntax ";
                 _errors.append(IniError(msg + _sliceBuffer(inputString, okp, p),
-                                        line, p-lineOffset-1));
+                                        line, 
+                                        p - lineOffset - 1
+                                        )
+                               );
             }
             if (_errors.count() >= maxErr) return _resultMap;
             // ACTION
     }
     else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
-# line 66 "opt/ini.rl" # end of line directive
+# line 78 "opt/ini.rl" # end of line directive
     
-            if (lineOffset < p && data[p] < 32) line+=1;
-            lineOffset = p+1;
-            okp = p+1;
+            if (lineOffset < p && data[p] < 32) line += 1;
+            lineOffset = p + 1;
+            okp = p + 1;
             // ACTION
     }
     else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
-# line 72 "opt/ini.rl" # end of line directive
+# line 84 "opt/ini.rl" # end of line directive
     
-            okp = p+1;
+            okp = p + 1;
             // ACTION
     }
     else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
-# line 76 "opt/ini.rl" # end of line directive
+# line 88 "opt/ini.rl" # end of line directive
     
-            if (p==lineOffset) {
-                if (_sectionMap != null && sectionName != null){
-                  _resultMap[sectionName] = _sectionMap;
+            if (p == lineOffset) {
+                if (_sectionMap != null && sectionName != null) {
+                    _resultMap[sectionName] = _sectionMap;
                 }
                 _sectionMap = null;
                 sectionName = null;
-                okp = p+1;
+                okp = p + 1;
             }
             // ACTION
     }
     else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
-# line 87 "opt/ini.rl" # end of line directive
+# line 99 "opt/ini.rl" # end of line directive
     
             sectionName = _sliceBuffer(inputString, okp, p);
             _sectionMap = OrderedHashMap[String, String]();
             _resultMap[sectionName] = _sectionMap;
-            okp = p+1;
+            okp = p + 1;
             // ACTION
     }
     else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
-# line 94 "opt/ini.rl" # end of line directive
+# line 106 "opt/ini.rl" # end of line directive
     
             if (marker < lineOffset) {
                 key = _sliceBuffer(inputString, lineOffset, p);
                 marker = p;
             }
-            okp = p+1;
+            okp = p + 1;
             // ACTION
     }
     else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
-# line 102 "opt/ini.rl" # end of line directive
+# line 114 "opt/ini.rl" # end of line directive
     
             appendBuf.size = 0;
-            okp = p+1;
+            okp = p + 1;
             // ACTION
     }
     else  if (_tempval  == 9) { // FROM_STATE_ACTION_SWITCH
-# line 107 "opt/ini.rl" # end of line directive
+# line 119 "opt/ini.rl" # end of line directive
     
-            if (p>okp){
+            if (p > okp){
               appendBuf.extend(data + uintz(okp), p - okp);
               okp = p;
           }
             // ACTION
     }
     else  if (_tempval  == 10) { // FROM_STATE_ACTION_SWITCH
-# line 114 "opt/ini.rl" # end of line directive
+# line 126 "opt/ini.rl" # end of line directive
     
             okp = p;
             // ACTION
     }
     else  if (_tempval  == 11) { // FROM_STATE_ACTION_SWITCH
-# line 118 "opt/ini.rl" # end of line directive
+# line 130 "opt/ini.rl" # end of line directive
     
-            chr = (data[okp] - 48) *64;
-            chr += (data[okp+1] - 48)*8;
-            chr += (data[okp+2] - 48);
+            chr = (data[okp] - 48) * 64;
+            chr += (data[okp + 1] - 48) * 8;
+            chr += (data[okp + 2] - 48);
             appendBuf.append(chr);
 
             okp = p + 1;
@@ -560,7 +571,7 @@ uint  IniParser_en_main = 29;
             // ACTION
     }
     else  if (_tempval  == 12) { // FROM_STATE_ACTION_SWITCH
-# line 128 "opt/ini.rl" # end of line directive
+# line 140 "opt/ini.rl" # end of line directive
     
             if (p > okp)
                 appendBuf.extend(data + uintz(okp), p - okp - 1);
@@ -583,7 +594,7 @@ uint  IniParser_en_main = 29;
             // ACTION
     }
     else  if (_tempval  == 13) { // FROM_STATE_ACTION_SWITCH
-# line 148 "opt/ini.rl" # end of line directive
+# line 160 "opt/ini.rl" # end of line directive
     
             if (p > okp)
                 appendBuf.extend(data + uintz(okp), p - okp);
@@ -593,7 +604,7 @@ uint  IniParser_en_main = 29;
             okp = p+1;
             // ACTION
     }
-# line 597 "lib/crack/ffmt/ini.crk" # end of line directive
+# line 608 "lib/crack/ffmt/ini.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -620,13 +631,12 @@ uint  IniParser_en_main = 29;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 221 "opt/ini.rl"
+# line 232 "opt/ini.rl"
 
         return _resultMap;
     }
 
-    OrderedHashMap[String, OrderedHashMap[String, String]]
-        parse(Buffer inputString) {
+    MapMap parse(Buffer inputString) {
 
         _resultMap = OrderedHashMap[String, OrderedHashMap[String, String]]();
         OrderedHashMap[String, String] _sectionMap = null;
@@ -634,61 +644,59 @@ uint  IniParser_en_main = 29;
         return parse(inputString, 0, inputString.size);
     }
 
-    OrderedHashMap[String, OrderedHashMap[String, String]] parseFile(String fname) {
+    MapMap parseFile(String fname) {
         Stat statInfo = {};
         n := CString(fname);
         statErrors := stat(n.buffer, statInfo);
-        if (!statErrors){
+        if (!statErrors) {
             mode := "r";
             file := fopen(n.buffer, mode.buffer);
 
-            if (file is null) {
+            if (file is null)
                 throw InvalidResourceError(FStr() `$fname: $(strerror())`);
-            }
             fd := fileno(file);
 
             data_size := statInfo.st_size;
             tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
             data := Buffer(byteptr(tdata), data_size);
             
-            if (uintz(tdata) != uintz(0)-1){
+            if (uintz(tdata) != uintz(0) - 1) {
                 parse(data);
                 munmap(tdata, data_size);
                 fclose(file);
                 return _resultMap;
-            }
-            else
+            } else {
                 throw InvalidResourceError(FStr() `$fname: $(strerror())`);
+            }
         }
         return null;
     }
 
-    void reset(){
-      _resultMap = null;
-      _sectionMap = null;
-      _errors =  null;
+    void reset() {
+        _resultMap = null;
+        _sectionMap = null;
+        _errors =  null;
     }
 
-    OrderedHashMap[String, OrderedHashMap[String, String]] results(){
-      return _resultMap;
+    MapMap results() {
+        return _resultMap;
     }
 
-    Array[IniError] errors(){
-      return _errors;
+    Array[IniError] errors() {
+        return _errors;
     }
 
-    void formatTo(Formatter fmt){
-      if (_resultMap is null)
-        fmt.write('null');
-      else {
-        for (section :in _resultMap){
-          fmt `[$(section.key)]\n`;
-          for (vitem :in section.val)
-            fmt `$(vitem.key)=$(escape(vitem.val, 32, 255))\n`
+    void formatTo(Formatter fmt) {
+        if (_resultMap is null) {
+            fmt.write('null');
+        } else {
+            for (section :in _resultMap) {
+                fmt `[$(section.key)]\n`;
+                for (vitem :in section.val)
+                    fmt `$(vitem.key)=$(escape(vitem.val, 32, 255))\n`
+            }
         }
-      }
     }
-
 }
 
 iniParser := IniParser();

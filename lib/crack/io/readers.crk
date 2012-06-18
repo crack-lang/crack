@@ -192,10 +192,12 @@ class PageBufferReader : PageBuffer {
     }
 
     ## Purse page buffer of entry numbers lower than the one containing offset i
-    uint vacuum(uint i){
-        uint j=0;
+    uint vacuum(uint i) {
+        uint j = 0;
         for (uint bi = min(i/_pageSize, _pages);
-             bi > 0 && _pageMap.hasKey(bi-1); bi--) {
+             bi > 0 && _pageMap.hasKey(bi-1); 
+             bi--
+             ) {
             _pageMap.delete(bi-1);
             j++;
         }
@@ -215,10 +217,12 @@ class PageBufferReader : PageBuffer {
         String cb;
         for (uint i = si; i<=ei; i++){
             cb = _pageMap[i];
-            retval.extend(cb.buffer +
-                (i==si? start%_pageSize : 0),
-                (i==si? ((i==ei) ? len : _pageSize - start%_pageSize) :
-                (i<ei ? _pageSize : end % _pageSize)));
+            retval.extend(
+                cb.buffer + (i == si ? start % _pageSize : 0),
+                (i == si ? ((i == ei) ? len : _pageSize - start % _pageSize) :
+                           (i<ei ? _pageSize : end % _pageSize)
+                 )
+            );
         }
         return String(retval);
     }
