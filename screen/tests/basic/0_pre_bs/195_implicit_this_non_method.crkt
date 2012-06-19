@@ -1,0 +1,15 @@
+%%TEST%%
+use of implicit this on a method of an incorrect class
+%%ARGS%%
+%%FILE%%
+class A {
+    void f() {}
+    class B {
+        void g() {
+            f();
+        }
+    }
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5: 'this' variable is not an instance of A
+%%STDIN%%

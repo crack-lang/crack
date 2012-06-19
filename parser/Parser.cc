@@ -706,6 +706,16 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
                                     container->type->meta->name
                                    )
                   );
+         
+         // if we got an implicit this and no container, verify that the 
+         // this is derived from the method's receiver type.
+         else if (!container &&
+                   !receiver->type->isDerivedFrom(func->getReceiverType())
+                  )
+            error(ident, SPUG_FSTR("'this' variable is not an instance of " <<
+                                    func->getReceiverType()->getDisplayName()
+                                   )
+                  );
       }
    }
 
