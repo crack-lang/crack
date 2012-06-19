@@ -1,0 +1,26 @@
+// Test CrossRoads I/O
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
+// 6/15/2012
+
+import crack.io cout;
+import crack.net.xs Xs, XsSocket, XsMsg, XS_XREQ, XS_XREP;
+import crack.process Process;
+
+// Set up Crossraods
+xsContext := Xs();
+
+// Create socket on localhost
+sock := XsSocket(xsContext, XS_XREQ);
+sock.bind("tcp://127.0.0.1:5555");
+
+msg := XsMsg();
+
+// Spawn child process
+child := Process("test/test_xs_client");
+
+// Block until we get a message
+sock.recvMsg(msg, 0);
+sock.sendMsg(msg, 0);
+sock.recvMsg(msg, 0);
+if (String(msg.updateBuffer()) == String("Hello XS"))
+    cout.write("ok\n");

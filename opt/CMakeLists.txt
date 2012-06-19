@@ -71,6 +71,21 @@ if (OPENGL_FOUND)
     install(TARGETS gl DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif (OPENGL_FOUND)
 
+macro_optional_find_package(XS)
+macro_log_feature(XS_FOUND "xs" "Bindings for Crossroads I/O" "http://crossroads.io")
+if (XS_FOUND)
+    add_library(xs SHARED _xs.cc)
+    set_target_properties(xs
+                        PROPERTIES
+                        OUTPUT_NAME _xs
+                        PREFIX ""
+                        )
+    target_link_libraries( xs
+                          -lxs
+                        )
+    install(TARGETS xs DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+endif (XS_FOUND)
+
 find_package(PkgConfig)
 
 if (PKG_CONFIG_FOUND)

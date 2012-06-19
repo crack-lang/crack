@@ -1,0 +1,312 @@
+# Crack Crossroads IO binding based in xs.h
+# (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+# 6/14/2012
+
+# Based on xs.h from Crossroads IO libxs 1.2.0, which is LGPLv3
+# Therefore this is file under LGPLv3
+# The C++ code generated from this file is under LGPLv2, like the rest of
+# Crack
+
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._xs {
+    @filename 'opt/_xs.cc'
+    @dumpsymbols 'opt/_xs.txt'
+    @inject '// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n//\n'
+    @inject '#include <stdio.h>\n'
+    @inject '#include <stdint.h>\n'
+    @inject '#include <string.h>\n'
+    @inject '#include <xs/xs.h>\n\n'
+    @inject 'typedef void * voidptr;\n'
+    @inject 'typedef void * xs_socket_t;\n'
+    @crack_internal
+
+/******************************************************************************/
+/*  Crossroads versioning support.                                            */
+/******************************************************************************/
+
+    @inject 'struct xs_version_struct {
+                int major, minor, patch;
+            };
+            typedef struct xs_version_struct xs_version_info;\n'
+
+    @inject 'xs_version_info *get_xs_version(){
+                xs_version_info *v = new xs_version_info;
+                xs_version(&(v->major), &(v->minor), &(v->patch));
+                return v;
+            }\n'
+
+/*  Version macros for compile-time API version detection                     */
+    const int XS_VERSION_MAJOR, XS_VERSION_MINOR, XS_VERSION_PATCH;
+
+/*  Run-time API version detection                                            */
+    class xs_version_info {
+        @cname get_xs_version
+        oper init();
+        int major, minor, patch;
+    }
+
+/******************************************************************************/
+/*  Crossroads errors.                                                        */
+/******************************************************************************/
+
+    /*  Native Crossroads error codes.                                        */
+    const int EFSM="(XS_HAUSNUMERO + 51)",
+              ENOCOMPATPROTO="(XS_HAUSNUMERO + 52)",
+              ETERM="(XS_HAUSNUMERO + 53)",
+              EMTHREAD="(XS_HAUSNUMERO + 54)"; //Kept for backward compatibility
+
+
+    /* This function retrieves the errno as it is known to Crossroads library.*/
+    /* The goal of this function is to make the code 100% portable, including */
+    /* where Crossroads are compiled with certain CRT library (on Windows) is */
+    /* linked to an application that uses different CRT library.              */
+    int xs_errno();
+
+    /*  Resolves system errors and Crossroads errors to human-readable string.*/
+    byteptr xs_strerror(int errno);
+
+    /**************************************************************************/
+    /*  Crossroads context definition.                                        */
+    /**************************************************************************/
+
+    const int XS_MAX_SOCKETS, XS_IO_THREADS, XS_PLUGIN;
+
+    // Xs context is a voidptr, so so Crack class
+    @cname voidptr
+    class xs_context;
+
+    xs_context xs_init();
+    int xs_term(xs_context ctx);
+
+    @inject 'int xs_setctxopt_int(voidptr ctx, int option, int optval) {
+                return xs_setsockopt((voidptr)ctx, option, &optval, sizeof(int));
+            }\n'
+
+    int xs_setctxopt(xs_context ctx, int option, voidptr optval, uint optvallen);
+    int xs_setctxopt_int(xs_context ctx, int option, int optval);
+
+
+    /**************************************************************************/
+    /*  Crossroads message definition.                                        */
+    /**************************************************************************/
+
+    @inject 'xs_msg_t *crk_xs_msg_new() {
+                xs_msg_t *msg = new xs_msg_t;
+                return msg;
+            }\n'
+
+    // We can make a Crack class for messages because it has a defined type
+    class xs_msg_t {
+
+        @cname crk_xs_msg_new
+        oper init();
+
+        @cname xs_msg_init
+        int init_empty();
+
+        @cname xs_msg_init_size
+        int init_size(uint size);
+
+        @cname xs_msg_init_data
+        int init_data(byteptr data,
+                      uint size, voidptr ffn, voidptr hint);
+        @cname xs_msg_close
+        int close();
+
+        @cname xs_msg_data
+        byteptr data();
+
+        @cname xs_msg_size
+        uint size();
+
+        //    @cname xs_getmsgopt // TODO write wrapper for &uint
+        //    int getmsgopt (int option, voidptr optval,
+        //        uint optvallen);
+    }
+
+    int xs_msg_move (xs_msg_t dest, xs_msg_t src);
+    int xs_msg_copy (xs_msg_t dest, xs_msg_t src);
+
+
+    /**************************************************************************/
+    /*  Crossroads socket definition.                                         */
+    /**************************************************************************/
+
+    /*  Socket types.                                                         */
+    const int XS_PAIR,
+              XS_PUB, 
+              XS_SUB, 
+              XS_REQ, 
+              XS_REP, 
+              XS_XREQ, 
+              XS_XREP, 
+              XS_PULL, 
+              XS_PUSH, 
+              XS_XPUB, 
+              XS_XSUB, 
+              XS_SURVEYOR, 
+              XS_RESPONDENT, 
+              XS_XSURVEYOR, 
+              XS_XRESPONDENT, 
+
+    /*  Legacy socket type aliases.                                           */
+              XS_ROUTER=XS_XREP,
+              XS_DEALER=XS_XREQ,
+
+    /*  Socket options.                                                       */
+              XS_AFFINITY, 
+              XS_IDENTITY, 
+              XS_SUBSCRIBE, 
+              XS_UNSUBSCRIBE, 
+              XS_RATE, 
+              XS_RECOVERY_IVL, 
+              XS_SNDBUF, 
+              XS_RCVBUF, 
+              XS_RCVMORE, 
+              XS_FD, 
+              XS_EVENTS, 
+              XS_TYPE, 
+              XS_LINGER, 
+              XS_RECONNECT_IVL, 
+              XS_BACKLOG, 
+              XS_RECONNECT_IVL_MAX, 
+              XS_MAXMSGSIZE, 
+              XS_SNDHWM, 
+              XS_RCVHWM, 
+              XS_MULTICAST_HOPS, 
+              XS_RCVTIMEO, 
+              XS_SNDTIMEO, 
+              XS_IPV4ONLY, 
+              XS_KEEPALIVE, 
+              XS_PROTOCOL, 
+              XS_SURVEY_TIMEOUT, 
+
+    /*  Message options                                                       */
+              XS_MORE, 
+
+    /*  Send/recv options.                                                    */
+              XS_DONTWAIT, 
+              XS_SNDMORE;
+
+    // Xs socket is a voidptr, so so Crack class
+    @cname voidptr
+    class xs_socket_t;
+
+    @cname xs_socket
+    xs_socket_t xs_sock_new(xs_context ctx, int tpe);
+
+    @cname xs_close
+    int xs_sock_close(xs_socket_t sock);
+
+    @inject 'int xs_setsockopt_int (voidptr sock, int option, int optval) {
+                return xs_setsockopt(sock, option, (voidptr)&optval, sizeof(int));
+            }\n'
+
+    @inject 'int xs_setsockopt_uint64 (voidptr sock, int option,
+                                       uint64_t optval) {
+                return xs_setsockopt(sock, option, (voidptr)&optval, sizeof(uint64_t));
+            }\n'
+
+    @inject 'int xs_setsockopt_byteptr (voidptr sock, int option,
+                char *optval, size_t optvallen) {
+                return xs_setsockopt(sock, option, (voidptr)optval, optvallen);
+            }\n'
+
+    int xs_setsockopt(xs_socket_t sock, int option, voidptr optval,
+        uint optvallen);
+
+    int xs_setsockopt_int(xs_socket_t sock, int option, int optval);
+    int xs_setsockopt_uint64(xs_socket_t sock, int option, uint64 optval);
+    int xs_setsockopt_byteptr(xs_socket_t sock, int option, byteptr optval,
+                              uint optvallen);
+
+    @inject 'int xs_getsockopt_int(voidptr sock, int option) {
+                int optval;
+                size_t optvallen;
+                int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
+                if (status == -1) return -1;
+                return optval;
+            }\n'
+
+    @inject 'uint64_t xs_getsockopt_uint64(voidptr sock, int option) {
+                uint64_t optval;
+                size_t optvallen;
+                int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
+                if (status == -1) return -1; // This -1 is deliberate
+                return optval;
+            }\n'
+
+    @inject 'char *xs_getsockopt_byteptr(voidptr sock, int option) {
+                char optval[255];
+                size_t optvallen;
+                int status = xs_getsockopt(sock, option, optval, &optvallen);
+                if (status == -1) return NULL;
+                char *valString = new char[optvallen];
+                memcpy((voidptr)valString, (voidptr)optval, optvallen);
+                valString[optvallen] = \'\\0\'; // So that it\'s a CString
+                return valString;
+            }\n'
+
+    int xs_getsockopt_int(xs_socket_t sock, int option);
+    uint64 xs_getsockopt_uint64(xs_socket_t sock, int option);
+    byteptr xs_getsockopt_byteptr(xs_socket_t sock, int option);
+
+
+    @cname xs_bind
+    int xs_sock_bind(xs_socket_t sock, byteptr addr);
+
+    @cname xs_connect
+    int xs_sock_connect(xs_socket_t sock, byteptr addr);
+
+    @cname xs_shutdown
+    int xs_sock_shutdown(xs_socket_t sock, int how);
+
+    @cname xs_send
+    int xs_sock_send(xs_socket_t sock, byteptr buf, uint len, int flags);
+
+    @cname xs_recv
+    int xs_sock_recv(xs_socket_t sock, byteptr buf, uint len, int flags);
+
+    @cname xs_sendmsg
+    int xs_sock_sendmsg(xs_socket_t sock, xs_msg_t msg, int flags);
+
+    @inject 'int crk_xs_sock_recvmsg(xs_socket_t sock, xs_msg_t *msgc, int flags) {
+                xs_msg_t msgr;
+                xs_msg_t *msg = &msgr;
+                xs_msg_init(msg);
+                int numbytes = xs_recvmsg(sock, msg, flags);
+                int i;
+                char _buf[256];
+                char *data = (char *)xs_msg_data(msg);
+                memcpy(_buf, xs_msg_data(msg), numbytes<255 ? numbytes : 254);
+                _buf[numbytes<255 ? numbytes : 255] = \'\\0\';
+                printf("numbytes= %d, xs_recvmsg = %s\\n", numbytes, _buf);
+                for (i=0; i<numbytes && i<255; i++)
+                    printf("msg[%d]= %c\\n", i, data[i]);
+                return numbytes;
+             }\n';
+
+    @cname xs_recvmsg
+    int xs_sock_recvmsg (xs_socket_t sock, xs_msg_t msg, int flags);
+
+
+    /**************************************************************************/
+    /*  I/O multiplexing.                                                     */
+    /**************************************************************************/
+
+    const int XS_POLLIN, 
+              XS_POLLOUT, 
+              XS_POLLERR;
+    // We can make a Crack class for poll items because it has a defined type
+    class xs_pollitem_t {
+        xs_socket_t socket;
+        int fd;
+        int16 events;
+        int16 revents;
+    }
+
+    int xs_poll(array[xs_pollitem_t] items, int nitems, int timeout);
+
+}

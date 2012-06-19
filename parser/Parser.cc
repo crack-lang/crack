@@ -1630,7 +1630,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
                              type->name
                             )
                   );
-         
+
          // parse the arg list
          expectToken(Token::lparen, "expected an ergument list.");
          FuncCall::ExprVec args;
