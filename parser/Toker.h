@@ -37,6 +37,7 @@ class Toker {
       // info for tracking the state of the tokenizer.
       enum { 
          st_none, 
+         st_interpNone,
          st_ident, 
          st_slash,
          st_minus,

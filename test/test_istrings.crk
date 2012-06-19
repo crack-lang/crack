@@ -19,4 +19,38 @@ if (1) {
     }
 }
 
+# verify that the troublesome `$i'` isn't interpreted as the beginning of an 
+# augmented string token
+if (1) {
+    import test.preutil streq;
+    class F {
+        int intVal;
+        byteptr bptrVal;
+        void format(byteptr text) {
+            bptrVal = text;
+        }
+        void format(int i) {
+            intVal = i;
+        }
+        bool check(int i, byteptr text) {
+            return intVal == i && streq(bptrVal, text);
+        }
+        oper to bool() { return 1; }
+    }
+    f := F();
+    int i = 100, b = 200, r = 300, I = 400;
+    f `$i"`;
+    if (!f.check(100, '"'))
+        puts('FAILED i" in istring');
+    f `$b"`;
+    if (!f.check(200, '"'))
+        puts('FAILED b" in istring');
+    f `$r"`;
+    if (!f.check(300, '"'))
+        puts('FAILED r" in istring');
+    f `$I"`;
+    if (!f.check(400, '"'))
+        puts('FAILED I" in istring');
+}
+
 puts('ok');

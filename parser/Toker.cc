@@ -186,8 +186,8 @@ Token Toker::readToken() {
 
     stringstream buf;
 
-    // we should only be able to enter this in one of two states.    
-    assert((state == st_none || state == st_istr) && 
+    // we should only be able to enter this in one of three states.
+    assert((state == st_none || state == st_interpNone || state == st_istr) && 
            "readToken(): tokenizer in invalid state"
            );
  
@@ -198,20 +198,32 @@ Token Toker::readToken() {
         // processing varies according to state
         switch (state) {
             case st_none:
-                if (isspace(ch)) {
-                   ;
-                } else if (ch == 'i' || ch == 'b') {
+                if (ch == 'i' || ch == 'b') {
                     // deal with i'str' and b'c' tokens
                     buf << ch;
                     state = st_strint;
+                    continue;
                 } else if (ch == 'r') {
                     // deal with r'raw string' tokens
                     buf << ch;
                     state = st_rawStr;
+                    continue;
                 } else if (ch == 'I') {
                     // deal with I'indented string' tokens.
                     buf << ch;
                     state = st_indentStr;
+                    continue;
+                }
+                // fall through to interpNone
+
+            // the "interpolation none" state is a base state that doesn't 
+            // except the augmented string tokens (e.g. i'1234', b'x'...).  
+            // These produce unexpected behavior in an interpolation 
+            // expression, e.g. `value = '$i'` would treat the "i'" as the 
+            // beginning of an integer string token.
+            case st_interpNone:
+                if (isspace(ch)) {
+                   ;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
@@ -845,7 +857,7 @@ Token Toker::readToken() {
                                     );
                     }
                 } else if (ch == '$') {
-                    state = st_none;
+                    state = st_interpNone;
                     return Token(Token::string, buf.str(),
                                  locationMap.getLocation()
                                  );
