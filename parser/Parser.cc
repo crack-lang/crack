@@ -866,8 +866,8 @@ ExprPtr Parser::parseIString(Expr *expr) {
    
    // wrap the formatter expression in a register setter so it will get stored 
    // for reuse.
-   ExprPtr formatter = new SetRegisterExpr(expr);
-   ExprPtr reg = new GetRegisterExpr(expr->type.get());
+   GetRegisterExprPtr reg = new GetRegisterExpr(expr->type.get());
+   ExprPtr formatter = new SetRegisterExpr(reg.get(), expr);
    
    // create an expression sequence for the formatter
    MultiExprPtr seq = new MultiExpr();

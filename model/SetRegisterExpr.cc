@@ -9,7 +9,7 @@ using namespace model;
 
 ResultExprPtr SetRegisterExpr::emit(Context &context) {
     ResultExprPtr result = expr->emit(context);
-    context.reg = result;
+    reg->val = result;
     return result;
 }
 

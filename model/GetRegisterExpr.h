@@ -12,6 +12,7 @@ namespace model {
  */
 class GetRegisterExpr : public Expr {
     public:
+        ExprPtr val;
         GetRegisterExpr(TypeDef *type) : Expr(type) {}
         
         virtual ResultExprPtr emit(Context &context);

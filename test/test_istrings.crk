@@ -57,4 +57,22 @@ if (1) {
         puts('FAILED augmented string in parens');
 }
 
+if (1) {
+    class F {
+        int result;
+        void format(int i) {
+            result <<= 4;
+            result |= i;
+        }
+        
+        int leave() {
+            return result;
+        }
+        
+        oper to bool() { return 1 }
+    }
+    if (F() `$(1)$(F() `$(2)`)$(3)` != 0x123)
+        puts('FAILED nested istrings');
+}
+
 puts('ok');
