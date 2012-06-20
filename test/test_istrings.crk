@@ -51,6 +51,10 @@ if (1) {
     f `$I"`;
     if (!f.check(400, '"'))
         puts('FAILED I" in istring');
+    
+    f `$(r'\test')$(i)`;
+    if (!f.check(100, '\\test'))
+        puts('FAILED augmented string in parens');
 }
 
 puts('ok');

@@ -220,8 +220,11 @@ Token Toker::readToken() {
             // except the augmented string tokens (e.g. i'1234', b'x'...).  
             // These produce unexpected behavior in an interpolation 
             // expression, e.g. `value = '$i'` would treat the "i'" as the 
-            // beginning of an integer string token.
+            // beginning of an integer string token.  Whenever we come into 
+            // this state, we revert the state to st_none - it's only valid 
+            // after being explicitly set.
             case st_interpNone:
+                state = st_none;
                 if (isspace(ch)) {
                    ;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
