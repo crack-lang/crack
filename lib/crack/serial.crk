@@ -30,7 +30,7 @@ class SerialReader {
             # make sure we've got data
             if (pos == buf.size) {
                 buf.size = BUFSIZE;
-                if (!(buf.size = __src.read(buf)))
+                if (!__src.read(buf))
                     underflow();
                 pos = 0;
             }

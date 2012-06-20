@@ -64,11 +64,9 @@ class OwningFDWriter : FDWriter {
 @abstract class Reader : VTableBase {
 
     ## Reads enough bytes to fill the buffer, or as many bytes as are
-    ## available from the source.  Returns the number of bytes read.
-    uint read(WriteBuffer buffer) {
-        die('Reader.read(uint,byteptr) called');
-        return 0;
-    }
+    ## available from the source.  Returns the number of bytes read and sets
+    ## the buffer size to the number of bytes read.
+    @abstract uint read(WriteBuffer buffer);
 
     String read(uint size) {
         b := ManagedBuffer(size);

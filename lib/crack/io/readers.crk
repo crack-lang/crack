@@ -109,11 +109,15 @@ class FullReader : LineReader @implements Reader {
         # read in the remainder of the file
         amtRead := r.read(buf);
         while (amtRead) {
-            result.extend(buf.buffer, amtRead);
+            result.extend(buf);
             amtRead = r.read(buf);
         }
         
         return String(result, true);
+    }
+    
+    uint read(WriteBuffer buf) {
+        return r.read(buf);
     }
 }
 

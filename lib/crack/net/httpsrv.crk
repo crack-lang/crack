@@ -335,7 +335,7 @@ class HTTPServer {
         }
 
         @final bool readChunk() {
-            amtRead := sock.read(WriteBuffer(getInputBuf(), 1024));
+            amtRead := sock.read(WriteBuffer(getInputBuf(), 0, 1024));
             if (!amtRead) {
                 return false;
             } else {

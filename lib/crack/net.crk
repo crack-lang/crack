@@ -198,8 +198,7 @@ class Socket : FileHandle @implements Reader, Writer {
 
     int recv(WriteBuffer buf, int flags) {
         rc := recv(fd, buf.buffer, buf.cap, flags);
-        if (rc != -1)
-            buf.size = rc;
+        buf.size = (rc == -1) ? 0 : rc;
         return rc;
     }
 
