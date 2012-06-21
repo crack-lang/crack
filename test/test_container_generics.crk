@@ -44,6 +44,21 @@ for (item :in m) {
     sa.append(fmt.string());
 }
 
+# TreeMap.delete()
+if (1) {
+    TreeMap[String, int] t = {};
+
+    t['a'] = 1;
+    t['b'] = 2;
+    t['c'] = 3;
+    
+    t.delete('b');
+    if (FStr() `$t` != '[a: 1, c: 3]')
+    cout `FAILED deleting root node\n`;
+}
+  
+
+
 QuickSort[Array[String]].sort(sa);
 
 # Now sa = [first: 100, fourth: 400, second: 200, third: 300]
