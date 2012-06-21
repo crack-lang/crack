@@ -2103,13 +2103,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         byteptrType
     );
     deferMetaClass.push_back(byteptrType);
-    FuncDefPtr funcDef =
-        new GeneralOpDef<UnsafeCastCall>(byteptrType, FuncDef::noFlags,
-                                         "oper new",
-                                         1
-                                         );
-    funcDef->args[0] = new ArgDef(voidptrType, "val");
-    context.addDef(funcDef.get(), byteptrType);
     context.addDef(byteptrType);
 
     Type *llvmBoolType = IntegerType::getInt1Ty(lctx);
@@ -2232,7 +2225,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     deferMetaClass.push_back(floatType);
 
     // conversion from voidptr to integer
-    funcDef =
+    FuncDefPtr funcDef =
         new GeneralOpDef<PtrToIntOpCall>(uintzType, FuncDef::noFlags,
                                          "oper new",
                                          1

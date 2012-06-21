@@ -88,7 +88,15 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                              );
     arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
     context.addDef(arrayAlloc.get(), arrayType);
-    
+
+    FuncDefPtr arrayFromVoidptr =
+        new GeneralOpDef<UnsafeCastCall>(arrayType, FuncDef::noFlags,
+                                         "oper new",
+                                         1
+                                         );
+    arrayFromVoidptr->args[0] = new ArgDef(gd->voidptrType.get(), "val");
+    context.addDef(arrayFromVoidptr.get(), arrayType);
+
     context.addDef(new PreIncrPtrOpDef(arrayType, "oper ++x"), arrayType);
     context.addDef(new PreDecrPtrOpDef(arrayType, "oper --x"), arrayType);
     context.addDef(new PostIncrPtrOpDef(arrayType, "oper x++"), arrayType);

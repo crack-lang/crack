@@ -23,5 +23,12 @@ class A {} class B : A {}
 aa := array[A](1);
 aa[0] = B();
 
+if (1) {
+    voidptr v = array[int]![1, 2, 3];
+    array[int] a = {v};
+    if (a[0] != 1 || a[1] != 2 || a[2] != 3)
+        puts('FAILED explicit conversion of voidptr to array');
+}
+
 puts('ok');
 
