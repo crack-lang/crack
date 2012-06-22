@@ -1,0 +1,25 @@
+%%TEST%%
+properties
+%%ARGS%%
+
+%%FILE%%
+@import crack.ann property;
+
+@property int standardProp;
+@property int standardProp2 {}
+@property readonly int readonlyProp;
+
+setStandardProp(42);
+int i = standardProp();
+
+setStandardProp2(42);
+i = standardProp2();
+
+i = readonlyProp();
+
+# should give an error
+setReadonlyProp(42);
+
+%%EXPECT%%
+ParseError: %OUTDIR%080_properties.crk:16: Unknown identifier setReadonlyProp
+%%STDIN%%

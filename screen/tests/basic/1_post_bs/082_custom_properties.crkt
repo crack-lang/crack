@@ -1,0 +1,36 @@
+%%TEST%%
+custom properties
+%%ARGS%%
+
+%%FILE%%
+@import crack.ann property;
+
+@property int customProp {
+    get {
+        return _customProp;
+    }
+
+    set {
+        _customProp = value;
+    }
+}
+
+setCustomProp(42);
+int i = customProp();
+
+@property readonly int readonlyProp {
+    get {
+        return _readonlyProp;
+    }
+
+    # sould give an error
+    set {
+        _readonlyProp = value;
+    }
+}
+
+i = readonlyProp();
+
+%%EXPECT%%
+ParseError: %OUTDIR%082_custom_properties.crk:22: readonly properties cannot have setters defined
+%%STDIN%%
