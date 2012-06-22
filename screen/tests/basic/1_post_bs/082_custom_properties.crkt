@@ -18,7 +18,7 @@ custom properties
 setCustomProp(42);
 int i = customProp();
 
-@property readonly int readonlyProp {
+@property(readonly) int readonlyProp {
     get {
         return _readonlyProp;
     }

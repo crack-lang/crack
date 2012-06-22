@@ -7,7 +7,7 @@ properties
 
 @property int standardProp;
 @property int standardProp2 {}
-@property readonly int readonlyProp;
+@property(readonly) int readonlyProp;
 
 setStandardProp(42);
 int i = standardProp();

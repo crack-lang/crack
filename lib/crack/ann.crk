@@ -1,4 +1,5 @@
 # Copyright 2010 Google Inc.
+# Copyright 2012 Arno Rehn <arno@arnorehn.de>
 # Implements some basic annotations that no one should be without.  Included
 # are:
 # @define name(arg, ...) { contents }
@@ -1195,9 +1196,27 @@ String _capitalize(String str) {
 # quickly create property accessors, inspired by Ruby's attr_accessor and C#'s properties
 void property(CrackContext ctx) {
     readonlyAttr := ctx.getToken();
+    ctx.putBack(readonlyAttr);
 
-    if (StaticString(readonlyAttr.getText()) != 'readonly') {
-        ctx.putBack(readonlyAttr);
+    if (readonlyAttr.isLParen()) {
+        readonlyAttr = null;
+
+        NodeList attrList = readDelimited(ctx, TOK_LPAREN, TOK_RPAREN);
+
+        for (node :in attrList) {
+            tok := Tok.cast(node);
+            if (tok.tok.isLParen() || tok.tok.isRParen() || tok.tok.isComma()) {
+                continue;
+            }
+
+            tokText := StaticString(tok.tok.getText());
+            if (tokText == 'ro' || tokText == 'readonly') {
+                readonlyAttr = tok.tok;
+            } else {
+                ctx.error(tok.tok, FStr() `Unknown property attribute$(tok)`.buffer);
+            }
+        }
+    } else {
         readonlyAttr = null;
     }
 
