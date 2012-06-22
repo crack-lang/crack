@@ -1180,3 +1180,88 @@ void assert(CrackContext ctx) {
     expr.expand(ctx, null);
     ctx.inject(@FILE.buffer, @LINE, 'if (!('.buffer)
 }
+
+# capitalizes the first letter of 'str'
+String _capitalize(String str) {
+    if (str[0] >= b'a' && str[0] <= b'z') {
+        String copy = String(str);  # create a copy
+        copy.buffer[0] = b'A' + str[0] - b'a';
+        return copy;
+    }
+
+    return str;
+}
+
+# quickly create property accessors, inspired by Ruby's attr_accessor and C#'s properties
+void property(CrackContext ctx) {
+    readonlyAttr := ctx.getToken();
+
+    if (StaticString(readonlyAttr.getText()) != 'readonly') {
+        ctx.putBack(readonlyAttr);
+        readonlyAttr = null;
+    }
+
+    NodeListImpl typeNodes = {};
+    type := Type.parse(ctx, typeNodes);
+
+    nameToken := ctx.getToken();
+    if (!nameToken.isIdent()) {
+        ctx.error(nameToken, 'Identifier expected after property type'.buffer);
+    }
+
+    tok := ctx.getToken();
+
+    NodeList getter = null;
+    NodeList setter = null;
+
+    # user defined accessors
+    if (tok.isLCurly()) {
+        tok = ctx.getToken();
+
+        while (!tok.isRCurly()) {
+            if (StaticString(tok.getText()) == "get") {
+                getter = readBlock(ctx);
+            } else if (StaticString(tok.getText()) == "set") {
+                if (!(readonlyAttr is null)) {
+                    ctx.error(tok, "readonly properties cannot have setters defined".buffer);
+                }
+                setter = readBlock(ctx);
+            } else if (!tok.isSemi()) {
+                ctx.error(tok, FStr() `Unknown identifier$(Tok(tok))`.buffer);
+            }
+            tok = ctx.getToken();
+        }
+    } else if (!tok.isSemi()) {
+        ctx.error(tok, 'semicolon or opening curly brace expected after property definition'.buffer);
+    }
+
+    # setter
+    if (readonlyAttr is null) {
+        if (setter is null) {
+            # default setter
+            ctx.inject(@FILE.buffer, @LINE, FStr() `{ _$(nameToken.getText()) = value; } \0`.buffer);
+        } else {
+            setter.expand(ctx, null);
+        }
+
+        ctx.inject(@FILE.buffer, @LINE, ' value) \0'.buffer);
+
+        typeNodes.expand(ctx, null);
+
+        ctx.inject(@FILE.buffer, @LINE, FStr() `void set$(_capitalize(StaticString(nameToken.getText()))) ( \0`.buffer);
+    }
+
+    # getter
+    if (getter is null) {
+        # default getter
+        ctx.inject(@FILE.buffer, @LINE, FStr() `{ return _$(nameToken.getText()); } \0`.buffer);
+    } else {
+        getter.expand(ctx, null);
+    }
+    ctx.inject(@FILE.buffer, @LINE, FStr() `$(nameToken.getText())() \0`.buffer);
+    typeNodes.expand(ctx, null);
+
+    # field
+    ctx.inject(@FILE.buffer, @LINE, FStr() `_$(nameToken.getText()); \0`.buffer);
+    typeNodes.expand(ctx, null);
+}
