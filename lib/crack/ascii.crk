@@ -36,6 +36,26 @@ String radix(uintz val, uint base) {
     return String(cur, size, false);
 }
 
+## Returns a hexadecimal representation of the bytes in the given buffer
+## hex("hello") -> '68656c6c6f'
+String hex(Buffer buf){
+    d := String(buf.size*2, b'0');
+    uint j = 0;
+    abt := buf.buffer;
+    dbt := d.buffer;
+    byte bt1, bt2;
+
+    for (uint i=0; i<buf.size; i++) {
+        bt1 = abt[i] >> 4;
+        bt2 = abt[i] & 0x0f;
+        dbt[j] = bt1 < 10 ? bt1 + b'0' : bt1 + b'a' - byte(10);
+        dbt[j+1] = bt2 < 10 ? bt2 + b'0' : bt2 + b'a' - byte(10);
+        j+=2;
+    }
+    return d;
+}
+
+
 ## Returns a string representation of fraction n / 10^denomExp suitable for
 ## use after the decimal point in a formatted floating point number.  For
 ## example, where n = 120 and denomExp = 4 (120 / 10,000), this  would

@@ -28,6 +28,7 @@ using namespace crack::ext;
 
 extern "C" bool __CrackUncaughtException();
 extern "C" void crack_runtime_time_cinit(crack::ext::Module *mod);
+extern "C" void crack_runtime_md5_cinit(crack::ext::Module *mod);
 
 // stat() appears to have some funny linkage issues in native mode so we wrap 
 // it in a normal function.
@@ -802,6 +803,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     
     // Add time functions
     crack_runtime_time_cinit(mod);
+    
+    // Add md5 functions
+    crack_runtime_md5_cinit(mod);
     
     // add exception functions
     mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 

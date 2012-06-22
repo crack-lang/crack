@@ -1,0 +1,10 @@
+%%TEST%%
+MD5 hash function
+%%ARGS%%
+
+%%FILE%%
+import test.test_md5;
+%%EXPECT%%
+ok
+%%STDIN%%
+

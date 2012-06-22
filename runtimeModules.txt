@@ -7,4 +7,6 @@ runtime/Init.cc
 runtime/Math.cc
 runtime/Process.cc
 runtime/Time.cc
+runtime/MD5.cc
 debug/DebugTools.cc
+builder/util/md5.c

@@ -1,0 +1,35 @@
+// MD5 hash algorithm wrapper class
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// 6/22/2012
+
+import crack.lang Buffer, ManagedBuffer;
+import crack.runtime md5, md5_init, md5_append, md5_finish, free;
+
+// Higher level MD5 class for use with Crack data structures
+class MD5 {
+    md5 _state;
+
+    oper init() : _state = md5_init() { }
+
+    // Always the same
+    uint length(){
+        return 16;
+    }
+
+    // Add more data
+    void update(Buffer buf){
+        md5_append(_state, buf.buffer, buf.size);
+    }
+
+    // Return raw digest as a buffer of 16 bytes
+    Buffer digest(){
+        b := ManagedBuffer(16);
+        b.size = 16;
+        md5_finish(_state, b.buffer);
+        return b;
+    }
+
+    oper del(){
+        free(_state);
+    }
+}

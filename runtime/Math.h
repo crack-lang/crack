@@ -1,5 +1,5 @@
 // Copyright (C) 2010 Conrad D. Steenberg
-// Lincensed under LGPLv3
+// Lincensed under LGPLv2
 
 #include "ext/Module.h"
 #include "ext/Func.h"
