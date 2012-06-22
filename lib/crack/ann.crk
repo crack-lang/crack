@@ -995,15 +995,7 @@ class Type {
     void formatTo(Formatter out) {
         out `$name`;
         if (params) {
-            out `[$params[0]`;
-            bool first = true;
-            for (p :in params) {
-                out `$p`;
-                if (first)
-                    first = false;
-                else
-                    out `, `;
-            }
+            out `$params`;
         }
     }
     
@@ -1025,10 +1017,10 @@ class Type {
                 params.append(Type.parse(ctx, result));
                 tok = ctx.getToken();
                 result.pushHead(Tok(tok));
-                if (tok.isLBracket()) {
+                if (tok.isRBracket()) {
                     break;
                 } else if (!tok.isComma()) {
-                    text := 'Comma or left bracket expected in type definition';
+                    text := 'Comma or right bracket expected in type definition';
                     ctx.error(tok, text.buffer)
                 }
             }
