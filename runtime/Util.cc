@@ -16,6 +16,7 @@
 #include <utime.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <iconv.h>
 
 namespace crack { namespace runtime {
 
@@ -118,5 +119,39 @@ int setUtimes(const char *path,
     return utimes(path, times);
 }
 
+char *crk_iconv(unsigned int targetCharSize, const char *to, const char *from, char *string, unsigned int len, unsigned int *convertedLen)
+{
+    iconv_t cd = iconv_open(to, from);
+
+    if (cd == (iconv_t) -1 || !string) {
+        iconv_close(cd);
+        return 0;
+    }
+
+    std::size_t _len = len;
+
+    // allocate two more chars for null termination and possibly a byte order mark.
+    std::size_t destlen = (_len + 2) * targetCharSize;
+    std::size_t origlen = destlen;
+
+    char *dest = static_cast<char*>(calloc(destlen, 1));
+    char *start = dest;
+
+    std::size_t ret = iconv(cd, &string, &_len, &dest, &destlen);
+
+    if (_len != 0 || ret == -1) {
+        return 0;
+        iconv_close(cd);
+    }
+
+    iconv_close(cd);
+
+    *convertedLen = origlen - destlen;
+
+    // realloc one more char than convertedLen so that the result is null terminated
+    char *converted = static_cast<char*>(realloc(start, *convertedLen + targetCharSize));
+
+    return converted;
+}
 
 }}

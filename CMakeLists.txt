@@ -41,9 +41,12 @@ IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
                       " please install ${LLVM_MIN_VERSION_TEXT} or greater!")
 ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
+find_package(Iconv REQUIRED)
+
 include_directories(${PROJECT_SOURCE_DIR}
                     ${PROJECT_BINARY_DIR}
-                    ${LLVM_INCLUDE_DIR})
+                    ${LLVM_INCLUDE_DIR}
+                    ${ICONV_INCLUDE_DIRS})
 
 add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
 add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
@@ -112,7 +115,7 @@ set_target_properties(crack-runtime
                       PREFIX ""
                       )
 target_link_libraries(crack-runtime
-                      pthread)
+                      pthread ${ICONV_LIBRARIES})
 
 
 add_executable(crack crack_main.cc)
