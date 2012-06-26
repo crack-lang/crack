@@ -1,0 +1,33 @@
+// Test Murmur3_32 class
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
+// 6/25/2012
+
+import crack.ascii hex, radix;
+import crack.hash.murmur3 Murmur3_32;
+import crack.io cout;
+import crack.cont.array Array;
+
+h := Murmur3_32();
+h.update("hello");
+h1 := Murmur3_32();
+h1.update("hello1");
+h2 := Murmur3_32();
+h2.update("hello12");
+h3 := Murmur3_32();
+h3.update("hello123");
+
+Array[uint32] int32Vals = [h.asUInt32(), h1.asUInt32(), h2.asUInt32(), h3.asUInt32()];
+Array[uint32] int32Expected = [613153351, 1897764613, 35436738, 2340879560];
+
+bool success = true;
+for (uint32 i=0; i < 4; i++) {
+    if (int32Vals[i] != int32Expected[i])
+        success = false;
+}
+
+
+if (hex(h.digest()) == "47fa8b24" && success)
+    cout.write("ok\n");
+else
+    cout.write("FAILED getting digest value\n");
+
