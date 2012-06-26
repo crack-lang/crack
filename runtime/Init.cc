@@ -916,6 +916,15 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(intType, "pid");
     f->addArg(intType, "sig");
 
+    f = mod->addFunc(byteptrType, "iconv",
+                           (void*)&crack::runtime::crk_iconv);
+    f->addArg(uintType, "targetCharSize");
+    f->addArg(byteptrType, "to");
+    f->addArg(byteptrType, "from");
+    f->addArg(byteptrType, "string");
+    f->addArg(uintType, "len");
+    f->addArg(voidptrType, "convertedLen");
+
     // debug support
     f = mod->addFunc(voidType, "getLocation", 
                      (void *)&crack::debug::getLocation

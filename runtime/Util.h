@@ -24,6 +24,9 @@ int is_file(const char *path);
 bool fileExists(const char *path);
 int setNonBlocking(int fd, int val);
 int setUtimes(const char *path, int64_t atv_usecs, int64_t mtv_usecs, bool now);
+
+char *crk_iconv(unsigned int targetCharSize, const char *to, const char *from, char *string, unsigned int len, unsigned int *convertedLen);
+
 }}
 
 #endif // _runtime_Util_h_
