@@ -1,0 +1,24 @@
+// Abstract hash class
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// 6/22/2012
+
+import crack.lang Buffer;
+
+@abstract
+class Hash {
+    uint _size;
+
+    ## Size of the digest in bytes
+    uint count(){
+        return _size;
+    }
+
+    ## Add more data
+    @abstract
+    void update(Buffer buf);
+
+    ## Return raw digest
+    @abstract
+    Buffer digest();
+
+}

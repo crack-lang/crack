@@ -13,11 +13,11 @@
     @crack_internal
 
 
-    @inject 'md5_state_s *crk_new_md5_state(){
-               md5_state_s *state = new md5_state_s;
-               md5_init(state);
-               return state;
-            }\n'
+    @inject I'md5_state_s *crk_new_md5_state() {
+                md5_state_s *state = new md5_state_s;
+                md5_init(state);
+                return state;
+             }\n'
 
     @cname md5_state_s
     class md5;

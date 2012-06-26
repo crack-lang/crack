@@ -11,4 +11,5 @@ h.update("hello");
 
 if (hex(h.digest()) == "5d41402abc4b2a76b9719d911017c592")
     cout.write("ok\n");
+else cout `FAILED getting digest value\n`;
 

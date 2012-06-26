@@ -38,14 +38,14 @@ String radix(uintz val, uint base) {
 
 ## Returns a hexadecimal representation of the bytes in the given buffer
 ## hex("hello") -> '68656c6c6f'
-String hex(Buffer buf){
-    d := String(buf.size*2, b'0');
+String hex(Buffer buf) {
+    d := String(buf.size * 2, b'0');
     uint j = 0;
     abt := buf.buffer;
     dbt := d.buffer;
     byte bt1, bt2;
 
-    for (uint i=0; i<buf.size; i++) {
+    for (uint i=0; i < buf.size; i++) {
         bt1 = abt[i] >> 4;
         bt2 = abt[i] & 0x0f;
         dbt[j] = bt1 < 10 ? bt1 + b'0' : bt1 + b'a' - byte(10);
