@@ -1,0 +1,100 @@
+// Test XDR encode/decode
+// (C) Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
+// 6/25/2012
+
+import crack.io cout;
+import crack.lang ManagedBuffer;
+import crack.runtime XDR_ENCODE, XDR_DECODE, XDR_FREE, xdr, xdrmem_create,
+                        xdr_encode_bool, xdr_decode_bool, xdr_error,
+                        xdr_encode_int, xdr_decode_int, 
+                        xdr_encode_uint, xdr_decode_uint,
+                        xdr_encode_int64, xdr_decode_int64, 
+                        xdr_encode_uint64, xdr_decode_uint64,
+                        xdr_encode_float32, xdr_decode_float32,
+                        xdr_encode_float64, xdr_decode_float64,
+                        xdr_encode_bytes, xdr_decode_bytes,
+                        xdr_getpos, xdr_destroy;
+import crack.ascii hex;
+import crack.math PI, E;
+
+// Create buffer
+xdrBuf := ManagedBuffer(1024);
+XdrStream := xdrmem_create(xdrBuf.buffer, xdrBuf.cap, XDR_ENCODE);
+
+xdr_encode_int(XdrStream, -100);
+xdr_encode_int(XdrStream, 200);
+
+xdr_encode_uint(XdrStream, 100);
+xdr_encode_uint(XdrStream, 200);
+
+int64 large = 2 << 60;
+
+xdr_encode_int64(XdrStream, -(1 << 60));
+xdr_encode_int64(XdrStream, (2 << 60));
+
+xdr_encode_uint64(XdrStream, 1 << 60);
+xdr_encode_uint64(XdrStream, 2 << 60);
+
+float32 mPI = PI;
+float64 mE = E;
+xdr_encode_float32(XdrStream, mPI);
+xdr_encode_float64(XdrStream, mE);
+
+xdr_encode_bool(XdrStream, false);
+xdr_encode_bool(XdrStream, true);
+
+xdr_encode_bytes(XdrStream, "hello".buffer, 5);
+
+xdrBuf.size = xdr_getpos(XdrStream);
+
+expected := "ffffff9c000000c800000064000000c8f00000000000000020000000000000001000000000000000200000000000000040490fdb4005bf0a8b14576900000000000000010000000568656c6c6f000000";
+
+xdr_destroy(XdrStream);
+encoded := hex(xdrBuf);
+if (encoded != expected)
+    cout `XDR encoding failed\n`;
+XdrStream = xdrmem_create(xdrBuf.buffer, xdrBuf.cap, XDR_DECODE);
+
+int1 := xdr_decode_int(XdrStream);
+int2 := xdr_decode_int(XdrStream);
+
+uint1 := xdr_decode_uint(XdrStream);
+uint2 := xdr_decode_uint(XdrStream);
+
+int164 := xdr_decode_int64(XdrStream);
+int264 := xdr_decode_int64(XdrStream);
+
+uint164 := xdr_decode_uint64(XdrStream);
+uint264 := xdr_decode_uint64(XdrStream);
+
+float132 := xdr_decode_float32(XdrStream);
+float164 := xdr_decode_float64(XdrStream);
+
+bool1 := xdr_decode_bool(XdrStream);
+bool2 := xdr_decode_bool(XdrStream);
+
+newBuf := ManagedBuffer(20);
+newLen := xdr_decode_bytes(XdrStream, newBuf.buffer, 20);
+newBuf.size = newLen;
+
+xdr_destroy(XdrStream);
+
+//------------------------------------------------------------------------------
+if (int1 != -100 || int2 != 200)
+    cout `Integer decoding failed\n`;
+if (uint1 != 100 || uint2 != 200)
+    cout `Unsigned integer decoding failed\n`;
+if (int164 != (int64)(-(1 << 60)) || int264 != (int64)(2<<60))
+    cout `64 bit integer decoding failed, got ($int164, $int264), expected($(-(1<<60)), $(2<<60))\n`;
+if (uint164 != (1 << 60) || uint264 != (2<<60))
+    cout `64 bit unsigned integer decoding failed\n`;
+if (float132 != mPI || float164 != mE)
+    cout `float decoding failed\n`;
+if (bool1 || !bool2)
+    cout `bool decoding failed\n`;
+
+if (newBuf != "hello")
+    cout `string decoding failed\n`;
+
+
+cout `ok\n`;

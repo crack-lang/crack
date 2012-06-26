@@ -1,0 +1,10 @@
+%%TEST%%
+XDR encoding/decoding
+%%ARGS%%
+
+%%FILE%%
+import test.test_xdr;
+%%EXPECT%%
+ok
+%%STDIN%%
+
