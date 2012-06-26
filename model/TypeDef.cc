@@ -38,12 +38,16 @@ bool TypeDef::isAbstract(FuncDef *func) {
 
         // found one.  do a look-up on the function, if there is a 
         // non-abstract implementation we should get a match that is 
-        // _not_ abstract.
+        // _not_ abstract and has the same receiver type (to rule out the 
+        // possibility that the implementation is for a method with the same 
+        // signature in a different class).
         OverloadDefPtr overloads =
             OverloadDefPtr::rcast(lookUp(func->name));
         assert(overloads);
         FuncDefPtr nearest = overloads->getSigMatch(func->args);
-        if (nearest->flags & FuncDef::abstract)
+        if (nearest->flags & FuncDef::abstract ||
+            func->getReceiverType() != nearest->getReceiverType()
+            )
             return true;
     }
     

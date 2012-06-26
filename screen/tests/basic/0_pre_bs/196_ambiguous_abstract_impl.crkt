@@ -1,0 +1,19 @@
+%%TEST%%
+Ambiguous implementation of abstract method
+%%ARGS%%
+%%FILE%%
+@abstract class A : VTableBase {
+  @abstract void f();
+}
+
+@abstract class B : VTableBase {
+  @abstract void f();
+}
+
+class C : A, B {
+  void f() {}
+}
+%%REXPECT%%
+ParseError: %SCRIPTNAME%:9: Non-abstract class C has abstract methods:
+  .builtin.void .*.B.f()
+%%STDIN%%
