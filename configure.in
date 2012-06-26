@@ -30,6 +30,7 @@ LT_INIT(dlopen)
 
 # external packages that we need
 AM_PATH_LLVM
+AM_ICONV
 
 # determine if we're 64 bit.
 AC_CHECK_SIZEOF([void *])
