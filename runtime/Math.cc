@@ -1,5 +1,4 @@
-// Copyright (C) 2010 Conrad D. Steenberg
-// Lincensed under LGPLv2
+// Copyright 2010 Conrad D. Steenberg <conrad.steenberg@gmail.com> under LGPLv2
 
 #include <math.h>
 #include <errno.h>

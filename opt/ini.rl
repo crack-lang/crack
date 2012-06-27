@@ -1,5 +1,5 @@
 // INI file parser
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
 // 2/11/2012
 
 import crack.io FStr, cout;

@@ -9,7 +9,7 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 
 # Adapted from FindCWD by:
-# (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+# Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
 # 6/22/2012
 
 if (XS_INCLUDE_DIR AND XS_LIBRARIES)

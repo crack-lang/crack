@@ -1,4 +1,4 @@
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
 // 6/22/2012
 
 #include <rpc/xdr.h>

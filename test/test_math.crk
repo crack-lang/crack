@@ -1,5 +1,4 @@
-// Copyright (C) 2010 Conrad D. Steenberg
-// Lincensed under LGPLv3
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
 
 // test of math library
 @import crack.ann define;

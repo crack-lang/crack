@@ -1,5 +1,5 @@
 // Test CrossRoads I/O
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
 // 6/15/2012
 
 import crack.io cout;
