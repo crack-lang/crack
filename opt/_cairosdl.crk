@@ -1,5 +1,5 @@
 // Crack binding of cairosdl.h
-// Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
 
 // This is an almost verbatim translation of cairosdl.h from 
 // http://cgit.freedesktop.org/~joonas/cairosdl/

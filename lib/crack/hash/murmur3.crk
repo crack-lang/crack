@@ -1,0 +1,101 @@
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// 6/26/2012
+
+// This implementation is derived from the public domain code at
+// https://github.com/PeterScott/murmur3, which in turn is based on:
+// MurmurHash3 was written by Austin Appleby, and is placed in the public
+// domain. The author hereby disclaims copyright to this source code.
+
+import crack.ascii radix;
+import crack.hash Hash;
+import crack.lang Buffer, ManagedBuffer;
+
+uint32 CalculateMurmur3_32(byteptr data, uint32 len, uint32 seed) {
+    if (data is null || len == 0) return 0;
+    uint32 i, k1;
+
+    uint32 h1 = seed;
+    uint32 nblocks = len / 4;
+
+    uint32 c1 = 0xcc9e2d51;
+    uint32 c2 = 0x1b873593;
+
+    //----------
+    // body
+    
+    blocks := array[uint32](data);
+
+    for (i = 0; i < nblocks; i++) {
+        k1 = blocks[i];
+
+        k1 *= c1;
+        k1 = (k1 << 15) | (k1 >> (32 - 15));
+        k1 *= c2;
+
+        h1 ^= k1;
+        h1 = (h1 << 13) | (h1 >> (32 - 13));
+        h1 = (h1 * 5) + 0xe6546b64;
+
+    }
+
+    //----------
+    // tail
+
+    tail := array[byte](data + nblocks*4);
+    k1 = 0;
+
+    uint32 sw = len & 3;
+    if (sw == 3) {
+        k1 ^= uint32(tail[2]) << 16;
+    }
+    if (sw == 2 || sw == 3) {
+        k1 ^= uint32(tail[1]) << 8;
+    }
+    if (sw == 1 || sw == 2 || sw == 3) {
+        k1 ^= tail[0];
+        k1 *= c1;
+        k1 = (k1 << 15) | (k1 >> (32 - 15));
+        k1 *= c2;
+        h1 ^= k1;
+    };
+
+    //----------
+    // finalization
+
+    h1 ^= len;
+    h1 ^= h1 >> 16;
+    h1 *= 0x85ebca6b;
+    h1 ^= h1 >> 13;
+    h1 *= 0xc2b2ae35;
+    h1 ^= h1 >> 16;
+
+    return h1;
+} 
+
+## Murmur3_32 class implements a Hash
+class Murmur3_32 : Hash {
+    uint32 _state;
+
+    oper init() : _state = 0 {
+        _size = 4;
+    }
+
+    ## Add more data
+    void update(Buffer buf){
+        _state = CalculateMurmur3_32(buf.buffer, uint32(buf.size), _state);
+    }
+
+    ## Return raw digest as a buffer of 4 bytes
+    Buffer digest() {
+        b := ManagedBuffer(4);
+        ib := array[uint32](b.buffer);
+        ib[0] = _state;
+        b.size = 4;
+        return b;
+    }
+
+    ## Return the digest as a uint32
+    uint32 asUInt32() {
+        return _state;
+    }
+}

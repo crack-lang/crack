@@ -1,5 +1,5 @@
 # Binding for builder/util.md5.h
-# (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
 # 6/22/2012
 
 
@@ -8,16 +8,16 @@
 @generateExtension crack.runtime.md5 {
     @filename 'runtime/MD5.cc'
     @dumpsymbols 'opt/md5.txt'
-    @inject '// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n// 6/22/2012\n'
+    @inject '// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n// 6/22/2012\n'
     @inject '#include "builder/util/md5.h"\n'
     @crack_internal
 
 
-    @inject 'md5_state_s *crk_new_md5_state(){
-               md5_state_s *state = new md5_state_s;
-               md5_init(state);
-               return state;
-            }\n'
+    @inject I'md5_state_s *crk_new_md5_state() {
+                md5_state_s *state = new md5_state_s;
+                md5_init(state);
+                return state;
+             }\n'
 
     @cname md5_state_s
     class md5;

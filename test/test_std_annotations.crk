@@ -1,6 +1,7 @@
 # Copyright 2010 Google Inc.
 
 import crack.io cout, StringFormatter;
+import crack.cont.array Array;
 @import crack.ann define, interface, implements;
 @import test.testmac foo, bar, tm_concat, tm_stringify;
 
@@ -99,5 +100,30 @@ if (1) {
         cout `FAILED double argument generic interface\n`;
 }
 
+# containers of interfaces
+if (1) {
+    @interface I {
+        @abstract void f();
+    }
+
+    int cleanups;
+
+    class A : Object @implements I {
+        int val;
+        oper init(int val) : val = val {}
+        oper del() { cleanups += val; }
+        void f() {}
+    }
+
+    if (1) {
+        Array[I] elems = {};
+        elems.append(A(1));
+        elems.append(A(2));
+        elems.append(A(3));
+    }
+
+    if (cleanups != 6)
+        cout `FAILED cleanups on containers of interfaces.`;
+}
 
 cout `ok\n`;

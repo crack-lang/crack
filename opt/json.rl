@@ -2,24 +2,24 @@
 // A JSON parser based on the Ragel state machine from http://flori.github.com/json/
 // This is a derivative work as defined by the license at 
 // http://www.ruby-lang.org/en/LICENSE.txt
-// The LGPLv3 license of Crack fulfills the requirements of 2.a and 3.a of that license
+// The LGPLv2 license of Crack fulfills the requirements of 2.a and 3.a of that license
 
 // To convert the Ragel source file to a .crk file use Ragel from
 // www.bitbucket.org/hengestone/ragel-crack until the patch -s merged using
 // ragel -K -F0 json.rl -o json.crk
 
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
 // 12/10/2011
 
 // For more info on JSON, see http://json.org/
 
 import crack.cont.array Array;
 import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer;
-import crack.json_common JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
+import crack.enc.json.lib JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
     JsonString, UnexpectedToken, ParseException;
 import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
     FP_NORMAL, FP_ZERO, sign;
-import crack.io Formatter;
+import crack.io Formatter, FStr, cerr;
 @import crack.ann define;
 
 class JsonParser {
@@ -61,7 +61,7 @@ class JsonParser {
 
         void formatTo(Formatter fmt) {
             if (result is null){
-              fmt.format(fmt.NULL);
+              fmt.write('null');
               return;
             }
 

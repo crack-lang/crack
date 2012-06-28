@@ -1,7 +1,7 @@
 // A few tests for lists and linked list appending and popping from the head
 // and tail
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com>
-// June 1 2012
+// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// 6/1/2012
 
 import crack.io cout;
 

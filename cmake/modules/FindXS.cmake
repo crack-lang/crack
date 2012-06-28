@@ -3,13 +3,14 @@
 #  XS_INCLUDE_DIR - the XS include directory
 #  XS_LIBRARIES - Libraries needed to use XS
 
-# based on FindGMP by:
+# FindCWD based on FindGMP by:
 # Copyright (c) 2006, Laurent Montel, <montel@kde.org>
 #
 # Redistribution and use is allowed according to the terms of the BSD license.
 
-# Adapted from FindCWD by
-# Conrad Steenberg <conrad.steenberg@gmail.com>
+# Adapted from FindCWD by:
+# Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
+# 6/22/2012
 
 if (XS_INCLUDE_DIR AND XS_LIBRARIES)
   # Already in cache, be silent

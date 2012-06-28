@@ -887,6 +887,12 @@ void interface(CrackContext ctx) {
         if (!(this is null))
             _iface_get$(nameTok.getText())Object().oper release();
     }
+    @final oper to Object() {
+        if (!(this is null))
+            return _iface_get$(nameTok.getText())Object();
+        else
+            return null;
+    }
 }\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 

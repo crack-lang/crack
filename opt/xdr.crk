@@ -1,0 +1,158 @@
+# Binding for rpc/xdr.h
+# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+# 6/22/2012
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.runtime.xdr {
+    @filename 'runtime/XDR.cc'
+    @dumpsymbols 'opt/xdr.txt'
+    @inject '// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n// 6/22/2012\n'
+    @inject '
+#include <rpc/xdr.h>
+#include <stdio.h>
+
+    XDR *crk_xdrmem_create(char *buffer, unsigned int numbytes, int op){
+               XDR *xdrs = new XDR;
+               xdrmem_create(xdrs, buffer, numbytes, (enum xdr_op)op);
+               return xdrs;
+            }
+
+    void crk_xdr_destroy(XDR * xdrs){
+        xdr_destroy(xdrs);
+    }
+
+    static bool xdr_error;
+    bool crk_xdr_error(){
+        return xdr_error;
+    }
+
+    // Returns the end of the buffer
+    unsigned int crk_xdr_getpos(XDR *xdrs){
+        return xdr_getpos(xdrs);
+    } 
+
+\#define scalar_op(tpe, func_tpe, crk_tpe) \\
+    bool crk_xdr_encode_\#\#crk_tpe(XDR *xdrs, tpe value){ \\
+        return (bool)xdr_\#\#func_tpe(xdrs, &value); \\
+    } \\
+\\
+    tpe crk_xdr_decode_\#\#crk_tpe(XDR *xdrs){ \\
+        tpe value; \\
+        xdr_error = xdr_\#\#func_tpe(xdrs, &value); \\
+        return value; \\
+    }
+
+    scalar_op(int, int, int)
+    scalar_op(unsigned int, u_int, uint)
+    scalar_op(int32_t, int32_t, int32)
+    scalar_op(uint32_t, uint32_t, uint32)
+    scalar_op(int64_t, int64_t, int64)
+    scalar_op(uint64_t, uint64_t, uint64)
+    scalar_op(float, float, float32)
+    scalar_op(double, double, float64)
+
+    // Encode a bool
+    bool crk_xdr_encode_bool(XDR *xdrs, bool value){
+        bool_t val = value;
+        return xdr_bool(xdrs, &val);
+    }
+
+    // Decode a bool
+    bool crk_xdr_decode_bool(XDR *xdrs){
+        bool_t value;
+        xdr_error = xdr_bool(xdrs, &value);
+        return (bool)value;
+    }
+
+    // Encode a string
+    bool crk_xdr_encode_bytes(XDR *xdrs, char *buf, unsigned int numbytes){
+        return xdr_bytes(xdrs, &buf, &numbytes, numbytes);
+    }
+
+    // Decode a string
+    unsigned int crk_xdr_decode_bytes(XDR *xdrs, char *buf, unsigned int numbytes){
+        xdr_error = xdr_bytes(xdrs, &buf, &numbytes, numbytes);
+        return numbytes;
+    }\n'
+
+    @crack_internal
+
+    const int XDR_ENCODE, XDR_DECODE, XDR_FREE;
+
+    @cname XDR
+    class xdr;
+
+    @cname crk_xdrmem_create
+    xdr xdrmem_create(byteptr buffer, uint numbytes, int op);
+
+    @cname crk_xdr_destroy
+    void xdr_destroy(xdr xdrs);
+
+    @cname crk_xdr_getpos
+    uint xdr_getpos(xdr xdrs);
+
+    // int
+    @cname crk_xdr_encode_int
+    bool xdr_encode_int(xdr xdrs, int value);
+    @cname crk_xdr_decode_int
+    int xdr_decode_int(xdr xdrs);
+
+    // uint
+    @cname crk_xdr_encode_uint
+    bool xdr_encode_uint(xdr xdrs, uint value);
+    @cname crk_xdr_decode_uint
+    uint xdr_decode_uint(xdr xdrs);
+
+    // int32
+    @cname crk_xdr_encode_int32
+    bool xdr_encode_int32(xdr xdrs, int32 value);
+    @cname crk_xdr_decode_int32
+    int32 xdr_decode_int32(xdr xdrs);
+
+    // uint32
+    @cname crk_xdr_encode_uint32
+    bool xdr_encode_uint32(xdr xdrs, uint32 value);
+    @cname crk_xdr_decode_uint32
+    uint32 xdr_decode_uint32(xdr xdrs);
+
+    // int64
+    @cname crk_xdr_encode_int64
+    bool xdr_encode_int64(xdr xdrs, int64 value);
+    @cname crk_xdr_decode_int64
+    int64 xdr_decode_int64(xdr xdrs);
+
+    // uint64
+    @cname crk_xdr_encode_uint64
+    bool xdr_encode_uint64(xdr xdrs, uint64 value);
+    @cname crk_xdr_decode_uint64
+    uint64 xdr_decode_uint64(xdr xdrs);
+
+    // float32
+    @cname crk_xdr_encode_float32
+    bool xdr_encode_float32(xdr xdrs, float32 value);
+    @cname crk_xdr_decode_float32
+    float32 xdr_decode_float32(xdr xdrs);
+
+    // float64
+    @cname crk_xdr_encode_float64
+    bool xdr_encode_float64(xdr xdrs, float64 value);
+    @cname crk_xdr_decode_float64
+    float64 xdr_decode_float64(xdr xdrs);
+
+    @cname crk_xdr_encode_bool
+    bool xdr_encode_bool(xdr xdrs, bool value);
+
+    @cname crk_xdr_decode_bool
+    bool xdr_decode_bool(xdr xdrs);
+
+    @cname crk_xdr_encode_bytes
+    bool xdr_encode_bytes(xdr xdrs, byteptr buf, uint numbytes);
+
+    @cname crk_xdr_decode_bytes
+    uint xdr_decode_bytes(xdr xdrs, byteptr buf, uint numbytes);
+
+    @cname crk_xdr_error
+    bool xdr_error();
+
+}
