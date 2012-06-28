@@ -135,7 +135,7 @@ class BuilderTestHarness {
     }
 
     void runBinary(Poller poller) {
-        cerr `running binary, got $(processHandler.getStdOut())\n`;
+        //cerr `running binary, got $(processHandler.getStdOut())\n`;
 
         String args = {};
 

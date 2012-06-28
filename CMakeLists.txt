@@ -161,10 +161,10 @@ install(FILES "${PROJECT_BINARY_DIR}/crack_config.h" DESTINATION "include/crack-
 install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"
         FILES_MATCHING PATTERN "*.crk")
 
-add_custom_target(check env CRACK_LIB_PATH=${CMAKE_CURRENT_BUILD_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BUILD_DIR}
+add_custom_target(check env CRACK_LIB_PATH=${CMAKE_CURRENT_BINARY_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BINARY_DIR}
                             SOURCES_ROOT=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/screen)
 
-add_custom_target(checkc env CRACK_LIB_PATH=${CMAKE_CURRENT_BUILD_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BUILD_DIR}
+add_custom_target(checkc env CRACK_LIB_PATH=${CMAKE_CURRENT_BINARY_DIR}/lib BUILD_ROOT=${CMAKE_CURRENT_BINARY_DIR}
                             SOURCES_ROOT=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test/screen -n)
 
 add_subdirectory(opt)
