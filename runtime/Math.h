@@ -1,4 +1,4 @@
-// Copyright 2010 Conrad D. Steenberg <conrad.steenberg@gmail.com>under LGPLv2
+// Copyright 2010 Conrad D. Steenberg <conrad.steenberg@gmail.com>
 
 #include "ext/Module.h"
 #include "ext/Func.h"

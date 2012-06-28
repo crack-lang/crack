@@ -1,10 +1,10 @@
 # Crack Crossroads IO binding based in xs.h
-# (C) Conrad Steenberg <conrad.steenberg@gmail.com>
+# COpyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 # 6/14/2012
 
 # Based on xs.h from Crossroads IO libxs 1.2.0, which is LGPLv3
 # Therefore this is file under LGPLv3
-# The C++ code generated from this file is under LGPLv2, like the rest of
+# The C++ code generated from this file is, like the rest of
 # Crack
 
 
@@ -13,7 +13,7 @@
 @generateExtension crack.ext._xs {
     @filename 'opt/_xs.cc'
     @dumpsymbols 'opt/_xs.txt'
-    @inject '// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n//\n'
+    @inject '// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>\n//\n'
     @inject '#include <stdio.h>\n'
     @inject '#include <stdint.h>\n'
     @inject '#include <string.h>\n'

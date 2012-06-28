@@ -1,5 +1,5 @@
 # Cairo 2D drawing library binding, class-based interface
-# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+# Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.lang free, FreeBase;
 import crack.lang CString, Buffer, Writer, Formatter;

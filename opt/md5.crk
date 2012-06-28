@@ -1,5 +1,5 @@
 # Binding for builder/util.md5.h
-# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+# Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 # 6/22/2012
 
 
@@ -8,7 +8,7 @@
 @generateExtension crack.runtime.md5 {
     @filename 'runtime/MD5.cc'
     @dumpsymbols 'opt/md5.txt'
-    @inject '// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2\n// 6/22/2012\n'
+    @inject '// Copyright Conrad Steenberg <conrad.steenberg@gmail.com>\n// 6/22/2012\n'
     @inject '#include "builder/util/md5.h"\n'
     @crack_internal
 

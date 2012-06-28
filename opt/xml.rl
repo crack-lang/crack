@@ -2,7 +2,7 @@
 // below is at http://libgdx.googlecode.com/svn/trunk/gdx/AUTHORS
 
 // Translated from the original Java version
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 2/27/2012
 
 // *****************************************************************************
