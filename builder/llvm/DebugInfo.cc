@@ -37,7 +37,7 @@ void DebugInfo::emitFunctionDef(const std::string &name,
             name,
             name,
             currentFile,
-            loc.getLineNumber(),
+            (loc) ? loc.getLineNumber() : 0,
             llvm::DIType(),
             false, // local to unit (i.e. like C static)
             true, // is definition,
@@ -50,7 +50,7 @@ MDNode* DebugInfo::emitLexicalBlock(const parser::Location &loc) {
 
     currentScope = builder.createLexicalBlock(currentScope,
                                               currentFile,
-                                              loc.getLineNumber(),
+                                              (loc) ? loc.getLineNumber() : 0,
                                               0 // col
                                               );
 
