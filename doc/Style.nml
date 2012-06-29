@@ -1,0 +1,510 @@
+
+Style Guide
+===========
+
+This is the coding style guide for the crack project.  If you are submitting
+code for this project, please follow these guidelines.
+
+Describing coding style is complicated.  While this guide attempts to
+enumerate all of the rules, it will inevitably let some of them slip through
+the cracks.  Remember that the point of this is to produce a codebase with a
+uniform appearance.  If this guide doesn't identify some practice as a rule, it
+doesn't mean that it's ok.  Please try to code in a manner consistent with the
+examples here, and with the body of the code if there are no examples.
+
+In General
+----------
+
+These rules apply to both C++ and Crack code.
+
+Indentation and Line Width
+''''''''''''''''''''''''''
+
+Lines of source code should not exceed 80 characters.
+
+Use 4-character indents.  Exceptions to this rule:
+
+-   aligning with argument lists and the beginning of other expressions:
+
+    {{
+    doSomethingExtremelyUseful(firstArgument,
+                               secondArgument
+                               );
+
+    int x = firstValue + secondValue +
+            thirdValue * 4;
+    }}
+
+-   when an argument in an argument list won't fit in a single line, indent
+    following lines one character:
+
+    {{
+    doSomethingExtremelyUseful(variableName + otherValue +
+                                indentedThirdValue +
+                                indentedFourthValue,
+                               nextArgument
+                               );
+    }}
+
+-   There are a few existing files that use three character indents.  Use
+    three character indents for these until they can be reformatted.
+
+Note that you should only use this alignment for statements that don't fit
+into 80 characters.  Whenever possible, write one statement per line.
+
+There are alternate formatting rules that apply in special situations:
+
+-   If a function definition or call does not fit into 80 characters using the
+    formatting rules above, indent all arguments four characters on the
+    following line and close it off with a parenthesis at the level of the
+    `call/definition`:
+
+    {{
+    VeryLargeReturnType functionDefinitionWithAVeryLargeName(
+        int firstArgument,
+        int secondArgument
+    ) {
+        // Function body
+    }
+    }}
+
+-   If the first line of a a constructor or "oper init" definition exceeds 80
+    characters, format it as follows:
+
+    {{
+        # parameters fit in 80 characters but initializers do not
+        oper init(String firstArgument, int secondArgument) :
+            x = firstArgument,
+            y = secondArgument {
+
+            # function body. (note blank line before it)
+        }
+
+        # neither parameters nor initializers fit in 80 characters
+        oper init(String firstArgument,
+                  String secondArgument
+                  ) :
+            x = firstArgument,
+            y = secondArgument {
+
+            # function body
+        }
+
+        # even with a single argument per line, initializers don't fit in 80
+        # characters
+        ReallyLongClassName::ReallyLongClassName(
+            ArgumentType arg,
+            ArgumentType other
+        ) :
+            BaseClass(arg),
+            instanceVariable(other) {
+
+            // function body (note blank line before it)
+        }
+    }}
+
+-   If the first line of a class statement doesn't fit in 80 characters,
+    indent it as follows:
+
+    {{
+    class ReallyLongClassName : BaseClassA,
+                                BaseClassB {
+
+        // class body
+    }
+
+    // even the first base class doesn't fit into 80 characters
+    class ReallyLongClassName :
+        public really_long_namespace::ReallLongBaseClassName,
+        public AnotherLongClassName {
+
+        // class body.
+    }
+    }}
+
+Other whitespace rules
+''''''''''''''''''''''
+
+When creating a new file, be sure that the file doesn't introduce trailing
+whitespace (whitespace at the end of a line after non-whitespace characters).
+For existing files that contain trailing whitespace, preserve it.
+
+Use a single space:
+
+-   around all binary operators:
+
+    {{
+        // OK
+        a = b + c;
+        y = 2 * x * x + 4 * x + 34;
+        if (a == b) ...
+
+        // WRONG!
+        a = b+c;
+        y = 2*x*x + 4*x + 34;
+        if (a==b) ...
+    }}
+
+-   around the symbols in a ternary operator:
+
+    {{
+        a = foo ? foo : bar;
+    }}
+
+-   between a statement name and its starting parens:
+
+    {{
+        if (condition) ...
+        while (condition) ...
+    }}
+
+-   between elements of a class statement:
+
+    {{
+        class Foo : Bar, Baz {
+    }}
+
+-   After a comma or semicolon separating elements on the same line:
+
+    {{
+        // OK
+        a(1, 2, 3);
+        void foo() { Type x = {}; return x.val(); }
+
+        a(1,2,3);b(3,4,5);          // WRONG!
+    }}
+
+-   Between curly parens and their contents in a single line function
+    definition:
+
+    {{
+        void getVar() { return var; }
+    }}
+
+Do not use spaces:
+
+-   between parentheses and their contents:
+
+    {{
+    if ( expression ) {                 // WRONG!
+    }}
+
+    The exception to this rule is when dealing with multiple nested
+    parenthesis where the structure isn't obvious, add a space within the
+    outermost parens:
+
+    {{
+    if ( ((x + y) / z) > ((x - y) / z) ) {      // OK
+    }}
+
+-   between an element and the comma or semicolon that follows it:
+
+    {{
+    a(1, 2, 3);                     // OK
+
+    a(1 , 2 , 3) ;                  // WRONG!
+    }}
+-   between an identifier and the following opening parenthesis (in a function
+    call) or bracket (in indexing):
+
+    {{
+    // OK
+    a(1, 3, 4);
+    x[100];
+
+    // WRONG!
+    a (1, 2, 3);
+    x [100];
+    }}
+-   In the use of empty curly braces:
+
+    {{
+    // OK
+    void doNothing() {}
+    SomeClass a = {};
+
+    // WRONG!
+    void doNothing() { }
+    SomeClass a = { };
+    }}
+
+Comments
+''''''''
+
+Comment code liberally.  Comments should be used to provide a terse
+description of sections of code, a clarification of complicated algorithms,
+and descriptions of cases where unusual code needs to be written.  Use one
+blank line before a commented section of code:
+
+{{
+    # move the contents of foo to bar:
+    TreeMap bar = {};
+    for (item :in foo)
+        bar[item.key] = item;
+
+    # remove all instances in the collection from the superset of all elements.
+    for (item :in bar)
+        superset.delete(item.key);
+}}
+
+For comments that apply to multiple following sections of code, follow that
+comment block with a line:
+
+{{
+    # read the contents of the configuration file and convert it to a tree.
+
+    # parse the config file
+    while (tok := configToker.getToken())
+        parser.inject(tok);
+
+    # convert to a datastructure
+    TreeMap config = {};
+    for (elem :in parser.getAllElements())
+        config[elem.name] = elem.value;
+}}
+
+Use "XXX" comments to indicate places where functionality is incomplete or
+intentionally broken.
+
+{{
+    # remove all instances in the collection from the superset of all elements.
+    # XXX should be performing a complicated algorithm to determine set
+    # membership instead of just relying on the name.
+    for (item :in bar)
+        superset.delete(item.key);
+}}
+
+Provide doc-comments for all public functions and interfaces.  These may be
+omitted for methods that simply implement documented base class methods:
+
+{{
+    ## Represents a really cool object.
+    class CoolObject : RighteousObject {
+
+        ## This method does something awesome.
+        ## desc: description of the thing to do.
+        void doSomethingAwesome(String desc) {}
+
+        void implementedBaseClassMethod() {}
+
+        void __undocumentedPrivateMethod() {}
+    }
+}}
+
+It is acceptable to provide doc-strings for private methods, but not necessary.
+
+Those damned curly braces
+'''''''''''''''''''''''''
+
+Place the beginning curly brace at the end of the originating statement, align
+the end curly brace with the beginning of the originating statement:
+
+{{
+    void function(Type arg) {
+        while (condition) {
+            statement;
+        }
+    }
+}}
+
+The exception to this rule is function or class definitions that are
+relatively simple and fit on a single line:
+
+{{
+    class Foo { int a, b; }
+    void square(float f) { return f * f; }
+}}
+
+Put a single space between the end of the statement and the opening curly
+brace, as in the examples.
+
+For an "if\/else" statement, use "cuddled" elses:
+
+{{
+    if (condition) {
+        statement1;
+    } else if (other_condition) {
+        statement2;
+    } else {
+        statement3;
+    }
+}}
+
+For all statements where curly braces are optional, use curly braces unless
+the contents are a single-expression statement.
+
+{{
+    while (condition)                       // OK
+        doSomething(firstArgument,
+                    secondArgument
+                    );
+
+    while (condition)                       // WRONG!
+        if (otherCondition)
+            doSomething();
+
+    while (condition) {                     // OK
+        if (otherCondition)
+            doSomething();
+    }
+}}
+
+If any part of an if\/else needs to be in curly braces, all parts of the
+if\/else should be in curly braces:
+
+{{
+    if (condition)                          // WRONG!
+        statement1;
+    else if (otherCond)
+        statement2;
+    else {
+        statement3;
+        statement4;
+    }
+
+    if (condition) {                        // OK
+        statement1;
+    } else if (otherCond) {
+        statement2;
+    } else {
+        statement3;
+        statement4;
+    }
+}}
+
+Try\/catch statements should also use cuddled exception clauses:
+
+{{
+    try {
+        statement;
+    } catch (Exception ex) {
+        handler;
+    }
+}}
+
+In a block that is not part of a statement, align the curly braces
+with the contents of the enclosing block and indent the contents normally:
+
+{{
+    doSomething();
+
+    {
+        Type scopedVariable;
+
+        scopedVariable.doSomethingElse();
+    }
+}}
+
+Naming Conventions
+''''''''''''''''''
+
+Type names should be camel-case, first character uppercase:
+
+{{
+    class ClassName { }
+}}
+
+Variable, method, function names should be camel-case, first character
+lower-case:
+
+{{
+    void doSomething() {
+        int someValue;
+    }
+}}
+
+Namespace and module names should be all lower-case, separate by underscores:
+
+{{
+    sample_name
+}}
+
+
+C++ Code
+--------
+
+Namespaces
+''''''''''
+
+Identifying namespaces in header files should be as unobtrusive as possible:
+they should not require indentation of the contents or multiple lines for
+nested namespaces.  When defining a nested namespace, put all namespace
+statements on the same line, and put the closing brackets on the same line
+followed by a comment:
+
+{{
+
+    namespace builder { namespace mvll {
+
+    // note that class is not indented.
+    class Foo {
+        // contents...
+    };
+
+    }} // namespace builder::mvll
+
+}}
+
+Reference Counting
+''''''''''''''''''
+
+Classes that are dynamically allocated use reference counting.  These are
+classes derived from *spug::RCBase* and have pointer templates with the suffix
+"Ptr" (defined by #`SPUG_RCPTR`(ClassName)#).  For Reference counted classes,
+use either reference counted pointers or raw pointers depending on the
+circumstances:
+
+-   Use reference counted pointers for global, instance, and local variables
+    and return values.
+-   Use raw pointers for `function/method` arguments and instance variables
+    where a raw pointer is needed to break a reference cycle (as in the
+    "parent pointer" in a tree).
+-   It is also sometimes permissible for a function to return a raw pointer
+    to something that is managed internally and /can not be deleted/ in the
+    course of its use.  Proceed with caution here, when in doubt return a
+    reference counted pointer.
+
+Other Points
+''''''''''''
+
+Use '`//`' style comments for everything except doxygen comments, use `/** */`
+for those:
+
+{{
+    /** Single line docstring. */
+    void doSomethingSimple();
+
+    /**
+     * This method is so complicated that it requires
+     * a multi-line docstring!
+     * @param arg this is a docstring.
+     */
+    void doSomethingComplicated(String arg);
+}}
+
+Crack Code
+----------
+
+Special Naming Conventions
+''''''''''''''''''''''''''
+
+Per language requirements, private class members shouold begin with a
+double-underscore:
+
+{{
+    class A {
+        int __a;
+        void __f() {}
+        class __PrivateNested {}
+    }
+}}
+
+Module-private\/protected variables, functions, methods and classes should
+begin with a single underscore:
+
+{{
+    class _A {}
+    void _f() {}
+
+    int _moduleVar;
+}}
