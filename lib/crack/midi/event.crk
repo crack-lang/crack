@@ -45,7 +45,7 @@
 import crack.ascii radix;
 import crack.cont.array Array;
 import crack.lang AssertionError, InvalidArgumentError;
-import crack.io cerr, StandardFormatter, FStr, StringFormatter, Writer;
+import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter, Writer;
 
 @import crack.ann interface, implements;
 
@@ -89,6 +89,9 @@ bool _printEvents;
     ## This method returns a tuple consisting of the new status byte and
     ## the string representation of the event.
     @abstract StatAndString toMidiString(byte status);
+    
+    ## Make a copy of the event object.
+    @abstract Event clone();
 }
 
 ## Abstract base class for all events that apply to a particular channel.
@@ -133,6 +136,10 @@ class NoteOn : NoteEvent {
         }
     }
     
+    Event clone() {
+        return NoteOn(time, channel, note, velocity);
+    }
+    
     void formatTo(Formatter f) {
         f `ch: $channel, note $note on, velocity $velocity`;
     }
@@ -161,6 +168,10 @@ class NoteOff : NoteEvent {
             return StatAndString(status, byteptr![status, note, velocity], 3);
         }
     }
+    
+    Event clone() {
+        return NoteOff(time, channel, note, velocity);
+    }
 
     void formatTo(Formatter f) {
         f `ch: $channel, note $note off, velocity $velocity`;
@@ -186,6 +197,10 @@ class ProgramChange : ChannelEvent {
         # channel, we just always send a status byte.
         status = 0xC0 | channel;
         return StatAndString(status, byteptr![status, program], 2);
+    }
+    
+    Event clone() {
+        return ProgramChange(time, channel, program);
     }
     
     void formatTo(Formatter f) {
@@ -226,6 +241,10 @@ class PitchWheel : ChannelEvent {
                                  );
         }
     }
+    
+    Event clone() {
+        return PitchWheel(time, channel, value);
+    }
 
     void formatTo(Formatter f) {
         f `ch: $channel, pitch wheel to $value`;
@@ -258,6 +277,10 @@ class ControlChange : ChannelEvent {
                                  );
         }
     }
+    
+    Event clone() {
+        return ControlChange(time, channel, controller, value);
+    }
 
     void formatTo(Formatter f) {
         f `ch: #channel, control $controller changed to $value`;
@@ -281,6 +304,10 @@ class SysEx : Event {
         StringFormatter temp = {};
         temp `\xF0$data\xF7`;
         return StatAndString(0xF0, temp.string());
+    }
+    
+    Event clone() {
+        return SysEx(time, data);
     }
 
     void formatTo(Formatter f) {
@@ -383,7 +410,7 @@ class Track {
                 return 0;
         }
     }
-
+    
     oper init(String name, Array[Event] events) :
         name = name,
         __events = events {
@@ -423,7 +450,7 @@ than the last event of the track ($(__events[-1].time)).`
         __events.append(evt);
     }
 
-    Event oper [](uint index) {
+    Event oper [](int index) {
         return __events[index];
     }
     
@@ -460,9 +487,44 @@ than the last event of the track ($(__events[-1].time)).`
 */
 }
 
-/*
-class TrackZipper(SeekableEventSource):
+Track merge(String name, Array[Track] tracks) {
+    alias Iter = typeof(tracks[0].iter());
 
+    # build an array of iterators
+    Array[Iter] iters = {tracks.count()};
+    for (t :in tracks)
+        iters.append(t.iter());
+    
+    Track result = {name};
+
+    # repeat until there are no more events in any of the iterators        
+    while (iters) {
+        
+        # find the earliest event in all of the iterators
+        Event first;
+        int firstIndex;
+        int index;
+        for (iter :in iters) {
+            if (!first || iter.elem().time < first.time) {
+                first = iter.elem();
+                firstIndex = index;
+            }
+            
+            ++index;
+        }
+
+        # bump the iterator for the next event forward
+        iters[firstIndex].next();
+        if (!iters[firstIndex])
+            iters.delete(firstIndex);
+
+        result.append(first);
+    }
+    
+    return result;
+}
+
+/*
    def __init__(self, tracks):
       self._events = []
       tracks = map(TrackCursor, tracks)

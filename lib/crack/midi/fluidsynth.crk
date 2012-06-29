@@ -5,8 +5,9 @@ import crack.io cout;
 import crack.lang CString;
 import crack.ext._fluidsynth fluid_synth_t, fluid_settings_t,
     fluid_audio_driver_t, delete_fluid_settings, delete_fluid_synth,
-    new_fluid_settings, new_fluid_synth, fluid_synth_noteon,
-    fluid_synth_noteoff, new_fluid_audio_driver, fluid_synth_sfload;
+    new_fluid_settings, new_fluid_synth, fluid_synth_all_notes_off, fluid_synth_noteon,
+    fluid_synth_noteoff, fluid_synth_program_change, new_fluid_audio_driver,
+    fluid_synth_sfload;
 
 class FluidSettings {
     fluid_settings_t _rep;
@@ -50,8 +51,20 @@ class FluidSynth {
         fluid_synth_noteon(__rep, channel, note, velocity);
     }
 
+    void allNotesOff(int channel) {
+        fluid_synth_all_notes_off(__rep, channel);
+    }
+
+    void allSoundsOff(int channel) {
+        fluid_synth_all_notes_off(__rep, channel);
+    }
+
     void noteOff(int channel, int note) {
         fluid_synth_noteoff(__rep, channel, note);
+    }
+
+    void programChange(int channel, int program) {
+        fluid_synth_program_change(__rep, channel, program);
     }
 }
 

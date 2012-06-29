@@ -24,6 +24,14 @@
                            );
 
     int fluid_synth_noteoff(fluid_synth_t synth, int channel, int key);
+    int fluid_synth_pitch_bend(fluid_synth_t synth, int channel, int val);
+    int fluid_synth_program_change(fluid_synth_t synth, int channel,
+                                   int program
+                                   );
+
+    int fluid_synth_all_notes_off(fluid_synth_t synth, int channel);
+    int fluid_synth_all_sounds_off(fluid_synth_t synth, int channel);
+
 
     fluid_audio_driver_t new_fluid_audio_driver(fluid_settings_t settings,
                                                 fluid_synth_t synth
