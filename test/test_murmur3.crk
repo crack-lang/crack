@@ -1,5 +1,5 @@
 // Test Murmur3_32 class
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> Under LGPLv2
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 6/25/2012
 
 import crack.ascii hex, radix;

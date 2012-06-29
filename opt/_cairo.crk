@@ -1,6 +1,6 @@
 # Crack Cairo binding of cairo.h
 # Adapted from SDL binding
-# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+# Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 @import crack.extgen generateExtension;
 

@@ -1,4 +1,4 @@
-// (C) Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 //
 #include <stdio.h>
 #include <stdint.h>

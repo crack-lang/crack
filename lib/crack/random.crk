@@ -1,4 +1,4 @@
 // Expose rand/srand random/srandom functions in libc
-// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.runtime random, srandom, setstate, initstate;

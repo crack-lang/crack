@@ -1,5 +1,5 @@
 # Test cairo 2D drawing library binding
-# Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+# Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 #
 # This tests the translation of the C library
 # Follow example code at http://cairographics.org/tutorial/

@@ -1,5 +1,5 @@
 // Binding of libm
-// Copyright 2010 Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2010 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 // See http://anubis.dkuug.dk/jtc1/sc22/wg14/www/docs/n869/ for libm reference
 // As a general rule, follow libm as well as GSL, without copying code.

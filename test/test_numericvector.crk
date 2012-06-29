@@ -1,5 +1,5 @@
 // Test NumericVector
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
 import crack.cont.numericarray NumericVector;
 import crack.io cout;

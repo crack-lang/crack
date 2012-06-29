@@ -1,5 +1,5 @@
 // MD5 hash algorithm wrapper class
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 6/22/2012
 
 import crack.lang Buffer, ManagedBuffer;

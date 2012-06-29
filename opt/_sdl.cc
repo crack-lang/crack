@@ -17,6 +17,13 @@ SDL_ResizeEvent *SDL_Event_GetResize(SDL_Event *evt) { return &evt->resize; }
 int16_t SDL_ResizeEvent_GetW(SDL_ResizeEvent *evt) { return evt->w; }
 int16_t SDL_ResizeEvent_GetH(SDL_ResizeEvent *evt) { return evt->h; }
 
+void crk_SDL_Rect_init(SDL_Rect *rect, int16_t x, int16_t y, uint16_t w, uint16_t h) {
+    rect->x = x;
+    rect->y = y;
+    rect->w = w;
+    rect->h = h;
+}
+
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -59,6 +66,22 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_SDL_Rect = mod->addType("SDL_Rect", sizeof(SDL_Rect));
+        type_SDL_Rect->addInstVar(type_int16, "x",
+                                CRACK_OFFSET(SDL_Rect, x));
+        type_SDL_Rect->addInstVar(type_int16, "y",
+                                CRACK_OFFSET(SDL_Rect, y));
+        type_SDL_Rect->addInstVar(type_uint16, "w",
+                                CRACK_OFFSET(SDL_Rect, w));
+        type_SDL_Rect->addInstVar(type_uint16, "h",
+                                CRACK_OFFSET(SDL_Rect, h));
+        f = type_SDL_Rect->addConstructor("init",
+                        (void *)crk_SDL_Rect_init
+                );
+            f->addArg(type_int16, "x");
+            f->addArg(type_int16, "y");
+            f->addArg(type_uint16, "w");
+            f->addArg(type_uint16, "h");
+
     type_SDL_Rect->finish();
 
 

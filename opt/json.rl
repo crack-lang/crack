@@ -2,13 +2,13 @@
 // A JSON parser based on the Ragel state machine from http://flori.github.com/json/
 // This is a derivative work as defined by the license at 
 // http://www.ruby-lang.org/en/LICENSE.txt
-// The LGPLv2 license of Crack fulfills the requirements of 2.a and 3.a of that license
+// The LGPLv3 license of Crack fulfills the requirements of 2.a and 3.a of that license
 
 // To convert the Ragel source file to a .crk file use Ragel from
 // www.bitbucket.org/hengestone/ragel-crack until the patch -s merged using
 // ragel -K -F0 json.rl -o json.crk
 
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 12/10/2011
 
 // For more info on JSON, see http://json.org/

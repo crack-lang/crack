@@ -1,4 +1,4 @@
-// Copyright Conrad Steenberg <conrad.steenberg@gmail.com> under LGPLv2
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 6/22/2012
 #include "builder/util/md5.h"
 md5_state_s *crk_new_md5_state() {

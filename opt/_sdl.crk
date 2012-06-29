@@ -22,6 +22,14 @@
     @inject 'SDL_ResizeEvent *SDL_Event_GetResize(SDL_Event *evt) { return &evt->resize; }\n';
     @inject 'int16_t SDL_ResizeEvent_GetW(SDL_ResizeEvent *evt) { return evt->w; }\n';
     @inject 'int16_t SDL_ResizeEvent_GetH(SDL_ResizeEvent *evt) { return evt->h; }\n';
+    @inject '
+void crk_SDL_Rect_init(SDL_Rect *rect, int16_t x, int16_t y, uint16_t w, uint16_t h) {
+    rect->x = x;
+    rect->y = y;
+    rect->w = w;
+    rect->h = h;
+}
+';
     @crack_internal
 
     
@@ -57,7 +65,13 @@
                                  );
 
     class SDL_Event;
-    class SDL_Rect;
+    class SDL_Rect {
+        int16 x, y;
+        uint16 w, h;
+        
+        @cname crk_SDL_Rect_init
+        oper init(int16 x, int16 y, uint16 w, uint16 h);
+    }
 
     SDL_Event SDL_EventNew();
     int SDL_Event_GetType(SDL_Event event);
