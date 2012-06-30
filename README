@@ -6,19 +6,9 @@ scripting language.
 Crack is a language similar to C/C++/Java that compiles directly from a script 
 to machine code.
 
-See COPYING.Lesser & COPYING for the license, this code is under the LGPL.  
-More formally:
+See MPL-2.0.txt for the license.  The bulk of this code is under the Mozilla 
+Public Licese, version 2.0.  More formally:
 
-This program and the accompanying libraries are free software; you can 
-redistribute and/or modify them under the terms of the GNU Lesser General 
-Public License as published by the Free Software Foundation; either version 
-3 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
