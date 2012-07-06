@@ -236,6 +236,7 @@ void Parser::parseClause(bool defsAllowed) {
    if (primaryType) {
       TypeDef *typeDef = primaryType.get();
       context->checkAccessible(typeDef);
+      identLoc = tok.getLocation();
       if (parseDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
@@ -497,11 +498,18 @@ ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
                               )
                );
 
+      // if we error in makeThisRef or createFieldRef, we want location to
+      // point to the variable referenced
+      context->setLocation(tok.getLocation());
+
       // if there's no container, try to use an implicit "this"
       ExprPtr receiver = container ? container : 
                                      context->makeThisRef(tok.getData());
       return context->createFieldRef(receiver.get(), var);
    } else {
+      // if we error in createVarRef, we want location to point to the
+      // variable referenced
+      context->setLocation(tok.getLocation());
       return context->createVarRef(var);
    }
 }
@@ -516,6 +524,8 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident,
             undefinedError ? undefinedError :
              SPUG_FSTR("Undefined variable: " << ident.getData()).c_str()
             );
+
+   context->setLocation(ident.getLocation());
    context->checkAccessible(var.get());
    
    // check for an overload definition - if it is one, make sure there's only 
@@ -967,6 +977,7 @@ ExprPtr Parser::parseConstSequence(TypeDef *containerType) {
          unexpected(tok, "Expected comma or right bracket after element");
    }
    
+   context->setLocation(identLoc);
    return context->emitConstSequence(containerType, elems);
 }
 
@@ -1302,6 +1313,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
 
    // check for a method
    } else if (tok.isIdent()) {
+      identLoc = tok.getLocation();
       expr = parsePostIdent(0, tok);
    
    // for a string constant
@@ -1517,6 +1529,9 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    }
    if (generic) generic->addToken(tok);
    
+   // save the ident source location for subsequent parse errors
+   identLoc = tok.getLocation();
+
    TypeDef *typeDef = typeofType.get();
    if (!typeDef && (!generic || !generic->getParm(tok.getData()))) {
       VarDefPtr def = context->ns->lookUp(tok.getData());
@@ -1539,7 +1554,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    
    // make sure this isn't an unspecialized generic
    if (!generic && typeDef->generic)
-      error(tok, SPUG_FSTR("Generic type " << typeDef->name << 
+      error(tok, SPUG_FSTR("Generic type " << typeDef->name <<
                             " must be specialized to be used."
                            )
             );
@@ -1865,10 +1880,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       } else if (override) {
          // forward declarations of overrides don't make any sense.
          TypeDef *base = TypeDefPtr::acast(override->getOwner());
-         warn(tok3, SPUG_FSTR("Unnecessary forward declaration for overriden "
-                               "function " << name << " (defined in ancestor "
-                               "class " << base->getDisplayName() << ")"
-                              )
+         warn(nameTok,
+              SPUG_FSTR("Unnecessary forward declaration for overriden "
+                        "function " << name << " (defined in ancestor "
+                        "class " << base->getDisplayName() << ")"
+                        )
               );
       } else {
          // it's a forward declaration or abstract function
@@ -1877,7 +1893,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          if (nextFuncFlags & FuncDef::abstract) {
             // abstract function - make sure we're in an abstract class
             if (!classTypeDef || !classTypeDef->abstract)
-               error(tok3, 
+               error(nameTok,
                      "Abstract functions can only be defined in an abstract "
                       "class."
                      );
@@ -2148,9 +2164,9 @@ bool Parser::parseDef(TypeDef *&type) {
       type = parseSpecializer(tok2, type);
       tok2 = getToken();
    } else if(type->generic) {
-      error(tok2, SPUG_FSTR("Generic type " << type->name << 
-                             " must be specialized to be used."
-                            )
+      error(identLoc, SPUG_FSTR("Generic type " << type->name <<
+                                " must be specialized to be used."
+                               )
             );
    }
    
@@ -2479,6 +2495,7 @@ void Parser::parseForStmt() {
          ExprPtr expr = parseExpression();
 
          // let the context expand an iteration expression            
+         context->setLocation(identLoc);
          context->expandIteration(tok.getData(), definesVar, varIsIter,
                                   expr.get(), 
                                   cond, 
@@ -2672,10 +2689,12 @@ void Parser::parseImportStmt(Namespace *ns) {
    
    // parse all following symbols
    vector<ImportedDef> syms;
+   vector<Token> symToks; // for parse error context
    while (true) {
       tok = getToken();
-      if (tok.isIdent()) {         
+      if (tok.isIdent()) {                   
          syms.push_back(ImportedDef(tok.getData()));
+         symToks.push_back(tok);
          tok = getToken();
          
          // see if this is "local_name = source_name" notation
@@ -2689,6 +2708,7 @@ void Parser::parseImportStmt(Namespace *ns) {
                                      ).c_str()
                           );
             syms.back().source = tok.getData();
+            symToks.back() = tok;
             tok = getToken();
          }
 
@@ -2721,13 +2741,14 @@ void Parser::parseImportStmt(Namespace *ns) {
                                 );
        BSTATS_END
       // alias all of the names in the new module
+      int st = 0;
       for (ImportedDefVec::iterator iter = syms.begin();
            iter != syms.end();
-           ++iter
+           ++iter, ++st
            ) {
          // make sure that the symbol is not private
          if (iter->source[0] == '_')
-            error(tok,
+            error(symToks[st],
                   SPUG_FSTR("Can not import private symbol " << iter->source << 
                              "."
                             )
@@ -3210,11 +3231,13 @@ TypeDefPtr Parser::parseClassDef() {
       while (true) {
          // parse the base class name
          TypeDefPtr baseClass = parseTypeSpec(0, generic);
+         // subsequent parse errors should note the location of ident
+         context->setLocation(identLoc);
          if (!generic) {
 
             // make sure that the class is not a forward declaration.
             if (baseClass->forward)
-               error(tok, 
+               error(identLoc,
                      SPUG_FSTR("you may not derive from forward declared "
                               "class " << baseClass->name
                               )
@@ -3518,6 +3541,9 @@ void Parser::redefineError(const Token &tok, const VarDef *existing) {
 
 void Parser::error(const Token &tok, const std::string &msg) {
    context->error(tok.getLocation(), msg);
+}
+void Parser::error(const Location &loc, const std::string &msg) {
+   context->error(loc, msg);
 }
 
 void Parser::warn(const Location &loc, const std::string &msg) {

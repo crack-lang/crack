@@ -6,6 +6,6 @@ warning on unnecessary forward declarations
 class A : VTableBase { void foo() {} }
      class C : A { void foo(); void foo() {} }
 %%EXPECT%%
-%OUTDIR%133_x.crk:2: Unnecessary forward declaration for overriden function foo (defined in ancestor class A)
+%OUTDIR%133_x.crk:2:25: Unnecessary forward declaration for overriden function foo (defined in ancestor class A)
 %%STDIN%%
 

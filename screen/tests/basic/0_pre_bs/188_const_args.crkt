@@ -9,5 +9,5 @@ void f(A a) {
     a = A();
 }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:5: You cannot assign to a constant, class or function.
+ParseError: %SCRIPTNAME%:5:7: You cannot assign to a constant, class or function.
 %%STDIN%%

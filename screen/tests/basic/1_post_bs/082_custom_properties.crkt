@@ -32,5 +32,5 @@ int i = customProp();
 i = readonlyProp();
 
 %%EXPECT%%
-ParseError: %OUTDIR%082_custom_properties.crk:22: readonly properties cannot have setters defined
+ParseError: %OUTDIR%082_custom_properties.crk:22:5: readonly properties cannot have setters defined
 %%STDIN%%

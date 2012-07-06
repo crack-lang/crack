@@ -6,5 +6,5 @@ void f() {}
 void g() {}
 alias f = g;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:3: Symbol f is already defined in this context.
+ParseError: %SCRIPTNAME%:3:7: Symbol f is already defined in this context.
 %%STDIN%%

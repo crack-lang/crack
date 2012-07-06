@@ -5,6 +5,6 @@ invalid return types
 %%FILE%%
 void f() {} int32 g() { return f(); }
 %%EXPECT%%
-ParseError: %OUTDIR%016_invalid_return_type.crk:1: Invalid return type void for function returning int32
+ParseError: %OUTDIR%016_invalid_return_type.crk:1:32: Invalid return type void for function returning int32
 %%STDIN%%
 

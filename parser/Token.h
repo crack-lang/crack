@@ -137,7 +137,7 @@ class Token {
       bool isLogicAnd() const { return type == logicAnd; }
       bool isLogicOr() const { return type == logicOr; }
       bool isTypeof() const { return type == typeofKw; }
-      
+
       bool isBinOp() const {
          switch (type) {
             case plus:

@@ -11,5 +11,5 @@ class A {
     }
 }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:5: 'this' variable is not an instance of A
+ParseError: %SCRIPTNAME%:5:13: 'this' variable is not an instance of A
 %%STDIN%%

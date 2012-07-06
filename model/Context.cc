@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <spug/StringFmt.h>
+#include <fstream>
 #include "builder/Builder.h"
 #include "parser/Token.h"
 #include "parser/Location.h"
@@ -36,6 +37,44 @@ using namespace model;
 using namespace std;
 
 parser::Location Context::emptyLoc;
+
+void Context::showSourceLoc(parser::Location loc, std::string &out) {
+
+    // set some limits
+    if (loc.getName() == "" ||
+        loc.getLineNumber() == 0 ||
+        loc.getStartCol() >= 500)
+        return;
+
+    // this should be reasonably fast, as we're assuming the error is
+    // thrown based on a source file already opened and cached by the os
+    ifstream in(loc.getName());
+    if (in.fail())
+        return;
+    char buf[512];
+    int line = loc.getLineNumber();
+    while (!in.eof() && line--) {
+        in.getline(buf, 512);
+    }
+    in.close();
+
+    out.append(buf);
+    out.push_back('\n');
+    int c;
+    for (c = 0; c < loc.getStartCol()-1 && c < 510; c++)
+        buf[c] = ' ';
+    buf[c++] = '^';
+    if (loc.getStartCol() != loc.getEndCol()) {
+        int len = loc.getEndCol()-loc.getStartCol();
+        for (int i = 0; i < len && c < 510; c++, i++)
+            buf[c] = '-';
+    }
+    buf[c] = 0;
+    out.append(buf);
+    out.push_back('\n');
+
+}
+
 
 void Context::warnOnHide(const string &name) {
     if (ns->lookUp(name))
@@ -339,27 +378,27 @@ VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
 
     // make sure we aren't using a forward declared type (we disallow this 
     // because we don't know if oper release() is defined for the type)
-    if (type->forward)
+    if (type->forward) {
+        setLocation(tok.getLocation());
         error(SPUG_FSTR("You cannot define a variable of a forward declared "
                          "type."
                         )
               );
+    }
     
     // if the definition context is an instance context, make sure that we 
     // haven't generated any constructors.
     ContextPtr defCtx = getDefContext();
     if (defCtx->scope == Context::instance && 
         TypeDefPtr::arcast(defCtx->ns)->initializersEmitted) {
-        parser::Location loc = tok.getLocation();
-        throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' << 
-                                            loc.getLineNumber() << 
-                                            ": Adding an instance variable "
-                                            "after 'oper init' has been "
-                                            "defined."
-                                           )
-                         );
+        throw parser::ParseError(tok.getLocation(),
+                                 "Adding an instance variable "
+                                 "after 'oper init' has been "
+                                 "defined."
+                                 );
     }
 
+    setLocation(tok.getLocation());
     return emitVarDef(defCtx.get(), type, tok.getData(), initializer, constant);
 }
 
@@ -892,24 +931,32 @@ void Context::error(const parser::Location &loc, const string &msg,
                     ) {
     
     list<string> &ec = construct->errorContexts;
-    if (throwException)
-        throw parser::ParseError(SPUG_FSTR(loc.getName() << ':' <<
-                                           loc.getLineNumber() << ": " <<
+    if (throwException) {
+        string diag;
+        if (!construct->rootBuilder->options->quiet) {
+            showSourceLoc(loc, diag);
+        }
+        throw parser::ParseError(loc, SPUG_FSTR(
                                            msg <<
                                            ContextStack(ec) <<
-                                           endl
+                                           endl <<
+                                           diag
                                            )
                                 );
+    }
     else {
-        cerr << "ParseError: " << loc.getName() << ":" << 
-            loc.getLineNumber() << ": " << msg << ContextStack(ec) << endl;
+        cerr << "ParseError: " << loc.getName() << ":" <<
+            loc.getLineNumber() << ":" << loc.getColNumber() << ": " << msg <<
+            ContextStack(ec) << endl;
         exit(1);
     }
     
 }
 
 void Context::warn(const parser::Location &loc, const string &msg) {
-    cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << msg << endl;
+    cerr << loc.getName() << ":" <<
+            loc.getLineNumber() << ":" <<
+            loc.getColNumber() << ": " << msg << endl;
 }
 
 void Context::pushErrorContext(const string &msg) {

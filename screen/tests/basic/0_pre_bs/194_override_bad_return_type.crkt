@@ -6,5 +6,5 @@ class X[T] {}
 @abstract class A { @abstract int f(); }
 class B : A { X[int] f() { return null; } }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:3: Function return type of X[.builtin.int].X does not match that of the function it overrides (int)
+ParseError: %SCRIPTNAME%:3:22: Function return type of X[.builtin.int].X does not match that of the function it overrides (int)
 %%STDIN%%

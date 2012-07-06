@@ -5,6 +5,6 @@ error on dead code
 %%FILE%%
 while (1) { break; puts("fail"); }
 %%EXPECT%%
-ParseError: %OUTDIR%079_dead_code.crk:1: unreachable code
+ParseError: %OUTDIR%079_dead_code.crk:1:20: unreachable code
 %%STDIN%%
 

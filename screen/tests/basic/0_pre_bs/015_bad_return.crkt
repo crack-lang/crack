@@ -5,6 +5,6 @@ returning void from non-void func
 %%FILE%%
 int32 f() { return; }
 %%EXPECT%%
-ParseError: %OUTDIR%015_bad_return.crk:1: Missing return expression for function returning int32
+ParseError: %OUTDIR%015_bad_return.crk:1:19: Missing return expression for function returning int32
 %%STDIN%%
 

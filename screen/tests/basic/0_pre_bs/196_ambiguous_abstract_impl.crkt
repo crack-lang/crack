@@ -14,6 +14,6 @@ class C : A, B {
   void f() {}
 }
 %%REXPECT%%
-ParseError: %SCRIPTNAME%:9: Non-abstract class C has abstract methods:
+ParseError: %SCRIPTNAME%:9:16: Non-abstract class C has abstract methods:
   .builtin.void .*.B.f()
 %%STDIN%%

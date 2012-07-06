@@ -120,8 +120,7 @@ void Func::finish() {
         Toker toker(emptyStream, name.c_str());
         Parser parser(toker, context);
 
-        LocationMap locMap;
-        Token nameTok(Token::ident, name, locMap.getLocation(name.c_str(), 0));
+        Token nameTok(Token::ident, name, new LocationImpl(name.c_str(), 0));
 
         VarDefPtr existingDef = parser.checkForExistingDef(nameTok, name, true);
         override = parser.checkForOverride(existingDef.get(), realArgs, context->ns.get(), nameTok, name);

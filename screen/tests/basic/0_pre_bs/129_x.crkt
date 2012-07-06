@@ -5,6 +5,6 @@ invalid unary operator
 %%FILE%%
 class Foo {} !Foo();
 %%EXPECT%%
-ParseError: %OUTDIR%129_x.crk:1: oper ! is not defined for type Foo
+ParseError: %OUTDIR%129_x.crk:1:14: oper ! is not defined for type Foo
 %%STDIN%%
 

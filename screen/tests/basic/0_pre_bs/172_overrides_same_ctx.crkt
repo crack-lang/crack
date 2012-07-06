@@ -5,5 +5,5 @@ error on overrides in the same context
 void f() {}
 void f() {}
 %%EXPECT%%
-ParseError: %OUTDIR%172_overrides_same_ctx.crk:2: Definition of f hides previous overload.
+ParseError: %OUTDIR%172_overrides_same_ctx.crk:2:6: Definition of f hides previous overload.
 %%STDIN%%

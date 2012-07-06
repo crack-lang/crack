@@ -5,6 +5,6 @@ return in module scope
 %%FILE%%
 return
 %%EXPECT%%
-ParseError: %OUTDIR%017_return_from_mod.crk:1: Return statement not allowed in module scope
+ParseError: %OUTDIR%017_return_from_mod.crk:1:1: Return statement not allowed in module scope
 %%STDIN%%
 

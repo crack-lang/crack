@@ -5,6 +5,6 @@ forward declarations in functions must be resolved by the end of the block
 %%FILE%%
 void outer() { void foo(); }
 %%EXPECT%%
-ParseError: %OUTDIR%120_fwd_decls_resolved_in_funcs.crk:1: Forward declared function not defined at the end of the block: void outer.foo()
+ParseError: %OUTDIR%120_fwd_decls_resolved_in_funcs.crk:1:28: Forward declared function not defined at the end of the block: void outer.foo()
 %%STDIN%%
 

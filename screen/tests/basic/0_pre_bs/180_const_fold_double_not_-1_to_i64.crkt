@@ -4,5 +4,5 @@ const folding of double not on a -1 incompatible with int64
 %%FILE%%
 int64 i =   ~~0xFFFFFFFFFFFFFFFF;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1: Invalid type uint64 for initializer for variable i of type int64.
+ParseError: %SCRIPTNAME%:1:13: Invalid type uint64 for initializer for variable i of type int64.
 %%STDIN%%

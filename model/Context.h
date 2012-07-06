@@ -66,6 +66,13 @@ class Context : public spug::RCBase {
         OverloadDefPtr replicateOverload(const std::string &varName,
                                          Namespace *srcNs
                                          );
+
+        /**
+         * this uses Location to show the
+         * source line and caret position of the problem
+         */
+        void showSourceLoc(parser::Location loc, std::string &out);
+
     public:
 
         // context scope - this is used to control how variables defined in 

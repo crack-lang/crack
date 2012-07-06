@@ -11,21 +11,25 @@
 
 namespace parser {
 
-// forward declaration of Location map so we can befriend it.
-class LocationMap;
-
 class LocationImpl : public spug::RCBase {
 
-   friend class LocationMap;
    private:
       std::string name;
       int lineNumber;
+      int startCol;
+      int endCol;
 
    public:
 
-      LocationImpl(const std::string &name, int lineNumber) :
+      LocationImpl(const std::string &name,
+                   int lineNumber,
+                   int startCol = 1,
+                   int endCol = 1) :
          name(name),
-         lineNumber(lineNumber) {
+         lineNumber(lineNumber),
+         startCol(startCol),
+         endCol(endCol) {
+
       }
 
       /** so that we can construct one of these prior to assigning it */
@@ -36,25 +40,42 @@ class LocationImpl : public spug::RCBase {
        * existence for as long as the instance is
        */
       const char *getName() const {
-	 return name.c_str();
+          return name.c_str();
       }
 
       /** returns the source line number */
       int getLineNumber() const {
-	 return lineNumber;
+          return lineNumber;
+      }
+
+      /** returns the source column numbers */
+      int getColNumber() const {
+          return startCol;
+      }
+
+      int getStartCol() const {
+          return startCol;
+      }
+
+      int getEndCol() const {
+          return endCol;
       }
 
       bool operator ==(const LocationImpl &other) const {
-	 return name == other.name && lineNumber == other.lineNumber;
+          return name == other.name &&
+                 lineNumber == other.lineNumber &&
+                 startCol == other.startCol &&
+                 endCol == other.endCol;
       }
 
       bool operator !=(const LocationImpl &other) const {
-	 return !(*this == other);
+          return !(*this == other);
       }
 
       friend std::ostream &
       operator <<(std::ostream &out, const LocationImpl &loc) {
-	 return out << loc.name << ':' << std::dec << loc.lineNumber;
+          return out << loc.name << ':' << std::dec << loc.lineNumber <<
+                 ":" << loc.startCol;
       }
 
 };
@@ -67,14 +88,12 @@ SPUG_RCPTR(LocationImpl);
  * These are managed in the LocationMap
  */
 class Location : public LocationImplPtr {
-   friend class LocationMap;
+
    private:
 
    public:
 
       /**
-       * You probably don't want to use this: use LocationMap::getLocation()
-       * to keep them cached instead.
        */
       Location(LocationImpl *impl) : LocationImplPtr(impl) {}
 
@@ -92,6 +111,17 @@ class Location : public LocationImplPtr {
       /** returns the source line number */
       int getLineNumber() const {
          return get()->getLineNumber();
+      }
+
+      /** returns the source columns */
+      int getColNumber() const {
+         return get()->getColNumber();
+      }
+      int getStartCol() const {
+         return get()->getStartCol();
+      }
+      int getEndCol() const {
+         return get()->getEndCol();
       }
 
       friend std::ostream &

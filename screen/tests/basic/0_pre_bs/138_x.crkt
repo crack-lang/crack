@@ -5,6 +5,6 @@ no void variables
 %%FILE%%
 void v;
 %%EXPECT%%
-ParseError: %OUTDIR%138_x.crk:1: Can not create a variable of type 'void'
+ParseError: %OUTDIR%138_x.crk:1:6: Can not create a variable of type 'void'
 %%STDIN%%
 

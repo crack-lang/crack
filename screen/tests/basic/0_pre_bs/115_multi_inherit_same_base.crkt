@@ -7,6 +7,6 @@ class A {}
      class B : A {}
      class C : B, A {}
 %%EXPECT%%
-ParseError: %OUTDIR%115_multi_inherit_same_base.crk:3: Class A is already an ancestor.
+ParseError: %OUTDIR%115_multi_inherit_same_base.crk:3:19: Class A is already an ancestor.
 %%STDIN%%
 

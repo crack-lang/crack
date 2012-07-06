@@ -8,5 +8,5 @@ abstract function defined after nested derived class
     @abstract void f();
 }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:4: You cannot declare an abstract function after the nested derived class B.
+ParseError: %SCRIPTNAME%:4:23: You cannot declare an abstract function after the nested derived class B.
 %%STDIN%%

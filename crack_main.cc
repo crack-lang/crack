@@ -31,6 +31,7 @@ struct option longopts[] = {
     {"double-builder", false, 0, doubleBuilder},
     {"optimize", true, 0, 'O'},
     {"verbosity", false, 0, 'v'},
+    {"quiet", false, 0, 'q'},
     {"no-cache", false, 0, 'C'},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
@@ -80,6 +81,8 @@ void usage(int retval) {
             << endl;
     cout << " -v         --verbose            Verbose output, use more than once"
             " for greater effect" << endl;
+    cout << " -q         --quiet              No extra output, implies"
+            " verbose level 0" << endl;
     cout << "            --version            Emit the version number and exit"
             << endl;
     cout << "            --stats              Emit statistics about compile "
@@ -113,7 +116,7 @@ int main(int argc, char **argv) {
     char * const token[] = { NULL };
     bool optionsError = false;
     bool useDoubleBuilder = false;    
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:v", longopts, &idx)) !=
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vq", longopts, &idx)) !=
            -1) {
         switch (opt) {
             case 0:
@@ -186,6 +189,10 @@ int main(int argc, char **argv) {
                 break;
             case 'v':
                 crack.options->verbosity++;
+                break;
+            case 'q':
+                crack.options->verbosity = 0;
+                crack.options->quiet = true;
                 break;
             case 'n':
                 crack.noBootstrap = true;

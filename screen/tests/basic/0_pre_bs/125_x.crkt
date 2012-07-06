@@ -5,6 +5,6 @@ assignment to type
 %%FILE%%
 class A {} A = 100;
 %%EXPECT%%
-ParseError: %OUTDIR%125_x.crk:1: You cannot assign to a constant, class or function.
+ParseError: %OUTDIR%125_x.crk:1:14: You cannot assign to a constant, class or function.
 %%STDIN%%
 

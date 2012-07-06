@@ -6,6 +6,6 @@ forward declarations must be in the same context as definition
 void f();
      if (1) { void f() {} }
 %%EXPECT%%
-ParseError: %OUTDIR%118_fwd_decls_same_ctx.crk:2: Function f can not be defined in a different namespace from its forward declaration.
+ParseError: %OUTDIR%118_fwd_decls_same_ctx.crk:2:24: Function f can not be defined in a different namespace from its forward declaration.
 %%STDIN%%
 

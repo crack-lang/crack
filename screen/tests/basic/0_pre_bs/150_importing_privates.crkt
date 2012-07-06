@@ -5,6 +5,6 @@ Error when importing privates
 %%FILE%%
 import test.testmod5 _protected;
 %%EXPECT%%
-ParseError: %OUTDIR%150_importing_privates.crk:1: Can not import private symbol _protected.
+ParseError: %OUTDIR%150_importing_privates.crk:1:22: Can not import private symbol _protected.
 %%STDIN%%
 

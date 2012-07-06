@@ -12,6 +12,6 @@ class A {
 
 for (x :in A());
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:9: Iterator type I does not have an 'elem()' method.
+ParseError: %SCRIPTNAME%:9:12: Iterator type I does not have an 'elem()' method.
 %%STDIN%%
 

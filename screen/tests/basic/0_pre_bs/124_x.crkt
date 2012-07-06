@@ -5,6 +5,6 @@ assignment to functions
 %%FILE%%
 void f() {} f = 100;
 %%EXPECT%%
-ParseError: %OUTDIR%124_x.crk:1: You cannot assign to a constant, class or function.
+ParseError: %OUTDIR%124_x.crk:1:15: You cannot assign to a constant, class or function.
 %%STDIN%%
 

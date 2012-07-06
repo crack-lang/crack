@@ -4,5 +4,5 @@ private aliases
 %%FILE%%
 import test.testmod7 _private;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1: Can not import private symbol _private.
+ParseError: %SCRIPTNAME%:1:22: Can not import private symbol _private.
 %%STDIN%%

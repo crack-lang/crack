@@ -6,6 +6,6 @@ no defining variables of forward declared types
 class A; A f(); void g() { A a = f(); } class A {} A f() { return A(); }
      g();
 %%EXPECT%%
-ParseError: %OUTDIR%122_x.crk:1: You cannot define a variable of a forward declared type.
+ParseError: %OUTDIR%122_x.crk:1:30: You cannot define a variable of a forward declared type.
 %%STDIN%%
 

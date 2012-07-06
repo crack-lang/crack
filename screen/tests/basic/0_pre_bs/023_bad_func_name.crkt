@@ -5,6 +5,6 @@ bad func names
 %%FILE%%
 class Foo { void f() { this.g(); }};
 %%EXPECT%%
-ParseError: %OUTDIR%023_bad_func_name.crk:1: No method exists matching g()
+ParseError: %OUTDIR%023_bad_func_name.crk:1:29: No method exists matching g()
 %%STDIN%%
 

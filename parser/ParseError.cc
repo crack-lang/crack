@@ -7,10 +7,12 @@
 using namespace std;
 using namespace parser;
 
+std::string ParseError::getMessage() const {
+    stringstream text;
+    text << loc << ": " << msg;
+    return text.str();
+}
+
 void ParseError::abort(const Token &tok, const char *msg) {
-   Location loc = tok.getLocation();
-   stringstream text;
-   cout << loc.getName() << ':' << loc.getLineNumber() << ": " << msg << endl;
-   text << loc.getName() << ':' << loc.getLineNumber() << ": " << msg;
-   throw ParseError(text.str().c_str());
+   throw ParseError(tok.getLocation(), msg);
 }

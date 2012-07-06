@@ -67,6 +67,11 @@ class Parser {
 
       Toker &toker;
 
+      // often during a parse error, we want to point the user to the location
+      // that wasn't the last source token location, but instead to e.g. an
+      // appropriate identifier. in these cases, we save that location here.
+      Location identLoc;
+
       // the module context, and the current context.
       model::ContextPtr moduleCtx, context;
 
@@ -468,6 +473,7 @@ class Parser {
        * message text.
        */
       void error(const Token &tok, const std::string &msg);
+      void error(const Location &loc, const std::string &msg);
 
       /** Writes a warning message to standard error. */
       void warn(const Location &loc, const std::string &msg);

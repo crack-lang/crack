@@ -1,7 +1,6 @@
-
-
 // Copyright 2003 Michael A. Muller
 // Copyright 2009 Google Inc.
+// Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
 
 #include <limits.h>
 #include <sstream>
@@ -13,6 +12,19 @@
 using namespace std;
 using namespace parser;
 
+Location Toker::getLocation() {
+    if (currentName == lastLoc.getName() &&
+        currentLine == lastLoc.getLineNumber() &&
+        currentStartCol == lastLoc.getStartCol() &&
+        currentEndCol == lastLoc.getEndCol())
+        return lastLoc;
+    lastLoc = new LocationImpl(currentName,
+                               currentLine,
+                               currentStartCol,
+                               currentEndCol-1);
+    return lastLoc;
+}
+
 bool Toker::getChar(char &ch) {
     bool result;
     if (putbackIndex < putbackSize) {
@@ -21,16 +33,26 @@ bool Toker::getChar(char &ch) {
     } else {
         result = src.read(&ch, 1);
     }
-    if (result && ch == '\n') 
-        locationMap.incrementLineNumber();
+    currentEndCol++;
+    if (result && ch == '\n') {
+        currentLine++;
+        saveEndCol = currentEndCol-1;
+        currentStartCol = 1;
+        currentEndCol = 1;
+    }
+    //cout << "getChar [" << ch << "] start: " << currentStartCol << ", end: " << currentEndCol << "\n";
     return result;
 }
 
 void Toker::ungetChar(char ch) {
     assert(putbackIndex && "Toker putback overflow");
     putbackBuf[--putbackIndex] = ch;
-    if (ch == '\n') 
-        locationMap.decrementLineNumber();
+    currentEndCol--;
+    if (ch == '\n') {
+        currentLine--;
+        currentEndCol = saveEndCol;
+    }
+    //cout << "ungetChar [" << ch << "] start: " << currentStartCol << ", end: " << currentEndCol << "\n";
 }
 
 void Toker::initIndent(bool indented) {
@@ -111,8 +133,12 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src),
     state(st_none),
     putbackIndex(putbackSize),
-    indentedString(false) {
-    locationMap.setName(sourceName, lineNumber);
+    indentedString(false),
+    currentName(sourceName),
+    currentLine(lineNumber),
+    currentStartCol(1),
+    currentEndCol(1) {
+    lastLoc = new LocationImpl(sourceName, 1, 1, 0);
 }
 
 Token Toker::fixIdent(const string &data, const Location &loc) {
@@ -168,7 +194,7 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::switchKw, data, loc);
     else
         return Token(Token::ident, data, 
-                     locationMap.getLocation()
+                     getLocation()
                      );
 }
 
@@ -190,7 +216,11 @@ Token Toker::readToken() {
     assert((state == st_none || state == st_interpNone || state == st_istr) && 
            "readToken(): tokenizer in invalid state"
            );
- 
+
+    // start col is where lastLocation ended, plus one
+    currentStartCol = lastLoc.getEndCol()+1;
+    //cout << "readToken: " << currentName << ":" << currentLine << ":" << currentStartCol << ":" << currentEndCol << "\n";
+
     while (true) {
         // read the next character from the stream
         if (!getChar(ch)) break;
@@ -226,16 +256,21 @@ Token Toker::readToken() {
             case st_interpNone:
                 state = st_none;
                 if (isspace(ch)) {
-                   ;
+                    // we increase our
+                    // startCol so that when the Location is made for this
+                    // token, the startCol points to the first non whitespace
+                    // character
+                    if (isblank(ch))
+                        currentStartCol++;
                 } else if (isalpha(ch) || ch == '_' || ch < 0) {
                     buf << ch;
                     state = st_ident;
                 } else if (ch == '#') {
                     state = st_comment;
                 } else if (ch == ';') {
-                    return Token(Token::semi, ";", locationMap.getLocation());
+                    return Token(Token::semi, ";", getLocation());
                 } else if (ch == ',') {
-                    return Token(Token::comma, ",", locationMap.getLocation());
+                    return Token(Token::comma, ",", getLocation());
                 } else if (ch == '=') {
                     symchars[sci++] = ch; t1 = Token::assign; t2 =Token::eq;
                     state = st_digram;
@@ -251,24 +286,24 @@ Token Toker::readToken() {
                     t3 = Token::bitLSh;
                     state = st_ltgt;
                 } else if (ch == '(') {
-                    return Token(Token::lparen, "(", locationMap.getLocation());
+                    return Token(Token::lparen, "(", getLocation());
                 } else if (ch == ')') {
-                    return Token(Token::rparen, ")", locationMap.getLocation());
+                    return Token(Token::rparen, ")", getLocation());
                 } else if (ch == '{') {
-                    return Token(Token::lcurly, "{", locationMap.getLocation());
+                    return Token(Token::lcurly, "{", getLocation());
                 } else if (ch == '}') {
-                    return Token(Token::rcurly, "}", locationMap.getLocation());
+                    return Token(Token::rcurly, "}", getLocation());
                 } else if (ch == '[') {
                     return Token(Token::lbracket, "[", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == ']') {
                     return Token(Token::rbracket, "]",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '$') {
                     return Token(Token::dollar, "$", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '+') {
                     state = st_plus;
@@ -306,7 +341,7 @@ Token Toker::readToken() {
                 } else if (ch == '.') {
                     state = st_period;
                 } else if (ch == '@') {
-                    return Token(Token::ann, "@", locationMap.getLocation());
+                    return Token(Token::ann, "@", getLocation());
                 } else if (isdigit(ch)) {
                     if (ch == '0') {
                         state = st_zero;
@@ -316,18 +351,18 @@ Token Toker::readToken() {
                         state = st_number;
                     }
                 } else if (ch == '~') {
-                    return Token(Token::tilde, "~", locationMap.getLocation());
+                    return Token(Token::tilde, "~", getLocation());
                 } else if (ch == '`') {
                     initIndent(false);
                     state = st_istr;
                     return Token(Token::istrBegin, "`", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '?') {
-                    return Token(Token::quest, "?", locationMap.getLocation());
+                    return Token(Token::quest, "?", getLocation());
                 } else {
                     ParseError::abort(Token(Token::dot, "", 
-                                            locationMap.getLocation()
+                                            getLocation()
                                             ),
                                       "unknown token"
                                       );
@@ -338,16 +373,16 @@ Token Toker::readToken() {
                 state = st_none;
                 if (ch == '&') {
                     return Token(Token::logicAnd, "&&",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '=') {
                     return Token(Token::assignAnd, "&=",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else {
                     ungetChar(ch);
                     return Token(Token::bitAnd, "&", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -356,16 +391,16 @@ Token Toker::readToken() {
                 state = st_none;
                 if (ch == '|') {
                     return Token(Token::logicOr, "||",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '=') {
                     return Token(Token::assignOr, "|=",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else {
                     ungetChar(ch);
                     return Token(Token::bitOr, "|", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -373,14 +408,14 @@ Token Toker::readToken() {
             case st_minus:
                 state = st_none;
                 if (ch == '-') {
-                    return Token(Token::decr, "--", locationMap.getLocation());
+                    return Token(Token::decr, "--", getLocation());
                 } else if (ch == '=') {
                     return Token(Token::assignMinus, "-=",
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else {
                     ungetChar(ch);
-                    return Token(Token::minus, "-", locationMap.getLocation());
+                    return Token(Token::minus, "-", getLocation());
                 }
                 break;
 
@@ -399,11 +434,11 @@ Token Toker::readToken() {
                 if (ch == '=') {
                     symchars[sci++] = ch;
                     symchars[sci++] = 0;
-                    return Token(t2, symchars, locationMap.getLocation());
+                    return Token(t2, symchars, getLocation());
                 } else {
                     symchars[1] = 0;
                     ungetChar(ch);
-                    return Token(t1, symchars, locationMap.getLocation());
+                    return Token(t1, symchars, getLocation());
                 }
                 break;
             
@@ -416,7 +451,7 @@ Token Toker::readToken() {
                 else {
                     ungetChar(ch);
                     state = st_none;
-                    return Token(Token::dot, ".", locationMap.getLocation());
+                    return Token(Token::dot, ".", getLocation());
                 }
                 break;
 
@@ -453,7 +488,7 @@ Token Toker::readToken() {
                     state = st_istr;
                     initIndent(true);
                     return Token(Token::istrBegin, "`", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else {
                     // last guy in the chain needs to set the state.
@@ -467,7 +502,7 @@ Token Toker::readToken() {
                 if (!isalnum(ch) && ch != '_' && ch > 0) {
                     ungetChar(ch);
                     state = st_none;
-                    return fixIdent(buf.str(), locationMap.getLocation());
+                    return fixIdent(buf.str(), getLocation());
                 }
     
                 buf << ch;
@@ -479,14 +514,14 @@ Token Toker::readToken() {
                 } else if (ch == '=') {
                     state = st_none;
                     return Token(Token::assignSlash, "/=", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '*') {
                     state = st_ccomment;
                 } else {
                     ungetChar(ch);
                     state = st_none;
-                    return Token(Token::slash, "/", locationMap.getLocation());
+                    return Token(Token::slash, "/", getLocation());
                 }
                 break;
             
@@ -517,7 +552,7 @@ Token Toker::readToken() {
                     string val = buf.str();
                     if (indentedString)
                         reindent(val);
-                    return Token(t1, val, locationMap.getLocation());
+                    return Token(t1, val, getLocation());
                 } else if (ch == '\\') {
                     state = st_strEscapeChar;
                 } else {
@@ -619,7 +654,7 @@ Token Toker::readToken() {
                     ch = ch - 'A' + 10;
                 } else {
                     ParseError::abort(Token(Token::string, buf.str(),
-                                            locationMap.getLocation()
+                                            getLocation()
                                             ),
                                       "invalid hex code escape sequence (must "
                                        "be two hex digits)"
@@ -642,7 +677,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     if (buf.str().size() == 0) {
                         ParseError::abort(Token(Token::string, buf.str(),
-                                                locationMap.getLocation()
+                                                getLocation()
                                                 ),
                                           "invalid binary constant"
                                           );
@@ -650,7 +685,7 @@ Token Toker::readToken() {
                     state = st_none;
                     return Token(Token::binLit,
                                  buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -660,7 +695,7 @@ Token Toker::readToken() {
                 if (ch == terminator) {
                     state = st_none;
                     return Token(Token::string, buf.str(), 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
 
@@ -686,7 +721,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     if (buf.str().size() == 0) {
                         ParseError::abort(Token(Token::string, buf.str(),
-                                                locationMap.getLocation()
+                                                getLocation()
                                                 ),
                                           "invalid octal constant"
                                           );
@@ -694,7 +729,7 @@ Token Toker::readToken() {
                     state = st_none;
                     return Token(Token::octalLit,
                                  buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -706,7 +741,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     if (buf.str().size() == 0) {
                         ParseError::abort(Token(Token::string, buf.str(),
-                                                locationMap.getLocation()
+                                                getLocation()
                                                 ),
                                           "invalid hex constant"
                                           );
@@ -714,7 +749,7 @@ Token Toker::readToken() {
                     state = st_none;
                     return Token(Token::hexLit,
                                  buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -745,7 +780,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     state = st_none;
                     return Token(Token::integer, "0", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -762,7 +797,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     state = st_none;
                     return Token(Token::integer, buf.str(), 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -780,7 +815,7 @@ Token Toker::readToken() {
                     ungetChar('.');
                     state = st_none;
                     return Token(Token::integer, buf.str(), 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -798,7 +833,7 @@ Token Toker::readToken() {
                     state = st_none;
                     return Token(tt,
                                  buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -821,7 +856,7 @@ Token Toker::readToken() {
                     state = st_exponent3;
                 } else {
                     ParseError::abort(Token(Token::string, buf.str(),
-                                            locationMap.getLocation()
+                                            getLocation()
                                             ),
                                       "invalid float specification");
                 }
@@ -834,7 +869,7 @@ Token Toker::readToken() {
                     ungetChar(ch);
                     state = st_none;
                     return Token(Token::floatLit, buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 }
                 break;
@@ -851,18 +886,18 @@ Token Toker::readToken() {
                         // time.
                         ungetChar(ch);
                         return Token(Token::string, buf.str(),
-                                     locationMap.getLocation()
+                                     getLocation()
                                      );
                     } else {
                         state = st_none;
                         return Token(Token::istrEnd, "`",
-                                    locationMap.getLocation()
+                                    getLocation()
                                     );
                     }
                 } else if (ch == '$') {
                     state = st_interpNone;
                     return Token(Token::string, buf.str(),
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else if (ch == '\\') {
                     state = st_istrEscapeChar;
@@ -874,14 +909,14 @@ Token Toker::readToken() {
             case st_plus:
                 state = st_none;
                 if (ch == '+') {
-                    return Token(Token::decr, "++", locationMap.getLocation());
+                    return Token(Token::decr, "++", getLocation());
                 } else if (ch == '=') {
                     return Token(Token::assignPlus, "+=", 
-                                 locationMap.getLocation()
+                                 getLocation()
                                  );
                 } else {
                     ungetChar(ch);
-                    return Token(Token::plus, "+", locationMap.getLocation());
+                    return Token(Token::plus, "+", getLocation());
                 }
                 break;
             
@@ -892,11 +927,11 @@ Token Toker::readToken() {
                 if (ch == '=') {
                     symchars[sci++] = ch;
                     symchars[sci++] = 0;
-                    return Token(t2, symchars, locationMap.getLocation());
+                    return Token(t2, symchars, getLocation());
                 } else {
                     symchars[sci++] = 0;
                     ungetChar(ch);
-                    return Token(t1, symchars, locationMap.getLocation());
+                    return Token(t1, symchars, getLocation());
                 }
                 break;
             
@@ -909,13 +944,13 @@ Token Toker::readToken() {
     // expected
     if (state == st_none || state == st_comment) {
         state = st_none;
-        return Token(Token::end, "", locationMap.getLocation());
+        return Token(Token::end, "", getLocation());
     } else if (state == st_ident) {
         // it's ok for identifiers to be up against the end of the stream
         state = st_none;
-        return Token(Token::ident, buf.str(), locationMap.getLocation());
+        return Token(Token::ident, buf.str(), getLocation());
     } else {
-        ParseError::abort(Token(Token::end, "", locationMap.getLocation()),
+        ParseError::abort(Token(Token::end, "", getLocation()),
                           "End of stream in the middle of a token"
                           );
     }

@@ -6,7 +6,7 @@ context error messages for generics
 class A[T] { T f() { return "foo"; } }
      A[int] i;
 %%EXPECT%%
-ParseError: %OUTDIR%142_x.crk:1: Invalid return type byteptr for function returning int
-  in generic instantiation at %OUTDIR%142_x.crk:2
+ParseError: %OUTDIR%142_x.crk:1:29: Invalid return type byteptr for function returning int
+  in generic instantiation at %OUTDIR%142_x.crk:2:11
 %%STDIN%%
 

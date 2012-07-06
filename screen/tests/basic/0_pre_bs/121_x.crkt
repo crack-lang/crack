@@ -5,6 +5,6 @@ forward declarations in classes must be resolved by the end of the block
 %%FILE%%
 class A { void foo(); }
 %%EXPECT%%
-ParseError: %OUTDIR%121_x.crk:1: Forward declared function not defined at the end of the block: void A.foo()
+ParseError: %OUTDIR%121_x.crk:1:9: Forward declared function not defined at the end of the block: void A.foo()
 %%STDIN%%
 

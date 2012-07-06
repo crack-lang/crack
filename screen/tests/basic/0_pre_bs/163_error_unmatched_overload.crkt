@@ -6,7 +6,7 @@ error when matching the name of a method overload but not the args
 class A { void f(int a) {} }
 A().f();
 %%EXPECT%%
-ParseError: %OUTDIR%163_error_unmatched_overload.crk:2: No method exists matching f()
+ParseError: %OUTDIR%163_error_unmatched_overload.crk:2:5: No method exists matching f()
 Possible overloads for f:
   void A.f(int a)
 %%STDIN%%

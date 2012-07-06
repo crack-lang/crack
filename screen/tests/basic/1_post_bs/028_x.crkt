@@ -5,6 +5,6 @@ oper init errors outside of class scope
 %%FILE%%
 void oper init() {}
 %%EXPECT%%
-ParseError: %OUTDIR%028_x.crk:1: oper init can only be defined in a class scope.
+ParseError: %OUTDIR%028_x.crk:1:11: oper init can only be defined in a class scope.
 %%STDIN%%
 

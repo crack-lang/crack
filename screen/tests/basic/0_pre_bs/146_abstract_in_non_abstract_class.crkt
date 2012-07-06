@@ -5,6 +5,6 @@ Abstract method in non-abstract class
 %%FILE%%
 class A : VTableBase { @abstract void f(); }
 %%EXPECT%%
-ParseError: %OUTDIR%146_abstract_in_non_abstract_class.crk:1: Abstract functions can only be defined in an abstract class.
+ParseError: %OUTDIR%146_abstract_in_non_abstract_class.crk:1:39: Abstract functions can only be defined in an abstract class.
 %%STDIN%%
 

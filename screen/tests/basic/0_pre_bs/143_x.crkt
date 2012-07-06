@@ -7,6 +7,6 @@ class A[T] { T f() { return 0; } }
      A[int] i;
      bogus value
 %%EXPECT%%
-ParseError: %OUTDIR%143_x.crk:3: Unknown identifier bogus
+ParseError: %OUTDIR%143_x.crk:3:6: Unknown identifier bogus
 %%STDIN%%
 

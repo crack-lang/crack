@@ -4,5 +4,5 @@ error on instance variable redefinition
 %%FILE%%
 class A { int name; int name; }
 %%EXPECT%%
-ParseError: %OUTDIR%167_inst_var_redef.crk:1: Symbol name is already defined in this context.
+ParseError: %OUTDIR%167_inst_var_redef.crk:1:25: Symbol name is already defined in this context.
 %%STDIN%%

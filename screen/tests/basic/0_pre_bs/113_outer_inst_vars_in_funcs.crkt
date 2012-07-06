@@ -6,6 +6,6 @@ using instance variables from a nested function in a method
 class A { int a = 100; int f() { int g() { return a; } return g(); } }
      printint(A().f());
 %%EXPECT%%
-ParseError: %OUTDIR%113_outer_inst_vars_in_funcs.crk:1: Variable 'this' is not accessible from within this context.
+ParseError: %OUTDIR%113_outer_inst_vars_in_funcs.crk:1:51: Variable 'this' is not accessible from within this context.
 %%STDIN%%
 

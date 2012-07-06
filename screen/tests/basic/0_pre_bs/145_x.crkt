@@ -5,6 +5,6 @@ error on first class methods
 %%FILE%%
 class B { void bar() {} } y := B.bar;
 %%EXPECT%%
-ParseError: %OUTDIR%145_x.crk:1: Trying to get the value of bar, first class methods are not supported yet.
+ParseError: %OUTDIR%145_x.crk:1:34: Trying to get the value of bar, first class methods are not supported yet.
 %%STDIN%%
 

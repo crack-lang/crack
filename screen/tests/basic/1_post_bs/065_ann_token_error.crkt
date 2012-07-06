@@ -8,6 +8,6 @@ annotation error with token function
     @errorTok
     XXX
 %%EXPECT%%
-ParseError: %OUTDIR%065_ann_token_error.crk:4: error with token
+ParseError: %OUTDIR%065_ann_token_error.crk:4:1: error with token
 %%STDIN%%
 

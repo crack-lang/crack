@@ -5,5 +5,5 @@ error when deriving from an undefined forward declared base
 class A;
 class B : A {}
 %%EXPECT%%
-ParseError: %OUTDIR%168_forward_base.crk:2: you may not derive from forward declared class A
+ParseError: %OUTDIR%168_forward_base.crk:2:11: you may not derive from forward declared class A
 %%STDIN%%

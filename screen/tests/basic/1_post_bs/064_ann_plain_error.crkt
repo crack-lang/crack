@@ -11,8 +11,8 @@ annotation warnings plain error function
     @error
     XXX
 %%EXPECT%%
-%SCRIPTNAME%:4: warning with token
-%SCRIPTNAME%:5: plain warning
-ParseError: %SCRIPTNAME%:6: plain error
+%SCRIPTNAME%:4:1: warning with token
+%SCRIPTNAME%:5:5: plain warning
+ParseError: %SCRIPTNAME%:6:5: plain error
 %%STDIN%%
 

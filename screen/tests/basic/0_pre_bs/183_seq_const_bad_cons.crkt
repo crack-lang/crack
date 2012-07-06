@@ -10,5 +10,5 @@ class A : B {
 
 A![1, 2, 3];
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:7: A has neither a constructor accepting a uint nor a default constructor.
+ParseError: %SCRIPTNAME%:7:1: A has neither a constructor accepting a uint nor a default constructor.
 %%STDIN%%

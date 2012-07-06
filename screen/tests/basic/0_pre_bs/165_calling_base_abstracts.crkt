@@ -10,5 +10,5 @@ class B : A {
     void f() { A.f(); }
 }
 %%EXPECT%%
-ParseError: %OUTDIR%165_calling_base_abstracts.crk:6: Abstract function f() can not be called.
+ParseError: %OUTDIR%165_calling_base_abstracts.crk:6:18: Abstract function f() can not be called.
 %%STDIN%%

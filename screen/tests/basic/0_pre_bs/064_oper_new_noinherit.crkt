@@ -7,6 +7,6 @@ class A { oper init(int a0) {} };
      class B : A { oper init() : A(100) {} };
      b := B(100);
 %%EXPECT%%
-ParseError: %OUTDIR%064_oper_new_noinherit.crk:3: No method exists matching B(int)
+ParseError: %OUTDIR%064_oper_new_noinherit.crk:3:11: No method exists matching B(int)
 %%STDIN%%
 

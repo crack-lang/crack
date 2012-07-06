@@ -1,5 +1,6 @@
 // Copyright 2003 Michael A. Muller
 // Portions Copyright 2009 Google Inc.
+// Portions Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
 
 #ifndef TOKER_H
 #define TOKER_H
@@ -8,7 +9,6 @@
 #include <list>
 #include <string>
 #include "Token.h"
-#include "LocationMap.h"
 
 namespace parser {
 
@@ -23,8 +23,12 @@ class Toker {
       // source stream
       std::istream &src;
       
-      // tracks the location
-      LocationMap locationMap;
+      // current file, line, columns
+      std::string currentName;
+      int currentLine, currentStartCol, currentEndCol, saveEndCol;
+
+      // the location of the last token we returned
+      Location lastLoc;
 
       // "fixes identifiers" by converting them to keywords if appropriate - 
       // if the identifier in 'raw' is a keyword, returns a keyword token, 
@@ -132,11 +136,11 @@ class Toker {
       Token getToken();
 
       /**
-       * Puts the token back onto the stream.  A subsequent getNext() will
+       * Puts the token back onto the stream.  A subsequent getToken() will
        * return the token.
        */
       void putBack(const Token &token) {
-	 tokens.push_back(token);
+          tokens.push_back(token);
       }
       
       /**
@@ -147,10 +151,13 @@ class Toker {
          assert(state == st_none && "continueIString in invalid state");
          state = st_istr;
       }
-      
-      /** Returns the tokenizer's location map. */
-      LocationMap &getLocationMap() { return locationMap; }
 
+      /**
+       * Get the current location of the tokenizer, which may be the location
+       * of the last token we processed
+       */
+      Location getLocation();
+      
 };
 
 } // namespace parser

@@ -5,6 +5,6 @@ error at attempts to use variables from enclosing functions
 %%FILE%%
 void outer() { int a; int inner() { return a; } }
 %%EXPECT%%
-ParseError: %OUTDIR%110_outer_func_vars.crk:1: Variable 'a' is not accessible from within this context.
+ParseError: %OUTDIR%110_outer_func_vars.crk:1:44: Variable 'a' is not accessible from within this context.
 %%STDIN%%
 

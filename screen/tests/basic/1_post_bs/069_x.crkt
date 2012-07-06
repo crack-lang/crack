@@ -6,7 +6,7 @@ error contexts work
 @import crack.ann define; @define fail() { void f() { bad; } }
      @fail()
 %%EXPECT%%
-ParseError: %OUTDIR%069_x.crk:1: Unknown identifier bad
+ParseError: %OUTDIR%069_x.crk:1:55: Unknown identifier bad
   expanded from macro at %OUTDIR%069_x.crk:2
 %%STDIN%%
 

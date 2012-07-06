@@ -7,6 +7,6 @@ class A { oper init(int a0) {} };
      class B : A { oper init() : A(100) {} };
      class C : B { oper init() : B(100) {} };
 %%EXPECT%%
-ParseError: %OUTDIR%063_base_cons_notrans.crk:3: No matching constructor found for B
+ParseError: %OUTDIR%063_base_cons_notrans.crk:3:34: No matching constructor found for B
 %%STDIN%%
 

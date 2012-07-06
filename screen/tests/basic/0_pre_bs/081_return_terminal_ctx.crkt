@@ -6,6 +6,6 @@ correct propagation of return terminal contexts
 void func() { if (1) { if (0) return; else return; } else return;
                    puts("fail"); }
 %%EXPECT%%
-ParseError: %OUTDIR%081_return_terminal_ctx.crk:2: unreachable code
+ParseError: %OUTDIR%081_return_terminal_ctx.crk:2:20: unreachable code
 %%STDIN%%
 

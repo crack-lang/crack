@@ -6,6 +6,6 @@ break scope limited to loop
 while (1) break;
     break;
 %%EXPECT%%
-ParseError: %OUTDIR%077_break_scope_limited.crk:2: Break can only be used in the body of a while, for or switch statement.
+ParseError: %OUTDIR%077_break_scope_limited.crk:2:5: Break can only be used in the body of a while, for or switch statement.
 %%STDIN%%
 

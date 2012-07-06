@@ -5,6 +5,6 @@ Error when using module protected vars
 %%FILE%%
 import test.testmod5 A; A()._val;
 %%EXPECT%%
-ParseError: %OUTDIR%152_using_module_protected.crk:1: _val is private to module test.testmod5 and not accessible in this context.
+ParseError: %OUTDIR%152_using_module_protected.crk:1:29: _val is private to module test.testmod5 and not accessible in this context.
 %%STDIN%%
 

@@ -22,6 +22,8 @@ class BuilderOptions : public spug::RCBase {
         int optimizeLevel;
         // Builder specific verbosity
         int verbosity;
+        // No extra output. Implies verbosity=0
+        bool quiet;
         // Dump IR rather than execute/compile code
         bool dumpMode;
         // Generate debug information
@@ -35,6 +37,7 @@ class BuilderOptions : public spug::RCBase {
 
         BuilderOptions(void): optimizeLevel(0),
                               verbosity(0),
+                              quiet(false),
                               dumpMode(false),
                               debugMode(false),
                               statsMode(false),

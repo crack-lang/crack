@@ -6,6 +6,6 @@ built-in "final" annotation
 class A { @final void f() {} }
      class B : A { void f() {} }
 %%EXPECT%%
-ParseError: %OUTDIR%067_x.crk:2: Definition of f hides previous overload.
+ParseError: %OUTDIR%067_x.crk:2:25: Definition of f hides previous overload.
 %%STDIN%%
 

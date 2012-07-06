@@ -5,6 +5,6 @@ Abstract method in non-class context
 %%FILE%%
 @abstract void f();
 %%EXPECT%%
-ParseError: %OUTDIR%147_abstract_in_non_class.crk:1: Abstract functions can only be defined in an abstract class.
+ParseError: %OUTDIR%147_abstract_in_non_class.crk:1:16: Abstract functions can only be defined in an abstract class.
 %%STDIN%%
 

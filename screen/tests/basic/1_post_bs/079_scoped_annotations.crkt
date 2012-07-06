@@ -14,5 +14,5 @@ void f() {
 bool v = @created;
 
 %%EXPECT%%
-ParseError: %OUTDIR%079_scoped_annotations.crk:9: Undefined annotation created
+ParseError: %OUTDIR%079_scoped_annotations.crk:9:11: Undefined annotation created
 %%STDIN%%
