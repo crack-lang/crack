@@ -2,9 +2,8 @@
 // 6/26/2012
 
 // This implementation is derived from the public domain code at
-// https://github.com/PeterScott/murmur3, which in turn is based on:
-// MurmurHash3 was written by Austin Appleby, and is placed in the public
-// domain. The author hereby disclaims copyright to this source code.
+// https://github.com/PeterScott/murmur3, which in turn is based on
+// MurmurHash3, written by Austin Appleby, who placed it in the public domain
 
 import crack.ascii radix;
 import crack.hash Hash;
@@ -35,7 +34,6 @@ uint32 CalculateMurmur3_32(byteptr data, uint32 len, uint32 seed) {
         h1 ^= k1;
         h1 = (h1 << 13) | (h1 >> (32 - 13));
         h1 = (h1 * 5) + 0xe6546b64;
-
     }
 
     //----------
