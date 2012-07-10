@@ -2756,13 +2756,13 @@ void Parser::parseImportStmt(Namespace *ns) {
          
          // make sure we don't already have it in the local context
          if (ns->lookUp(iter->local, false))
-            error(tok, SPUG_FSTR("imported name " << iter->local << 
+            error(symToks[st], SPUG_FSTR("imported name " << iter->local <<
                                   " hides existing definition."
                                  )
                   );
          VarDefPtr symVal = mod->lookUp(iter->source);
          if (!symVal)
-            error(tok, SPUG_FSTR("name " << iter->source << 
+            error(symToks[st], SPUG_FSTR("name " << iter->source <<
                                   " is not defined in module " << 
                                   canonicalName
                                  )
@@ -2774,7 +2774,7 @@ void Parser::parseImportStmt(Namespace *ns) {
          if (symVal->getOwner() != mod.get() &&
              mod->exports.find(iter->source) == mod->exports.end()
              )
-            error(tok, SPUG_FSTR("Name " << iter->source <<
+            error(symToks[st], SPUG_FSTR("Name " << iter->source <<
                                   " does not belong to module " <<
                                   canonicalName << ".  Second-order imports " 
                                   "are not allowed.  Import it from " <<
