@@ -10,7 +10,8 @@
     @inject '// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>\n// 6/22/2012\n'
     @inject '
 #include <rpc/xdr.h>
-#include <stdio.h>
+
+#define INT_SIZE sizeof(int)
 
     XDR *crk_xdrmem_create(char *buffer, unsigned int numbytes, int op){
                XDR *xdrs = new XDR;
@@ -22,15 +23,27 @@
         xdr_destroy(xdrs);
     }
 
-    static bool xdr_error;
+    bool xdr_error;
+    unsigned int xdr_size;
+
     bool crk_xdr_error(){
         return xdr_error;
+    }
+
+    unsigned int crk_xdr_size(){
+        return xdr_size;
     }
 
     // Returns the end of the buffer
     unsigned int crk_xdr_getpos(XDR *xdrs){
         return xdr_getpos(xdrs);
     } 
+
+    // Sets the position to be read from next in the buffer/stream
+    void crk_xdr_setpos(XDR *xdrs, unsigned int pos){
+        xdr_setpos(xdrs, pos);
+    } 
+
 
 \#define scalar_op(tpe, func_tpe, crk_tpe) \\
     bool crk_xdr_encode_\#\#crk_tpe(XDR *xdrs, tpe value){ \\
@@ -67,19 +80,46 @@
 
     // Encode a string
     bool crk_xdr_encode_bytes(XDR *xdrs, char *buf, unsigned int numbytes){
-        return xdr_bytes(xdrs, &buf, &numbytes, numbytes);
+        return (bool)xdr_bytes(xdrs, &buf, &numbytes, numbytes);
     }
 
     // Decode a string
     unsigned int crk_xdr_decode_bytes(XDR *xdrs, char *buf, unsigned int numbytes){
         xdr_error = xdr_bytes(xdrs, &buf, &numbytes, numbytes);
         return numbytes;
-    }\n'
+    }
+
+\#define array_op(tpe, func_tpe, crk_tpe) \\
+    bool crk_xdr_encode_array_\#\#crk_tpe(XDR *xdrs, tpe *value, \\
+            unsigned int count, unsigned int max) { \\
+        return (bool) xdr_array(xdrs,  (char **)&value, &count, max, \\
+                                sizeof(tpe), (xdrproc_t)xdr_\#\#func_tpe); \\
+    } \\
+\\
+    unsigned int crk_xdr_decode_array_\#\#crk_tpe(XDR *xdrs, tpe *value, \\
+                                                  unsigned int max) { \\
+        unsigned int count; \\
+        xdr_error = xdr_array(xdrs, (char **)&value, &count, max, \\
+                              sizeof(tpe), (xdrproc_t)xdr_\#\#func_tpe); \\
+        return count; \\
+    }
+
+    array_op(int, int, int)
+    array_op(unsigned int, u_int, uint)
+    array_op(int32_t, int32_t, int32)
+    array_op(uint32_t, uint32_t, uint32)
+    array_op(int64_t, int64_t, int64)
+    array_op(uint64_t, uint64_t, uint64)
+    array_op(float, float, float32)
+    array_op(double, double, float64)
+    array_op(bool_t, bool, bool)
+
+    '
 
     @crack_internal
 
-    const int XDR_ENCODE, XDR_DECODE, XDR_FREE;
-
+    const int XDR_ENCODE, XDR_DECODE, XDR_FREE, INT_SIZE;
+    
     @cname XDR
     class xdr;
 
@@ -91,6 +131,9 @@
 
     @cname crk_xdr_getpos
     uint xdr_getpos(xdr xdrs);
+
+    @cname crk_xdr_setpos
+    uint xdr_setpos(xdr xdrs, uint pos);
 
     // int
     @cname crk_xdr_encode_int
@@ -151,6 +194,64 @@
 
     @cname crk_xdr_decode_bytes
     uint xdr_decode_bytes(xdr xdrs, byteptr buf, uint numbytes);
+
+// Arrays
+    @cname crk_xdr_encode_array_int
+    bool xdr_encode_array_int(xdr xdrs, array[int] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_int
+    uint xdr_decode_array_int(xdr xdrs, array[int] buf, uint max);
+
+    @cname crk_xdr_encode_array_uint
+    bool xdr_encode_array_uint(xdr xdrs, array[uint] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_uint
+    uint xdr_decode_array_uint(xdr xdrs, array[uint] buf, uint max);
+
+
+    @cname crk_xdr_encode_array_int32
+    bool xdr_encode_array_int32(xdr xdrs, array[int32] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_int32
+    uint xdr_decode_array_int32(xdr xdrs, array[int32] buf, uint max);
+
+    @cname crk_xdr_encode_array_uint32
+    bool xdr_encode_array_uint32(xdr xdrs, array[uint32] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_uint32
+    uint xdr_decode_array_uint32(xdr xdrs, array[uint32] buf, uint max);
+
+
+    @cname crk_xdr_encode_array_int64
+    bool xdr_encode_array_int64(xdr xdrs, array[int64] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_int64
+    uint xdr_decode_array_int64(xdr xdrs, array[int64] buf, uint max);
+
+    @cname crk_xdr_encode_array_uint64
+    bool xdr_encode_array_uint64(xdr xdrs, array[uint64] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_uint64
+    uint xdr_decode_array_uint64(xdr xdrs, array[uint64] buf, uint max);
+
+
+    @cname crk_xdr_encode_array_float32
+    bool xdr_encode_array_float32(xdr xdrs, array[float32] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_float32
+    uint xdr_decode_array_float32(xdr xdrs, array[float32] buf, uint max);
+
+    @cname crk_xdr_encode_array_float64
+    bool xdr_encode_array_float64(xdr xdrs, array[float64] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_float64
+    uint xdr_decode_array_float64(xdr xdrs, array[float64] buf, uint max);
+
+    @cname crk_xdr_encode_array_bool
+    bool xdr_encode_array_bool(xdr xdrs, array[bool] buf, uint count, uint max);
+
+    @cname crk_xdr_decode_array_bool
+    uint xdr_decode_array_bool(xdr xdrs, array[bool] buf, uint max);
 
     @cname crk_xdr_error
     bool xdr_error();

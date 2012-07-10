@@ -2,7 +2,8 @@
 // 6/22/2012
 
 #include <rpc/xdr.h>
-#include <stdio.h>
+
+#define INT_SIZE sizeof(int)
 
     XDR *crk_xdrmem_create(char *buffer, unsigned int numbytes, int op){
                XDR *xdrs = new XDR;
@@ -14,15 +15,27 @@
         xdr_destroy(xdrs);
     }
 
-    static bool xdr_error;
+    bool xdr_error;
+    unsigned int xdr_size;
+
     bool crk_xdr_error(){
         return xdr_error;
+    }
+
+    unsigned int crk_xdr_size(){
+        return xdr_size;
     }
 
     // Returns the end of the buffer
     unsigned int crk_xdr_getpos(XDR *xdrs){
         return xdr_getpos(xdrs);
     } 
+
+    // Sets the position to be read from next in the buffer/stream
+    void crk_xdr_setpos(XDR *xdrs, unsigned int pos){
+        xdr_setpos(xdrs, pos);
+    } 
+
 
 #define scalar_op(tpe, func_tpe, crk_tpe) \
     bool crk_xdr_encode_##crk_tpe(XDR *xdrs, tpe value){ \
@@ -59,7 +72,7 @@
 
     // Encode a string
     bool crk_xdr_encode_bytes(XDR *xdrs, char *buf, unsigned int numbytes){
-        return xdr_bytes(xdrs, &buf, &numbytes, numbytes);
+        return (bool)xdr_bytes(xdrs, &buf, &numbytes, numbytes);
     }
 
     // Decode a string
@@ -68,6 +81,32 @@
         return numbytes;
     }
 
+#define array_op(tpe, func_tpe, crk_tpe) \
+    bool crk_xdr_encode_array_##crk_tpe(XDR *xdrs, tpe *value, \
+            unsigned int count, unsigned int max) { \
+        return (bool) xdr_array(xdrs,  (char **)&value, &count, max, \
+                                sizeof(tpe), (xdrproc_t)xdr_##func_tpe); \
+    } \
+\
+    unsigned int crk_xdr_decode_array_##crk_tpe(XDR *xdrs, tpe *value, \
+                                                  unsigned int max) { \
+        unsigned int count; \
+        xdr_error = xdr_array(xdrs, (char **)&value, &count, max, \
+                              sizeof(tpe), (xdrproc_t)xdr_##func_tpe); \
+        return count; \
+    }
+
+    array_op(int, int, int)
+    array_op(unsigned int, u_int, uint)
+    array_op(int32_t, int32_t, int32)
+    array_op(uint32_t, uint32_t, uint32)
+    array_op(int64_t, int64_t, int64)
+    array_op(uint64_t, uint64_t, uint64)
+    array_op(float, float, float32)
+    array_op(double, double, float64)
+    array_op(bool_t, bool, bool)
+
+    
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -104,6 +143,71 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_xdr = mod->addType("xdr", sizeof(XDR));
     type_xdr->finish();
 
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int;
+        array_pint_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_puint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_uint;
+        array_puint_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pint32_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int32;
+        array_pint32_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_puint32_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_uint32;
+        array_puint32_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pint64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int64;
+        array_pint64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_puint64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_uint64;
+        array_puint64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat32_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float32;
+        array_pfloat32_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pbool_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_bool;
+        array_pbool_q = array->getSpecialization(params);
+    }
     f = mod->addFunc(type_xdr, "xdrmem_create",
                      (void *)crk_xdrmem_create
                      );
@@ -120,6 +224,12 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
                      (void *)crk_xdr_getpos
                      );
        f->addArg(type_xdr, "xdrs");
+
+    f = mod->addFunc(type_uint, "xdr_setpos",
+                     (void *)crk_xdr_setpos
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(type_uint, "pos");
 
     f = mod->addFunc(type_bool, "xdr_encode_int",
                      (void *)crk_xdr_encode_int
@@ -234,6 +344,141 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "buf");
        f->addArg(type_uint, "numbytes");
 
+    f = mod->addFunc(type_bool, "xdr_encode_array_int",
+                     (void *)crk_xdr_encode_array_int
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_int",
+                     (void *)crk_xdr_decode_array_int
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_uint",
+                     (void *)crk_xdr_encode_array_uint
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_uint",
+                     (void *)crk_xdr_decode_array_uint
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_int32",
+                     (void *)crk_xdr_encode_array_int32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint32_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_int32",
+                     (void *)crk_xdr_decode_array_int32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint32_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_uint32",
+                     (void *)crk_xdr_encode_array_uint32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint32_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_uint32",
+                     (void *)crk_xdr_decode_array_uint32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint32_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_int64",
+                     (void *)crk_xdr_encode_array_int64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint64_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_int64",
+                     (void *)crk_xdr_decode_array_int64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pint64_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_uint64",
+                     (void *)crk_xdr_encode_array_uint64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint64_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_uint64",
+                     (void *)crk_xdr_decode_array_uint64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_puint64_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_float32",
+                     (void *)crk_xdr_encode_array_float32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pfloat32_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_float32",
+                     (void *)crk_xdr_decode_array_float32
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pfloat32_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_float64",
+                     (void *)crk_xdr_encode_array_float64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pfloat64_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_float64",
+                     (void *)crk_xdr_decode_array_float64
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pfloat64_q, "buf");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_bool, "xdr_encode_array_bool",
+                     (void *)crk_xdr_encode_array_bool
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pbool_q, "buf");
+       f->addArg(type_uint, "count");
+       f->addArg(type_uint, "max");
+
+    f = mod->addFunc(type_uint, "xdr_decode_array_bool",
+                     (void *)crk_xdr_decode_array_bool
+                     );
+       f->addArg(type_xdr, "xdrs");
+       f->addArg(array_pbool_q, "buf");
+       f->addArg(type_uint, "max");
+
     f = mod->addFunc(type_bool, "xdr_error",
                      (void *)crk_xdr_error
                      );
@@ -249,5 +494,9 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "XDR_FREE",
                      static_cast<int>(XDR_FREE)
+                     );
+
+    mod->addConstant(type_int, "INT_SIZE",
+                     static_cast<int>(INT_SIZE)
                      );
 }
