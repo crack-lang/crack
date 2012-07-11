@@ -35,9 +35,18 @@ namespace {
         }
     };
     
+    struct InternedStringSet : public set<InternedString> {
+        ~InternedStringSet() {
+            for (InternedStringSet::iterator iter = begin();
+                 iter != end();
+                 ++iter
+                 )
+                delete iter->val;
+        }
+    };
+
     typedef map<void *, DebugInfo> DebugTable;
     DebugTable debugTable;
-    typedef set<InternedString> InternedStringSet;
     InternedStringSet internTable;
 
     const InternedString &lookUpString(const InternedString &key) {
