@@ -106,7 +106,7 @@ Array[int] A = [1, 2, 3, 4, 5];
 xdr_encode_array_int(XdrStream, A.data.rep, A.count(), A.count());
 xdrBuf.size = xdr_getpos(XdrStream);
 encoded = hex(xdrBuf);
-expected="000000050000000100000002000000030000000400000005";
+expected = "000000050000000100000002000000030000000400000005";
 if (encoded != expected)
     cout `XDR int array encoding failed\n`;
 
