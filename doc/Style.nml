@@ -228,6 +228,8 @@ Do not use spaces:
     SomeClass a = { };
     }}
 
+Use a single blank line to separate function, class and namespace definitions.
+
 Comments
 ''''''''
 
@@ -481,6 +483,17 @@ for those:
      */
     void doSomethingComplicated(String arg);
 }}
+
+Avoid "pass by copy" for aggregate data types (classes and structures).  Use a
+const reference instead:
+
+{{
+    void foo(SomeClass bar) { } // WRONG
+
+    void foo(const SomeClass &bar) { } // OK
+}}
+
+Passing by reference is considerably less expensive.
 
 Crack Code
 ----------

@@ -166,7 +166,6 @@ noinst_HEADERS = \
     model/VarDefImpl.h \
     model/VarRef.h \
     parser/Location.h \
-    parser/LocationMap.h \
     parser/ParseError.h \
     parser/Parser.h \
     parser/Token.h \
