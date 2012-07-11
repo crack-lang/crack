@@ -13,6 +13,7 @@
 
     void crk_xdr_destroy(XDR * xdrs){
         xdr_destroy(xdrs);
+        delete xdrs;
     }
 
     bool xdr_error;
