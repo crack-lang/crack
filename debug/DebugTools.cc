@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <iostream>
+#include <malloc.h>
 #include <map>
 #include <set>
 
@@ -41,7 +42,7 @@ namespace {
                  iter != end();
                  ++iter
                  )
-                delete iter->val;
+                free(const_cast<char *>(iter->val));
         }
     };
 
