@@ -25,6 +25,7 @@
 #include "Exceptions.h"
 #include "Process.h"
 using namespace crack::ext;
+using namespace crack::runtime;
 
 extern "C" bool __CrackUncaughtException();
 extern "C" void crack_runtime_time_cinit(crack::ext::Module *mod);
@@ -364,24 +365,24 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteType, "d");
 
     // begin SockAddr
-    Type *sockAddrType = mod->addType("SockAddr", sizeof(sockaddr));
+    Type *sockAddrType = mod->addType("SockAddr", sizeof(SockAddr));
     sockAddrType->addConstructor();
     sockAddrType->addInstVar(intType, "family", 
-                             CRACK_OFFSET(sockaddr, sa_family)
+                             CRACK_OFFSET(SockAddr, family)
                              );
     sockAddrType->finish();
     // end SockAddr
 
     // begin SockAddrIn    
     Type *sockAddrInType = mod->addType("SockAddrIn", 
-                                        sizeof(sockaddr_in) - sizeof(sockaddr)
+                                        sizeof(SockAddrIn) - sizeof(SockAddr)
                                         );
     sockAddrInType->addBase(sockAddrType);
     sockAddrInType->addInstVar(uint32Type, "addr", 
-                               CRACK_OFFSET(sockaddr_in, sin_addr.s_addr)
+                               CRACK_OFFSET(SockAddrIn, addr)
                                );
     sockAddrInType->addInstVar(uint16Type, "port",
-                               CRACK_OFFSET(sockaddr_in, sin_port)
+                               CRACK_OFFSET(SockAddrIn, port)
                                );
 
     f = sockAddrInType->addConstructor(
@@ -434,7 +435,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     
     // begin SockAddrIn
     Type *sockAddrUnType = mod->addType("SockAddrUn",
-                                        sizeof(sockaddr_un) - sizeof(sockaddr)
+                                        sizeof(SockAddrUn) - sizeof(SockAddr)
                                         );
     sockAddrUnType->addBase(sockAddrType);
 
@@ -443,6 +444,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
         (void *)&crack::runtime::SockAddrUn::init
     );
     f->addArg(byteptrType, "path");
+    f->addArg(uintzType, "size");
 
     sockAddrUnType->addMethod(byteptrType, "getPath",
                               (void *)&crack::runtime::SockAddrUn::getPath

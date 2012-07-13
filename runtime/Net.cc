@@ -94,9 +94,17 @@ uint16_t SockAddrIn::crack_ntohs(uint16_t val) {
     return ntohs(val);
 }
 
-void SockAddrUn::init(SockAddrUn *inst, const char *path) {
+namespace {
+    inline size_t min(size_t a, size_t b) {
+        return (a < b) ? a : b;
+    }
+}
+
+void SockAddrUn::init(SockAddrUn *inst, const char *path, size_t size) {
     inst->family = AF_UNIX;
-    strncpy(inst->path, path, UNIX_PATH_MAX);
+    size = min(size, UNIX_PATH_MAX - 1);
+    strncpy(inst->path, path, size);
+    inst->path[size] = 0;
 }
 
 const char *SockAddrUn::getPath(SockAddrUn *inst) {

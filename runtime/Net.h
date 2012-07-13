@@ -67,7 +67,7 @@ struct SockAddrIn : public SockAddr {
 struct SockAddrUn : public SockAddr {
     char path[UNIX_PATH_MAX];
 
-    static void init(SockAddrUn *inst, const char *path);
+    static void init(SockAddrUn *inst, const char *path, size_t size);
     static const char *getPath(SockAddrUn *inst);
 };
 
