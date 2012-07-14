@@ -117,9 +117,11 @@ void TimeVal::init(TimeVal *inst, int32_t secs0, int32_t nsecs0) {
 }
 
 void TimeVal::setToNow(TimeVal *inst, void *tz) {
-    gettimeofday((struct timeval *)inst, (struct timezone *)tz);
+    struct timeval tv;
+    gettimeofday(&tv, (struct timezone *)tz);
+    inst->secs = tv.tv_sec;
     // TimeVal uses naoseconcs, gettimeofday uses microseconds.
-    inst->nsecs *= 1000;
+    inst->nsecs = tv.tv_usec * 1000;
 }
 
 uint32_t makeIPV4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {

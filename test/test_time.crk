@@ -104,4 +104,8 @@ if (Time(100, 123) - Time(99, 100) != TimeDelta(1, 23))
 if (Time(100, 123) - Time(99, 999999999) != TimeDelta(0, 124))
    cout `FAILED wrap-around subtraction\n`;
 
+
+localDate := Date.now();
+localTime := Time.now();
+
 cout `ok\n`;

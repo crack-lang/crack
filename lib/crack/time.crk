@@ -55,6 +55,13 @@ class Time : Object, TimeVal {
         TimeVal(secs, nsecs) {
     }
 
+    @static Time now() {
+        t := Time();
+        t.setToNow(null);
+        return t;
+    }
+
+
     TimeDelta oper -(Time other) {
         result := TimeDelta();
         _minus(this, other, result);
@@ -82,13 +89,10 @@ TimeDelta seconds(int secs) {
     return TimeDelta(int32(secs), 0);
 }
 
-Time now() {
-    Time t = {};
-    t.setToNow(null);
-    return t;
-}
-
+// From http://en.wikipedia.org/wiki/Leap_year retrieved on 7/12/2012
 bool isLeap(int year){
+   if (year%400 == 0) return true;
+   if (year%100 == 0) return false;
    if (year%4 == 0) return true;
    else return false;
 }
@@ -120,6 +124,12 @@ class Date : Object, InternalDate {
         }
     }
 
+    @static Date now() {
+        Date d = {};
+        d.setLocalNow();
+        return d;
+    }
+
     String getDefaultString(){
         ManagedBuffer result = {100};
         _toBufferRaw(result.buffer);
@@ -140,7 +150,7 @@ class Date : Object, InternalDate {
 
    void formatTo(Formatter out) {
         out `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
-        if (tm_isdst) out `DST`;
+        if (tm_isdst) out ` DST`;
    }
 }
 
