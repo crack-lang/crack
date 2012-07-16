@@ -2165,8 +2165,8 @@ bool Parser::parseDef(TypeDef *&type) {
       tok2 = getToken();
    } else if(type->generic) {
       error(identLoc, SPUG_FSTR("Generic type " << type->name <<
-                                " must be specialized to be used."
-                               )
+                                 " must be specialized to be used."
+                                )
             );
    }
    
@@ -3542,6 +3542,7 @@ void Parser::redefineError(const Token &tok, const VarDef *existing) {
 void Parser::error(const Token &tok, const std::string &msg) {
    context->error(tok.getLocation(), msg);
 }
+
 void Parser::error(const Location &loc, const std::string &msg) {
    context->error(loc, msg);
 }

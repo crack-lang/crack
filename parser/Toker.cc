@@ -40,19 +40,19 @@ bool Toker::getChar(char &ch) {
         currentStartCol = 1;
         currentEndCol = 1;
     }
-    //cout << "getChar [" << ch << "] start: " << currentStartCol << ", end: " << currentEndCol << "\n";
     return result;
 }
 
 void Toker::ungetChar(char ch) {
     assert(putbackIndex && "Toker putback overflow");
     putbackBuf[--putbackIndex] = ch;
-    currentEndCol--;
     if (ch == '\n') {
         currentLine--;
         currentEndCol = saveEndCol;
     }
-    //cout << "ungetChar [" << ch << "] start: " << currentStartCol << ", end: " << currentEndCol << "\n";
+    else {
+        currentEndCol--;
+    }
 }
 
 void Toker::initIndent(bool indented) {
@@ -218,8 +218,7 @@ Token Toker::readToken() {
            );
 
     // start col is where lastLocation ended, plus one
-    currentStartCol = lastLoc.getEndCol()+1;
-    //cout << "readToken: " << currentName << ":" << currentLine << ":" << currentStartCol << ":" << currentEndCol << "\n";
+    currentStartCol = lastLoc.getEndCol() + 1;
 
     while (true) {
         // read the next character from the stream

@@ -71,7 +71,7 @@ class Context : public spug::RCBase {
          * this uses Location to show the
          * source line and caret position of the problem
          */
-        void showSourceLoc(parser::Location loc, std::string &out);
+        void showSourceLoc(const parser::Location &loc, std::ostream &out);
 
     public:
 

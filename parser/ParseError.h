@@ -18,12 +18,18 @@ class ParseError : public spug::Exception {
         Location loc;
     public:
         ParseError() {}
-        ParseError(const Location &loc,
-                   const char *msg) : spug::Exception(msg),
-                                      loc(loc) {}
-        ParseError(const Location &loc,
-                   const std::string &msg) : spug::Exception(msg),
-                                             loc(loc) {}
+
+        ParseError(const Location &loc, const char *msg) :
+            spug::Exception(msg),
+            loc(loc) {
+
+        }
+
+        ParseError(const Location &loc, const std::string &msg) :
+            spug::Exception(msg),
+            loc(loc) {
+
+        }
 
         ~ParseError() throw () {}
 

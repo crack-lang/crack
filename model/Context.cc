@@ -38,7 +38,7 @@ using namespace std;
 
 parser::Location Context::emptyLoc;
 
-void Context::showSourceLoc(parser::Location loc, std::string &out) {
+void Context::showSourceLoc(const parser::Location &loc, ostream &out) {
 
     // set some limits
     if (loc.getName() == "" ||
@@ -55,26 +55,29 @@ void Context::showSourceLoc(parser::Location loc, std::string &out) {
     int line = loc.getLineNumber();
     while (!in.eof() && line--) {
         in.getline(buf, 512);
+        if (in.gcount() == 511)
+            // we reached a really long line, bail out of trying to
+            // show anything meaningful
+            return;
     }
     in.close();
 
-    out.append(buf);
-    out.push_back('\n');
+    out << buf << "\n";
+
     int c;
-    for (c = 0; c < loc.getStartCol()-1 && c < 510; c++)
+    for (c = 0; c < loc.getStartCol() - 1 && c < 510; c++)
         buf[c] = ' ';
     buf[c++] = '^';
     if (loc.getStartCol() != loc.getEndCol()) {
-        int len = loc.getEndCol()-loc.getStartCol();
+        int len = loc.getEndCol() - loc.getStartCol();
         for (int i = 0; i < len && c < 510; c++, i++)
             buf[c] = '-';
     }
     buf[c] = 0;
-    out.append(buf);
-    out.push_back('\n');
+
+    out << buf << "\n";
 
 }
-
 
 void Context::warnOnHide(const string &name) {
     if (ns->lookUp(name))
@@ -393,8 +396,8 @@ VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
         TypeDefPtr::arcast(defCtx->ns)->initializersEmitted) {
         throw parser::ParseError(tok.getLocation(),
                                  "Adding an instance variable "
-                                 "after 'oper init' has been "
-                                 "defined."
+                                  "after 'oper init' has been "
+                                  "defined."
                                  );
     }
 
@@ -932,17 +935,17 @@ void Context::error(const parser::Location &loc, const string &msg,
     
     list<string> &ec = construct->errorContexts;
     if (throwException) {
-        string diag;
+        stringstream diag;
         if (!construct->rootBuilder->options->quiet) {
             showSourceLoc(loc, diag);
         }
-        throw parser::ParseError(loc, SPUG_FSTR(
-                                           msg <<
-                                           ContextStack(ec) <<
-                                           endl <<
-                                           diag
+        throw parser::ParseError(loc,
+                                 SPUG_FSTR(msg <<
+                                            ContextStack(ec) <<
+                                            endl <<
+                                            diag.str()
                                            )
-                                );
+                                 );
     }
     else {
         cerr << "ParseError: " << loc.getName() << ":" <<

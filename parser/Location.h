@@ -93,8 +93,6 @@ class Location : public LocationImplPtr {
 
    public:
 
-      /**
-       */
       Location(LocationImpl *impl) : LocationImplPtr(impl) {}
 
       /** so that we can construct one of these prior to assigning it */
