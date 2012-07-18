@@ -9,7 +9,10 @@ import crack.io cout;
 h := MD5();
 h.update("hello");
 
-if (hex(h.digest()) == "5d41402abc4b2a76b9719d911017c592")
+h2 := MD5("hello"); 
+
+if (hex(h.digest()) == "5d41402abc4b2a76b9719d911017c592" &&
+    hex(h2.digest()) == "5d41402abc4b2a76b9719d911017c592")
     cout.write("ok\n");
 else
     cout `FAILED getting digest value\n`;

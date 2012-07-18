@@ -83,6 +83,13 @@ class Murmur3_32 : Hash {
         _state = CalculateMurmur3_32(buf.buffer, uint32(buf.size), _state);
     }
 
+    ## Alternative constructor taking a buffer argument
+    oper init(Buffer buf) : _state = 0 {
+        _size = 4;
+        update(buf);
+    }
+
+
     ## Return raw digest as a buffer of 4 bytes
     Buffer digest() {
         b := ManagedBuffer(4);

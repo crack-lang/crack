@@ -19,6 +19,12 @@ class MD5 : Hash {
         md5_append(_state, buf.buffer, buf.size);
     }
 
+    ## Alternative constructor taking a buffer argument
+    oper init(Buffer buf) : _state = md5_init() {
+         _size = 16;
+         update(buf);
+    }
+
     ## Return raw digest as a buffer of 16 bytes
     Buffer digest() {
         b := ManagedBuffer(16);
