@@ -26,6 +26,11 @@ void registerFuncTable(const char **table);
  */
 void getLocation(void *address, const char *info[3]);
 
+/**
+ * Write the entire function table to the specified stream.
+ */
+void dumpFuncTable(std::ostream &out);
+
 }} // namespace crack::debug
 
 #endif

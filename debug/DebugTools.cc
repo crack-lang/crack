@@ -3,6 +3,7 @@
 #include "DebugTools.h"
 
 #include <string.h>
+#include <iomanip>
 #include <iostream>
 #include <malloc.h>
 #include <map>
@@ -100,4 +101,11 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
         info[1] = i->second.filename;
         info[2] = reinterpret_cast<const char *>(i->second.lineNumber);
     }
+}
+
+void crack::debug::dumpFuncTable(ostream &out) {
+    for (DebugTable::iterator i = debugTable.begin(); i != debugTable.end();
+         ++i
+         )
+        out << hex << i->first << " " << i->second.funcName << endl;
 }
