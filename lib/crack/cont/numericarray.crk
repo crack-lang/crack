@@ -3,7 +3,7 @@ import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError,
 import crack.math abs, log2;
 import crack.io cout, Writer, FStr, StandardFormatter;
 import crack.algorithm QuickSort;
-import crack.cont.array Array, ArrayData;
+import crack.cont.array Array;
 @import crack.ann define;
 
 void _bind(Object obj) { obj.oper bind(); }
@@ -43,17 +43,6 @@ class NumericVector[Elem] : Array[Elem] {
     oper init (uint initCapacity): Array[Elem](initCapacity){
     }
 
-    // This should go away when we have virtual inheritance
-    oper init (ArrayData[Elem] data, array[Elem] rep, uint cap, uint size):
-        Array[Elem](data, rep, cap, size) {
-    }
-
-    @static
-    NumericVector copy(NumericVector NV){
-        V := NV.copy();
-        return NumericVector(V.data, V.data.rep, V.data.cap, V.count());
-    }
-    
     @static
     NumericVector range(Elem startVal, Elem endVal, Elem delta){
         if (delta <= 0)
@@ -114,12 +103,11 @@ class NumericVector[Elem] : Array[Elem] {
 
 
     /// Set all elements of the vector to value
-    void set(Elem value){
+    void set(Elem value) {
         size := count();
-        rep := data.rep;
 
         for (uint i = 0; i < size; i++)
-           rep[i] = value;
+            this[i] = value;
     }
 
     /// Convenience constructor to create a vector filled with the given
@@ -177,33 +165,14 @@ class NumericVector[Elem] : Array[Elem] {
         return fill(vector, 1);
     }
 
-    /// Append all elements in "other" onto the vector.
-    void append(NumericVector other) {
-        ts := this.count();
-        os := other.count();
-        if (data.cap - ts < os) {
-            newCap := data.cap + os;
-            realloc(newCap);
-        }
-        
-        for (intz i = 0; i < os; ++i) {
-            elem := other[i];
-            data.rep[ts + i] = elem;
-            _bind(elem);
-        }
-        _setSize(ts + os);
-    }
-
     /// Apply scalar operator to all elements
-    @define ScalarOper(op){
+    @define ScalarOper(op) {
         NumericVector oper op(Elem value){
             size := count();
-            rep := data.rep;
 
             nV := NumericVector.empty(size);
-            nVrep := nV.data.rep;
             for (uint i = 0; i < size; i++)
-               nVrep[i] = rep[i] op value;
+               nV[i] = this[i] op value;
             return nV;
         }
     }
@@ -217,10 +186,9 @@ class NumericVector[Elem] : Array[Elem] {
     @define ScalarOperEqual(op){
         void oper op$$=(Elem value){
             size := count();
-            rep := data.rep;
 
             for (uint i = 0; i < size; i++)
-               rep[i] = rep[i] op value;
+               this[i] = this[i] op value;
         }
     }
 
@@ -234,12 +202,10 @@ class NumericVector[Elem] : Array[Elem] {
     @define VectorOperEqual(op){
         void oper op$$=(NumericVector vector){
             size := count();
-            rep := data.rep;
-            rep2 := vector.data.rep;
             _assertConformant(vector);
 
             for (uint i = 0; i < size; i++)
-               rep[i] = rep[i] op rep2[i];
+               this[i] = this[i] op vector[i];
         }
     }
 
@@ -255,10 +221,7 @@ class NumericVector[Elem] : Array[Elem] {
 /// For 1D arrays it is faster to use the above NumericVector class
 class NumericArray[Elem] {
     // underlying data
-    ArrayData[Elem] data;
-    array[Elem] __rep = null; // equal to data.rep
-    uint __cap,               // equal to data.cap
-         __size;              // size of array in elements
+    Array[Elem] data;
     
     // description of our view of the data
     Array[uint] shape;
@@ -272,15 +235,8 @@ class NumericArray[Elem] {
         oper init(ArrayType[Elem] A): dims=1 
         {
             cols := A.count();
-            data=ArrayData[Elem](cols);
-            __rep = data.rep;
-            __cap = data.cap; 
-            __size = cols;
-
-            // Copy over data
-            Arep := A.data.rep;
-            for (uint i = 0; i < cols; i++)
-                __rep[i] = Arep[i];
+            data = Array[Elem](cols);
+            data.extend(A);
 
             shape = Array[uint]![cols];
             strides = Array[uintz]![1];
@@ -295,10 +251,7 @@ class NumericArray[Elem] {
     @initFromArray(NumericVector)
     
     void _oneDinitWorker(uint cols){
-        data=ArrayData[Elem](cols);
-        __rep = data.rep;
-        __cap = data.cap; 
-        __size = 0;
+        data = Array[Elem](cols);
 
         shape = Array[uint]![0];
         strides = Array[uintz]![1];
@@ -332,16 +285,13 @@ class NumericArray[Elem] {
             }
 
             
-            data=ArrayData[Elem](cols * rows);
-            __rep = data.rep;
-            __cap = data.cap; 
-            __size = cols * rows;
+            data = Array[Elem](cols * rows);
 
             // Copy over data
             uint k = 0;
             for (uint j = 0; j < rows; j++){
                 for (uint i = 0 ; i < cols; i++){
-                    __rep[k] = AA[j].data.rep[i];
+                    data.append(AA[j][i]);
                     k++;
                 }
             }
@@ -356,18 +306,14 @@ class NumericArray[Elem] {
 
     @initFromArrayArray(Array)
 
-    // This is a low-level constructor for use when slices, subarrays or transposes
-    // are created
-    oper init(ArrayData[Elem] data0, Array[uint] shape0,
+    // This is a low-level constructor for use when slices, subarrays or 
+    // transposes are created
+    oper init(Array[Elem] data0, Array[uint] shape0,
               Array[uintz] strides0, Array[uintz] offsets0):
               data = data0, shape = shape0, 
-              strides = strides0, offsets = offsets0,
-              __rep = data0.rep, __cap = data0.cap, dims = shape0.count() {
+              strides = strides0, offsets = offsets0 {
 
         dims = shape0.count();
-        __size = shape0[0];
-        for (uint i = 0; i < shape0.count(); i++)
-            __size *= shape0[i];
         T = null;
     }
     
@@ -386,31 +332,26 @@ class NumericArray[Elem] {
         }
     }
     
-    ArrayData[Elem] _copyData(uint newCap){
-        newData := ArrayData[Elem](newCap);
-        newRep := newData.rep;
+    Array[Elem] _copyData(uint newCap){
+        newData := Array[Elem](newCap);
 
         uint i;
-        for (uint i = 0; i < __size; i++)
-            newRep[i] = __rep[i];
-
-        if (__cap > 0 && _isObject(__rep[0]))
-            for (uint i = __size; i < newCap; i++)
-                newRep[i] = null;
+        for (uint i = 0; i < data.count(); i++)
+            newData[i] = data[i];
 
         return newData;
     }
 
-    @static
-    NumericArray I(uint dim){
-        newData := ArrayData[Elem](dim*dim);
+    @static NumericArray I(uint dim) {
+        newData := Array[Elem](dim * dim);
 
-        uint cnt = 0;
-        for (uint j = 0; j < dim; j++)
-            for (uint i = 0; i < dim; i++){
-                if (i == j) newData.rep[cnt] = 1;
-                else newData.rep[cnt] = 0;
-                cnt++;
+        for (uint j = 0; j < dim; j++) {
+            for (uint i = 0; i < dim; i++) {
+                if (i == j)
+                    newData.append(1);
+                else
+                    newData.append(0);
+            }
         }
         
         return NumericArray(newData, Array[uint]![dim, dim], 
@@ -431,17 +372,19 @@ class NumericArray[Elem] {
     @identityNumbered(3)
     @identityNumbered(4)
 
-    void set(Elem value){
+    void set(Elem value) {
         uint i;
 
-        for (i = 0; i < __cap; i++)
-            __rep[i] = value;
+        size := data.count();
+        for (i = 0; i < size; i++)
+            data[i] = value;
     }
     
     @static
     NumericArray empty(Array[uint] d){
         if (d.count() == 0)
-            throw AssertionError("Attempt to create a NumericArray with 0 dimensions");
+            throw AssertionError(I"Attempt to create a NumericArray with 0 \
+                                   dimensions");
 
         uint cap = 1;
 
@@ -455,7 +398,7 @@ class NumericArray[Elem] {
             cap*=d[i];
         }
         
-        newData := ArrayData[Elem](cap);
+        newData := Array[Elem](cap);
         return NumericArray(newData, newShape, newStrides, newOffsets);
     }
 
@@ -480,41 +423,48 @@ class NumericArray[Elem] {
 
 
     Elem oper [](uint i){
-        if (dims!=1) 
+        if (dims != 1) 
             throw InvalidArgumentError(FStr() 
-                `Attempting to access element from $(dims)D array using only one index`);
-        if (i >= __size)
-            throw IndexError(FStr() 
-            `Index $i out of bounds for size $__size array`);
-        return (__rep + offsets[0] + strides[0] * i)[0];
+                I`Attempting to access element from $(dims)D array using only \
+                  one index`);
+        if (i >= size := data.count())
+            throw IndexError(FStr() `Index $i out of bounds for size $size \
+                                     array`);
+        return data[offsets[0] + strides[0] * i];
         
     }
 
-    void oper []=(uint i, Elem e){
-        if (dims!=1) 
+    void oper []=(uint i, Elem e) {
+        if (dims != 1) 
             throw InvalidArgumentError(FStr() 
-                `Attempting to assign element from $(dims)D array using only one index`);
-        if (i >= __size)
-            throw IndexError(FStr() 
-            `Index $i out of bounds for size $__size array`);
-        (__rep + offsets[0] + strides[0] * i)[0] = e;
+                I`Attempting to assign element from $(dims)D array using only \
+                  one index`);
+        if (i >= size := data.count())
+            throw IndexError(FStr() I`Index $i out of bounds for size $size \
+                                      array`);
+        data[offsets[0] + strides[0] * i] = e;
     }
 
 
     Elem oper [](uint i, uint j){
-        if (dims!=2) 
-            throw InvalidArgumentError(FStr() 
-            `Attempting to access element from $(dims)D array using 2 indices`);
-        if (i * j >= __size || i > shape[0] || j > shape[1])
-            throw IndexError(FStr() 
-            `Index [$i,$j] out of bounds for array with shape $shape`);
-        return (__rep + strides[1] * (j + offsets[0]) + offsets[0] + strides[0] * i)[0];
+        if (dims != 2) 
+            throw InvalidArgumentError(FStr() I`Attempting to access element \
+                                                from $(dims)D array using 2 \
+                                                indices`
+                                       );
+        if (i * j >= data.count() || i > shape[0] || j > shape[1])
+            throw IndexError(FStr() I`Index [$i,$j] out of bounds for array \
+                                      with shape $shape`
+                             );
+        return data[strides[1] * (j + offsets[0]) + offsets[0] + strides[0] * i];
     }
 
-    Elem oper [](uint i, uint j, uint k){
-        if (dims!=3) 
-            throw InvalidArgumentError(FStr() 
-            `Attempting to access element from $(dims)D array using 3 indices`);
+    Elem oper [](uint i, uint j, uint k) {
+        if (dims != 3) 
+            throw InvalidArgumentError(FStr() I`Attempting to access element \
+                                                from $(dims)D array using 3 \
+                                                indices`
+                                       );
         throw AssertionError("3D array access is not implemented yet");
     }
 
@@ -527,9 +477,11 @@ class NumericArray[Elem] {
         peer := NumericArray.cast(other);
 
         if (dims != peer.dims)
-            throw AssertionError(FStr() `Comparing $(dims)D array with $(peer.dims) array\n`);
+            throw AssertionError(FStr() I`Comparing $(dims)D array with \
+                                          $(peer.dims) array\n`
+                                 );
 
-        if (dims == 1){
+        if (dims == 1) {
             oc := peer.shape[0];
             c := shape[0];
             for (uint i = 0; i < c; ++i) {
@@ -545,36 +497,38 @@ class NumericArray[Elem] {
                     return elemDiff;
             }
             
-            # if other is longer than me, and we share a common prefix, I'm lesser.
+            # if other is longer than me, and we share a common prefix, I'm 
+            # lesser.
             if (oc > c)
                 return -1;
             else
                 # we're the same length and all elements are equal
                 return 0;
-        }
-        else if (dims == 2){
+        } else if (dims == 2) {
             peerSize := 0;
             oc := peer.shape[1];
             c := shape[1];
-            for (uint j = 0; j < c; j++){
+            for (uint j = 0; j < c; j++) {
                 if (j > oc)
                     return 1;
                 od := peer.shape[0];
                 d := shape[0];
                 for (uint i = 0; i < d; ++i) {
                     
-                    # if I'm longer than other, and we share a common prefix, I'm 
-                    # greater.
+                    # if I'm longer than other, and we share a common prefix, 
+                    # I'm greater.
                     if (i > od)
                         return 1;
 
                     # compare the elements
-                    elemDiff := cmp(this[i,j], peer[i,j]); // TODO use faster iteration
+                    # TODO use faster iteration
+                    elemDiff := cmp(this[i, j], peer[i, j]); 
                     if (elemDiff)
                         return elemDiff;
                 }
                 
-                # if other is longer than me, and we share a common prefix, I'm lesser.
+                # if other is longer than me, and we share a common prefix, 
+                # I'm lesser.
                 if (od > d)
                     return - 1;
             }
@@ -583,124 +537,114 @@ class NumericArray[Elem] {
             else
                 # we're the same length and all elements are equal
                 return 0;
+        } else if (dims ==0 || dims > 2) {
+            throw AssertionError(FStr() I`Comparing $(dims)D arrays is not \
+                                          implemented`
+                                 );
         }
-        else if (dims ==0 || dims > 2)
-            throw AssertionError(FStr() `Comparing $(dims)D arrays is not implemented\n`);
         return 0;
     }
 
-    ArrayData[Elem] _appendWorker(ArrayData[Elem] tmpData, Elem e){
-        uint index = offsets[0] + shape[0]*strides[0];
-        if (__cap > index){
-            tmpData.rep[index] = e;
-            return tmpData;
-        }
-        else {
-            uint newCap = __cap > 1 ? __cap + __cap/uint(abs(log2(float(__cap)))) : 10;
-            newData := _copyData(newCap);
-            newData.rep[index] = e;
-            return newData
-        }
-    }
-
     /// Append an element to an array, expanding it if needed
-    void append(Elem e){
+    void append(Elem e) {
         if (dims > 1)
-            throw InvalidArgumentError(FStr() `Cannot append an element to a ($dims)D array`);
+            throw InvalidArgumentError(FStr() I`Cannot append an element to a \
+                                                ($dims)D array`
+                                       );
 
-        ArrayData[Elem] newData  = _appendWorker(data, e);
 
-        if (newData != data) {
-            __cap = newData.cap;
-            __rep = newData.rep;
-            data = newData;
-        }
-
-        __size++;
-        shape[0] = __size;
+        data.append(e);
+        shape[0] = data.count();
     }
 
     /// Return a new array with an element appended
-    NumericArray appended(Elem e){
+    NumericArray appended(Elem e) {
         if (dims > 1)
-            throw InvalidArgumentError(FStr() `Cannot append an element to a ($dims)D array`);
+            throw InvalidArgumentError(FStr() I`Cannot append an element to a \
+                                                ($dims)D array`
+                                       );
 
-        uint index = offsets[0] + shape[0]*strides[0];
-        ArrayData[Elem] newData;
-        if (__cap > index) {
-            newData = _copyData(__cap);
-            tmpData := newData;
-            newData = _appendWorker(tmpData, e);
-            if (!(newData is tmpData))
-                throw AssertionError("Array data changed during element append without expansion");
+        uint index = offsets[0] + shape[0] * strides[0];
+        Array[Elem] newData;
+        if (data.capacity() > index) {
+            newData = data.clone();
+        } else {
+            # not enough capacity, allocate and copy manually to avoid doing 
+            # multiple allocs.
+            newData = Array[Elem](data.capacity() * 2);
+            for (int i = 0; i < data.count(); ++i)
+                newData.append(data[i]);
         }
-        else
-            newData = _appendWorker(data, e);
-        if (newData is data)
-            throw AssertionError("Array data not copied during element append with expansion");
+        newData.append(e);
 
-        return NumericArray(newData, Array[uint]![shape[0] + 1], strides.copy(), offsets.copy());
+        return NumericArray(newData, Array[uint]![shape[0] + 1], 
+                            strides.clone(), 
+                            offsets.clone()
+                            );
     }
 
-    NumericArray promoted(){
+    NumericArray promoted() {
         if (dims == 1) {
             newShape := Array[uint]![shape[0], 1];
             newStrides := Array[uintz]![strides[0], shape[0]];
             newOffsets := Array[uintz]![offsets[0], 0];
 
             return NumericArray(data, newShape, newStrides, newOffsets);
-        }
-        else
+        } else {
             throw AssertionError("promote only implemented for 1D arrays");
+        }
     }
 
-    NumericArray flattened(){
+    NumericArray flattened() {
         if (dims == 1) return this;
         
-        if (dims == 2){
-            if (shape[1] > 1 && (offsets[0] > 0 || offsets[1] > 0 || strides[1] != shape[0]))
-                throw AssertionError("2D subarray with this shape and offsets cannot be flattened, create a copy first");
+        if (dims == 2) {
+            if (shape[1] > 1 && 
+                (offsets[0] > 0 || offsets[1] > 0 || strides[1] != shape[0]))
+
+                throw AssertionError("2D subarray with this shape and offsets \
+                                      cannot be flattened, create a copy first");
             newShape := Array[uint]![shape[0] * shape[1]];
             newStrides := Array[uintz]![strides[0]];
             newOffsets := Array[uintz]![0];
 
             return NumericArray(data, newShape, newStrides, newOffsets);
+        } else {
+            throw AssertionError(I"flatten only implemented for 1D and 2D \
+                                   arrays");
         }
-        else
-            throw AssertionError("flatten only implemented for 1D and 2D arrays");
     }
 
     void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
-                Array[uint] wshape, uint dim);
+                     Array[uint] wshape, uint dim);
 
     void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
-                Array[uint] wshape, uint dim){
+                     Array[uint] wshape, uint dim) {
         fmt `[`;
-        if (dim == 1){
+        if (dim == 1) {
             bool first = true;
             uintz offset = woffsets[dim - 1];
             uintz stride = wstrides[dim - 1];
-            for (uint i = 0; i < wshape[0]; i++){
+            for (uint i = 0; i < wshape[0]; i++) {
                 if (!first)
                     fmt `, `;
                 else
                     first = false;
-                Elem elem = (__rep + offset + stride * i)[0];
-                if (_isNull(elem)) fmt `null`;
-                else {
+                Elem elem = data[offset + stride * i];
+                if (_isNull(elem)) 
+                    fmt `null`;
+                else
                     fmt `$elem`;
-                }
             }
-        } 
-        else {
+        } else {
             bool first = true;
 
-            Array[uintz] noffsets = woffsets.subarray(0, dim - 1).copy();
+            Array[uintz] noffsets = woffsets.subarray(0, dim - 1).clone();
             nstrides := wstrides.subarray(0, dim - 1);
             nshape := shape.subarray(0, dim - 1);
             stride := wstrides[dim - 1];
 
-            for (uint i = 0; i < wshape[dim - 1]; i++){
+            for (uint i = 0; i < wshape[dim - 1]; i++) {
                 if (!first)
                     fmt `, `;
                 else
@@ -709,7 +653,6 @@ class NumericArray[Elem] {
                 uintz noffset = noffsets[dim - 2] + stride;
                 noffsets[dim - 2] = noffset;
             }
-            
         }
         
         fmt `]`;

@@ -143,9 +143,9 @@ intRepr:=FStr() `$intA`;
 stringRepr:=FStr() `$stringA`;
 
 if (intRepr != '[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]')
-    cout `Array[int].writeTo failed\n`;
+    cout `Array[int].formatTo failed\n`;
 if (stringRepr != '[bogus, test, string]')
-    cout `Array[String].writeTo failed\n`;
+    cout `Array[String].formatTo failed\n`;
 
 # Test array comparison
 Array[int] N = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -185,6 +185,12 @@ if (true) {
     if (arr != Array[int]![0, 1, 2, 30, 3, 4, 5, 6])
         cout `FAILED array insertion\n`;
 }
+
+# test contains()
+if (!stringA.contains('string'))
+    cout `FAILED contains(member) is true\n`;
+if (stringA.contains('non-member'))
+    cout `FAILED contains(non-member is false\n`;
 
 # test map/reduce/filter
 
@@ -271,6 +277,20 @@ if (1) {
     
     if (!deleted)
         cout `FAILED array cleanup\n`;
+}
+
+if (1) {
+    bool deleted;
+    class Tracer { oper del() { deleted = true; } }
+    if (1) {
+        Array[Tracer] ta = [Tracer()];
+        Tracer t = ta.pop();
+        if (deleted)
+            cout `FAILED pop - deleted too early.`;
+    }
+    
+    if (!deleted)
+        cout `FAILED pop management - object not deleted`;
 }
 
 # test a second invocation (uses a different code path)

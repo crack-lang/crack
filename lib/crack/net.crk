@@ -413,7 +413,7 @@ class Poller {
         if (newCapacity < __capacity)
             throw Exception('cannot shrink');
         
-        __pollables.realloc(newCapacity);
+        __pollables.grow(newCapacity);
         
         # create a new pollset and copy the existing one.
         newFDs := PollSet(newCapacity);

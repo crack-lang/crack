@@ -195,13 +195,6 @@ class Process {
         }
     }
 
-    oper del() {
-        if (!(_pd is null))
-            closeProcess(_pd);
-
-        free(_pd);
-    }
-
     PipeDesc getPipeDesc() {
         return _pd;
     }
@@ -234,8 +227,6 @@ class Process {
         __Status status = {handler, _pid};
         __addTo(poller, status);
         int count = 2;
-        
-        ManagedBuffer buf = {1024};
         
         # keep reading until both of the output streams have closed.
         while (poller)
@@ -354,12 +345,17 @@ class Process {
 
     // close the pipes. read/write operations on this class after a call to
     // close are undefined
-    void close() {
-        closeProcess(_pd);
-        free(_pd);
-        _pd = null;
+    @final void close() {
+        if (!(_pd is null)) {
+            closeProcess(_pd);
+            free(_pd);
+            _pd = null;
+        }   
     }
 
+    oper del() {
+        close();
+    }
 }
 
 class _ProcWriter : FDWriter {
