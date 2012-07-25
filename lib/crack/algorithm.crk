@@ -4,17 +4,23 @@ import crack.lang cmp;
 import crack.io cout;
 
 ## Base class version of quick-sort, can be applied to primitive arrays.
-class QuickSortPrim[Elem] {
+class QuickSortPrim[SeqT] {
+
+    alias Elem = typeof(SeqT(1)[0]);
+    alias CmpFunc = function[int, Elem, Elem];
 
     @static
-    void _swap(Elem A, uintz l, uintz r){
+    void _swap(SeqT A, uintz l, uintz r){
         temp := A[l];
         A[l] = A[r];
         A[r] = temp;
     }
 
-    @static
-    void _quickSort3(Elem A, intz l, intz r) {
+    @static int defaultCmp(Elem a, Elem b) {
+        return cmp(a, b);
+    }
+
+    @static void _quickSort3(SeqT A, intz l, intz r, CmpFunc cmp) {
 
         // this is based on a 3-partition version from a talk by Robert Sedgewick
         // and Jon Bentley
@@ -81,25 +87,35 @@ class QuickSortPrim[Elem] {
             i++;
         }
         
-        _quickSort3(A, l, j);
-        _quickSort3(A, i, r);
+        _quickSort3(A, l, j, cmp);
+        _quickSort3(A, i, r, cmp);
         
     }
 
     @static
-    void sort(Elem A, uintz count){
+    void sort(SeqT A, uintz count) {
         if (count > 1)
-            _quickSort3(A, 0, count - 1);
+            _quickSort3(A, 0, count - 1, defaultCmp);
+    }
+
+    @static
+    void sort(SeqT A, uintz count, CmpFunc cmp) {
+        if (count > 1)
+            _quickSort3(A, 0, count - 1, cmp);
     }
 
 }
 
 ## Quick-sort.  SeqT must have [], []= and count()
 class QuickSort[SeqT] : QuickSortPrim[SeqT] {
-    @static
-    void sort(SeqT A){
+    @static void sort(SeqT A) {
         if (A.count() > 1)
-            _quickSort3(A, 0, A.count() - 1);
+            _quickSort3(A, 0, A.count() - 1, defaultCmp);
+    }
+
+    @static void sort(SeqT A, CmpFunc cmp) {
+        if (A.count() > 1)
+            _quickSort3(A, 0, A.count() - 1, cmp);
     }
 }
 

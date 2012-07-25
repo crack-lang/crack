@@ -226,6 +226,15 @@ if (intA != Array[int]![2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 if (intA != intB)
     cout `Array compare/sorted failed, got $intA != $intB\n`;
 
+int reverseCmp(int a, int b) { return b - a; }
+intB = intA.sorted(reverseCmp);
+intA.sort(reverseCmp);
+if (intA != Array[int]![11, 10, 9, 8, 7, 6, 5, 4, 3, 2])
+    cout `sort(fn) failed, got $intA\n`;
+if (intB != intA)
+    cout `sorted(fn) failed, got $intB\n`;
+intA.sort();
+
 intB = intA.filtered(gte10);
 if (intB != Array[int]![10, 11])
     cout `filter intA failed, got $intB\n`;

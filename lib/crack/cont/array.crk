@@ -217,9 +217,10 @@ class Array[Elem] {
     
     oper del() {
         if (!(__rep is null)) {
-            for (uint i = 0; i < __size; ++i) {
-                if (!_isNull(__rep[i]))
+            if (__cap && _isObject(__rep[0])) {
+                for (uint i = 0; i < __size; ++i) {
                     _release(__rep[i]);
+                }
             }
             free(__rep); 
         }
@@ -292,9 +293,19 @@ class Array[Elem] {
         QuickSort[Array].sort(this);
     }
 
+    void sort(function[int, Elem, Elem] cmp) {
+        QuickSort[Array].sort(this, cmp);
+    }
+
     Array sorted() {
         Array newArray = this.clone();
         QuickSort[Array].sort(newArray);
+        return newArray;
+    }
+
+    Array sorted(function[int, Elem, Elem] cmp) {
+        Array newArray = this.clone();
+        QuickSort[Array].sort(newArray, cmp);
         return newArray;
     }
 
