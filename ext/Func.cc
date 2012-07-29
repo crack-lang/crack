@@ -260,7 +260,7 @@ void Func::finish() {
         receiverType->createNewFunc(*realCtx, newFunc.get());
     
     // is this a virtual wrapper class?
-    } else if ((flags & vwrap) || override) {
+    } else if ((flags & vwrap) || (override && funcPtr)) {
         if (flags & vwrap) {
             assert(wrapperClass && "class wrapper not specified for wrapped func");
         }
