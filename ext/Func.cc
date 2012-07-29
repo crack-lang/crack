@@ -124,6 +124,11 @@ void Func::finish() {
 
         VarDefPtr existingDef = parser.checkForExistingDef(nameTok, name, true);
         override = parser.checkForOverride(existingDef.get(), realArgs, context->ns.get(), nameTok, name);
+
+        // make overrides implicitly virtual
+        if (override) {
+            flags = static_cast<Func::Flags>(flags | virtualized);
+        }
     }
 
     // if we have a function pointer, create a extern function for it
@@ -137,6 +142,10 @@ void Func::finish() {
         } else if (override) {
             // if this is an override, create a wrapper function
             externName = name + ":impl_" + receiverType->name;
+
+            // this is only the extern function, it can't be virtual.
+            // the wrapper for it, further down, is.
+            flags = static_cast<Func::Flags>(flags & ~virtualized);
         } else {
             externName = name;
         }
