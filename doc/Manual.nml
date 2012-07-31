@@ -5350,6 +5350,8 @@ From 0.6 to 1.0
 -   Renamed #TreeMap#, #HashMap#, and #OrderedHashMap# #contains()# method to
     #hasKey()#.
 -   Renamed #OrderedHashMap.getIndex()# method to #getItemAt()#.    
+-   The #isLeap()# function in the time module is now a static method of the 
+    #Time# class.
 
 From 0.5 to 0.6
 ---------------
