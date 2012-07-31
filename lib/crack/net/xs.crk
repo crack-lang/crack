@@ -21,8 +21,10 @@ import crack.ext._xs xs_context, xs_msg_t, xs_pollitem_t, xs_socket_t,
     XS_EVENTS, XS_TYPE, XS_LINGER, XS_RECONNECT_IVL, XS_BACKLOG,
     XS_RECONNECT_IVL_MAX, XS_MAXMSGSIZE, XS_SNDHWM, XS_RCVHWM,
     XS_MULTICAST_HOPS, XS_RCVTIMEO, XS_SNDTIMEO, XS_IPV4ONLY, XS_KEEPALIVE,
-    XS_PROTOCOL, XS_SURVEY_TIMEOUT, XS_MORE, XS_DONTWAIT, XS_SNDMORE,
+    XS_SURVEY_TIMEOUT, XS_MORE, XS_DONTWAIT, XS_SNDMORE,
     XS_POLLIN, XS_POLLOUT, XS_POLLERR;
+
+import crack.runtime EAGAIN;
 
 @export_symbols xs_context, xs_msg_t, xs_pollitem_t, xs_socket_t,
     xs_errno, xs_strerror, xs_init, xs_term, xs_setctxopt, xs_msg_move,
@@ -40,7 +42,7 @@ import crack.ext._xs xs_context, xs_msg_t, xs_pollitem_t, xs_socket_t,
     XS_EVENTS, XS_TYPE, XS_LINGER, XS_RECONNECT_IVL, XS_BACKLOG,
     XS_RECONNECT_IVL_MAX, XS_MAXMSGSIZE, XS_SNDHWM, XS_RCVHWM,
     XS_MULTICAST_HOPS, XS_RCVTIMEO, XS_SNDTIMEO, XS_IPV4ONLY, XS_KEEPALIVE,
-    XS_PROTOCOL, XS_SURVEY_TIMEOUT, XS_MORE, XS_DONTWAIT, XS_SNDMORE,
+    XS_SURVEY_TIMEOUT, XS_MORE, XS_DONTWAIT, XS_SNDMORE,
     XS_POLLIN, XS_POLLOUT, XS_POLLERR;
 
 import crack.io cout, cerr, FStr, Formatter;
@@ -49,12 +51,12 @@ import crack.runtime exit, memcpy, malloc, strlen;
 @import crack.ann assert;
 
 // Return error string for the given error number
-CString getErrMsg(int errno){
+CString getErrMsg(int errno) {
     return CString(xs_strerror(errno), false);
 }
 
 // Return the error string for the current error condition
-CString getErrMsg(){
+CString getErrMsg() {
     return CString(xs_strerror(xs_errno()), false);
 }
 
@@ -67,7 +69,7 @@ class Xs {
                                      $(getErrMsg())`);
     }
     
-    oper del(){
+    oper del() {
         if (xs_term(ctx) == -1)
             throw Exception(FStr() I`Could not terminate Xs context: \
                                      $(getErrMsg())`);
@@ -78,7 +80,7 @@ class Xs {
 class XsMsg : Object, xs_msg_t {
     Buffer _buf; // We want to keep a reference to the buffer
 
-    void handleError(String op) {
+    void _handleError(String op) {
         int errno = xs_errno();
         if (errno != 0)
             throw Exception(FStr() `Could not $op XsMsg: $(getErrMsg())`);
@@ -97,25 +99,25 @@ class XsMsg : Object, xs_msg_t {
 
     // Create an empty message
     oper init(): _buf = null {
-        retval := init_empty();
+        retval := initEmpty();
         if (retval == -1)
-            handleError("init");
+            _handleError("init");
         updateBuffer();
     }
 
     // Create an empty message with a buffer attached
     oper init(uint size): _buf = null {
-        retval := init_size(size);
+        retval := initSize(size);
         if (retval == -1)
-            handleError("init_size");
+            _handleError("init_size");
         updateBuffer();
     }
 
     // Create a message with an initialized buffer
     oper init(Buffer data): _buf = data {
-        retval := init_data(data.buffer, data.size, null, null);
+        retval := initData(data.buffer, data.size);
         if (retval == -1)
-            handleError("init_data");
+            _handleError("init_data");
     }
 
     void formatTo(Formatter fmt){
@@ -129,122 +131,146 @@ class XsMsg : Object, xs_msg_t {
 
 // Wrap the opaque XS socket structure
 class XsSocket {
-    xs_socket_t sock;
+    xs_socket_t _sock;
 
     // Get error message and throw exception
-    void handleError(String op) {
+    void _handleError(String op) {
         int errno = xs_errno();
         if (errno != 0)
             throw Exception(FStr() `Could not $op XsSocket: $(getErrMsg())`);
     }
 
     // Constructor with low-level context type
-    oper init(xs_context ctx, int tpe) : sock =  xs_sock_new(ctx, tpe) {
-        if (sock is null)
-            handleError("initialize");
+    oper init(xs_context ctx, int tpe) : _sock =  xs_sock_new(ctx, tpe) {
+        if (_sock is null)
+            _handleError("initialize");
     }
 
     // Constructor with higher-level context type
-    oper init(Xs Ctx, int tpe) : sock = xs_sock_new(Ctx.ctx, tpe) {
-        if (sock is null)
-            handleError("initialize");
+    oper init(Xs Ctx, int tpe) : _sock = xs_sock_new(Ctx.ctx, tpe) {
+        if (_sock is null)
+            _handleError("initialize");
     }
 
     // Bind socket to endpoint (server)
     int bind(CString endpoint) {
-        retval := xs_sock_bind(sock, endpoint.buffer);
+        retval := xs_sock_bind(_sock, endpoint.buffer);
         if (retval == -1)
-            handleError("bind");
+            _handleError("bind");
         return retval;
     }
 
     // Connect to endpoint (client)
     int connect(CString endpoint) {
-        retval := xs_sock_connect(sock, endpoint.buffer);
+        retval := xs_sock_connect(_sock, endpoint.buffer);
         if (retval == -1)
-            handleError("connect");
+            _handleError("connect");
         return retval;
     }
 
     // Shut down the socket
     int shutdown(int how) {
-        retval := xs_sock_shutdown(sock, how);
+        retval := xs_sock_shutdown(_sock, how);
         if (retval == -1)
-            handleError("shutdown");
+            _handleError("shutdown");
         return retval;
     }
 
     // Send message
     int send(byteptr buf, uint len, int flags) {
-        return xs_sock_send(sock, buf, len, flags);
+        return xs_sock_send(_sock, buf, len, flags);
     }
 
     // Send message using a Buffer object (like a string)
     int send(Buffer buf, int flags) {
-        return xs_sock_send(sock, buf.buffer, buf.size, flags);
+        retval := send(buf.buffer, buf.size, flags);
+        if (retval == -1)
+            _handleError("send");
+        return retval;
     }
 
     // Receive a message into a low-level byteptr buffer of max-size len
     int recv(byteptr buf, uint len, int flags) {
-        return xs_sock_recv(sock, buf, len, flags);
+        return xs_sock_recv(_sock, buf, len, flags);
     }
 
     // Receive a message into a Buffer object
     int recv(Buffer buf, int flags) {
-        return xs_sock_recv(sock, buf.buffer, buf.size, flags);
+        return xs_sock_recv(_sock, buf.buffer, buf.size, flags);
     }
 
     // Send a message using a high-level XsMsg object (zero-copy)
     int sendMsg(XsMsg msg, int flags) {
-        return xs_sock_sendmsg(sock, msg, flags);
+        retval := xs_sock_sendmsg(_sock, msg, flags);
+        if (retval == -1)
+          _handleError("sendmsg");
+        return retval;
     }
 
     // Receive a message into an XsMsg object (zero-copy)
     int recvMsg(XsMsg msg, int flags) {
-        numbytes := xs_sock_recvmsg (sock, msg, flags);
-        if (numbytes == -1) return -1;
+        numbytes := xs_sock_recvmsg (_sock, msg, flags);
+        if (numbytes == -1)
+          _handleError("recvmsg");;
         return numbytes;
     }
 
     // Set int option - this covers most use cases
     int setOpt(int option, int optval) {
-        return xs_setsockopt_int(sock, option, optval);
+        return xs_setsockopt_int(_sock, option, optval);
     }
 
     // Set uint64 option
-    int setOpt(int option, uint64 optval){
-        return xs_setsockopt_uint64(sock, option, optval);
+    int setOpt(int option, uint64 optval) {
+        return xs_setsockopt_uint64(_sock, option, optval);
     }
 
     // Set string option using a low-level byteptr buffer
     int setOpt(int option, byteptr optval, uint optvallen) {
-        return xs_setsockopt_byteptr(sock, option, optval, optvallen);
+        return xs_setsockopt_byteptr(_sock, option, optval, optvallen);
     }
 
     // Set string option using a Buffer obhect
     int setOpt(int option, Buffer buf) {
-        return xs_setsockopt_byteptr(sock, option, buf.buffer, buf.size);
+        return xs_setsockopt_byteptr(_sock, option, buf.buffer, buf.size);
     }
 
     // Get int option: -1 means error, unless that is a valid option value
-    int getOptInt(int option){
-        return xs_getsockopt_int(sock, option);
+    int getOptInt(int option) {
+        return xs_getsockopt_int(_sock, option);
     }
 
     // Get uint64 option value
-    uint64 getOptUint64(int option){
-        return xs_getsockopt_uint64(sock, option);
+    uint64 getOptUint64(int option) {
+        return xs_getsockopt_uint64(_sock, option);
     }
 
     // Get zero-terminated string option value
-    String getSockOptString(int option){
-        byteptr b = xs_getsockopt_byteptr(sock, option);
+    String getOptString(int option) {
+        byteptr b = xs_getsockopt_byteptr(_sock, option);
         return String(b, strlen(b), true);
     }
 
+    // Get socket file descriptor
+    int getFD() {
+        retval := getOptInt(XS_FD);
+        if (retval == -1)
+          _handleError("getFD");
+        return retval;
+    }
+
+    // Get socket events
+    int getEvents() {
+        retval := getOptInt(XS_EVENTS);
+        if (retval == -1)
+          _handleError("getEvents");
+        return retval;
+
+    }
+
     oper del() {
-        if (!(sock is null) && xs_sock_close(sock) == -1)
-            handleError("close");
-        sock = null;
+        if (!(_sock is null) && xs_sock_close(_sock) == -1)
+            _handleError("close");
+        _sock = null;
     }
 }

@@ -104,14 +104,18 @@
         oper init();
 
         @cname xs_msg_init
-        int init_empty();
+        int initEmpty();
 
         @cname xs_msg_init_size
-        int init_size(uint size);
+        int initSize(uint size);
 
-        @cname xs_msg_init_data
-        int init_data(byteptr data,
-                      uint size, voidptr ffn, voidptr hint);
+        @inject 'int crk_xs_msg_init_data(xs_msg_t *msg, char *data, unsigned int size) {
+                return xs_msg_init_data(msg, (voidptr)data, (size_t)size, NULL, NULL);
+            }\n'
+
+        @cname crk_xs_msg_init_data
+        int initData(byteptr data, uint size);
+
         @cname xs_msg_close
         int close();
 
@@ -121,9 +125,17 @@
         @cname xs_msg_size
         uint size();
 
-        //    @cname xs_getmsgopt // TODO write wrapper for &uint
-        //    int getmsgopt (int option, voidptr optval,
-        //        uint optvallen);
+        @inject 'int crk_xs_getmsgopt_int(xs_msg_t *msg, int option) {
+                int optval;
+                size_t optvallen;
+                int status = xs_getmsgopt(msg, option, (voidptr)&optval, &optvallen);
+                printf("optval=%d\\n", optval);
+                if (status == -1) return -1;
+                return optval;
+            }\n'
+
+    @cname crk_xs_getmsgopt_int
+        int getOptInt (int option);
     }
 
     int xs_msg_move (xs_msg_t dest, xs_msg_t src);
@@ -180,7 +192,6 @@
               XS_SNDTIMEO, 
               XS_IPV4ONLY, 
               XS_KEEPALIVE, 
-              XS_PROTOCOL, 
               XS_SURVEY_TIMEOUT, 
 
     /*  Message options                                                       */
@@ -226,6 +237,7 @@
                 int optval;
                 size_t optvallen;
                 int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
+                printf("optval=%d\\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }\n'

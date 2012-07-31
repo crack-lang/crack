@@ -10,7 +10,7 @@ import crack.process Process;
 xsContext := Xs();
 
 // Create socket on localhost
-sock := XsSocket(xsContext, XS_XREQ);
+sock := XsSocket(xsContext, XS_XREP);
 sock.bind("tcp://127.0.0.1:5555");
 
 msg := XsMsg();
