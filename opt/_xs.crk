@@ -13,7 +13,14 @@
 @generateExtension crack.ext._xs {
     @filename 'opt/_xs.cc'
     @dumpsymbols 'opt/_xs.txt'
-    @inject '// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>\n//\n'
+    @inject I'// Copy\
+                 right 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+              //
+              //  This Source Code Form is subject to the terms of the \
+                  Mozilla Public
+              //  License, v. 2.0. If a copy of the MPL was not distributed \
+                  with this
+              //  file, You can obtain one at http://mozilla.org/MPL/2.0/.\n'
     @inject '#include <stdio.h>\n'
     @inject '#include <stdint.h>\n'
     @inject '#include <string.h>\n'

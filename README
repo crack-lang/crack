@@ -17,6 +17,7 @@ The following files are not released under the MPL:
 
     These files can be freely distributed as long as their copyright notices 
     remain intact:
+        m4/libtool.m4
         m4/ltoptions.m4
         m4/ltsugar.m4
         ./m4/iconv.m4
@@ -37,9 +38,11 @@ The following files are not released under the MPL:
       
     These files are released under the Illinois Open Source License:
         ./runtime/BorrowedExceptions.cc
+        portions of builder/llvm/Native.cc
 
     These files are released under the Apache license:
       ./opt/xml.rl
+      lib/crack/xml.crk
 
     These files are released under the Ruby license:
       ./opt/json.rl
@@ -52,6 +55,15 @@ The following files are not released under the MPL:
       ./cmake/modules/FindIconv.cmake
       ./cmake/modules/FindPCRE.cmake
       ./cmake/modules/FindSpug.cmake 
+    
+    These files are under their own license which requires only that 
+    copyright/licecnsing remain intact and modifications be noted:
+      builder/util/md5.c
+    
+    These files are under the MIT license.
+      opt/_cairosdl.crk
+      opt/cairosdl.c
+      opt/cairosdl.h
 
 See the doc/license directory for copies of all of the special licenses.
 
