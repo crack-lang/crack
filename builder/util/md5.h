@@ -31,7 +31,12 @@
   The code is derived from the text of the RFC, including the test suite
   (section A.5) but excluding the rest of Appendix A.  It does not include
   any code or documentation that is identified in the RFC as being
-  copyrighted.
+  Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
+  
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  
 
   The original and principal author of md5.h is L. Peter Deutsch
   <ghost@aladdin.com>.  Other authors are noted in the change history

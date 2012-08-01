@@ -1,5 +1,11 @@
 // Binding of libm
-// Copyright 2010 Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2010-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2011 Google Inc.
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 // See http://anubis.dkuug.dk/jtc1/sc22/wg14/www/docs/n869/ for libm reference
 // As a general rule, follow libm as well as GSL, without copying code.

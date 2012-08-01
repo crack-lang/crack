@@ -8,7 +8,13 @@
 // www.bitbucket.org/hengestone/ragel-crack until the patch -s merged using
 // ragel -K -F0 json.rl -o json.crk
 
-// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2012 Google Inc.
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 // 12/10/2011
 
 // For more info on JSON, see http://json.org/

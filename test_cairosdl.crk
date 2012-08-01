@@ -1,3 +1,9 @@
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 import crack.runtime exit;
 import crack.ext._sdl SDL_Surface, SDL_Event, SDL_Init, SDL_INIT_VIDEO, SDL_SetVideoMode,
        SDL_Quit, SDL_FULLSCREEN, SDL_SWSURFACE, SDL_QUIT, SDL_KEYDOWN, 

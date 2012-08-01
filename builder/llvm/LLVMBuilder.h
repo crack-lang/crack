@@ -1,4 +1,10 @@
-// Copyright 2009 Google Inc.
+// Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2010-2012 Google Inc.
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #ifndef _builder_LLVMBuilder_h_
 #define _builder_LLVMBuilder_h_

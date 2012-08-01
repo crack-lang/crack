@@ -1,4 +1,9 @@
-// Copyright 2010 Google Inc, Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #ifndef _builder_llvm_BFieldRef_h_
 #define _builder_llvm_BFieldRef_h_
