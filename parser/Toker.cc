@@ -54,8 +54,7 @@ void Toker::ungetChar(char ch) {
     if (ch == '\n') {
         currentLine--;
         currentEndCol = saveEndCol;
-    }
-    else {
+    } else {
         currentEndCol--;
     }
 }
