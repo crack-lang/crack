@@ -1,17 +1,12 @@
 # Crack Crossroads IO binding based in xs.h
 # Copyright 2012 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
-#   This Source Code Form is subject to the terms of the Mozilla Public
-#   License, v. 2.0. If a copy of the MPL was not distributed with this
-#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
 # 6/14/2012
 
 # Based on xs.h from Crossroads IO libxs 1.2.0, which is LGPLv3
 # Therefore this is file under LGPLv3
 # The C++ code generated from this file is, like the rest of
-# Crack
+# Crack, licensed under MPL 2.0.
 
 
 @import crack.extgen generateExtension;

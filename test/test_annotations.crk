@@ -70,9 +70,9 @@ if (!D.works()) cout `"static" annotation failed\n`;
 
 @getLocation blah  # this test will break if you change the line number of blah
 nameEnd := NAME.slice(-25);
-if (nameEnd != 'test/test_annotations.crk' || LINE != 66)
+if (nameEnd != 'test/test_annotations.crk' || LINE != 71)
     cout `failed location check:
-        $nameEnd:$LINE != test/test_annotations.crk:66\n`;
+        $nameEnd:$LINE != test/test_annotations.crk:71\n`;
 
 if (@stringify foo != 'foo')
     cout `stringification (creating a token) failed\n`;

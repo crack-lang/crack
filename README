@@ -57,8 +57,10 @@ The following files are not released under the MPL:
       ./cmake/modules/FindSpug.cmake 
     
     These files are under their own license which requires only that 
-    copyright/licecnsing remain intact and modifications be noted:
+    copyright/licecnsing remain intact and (in the case of some of them) that 
+    modifications be noted:
       builder/util/md5.c
+      benchmarks/test_fankuch_language_game.crk
     
     These files are under the MIT license.
       opt/_cairosdl.crk
