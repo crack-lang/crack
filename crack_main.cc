@@ -13,6 +13,7 @@
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
 #include "Crack.h"
+#include "crack_config.h"
 
 using namespace std;
 

@@ -230,7 +230,10 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     createLLVMModule(name);
 
     if (options->debugMode) {
-        debugInfo = new DebugInfo(module, name);
+        debugInfo = new DebugInfo(module,
+                                  name,
+                                  path,
+                                  context.builder.options.get());
     }
 
     // create a context data object
