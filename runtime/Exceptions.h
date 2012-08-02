@@ -1,4 +1,10 @@
 // Copyright 2011 Google Inc.
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 // header for the exceptions subsystem of the runtime
 
 #define __STDC_CONSTANT_MACROS 1

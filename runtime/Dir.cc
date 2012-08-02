@@ -1,6 +1,12 @@
 // Runtime support for directory access
+// Copyright 2010-2011 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-// Portions Copyright 2010 Google Inc.
+// Copyright 2011 Arno Rehn <arno@arnorehn.de>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #include <iostream>
 

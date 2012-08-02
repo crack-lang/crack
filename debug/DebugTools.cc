@@ -1,8 +1,14 @@
-// Copyright 2011 Google Inc.
+// Copyright 2011-2012 Google Inc.
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #include "DebugTools.h"
 
 #include <string.h>
+#include <iomanip>
 #include <iostream>
 #include <malloc.h>
 #include <map>
@@ -100,4 +106,11 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
         info[1] = i->second.filename;
         info[2] = reinterpret_cast<const char *>(i->second.lineNumber);
     }
+}
+
+void crack::debug::dumpFuncTable(ostream &out) {
+    for (DebugTable::iterator i = debugTable.begin(); i != debugTable.end();
+         ++i
+         )
+        out << hex << i->first << " " << i->second.funcName << endl;
 }

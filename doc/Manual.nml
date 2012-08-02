@@ -1,4 +1,14 @@
-c
+\C{
+ * Copyright 2010-2012 Google Inc.
+ * Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
+ * Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+ * 
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
+}
+
 The Crack Programming Language Guide
 ====================================
 
@@ -5350,6 +5360,8 @@ From 0.6 to 1.0
 -   Renamed #TreeMap#, #HashMap#, and #OrderedHashMap# #contains()# method to
     #hasKey()#.
 -   Renamed #OrderedHashMap.getIndex()# method to #getItemAt()#.    
+-   The #isLeap()# function in the time module is now a static method of the 
+    #Time# class.
 
 From 0.5 to 0.6
 ---------------

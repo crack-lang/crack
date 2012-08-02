@@ -23,6 +23,17 @@ xs_msg_t *crk_xs_msg_new() {
                 xs_msg_t *msg = new xs_msg_t;
                 return msg;
             }
+int crk_xs_msg_init_data(xs_msg_t *msg, char *data, unsigned int size) {
+                return xs_msg_init_data(msg, (voidptr)data, (size_t)size, NULL, NULL);
+            }
+int crk_xs_getmsgopt_int(xs_msg_t *msg, int option) {
+                int optval;
+                size_t optvallen;
+                int status = xs_getmsgopt(msg, option, (voidptr)&optval, &optvallen);
+                printf("optval=%d\n", optval);
+                if (status == -1) return -1;
+                return optval;
+            }
 int xs_setsockopt_int (voidptr sock, int option, int optval) {
                 return xs_setsockopt(sock, option, (voidptr)&optval, sizeof(int));
             }
@@ -38,6 +49,7 @@ int xs_getsockopt_int(voidptr sock, int option) {
                 int optval;
                 size_t optvallen;
                 int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
+                printf("optval=%d\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }
@@ -130,22 +142,20 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
                         (void *)crk_xs_msg_new
                 );
 
-        f = type_xs_msg_t->addMethod(type_int, "init_empty",
+        f = type_xs_msg_t->addMethod(type_int, "initEmpty",
                         (void *)xs_msg_init
                 );
 
-        f = type_xs_msg_t->addMethod(type_int, "init_size",
+        f = type_xs_msg_t->addMethod(type_int, "initSize",
                         (void *)xs_msg_init_size
                 );
             f->addArg(type_uint, "size");
 
-        f = type_xs_msg_t->addMethod(type_int, "init_data",
-                        (void *)xs_msg_init_data
+        f = type_xs_msg_t->addMethod(type_int, "initData",
+                        (void *)crk_xs_msg_init_data
                 );
             f->addArg(type_byteptr, "data");
             f->addArg(type_uint, "size");
-            f->addArg(type_voidptr, "ffn");
-            f->addArg(type_voidptr, "hint");
 
         f = type_xs_msg_t->addMethod(type_int, "close",
                         (void *)xs_msg_close
@@ -158,6 +168,11 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
         f = type_xs_msg_t->addMethod(type_uint, "size",
                         (void *)xs_msg_size
                 );
+
+        f = type_xs_msg_t->addMethod(type_int, "getOptInt",
+                        (void *)crk_xs_getmsgopt_int
+                );
+            f->addArg(type_int, "option");
 
     type_xs_msg_t->finish();
 
@@ -548,10 +563,6 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "XS_KEEPALIVE",
                      static_cast<int>(XS_KEEPALIVE)
-                     );
-
-    mod->addConstant(type_int, "XS_PROTOCOL",
-                     static_cast<int>(XS_PROTOCOL)
                      );
 
     mod->addConstant(type_int, "XS_SURVEY_TIMEOUT",

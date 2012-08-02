@@ -1,5 +1,11 @@
 ## This module provides a Process class for managing sub processes
-## Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
+## Copyright 2011-2012 Google Inc.
+## Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+## 
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+## 
 
 import crack.runtime close, runChildProcess, waitProcess, signalProcess,
     SIGKILL, SIGTERM, PipeDesc, free, closeProcess;
@@ -195,13 +201,6 @@ class Process {
         }
     }
 
-    oper del() {
-        if (!(_pd is null))
-            closeProcess(_pd);
-
-        free(_pd);
-    }
-
     PipeDesc getPipeDesc() {
         return _pd;
     }
@@ -234,8 +233,6 @@ class Process {
         __Status status = {handler, _pid};
         __addTo(poller, status);
         int count = 2;
-        
-        ManagedBuffer buf = {1024};
         
         # keep reading until both of the output streams have closed.
         while (poller)
@@ -354,12 +351,17 @@ class Process {
 
     // close the pipes. read/write operations on this class after a call to
     // close are undefined
-    void close() {
-        closeProcess(_pd);
-        free(_pd);
-        _pd = null;
+    @final void close() {
+        if (!(_pd is null)) {
+            closeProcess(_pd);
+            free(_pd);
+            _pd = null;
+        }   
     }
 
+    oper del() {
+        close();
+    }
 }
 
 class _ProcWriter : FDWriter {

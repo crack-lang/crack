@@ -1,5 +1,11 @@
 // Test XDR encode/decode
+// Copyright 2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 // 6/25/2012
 
 import crack.io cout;
@@ -19,7 +25,7 @@ import crack.runtime XDR_ENCODE, XDR_DECODE, XDR_FREE, xdr, xdrmem_create,
                         xdr_getpos, xdr_destroy;
 import crack.ascii hex;
 import crack.math PI, E;
-import crack.cont.array Array, ArrayData;
+import crack.cont.array Array;
 
 // Create buffer
 xdrBuf := ManagedBuffer(1024);
@@ -102,8 +108,9 @@ if (newBuf != "hello")
 
 // Arrays ----------------------------------------------------------------------
 XdrStream = xdrmem_create(xdrBuf.buffer, xdrBuf.cap, XDR_ENCODE);
-Array[int] A = [1, 2, 3, 4, 5];
-xdr_encode_array_int(XdrStream, A.data.rep, A.count(), A.count());
+array[int] Araw = [1, 2, 3, 4, 5];
+xdr_encode_array_int(XdrStream, Araw, 5, 5);
+Array[int] A = {Araw, 5, 5, true};
 xdrBuf.size = xdr_getpos(XdrStream);
 encoded = hex(xdrBuf);
 expected = "000000050000000100000002000000030000000400000005";
@@ -114,11 +121,11 @@ if (encoded != expected)
 xdr_destroy(XdrStream);
 
 XdrStream = xdrmem_create(xdrBuf.buffer, xdrBuf.cap, XDR_DECODE);
-ArrayData[int] B = {10}; // A buffer
-newLen = xdr_decode_array_int(XdrStream, B.rep, B.cap);
+array[int] B = {10}; // A buffer
+newLen = xdr_decode_array_int(XdrStream, B, 10);
 
 // Create an array view of the buffer
-Array[int] result = {B, B.rep, B.cap, newLen};
+Array[int] result = {B, 10, newLen, true};
 if (result != A)
     cout `XDR int array decoding failed\n`;
 

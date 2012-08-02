@@ -1,4 +1,11 @@
-// Copyright 2010 Google Inc.
+// Copyright 2010-2012 Google Inc.
+// Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2011-2012 Arno Rehn <arno@arnorehn.de>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #include "Func.h"
 
@@ -124,6 +131,11 @@ void Func::finish() {
 
         VarDefPtr existingDef = parser.checkForExistingDef(nameTok, name, true);
         override = parser.checkForOverride(existingDef.get(), realArgs, context->ns.get(), nameTok, name);
+
+        // make overrides implicitly virtual
+        if (override) {
+            flags = static_cast<Func::Flags>(flags | virtualized);
+        }
     }
 
     // if we have a function pointer, create a extern function for it
@@ -137,6 +149,10 @@ void Func::finish() {
         } else if (override) {
             // if this is an override, create a wrapper function
             externName = name + ":impl_" + receiverType->name;
+
+            // this is only the extern function, it can't be virtual.
+            // the wrapper for it, further down, is.
+            flags = static_cast<Func::Flags>(flags & ~virtualized);
         } else {
             externName = name;
         }
@@ -260,7 +276,7 @@ void Func::finish() {
         receiverType->createNewFunc(*realCtx, newFunc.get());
     
     // is this a virtual wrapper class?
-    } else if ((flags & vwrap) || override) {
+    } else if ((flags & vwrap) || (override && funcPtr)) {
         if (flags & vwrap) {
             assert(wrapperClass && "class wrapper not specified for wrapped func");
         }

@@ -10,7 +10,6 @@
 
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 12/10/2011
-// Portions Copyright 2012, Google Inc.
 
 import crack.lang AssertionError, ManagedBuffer, Exception, Buffer;
 import crack.io cout, cerr, cin, Formatter, FStr, StandardFormatter,

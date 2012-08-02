@@ -5,52 +5,13 @@
 #  Contains the definition of a TextBlock and BlockType.  These structures
 #  define NML objects.
 #
-#  Copyright (C) 1998 Michael A. Muller
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#
-#  $Log: block.py,v $
-#  Revision 1.9  2005/03/06 17:30:22  mike
-#  Added support for extracting and displaying a title (obtained from the first
-#  header in the document)
-#
-#  Revision 1.8  2002/04/28 19:09:28  mike
-#  Added support for tables.
-#
-#  Revision 1.7  2000/02/13 22:08:52  mike
-#  Doc fixes.
-#
-#  Revision 1.6  1999/05/23 17:55:34  mike
-#  Fixed comments and added a warning message if block formatting constructs
-#  are discovered in a text formatting entry.
-#
-#  Revision 1.5  1999/02/03 01:48:50  mike
-#  Fixed tabs and comments, added support for comment and reference types.
-#
-#  Revision 1.4  1998/11/03 00:43:48  mike
-#  Purely cosmetic
-#
-#  Revision 1.3  1998/08/14 15:26:59  mike
-#  Added documentation for "exec" block types.
-#
-#  Revision 1.2  1998/06/14 00:45:06  mike
-#  Just added a comment for the 'n' (linebreak/newline) type.
-#
-#  Revision 1.1  1998/06/11 01:34:05  mike
-#  Initial revision
-#
+#  Copyright 1998 Michael A. Muller <mmuller@enduden.com>
+#  Copyright 2012 Google Inc.
+#  
+#    This Source Code Form is subject to the terms of the Mozilla Public
+#    License, v. 2.0. If a copy of the MPL was not distributed with this
+#    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#  
 #
 #==============================================================================
 

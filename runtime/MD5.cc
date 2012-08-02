@@ -1,4 +1,9 @@
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 // 6/22/2012
 #include "builder/util/md5.h"
 md5_state_s *crk_new_md5_state() {

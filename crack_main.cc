@@ -1,4 +1,10 @@
-// Copyright 2009-2011 Google Inc, Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2011-2012 Google Inc.
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 
 #include <iostream>
 #include <fstream>
@@ -12,6 +18,7 @@
 #include "builder/BuilderOptions.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
+#include "debug/DebugTools.h"
 #include "Crack.h"
 #include "crack_config.h"
 
@@ -20,7 +27,8 @@ using namespace std;
 typedef enum {
     jitBuilder,
     nativeBuilder,
-    doubleBuilder = 1001
+    doubleBuilder = 1001,
+    dumpFuncTable = 1002
 } builderType;
 
 struct option longopts[] = {
@@ -40,6 +48,7 @@ struct option longopts[] = {
     {"lib", true, 0, 'l'},
     {"version", false, 0, 0},
     {"stats", false, 0, 0},
+    {"dump-func-table", false, 0, dumpFuncTable},
     {0, 0, 0, 0}
 };
 
@@ -77,7 +86,7 @@ void usage(int retval) {
     cout << " -l <path>  --lib                Add directory to module search "
             "path" << endl;
     cout << " -m         --migration-warnings Include migration warnings"
-            << endl;
+        << endl;
     cout << " -n         --no-bootstrap       Do not load bootstrapping modules"
             << endl;
     cout << " -v         --verbose            Verbose output, use more than once"
@@ -85,9 +94,11 @@ void usage(int retval) {
     cout << " -q         --quiet              No extra output, implies"
             " verbose level 0" << endl;
     cout << "            --version            Emit the version number and exit"
-            << endl;
+        << endl;
     cout << "            --stats              Emit statistics about compile "
             "time operations." << endl;
+    cout << "            --dump-func-table    Dump the debug function table."
+        << endl;
     exit(retval);
 }
 
@@ -117,6 +128,7 @@ int main(int argc, char **argv) {
     char * const token[] = { NULL };
     bool optionsError = false;
     bool useDoubleBuilder = false;    
+    bool doDumpFuncTable = false;
     while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vq", longopts, &idx)) !=
            -1) {
         switch (opt) {
@@ -216,6 +228,8 @@ int main(int argc, char **argv) {
             case doubleBuilder:
                 useDoubleBuilder = true;
                 break;
+            case dumpFuncTable:
+                doDumpFuncTable = true;
         }
     }
     
@@ -271,6 +285,9 @@ int main(int argc, char **argv) {
     if (crack.options->statsMode) {
         crack.printStats(cerr);
     }
+    
+    if (doDumpFuncTable)
+        crack::debug::dumpFuncTable(cerr);
 
     return rc;
 

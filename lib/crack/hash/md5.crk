@@ -1,5 +1,10 @@
 // MD5 hash algorithm wrapper class
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
 // 6/22/2012
 
 import crack.lang Buffer, ManagedBuffer;
@@ -11,7 +16,7 @@ class MD5 : Hash {
     md5 _state;
 
     oper init() : _state = md5_init() {
-         _size = 16;
+        _size = 16;
     }
 
     ## Add more data
@@ -21,8 +26,8 @@ class MD5 : Hash {
 
     ## Alternative constructor taking a buffer argument
     oper init(Buffer buf) : _state = md5_init() {
-         _size = 16;
-         update(buf);
+        _size = 16;
+        update(buf);
     }
 
     ## Return raw digest as a buffer of 16 bytes
