@@ -221,6 +221,10 @@ class Array[Elem] {
             }
         }
     }
+
+    array[Elem] data() {
+        return __rep;
+    }
     
     oper del() {
         if (!(__rep is null)) {

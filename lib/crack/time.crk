@@ -96,10 +96,10 @@ TimeDelta seconds(int secs) {
 }
 
 // From http://en.wikipedia.org/wiki/Leap_year retrieved on 7/12/2012
-bool isLeap(int year){
-   if (year%400 == 0) return true;
-   if (year%100 == 0) return false;
-   if (year%4 == 0) return true;
+bool isLeap(int year) {
+   if (year % 400 == 0) return true;
+   if (year % 100 == 0) return false;
+   if (year % 4 == 0) return true;
    else return false;
 }
 
