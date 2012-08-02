@@ -1,0 +1,158 @@
+#!/usr/local/bin/crack
+# Top-level script to fix the copyright attribution for all files in the
+# repository.
+#
+# This was written for the one-time task of fixing our copyrights, it should
+# be updated to keep our attributions up-to-date.
+#
+# Copyright 2012 Google Inc.
+#
+#  This Source Code Form is subject to the terms of the Mozilla Public
+#  License, v. 2.0. If a copy of the MPL was not distributed with this
+#  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.ascii parseInt, strip;
+import crack.cont.array Array;
+import crack.regex Regex, PCRE_CASELESS;
+import crack.strutil StringArray;
+import crack.sys argv;
+import crack.io cin, cerr, cout, FStr;
+import crack.fs file = RealPath, Path;
+import copyrights CopyrightsForFile;
+
+copyrightRx := Regex(r'(.*(#*|//)?)\s*copyright', PCRE_CASELESS);
+ccmt := Regex(r'\s*//\s*');
+crkcmt := Regex(r'\s*#+\s*');
+oldcmt := Regex(r'\s*\*+\s*');
+wscmt := Regex(r'\s*');
+mmRx := Regex(r'(?P<year>\d+) Michael A\. Muller');
+
+const MMULLER := 'Michael A. Muller <mmuller@enduden.com>'
+
+void fixFile(Path path) {
+    bool inCopyrights;
+    int lineNum;
+    filename := path.getFullName();
+    CopyrightsForFile copyrights = {filename, '// '};
+    for (line :in path.makeFullReader()) {
+        ++lineNum;
+        if (m := copyrightRx.match(line)) {
+            if (!( pm := ccmt.match(m.group(1)) ) &&
+                !( pm = crkcmt.match(m.group(1)) ) &&
+                !( pm = oldcmt.match(m.group(1)) ) &&
+                !( pm = wscmt.match(m.group(1)) )
+                ) {
+                cerr `file $filename has unrecognized comments: $line\n`;
+                return;
+            } else {
+                copyrights.prefix = pm.group();
+            }
+
+            // as a special exception, if the line is copyright MM, it
+            // predates the log and we want to preserve it
+            if (m2 := mmRx.search(line))
+                copyrights.copyrights.add(MMULLER, parseInt(m2.group('year')));
+
+            if (!inCopyrights) {
+                copyrights.startLine = lineNum;
+                inCopyrights = true;
+            }
+        } else if (inCopyrights) {
+            inCopyrights = false;
+            copyrights.endLine = lineNum;
+        }
+    }
+
+    if (!copyrights.startLine) {
+        cerr `adding new copyright to $filename\n`;
+        copyrights.startLine = copyrights.endLine = 1;
+        copyrights.injectCopyrights();
+    } else {
+        copyrights.injectCopyrights();
+    }
+}
+
+extensions := StringArray!['.cc', '.h', '.crk', '.in', '.template',
+                           '.nml', '.m4', '.rl',
+                           '.c',
+
+                           # shell scripts (no extension)
+                           'test/screen',
+                           'screen/planB',
+                           'bootstrap',
+                           'crack_dbg',
+                           ];
+
+excluded := StringArray![
+    r'\.hg/.*', 'COPYING', 'AUTHORS', 'Credits', r'.*\.crkt', r'.*\.orig',
+    r'.*\.ccrtmp', r'm4/ltoptions\.m4', r'm4/ltsugar\.m4', r'm4/iconv\.m4',
+    r'm4/ltversion\.m4', r'm4/lt~obsolete\.m4', r'm4/ax_path_lib_pcre\.m4',
+    r'm4/gtk-2\.0\.m4', r'm4/alsa\.m4', r'm4/sdl\.m4',
+    r'm4/libtool\.m4',
+    r'runtime/BorrowedExceptions\.cc',
+    r'ext/crack_config\.h\.in', r'.*CMakeLists\.txt', r'sourceModules\.txt',
+    r'opt/xml\.rl',
+    r'lib/crack/xml\.crk',
+    r'opt/.*\.cc',
+    r'runtimeModules\.txt',
+    r'todo',
+    r'builder/util/md5\.c',
+    r'opt/_cairosdl\.crk',
+    r'opt/cairosdl\.c',
+    r'opt/cairosdl\.h',
+    r'opt/_xs\.crk',
+    r'lib/crack/enc/json/lib\.crk',
+];
+
+# convert the excluded pathnames to regular expressions
+excludedRx := Array[Regex](excluded.count());
+for (rx :in excluded)
+    excludedRx.append(Regex(FStr() `\\./$rx\$`));
+
+void checkFiles(Path root) {
+    for (path :in root.children()) {
+        filename := path.getFullName();
+
+        # ignore the filename if it is excluded
+        for (rx :in excludedRx) {
+            if (rx.match(filename)) {
+                path = null;
+                break;
+            }
+        }
+        if (!path)
+            continue;
+
+        if (path.isDir()) {
+            checkFiles(path);
+        } else {
+
+            bool gotIt = false;
+            for (ext :in extensions) {
+                if (filename.size >= ext.size &&
+                    filename.slice(-ext.size) == ext) {
+
+                    cerr `copyrighting $filename\n`;
+                    fixFile(path);
+                    gotIt = true;
+                    break;
+                }
+            }
+            if (!gotIt)
+                cerr `unknwon filetype $filename\n`;
+        }
+
+    }
+}
+
+
+if (argv.count() > 1) {
+    filename := argv[1];
+    cerr `copyrighting $filename\n`;
+    fixFile(file(filename));
+} else {
+    checkFiles(file('.'));
+#    for (line :in file('files').makeFullReader()) {
+#        filename := strip(line);
+#    }
+}
