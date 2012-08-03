@@ -137,7 +137,6 @@
                 int optval;
                 size_t optvallen;
                 int status = xs_getmsgopt(msg, option, (voidptr)&optval, &optvallen);
-                printf("optval=%d\\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }\n'
@@ -245,7 +244,6 @@
                 int optval;
                 size_t optvallen;
                 int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
-                printf("optval=%d\\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }\n'
@@ -302,9 +300,6 @@
                 char *data = (char *)xs_msg_data(msg);
                 memcpy(_buf, xs_msg_data(msg), numbytes<255 ? numbytes : 254);
                 _buf[numbytes<255 ? numbytes : 255] = \'\\0\';
-                printf("numbytes= %d, xs_recvmsg = %s\\n", numbytes, _buf);
-                for (i=0; i<numbytes && i<255; i++)
-                    printf("msg[%d]= %c\\n", i, data[i]);
                 return numbytes;
              }\n';
 
