@@ -1,9 +1,9 @@
 # Copyright 2010-2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.io cout, StringFormatter;
 import crack.cont.array Array;
@@ -130,5 +130,21 @@ if (1) {
     if (cleanups != 6)
         cout `FAILED cleanups on containers of interfaces.`;
 }
+
+# interface null interface references
+if (1) {
+    @interface I {
+        @abstract void f();
+    }
+
+    # test converting a null to an object.
+    void g(Object o) {}
+    g(null);
+
+    # test bind and release on null.
+    I h() { return null; }
+    I i = h();
+}
+
 
 cout `ok\n`;
