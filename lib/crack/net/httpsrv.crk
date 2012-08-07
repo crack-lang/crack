@@ -151,14 +151,8 @@ class Error : StringFormatter {
         
 }
 
-# we can't store interfaces in arrays yet, so we have to wrap it in another 
-# object.
-class F {
-    Functor1[bool, HTTPRequest] f;
-    oper init(Functor1[bool, HTTPRequest] f) : f = f {}
-}
-    
-class HandlerArray : Array[F] {}
+alias RequestHandler = Functor1[bool, HTTPRequest];
+alias HandlerArray = Array[RequestHandler];
 
 class OutQueue : Array[String] @implements Writer {
     void write(Buffer data) {
@@ -277,7 +271,7 @@ class HTTPServer {
 
         @final void processRequest() {
             for (handler :in handlers) {
-                if (handler.f(request))
+                if (handler(request))
                     break;
             }
             
@@ -406,7 +400,7 @@ $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)\n`;
     ## Adds the given handler to the chain.  Handlers are called in the order 
     ## in which they were added until one of them returns true.
     void addHandler(Functor1[bool, HTTPRequest] handler) {
-        __handlers.append(F(handler));
+        __handlers.append(handler);
     }
     
     ## Process a single event.
