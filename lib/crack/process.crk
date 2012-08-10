@@ -57,14 +57,12 @@ class ProcessHandlerImpl : Object @implements ProcessHandler {
         void on$$cap$$Data(Buffer data) {
             dst$$Buf.extend(data);
             uint pos;
-            int lastIndex;
             while ((index := dst$$Buf.lfind(b'\n', pos)) != -1) {
                 on$$cap$$Line(Buffer(dst$$Buf.buffer + pos, index + 1 - pos));
                 pos = index + 1;
-                lastIndex = index;
             }
-            if (lastIndex)
-                dst$$Buf.compact(lastIndex + 1);
+            if (pos)
+                dst$$Buf.compact(pos);
         }
         
         void on$$cap$$Line(Buffer line) {}
