@@ -9,6 +9,7 @@
 #include "Context.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <spug/StringFmt.h>
 #include <fstream>
 #include "builder/Builder.h"
@@ -47,7 +48,7 @@ parser::Location Context::emptyLoc;
 void Context::showSourceLoc(const parser::Location &loc, ostream &out) {
 
     // set some limits
-    if (loc.getName() == "" ||
+    if (!loc.getName() || loc.getName()[0] == '\0' ||
         loc.getLineNumber() == 0 ||
         loc.getStartCol() >= 500)
         return;
