@@ -34,13 +34,16 @@ StandardFormatter NULL_FORMATTER = null;
 class HTTPRequest {
     String method, path, version;
     HashMap[String, String] headers = {};
+    InetAddress clientAddr;
     StandardFormatter __clt;
 
-    oper init(Writer client ## the channel to write back to the client.
+    oper init(Writer client, ## the channel to write back to the client.
+              InetAddress clientAddr ## the client address.
               ) :
         method = method,
         path = path,
         version = version,
+        clientAddr = clientAddr,
         __clt(client) {
     }
     
@@ -206,7 +209,7 @@ class HTTPServer {
         }
 
         @final void compressBuffer(uintz start) {
-            inbuf.move(0, start, inbuf.size);
+            inbuf.move(0, start, inbuf.size - start);
             pos = 0;
         }
 
@@ -215,7 +218,7 @@ class HTTPServer {
         }        
         
         @final void processRequestLine(uintz start, uintz end) {
-            request = HTTPRequest(outQueue);
+            request = HTTPRequest(outQueue, addr);
 
             # find the first space
             methodEnd := inbuf.lfind(b' ', start);
@@ -277,7 +280,7 @@ class HTTPServer {
             
             if (request.method != 'POST' && request.method != 'PUT')
                 state = _ST_REQUEST;
-            request = HTTPRequest(outQueue);
+            request = HTTPRequest(outQueue, addr);
         }
         
         @final void processHeaderLine(uintz start, uintz end) {
