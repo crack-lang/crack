@@ -624,8 +624,11 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
                                 loc);
     }
 
-    if (initVal)
-        b.CreateStore(initVal, var);
+    if (initVal) {
+        Instruction *i = b.CreateStore(initVal, var);
+        if (debugInfo)
+            debugInfo->addDebugLoc(i, loc);
+    }
 
     return new BHeapVarDefImpl(var);
 }
@@ -1892,7 +1895,10 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
         }
 
         case Context::local: {
-            varDefImpl = createLocalVar(tp, var, name, &context.getLocation());
+            varDefImpl = createLocalVar(tp,
+                                        var,
+                                        name,
+                                        &context.getLocation());
             break;
         }
 
@@ -1902,6 +1908,9 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
 
     // allocate the variable and assign it
     lastValue = builder.CreateStore(lastValue, var);
+    if (debugInfo)
+        debugInfo->addDebugLoc(cast<Instruction>(lastValue),
+                               &context.getLocation());
 
     // create the definition object.
     VarDefPtr varDef = new VarDef(type, name);

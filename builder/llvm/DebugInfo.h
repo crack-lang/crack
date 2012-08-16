@@ -58,10 +58,12 @@ public:
                          unsigned encoding);
 
     void declareLocal(const BTypeDef *type,
-                      llvm::Value *&var,
+                      llvm::Value *var,
                       llvm::BasicBlock *instr,
                       const parser::Location *loc);
 
+    void addDebugLoc(llvm::Instruction *instr,
+                     const parser::Location *loc);
 
 };
 

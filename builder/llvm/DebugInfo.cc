@@ -79,7 +79,7 @@ void DebugInfo::createBasicType(BTypeDef *type,
 }
 
 void DebugInfo::declareLocal(const BTypeDef *type,
-                             Value *&var,
+                             Value *var,
                              BasicBlock *block,
                              const parser::Location *loc) {
 
@@ -100,11 +100,23 @@ void DebugInfo::declareLocal(const BTypeDef *type,
                 (loc) ? loc->getLineNumber() : 0,
                 type->debugInfo
                 );
+
     Instruction *Call = builder.insertDeclare(var, varInfo, block);
-    Call->setDebugLoc(DebugLoc::get((loc) ? loc->getLineNumber() : 0,
-                                    (loc) ? loc->getColNumber() : 0,
-                                    currentScope
-                                    )
-                      );
+    addDebugLoc(Call, loc);
+
+}
+
+void DebugInfo::addDebugLoc(llvm::Instruction *instr,
+                            const parser::Location *loc) {
+
+    // XXX weirdness ahead
+    if (!loc || !loc->get())
+        return;
+
+    instr->setDebugLoc(DebugLoc::get(loc->getLineNumber(),
+                                     loc->getColNumber(),
+                                     currentScope
+                                     )
+                       );
 
 }
