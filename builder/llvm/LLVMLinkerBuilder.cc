@@ -464,3 +464,7 @@ model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(
     Cacher c(context, options.get());
     return c.maybeLoadFromCache(canonicalName);
 }
+
+ExecutionEngine *LLVMLinkerBuilder::getExecEng() const {
+    return 0;
+}

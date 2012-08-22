@@ -107,6 +107,7 @@ class LLVMJitBuilder : public LLVMBuilder {
             model::ModuleDef *owner
         );
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
+        virtual llvm::ExecutionEngine *getExecEng() const;
 };
 
 } } // namespace

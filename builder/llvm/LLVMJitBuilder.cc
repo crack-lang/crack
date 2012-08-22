@@ -64,6 +64,10 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
 }
 
+ExecutionEngine *LLVMJitBuilder::getExecEng() const {
+    return execEng;
+}
+
 void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
     // note, this->module and moduleDef->rep should be ==
     bindJitModule(moduleDef->rep);

@@ -77,6 +77,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
             model::ModuleDef *owner
         );
 
+        virtual llvm::ExecutionEngine *getExecEng() const;
 };
 
 } } // namespace
