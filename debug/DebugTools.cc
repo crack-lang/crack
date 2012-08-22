@@ -99,7 +99,7 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
         --i;
     
     if (i == debugTable.end()) {
-        info[1] = "unknown";
+        info[0] = info[1] = "unknown";
         info[2] = 0;
     } else {
         info[0] = i->second.funcName;
@@ -113,4 +113,12 @@ void crack::debug::dumpFuncTable(ostream &out) {
          ++i
          )
         out << hex << i->first << " " << i->second.funcName << endl;
+}
+
+void *__builtin_frame_address(unsigned int level);
+
+void *crack::debug::getStackFrame() {
+    // note: on certain architectures, this won't be able to see past the 
+    // current stack frame and will always return zero.
+    return __builtin_frame_address(0);
 }

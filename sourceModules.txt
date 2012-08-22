@@ -1,4 +1,3 @@
-debug/DebugTools.cc
 ext/Module.cc
 ext/Func.cc
 ext/RCObj.cc

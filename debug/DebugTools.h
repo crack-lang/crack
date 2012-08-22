@@ -36,6 +36,12 @@ void getLocation(void *address, const char *info[3]);
  */
 void dumpFuncTable(std::ostream &out);
 
+/**
+ * Returns the address of the current stack frame.  This can mean different
+ * things on different architecturs.
+ */
+void *getStackFrame();
+
 }} // namespace crack::debug
 
 #endif
