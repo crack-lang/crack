@@ -163,7 +163,8 @@ GlobalVariable *BTypeDef::getClassInstRep(Module *module,
                 module->getGlobalVariable(classInst->getName())
             );
         if (!gvar) {
-            gvar = new GlobalVariable(*module, classInst->getType(), 
+            gvar = new GlobalVariable(*module, 
+                                      classInst->getType()->getElementType(), 
                                       true, // is constant
                                       GlobalValue::ExternalLinkage,
                                       0, // initializer: null for externs
