@@ -23,6 +23,10 @@ $ ./configure
 $ make
 $ make install
 
+(Add the options "--disable-optimized --enable-debug-runtime" if you want to 
+be able to debug LLVM, but be aware this comes with a huge performance 
+cost).
+
 Build Crack:
 
 $ tar -xvzf crack-0.6.tar.gz
