@@ -14,6 +14,7 @@ project (crack)
 set(CRACK_VERSION "0.6")
 set(CRACKLANG_API_VERSION "3.0.1")
 set(NATRUN_API_VERSION "2.0.0")
+set(DEBUG_API_VERSION "1.0.0")
 
 set(LLVM_MIN_VERSION       "3001000")
 set(LLVM_MIN_VERSION_TEXT  "3.1")
@@ -56,6 +57,9 @@ file(STRINGS sourceModules.txt CRACK_SRC_FILES)
 #MESSAGE( STATUS "modules: " ${CRACK_SRC_FILES})
 file(STRINGS runtimeModules.txt RUNTIME_SRC_FILES)
 
+# debug tools
+set(DEBUG_SRC_FILES debug/DebugTools.cc)
+
 # these are llvm specific compile flags, needed only for source files that
 # include llvm headers
 set_source_files_properties( ${CRACK_SRC_FILES}
@@ -76,7 +80,7 @@ set_target_properties(libcrack
                       )
 
 target_link_libraries( libcrack
-                       ${LLVM_LIBS} dl
+                       ${LLVM_LIBS} dl libcrackdebug
                      )
 
 # libCrackNativeRuntime
@@ -89,6 +93,19 @@ set_target_properties(libcrackextstub
                       COMPILE_DEFINITIONS_DEBUG _DEBUG
                       )
 target_link_libraries( libcrackextstub
+                       ${LLVM_LIBS}
+                     )
+
+# libCrackDebugTools
+add_library(libcrackdebug SHARED ${DEBUG_SRC_FILES})
+set_target_properties(libcrackdebug
+                      PROPERTIES
+                      OUTPUT_NAME CrackDebugTools
+                      SOVERSION ${DEBUG_API_VERSION}
+                      LINK_FLAGS ${LLVM_LDFLAGS}
+                      COMPILE_DEFINITIONS_DEBUG _DEBUG
+                      )
+target_link_libraries( libcrackdebug
                        ${LLVM_LIBS}
                      )
 
@@ -112,10 +129,11 @@ set_target_properties(crack-runtime
                       PROPERTIES
                       OUTPUT_NAME runtime
                       LIBRARY_OUTPUT_DIRECTORY lib/crack
+                      LINK_FLAGS ${LLVM_LDFLAGS}
                       PREFIX ""
                       )
 target_link_libraries(crack-runtime
-                      pthread ${ICONV_LIBRARIES})
+                      pthread libcrackdebug ${ICONV_LIBRARIES})
 
 
 add_executable(crack crack_main.cc)
@@ -132,7 +150,7 @@ add_custom_command(TARGET crack POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink crack crackc)
 
 # install targets
-install(TARGETS crack libcrack libcrackextstub
+install(TARGETS crack libcrack libcrackextstub libcrackdebug
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
@@ -154,6 +172,8 @@ endif (EXISTS doc/Manual.html)
 install(DIRECTORY compiler/ DESTINATION "include/crack-${CRACK_VERSION}/crack/compiler"
         FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/ext"
+        FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/debug"
         FILES_MATCHING PATTERN "*.h")
 install(FILES "${PROJECT_BINARY_DIR}/crack_config.h" DESTINATION "include/crack-${CRACK_VERSION}/crack/ext")
 
