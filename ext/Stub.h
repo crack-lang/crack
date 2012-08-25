@@ -39,6 +39,7 @@ class Func {
 
         void setInitializers(const std::string&);
         std::string initializers() const;
+        unsigned int vtableOffset() const;
         void setBody(const std::string&);
         std::string body() const;
         void setIsVariadic(bool isVariadic);

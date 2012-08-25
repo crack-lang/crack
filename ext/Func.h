@@ -56,6 +56,8 @@ class Func {
 
         std::string funcBody;
         std::string ctorInitializers;
+
+        unsigned int vtableSlot;
         
         // these must match the values in FuncDef::Flags
         Flags flags;
@@ -71,6 +73,7 @@ class Func {
             returnType(returnType),
             name(name),
             funcPtr(funcPtr),
+            vtableSlot(0),
             flags(flags),
             finished(false) {
         }
@@ -86,6 +89,7 @@ class Func {
             name(name),
             funcPtr(0),
             funcBody(body),
+            vtableSlot(0),
             flags(flags),
             finished(false) {
         }
@@ -131,6 +135,10 @@ class Func {
 
         // returns the initializers for constructors
         std::string getInitializers() const;
+
+        // returns this method's offset in the vtable; only well-defined
+        // after the containing type has been finish()'ed.
+        unsigned int getVTableOffset() const;
 
         // finish the definition of the function (this will be called 
         // automatically by Module::finish())

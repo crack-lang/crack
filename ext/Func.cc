@@ -106,6 +106,11 @@ string Func::getInitializers() const
     return ctorInitializers;
 }
 
+unsigned int Func::getVTableOffset() const
+{
+    return vtableSlot;
+}
+
 void Func::finish() {
     if (finished || !context)
         return;
@@ -227,6 +232,8 @@ void Func::finish() {
             if (type != type->type.get())
                 type->type->addAlias(storedDef.get());
         }
+
+        vtableSlot = funcDef->getVTableOffset();
     }
 
     if (flags & constructor) {
@@ -340,6 +347,8 @@ void Func::finish() {
         }
         funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
         context->addDef(newFunc.get(), (flags & vwrap) ? wrapperClass : receiverType);
+
+        vtableSlot = newFunc->getVTableOffset();
     }
 
     finished = true;

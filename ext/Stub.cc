@@ -15,6 +15,7 @@ using namespace crack::ext;
 // Func
 void Func::setInitializers(const std::string&) { }
 std::string Func::initializers() const { return std::string(); }
+unsigned int Func::vtableOffset() const { return 0; }
 void Func::setBody(const std::string&) { }
 std::string Func::body() const { return std::string(); }
 void Func::setIsVariadic(bool isVariadic) { }
