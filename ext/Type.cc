@@ -11,15 +11,20 @@
 
 #include <assert.h>
 #include <iostream>
+#include <sstream>
 #include "builder/Builder.h"
 #include "model/CompositeNamespace.h"
 #include "model/Context.h"
+#include "model/OverloadDef.h"
 #include "model/TypeDef.h"
+#include "parser/Token.h"
+#include "parser/Parser.h"
 #include "Func.h"
 #include "Module.h"
 
 using namespace crack::ext;
 using namespace model;
+using namespace parser;
 using namespace std;
 
 Type::Impl::~Impl() {
@@ -41,9 +46,9 @@ Type::~Type() {
 }
 
 
-void Type::checkInitialized() {
+void Type::checkInitialized() const {
     if (!impl) {
-        std::cerr << "Attempting to add attributes to forward type"
+        std::cerr << "Attempting to access attributes of forward type"
             << "."  << std::endl;
         assert(false);
     }
@@ -133,6 +138,38 @@ Func* Type::addStaticMethod(Type* returnType, const std::string& name,
     return result;
 }
 
+const Type::FuncVec& Type::getMethods() const
+{
+    checkInitialized();
+    return impl->funcs;
+}
+
+bool Type::methodHidesOverload(const string& name,
+                               const vector<Type *>& args
+                              ) const {
+    checkInitialized();
+
+    ArgVec realArgs; realArgs.reserve(args.size());
+    for (TypeVec::const_iterator iter = args.begin(); iter != args.end();
+         ++iter) {
+        realArgs.push_back(new ArgDef((*iter)->typeDef, string()));
+    }
+
+    for (TypeVec::iterator iter = impl->bases.begin();
+         iter != impl->bases.end(); ++iter) {
+        TypeDef *td = (*iter)->typeDef;
+        VarDefPtr varDef = td->lookUp(name);
+        if (varDef) {
+            OverloadDef *overloadDef = OverloadDefPtr::rcast(varDef);
+            if (overloadDef) {
+                FuncDef *funcDef = overloadDef->getSigMatch(realArgs);
+                return funcDef && !funcDef->isOverridable();
+            }
+        }
+    }
+
+    return false;
+}
 
 Type *Type::getSpecialization(const vector<Type *> &params) {
     checkFinished();
@@ -153,6 +190,63 @@ Type *Type::getSpecialization(const vector<Type *> &params) {
     Type *type = new Type(module, spec.get());
     module->types[spec->getFullName()] = type;
     return type;
+}
+
+vector<Type *> Type::getGenericParams() const {
+    vector<Type*> params;
+    params.reserve(typeDef->genericParms.size());
+
+    for (TypeDef::TypeVec::iterator iter = typeDef->genericParms.begin();
+         iter != typeDef->genericParms.end(); ++iter)
+    {
+        Type *associatedType = 0;
+
+        // see if it's cached in the module
+        Module::TypeMap::iterator typeMapIter =
+            module->types.find((*iter)->getFullName());
+
+        if (typeMapIter != module->types.end()) {
+            associatedType = typeMapIter->second;
+        } else {
+            associatedType = new Type(module, iter->get());
+            module->types[(*iter)->getFullName()] = associatedType;
+        }
+
+        assert(associatedType);
+
+        params.push_back(associatedType);
+    }
+
+    return params;
+}
+
+bool Type::isPrimitive() const {
+    return !typeDef->pointer;
+}
+
+string Type::stringifyTypedef(TypeDef* td) {
+    string str = td->name;
+
+    if (td->genericParms.size() > 0) {
+        str.push_back('[');
+
+        for (TypeDef::TypeVec::iterator iter = td->genericParms.begin();
+            iter != td->genericParms.end(); ++iter)
+        {
+            if (iter != td->genericParms.begin()) {
+                str.push_back(',');
+            }
+            str.append(stringifyTypedef(iter->get()));
+        }
+
+        str.push_back(']');
+    }
+
+    return str;
+}
+
+string Type::toString() const {
+    return stringifyTypedef(typeDef);
 }
 
 bool Type::isFinished() const {

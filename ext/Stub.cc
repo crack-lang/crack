@@ -11,11 +11,12 @@
 #include "Stub.h"
 
 using namespace crack::ext;
+using namespace std;
 
 // Func
 void Func::setInitializers(const std::string&) { }
-std::string Func::initializers() const { return std::string(); }
-unsigned int Func::vtableOffset() const { return 0; }
+std::string Func::getInitializers() const { return std::string(); }
+unsigned int Func::getVTableOffset() const { return 0; }
 void Func::setBody(const std::string&) { }
 std::string Func::body() const { return std::string(); }
 void Func::setIsVariadic(bool isVariadic) { }
@@ -87,6 +88,12 @@ Func *Type::addStaticMethod(Type *returnType, const std::string &name,
 Func *Type::addStaticMethod(Type *returnType, const std::string &name,
                       const std::string& body
                       ) { }
+const vector<Func *>& Type::getMethods() const { };
+bool Type::methodHidesOverload(const string& name,
+                               const vector<Type *>& args) const { };
+vector<Type *> Type::getGenericParams() const { };
+Type *Type::getSpecialization(const vector<Type *> &params) { };
+bool Type::isPrimitive() const { };
+string Type::toString() const { };
 
-Type *Type::getSpecialization(const std::vector<Type *> &params) { };
 void Type::finish() { };

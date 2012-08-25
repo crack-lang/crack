@@ -38,8 +38,8 @@ class Func {
     public:
 
         void setInitializers(const std::string&);
-        std::string initializers() const;
-        unsigned int vtableOffset() const;
+        std::string getInitializers() const;
+        unsigned int getVTableOffset() const;
         void setBody(const std::string&);
         std::string body() const;
         void setIsVariadic(bool isVariadic);
@@ -123,7 +123,13 @@ class Type {
                               const std::string& body = std::string()
                               );
 
+        const std::vector<Func *>& getMethods() const;
+        bool methodHidesOverload(const std::string& name,
+                                 const std::vector<Type *>& args) const;
         Type *getSpecialization(const std::vector<Type *> &params);
+        std::vector<Type *> getGenericParams() const;
+        bool isPrimitive() const;
+        std::string toString() const;
         void finish();
 };
     
