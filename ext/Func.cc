@@ -96,6 +96,16 @@ std::string Func::body() const
     return funcBody;
 }
 
+void Func::setInitializers(const string& initializers)
+{
+    ctorInitializers = initializers;
+}
+
+string Func::getInitializers() const
+{
+    return ctorInitializers;
+}
+
 void Func::finish() {
     if (finished || !context)
         return;
@@ -240,6 +250,12 @@ void Func::finish() {
         
         // emit the initializers
         Initializers inits;
+        if (!ctorInitializers.empty()) {
+            std::istringstream initsStream(ctorInitializers);
+            Toker initsToker(initsStream, name.c_str());
+            Parser initsParser(initsToker, funcContext.get());
+            initsParser.parseInitializers(&inits, thisRef.get());
+        }
         receiverType->emitInitializers(*funcContext, &inits);
         
         // if we got a function, emit a call to it.

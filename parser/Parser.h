@@ -331,11 +331,6 @@ class Parser {
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args, bool isMethod);
 
-      /**
-       * Parse the initializer list after an oper init.
-       */
-      void parseInitializers(model::Initializers *inits, model::Expr *receiver);
-
       enum FuncFlags {
          normal,           // normal function
          hasMemberInits,   // function with member/base class initializers
@@ -462,6 +457,11 @@ class Parser {
       Parser(Toker &toker, model::Context *context);
 
       void parse();
+
+      /**
+       * Parse the initializer list after an oper init.
+       */
+      void parseInitializers(model::Initializers *inits, model::Expr *receiver);
 
       void parseClassBody();
 

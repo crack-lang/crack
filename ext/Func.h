@@ -55,6 +55,7 @@ class Func {
         std::vector<Arg *> args;
 
         std::string funcBody;
+        std::string ctorInitializers;
         
         // these must match the values in FuncDef::Flags
         Flags flags;
@@ -124,6 +125,12 @@ class Func {
 
         // returns the function body
         std::string body() const;
+
+        // sets the initializers for constructors
+        void setInitializers(const std::string& initializers);
+
+        // returns the initializers for constructors
+        std::string getInitializers() const;
 
         // finish the definition of the function (this will be called 
         // automatically by Module::finish())
