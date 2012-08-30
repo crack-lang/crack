@@ -128,7 +128,7 @@ class Func {
         void setBody(const std::string& body);
 
         // returns the function body
-        std::string body() const;
+        std::string getBody() const;
 
         // sets the initializers for constructors
         void setInitializers(const std::string& initializers);

@@ -18,7 +18,7 @@ void Func::setInitializers(const std::string&) { }
 std::string Func::getInitializers() const { return std::string(); }
 unsigned int Func::getVTableOffset() const { return 0; }
 void Func::setBody(const std::string&) { }
-std::string Func::body() const { return std::string(); }
+std::string Func::getBody() const { return std::string(); }
 void Func::setIsVariadic(bool isVariadic) { }
 bool Func::isVariadic() const { return false; }
 void Func::setVWrap(bool vwrapEnabled) { }

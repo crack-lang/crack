@@ -41,7 +41,7 @@ class Func {
         std::string getInitializers() const;
         unsigned int getVTableOffset() const;
         void setBody(const std::string&);
-        std::string body() const;
+        std::string getBody() const;
         void setIsVariadic(bool isVariadic);
         bool isVariadic() const;
         void setVWrap(bool vwrapEnabled);

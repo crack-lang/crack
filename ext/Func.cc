@@ -91,7 +91,7 @@ void Func::setBody(const std::string& body)
     funcBody = body;
 }
 
-std::string Func::body() const
+std::string Func::getBody() const
 {
     return funcBody;
 }
