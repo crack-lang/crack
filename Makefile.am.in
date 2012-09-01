@@ -11,11 +11,11 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libCrackLang.la libCrackNativeRuntime.la libCrackDebugTools.la
+lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 3:1:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
-    -lCrackDebugTools
+libCrackLang_la_LDFLAGS = -version-info 4:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LIBADD = libCrackDebugTools.la
 
 libCrackDebugTools_la_SOURCES = debug/DebugTools.cc
 libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
@@ -23,15 +23,15 @@ libCrackDebugTools_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackNativeRuntime_la_LDFLAGS = -version-info 2:0:0
+libCrackNativeRuntime_la_LDFLAGS = -version-info 3:0:1
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
 
-runtime_la_LDFLAGS = -avoid-version -module -lpthread @LIBICONV@ \
-    -lCrackDebugTools
+runtime_la_LDFLAGS = -avoid-version -module -lpthread @LIBICONV@
 runtime_la_CPPFLAGS = @INCICONV@
 runtime_la_SOURCES = %libRuntimeSources%
+runtime_la_LIBADD = libCrackDebugTools.la
 
 # this is really annoying, testext needs to be installed in order to generate 
 # a .so file.
@@ -128,6 +128,7 @@ noinst_HEADERS = \
     builder/llvm/Native.h \
     builder/llvm/Ops.h \
     builder/llvm/PlaceholderInstruction.h \
+    builder/llvm/StructResolver.h \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
@@ -148,6 +149,8 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/Deserializer.h \
+    model/EphemeralImportDef.h \
     model/Expr.h \
     model/FloatConst.h \
     model/FuncAnnotation.h \
@@ -169,6 +172,7 @@ noinst_HEADERS = \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \
     model/ResultExpr.h \
+    model/Serializer.h \
     model/SetRegisterExpr.h \
     model/StrConst.h \
     model/StubDef.h \
@@ -198,6 +202,7 @@ noinst_HEADERS = \
     spug/TypeInfo.h \
     spug/check.h \
     compiler/init.h \
+    opt/cairosdl.h \
     Crack.h
 
 compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
@@ -217,10 +222,11 @@ extinc_HEADERS = \
     ext/Var.h \
     ext/crack_config.h
 
-EXTRA_DIST = doc lib test Credits CMakeLists.txt opt/CMakeLists.txt \
-    sourceModules.txt runtimeModules.txt cmake COPYING COPYING.Lesser \
+EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
+    sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
     screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests
+    screen/testdata.crk screen/planB screen/tests extras/JITEmitter.patch
+    
 
 bin_PROGRAMS = crack
 
@@ -232,8 +238,9 @@ cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template crack
-	./crack -l lib $(srcdir)/tools/nml2html.crk -t doc/Manual.template \
-	   doc/Manual.nml
+	./crack -l $(srcdir)/lib $(srcdir)/tools/nml2html.crk -t \
+	   $(srcdir)/doc/Manual.template \
+	   $(srcdir)/doc/Manual.nml
 
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
