@@ -1,0 +1,34 @@
+--- JITEmitter.cpp.org	2012-08-21 08:02:15.919761001 -0400
++++ JITEmitter.cpp	2012-08-21 08:06:16.720942431 -0400
+@@ -969,14 +969,24 @@
+     SavedBufferBegin = BufferBegin;
+     SavedBufferEnd = BufferEnd;
+     SavedCurBufferPtr = CurBufferPtr;
++    uint8_t *FrameRegister;
+ 
+-    BufferBegin = CurBufferPtr = MemMgr->startExceptionTable(F.getFunction(),
+-                                                             ActualSize);
+-    BufferEnd = BufferBegin+ActualSize;
+-    EmittedFunctions[F.getFunction()].ExceptionTable = BufferBegin;
+-    uint8_t *EhStart;
+-    uint8_t *FrameRegister = DE->EmitDwarfTable(F, *this, FnStart, FnEnd,
+-                                                EhStart);
++    while (true) {
++      BufferBegin = CurBufferPtr = MemMgr->startExceptionTable(F.getFunction(),
++                                                              ActualSize);
++      BufferEnd = BufferBegin+ActualSize;
++      EmittedFunctions[F.getFunction()].ExceptionTable = BufferBegin;
++      uint8_t *EhStart;
++      FrameRegister = DE->EmitDwarfTable(F, *this, FnStart, FnEnd, EhStart);
++
++      // If we've run out of memory, try again with twice as much space.
++      if (CurBufferPtr == BufferEnd) {
++        ActualSize = (CurBufferPtr-BufferBegin)*2;
++        MemMgr->deallocateExceptionTable(BufferBegin);
++      } else {
++        break;
++      }
++    }
+     MemMgr->endExceptionTable(F.getFunction(), BufferBegin, CurBufferPtr,
+                               FrameRegister);
+     BufferBegin = SavedBufferBegin;
