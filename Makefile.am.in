@@ -231,13 +231,17 @@ EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
 bin_PROGRAMS = crack
 
 crack_SOURCES = crack_main.cc
-crack_LDADD = libCrackLang.la $(LDFLAGS)
+crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
 
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
-doc/Manual.html: doc/Manual.nml doc/Manual.template crack
+# Depend on "testbed" so that the testbed installation won't happen as root if 
+# the user runs "make; sudo make install"
+all: testbed
+
+doc/Manual.html: doc/Manual.nml doc/Manual.template crack testbed
 	./crack -l $(srcdir)/lib $(srcdir)/tools/nml2html.crk -t \
 	   $(srcdir)/doc/Manual.template \
 	   $(srcdir)/doc/Manual.nml
