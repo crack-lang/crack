@@ -9,8 +9,6 @@
 
 #include "IntConst.h"
 
-#define __STDC_LIMIT_MACROS 1
-#include "stdint.h"
 #include "builder/Builder.h"
 #include "parser/ParseError.h"
 #include "VarDefImpl.h"

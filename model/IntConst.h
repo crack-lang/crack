@@ -9,9 +9,10 @@
 #ifndef _model_IntConst_h_
 #define _model_IntConst_h_
 
+#define __STDC_LIMIT_MACROS 1
+#include <stdint.h>
 #include "Context.h"
 #include "Expr.h"
-#include <stdint.h>
 
 namespace model {
 
