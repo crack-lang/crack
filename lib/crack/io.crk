@@ -1,11 +1,11 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2010,2012 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Basic input/output classes.
 
 import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
@@ -347,8 +347,10 @@ class StringReader : Object, Reader {
     oper init(String src) : __src = src {}
 
     uint read(WriteBuffer buf) {
-        if (__pos >= __src.size)
+        if (__pos >= __src.size) {
+            buf.size = 0;
             return 0;
+        }
 
         count :=
             (__pos + buf.cap > __src.size) ? __src.size - __pos : buf.cap;
