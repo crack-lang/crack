@@ -662,7 +662,9 @@ void nativeCompile(llvm::Module *module,
                                                   CPU,
                                                   FeaturesStr,
                                                   options,
-                                                  relocModel));
+                                                  relocModel
+                                                  )
+                   );
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();
 
