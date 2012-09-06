@@ -6,17 +6,32 @@
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ## 
 
-import crack.io cout;
+import crack.io cerr;
 import crack.strutil StringArray;
-import crack.sys argv;
+import crack.sys argv, exit;
 import crack.fs makePath;
 import crack.cmdline CmdOptions, Option, CMD_STR;
 import crack.nml.parse DocParser;
 import crack.nml.html HTMLFormatter;
 
-CmdOptions opts = [Option('template', 't', 'Template file', '', CMD_STR)];
+CmdOptions opts = [
+    Option('template', 't', 'Template file', '', CMD_STR),
+    Option('output', 'o', 
+           'Output filename (defaults to sourcename.ntml).',
+           '',
+           CMD_STR
+           )
+];
+
 srcFiles := opts.parse(argv);
 template := opts.getString('template');
+outFilename := opts.getString('output');
+
+if (outFilename && srcFiles.count() > 2) {
+    cerr I`You can't specify output with multiple source files: \
+           $(srcFiles.subarray(1))\n`;
+    exit(1);
+}
 
 bool gotFiles;
 for (arg :in srcFiles.subarray(1)) {
@@ -25,11 +40,11 @@ for (arg :in srcFiles.subarray(1)) {
     doc := parser.parseDoc();
     
     // get the destination file name
-    String outFilename;
-    if (arg.slice(-4) == '.nml')
-        outFilename = arg.slice(0, -4) + '.html';
-    else
-        outFilename = arg + '.html';
+    if (!outFilename)
+        if (arg.slice(-4) == '.nml')
+            outFilename = arg.slice(0, -4) + '.html';
+        else
+            outFilename = arg + '.html';
     
     formatter := HTMLFormatter(makePath(outFilename).writer());
     if (template) {

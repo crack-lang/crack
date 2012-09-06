@@ -256,8 +256,10 @@ AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 all: testbed
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template crack testbed
-	./crack -l $(srcdir)/lib $(srcdir)/tools/nml2html.crk -t \
+	$(MKDIR_P) doc
+	./crack -l $(srcdir)/lib:./lib $(srcdir)/tools/nml2html.crk -t \
 	   $(srcdir)/doc/Manual.template \
+	   -o $@ \
 	   $(srcdir)/doc/Manual.nml
 
 install-data-local: doc/Manual.html
@@ -272,7 +274,7 @@ install-data-local: doc/Manual.html
 	   fi; \
 	 done)
 	$(MKDIR_P) $(DESTDIR)$(docdir)
-	$(INSTALL) $(srcdir)/doc/Manual.html $(DESTDIR)$(docdir)
+	$(INSTALL) doc/Manual.html $(DESTDIR)$(docdir)
 
 install-exec-local: install-binPROGRAMS
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
@@ -285,10 +287,11 @@ uninstall-local:
 
 clean-local:
 	rm -rf $(EXTENSIONS:%=lib/crack/ext/%.so) screen/output \
-	   test/screen.bin* lib/crack/runtime.so lib/testext.so
+	   test/screen.bin* lib/crack/runtime.so lib/testext.so \
+	   doc/Manual.html
 
 testbed: runtime.la $(extlib_LTLIBRARIES)
-	mkdir -p lib/crack/ext
+	$(MKDIR_P) lib/crack/ext
 	ln -f .libs/runtime.so lib/crack
 	ln -f test/.libs/testext.so lib
 	for ext in $(EXTENSIONS); do \
