@@ -67,6 +67,8 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
         b.deferMetaClass.push_back(tempSpec);
     }
 
+    tempSpec->genericParms = *types;
+
     // add all of the methods and finish up.
     addArrayMethods(context, tempSpec.get(), parmType);
     tempSpec->complete = true;
