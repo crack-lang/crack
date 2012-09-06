@@ -23,6 +23,8 @@ void Func::setIsVariadic(bool isVariadic) { }
 bool Func::isVariadic() const { return false; }
 void Func::setVWrap(bool vwrapEnabled) { }
 bool Func::getVWrap() const { return false; }
+void Func::setVirtual(bool virtualizedEnabled) {}
+bool Func::getVirtual() const { return false; }
 void Func::setSymbolName(const std::string &name) { }
 void Func::addArg(Type *type, const std::string &name) { }
 void Func::finish() { }

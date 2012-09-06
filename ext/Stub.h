@@ -46,6 +46,8 @@ class Func {
         bool isVariadic() const;
         void setVWrap(bool vwrapEnabled);
         bool getVWrap() const;
+        void setVirtual(bool virtualizedEnabled);
+        bool getVirtual() const;
         void setSymbolName(const std::string &name);
         void addArg(Type *type, const std::string &name);
         void finish();
