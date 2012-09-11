@@ -45,6 +45,7 @@
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/Dwarf.h>
 #include <llvm/Intrinsics.h>
 
 #include <spug/Exception.h>
@@ -596,7 +597,10 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
 
 }
 
-BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
+BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
+                                               Value *&var,
+                                               const string &name,
+                                               const parser::Location *loc,
                                                Value *initVal
                                                ) {
     // insert an alloca into the first block of the function - we
@@ -611,8 +615,21 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp, Value *&var,
 
     IRBuilder<> b(funcBlock, i);
     var = b.CreateAlloca(tp->rep, 0);
-    if (initVal)
-        b.CreateStore(initVal, var);
+    var->setName(name);
+
+    if (debugInfo) {
+        debugInfo->declareLocal(tp,
+                                var,
+                                b.GetInsertBlock(),
+                                loc);
+    }
+
+    if (initVal) {
+        Instruction *i = b.CreateStore(initVal, var);
+        if (debugInfo)
+            debugInfo->addDebugLoc(i, loc);
+    }
+
     return new BHeapVarDefImpl(var);
 }
 
@@ -1048,14 +1065,14 @@ void LLVMBuilder::emitContinue(Context &context, Branchpoint *branch) {
     builder.CreateBr(bpos->block2);
 }
 
-void LLVMBuilder::createSpecialVar(Namespace *ns, TypeDef *type,
+void LLVMBuilder::createSpecialVar(Namespace *ns,
+                                   TypeDef *type,
                                    const string &name
                                    ) {
     Value *ptr;
     BTypeDef *tp = BTypeDefPtr::cast(type);
     VarDefPtr varDef = new VarDef(tp, name);
-    varDef->impl = createLocalVar(tp, ptr);
-    ptr->setName(name);
+    varDef->impl = createLocalVar(tp, ptr, name);
     ns->addDef(varDef.get());
 }
 
@@ -1878,7 +1895,10 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
         }
 
         case Context::local: {
-            varDefImpl = createLocalVar(tp, var);
+            varDefImpl = createLocalVar(tp,
+                                        var,
+                                        name,
+                                        &context.getLocation());
             break;
         }
 
@@ -1888,6 +1908,9 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
 
     // allocate the variable and assign it
     lastValue = builder.CreateStore(lastValue, var);
+    if (debugInfo)
+        debugInfo->addDebugLoc(cast<Instruction>(lastValue),
+                               &context.getLocation());
 
     // create the definition object.
     VarDefPtr varDef = new VarDef(type, name);
@@ -2047,10 +2070,16 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     if (options->statsMode) {
         context.construct->stats->setState(ConstructStats::builtin);
     }
-
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
+
+    if (options->debugMode) {
+        debugInfo = new DebugInfo(module,
+                                  ".builtin",
+                                  "",
+                                  options.get());
+    }
 
     if (options->statsMode) {
         context.construct->stats->setModule(bModDef);
@@ -2121,54 +2150,81 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->boolType->defaultInitializer = new BIntConst(boolType, (int64_t)0);
     context.addDef(boolType);
     deferMetaClass.push_back(boolType);
+    if (debugInfo) {
+        debugInfo->createBasicType(boolType, 8, dwarf::DW_ATE_boolean);
+    }
 
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
                                            "byte"
                                            );
     gd->byteType = byteType;
     deferMetaClass.push_back(byteType);
+    if (debugInfo) {
+        debugInfo->createBasicType(byteType, 8, dwarf::DW_ATE_unsigned_char);
+    }
 
     BTypeDef *int16Type = createIntPrimType(context, Type::getInt16Ty(lctx),
                                             "int16"
                                             );
     gd->int16Type = int16Type;
     deferMetaClass.push_back(int16Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(int16Type, 16, dwarf::DW_ATE_signed);
+    }
 
     BTypeDef *int32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "int32"
                                             );
     gd->int32Type = int32Type;
     deferMetaClass.push_back(int32Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(int32Type, 32, dwarf::DW_ATE_signed);
+    }
 
     BTypeDef *int64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
                                             "int64"
                                             );
     gd->int64Type = int64Type;
     deferMetaClass.push_back(int64Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(int64Type, 64, dwarf::DW_ATE_signed);
+    }
 
     BTypeDef *uint16Type = createIntPrimType(context, Type::getInt16Ty(lctx),
                                             "uint16"
                                             );
     gd->uint16Type = uint16Type;
     deferMetaClass.push_back(uint16Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(uint16Type, 16, dwarf::DW_ATE_unsigned);
+    }
 
     BTypeDef *uint32Type = createIntPrimType(context, Type::getInt32Ty(lctx),
                                             "uint32"
                                             );
     gd->uint32Type = uint32Type;
     deferMetaClass.push_back(uint32Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(uint32Type, 32, dwarf::DW_ATE_unsigned);
+    }
 
     BTypeDef *uint64Type = createIntPrimType(context, Type::getInt64Ty(lctx),
                                             "uint64"
                                             );
     gd->uint64Type = uint64Type;
     deferMetaClass.push_back(uint64Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(uint64Type, 64, dwarf::DW_ATE_unsigned);
+    }
 
     BTypeDef *float32Type = createFloatPrimType(context, Type::getFloatTy(lctx),
                                             "float32"
                                             );
     gd->float32Type = float32Type;
     deferMetaClass.push_back(float32Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(float32Type, 32, dwarf::DW_ATE_float);
+    }
 
     BTypeDef *float64Type = createFloatPrimType(context,
                                                 Type::getDoubleTy(lctx),
@@ -2176,6 +2232,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                 );
     gd->float64Type = float64Type;
     deferMetaClass.push_back(float64Type);
+    if (debugInfo) {
+        debugInfo->createBasicType(float64Type, 64, dwarf::DW_ATE_float);
+    }
 
     // PDNTs
     BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType;
@@ -2184,11 +2243,19 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         intIs32Bit = true;
         intType = createIntPrimType(context, Type::getInt32Ty(lctx), "int");
         uintType = createIntPrimType(context, Type::getInt32Ty(lctx), "uint");
+        if (debugInfo) {
+            debugInfo->createBasicType(intType, 32, dwarf::DW_ATE_signed);
+            debugInfo->createBasicType(uintType, 32, dwarf::DW_ATE_unsigned);
+        }
     } else {
         assert(sizeof(int) == 8);
         intIs32Bit = false;
         intType = createIntPrimType(context, Type::getInt64Ty(lctx), "int");
         uintType = createIntPrimType(context, Type::getInt64Ty(lctx), "uint");
+        if (debugInfo) {
+            debugInfo->createBasicType(intType, 64, dwarf::DW_ATE_signed);
+            debugInfo->createBasicType(uintType, 64, dwarf::DW_ATE_unsigned);
+        }
     }
     gd->intType = intType;
     gd->uintType = uintType;
@@ -2201,6 +2268,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         ptrIs32Bit = true;
         intzType = createIntPrimType(context, Type::getInt32Ty(lctx), "intz");
         uintzType = createIntPrimType(context, Type::getInt32Ty(lctx), "uintz");
+        if (debugInfo) {
+            debugInfo->createBasicType(intzType, 32, dwarf::DW_ATE_signed);
+            debugInfo->createBasicType(uintzType, 32, dwarf::DW_ATE_unsigned);
+        }
     } else {
         assert(sizeof(void *) == 8);
 
@@ -2208,6 +2279,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         intzType = createIntPrimType(context, Type::getInt64Ty(lctx), "intz");
         uintzType =
             createIntPrimType(context, Type::getInt64Ty(lctx), "uintz");
+        if (debugInfo) {
+            debugInfo->createBasicType(intzType, 64, dwarf::DW_ATE_signed);
+            debugInfo->createBasicType(uintzType, 64, dwarf::DW_ATE_unsigned);
+        }
     }
     gd->intzType = intzType;
     gd->uintzType = uintzType;
@@ -2220,6 +2295,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         floatType = createFloatPrimType(context, Type::getFloatTy(lctx),
                                         "float"
                                         );
+        if (debugInfo) {
+            debugInfo->createBasicType(floatType, 32, dwarf::DW_ATE_float);
+        }
     } else {
         floatIs32Bit = false;
         assert(sizeof(float) == 8);
@@ -2227,6 +2305,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         floatType = createFloatPrimType(context, Type::getDoubleTy(lctx),
                                         "float"
                                         );
+        if (debugInfo) {
+            debugInfo->createBasicType(floatType, 64, dwarf::DW_ATE_float);
+        }
     }
     gd->floatType = floatType;
     deferMetaClass.push_back(floatType);
@@ -2779,6 +2860,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.construct->stats->setState(ConstructStats::start);
         context.construct->stats->setModule(NULL);
     }
+
+    if (debugInfo)
+        delete debugInfo;
 
     return bMod;
 

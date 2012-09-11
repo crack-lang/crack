@@ -129,7 +129,8 @@ class LLVMBuilder : public Builder {
         void clearCachedCleanups(model::Context &context);
 
         /** Creates special hidden variables used by the generated code. */
-        void createSpecialVar(model::Namespace *ns, model::TypeDef *type, 
+        void createSpecialVar(model::Namespace *ns,
+                              model::TypeDef *type,
                               const std::string &name
                               );
 
@@ -213,7 +214,10 @@ class LLVMBuilder : public Builder {
                                 model::FuncDef *funcDef,
                                 llvm::Type *llvmFuncType
                                 );
-        BHeapVarDefImplPtr createLocalVar(BTypeDef *tp, llvm::Value *&var,
+        BHeapVarDefImplPtr createLocalVar(BTypeDef *tp,
+                                          llvm::Value *&var,
+                                          const std::string &name,
+                                          const parser::Location *loc = 0,
                                           llvm::Value *initVal = 0
                                           );
         

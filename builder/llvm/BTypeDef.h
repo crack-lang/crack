@@ -11,6 +11,8 @@
 
 #include "model/TypeDef.h"
 #include <llvm/Type.h>
+#include <llvm/Analysis/DebugInfo.h>
+#include "model/Context.h"
 
 #include <map>
 #include <string>
@@ -37,6 +39,7 @@ public:
     unsigned fieldCount;
     llvm::GlobalVariable *classInst;
     llvm::Type *rep;
+    llvm::DIType debugInfo; // debug info (wrapper for MDNode*)
     unsigned nextVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
     typedef std::vector< std::pair<BTypeDefPtr, model::ContextPtr> >
