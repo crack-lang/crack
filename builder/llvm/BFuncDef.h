@@ -40,9 +40,6 @@ public:
     // loaded extension
     std::string symbolName;
 
-    // for a virtual function, this is the vtable slot position.
-    unsigned vtableSlot;
-
     // for a virtual function, this holds the ancestor class that owns
     // the vtable pointer
     BTypeDefPtr vtableBase;
@@ -52,10 +49,8 @@ public:
              ) :
     model::FuncDef(flags, name, argCount),
     rep(0),
-    symbolName(),
-    vtableSlot(0) {
+    symbolName() {
     }
-
 
     /**
      * If our owner gets set, update the LLVM symbol name to reflect

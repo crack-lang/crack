@@ -11,14 +11,20 @@
 #include "Stub.h"
 
 using namespace crack::ext;
+using namespace std;
 
 // Func
+void Func::setInitializers(const std::string&) { }
+std::string Func::getInitializers() const { return std::string(); }
+unsigned int Func::getVTableOffset() const { return 0; }
 void Func::setBody(const std::string&) { }
-std::string Func::body() const { return std::string(); }
+std::string Func::getBody() const { return std::string(); }
 void Func::setIsVariadic(bool isVariadic) { }
 bool Func::isVariadic() const { return false; }
 void Func::setVWrap(bool vwrapEnabled) { }
 bool Func::getVWrap() const { return false; }
+void Func::setVirtual(bool virtualizedEnabled) {}
+bool Func::getVirtual() const { return false; }
 void Func::setSymbolName(const std::string &name) { }
 void Func::addArg(Type *type, const std::string &name) { }
 void Func::finish() { }
@@ -84,6 +90,12 @@ Func *Type::addStaticMethod(Type *returnType, const std::string &name,
 Func *Type::addStaticMethod(Type *returnType, const std::string &name,
                       const std::string& body
                       ) { }
+const vector<Func *>& Type::getMethods() const { };
+bool Type::methodHidesOverload(const string& name,
+                               const vector<Type *>& args) const { };
+vector<Type *> Type::getGenericParams() const { };
+Type *Type::getSpecialization(const vector<Type *> &params) { };
+bool Type::isPrimitive() const { };
+string Type::toString() const { };
 
-Type *Type::getSpecialization(const std::vector<Type *> &params) { };
 void Type::finish() { };

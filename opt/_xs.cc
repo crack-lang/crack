@@ -1,5 +1,8 @@
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 //
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -30,7 +33,6 @@ int crk_xs_getmsgopt_int(xs_msg_t *msg, int option) {
                 int optval;
                 size_t optvallen;
                 int status = xs_getmsgopt(msg, option, (voidptr)&optval, &optvallen);
-                printf("optval=%d\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }
@@ -49,7 +51,6 @@ int xs_getsockopt_int(voidptr sock, int option) {
                 int optval;
                 size_t optvallen;
                 int status = xs_getsockopt(sock, option, (voidptr)&optval, &optvallen);
-                printf("optval=%d\n", optval);
                 if (status == -1) return -1;
                 return optval;
             }
@@ -80,9 +81,6 @@ int crk_xs_sock_recvmsg(xs_socket_t sock, xs_msg_t *msgc, int flags) {
                 char *data = (char *)xs_msg_data(msg);
                 memcpy(_buf, xs_msg_data(msg), numbytes<255 ? numbytes : 254);
                 _buf[numbytes<255 ? numbytes : 255] = '\0';
-                printf("numbytes= %d, xs_recvmsg = %s\n", numbytes, _buf);
-                for (i=0; i<numbytes && i<255; i++)
-                    printf("msg[%d]= %c\n", i, data[i]);
                 return numbytes;
              }
 

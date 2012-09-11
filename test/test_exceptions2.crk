@@ -10,12 +10,19 @@ import crack.lang die, free, Exception, SubString;
 import crack.io cout, StringFormatter;
 import crack.strutil StringArray;
 
+// don't derived from Exception before this test - see comment on 
+// DerivedException below.
 String exText;
 try {
     throw Exception('this is a test');
 } catch (Exception ex) {
     exText = ex.text;
 }
+
+// at one point, deriving from an imported class caused problems if the 
+// derivation happened after the first "catch".  Keep this class after the 
+// first try/catch.
+class DerivedException : Exception {} 
 
 if (exText != 'this is a test')
     cout `FAIL: incorrect exception value: $exText\n`;

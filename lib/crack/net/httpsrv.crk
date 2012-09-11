@@ -34,13 +34,16 @@ StandardFormatter NULL_FORMATTER = null;
 class HTTPRequest {
     String method, path, version;
     HashMap[String, String] headers = {};
+    InetAddress clientAddr;
     StandardFormatter __clt;
 
-    oper init(Writer client ## the channel to write back to the client.
+    oper init(Writer client, ## the channel to write back to the client.
+              InetAddress clientAddr ## the client address.
               ) :
         method = method,
         path = path,
         version = version,
+        clientAddr = clientAddr,
         __clt(client) {
     }
     
@@ -151,14 +154,8 @@ class Error : StringFormatter {
         
 }
 
-# we can't store interfaces in arrays yet, so we have to wrap it in another 
-# object.
-class F {
-    Functor1[bool, HTTPRequest] f;
-    oper init(Functor1[bool, HTTPRequest] f) : f = f {}
-}
-    
-class HandlerArray : Array[F] {}
+alias RequestHandler = Functor1[bool, HTTPRequest];
+alias HandlerArray = Array[RequestHandler];
 
 class OutQueue : Array[String] @implements Writer {
     void write(Buffer data) {
@@ -212,7 +209,7 @@ class HTTPServer {
         }
 
         @final void compressBuffer(uintz start) {
-            inbuf.move(0, start, inbuf.size);
+            inbuf.move(0, start, inbuf.size - start);
             pos = 0;
         }
 
@@ -221,7 +218,7 @@ class HTTPServer {
         }        
         
         @final void processRequestLine(uintz start, uintz end) {
-            request = HTTPRequest(outQueue);
+            request = HTTPRequest(outQueue, addr);
 
             # find the first space
             methodEnd := inbuf.lfind(b' ', start);
@@ -277,13 +274,13 @@ class HTTPServer {
 
         @final void processRequest() {
             for (handler :in handlers) {
-                if (handler.f(request))
+                if (handler(request))
                     break;
             }
             
             if (request.method != 'POST' && request.method != 'PUT')
                 state = _ST_REQUEST;
-            request = HTTPRequest(outQueue);
+            request = HTTPRequest(outQueue, addr);
         }
         
         @final void processHeaderLine(uintz start, uintz end) {
@@ -406,7 +403,7 @@ $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)\n`;
     ## Adds the given handler to the chain.  Handlers are called in the order 
     ## in which they were added until one of them returns true.
     void addHandler(Functor1[bool, HTTPRequest] handler) {
-        __handlers.append(F(handler));
+        __handlers.append(handler);
     }
     
     ## Process a single event.

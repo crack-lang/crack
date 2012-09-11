@@ -166,33 +166,11 @@ void createClassImpl(Context &context, BTypeDef *type) {
         BTypeDefPtr base = BTypeDefPtr::arcast(type->parents[i]);
 
         // get the class body global variable
-        Constant *baseClassPtr = base->classInst;
+        Constant *baseClassPtr = 
+            base->getClassInstRep(llvmBuilder.module, 
+                                  llvmBuilder.getExecEng()
+                                  );
         
-        // make sure that this is in the module
-        if (cast<GlobalValue>(baseClassPtr)->getParent() != llvmBuilder.module) {
-            const string &name = baseClassPtr->getName();
-            Type *classInstType =
-                cast<PointerType>(baseClassPtr->getType())->getElementType();
-            
-            // see if we've already got a copy in this module
-            baseClassPtr =
-              llvmBuilder.module->getGlobalVariable(baseClassPtr->getName());
-
-            // if not, create a new global variable for us
-            if (!baseClassPtr) {
-                GlobalVariable *gvar;
-                baseClassPtr = gvar =
-                    new GlobalVariable(*llvmBuilder.module, 
-                                       classInstType,
-                                       true,
-                                       GlobalValue::ExternalLinkage,
-                                       0, // initializer: null for externs
-                                       name
-                                       );
-                llvmBuilder.addGlobalVarMapping(gvar, base->classInst);
-            }
-        }
-
         // 1) if the base class is Class, just use the pointer
         // 2) if it's Class[BaseName], GEP our way into the base class 
         // (Class) instance.

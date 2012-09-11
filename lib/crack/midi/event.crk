@@ -190,8 +190,8 @@ class ProgramChange : ChannelEvent {
 ##
 class PitchWheel : ChannelEvent {
 
-    uint value;
-    oper init(uint time, byte channel, uint value) :
+    int value;
+    oper init(uint time, byte channel, int value) :
         ChannelEvent(time, channel),
         value = value {
     }

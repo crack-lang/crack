@@ -1,3 +1,19 @@
+0.7
+    -   Switched licensing from LGPLv3 to MPL 2.0.
+    -   Upgraded to LLVM 3.1
+    -   16-bit integer types.
+    -   The "alias" statement.
+    -   Implemented a version of cast that returns a default instead of 
+        throwing an exception when the cast fails.
+    -   Indented string constants.
+    -   Virtual methods in extension classes.
+    -   An "assert" annotation.
+    -   Extensions for midi, alsa, SDL drawing, fluidsynth and Crossroads IO.
+    -   XML parsing.
+    -   OrderedHashmap
+    -   Process multiplexing
+    -   Lots of bug-fixes and small enhancements.
+    -   Various changes to support caching (which still doesn't work).
 0.6
     -   Implemented const folding for integer and float operations.
     -   Added support for injecting crack function body code from an extension.

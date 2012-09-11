@@ -58,6 +58,9 @@ class FuncDef : public VarDef {
         // where the vtable is defined
         TypeDef::AncestorPath pathToFirstDeclaration;
 
+        // for a virtual function, this is the vtable slot position.
+        unsigned vtableSlot;
+
         FuncDef(Flags flags, const std::string &name, size_t argCount);
         
         /**
@@ -89,7 +92,12 @@ class FuncDef : public VarDef {
          * Returns true if the function can be overriden.
          */
         bool isOverridable() const;
-        
+
+        /**
+         * Returns the method's offset in the VTable.
+         */
+        unsigned int getVTableOffset() const;
+
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;

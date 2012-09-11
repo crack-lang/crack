@@ -11,14 +11,19 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libCrackLang.la libCrackNativeRuntime.la
+lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 3:1:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LDFLAGS = -version-info 4:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LIBADD = libCrackDebugTools.la
+
+libCrackDebugTools_la_SOURCES = debug/DebugTools.cc
+libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
+libCrackDebugTools_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackNativeRuntime_la_LDFLAGS = -version-info 2:0:0
+libCrackNativeRuntime_la_LDFLAGS = -version-info 3:0:1
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
@@ -26,6 +31,7 @@ rtlib_LTLIBRARIES = runtime.la
 runtime_la_LDFLAGS = -avoid-version -module -lpthread @LIBICONV@
 runtime_la_CPPFLAGS = @INCICONV@
 runtime_la_SOURCES = %libRuntimeSources%
+runtime_la_LIBADD = libCrackDebugTools.la
 
 # this is really annoying, testext needs to be installed in order to generate 
 # a .so file.
@@ -35,7 +41,8 @@ extlib_LTLIBRARIES = test/testext.la
 test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
-EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth 
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
+             _cairosdl _xs
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -78,6 +85,19 @@ extlib_LTLIBRARIES += _cairo.la
 _cairo_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@
 _cairo_la_CPPFLAGS = @CAIRO_CPPFLAGS@
 _cairo_la_SOURCES = opt/_cairo.cc
+if HAVE_SDL
+extlib_LTLIBRARIES += _cairosdl.la
+_cairosdl_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@ @SDL_LIBS@
+_cairosdl_la_SOURCES = opt/_cairosdl.cc opt/cairosdl.c
+_cairosdl_la_CPPFLAGS = @CAIRO_CPPFLAGS@ @SDL_CFLAGS@
+endif
+endif
+
+if HAVE_XS
+extlib_LTLIBRARIES += _xs.la
+_xs_la_LDFLAGS = -avoid-version -module @XS_LIBS@
+_xs_la_CPPFLAGS = @XS_CFLAGS@
+_xs_la_SOURCES = opt/_xs.cc
 endif
 
 if HAVE_ALSA
@@ -122,6 +142,7 @@ noinst_HEADERS = \
     builder/llvm/Native.h \
     builder/llvm/Ops.h \
     builder/llvm/PlaceholderInstruction.h \
+    builder/llvm/StructResolver.h \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
@@ -142,6 +163,8 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/Deserializer.h \
+    model/EphemeralImportDef.h \
     model/Expr.h \
     model/FloatConst.h \
     model/FuncAnnotation.h \
@@ -163,6 +186,7 @@ noinst_HEADERS = \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \
     model/ResultExpr.h \
+    model/Serializer.h \
     model/SetRegisterExpr.h \
     model/StrConst.h \
     model/StubDef.h \
@@ -192,6 +216,7 @@ noinst_HEADERS = \
     spug/TypeInfo.h \
     spug/check.h \
     compiler/init.h \
+    opt/cairosdl.h \
     Crack.h
 
 compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
@@ -211,23 +236,31 @@ extinc_HEADERS = \
     ext/Var.h \
     ext/crack_config.h
 
-EXTRA_DIST = doc lib test Credits CMakeLists.txt opt/CMakeLists.txt \
-    sourceModules.txt runtimeModules.txt cmake COPYING COPYING.Lesser \
+EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
+    sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
     screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests
+    screen/testdata.crk screen/planB screen/tests extras/JITEmitter.patch
+    
 
 bin_PROGRAMS = crack
 
 crack_SOURCES = crack_main.cc
-crack_LDADD = libCrackLang.la $(LDFLAGS)
+crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
 
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
 
-doc/Manual.html: doc/Manual.nml doc/Manual.template crack
-	./crack -l lib $(srcdir)/tools/nml2html.crk -t doc/Manual.template \
-	   doc/Manual.nml
+# Depend on "testbed" so that the testbed installation won't happen as root if 
+# the user runs "make; sudo make install"
+all: testbed
+
+doc/Manual.html: doc/Manual.nml doc/Manual.template crack testbed
+	$(MKDIR_P) doc
+	./crack -l $(srcdir)/lib:./lib $(srcdir)/tools/nml2html.crk -t \
+	   $(srcdir)/doc/Manual.template \
+	   -o $@ \
+	   $(srcdir)/doc/Manual.nml
 
 install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(cracklib)
@@ -241,7 +274,7 @@ install-data-local: doc/Manual.html
 	   fi; \
 	 done)
 	$(MKDIR_P) $(DESTDIR)$(docdir)
-	$(INSTALL) $(srcdir)/doc/Manual.html $(DESTDIR)$(docdir)
+	$(INSTALL) doc/Manual.html $(DESTDIR)$(docdir)
 
 install-exec-local: install-binPROGRAMS
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
@@ -254,10 +287,11 @@ uninstall-local:
 
 clean-local:
 	rm -rf $(EXTENSIONS:%=lib/crack/ext/%.so) screen/output \
-	   test/screen.bin* lib/crack/runtime.so lib/testext.so
+	   test/screen.bin* lib/crack/runtime.so lib/testext.so \
+	   doc/Manual.html
 
 testbed: runtime.la $(extlib_LTLIBRARIES)
-	mkdir -p lib/crack/ext
+	$(MKDIR_P) lib/crack/ext
 	ln -f .libs/runtime.so lib/crack
 	ln -f test/.libs/testext.so lib
 	for ext in $(EXTENSIONS); do \

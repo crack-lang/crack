@@ -178,7 +178,9 @@ Type *Module::getType(const char *name) {
         return iter->second;
     
     TypeDefPtr rawType = TypeDefPtr::rcast(context->ns->lookUp(name));
-    assert(rawType && "Requested type not found");
+    if (!rawType) {
+        return 0;
+    }
     
     // Create a new type, add it to the map.
     Type *type = new Type(this, rawType.get());

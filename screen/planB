@@ -106,6 +106,8 @@ function run_test {
         echo "set args $OPTS_sec $outfile $ARGS_sec" >$gdb_opts
         LD_LIBRARY_PATH=.libs gdb -x $gdb_opts .libs/crack
         rm "$gdb_opts"
+    elif $valgrind; then
+        LD_LIBRARY_PATH=.libs valgrind .libs/crack $OPTS_sec $outfile $ARGS_sec
     else
         cmdline="$CRACKBIN $OPTS_sec $outfile $ARGS_sec" # xxx script args section
         #echo "running $cmdline"
@@ -127,6 +129,12 @@ function run_test {
 debug=false
 if [ "$1" = '-g' ]; then
     debug=true
+    shift
+fi
+
+valgrind=false
+if [ "$1" = "-V" ]; then
+    valgrind=true
     shift
 fi
 

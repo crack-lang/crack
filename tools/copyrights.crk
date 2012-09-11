@@ -1,0 +1,206 @@
+# Module for extracting crack modifications from mercurial and rewriting
+# copyright notices based on that information.
+#
+# This was written for the one-time task of fixing our copyrights, it should
+# be updated to keep our attributions up-to-date.
+#
+# Copyright 2012 Google Inc.
+#
+#  This Source Code Form is subject to the terms of the Mozilla Public
+#  License, v. 2.0. If a copy of the MPL was not distributed with this
+#  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.ascii parseInt;
+import crack.fs file = makePath;
+import crack.lang cmp, Buffer;
+import crack.process Process, ProcessHandler, ProcessHandlerImpl,
+    CRK_PIPE_STDOUT;
+import crack.strutil StringArray;
+import crack.regex Regex;
+import crack.io cin, cout, Formatter, FStr, StringFormatter;
+import crack.io.readers LineReader;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.cont.treemap TreeMap;
+
+@import crack.ann implements;
+
+userMap := HashMap[String, String]();
+userMap['mmuller@google.com'] = 'Google Inc.';
+userMap['mmuller@enduden.com'] = 'Google Inc.';
+userMap['mmuller@succubus'] = 'Google Inc.';
+userMap['Conrad Steenberg <conrad.steenberg@caltech.edu>'] =
+    'Conrad Steenberg <conrad.steenberg@gmail.com>';
+userMap['Conrad Steenberg <conrad.steenberg@gmail.com>'] =
+    'Conrad Steenberg <conrad.steenberg@gmail.com>';
+userMap['weyrick@mozek.us'] = 'Shannon Weyrick <weyrick@mozek.us>';
+userMap['Shannon Weyrick <weyrick@mozek.us>'] = 'Shannon Weyrick <weyrick@mozek.us>';
+userMap['weyrick@gmail.com'] = 'Shannon Weyrick <weyrick@mozek.us>';
+userMap['weyrick'] = 'Shannon Weyrick <weyrick@mozek.us>';
+userMap['Arno Rehn <arno@arnorehn.de>'] = 'Arno Rehn <arno@arnorehn.de>';
+
+
+userRx := Regex(r'user:\s+(?P<user>\S+(\s+\S+)*)');
+dateRx := Regex(r'date:\s+(?P<weekday>\S+) (?P<month>\S+) \d+ (?P<time>\d+:\d+:\d+) '
+                 r'(?P<year>\d+)'
+                );
+changesetRx := Regex(r'changeset:\s+(?P<rev>\d+):.*');
+
+# mapping from a user name to a map of copyright years for that user
+class CopyrightMap : HashMap[String, TreeMap[int, int]] {
+    void add(String user, int year) {
+        # make sure this year is in the set of years for this user
+        TreeMap[int, int] years;
+        if (!years = get(user)) {
+            years = TreeMap[int, int]();
+            this[user] = years;
+        }
+        years[year] = 1;
+    }
+}
+
+class MercurialLogReader : ProcessHandlerImpl {
+    String lastUser;
+    int lastChangeset;
+
+    CopyrightMap copyrights = {};
+
+    oper init(CopyrightMap copyrights) : copyrights = copyrights {}
+
+    void onOutLine(Buffer buf) {
+        line := String(buf);
+
+        # the date line is the last line we care about in a revision entry,
+        # when we get it record the year.  Ignore this for revision zero - if
+        # the file was in the first revision, it predates this epoch of crack
+        # and the initial owner (mmuller -> Google) is not valid.
+        if ((m := dateRx.match(line)) && lastChangeset) {
+            year := parseInt(m.group('year'));
+            copyrights.add(lastUser, year);
+
+        # just store the user and changeset lines.
+        } else if (m := userRx.match(line)) {
+            lastUser = userMap[m.group('user')];
+        } else if (m := changesetRx.match(line)) {
+            lastChangeset = parseInt(m.group('rev'));
+        }
+    }
+}
+
+String license(String pfx) {
+    return FStr()
+    I`$pfx
+      $pfx  This Source Code Form is subject to the terms of the Mozilla Public
+      $pfx  License, v. 2.0. If a copy of the MPL was not distributed with this
+      $pfx  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+      $pfx
+      `;
+}
+
+## Stores all of the copyright information for a given file and allows you to
+## rewrite the file with the correct information.
+class CopyrightsForFile {
+    String filename, prefix;
+    int startLine, endLine;
+
+    CopyrightMap copyrights = {};
+
+    oper init(String filename, String prefix) :
+        filename = filename,
+        prefix = prefix {
+    }
+
+    void injectCopyrights() {
+        Formatter trace;
+
+        trace `getting log for $filename\n`;
+        proc := Process(StringArray!['/usr/bin/hg', 'log', filename],
+                        CRK_PIPE_STDOUT);
+        logReader := MercurialLogReader(copyrights);
+        rc := proc.run(logReader);
+
+        # read and write everything up to the start line
+        trace `reading up to start line\n`;
+        src := file(filename).makeFullReader();
+        dst := file(tempName := filename + '.ccrtmp').writer();
+        int lineNum = 1;
+        String afterLine;
+        for (line :in src) {
+            if (lineNum == startLine) {
+                afterLine = line;
+                break;
+            }
+            dst.write(line);
+            ++lineNum;
+        }
+
+        # skip everything until the end line.
+        trace `skipping to the end line\n`;
+        if (lineNum != endLine) {
+            for (line :in src) {
+                if (++lineNum == endLine) {
+                    afterLine = line;
+                    break;
+                }
+            }
+        }
+
+        # create a list of copyrights sorted by the earliest year.
+        alias CoKeyVal = typeof(logReader.copyrights.iter().elem());
+        Array[CoKeyVal] sortedCopyrights = {};
+        for (item :in logReader.copyrights)
+            sortedCopyrights.append(item);
+        int compareYears(CoKeyVal a, CoKeyVal b) {
+            return cmp(a.val.iter().elem().key,
+                       b.val.iter().elem().key
+                       );
+        }
+        sortedCopyrights.sort(compareYears);
+
+        # write out all of the copyrights
+        trace `writing out copyrights\n`;
+        for (item :in sortedCopyrights) {
+            int lastYear = 0;
+            bool run;  # true if we are currently in a "run" of years, e.g. 1980-1982
+            StringFormatter out = {};
+            out `$(prefix)Copyright `;
+            for (yearItem :in item.val) {
+                year := yearItem.key;
+                if (!lastYear) {
+                    out `$year`;
+                } else if (year == lastYear) {
+                    ;
+                } else if (year - lastYear == 1) {
+                    run = true;
+                } else {
+                    if (run) {
+                        out `-$lastYear`;
+                        run = false;
+                    }
+                    out `,$year`;
+                }
+                lastYear = year;
+            }
+            if (run)
+                out `-$lastYear`;
+
+            # close it off with the copyright holder
+            out ` $(item.key)\n`;
+
+            dst.write(out.string());
+        }
+
+        # write the license
+        dst.write(license(prefix));
+
+        # write out the remaining lines
+        trace `writing out remaining lines\n`;
+        dst.write(afterLine);
+        for (line :in src)
+            dst.write(line);
+
+        # effectively close the file, then move it.
+        dst = null;
+        Process(StringArray!['/bin/mv', tempName, filename], 0).run(null);
+    }
+}

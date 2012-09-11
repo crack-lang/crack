@@ -16,6 +16,7 @@ AC_DEFUN([AM_PATH_GL], [dnl
         
         int main(int argc, const char **argv) {
             glMatrixMode(GL_PROJECTION);
+            return 0;
         }
     ], [
         got_gl=yes

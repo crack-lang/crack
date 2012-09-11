@@ -236,7 +236,7 @@ class LLVMBuilder : public Builder {
          * @param next the block after the landing pad
          * @param cdata catch data or null if this is not a catch context.
          */
-        llvm:: BasicBlock *createLandingPad(
+        llvm::BasicBlock *createLandingPad(
             model::Context &context,
             llvm::BasicBlock *next,
             BBuilderContextData::CatchData *cdata
@@ -246,6 +246,9 @@ class LLVMBuilder : public Builder {
                                          llvm::GlobalValue *externalDef
                                          ) {
         }
+
+        /** Return the execution engine if there is one, null if not. */        
+        virtual llvm::ExecutionEngine *getExecEng() const = 0;
 
         LLVMBuilder();
 

@@ -76,11 +76,14 @@ class Type {
         }
 
         // verify that the type has been initilized (has a non-null impl)
-        void checkInitialized();
+        void checkInitialized() const;
 
         // verify that the type has been "finished" (presumably before using 
         // it).
         void checkFinished();
+
+        // returns a simplified string representation of 'td'.
+        static std::string stringifyTypedef(model::TypeDef *td);
 
     protected:
 
@@ -187,12 +190,41 @@ class Type {
         Func *addStaticMethod(Type *returnType, const std::string &name,
                               const std::string& body = std::string()
                               );
-        
+
+        /**
+         * @return all methods added to this Type.
+         */
+        const FuncVec& getMethods() const;
+
+        /**
+         * Check if a method would hide an already existing overload.
+         * @return whether a method would be hidden
+         * @param name the method's name
+         * @param args the method's arguments
+         */
+        bool methodHidesOverload(const std::string& name,
+                                 const std::vector<Type *>& args) const;
+
         /**
          * Returns a specialization of the type for the given parameters.
          */
         Type *getSpecialization(const std::vector<Type *> &params);
-        
+
+        /**
+         * Returns the generic parameters of this type.
+         */
+        std::vector<Type *> getGenericParams() const;
+
+        /**
+         * Check whether this is a primitive type.
+         */
+        bool isPrimitive() const;
+
+        /**
+         * Returns a simplified type string (e.g 'List[int]').
+         */
+        std::string toString() const;
+
         /**
          * Mark the new type as "finished"
          */

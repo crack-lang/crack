@@ -91,9 +91,24 @@ void Func::setBody(const std::string& body)
     funcBody = body;
 }
 
-std::string Func::body() const
+std::string Func::getBody() const
 {
     return funcBody;
+}
+
+void Func::setInitializers(const string& initializers)
+{
+    ctorInitializers = initializers;
+}
+
+string Func::getInitializers() const
+{
+    return ctorInitializers;
+}
+
+unsigned int Func::getVTableOffset() const
+{
+    return vtableSlot;
 }
 
 void Func::finish() {
@@ -217,6 +232,8 @@ void Func::finish() {
             if (type != type->type.get())
                 type->type->addAlias(storedDef.get());
         }
+
+        vtableSlot = funcDef->getVTableOffset();
     }
 
     if (flags & constructor) {
@@ -240,6 +257,12 @@ void Func::finish() {
         
         // emit the initializers
         Initializers inits;
+        if (!ctorInitializers.empty()) {
+            std::istringstream initsStream(ctorInitializers);
+            Toker initsToker(initsStream, name.c_str());
+            Parser initsParser(initsToker, funcContext.get());
+            initsParser.parseInitializers(&inits, thisRef.get());
+        }
         receiverType->emitInitializers(*funcContext, &inits);
         
         // if we got a function, emit a call to it.
@@ -324,6 +347,8 @@ void Func::finish() {
         }
         funcContext->builder.emitEndFunc(*funcContext, newFunc.get());
         context->addDef(newFunc.get(), (flags & vwrap) ? wrapperClass : receiverType);
+
+        vtableSlot = newFunc->getVTableOffset();
     }
 
     finished = true;

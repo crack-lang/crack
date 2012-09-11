@@ -75,7 +75,7 @@ static int GenerateNative(const std::string &OutputFilename,
                           const sys::Path &gcc, char ** const envp,
                           std::string& ErrMsg,
                           bool is64Bit,
-                          int verbosity) {
+                          const BuilderOptions *o) {
 
   // Run GCC to assemble and link the program into native code.
   //
@@ -87,6 +87,12 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(gcc.c_str());
   args.push_back("-O3");
 
+  BuilderOptions::StringMap::const_iterator i = o->optionMap.find("PIE");
+  if (i != o->optionMap.end()) {
+      args.push_back("-fPIC");
+      args.push_back("-pie");
+  }
+
   if (is64Bit)
       args.push_back("-m64");
 
@@ -97,13 +103,13 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back("-Wl,--add-needed");
 
   // Add in the library and framework paths
-  if (verbosity > 3) {
+  if (o->verbosity > 3) {
       cerr << "Native link paths:" << endl;
       // verbose linker
       args.push_back("-Wl,--verbose");
   }
   for (unsigned index = 0; index < LibPaths.size(); index++) {
-      if (verbosity > 2)
+      if (o->verbosity > 2)
           cerr << LibPaths[index] << endl;
       args.push_back("-L" + LibPaths[index]);
       // XXX we add all lib paths as rpaths as well. this can potentially
@@ -130,11 +136,11 @@ static int GenerateNative(const std::string &OutputFilename,
   }
 
   // Add in the libraries to link.
-  if (verbosity > 2)
+  if (o->verbosity > 2)
       cerr << "Native link libraries:" << endl;
   for (unsigned index = 0; index < LinkItems.size(); index++)
     if (LinkItems[index].first != "crtend") {
-      if (verbosity > 2)
+      if (o->verbosity > 2)
           cerr << LinkItems[index].first << endl;
       if (LinkItems[index].second)
         args.push_back("-l" + LinkItems[index].first);
@@ -150,7 +156,7 @@ static int GenerateNative(const std::string &OutputFilename,
     Args.push_back(args[i].c_str());
   Args.push_back(0);
 
-  if (verbosity) {
+  if (o->verbosity) {
       cerr << "Generating Native Executable With:\n";
       PrintCommand(Args);
   }
@@ -640,12 +646,25 @@ void nativeCompile(llvm::Module *module,
 
     string FeaturesStr;
     string CPU;
+
     TargetOptions options;
+
+    // position independent executables
+    i = o->optionMap.find("PIE");
+    Reloc::Model relocModel = Reloc::Default;
+    if (i != o->optionMap.end()) {
+        options.PositionIndependentExecutable = 1;
+        relocModel = Reloc::PIC_;
+    }
+
     std::auto_ptr<TargetMachine>
             target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                                   CPU,
                                                   FeaturesStr,
-                                                  options));
+                                                  options,
+                                                  relocModel
+                                                  )
+                   );
     assert(target.get() && "Could not allocate target machine!");
     TargetMachine &Target = *target.get();
 
@@ -793,7 +812,7 @@ void nativeCompile(llvm::Module *module,
                    envp,
                    ErrMsg,
                    is64Bit,
-                   o->verbosity
+                   o
                    );
 
 

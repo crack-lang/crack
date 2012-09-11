@@ -11,8 +11,8 @@ import crack.lang CString;
 import crack.ext._fluidsynth fluid_synth_t, fluid_settings_t,
     fluid_audio_driver_t, delete_fluid_settings, delete_fluid_synth,
     new_fluid_settings, new_fluid_synth, fluid_synth_all_notes_off, fluid_synth_noteon,
-    fluid_synth_noteoff, fluid_synth_program_change, new_fluid_audio_driver,
-    fluid_synth_sfload;
+    fluid_synth_noteoff, fluid_synth_pitch_bend, fluid_synth_program_change,
+    new_fluid_audio_driver, fluid_synth_sfload;
 
 class FluidSettings {
     fluid_settings_t _rep;
@@ -54,6 +54,10 @@ class FluidSynth {
 
     void noteOn(int channel, int note, int velocity) {
         fluid_synth_noteon(__rep, channel, note, velocity);
+    }
+
+    void pitchBend(int channel, int value) {
+        fluid_synth_pitch_bend(__rep, channel, value + 8192);
     }
 
     void allNotesOff(int channel) {

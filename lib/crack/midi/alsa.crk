@@ -105,12 +105,14 @@ class Sequencer {
         } else if (evt[0].type == SND_SEQ_EVENT_PGMCHANGE) {
             ctrl := evt[0].getControl();
             result = ProgramChange(0, ctrl.channel, byte(ctrl.value));
-        } else if (evt[0].type == SND_SEQ_EVENT_PITCHBEND)
-            result = PitchWheel(0, 0, 0);
-        else if (evt[0].type == SND_SEQ_EVENT_CONTROLLER)
+        } else if (evt[0].type == SND_SEQ_EVENT_PITCHBEND) {
+            ctrl := evt[0].getControl();
+            result = PitchWheel(0, ctrl.channel, ctrl.value);
+        } else if (evt[0].type == SND_SEQ_EVENT_CONTROLLER) {
             result = ControlChange(0, 0, 0, 0);
-        else if (evt[0].type == SND_SEQ_EVENT_SYSEX)
+        } else if (evt[0].type == SND_SEQ_EVENT_SYSEX) {
             result = SysEx(0, '');
+        }
         
         free(evt);
         return result;

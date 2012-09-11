@@ -22,7 +22,8 @@ FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
     // function types are assigned after the fact.
     VarDef(0, name),
     flags(flags),
-    args(argCount) {
+    args(argCount),
+    vtableSlot(0) {
 }
 
 bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals, 
@@ -113,6 +114,10 @@ bool FuncDef::matchesWithNames(const ArgVec &other_args) {
 
 bool FuncDef::isOverridable() const {
     return flags & virtualized || name == "oper init" || flags & forward;
+}
+
+unsigned int FuncDef::getVTableOffset() const {
+    return vtableSlot;
 }
 
 bool FuncDef::hasInstSlot() {

@@ -936,7 +936,8 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(uintType, "len");
     f->addArg(voidptrType, "convertedLen");
 
-    // debug support
+    // debug support - these are weird in that these functions actually reside 
+    // in libCrackLang.
     f = mod->addFunc(voidType, "getLocation", 
                      (void *)&crack::debug::getLocation
                      );
@@ -946,4 +947,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                      (void *)&crack::debug::registerFuncTable
                      );
     f->addArg(byteptrArrayType, "funcTable");
+    f = mod->addFunc(voidptrType, "getStackFrame",
+                     (void *)&crack::debug::getStackFrame
+                     );
 }
