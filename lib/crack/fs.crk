@@ -1,15 +1,16 @@
 ## Copyright 2011-2012 Google Inc.
 ## Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 ## Crack Virtual Filesystem (it's not very virtual yet)
 
-import crack.runtime basename, chdir, errno, fileExists, free, fileRemove,
-    getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat, stat, Dir,
-    DirEntry, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, PATH_MAX, S_IFDIR, S_IFLNK;
+import crack.runtime basename, chdir, closedir, errno, fileExists, free,
+    fileRemove, getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat,
+    stat, Dir, DirEntry, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, PATH_MAX,
+    S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
@@ -105,12 +106,19 @@ class RealPathIter : PathIter {
     Dir __dir;
     DirEntry __entry;
 
+    @final void __close() {
+        if (__dir) {
+            closedir(__dir);
+            __dir = null;
+        }
+    }
+
     bool _readNext() {
         if (!__dir)
             throw InvalidStateError('Iterating past the end of the directory');
 
         if (!readdir(__dir)) {
-            __dir = null;
+            __close();
             return false;
         } else {
             return true;
@@ -125,6 +133,10 @@ class RealPathIter : PathIter {
             next();
     }
 
+    oper del() {
+        __close();
+    }
+
     Path elem() { return __container[StaticString(__entry.name)]; }
 
     ## Returns true if 'name' is '.' or '..'
@@ -136,7 +148,7 @@ class RealPathIter : PathIter {
     bool next() {
         while (true) {
             if (!_readNext()) {
-                __dir = null;
+                __close();
                 return false;
             } else if (__isSpecial(__entry.name)) {
                 continue;
