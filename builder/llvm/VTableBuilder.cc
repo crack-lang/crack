@@ -134,6 +134,11 @@ void VTableBuilder::emit(BTypeDef *type) {
          ) {
         // populate the types array
         vector<Constant *> &entries = iter->second->entries;
+
+        // add a trailing null pointer so that the vtable can
+        // be iterated safely
+        entries.push_back(ConstantPointerNull::get(builder->llvmVoidPtrType));
+
         vector<Type *> vtableTypes(entries.size());
         int i = 0;
         for (vector<Constant *>::iterator entryIter =

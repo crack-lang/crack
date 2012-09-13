@@ -157,7 +157,7 @@ class LLVMBuilder : public Builder {
         BModuleDef *bModDef;
         llvm::Module *module;
         llvm::Function *func;
-        llvm::Type *llvmVoidPtrType;
+        llvm::PointerType *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
         llvm::BasicBlock *funcBlock;
