@@ -6,7 +6,7 @@ scripting language.
 Crack is a language similar to C/C++/Java that compiles directly from a script 
 to machine code.
 
-See doc/copying/MPL-2.0.txt for the license.  The bulk of this code is under 
+See doc/license/MPL-2.0.txt for the license.  The bulk of this code is under 
 the Mozilla Public License, version 2.0.  More formally:
 
   This Source Code Form is subject to the terms of the Mozilla Public
