@@ -46,24 +46,29 @@ public:
     DebugInfo(llvm::Module *m,
               const std::string &file,
               const std::string &path,
-              const BuilderOptions *options);
+              const BuilderOptions *options
+              );
 
     void emitFunctionDef(const std::string &name,
-                         const parser::Location &loc);
+                         const parser::Location &loc
+                         );
 
     llvm::MDNode* emitLexicalBlock(const parser::Location &loc);
 
     void createBasicType(BTypeDef *type,
                          int sizeInBits,
-                         unsigned encoding);
+                         unsigned encoding
+                         );
 
     void declareLocal(const BTypeDef *type,
                       llvm::Value *var,
                       llvm::BasicBlock *instr,
-                      const parser::Location *loc);
+                      const parser::Location *loc
+                      );
 
     void addDebugLoc(llvm::Instruction *instr,
-                     const parser::Location *loc);
+                     const parser::Location *loc
+                     );
 
 };
 

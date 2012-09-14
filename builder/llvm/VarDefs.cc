@@ -29,7 +29,8 @@ VarDefImplPtr BArgVarDefImpl::promote(LLVMBuilder &builder, ArgDef *arg) {
                                var,
                                "",
                                NULL,
-                               rep);
+                               rep
+                               );
     return localVar;
 }
 

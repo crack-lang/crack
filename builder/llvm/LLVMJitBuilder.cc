@@ -239,12 +239,12 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     LLVMContext &lctx = getGlobalContext();
     createLLVMModule(name);
 
-    if (options->debugMode) {
+    if (options->debugMode)
         debugInfo = new DebugInfo(module,
                                   name,
                                   path,
-                                  context.builder.options.get());
-    }
+                                  context.builder.options.get()
+                                  );
 
     // create a context data object
     BBuilderContextData::get(&context);
@@ -284,8 +284,10 @@ void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
     dList.push_back(func);
     node->addOperand(MDNode::get(getGlobalContext(), dList));
 
-    Cacher c(context, context.construct->rootBuilder->options.get(),
-             BModuleDefPtr::cast(mod));
+    Cacher c(context,
+             context.construct->rootBuilder->options.get(),
+             BModuleDefPtr::cast(mod)
+             );
     c.saveToCache();
 
 }

@@ -617,12 +617,11 @@ BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
     var = b.CreateAlloca(tp->rep, 0);
     var->setName(name);
 
-    if (debugInfo) {
+    if (debugInfo)
         debugInfo->declareLocal(tp,
                                 var,
                                 b.GetInsertBlock(),
                                 loc);
-    }
 
     if (initVal) {
         Instruction *i = b.CreateStore(initVal, var);
@@ -1895,10 +1894,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
         }
 
         case Context::local: {
-            varDefImpl = createLocalVar(tp,
-                                        var,
-                                        name,
-                                        &context.getLocation());
+            varDefImpl = createLocalVar(tp, var, name, &context.getLocation());
             break;
         }
 
@@ -1910,7 +1906,8 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     lastValue = builder.CreateStore(lastValue, var);
     if (debugInfo)
         debugInfo->addDebugLoc(cast<Instruction>(lastValue),
-                               &context.getLocation());
+                               &context.getLocation()
+                               );
 
     // create the definition object.
     VarDefPtr varDef = new VarDef(type, name);
@@ -2067,23 +2064,22 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     assert(!context.getParent()->getParent() && "parent context must be root");
     assert(!module);
 
-    if (options->statsMode) {
+    if (options->statsMode)
         context.construct->stats->setState(ConstructStats::builtin);
-    }
+
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
 
-    if (options->debugMode) {
+    if (options->debugMode)
         debugInfo = new DebugInfo(module,
                                   ".builtin",
                                   "",
-                                  options.get());
-    }
+                                  options.get()
+                                  );
 
-    if (options->statsMode) {
+    if (options->statsMode)
         context.construct->stats->setModule(bModDef);
-    }
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
