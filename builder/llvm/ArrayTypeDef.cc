@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "ArrayTypeDef.h"
 
@@ -28,9 +28,9 @@ ArrayTypeDef::ArrayTypeDef(TypeDef *metaType, const std::string &name,
 
 // specializations of array types actually create a new type
 // object.
-TypeDef * ArrayTypeDef::getSpecialization(Context &context,
-                                          TypeVecObj *types
-                                          ) {
+TypeDef *ArrayTypeDef::getSpecialization(Context &context,
+                                         TypeVecObj *types
+                                         ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);
     if (spec)
@@ -50,7 +50,7 @@ TypeDef * ArrayTypeDef::getSpecialization(Context &context,
                                    ),
                          llvmType
                          );
-    tempSpec->setOwner(this);
+    tempSpec->setOwner(this->owner);
 
     context.addDef(new VoidPtrOpDef(context.construct->voidptrType.get()),
                    tempSpec.get()
