@@ -74,6 +74,7 @@ class CrackContext {
                                     parser::ParserCallback *callback
                                     );
         static void _setNextFuncFlags(CrackContext *inst, int nextFuncFlags);
+        static unsigned int _getCurrentVTableOffset(CrackContext *inst);
         static Location *_getLocation(CrackContext *inst, const char *name, 
                                       int lineNumber
                                       );
@@ -192,6 +193,11 @@ class CrackContext {
          */
         void setNextFuncFlags(int nextFuncFlags);
         
+        /**
+         * Get the offset in the virtual table of the current method.
+         */
+        unsigned int getCurrentVTableOffset() const;
+
         /**
          * Set the flags for the next class.  Valid values are 
          * CLASSFLAG_ABSTRACT.

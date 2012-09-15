@@ -1936,6 +1936,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                                       argDefs,
                                                       override.get()
                                                       );
+         // store the vtable offset in the context
+         context->vtableOffset = funcDef->getVTableOffset();
+
          BSTATS_END
          runCallbacks(funcForward);
 
@@ -1992,6 +1995,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                      argDefs,
                                      override.get()
                                      );
+   // store the vtable offset in the context
+   context->vtableOffset = funcDef->getVTableOffset();
+
    BSTATS_END
 
    // store the new definition in the parent context if it's not already in 

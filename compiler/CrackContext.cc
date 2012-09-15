@@ -185,6 +185,9 @@ void CrackContext::setNextClassFlags(int nextClassFlags) {
     context->nextClassFlags = static_cast<TypeDef::Flags>(nextClassFlags);
 }
 
+unsigned int CrackContext::getCurrentVTableOffset() const {
+    return context->vtableOffset;
+}
 
 Location *CrackContext::getLocation(const char *name, int lineNumber) {
     return new Location(new parser::LocationImpl(name, lineNumber));
@@ -297,6 +300,10 @@ void CrackContext::_removeCallback(CrackContext *inst,
 
 void CrackContext::_setNextFuncFlags(CrackContext *inst, int nextFuncFlags) {
     inst->context->nextFuncFlags = static_cast<FuncDef::Flags>(nextFuncFlags);
+}
+
+unsigned int CrackContext::_getCurrentVTableOffset(CrackContext *inst) {
+    return inst->context->vtableOffset;
 }
 
 Location *CrackContext::_getLocation(CrackContext *inst, const char *name,
