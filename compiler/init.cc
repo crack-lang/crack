@@ -600,6 +600,9 @@ void init(Module *mod) {
     mod->addConstant(mod->getIntType(), "PCB_FUNC_DEF",
                      parser::Parser::funcDef
                      );
+    mod->addConstant(mod->getIntType(), "PCB_FUNC_FORWARD",
+                     parser::Parser::funcForward
+                     );
     mod->addConstant(mod->getIntType(), "PCB_FUNC_ENTER",
                      parser::Parser::funcEnter
                      );
