@@ -81,6 +81,8 @@ void StructResolver::run(StructMapType *m) {
     module->MaterializeAll();
 
     typeMap = m;
+    for (StructMapType::iterator iter = m->begin(); iter != m->end(); ++iter)
+        reverseMap[iter->second] = iter->first;
     mapGlobals();
     mapFunctions();
     mapMetadata();
@@ -98,6 +100,11 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         SR_DEBUG (*typeMap)[t]->dump();
         SR_DEBUG cout << "\n";
         return (*typeMap)[t];
+    } else if (reverseMap.find(t) != reverseMap.end()) {
+        SR_DEBUG cout << "\t\t## --- PREMAPPED --- ##\n";
+        SR_DEBUG t->dump();
+        SR_DEBUG cout << "\n";
+        return t;
     }
 
     // short cut if not composite
