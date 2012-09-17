@@ -154,6 +154,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
     nextClassFlags(TypeDef::noFlags),
+    vtableOffset(0),
     construct(parentContext->construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
     assert(construct && "parent context must have a construct");
@@ -173,6 +174,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     terminal(false),
     returnType(TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
+    vtableOffset(0),
     construct(construct),
     cleanupFrame(builder.createCleanupFrame(*this)) {
     assert(compileNS);

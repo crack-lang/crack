@@ -227,10 +227,8 @@ bool Type::isPrimitive() const {
 string Type::stringifyTypedef(TypeDef* td) {
     string str = td->name;
 
-    // special-case arrays
-    TypeDef *owner = dynamic_cast<TypeDef*>(td->getOwner());
-    if (owner && owner->name == "array") {
-        str = owner->name;
+    if (!td->name.compare(0, 6, "array[")) {
+        str = "array";
     }
 
     if (td->genericParms.size() > 0) {

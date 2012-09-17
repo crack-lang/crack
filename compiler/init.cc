@@ -421,6 +421,10 @@ void init(Module *mod) {
                       );
     f->addArg(mod->getIntType(), "flags");
 
+    f = cc->addMethod(mod->getUintType(), "getCurrentVTableOffset",
+                      (void *)CrackContext::_getCurrentVTableOffset
+                      );
+
     typedef Location *(*L1)(CrackContext *);
     typedef Location *(*L2)(CrackContext *, const char *, int);
     f = cc->addMethod(locationType, "getLocation",
@@ -599,6 +603,9 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "PCB_FUNC_DEF",
                      parser::Parser::funcDef
+                     );
+    mod->addConstant(mod->getIntType(), "PCB_FUNC_FORWARD",
+                     parser::Parser::funcForward
                      );
     mod->addConstant(mod->getIntType(), "PCB_FUNC_ENTER",
                      parser::Parser::funcEnter

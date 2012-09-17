@@ -126,6 +126,9 @@ class Context : public spug::RCBase {
         // flags to be injected into the next class
         TypeDef::Flags nextClassFlags;
 
+        // vtable offset if this is a function context
+        unsigned int vtableOffset;
+
         // the construct
         Construct *construct;
     

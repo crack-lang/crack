@@ -193,12 +193,12 @@ ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
     LLVMContext &lctx = getGlobalContext();
     createLLVMModule(name);
 
-    if (options->debugMode) {
+    if (options->debugMode)
         debugInfo = new DebugInfo(module,
                                   name,
                                   path,
-                                  context.builder.options.get());
-    }
+                                  context.builder.options.get()
+                                  );
 
     BBuilderContextData::get(&context);
 

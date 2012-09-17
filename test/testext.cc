@@ -143,6 +143,10 @@ extern "C" void testext_cinit(Module *mod) {
     vector<Type *> params(1);
     params[0] = mod->getIntType();
     Type *intArrayType = arrayType->getSpecialization(params);
+
+    if (intArrayType->toString() != "array[int]")
+        cout << "FAILED constructing simple type string for array" << endl;
+
     f = mod->addFunc(intArrayType, "copyArray", (void *)copyArray);
     f->addArg(mod->getIntType(), "count");
     f->addArg(intArrayType, "array");
