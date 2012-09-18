@@ -266,6 +266,18 @@ void Type::setClasses(Func *f, model::TypeDef *base, model::TypeDef *wrapper,
     f->context = context;
 }
 
+void Type::injectBegin(const string& code)
+{
+    checkInitialized();
+    impl->beginCode.append(code);
+}
+
+void Type::injectEnd(const string& code)
+{
+    checkInitialized();
+    impl->endCode.append(code);
+}
+
 void Type::finish() {
     // ignore this if we're already finished.
     if (isFinished())
@@ -314,6 +326,14 @@ void Type::finish() {
         clsCtx->ns->addDef(varDef.get());
     }
 
+    // inject code at the beginning
+    if (!impl->beginCode.empty()) {
+        std::istringstream codeStream(impl->beginCode);
+        Toker toker(codeStream, "injected code");
+        Parser parser(toker, lexicalContext.get());
+        parser.parse();
+    }
+
     // emit all of the method defs
     for (FuncVec::iterator fi = impl->funcs.begin(); fi != impl->funcs.end();
          ++fi
@@ -327,7 +347,15 @@ void Type::finish() {
             (*fi)->finish();
         }
     }
-    
+
+    // inject code at the end
+    if (!impl->endCode.empty()) {
+        std::istringstream codeStream(impl->endCode);
+        Toker toker(codeStream, "injected code");
+        Parser parser(toker, lexicalContext.get());
+        parser.parse();
+    }
+
     // pad the class to the instance size
     typeDef->padding = impl->instSize;
     ctx->builder.emitEndClass(*clsCtx);

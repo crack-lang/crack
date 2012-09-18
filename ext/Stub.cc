@@ -97,5 +97,7 @@ vector<Type *> Type::getGenericParams() const { };
 Type *Type::getSpecialization(const vector<Type *> &params) { };
 bool Type::isPrimitive() const { };
 string Type::toString() const { };
+void Type::injectBegin(const std::string& code) { };
+void Type::injectEnd(const std::string& code) { };
 
 void Type::finish() { };

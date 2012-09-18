@@ -132,6 +132,8 @@ class Type {
         std::vector<Type *> getGenericParams() const;
         bool isPrimitive() const;
         std::string toString() const;
+        void injectBegin(const std::string& code);
+        void injectEnd(const std::string& code);
         void finish();
 };
     

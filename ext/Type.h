@@ -38,6 +38,9 @@ class Type {
         // Impl holds everything that we need to create a new type
         struct Impl {
             std::string name;
+            std::string beginCode;
+            std::string endCode;
+
             model::Context *context;
             TypeVec bases;
             FuncVec funcs;
@@ -224,6 +227,16 @@ class Type {
          * Returns a simplified type string (e.g 'List[int]').
          */
         std::string toString() const;
+
+        /**
+         * Injects crack code at the beginning of the type definition.
+         */
+        void injectBegin(const std::string& code);
+
+        /**
+         * Injects crack code at the end of the type definition.
+         */
+        void injectEnd(const std::string& code);
 
         /**
          * Mark the new type as "finished"
