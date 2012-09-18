@@ -1,10 +1,10 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "FunctionTypeDef.h"
 
@@ -72,10 +72,10 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
 
     BTypeDefPtr tempSpec =
             new BTypeDef(type.get(),
-                         getSpecializedName(types, true),
+                         getSpecializedName(types, false),
                          llvmFunPtrType
                          );
-    tempSpec->setOwner(this);
+    tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
     // create the implementation (this can be called before the meta-class is
