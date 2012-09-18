@@ -128,16 +128,17 @@ void VTableBuilder::createVTable(BTypeDef *type, const std::string &name,
 }
 
 void VTableBuilder::emit(BTypeDef *type) {
+    // add a trailing null pointer so that the vtable can
+    // be iterated safely
+    vtables.rbegin()->second->
+        entries.push_back(ConstantPointerNull::get(builder->llvmVoidPtrType));
+
     for (VTableMap::iterator iter = vtables.begin();
          iter != vtables.end();
          ++iter
          ) {
         // populate the types array
         vector<Constant *> &entries = iter->second->entries;
-
-        // add a trailing null pointer so that the vtable can
-        // be iterated safely
-        entries.push_back(ConstantPointerNull::get(builder->llvmVoidPtrType));
 
         vector<Type *> vtableTypes(entries.size());
         int i = 0;
