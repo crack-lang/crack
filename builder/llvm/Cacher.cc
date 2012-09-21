@@ -48,6 +48,8 @@ using namespace builder::mvll;
 using namespace std;
 using namespace model;
 
+#define VLOG(level) if (options->verbosity >= (level)) cerr
+
 // metadata version
 const std::string Cacher::MD_VERSION = "1";
 
@@ -122,6 +124,8 @@ string Cacher::getNamedStringNode(const std::string &key) {
 }
 
 MDNode *Cacher::writeEphemeralImport(BModuleDef *mod) {
+    VLOG(2) << "writing ephemeral import " << mod->name << " from " << 
+        modDef->name << endl;
     vector<Value *> dList;
 
     // operand 0: symbol name (unecessary)
@@ -272,6 +276,7 @@ void Cacher::writeNamespace(Namespace *ns) {
                  ++f) {
                 // skip aliases
                 if ((*f)->getOwner() == ns) {
+                    VLOG(2) << "  writing symbol " << (*i)->name << endl;
                     MDNode *n = writeFuncDef((*f).get(), owner);
                     if (n)
                         node->addOperand(n);
@@ -281,6 +286,7 @@ void Cacher::writeNamespace(Namespace *ns) {
             // skip aliases
             if ((*i)->getOwner() != ns)
                 continue;
+            VLOG(2) << "  writing symbol " << (*i)->name << endl;
             if (td = TypeDefPtr::rcast(*i)) {
                 MDNode *typeNode = writeTypeDef(td);
                 if (typeNode) {
@@ -312,10 +318,9 @@ void Cacher::writeNamespace(Namespace *ns) {
 
 MDNode *Cacher::writeTypeDef(model::TypeDef* t) {
 
-    if (options->verbosity >= 2)
-        cerr << "writing type " << t->getFullName() << " in module " <<
-            modDef->getNamespaceName() <<
-            endl;
+    VLOG(2) << "writing type " << t->getFullName() << " in module " <<
+        modDef->getNamespaceName() <<
+        endl;
     BTypeDef *bt = dynamic_cast<BTypeDef *>(t);
     assert((bt || t->generic) && "not BTypeDef");
 
@@ -502,8 +507,7 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
         dList.push_back(Constant::getNullValue(type->rep));
 
     // operand 3: type name
-    if (options->verbosity > 2)
-        cerr << "Writing variable type " << type->getFullName() << endl;
+    VLOG(2) << "Writing variable type " << type->getFullName() << endl;
     dList.push_back(MDString::get(getGlobalContext(), type->getFullName()));
 
     // operand 4: typedef owner
@@ -611,6 +615,7 @@ bool Cacher::readImports() {
 }
 
 TypeDefPtr Cacher::resolveType(const string &name) {
+    VLOG(2) << "  resolving type " << name << endl;
     TypeDefPtr td =
         TypeDefPtr::rcast(context->construct->getRegisteredDef(name));
 
@@ -633,15 +638,14 @@ TypeDefPtr Cacher::resolveType(const string &name) {
             parms->push_back(resolveType(name.substr(start, i - start)));
         }
 
-        return generic->getSpecialization(*context, parms.get());
+        td = generic->getSpecialization(*context, parms.get());
     }
 
-    if (options->verbosity > 2)
-        cerr << "  type " << td->name << " is " <<
-            td->getFullName() << " and owner is " <<
-            td->getOwner()->getNamespaceName() <<
-            " original name is " << name <<
-            endl;
+    VLOG(2) << "  type " << td->name << " is " <<
+        td->getFullName() << " and owner is " <<
+        td->getOwner()->getNamespaceName() <<
+        " original name is " << name <<
+        endl;
     return td;
 }
 
@@ -655,9 +659,8 @@ void Cacher::readVarDefGlobal(const std::string &sym,
     MDString *typeStr = dyn_cast<MDString>(mnode->getOperand(3));
     assert(typeStr && "readVarDefGlobal: invalid type string");
 
-    if (options->verbosity > 2)
-        cerr << "loading global " << sym << " of type " <<
-            typeStr->getString().str() << endl;
+    VLOG(2) << "loading global " << sym << " of type " <<
+        typeStr->getString().str() << endl;
 
     TypeDefPtr td = resolveType(typeStr->getString().str());
 
@@ -898,6 +901,8 @@ void Cacher::readEphemeralImport(MDNode *mnode) {
     SPUG_CHECK(canName, "Canonical name not specified for import.");
     MDString *digest = dyn_cast<MDString>(mnode->getOperand(3));
     SPUG_CHECK(digest, "Digest not specified for import.");
+    VLOG(2) << "reading ephemeral import " << canName->getString().str() 
+        << endl;
     BModuleDefPtr mod = 
         context->construct->loadModule(canName->getString().str());
     SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
@@ -1023,6 +1028,7 @@ void Cacher::readDefs() {
         mstr = dyn_cast<MDString>(mnode->getOperand(0));
         assert(mstr && "malformed def node: symbol name");
         sym = mstr->getString().str();
+        VLOG(2) << "  reading definition " << sym << endl;
 
         // operand 1: symbol type
         ConstantInt *type = dyn_cast<ConstantInt>(mnode->getOperand(1));
@@ -1221,15 +1227,13 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
     if (cacheFile.empty())
         return NULL;
 
-    if (options->verbosity >= 2)
-        cerr << "[" << canonicalName << "] cache: maybeLoad "
-             << cacheFile << endl;
+    VLOG(2) << "[" << canonicalName << "] cache: maybeLoad "
+        << cacheFile << endl;
 
     OwningPtr<MemoryBuffer> fileBuf;
     if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
-        if (options->verbosity >= 2)
-            cerr << "[" << canonicalName <<
-                    "] cache: not cached or inaccessible" << endl;
+        VLOG(2) << "[" << canonicalName <<
+            "] cache: not cached or inaccessible" << endl;
         return NULL;
     }
 
@@ -1239,9 +1243,8 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
                                           &errMsg);
     if (!module) {
         fileBuf.reset();
-        if (options->verbosity >= 1)
-            cerr << "[" << canonicalName <<
-                    "] cache: exists but unable to load bitcode" << endl;
+        VLOG(1) << "[" << canonicalName <<
+            "] cache: exists but unable to load bitcode" << endl;
         return NULL;
     }
 
@@ -1257,9 +1260,7 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
         resolveStructs(module);
 
         // cache hit
-        if (options->verbosity >= 2)
-            cerr << "[" << canonicalName <<
-                    "] cache materialized" << endl;
+        VLOG(2) << "[" << canonicalName << "] cache materialized" << endl;
     }
     else {
 
@@ -1275,6 +1276,9 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
             if (namedStructs[i]->hasName())
                 namedStructs[i]->setName("");
         }
+        
+        VLOG(2) << "[" << canonicalName <<
+            "] cache miss discovered in metadata read" << endl;
     }
     return modDef;
 }
@@ -1299,17 +1303,15 @@ void Cacher::saveToCache() {
         return;
     string cacheFile = getCacheFilePath(options, modDef->getFullName(), "bc");
     if (cacheFile.empty()) {
-        if (options->verbosity >= 1)
-            cerr << "unable to find writable directory for cache, won't cache: "
-                 << modDef->sourcePath
-                 << endl;
+        VLOG(1) << "unable to find writable directory for cache, won't cache: "
+            << modDef->sourcePath
+            << endl;
         return;
     }
 
-    if (options->verbosity >= 2)
-        cerr << "[" << modDef->getFullName() << "] cache: saved from "
-             << modDef->sourcePath
-             << " to file: " << cacheFile << endl;
+    VLOG(2) << "[" << modDef->getFullName() << "] cache: saved from "
+        << modDef->sourcePath
+        << " to file: " << cacheFile << endl;
 
     // digest the source file
     modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
