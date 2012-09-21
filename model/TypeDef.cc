@@ -903,12 +903,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     assert(result);
     (*generic)[types] = result;
 
-    // XXX this is recording dependencies on ephemeral modules and making them
-    // show up in import metadata nodes in cached files. commenting this fixes
-    // it. do we need this?
-
     // record a dependency on the owner's module
-    //context.recordDependency(result->getOwner()->getModule().get());
+    context.recordDependency(result->getOwner()->getModule().get());
     
     return result;
 }
