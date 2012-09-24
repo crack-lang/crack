@@ -194,6 +194,9 @@ Type *Type::getSpecialization(const vector<Type *> &params) {
 
 vector<Type *> Type::getGenericParams() const {
     vector<Type*> params;
+    if (!typeDef)
+        return params;
+
     params.reserve(typeDef->genericParms.size());
 
     for (TypeDef::TypeVec::iterator iter = typeDef->genericParms.begin();
@@ -221,7 +224,7 @@ vector<Type *> Type::getGenericParams() const {
 }
 
 bool Type::isPrimitive() const {
-    return !typeDef->pointer;
+    return typeDef && !typeDef->pointer;
 }
 
 string Type::stringifyTypedef(TypeDef* td) {
@@ -250,7 +253,7 @@ string Type::stringifyTypedef(TypeDef* td) {
 }
 
 string Type::toString() const {
-    return stringifyTypedef(typeDef);
+    return typeDef ? stringifyTypedef(typeDef) : impl->name;
 }
 
 bool Type::isFinished() const {
