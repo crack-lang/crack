@@ -23,9 +23,7 @@ Crack::Crack(void) :
     initialized(false),    
     options(new builder::BuilderOptions()),
     noBootstrap(false),
-    useGlobalLibs(true),
-    emitMigrationWarnings(false) {
-
+    useGlobalLibs(true) {
 }
 
 void Crack::addToSourceLibPath(const string &path) {
@@ -42,7 +40,7 @@ void Crack::setArgv(int argc, char **argv) {
 
 void Crack::setBuilder(Builder *builder) {
     builder->options = options;
-    construct = new Construct(builder);
+    construct = new Construct(*this, builder);
 }
 
 void Crack::setCompileTimeBuilder(Builder *builder) {
@@ -53,7 +51,9 @@ void Crack::setCompileTimeBuilder(Builder *builder) {
     // so that the _main_ builder can generate the correct ir to dump
     builder->options = new BuilderOptions(*options.get());
     builder->options->dumpMode = false;
-    construct->compileTimeConstruct = new Construct(builder, construct.get());
+    construct->compileTimeConstruct = new Construct(*this, builder, 
+                                                    construct.get()
+                                                    );
 }
 
 bool Crack::init() {
@@ -75,14 +75,10 @@ bool Crack::init() {
 
         // initialize the compile-time construct first
         if (ctc) {
-            ctc->migrationWarnings = emitMigrationWarnings;
             ctc->loadBuiltinModules();
             if (!noBootstrap && !ctc->loadBootstrapModules())
                 return false;
         }
-
-        // pass the emitMigrationWarnings flag down to the global data.
-        construct->migrationWarnings = emitMigrationWarnings;
 
         construct->loadBuiltinModules();
         if (!noBootstrap && !construct->loadBootstrapModules())

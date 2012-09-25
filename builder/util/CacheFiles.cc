@@ -1,10 +1,10 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "CacheFiles.h"
 
@@ -64,7 +64,7 @@ namespace {
     }
 }
 
-bool initCacheDirectory(BuilderOptions *options) {
+bool initCacheDirectory(BuilderOptions *options, Construct &construct) {
 
     string path;
 
@@ -83,7 +83,7 @@ bool initCacheDirectory(BuilderOptions *options) {
         if (path.empty()) {
             if (options->verbosity)
                 cerr << "unable to set default cache path, caching disabled\n";
-            options->cacheMode = false;
+            construct.cacheMode = false;
             return false;
         }
         if (path.at(path.size()-1) != '/')
@@ -102,7 +102,7 @@ bool initCacheDirectory(BuilderOptions *options) {
         if (options->verbosity)
             cerr << "no access to create/use cache path, caching disabled: " <<
                     path << "\n";
-        options->cacheMode = false;
+        construct.cacheMode = false;
         return false;
     }
 
@@ -110,8 +110,10 @@ bool initCacheDirectory(BuilderOptions *options) {
 }
 
 string getCacheFilePath(BuilderOptions* options,
+                        Construct &construct,
                         const std::string &canonicalName,
-                        const std::string &destExt) {
+                        const std::string &destExt
+                        ) {
 
     // at this point, initCacheDirectory should have ensured we have a path
     BuilderOptions::StringMap::const_iterator i =
@@ -120,7 +122,7 @@ string getCacheFilePath(BuilderOptions* options,
     // if we didn't find the cache path, try initializing the cache directory
     // before failing.
     if (i == options->optionMap.end()) {
-        if (!initCacheDirectory(options))
+        if (!initCacheDirectory(options, construct))
             return string();
         else
             i = options->optionMap.find("cachePath");

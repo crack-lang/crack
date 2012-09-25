@@ -55,7 +55,7 @@ struct option longopts[] = {
 static std::string prog;
 
 void version() {
-    cout << prog << " " << CRACK_VERSION_STRING << endl;
+    cout << prog << " " << VERSION << endl;
 }
 
 void usage(int retval) {
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
                 crack.options->dumpMode = true;
                 break;
             case 'C':
-                crack.options->cacheMode = true;
+                crack.cacheMode = true;
                 break;
             case 'h':
                 usage(0);
@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
                 crack.useGlobalLibs = false;
                 break;
             case 'm':
-                crack.emitMigrationWarnings = true;
+                crack.migrationWarnings = true;
                 break;
             case 'l':
                 if (libPath.empty()) {

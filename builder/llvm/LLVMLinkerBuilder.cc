@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "LLVMLinkerBuilder.h"
 #include "BModuleDef.h"
@@ -396,7 +396,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
     builder.CreateCall(registerFunc, args);
 
-    if (rootBuilder->options->cacheMode) {
+    if (context.construct->cacheMode) {
         Cacher c(context, options.get(), BModuleDefPtr::acast(moduleDef));
         c.saveToCache();
     }

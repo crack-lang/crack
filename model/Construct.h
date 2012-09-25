@@ -10,10 +10,12 @@
 #ifndef _model_Construct_h_
 #define _model_Construct_h_
 
-#include "ModuleDef.h"
 #include <list>
 #include <stack>
 #include <sys/time.h>
+
+#include "ModuleDef.h"
+#include "Options.h"
 
 namespace builder {
     SPUG_RCPTR(Builder);
@@ -111,7 +113,7 @@ public:
  * A crack executor will contain either one or two Constructs - there is one 
  * for the program being executed and there may be different one.
  */
-class Construct : public spug::RCBase {
+class Construct : public spug::RCBase, public Options {
 
     public:
         typedef std::vector<std::string> StringVec;
@@ -241,10 +243,6 @@ class Construct : public spug::RCBase {
         
     public:        
 
-        // if true, emit warnings about things that have changed since the
-        // last version of the language.
-        bool migrationWarnings;
-        
         // the error context stack.  This needs to be global because it is 
         // managed by annotations and transcends local contexts.
         std::list<std::string> errorContexts;
@@ -284,7 +282,9 @@ class Construct : public spug::RCBase {
         // Size of these PDNTs in bits.
         int intSize, intzSize;
 
-        Construct(builder::Builder *rootBuilder, Construct *primary = 0);
+        Construct(const model::Options &options, builder::Builder *rootBuilder, 
+                  Construct *primary = 0
+                  );
 
         /**
          * Adds the given path to the source library path - 'path' is a 

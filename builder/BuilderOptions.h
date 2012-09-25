@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_BuilderOptions_h_
 #define _builder_BuilderOptions_h_
@@ -36,8 +36,6 @@ class BuilderOptions : public spug::RCBase {
         bool debugMode;
         // Keep compile time statistics
         bool statsMode;
-        // Enable builder module caching
-        bool cacheMode;
         // builder specific option strings
         StringMap optionMap;
 
@@ -47,7 +45,6 @@ class BuilderOptions : public spug::RCBase {
                               dumpMode(false),
                               debugMode(false),
                               statsMode(false),
-                              cacheMode(false),
                               optionMap() { }
 
 };

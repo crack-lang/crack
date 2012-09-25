@@ -1223,7 +1223,10 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
                           );
     context->toplevel = true;
 
-    string cacheFile = getCacheFilePath(options, canonicalName, "bc");
+    string cacheFile = getCacheFilePath(options, *context->construct, 
+                                        canonicalName, 
+                                        "bc"
+                                        );
     if (cacheFile.empty())
         return NULL;
 
@@ -1301,7 +1304,10 @@ void Cacher::saveToCache() {
     // means we need to search the library path for it.
     if (modDef->sourcePath.empty() || Construct::isDir(modDef->sourcePath))
         return;
-    string cacheFile = getCacheFilePath(options, modDef->getFullName(), "bc");
+    string cacheFile = getCacheFilePath(options, *context->construct, 
+                                        modDef->getFullName(), 
+                                        "bc"
+                                        );
     if (cacheFile.empty()) {
         VLOG(1) << "unable to find writable directory for cache, won't cache: "
             << modDef->sourcePath

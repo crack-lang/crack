@@ -247,10 +247,12 @@ std::string Construct::joinName(const std::string &base,
     return base + "/" + rel;
 }
 
-Construct::Construct(Builder *builder, Construct *primary) :
+Construct::Construct(const Options &options, Builder *builder, 
+                     Construct *primary
+                     ) :
+    Options(options),
     rootBuilder(builder),
-    uncaughtExceptionFunc(0),
-    migrationWarnings(false) {
+    uncaughtExceptionFunc(0) {
 
     if (builder->options->statsMode)
         stats = new ConstructStats();
@@ -485,7 +487,7 @@ ModuleDefPtr Construct::loadModule(const string &canonicalName) {
 }
 
 ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
-    if (!rootBuilder->options->cacheMode)
+    if (!rootContext->construct->cacheMode)
         return 0;
 
     // see if it's in the in-memory cache    
@@ -569,7 +571,7 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
         // before parsing the module from scratch, we give the builder a chance
         // to materialize the module through its own means (e.g., a cache)
         bool cached = false;
-        if (rootBuilder->options->cacheMode && !modPath.isDir)
+        if (rootContext->construct->cacheMode && !modPath.isDir)
             modDef = context->materializeModule(canonicalName);
         if (modDef && modDef->matchesSource(sourceLibPath)) {
             cached = true;
@@ -760,12 +762,12 @@ int Construct::runScript(istream &src, const string &name) {
 
     ModuleDefPtr modDef;
     bool cached = false;
-    if (rootBuilder->options->cacheMode)
-        builder::initCacheDirectory(rootBuilder->options.get());
+    if (rootContext->construct->cacheMode)
+        builder::initCacheDirectory(rootBuilder->options.get(), *this);
     // we check cacheMode again after init,
     // because it might have been disabled if
     // we couldn't find an appropriate cache directory
-    if (rootBuilder->options->cacheMode) {
+    if (rootContext->construct->cacheMode) {
         modDef = context->materializeModule(canName);
     }
     if (modDef) {

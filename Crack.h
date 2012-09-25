@@ -9,11 +9,12 @@
 #ifndef _Crack_h_
 #define _Crack_h_
 
-#include "builder/BuilderOptions.h"
-
 #include <map>
 #include <vector>
 #include <spug/RCPtr.h>
+
+#include "builder/BuilderOptions.h"
+#include "model/Options.h"
 
 namespace model {
     SPUG_RCPTR(Construct);
@@ -29,7 +30,7 @@ namespace builder {
  * High-level wrapper around the crack executor.  Use this whenever possible 
  * for embedding.
  */
-class Crack {
+class Crack : public model::Options {
     private:
         // the root context contains all of the builtin types and functions
         // that are visible from all modules.
