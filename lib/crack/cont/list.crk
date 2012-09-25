@@ -43,7 +43,7 @@ $$
 @_nobind float32
 @_nobind float64
 @_nobind byteptr
-
+@_nobind voidptr
 
 ## A singly-linked list.
 class List[Elem] {

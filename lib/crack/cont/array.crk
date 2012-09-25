@@ -46,6 +46,7 @@ $$
 @_nobind float32
 @_nobind float64
 @_nobind byteptr
+@_nobind voidptr
 
 @define _setItem 1
     if ($1 >= __size)

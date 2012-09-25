@@ -163,6 +163,8 @@ class Buffer;
     @abstract void format(Object obj);
     @abstract void format(byteptr cstr);
 
+    @abstract void format(voidptr cstr);
+
 }
 
 ## The buffer base class containing a bytebuf and size.
@@ -1151,6 +1153,11 @@ int cmp(Object a, Object b) {
         return -1;
     else
         return 1;
+}
+
+int cmp(voidptr a, voidptr b) {
+    if (uintz(a) == uintz(b)) return 0;
+    else return uintz(a) > uintz(b) ? 1 : -1;
 }
 
 @define lightcmp 1 int cmp($1 a, $1 b) { return a - b; } $$
