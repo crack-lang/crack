@@ -172,6 +172,36 @@ uint _format(int64 val, byteptr buf, uint size) {
     return i;
 }
 
+## Format a pointer into the buffer. "buf" must be at least 18 characters.
+## Returns the index to the beginnung of the hex number.
+uint _format(voidptr ptr, byteptr buf, uint size) {
+    val := uintz(ptr);
+    uint i = size;
+
+    if (!val) {
+        i = i - 1;
+        buf[i] = b'0';
+    } else {
+        while (val) {
+            i = i - 1;
+            b := byte(val % 16);
+            if (b < 10)
+                b += b'0';
+            else
+                b += b'a' - byte(10);
+            buf[i] = b;
+            val = val / 16;
+        }
+    }
+
+    i = i - 1;
+    buf[i] = b'x';
+    i = i - 1;
+    buf[i] = b'0';
+
+    return i;
+}
+
 ## StandardFormatter class - got a format() method for anything.
 class StandardFormatter : Formatter {
 
@@ -273,6 +303,12 @@ class StandardFormatter : Formatter {
     ## So we can deal with plain null-terminated strings.
     void format(byteptr cstr) {
         write(Buffer(cstr, strlen(cstr)));
+    }
+
+    void format(voidptr ptr) {
+        buffer := ManagedBuffer(18);
+        start := _format(ptr, buffer.buffer, buffer.cap);
+        write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
     Object _iface_getWriterObject() { return this; }
