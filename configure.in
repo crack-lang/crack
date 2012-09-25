@@ -24,8 +24,7 @@ AC_C_CONST
 
 # automake advised me to add this...
 AC_CONFIG_FILES([Makefile])
-# config.h is here to prevent autoheader from clobbering ext/crack_config.h.in
-AC_CONFIG_HEADERS([config.h ext/crack_config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # ... and also this (when I switched to a library)
 AC_PROG_RANLIB

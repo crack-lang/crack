@@ -217,6 +217,7 @@ noinst_HEADERS = \
     spug/check.h \
     compiler/init.h \
     opt/cairosdl.h \
+    config.h \
     Crack.h
 
 compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
@@ -233,8 +234,7 @@ extinc_HEADERS = \
     ext/RCObj.h \
     ext/Type.h \
     ext/util.h \
-    ext/Var.h \
-    ext/crack_config.h
+    ext/Var.h
 
 EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
     sourceModules.txt runtimeModules.txt cmake COPYING doc/license \

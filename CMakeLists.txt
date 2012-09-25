@@ -111,8 +111,8 @@ target_link_libraries( libcrackdebug
 
 # extension config, per autoconf
 set(SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P})
-configure_file("${PROJECT_SOURCE_DIR}/ext/crack_config.h.in"
-               "${PROJECT_BINARY_DIR}/crack_config.h")
+configure_file("${PROJECT_SOURCE_DIR}/config.h.in"
+               "${PROJECT_BINARY_DIR}/config.h")
 
 # test extension. we set this up to mirror the autoconf
 # build
@@ -175,7 +175,6 @@ install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/ext"
         FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ext/ DESTINATION "include/crack-${CRACK_VERSION}/crack/debug"
         FILES_MATCHING PATTERN "*.h")
-install(FILES "${PROJECT_BINARY_DIR}/crack_config.h" DESTINATION "include/crack-${CRACK_VERSION}/crack/ext")
 
 # install library modules
 install(DIRECTORY lib/crack DESTINATION "lib/crack-${CRACK_VERSION}"

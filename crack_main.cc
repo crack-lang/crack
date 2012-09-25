@@ -20,7 +20,7 @@
 #include "builder/llvm/LLVMLinkerBuilder.h"
 #include "debug/DebugTools.h"
 #include "Crack.h"
-#include "crack_config.h"
+#include "config.h"
 
 using namespace std;
 

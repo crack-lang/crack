@@ -6,7 +6,7 @@
 // 
 
 #include "DebugInfo.h"
-#include "crack_config.h"
+#include "config.h"
 #include "builder/BuilderOptions.h"
 
 #include <llvm/Module.h>
