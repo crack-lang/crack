@@ -331,10 +331,11 @@ void Type::finish() {
 
     // inject code at the beginning
     if (!impl->beginCode.empty()) {
+        impl->beginCode.push_back('}');
         std::istringstream codeStream(impl->beginCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        parser.parse();
+        parser.parseClassBody();
     }
 
     // emit all of the method defs
@@ -353,10 +354,11 @@ void Type::finish() {
 
     // inject code at the end
     if (!impl->endCode.empty()) {
+        impl->endCode.push_back('}');
         std::istringstream codeStream(impl->endCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        parser.parse();
+        parser.parseClassBody();
     }
 
     // pad the class to the instance size
