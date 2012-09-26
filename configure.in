@@ -22,6 +22,8 @@ AC_PROG_CXX
 AC_HEADER_STDBOOL
 AC_C_CONST
 
+AC_CHECK_HEADERS([malloc.h])
+
 # automake advised me to add this...
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADERS([config.h])

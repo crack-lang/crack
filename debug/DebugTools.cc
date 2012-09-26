@@ -5,12 +5,15 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
+#include "config.h"
 #include "DebugTools.h"
 
 #include <string.h>
 #include <iomanip>
 #include <iostream>
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 #include <map>
 #include <set>
 
