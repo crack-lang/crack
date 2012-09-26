@@ -9,19 +9,28 @@
 // 
 
 #include "Net.h"
+#include "config.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <poll.h>
 #include <arpa/inet.h>
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 
 #include <iostream>

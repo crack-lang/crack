@@ -45,6 +45,13 @@ using namespace std;
 
 parser::Location Context::emptyLoc;
 
+Construct* Context::getCompileTimeConstruct() {
+    if (construct->compileTimeConstruct.get())
+        return construct->compileTimeConstruct.get();
+    else
+        return construct;
+}
+
 void Context::showSourceLoc(const parser::Location &loc, ostream &out) {
 
     // set some limits

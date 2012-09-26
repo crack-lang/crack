@@ -9,8 +9,6 @@
 #ifndef _Crack_h_
 #define _Crack_h_
 
-#include <map>
-#include <vector>
 #include <spug/RCPtr.h>
 
 #include "builder/BuilderOptions.h"

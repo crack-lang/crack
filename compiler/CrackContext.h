@@ -8,6 +8,8 @@
 #ifndef _crack_compiler_CrackContext_h_
 #define _crack_compiler_CrackContext_h_
 
+#include "init.h"
+
 namespace crack { namespace ext {
     class Module;
 }}

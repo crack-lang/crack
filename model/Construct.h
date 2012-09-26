@@ -14,6 +14,7 @@
 #include <stack>
 #include <sys/time.h>
 
+#include "model/StrConst.h"
 #include "ModuleDef.h"
 #include "Options.h"
 

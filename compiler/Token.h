@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include "ext/RCObj.h"
+#include "init.h"
 
 namespace crack { namespace ext {
     class Module;

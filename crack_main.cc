@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
+#include <libgen.h>
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"

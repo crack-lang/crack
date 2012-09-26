@@ -9,6 +9,7 @@
 #define _crack_compiler_Location_h_
 
 #include "ext/RCObj.h"
+#include "init.h"
 
 namespace crack { namespace ext {
     class Module;

@@ -27,6 +27,8 @@ namespace parser {
 
 namespace model {
 
+class Construct;
+
 SPUG_RCPTR(Annotation);
 SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
@@ -198,12 +200,7 @@ class Context : public spug::RCBase {
          * Returns the compile-time construct - this will revert to the 
          * default construct if there is no compile-time construct.
          */
-        Construct *getCompileTimeConstruct() {
-            if (construct->compileTimeConstruct.get())
-                return construct->compileTimeConstruct.get();
-            else
-                return construct;
-        }
+        Construct *getCompileTimeConstruct();
 
         /**
          * Returns true if the context encloses the "other" context - a 

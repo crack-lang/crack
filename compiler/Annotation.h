@@ -9,6 +9,7 @@
 #define _crack_compiler_Annotation_h_
 
 #include "ext/RCObj.h"
+#include "init.h"
 
 namespace crack { namespace ext {
     class Module;
