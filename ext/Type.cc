@@ -309,6 +309,9 @@ void Type::finish() {
     typeDef = td.get();
     typeDef->aliasBaseMetaTypes();
 
+    if (!typeDef->getOwner())
+        ctx->ns->addDef(typeDef);
+
     // create a lexical context which delegates to both the class context and
     // the parent context.
     NamespacePtr lexicalNS =
@@ -365,7 +368,5 @@ void Type::finish() {
     typeDef->padding = impl->instSize;
     ctx->builder.emitEndClass(*clsCtx);
 
-    if (!typeDef->getOwner())
-        ctx->ns->addDef(typeDef);
     finished = true;
 }
