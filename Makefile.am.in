@@ -247,6 +247,10 @@ bin_PROGRAMS = crack
 crack_SOURCES = crack_main.cc
 crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
 
+noinst_PROGRAMS = unittests
+unittests_SOURCES = test/unittests_main.cc
+unittests_LDADD = libCrackLang.la
+
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\"
