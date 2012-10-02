@@ -1,9 +1,9 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Process.h"
 #include "ext/Module.h"
@@ -63,13 +63,13 @@ void signalProcess(int pid, int sig) {
 
 void closeProcess(PipeDesc *pd) {
 
-    if (close(pd->stdin) == -1)
+    if (pd->stdin != -1 && close(pd->stdin) == -1)
             perror("close pipe failed: stdin");
 
-    if (close(pd->stdout) == -1)
+    if (pd->stdout != -1 && close(pd->stdout) == -1)
             perror("close pipe failed: stdout");
 
-    if (close(pd->stderr) == -1)
+    if (pd->stderr != -1 && close(pd->stderr) == -1)
             perror("close pipe failed: stderr");
 
 }
@@ -103,7 +103,7 @@ int runChildProcess(const char **argv,
     // create pipes
     // XXX check pd to see which pipes we should make, if any
     for (int i = 0; i < 3; i++) {
-        if (pipe(pipes[i]) == -1) {
+        if (pd->flags & (1 << i) && pipe(pipes[i]) == -1) {
             perror("pipe failed");
             return -1;
         }
@@ -117,29 +117,35 @@ int runChildProcess(const char **argv,
         return -1;
     case 0:
         // child
-        if (close(pipes[0][1]) == -1) { // child stdin write close
-            perror("close - child 0");
-            return -1;
+        if (pd->flags & 1) {
+            if (close(pipes[0][1]) == -1) { // child stdin write close
+                perror("close - child 0");
+                return -1;
+            }
+            if (pipes[0][0] != STDIN_FILENO) {
+                dup2(pipes[0][0], STDIN_FILENO);
+                close(pipes[0][0]);
+            }
         }
-        if (pipes[0][0] != STDIN_FILENO) {
-            dup2(pipes[0][0], STDIN_FILENO);
-            close(pipes[0][0]);
+        if (pd->flags & 2) {
+            if (close(pipes[1][0]) == -1) { // child stdout read close
+                perror("close - child 1");
+                return -1;
+            }
+            if (pipes[1][1] != STDOUT_FILENO) {
+                dup2(pipes[1][1], STDOUT_FILENO);
+                close(pipes[1][1]);
+            }
         }
-        if (close(pipes[1][0]) == -1) { // child stdout read close
-            perror("close - child 1");
-            return -1;
-        }
-        if (pipes[1][1] != STDOUT_FILENO) {
-            dup2(pipes[1][1], STDOUT_FILENO);
-            close(pipes[1][1]);
-        }
-        if (close(pipes[2][0]) == -1) { // child stderr read close
-            perror("close - child 2");
-            return -1;
-        }
-        if (pipes[2][1] != STDERR_FILENO) {
-            dup2(pipes[2][1], STDERR_FILENO);
-            close(pipes[2][1]);
+        if (pd->flags & 4) {
+            if (close(pipes[2][0]) == -1) { // child stderr read close
+                perror("close - child 2");
+                return -1;
+            }
+            if (pipes[2][1] != STDERR_FILENO) {
+                dup2(pipes[2][1], STDERR_FILENO);
+                close(pipes[2][1]);
+            }
         }
         // XXX close all handles > 2?
 
@@ -157,25 +163,34 @@ int runChildProcess(const char **argv,
 
     default:
         // parent
-        if (close(pipes[0][0]) == -1) { // parent stdin read close
-            perror("close - parent 0");
-            return -1;
-        }
-        if (close(pipes[1][1]) == -1) { // parent stdout write close
-            perror("close - parent 1");
-            return -1;
-        }
-        if (close(pipes[2][1]) == -1) { // parent stderr write close
-            perror("close - parent 2");
-            return -1;
-        }
 
-        // return pipes[0][1] as writeable fd (to child stdin)
-        // return pipes[1][0] as readable fd (from child stdout)
-        // return pipes[2][0] as readable fd (from child stderr)
-        pd->stdin = pipes[0][1];
-        pd->stdout = pipes[1][0];
-        pd->stderr = pipes[2][0];
+        // parent stdin read close
+        if (pd->flags & 1) {
+            if (close(pipes[0][0]) == -1) {
+                perror("close - parent 0");
+                return -1;
+            }
+            // return pipes[0][1] as writeable fd (to child stdin)
+            pd->stdin = pipes[0][1];
+        }
+        // parent stdout write close
+        if (pd->flags & 2) {
+                if (close(pipes[1][1]) == -1) {
+                perror("close - parent 1");
+                return -1;
+            }
+            // return pipes[1][0] as readable fd (from child stdout)
+            pd->stdout = pipes[1][0];
+        }
+        // parent stderr write close
+        if (pd->flags & 4) {
+            if (close(pipes[2][1]) == -1) {
+                perror("close - parent 2");
+                return -1;
+            }
+            // return pipes[2][0] as readable fd (from child stderr)
+            pd->stderr = pipes[2][0];
+        }
 
         return p;
     }
