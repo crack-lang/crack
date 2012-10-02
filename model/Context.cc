@@ -313,7 +313,8 @@ void Context::closeCleanupFrame() {
 }
 
 TypeDefPtr Context::createForwardClass(const string &name) {
-    TypeDefPtr type = builder.createClassForward(*this, name);
+    ContextPtr classContext = new Context(builder, Context::instance, this, 0);
+    TypeDefPtr type = builder.createClassForward(*classContext, name);
     ns->addDef(type.get());
     return type;
 }
