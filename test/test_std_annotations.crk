@@ -144,7 +144,20 @@ if (1) {
     # test bind and release on null.
     I h() { return null; }
     I i = h();
-}
 
+    # conversion to bool
+    I j;
+    if (j) cout `FAILED conversion of null interface reference to bool\n`;
+
+    class A : Object @implements I {
+        bool val;
+        oper init(bool val) : val = val {}
+        bool isTrue() { return val; }
+        void f() {}
+    }
+    j = A(true);
+    I k = A(false);
+    if (!j || k) cout `FAILED object bool conversion in interface.\n`;
+}
 
 cout `ok\n`;
