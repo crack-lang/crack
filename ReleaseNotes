@@ -1,3 +1,11 @@
+0.7.1
+    -   Fixed crack.process, respect the flags that are passed in defining 
+        pipe configuration.
+    -   Updated the manual for 0.7.
+    -   Added closedir() on destruction of a directory iterator (we were 
+        leaking handles).
+    -   Fixes for naming and module association for forward classes and 
+        extension types.
 0.7
     -   Switched licensing from LGPLv3 to MPL 2.0.
     -   Upgraded to LLVM 3.1
