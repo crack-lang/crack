@@ -7,8 +7,8 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-AC_INIT(crack, 0.7)
-AM_INIT_AUTOMAKE(crack, 0.7)
+AC_INIT(crack, 0.7.1)
+AM_INIT_AUTOMAKE(crack, 0.7.1)
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
 

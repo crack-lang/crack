@@ -11,14 +11,14 @@ Autoconf Install Instructions
 -----------------------------
 
 Unpack Crack so you can apply the JITEmitter patch:
-$ tar -xvzf crack-0.7.tar.gz
+$ tar -xvzf crack-0.7.1.tar.gz
 
 Build LLVM 3.1:
 
 $ tar -xvzf llvm-3.1.tgz
 $ cd llvm-3.1.src
 $ (cd lib/ExecutionEngine/JIT; \
-   patch <../../../../../crack-0.7/extras/JITEmitter.patch)
+   patch <../../../../../crack-0.7.1/extras/JITEmitter.patch)
 $ ./configure
 $ make
 $ make install
@@ -29,7 +29,7 @@ cost).
 
 Build Crack:
 
-$ cd crack-0.7
+$ cd crack-0.7.1
 $ ./configure
 $ make
 $ make check  # optional
@@ -50,7 +50,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-0.7
+$ cd crack-0.7.1
 $ mkdir build; cd build
 $ cmake ..
 $ make

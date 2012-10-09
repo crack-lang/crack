@@ -15,7 +15,7 @@
 #include <vector>
 #include <spug/RCPtr.h>
 
-#define CRACK_VERSION_STRING  "0.7"
+#define CRACK_VERSION_STRING  "0.7.1"
 
 namespace model {
     SPUG_RCPTR(Construct);
