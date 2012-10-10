@@ -246,12 +246,16 @@ void PollSet_delete(struct pollfd *set, unsigned int size, unsigned int index) {
 int PollSet_poll(struct pollfd *fds, unsigned int nfds, TimeVal *tv,
                  sigset_t *sigmask
                  ) {
+#ifdef HAVE_PPOLL
     if (tv) {
         struct timespec ts = {tv->secs, tv->nsecs};
         return ppoll(fds, nfds, &ts, sigmask);
     } else {
         return ppoll(fds, nfds, 0, sigmask);
     }
+#else
+    assert(0 && "XXX no ppoll");
+#endif
 }
 
 sigset_t *SigSet_create() {

@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <signal.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -63,13 +64,13 @@ void signalProcess(int pid, int sig) {
 
 void closeProcess(PipeDesc *pd) {
 
-    if (pd->stdin != -1 && close(pd->stdin) == -1)
+    if (pd->in != -1 && close(pd->in) == -1)
             perror("close pipe failed: stdin");
 
-    if (pd->stdout != -1 && close(pd->stdout) == -1)
+    if (pd->out != -1 && close(pd->out) == -1)
             perror("close pipe failed: stdout");
 
-    if (pd->stderr != -1 && close(pd->stderr) == -1)
+    if (pd->err != -1 && close(pd->err) == -1)
             perror("close pipe failed: stderr");
 
 }
@@ -83,9 +84,9 @@ int runChildProcess(const char **argv,
 
 // UNIX
     // set to unreadable initially
-    pd->stdin = -1;
-    pd->stdout = -1;
-    pd->stderr = -1;
+    pd->in = -1;
+    pd->out = -1;
+    pd->err = -1;
 
     int pipes[3][2]; // 0,1,2 (in,out,err) x 0,1 (read,write)
 
@@ -95,9 +96,9 @@ int runChildProcess(const char **argv,
         return -1;
     if (!S_ISREG(sb.st_mode) ||
         sb.st_size == 0 ||
-        ((sb.st_mode & S_IXUSR == 0) ||
-         (sb.st_mode & S_IXGRP == 0) ||
-         (sb.st_mode & S_IXOTH == 0)))
+        (((sb.st_mode & S_IXUSR) == 0) ||
+         ((sb.st_mode & S_IXGRP) == 0) ||
+         ((sb.st_mode & S_IXOTH) == 0)))
         return -1;
 
     // create pipes
@@ -171,7 +172,7 @@ int runChildProcess(const char **argv,
                 return -1;
             }
             // return pipes[0][1] as writeable fd (to child stdin)
-            pd->stdin = pipes[0][1];
+            pd->in = pipes[0][1];
         }
         // parent stdout write close
         if (pd->flags & 2) {
@@ -180,7 +181,7 @@ int runChildProcess(const char **argv,
                 return -1;
             }
             // return pipes[1][0] as readable fd (from child stdout)
-            pd->stdout = pipes[1][0];
+            pd->out = pipes[1][0];
         }
         // parent stderr write close
         if (pd->flags & 4) {
@@ -189,7 +190,7 @@ int runChildProcess(const char **argv,
                 return -1;
             }
             // return pipes[2][0] as readable fd (from child stderr)
-            pd->stderr = pipes[2][0];
+            pd->err = pipes[2][0];
         }
 
         return p;

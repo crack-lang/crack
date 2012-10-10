@@ -12,6 +12,12 @@
 #include <sys/time.h>
 #include <stdio.h>
 
+#ifdef __APPLE__
+#include "crt_externs.h" // _NSGetEnviron
+#else
+extern char **environ;
+#endif
+
 typedef struct tm InternalDate;
 
 InternalDate *crk_create_date(){
@@ -56,7 +62,13 @@ char *crk_ctime_r(int64_t t, char * buf){
 }
 
 char **get_environ(){
-   return environ;
+#ifdef __APPLE__
+    char ***envp_ = _NSGetEnviron();
+    char **envp = *envp_;
+#else
+    char **envp = ::environ;
+#endif
+   return envp;
 }
 
 

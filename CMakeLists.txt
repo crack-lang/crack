@@ -24,6 +24,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 include(CheckIncludeFiles)
+include(CheckFunctionExists)
 include(MacroOptionalFindPackage)
 include(MacroLogFeature)
 
@@ -133,6 +134,7 @@ check_include_files(sys/stat.h HAVE_SYS_STAT_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 
+check_function_exists(ppoll HAVE_PPOLL)
 
 # do the sub
 configure_file(${CMAKE_CONFIG_H_IN} ${CMAKE_CONFIG_H_OUT})
@@ -143,8 +145,11 @@ add_library(testext SHARED test/testext.cc)
 set_target_properties(testext
                       PROPERTIES
                       OUTPUT_NAME testext
+                      LINK_FLAGS ${LLVM_LDFLAGS}
                       PREFIX ""
                       )
+target_link_libraries(testext
+                      libcrack)
 
 # runtime extension
 add_library( crack-runtime SHARED ${RUNTIME_SRC_FILES} )
@@ -156,7 +161,7 @@ set_target_properties(crack-runtime
                       PREFIX ""
                       )
 target_link_libraries(crack-runtime
-                      pthread libcrackdebug ${ICONV_LIBRARIES})
+                      libcrack pthread libcrackdebug ${ICONV_LIBRARIES})
 
 
 add_executable(crack crack_main.cc)

@@ -23,6 +23,7 @@ AC_HEADER_STDBOOL
 AC_C_CONST
 
 AC_CHECK_HEADERS([malloc.h])
+AC_CHECK_FUNCS(ppoll)
 
 # automake advised me to add this...
 AC_CONFIG_FILES([Makefile])

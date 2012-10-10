@@ -51,7 +51,11 @@ using namespace llvm::sys;
 using namespace builder;
 using namespace std;
 
+#ifdef __APPLE__
+#include "crt_externs.h" // _NSGetEnviron
+#else
 extern char **environ;
+#endif
 
 namespace builder { namespace mvll {
 
@@ -802,7 +806,13 @@ void nativeCompile(llvm::Module *module,
     NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
 
     string ErrMsg;
+
+#ifdef __APPLE__
+    char ***envp_ = _NSGetEnviron();
+    char **envp = *envp_;
+#else
     char **envp = ::environ;
+#endif
 
     GenerateNative(binFile.str(),
                    oFile.str(),

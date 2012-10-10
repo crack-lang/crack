@@ -328,9 +328,11 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "F_SETFL", F_SETFL);
     mod->addConstant(intType, "F_GETOWN", F_GETOWN);
     mod->addConstant(intType, "F_SETOWN", F_SETOWN);
+#ifdef __linux__ 
     mod->addConstant(intType, "F_GETSIG", F_GETSIG);
     mod->addConstant(intType, "F_SETSIG", F_SETSIG);
     mod->addConstant(intType, "F_NOTIFY", F_NOTIFY);
+#endif
 
 
     // Net
@@ -340,18 +342,20 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "AF_INET", AF_INET);
     mod->addConstant(intType, "AF_INET6", AF_INET6);
     mod->addConstant(intType, "AF_IPX", AF_IPX);
+#ifdef __linux__
     mod->addConstant(intType, "AF_NETLINK", AF_NETLINK);
     mod->addConstant(intType, "AF_X25", AF_X25);
     mod->addConstant(intType, "AF_AX25", AF_AX25);
     mod->addConstant(intType, "AF_ATMPVC", AF_ATMPVC);
-    mod->addConstant(intType, "AF_APPLETALK", AF_APPLETALK);
     mod->addConstant(intType, "AF_PACKET", AF_PACKET);
+    mod->addConstant(intType, "SOCK_PACKET", SOCK_PACKET);
+#endif
+    mod->addConstant(intType, "AF_APPLETALK", AF_APPLETALK);
     mod->addConstant(intType, "SOCK_STREAM", SOCK_STREAM);
     mod->addConstant(intType, "SOCK_DGRAM", SOCK_DGRAM);
     mod->addConstant(intType, "SOCK_SEQPACKET", SOCK_SEQPACKET);
     mod->addConstant(intType, "SOCK_RAW", SOCK_RAW);
     mod->addConstant(intType, "SOCK_RDM", SOCK_RDM);
-    mod->addConstant(intType, "SOCK_PACKET", SOCK_PACKET);
 
     mod->addConstant(intType, "SOL_SOCKET", SOL_SOCKET);
     mod->addConstant(intType, "SO_REUSEADDR", SO_REUSEADDR);
@@ -860,7 +864,11 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SIGALRM", SIGALRM);
     mod->addConstant(intType, "SIGBUS" , SIGBUS);
     mod->addConstant(intType, "SIGCHLD", SIGCHLD);
+#ifdef __linux__
     mod->addConstant(intType, "SIGCLD" , SIGCLD);
+    mod->addConstant(intType, "SIGPOLL", SIGPOLL);
+    mod->addConstant(intType, "SIGPWR" , SIGPWR);
+#endif
     mod->addConstant(intType, "SIGCONT", SIGCONT);
     mod->addConstant(intType, "SIGFPE" , SIGFPE);
     mod->addConstant(intType, "SIGHUP" , SIGHUP);
@@ -870,9 +878,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SIGIOT" , SIGIOT);
     mod->addConstant(intType, "SIGKILL", SIGKILL);
     mod->addConstant(intType, "SIGPIPE", SIGPIPE);
-    mod->addConstant(intType, "SIGPOLL", SIGPOLL);
     mod->addConstant(intType, "SIGPROF", SIGPROF);
-    mod->addConstant(intType, "SIGPWF" , SIGPWR);
     mod->addConstant(intType, "SIGQUIT", SIGQUIT);
     mod->addConstant(intType, "SIGSEGV", SIGSEGV);
     mod->addConstant(intType, "SIGSTOP", SIGSTOP);
@@ -896,13 +902,13 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                           CRACK_OFFSET(crack::runtime::PipeDesc, flags)
                           );
     cpipeType->addInstVar(intType, "stdin", 
-                          CRACK_OFFSET(crack::runtime::PipeDesc, stdin)
+                          CRACK_OFFSET(crack::runtime::PipeDesc, in)
                           );
     cpipeType->addInstVar(intType, "stdout", 
-                          CRACK_OFFSET(crack::runtime::PipeDesc, stdout)
+                          CRACK_OFFSET(crack::runtime::PipeDesc, out)
                           );
     cpipeType->addInstVar(intType, "stderr", 
-                          CRACK_OFFSET(crack::runtime::PipeDesc, stderr)
+                          CRACK_OFFSET(crack::runtime::PipeDesc, err)
                           );
     cpipeType->addConstructor();
     cpipeType->finish();

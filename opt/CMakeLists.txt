@@ -30,9 +30,10 @@ if (PCRE_FOUND)
                       PROPERTIES
                       OUTPUT_NAME _pcre
                       PREFIX ""
+                      LINK_FLAGS ${LLVM_LDFLAGS}
                       )
-    target_link_libraries( pcre
-                          ${PCRE_LIBRARIES}
+    target_link_libraries(pcre
+                          libcrack ${PCRE_LIBRARIES}
                          )
     install(TARGETS pcre DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif(PCRE_FOUND)

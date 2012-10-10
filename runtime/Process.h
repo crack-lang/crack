@@ -19,9 +19,9 @@ namespace crack { namespace runtime {
 
 typedef struct {
     int flags;
-    int stdin;
-    int stdout;
-    int stderr;
+    int in;
+    int out;
+    int err;
 } PipeDesc;
 
 int runChildProcess(const char **argv,
