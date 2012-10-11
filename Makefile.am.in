@@ -305,4 +305,5 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 	done
 
 check: testbed
+	./unittests
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen
