@@ -1,10 +1,10 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "VarDef.h"
 
@@ -13,6 +13,7 @@
 #include "Context.h"
 #include "Expr.h"
 #include "ResultExpr.h"
+#include "Serializer.h"
 #include "TypeDef.h"
 
 using namespace std;
@@ -77,4 +78,41 @@ void VarDef::dump(ostream &out, const string &prefix) const {
 
 void VarDef::dump() const {
     dump(std::cerr, "");
+}
+
+ModuleDef *VarDef::getModule() const {
+    return owner->getModule().get();
+}
+
+void VarDef::addDependenciesTo(set<string> &deps) const {
+    getModule()->computeDependencies(deps);
+}
+
+namespace {
+    enum DefTypes {
+        variableId = 1,
+        typeId = 2,
+        genericId = 3,
+        functionId = 4,
+        aliasId = 5
+    };
+}
+
+void VarDef::serializeExtern(Serializer &serializer) const {
+    if (serializer.writeObject(this)) {
+        serializer.write(getModule()->getFullName());
+        serializer.write(name);
+    }
+}
+
+void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
+    serializer.write(aliasId);
+    serializer.write(alias);
+    serializeExtern(serializer);
+}
+
+void VarDef::serialize(Serializer &serializer) const {
+    serializer.write(variableId);
+    serializer.write(name);
+    type->serialize(serializer);
 }

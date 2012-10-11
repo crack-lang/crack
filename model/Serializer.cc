@@ -1,9 +1,9 @@
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Serializer.h"
 
@@ -34,7 +34,7 @@ void Serializer::write(size_t length, const void *data) {
     dst.write(reinterpret_cast<const char *>(data), length);
 }
 
-bool Serializer::writeObject(void *object) {
+bool Serializer::writeObject(const void *object) {
     ObjMap::iterator iter = objMap.find(object);
     if (iter == objMap.end()) {
 

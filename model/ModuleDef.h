@@ -9,6 +9,7 @@
 #ifndef _model_ModuleDef_h_
 #define _model_ModuleDef_h_
 
+#include <set>
 #include <vector>
 #include "Namespace.h"
 #include "VarDef.h"
@@ -16,6 +17,8 @@
 namespace model {
 
 SPUG_RCPTR(Context);
+class Deserializer;
+class Serializer;
 
 SPUG_RCPTR(ModuleDef);
 
@@ -94,6 +97,28 @@ class ModuleDef : public VarDef, public Namespace {
          * components.
          */
         static StringVec parseCanonicalName(const std::string &name);
+
+        /**
+         * Compute the transitive closure of the mpdule's dependencies and add 
+         * them to 'deps'.
+         */
+        void computeDependencies(std::set<std::string> &deps) const;
+
+        /**
+         * Write the module meta-data to the serializer.
+         */
+        void serialize(Serializer &serializer) const;
+        
+        /**
+         * Read the module header from the serializer, return true if the 
+         * cache data appears to be up-to-date.
+         */
+        static bool readHeaderAndVerify(Deserializer &serializer);
+
+        /**
+         * Deserialize the remainder of the module meta-data.
+         */        
+        void deserialize(Deserializer &deserializer);
 };
 
 } // namespace model

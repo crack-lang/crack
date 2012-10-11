@@ -263,3 +263,12 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
          )
         (*parent)->display(out, prefix);
 }
+
+void OverloadDef::addDependenciesTo(set<string> &deps) const {
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         ) {
+        (*iter)->addDependenciesTo(deps);
+    }
+}

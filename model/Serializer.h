@@ -1,9 +1,9 @@
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_Serializer_h_
 #define _model_Serializer_h_
@@ -13,6 +13,8 @@
 
 namespace model {
 
+class ModuleDef;
+
 class Serializer {
     private:
         std::ostream &dst;
@@ -21,12 +23,14 @@ class Serializer {
         // pointer.  This is part of the mechanism that allows us to serialize
         // an object that is used in multiple locations only the first time it
         // is used.
-        typedef std::map<void *, int> ObjMap;
+        typedef std::map<const void *, int> ObjMap;
         ObjMap objMap;
         int lastId;
 
     public:
-        Serializer(std::ostream &dst) : dst(dst), lastId(0) {}
+        const ModuleDef *module;
+
+        Serializer(std::ostream &dst) : dst(dst), lastId(0), module(0) {}
 
         /** Serialize an integer. */
         void write(unsigned int val);
@@ -45,7 +49,7 @@ class Serializer {
          * identifier with a definition flag set to true and return true,
          * indicating that the caller should serialize the state of the object.
          */
-        bool writeObject(void *object);
+        bool writeObject(const void *object);
 };
 
 }

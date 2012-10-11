@@ -28,6 +28,7 @@
 #include "OverloadDef.h"
 #include "NullConst.h"
 #include "ResultExpr.h"
+#include "Serializer.h"
 #include "VarDef.h"
 #include "VarDefImpl.h"
 #include "VarRef.h"
@@ -932,4 +933,36 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
          )
         iter->second->dump(out, childPrefix);
     out << prefix << "}" << endl;
+}
+
+void TypeDef::serialize(Serializer &serializer) const {
+    if (serializer.writeObject(this)) {
+        if (VarDef::getModule() != serializer.module) {
+            serializer.write(1);  // isAlias
+            VarDef::serializeExtern(serializer);
+        } else {
+            serializer.write(0);  // isAlias
+            serializer.write(name);  // name
+            
+            // bases
+            serializer.write(parents.size());
+            for (TypeVec::const_iterator i = parents.begin();
+                 i != parents.end();
+                 ++i
+                 )
+                (*i)->serialize(serializer);
+            
+            // defs
+            serializer.write(defs.size());
+            for (VarDefMap::const_iterator i = defs.begin();
+                 i != defs.end();
+                 ++i
+                 ) {
+                if (i->second->getOwner() != serializer.module)
+                    i->second->serializeAlias(serializer, i->first);
+                else
+                    i->second->serialize(serializer);
+            }
+        }
+    }
 }

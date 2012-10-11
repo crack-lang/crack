@@ -9,6 +9,7 @@
 #ifndef _model_VarDef_h_
 #define _model_VarDef_h_
 
+#include <set>
 #include "model/ResultExpr.h"
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
@@ -18,6 +19,8 @@ namespace model {
 class Context;
 SPUG_RCPTR(Expr);
 class Namespace;
+class ModuleDef;
+class Serializer;
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
 
@@ -87,6 +90,34 @@ class VarDef : public virtual spug::RCBase {
          * Allow dumping from the debugger.
          */
         void dump() const;
+        
+        /**
+         * Returns the module that owns this definition.
+         */
+        ModuleDef *getModule() const;
+        
+        /**
+         * Add the names of all modules that this definition depends on, 
+         * directly or indirectly.
+         */
+        virtual void addDependenciesTo(std::set<std::string> &deps) const;
+
+        /**
+         * Serialize an external definition. "Extern"
+         */
+        void serializeExtern(Serializer &serializer) const;
+
+        /**
+         * Serialize the definition as an alias. "AliasDef"
+         */
+        void serializeAlias(Serializer &serializer, 
+                            const std::string &alias
+                            ) const;
+
+        /**
+         * Serialize the variable definition.
+         */
+        virtual void serialize(Serializer &serialzer) const;
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

@@ -1,0 +1,129 @@
+
+This is the format of crack's meta-data (".crkm") cache files.  These files
+contain a binary representation of the interface of a module.
+
+There are two primitive types defined by the crack serializer (see
+model/Serializer.h), unsigned integers and blobs.
+
+Unsigned integers are stored as a variable length sequence of bytes (just like
+"VarInts" in Google protocol buffers), in which each byte consists of a single
+high-bit which is zero if the byte is the last byte in the number followed by
+7 bits of value.  The first byte is the low byte, the last is the high byte.
+
+For example, we would represent 385 (0x181) with the byte sequence:
+"0x81 0x03",  0x181's low seven bits = 0x01, which is not the last, so we set
+the high bit and get 0x81,
+The next seven bits are 0x03, which is the last so we get 0x03.
+
+Blobs consist of an unsigned integer (uint) describing the number of bytes
+that follow comprising the body of the blob.   For example, we would represent
+the ascii string "text" as the hex sequence:
+
+    04 74 65 78 74
+    /   \  | |  /
+# bytes  t e x t
+
+What follows is a description of the meta-data serialization format in a
+loosely crack-like definition language.  Some non-obvious definitions:
+
+array[type] is a uint "count" followed by count instances of "type"
+
+ref[type] is a way to define and reference objects that exist more than once
+in the serialized data, including objects that are self-referential.  It is
+stored as a uint object identifier followed by an instance of type if this is
+the first occurrence of the instance.  The identifier has a low-bit of 1 in
+this case, a low bit of zero if it is merely a reference to an existing
+instance.  For example, if we had some object represented by <data>, the first
+time we serialized it we might serialze it as "07 <data>", the second time
+simply as "06".  In this example, the object id is actually 3, we shift by one
+and set the low-bit to 1 when it is initially defined.  (I don't think the
+"first definition" bit was strictly necessary).
+
+So given this, our meta-data format is:
+
+{{
+    MetaDataFile {
+        # the header is the information that is to be read before we bother
+        # reading the meta-data.  It must contain everything we need to
+        # determine whether the use of the cache is acceptable for this module.
+        Header header
+
+        # the module meta-data.
+        Definitions defs
+    }
+
+    Header {
+        # the hash of the string 'crack meta-data v1'
+        uint magic = 2271218416
+
+        blob sourcePath
+
+        # source file MD5 signature
+        blob sourceSig
+
+        # a list of the canonical names of the modules that this module
+        # depends on (does not include .builtin)
+        array[blob] deps
+    }
+
+    Definitions {
+        array[Def] defs
+    }
+
+    Def {
+        # the kind of definition:
+        #  1 a variable
+        #  2 a type
+        #  3 a generic
+        #  4 a function
+        #  5 an alias
+        # "kind" determines which "subclass" of VarDef this entry actually is
+        # so we can correctly parse the remainder of it.
+        enum {
+            variableId = 1,
+            typeId = 2,
+            genericId = 3,
+            functionId = 4,
+            aliasId = 5,
+            typeAliasId = 6,
+        }
+        uint kind;
+
+        switch (kind) {
+            case aliasId: AliasDef
+            case variableId: VarDef
+            case typeId: ref[Type]
+        }
+    }
+
+    AliasDef {
+        blob alias
+        ref[Extern] ext
+    }
+
+    Extern {
+        blob module
+        blob name   # the name in the module
+    }
+
+    VarDef {
+        blob name
+        ref[Type] type
+    }
+
+    Type {
+        uint isAlias;  # if non-zero, this is an alias
+        switch (isAlias) {
+            case true: Extern
+            case false: TypeDef
+        }
+    }
+
+    TypeDef {
+        blob name
+        array[ref[Type]] bases
+        array[Def] defs
+    }
+
+
+}}
