@@ -56,14 +56,19 @@ So given this, our meta-data format is:
         # the hash of the string 'crack meta-data v1'
         uint magic = 2271218416
 
-        blob sourcePath
-
         # source file MD5 signature
         blob sourceSig
 
-        # a list of the canonical names of the modules that this module
-        # depends on (does not include .builtin)
-        array[blob] deps
+        # a list of the the modules that this module
+        # directly depends on (does not include .builtin)
+        array[Dependency] deps
+    }
+
+    # identifies a dependency module by its canonical name and the hash of its
+    # interface.
+    Dependency {
+        blob canonicalName
+        uint hashVal
     }
 
     Definitions {

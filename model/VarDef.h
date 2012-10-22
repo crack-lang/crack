@@ -20,6 +20,7 @@ class Context;
 SPUG_RCPTR(Expr);
 class Namespace;
 class ModuleDef;
+class ModuleDefMap;
 class Serializer;
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
@@ -97,10 +98,11 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
-         * Add the names of all modules that this definition depends on, 
-         * directly or indirectly.
+         * Add all of the modules that this 
          */
-        virtual void addDependenciesTo(std::set<std::string> &deps) const;
+        virtual void addDependenciesTo(const ModuleDef *mod,
+                                       ModuleDefMap &deps
+                                       ) const;
 
         /**
          * Serialize an external definition. "Extern"

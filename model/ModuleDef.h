@@ -14,6 +14,10 @@
 #include "Namespace.h"
 #include "VarDef.h"
 
+namespace crack { namespace util {
+class SourceDigest;
+}}
+
 namespace model {
 
 SPUG_RCPTR(Context);
@@ -99,10 +103,11 @@ class ModuleDef : public VarDef, public Namespace {
         static StringVec parseCanonicalName(const std::string &name);
 
         /**
-         * Compute the transitive closure of the mpdule's dependencies and add 
-         * them to 'deps'.
+         * Get the "definition hash."  This is the hash of all definitions 
+         * exported by the module.  It is used to determine whether a 
+         * dependent module needs to be recompiled.
          */
-        void computeDependencies(std::set<std::string> &deps) const;
+        int getDefHash() const { return 0; }
 
         /**
          * Write the module meta-data to the serializer.
@@ -113,12 +118,14 @@ class ModuleDef : public VarDef, public Namespace {
          * Read the module header from the serializer, return true if the 
          * cache data appears to be up-to-date.
          */
-        static bool readHeaderAndVerify(Deserializer &serializer);
+        static bool readHeaderAndVerify(Deserializer &serializer,
+                                        const crack::util::SourceDigest &digest
+                                        );
 
         /**
          * Deserialize the remainder of the module meta-data.
          */        
-        void deserialize(Deserializer &deserializer);
+        static ModuleDefPtr deserialize(Deserializer &deserializer);
 };
 
 } // namespace model

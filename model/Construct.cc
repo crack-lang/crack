@@ -28,13 +28,14 @@
 #include "TypeDef.h"
 #include "compiler/init.h"
 #include "builder/util/CacheFiles.h"
-#include "builder/util/SourceDigest.h"
+#include "util/SourceDigest.h"
 
 using namespace std;
 using namespace model;
 using namespace parser;
 using namespace builder;
 using namespace crack::ext;
+using namespace crack::util;
 
 namespace {
     typedef pair<string, double> timePair;
@@ -486,6 +487,13 @@ ModuleDefPtr Construct::loadModule(const string &canonicalName) {
 
 }
 
+namespace {
+    bool isFile(const string &path) {
+        struct stat st;
+        return !stat(path.c_str(), &st) && S_ISREG(st.st_mode);
+    }
+}
+
 ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
     if (!rootContext->construct->cacheMode)
         return 0;
@@ -516,6 +524,10 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
     
     builderStack.pop();
     return modDef;
+}
+
+ModuleDefPtr Construct::getModule(const string &canonicalName) {
+    return loadFromCache(canonicalName);
 }
 
 ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,

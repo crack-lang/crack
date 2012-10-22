@@ -35,7 +35,7 @@
 #include "model/EphemeralImportDef.h"
 #include "builder/BuilderOptions.h"
 #include "builder/util/CacheFiles.h"
-#include "builder/util/SourceDigest.h"
+#include "util/SourceDigest.h"
 #include "LLVMBuilder.h"
 #include "VarDefs.h"
 #include "BFuncDef.h"
@@ -47,6 +47,7 @@ using namespace llvm::sys;
 using namespace builder::mvll;
 using namespace std;
 using namespace model;
+using namespace crack::util;
 
 #define VLOG(level) if (options->verbosity >= (level)) cerr
 

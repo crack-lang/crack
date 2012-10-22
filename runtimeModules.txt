@@ -9,4 +9,3 @@ runtime/Process.cc
 runtime/Time.cc
 runtime/MD5.cc
 runtime/XDR.cc
-builder/util/md5.c

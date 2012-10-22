@@ -9,11 +9,15 @@
 #include "ModuleDef.h"
 
 #include "builder/Builder.h"
+#include "util/SourceDigest.h"
 #include "Context.h"
+#include "Deserializer.h"
+#include "ModuleDefMap.h"
 #include "Serializer.h"
 
 using namespace std;
 using namespace model;
+using namespace crack::util;
 
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
@@ -98,34 +102,30 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
     return result;
 }
 
-void ModuleDef::computeDependencies(set<string> &deps) const {
-    // try adding the module name to the set, if it wasn't already there
-    // iterate its definitions for dependencies.
-    pair<set<string>::iterator, bool> result = deps.insert(getFullName());
-    if (result.second) {
-        for (VarDefMap::const_iterator i = defs.begin(); i != defs.end(); ++i)
-            i->second->addDependenciesTo(deps);
-    }
-}
-
 #define CRACK_METADATA_V1 2271218416
 
 void ModuleDef::serialize(Serializer &serializer) const {
     serializer.module = this;
     serializer.write(CRACK_METADATA_V1);
-    serializer.write(sourcePath);
 
     // XXX we need to write the source hash.
 
-    set<string> deps;
-    computeDependencies(deps);
+    // calculate the dependencies
+    ModuleDefMap deps;
+    for (VarDefMap::const_iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         )
+        iter->second->addDependenciesTo(this, deps);
 
     // write the dependencies
     serializer.write(deps.size());
-    for (set<string>::iterator iter = deps.begin(); iter != deps.end();
+    for (ModuleDefMap::const_iterator iter = deps.begin(); iter != deps.end();
          ++iter
-         )
-        serializer.write(*iter);
+         ) {
+        serializer.write(iter->first);
+        serializer.write(iter->second->getDefHash());
+    }
 
     // write all of the symbols
     for (VarDefMap::const_iterator i = defs.begin();
@@ -138,3 +138,32 @@ void ModuleDef::serialize(Serializer &serializer) const {
             i->second->serialize(serializer);
     }
 }
+
+bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
+                                    const SourceDigest &digest
+                                    ) {
+    if (deser.readUInt() != CRACK_METADATA_V1)
+        return 0;
+
+    //deser.readBlob()  // XXX read the source hash.
+
+    // read and load the dependencies
+    int count = deser.readUInt();
+    for (int i = 0; i < count; ++i) {
+        ModuleDefPtr mod = deser.construct->getModule(deser.readString(64));
+
+        // if the dependency has a different definition hash from what we were
+        // built against, we have to recompile.
+        if (mod->getDefHash() != deser.readUInt())
+            return false;
+    }
+}
+
+ModuleDefPtr ModuleDef::deserialize(Deserializer &deser) {
+    // read all of the symbols
+    unsigned count = deser.readUInt();
+//    for (int i = 0; i < count; ++i) {
+//
+//        deser
+}
+
