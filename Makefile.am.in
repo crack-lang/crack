@@ -44,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs
+             _cairosdl _xs _ssl
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -107,6 +107,13 @@ extlib_LTLIBRARIES += _alsa_midi.la
 _alsa_midi_la_LDFLAGS = -avoid-version -module @ALSA_LIBS@
 _alsa_midi_la_CXXFLAGS = @ALSA_CFLAGS@
 _alsa_midi_la_SOURCES = opt/_alsa_midi.cc
+endif
+
+if HAVE_SSL
+extlib_LTLIBRARIES += _ssl.la
+_ssl_la_LDFLAGS = -avoid-version -module @SSL_LIBS@
+_ssl_la_CXXFLAGS = @SSL_CPPFLAGS@
+_ssl_la_SOURCES = opt/_ssl.cc
 endif
 
 if HAVE_FLUIDSYNTH
