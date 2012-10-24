@@ -431,8 +431,15 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
 namespace {
     // load a function from a shared library
     void *loadFunc(void *handle, const string &path, const string &funcName) {
+#ifdef __APPLE__
+        // XXX on osx, it's failing to find the symbol unless we do
+        // RTLD_DEFAULT. this may work on linux too, but is noted as being
+        // expensive so i'm keeping it osx only until we can figure out
+        // a better way
+        void *func = dlsym(RTLD_DEFAULT, funcName.c_str());
+#else
         void *func = dlsym(handle, funcName.c_str());
-        
+#endif
         if (!func) {
             cerr << "Error looking up function " << funcName
                 << " in extension library " << path << ": "
