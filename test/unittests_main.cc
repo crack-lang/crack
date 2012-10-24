@@ -10,6 +10,7 @@
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
 #include "model/ModuleDef.h"
+#include "model/ModuleDefMap.h"
 #include "model/TypeDef.h"
 
 using namespace std;
@@ -60,11 +61,13 @@ struct MockModuleDef : public ModuleDef {
 struct DataSet {
 
     TypeDefPtr metaType, t0, t1;
-    ModuleDefPtr dep0, dep1, mod;
+    ModuleDefPtr builtins, dep0, dep1, mod;
 
     DataSet() {
         metaType =  new TypeDef(0, "Meta");
         metaType->type = metaType;
+        builtins = new MockModuleDef("builtins", 0);
+        builtins->addDef(metaType.get());
 
         dep0 = new MockModuleDef("dep0", 0);
         t0 = new TypeDef(metaType.get(), "t0");
@@ -83,16 +86,16 @@ struct DataSet {
 bool moduleTestDeps() {
     DataSet ds;
     bool success = true;
-    set<string> deps;
-    ds.mod->computeDependencies(deps);
+    ModuleDefMap deps;
+    ds.t1->addDependenciesTo(ds.mod.get(), deps);
 
     if (deps.find("dep1") == deps.end()) {
-        cerr << "dep1 not in outer's deps" << endl;
+        cerr << "dep1 not in module's deps" << endl;
         success = false;
     }
 
-    if (deps.find("dep0") == deps.end()) {
-        cerr << "dep0 not in outer's deps" << endl;
+    if (deps.find("dep0") != deps.end()) {
+        cerr << "indirect dependency is in module's deps" << endl;
         success = false;
     }
     return success;

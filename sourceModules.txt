@@ -39,8 +39,6 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
-builder/util/md5.c
-builder/util/SourceDigest.cc
 builder/util/CacheFiles.cc
 builder/llvm/ArrayTypeDef.cc
 builder/llvm/BModuleDef.cc

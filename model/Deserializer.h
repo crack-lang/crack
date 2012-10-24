@@ -1,9 +1,9 @@
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_Deserializer_h_
 #define _model_Deserializer_h_
@@ -12,6 +12,8 @@
 #include <map>
 
 namespace model {
+
+class Construct;
 
 class Deserializer {
     private:
@@ -31,6 +33,8 @@ class Deserializer {
         struct ObjectReader {
             virtual void *read(Deserializer &src) const = 0;
         };
+
+        Construct *construct;
 
         Deserializer(std::istream &src) : src(src) {}
 

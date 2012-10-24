@@ -1,0 +1,131 @@
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._ssl {
+    @filename 'opt/_ssl.cc'
+    @crack_internal
+
+    @inject '#include <openssl/ssl.h>\n'
+    @inject '
+
+#include <iostream>
+using namespace std;
+
+SSL *my_SSL_new(SSL_CTX *ctx) {
+    SSL *result = SSL_new(ctx);
+    if (!result)
+        cerr << "error is " << SSL_get_error(result, 0) <<
+            " context is " << ctx << endl;
+    cerr << "my ssl = " << result << endl;
+    return result;
+}
+
+void my_BIO_set_blocking(BIO *bio, int blocking) {
+    BIO_set_nbio(bio, !blocking);
+}
+
+void my_SSL_set_accept_state(SSL *ssl) {
+    cerr << "setting accept state on " << ssl << endl;
+    SSL_set_accept_state(ssl);
+}
+
+';
+
+    const int SSL_FILETYPE_PEM,
+              SSL_ERROR_NONE,
+              SSL_ERROR_ZERO_RETURN,
+              SSL_ERROR_WANT_READ,
+              SSL_ERROR_WANT_WRITE,
+              SSL_ERROR_WANT_CONNECT,
+              SSL_ERROR_WANT_ACCEPT,
+              SSL_ERROR_WANT_X509_LOOKUP,
+              SSL_ERROR_SYSCALL,
+              SSL_ERROR_SSL;
+
+    class BIO_METHOD;
+    BIO_METHOD BIO_s_mem();
+
+    class BIO {
+
+        @cname BIO_read
+        int read(byteptr buffer, int len);
+
+        @cname BIO_write
+        int write(byteptr buffer, int len);
+
+#        @cname BIO_new
+#        oper new(BIO_METHOD method);
+
+        @cname BIO_free
+        void free(BIO bio);
+
+        @cname BIO_ctrl_pending
+        int ctrlPending();
+
+        @cname my_BIO_set_blocking
+        void setBlocking(bool blocking);
+
+    }
+
+    BIO BIO_new(BIO_METHOD method);
+
+    class SSL_METHOD;
+    SSL_METHOD SSLv23_method();
+
+    void SSL_library_init();
+
+    class SSL_CTX {
+
+#        @cname SSL_CTX_new
+#        oper new(SSL_METHOD method);
+
+        @cname SSL_CTX_free
+        void free();
+
+        @cname SSL_CTX_use_certificate_file
+        int useCertificateFile(byteptr filename, int type);
+
+        @cname SSL_CTX_use_PrivateKey_file
+        int usePrivateKeyFile(byteptr file, int type);
+    }
+
+    SSL_CTX SSL_CTX_new(SSL_METHOD method);
+
+    class SSL {
+
+#        @cname SSL_new
+#        oper new(SSL_CTX ctx);
+
+        @cname SSL_free
+        void free();
+
+        @cname SSL_set_bio
+        void setBIO(BIO rbio, BIO wbio);
+
+        @cname SSL_set_accept_state
+        void setAcceptState();
+
+        @cname SSL_set_connect_state
+        void setConnectState();
+
+        @cname SSL_accept
+        int accept();
+
+        @cname SSL_connect
+        int connect();
+
+        @cname SSL_shutdown
+        int shutdown();
+
+        @cname SSL_write
+        int write(byteptr buf, int size);
+
+        @cname SSL_read
+        int read(byteptr buf, int cap);
+
+        @cname SSL_get_error
+        int getError(int ret);
+    }
+
+    SSL SSL_new(SSL_CTX ctx);
+
+}

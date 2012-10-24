@@ -1,0 +1,159 @@
+# Copyright 2011 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Test SSL interface.
+
+import crack.sys argv;
+import crack.lang Buffer, CString, Exception, ManagedBuffer, WriteBuffer;
+import crack.io cerr, FStr, Writer, Reader;
+import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
+    SSL_FILETYPE_PEM, SSL_CTX_new, BIO_new, BIO_s_mem, SSL_new,
+    SSL_ERROR_WANT_READ;
+@import crack.ann assert, implements;
+
+class SSLStuff : Object @implements Reader, Writer {
+    String name;
+    SSL_CTX ctx = SSL_CTX_new(SSLv23_method());
+    SSL ssl;
+    BIO rd, wr;
+    Writer consumer;
+
+    ## fileBase: base name of the certificate (".crt") and private key
+    ##    (".key") files
+    ## consumer: The ultimate consumer of any data
+    oper init(String name, String fileBase, Writer consumer) :
+        name = name,
+        consumer = consumer {
+
+        if (ctx.useCertificateFile(CString(fileBase + '.crt').buffer,
+                                   SSL_FILETYPE_PEM
+                                   ) != 1
+            )
+            throw Exception('Invalid cert file');
+
+        if (ctx.usePrivateKeyFile(CString(fileBase + '.key').buffer,
+                                  SSL_FILETYPE_PEM
+                                  ) != 1
+            )
+            throw Exception('Invalid key file');
+        ssl = SSL_new(ctx);
+
+        # it looks like "read" and "write" are from the perspective of the SSL
+        # object - read is for data read from the remote connection, write is
+        # for data written to it.
+        rd = BIO_new(BIO_s_mem());
+        wr = BIO_new(BIO_s_mem());
+        ssl.setBIO(rd, wr);
+        rd.setBlocking(false);
+        wr.setBlocking(false);
+    }
+
+    ## read data from the "bottom" for write to the underlying communication
+    ## channel.
+    int readBIO(WriteBuffer buf) {
+        rc := wr.read(buf.buffer, buf.cap);
+        if (rc >= 0)
+            buf.size = rc;
+        return rc;
+    }
+
+    ## Write data received from the underlying communication channel.
+    int writeBIO(Buffer buf) {
+        return rd.write(buf.buffer, buf.size);
+    }
+
+    class ChannelInterface : Object @implements Reader, Writer {
+        SSLStuff ssl;
+        oper init(SSLStuff ssl) : ssl = ssl {}
+        uint read(WriteBuffer buf) { return ssl.readBIO(buf); }
+        void write(Buffer buf) { ssl.writeBIO(buf); }
+    }
+
+    ChannelInterface getChannelInterface() { return ChannelInterface(this); }
+
+    void setAcceptState() {
+        ssl.setAcceptState();
+    }
+
+    ## Flush all of the internal buffers to the ultimate consumer.
+    void flush() {
+        ManagedBuffer buf = {1024};
+        int rc;
+        while ((rc = readBIO(buf)) > 0)
+            consumer.write(buf);
+    }
+
+    int accept() {
+        rc := ssl.accept();
+        if (rc)
+            rc = ssl.getError(rc);
+        flush();
+        return rc;
+    }
+
+    int connect() {
+        result := ssl.connect();
+        if (result)
+            result = ssl.getError(result);
+        flush();
+        return result;
+    }
+
+    void write(Buffer buf) {
+        rc := ssl.write(buf.buffer, buf.size);
+        if (rc < buf.size)
+            throw Exception(FStr() I`Error during SSL write: \
+                                     $(ssl.getError(rc))`
+                            );
+        flush();
+    }
+
+    uint read(WriteBuffer buf) {
+        rc := ssl.read(buf.buffer, buf.cap);
+        if (rc < 0)
+            throw Exception(FStr() I`Error reading from ssl: $rc,
+                                     $(ssl.getError(rc))\n`);
+        else
+            return buf.size = rc;
+    }
+}
+
+# make sure mem bios work as expected
+if (true) {
+    b := BIO_new(BIO_s_mem());
+    @assert(b.write('test'.buffer, 4));
+    ManagedBuffer tempBuf = {1024};
+    int rc;
+    @assert((rc = b.read(tempBuf.buffer, tempBuf.cap)) == 4);
+    tempBuf.size = rc;
+    @assert(tempBuf == 'test');
+}
+
+
+if (true) {
+    SSL_library_init();
+    data_dir := (argv.count() > 1) ? argv[1] : '.';
+
+    ssl1 := SSLStuff('server', data_dir + '/test/test1', null);
+    ssl2 := SSLStuff('client', data_dir + '/test/test2',
+                     ssl1.getChannelInterface()
+                     );
+    ssl1.consumer = ssl2.getChannelInterface();
+
+    # ssl2 is our client
+    int connectRc = SSL_ERROR_WANT_READ, acceptRc = SSL_ERROR_WANT_READ;
+    while (connectRc == SSL_ERROR_WANT_READ || acceptRc == SSL_ERROR_WANT_READ) {
+        if (connectRc) connectRc = ssl2.connect();
+        if (acceptRc) acceptRc = ssl1.accept();
+    }
+
+    ssl2.write('this is a test');
+    tmp := ssl1.read(1024);
+    if (tmp != 'this is a test')
+        cerr `FAILED basic read/write sequence, got $(tmp.size)\n`;
+}
+cerr `ok\n`;
+

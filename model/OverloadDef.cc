@@ -264,11 +264,13 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
         (*parent)->display(out, prefix);
 }
 
-void OverloadDef::addDependenciesTo(set<string> &deps) const {
+void OverloadDef::addDependenciesTo(const ModuleDef *mod, 
+                                    ModuleDefMap &deps
+                                    ) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        (*iter)->addDependenciesTo(deps);
+        (*iter)->addDependenciesTo(mod, deps);
     }
 }

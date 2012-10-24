@@ -11,13 +11,15 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la libCrackNativeRuntime.la
+lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
+    libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
 libCrackLang_la_LDFLAGS = -version-info 4:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
-libCrackDebugTools_la_SOURCES = debug/DebugTools.cc
+libCrackDebugTools_la_SOURCES = debug/DebugTools.cc util/md5.c \
+    util/SourceDigest.cc
 libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
 libCrackDebugTools_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
@@ -42,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs
+             _cairosdl _xs _ssl
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -107,6 +109,13 @@ _alsa_midi_la_CXXFLAGS = @ALSA_CFLAGS@
 _alsa_midi_la_SOURCES = opt/_alsa_midi.cc
 endif
 
+if HAVE_SSL
+extlib_LTLIBRARIES += _ssl.la
+_ssl_la_LDFLAGS = -avoid-version -module @SSL_LIBS@
+_ssl_la_CXXFLAGS = @SSL_CPPFLAGS@
+_ssl_la_SOURCES = opt/_ssl.cc
+endif
+
 if HAVE_FLUIDSYNTH
 extlib_LTLIBRARIES += _fluidsynth.la
 _fluidsynth_la_LDFLAGS = -avoid-version -module @FLUIDSYNTH_LIBS@
@@ -146,8 +155,6 @@ noinst_HEADERS = \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
-    builder/util/md5.h \
-    builder/util/SourceDigest.h \
     builder/util/CacheFiles.h \
     debug/DebugTools.h \
     ext/Stub.h \
@@ -163,6 +170,7 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/DeserializationError.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
@@ -215,6 +223,8 @@ noinst_HEADERS = \
     spug/StringFmt.h \
     spug/TypeInfo.h \
     spug/check.h \
+    util/md5.h \
+    util/SourceDigest.h \
     compiler/init.h \
     opt/cairosdl.h \
     config.h \

@@ -12,6 +12,7 @@
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "Expr.h"
+#include "ModuleDefMap.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "TypeDef.h"
@@ -84,8 +85,19 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
-void VarDef::addDependenciesTo(set<string> &deps) const {
-    getModule()->computeDependencies(deps);
+void VarDef::addDependenciesTo(const ModuleDef *mod,
+                               ModuleDefMap &deps
+                               ) const {
+
+    ModuleDefPtr depMod = getModule();
+    if (depMod != mod &&
+        deps.find(depMod->getNamespaceName()) == deps.end()
+        )
+        deps[depMod->getNamespaceName()] = depMod;
+
+    // add the dependencies of the type
+    if (type.get() != this)
+        type->addDependenciesTo(mod, deps);
 }
 
 namespace {

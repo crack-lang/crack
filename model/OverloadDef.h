@@ -160,7 +160,9 @@ class OverloadDef : public VarDef {
         void dump(std::ostream &out, const std::string &prefix = "") const;
         void display(std::ostream &out, const std::string &prefix = "") const;
         
-        virtual void addDependenciesTo(std::set<std::string> &deps) const;        
+        virtual void addDependenciesTo(const ModuleDef *mod, 
+                                       ModuleDefMap &deps
+                                       ) const;        
 };
 
 } // namespace model

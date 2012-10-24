@@ -1,15 +1,15 @@
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BModuleDef_h_
 #define _builder_llvm_BModuleDef_h_
 
-#include "builder/util/SourceDigest.h"
+#include "util/SourceDigest.h"
 #include "model/ModuleDef.h"
 #include "model/ImportedDef.h"
 #include <spug/RCPtr.h>
@@ -38,7 +38,7 @@ public:
     llvm::Module *rep;
 
     // source text hash code, used for caching
-    SourceDigest digest;
+    crack::util::SourceDigest digest;
 
     // list of modules imported by this one, along with its imported symbols
     typedef std::map<BModuleDef*, model::ImportedDefVec > ImportListType;
@@ -67,7 +67,7 @@ public:
     void recordDependency(ModuleDef *other);
 
     virtual bool matchesSource(const std::string &source) {
-        return digest == SourceDigest::fromFile(source);
+        return digest == crack::util::SourceDigest::fromFile(source);
     }
 };
 

@@ -1,0 +1,9 @@
+%%TEST%%
+SSL
+%%ARGS%%
+%SOURCEDIR%
+%%FILE%%
+import test.ssl_test;
+%%EXPECT%%
+ok
+%%STDIN%%

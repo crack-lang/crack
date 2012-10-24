@@ -337,6 +337,12 @@ class Construct : public spug::RCBase, public Options {
         ModuleDefPtr loadFromCache(const std::string &canonicalName);
 
         /**
+         * Get the module wither from the in-memory cache, the persistent 
+         * cache, or finally by compiling it from source.
+         */
+        ModuleDefPtr getModule(const std::string &canonicalName);
+
+        /**
          * Load the named module and returns it.  Returns null if the module 
          * could not be found, raises an exception if there were errors 
          * parsing the module.
