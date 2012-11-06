@@ -438,6 +438,23 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
+        virtual model::VarDefPtr materializeVar(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type
+        );
+
+        virtual model::TypeDefPtr materializeType(
+            model::Context &context,
+            const std::string &name
+        );
+
+        virtual model::FuncDefPtr materializeFunc(
+            model::Context &context,
+            const std::string &name,
+            const model::ArgVec &args
+        );
+
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);

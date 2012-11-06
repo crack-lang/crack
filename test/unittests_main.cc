@@ -7,14 +7,20 @@
 
 #include <stdint.h>
 #include <sstream>
+#include "model/GlobalNamespace.h"
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
 #include "model/ModuleDef.h"
 #include "model/ModuleDefMap.h"
 #include "model/TypeDef.h"
 
+#include "tests/MockBuilder.h"
+#include "tests/MockModuleDef.h"
+#include "util/SourceDigest.h"
+
 using namespace std;
 using namespace model;
+using namespace crack::util;
 
 bool serializerTestUInt() {
     bool success = true;
@@ -23,7 +29,7 @@ bool serializerTestUInt() {
     ostringstream dst;
     Serializer s(dst);
 
-    s.write(257);
+    s.write(257, "data");
     string data = dst.str();
     istringstream src(data);
 
@@ -40,23 +46,13 @@ bool serializerTestUInt() {
     }
 
     Deserializer d(src);
-    int val = d.readUInt();
+    int val = d.readUInt("data");
     if (val != 257) {
         cerr << "write/read of uint failed, got " << val << endl;
         success = false;
     }
     return success;
 }
-
-struct MockModuleDef : public ModuleDef {
-
-    MockModuleDef(const std::string &name, Namespace *parent) :
-        ModuleDef(name, parent) {
-    }
-
-    virtual void callDestructor() {}
-    virtual bool matchesSource(const string &path) { return false; }
-};
 
 struct DataSet {
 
@@ -110,6 +106,53 @@ bool moduleSerialization() {
     return true;
 }
 
+bool moduleReload() {
+    bool success = true;
+    DataSet ds;
+
+    ostringstream dep0Data, dep1Data, modData;
+    Serializer ser1(dep0Data);
+    ds.dep0->serialize(ser1);
+    Serializer ser2(dep1Data);
+    ds.dep1->serialize(ser2);
+    Serializer ser3(modData);
+    ds.mod->serialize(ser3);
+
+    MockBuilder builder;
+    builder.incref();
+    builder.options = new builder::BuilderOptions();
+    Construct construct(Options(), &builder);
+    Context context(builder, Context::module, &construct,
+                    0, // namespace, filled in by ModuleDef::deserialize()
+                    new GlobalNamespace(0, "")
+                    );
+    context.incref();
+
+    istringstream src1(dep0Data.str());
+    Deserializer deser1(src1, &context);
+    ModuleDef::readHeaderAndVerify(deser1, SourceDigest());
+    ModuleDefPtr dep0 = ModuleDef::deserialize(deser1, "dep0");
+    construct.registerModule(dep0.get());
+
+    istringstream src2(dep1Data.str());
+    Deserializer deser2(src2, &context);
+    ModuleDef::readHeaderAndVerify(deser2, SourceDigest());
+    ModuleDefPtr dep1 = ModuleDef::deserialize(deser2, "dep1");
+    construct.registerModule(dep1.get());
+
+    TypeDefPtr t = ds.mod->lookUp("t1");
+    if (!t) {
+        cerr << "Unable to lookup type t1 in mod" << endl;
+        success = false;
+    }
+    if (t->getOwner() != ds.dep1.get()) {
+        cerr << "Invalid owner of dep1.t1" << endl;
+        success = false;
+    }
+
+    return success;
+}
+
 struct TestCase {
     const char *text;
     bool (*f)();
@@ -119,6 +162,7 @@ TestCase testCases[] = {
     {"serializerTestUInt", serializerTestUInt},
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
+    {"moduleReload", moduleReload},
     {0, 0}
 };
 

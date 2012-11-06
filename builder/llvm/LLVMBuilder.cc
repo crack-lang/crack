@@ -1,11 +1,11 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "LLVMBuilder.h"
 
@@ -2057,6 +2057,23 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 
     lastValue = temp;
     return new BResultExpr(assign, temp);
+}
+
+VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
+                                      TypeDef *type
+                                      ) {
+    SPUG_CHECK(false, "LLVMBuilder::materializeVar() not implemented");
+}
+
+TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
+    SPUG_CHECK(false, "LLVMBuilder::materializeType() not implemented");
+}
+
+
+FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
+                                        const ArgVec &args
+                                        ) {
+    SPUG_CHECK(false, "LLVMBuilder::materializeFunc() not implemented");
 }
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {

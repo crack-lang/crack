@@ -502,13 +502,13 @@ namespace {
 }
 
 ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
-    if (!rootContext->construct->cacheMode)
-        return 0;
-
     // see if it's in the in-memory cache    
     Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
     if (iter != moduleCache.end())
         return iter->second;
+
+    if (!rootContext->construct->cacheMode)
+        return 0;
 
     // create a new builder, context and module
     BuilderPtr builder = rootBuilder->createChildBuilder();

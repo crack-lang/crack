@@ -17,6 +17,7 @@
 namespace model {
 
 class Context;
+class Deserializer;
 SPUG_RCPTR(Expr);
 class Namespace;
 class ModuleDef;
@@ -118,8 +119,23 @@ class VarDef : public virtual spug::RCBase {
 
         /**
          * Serialize the variable definition.
+         * If 'writeKind' is true, write the kind of definition in front of 
+         * the definition itself.  This is false when we can determine the 
+         * kind of definiton from the context, as when we serialize a variable 
+         * type.
          */
-        virtual void serialize(Serializer &serialzer) const;
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+
+        /**
+         * Deserialize an alias.
+         */
+        static VarDefPtr deserializeAlias(Deserializer &serializer);
+        
+        /**
+         * Deserialize a VarDef.
+         */
+        static VarDefPtr deserialize(Deserializer &deser);
+        
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

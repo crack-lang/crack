@@ -125,7 +125,9 @@ class ModuleDef : public VarDef, public Namespace {
         /**
          * Deserialize the remainder of the module meta-data.
          */        
-        static ModuleDefPtr deserialize(Deserializer &deserializer);
+        static ModuleDefPtr deserialize(Deserializer &deserializer,
+                                        const std::string &canonicalName
+                                        );
 };
 
 } // namespace model

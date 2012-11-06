@@ -13,7 +13,7 @@
 
 namespace model {
 
-class Construct;
+class Context;
 
 class Deserializer {
     private:
@@ -34,11 +34,15 @@ class Deserializer {
             virtual void *read(Deserializer &src) const = 0;
         };
 
-        Construct *construct;
+        Context *context;
 
         Deserializer(std::istream &src) : src(src) {}
+        Deserializer(std::istream &src, Context *context) :
+            src(src),
+            context(context) {
+        }
 
-        unsigned int readUInt();
+        unsigned int readUInt(const char *name);
 
         /**
          * Read a sized blob (block of binary data) from the stream.
@@ -54,7 +58,7 @@ class Deserializer {
          *          blob to be stored in.  If this is not null, 'size' must be
          *          provided.
          */
-        char *readBlob(size_t &size, char *buffer);
+        char *readBlob(size_t &size, char *buffer, const char *name);
 
         /**
          * Read a block of binary data as a string.  expectedMaxSize is a
@@ -62,14 +66,14 @@ class Deserializer {
          * will be allocated.
          * This implements the common case of creating a string from the blob.
          */
-        std::string readString(size_t expectedMaxSize);
+        std::string readString(size_t expectedMaxSize, const char *name);
 
         /**
          * Read the next object from the stream.  This returns a pointer to an
          * existing object if the object possibly calling reader.read() to
          * deserialize the object from the stream.
          */
-        void *readObject(const ObjectReader &reader);
+        void *readObject(const ObjectReader &reader, const char *name);
 };
 
 }

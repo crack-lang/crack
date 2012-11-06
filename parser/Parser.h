@@ -1,11 +1,11 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010,2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Arno Rehn <arno@arnorehn.de>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef PARSER_H
 #define PARSER_H
@@ -21,6 +21,7 @@
 #include "model/FuncCall.h"
 #include "model/GenericParm.h"
 #include "model/Context.h"
+#include "model/ContextStackFrame.h"
 
 namespace model {
    SPUG_RCPTR(ArgDef);
@@ -90,40 +91,7 @@ class Parser {
        * program's stack.  We push the context by creating an instance, and
        * pop it by calling restore() or falling through to the destructor.
        */
-      friend class ContextStackFrame;
-      class ContextStackFrame {
-         private:
-            bool restored;
-            Parser &parser;
-            model::ContextPtr context;
-
-         public:
-            ContextStackFrame(Parser &parser,
-                              model::Context *context
-                              ) :
-               restored(false),
-               parser(parser),
-               context(parser.context) {
-
-               parser.context = context;
-            }
-
-            ~ContextStackFrame() {
-               if (!restored)
-                  restore();
-            }
-
-            void restore() {
-               assert(!restored);
-               parser.context = context;
-               restored = true;
-            }
-
-            model::Context &parent() {
-               assert(!restored);
-               return *context;
-            }
-      };
+      friend class model::ContextStackFrame<Parser>;
 
       typedef std::map<std::string, unsigned> OpPrecMap;
       OpPrecMap opPrecMap;

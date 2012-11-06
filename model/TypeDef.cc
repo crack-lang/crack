@@ -17,6 +17,7 @@
 #include "AllocExpr.h"
 #include "AssignExpr.h"
 #include "CleanupFrame.h"
+#include "Deserializer.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
 #include "Context.h"
@@ -26,6 +27,7 @@
 #include "Initializers.h"
 #include "InstVarDef.h"
 #include "OverloadDef.h"
+#include "ModuleDef.h"
 #include "NullConst.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
@@ -935,34 +937,95 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
-void TypeDef::serialize(Serializer &serializer) const {
-    if (serializer.writeObject(this)) {
+void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
+    if (writeKind)
+        serializer.write(Serializer::typeId, "kind");
+    if (serializer.writeObject(this, "type")) {
         if (VarDef::getModule() != serializer.module) {
-            serializer.write(1);  // isAlias
+            serializer.write(1, "isAlias");
             VarDef::serializeExtern(serializer);
         } else {
-            serializer.write(0);  // isAlias
-            serializer.write(name);  // name
+            serializer.write(0, "isAlias");
+            serializer.write(name, "name");
             
-            // bases
-            serializer.write(parents.size());
+            serializer.write(parents.size(), "#bases");
             for (TypeVec::const_iterator i = parents.begin();
                  i != parents.end();
                  ++i
                  )
-                (*i)->serialize(serializer);
+                (*i)->serialize(serializer, false);
             
-            // defs
-            serializer.write(defs.size());
-            for (VarDefMap::const_iterator i = defs.begin();
-                 i != defs.end();
-                 ++i
-                 ) {
-                if (i->second->getOwner() != serializer.module)
-                    i->second->serializeAlias(serializer, i->first);
-                else
-                    i->second->serialize(serializer);
-            }
+            Namespace::serializeDefs(serializer);
         }
     }
+}
+
+namespace {
+    struct TypeDefReader : public Deserializer::ObjectReader {
+        virtual void *read(Deserializer &deser) const {
+            int alias = deser.readUInt("isAlias");
+            TypeDefPtr type;
+            if (alias) {
+                string moduleName = deser.readString(64, "module");
+                string typeName = deser.readString(16, "name");
+                ModuleDefPtr module = 
+                    deser.context->construct->getModule(moduleName);
+                SPUG_CHECK(module, 
+                           "Unable to find module " << moduleName << 
+                            " which contains referenced type " << typeName
+                           );
+                VarDefPtr typeVar = module->lookUp(typeName);
+                SPUG_CHECK(typeVar, 
+                           "Unable to find type " << moduleName << "." <<
+                            typeName
+                           );
+                type = TypeDefPtr::rcast(typeVar);
+                SPUG_CHECK(type,
+                           "Name " << moduleName << "." << typeName << 
+                            " is not a type: " << *typeVar
+                           );
+            } else {
+                string name = deser.readString(16, "name");
+                
+                // bases
+                int count = deser.readUInt("#bases");
+                TypeDef::TypeVec bases(count);
+                for (int i = 0; i < count; ++i) {
+                    bases[i] = 
+                        static_cast<TypeDef *>(deser.readObject(*this, 
+                                                                "bases[i]"
+                                                                )
+                                               );
+                    bases[i]->decref();
+                }
+
+                // instantiate the type                
+                type = deser.context->builder.materializeType(*deser.context,
+                                                              name
+                                                              );
+                type->parents = bases;
+                
+                // 'defs' - fill in the body.
+                ContextPtr classContext = deser.context->createSubContext(Context::instance,
+                                                           type.get(),
+                                                           &name
+                                                           );
+                ContextStackFrame<Deserializer> 
+                    cstack(deser, classContext.get()
+                           
+                           );
+                type->deserializeDefs(deser);
+            }
+            
+            type->incref();
+            return type.get();
+        }
+    };
+} // anon namespace
+
+TypeDefPtr TypeDef::deserialize(Deserializer &deser) {
+    TypeDefPtr result = 
+        static_cast<TypeDef *>(deser.readObject(TypeDefReader(), "type"));
+    result->decref();
+    return result;
 }

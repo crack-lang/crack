@@ -55,7 +55,7 @@ using namespace model;
 // po' man's profilin.
 // since this is intrusive, we can ifdef it out here conditionally
 #define BSTATS_GO(var) \
-    StatState var(context.get(), ConstructStats::builder);
+   StatState var(context.get(), ConstructStats::builder);
 
 #define BSTATS_END
 
@@ -298,7 +298,7 @@ void Parser::parseAnnotation() {
       // create a new context whose construct is tha annotation construct.
       ContextPtr parentContext = context;
       ContextPtr ctx = context->createSubContext(Context::module);
-      ContextStackFrame cstack(*this, ctx.get());
+      ContextStackFrame<Parser> cstack(*this, ctx.get());
       context->construct = context->getCompileTimeConstruct();
    
       Token tok = toker.getToken();
@@ -1798,7 +1798,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    ContextPtr subCtx = context->createSubContext(Context::local, 0,
                                                  &name
                                                  );
-   ContextStackFrame cstack(*this, subCtx.get());
+   ContextStackFrame<Parser> cstack(*this, subCtx.get());
    context->returnType = returnType;
    context->toplevel = true;
    
@@ -2003,7 +2003,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    // store the new definition in the parent context if it's not already in 
    // there (if there was a forward declaration)
    if (!funcDef->getOwner()) {
-      ContextStackFrame cstack(*this, context->getParent().get());
+      ContextStackFrame<Parser> cstack(*this, context->getParent().get());
       addFuncDef(funcDef.get());
    }
 
@@ -2342,9 +2342,12 @@ ContextPtr Parser::parseIfClause() {
    stringstream nsName;
    nsName << ++nestID;
    string nsNameStr = nsName.str();
-   ContextStackFrame cstack(*this, context->createSubContext(context->scope,
-                                                             0,
-                                                             &nsNameStr).get());
+   ContextStackFrame<Parser> 
+      cstack(*this, 
+             context->createSubContext(context->scope,
+                                       0,
+                                       &nsNameStr).get()
+             );
    if (tok.isLCurly()) {
       return parseBlock(true, noCallbacks);
    } else {
@@ -2370,7 +2373,8 @@ ExprPtr Parser::parseCondExpr() {
 //   ^                           ^
 ContextPtr Parser::parseIfStmt() {
    // create a subcontext for variables defined in the condition.
-   ContextStackFrame cstack(*this, context->createSubContext(true).get());
+   ContextStackFrame<Parser> 
+      cstack(*this, context->createSubContext(true).get());
 
    Token tok = getToken();
    if (!tok.isLParen())
@@ -2430,7 +2434,7 @@ ContextPtr Parser::parseIfStmt() {
 void Parser::parseWhileStmt() {
    // create a subcontext for the break and for variables defined in the 
    // condition.
-   ContextStackFrame cstack(*this, context->createSubContext().get());
+   ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
 
    Token tok = getToken();
    if (!tok.isLParen())
@@ -2463,7 +2467,7 @@ void Parser::parseWhileStmt() {
 void Parser::parseForStmt() {
    // create a subcontext for the break and for variables defined in the 
    // condition.
-   ContextStackFrame cstack(*this, context->createSubContext().get());
+   ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
 
    Token tok = getToken();
    if (!tok.isLParen())
@@ -2815,12 +2819,13 @@ ContextPtr Parser::parseTryStmt() {
    BSTATS_END
 
    // create a subcontext for the try statement
-   ContextStackFrame cstack(*this, context->createSubContext().get());
+   ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
    context->setCatchBranchpoint(pos.get());
 
    ContextPtr terminal;
    {
-      ContextStackFrame cstack(*this, context->createSubContext().get());
+      ContextStackFrame<Parser> 
+         cstack(*this, context->createSubContext().get());
       terminal = parseBlock(true, noCallbacks); // XXX add tryLeave callback
    }
    bool lastWasTerminal = terminal;
@@ -2871,7 +2876,8 @@ ContextPtr Parser::parseTryStmt() {
                     );
       
       {
-         ContextStackFrame cstack(*this, context->createSubContext().get());
+         ContextStackFrame<Parser> 
+            cstack(*this, context->createSubContext().get());
          
          // create a variable definition for the exception variable
          context->emitVarDef(exceptionType.get(), varTok, exceptionObj.get());
@@ -3336,7 +3342,7 @@ TypeDefPtr Parser::parseClassDef() {
       classContext->createSubContext(Context::composite, lexicalNS.get());
 
    // push the new context
-   ContextStackFrame cstack(*this, lexicalContext.get());
+   ContextStackFrame<Parser> cstack(*this, lexicalContext.get());
 
    // parse the body
    parseClassBody();

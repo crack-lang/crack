@@ -57,7 +57,7 @@ So given this, our meta-data format is:
         uint magic = 2271218416
 
         # source file MD5 signature
-        blob sourceSig
+#        blob sourceSig
 
         # a list of the the modules that this module
         # directly depends on (does not include .builtin)

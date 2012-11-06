@@ -170,6 +170,7 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/ContextStackFrame.h \
     model/DeserializationError.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
@@ -223,6 +224,8 @@ noinst_HEADERS = \
     spug/StringFmt.h \
     spug/TypeInfo.h \
     spug/check.h \
+    tests/MockBuilder.h \
+    tests/MockModuleDef.h \
     util/md5.h \
     util/SourceDigest.h \
     compiler/init.h \
