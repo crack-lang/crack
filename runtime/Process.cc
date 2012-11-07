@@ -90,17 +90,6 @@ int runChildProcess(const char **argv,
 
     int pipes[3][2]; // 0,1,2 (in,out,err) x 0,1 (read,write)
 
-    // verify the binary exists and is executable, otherwise we fail before fork
-    struct stat sb;
-    if (stat(argv[0], &sb) == -1)
-        return -1;
-    if (!S_ISREG(sb.st_mode) ||
-        sb.st_size == 0 ||
-        (((sb.st_mode & S_IXUSR) == 0) ||
-         ((sb.st_mode & S_IXGRP) == 0) ||
-         ((sb.st_mode & S_IXOTH) == 0)))
-        return -1;
-
     // create pipes
     // XXX check pd to see which pipes we should make, if any
     for (int i = 0; i < 3; i++) {
@@ -115,6 +104,13 @@ int runChildProcess(const char **argv,
     switch (p) {
     case -1:
         perror("fork failed");
+
+        // clean the pipes
+        for (int i = 0; i < 3; ++i)
+            for (int j = 1; i < 2; ++j)
+                if (pipes[i][j] != -1)
+                    close(pipes[i][j]);
+
         return -1;
     case 0:
         // child
@@ -160,7 +156,7 @@ int runChildProcess(const char **argv,
         }
 
         // if we get here, exec failed
-        exit(-1);
+        _exit(-1);
 
     default:
         // parent
