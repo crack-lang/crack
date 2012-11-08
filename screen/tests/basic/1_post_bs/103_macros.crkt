@@ -1,0 +1,36 @@
+%%TEST%%
+macros
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+@import crack.ann define;
+
+@define m(args) { array[int] arr = args; }
+@m([1, 2, 3, 4]);
+if (arr[3] != 4)
+    cerr `FAILED macro with array arguments.\n`;
+
+# will give some kind of error if it doesn't expand correctly
+@define foo(a, b) { a b }
+if (true) {
+    int x;
+    bool flag;
+    if (true) { @foo(int x; flag = 1;, })
+    if (!flag)
+        cerr `FAILED expansion of unmatched brackets.\n`;
+}
+
+# check strict nesting.
+@define passthru(arg) { arg }
+if (true) {
+    bool flag;
+    int arr;
+    if (true) @passthru({ array[int] arr = [1, 2, (3)]; flag = true; });
+    if (!flag)
+        cerr `FAILED expansion of multiple levels of nesting.\n`;
+}
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

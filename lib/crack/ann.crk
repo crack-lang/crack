@@ -469,20 +469,46 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     if (!tok.isLParen())
         ctx.error(tok, 'left paren expected in macro expansion'.buffer);
 
+    const byte PAREN = 1, BRACK = 2, CURL = 3;
+
     uint nesting = 1;
     argTokList := NodeListImpl();
     Array[NodeList] args = {argCount};
+    Array[byte] brackStack = {4};
+    
+    # pop everything on the bracket stack up to the matching value.  This 
+    # behavior lets us both respect existing balanced delimiters and ignore 
+    # unbalanced ones.
+    void popTo(Array[byte] brackStack, byte val) {
+        for (int i = brackStack.count() - 1; i >= 0; --i) {
+            if (brackStack[i] == val) {
+                while (brackStack.count() > i)
+                    brackStack.delete(brackStack.count() - 1);
+            }
+        }
+    }
+
     while (true) {
         tok = ctx.getToken();
-        if (nesting == 1 && tok.isComma()) {
+        if (!brackStack && tok.isComma()) {
             args.append(argTokList);
             argTokList = NodeListImpl();
         } else {
             if (tok.isLParen()) {
-                ++nesting;
+                brackStack.append(PAREN);
+            } else if (tok.isLBracket()) {
+                brackStack.append(BRACK);
+            } else if (tok.isLCurly()) {
+                brackStack.append(CURL);
             } else if (tok.isRParen()) {
-                if (!--nesting)
+                if (!brackStack)
                     break;
+                else
+                    popTo(brackStack, PAREN);
+            } else if (tok.isRBracket() && brackStack) {
+                popTo(brackStack, BRACK);
+            } else if (tok.isRCurly() && brackStack) {
+                popTo(brackStack, CURL);
             }
 
             argTokList.pushHead(Tok(tok));
