@@ -12,9 +12,11 @@
 #include "model/Deserializer.h"
 #include "model/ModuleDef.h"
 #include "model/ModuleDefMap.h"
+#include "model/OverloadDef.h"
 #include "model/TypeDef.h"
 
 #include "tests/MockBuilder.h"
+#include "tests/MockFuncDef.h"
 #include "tests/MockModuleDef.h"
 #include "util/SourceDigest.h"
 
@@ -56,15 +58,19 @@ bool serializerTestUInt() {
 
 struct DataSet {
 
-    TypeDefPtr metaType, t0, t1;
+    TypeDefPtr metaType, voidType, t0, t1;
     ModuleDefPtr builtins, dep0, dep1, mod;
 
     DataSet() {
-        metaType =  new TypeDef(0, "Meta");
+        metaType = new TypeDef(0, "Meta");
         metaType->type = metaType;
-        builtins = new MockModuleDef("builtins", 0);
+        builtins = new MockModuleDef(".builtins", 0);
         builtins->addDef(metaType.get());
+        voidType = new TypeDef(metaType.get(), "void");
+        builtins->addDef(voidType.get());
+    }
 
+    void addTestModules() {
         dep0 = new MockModuleDef("dep0", 0);
         t0 = new TypeDef(metaType.get(), "t0");
         dep0->addDef(t0.get());
@@ -73,14 +79,28 @@ struct DataSet {
         t1 = new TypeDef(metaType.get(), "t1");
         dep1->addDef(t1.get());
         dep1->addAlias(t0.get());
+        OverloadDefPtr ovld = new OverloadDef("func");
+        FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+        f->args[0] = new ArgDef(t1.get(), "a");
+        f->returnType = voidType;
+        ovld->addFunc(f.get());
+        f->setOwner(dep1.get());
+        f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+        f->args[0] = new ArgDef(t0.get(), "x");
+        f->returnType = t0;
+        ovld->addFunc(f.get());
+        f->setOwner(dep1.get());
+        dep1->addDef(ovld.get());
 
         mod = new MockModuleDef("outer", 0);
         mod->addAlias(t1.get());
+        mod->addAlias(ovld.get());
     }
 };
 
 bool moduleTestDeps() {
     DataSet ds;
+    ds.addTestModules();
     bool success = true;
     ModuleDefMap deps;
     ds.t1->addDependenciesTo(ds.mod.get(), deps);
@@ -99,6 +119,7 @@ bool moduleTestDeps() {
 
 bool moduleSerialization() {
     DataSet ds;
+    ds.addTestModules();
     ostringstream out;
     Serializer ser(out);
     ds.mod->serialize(ser);
@@ -109,6 +130,7 @@ bool moduleSerialization() {
 bool moduleReload() {
     bool success = true;
     DataSet ds;
+    ds.addTestModules();
 
     ostringstream dep0Data, dep1Data, modData;
     Serializer ser1(dep0Data);
@@ -127,6 +149,9 @@ bool moduleReload() {
                     new GlobalNamespace(0, "")
                     );
     context.incref();
+
+    DataSet ds2;
+    construct.registerModule(ds2.builtins.get());
 
     istringstream src1(dep0Data.str());
     Deserializer deser1(src1, &context);

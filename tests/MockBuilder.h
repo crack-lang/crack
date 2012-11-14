@@ -349,6 +349,14 @@ class MockBuilder : public builder::Builder {
             return new model::VarDef(type, name);
         }
 
+        virtual model::ArgDefPtr materializeArg(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type
+        ) {
+            return new model::ArgDef(type, name);
+        }
+
         virtual model::TypeDefPtr materializeType(
             model::Context &context,
             const std::string &name
@@ -363,10 +371,13 @@ class MockBuilder : public builder::Builder {
             const std::string &name,
             const model::ArgVec &args
         ) {
-            return new MockFuncDef(static_cast<model::FuncDef::Flags>(0),
-                                   name,
-                                   args.size()
-                                   );
+            model::FuncDefPtr result =
+                new MockFuncDef(static_cast<model::FuncDef::Flags>(0),
+                                name,
+                                args.size()
+                                );
+            result->args = args;
+            return result;
         }
 
         virtual model::CleanupFramePtr createCleanupFrame(

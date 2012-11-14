@@ -436,6 +436,15 @@ class Builder : public spug::RCBase {
         ) = 0;
 
         /**
+         * Create a new ArgDef from the current (cached) module.
+         */
+        virtual model::ArgDefPtr materializeArg(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type
+        ) = 0;
+
+        /**
          * Create a new TypeDef from the current (cached) module.
          * See materializeVar(), same rules apply.
          */        

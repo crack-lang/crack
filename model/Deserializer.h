@@ -11,6 +11,12 @@
 #include <string>
 #include <map>
 
+#include "spug/RCPtr.h"
+
+namespace spug {
+    SPUG_RCPTR(RCBase);
+}
+
 namespace model {
 
 class Context;
@@ -20,7 +26,7 @@ class Deserializer {
         std::istream &src;
 
         // the deserializer's object map
-        typedef std::map<int, void *> ObjMap;
+        typedef std::map<int, spug::RCBasePtr> ObjMap;
         ObjMap objMap;
 
     public:
@@ -31,7 +37,7 @@ class Deserializer {
          * readObject().
          */
         struct ObjectReader {
-            virtual void *read(Deserializer &src) const = 0;
+            virtual spug::RCBasePtr read(Deserializer &src) const = 0;
         };
 
         Context *context;
@@ -73,7 +79,9 @@ class Deserializer {
          * existing object if the object possibly calling reader.read() to
          * deserialize the object from the stream.
          */
-        void *readObject(const ObjectReader &reader, const char *name);
+        spug::RCBasePtr readObject(const ObjectReader &reader,
+                                   const char *name
+                                   );
 };
 
 }

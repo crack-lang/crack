@@ -3,6 +3,7 @@ ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
+model/ArgDef.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
 model/Deserializer.cc

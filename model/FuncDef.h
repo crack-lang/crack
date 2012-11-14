@@ -145,6 +145,14 @@ class FuncDef : public VarDef {
         /** Allow us to write the argument list. */
         static void dump(std::ostream &out, const ArgVec &args);
         static void display(std::ostream &out, const ArgVec &args);
+
+        virtual void addDependenciesTo(const ModuleDef *mod, 
+                                       ModuleDefMap &deps
+                                       ) const;
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        static FuncDefPtr deserialize(Deserializer &deser, 
+                                      const std::string &funcName
+                                      );
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {

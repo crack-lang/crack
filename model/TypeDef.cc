@@ -941,9 +941,14 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
     if (writeKind)
         serializer.write(Serializer::typeId, "kind");
     if (serializer.writeObject(this, "type")) {
-        if (VarDef::getModule() != serializer.module) {
+        ModuleDefPtr module = VarDef::getModule();
+        if (module != serializer.module) {
             serializer.write(1, "isAlias");
-            VarDef::serializeExtern(serializer);
+            
+            // write an "Extern" (but not a reference, we're already in a 
+            // reference to the object we'd be externing)
+            serializer.write(module->getFullName(), "module");
+            serializer.write(name, "name");
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
@@ -962,7 +967,7 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
 
 namespace {
     struct TypeDefReader : public Deserializer::ObjectReader {
-        virtual void *read(Deserializer &deser) const {
+        virtual spug::RCBasePtr read(Deserializer &deser) const {
             int alias = deser.readUInt("isAlias");
             TypeDefPtr type;
             if (alias) {
@@ -992,10 +997,9 @@ namespace {
                 TypeDef::TypeVec bases(count);
                 for (int i = 0; i < count; ++i) {
                     bases[i] = 
-                        static_cast<TypeDef *>(deser.readObject(*this, 
-                                                                "bases[i]"
-                                                                )
-                                               );
+                        TypeDefPtr::rcast(
+                            deser.readObject(*this, "bases[i]" )
+                        );
                     bases[i]->decref();
                 }
 
@@ -1006,26 +1010,23 @@ namespace {
                 type->parents = bases;
                 
                 // 'defs' - fill in the body.
-                ContextPtr classContext = deser.context->createSubContext(Context::instance,
-                                                           type.get(),
-                                                           &name
-                                                           );
+                ContextPtr classContext = 
+                    deser.context->createSubContext(Context::instance,
+                                                    type.get(),
+                                                    &name
+                                                    );
                 ContextStackFrame<Deserializer> 
-                    cstack(deser, classContext.get()
-                           
-                           );
+                    cstack(deser, classContext.get());
                 type->deserializeDefs(deser);
             }
             
-            type->incref();
-            return type.get();
+            return type;
         }
     };
 } // anon namespace
 
 TypeDefPtr TypeDef::deserialize(Deserializer &deser) {
     TypeDefPtr result = 
-        static_cast<TypeDef *>(deser.readObject(TypeDefReader(), "type"));
-    result->decref();
+        TypeDefPtr::rcast(deser.readObject(TypeDefReader(), "type"));
     return result;
 }

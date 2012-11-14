@@ -9,9 +9,12 @@
 #include "FuncDef.h"
 
 #include <sstream>
+#include "builder/Builder.h"
+#include "Deserializer.h"
 #include "Context.h"
 #include "ArgDef.h"
 #include "Expr.h"
+#include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
 
@@ -199,4 +202,40 @@ void FuncDef::display(ostream &out, const string &prefix) const {
     out << prefix << returnType->getDisplayName() << " " << 
         VarDef::getDisplayName();
     display(out, args);
+}
+
+void FuncDef::addDependenciesTo(const ModuleDef *mod, 
+                                ModuleDefMap &deps
+                                ) const {
+    returnType->addDependenciesTo(mod, deps);
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
+         ++iter
+         )
+        (*iter)->type->addDependenciesTo(mod, deps);
+}
+
+void FuncDef::serialize(Serializer &serializer, bool writeKind) const {
+    assert(!writeKind);
+    returnType->serialize(serializer, false);
+    
+    serializer.write(args.size(), "#args");
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
+         ++iter
+         )
+        (*iter)->serialize(serializer, false);
+}
+
+FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
+    TypeDefPtr returnType = TypeDef::deserialize(deser);
+    
+    int argCount = deser.readUInt("#args");
+    ArgVec args;
+    for (int i = 0; i < argCount; ++i)
+        args.push_back(ArgDef::deserialize(deser));
+
+    return deser.context->builder.materializeFunc(
+        *deser.context,
+        name,
+        args
+    );
 }

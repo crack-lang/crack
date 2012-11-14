@@ -2065,6 +2065,12 @@ VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
     SPUG_CHECK(false, "LLVMBuilder::materializeVar() not implemented");
 }
 
+ArgDefPtr LLVMBuilder::materializeArg(Context &context, const string &name,
+                                      TypeDef *type
+                                      ) {
+    SPUG_CHECK(false, "LLVMBuilder::materializeArg() not implemented");
+}
+
 TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
     SPUG_CHECK(false, "LLVMBuilder::materializeType() not implemented");
 }

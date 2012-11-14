@@ -9,7 +9,9 @@
 #include "OverloadDef.h"
 
 #include "Context.h"
+#include "Deserializer.h"
 #include "Expr.h"
+#include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
 
@@ -273,4 +275,26 @@ void OverloadDef::addDependenciesTo(const ModuleDef *mod,
          ) {
         (*iter)->addDependenciesTo(mod, deps);
     }
+}
+
+void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
+    if (writeKind)
+        serializer.write(Serializer::overloadId, "kind");
+    serializer.write(name, "name");
+    
+    serializer.write(funcs.size(), "#overloads");
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        (*iter)->serialize(serializer, false);
+}
+
+OverloadDefPtr OverloadDef::deserialize(Deserializer &deser) {
+    string name = deser.readString(Serializer::modNameSize, "name");
+    OverloadDefPtr ovld = new OverloadDef(name);
+    int size = deser.readUInt("#overloads");
+    for (int i = 0; i < size; ++i)
+        ovld->addFunc(FuncDef::deserialize(deser, name).get());
+    return ovld;
 }

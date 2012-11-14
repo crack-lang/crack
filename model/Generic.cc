@@ -53,7 +53,7 @@ void Generic::serializeToken(Serializer &out, const Token &tok) {
 
 namespace {
     struct LocReader : public Deserializer::ObjectReader {
-        virtual void *read(Deserializer &src) const {
+        virtual spug::RCBasePtr read(Deserializer &src) const {
             string name = src.readString(256, "sourceName");
             int lineNum = src.readUInt("lineNum");
 
@@ -77,7 +77,7 @@ Token Generic::deserializeToken(Deserializer &src) {
             tokText = src.readString(32, "tokenData");
     }
     Location loc =
-        reinterpret_cast<LocationImpl *>(src.readObject(LocReader(), "loc"));
+        LocationImplPtr::rcast(src.readObject(LocReader(), "loc"));
     return Token(tokType, tokText, loc);
 }
 

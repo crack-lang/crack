@@ -118,7 +118,7 @@ void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
 
 namespace {
     struct AliasReader : public Deserializer::ObjectReader {
-        virtual void *read(Deserializer &deser) const {
+        virtual spug::RCBasePtr read(Deserializer &deser) const {
             string moduleName = deser.readString(Serializer::modNameSize,
                                                  "module"
                                                  );
@@ -134,16 +134,16 @@ namespace {
                        "Deserializing " << moduleName << "." << name <<
                         ": name not defined in module."
                        );
-            return var.get();
+            return var;
         }
     };
 }
 
 VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
-    return reinterpret_cast<VarDef *>(serializer.readObject(AliasReader(),
-                                                            "ext"
-                                                            )
-                                      );
+    return VarDefPtr::rcast(serializer.readObject(AliasReader(),
+                                                  "ext"
+                                                  )
+                            );
 }
 
 void VarDef::serialize(Serializer &serializer, bool writeKind) const {

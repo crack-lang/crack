@@ -80,7 +80,7 @@ So given this, our meta-data format is:
         #  1 a variable
         #  2 a type
         #  3 a generic
-        #  4 a function
+        #  4 a function overload group
         #  5 an alias
         # "kind" determines which "subclass" of VarDef this entry actually is
         # so we can correctly parse the remainder of it.
@@ -88,7 +88,7 @@ So given this, our meta-data format is:
             variableId = 1,
             typeId = 2,
             genericId = 3,
-            functionId = 4,
+            overloadId = 4,
             aliasId = 5,
             typeAliasId = 6,
         }
@@ -98,6 +98,7 @@ So given this, our meta-data format is:
             case aliasId: AliasDef
             case variableId: VarDef
             case typeId: ref[Type]
+            case overloadId: OverloadDef
         }
     }
 
@@ -130,5 +131,14 @@ So given this, our meta-data format is:
         array[Def] defs
     }
 
+    OverloadDef {
+        blob name
+        array[FuncDef] overloads
+    }
+
+    FuncDef {
+        ref[Type] returnType
+        array[VarDef] args
+    }
 
 }}

@@ -36,7 +36,7 @@ class Serializer {
             variableId = 1,
             typeId = 2,
             genericId = 3,
-            functionId = 4,
+            overloadId = 4,
             aliasId = 5
         };
 

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <iostream>
 #include <iomanip>
+#include "spug/RCBase.h"
 #include "Serializer.h"
 
 using namespace std;
@@ -59,13 +60,15 @@ string Deserializer::readString(size_t expectedMaxSize, const char *name) {
     }
 }
 
-void *Deserializer::readObject(const ObjectReader &reader, const char *name) {
+spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
+                                         const char *name
+                                         ) {
     int id = readUInt(name);
     if (id & 1) {
         // this is a definition - let the reader read the object
         if (Serializer::trace)
             cerr << "reading new object " << name << " id = " << id << endl;
-        void *obj = reader.read(*this);
+        spug::RCBasePtr obj = reader.read(*this);
         objMap[id >> 1] = obj;
         return obj;
     } else {

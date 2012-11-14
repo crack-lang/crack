@@ -216,9 +216,8 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 SPUG_CHECK(false, "can't deserialize generics yet");
 //                addDef(Generic::deserialize(deser));
                 break;
-            case Serializer::functionId:
-                SPUG_CHECK(false, "can't deserialize functions yet");
-//                addDef(OverloadDef::deserialize(deser));
+            case Serializer::overloadId:
+                addDef(OverloadDef::deserialize(deser).get());
                 break;
             case Serializer::typeId:
                 addDef(TypeDef::deserialize(deser).get());
