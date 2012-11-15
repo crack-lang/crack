@@ -342,11 +342,11 @@ void Construct::loadBuiltinModules() {
     crackRuntimeName[0] = "crack";
     crackRuntimeName[1] = "runtime";
     string name;
-    ModuleDefPtr rtMod = rootContext->construct->loadModule(
-                                                     crackRuntimeName.begin(),
-                                                     crackRuntimeName.end(),
-                                                     name
-                                                     );
+    ModuleDefPtr rtMod = 
+        rootContext->construct->getModule(crackRuntimeName.begin(),
+                                          crackRuntimeName.end(),
+                                          name
+                                          );
     if (!rtMod) {
         cerr << "failed to load crack runtime from module load path" << endl;
         // XXX exception?
@@ -479,13 +479,13 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
     return initExtensionModule(canonicalName, cfunc, rfunc);
 }
 
-ModuleDefPtr Construct::loadModule(const string &canonicalName) {
+ModuleDefPtr Construct::getModule(const string &canonicalName) {
 
     StringVec name;
     name = ModuleDef::parseCanonicalName(canonicalName);
 
     string cname;
-    ModuleDefPtr m = loadModule(name.begin(), name.end(), cname);
+    ModuleDefPtr m = getModule(name.begin(), name.end(), cname);
     SPUG_CHECK(cname == canonicalName, 
                "canonicalName mismatch.  constructed = " << cname << 
                 ", requested = " << canonicalName
@@ -501,7 +501,7 @@ namespace {
     }
 }
 
-ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
+ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
     // see if it's in the in-memory cache    
     Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
     if (iter != moduleCache.end())
@@ -533,14 +533,10 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
     return modDef;
 }
 
-ModuleDefPtr Construct::getModule(const string &canonicalName) {
-    return loadFromCache(canonicalName);
-}
-
-ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
-                                   Construct::StringVecIter moduleNameEnd,
-                                   string &canonicalName
-                                   ) {
+ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
+                                  Construct::StringVecIter moduleNameEnd,
+                                  string &canonicalName
+                                  ) {
     // create the dotted canonical name of the module
     StringVecIter iter = moduleNameBegin;
     if (iter != moduleNameEnd) {
@@ -671,10 +667,10 @@ bool Construct::loadBootstrapModules() {
         crackLangName[0] = "crack";
         crackLangName[1] = "lang";
         string name;
-        ModuleDefPtr mod = loadModule(crackLangName.begin(),
-                                      crackLangName.end(), 
-                                      name
-                                      );
+        ModuleDefPtr mod = getModule(crackLangName.begin(),
+                                     crackLangName.end(), 
+                                     name
+                                     );
         
         if (!mod) {
             cerr << "Bootstrapping module crack.lang not found." << endl;

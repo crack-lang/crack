@@ -559,7 +559,7 @@ bool Cacher::readImports() {
 
         // load this module. if the digest doesn't match, we miss.
         // note module may come from cache or parser, we won't know
-        m = context->construct->loadModule(cname->getString().str());
+        m = context->construct->getModule(cname->getString().str());
         if (!m || m->digest != iDigest)
             return false;
 
@@ -905,7 +905,7 @@ void Cacher::readEphemeralImport(MDNode *mnode) {
     VLOG(2) << "reading ephemeral import " << canName->getString().str() 
         << endl;
     BModuleDefPtr mod = 
-        context->construct->loadModule(canName->getString().str());
+        context->construct->getModule(canName->getString().str());
     SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
                "XXX Module digestfrom import doesn't match");
 }

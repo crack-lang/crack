@@ -2683,10 +2683,10 @@ void Parser::parseImportStmt(Namespace *ns) {
       vector<string> moduleName;
       parseModuleName(moduleName);
             
-      mod = context->construct->loadModule(moduleName.begin(), 
-                                           moduleName.end(),
-                                           canonicalName
-                                           );
+      mod = context->construct->getModule(moduleName.begin(), 
+                                          moduleName.end(),
+                                          canonicalName
+                                          );
       if (!mod)
          error(tok, SPUG_FSTR("unable to find module " << canonicalName));
       

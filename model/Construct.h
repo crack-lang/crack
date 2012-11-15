@@ -330,11 +330,13 @@ class Construct : public spug::RCBase, public Options {
                                    );
 
         /**
-         * Try to load the module from the cache (if caching is enabled and 
-         * the module is cached).  Returns the module if it was loaded, null 
+         * Try to get the module but only from the in-memory and persistent 
+         * cache (the persistent cache only if caching is enabled and 
+         * the module is cached).  Will not attempt to compile the module like 
+         * getModule().  Returns the module if it is available, null 
          * if not.
          */
-        ModuleDefPtr loadFromCache(const std::string &canonicalName);
+        ModuleDefPtr getCachedModule(const std::string &canonicalName);
 
         /**
          * Get the module wither from the in-memory cache, the persistent 
@@ -347,15 +349,10 @@ class Construct : public spug::RCBase, public Options {
          * could not be found, raises an exception if there were errors 
          * parsing the module.
          */
-        ModuleDefPtr loadModule(StringVecIter moduleNameBegin,
-                                StringVecIter moduleNameEnd,
-                                std::string &canonicalName
-                                );
-
-        /**
-         * a version of loadModule which accept a string canonicalName
-         */
-        ModuleDefPtr loadModule(const std::string &canonicalName);
+        ModuleDefPtr getModule(StringVecIter moduleNameBegin,
+                               StringVecIter moduleNameEnd,
+                               std::string &canonicalName
+                               );
 
         /**
          * Load the executor's bootstrapping modules (crack.lang).

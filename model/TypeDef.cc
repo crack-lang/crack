@@ -800,7 +800,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     string nameInModule;
 
     // check the precompiled module cache
-    ModuleDefPtr module = context.construct->loadFromCache(moduleName);
+    ModuleDefPtr module = context.construct->getCachedModule(moduleName);
 
     if (!module) {
 
