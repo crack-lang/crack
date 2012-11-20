@@ -170,7 +170,6 @@ noinst_HEADERS = \
     model/ConstVarDef.h \
     model/Context.h \
     model/ContextStackFrame.h \
-    model/DeserializationError.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
