@@ -34,7 +34,7 @@
 
 #include "model/EphemeralImportDef.h"
 #include "builder/BuilderOptions.h"
-#include "builder/util/CacheFiles.h"
+#include "util/CacheFiles.h"
 #include "util/SourceDigest.h"
 #include "LLVMBuilder.h"
 #include "VarDefs.h"
@@ -1256,34 +1256,13 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
     modDef = builder->instantiateModule(*context, canonicalName, module);
     builder->module = module;
 
-    if (readMetadata()) {
+    // after reading our metadata and defining types, we
+    // resolve all disjoint structs from our bitcode to those
+    // already in the crack type system
+    resolveStructs(module);
 
-        // after reading our metadata and defining types, we
-        // resolve all disjoint structs from our bitcode to those
-        // already in the crack type system
-        resolveStructs(module);
-
-        // cache hit
-        VLOG(2) << "[" << canonicalName << "] cache materialized" << endl;
-    }
-    else {
-
-        // during meta data read, we determined we will miss
-
-        // ensure any named structs from the module that we miss on do not 
-        // remain in the llvm context struct namespace
-        // XXX is this necessary? a module delete doesn't appear to affect
-        // the llvmcontext
-        vector<StructType*> namedStructs;
-        module->findUsedStructTypes(namedStructs);
-        for (int i=0; i < namedStructs.size(); ++i) {
-            if (namedStructs[i]->hasName())
-                namedStructs[i]->setName("");
-        }
-        
-        VLOG(2) << "[" << canonicalName <<
-            "] cache miss discovered in metadata read" << endl;
-    }
+    // cache hit
+    VLOG(2) << "[" << canonicalName << "] cache materialized" << endl;
     return modDef;
 }
 

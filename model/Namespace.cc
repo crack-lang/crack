@@ -183,12 +183,28 @@ void Namespace::dump() {
 }
 
 void Namespace::serializeDefs(Serializer &serializer) const {
-    serializer.write(defs.size(), "#defs");
+    
+    // count the number of definitions to serialize
+    int count = 0;
     for (VarDefMap::const_iterator i = defs.begin();
          i != defs.end();
          ++i
          ) {
-        if (i->second->getOwner() != serializer.module)
+        // ignore special symbols.
+        if (i->first[0] != ':')
+            ++count;
+    }
+    
+    // write the count and the definitions
+    serializer.write(count, "#defs");
+    for (VarDefMap::const_iterator i = defs.begin();
+         i != defs.end();
+         ++i
+         ) {
+        // ignore special symbols.
+        if (i->first[0] == ':')
+            continue;
+        else if (i->second->getOwner() != serializer.module)
             i->second->serializeAlias(serializer, i->first);
         else
             i->second->serialize(serializer, true);

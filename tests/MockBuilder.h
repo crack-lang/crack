@@ -380,6 +380,11 @@ class MockBuilder : public builder::Builder {
             return result;
         }
 
+        virtual void cacheModule(model::Context &context,
+                                 model::ModuleDef *module
+                                 ) {
+        }
+
         virtual model::CleanupFramePtr createCleanupFrame(
             model::Context &context
         ) {

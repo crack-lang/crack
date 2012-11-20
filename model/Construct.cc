@@ -27,7 +27,7 @@
 #include "StrConst.h"
 #include "TypeDef.h"
 #include "compiler/init.h"
-#include "builder/util/CacheFiles.h"
+#include "util/CacheFiles.h"
 #include "util/SourceDigest.h"
 
 using namespace std;
@@ -291,12 +291,13 @@ ContextPtr Construct::createRootContext() {
                               );
 
     // register the primitives into our builtin module
+    GlobalNamespace *builtinGlobalNS;
     ContextPtr builtinContext =
         new Context(*rootBuilder, Context::module, rootContext.get(),
                     // NOTE we can't have rootContext namespace be the parent
                     // here since we are adding the aliases into rootContext
                     // and we get dependency issues
-                    new GlobalNamespace(0, ".builtin"),
+                    builtinGlobalNS = new GlobalNamespace(0, ".builtin"),
                     new GlobalNamespace(0, ".builtin"));
     builtinMod = rootBuilder->registerPrimFuncs(*builtinContext);
 
@@ -306,6 +307,10 @@ ContextPtr Construct::createRootContext() {
          ++i) {
          rootContext->ns->addUnsafeAlias(i->first, i->second.get());
     }
+    
+    // attach the builtin module to the root namespace
+    rootContext->ns = builtinGlobalNS->builtin;
+    moduleCache[".builtin"] = builtinMod;
     
     return rootContext;
 }
@@ -398,6 +403,10 @@ void Construct::parseModule(Context &context,
     }
     parser.parse();
     module->close(context);
+    
+    // if we're caching, store the module.
+    if (context.construct->cacheMode)
+        context.cacheModule(module);
 }
 
 ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
@@ -588,8 +597,8 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                         );
         context->toplevel = true;
 
-        // before parsing the module from scratch, we give the builder a chance
-        // to materialize the module through its own means (e.g., a cache)
+        // before parsing the module from scratch, check the persistent cache 
+        // for it.
         bool cached = false;
         if (rootContext->construct->cacheMode && !modPath.isDir)
             modDef = context->materializeModule(canonicalName);
@@ -783,7 +792,7 @@ int Construct::runScript(istream &src, const string &name) {
     ModuleDefPtr modDef;
     bool cached = false;
     if (rootContext->construct->cacheMode)
-        builder::initCacheDirectory(rootBuilder->options.get(), *this);
+        crack::util::initCacheDirectory(rootBuilder->options.get(), *this);
     // we check cacheMode again after init,
     // because it might have been disabled if
     // we couldn't find an appropriate cache directory

@@ -16,12 +16,14 @@
 #include "parser/Token.h"
 #include "parser/Location.h"
 #include "parser/ParseError.h"
+#include "util/CacheFiles.h"
 #include "Annotation.h"
 #include "AssignExpr.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
 #include "ConstVarDef.h"
 #include "ConstSequenceExpr.h"
+#include "Deserializer.h"
 #include "FuncAnnotation.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
@@ -33,6 +35,7 @@
 #include "NullConst.h"
 #include "OverloadDef.h"
 #include "ResultExpr.h"
+#include "Serializer.h"
 #include "StrConst.h"
 #include "TernaryExpr.h"
 #include "TypeDef.h"
@@ -42,6 +45,7 @@
 
 using namespace model;
 using namespace std;
+using namespace crack::util;
 
 parser::Location Context::emptyLoc;
 
@@ -268,11 +272,45 @@ ModuleDefPtr Context::createModule(const string &name,
 
 ModuleDefPtr Context::materializeModule(const string &canonicalName,
                                         ModuleDef *owner) {
-    ModuleDefPtr result =
-        builder.materializeModule(*this, canonicalName, owner);
+    // check the cache path for module metadata.
+    string metaDataPath = getCacheFilePath(builder.options.get(),
+                                           *construct,
+                                           canonicalName,
+                                           "crkmeta"
+                                           );
+    
+    if (!Construct::isFile(metaDataPath))
+        return 0;
+    
+    ifstream src(metaDataPath.c_str());
+    Deserializer deser(src, this);
+    
+    // XXX not sure what I'm going to do about source digests just yet.
+    SourceDigest *digest = 0;
+    if (!ModuleDef::readHeaderAndVerify(deser, *digest))
+        return 0;
+    
+    ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);
+    
+//    ModuleDefPtr result =
+//        builder.materializeModule(*this, canonicalName, owner);
     if (result)
         ns = result;
     return result;
+}
+
+void Context::cacheModule(ModuleDef *mod) {
+    string metaDataPath = getCacheFilePath(builder.options.get(),
+                                           *construct,
+                                           mod->getNamespaceName(),
+                                           "crkmeta"
+                                           );
+    
+    ofstream dst(metaDataPath.c_str());
+    Serializer ser(dst);
+    mod->serialize(ser);
+    
+    builder.cacheModule(*this, mod);
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {

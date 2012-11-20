@@ -136,7 +136,7 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
                                     const SourceDigest &digest
                                     ) {
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
-        return 0;
+        return false;
 
     //deser.readBlob()  // XXX read the source hash.
 
@@ -153,6 +153,8 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
         if (mod->getDefHash() != deser.readUInt("hashVal"))
             return false;
     }
+
+    return true;
 }
 
 ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
@@ -164,7 +166,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                                  );
     deser.context->ns = mod.get();
     mod->deserializeDefs(deser);
-    mod->close(*deser.context);
     return mod;
 }
 

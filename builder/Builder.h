@@ -462,6 +462,15 @@ class Builder : public spug::RCBase {
             const std::string &name,
             const model::ArgVec &args
         ) = 0;
+        
+        /**
+         * Write the module implementation to the persistent cache in whatever 
+         * format is appropriate.
+         */
+        virtual void cacheModule(
+            model::Context &context,
+            model::ModuleDef *module
+        ) = 0;
 
         /**
          * Create a new cleanup frame.

@@ -40,11 +40,14 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/CallingConv.h>
+#include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Intrinsics.h>
 
@@ -55,18 +58,21 @@
 #include <model/AssignExpr.h>
 #include <model/CompositeNamespace.h>
 #include <model/Construct.h>
+#include <model/GlobalNamespace.h>
 #include <model/InstVarDef.h>
 #include <model/LocalNamespace.h>
 #include <model/NullConst.h>
 #include <model/OverloadDef.h>
 #include <model/StubDef.h>
 #include <model/TernaryExpr.h>
+#include "util/CacheFiles.h"
 
 using namespace std;
 using namespace llvm;
 using namespace model;
 using namespace builder;
 using namespace builder::mvll;
+using namespace crack::util;
 
 typedef model::FuncCall::ExprVec ExprVec;
 
@@ -2062,17 +2068,40 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
                                       TypeDef *type
                                       ) {
-    SPUG_CHECK(false, "LLVMBuilder::materializeVar() not implemented");
+    ostringstream tmp;
+    tmp << context.ns->getNamespaceName() << "." << name;
+    const string &fullName = tmp.str();
+    VarDefPtr result = new VarDef(type, name);
+    GlobalVariable *gvar = module->getGlobalVariable(fullName);
+    SPUG_CHECK(gvar,
+               "Global variable " << fullName << " of type " <<
+                type->getFullName() << " not found in module " <<
+                module->getModuleIdentifier()
+               );
+    result->impl = new BGlobalVarDefImpl(gvar);
+    return result;
 }
 
 ArgDefPtr LLVMBuilder::materializeArg(Context &context, const string &name,
                                       TypeDef *type
                                       ) {
-    SPUG_CHECK(false, "LLVMBuilder::materializeArg() not implemented");
+    return new ArgDef(type, name);
 }
 
 TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
-    SPUG_CHECK(false, "LLVMBuilder::materializeType() not implemented");
+    ostringstream tmp;
+    tmp << context.ns->getNamespaceName() << "." << name;
+    const string &fullName = tmp.str();
+    Type *llvmType = module->getTypeByName(fullName);
+    SPUG_CHECK(llvmType,
+               "Type " << fullName << " not found in module " <<
+                module->getModuleIdentifier()
+               );
+
+    return new BTypeDef(context.construct->classType.get(),
+                        name,
+                        llvmType
+                        );
 }
 
 
@@ -2080,6 +2109,27 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
                                         const ArgVec &args
                                         ) {
     SPUG_CHECK(false, "LLVMBuilder::materializeFunc() not implemented");
+}
+
+void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
+    assert(false);
+    string errors;
+    string path = getCacheFilePath(options.get(),
+                                   *context.construct,
+                                   module->getNamespaceName(),
+                                   "bc"
+                                   );
+    tool_output_file out(path.c_str(), errors, 0);
+    if (errors.size())
+        throw spug::Exception(errors);
+
+    // fos needs to destruct before we can "keep()"
+    {
+        formatted_raw_ostream fos(out.os());
+        WriteBitcodeToFile(BModuleDefPtr::cast(module)->rep, fos);
+    }
+
+    out.keep();
 }
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
@@ -2093,6 +2143,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createLLVMModule(".builtin");
     BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
     bModDef = bMod.get();
+
+    // tie the builtin module to the global namespace (context's namespace
+    // must be a global namespace)
+    GlobalNamespacePtr::arcast(context.ns)->builtin = bMod.get();
 
     if (options->debugMode)
         debugInfo = new DebugInfo(module,
@@ -2799,10 +2853,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         vector<Type *> elems(2);
         elems[0] = builder.getInt8PtrTy();
         elems[1] = builder.getInt32Ty();
-        exStructType = new BTypeDef(metaType.get(), ":ExStruct",
+        exStructType = new BTypeDef(0, ":ExStruct",
                                     StructType::get(lctx, elems),
                                     false
                                     );
+        context.addDef(exStructType.get());
+        deferMetaClass.push_back(exStructType);
     }
 
     // now that we have byteptr and array and all of the integer types, we can

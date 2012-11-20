@@ -155,7 +155,6 @@ noinst_HEADERS = \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
-    builder/util/CacheFiles.h \
     debug/DebugTools.h \
     ext/Stub.h \
     model/AllocExpr.h \
@@ -227,6 +226,7 @@ noinst_HEADERS = \
     tests/MockBuilder.h \
     tests/MockFuncDef.h \
     tests/MockModuleDef.h \
+    util/CacheFiles.h \
     util/md5.h \
     util/SourceDigest.h \
     compiler/init.h \

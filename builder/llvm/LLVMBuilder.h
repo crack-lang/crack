@@ -461,6 +461,11 @@ class LLVMBuilder : public Builder {
             const model::ArgVec &args
         );
 
+        virtual void cacheModule(
+            model::Context &context,
+            model::ModuleDef *module
+        );
+        
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);
