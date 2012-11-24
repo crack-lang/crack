@@ -123,9 +123,11 @@ _fluidsynth_la_CXXFLAGS = @FLUIDSYNTH_CPPFLAGS@
 _fluidsynth_la_SOURCES = opt/_fluidsynth.cc
 endif
 
+if HAVE_PNG
 extlib_LTLIBRARIES += _png.la
-_png_la_LDFLAGS = -avoid-version -module -lpng
+_png_la_LDFLAGS = -avoid-version -module @PNG_LIBS@
 _png_la_SOURCES = opt/_png.cc
+endif
 
 noinst_HEADERS = \
     builder/Builder.h \
