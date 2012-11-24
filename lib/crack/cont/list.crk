@@ -21,15 +21,19 @@ bool _isObject(Object obj) { return true; }
 bool _isNull(Object obj) {
     return (obj is null);
 }
+bool _equal(Object a, Object b) {
+    return a == b;
+}
 
 @define _nobind 1
     void _bind($1 i) { }
     void _release($1 i) { }
     bool _isObject($1 i) { return false; }
     bool _isNull($1 i) { return false; } 
+    bool _equal($1 a, $1 b) { return a == b; }
 $$
 
-@_nobind bool
+#@_nobind bool
 @_nobind byte
 @_nobind int
 @_nobind int16
@@ -42,7 +46,7 @@ $$
 @_nobind float
 @_nobind float32
 @_nobind float64
-@_nobind byteptr
+#@_nobind byteptr
 
 ## A singly-linked list.
 class List[Elem] {
@@ -228,15 +232,14 @@ class List[Elem] {
     void delete(Elem elem) {
         if (_isNull(elem)) throw InvalidArgumentError("Invalid argument null for delete()");
         if (_isNull(head) || _isNull(tail)) throw AssertionError("Cannot delete element from empty list");
-        if (head.elem == elem &&  head){
+        if (_equal(head.elem, elem) && head) {
             popHead();
-        }
-        else if (tail.elem == elem && tail){
+        } else if (_equal(tail.elem, elem) && tail) {
             popTail();
         } else {
             Node onode, tnode;
             onode = tnode = head;
-            while (tnode.elem != elem) {
+            while (!_equal(tnode.elem, elem)) {
                 onode = tnode;
                 tnode = tnode.next;
             }
