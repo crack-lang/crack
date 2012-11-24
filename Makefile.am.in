@@ -44,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs _ssl
+             _cairosdl _xs _ssl _png
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -122,6 +122,10 @@ _fluidsynth_la_LDFLAGS = -avoid-version -module @FLUIDSYNTH_LIBS@
 _fluidsynth_la_CXXFLAGS = @FLUIDSYNTH_CPPFLAGS@
 _fluidsynth_la_SOURCES = opt/_fluidsynth.cc
 endif
+
+extlib_LTLIBRARIES += _png.la
+_png_la_LDFLAGS = -avoid-version -module -lpng
+_png_la_SOURCES = opt/_png.cc
 
 noinst_HEADERS = \
     builder/Builder.h \
