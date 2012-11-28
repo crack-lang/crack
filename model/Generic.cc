@@ -77,7 +77,7 @@ Token Generic::deserializeToken(Deserializer &src) {
             tokText = src.readString(32, "tokenData");
     }
     Location loc =
-        LocationImplPtr::rcast(src.readObject(LocReader(), "loc"));
+        LocationImplPtr::rcast(src.readObject(LocReader(), "loc").object);
     return Token(tokType, tokText, loc);
 }
 

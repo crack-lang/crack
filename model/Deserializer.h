@@ -74,14 +74,27 @@ class Deserializer {
          */
         std::string readString(size_t expectedMaxSize, const char *name);
 
+        struct ReadObjectResult {
+            spug::RCBasePtr object;
+
+            // True if we just read the definition of the object (if this was
+            // the first time it was encountered)
+            bool definition;
+
+            ReadObjectResult(spug::RCBasePtr object, bool definition) :
+                object(object),
+                definition(definition) {
+            }
+        };
+
         /**
          * Read the next object from the stream.  This returns a pointer to an
          * existing object if the object possibly calling reader.read() to
          * deserialize the object from the stream.
          */
-        spug::RCBasePtr readObject(const ObjectReader &reader,
-                                   const char *name
-                                   );
+        ReadObjectResult readObject(const ObjectReader &reader,
+                                    const char *name
+                                    );
 };
 
 }

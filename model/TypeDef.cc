@@ -995,13 +995,8 @@ namespace {
                 // bases
                 int count = deser.readUInt("#bases");
                 TypeDef::TypeVec bases(count);
-                for (int i = 0; i < count; ++i) {
-                    bases[i] = 
-                        TypeDefPtr::rcast(
-                            deser.readObject(*this, "bases[i]" )
-                        );
-                    bases[i]->decref();
-                }
+                for (int i = 0; i < count; ++i)
+                    bases[i] = TypeDef::deserialize(deser, "bases[i]");
 
                 // instantiate the type                
                 type = deser.context->builder.materializeType(*deser.context,
@@ -1025,8 +1020,11 @@ namespace {
     };
 } // anon namespace
 
-TypeDefPtr TypeDef::deserialize(Deserializer &deser) {
+TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
     TypeDefPtr result = 
-        TypeDefPtr::rcast(deser.readObject(TypeDefReader(), "type"));
+        TypeDefPtr::rcast(deser.readObject(TypeDefReader(), 
+                                           name ? name : "type"
+                                           ).object
+                          );
     return result;
 }

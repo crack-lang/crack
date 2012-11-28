@@ -142,7 +142,7 @@ namespace {
 VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
     return VarDefPtr::rcast(serializer.readObject(AliasReader(),
                                                   "ext"
-                                                  )
+                                                  ).object
                             );
 }
 

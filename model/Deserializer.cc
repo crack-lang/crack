@@ -60,9 +60,10 @@ string Deserializer::readString(size_t expectedMaxSize, const char *name) {
     }
 }
 
-spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
-                                         const char *name
-                                         ) {
+Deserializer::ReadObjectResult Deserializer::readObject(
+    const ObjectReader &reader,
+    const char *name
+) {
     int id = readUInt(name);
     if (id & 1) {
         // this is a definition - let the reader read the object
@@ -70,7 +71,7 @@ spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
             cerr << "reading new object " << name << " id = " << id << endl;
         spug::RCBasePtr obj = reader.read(*this);
         objMap[id >> 1] = obj;
-        return obj;
+        return ReadObjectResult(obj, true);
     } else {
         // the object should already exist
         if (Serializer::trace)
@@ -78,6 +79,6 @@ spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
                 endl;
         ObjMap::iterator iter = objMap.find(id >> 1);
         assert(iter != objMap.end() && "Unable to resolve serialized object");
-        return iter->second;
+        return ReadObjectResult(iter->second, false);
     }
 }
