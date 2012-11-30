@@ -258,9 +258,10 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     // name for the type is not always available yet
     string canonicalName(earlyCanonicalize(context, name));
 
+    string metaTypeName = SPUG_FSTR(canonicalName << ":meta");
     BTypeDefPtr metaType =
         new BTypeDef(context.construct->classType.get(),
-                     SPUG_FSTR(canonicalName << ":meta"),
+                     metaTypeName,
                      0,
                      true,
                      0
@@ -277,6 +278,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     fields[0] = classStructType;
     StructType *metaClassStructType =
             StructType::create(lctx, fields);
+    LLVMBuilder::putLLVMType(metaTypeName, metaClassStructType);
     Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;

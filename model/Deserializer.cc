@@ -69,9 +69,10 @@ Deserializer::ReadObjectResult Deserializer::readObject(
         // this is a definition - let the reader read the object
         if (Serializer::trace)
             cerr << "reading new object " << name << " id = " << id << endl;
+        userData = 0;
         spug::RCBasePtr obj = reader.read(*this);
         objMap[id >> 1] = obj;
-        return ReadObjectResult(obj, true);
+        return ReadObjectResult(obj, true, userData);
     } else {
         // the object should already exist
         if (Serializer::trace)
@@ -79,6 +80,6 @@ Deserializer::ReadObjectResult Deserializer::readObject(
                 endl;
         ObjMap::iterator iter = objMap.find(id >> 1);
         assert(iter != objMap.end() && "Unable to resolve serialized object");
-        return ReadObjectResult(iter->second, false);
+        return ReadObjectResult(iter->second, false, 0);
     }
 }

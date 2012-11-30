@@ -204,7 +204,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
         // ignore special symbols.
         if (i->first[0] == ':')
             continue;
-        else if (i->second->getOwner() != serializer.module)
+        else if (i->second->getModule() != serializer.module)
             i->second->serializeAlias(serializer, i->first);
         else
             i->second->serialize(serializer, true);
@@ -236,7 +236,7 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 addDef(OverloadDef::deserialize(deser).get());
                 break;
             case Serializer::typeId:
-                addDef(TypeDef::deserialize(deser).get());
+                TypeDef::deserialize(deser).get();
                 break;
             default:
                 SPUG_CHECK(false, "Bad definition type id " << kind);

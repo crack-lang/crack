@@ -42,6 +42,12 @@ class Deserializer {
 
         Context *context;
 
+        // Allows an object reader to pass back information to the
+        // higher-level calling code for use after the object is deserialized.
+        // This is copied into the ReadObjectResult structure returned by
+        // readObject().
+        int userData;
+
         Deserializer(std::istream &src) : src(src) {}
         Deserializer(std::istream &src, Context *context) :
             src(src),
@@ -81,9 +87,15 @@ class Deserializer {
             // the first time it was encountered)
             bool definition;
 
-            ReadObjectResult(spug::RCBasePtr object, bool definition) :
+            // Field to allow first-stage deserializers to pass information
+            // back to a second stage.  Initialized to zero.
+            int userData;
+
+            ReadObjectResult(spug::RCBasePtr object, bool definition,
+                             int userData) :
                 object(object),
-                definition(definition) {
+                definition(definition),
+                userData(userData) {
             }
         };
 

@@ -1003,16 +1003,14 @@ namespace {
                                                               name
                                                               );
                 type->parents = bases;
+                // XXX yarks.  this assumes that the parent context of the 
+                // first definition is always the context of the class.  Is 
+                // that really safe?
+                deser.context->addDef(type.get());
                 
-                // 'defs' - fill in the body.
-                ContextPtr classContext = 
-                    deser.context->createSubContext(Context::instance,
-                                                    type.get(),
-                                                    &name
-                                                    );
-                ContextStackFrame<Deserializer> 
-                    cstack(deser, classContext.get());
-                type->deserializeDefs(deser);
+                // pass a flag back to indicate that we just deserialized a 
+                // definition.
+                deser.userData = 1;
             }
             
             return type;
@@ -1021,10 +1019,21 @@ namespace {
 } // anon namespace
 
 TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
-    TypeDefPtr result = 
-        TypeDefPtr::rcast(deser.readObject(TypeDefReader(), 
-                                           name ? name : "type"
-                                           ).object
-                          );
+    Deserializer::ReadObjectResult readObj = 
+        deser.readObject(TypeDefReader(), name ? name : "type");
+    TypeDefPtr result = TypeDefPtr::rcast(readObj.object);
+
+    // if we're in a non-alias definition
+    if (readObj.userData) {
+        // 'defs' - fill in the body.
+        ContextPtr classContext =
+            deser.context->createSubContext(Context::instance,
+                                            result.get(),
+                                            &result->name
+                                            );
+        ContextStackFrame<Deserializer> cstack(deser, classContext.get());
+        result->deserializeDefs(deser);
+    }
+
     return result;
 }

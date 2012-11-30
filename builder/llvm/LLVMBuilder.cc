@@ -1369,12 +1369,11 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     // we first check to see if a structure with this canonical name exists
     // if it does, we use it. if it doesn't we create it, and the body and
     // name get set in emitEndClass
-    BTypeDefPtr existing =
-        BTypeDefPtr::rcast(context.construct->getRegisteredDef(canonicalName));
-    if (existing)
-        curType = cast<StructType>(existing->rep);
-    else
+    curType = getLLVMType(canonicalName);
+    if (!curType) {
         curType = StructType::create(getGlobalContext());
+        putLLVMType(canonicalName, curType);
+    }
     type = new BTypeDef(metaType.get(), name,
                         PointerType::getUnqual(curType),
                         true,
@@ -2097,6 +2096,7 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
                "Type " << fullName << " not found in module " <<
                 module->getModuleIdentifier()
                );
+    putLLVMType(fullName, cast<StructType>(llvmType));
 
     return new BTypeDef(context.construct->classType.get(),
                         name,
@@ -2108,7 +2108,20 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
 FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
                                         const ArgVec &args
                                         ) {
-    SPUG_CHECK(false, "LLVMBuilder::materializeFunc() not implemented");
+
+    ostringstream tmp;
+    tmp << context.ns->getNamespaceName() << "." << name;
+    const string &fullName = tmp.str();
+    // XXX arg types need to be part of a function signature
+    Function *func = module->getFunction(fullName);
+    SPUG_CHECK(func,
+               "Function " << fullName << " not found in module " <<
+                module->getModuleIdentifier()
+               );
+    // XXX add flags.
+    BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
+    result->setRep(func);
+    return result;
 }
 
 void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
@@ -2164,14 +2177,14 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // create the basic types
 
     BTypeDef *classType;
-    Type *classTypeRep = StructType::create(lctx);
+    StructType *classTypeRep = StructType::create(lctx);
+    putLLVMType(".builtin.Class", classTypeRep);
     Type *classTypePtrRep = PointerType::getUnqual(classTypeRep);
     gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
     classType->type = classType;
     classType->meta = classType;
     classType->defaultInitializer = new NullConst(classType);
     context.addDef(classType);
-    context.construct->registerDef(classType);
 
     // some tools for creating meta-classes
     BTypeDefPtr metaType;           // storage for meta-types
@@ -2186,11 +2199,10 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     BTypeDef *voidptrType;
     llvmVoidPtrType = Type::getInt8Ty(lctx)->getPointerTo();
-        PointerType::getUnqual(StructType::create(getGlobalContext()));
-    gd->voidptrType = voidptrType = new BTypeDef(context.construct->classType.get(),
-                                                 "voidptr",
-                                                 llvmVoidPtrType
-                                                 );
+    gd->voidptrType = voidptrType =
+        new BTypeDef(context.construct->classType.get(), "voidptr",
+                     llvmVoidPtrType
+                     );
     voidptrType->defaultInitializer = new NullConst(voidptrType);
     context.addDef(voidptrType);
     deferMetaClass.push_back(voidptrType);
@@ -2889,9 +2901,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // Actual type is {}** (another layer of pointer indirection) because
     // classes need to be pointer types.
     vector<Type *> members;
-    Type *vtableType = StructType::create(getGlobalContext(), members,
-                                          ".builtin.VTableBase"
-                                          );
+    string vtableTypeName = ".builtin.VTableBase";
+    StructType *vtableType = StructType::create(getGlobalContext(), members,
+                                                vtableTypeName
+                                                );
+    putLLVMType(vtableTypeName, vtableType);
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
     metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;
@@ -3149,3 +3163,21 @@ void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
     btype->addPlaceholder(vtableInit);
 }
 
+LLVMBuilder::TypeMap LLVMBuilder::llvmTypes;
+
+StructType *LLVMBuilder::getLLVMType(const string &canonicalName) {
+    TypeMap::iterator iter = llvmTypes.find(canonicalName);
+    if (iter == llvmTypes.end())
+        return 0;
+    return iter->second;
+}
+
+void LLVMBuilder::putLLVMType(const string &canonicalName,
+                              StructType *type
+                              ) {
+    pair<TypeMap::iterator, bool> result =
+        llvmTypes.insert(pair<string, StructType *>(canonicalName, type));
+    SPUG_CHECK(result.second,
+               "Attempting to redefine LLVM type " << canonicalName
+               );
+}
