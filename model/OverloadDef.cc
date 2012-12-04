@@ -206,6 +206,13 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
+bool OverloadDef::isSerializable() const {
+    if (!VarDef::isSerializable()) 
+        return false;
+    else
+        return hasNonBuiltins();   
+}
+
 bool OverloadDef::isSingleFunction() const {
     FuncList flatFuncs;
     flatten(flatFuncs);
@@ -277,7 +284,31 @@ void OverloadDef::addDependenciesTo(const ModuleDef *mod,
     }
 }
 
+bool OverloadDef::hasNonBuiltins() const {
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         ) {
+        if (!((*iter)->flags & FuncDef::builtin))
+            return true;
+    }
+}
+
 void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
+
+    // calculate the number of functions to serialize (we don't serialize 
+    // builtins)
+    int size = 0;
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         ) {
+        // don't serialize the builtin functions - these get added as part of 
+        // class construction.
+        if (!((*iter)->flags & FuncDef::builtin))
+            ++size;
+    }
+
     if (writeKind)
         serializer.write(Serializer::overloadId, "kind");
     serializer.write(name, "name");
@@ -286,8 +317,12 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         )
-        (*iter)->serialize(serializer, false);
+         ) {
+        // don't serialize the builtin functions - these get added as part of 
+        // class construction.
+        if (!((*iter)->flags & FuncDef::builtin))
+            (*iter)->serialize(serializer, false);
+    }
 }
 
 OverloadDefPtr OverloadDef::deserialize(Deserializer &deser) {

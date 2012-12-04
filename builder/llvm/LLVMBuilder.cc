@@ -1355,6 +1355,37 @@ FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
     return f.funcDef;
 }
 
+namespace {
+    // create a BTypeDef with all of the built-in methods.
+    BTypeDefPtr createTypeDef(Context &context, const string &name,
+                              BTypeDef *metaType,
+                              Type *llvmType,
+                              unsigned int nextVTableSlot
+                              ) {
+        BTypeDefPtr type = new BTypeDef(metaType, name,
+                                        PointerType::getUnqual(llvmType),
+                                        true,
+                                        nextVTableSlot
+                                        );
+
+        // tie the meta-class to the class
+        metaType->meta = type.get();
+
+        // create the unsafeCast() function.
+        context.addDef(new UnsafeCastDef(type.get()), metaType);
+
+        // create function to convert to voidptr
+        context.addDef(new VoidPtrOpDef(context.construct->voidptrType.get()),
+                       type.get()
+                       );
+
+        // make the class default to initializing to null
+        type->defaultInitializer = new NullConst(type.get());
+
+        return type;
+    }
+}
+
 BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
                                      unsigned int nextVTableSlot
                                      ) {
@@ -1374,26 +1405,9 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
         curType = StructType::create(getGlobalContext());
         putLLVMType(canonicalName, curType);
     }
-    type = new BTypeDef(metaType.get(), name,
-                        PointerType::getUnqual(curType),
-                        true,
-                        nextVTableSlot
-                        );
-
-    // tie the meta-class to the class
-    metaType->meta = type.get();
-
-    // create the unsafeCast() function.
-    context.addDef(new UnsafeCastDef(type.get()), metaType.get());
-
-    // create function to convert to voidptr
-    context.addDef(new VoidPtrOpDef(context.construct->voidptrType.get()),
-                   type.get());
-
-    // make the class default to initializing to null
-    type->defaultInitializer = new NullConst(type.get());
-
-    return type;
+    return createTypeDef(context, name, metaType.get(), curType,
+                         nextVTableSlot
+                         );
 }
 
 TypeDefPtr LLVMBuilder::createClassForward(Context &context,
@@ -2098,10 +2112,9 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
                );
     putLLVMType(fullName, cast<StructType>(llvmType));
 
-    return new BTypeDef(context.construct->classType.get(),
-                        name,
-                        llvmType
-                        );
+//    cerr << "XXX can't materialize vtable base count yet" << endl;
+    BTypeDefPtr metaType = createMetaClass(context, name);
+    return createTypeDef(context, name, metaType.get(), llvmType, 0);
 }
 
 

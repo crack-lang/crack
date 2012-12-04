@@ -99,6 +99,11 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
+         * Returns true if the definition should be serialized.
+         */
+        virtual bool isSerializable() const;
+        
+        /**
          * Add all of the modules that this 
          */
         virtual void addDependenciesTo(const ModuleDef *mod,

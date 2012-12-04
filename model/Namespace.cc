@@ -190,8 +190,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        // ignore special symbols.
-        if (i->first[0] != ':')
+        if (i->second->isSerializable())
             ++count;
     }
     
@@ -201,8 +200,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        // ignore special symbols.
-        if (i->first[0] == ':')
+        if (!i->second->isSerializable())
             continue;
         else if (i->second->getModule() != serializer.module)
             i->second->serializeAlias(serializer, i->first);

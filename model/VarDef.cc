@@ -88,6 +88,10 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
+bool VarDef::isSerializable() const {
+    return name[0] != ':';
+}
+
 void VarDef::addDependenciesTo(const ModuleDef *mod,
                                ModuleDefMap &deps
                                ) const {

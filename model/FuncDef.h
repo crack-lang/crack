@@ -36,6 +36,8 @@ class FuncDef : public VarDef {
             variadic = 8,  // this is a variadic function
             reverse = 16,  // for a binary op, reverse receiver and first arg
             abstract = 32,  // This is an abstract (pure virtual function)
+            builtin = 64,   // Not a real function.  Defined by the executor,
+                            // calls expand to a sequence of instructions.
             explicitFlags = 256  // these flags were set by an annotation
         } flags;
         
