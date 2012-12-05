@@ -54,6 +54,12 @@ class VarDef : public virtual spug::RCBase {
         virtual bool hasInstSlot();
         
         /**
+         * Returns the instance variable slot of the variable (if any).  -1 if 
+         * there is none.
+         */
+        virtual int getInstSlot() const;
+        
+        /**
          * Returns true if the definition is class static.
          */
         virtual bool isStatic() const;

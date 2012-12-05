@@ -47,6 +47,7 @@ public:
     model::VarDefImplPtr promote(LLVMBuilder &builder, model::ArgDef *arg);
     
     virtual bool hasInstSlot() const;
+    virtual int getInstSlot() const;
 };
 
 
@@ -65,6 +66,7 @@ public:
     virtual llvm::Value *getRep(LLVMBuilder &builder) = 0;
 
     virtual bool hasInstSlot() const;
+    virtual int getInstSlot() const;
 };
 
 SPUG_RCPTR(BHeapVarDefImpl)
@@ -116,6 +118,7 @@ public:
     }
 
     virtual bool hasInstSlot() const;
+    virtual int getInstSlot() const;
 };
 
 SPUG_RCPTR(BFieldDefImpl);
@@ -175,6 +178,7 @@ class BInstVarDefImpl : public BFieldDefImpl {
                                           );
 
         virtual bool hasInstSlot() const;
+        virtual int getInstSlot() const;
 };
 
 // Implementation for "offset fields."  These are used to access structure 
@@ -196,6 +200,7 @@ class BOffsetFieldDefImpl : public BFieldDefImpl {
                                           );
 
         virtual bool hasInstSlot() const;
+        virtual int getInstSlot() const;
 };
 
 

@@ -445,7 +445,8 @@ class LLVMBuilder : public Builder {
         virtual model::VarDefPtr materializeVar(
             model::Context &context,
             const std::string &name,
-            model::TypeDef *type
+            model::TypeDef *type,
+            int instSlot
         );
 
         virtual model::ArgDefPtr materializeArg(

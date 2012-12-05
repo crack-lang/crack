@@ -114,6 +114,7 @@ So given this, our meta-data format is:
 
     VarDef {
         blob name
+        uint instSlot  # the instance slot, 0 if there is none.
         ref[Type] type
     }
 

@@ -2079,19 +2079,24 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
 }
 
 VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
-                                      TypeDef *type
+                                      TypeDef *type,
+                                      int instSlot
                                       ) {
     ostringstream tmp;
     tmp << context.ns->getNamespaceName() << "." << name;
     const string &fullName = tmp.str();
     VarDefPtr result = new VarDef(type, name);
-    GlobalVariable *gvar = module->getGlobalVariable(fullName);
-    SPUG_CHECK(gvar,
-               "Global variable " << fullName << " of type " <<
-                type->getFullName() << " not found in module " <<
-                module->getModuleIdentifier()
-               );
-    result->impl = new BGlobalVarDefImpl(gvar);
+    if (instSlot >= 0) {
+        result->impl = new BInstVarDefImpl(instSlot);
+    } else {
+        GlobalVariable *gvar = module->getGlobalVariable(fullName);
+        SPUG_CHECK(gvar,
+                   "Global variable " << fullName << " of type " <<
+                    type->getFullName() << " not found in module " <<
+                    module->getModuleIdentifier()
+                );
+        result->impl = new BGlobalVarDefImpl(gvar);
+    }
     return result;
 }
 
