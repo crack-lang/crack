@@ -2697,6 +2697,10 @@ void Parser::parseImportStmt(Namespace *ns) {
                           " recursively."
                          )
                );
+      
+      // add an implicit dependency to the current module.
+      ModuleDefPtr curMod = context->getModuleContext()->ns;
+      curMod->imports.push_back(mod);
 
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
