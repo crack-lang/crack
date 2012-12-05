@@ -14,6 +14,7 @@
 #include <iomanip>
 #include "spug/RCBase.h"
 #include "Serializer.h"
+#include "DeserializationError.h"
 
 using namespace std;
 using namespace model;
@@ -22,6 +23,8 @@ unsigned int Deserializer::readUInt(const char *name) {
     uint8_t b = 0x80;
     unsigned val = 0, offset = 0;
     while (b & 0x80) {
+        if (src.eof())
+            throw DeserializationError("EOF deserializing meta-data");
         b = src.get();
 
         // see if we've got the last byte
@@ -42,6 +45,8 @@ char *Deserializer::readBlob(size_t &size, char *buffer, const char *name) {
         buffer = new char[size];
 
     src.read(buffer, size);
+    if (src.fail())
+        throw DeserializationError("EOF deserializing meta-data");
     if (Serializer::trace)
         cerr << "read blob " << name << ": " << setw(size) << buffer << endl;
     return buffer;
