@@ -20,6 +20,7 @@
 #include "builder/BuilderOptions.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
+#include "builder/llvm/StructResolver.h"
 #include "debug/DebugTools.h"
 #include "Crack.h"
 #include "config.h"
@@ -246,6 +247,8 @@ int main(int argc, char **argv) {
             case 't':
                 if (!strcmp("Serializer", optarg)) {
                     model::Serializer::trace = true;
+                } else if (!strcmp("StructResolver", optarg)) {
+                    builder::mvll::StructResolver::trace = true;
                 } else {
                     cerr << "Unknown trace module (-t): " << optarg << endl;
                     exit(1);

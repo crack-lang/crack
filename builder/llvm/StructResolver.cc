@@ -22,8 +22,10 @@
 
 using namespace llvm;
 using namespace std;
+using namespace builder::mvll;
 
-#define SR_DEBUG if (0)
+#define SR_DEBUG if (trace)
+bool StructResolver::trace = false;
 
 namespace {
     const char *tName(int t) {
@@ -166,16 +168,22 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
                 sVec.push_back(*e);
             }
         }
-        if (modified) {            
+        if (modified) {
             StructType *m;
             StructType *origS = cast<StructType>(t);
+            SR_DEBUG cout << "\t\t## replacing struct " << 
+                (origS->hasName() ? origS->getName().str() : 
+                 string("<noname>")
+                 )
+                << endl;
             if (origS->isLiteral()) {
                 m = StructType::get(getGlobalContext(), sVec);
             }
             else {
                 // take over the name
+                string origName = origS->getName().str();
                 origS->setName("");
-                m = StructType::create(sVec, origS->getName().str());
+                m = StructType::create(sVec, origName);
             }
             (*typeMap)[t] = m;
             //return m;

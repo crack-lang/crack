@@ -19,11 +19,15 @@ namespace llvm {
     class Function;
 }
 
+namespace builder {
+namespace mvll {
+
 class StructResolver {
 
 public:
     typedef std::map<llvm::Type*, llvm::Type*> StructMapType;
     typedef std::map<std::string, llvm::Type*> StructListType;
+    static bool trace;
 
 protected:
     llvm::Module *module;
@@ -52,5 +56,7 @@ public:
     void run(StructMapType *m);
 
 };
+
+}} // namespace builder::mvll
 
 #endif

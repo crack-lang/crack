@@ -1403,6 +1403,7 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
     curType = getLLVMType(canonicalName);
     if (!curType) {
         curType = StructType::create(getGlobalContext());
+        curType->setName(canonicalName);
         putLLVMType(canonicalName, curType);
     }
     return createTypeDef(context, name, metaType.get(), curType,
@@ -1627,11 +1628,15 @@ namespace {
                                 0
                                 );
 
-        // ensure canonicalized symbol names for link
-        if (context.parent->ns) {
-            funcBuilder.setSymbolName(context.parent->ns->getNamespaceName()+
-                                      ":oper class");
-        }
+        // ensure canonicalized symbol names for link.  We have to construct
+        // this name because at the point where we get called the class hasn't
+        // yet been assigned a context.
+        funcBuilder.setSymbolName(
+            SPUG_FSTR(context.parent->ns->getNamespaceName() << '.' <<
+                      objClass->name <<
+                      ".oper class"
+                      )
+        );
 
         // if this is an override, do the wrapping.
         FuncDefPtr override = context.lookUpNoArgs("oper class", true,
@@ -1784,13 +1789,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
         cast<PointerType>(type->rep);
     StructType *curType = cast<StructType>(ptrType->getElementType());
 
-    // a type may already have a name here if it existed in the llvm context
-    // when createClass was called. this happens in caching scenarios. only if
-    // it doesn't have a name do we proceed with the body and the name
-    if (!curType->hasName()) {
-        curType->setBody(members);
-        curType->setName(canonicalName);
-    }
+    curType->setBody(members);
 
     // verify that all of the base classes are complete (because we can only
     // inherit from an incomplete base class in the case of a nested derived
@@ -2196,6 +2195,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     BTypeDef *classType;
     StructType *classTypeRep = StructType::create(lctx);
+    classTypeRep->setName(".builtin.Class");
     putLLVMType(".builtin.Class", classTypeRep);
     Type *classTypePtrRep = PointerType::getUnqual(classTypeRep);
     gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
