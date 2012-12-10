@@ -1789,7 +1789,10 @@ void LLVMBuilder::emitEndClass(Context &context) {
         cast<PointerType>(type->rep);
     StructType *curType = cast<StructType>(ptrType->getElementType());
 
-    curType->setBody(members);
+    // set the body (if we haven't already: this can happen if we're reusing
+    // an existing LLVM type object)
+    if (curType->isOpaque())
+        curType->setBody(members);
 
     // verify that all of the base classes are complete (because we can only
     // inherit from an incomplete base class in the case of a nested derived
@@ -2194,9 +2197,12 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // create the basic types
 
     BTypeDef *classType;
-    StructType *classTypeRep = StructType::create(lctx);
-    classTypeRep->setName(".builtin.Class");
-    putLLVMType(".builtin.Class", classTypeRep);
+    StructType *classTypeRep = getLLVMType(".builtin.Class");
+    if (!classTypeRep) {
+        classTypeRep = StructType::create(lctx);
+        classTypeRep->setName(".builtin.Class");
+        putLLVMType(".builtin.Class", classTypeRep);
+    }
     Type *classTypePtrRep = PointerType::getUnqual(classTypeRep);
     gd->classType = classType = new BTypeDef(0, "Class", classTypePtrRep);
     classType->type = classType;
@@ -2920,10 +2926,13 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // classes need to be pointer types.
     vector<Type *> members;
     string vtableTypeName = ".builtin.VTableBase";
-    StructType *vtableType = StructType::create(getGlobalContext(), members,
-                                                vtableTypeName
-                                                );
-    putLLVMType(vtableTypeName, vtableType);
+    StructType *vtableType = getLLVMType(vtableTypeName);
+    if (!vtableType) {
+        vtableType = StructType::create(getGlobalContext(), members,
+                                        vtableTypeName
+                                        );
+        putLLVMType(vtableTypeName, vtableType);
+    }
     Type *vtablePtrType = PointerType::getUnqual(vtableType);
     metaType = createMetaClass(context, "VTableBase");
     BTypeDef *vtableBaseType;

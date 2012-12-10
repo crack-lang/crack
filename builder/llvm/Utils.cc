@@ -274,11 +274,14 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
 
     // Create a struct representation of the meta class.  This just has the
     // Class class as its only field.
-    vector<Type *> fields(1);
-    fields[0] = classStructType;
-    StructType *metaClassStructType =
-            StructType::create(lctx, fields);
-    LLVMBuilder::putLLVMType(metaTypeName, metaClassStructType);
+    StructType *metaClassStructType = LLVMBuilder::getLLVMType(metaTypeName);
+    if (!metaClassStructType) {
+        vector<Type *> fields(1);
+        fields[0] = classStructType;
+        metaClassStructType = StructType::create(lctx, fields);
+        LLVMBuilder::putLLVMType(metaTypeName, metaClassStructType);
+        metaClassStructType->setName(metaTypeName);
+    }
     Type *metaClassPtrType = PointerType::getUnqual(metaClassStructType);
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
@@ -291,7 +294,6 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
         context.getDefContext()->addDef(metaType.get());
     createClassImpl(context, metaType.get());
         
-    metaClassStructType->setName(metaType->getFullName());
 
     return metaType;
 }
