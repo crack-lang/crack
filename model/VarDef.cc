@@ -92,8 +92,8 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
-bool VarDef::isSerializable() const {
-    return name[0] != ':';
+bool VarDef::isSerializable(const ModuleDef *module) const {
+    return name[0] != ':' && getModule() == module;
 }
 
 void VarDef::addDependenciesTo(const ModuleDef *mod,

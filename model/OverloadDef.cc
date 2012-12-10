@@ -206,11 +206,11 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
-bool OverloadDef::isSerializable() const {
-    if (!VarDef::isSerializable()) 
+bool OverloadDef::isSerializable(const ModuleDef *module) const {
+    if (!VarDef::isSerializable(module))
         return false;
     else
-        return hasNonBuiltins();   
+        return hasSerializableFuncs(module);
 }
 
 bool OverloadDef::isSingleFunction() const {
@@ -269,8 +269,9 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
-         )
+         ) {
         (*parent)->display(out, prefix);
+    }
 }
 
 void OverloadDef::addDependenciesTo(const ModuleDef *mod, 
@@ -284,12 +285,12 @@ void OverloadDef::addDependenciesTo(const ModuleDef *mod,
     }
 }
 
-bool OverloadDef::hasNonBuiltins() const {
+bool OverloadDef::hasSerializableFuncs(const ModuleDef *module) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        if (!((*iter)->flags & FuncDef::builtin))
+        if ((*iter)->isSerializable(module))
             return true;
     }
 }
@@ -302,12 +303,9 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         ) {
-        // don't serialize the builtin functions - these get added as part of 
-        // class construction.
-        if (!((*iter)->flags & FuncDef::builtin))
+         )
+        if ((*iter)->isSerializable(serializer.module))
             ++size;
-    }
 
     if (writeKind)
         serializer.write(Serializer::overloadId, "kind");
@@ -318,9 +316,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
          iter != funcs.end();
          ++iter
          ) {
-        // don't serialize the builtin functions - these get added as part of 
-        // class construction.
-        if (!((*iter)->flags & FuncDef::builtin))
+        if ((*iter)->isSerializable(serializer.module))
             (*iter)->serialize(serializer, false);
     }
 }

@@ -214,6 +214,12 @@ void FuncDef::addDependenciesTo(const ModuleDef *mod,
         (*iter)->type->addDependenciesTo(mod, deps);
 }
 
+bool FuncDef::isSerializable(const ModuleDef *module) const {
+    return VarDef::isSerializable(module) && 
+           !(flags & FuncDef::builtin) && 
+           getModule() == module;
+}
+
 void FuncDef::serialize(Serializer &serializer, bool writeKind) const {
     assert(!writeKind);
     returnType->serialize(serializer, false);

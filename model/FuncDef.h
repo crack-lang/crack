@@ -103,6 +103,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
+        virtual bool isSerializable(const ModuleDef *module) const;
         
         /**
          * Returns true if the function is an override of a virtual method

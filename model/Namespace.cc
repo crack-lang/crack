@@ -190,7 +190,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (i->second->isSerializable())
+        if (i->second->isSerializable(serializer.module))
             ++count;
     }
     
@@ -200,7 +200,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (!i->second->isSerializable())
+        if (!i->second->isSerializable(serializer.module))
             continue;
         else if (i->second->getModule() != serializer.module)
             i->second->serializeAlias(serializer, i->first);
