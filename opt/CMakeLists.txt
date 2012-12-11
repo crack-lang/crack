@@ -38,6 +38,26 @@ if (PCRE_FOUND)
     install(TARGETS pcre DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif(PCRE_FOUND)
 
+macro_optional_find_package(CURL)
+macro_log_feature(CURL_FOUND "CURL" "Bindings for libcurl" "http://curl.haxx.se/libcurl/c/")
+
+if (CURL_FOUND)
+    include_directories(${CURL_INCLUDE_DIR})
+    add_library(curl SHARED _curl.cc)
+    set_target_properties(curl
+                      PROPERTIES
+                      OUTPUT_NAME _curl
+                      PREFIX ""
+                      )
+
+    target_link_libraries(curl
+                          ${CURL_LIBRARY}
+                         )
+    install(TARGETS curl DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+endif(CURL_FOUND)
+
+
+
 macro_optional_find_package(SDL)
 macro_log_feature(SDL_FOUND "SDL" "Bindings for SDL" "http://www.libsdl.org/")
 
