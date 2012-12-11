@@ -4,6 +4,12 @@ typedef char * byteptr;
 typedef int Undef;
 typedef struct curl_slist * crack_slist;
 
+int easy_setopt_long(CURL *handle, int option, int64_t parameter){
+        return curl_easy_setopt(handle, (CURLoption)option, (long) parameter);
+    }
+int easy_setopt_offset(CURL *handle, int option, size_t parameter){
+        return curl_easy_setopt(handle, (CURLoption)option, (size_t) parameter);
+    }
 class CURLinfoWrapper {
         public:
 
@@ -129,7 +135,7 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "buffer");
 
     f = mod->addFunc(type_int, "easy_setopt_long",
-                     (void *)curl_easy_setopt
+                     (void *)easy_setopt_long
                      );
        f->addArg(type_CURL, "handle");
        f->addArg(type_int, "option");
@@ -143,7 +149,7 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
        f->addArg(type_voidptr, "parameter");
 
     f = mod->addFunc(type_int, "easy_setopt_offset",
-                     (void *)curl_easy_setopt
+                     (void *)easy_setopt_offset
                      );
        f->addArg(type_CURL, "handle");
        f->addArg(type_int, "option");
@@ -547,10 +553,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_FTP_CANT_GET_HOST)
                      );
 
-    mod->addConstant(type_int, "CURLE_OBSOLETE16",
-                     static_cast<int>(CURLE_OBSOLETE16)
-                     );
-
     mod->addConstant(type_int, "CURLE_FTP_COULDNT_SET_TYPE",
                      static_cast<int>(CURLE_FTP_COULDNT_SET_TYPE)
                      );
@@ -563,10 +565,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_FTP_COULDNT_RETR_FILE)
                      );
 
-    mod->addConstant(type_int, "CURLE_OBSOLETE20",
-                     static_cast<int>(CURLE_OBSOLETE20)
-                     );
-
     mod->addConstant(type_int, "CURLE_QUOTE_ERROR",
                      static_cast<int>(CURLE_QUOTE_ERROR)
                      );
@@ -577,10 +575,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "CURLE_WRITE_ERROR",
                      static_cast<int>(CURLE_WRITE_ERROR)
-                     );
-
-    mod->addConstant(type_int, "CURLE_OBSOLETE24",
-                     static_cast<int>(CURLE_OBSOLETE24)
                      );
 
     mod->addConstant(type_int, "CURLE_UPLOAD_FAILED",
@@ -599,20 +593,12 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_OPERATION_TIMEDOUT)
                      );
 
-    mod->addConstant(type_int, "CURLE_OBSOLETE29",
-                     static_cast<int>(CURLE_OBSOLETE29)
-                     );
-
     mod->addConstant(type_int, "CURLE_FTP_PORT_FAILED",
                      static_cast<int>(CURLE_FTP_PORT_FAILED)
                      );
 
     mod->addConstant(type_int, "CURLE_FTP_COULDNT_USE_REST",
                      static_cast<int>(CURLE_FTP_COULDNT_USE_REST)
-                     );
-
-    mod->addConstant(type_int, "CURLE_OBSOLETE32",
-                     static_cast<int>(CURLE_OBSOLETE32)
                      );
 
     mod->addConstant(type_int, "CURLE_RANGE_ERROR",
@@ -643,10 +629,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_LDAP_SEARCH_FAILED)
                      );
 
-    mod->addConstant(type_int, "CURLE_OBSOLETE40",
-                     static_cast<int>(CURLE_OBSOLETE40)
-                     );
-
     mod->addConstant(type_int, "CURLE_FUNCTION_NOT_FOUND",
                      static_cast<int>(CURLE_FUNCTION_NOT_FOUND)
                      );
@@ -659,16 +641,8 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_BAD_FUNCTION_ARGUMENT)
                      );
 
-    mod->addConstant(type_int, "CURLE_OBSOLETE44",
-                     static_cast<int>(CURLE_OBSOLETE44)
-                     );
-
     mod->addConstant(type_int, "CURLE_INTERFACE_FAILED",
                      static_cast<int>(CURLE_INTERFACE_FAILED)
-                     );
-
-    mod->addConstant(type_int, "CURLE_OBSOLETE46",
-                     static_cast<int>(CURLE_OBSOLETE46)
                      );
 
     mod->addConstant(type_int, "CURLE_TOO_MANY_REDIRECTS",
@@ -681,10 +655,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "CURLE_TELNET_OPTION_SYNTAX",
                      static_cast<int>(CURLE_TELNET_OPTION_SYNTAX)
-                     );
-
-    mod->addConstant(type_int, "CURLE_OBSOLETE50",
-                     static_cast<int>(CURLE_OBSOLETE50)
                      );
 
     mod->addConstant(type_int, "CURLE_PEER_FAILED_VERIFICATION",
@@ -709,10 +679,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "CURLE_RECV_ERROR",
                      static_cast<int>(CURLE_RECV_ERROR)
-                     );
-
-    mod->addConstant(type_int, "CURLE_OBSOLETE57",
-                     static_cast<int>(CURLE_OBSOLETE57)
                      );
 
     mod->addConstant(type_int, "CURLE_SSL_CERTPROBLEM",
@@ -2145,10 +2111,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "CURLFORM_END",
                      static_cast<int>(CURLFORM_END)
-                     );
-
-    mod->addConstant(type_int, "CURLFORM_OBSOLETE2",
-                     static_cast<int>(CURLFORM_OBSOLETE2)
                      );
 
     mod->addConstant(type_int, "CURLFORM_STREAM",

@@ -41,13 +41,19 @@
     void curl_free(byteptr buffer);
 
     // Overloaded setopt functions
-    @cname curl_easy_setopt
+    @inject 'int easy_setopt_long(CURL *handle, int option, int64_t parameter){
+        return curl_easy_setopt(handle, (CURLoption)option, (long) parameter);
+    }\n'
+
     int easy_setopt_long(CURL handle, int option, int64 parameter);
 
     @cname curl_easy_setopt
     int easy_setopt_voiptr(CURL handle, int option, voidptr parameter);
 
-    @cname curl_easy_setopt
+    @inject 'int easy_setopt_offset(CURL *handle, int option, size_t parameter){
+        return curl_easy_setopt(handle, (CURLoption)option, (size_t) parameter);
+    }\n'
+
     int easy_setopt_offset(CURL handle, int option, uintz parameter);
 
     // Perform
