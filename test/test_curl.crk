@@ -11,7 +11,7 @@
 import crack.runtime exit,strlen;
 import crack.lang CString;
 import crack.io cout, cerr, FStr;
-import crack.lang ManagedBuffer;
+import crack.lang Buffer;
 import crack.cont.array Array;
 
 import crack.ext._curl
@@ -170,7 +170,8 @@ CURLPAUSE_SEND, CURLPAUSE_SEND_CONT, CURLPAUSE_ALL, CURLPAUSE_CONT,
 
 
 // Types
-CURL, CURLinfo,
+CURL, CURLinfo, 
+slist,
 
 
 // Function names
@@ -185,7 +186,6 @@ easy_setopt_voiptr,
 easy_setopt_offset,
 easy_perform,
 
-easy_info_new,
 easy_info_get_long,
 easy_info_get_double,
 easy_info_get_string,
@@ -206,9 +206,11 @@ int progress_callback(CURL handle, float64 dltotal, float64 dlnow, float64 ultot
     return 0;
 }
 
+
+
 curl := easy_init();
 
-// Test roundtrip url-escaping strings
+// Test roundtrip url-escaping strings -----------------------------------------
 args := "A broken (*&*^&* string";
 escaped_args := CString(curl_escape(args.buffer, args.size), false);
 unescaped_args := CString(curl_unescape(escaped_args.buffer, escaped_args.size), false);
@@ -216,7 +218,29 @@ unescaped_args := CString(curl_unescape(escaped_args.buffer, escaped_args.size),
 if (unescaped_args != args)
     exitError(errStr `Problem url-escaping string:\n'$args' -> '$escaped_args' -> '$unescaped_args'\n`);
 
-// Test program from http://curl.haxx.se/libcurl/c/simple.html
+// Test linked list ------------------------------------------------------------
+
+class sList {
+    slist head, tail;
+    oper init(slist base) : head = base, tail=head {}
+    oper init(Buffer d) : head = slist(d.buffer), tail=head {}
+
+    void append(Buffer d) {
+        tail = tail.append(d.buffer);
+    }
+}
+
+
+list := sList("first");
+list.append("second");
+list.append("third");
+
+cout `Test curl_slist\n`;
+for (l := list.head; !(l is null); l = l.next)
+    cout `data: $(l.data)\n`;
+
+
+// Test program from http://curl.haxx.se/libcurl/c/simple.html -----------------
 url := "http://www.iana.org/domains/example/";
 easy_setopt_voiptr(curl, CURLOPT_URL, url.buffer);
 cout `setopt noprogress = $(easy_setopt_long(curl, CURLOPT_NOPROGRESS, int64(0)))\n`;
@@ -228,7 +252,7 @@ if (res != CURLE_OK) {
     exitError(errStr `Downloading $url failed:  $errMsg\n`);
 }
 
-info := easy_info_new(CURLINFO_EFFECTIVE_URL);
+info := CURLinfo(CURLINFO_EFFECTIVE_URL);
 
 Array[String] STRING_TEST_NAMES = ["CURLINFO_EFFECTIVE_URL",
                                    "CURLINFO_REDIRECT_URL"];

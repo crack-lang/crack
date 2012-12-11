@@ -2,7 +2,7 @@
 typedef void * voidptr;
 typedef char * byteptr;
 typedef int Undef;
-typedef struct curl_slist * crack_slist;
+typedef struct curl_slist crack_slist;
 
 int easy_setopt_long(CURL *handle, int option, int64_t parameter){
         return curl_easy_setopt(handle, (CURLoption)option, (long) parameter);
@@ -24,9 +24,8 @@ class CURLinfoWrapper {
         };
     };
 
-CURLinfoWrapper *easy_info_new(int info) {
-        CURLinfoWrapper *ci = new CURLinfoWrapper((CURLINFO)info);
-        return ci;
+void easy_info_new(CURLinfoWrapper *ci, int info) {
+        ci->info = (CURLINFO)info;
     }
 int easy_info_get_long(CURL *handle, CURLinfoWrapper *result) {
         result->success = curl_easy_getinfo(handle, result->info,
@@ -53,6 +52,10 @@ int easy_info_get_slist(CURL *handle, CURLinfoWrapper *result) {
         return result->success;
     }
 
+void curl_slist_new(crack_slist *list, char *buffer) {
+        list->data = buffer;
+        list->next = NULL;
+    }
 
 
 #include "ext/Module.h"
@@ -102,7 +105,32 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(CURLinfoWrapper, resultDouble));
         type_CURLinfo->addInstVar(type_voidptr, "resultPtr",
                                 CRACK_OFFSET(CURLinfoWrapper, resultPtr));
+        f = type_CURLinfo->addConstructor("init",
+                            (void *)easy_info_new
+                        );
+            f->addArg(type_int, "info");
+
     type_CURLinfo->finish();
+
+
+    crack::ext::Type *type_slist = mod->addForwardType("slist", sizeof(crack_slist));
+
+    // Definition of forward type slist ---------------------------------------
+        type_slist->addInstVar(type_byteptr, "data",
+                                CRACK_OFFSET(crack_slist, data));
+        type_slist->addInstVar(type_slist, "next",
+                                CRACK_OFFSET(crack_slist, next));
+        f = type_slist->addConstructor("init",
+                            (void *)curl_slist_new
+                        );
+            f->addArg(type_byteptr, "buffer");
+
+        f = type_slist->addMethod(type_slist, "append",
+                        (void *)curl_slist_append
+                );
+            f->addArg(type_byteptr, "buffer");
+
+    type_slist->finish();
 
     f = mod->addFunc(type_byteptr, "curl_version",
                      (void *)curl_version
@@ -160,11 +188,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_CURL, "handle");
 
-    f = mod->addFunc(type_CURLinfo, "easy_info_new",
-                     (void *)easy_info_new
-                     );
-       f->addArg(type_int, "info");
-
     f = mod->addFunc(type_int, "easy_info_get_long",
                      (void *)easy_info_get_long
                      );
@@ -199,6 +222,11 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_CURL, "handle");
        f->addArg(type_int, "bitmask");
+
+    f = mod->addFunc(type_void, "slist_free_all",
+                     (void *)curl_slist_free_all
+                     );
+       f->addArg(type_slist, "list");
 
 
     mod->addConstant(type_int64, "HTTPPOST_FILENAME",

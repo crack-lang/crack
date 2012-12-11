@@ -17,7 +17,7 @@
     @inject 'typedef void * voidptr;\n'
     @inject 'typedef char * byteptr;\n'
     @inject 'typedef int Undef;\n'
-    @inject 'typedef struct curl_slist * crack_slist;\n\n';
+    @inject 'typedef struct curl_slist crack_slist;\n\n';
 
     // Opaque classes
     @crack_internal
@@ -77,9 +77,8 @@
         };
     };\n\n'
 
-    @inject 'CURLinfoWrapper *easy_info_new(int info) {
-        CURLinfoWrapper *ci = new CURLinfoWrapper((CURLINFO)info);
-        return ci;
+    @inject 'void easy_info_new(CURLinfoWrapper *ci, int info) {
+        ci->info = (CURLINFO)info;
     }\n'
 
     @cname CURLinfoWrapper
@@ -89,9 +88,10 @@
         int64 resultLong;
         float64 resultDouble;
         voidptr resultPtr;
-    }
 
-    CURLinfo easy_info_new(int info);
+        @cname easy_info_new
+        oper init(int info);
+    }
 
     // Get info functions
     @inject 'int easy_info_get_long(CURL *handle, CURLinfoWrapper *result) {
@@ -130,6 +130,29 @@
     @cname curl_easy_pause
     int easy_pause(CURL handle, int bitmask);
 
+    // Linked list for headers etc.
+    @inject 'void curl_slist_new(crack_slist *list, char *buffer) {
+        list->data = buffer;
+        list->next = NULL;
+    }\n'
+
+    @cname crack_slist
+    class slist;
+
+    @cname crack_slist
+    class slist {
+        byteptr data;
+        slist next;
+
+        @cname curl_slist_new
+        oper init(byteptr buffer);
+
+        @cname curl_slist_append
+        slist append(byteptr buffer);
+    }
+
+    @cname curl_slist_free_all
+        void slist_free_all(slist list);
 
     // Constants
     const int64
