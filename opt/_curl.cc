@@ -39,7 +39,7 @@ int easy_info_get_double(CURL *handle, CURLinfoWrapper *result) {
         return result->success;
     }
 
-int easy_info_get_string(CURL *handle, CURLinfoWrapper *result) {
+int easy_info_get_ptr(CURL *handle, CURLinfoWrapper *result) {
 
         result->success = curl_easy_getinfo(handle, result->info,
                             &(result->resultPtr));
@@ -55,6 +55,9 @@ int easy_info_get_slist(CURL *handle, CURLinfoWrapper *result) {
 void curl_slist_new(crack_slist *list, char *buffer) {
         list->data = buffer;
         list->next = NULL;
+    }
+crack_slist *crack_slist_cast(voidptr ptr) {
+        return (crack_slist *)ptr;
     }
 
 
@@ -169,7 +172,7 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
        f->addArg(type_int, "option");
        f->addArg(type_int64, "parameter");
 
-    f = mod->addFunc(type_int, "easy_setopt_voiptr",
+    f = mod->addFunc(type_int, "easy_setopt_ptr",
                      (void *)curl_easy_setopt
                      );
        f->addArg(type_CURL, "handle");
@@ -200,8 +203,8 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
        f->addArg(type_CURL, "handle");
        f->addArg(type_CURLinfo, "result");
 
-    f = mod->addFunc(type_int, "easy_info_get_string",
-                     (void *)easy_info_get_string
+    f = mod->addFunc(type_int, "easy_info_get_ptr",
+                     (void *)easy_info_get_ptr
                      );
        f->addArg(type_CURL, "handle");
        f->addArg(type_CURLinfo, "result");
@@ -222,6 +225,11 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_CURL, "handle");
        f->addArg(type_int, "bitmask");
+
+    f = mod->addFunc(type_slist, "slist_cast",
+                     (void *)crack_slist_cast
+                     );
+       f->addArg(type_voidptr, "ptr");
 
     f = mod->addFunc(type_void, "slist_free_all",
                      (void *)curl_slist_free_all

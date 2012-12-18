@@ -1,18 +1,6 @@
-// Test LDB encode/decode
-// Copyright 2012 Google Inc.
-// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
-//   This Source Code Form is subject to the terms of the Mozilla Public
-//   License, v. 2.0. If a copy of the MPL was not distributed with this
-//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
-// 11/12/2012
-
-import crack.runtime exit,strlen;
-import crack.lang CString;
-import crack.io cout, cerr, FStr;
-import crack.lang Buffer;
-import crack.cont.array Array;
+import crack.io cout, FStr;
+import crack.lang CString, Buffer, AppendBuffer;
+import crack.cont.hashmap HashMap, OrderedHashMap;
 
 import crack.ext._curl
 HTTPPOST_FILENAME, HTTPPOST_READFILE, HTTPPOST_PTRNAME, HTTPPOST_PTRCONTENTS, 
@@ -195,33 +183,8 @@ easy_pause,
 slist_cast,
 slist_free_all;
 
-errStr := FStr();
 
-void exitError(String msg) {
-    cerr `ERROR: $(msg)\n`;
-    exit(1);
-}
-
-int progress_callback(CURL handle, float64 dltotal, float64 dlnow, float64 ultotal,
-                      float64 ulnow) {
-    cout `$dltotal, $dlnow, $ultotal, $ulnow\n`;
-    return 0;
-}
-
-
-
-curl := easy_init();
-
-// Test roundtrip url-escaping strings -----------------------------------------
-args := "A broken (*&*^&* string";
-escaped_args := CString(curl_escape(args.buffer, args.size), false);
-unescaped_args := CString(curl_unescape(escaped_args.buffer, escaped_args.size), false);
-
-if (unescaped_args != args)
-    exitError(errStr `Problem url-escaping string:\n'$args' -> '$escaped_args' -> '$unescaped_args'\n`);
-
-// Test linked list ------------------------------------------------------------
-
+/// Wraps the linked list used by cUrl
 class sList {
     slist head, tail;
     oper init(slist base) : head = base, tail=head {}
@@ -230,85 +193,136 @@ class sList {
     void append(Buffer d) {
         tail = tail.append(d.buffer);
     }
-}
 
-
-list := sList("first");
-list.append("second");
-list.append("third");
-
-cout `Test curl_slist\n`;
-for (l := list.head; !(l is null); l = l.next)
-    cout `data: $(l.data)\n`;
-
-
-// Test program from http://curl.haxx.se/libcurl/c/simple.html -----------------
-url := "http://www.iana.org/domains/example/";
-easy_setopt_ptr(curl, CURLOPT_URL, url.buffer);
-cout `setopt noprogress = $(easy_setopt_long(curl, CURLOPT_NOPROGRESS, int64(0)))\n`;
-cout `setopt callback = $(easy_setopt_ptr(curl, CURLOPT_PROGRESSFUNCTION, progress_callback))\n`;
-res := easy_perform(curl);
-
-if (res != CURLE_OK) {
-    errMsg := CString(easy_strerror(res), false);
-    exitError(errStr `Downloading $url failed:  $errMsg\n`);
-}
-
-info := CURLinfo(CURLINFO_EFFECTIVE_URL);
-
-Array[String] STRING_TEST_NAMES = ["CURLINFO_EFFECTIVE_URL",
-                                   "CURLINFO_REDIRECT_URL"];
-Array[int] STRING_TEST_CODES = [CURLINFO_EFFECTIVE_URL,
-                                CURLINFO_REDIRECT_URL];
-
-Array[String] LONG_TEST_NAMES = ["CURLINFO_RESPONSE_CODE"];
-Array[int]LONG_TEST_CODES = [CURLINFO_RESPONSE_CODE];
-
-Array[String] DOUBLE_TEST_NAMES = ["CURLINFO_TOTAL_TIME",
-                                   "CURLINFO_NAMELOOKUP_TIME",
-                                   "CURLINFO_CONNECT_TIME"];
-Array[int] DOUBLE_TEST_CODES = [CURLINFO_TOTAL_TIME,
-                                CURLINFO_NAMELOOKUP_TIME,
-                                CURLINFO_CONNECT_TIME];
-
-cout `Strings: $("-"*70)\n`;
-
-for (int i=0; i< STRING_TEST_NAMES.count(); i++) {
-    info.info=STRING_TEST_CODES[i];
-    res = easy_info_get_ptr(curl, info);
-    if (res != CURLE_OK) {
-        errMsg := CString(easy_strerror(res), false);
-        exitError(errStr `Getting $(STRING_TEST_NAMES[i]) failed:  $errMsg\n`);
+    ## A linked list iterator.
+    class Iter {
+        slist _node;
+        bool __first;
+        oper init(slist node) : _node = node, __first = true {}
+        
+        byteptr elem() {
+                return _node.data;
+        }
+        
+        bool next() {
+            if (_node is null)
+                return false;
+            
+            _node = _node.next;
+            return !(_node is null);
+        }
+    
+        bool nx() {
+            if (_node is null)
+                return false;
+            
+            if (__first)
+                __first = false;
+            else
+                _node = _node.next;
+            return !(_node is null);
+        }
+        
+        bool isTrue() { return !(_node is null); }
     }
-    if (!(info.resultPtr is null))
-        cout `$(STRING_TEST_NAMES[i]) = $(CString(byteptr(info.resultPtr), false))\n`;
 
-}
-
-cout `Longs: $("-"*72)\n`;                      
-for (int i=0; i< LONG_TEST_NAMES.count(); i++) {
-    info.info=LONG_TEST_CODES[i];
-    res = easy_info_get_long(curl, info);
-    if (res != CURLE_OK) {
-        errMsg := CString(easy_strerror(res), false);
-        exitError(errStr `Getting $(LONG_TEST_NAMES[i]) failed:  $errMsg\n`);
+    Iter iter() {
+        return Iter(head);
     }
-    cout `$(LONG_TEST_NAMES[i]) = $(info.resultLong)\n`;
 }
 
-cout `Doubles: $("-"*70)\n`;
-for (int i=0; i< DOUBLE_TEST_NAMES.count(); i++) {
-    info.info=DOUBLE_TEST_CODES[i];
-    res = easy_info_get_double(curl, info);
-    if (res != CURLE_OK) {
-        errMsg := CString(easy_strerror(res), false);
-        exitError(errStr `Getting $(DOUBLE_TEST_NAMES[i]) failed:  $errMsg\n`);
+class CookieMaker[M] {
+    @static
+    int set(CURL handle, M cmap){
+        AppendBuffer cstring = {256};
+        uint i=0;
+        for (elem :in cmap) {
+            if (i>0) cstring.extend(" ");
+            cstring.extend(elem.key);
+            cstring.extend("=");
+            cstring.extend(elem.val);
+            cstring.extend(";");
+            i+=1;
+        }
+        cstring.extend("\0");
+        return easy_setopt_ptr(handle, CURLOPT_COOKIE, cstring.buffer);
     }
-    cout `$(DOUBLE_TEST_NAMES[i]) = $(info.resultDouble)\n`;
 }
-                      
 
+class CurlEasy {
+    CURL _handle;
+    sList _headers = null;
+    OrderedHashMap[Buffer, Buffer] _cookies;
 
-// Clean up
-easy_cleanup(curl);
-cout `ok\n`;
+    oper init() : _handle=easy_init() { }
+
+    CURL getHandle() { return _handle; }
+
+    int perform() {
+        return easy_perform(_handle);
+    }
+
+    int pause(int bitmask) {
+        return easy_pause(_handle, bitmask);
+    }
+
+    int setOpt(int optName, Buffer data) {
+        return easy_setopt_ptr(_handle, optName, data.buffer);
+    }
+
+    int setOpt(int optName, sList list) {
+        return easy_setopt_ptr(_handle, optName, list.head);
+    }
+
+    int setOpt(int optName, voidptr f) {
+        return easy_setopt_ptr(_handle, optName, f);
+    }
+    
+    int setOpt(int optName, int value) {
+        return easy_setopt_long(_handle, optName, int64(value));
+    }
+
+    int addCookie(Buffer key, Buffer value) {
+        _cookies[key] = value;
+        return _cookies.count();
+    }
+
+    int saveCookies() {
+        return CookieMaker[OrderedHashMap[Buffer, Buffer]].set(_handle, _cookies);
+    }
+
+    int setCookies(OrderedHashMap[Buffer, Buffer] map) {
+        _cookies = map;
+        return saveCookies();
+    }
+
+    int setCookies(HashMap[Buffer, Buffer] map) {
+        for (e :in map)
+            _cookies[e.key] = e.val;
+        return saveCookies();
+    }
+
+    void appendHeader(String headerName, String headerValue) {
+        headerString := FStr() `$headerName: $headerValue`;
+        if (_headers is null)
+            _headers = sList(headerString);
+        else _headers.append(headerString);
+    }
+
+    int setHeader(String headerName, String headerValue) {
+        appendHeader(headerName, headerValue);
+        return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
+    }
+
+    int saveHeaders() {
+        if (!(_headers is null))
+            return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
+        else
+            return CURLE_OK;
+    }
+
+    oper del() {
+        if (!(_handle is null)) easy_cleanup(_handle);
+    }
+    
+}
