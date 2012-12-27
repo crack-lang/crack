@@ -1,0 +1,10 @@
+%%TEST%%
+Base64 encoding/decoding
+%%ARGS%%
+
+%%FILE%%
+import test.test_base64;
+%%EXPECT%%
+ok
+%%STDIN%%
+

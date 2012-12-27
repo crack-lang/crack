@@ -1,0 +1,52 @@
+// Test base64 encoding/decoding
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
+// 12/26/2012
+
+import crack.ascii hex;
+import crack.io cout, FStr;
+import crack.runtime exit;
+import crack.ffmt.base64 encode, decode, decodeB64;
+
+lipsum := "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam "
+          "nonumyeirmod tempor invidunt ut labore et dolore magna aliquyam "
+          "erat, sed diamvoluptua. At vero eos et accusam et justo duo dolores "
+          "et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est "
+          "Lorem ipsum dolor sit amet.Lorem ipsum dolor sit amet, consetetur "
+          "sadipscing elitr, sed diam nonumyeirmod tempor invidunt ut labore "
+          "et dolore magna aliquyam erat, sed diamvoluptua. At vero eos et "
+          "accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, "
+          "no sea takimata sanctus est Lorem ipsum dolor sit amet.Lorem ipsum "
+          "dolor sit amet, consetetur sadipscing elitr, sed diam nonumyeirmod "
+          "tempor invidunt ut labore et dolore magna aliquyam erat, sed "
+          "diamvoluptua. At vero eos et accusam et justo duo dolores et ea "
+          "rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem "
+          "ipsum dolor sit amet.Lorem ipsum dolor sit amet, consetetur";
+
+correct_lipsum := "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNldGV0dXIgc2FkaXBzY2luZyBlbGl0ciwgc2VkIGRpYW0gbm9udW15ZWlybW9kIHRlbXBvciBpbnZpZHVudCB1dCBsYWJvcmUgZXQgZG9sb3JlIG1hZ25hIGFsaXF1eWFtIGVyYXQsIHNlZCBkaWFtdm9sdXB0dWEuIEF0IHZlcm8gZW9zIGV0IGFjY3VzYW0gZXQganVzdG8gZHVvIGRvbG9yZXMgZXQgZWEgcmVidW0uIFN0ZXQgY2xpdGEga2FzZCBndWJlcmdyZW4sIG5vIHNlYSB0YWtpbWF0YSBzYW5jdHVzIGVzdCBMb3JlbSBpcHN1bSBkb2xvciBzaXQgYW1ldC5Mb3JlbSBpcHN1bSBkb2xvciBzaXQgYW1ldCwgY29uc2V0ZXR1ciBzYWRpcHNjaW5nIGVsaXRyLCBzZWQgZGlhbSBub251bXllaXJtb2QgdGVtcG9yIGludmlkdW50IHV0IGxhYm9yZSBldCBkb2xvcmUgbWFnbmEgYWxpcXV5YW0gZXJhdCwgc2VkIGRpYW12b2x1cHR1YS4gQXQgdmVybyBlb3MgZXQgYWNjdXNhbSBldCBqdXN0byBkdW8gZG9sb3JlcyBldCBlYSByZWJ1bS4gU3RldCBjbGl0YSBrYXNkIGd1YmVyZ3Jlbiwgbm8gc2VhIHRha2ltYXRhIHNhbmN0dXMgZXN0IExvcmVtIGlwc3VtIGRvbG9yIHNpdCBhbWV0LkxvcmVtIGlwc3VtIGRvbG9yIHNpdCBhbWV0LCBjb25zZXRldHVyIHNhZGlwc2NpbmcgZWxpdHIsIHNlZCBkaWFtIG5vbnVteWVpcm1vZCB0ZW1wb3IgaW52aWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdXlhbSBlcmF0LCBzZWQgZGlhbXZvbHVwdHVhLiBBdCB2ZXJvIGVvcyBldCBhY2N1c2FtIGV0IGp1c3RvIGR1byBkb2xvcmVzIGV0IGVhIHJlYnVtLiBTdGV0IGNsaXRhIGthc2QgZ3ViZXJncmVuLCBubyBzZWEgdGFraW1hdGEgc2FuY3R1cyBlc3QgTG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQuTG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNldGV0dXI=";
+
+s := "ADP GmbH\nAnalyse Design & Programmierung\nGesellschaft mit beschränkter Haftung";
+correct_s := "QURQIEdtYkgKQW5hbHlzZSBEZXNpZ24gJiBQcm9ncmFtbWllcnVuZwpHZXNlbGxzY2hhZnQg\r\nbWl0IGJlc2NocsOkbmt0ZXIgSGFmdHVuZw==";
+
+encoded_lipsum := encode(lipsum,0);
+encoded_s := encode(s, 72);
+
+if (encoded_s != correct_s || encoded_lipsum != correct_lipsum) {
+    cout `Base64 encoding failed\n`;
+    exit(1);
+}
+
+decoded_lipsum := decode(encoded_lipsum);
+decoded_s := decode(encoded_s);
+
+if (decoded_s != s || decoded_lipsum != lipsum) {
+    cout `Base64 decoding failed\n`;
+    exit(1);
+}
+
+cout.write("ok\n");
+
