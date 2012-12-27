@@ -15,12 +15,13 @@
 #
 #==============================================================================
 
-import crack.ascii radix;
+import crack.ascii hex, radix;
 import crack.cont.array Array;
-import crack.lang AssertionError, InvalidArgumentError;
-import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter, Writer;
+import crack.lang AssertionError, InvalidArgumentError, InvalidStateError, ManagedBuffer;
+import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter, 
+    Reader, Writer;
 
-@import crack.ann interface, implements;
+@import crack.ann assert, interface, implements;
 
 const int
     SNDCTL_SEQ_SYNC = 20737,
@@ -33,6 +34,53 @@ const int
 
 # if this is true, all received midi events will be printed
 bool _printEvents;
+
+## Wrapper to help write to a midi stream.  Manages a buffer and allows you to 
+## keep track of a status byte.
+class MidiWriter {
+    Writer out;
+    byte status;
+    ManagedBuffer buffer = {1024};
+    oper init(Writer out) : out = out {}
+
+    ## Write eveything buffered to the final output stream.
+    @final void flush() {
+        out.write(buffer);
+        buffer.size = 0;
+    }
+    
+    @final void write(byte b) {
+        if (buffer.size == 1024)
+            flush();
+        buffer.buffer[buffer.size++] = b;
+    }
+    
+    ## Writes the status byte but only if it is not already the current status.
+    @final void writeStatus(byte b) {
+        if (status != b) {
+            status = b;
+            write(b);
+        }
+    }
+    
+    @final void encodeVarLen(uint val) {
+        if (!val)
+            write(0);
+
+        while (val) {
+            if (val > 0x7f) {
+                write(byte(val & 0x7f | 0x80));
+            } else {
+                write(byte(val));
+            }
+            val >>= 7;
+        }
+    }
+    
+    oper del() {
+        flush();
+    }
+}
 
 ##  A MIDI event.  An abstract base class.
 ##  
@@ -62,6 +110,8 @@ bool _printEvents;
     ## This method returns a tuple consisting of the new status byte and
     ## the string representation of the event.
     @abstract StatAndString toMidiString(byte status);
+    
+    @abstract void writeTo(MidiWriter writer);
     
     ## Make a copy of the event object.
     @abstract Event clone();
@@ -113,6 +163,12 @@ class NoteOn : NoteEvent {
         return NoteOn(time, channel, note, velocity);
     }
     
+    void writeTo(MidiWriter out) {
+        out.writeStatus(0x90 | channel);
+        out.write(note);
+        out.write(velocity);
+    }
+    
     void formatTo(Formatter f) {
         f `ch: $channel, note $note on, velocity $velocity`;
     }
@@ -140,6 +196,16 @@ class NoteOff : NoteEvent {
             status = 0x80 | channel;
             return StatAndString(status, byteptr![status, note, velocity], 3);
         }
+    }
+    
+    void writeTo(MidiWriter out) {
+        # handle the "note on" status specially - if we're in note on, and the
+        # velocity is 0 (which it should always be) we can just emit note on 
+        # with velocity zero.
+        if (out.status != (0x90 | channel) || velocity) 
+            out.writeStatus(0x80 | channel);
+        out.write(note);
+        out.write(velocity);
     }
     
     Event clone() {
@@ -170,6 +236,11 @@ class ProgramChange : ChannelEvent {
         # channel, we just always send a status byte.
         status = 0xC0 | channel;
         return StatAndString(status, byteptr![status, program], 2);
+    }
+    
+    void writeTo(MidiWriter out) {
+        out.writeStatus(0xC0 | channel);
+        out.write(program);
     }
     
     Event clone() {
@@ -215,6 +286,12 @@ class PitchWheel : ChannelEvent {
         }
     }
     
+    void writeTo(MidiWriter out) {
+        out.writeStatus(0xE0 | channel);
+        out.write(byte(value & 0x7F));
+        out.write(byte(value >> 7 & 0xFF));
+    }
+    
     Event clone() {
         return PitchWheel(time, channel, value);
     }
@@ -241,14 +318,20 @@ class ControlChange : ChannelEvent {
     }
 
     StatAndString toMidiString(byte status) {
-        if (status == (0x80 | channel)) {
+        if (status == (0xB0 | channel)) {
             return StatAndString(status, byteptr![controller, value], 2);
         } else {
-            status = 0x80 | channel;
+            status = 0xB0 | channel;
             return StatAndString(status, byteptr![status, controller, value],
                                  3
                                  );
         }
+    }
+    
+    void writeTo(MidiWriter out) {
+        out.writeStatus(0xB0 | channel);
+        out.write(controller);
+        out.write(value);
     }
     
     Event clone() {
@@ -283,10 +366,41 @@ class SysEx : Event {
         return SysEx(time, data);
     }
 
+    void writeTo(MidiWriter out) {
+        out.writeStatus(0xF0);
+        out.encodeVarLen(data.size + 1);
+        for (uintz i = 0; i < data.size; ++i)
+            out.write(data[i]);
+        out.write(0xF7);
+    }
+    
     void formatTo(Formatter f) {
         f `SysEx: `;
         for (uintz i = 0; i < data.size; ++i)
             f `$(radix(data[i], 16))`;
+    }
+}
+
+## Pseudo-event used as a marker for the end of the track.
+## When a track is deserialized, the EndTrack is automatically added from the 
+## end track marker in the stream.  When a track is serialized, if it doesn't 
+## have an EndTrack event one will be written at the time of the last existing 
+## event on the track.
+class EndTrack : Event {
+    oper init(uint time) : Event(time) {}
+
+    typeof(EndTrack(0).toMidiString(0)) toMidiString(byte status) {
+        return null;
+    }
+    
+    void writeTo(MidiWriter out) {
+        out.write(0xFF);
+        out.write(0x2F);
+        out.write(0);
+    }
+
+    Event clone() {
+        return EndTrack(time);
     }
 }
 
@@ -417,8 +531,9 @@ class Track {
     void append(Event evt) {
         if (__events && evt.time < __events[-1].time)
             throw InvalidArgumentError(FStr() 
-                                       `Appending event $evt which is earlier \
-than the last event of the track ($(__events[-1].time)).`
+                                       I`Appending event $evt which is earlier \
+                                         than the last event of the track \
+                                         ($(__events[-1].time)).`
                                        );
         __events.append(evt);
     }
@@ -430,6 +545,24 @@ than the last event of the track ($(__events[-1].time)).`
     uint count() { return __events.count(); }
     
     EventSource iter() { return TrackEventSource(__events, 0); }
+
+    ## write all of the events in the track with their time deltas.
+    void writeEvents(MidiWriter out) {
+        uint lastTime = 0;
+        for (event :in this) {
+            out.encodeVarLen(event.time - lastTime);
+            event.writeTo(out);
+            lastTime = event.time;
+        }
+    }
+    
+    void writeTo(MidiWriter out) {
+        writeEvents(out);
+        out.write(0);  # time from last event.
+        out.write(0xff);
+        out.write(0x2f);
+        out.write(0);
+    }
 
 /*   
    def merge(self, other):
@@ -495,6 +628,114 @@ Track merge(String name, Array[Track] tracks) {
     }
     
     return result;
+}
+
+const BUF_SIZE := 1024;
+
+class MidiReader {
+    byte status;
+    Reader src;
+    ManagedBuffer buf = {BUF_SIZE};
+    uint pos;
+    
+    oper init(Reader src) : src = src {}
+    
+    @final void needByte() {
+        if (pos == buf.size) {
+            src.read(buf);
+            if (!buf.size)
+                throw InvalidStateError('Out of data reading midi file');
+            pos = 0;
+        }
+    }
+    
+    @final byte readByte() {
+        needByte();
+        return buf.buffer[pos++];
+    }
+    
+    uint readVarLen() {
+        uint val;
+        byte b = 0x80;
+        while (b & 0x80) {
+            b = readByte();
+            val = val << 7 | (b & 0x7F);
+        }
+        return val;
+    }
+    
+    ## This gets called when we read an event with an unknown status byte.  
+    ## Override it to deal with special events.
+    Event readUserEvent() {
+        @assert(false);
+        return null;
+    }
+    
+    @final Event readEvent() {
+        byte first = readByte();
+        
+        # is it a status byte?
+        if (first & 0x80) {
+            status = first;
+            first = readByte();
+        }
+
+        statusHigh := status & 0xF0;
+        channel := status & 0xF;
+        if (statusHigh == 0x90) {
+            velocity := readByte();
+            if (velocity)
+                return NoteOn(0, channel, first, velocity);
+            else
+                return NoteOff(0, channel, first, velocity);
+        } else if (statusHigh == 0x80) {
+            return NoteOff(0, channel, first, readByte());
+        } else if (statusHigh == 0xE0) {
+            high := readByte();
+            return PitchWheel(0, channel, (readByte() << 7) | first);
+        } else if (statusHigh == 0xC0) {
+            return ProgramChange(0, channel, first);
+        } else if (statusHigh == 0xB0) {
+            return ControlChange(0, channel, first, readByte());
+        } else if (status == 0xF0) {
+            # sys-ex event
+            size := readVarLen();
+            ManagedBuffer tempBuf = {size};
+            # XXX broken! Will ignore the existing buffer.
+            src.read(tempBuf);
+            terminator := readByte();
+            @assert(terminator == 0xF7);
+            return SysEx(0, String(tempBuf, true));
+        } else if (status == 0xFF) {
+            action := first;
+            if (action == 0x2F) {
+                @assert(readByte() == 0);
+                return EndTrack(0);
+            } else {
+                return null;
+            }
+        } else {
+            return readUserEvent();
+        }
+    }
+    
+    Track readTrack(String name) {
+        Track track = {name};
+        uint t;
+        while (true) {
+            # read the time
+            t += readVarLen();
+            evt := readEvent();
+            if (!evt)
+                break;
+            evt.time = t;
+            track.add(evt);
+            if (evt.isa(EndTrack))
+                break;
+        }
+        
+        return track;
+    }
 }
 
 /*
