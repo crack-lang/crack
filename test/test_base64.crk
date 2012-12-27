@@ -10,7 +10,7 @@
 import crack.ascii hex;
 import crack.io cout, FStr;
 import crack.runtime exit;
-import crack.ffmt.base64 encode, decode, decodeB64;
+import crack.enc.base64 encode, decode;
 
 lipsum := "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam "
           "nonumyeirmod tempor invidunt ut labore et dolore magna aliquyam "
@@ -32,7 +32,7 @@ correct_lipsum := "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNldGV0dXIgc2FkaXBzY
 s := "ADP GmbH\nAnalyse Design & Programmierung\nGesellschaft mit beschränkter Haftung";
 correct_s := "QURQIEdtYkgKQW5hbHlzZSBEZXNpZ24gJiBQcm9ncmFtbWllcnVuZwpHZXNlbGxzY2hhZnQg\r\nbWl0IGJlc2NocsOkbmt0ZXIgSGFmdHVuZw==";
 
-encoded_lipsum := encode(lipsum,0);
+encoded_lipsum := encode(lipsum, 0);
 encoded_s := encode(s, 72);
 
 if (encoded_s != correct_s || encoded_lipsum != correct_lipsum) {

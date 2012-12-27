@@ -42,15 +42,15 @@ Array[byte] decodeB64Array = {128}; // Reserve space
 decodeB64 := decodeB64Array.data();
 byte _v;
 for (byte i=0; i<128; i++){
-    if (i>=b'A' && i<=b'Z')
+    if (i >= b'A' && i <= b'Z')
         _v = i - b'A';
-    else if (i>=b'a' && i<=b'z')
+    else if (i >= b'a' && i <= b'z')
         _v = 26 + i - b'a';
-    else if (i>=b'0' && i<=b'9')
+    else if (i >= b'0' && i <= b'9')
         _v = 52 + i - b'0';
-    else if (i==b'+')
+    else if (i == b'+')
         _v = 62;
-    else if (i==b'/')
+    else if (i == b'/')
         _v = 63;
     else
         _v = 0;
@@ -69,7 +69,8 @@ bool is_eol(byte c) {
     return (c == b'\n' || c == b'\r');
 }
 
-Buffer encode(Buffer inbuf, uint lineLength) { // unsigned char const* bytes_to_encode, unsigned int in_len) {
+// Encode the given buffer with specified line length
+Buffer encode(Buffer inbuf, uint lineLength) {
     bytes_to_encode := inbuf.buffer;
     split := lineLength > 0;
     l := inbuf.size*4/inbuf.size/3 + 4;
@@ -138,7 +139,7 @@ Buffer encode(Buffer inbuf, uint lineLength) { // unsigned char const* bytes_to_
 
 }
 
-
+// Decode the given buffer
 Buffer decode(Buffer inbuf) {
     int in_len = inbuf.size;
     encoded_string := inbuf.buffer;
