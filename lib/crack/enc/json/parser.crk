@@ -4,7 +4,7 @@
 // A JSON parser based on the Ragel state machine from http://flori.github.com/json/
 // This is a derivative work as defined by the license at 
 // http://www.ruby-lang.org/en/LICENSE.txt
-// The MPL 2.0 license of Crack fulfills the requirements of 2.a and 3.a of 
+// The MPL 2.0 license of Crack fulfills the requirements of 2.a and 3.a of
 // that license
 
 // To convert the Ragel source file to a .crk file use Ragel from
@@ -85,7 +85,7 @@ class JsonParser {
     }
 
     
-# line 104 "opt/json.rl"
+# line 111 "opt/json.rl"
 
 
 //------------------------------------------------------------------------------
@@ -108,7 +108,7 @@ class JsonParser {
     ParserResult parseObject(uint p, uint pe);
 
     
-# line 105 "lib/crack/enc/json/parser.crk"
+# line 112 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_value_actions = [
   0, 1, 0, 1, 1, 1, 2, 1, 
   3, 1, 4, 1, 5, 1, 6, 1, 
@@ -186,7 +186,7 @@ uint JSON_value_error = 0;
 uint  JSON_value_en_main = 1;
 
 
-# line 238 "opt/json.rl"
+# line 245 "opt/json.rl"
 
 
     ParserResult parseValue(uint p, uint pe) {
@@ -195,13 +195,13 @@ uint  JSON_value_en_main = 1;
         uint cs = EVIL;
 
         
-# line 192 "lib/crack/enc/json/parser.crk"
+# line 199 "lib/crack/enc/json/parser.crk"
   cs = JSON_value_start;
 
-# line 246 "opt/json.rl"
+# line 253 "opt/json.rl"
 
         
-# line 198 "lib/crack/enc/json/parser.crk"
+# line 205 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -249,7 +249,7 @@ uint  JSON_value_en_main = 1;
 
       # start from state action switch
     if (_tempval  == 9) { // FROM_STATE_ACTION_SWITCH
-# line 223 "opt/json.rl" # end of line directive
+# line 230 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -260,7 +260,7 @@ uint  JSON_value_en_main = 1;
 
             // ACTION
     }
-# line 257 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 264 "lib/crack/enc/json/parser.crk" # end of line directive
       # end from state action switch
       }
 
@@ -289,25 +289,25 @@ uint  JSON_value_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 131 "opt/json.rl" # end of line directive
+# line 138 "opt/json.rl" # end of line directive
     
             result = null;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 135 "opt/json.rl" # end of line directive
+# line 142 "opt/json.rl" # end of line directive
     
             result = JsonBool(false);
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
-# line 139 "opt/json.rl" # end of line directive
+# line 146 "opt/json.rl" # end of line directive
     
             result = JsonBool(true);
             // ACTION
     }
     else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
-# line 143 "opt/json.rl" # end of line directive
+# line 150 "opt/json.rl" # end of line directive
     
             if (allowNaN) {
                 result = JsonFloat(NAN);
@@ -317,7 +317,7 @@ uint  JSON_value_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
-# line 151 "opt/json.rl" # end of line directive
+# line 158 "opt/json.rl" # end of line directive
     
             if (allowNaN) {
                 result = JsonFloat(INFINITY)
@@ -327,7 +327,7 @@ uint  JSON_value_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
-# line 159 "opt/json.rl" # end of line directive
+# line 166 "opt/json.rl" # end of line directive
     
             if (pe > p + 9 && bufferString(p, p+9) == "-Infinity") {
                 if (allowNaN) {
@@ -369,7 +369,7 @@ uint  JSON_value_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 6) { // FROM_STATE_ACTION_SWITCH
-# line 186 "opt/json.rl" # end of line directive
+# line 193 "opt/json.rl" # end of line directive
     
             res = parseString(p, pe);
             if (res is null) {
@@ -388,7 +388,7 @@ uint  JSON_value_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 7) { // FROM_STATE_ACTION_SWITCH
-# line 197 "opt/json.rl" # end of line directive
+# line 204 "opt/json.rl" # end of line directive
     
             currentNesting++;
             res = parseArray(p, pe);
@@ -409,7 +409,7 @@ uint  JSON_value_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 8) { // FROM_STATE_ACTION_SWITCH
-# line 210 "opt/json.rl" # end of line directive
+# line 217 "opt/json.rl" # end of line directive
     
             currentNesting++;
             res = parseObject(p, pe);
@@ -429,7 +429,7 @@ uint  JSON_value_en_main = 1;
             }
             // ACTION
     }
-# line 426 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 433 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -456,7 +456,7 @@ uint  JSON_value_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 248 "opt/json.rl"
+# line 255 "opt/json.rl"
 
         if (cs >= JSON_value_first_final){
             return ParserResult(result, p);
@@ -466,7 +466,7 @@ uint  JSON_value_en_main = 1;
     }
 
     
-# line 463 "lib/crack/enc/json/parser.crk"
+# line 470 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_integer_actions = [
   0, 1, 0
 ];
@@ -510,7 +510,7 @@ uint JSON_integer_error = 0;
 uint  JSON_integer_en_main = 1;
 
 
-# line 267 "opt/json.rl"
+# line 274 "opt/json.rl"
 
 
     ParserResult parseInteger(uint p, uint pe) {
@@ -518,13 +518,13 @@ uint  JSON_integer_en_main = 1;
         uint memo = p;
 
         
-# line 515 "lib/crack/enc/json/parser.crk"
+# line 522 "lib/crack/enc/json/parser.crk"
   cs = JSON_integer_start;
 
-# line 274 "opt/json.rl"
+# line 281 "opt/json.rl"
 
         
-# line 521 "lib/crack/enc/json/parser.crk"
+# line 528 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -585,7 +585,7 @@ uint  JSON_integer_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 261 "opt/json.rl" # end of line directive
+# line 268 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -596,7 +596,7 @@ uint  JSON_integer_en_main = 1;
 
             // ACTION
     }
-# line 593 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 600 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -623,7 +623,7 @@ uint  JSON_integer_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 276 "opt/json.rl"
+# line 283 "opt/json.rl"
 
         if (cs < JSON_integer_first_final) {
             return null;
@@ -635,7 +635,7 @@ uint  JSON_integer_en_main = 1;
     }
 
     
-# line 632 "lib/crack/enc/json/parser.crk"
+# line 639 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_float_actions = [
   0, 1, 0
 ];
@@ -715,7 +715,7 @@ uint JSON_float_error = 0;
 uint  JSON_float_en_main = 1;
 
 
-# line 301 "opt/json.rl"
+# line 308 "opt/json.rl"
 
 
     ParserResult parseFloat(uint p, uint pe) {
@@ -723,13 +723,13 @@ uint  JSON_float_en_main = 1;
         uint memo = p;
 
         
-# line 720 "lib/crack/enc/json/parser.crk"
+# line 727 "lib/crack/enc/json/parser.crk"
   cs = JSON_float_start;
 
-# line 308 "opt/json.rl"
+# line 315 "opt/json.rl"
 
         
-# line 726 "lib/crack/enc/json/parser.crk"
+# line 733 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -790,7 +790,7 @@ uint  JSON_float_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 292 "opt/json.rl" # end of line directive
+# line 299 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -801,7 +801,7 @@ uint  JSON_float_en_main = 1;
 
             // ACTION
     }
-# line 798 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 805 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -828,7 +828,7 @@ uint  JSON_float_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 310 "opt/json.rl"
+# line 317 "opt/json.rl"
 
         if (cs < JSON_float_first_final) {
             return null;
@@ -839,7 +839,7 @@ uint  JSON_float_en_main = 1;
     }
 
     
-# line 836 "lib/crack/enc/json/parser.crk"
+# line 843 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_string_actions = [
   0, 1, 0, 1, 1, 1, 2, 1, 
   3, 2, 4, 5
@@ -904,7 +904,7 @@ uint JSON_string_error = 0;
 uint  JSON_string_en_main = 1;
 
 
-# line 385 "opt/json.rl"
+# line 392 "opt/json.rl"
 
 
     ParserResult parseString(uint p, uint pe) {
@@ -916,13 +916,13 @@ uint  JSON_string_en_main = 1;
         uint memo = p;
 
         
-# line 913 "lib/crack/enc/json/parser.crk"
+# line 920 "lib/crack/enc/json/parser.crk"
   cs = JSON_string_start;
 
-# line 396 "opt/json.rl"
+# line 403 "opt/json.rl"
 
         
-# line 919 "lib/crack/enc/json/parser.crk"
+# line 926 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -983,19 +983,19 @@ uint  JSON_string_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 325 "opt/json.rl" # end of line directive
+# line 332 "opt/json.rl" # end of line directive
     
             memo++;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 334 "opt/json.rl" # end of line directive
+# line 341 "opt/json.rl" # end of line directive
     
             memo = p;
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
-# line 338 "opt/json.rl" # end of line directive
+# line 345 "opt/json.rl" # end of line directive
     
             chr = (data[memo] - 48) *64;
             chr += (data[memo+1] - 48)*8;
@@ -1007,7 +1007,7 @@ uint  JSON_string_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
-# line 347 "opt/json.rl" # end of line directive
+# line 354 "opt/json.rl" # end of line directive
     
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo - 1);
@@ -1030,7 +1030,7 @@ uint  JSON_string_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 4) { // FROM_STATE_ACTION_SWITCH
-# line 367 "opt/json.rl" # end of line directive
+# line 374 "opt/json.rl" # end of line directive
     
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo);
@@ -1040,7 +1040,7 @@ uint  JSON_string_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 5) { // FROM_STATE_ACTION_SWITCH
-# line 374 "opt/json.rl" # end of line directive
+# line 381 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -1051,7 +1051,7 @@ uint  JSON_string_en_main = 1;
 
             // ACTION
     }
-# line 1048 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 1055 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -1078,7 +1078,7 @@ uint  JSON_string_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 398 "opt/json.rl"
+# line 405 "opt/json.rl"
 
         if (cs >= JSON_string_first_final && !(result is null)) {
             return ParserResult(result, p + 1);
@@ -1088,7 +1088,7 @@ uint  JSON_string_en_main = 1;
     }
 
     
-# line 1085 "lib/crack/enc/json/parser.crk"
+# line 1092 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_array_actions = [
   0, 1, 0, 1, 1
 ];
@@ -1184,7 +1184,7 @@ uint JSON_array_error = 0;
 uint  JSON_array_en_main = 1;
 
 
-# line 439 "opt/json.rl"
+# line 446 "opt/json.rl"
 
 
     ParserResult parseArray(uint p, uint pe) {
@@ -1198,13 +1198,13 @@ uint  JSON_array_en_main = 1;
         uint cs = EVIL;
 
         
-# line 1195 "lib/crack/enc/json/parser.crk"
+# line 1202 "lib/crack/enc/json/parser.crk"
   cs = JSON_array_start;
 
-# line 452 "opt/json.rl"
+# line 459 "opt/json.rl"
 
         
-# line 1201 "lib/crack/enc/json/parser.crk"
+# line 1208 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -1265,7 +1265,7 @@ uint  JSON_array_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 412 "opt/json.rl" # end of line directive
+# line 419 "opt/json.rl" # end of line directive
     
             res = parseValue(p, pe);
             if (res is null) {
@@ -1284,7 +1284,7 @@ uint  JSON_array_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 423 "opt/json.rl" # end of line directive
+# line 430 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -1295,7 +1295,7 @@ uint  JSON_array_en_main = 1;
 
             // ACTION
     }
-# line 1292 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 1299 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -1322,7 +1322,7 @@ uint  JSON_array_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 454 "opt/json.rl"
+# line 461 "opt/json.rl"
 
         if (cs >= JSON_array_first_final) {
             return ParserResult(result, p + 1);
@@ -1332,7 +1332,7 @@ uint  JSON_array_en_main = 1;
     }
 
     
-# line 1329 "lib/crack/enc/json/parser.crk"
+# line 1336 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_object_actions = [
   0, 1, 0, 1, 1, 1, 2
 ];
@@ -1457,7 +1457,7 @@ uint JSON_object_error = 0;
 uint  JSON_object_en_main = 1;
 
 
-# line 505 "opt/json.rl"
+# line 512 "opt/json.rl"
 
 
     ParserResult parseObject(uint p, uint pe) {
@@ -1472,13 +1472,13 @@ uint  JSON_object_en_main = 1;
         uint cs = EVIL;
 
         
-# line 1469 "lib/crack/enc/json/parser.crk"
+# line 1476 "lib/crack/enc/json/parser.crk"
   cs = JSON_object_start;
 
-# line 519 "opt/json.rl"
+# line 526 "opt/json.rl"
 
         
-# line 1475 "lib/crack/enc/json/parser.crk"
+# line 1482 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -1539,7 +1539,7 @@ uint  JSON_object_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 468 "opt/json.rl" # end of line directive
+# line 475 "opt/json.rl" # end of line directive
     
             res = parseValue(p, pe);
             if (res is null) {
@@ -1561,7 +1561,7 @@ uint  JSON_object_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 482 "opt/json.rl" # end of line directive
+# line 489 "opt/json.rl" # end of line directive
     
             res = parseString(p, pe);
 
@@ -1575,7 +1575,7 @@ uint  JSON_object_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
-# line 493 "opt/json.rl" # end of line directive
+# line 500 "opt/json.rl" # end of line directive
     
             p = p - 1;
                 p += 1;
@@ -1586,7 +1586,7 @@ uint  JSON_object_en_main = 1;
 
             // ACTION
     }
-# line 1583 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 1590 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -1613,7 +1613,7 @@ uint  JSON_object_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 521 "opt/json.rl"
+# line 528 "opt/json.rl"
 
         if (cs < JSON_object_first_final) {
             return null;
@@ -1622,7 +1622,7 @@ uint  JSON_object_en_main = 1;
     }
 
     
-# line 1619 "lib/crack/enc/json/parser.crk"
+# line 1626 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_actions = [
   0, 1, 0, 1, 1
 ];
@@ -1690,7 +1690,7 @@ uint JSON_error = 0;
 uint  JSON_en_main = 1;
 
 
-# line 562 "opt/json.rl"
+# line 569 "opt/json.rl"
 
 
     ParserResult parseStrict() {
@@ -1702,13 +1702,13 @@ uint  JSON_en_main = 1;
         uint pe = p + data_size;
 
         
-# line 1699 "lib/crack/enc/json/parser.crk"
+# line 1706 "lib/crack/enc/json/parser.crk"
   cs = JSON_start;
 
-# line 573 "opt/json.rl"
+# line 580 "opt/json.rl"
 
         
-# line 1705 "lib/crack/enc/json/parser.crk"
+# line 1712 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -1769,7 +1769,7 @@ uint  JSON_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 534 "opt/json.rl" # end of line directive
+# line 541 "opt/json.rl" # end of line directive
     
             currentNesting = 1;
             res = parseObject(p, pe);
@@ -1789,7 +1789,7 @@ uint  JSON_en_main = 1;
             // ACTION
     }
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
-# line 546 "opt/json.rl" # end of line directive
+# line 553 "opt/json.rl" # end of line directive
     
             currentNesting = 1;
             res = parseArray(p, pe);
@@ -1808,7 +1808,7 @@ uint  JSON_en_main = 1;
             }
             // ACTION
     }
-# line 1805 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 1812 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -1835,7 +1835,7 @@ uint  JSON_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 575 "opt/json.rl"
+# line 582 "opt/json.rl"
 
         if (cs >= JSON_first_final && p == pe) {
             return res;
@@ -1845,7 +1845,7 @@ uint  JSON_en_main = 1;
     }
 
     
-# line 1842 "lib/crack/enc/json/parser.crk"
+# line 1849 "lib/crack/enc/json/parser.crk"
 Array[uint] _JSON_quirks_mode_actions = [
   0, 1, 0
 ];
@@ -1913,7 +1913,7 @@ uint JSON_quirks_mode_error = 0;
 uint  JSON_quirks_mode_en_main = 1;
 
 
-# line 601 "opt/json.rl"
+# line 608 "opt/json.rl"
 
 
     ParserResult parseQuirksMode() {
@@ -1925,13 +1925,13 @@ uint  JSON_quirks_mode_en_main = 1;
         uint pe = p + data_size;
 
         
-# line 1922 "lib/crack/enc/json/parser.crk"
+# line 1929 "lib/crack/enc/json/parser.crk"
   cs = JSON_quirks_mode_start;
 
-# line 612 "opt/json.rl"
+# line 619 "opt/json.rl"
 
         
-# line 1928 "lib/crack/enc/json/parser.crk"
+# line 1935 "lib/crack/enc/json/parser.crk"
 #  ragel flat exec
 
   bool testEof = false;
@@ -1992,7 +1992,7 @@ uint  JSON_quirks_mode_en_main = 1;
 
      # start action switch
     if (_tempval  == 0) { // FROM_STATE_ACTION_SWITCH
-# line 589 "opt/json.rl" # end of line directive
+# line 596 "opt/json.rl" # end of line directive
     
             res = parseValue(p, pe);
             if (res is null) {
@@ -2010,7 +2010,7 @@ uint  JSON_quirks_mode_en_main = 1;
             }
             // ACTION
     }
-# line 2007 "lib/crack/enc/json/parser.crk" # end of line directive
+# line 2014 "lib/crack/enc/json/parser.crk" # end of line directive
     # end action switch
       } # while _nacts
     }
@@ -2037,7 +2037,7 @@ uint  JSON_quirks_mode_en_main = 1;
     } # endif _goto_level <= out
 
   # end of execute block
-# line 614 "opt/json.rl"
+# line 621 "opt/json.rl"
 
         if (cs >= JSON_quirks_mode_first_final && p == pe) {
             return res;
@@ -2059,7 +2059,7 @@ uint  JSON_quirks_mode_en_main = 1;
 
 //------------------------------------------------------------------------------
 
-    ParserResult parse(String buf0) {
+    ParserResult parse(Buffer buf0) {
         data = buf0.buffer;
         data_size = buf0.size;
         return parse();
