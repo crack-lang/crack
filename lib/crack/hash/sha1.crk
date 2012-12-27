@@ -1,0 +1,217 @@
+/*
+ Copyright (c) 2011, Micael Hildenborg
+ All rights reserved.
+
+ Crack version
+ Copyright 2012 Conrad D. Steenberg <conrad.steenberg@gmail.com>
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Micael Hildenborg nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY Micael Hildenborg ''AS IS'' AND ANY
+ EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL Micael Hildenborg BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+ Contributors:
+ Gustav
+ Several members in the gamedev.se forum.
+ Gregory Petrosyan
+ */
+ 
+
+import crack.cont.array Array;
+import crack.ascii radix;
+import crack.hash Hash;
+import crack.lang Buffer, ManagedBuffer;
+import crack.runtime INT_SIZE;
+@import crack.ann define;
+
+
+// Rotate an integer value to left.
+uint _rol(uint value, uint steps) {
+    return ((value << steps) | (value >> (32 - steps)));
+}
+
+// Sets the first 16 integers in the buffert to zero.
+// Used for clearing the W buffert.
+void clearWBuffert(array[uint] buffert)
+{
+    for (uint pos = 0; pos < 16; pos++)
+    {
+        buffert[pos] = 0;
+    }
+}
+
+@define sha1macro(func, val) {
+    if (true) {
+        uint t = _rol(a, 5) + (func) + e + val + w[round];
+        e = d;
+        d = c;
+        c = _rol(b, 30);
+        b = a;
+        a = t;
+    }
+}
+
+void innerHash(array[uint] result, array[uint] w) {
+    uint a = result[0];
+    uint b = result[1];
+    uint c = result[2];
+    uint d = result[3];
+    uint e = result[4];
+
+    uint round = 0;
+
+    while (round < 16) {
+        @sha1macro((b & c) | (~b & d), 0x5a827999)
+        ++round;
+    }
+
+    while (round < 20) {
+        w[round] = _rol((w[round - 3] ^ w[round - 8] ^ w[round - 14] ^ w[round - 16]), 1);
+        @sha1macro((b & c) | (~b & d), 0x5a827999);
+        ++round;
+    }
+
+    while (round < 40) {
+        w[round] = _rol((w[round - 3] ^ w[round - 8] ^ w[round - 14] ^ w[round - 16]), 1);
+        @sha1macro(b ^ c ^ d, 0x6ed9eba1);
+        ++round;
+    }
+
+    while (round < 60) {
+        w[round] = _rol((w[round - 3] ^ w[round - 8] ^ w[round - 14] ^ w[round - 16]), 1);
+        @sha1macro((b & c) | (b & d) | (c & d), 0x8f1bbcdc);
+        ++round;
+    }
+
+    while (round < 80) {
+        w[round] = _rol((w[round - 3] ^ w[round - 8] ^ w[round - 14] ^ w[round - 16]), 1);
+        @sha1macro(b ^ c ^ d, 0xca62c1d6);
+        ++round;
+    }
+
+    result[0] = result[0] + a;
+    result[1] = result[1] + b;
+    result[2] = result[2] + c;
+    result[3] = result[3] + d;
+    result[4] = result[4] + e;
+}
+
+
+void calc(Buffer src, Buffer hash) {
+    // Init the result array.
+    Array[uint] Result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+    result := Result.data();
+
+    // Cast the src pointer to be the byte array we can work with.
+    sarray := src.buffer;
+    bytelength := src.size;
+
+    // The reusable round buffer
+    Array[uint] W = {80};
+    w := W.data();
+
+    // Loop through all complete 64byte blocks.
+    int endOfFullBlocks = bytelength - 64;
+    int endCurrentBlock;
+    int currentBlock = 0;
+
+    while (currentBlock <= endOfFullBlocks) {
+        endCurrentBlock = currentBlock + 64;
+
+        // Init the round buffer with the 64 byte block data.
+        for (uint roundPos = 0; currentBlock < endCurrentBlock; currentBlock += 4) {
+            // This line will swap endian on big endian and keep endian on little endian.
+            w[roundPos++] = uint(sarray[currentBlock + 3])
+                    | (uint(sarray[currentBlock + 2]) << 8)
+                    | (uint(sarray[currentBlock + 1]) << 16)
+                    | (uint(sarray[currentBlock]) << 24);
+        }
+        innerHash(result, w);
+    }
+
+    // Handle the last and not full 64 byte block if existing.
+    endCurrentBlock = bytelength - currentBlock;
+    clearWBuffert(w);
+
+    uint lastBlockBytes = 0, wi;
+    
+    while (lastBlockBytes < endCurrentBlock)  {
+        wi = lastBlockBytes >> 2;
+        w[wi] = w[wi] | (uint(sarray[lastBlockBytes + currentBlock]) <<
+                                       ((3 - (lastBlockBytes & 3)) << 3));
+        ++lastBlockBytes
+    }
+
+    wi = lastBlockBytes >> 2;
+    w[wi] = w[wi] | 0x80 << ((3 - (lastBlockBytes & 3)) << 3);
+
+    if (endCurrentBlock >= 56) {
+        innerHash(result, w);
+        clearWBuffert(w);
+    }
+    
+    w[15] = bytelength << 3;
+    innerHash(result, w);
+
+    h := hash.buffer;
+
+    // Store hash in result pointer, and make sure we get in in the correct order on both endian models.
+    for (uint hashByte = 0; hashByte < 20; hashByte++) {
+        h[hashByte] = byte((result[hashByte >> 2] >> (((3 - hashByte) & 0x3) << 3)) & 0xff);
+    }
+}
+
+## SHA1 class implements a Hash
+class SHA1 : Hash {
+    ManagedBuffer hash;
+
+    void _clear() {
+        h := hash.buffer;
+        if (!(h is null) && hash.size >= 20) {
+            for (uint i=0; i < 20; i++)
+                h[i] = 0;
+        }
+    }
+
+    oper init() : hash(20) {
+        _size = 20;
+        hash.size = 20;
+    }
+
+    ## Add more data
+    void update(Buffer buf) {
+        calc(buf, hash);
+    }
+
+    ## Alternative constructor taking a buffer argument
+    oper init(Buffer buf) : hash(20) {
+        _size = 20;
+        hash.size = 20;
+        update(buf);
+    }
+
+    ## Return raw digest as a buffer of 4 bytes
+    Buffer digest() {
+        return hash;
+    }
+
+}
