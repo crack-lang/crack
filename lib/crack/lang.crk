@@ -393,7 +393,7 @@ class WriteBuffer : Buffer {
     ## move data from one place in the buffer to another place in the buffer.  
     ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
     void move(uint newStart, uint oldStart, uint count) {
-        if (oldStart + count > cap)
+        if (oldStart + count > size)
             _throwIndexError('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
         if (newStart + count > size)

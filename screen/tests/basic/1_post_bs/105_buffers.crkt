@@ -1,0 +1,23 @@
+%%TEST%%
+Buffer Tests
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+import crack.lang AppendBuffer, IndexError;
+
+// Verify that move() with a source outside of capacity throws an IndexError.
+if (true) {
+    AppendBuffer buf = {16};
+    buf.extend('foobar');
+    try {
+        buf.move(0, 1, 6);
+        cerr `FAILED getting an exception from outside move range.\n`;
+    } catch (IndexError ex) {
+    }
+}
+
+cerr `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
