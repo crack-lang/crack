@@ -206,6 +206,13 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
+bool OverloadDef::isSerializable(const ModuleDef *module) const {
+    if (!VarDef::isSerializable(module))
+        return false;
+    else
+        return hasSerializableFuncs(module);
+}
+
 bool OverloadDef::isSingleFunction() const {
     FuncList flatFuncs;
     flatten(flatFuncs);
@@ -262,8 +269,9 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
-         )
+         ) {
         (*parent)->display(out, prefix);
+    }
 }
 
 void OverloadDef::addDependenciesTo(const ModuleDef *mod, 
@@ -277,7 +285,28 @@ void OverloadDef::addDependenciesTo(const ModuleDef *mod,
     }
 }
 
+bool OverloadDef::hasSerializableFuncs(const ModuleDef *module) const {
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         ) {
+        if ((*iter)->isSerializable(module))
+            return true;
+    }
+}
+
 void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
+
+    // calculate the number of functions to serialize (we don't serialize 
+    // builtins)
+    int size = 0;
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        if ((*iter)->isSerializable(serializer.module))
+            ++size;
+
     if (writeKind)
         serializer.write(Serializer::overloadId, "kind");
     serializer.write(name, "name");
@@ -286,8 +315,10 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         )
-        (*iter)->serialize(serializer, false);
+         ) {
+        if ((*iter)->isSerializable(serializer.module))
+            (*iter)->serialize(serializer, false);
+    }
 }
 
 OverloadDefPtr OverloadDef::deserialize(Deserializer &deser) {

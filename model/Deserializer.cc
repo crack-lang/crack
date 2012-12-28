@@ -14,6 +14,7 @@
 #include <iomanip>
 #include "spug/RCBase.h"
 #include "Serializer.h"
+#include "DeserializationError.h"
 
 using namespace std;
 using namespace model;
@@ -22,6 +23,8 @@ unsigned int Deserializer::readUInt(const char *name) {
     uint8_t b = 0x80;
     unsigned val = 0, offset = 0;
     while (b & 0x80) {
+        if (src.eof())
+            throw DeserializationError("EOF deserializing meta-data");
         b = src.get();
 
         // see if we've got the last byte
@@ -42,6 +45,8 @@ char *Deserializer::readBlob(size_t &size, char *buffer, const char *name) {
         buffer = new char[size];
 
     src.read(buffer, size);
+    if (src.fail())
+        throw DeserializationError("EOF deserializing meta-data");
     if (Serializer::trace)
         cerr << "read blob " << name << ": " << setw(size) << buffer << endl;
     return buffer;
@@ -60,17 +65,19 @@ string Deserializer::readString(size_t expectedMaxSize, const char *name) {
     }
 }
 
-spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
-                                         const char *name
-                                         ) {
+Deserializer::ReadObjectResult Deserializer::readObject(
+    const ObjectReader &reader,
+    const char *name
+) {
     int id = readUInt(name);
     if (id & 1) {
         // this is a definition - let the reader read the object
         if (Serializer::trace)
             cerr << "reading new object " << name << " id = " << id << endl;
+        userData = 0;
         spug::RCBasePtr obj = reader.read(*this);
         objMap[id >> 1] = obj;
-        return obj;
+        return ReadObjectResult(obj, true, userData);
     } else {
         // the object should already exist
         if (Serializer::trace)
@@ -78,6 +85,6 @@ spug::RCBasePtr Deserializer::readObject(const ObjectReader &reader,
                 endl;
         ObjMap::iterator iter = objMap.find(id >> 1);
         assert(iter != objMap.end() && "Unable to resolve serialized object");
-        return iter->second;
+        return ReadObjectResult(iter->second, false, 0);
     }
 }

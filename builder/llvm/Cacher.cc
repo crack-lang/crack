@@ -1166,6 +1166,10 @@ void Cacher::resolveStructs(llvm::Module *module) {
          i != dSet.end(); ++i) {
         int pos = i->first.rfind(".");
         string canonical = i->first.substr(0, pos);        
+
+// XXX I don't think we need this hack anymore since we're not dealing with 
+// the Crack type system.
+#if 0
         // XXX big hack. meta's are created implicitly by class defs, so their
         // corresponding class defs have to come first in this list else the
         // metas won't exist in resolveType. defer them?
@@ -1173,17 +1177,30 @@ void Cacher::resolveStructs(llvm::Module *module) {
             //cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
             continue;
         }
-        TypeDefPtr td = resolveType(canonical);
-        BTypeDef *bt = dynamic_cast<BTypeDef *>(td.get());
-        assert(bt);
+#endif
+        
+        // see if we've encountered the type before, if not just map it to 
+        // itself.
+        StructType *type = LLVMBuilder::getLLVMType(canonical);
+        if (!type) {
+            typeMap[i->second] = i->second;
+            continue;
+        }
+            
         // we want to map the struct (the ContainedType), not the pointer to it
-        PointerType *a = dyn_cast<PointerType>(bt->rep);
+        PointerType *a = type->getPointerTo();
         assert(a && "expected a PointerType");
+
+// XXX again, since we're not going through the crack layer contortions, this 
+// type should just be the VTableBase type.
+#if 0
         // most classes are single indirection pointers-to-struct, but we have
         // to special case VTableBase which is **
         if (canonical == ".builtin.VTableBase") {
             a = cast<PointerType>(a->getElementType());
         }
+#endif
+
         StructType *left = dyn_cast<StructType>(i->second);
         assert(left);
         StructType *right = dyn_cast<StructType>(a->getElementType());

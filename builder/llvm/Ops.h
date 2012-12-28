@@ -61,7 +61,10 @@ class BinOpDef : public OpDef {
 class UnOpDef : public OpDef {
     public:
     UnOpDef(model::TypeDef *resultType, const std::string &name) :
-            OpDef(resultType, model::FuncDef::method, name, 0) {
+            OpDef(resultType, model::FuncDef::builtin | model::FuncDef::method, 
+                  name, 
+                  0
+                  ) {
         }
 };
 
@@ -171,7 +174,9 @@ class FunctionPtrOpDef : public OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    OpDef(resultType, FuncDef::method, "oper call", argCount) {
+    OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call", 
+          argCount
+          ) {
         type = resultType;
     }
 
@@ -207,7 +212,9 @@ public:
 class NoOpDef : public GeneralOpDef<NoOpCall> {
     public:
         NoOpDef(model::TypeDef *resultType, const std::string &name) : 
-            GeneralOpDef<NoOpCall>(resultType, model::FuncDef::method, name,
+            GeneralOpDef<NoOpCall>(resultType, 
+                                   FuncDef::builtin | model::FuncDef::method, 
+                                   name,
                                    0
                                    ) {
         }

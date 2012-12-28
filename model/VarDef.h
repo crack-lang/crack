@@ -54,6 +54,12 @@ class VarDef : public virtual spug::RCBase {
         virtual bool hasInstSlot();
         
         /**
+         * Returns the instance variable slot of the variable (if any).  -1 if 
+         * there is none.
+         */
+        virtual int getInstSlot() const;
+        
+        /**
          * Returns true if the definition is class static.
          */
         virtual bool isStatic() const;
@@ -97,6 +103,12 @@ class VarDef : public virtual spug::RCBase {
          * Returns the module that owns this definition.
          */
         ModuleDef *getModule() const;
+        
+        /**
+         * Returns true if the definition should be serialized when the module
+         * is being serialized.
+         */
+        virtual bool isSerializable(const ModuleDef *module) const;
         
         /**
          * Add all of the modules that this 

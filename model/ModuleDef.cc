@@ -119,6 +119,14 @@ void ModuleDef::serialize(Serializer &serializer) const {
          )
         iter->second->addDependenciesTo(this, deps);
 
+    // make sure we have the imports (we can import a module without
+    // incorporating any of its defs)
+    for (vector<ModuleDefPtr>::const_iterator iter = imports.begin();
+         iter != imports.end();
+         ++iter
+         )
+        deps[(*iter)->getFullName()] = *iter;
+
     // write the dependencies
     serializer.write(deps.size(), "#deps");
     for (ModuleDefMap::const_iterator iter = deps.begin(); iter != deps.end();

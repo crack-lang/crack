@@ -34,6 +34,10 @@ class BModuleDef;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
+    private:
+        typedef std::map<std::string, llvm::StructType *> TypeMap;
+        static TypeMap llvmTypes;
+
     protected:
 
         llvm::Function *callocFunc;
@@ -441,7 +445,8 @@ class LLVMBuilder : public Builder {
         virtual model::VarDefPtr materializeVar(
             model::Context &context,
             const std::string &name,
-            model::TypeDef *type
+            model::TypeDef *type,
+            int instSlot
         );
 
         virtual model::ArgDefPtr materializeArg(
@@ -516,6 +521,23 @@ class LLVMBuilder : public Builder {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     );
+        
+        // functions to manage the global type table.  The global type table 
+        // allows us to normalize types when loading modules from the 
+        // persistent cache.
+        
+        /**
+         * Return the LLVM type associated with the given canonical name.  
+         * Returns null if there is currently no type stored under that name.
+         */
+        static llvm::StructType *getLLVMType(const std::string &canonicalName);
+        
+        /**
+         * Store a type by name in the global LLVM type table.
+         */
+        static void putLLVMType(const std::string &canonicalName, 
+                                llvm::StructType *type
+                                );
 
 
 };

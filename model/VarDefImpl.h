@@ -34,6 +34,8 @@ class VarDefImpl : public spug::RCBase {
                                              ) = 0;
 
         virtual bool hasInstSlot() const = 0;
+        
+        virtual int getInstSlot() const = 0;
 };
 
 } // namespace model

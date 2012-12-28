@@ -1,0 +1,10 @@
+%%TEST%%
+SHA1 hash function
+%%ARGS%%
+
+%%FILE%%
+import test.test_sha1;
+%%EXPECT%%
+ok
+%%STDIN%%
+

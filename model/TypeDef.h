@@ -346,7 +346,9 @@ class TypeDef : public VarDef, public Namespace {
         /**
          * Deserialze a type object.
          */        
-        static TypeDefPtr deserialize(Deserializer &deser);
+        static TypeDefPtr deserialize(Deserializer &deser,
+                                      const char *name = 0
+                                      );
 };
 
 } // namespace model

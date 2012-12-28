@@ -42,6 +42,12 @@ class Deserializer {
 
         Context *context;
 
+        // Allows an object reader to pass back information to the
+        // higher-level calling code for use after the object is deserialized.
+        // This is copied into the ReadObjectResult structure returned by
+        // readObject().
+        int userData;
+
         Deserializer(std::istream &src) : src(src) {}
         Deserializer(std::istream &src, Context *context) :
             src(src),
@@ -74,14 +80,33 @@ class Deserializer {
          */
         std::string readString(size_t expectedMaxSize, const char *name);
 
+        struct ReadObjectResult {
+            spug::RCBasePtr object;
+
+            // True if we just read the definition of the object (if this was
+            // the first time it was encountered)
+            bool definition;
+
+            // Field to allow first-stage deserializers to pass information
+            // back to a second stage.  Initialized to zero.
+            int userData;
+
+            ReadObjectResult(spug::RCBasePtr object, bool definition,
+                             int userData) :
+                object(object),
+                definition(definition),
+                userData(userData) {
+            }
+        };
+
         /**
          * Read the next object from the stream.  This returns a pointer to an
          * existing object if the object possibly calling reader.read() to
          * deserialize the object from the stream.
          */
-        spug::RCBasePtr readObject(const ObjectReader &reader,
-                                   const char *name
-                                   );
+        ReadObjectResult readObject(const ObjectReader &reader,
+                                    const char *name
+                                    );
 };
 
 }

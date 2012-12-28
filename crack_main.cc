@@ -15,10 +15,12 @@
 #include "parser/Toker.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
+#include "model/Serializer.h"
 #include "model/TypeDef.h"
 #include "builder/BuilderOptions.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
+#include "builder/llvm/StructResolver.h"
 #include "debug/DebugTools.h"
 #include "Crack.h"
 #include "config.h"
@@ -50,6 +52,7 @@ struct option longopts[] = {
     {"version", false, 0, 0},
     {"stats", false, 0, 0},
     {"dump-func-table", false, 0, dumpFuncTable},
+    {"trace", true, 0, 't'},
     {0, 0, 0, 0}
 };
 
@@ -100,6 +103,12 @@ void usage(int retval) {
             "time operations." << endl;
     cout << "            --dump-func-table    Dump the debug function table."
         << endl;
+    cout << " -t <module> --trace <module>    Turn tracing on for the module."
+        << endl;
+    cout << "                                 Modules supporting tracing:"
+        << endl;
+    cout << "                                   Serializer"
+        << endl;
     exit(retval);
 }
 
@@ -130,8 +139,11 @@ int main(int argc, char **argv) {
     bool optionsError = false;
     bool useDoubleBuilder = false;    
     bool doDumpFuncTable = false;
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vq", longopts, &idx)) !=
-           -1) {
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vqt:", longopts, 
+                              &idx
+                              )
+            ) != -1
+           ) {
         switch (opt) {
             case 0:
                 // long option tied to a flag variable
@@ -231,6 +243,17 @@ int main(int argc, char **argv) {
                 break;
             case dumpFuncTable:
                 doDumpFuncTable = true;
+                break;
+            case 't':
+                if (!strcmp("Serializer", optarg)) {
+                    model::Serializer::trace = true;
+                } else if (!strcmp("StructResolver", optarg)) {
+                    builder::mvll::StructResolver::trace = true;
+                } else {
+                    cerr << "Unknown trace module (-t): " << optarg << endl;
+                    exit(1);
+                }
+                break;
         }
     }
     

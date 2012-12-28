@@ -344,7 +344,8 @@ class MockBuilder : public builder::Builder {
         virtual model::VarDefPtr materializeVar(
             model::Context &context,
             const std::string &name,
-            model::TypeDef *type
+            model::TypeDef *type,
+            int instSlot
         ) {
             return new model::VarDef(type, name);
         }

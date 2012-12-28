@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <sstream>
+#include <string.h>
 #include "model/GlobalNamespace.h"
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
@@ -178,6 +179,64 @@ bool moduleReload() {
     return success;
 }
 
+bool reloadOfSelfReferrentTypes() {
+    bool success = true;
+    DataSet ds;
+    ds.addTestModules();
+
+    TypeDefPtr myType = new TypeDef(ds.metaType.get(), "MyType");
+    ds.dep0->addDef(myType.get());
+
+    // create "MyType MyType.func(MyType a)"
+    OverloadDefPtr ovld = new OverloadDef("func");
+    FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+    f->args[0] = new ArgDef(myType.get(), "a");
+    f->returnType = ds.voidType;
+    ovld->addFunc(f.get());
+    f->setOwner(myType.get());
+    myType->addDef(ovld.get());
+
+    MockBuilder builder;
+    builder.incref();
+    builder.options = new builder::BuilderOptions();
+    Construct construct(Options(), &builder);
+    Context context(builder, Context::module, &construct,
+                    0, // namespace, filled in by ModuleDef::deserialize()
+                    new GlobalNamespace(0, "")
+                    );
+    context.incref();
+
+    DataSet ds2;
+    construct.registerModule(ds2.builtins.get());
+
+    ostringstream data;
+    Serializer ser(data);
+    ds.dep0->serialize(ser);
+
+    istringstream src(data.str());
+    Deserializer deser(src, &context);
+    ModuleDef::readHeaderAndVerify(deser, SourceDigest());
+    ModuleDefPtr dep0 = ModuleDef::deserialize(deser, "dep0");
+
+    myType = dep0->lookUp("MyType");
+    ovld = myType->lookUp("func");
+    if (!ovld) {
+        cerr << "unable to lookup overload func" << endl;
+        success = false;
+    } else {
+        ArgVec args(1);
+        args[0] = new ArgDef(myType.get(), "a");
+        f = ovld->getSigMatch(args, true);
+
+        if (!f)
+            cerr << "unable to find matching overload" << endl;
+        else if (f->args[0]->type != myType)
+            cerr << "incorrect return type deserialized" << endl;
+    }
+
+    return success;
+}
+
 struct TestCase {
     const char *text;
     bool (*f)();
@@ -188,10 +247,16 @@ TestCase testCases[] = {
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
     {"moduleReload", moduleReload},
+    {"reloadOfSelfReferrentTypes", reloadOfSelfReferrentTypes},
     {0, 0}
 };
 
 int main(int argc, const char **argv) {
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[1], "Serializer"))
+            Serializer::trace = true;
+    }
+
     for (TestCase *test = testCases; test->text; ++test) {
         cerr << test->text << "..." << flush;
         cerr << (test->f() ? "ok" : "FAILED") << endl;

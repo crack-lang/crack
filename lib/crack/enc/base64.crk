@@ -1,0 +1,195 @@
+/* 
+   base64.cpp and base64.h
+
+   Copyright (C) 2004-2008 René Nyffenegger
+
+   This source code is provided 'as-is', without any express or implied
+   warranty. In no event will the author be held liable for any damages
+   arising from the use of this software.
+
+   Permission is granted to anyone to use this software for any purpose,
+   including commercial applications, and to alter it and redistribute it
+   freely, subject to the following restrictions:
+
+   1. The origin of this source code must not be misrepresented; you must not
+      claim that you wrote the original source code. If you use this source code
+      in a product, an acknowledgment in the product documentation would be
+      appreciated but is not required.
+
+   2. Altered source versions must be plainly marked as such, and must not be
+      misrepresented as being the original source code.
+
+   3. This notice may not be removed or altered from any source distribution.
+
+   René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+
+*/
+
+// Crack version
+// Copyright 2012 Conrad D. Steenberg <conrad.steenberg@gmail.com>
+// 12/26/2012
+
+import crack.cont.array Array;
+import crack.lang Buffer, ManagedBuffer, AppendBuffer;
+
+base64 := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+          "abcdefghijklmnopqrstuvwxyz"
+          "0123456789+/";
+base64_chars := base64.buffer;
+EOL := "\r\n";
+
+// Create an inverse lookup buffer
+Array[byte] decodeB64Array = {128}; // Reserve space
+decodeB64 := decodeB64Array.data();
+
+byte _v;
+for (byte i=0; i<128; i++) {
+    if (i >= b'A' && i <= b'Z')
+        _v = i - b'A';
+    else if (i >= b'a' && i <= b'z')
+        _v = 26 + i - b'a';
+    else if (i >= b'0' && i <= b'9')
+        _v = 52 + i - b'0';
+    else if (i == b'+')
+        _v = 62;
+    else if (i == b'/')
+        _v = 63;
+    else
+        _v = 0;
+    decodeB64[i] = _v;
+}
+
+bool is_base64(byte c) {
+    return ((c >= b'A' && c <= b'Z') ||
+            (c >= b'a' && c <= b'z') ||
+            (c >= b'0' && c <= b'9') ||
+             c == b'+' ||  c == b'/' ||
+             c == b'\n' || c == b'\r');
+}
+
+bool is_eol(byte c) {
+    return (c == b'\n' || c == b'\r');
+}
+
+// Encode the given buffer with specified line length
+Buffer encode(Buffer inbuf, uint lineLength) {
+    bytes_to_encode := inbuf.buffer;
+    split := lineLength > 0;
+    l := inbuf.size*4/inbuf.size/3 + 4;
+
+    if (split)
+        l += (inbuf.size*4/inbuf.size/3)/lineLength;
+
+    in_len := int(inbuf.size);
+
+    AppendBuffer ret = {l};
+    uint i = 0, j = 0, k = 0, lc = 1;
+
+    ManagedBuffer chars4 = {4};
+    ManagedBuffer chars3 = {3};
+    chars4.size = 4;
+    chars3.size = 3;
+    
+    char_array_4 := chars4.buffer;
+    char_array_3 := chars3.buffer;
+
+
+    while (in_len > 0) {
+        char_array_3[i++] = bytes_to_encode[k++];
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for (i = 0; i < 4; i++) {
+                ret.append(base64_chars[char_array_4[i]]);
+                if (split && lc%lineLength == 0) ret.extend(EOL);
+                lc++;  
+            }
+            i = 0;
+        }
+        in_len--;
+    }
+
+    if (i > 0)  {
+        for(j = i; j < 3; j++)
+            char_array_3[j] = b'\0';
+
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[3] = char_array_3[2] & 0x3f;
+
+        for (j = 0; j < i + 1; j++) {
+            ret.append(base64_chars[char_array_4[j]]);
+            if (split && (lc % lineLength == 0)) ret.extend(EOL);
+            lc++;
+        }
+
+        while(i < 3) {
+            ret.append(b'=');
+            if (split && (lc % lineLength == 0)) ret.extend(EOL);
+            lc++;
+            i++;
+        }
+    }
+
+  return ret;
+}
+
+// Decode the given buffer
+Buffer decode(Buffer inbuf) {
+    int in_len = inbuf.size;
+    encoded_string := inbuf.buffer;
+    l := (inbuf.size * 3) / (inbuf.size / 4) + 4;
+    uint i = 0, j = 0, in_ = 0;
+
+    ManagedBuffer chars4 = {4};
+    ManagedBuffer chars3 = {3};
+    chars4.size = 4;
+    chars3.size = 3;
+    
+    char_array_4 := chars4.buffer;
+    char_array_3 := chars3.buffer;
+
+    AppendBuffer ret = {l};
+    c := encoded_string[in_];
+
+    while (in_len > 0 && (c != b'=') && is_base64(c)) {
+        if (!is_eol(c)) {
+            char_array_4[i++] = c;
+            if (i == 4) {
+                for (i = 0; i < 4; i++)
+                    char_array_4[i] = decodeB64[char_array_4[i]];
+
+                char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+                char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+                char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+                ret.extend(chars3);
+                i = 0;
+            }
+        }
+        in_len--;
+        in_++;
+        c = encoded_string[in_];
+    }
+
+    if (i > 0) {
+        for (j = i; j <4; j++)
+            char_array_4[j] = 0;
+
+        for (j = 0; j <4; j++)
+            char_array_4[j] = decodeB64[char_array_4[j]];
+
+        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+        for (j = 0; j < i - 1; j++)
+            ret.append(char_array_3[j]);
+    }
+
+    return ret;
+}

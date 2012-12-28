@@ -41,6 +41,10 @@ bool VarDef::hasInstSlot() {
     return impl->hasInstSlot();
 }
 
+int VarDef::getInstSlot() const {
+    return impl->getInstSlot();
+}
+
 bool VarDef::isStatic() const {
     return false;
 }
@@ -86,6 +90,10 @@ void VarDef::dump() const {
 
 ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
+}
+
+bool VarDef::isSerializable(const ModuleDef *module) const {
+    return name[0] != ':' && getModule() == module;
 }
 
 void VarDef::addDependenciesTo(const ModuleDef *mod,
@@ -142,7 +150,7 @@ namespace {
 VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
     return VarDefPtr::rcast(serializer.readObject(AliasReader(),
                                                   "ext"
-                                                  )
+                                                  ).object
                             );
 }
 
@@ -150,13 +158,16 @@ void VarDef::serialize(Serializer &serializer, bool writeKind) const {
     if (writeKind)
         serializer.write(Serializer::variableId, "kind");
     serializer.write(name, "name");
+    serializer.write(getInstSlot() + 1, "instSlot");
     type->serialize(serializer, false);
 }
 
 VarDefPtr VarDef::deserialize(Deserializer &deser) {
     string name = deser.readString(16, "name");
+    int instSlot = static_cast<int>(deser.readUInt("instSlot")) - 1;
     TypeDefPtr type = TypeDef::deserialize(deser);
     return deser.context->builder.materializeVar(*deser.context, name,
-                                                 type.get()
+                                                 type.get(),
+                                                 instSlot
                                                  );
 }
