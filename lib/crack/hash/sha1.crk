@@ -52,7 +52,7 @@ uint _rol(uint value, uint steps) {
 
 // Sets the first 16 integers in the buffert to zero.
 // Used for clearing the W buffert.
-void clearWBuffert(array[uint] buffert)
+void _clearWBuffert(array[uint] buffert)
 {
     for (uint pos = 0; pos < 16; pos++)
     {
@@ -117,7 +117,7 @@ void innerHash(array[uint] result, array[uint] w) {
 }
 
 
-void calc(Buffer src, Buffer hash) {
+void _calc(Buffer src, Buffer hash) {
     // Init the result array.
     Array[uint] Result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
     result := Result.data();
@@ -151,7 +151,7 @@ void calc(Buffer src, Buffer hash) {
 
     // Handle the last and not full 64 byte block if existing.
     endCurrentBlock = bytelength - currentBlock;
-    clearWBuffert(w);
+    _clearWBuffert(w);
 
     uint lastBlockBytes = 0, wi;
     
@@ -167,7 +167,7 @@ void calc(Buffer src, Buffer hash) {
 
     if (endCurrentBlock >= 56) {
         innerHash(result, w);
-        clearWBuffert(w);
+        _clearWBuffert(w);
     }
     
     w[15] = bytelength << 3;
@@ -181,7 +181,7 @@ void calc(Buffer src, Buffer hash) {
     }
 }
 
-## SHA1 class implements a Hash
+// SHA1 class implements a Hash
 class SHA1 : Hash {
     ManagedBuffer hash;
 
@@ -198,19 +198,19 @@ class SHA1 : Hash {
         hash.size = 20;
     }
 
-    ## Add more data
+    // Add more data
     void update(Buffer buf) {
-        calc(buf, hash);
+        _calc(buf, hash);
     }
 
-    ## Alternative constructor taking a buffer argument
+    // Alternative constructor taking a buffer argument
     oper init(Buffer buf) : hash(20) {
         _size = 20;
         hash.size = 20;
         update(buf);
     }
 
-    ## Return raw digest as a buffer of 4 bytes
+    // Return raw digest as a buffer of 4 bytes
     Buffer digest() {
         return hash;
     }

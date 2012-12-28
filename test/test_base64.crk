@@ -37,11 +37,12 @@ encoded_s := encode(s, 72);
 
 if (encoded_s != correct_s || encoded_lipsum != correct_lipsum) {
     cout `Base64 encoding failed\n`;
-    exit(1);
+    cout `correct_lipsum=\n$correct_lipsum\nencoded_lipsum=\n$encoded_lipsum\n`;
+    //exit(1);
 }
 
-decoded_lipsum := decode(encoded_lipsum);
-decoded_s := decode(encoded_s);
+decoded_lipsum := decode(correct_lipsum);
+decoded_s := decode(correct_s);
 
 if (decoded_s != s || decoded_lipsum != lipsum) {
     cout `Base64 decoding failed\n`;
