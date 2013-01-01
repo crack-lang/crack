@@ -1,0 +1,367 @@
+## User-friendly facades for network interfaces.
+##
+## Copyright 2012, Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+
+import crack.io FileHandle, FStr;
+import crack.functor Functor1, Functor2;
+import crack.lang AppendBuffer, Buffer, Exception, WriteBuffer;
+import crack.logger error, info;
+import crack.net Address, InetAddress, Poller, PollEvent, Socket, UnixAddress,
+    AF_INET, AF_UNIX, INADDR_ANY, SOCK_STREAM, POLLIN, POLLOUT, POLLERR;
+import crack.runtime read, write;
+import crack.time TimeDelta;
+
+@import crack.ann implements;
+
+Poller _poller;
+
+## Returns the currently active poller, creating one if necessary.
+Poller getPoller() {
+    if (!_poller)
+        _poller = Poller();
+    return _poller;
+}
+
+# This sucks.  Really need to be able to dereference nested static objects.
+Socket _fake;
+alias Accepted = typeof(_fake.accept());
+
+const BLOCK_SIZE := 4096;
+
+## EventData aggregates all of the information that neeeds to be communicated
+## back and forth between the connection manager and the user connection
+## handler.
+class ConnectionState {
+
+    ## Data that has been read that is passed into the user handler.  The user
+    ## handler can use as much of this data as it likes and should set
+    ## inputProcessed to the number of bytes that were actually processed and
+    ## are safe to be discarded.  Undiscarded bytes will be preserved and
+    ## presented in inbuf the next time the user handler is called.
+    Buffer inbuf;
+
+    ## This should be set by the user handler to the number of bytes of inbuf
+    ## that were processed and are safe to discard.
+    uint inbufProcessed;
+
+    ## Data that should be sent back through the connection.  This can be set
+    ## by the user handler to pass data back.
+    ## XXX actually, I kind of think what we want is for the AppendBuffer to
+    ## be long-lived and external to the connection and user handler.
+    AppendBuffer outbuf;
+
+    oper init(Buffer inbuf, AppendBuffer outbuf) :
+        inbuf = inbuf,
+        outbuf = outbuf {
+    }
+}
+
+## The internal class that manages a connection.  ConnectionController does
+## all of the actual reading and writing and buffer management, delegating
+## processing of the contents of the buffers to the user connection handler
+## functor.
+class ConnectionController : Object
+                             @implements Functor2[int, Poller, PollEvent] {
+    AppendBuffer outbuf, inbuf;
+    Functor1[void, ConnectionState] handler;
+
+    ## The connection state object for the controller.
+    ConnectionState _connState;
+
+    FileHandle _handle;
+
+    oper init(FileHandle handle, ConnectionState state) :
+        inbuf = AppendBuffer.cast(state.inbuf),
+        outbuf = state.outbuf,
+        _handle = handle,
+        _connState = state {
+    }
+
+    ## Close the filehandle and remove it from the poller.
+    @final void _close(Poller poller) {
+        if (_handle) {
+            _handle.close();
+            poller.remove(_handle);
+            _handle = null;
+        }
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+#        cout `events = $(event.revents) $(outbuf ? POLLOUT : 0)\n`;
+        if (event.revents & POLLIN) {
+            # grow the buffer if we get too small
+            if (inbuf.cap - inbuf.size < BLOCK_SIZE)
+                inbuf.grow(inbuf.cap * 2);
+
+            rc := read(_handle.fd, inbuf.buffer + inbuf.size,
+                       inbuf.cap - inbuf.size
+                       );
+            if (rc >= 0) {
+                inbuf.size += rc;
+                handler(_connState);
+            }
+
+            if (rc <= 0 && _connState.inbufProcessed == inbuf.size) {
+                # connection is closed.  Remove it.
+                # XXX this is not quite right.  We want to give the handler
+                # the option to leave the connection open until it lets us
+                # know that it is ok to close it.
+                _close(poller);
+            }
+
+            if (_connState.inbufProcessed > inbuf.size)
+                error `Inbuf processed is $(_connState.inbufProcessed)\n`;
+            inbuf.compact(_connState.inbufProcessed);
+            _connState.inbufProcessed = 0;
+        }
+
+        if (event.revents & POLLOUT) {
+#            cout `sending data\n`;
+            sent := write(_handle.fd, outbuf.buffer, outbuf.size);
+#            cout `sent $sent bytes\n`;
+            outbuf.compact(sent);
+        }
+
+        if (event.revents & POLLERR)
+            error `Got an error on connection object\n`;
+
+        return POLLIN | POLLERR | (outbuf ? POLLOUT : 0);
+    }
+
+    oper del() {
+        # we don't have to remove from the poller in this case, the fact that
+        # it's being deleted means that it's not managed by a poller.
+        _handle.close();
+    }
+}
+
+## IPv4 Server.
+## Factory is a connection class factory, which must define the static function:
+##  Conn makeConnection()
+##
+## The "Conn" class is user defined, but it must provide the following methods:
+##  XXX really think about this.
+## The server creates an instance of one of these
+## every time a new client connects to the server.
+class IP4Server[Factory] : Object @implements Functor2[int, Poller, PollEvent] {
+    Poller __poller;
+    Socket __socket;
+    alias ConnHandler = typeof(Factory.makeConnectionHandler(null));
+    ConnHandler __handler;
+
+    void __init(Poller poller, uint32 addr, uint port) {
+        __poller = poller ? poller : getPoller();
+        __socket = Socket(AF_INET, SOCK_STREAM 0);
+
+        __socket.setNonBlocking(true);
+        __socket.bind(InetAddress(addr, port));
+    }
+
+    oper init(uint32 addr, uint port) { __init(null, addr, port); }
+    oper init(uint port) { __init(null, INADDR_ANY, port); }
+    oper init(InetAddress addr) {
+        __init(null, addr.getAddr(), addr.getPort());
+    }
+    oper init(InetAddress addr, uint port) {
+        __init(null, addr.getAddr(), port);
+    }
+    oper init(Poller poller, uint32 addr, uint port) {
+        __init(poller, addr, port);
+    }
+    oper init(Poller poller, uint port) {
+        __init(poller, INADDR_ANY, port);
+    }
+    oper init(Poller poller, InetAddress addr) {
+        __init(poller, addr.getAddr(), addr.getPort());
+    }
+    oper init(Poller poller, InetAddress addr, uint port) {
+        __init(poller, addr.getAddr(), port);
+    }
+
+    void start() {
+        __socket.listen(5);
+        __poller.add(__socket, this);
+    }
+
+    void stop() {
+        if (__socket) {
+            __socket.close();
+            __poller.remove(__socket);
+        }
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        if (event.revents & POLLIN) {
+            accepted := __socket.accept();
+            AppendBuffer inbuf = {BLOCK_SIZE}, outbuf = {BLOCK_SIZE};
+            state := ConnectionState(inbuf, outbuf);
+            cm := ConnectionController(accepted.sock, state);
+            cm.handler = Factory.makeConnectionHandler(state);
+            poller.add(accepted.sock, cm);
+        } else if (event.revents & POLLERR) {
+            error `Got an error on server socket\n`;
+        }
+
+        return POLLIN | POLLERR;
+    }
+}
+
+## Create the appropriate socket type for the address.
+Socket _createSocket(Address addr) {
+    if (addr.isa(InetAddress)) {
+        return Socket(AF_INET, SOCK_STREAM, 0);
+    } else if (addr.isa(UnixAddress)) {
+        return Socket(AF_UNIX, SOCK_STREAM, 0);
+    } else {
+        throw Exception(FStr() I`Don't know how to create a socket from this \
+                                 address: $addr`
+                        );
+    }
+}
+
+class IP4Client[Factory] : ConnectionController {
+
+    Poller __poller;
+    Socket __socket;
+    Address __address;
+    alias __Handler = typeof(Factory.makeConnectionHandler(null));
+
+    void __init(Poller poller, InetAddress addr) {
+        __poller = poller;
+        __socket = Socket(AF_INET, SOCK_STREAM, 0);
+        __address = addr;
+        _handle = __socket;
+    }
+
+    oper init(uint32 addr, uint port) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(getPoller(), InetAddress(addr, port));
+    }
+
+    oper init(InetAddress addr) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(getPoller(), addr);
+    }
+
+    oper init(InetAddress addr, uint port) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(getPoller(), InetAddress(addr.getAddr(), port));
+    }
+
+    oper init(Poller poller, uint32 addr, uint port) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(poller, InetAddress(addr, port));
+    }
+
+    oper init(Poller poller, InetAddress addr) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(poller, addr);
+    }
+
+    oper init(Poller poller, InetAddress addr, uint port) :
+        ConnectionController(null,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ) {
+        __init(poller, InetAddress(addr.getAddr(), port));
+    }
+
+    void start() {
+#        cout I`socket = $__socket, poller = $__poller, address = $__address,
+#               connState = $_connState\n`;
+        __socket.connect(__address);
+        __poller.add(__socket, this);
+        handler = Factory.makeConnectionHandler(_connState);
+    }
+
+    void stop() {
+        _close(__poller);
+    }
+
+    ## Returns the handler for the connection (this is null before "start()"
+    ## is called).
+    __Handler getHandler() {
+        # XXX work around for a bug in casting.
+        Object obj = handler;
+        return __Handler.cast(obj);
+    }
+}
+
+## Connection wrapper that just handles an existing FileHandle.
+class GeneralController : ConnectionController {
+
+    Poller __poller;
+
+    oper init(Poller poller, FileHandle handle,
+              Functor1[void, ConnectionState] handler
+              ) :
+        ConnectionController(handle,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ),
+        __poller = poller {
+
+        this.handler = handler;
+    }
+
+    oper init(FileHandle handle, Functor1[void, ConnectionState] handler) :
+        ConnectionController(handle,
+                             ConnectionState(AppendBuffer(BLOCK_SIZE),
+                                             AppendBuffer(BLOCK_SIZE)
+                                             )
+                             ),
+        __poller = getPoller() {
+
+        this.handler = handler;
+    }
+
+    void start() {
+        __poller.add(_handle, this);
+    }
+
+    void stop() {
+        _close(__poller);
+    }
+}
+
+void runOneCycle(TimeDelta timeout) {
+    poller := getPoller();
+    poller.checkHandlers();
+    poller.waitAndProcess(timeout);
+}
+
+## Runs a main event loop with the default poller.  Runs forever.
+void mainloop() {
+    poller := getPoller();
+    while (true) {
+        poller.checkHandlers();
+        poller.waitAndProcess(null);
+    }
+}
