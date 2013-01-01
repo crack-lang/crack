@@ -206,15 +206,33 @@ class SerialReader {
     # all systems.
     
     float32 readFloat32() {
-        ManagedBuffer buf = {4};
-        __src.read(buf);
-        return array[float32](buf.buffer)[0];
+        # make sure we have 4 bytes
+        if (buf.size - pos < 4) {
+            buf.compact(pos);
+            pos = 0;
+            __src.read(buf);
+            if (buf.size < 4)
+                underflow();
+        }
+        
+        result := array[float32](buf.buffer + pos)[0];
+        pos += 4;
+        return result;
     }
 
     float64 readFloat64() {
-        ManagedBuffer buf = {4};
-        __src.read(buf);
-        return array[float64](buf.buffer)[0];
+        # make sure we have 8 bytes
+        if (buf.size - pos < 8) {
+            buf.compact(pos);
+            pos = 0;
+            __src.read(buf);
+            if (buf.size < 8)
+                underflow();
+        }
+        
+        result := array[float64](buf.buffer + pos)[0];
+        pos += 8;
+        return result
     }
 
     void formatTo(Formatter o) {
@@ -239,7 +257,7 @@ class SerialWriter {
         
         # special case 0
         if (!val) {
-            buf.append(0);
+            __dst.write('\0');
             return;
         }
 

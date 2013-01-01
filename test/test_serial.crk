@@ -83,17 +83,42 @@ if (true) {
     w.write(float64(4.56));
     
     BufferDeserializer deser = {sw.string()};
+    if (!deser.readUInt().success || deser.lastUInt != 0)
+        cout I`FAILED reading a zero uint, success = $(deser.success) \
+               lastUInt = $(deser.lastUInt)\n`;
     if (!deser.readFloat32().success)
         cout `FAILED reading a float32\n`;
     if (deser.lastFloat32 != 1.23)
-        cout I`FAILED reading float32, expected 1.23 got 
+        cout I`FAILED reading float32, expected 1.23 got \
                $(deser.lastFloat32)\n`;
     if (!deser.readFloat64().success)
         cout `FAILED reading a float64\n`;
     if (deser.lastFloat64 != 4.56)
-        cout I`FAILED reading float64, expected 4.56 got
+        cout I`FAILED reading float64, expected 4.56 got \
                $(deser.lastFloat64)\n`;
     
+}
+
+# test for two bugs: terminating single byte uint and float being read from 
+# the existing buffer.
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    
+    w.write(1);
+    w.write(float32(2));
+    w.write(float64(3));
+    w.write(0);
+    
+    SerialReader deser = {StringReader(sw.string())};
+    if (deser.readUInt() != 1)
+        cout `FAILED reading first byte\n`;
+    if (deser.readFloat32() != 2)
+        cout `FAILED reading float32\n`;
+    if (deser.readFloat64() != 3)
+        cout `FAILED reading float64\n`;
+    if (deser.readUInt() != 0)
+        cout `FAILED reading terminating uint\n`;
 }
 
 cout `ok\n`;
