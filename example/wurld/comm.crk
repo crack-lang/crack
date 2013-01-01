@@ -1,0 +1,113 @@
+# Copyright 2012 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+import crack.cont.array Array;
+import crack.exp.g3d Vector;
+import crack.functor Functor1;
+import crack.io cerr, AppendBufferWriter, Reader, StringWriter;
+import crack.lang AppendBuffer, Buffer, WriteBuffer;
+import crack.net Poller, PollEvent, PollEventCallback, Socket, AF_INET,
+    SOCK_STREAM, POLLOUT, POLLIN, POLLERR;
+import crack.exp.net.facade ConnectionState;
+import crack.serial BufferDeserializer, SerialWriter;
+
+@import crack.ann implements, interface;
+
+const uint
+    METHOD_SET_VIEW = 1,
+    METHOD_ADD_CUBE = 2;
+
+@interface WurldInst {
+    @abstract void setView(Vector pos, float yaw, float pitch);
+    @abstract void addCube(Vector pos);
+}
+
+## Communications proxy for a remote WurldInst object.  Calling these methods
+## results in a message being sent asynchronously to the remote instance.
+class Proxy : Object @implements WurldInst {
+    SerialWriter ser;
+
+    oper init(AppendBuffer buf) {
+        ser = SerialWriter(AppendBufferWriter(buf));
+    }
+
+    void setView(Vector pos, float yaw, float pitch) {
+        ser.write(METHOD_SET_VIEW);
+        ser.write(float32(pos[0]));
+        ser.write(float32(pos[1]));
+        ser.write(float32(pos[2]));
+        ser.write(float32(yaw));
+        ser.write(float32(pitch));
+    }
+
+    void addCube(Vector pos) {
+        ser.write(METHOD_ADD_CUBE);
+        ser.write(float32(pos[0]));
+        ser.write(float32(pos[1]));
+        ser.write(float32(pos[2]));
+    }
+}
+
+## Global variables.
+WurldInst inst;
+Array[Proxy] proxies = {};
+
+class CommManager : Object @implements Functor1[void, ConnectionState] {
+    AppendBuffer outbuf;
+    BufferDeserializer deser;
+
+    oper init(ConnectionState state) :
+        outbuf = state.outbuf,
+        deser(state.inbuf) {
+    }
+
+    @static CommManager makeConnectionHandler(ConnectionState state) {
+        proxies.append(Proxy(state.outbuf));
+        return CommManager(state);
+    }
+
+    void oper call(ConnectionState state) {
+        deser.reset(state.inbuf);
+        while (state.inbuf) {
+
+            # get the command
+            if (!deser.readUInt().success) {
+                cerr `incomplete message in inbuf\n`;
+                return;
+            }
+
+            cmd := deser.lastUInt;
+            if (cmd == METHOD_SET_VIEW) {
+                if (deser.getAvailable() < 20)
+                    return;
+                Vector pos = {deser.readFloat32().lastFloat32,
+                              deser.readFloat32().lastFloat32,
+                              deser.readFloat32().lastFloat32
+                              };
+                float yaw = deser.readFloat32().lastFloat32;
+                float pitch = deser.readFloat32().lastFloat32;
+                if (inst)
+                    inst.setView(pos, yaw, pitch);
+                cerr `setting inbuf processed to $(deser.pos)\n`;
+                state.inbufProcessed = deser.pos;
+            } else if (cmd == METHOD_ADD_CUBE) {
+                if (deser.getAvailable() < 12)
+                    return;
+                Vector pos = {deser.readFloat32().lastFloat32,
+                              deser.readFloat32().lastFloat32,
+                              deser.readFloat32().lastFloat32
+                              };
+                if (inst)
+                    inst.addCube(pos);
+                state.inbufProcessed = deser.pos;
+            } else {
+                cerr `Got illegal comand $cmd from remote endpoint.  Disconnecting.\n`;
+                # XXX how to tell the facade to disconnect?
+            }
+        }
+    }
+}

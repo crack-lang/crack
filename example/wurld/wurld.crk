@@ -1,0 +1,606 @@
+# Copyright 2012-2013 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This is a demo of an OpenGL 3D multiplayer environment written in Crack.  It 
+# demonstrates the use of the g3d modules (3D graphics), the network facade 
+# and serialization.
+#
+# Run it from the directory where it lives - there are texture files in the 
+# "data" subdirectory that it will try to load.
+#
+# Without options, this program will run in standalone mode.  You can run it 
+# as a server by specifying a TCP/IP port to bind to using '-p'.  You can run 
+# it as a client by specifying the server address as '-s address:port'.
+#
+# When running, you can use the following keys:
+#   w - move forward.
+#   s - move backwards.
+#   a - move left.
+#   d - move right.
+#   space - move up
+#   x - move down.
+#   Mouse button 1 - create a block.
+#   e - show where a block would be created
+#   v - when running as a client, make the attached server your slave (so it 
+#       will show the same view as the client)
+#   o - save the game state to the file "wurld.dat"
+#   q - quit.
+#
+
+import crack.ascii parseInt;
+import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_INT, CMD_STR;
+import crack.fs RealPath;
+import crack.lang die, free, AppendBuffer;
+import crack.io cerr, cout, AppendBufferWriter, Writer;
+import crack.math PI;
+import crack.net resolve, InetAddress, Poller;
+import crack.exp.net.facade facadeRunOnce = runOneCycle, IP4Client, IP4Server;
+import crack.runtime floor;
+import crack.serial SerialWriter, SerialReader;
+import crack.strutil split;
+import crack.sys argv, exit;
+import crack.time TimeDelta;
+import crack.cont.array Array;
+@import crack.ann assert, define, implements;
+import crack.math cos, sin;
+import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
+    SDL_Quit, SDL_SetVideoMode, SDL_WarpMouse, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, 
+    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_KEYDOWN, 
+    SDL_KEYUP,
+    SDL_MOUSEBUTTONDOWN, SDL_MOUSEMOTION, SDL_OPENGL, SDL_RESIZABLE;
+import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Light, Graphics, 
+    KeyboardEvent, KeyboardHandler, Material, MouseButtonEvent, 
+    MouseButtonHandler, MouseMotionEvent, MouseMotionHandler, Prim, Quad, 
+    Renderable, RotMatrix, TextureMaterial, Vector, RenderFrameEvent, 
+    RenderFrameHandler;
+import comm commInst = inst, proxies, CommManager, Proxy, WurldInst;
+    
+import crack.ext._gl GL_LIGHT0, GL_LIGHT1;
+
+## A game object.  Renderable, persistable and (eventually) collidable.
+@abstract class WurldObj : Prim {
+    oper init(Material material) : Prim(material) {}
+    @abstract void store(SerialWriter out);
+}
+
+void writeVector(SerialWriter out, Vector vec) {
+    out.write(float32(vec[0]));
+    out.write(float32(vec[1]));
+    out.write(float32(vec[2]));
+}
+
+Vector readVector(SerialReader src) {
+    return Vector(src.readFloat32(), src.readFloat32(), src.readFloat32());
+}
+
+const uint OBJ_CUBE = 1, OBJ_LIGHT = 2, OBJ_QUAD = 3;
+
+# The material array - lets us store materials by their index.
+Array[Material] materials;
+
+## Front, back and side faces are oriented so the material top is on the top 
+## of the cube.  Top and bottom faces have the top of the material oriented 
+## towards the front.
+class Cube : WurldObj {
+
+    @define Cube_vertex(x, y, z, s, t) {
+        vertex(pos[0] + x, pos[1] + y, pos[2] + z, s, t)
+    }
+
+    Vector pos;
+    
+    oper init(Material material0, Vector pos0) : WurldObj(material0), pos = pos0 {}
+    
+    void render() {
+        material.makeCurrent();
+
+        Quad.begin();
+        
+        # front face, counter-clockwise from top right
+        normal(0, 0, -1);
+        @Cube_vertex(1, 1, 0, 0, 0);
+        @Cube_vertex(0, 1, 0, 1, 0);
+        @Cube_vertex(0, 0, 0, 1, 1);
+        @Cube_vertex(1, 0, 0, 0, 1);
+        
+        # rear face, clockwise from top left
+        normal(0, 0, 1);
+        @Cube_vertex(0, 1, 1, 0, 0);
+        @Cube_vertex(1, 1, 1, 1, 0);
+        @Cube_vertex(1, 0, 1, 1, 1);
+        @Cube_vertex(0, 0, 1, 0, 1);
+
+        # left side face, clockwise from top front
+        normal(-1, 0, 0);
+        @Cube_vertex(0, 1, 0, 0, 0);
+        @Cube_vertex(0, 1, 1, 1, 0);
+        @Cube_vertex(0, 0, 1, 1, 1);
+        @Cube_vertex(0, 0, 0, 0, 1);
+
+        # right side face, clockwise from top rear
+        normal(1, 0, 0);
+        @Cube_vertex(1, 1, 1, 0, 0);
+        @Cube_vertex(1, 1, 0, 1, 0);
+        @Cube_vertex(1, 0, 0, 1, 1);
+        @Cube_vertex(1, 0, 1, 0, 1);
+        
+        # top face, clockwise from front left
+        normal(0, 1, 0);
+        @Cube_vertex(0, 1, 0, 0, 0);
+        @Cube_vertex(1, 1, 0, 1, 0);
+        @Cube_vertex(1, 1, 1, 1, 1);
+        @Cube_vertex(0, 1, 1, 0, 1);
+
+        # bottom face, clockwise from front right
+        normal(0, -1, 0);
+        @Cube_vertex(1, 0, 0, 0, 0);
+        @Cube_vertex(0, 0, 0, 1, 0);
+        @Cube_vertex(0, 0, 1, 1, 1);
+        @Cube_vertex(1, 0, 1, 0, 1);
+
+        Quad.end();
+    }
+    
+    void store(SerialWriter out) {
+        out.write(OBJ_CUBE);
+        out.write(uint(12));
+        writeVector(out, pos);
+    }
+    
+    @static Cube load(SerialReader src, Material material) {
+        cout `loading cube\n`;
+        size := src.readUInt();
+        @assert(size == 12);
+        return Cube(material, readVector(src));
+    }
+}
+
+class WurldLight : WurldObj {
+    Light __rep;
+    
+    oper init(uint id, Vector pos, Vector color, bool diffuse) : 
+        WurldObj(null),
+        __rep(id, pos, color, diffuse) {
+    }
+    
+    void store(SerialWriter out) {
+        out.write(OBJ_LIGHT);
+        AppendBufferWriter bw = {AppendBuffer(24)};
+        SerialWriter sw = {bw};
+        sw.write(__rep.id);
+        writeVector(sw, __rep.pos);
+        writeVector(sw, __rep.color);
+        sw.write(__rep.diffuse ? 1 : 0);
+        out.write(String(bw.buffer, true));
+    }
+    
+    @static WurldLight load(SerialReader src) {
+        @assert(src.readUInt() >= 26);
+        return WurldLight(src.readUInt(), readVector(src), readVector(src), 
+                          src.readUInt()
+                          );
+    }
+    
+    void render() {
+        __rep.render();
+    }
+}
+
+class WurldQuad : WurldObj {
+    uint materialId;
+    Quad __rep;
+    
+    oper init(uint materialId, Vector a, Vector b, Vector c, Vector d, 
+              Vector normal
+              ) :
+        WurldObj(null),
+        materialId = materialId,
+        __rep(materials[materialId], a, b, c, d, normal) {
+    }
+    
+    void store(SerialWriter dst) {
+        dst.write(OBJ_QUAD);
+        AppendBufferWriter bw = {AppendBuffer(24)};
+        SerialWriter sw = {bw};
+        sw.write(materialId);
+        writeVector(sw, __rep.a);
+        writeVector(sw, __rep.b);
+        writeVector(sw, __rep.c);
+        writeVector(sw, __rep.d);
+        writeVector(sw, __rep.norm);
+        dst.write(String(bw.buffer, true));
+    }
+    
+    @static WurldQuad load(SerialReader src) {
+        cout `loading quad\n`;
+        @assert(src.readUInt() >= 21);
+        return WurldQuad(src.readUInt(), readVector(src), readVector(src), 
+                         readVector(src),
+                         readVector(src),
+                         readVector(src)
+                         );
+    }
+
+    void render() {
+        __rep.render();
+    }
+}
+
+# parse command line options.
+opts := CmdOptions![
+    Option('port', 'p', 
+           'Port number.  If specified, runs as a server on the given port',
+           '0',
+           CMD_INT
+           ),
+    Option('server', 's',
+           'Server address (addr:port)',
+           '',
+           CMD_STR
+           ),
+    Option('load', 'l',
+           'Filename of game state file to load.',
+           '',
+           CMD_STR
+           ),
+    Option('help', 'h',
+           'Show this help message.',
+           '',
+           CMD_BOOL
+           ),
+];
+
+opts.parse(argv, false);
+
+if (opts.getBool('help')) {
+    cout `Wurld - a 3D multiplayer network demo.\n`;
+    opts.printUsage(null);
+    exit(0);
+}
+
+# Initialize the application and all of the entities in the app 
+# environment.
+
+alias WurldObjArray = Array[WurldObj];
+
+WurldObjArray objects = {};
+
+App app = {640, 480};
+app.initialize();
+
+# the camera
+RotMatrix rotMatrix = {};
+rotMatrix.makeYaw(0);
+camera := Camera(Vector(0, 5, 0), rotMatrix);
+camera.render();
+
+# slave proxy
+Proxy slave;
+
+# load the textures
+sky := TextureMaterial(loadPNGMaterial(openRd('data/CloudySky.png')));
+plasma := TextureMaterial(loadPNGMaterial(openRd('data/PlasmaVomit.png')));
+stucco := TextureMaterial(loadPNGMaterial(openRd('data/stucco.png')));
+orange := TextureMaterial(loadPNGMaterial(openRd('data/AlphaSquare.png')));
+materials = Array[Material]![sky, plasma, stucco, orange];
+const int MAT_SKY = 0, MAT_PLASMA = 1, MAT_STUCCO = 2, MAT_ORANGE = 3;
+
+void save() {
+    out := SerialWriter(RealPath('wurld.dat').writer());
+    out.write(objects.count());
+    for (obj :in objects)
+        obj.store(out);
+}
+
+## Loads the wurld from the specified filename.
+void load(String name) {
+    deser := SerialReader(RealPath(name).reader());
+    objectCount := deser.readUInt();
+    objects = WurldObjArray(objectCount);
+    for (int i = 0; i < objectCount; ++i) {
+        objType := deser.readUInt();
+        if (objType == OBJ_CUBE)
+            objects.append(Cube.load(deser, stucco));
+        else if (objType == OBJ_LIGHT)
+            objects.append(WurldLight.load(deser));
+        else if (objType == OBJ_QUAD)
+            objects.append(WurldQuad.load(deser));
+        else {
+            cout `Unknown object type $objType\n`;
+            
+            # All object data are stored with a size, so read it as a string 
+            # so we can skip to the next object.
+            deser.readString();
+        }
+    }
+}
+
+## add the delta to the angle and then adjust to fit in the range of -PI to PI.
+float addAngle(float angle, float delta) {
+    angle += delta;
+    while (angle > PI)
+        angle -= 2 * PI;
+    while (angle < -PI)
+        angle += 2 * PI;
+    return angle;
+}
+
+cout `warping mouse\n`;
+SDL_WarpMouse(320, 200);
+terminate := false;
+Poller poller = {};
+float yaw, pitch;
+RotMatrix yawMat = {}, pitchMat = {};
+
+bool forward, backward, left, right, up, down;
+float velocity = 3.0;
+Cube targetCube;
+
+Cube makeTargetCube() {
+    Vector fwd = {0, 0, -2}, dir = {};
+    camera.rotMatrix.rotate(fwd, dir);
+    dir += camera.pos;
+    
+    # calculate the floor of all coords, this will be the location of 
+    # our cube.
+    dir[0] = floor(dir[0]);
+    dir[1] = floor(dir[1]);
+    dir[2] = floor(dir[2]);
+    return Cube(orange, dir);
+}
+
+class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler, 
+                                   MouseButtonHandler,
+                                   RenderFrameHandler,
+                                   WurldInst
+                                   {
+
+    bool viewChanged;
+    bool client;
+    bool server;
+
+    oper init(bool client, bool server) : client = client, server = server {}
+
+    void doKey(KeyboardEvent evt, bool pressed) {
+        sym := evt.sym;
+        if (sym == b'q') {
+            app.terminate();
+        } else if (sym == b'v' && pressed && proxies) {
+            # toggle slave
+            cout `toggling slave: $slave\n`;
+            if (slave)
+                slave = null;
+            else {
+                if (proxies)
+                    slave = proxies[0];
+                else
+                    cout `No slave!\n`;
+            }
+        } else if (sym == b'w') {
+            forward = pressed;
+            cout `set forward to $forward\n`;
+        } else if (sym == b's') {
+            backward = pressed;
+        } else if (sym == b'a') {
+            left = pressed;
+        } else if (sym == b'd') {
+            right = pressed;
+        } else if (sym == b'e') {
+            if (pressed)
+                targetCube = makeTargetCube();
+            else
+                targetCube = null;
+        } else if (sym == b' ') {
+            up = pressed;
+        } else if (sym == b'x') {
+            down = pressed;
+        } else if (sym == b'o') {
+            # save the game state
+            save();
+        }
+    }
+
+    bool onKeyDown(KeyboardEvent evt) {
+        doKey(evt, true);
+        return false;
+    }
+    
+    bool onKeyUp(KeyboardEvent evt) {
+        doKey(evt, false);
+        return false;
+    }
+
+    bool onMouseMotion(MouseMotionEvent evt) {
+        yaw = addAngle(yaw, float(int(evt.x) - 320) * -0.01);
+        pitch = addAngle(pitch, float(int(evt.y) - 240) * -0.01);
+        SDL_WarpMouse(320, 240);
+        viewChanged = true;
+        return false;
+    }
+
+    bool onMouseButtonDown(MouseButtonEvent evt) {
+        if (!targetCube)
+            targetCube = makeTargetCube();
+
+        # Convert the target cube to a stucco cube.            
+        if (client) {
+            # client mode - tell the server to add the target cube, the server 
+            # will tell us to add it when it has processed the request.
+            proxies[0].addCube(targetCube.pos);
+        } else {
+            # standalone mode, add the target cube.
+            targetCube.material = stucco;
+            objects.append(targetCube);
+        }
+
+        targetCube = null;
+        return false;
+    }
+    
+    bool onMouseButtonUp(MouseButtonEvent evt) {
+        return false;
+    }
+    
+    void setView(Vector pos, float yaw0, float pitch0) {
+        camera.pos = pos;
+        yaw = yaw0;
+        pitch = pitch0;
+    }
+    
+    void addCube(Vector pos) {
+        cout `addCube($pos) called\n`;
+        objects.append(Cube(stucco, pos));
+        
+        # if this is the server, tell all of the clients that we have a new 
+        # cube.
+        if (server) {
+            for (proxy :in proxies)
+                proxy.addCube(pos);
+        }
+    }
+
+    void render() {
+        yawMat.makeYaw(yaw);
+        pitchMat.makePitch(pitch);
+        camera.rotMatrix.makeProduct(pitchMat, yawMat);
+        camera.render();
+
+        for (r :in objects)
+            r.render();
+
+        if (targetCube)
+            targetCube.render();
+    }
+    
+    void onRenderFrame(RenderFrameEvent evt) {
+        incr := velocity * (float(evt.deltaUSecs) / 1e+6);
+        if (forward) {
+            cout `going forward by $(evt.deltaUSecs) / 1M * $velocity\n`;
+            Vector fwd = {0, 0, -1 * incr}, dir = {};
+            camera.rotMatrix.rotate(fwd, dir);
+            camera.pos += dir;
+            viewChanged = true;
+        } else if (backward) {
+            Vector fwd = {0, 0, 1 * incr}, dir = {};
+            camera.rotMatrix.rotate(fwd, dir);
+            camera.pos += dir;
+            viewChanged = true;
+        }
+        
+        if (left) {
+            Vector leftVec = {-1 * incr, 0, 0}, dir = {};
+            camera.rotMatrix.rotate(leftVec, dir);
+            camera.pos += dir;
+            viewChanged = true;
+        } else if (right) {
+            Vector right = {incr, 0, 0}, dir = {};
+            camera.rotMatrix.rotate(right, dir);
+            camera.pos += dir;
+            viewChanged = true;
+        }
+        
+        float vert;
+        if (up)
+            vert = 1;
+        else if (down)
+            vert = -1;
+        if (vert) {
+            Vector vertVec = {0, vert * incr, 0}, dir = {};
+            camera.rotMatrix.rotate(vertVec, dir);
+            camera.pos += dir;
+            viewChanged = true;
+        }
+        
+        # if the view has changed and there is a slave, set the view with the 
+        # slave.
+        if (viewChanged && slave) {
+            slave.setView(camera.pos, yaw, pitch);
+            viewChanged = false;
+        }
+    }
+    
+}
+
+bool networked = false;
+bool client, server;
+if (port := opts.getInt('port')) {
+    IP4Server[CommManager](port).start();
+    networked = true;
+    server = true;
+}
+
+if (server := opts.getString('server')) {
+    parts := split(server, ':');
+    if (parts.count() != 2) {
+        cerr `malformed server flag, expected host:port\n`;
+        exit(1);
+    }
+    addresses := resolve(parts[0]);
+    if (!addresses) {
+        cerr `host $(parts[0]) not found\n`;
+        exit(1);
+    }
+    port := parseInt(parts[1]);
+    IP4Client[CommManager](InetAddress.cast(addresses[0]), port).start();
+    networked = true;
+    client = true;
+}
+
+if (gameToLoad := opts.getString('load')) {
+    load(gameToLoad);
+} else {
+    # if we're not loading a world, create the default one.
+
+    # let there be light
+    objects.append(WurldLight(GL_LIGHT0, Vector(0, 10, 0), Vector(0.001, 0.001, 0.001 ), false));
+    objects.append(WurldLight(GL_LIGHT1, Vector(0, 10, 0), Vector(1, 1, 1), true));
+    
+    # the floor
+    objects.append(WurldQuad(MAT_STUCCO,
+                             Vector(-10, 0, 10),
+                             Vector(10, 0, 10),
+                             Vector(10, 0, -10),
+                             Vector(-10, 0, -10),
+                             Vector(0, 1, 0)
+                             )
+                );
+    
+    # front wall
+    objects.append(WurldQuad(MAT_SKY,
+                             Vector(-10, 0, 10),
+                             Vector(-10, 3, 10),
+                             Vector(10, 3, 10),
+                             Vector(10, 0, 10),
+                             Vector(0, 0, -1)
+                             )
+                );
+    
+    # rear wall
+    objects.append(WurldQuad(MAT_PLASMA,
+                             Vector(10, 0, -10),
+                             Vector(10, 3, -10),
+                             Vector(-10, 3, -10),
+                             Vector(-10, 0, -10),
+                             Vector(0, 0, 1)
+                             )
+                );
+}
+
+DemoApp myHandlers = {client, server};
+commInst = myHandlers;
+
+app.keyboardHandlers.append(myHandlers);
+app.mouseMotionHandlers.append(myHandlers);
+app.mouseButtonHandlers.append(myHandlers);
+app.renderable = myHandlers;
+app.renderFrameHandler = myHandlers;
+noTime := TimeDelta(0, 0);
+while (!app.getTerminated()) {
+    if (networked)
+        facadeRunOnce(noTime);
+    app.runOneCycle();
+}
