@@ -55,9 +55,13 @@ class ConnectionState {
     ## be long-lived and external to the connection and user handler.
     AppendBuffer outbuf;
 
-    oper init(Buffer inbuf, AppendBuffer outbuf) :
+    ## The address of the remote connection.
+    Address remoteAddress;
+
+    oper init(Buffer inbuf, AppendBuffer outbuf, Address remoteAddress) :
         inbuf = inbuf,
-        outbuf = outbuf {
+        outbuf = outbuf,
+        remoteAddress = remoteAddress {
     }
 }
 
@@ -199,7 +203,7 @@ class IP4Server[Factory] : Object @implements Functor2[int, Poller, PollEvent] {
         if (event.revents & POLLIN) {
             accepted := __socket.accept();
             AppendBuffer inbuf = {BLOCK_SIZE}, outbuf = {BLOCK_SIZE};
-            state := ConnectionState(inbuf, outbuf);
+            state := ConnectionState(inbuf, outbuf, accepted.addr);
             cm := ConnectionController(accepted.sock, state);
             cm.handler = Factory.makeConnectionHandler(state);
             poller.add(accepted.sock, cm);
@@ -241,7 +245,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(uint32 addr, uint port) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             InetAddress(addr, port)
                                              )
                              ) {
         __init(getPoller(), InetAddress(addr, port));
@@ -250,7 +255,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(InetAddress addr) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             addr
                                              )
                              ) {
         __init(getPoller(), addr);
@@ -259,7 +265,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(InetAddress addr, uint port) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             addr
                                              )
                              ) {
         __init(getPoller(), InetAddress(addr.getAddr(), port));
@@ -268,7 +275,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(Poller poller, uint32 addr, uint port) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             InetAddress(addr, port)
                                              )
                              ) {
         __init(poller, InetAddress(addr, port));
@@ -277,7 +285,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(Poller poller, InetAddress addr) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             addr
                                              )
                              ) {
         __init(poller, addr);
@@ -286,7 +295,8 @@ class IP4Client[Factory] : ConnectionController {
     oper init(Poller poller, InetAddress addr, uint port) :
         ConnectionController(null,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             InetAddress(addr.getAddr(), port)
                                              )
                              ) {
         __init(poller, InetAddress(addr.getAddr(), port));
@@ -323,7 +333,8 @@ class GeneralController : ConnectionController {
               ) :
         ConnectionController(handle,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             null
                                              )
                              ),
         __poller = poller {
@@ -334,7 +345,8 @@ class GeneralController : ConnectionController {
     oper init(FileHandle handle, Functor1[void, ConnectionState] handler) :
         ConnectionController(handle,
                              ConnectionState(AppendBuffer(BLOCK_SIZE),
-                                             AppendBuffer(BLOCK_SIZE)
+                                             AppendBuffer(BLOCK_SIZE),
+                                             null
                                              )
                              ),
         __poller = getPoller() {
