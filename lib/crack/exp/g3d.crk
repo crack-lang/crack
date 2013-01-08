@@ -33,9 +33,10 @@ import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor,
     GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_FRONT_AND_BACK, GL_LEQUAL, 
     GL_LIGHTING, GL_LIGHT0, GL_LINEAR, GL_LINEAR_ATTENUATION, GL_MODELVIEW, 
     GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POSITION, GL_PROJECTION, 
-    GL_SPECULAR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_TEXTURE_2D, 
-    GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, GL_QUADRATIC_ATTENUATION, 
-    GL_QUADS, GL_RGB, GL_RGBA, GL_RGB8, GL_RGBA8, GL_SMOOTH, GL_UNSIGNED_BYTE;
+    GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES, GL_ONE_MINUS_SRC_ALPHA, 
+    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, 
+    GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB, GL_RGBA, GL_RGB8, GL_RGBA8, 
+    GL_SMOOTH, GL_UNSIGNED_BYTE;
 import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows, 
     png_set_read_fn, png_struct, png_create_read_struct, 
     png_create_info_struct, png_read_png, PNG_COLOR_TYPE_RGB,
@@ -161,9 +162,9 @@ class Vector {
 
     ## Returns the cross product of this vector and the other.
     Vector crossProduct(Vector other) {
-        return Vector(raw[0] * other.raw[2] - raw[2] * other.raw[0],
-                      raw[2] * other.raw[1] - raw[1] * other.raw[2], 
-                      raw[1] * other.raw[0] - raw[0] * other.raw[1]
+        return Vector(raw[1] * other.raw[2] - raw[2] * other.raw[1],
+                      raw[2] * other.raw[0] - raw[0] * other.raw[2], 
+                      raw[0] * other.raw[1] - raw[1] * other.raw[0]
 		      );
     }
     
@@ -195,6 +196,26 @@ class RotMatrix {
     
     oper del() { free(matrix); }
 
+    void formatTo(Formatter out) {
+        out I`$(matrix[0 * 4 + 0]) \
+              $(matrix[0 * 4 + 1]) \
+              $(matrix[0 * 4 + 2]) \
+              $(matrix[0 * 4 + 3])
+              $(matrix[1 * 4 + 0]) \
+              $(matrix[1 * 4 + 1]) \
+              $(matrix[1 * 4 + 2]) \
+              $(matrix[1 * 4 + 3])
+              $(matrix[2 * 4 + 0]) \
+              $(matrix[2 * 4 + 1]) \
+              $(matrix[2 * 4 + 2]) \
+              $(matrix[2 * 4 + 3])
+              $(matrix[3 * 4 + 0]) \
+              $(matrix[3 * 4 + 1]) \
+              $(matrix[3 * 4 + 2]) \
+              $(matrix[3 * 4 + 3])
+              `;
+    }
+              
     ## Sets row 3 and column 3 of the matrix to the values of the identity 
     ## matrix.
     @final void _setIdentVecs() {
@@ -266,6 +287,31 @@ class RotMatrix {
         @set(3, 1, 0);
         @set(3, 2, 0);
         @set(3, 3, 1);
+    }
+    
+    ## convert the matrix to the rotation matrix for the direction vector.
+    ## After this, matrix.rotate([0, 0, 1], result); result == direction.
+    ## 'direction' must be normalized.
+    @final void fromDirection(Vector direction) {
+        absUp := Vector(0, 1, 0);
+        right := absUp.crossProduct(direction);
+        right.normalize();
+        up := direction.crossProduct(right);
+        up.normalize();
+
+        @set(0, 0, right[0]);
+        @set(0, 1, right[1]);
+        @set(0, 2, right[2]);
+
+        @set(1, 0, up[0]);
+        @set(1, 1, up[1]);
+        @set(1, 2, up[2]);
+
+        @set(2, 0, direction[0]);
+        @set(2, 1, direction[1]);
+        @set(2, 2, direction[2]);
+
+        _setIdentVecs();
     }
     
     ## Make the receiver the cross-product of a and b.  (Currently ignores the 
@@ -492,6 +538,11 @@ class Prim : Renderable {
         glVertex3f(float32(x), float32(y), float32(z));
     }
     
+    @final void vertex(Vector pos, float s, float t) {
+        material.pin(s, t);
+        glVertex3fv(pos.raw);
+    }
+    
     @final void normal(float x, float y, float z) {
         glNormal3f(float32(x), float32(y), float32(z));
     }
@@ -638,7 +689,23 @@ class Graphics {
     ## Call this after you're done rendering a frame.
     @static void end() {
         glFlush();
-    }   
+    }
+    
+    ## Load the identity matrix.
+    @static void loadIdentity() {
+        glLoadIdentity();
+    }
+    
+    ## Offset all subsequent shapes by the specified position.  Call this 
+    ## before "rotate()" unless you want the translation rotated.
+    @static void translate(Vector pos) {
+        glTranslatef(float32(pos[0]), float32(pos[1]), float32(pos[2]));
+    }
+
+    ## Rotate subsequent shapes by the specified rotation matrix.    
+    @static void rotate(RotMatrix rot) {
+        glMultMatrixf(rot.matrix);
+    }
 }
 
 class MouseMotionEvent {
@@ -863,14 +930,17 @@ class Tri : Object @implements Poly {
         coord2 = coord2 {
     }
 
-    ## Returns the normal of the triangle's plane.
+    ## Returns the normal of the triangle's plane.  We calculate the normal 
+    ## using the "left-hand rule" - the points of the triangle are considered 
+    ## to be clockwise with the normal coming out of the face of the clock.
     Vector normal() {
         Vector result = (coord1 - coord0).crossProduct(coord2 - coord0);
         result.normalize();
         return result;
     }
 
-    ## Returns the normal of any three points.
+    ## Returns the normal of any three points.  Again, the normal is 
+    ## calculated using the left-hand rule.
     @static Vector normal(Vector c0, Vector c1, Vector c2) {
         Vector result = (c1 - c0).crossProduct(c2 - c0);
         result.normalize();
@@ -994,6 +1064,14 @@ class Tri : Object @implements Poly {
             return coord2;
         else
             return null;
+    }
+    
+    @static void begin() {
+        glBegin(GL_TRIANGLES);
+    }
+    
+    @static void end() {
+        glEnd();
     }
 }
 

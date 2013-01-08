@@ -1,0 +1,89 @@
+## Copyright 2012, Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+
+import crack.io cout;
+import crack.exp.g3d Sphere, RotMatrix, Vector, Tri;
+import crack.exp.g3d.collision checkSphereCollision, checkSpherePolyCollision;
+
+Vector v1 = {1, 2, 3}, v2 = {4, 5, 6};
+
+if (v1 + v2 != Vector(5, 7, 9))
+    cout `Failed vector addition: $(v1 + v2)\n`;
+
+if (v1 * v2 != 32)
+    cout `Failed dot product: $(v1 * v2)\n`;
+
+if (v1 * 2 != Vector(2, 4, 6))
+    cout `Failed vector * scalar: $(v1 * 2)\n`;
+
+// Rotation matrix from direction vector.
+if (true) {
+    RotMatrix rm = {};
+    forward := Vector(0, 0, 1);
+    Vector result = {};
+    rm.fromDirection(forward);
+    rm.rotate(forward, result);
+    if (result != forward)
+        cout `FAILED RotMatrix.fromDirection(forward), result = $result\n`;
+    up := Vector(0, 1, 0);
+    rm.fromDirection(up);
+    rm.rotate(forward, result);
+    if (result != up)
+        cout `FAILED RotMatric.fromDirection(up), result = $result\n`;
+    
+    right := Vector(1, 0, 0);
+    rm.fromDirection(right);
+    rm.rotate(forward, result);
+    if (result != right)
+        cout `FAILED RotMatrix.fromDirection(right), result = $result\n`;
+}
+
+if (true) {
+    Sphere s1 = {Vector(0, 0, 0), 1}, s2 = {Vector(10, 10, 10), 1};
+    Vector dir = {1, 1, 1};
+    dir.normalize();
+    array[float] dist = array[float](1);
+    if (!checkSphereCollision(s1, dir, s2, dist))
+        cout `Failed sphere collision check\n`;
+    if (dist[0] < 15.31 || dist[0] > 15.33)
+        cout `Failed sphere collision distance\n`;
+}
+
+if (true) {
+    Tri t = {Vector(0, 0, -1), Vector(1, 0, -1), Vector(0, -1, -1)};
+    Vector org = {0, 0, 0}, dir = {0, 0, -1}, intersection = {};
+    array[float] dist = array[float](1);
+    
+    if (!t.intersects(org, dir, intersection, dist))
+        cout `failed triangle intersection\n`;
+    
+    if (dist[0] != 1)
+        cout `failed distance: $(dist[0])\n`;
+    if (intersection != Vector(0, 0, -1))
+        cout `failed intersection: $intersection\n`;
+    
+    ## check for a non-intersection
+    org.set(1, -1, 0);
+    if (t.intersects(org, dir, intersection, dist))
+        cout `failed triangle intersection when out of bounds\n`;
+}
+
+if (true) {
+    Tri t = {Vector(0, 0, -5), Vector(0, -1, -5), Vector(1, 0, -5)};
+    Vector org = {0, 0, 0}, dir = {0, 0, -1}, intersection = {};
+    array[float] dist = array[float](1);
+    
+    // test sphere poly collision
+    Sphere s1 = {Vector(0, 0, 0), 1};
+    array[float] distance = {1};
+    if (!checkSpherePolyCollision(s1, t, Vector(0, 0, -1), distance))
+        cout `Failed sphere/poly collision check\n`;
+    if (distance[0] != 4.0)
+        cout `Failed sphere/poly collision distance, got $(distance[0])\n`;
+}
+
+cout `ok\n`;
