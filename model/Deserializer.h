@@ -11,16 +11,22 @@
 #include <string>
 #include <map>
 
+#include "spug/RCPtr.h"
+
+namespace spug {
+    SPUG_RCPTR(RCBase);
+}
+
 namespace model {
 
-class Construct;
+class Context;
 
 class Deserializer {
     private:
         std::istream &src;
 
         // the deserializer's object map
-        typedef std::map<int, void *> ObjMap;
+        typedef std::map<int, spug::RCBasePtr> ObjMap;
         ObjMap objMap;
 
     public:
@@ -31,14 +37,24 @@ class Deserializer {
          * readObject().
          */
         struct ObjectReader {
-            virtual void *read(Deserializer &src) const = 0;
+            virtual spug::RCBasePtr read(Deserializer &src) const = 0;
         };
 
-        Construct *construct;
+        Context *context;
+
+        // Allows an object reader to pass back information to the
+        // higher-level calling code for use after the object is deserialized.
+        // This is copied into the ReadObjectResult structure returned by
+        // readObject().
+        int userData;
 
         Deserializer(std::istream &src) : src(src) {}
+        Deserializer(std::istream &src, Context *context) :
+            src(src),
+            context(context) {
+        }
 
-        unsigned int readUInt();
+        unsigned int readUInt(const char *name);
 
         /**
          * Read a sized blob (block of binary data) from the stream.
@@ -54,7 +70,7 @@ class Deserializer {
          *          blob to be stored in.  If this is not null, 'size' must be
          *          provided.
          */
-        char *readBlob(size_t &size, char *buffer);
+        char *readBlob(size_t &size, char *buffer, const char *name);
 
         /**
          * Read a block of binary data as a string.  expectedMaxSize is a
@@ -62,14 +78,35 @@ class Deserializer {
          * will be allocated.
          * This implements the common case of creating a string from the blob.
          */
-        std::string readString(size_t expectedMaxSize);
+        std::string readString(size_t expectedMaxSize, const char *name);
+
+        struct ReadObjectResult {
+            spug::RCBasePtr object;
+
+            // True if we just read the definition of the object (if this was
+            // the first time it was encountered)
+            bool definition;
+
+            // Field to allow first-stage deserializers to pass information
+            // back to a second stage.  Initialized to zero.
+            int userData;
+
+            ReadObjectResult(spug::RCBasePtr object, bool definition,
+                             int userData) :
+                object(object),
+                definition(definition),
+                userData(userData) {
+            }
+        };
 
         /**
          * Read the next object from the stream.  This returns a pointer to an
          * existing object if the object possibly calling reader.read() to
          * deserialize the object from the stream.
          */
-        void *readObject(const ObjectReader &reader);
+        ReadObjectResult readObject(const ObjectReader &reader,
+                                    const char *name
+                                    );
 };
 
 }

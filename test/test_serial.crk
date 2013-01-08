@@ -6,7 +6,8 @@
 # 
 
 import crack.io cout, StringWriter, StringReader;
-import crack.serial SerialWriter, SerialReader;
+import crack.lang Buffer;
+import crack.serial BufferDeserializer, SerialWriter, SerialReader;
 
 if (true) {
     StringWriter sw = {};
@@ -19,6 +20,105 @@ if (true) {
     
     if (r.readString() != 'test')
         cout `Failed to write and read string\n`;
+}
+
+if (true) {
+    # test reading from an empty buffer
+    BufferDeserializer deser = {Buffer(null, 0)};
+    if (deser.readUInt().success)
+        cout `FAILED, got success on empty buffer read\n`;
+    if (deser.pos != 0)
+        cout I`FAILED, got pos update on empty buffer read: pos = 
+               $(deser.pos)\n`;
+}
+
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    w.write(1000);
+    BufferDeserializer deser = {sw.string()};
+    if (!deser.readUInt().success)
+        cout `FAILED getting success from successful readUInt()\n`;
+    if (deser.lastUInt != 1000)
+        cout I`FAILED getting uint from BufferDeserializer, got \
+               $(deser.lastUInt)\n`;
+    if (deser.pos != 2)
+        cout I`FAILED BufferDeserializer.readUInt() buffer pos update, got 
+               $(deser.pos)\n`;
+}
+
+# string read underflow.
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    w.write('ab');
+    BufferDeserializer deser = {sw.string()};
+    deser.size = 2;
+    if (deser.readString().success)
+        cout `FAILED got success on empty buffer readString()\n`;
+    if (deser.pos)
+        cout `FAILED incremented pos on underflowed readString()\n`;
+}
+
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    w.write('test string');
+    BufferDeserializer deser = {sw.string()};
+    if (!deser.readString().success)
+        cout `FAILED readString()\n`;
+    if (deser.lastString != 'test string')
+        cout `FAILED readString() value, got $(deser.lastString)\n`;
+    if (deser.pos != 12)
+        cout `FAILED readString() pos, got $(deser.pos)\n`;
+}
+
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    
+    # do a one byte offset just so we can test float reads
+    w.write(0);
+    w.write(float32(1.23));
+    w.write(float64(4.56));
+    
+    BufferDeserializer deser = {sw.string()};
+    if (!deser.readUInt().success || deser.lastUInt != 0)
+        cout I`FAILED reading a zero uint, success = $(deser.success) \
+               lastUInt = $(deser.lastUInt)\n`;
+    if (!deser.readFloat32().success)
+        cout `FAILED reading a float32\n`;
+    if (deser.lastFloat32 != 1.23)
+        cout I`FAILED reading float32, expected 1.23 got \
+               $(deser.lastFloat32)\n`;
+    if (!deser.readFloat64().success)
+        cout `FAILED reading a float64\n`;
+    if (deser.lastFloat64 != 4.56)
+        cout I`FAILED reading float64, expected 4.56 got \
+               $(deser.lastFloat64)\n`;
+    
+}
+
+# test for two bugs: terminating single byte uint and float being read from 
+# the existing buffer.
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    
+    w.write(1);
+    w.write(float32(2));
+    w.write(float64(3));
+    w.write(0);
+    
+    SerialReader deser = {StringReader(sw.string())};
+    if (deser.readUInt() != 1)
+        cout `FAILED reading first byte\n`;
+    if (deser.readFloat32() != 2)
+        cout `FAILED reading float32\n`;
+    if (deser.readFloat64() != 3)
+        cout `FAILED reading float64\n`;
+    if (deser.readUInt() != 0)
+        cout `FAILED reading terminating uint\n`;
 }
 
 cout `ok\n`;

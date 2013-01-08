@@ -28,19 +28,33 @@ class Serializer {
         int lastId;
 
     public:
+        // trace serialization/deesrialization to cerr.
+        static bool trace;
+
         const ModuleDef *module;
+        enum DefTypes {
+            variableId = 1,
+            typeId = 2,
+            genericId = 3,
+            overloadId = 4,
+            aliasId = 5
+        };
+
+        static const int
+            modNameSize = 64,
+            varNameSize = 16;
 
         Serializer(std::ostream &dst) : dst(dst), lastId(0), module(0) {}
 
         /** Serialize an integer. */
-        void write(unsigned int val);
+        void write(unsigned int val, const char *name);
 
         /** Serialize byte data (writes the length followed by the bytes) */
-        void write(size_t length, const void *data);
+        void write(size_t length, const void *data, const char *name);
 
         /** Convenience method for writing strings. */
-        void write(const std::string &str) {
-            write(str.size(), str.data());
+        void write(const std::string &str, const char *name) {
+            write(str.size(), str.data(), name);
         }
 
         /**
@@ -49,7 +63,7 @@ class Serializer {
          * identifier with a definition flag set to true and return true,
          * indicating that the caller should serialize the state of the object.
          */
-        bool writeObject(const void *object);
+        bool writeObject(const void *object, const char *name);
 };
 
 }

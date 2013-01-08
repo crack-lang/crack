@@ -8,7 +8,10 @@
 
 #include "VarDef.h"
 
+#include "builder/Builder.h"
+#include "spug/check.h"
 #include "AssignExpr.h"
+#include "Deserializer.h"
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "Expr.h"
@@ -36,6 +39,10 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 
 bool VarDef::hasInstSlot() {
     return impl->hasInstSlot();
+}
+
+int VarDef::getInstSlot() const {
+    return impl->getInstSlot();
 }
 
 bool VarDef::isStatic() const {
@@ -85,6 +92,10 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
+bool VarDef::isSerializable(const ModuleDef *module) const {
+    return name[0] != ':' && getModule() == module;
+}
+
 void VarDef::addDependenciesTo(const ModuleDef *mod,
                                ModuleDefMap &deps
                                ) const {
@@ -100,31 +111,63 @@ void VarDef::addDependenciesTo(const ModuleDef *mod,
         type->addDependenciesTo(mod, deps);
 }
 
-namespace {
-    enum DefTypes {
-        variableId = 1,
-        typeId = 2,
-        genericId = 3,
-        functionId = 4,
-        aliasId = 5
-    };
-}
-
 void VarDef::serializeExtern(Serializer &serializer) const {
-    if (serializer.writeObject(this)) {
-        serializer.write(getModule()->getFullName());
-        serializer.write(name);
+    if (serializer.writeObject(this, "ext")) {
+        serializer.write(getModule()->getFullName(), "module");
+        serializer.write(name, "name");
     }
 }
 
 void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
-    serializer.write(aliasId);
-    serializer.write(alias);
+    serializer.write(Serializer::aliasId, "kind");
+    serializer.write(alias, "alias");
     serializeExtern(serializer);
 }
 
-void VarDef::serialize(Serializer &serializer) const {
-    serializer.write(variableId);
-    serializer.write(name);
-    type->serialize(serializer);
+namespace {
+    struct AliasReader : public Deserializer::ObjectReader {
+        virtual spug::RCBasePtr read(Deserializer &deser) const {
+            string moduleName = deser.readString(Serializer::modNameSize,
+                                                 "module"
+                                                 );
+            string name = deser.readString(Serializer::varNameSize, "name");
+
+            ModuleDefPtr mod = deser.context->construct->getModule(moduleName);
+            SPUG_CHECK(mod,
+                       "Deserializing " << moduleName << "." << name <<
+                        ": module could not be resolved."
+                       );
+            VarDefPtr var = mod->lookUp(name);
+            SPUG_CHECK(mod,
+                       "Deserializing " << moduleName << "." << name <<
+                        ": name not defined in module."
+                       );
+            return var;
+        }
+    };
+}
+
+VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
+    return VarDefPtr::rcast(serializer.readObject(AliasReader(),
+                                                  "ext"
+                                                  ).object
+                            );
+}
+
+void VarDef::serialize(Serializer &serializer, bool writeKind) const {
+    if (writeKind)
+        serializer.write(Serializer::variableId, "kind");
+    serializer.write(name, "name");
+    serializer.write(getInstSlot() + 1, "instSlot");
+    type->serialize(serializer, false);
+}
+
+VarDefPtr VarDef::deserialize(Deserializer &deser) {
+    string name = deser.readString(16, "name");
+    int instSlot = static_cast<int>(deser.readUInt("instSlot")) - 1;
+    TypeDefPtr type = TypeDef::deserialize(deser);
+    return deser.context->builder.materializeVar(*deser.context, name,
+                                                 type.get(),
+                                                 instSlot
+                                                 );
 }

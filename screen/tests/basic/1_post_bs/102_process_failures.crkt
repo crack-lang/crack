@@ -1,0 +1,17 @@
+%%TEST%%
+process failures
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+import crack.strutil StringArray;
+import crack.process Process, CRK_PIPE_STDOUT, CRK_PROC_EXECFAIL,
+    CRK_PROC_EXITED;
+
+p := Process(StringArray!['nonexistent-binary'], CRK_PIPE_STDOUT);
+rc := p.run();
+if (rc != (CRK_PROC_EXITED | CRK_PROC_EXECFAIL))
+    cerr `FAILED getting correct error code for failure to execute.\n`;
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

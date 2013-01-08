@@ -14,6 +14,119 @@ import crack.io cout, Reader, Writer, StandardFormatter;
 
 BUFSIZE := uint(1024);
 
+class BufferDeserializer : Buffer {
+    
+    # If an external buffer is provided, this variable keeps it in existence.
+    Buffer __rep;
+    
+    # buffer and position.
+    uint pos;
+    
+    # Set to true if the last read succeeded, false if not.
+    bool success;
+    
+    # The last value read.
+    uint lastUInt;
+    CString lastString;
+    float32 lastFloat32;
+    float64 lastFloat64;
+    
+    oper init(Buffer buffer) : 
+        Buffer(buffer.buffer, buffer.size), 
+        __rep = buffer {
+    }
+    oper init(Buffer buffer, uint pos) : 
+        Buffer(buffer.buffer, buffer.size), 
+        __rep = buffer,
+        pos = pos {
+    }
+
+    oper init(byteptr buffer, uintz size) : Buffer(buffer, size) {}
+    
+    void reset(Buffer newBuffer) {
+        buffer = newBuffer.buffer;
+        size = newBuffer.size;
+        __rep = newBuffer;
+        pos = 0;
+    }
+
+    void reset(Buffer newBuffer, uint newPos) {
+        buffer = newBuffer.buffer;
+        size = newBuffer.size;
+        __rep = newBuffer;
+        pos = newPos;
+    }
+    
+    void reset(byteptr newBuffer, uintz newSize) {
+        buffer = newBuffer;
+        size = newSize;
+        pos = 0;
+    }
+    
+    BufferDeserializer readUInt() {
+        uint cur = pos;
+        byte b = 0x80;
+        uint val;
+        uint offset;
+        while (b & 0x80) {
+            # make sure we've got data
+            if (cur == size) {
+                success = false;
+                return this;
+            }
+
+            # see if we've got the last byte
+            b = buffer[cur++];
+            val = val | ((b & 0x7f) << offset);
+            offset += 7;
+        }
+
+        lastUInt = val;
+        pos = cur;
+        success = true;
+        return this;
+    }
+
+    BufferDeserializer readString() {
+        uint start = pos;
+        if (!readUInt().success)
+            return this;
+        uintz stringSize = lastUInt;
+        
+        # see if we've got enough space in the buffer.
+        if (size - pos >= stringSize) {
+            lastString = CString(buffer + pos, stringSize, false);
+            pos += stringSize;
+        } else {
+            # revert pos (since readUInt modified it)
+            pos = start;
+            success = false;
+        }
+        return this;
+    }
+
+    BufferDeserializer readFloat32() {
+        if (success = (size - pos >= 4)) {
+            lastFloat32 = array[float32](buffer + pos)[0];
+            pos += 4;
+        }
+        return this;
+    }
+
+    BufferDeserializer readFloat64() {
+        if (success = (size - pos >= 8)) {
+            lastFloat64 = array[float64](buffer + pos)[0];
+            pos += 8;
+        }
+        return this;
+    }
+    
+    ## returns the number of bytes available in the buffer.
+    uint getAvailable() {
+        return size - pos;
+    }
+}
+
 class SerialReader {
     
     Reader __src;
@@ -87,6 +200,40 @@ class SerialReader {
         size = mbuf.cap - 1;
         return CString(mbuf.orphan(), size, true);
     }
+    
+    # the floating point serialization routines rely on the in-memory 
+    # representation of a float being IEEE.  I'm not sure if this is true on 
+    # all systems.
+    
+    float32 readFloat32() {
+        # make sure we have 4 bytes
+        if (buf.size - pos < 4) {
+            buf.compact(pos);
+            pos = 0;
+            __src.read(buf);
+            if (buf.size < 4)
+                underflow();
+        }
+        
+        result := array[float32](buf.buffer + pos)[0];
+        pos += 4;
+        return result;
+    }
+
+    float64 readFloat64() {
+        # make sure we have 8 bytes
+        if (buf.size - pos < 8) {
+            buf.compact(pos);
+            pos = 0;
+            __src.read(buf);
+            if (buf.size < 8)
+                underflow();
+        }
+        
+        result := array[float64](buf.buffer + pos)[0];
+        pos += 8;
+        return result
+    }
 
     void formatTo(Formatter o) {
         o `$(String(buf, 0, pos).getRepr())\n`;
@@ -110,7 +257,7 @@ class SerialWriter {
         
         # special case 0
         if (!val) {
-            buf.append(0);
+            __dst.write('\0');
             return;
         }
 
@@ -130,6 +277,16 @@ class SerialWriter {
     void write(String val) {
         write(uint32(val.size));
         __dst.write(val);
+    }
+    
+    void write(float32 val) {
+        array[float32](buf.buffer)[0] = val;
+        __dst.write(Buffer(buf.buffer, 4));
+    }
+    
+    void write(float64 val) {
+        array[float64](buf.buffer)[0] = val;
+        __dst.write(Buffer(buf.buffer, 8));
     }
     
     void flush() {

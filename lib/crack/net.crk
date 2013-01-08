@@ -7,7 +7,7 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-import crack.lang Buffer, Exception, FreeBase, InvalidArgumentError,
+import crack.lang Buffer, CString, Exception, FreeBase, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
 import crack.io FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
 import crack.sys strerror;
@@ -120,7 +120,7 @@ class UnixAddress : Address {
 }
 
 ## Get all of the addresses for the specified hostname.
-Array[Address] resolve(String hostname) {
+Array[Address] resolve(CString hostname) {
     Array[Address] result = {};
     info := AddrInfo(hostname.buffer, null, null);
     while (!(info is null)) {
@@ -148,6 +148,10 @@ Array[Address] resolve(String hostname) {
     }
     
     return result;
+}
+
+Array[Address] resolve(String hostname) {
+    return resolve(CString(hostname));
 }
 
 ## Wrapper around a socket.
@@ -502,6 +506,24 @@ class Poller {
             throw InvalidArgumentError(FStr() `File handle not in Poller`);
         
         __fds.set(i, pollable.fd, events, 0);
+    }
+    
+    ## Call all of the handler callbacks and get the events that we want to 
+    ## wait on in the next iteration.
+    void checkHandlers() {
+        if (__callbacks) {
+            PollEvent evt = {};
+            int i;
+            for (p :in __pollables) {
+                cb := __callbacks.get(p);
+                if (cb) {
+                    evt.pollable = p;
+                    events := cb.callback(this, evt);
+                    __fds.set(i, p.fd, events, 0);
+                }
+                ++i;
+            }
+        }
     }
 
     ## Wait for up to timeout or until the next event.  'timeout' may be null, 

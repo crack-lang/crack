@@ -21,8 +21,9 @@
 
 using namespace model;
 using namespace std;
+using namespace builder;
 
-namespace builder {
+namespace crack { namespace util {
 
 namespace {
     // recursive mkdir - i.e. ensure the path exists and is readable, and if
@@ -167,4 +168,4 @@ string getCacheFilePath(BuilderOptions* options,
 #endif
 }
 
-}
+}} // namespace crack::util

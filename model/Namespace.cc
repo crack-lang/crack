@@ -9,9 +9,12 @@
 
 #include "Namespace.h"
 
+#include "spug/check.h"
 #include "Context.h"
+#include "Deserializer.h"
 #include "Expr.h"
 #include "OverloadDef.h"
+#include "Serializer.h"
 #include "VarDef.h"
 
 using namespace std;
@@ -177,4 +180,64 @@ void Namespace::dump(ostream &out, const string &prefix) {
 
 void Namespace::dump() {
     dump(cerr, "");
+}
+
+void Namespace::serializeDefs(Serializer &serializer) const {
+    
+    // count the number of definitions to serialize
+    int count = 0;
+    for (VarDefMap::const_iterator i = defs.begin();
+         i != defs.end();
+         ++i
+         ) {
+        if (i->second->isSerializable(serializer.module))
+            ++count;
+    }
+    
+    // write the count and the definitions
+    serializer.write(count, "#defs");
+    for (VarDefMap::const_iterator i = defs.begin();
+         i != defs.end();
+         ++i
+         ) {
+        if (!i->second->isSerializable(serializer.module))
+            continue;
+        else if (i->second->getModule() != serializer.module)
+            i->second->serializeAlias(serializer, i->first);
+        else
+            i->second->serialize(serializer, true);
+    }
+}
+
+void Namespace::deserializeDefs(Deserializer &deser) {
+    // read all of the symbols
+    unsigned count = deser.readUInt("#defs");
+    for (int i = 0; i < count; ++i) {
+        int kind = deser.readUInt("kind");
+        switch (static_cast<Serializer::DefTypes>(kind)) {
+            case Serializer::variableId:
+                addDef(VarDef::deserialize(deser).get());
+                break;
+            case Serializer::aliasId: {
+                string alias = 
+                    deser.readString(Serializer::varNameSize, "alias");
+                addAlias(alias, VarDef::deserializeAlias(deser).get());
+                break;
+            }
+            case Serializer::genericId:
+                // XXX don't think we need this, generics are probably stored 
+                // in a type.
+                SPUG_CHECK(false, "can't deserialize generics yet");
+//                addDef(Generic::deserialize(deser));
+                break;
+            case Serializer::overloadId:
+                addDef(OverloadDef::deserialize(deser).get());
+                break;
+            case Serializer::typeId:
+                TypeDef::deserialize(deser).get();
+                break;
+            default:
+                SPUG_CHECK(false, "Bad definition type id " << kind);
+        }
+    }
 }

@@ -1,0 +1,22 @@
+%%TEST%%
+AppendBufferWriter
+%%ARGS%%
+%%FILE%%
+import crack.lang AppendBuffer;
+import crack.io cerr, AppendBufferWriter;
+
+AppendBuffer buf = {8};
+AppendBufferWriter writer = {buf};
+
+writer.write('first');
+writer.write(' second');
+writer.write(' third');
+
+if (buf != 'first second third')
+    cerr `FAILED AppendBufferWriter construction.\n`;
+
+cerr `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%

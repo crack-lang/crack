@@ -104,7 +104,9 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(OutputFilename);
   args.push_back(InputFilename);
 
+#ifdef __linux__
   args.push_back("-Wl,--add-needed");
+#endif
 
   // Add in the library and framework paths
   if (o->verbosity > 3) {
@@ -112,10 +114,12 @@ static int GenerateNative(const std::string &OutputFilename,
       // verbose linker
       args.push_back("-Wl,--verbose");
   }
+
   for (unsigned index = 0; index < LibPaths.size(); index++) {
       if (o->verbosity > 2)
           cerr << LibPaths[index] << endl;
       args.push_back("-L" + LibPaths[index]);
+#ifdef __linux__
       // XXX we add all lib paths as rpaths as well. this can potentially
       // cause conflicts where foo/baz.so and bar/baz.so exist as crack
       // extensions, but the runtime loader loads foo/baz.so for both since
@@ -137,6 +141,7 @@ static int GenerateNative(const std::string &OutputFilename,
         args.push_back("-Wl,-rpath=" + string(rp));
         free(rp);
       }
+#endif
   }
 
   // Add in the libraries to link.
@@ -804,6 +809,10 @@ void nativeCompile(llvm::Module *module,
 
     // native runtime lib is required
     NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
+#ifdef __APPLE__
+    // osx requires explicit link to debug
+    NativeLinkItems.push_back(pair<string,bool>("CrackDebugTools",true));
+#endif
 
     string ErrMsg;
 

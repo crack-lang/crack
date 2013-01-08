@@ -34,7 +34,7 @@
 
 #include "model/EphemeralImportDef.h"
 #include "builder/BuilderOptions.h"
-#include "builder/util/CacheFiles.h"
+#include "util/CacheFiles.h"
 #include "util/SourceDigest.h"
 #include "LLVMBuilder.h"
 #include "VarDefs.h"
@@ -559,7 +559,7 @@ bool Cacher::readImports() {
 
         // load this module. if the digest doesn't match, we miss.
         // note module may come from cache or parser, we won't know
-        m = context->construct->loadModule(cname->getString().str());
+        m = context->construct->getModule(cname->getString().str());
         if (!m || m->digest != iDigest)
             return false;
 
@@ -905,7 +905,7 @@ void Cacher::readEphemeralImport(MDNode *mnode) {
     VLOG(2) << "reading ephemeral import " << canName->getString().str() 
         << endl;
     BModuleDefPtr mod = 
-        context->construct->loadModule(canName->getString().str());
+        context->construct->getModule(canName->getString().str());
     SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
                "XXX Module digestfrom import doesn't match");
 }
@@ -1166,6 +1166,10 @@ void Cacher::resolveStructs(llvm::Module *module) {
          i != dSet.end(); ++i) {
         int pos = i->first.rfind(".");
         string canonical = i->first.substr(0, pos);        
+
+// XXX I don't think we need this hack anymore since we're not dealing with 
+// the Crack type system.
+#if 0
         // XXX big hack. meta's are created implicitly by class defs, so their
         // corresponding class defs have to come first in this list else the
         // metas won't exist in resolveType. defer them?
@@ -1173,17 +1177,30 @@ void Cacher::resolveStructs(llvm::Module *module) {
             //cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
             continue;
         }
-        TypeDefPtr td = resolveType(canonical);
-        BTypeDef *bt = dynamic_cast<BTypeDef *>(td.get());
-        assert(bt);
+#endif
+        
+        // see if we've encountered the type before, if not just map it to 
+        // itself.
+        StructType *type = LLVMBuilder::getLLVMType(canonical);
+        if (!type) {
+            typeMap[i->second] = i->second;
+            continue;
+        }
+            
         // we want to map the struct (the ContainedType), not the pointer to it
-        PointerType *a = dyn_cast<PointerType>(bt->rep);
+        PointerType *a = type->getPointerTo();
         assert(a && "expected a PointerType");
+
+// XXX again, since we're not going through the crack layer contortions, this 
+// type should just be the VTableBase type.
+#if 0
         // most classes are single indirection pointers-to-struct, but we have
         // to special case VTableBase which is **
         if (canonical == ".builtin.VTableBase") {
             a = cast<PointerType>(a->getElementType());
         }
+#endif
+
         StructType *left = dyn_cast<StructType>(i->second);
         assert(left);
         StructType *right = dyn_cast<StructType>(a->getElementType());
@@ -1256,34 +1273,13 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
     modDef = builder->instantiateModule(*context, canonicalName, module);
     builder->module = module;
 
-    if (readMetadata()) {
+    // after reading our metadata and defining types, we
+    // resolve all disjoint structs from our bitcode to those
+    // already in the crack type system
+    resolveStructs(module);
 
-        // after reading our metadata and defining types, we
-        // resolve all disjoint structs from our bitcode to those
-        // already in the crack type system
-        resolveStructs(module);
-
-        // cache hit
-        VLOG(2) << "[" << canonicalName << "] cache materialized" << endl;
-    }
-    else {
-
-        // during meta data read, we determined we will miss
-
-        // ensure any named structs from the module that we miss on do not 
-        // remain in the llvm context struct namespace
-        // XXX is this necessary? a module delete doesn't appear to affect
-        // the llvmcontext
-        vector<StructType*> namedStructs;
-        module->findUsedStructTypes(namedStructs);
-        for (int i=0; i < namedStructs.size(); ++i) {
-            if (namedStructs[i]->hasName())
-                namedStructs[i]->setName("");
-        }
-        
-        VLOG(2) << "[" << canonicalName <<
-            "] cache miss discovered in metadata read" << endl;
-    }
+    // cache hit
+    VLOG(2) << "[" << canonicalName << "] cache materialized" << endl;
     return modDef;
 }
 

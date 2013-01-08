@@ -127,22 +127,22 @@ class Func {
     String cname;
     Array[Arg] args;
     bool initialized;
-    bool isOperInit;
+    bool isOper;
 
     oper init(Type retType, String name, String cname) :
         retType = retType,
         name = name,
         cname = cname,
         initialized = false,
-        isOperInit = false,
+        isOper = false,
         args() { }
 
-    oper init(Type retType, String name, String cname, bool isOperInit) :
+    oper init(Type retType, String name, String cname, bool isOper) :
         retType = retType,
         name = name,
         cname = cname,
         initialized = false,
-        isOperInit = isOperInit,
+        isOper = isOper,
         args() { }
 
 
@@ -303,10 +303,12 @@ class TypeImpl : Type {
                 if (method.retType.isBuiltIn())
                     method.retType.emitInitializer(out);
 
-                if (method.isOperInit)
-                    out `        f = $typeVar->addConstructor("init",
-                        (void *)$(method.cname)
-                );\n`;
+                if (method.isOper) {
+                    if (method.name == "init")
+                        out `        f = $typeVar->addConstructor("init",
+                            (void *)$(method.cname)
+                        );\n`;
+                }
                 else
                     out `        f = $typeVar->addMethod($(method.retType.emit()), "$(method.name)",
                         (void *)$(method.cname)
@@ -662,8 +664,8 @@ $(generic.getParamCount()) parameters.`;
         Token tok;
 
         tok = ctx.getToken();
-        isOperInit:= tok.isOper();
-        if (!isOperInit) {
+        isOper:= tok.isOper();
+        if (!isOper) {
             ctx.putBack(tok);
             retType = _parseType(ctx);
         }
@@ -677,7 +679,7 @@ $(generic.getParamCount()) parameters.`;
 
         name = String(tok.getText());
 
-        f := Func(retType, name, lastCName ? lastCName : name, isOperInit);
+        f := Func(retType, name, lastCName ? lastCName : name, isOper);
         lastCName = null;
 
         if (!(tok = ctx.getToken()).isLParen())
@@ -874,10 +876,10 @@ class declaration`;
                     tok = ctx.getToken();
                     continue;
                 } else {
-                    isOperInit := tok.isOper();
+                    isOper := tok.isOper();
 
                     # parse the argument type
-                    if (!isOperInit){
+                    if (!isOper){
                         ctx.putBack(tok);
                         argType = _parseType(ctx);
                     }
@@ -892,8 +894,8 @@ class declaration`;
                         ctx.putBack(tok3); // (
                         ctx.putBack(tok2); // method name
                         ctx.putBack(tok);  // return type
-                        Func f = _parseFuncDef(ctx, isOperInit);
-                        if (f.isOperInit) f.retType = ctype;
+                        Func f = _parseFuncDef(ctx, isOper);
+                        if (f.isOper) f.retType = ctype;
                         ctype.addMethod(f);
                         tok = ctx.getToken();
                     }

@@ -17,6 +17,7 @@
 namespace model {
 
 class Context;
+class Deserializer;
 SPUG_RCPTR(Expr);
 class Namespace;
 class ModuleDef;
@@ -51,6 +52,12 @@ class VarDef : public virtual spug::RCBase {
          * variable.
          */
         virtual bool hasInstSlot();
+        
+        /**
+         * Returns the instance variable slot of the variable (if any).  -1 if 
+         * there is none.
+         */
+        virtual int getInstSlot() const;
         
         /**
          * Returns true if the definition is class static.
@@ -98,6 +105,12 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
+         * Returns true if the definition should be serialized when the module
+         * is being serialized.
+         */
+        virtual bool isSerializable(const ModuleDef *module) const;
+        
+        /**
          * Add all of the modules that this 
          */
         virtual void addDependenciesTo(const ModuleDef *mod,
@@ -118,8 +131,23 @@ class VarDef : public virtual spug::RCBase {
 
         /**
          * Serialize the variable definition.
+         * If 'writeKind' is true, write the kind of definition in front of 
+         * the definition itself.  This is false when we can determine the 
+         * kind of definiton from the context, as when we serialize a variable 
+         * type.
          */
-        virtual void serialize(Serializer &serialzer) const;
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+
+        /**
+         * Deserialize an alias.
+         */
+        static VarDefPtr deserializeAlias(Deserializer &serializer);
+        
+        /**
+         * Deserialize a VarDef.
+         */
+        static VarDefPtr deserialize(Deserializer &deser);
+        
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

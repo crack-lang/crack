@@ -8,6 +8,7 @@
 
 #include "ModuleDef.h"
 
+#include "spug/check.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
 #include "Context.h"
@@ -106,7 +107,7 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
 
 void ModuleDef::serialize(Serializer &serializer) const {
     serializer.module = this;
-    serializer.write(CRACK_METADATA_V1);
+    serializer.write(CRACK_METADATA_V1, "magic");
 
     // XXX we need to write the source hash.
 
@@ -118,52 +119,61 @@ void ModuleDef::serialize(Serializer &serializer) const {
          )
         iter->second->addDependenciesTo(this, deps);
 
+    // make sure we have the imports (we can import a module without
+    // incorporating any of its defs)
+    for (vector<ModuleDefPtr>::const_iterator iter = imports.begin();
+         iter != imports.end();
+         ++iter
+         )
+        deps[(*iter)->getFullName()] = *iter;
+
     // write the dependencies
-    serializer.write(deps.size());
+    serializer.write(deps.size(), "#deps");
     for (ModuleDefMap::const_iterator iter = deps.begin(); iter != deps.end();
          ++iter
          ) {
-        serializer.write(iter->first);
-        serializer.write(iter->second->getDefHash());
+        serializer.write(iter->first, "canonicalName");
+        serializer.write(iter->second->getDefHash(), "hashVal");
     }
 
     // write all of the symbols
-    for (VarDefMap::const_iterator i = defs.begin();
-         i != defs.end();
-         ++i
-         ) {
-        if (i->second->getModule() != this)
-            i->second->serializeAlias(serializer, i->first);
-        else
-            i->second->serialize(serializer);
-    }
+    Namespace::serializeDefs(serializer);
 }
 
 bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
                                     const SourceDigest &digest
                                     ) {
-    if (deser.readUInt() != CRACK_METADATA_V1)
-        return 0;
+    if (deser.readUInt("magic") != CRACK_METADATA_V1)
+        return false;
 
     //deser.readBlob()  // XXX read the source hash.
 
     // read and load the dependencies
-    int count = deser.readUInt();
+    int count = deser.readUInt("#deps");
     for (int i = 0; i < count; ++i) {
-        ModuleDefPtr mod = deser.construct->getModule(deser.readString(64));
+        ModuleDefPtr mod =
+            deser.context->construct->getModule(
+                deser.readString(64, "canonicalName")
+            );
 
         // if the dependency has a different definition hash from what we were
         // built against, we have to recompile.
-        if (mod->getDefHash() != deser.readUInt())
+        if (mod->getDefHash() != deser.readUInt("hashVal"))
             return false;
     }
+
+    return true;
 }
 
-ModuleDefPtr ModuleDef::deserialize(Deserializer &deser) {
-    // read all of the symbols
-    unsigned count = deser.readUInt();
-//    for (int i = 0; i < count; ++i) {
-//
-//        deser
+ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
+                                    const string &canonicalName
+                                    ) {
+    ModuleDefPtr mod =
+        deser.context->builder.materializeModule(*deser.context, canonicalName,
+                                                 0 // owner
+                                                 );
+    deser.context->ns = mod.get();
+    mod->deserializeDefs(deser);
+    return mod;
 }
 

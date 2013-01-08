@@ -3,10 +3,12 @@ ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
+model/ArgDef.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
+model/GlobalNamespace.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
@@ -39,7 +41,6 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
-builder/util/CacheFiles.cc
 builder/llvm/ArrayTypeDef.cc
 builder/llvm/BModuleDef.cc
 builder/llvm/BBuilderContextData.cc
@@ -71,4 +72,4 @@ compiler/CrackContext.cc
 compiler/Token2.cc
 compiler/Location2.cc
 Crack.cc
-
+util/CacheFiles.cc

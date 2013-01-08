@@ -13,17 +13,21 @@
 #include <string>
 
 namespace builder {
+    class BuilderOptions;
+}
 
-class BuilderOptions;
+namespace crack { namespace util {
 
-std::string getCacheFilePath(BuilderOptions* o,
+std::string getCacheFilePath(builder::BuilderOptions* o,
                              model::Construct &construct,
                              const std::string &path,
                              const std::string &destExt
                              );
 
-bool initCacheDirectory(BuilderOptions *o, model::Construct &construct);
+bool initCacheDirectory(builder::BuilderOptions *o,
+                        model::Construct &construct
+                        );
 
-} // end namespace builder
+}} // end namespace crack::util
 
 #endif

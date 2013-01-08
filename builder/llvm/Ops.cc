@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Ops.h"
 #include "LLVMBuilder.h"
@@ -237,7 +237,8 @@ BinOpDef::BinOpDef(TypeDef *argType,
                    ) :
     OpDef(resultType,
           (isMethod ? FuncDef::method : FuncDef::noFlags) |
-           (reversed ? FuncDef::reverse : FuncDef::noFlags),
+           (reversed ? FuncDef::reverse : FuncDef::noFlags) |
+           FuncDef::builtin,
           name,
           isMethod ? 1 : 2
           ) {
@@ -314,7 +315,9 @@ ExprPtr BitNotOpCall::foldConstants() {
 BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
                          bool isMethod
                          ) :
-    OpDef(resultType, isMethod ? FuncDef::method :FuncDef::noFlags, name,
+    OpDef(resultType,
+          FuncDef::builtin | (isMethod ? FuncDef::method : FuncDef::noFlags),
+          name,
           isMethod ? 0 : 1
           ) {
     if (!isMethod)
@@ -449,7 +452,10 @@ ExprPtr NegOpCall::foldConstants() {
 NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
                    bool isMethod
                    ) :
-        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name,
+        OpDef(resultType,
+              FuncDef::builtin |
+               (isMethod ? FuncDef::method : FuncDef::noFlags),
+              name,
               isMethod ? 0 : 1
               ) {
     if (!isMethod)
@@ -489,7 +495,10 @@ ExprPtr FNegOpCall::foldConstants() {
 FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name,
                      bool isMethod
                      ) :
-        OpDef(resultType, isMethod ? FuncDef::method : FuncDef::noFlags, name,
+        OpDef(resultType,
+              FuncDef::builtin |
+               (isMethod ? FuncDef::method : FuncDef::noFlags),
+              name,
               isMethod ? 0 : 1
               ) {
     if (!isMethod)
@@ -676,7 +685,7 @@ ResultExprPtr UnsafeCastCall::emit(Context &context) {
 
 // UnsafeCastDef
 UnsafeCastDef::UnsafeCastDef(TypeDef *resultType) :
-        OpDef(resultType, model::FuncDef::noFlags, "unsafeCast", 1) {
+        OpDef(resultType, model::FuncDef::builtin, "unsafeCast", 1) {
     args[0] = new ArgDef(resultType, "val");
 }
 

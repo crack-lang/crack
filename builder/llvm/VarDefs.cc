@@ -11,6 +11,7 @@
 #include "BResultExpr.h"
 #include "BTypeDef.h"
 
+#include "spug/check.h"
 #include "model/AssignExpr.h"
 
 #include <llvm/GlobalVariable.h>
@@ -53,6 +54,7 @@ ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context,
 }
 
 bool BArgVarDefImpl::hasInstSlot() const { return false; }
+int BArgVarDefImpl::getInstSlot() const { return -1; }
 
 // BMemVarDefImpl
 ResultExprPtr BMemVarDefImpl::emitRef(Context &context, VarRef *var) {
@@ -76,6 +78,7 @@ ResultExprPtr BMemVarDefImpl::emitAssignment(Context &context, AssignExpr *assig
 }
 
 bool BMemVarDefImpl::hasInstSlot() const { return false; }
+int BMemVarDefImpl::getInstSlot() const { return -1; }
 
 // BGlobalVarDefImpl
 Value * BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
@@ -95,6 +98,7 @@ ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
 }
 
 bool BConstDefImpl::hasInstSlot() const { return false; }
+int BConstDefImpl::getInstSlot() const { return -1; }
 
 // BInstVarDefImpl
 void BInstVarDefImpl::emitFieldAssign(IRBuilder<> &builder, Value *aggregate,
@@ -113,6 +117,7 @@ Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder,
 }
 
 bool BInstVarDefImpl::hasInstSlot() const { return true; }
+int BInstVarDefImpl::getInstSlot() const { return index; }
 
 // BOffsetFieldDefImpl
 void BOffsetFieldDefImpl::emitFieldAssign(IRBuilder<> &builder,
@@ -143,3 +148,6 @@ Value *BOffsetFieldDefImpl::emitFieldRef(IRBuilder<> &builder,
     
 
 bool BOffsetFieldDefImpl::hasInstSlot() const { return false; }
+int BOffsetFieldDefImpl::getInstSlot() const {
+    SPUG_CHECK(false, "Can't serialize offset variables yet.");
+}

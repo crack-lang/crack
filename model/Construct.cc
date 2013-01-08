@@ -27,7 +27,7 @@
 #include "StrConst.h"
 #include "TypeDef.h"
 #include "compiler/init.h"
-#include "builder/util/CacheFiles.h"
+#include "util/CacheFiles.h"
 #include "util/SourceDigest.h"
 
 using namespace std;
@@ -291,12 +291,13 @@ ContextPtr Construct::createRootContext() {
                               );
 
     // register the primitives into our builtin module
+    GlobalNamespace *builtinGlobalNS;
     ContextPtr builtinContext =
         new Context(*rootBuilder, Context::module, rootContext.get(),
                     // NOTE we can't have rootContext namespace be the parent
                     // here since we are adding the aliases into rootContext
                     // and we get dependency issues
-                    new GlobalNamespace(0, ".builtin"),
+                    builtinGlobalNS = new GlobalNamespace(0, ".builtin"),
                     new GlobalNamespace(0, ".builtin"));
     builtinMod = rootBuilder->registerPrimFuncs(*builtinContext);
 
@@ -306,6 +307,10 @@ ContextPtr Construct::createRootContext() {
          ++i) {
          rootContext->ns->addUnsafeAlias(i->first, i->second.get());
     }
+    
+    // attach the builtin module to the root namespace
+    rootContext->ns = builtinGlobalNS->builtin;
+    moduleCache[".builtin"] = builtinMod;
     
     return rootContext;
 }
@@ -342,11 +347,11 @@ void Construct::loadBuiltinModules() {
     crackRuntimeName[0] = "crack";
     crackRuntimeName[1] = "runtime";
     string name;
-    ModuleDefPtr rtMod = rootContext->construct->loadModule(
-                                                     crackRuntimeName.begin(),
-                                                     crackRuntimeName.end(),
-                                                     name
-                                                     );
+    ModuleDefPtr rtMod = 
+        rootContext->construct->getModule(crackRuntimeName.begin(),
+                                          crackRuntimeName.end(),
+                                          name
+                                          );
     if (!rtMod) {
         cerr << "failed to load crack runtime from module load path" << endl;
         // XXX exception?
@@ -398,6 +403,10 @@ void Construct::parseModule(Context &context,
     }
     parser.parse();
     module->close(context);
+    
+    // if we're caching, store the module.
+    if (context.construct->cacheMode)
+        context.cacheModule(module);
 }
 
 ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
@@ -432,8 +441,15 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
 namespace {
     // load a function from a shared library
     void *loadFunc(void *handle, const string &path, const string &funcName) {
+#ifdef __APPLE__
+        // XXX on osx, it's failing to find the symbol unless we do
+        // RTLD_DEFAULT. this may work on linux too, but is noted as being
+        // expensive so i'm keeping it osx only until we can figure out
+        // a better way
+        void *func = dlsym(RTLD_DEFAULT, funcName.c_str());
+#else
         void *func = dlsym(handle, funcName.c_str());
-        
+#endif
         if (!func) {
             cerr << "Error looking up function " << funcName
                 << " in extension library " << path << ": "
@@ -472,13 +488,13 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
     return initExtensionModule(canonicalName, cfunc, rfunc);
 }
 
-ModuleDefPtr Construct::loadModule(const string &canonicalName) {
+ModuleDefPtr Construct::getModule(const string &canonicalName) {
 
     StringVec name;
     name = ModuleDef::parseCanonicalName(canonicalName);
 
     string cname;
-    ModuleDefPtr m = loadModule(name.begin(), name.end(), cname);
+    ModuleDefPtr m = getModule(name.begin(), name.end(), cname);
     SPUG_CHECK(cname == canonicalName, 
                "canonicalName mismatch.  constructed = " << cname << 
                 ", requested = " << canonicalName
@@ -494,14 +510,14 @@ namespace {
     }
 }
 
-ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
-    if (!rootContext->construct->cacheMode)
-        return 0;
-
+ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
     // see if it's in the in-memory cache    
     Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
     if (iter != moduleCache.end())
         return iter->second;
+
+    if (!rootContext->construct->cacheMode)
+        return 0;
 
     // create a new builder, context and module
     BuilderPtr builder = rootBuilder->createChildBuilder();
@@ -526,14 +542,10 @@ ModuleDefPtr Construct::loadFromCache(const string &canonicalName) {
     return modDef;
 }
 
-ModuleDefPtr Construct::getModule(const string &canonicalName) {
-    return loadFromCache(canonicalName);
-}
-
-ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
-                                   Construct::StringVecIter moduleNameEnd,
-                                   string &canonicalName
-                                   ) {
+ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
+                                  Construct::StringVecIter moduleNameEnd,
+                                  string &canonicalName
+                                  ) {
     // create the dotted canonical name of the module
     StringVecIter iter = moduleNameBegin;
     if (iter != moduleNameEnd) {
@@ -585,8 +597,8 @@ ModuleDefPtr Construct::loadModule(Construct::StringVecIter moduleNameBegin,
                         );
         context->toplevel = true;
 
-        // before parsing the module from scratch, we give the builder a chance
-        // to materialize the module through its own means (e.g., a cache)
+        // before parsing the module from scratch, check the persistent cache 
+        // for it.
         bool cached = false;
         if (rootContext->construct->cacheMode && !modPath.isDir)
             modDef = context->materializeModule(canonicalName);
@@ -664,10 +676,10 @@ bool Construct::loadBootstrapModules() {
         crackLangName[0] = "crack";
         crackLangName[1] = "lang";
         string name;
-        ModuleDefPtr mod = loadModule(crackLangName.begin(),
-                                      crackLangName.end(), 
-                                      name
-                                      );
+        ModuleDefPtr mod = getModule(crackLangName.begin(),
+                                     crackLangName.end(), 
+                                     name
+                                     );
         
         if (!mod) {
             cerr << "Bootstrapping module crack.lang not found." << endl;
@@ -780,7 +792,7 @@ int Construct::runScript(istream &src, const string &name) {
     ModuleDefPtr modDef;
     bool cached = false;
     if (rootContext->construct->cacheMode)
-        builder::initCacheDirectory(rootBuilder->options.get(), *this);
+        crack::util::initCacheDirectory(rootBuilder->options.get(), *this);
     // we check cacheMode again after init,
     // because it might have been disabled if
     // we couldn't find an appropriate cache directory

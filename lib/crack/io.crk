@@ -374,6 +374,21 @@ class StringWriter : AppendBuffer, Writer {
     Object _iface_getWriterObject() { return this; }
 };
 
+## Lets you wrap an AppendBuffer with a Writer interface.
+class AppendBufferWriter : Object, Writer {
+
+    AppendBuffer buffer;
+
+    oper init(AppendBuffer buffer) : buffer = buffer {}
+
+    void write(Buffer data) {
+        buffer.extend(data);
+    }
+
+    Object _iface_getWriterObject() { return this; }
+}
+
+
 ## Allows you to read from a string.
 class StringReader : Object, Reader {
 

@@ -17,10 +17,12 @@
 namespace model {
 
 class Context;
+class Deserializer;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(OverloadDef);
+class Serializer;
 SPUG_RCPTR(VarDef);
 
 SPUG_RCPTR(Namespace);
@@ -173,6 +175,16 @@ class Namespace : public virtual spug::RCBase {
         }
         /// @}
 
+        /**
+         * Serialize all of the definitions in the namespace.
+         */
+        void serializeDefs(Serializer &serializer) const;
+        
+        /** 
+         * Deserialize an array of definitions and store them in the 
+         * namespace.
+         */
+        void deserializeDefs(Deserializer &deser);
 };
 
 } // namespace model

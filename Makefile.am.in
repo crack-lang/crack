@@ -44,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs _ssl
+             _cairosdl _xs _ssl _png
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -123,6 +123,12 @@ _fluidsynth_la_CXXFLAGS = @FLUIDSYNTH_CPPFLAGS@
 _fluidsynth_la_SOURCES = opt/_fluidsynth.cc
 endif
 
+if HAVE_PNG
+extlib_LTLIBRARIES += _png.la
+_png_la_LDFLAGS = -avoid-version -module @PNG_LIBS@
+_png_la_SOURCES = opt/_png.cc
+endif
+
 noinst_HEADERS = \
     builder/Builder.h \
     builder/BuilderOptions.h \
@@ -155,7 +161,6 @@ noinst_HEADERS = \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
-    builder/util/CacheFiles.h \
     debug/DebugTools.h \
     ext/Stub.h \
     model/AllocExpr.h \
@@ -170,6 +175,7 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/ContextStackFrame.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
@@ -222,6 +228,10 @@ noinst_HEADERS = \
     spug/StringFmt.h \
     spug/TypeInfo.h \
     spug/check.h \
+    tests/MockBuilder.h \
+    tests/MockFuncDef.h \
+    tests/MockModuleDef.h \
+    util/CacheFiles.h \
     util/md5.h \
     util/SourceDigest.h \
     compiler/init.h \
@@ -258,7 +268,7 @@ crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
 
 noinst_PROGRAMS = unittests
 unittests_SOURCES = test/unittests_main.cc
-unittests_LDADD = libCrackLang.la
+unittests_LDADD = libCrackLang.la libCrackDebugTools.la
 
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}

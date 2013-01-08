@@ -357,7 +357,6 @@ class Builder : public spug::RCBase {
                                               const std::string &name
                                               ) = 0;
 
-        
         /**
          * @param squashVirtual If true, call a virtualized function 
          *  directly, without the use of the vtable (causes virtualized to be 
@@ -423,6 +422,55 @@ class Builder : public spug::RCBase {
             model::Context &context,
             const std::string &canonicalName,
             model::ModuleDef *owner
+        ) = 0;
+
+        /**
+         * Create a new VarDef from the current (cached) module.  The 
+         * definition must already exist in the underlying representation of 
+         * the module.
+         */
+        virtual model::VarDefPtr materializeVar(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type,
+            int instSlot
+        ) = 0;
+
+        /**
+         * Create a new ArgDef from the current (cached) module.
+         */
+        virtual model::ArgDefPtr materializeArg(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type
+        ) = 0;
+
+        /**
+         * Create a new TypeDef from the current (cached) module.
+         * See materializeVar(), same rules apply.
+         */        
+        virtual model::TypeDefPtr materializeType(
+            model::Context &context,
+            const std::string &name
+        ) = 0;
+
+        /**
+         * Create a new FuncDef from the current (cached) module.
+         * See materializeVar(), same rules apply.
+         */
+        virtual model::FuncDefPtr materializeFunc(
+            model::Context &context,
+            const std::string &name,
+            const model::ArgVec &args
+        ) = 0;
+        
+        /**
+         * Write the module implementation to the persistent cache in whatever 
+         * format is appropriate.
+         */
+        virtual void cacheModule(
+            model::Context &context,
+            model::ModuleDef *module
         ) = 0;
 
         /**

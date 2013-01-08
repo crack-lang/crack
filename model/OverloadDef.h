@@ -15,13 +15,19 @@
 namespace model {
 
 class Context;
+class Deserializer;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(Namespace);
+class Serializer;
 SPUG_RCPTR(TypeDef);
 
 SPUG_RCPTR(OverloadDef);
 
-/** An overloaded function. */
+/** 
+ * An overloaded function. 
+ * Overloads are not currently created by the builder, as they are presumed to 
+ * be purely administrative entities with no representation in the backend.
+ */
 class OverloadDef : public VarDef {
     public:
         typedef std::list<FuncDefPtr> FuncList;
@@ -143,6 +149,7 @@ class OverloadDef : public VarDef {
         
         bool hasInstSlot();
         bool isStatic() const;
+        virtual bool isSerializable(const ModuleDef *module) const;
         
         /**
          * Returns true if the overload consists of only one function.
@@ -162,7 +169,17 @@ class OverloadDef : public VarDef {
         
         virtual void addDependenciesTo(const ModuleDef *mod, 
                                        ModuleDefMap &deps
-                                       ) const;        
+                                       ) const;
+        
+        /**
+         * Returns true if the overload includes any non-builtin functions 
+         * (this is useful for determining if it needs to be serialized).
+         */
+        bool hasSerializableFuncs(const ModuleDef *module) const;
+
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        
+        static OverloadDefPtr deserialize(Deserializer &deser);
 };
 
 } // namespace model

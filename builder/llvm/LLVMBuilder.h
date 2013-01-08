@@ -34,6 +34,10 @@ class BModuleDef;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
+    private:
+        typedef std::map<std::string, llvm::StructType *> TypeMap;
+        static TypeMap llvmTypes;
+
     protected:
 
         llvm::Function *callocFunc;
@@ -438,6 +442,35 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
+        virtual model::VarDefPtr materializeVar(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type,
+            int instSlot
+        );
+
+        virtual model::ArgDefPtr materializeArg(
+            model::Context &context,
+            const std::string &name,
+            model::TypeDef *type
+        );
+
+        virtual model::TypeDefPtr materializeType(
+            model::Context &context,
+            const std::string &name
+        );
+
+        virtual model::FuncDefPtr materializeFunc(
+            model::Context &context,
+            const std::string &name,
+            const model::ArgVec &args
+        );
+
+        virtual void cacheModule(
+            model::Context &context,
+            model::ModuleDef *module
+        );
+        
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);
@@ -488,6 +521,23 @@ class LLVMBuilder : public Builder {
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     );
+        
+        // functions to manage the global type table.  The global type table 
+        // allows us to normalize types when loading modules from the 
+        // persistent cache.
+        
+        /**
+         * Return the LLVM type associated with the given canonical name.  
+         * Returns null if there is currently no type stored under that name.
+         */
+        static llvm::StructType *getLLVMType(const std::string &canonicalName);
+        
+        /**
+         * Store a type by name in the global LLVM type table.
+         */
+        static void putLLVMType(const std::string &canonicalName, 
+                                llvm::StructType *type
+                                );
 
 
 };

@@ -7,14 +7,23 @@
 
 #include <stdint.h>
 #include <sstream>
+#include <string.h>
+#include "model/GlobalNamespace.h"
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
 #include "model/ModuleDef.h"
 #include "model/ModuleDefMap.h"
+#include "model/OverloadDef.h"
 #include "model/TypeDef.h"
+
+#include "tests/MockBuilder.h"
+#include "tests/MockFuncDef.h"
+#include "tests/MockModuleDef.h"
+#include "util/SourceDigest.h"
 
 using namespace std;
 using namespace model;
+using namespace crack::util;
 
 bool serializerTestUInt() {
     bool success = true;
@@ -23,7 +32,7 @@ bool serializerTestUInt() {
     ostringstream dst;
     Serializer s(dst);
 
-    s.write(257);
+    s.write(257, "data");
     string data = dst.str();
     istringstream src(data);
 
@@ -40,7 +49,7 @@ bool serializerTestUInt() {
     }
 
     Deserializer d(src);
-    int val = d.readUInt();
+    int val = d.readUInt("data");
     if (val != 257) {
         cerr << "write/read of uint failed, got " << val << endl;
         success = false;
@@ -48,27 +57,21 @@ bool serializerTestUInt() {
     return success;
 }
 
-struct MockModuleDef : public ModuleDef {
-
-    MockModuleDef(const std::string &name, Namespace *parent) :
-        ModuleDef(name, parent) {
-    }
-
-    virtual void callDestructor() {}
-    virtual bool matchesSource(const string &path) { return false; }
-};
-
 struct DataSet {
 
-    TypeDefPtr metaType, t0, t1;
+    TypeDefPtr metaType, voidType, t0, t1;
     ModuleDefPtr builtins, dep0, dep1, mod;
 
     DataSet() {
-        metaType =  new TypeDef(0, "Meta");
+        metaType = new TypeDef(0, "Meta");
         metaType->type = metaType;
-        builtins = new MockModuleDef("builtins", 0);
+        builtins = new MockModuleDef(".builtins", 0);
         builtins->addDef(metaType.get());
+        voidType = new TypeDef(metaType.get(), "void");
+        builtins->addDef(voidType.get());
+    }
 
+    void addTestModules() {
         dep0 = new MockModuleDef("dep0", 0);
         t0 = new TypeDef(metaType.get(), "t0");
         dep0->addDef(t0.get());
@@ -77,14 +80,28 @@ struct DataSet {
         t1 = new TypeDef(metaType.get(), "t1");
         dep1->addDef(t1.get());
         dep1->addAlias(t0.get());
+        OverloadDefPtr ovld = new OverloadDef("func");
+        FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+        f->args[0] = new ArgDef(t1.get(), "a");
+        f->returnType = voidType;
+        ovld->addFunc(f.get());
+        f->setOwner(dep1.get());
+        f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+        f->args[0] = new ArgDef(t0.get(), "x");
+        f->returnType = t0;
+        ovld->addFunc(f.get());
+        f->setOwner(dep1.get());
+        dep1->addDef(ovld.get());
 
         mod = new MockModuleDef("outer", 0);
         mod->addAlias(t1.get());
+        mod->addAlias(ovld.get());
     }
 };
 
 bool moduleTestDeps() {
     DataSet ds;
+    ds.addTestModules();
     bool success = true;
     ModuleDefMap deps;
     ds.t1->addDependenciesTo(ds.mod.get(), deps);
@@ -103,11 +120,121 @@ bool moduleTestDeps() {
 
 bool moduleSerialization() {
     DataSet ds;
+    ds.addTestModules();
     ostringstream out;
     Serializer ser(out);
     ds.mod->serialize(ser);
     ds.dep1->serialize(ser);
     return true;
+}
+
+bool moduleReload() {
+    bool success = true;
+    DataSet ds;
+    ds.addTestModules();
+
+    ostringstream dep0Data, dep1Data, modData;
+    Serializer ser1(dep0Data);
+    ds.dep0->serialize(ser1);
+    Serializer ser2(dep1Data);
+    ds.dep1->serialize(ser2);
+    Serializer ser3(modData);
+    ds.mod->serialize(ser3);
+
+    MockBuilder builder;
+    builder.incref();
+    builder.options = new builder::BuilderOptions();
+    Construct construct(Options(), &builder);
+    Context context(builder, Context::module, &construct,
+                    0, // namespace, filled in by ModuleDef::deserialize()
+                    new GlobalNamespace(0, "")
+                    );
+    context.incref();
+
+    DataSet ds2;
+    construct.registerModule(ds2.builtins.get());
+
+    istringstream src1(dep0Data.str());
+    Deserializer deser1(src1, &context);
+    ModuleDef::readHeaderAndVerify(deser1, SourceDigest());
+    ModuleDefPtr dep0 = ModuleDef::deserialize(deser1, "dep0");
+    construct.registerModule(dep0.get());
+
+    istringstream src2(dep1Data.str());
+    Deserializer deser2(src2, &context);
+    ModuleDef::readHeaderAndVerify(deser2, SourceDigest());
+    ModuleDefPtr dep1 = ModuleDef::deserialize(deser2, "dep1");
+    construct.registerModule(dep1.get());
+
+    TypeDefPtr t = ds.mod->lookUp("t1");
+    if (!t) {
+        cerr << "Unable to lookup type t1 in mod" << endl;
+        success = false;
+    }
+    if (t->getOwner() != ds.dep1.get()) {
+        cerr << "Invalid owner of dep1.t1" << endl;
+        success = false;
+    }
+
+    return success;
+}
+
+bool reloadOfSelfReferrentTypes() {
+    bool success = true;
+    DataSet ds;
+    ds.addTestModules();
+
+    TypeDefPtr myType = new TypeDef(ds.metaType.get(), "MyType");
+    ds.dep0->addDef(myType.get());
+
+    // create "MyType MyType.func(MyType a)"
+    OverloadDefPtr ovld = new OverloadDef("func");
+    FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
+    f->args[0] = new ArgDef(myType.get(), "a");
+    f->returnType = ds.voidType;
+    ovld->addFunc(f.get());
+    f->setOwner(myType.get());
+    myType->addDef(ovld.get());
+
+    MockBuilder builder;
+    builder.incref();
+    builder.options = new builder::BuilderOptions();
+    Construct construct(Options(), &builder);
+    Context context(builder, Context::module, &construct,
+                    0, // namespace, filled in by ModuleDef::deserialize()
+                    new GlobalNamespace(0, "")
+                    );
+    context.incref();
+
+    DataSet ds2;
+    construct.registerModule(ds2.builtins.get());
+
+    ostringstream data;
+    Serializer ser(data);
+    ds.dep0->serialize(ser);
+
+    istringstream src(data.str());
+    Deserializer deser(src, &context);
+    ModuleDef::readHeaderAndVerify(deser, SourceDigest());
+    ModuleDefPtr dep0 = ModuleDef::deserialize(deser, "dep0");
+
+    myType = dep0->lookUp("MyType");
+    ovld = myType->lookUp("func");
+    if (!ovld) {
+        cerr << "unable to lookup overload func" << endl;
+        success = false;
+    } else {
+        ArgVec args(1);
+        args[0] = new ArgDef(myType.get(), "a");
+        f = ovld->getSigMatch(args, true);
+
+        if (!f)
+            cerr << "unable to find matching overload" << endl;
+        else if (f->args[0]->type != myType)
+            cerr << "incorrect return type deserialized" << endl;
+    }
+
+    return success;
 }
 
 struct TestCase {
@@ -119,10 +246,17 @@ TestCase testCases[] = {
     {"serializerTestUInt", serializerTestUInt},
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
+    {"moduleReload", moduleReload},
+    {"reloadOfSelfReferrentTypes", reloadOfSelfReferrentTypes},
     {0, 0}
 };
 
 int main(int argc, const char **argv) {
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[1], "Serializer"))
+            Serializer::trace = true;
+    }
+
     for (TestCase *test = testCases; test->text; ++test) {
         cerr << test->text << "..." << flush;
         cerr << (test->f() ? "ok" : "FAILED") << endl;

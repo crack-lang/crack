@@ -60,7 +60,7 @@ file(STRINGS sourceModules.txt CRACK_SRC_FILES)
 file(STRINGS runtimeModules.txt RUNTIME_SRC_FILES)
 
 # debug tools
-set(DEBUG_SRC_FILES debug/DebugTools.cc)
+set(DEBUG_SRC_FILES debug/DebugTools.cc util/md5.c util/SourceDigest.cc)
 
 # these are llvm specific compile flags, needed only for source files that
 # include llvm headers

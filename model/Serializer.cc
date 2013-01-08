@@ -8,12 +8,18 @@
 #include "Serializer.h"
 
 #include <stdint.h>
-#include <ostream>
+#include <iostream>
+#include <iomanip>
 
 using namespace std;
 using namespace model;
 
-void Serializer::write(unsigned int val) {
+bool Serializer::trace = false;
+
+void Serializer::write(unsigned int val, const char *name) {
+    if (trace)
+        cerr << "write uint " << name << ": " << val << endl;
+
     // special case 0
     if (!val) {
         dst << static_cast<char>(val);
@@ -29,22 +35,29 @@ void Serializer::write(unsigned int val) {
     }
 }
 
-void Serializer::write(size_t length, const void *data) {
-    write(length);
+void Serializer::write(size_t length, const void *data, const char *name) {
+    write(length, name);
+    if (trace)
+        cerr << "write blob " << name << ": " << setw(length) <<
+            static_cast<const char *>(data) << endl;
     dst.write(reinterpret_cast<const char *>(data), length);
 }
 
-bool Serializer::writeObject(const void *object) {
+bool Serializer::writeObject(const void *object, const char *name) {
     ObjMap::iterator iter = objMap.find(object);
     if (iter == objMap.end()) {
 
         // new object
+        if (trace)
+            cerr << "writing new object " << name << endl;
         int id = lastId++;
         objMap[object] = id;
-        write(id << 1 | 1);
+        write(id << 1 | 1, "objectId");
         return true;
     } else {
-        write(iter->second << 1);
+        if (trace)
+            cerr << "writing existing object " << name << endl;
+        write(iter->second << 1, "objectId");
         return false;
     }
 }

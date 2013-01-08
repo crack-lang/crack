@@ -36,6 +36,8 @@ class FuncDef : public VarDef {
             variadic = 8,  // this is a variadic function
             reverse = 16,  // for a binary op, reverse receiver and first arg
             abstract = 32,  // This is an abstract (pure virtual function)
+            builtin = 64,   // Not a real function.  Defined by the executor,
+                            // calls expand to a sequence of instructions.
             explicitFlags = 256  // these flags were set by an annotation
         } flags;
         
@@ -101,6 +103,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
+        virtual bool isSerializable(const ModuleDef *module) const;
         
         /**
          * Returns true if the function is an override of a virtual method
@@ -145,6 +148,14 @@ class FuncDef : public VarDef {
         /** Allow us to write the argument list. */
         static void dump(std::ostream &out, const ArgVec &args);
         static void display(std::ostream &out, const ArgVec &args);
+
+        virtual void addDependenciesTo(const ModuleDef *mod, 
+                                       ModuleDefMap &deps
+                                       ) const;
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        static FuncDefPtr deserialize(Deserializer &deser, 
+                                      const std::string &funcName
+                                      );
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {

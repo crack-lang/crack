@@ -214,10 +214,18 @@ class Context : public spug::RCBase {
                                   ModuleDef *owner = 0
                                   );
 
-        // possibly load from cache
+        /**
+         * Try to load the module from the cache, return true if the module 
+         * exists in the cache and is up to date.
+         */
         ModuleDefPtr materializeModule(const std::string &canonicalName,
                                        ModuleDef *owner = 0
                                        );
+
+        /**
+         * Store the module in the cache.
+         */
+        void cacheModule(ModuleDef *mod);
 
         /** 
          * Get or create a string constant.  This can be either a

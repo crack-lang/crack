@@ -1,0 +1,50 @@
+
+import crack.functor Functor1, Function1;
+import crack.io cin, cout, Formatter;
+import crack.lang AppendBuffer;
+import crack.net InetAddress;
+import crack.net.facade getPoller, mainloop, IP4Client, ConnectionState,
+    GeneralController;
+import crack.sys exit;
+
+@import crack.ann implements;
+
+class ConnHandler : Object @implements Functor1[void, ConnectionState] {
+    AppendBuffer outbuf;
+
+    oper init(ConnectionState state) : outbuf = state.outbuf {
+    }
+
+    void oper call(ConnectionState state) {
+        if (state.inbuf) {
+            cout.write(state.inbuf);
+            state.inbufProcessed = state.inbuf.size;
+        }
+    }
+
+    @static ConnHandler create(ConnectionState state) {
+        return ConnHandler(state);
+    }
+}
+
+ConnHandler clientHandler;
+
+void inputHandler(ConnectionState state) {
+    if (state.inbuf) {
+        clientHandler.outbuf.extend(state.inbuf);
+        state.inbufProcessed = state.inbuf.size;
+    }
+}
+
+client := IP4Client[ConnHandler](InetAddress(127, 0, 0, 1, 9123));
+client.start();
+clientHandler = client.getHandler();
+cout `client handler = $(client.handler) $clientHandler\n`;
+
+cmdline := GeneralController(cin,
+                             Function1[void, ConnectionState](inputHandler)
+                             );
+cmdline.start();
+
+cout `Send some data to the server:\n`;
+mainloop();

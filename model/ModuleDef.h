@@ -48,6 +48,9 @@ class ModuleDef : public VarDef, public Namespace {
 
         // aliased symbols that other modules are allowed to import.
         std::map<std::string, bool> exports;
+        
+        // explicit imports.
+        std::vector<ModuleDefPtr> imports;
 
         // path to original source code on disk
         std::string sourcePath;
@@ -125,7 +128,9 @@ class ModuleDef : public VarDef, public Namespace {
         /**
          * Deserialize the remainder of the module meta-data.
          */        
-        static ModuleDefPtr deserialize(Deserializer &deserializer);
+        static ModuleDefPtr deserialize(Deserializer &deserializer,
+                                        const std::string &canonicalName
+                                        );
 };
 
 } // namespace model

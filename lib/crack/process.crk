@@ -19,6 +19,8 @@ import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.functor Functor2;
 
+import crack.io cerr;
+
 @import crack.ann define, interface, implements;
 
 // see Process.h in  runtime
@@ -27,7 +29,10 @@ const int
     CRK_PROC_KILLED = 0x200,
     CRK_PROC_STOPPED = 0x400,
     CRK_PROC_EXITED = 0x800,
-    CRK_PROC_FAILED = 0x1000;
+    CRK_PROC_FAILED = 0x1000,
+    
+    ## Process exit code when we fail to "exec" a binary.
+    CRK_PROC_EXECFAIL = 0xff;
 
 const int
     CRK_PIPE_STDIN = 1,
@@ -87,9 +92,11 @@ class Process {
         int pid, exitCode;
         ProcessHandler handler;
         
-        oper init(ProcessHandler handler, int pid) : 
+        oper init(ProcessHandler handler, int pid, bool outDone, bool errDone) : 
             handler = handler, 
-            pid = pid {
+            pid = pid,
+            outDone = outDone,
+            errDone = errDone {
         }
         
         void onStreamsClosed() {
@@ -97,7 +104,9 @@ class Process {
             # before termmination, this can hang the polling thread.  What we 
             # should do is handle SIGCHLD in the poller and then call
             # onTerminate() from that.
-            handler.onTerminate(exitCode = waitProcess(pid, 0));
+            exitCode = waitProcess(pid, 0);
+            if (handler)
+                handler.onTerminate(exitCode);
         }
         
         void onOutDone() { 
@@ -125,15 +134,19 @@ class Process {
             }
 
             int oper call(Poller poller, PollEvent event) {
-                if ((event.revents & POLLIN) && !(status.handler is null)) {
+                if (event.revents & POLLIN) {
                     FDReader.cast(event.pollable).read(buf);
-                    status.handler.on$$dst$$Data(buf);
+                    if (status.handler)
+                        status.handler.on$$dst$$Data(buf);
                     if (!buf) {
                         poller.remove(event.pollable);
                         status.on$$dst$$Done();
                     }
+                
+                # POLLERR, POLLHUP, etc - just shut down.
                 } else if (event.revents) {
-                    status.handler.on$$dst$$Data('');
+                    if (status.handler)
+                        status.handler.on$$dst$$Data('');
                     poller.remove(event.pollable);
                     status.on$$dst$$Done();
                 }
@@ -220,7 +233,7 @@ class Process {
     ## Add the file descriptors for management in the poller.
     ## XXX we should also be adding a SIGCHLD handler.
     void addTo(Poller poller, ProcessHandler handler) {
-        __addTo(poller, __Status(handler, _pid));
+        __addTo(poller, __Status(handler, _pid, !__stdout, !__stderr));
     }
     
     ## Remove the file descriptors from the poller.
@@ -236,7 +249,7 @@ class Process {
     ## XXX needs to deal with stdin.
     int run(ProcessHandler handler) {
         Poller poller = {};
-        __Status status = {handler, _pid};
+        __Status status = {handler, _pid, !__stdout, !__stderr};
         if (__addTo(poller, status)) {
             # keep reading until both of the output streams have closed.
             while (poller)
@@ -248,6 +261,9 @@ class Process {
         
         return status.exitCode;
     }
+    
+    ## Run the process to completion, return the exit code.
+    @final int run() { return run(null); }
 
     String _readPipe(Reader rd) {
         // paged reads

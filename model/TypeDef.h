@@ -20,6 +20,7 @@
 namespace model {
 
 SPUG_RCPTR(Context);
+class Deserializer;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(FuncDef);
 class Generic;
@@ -340,7 +341,14 @@ class TypeDef : public VarDef, public Namespace {
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
-        virtual void serialize(Serializer &serializer) const;
+        virtual void serialize(Serializer &serializer, bool writeKind) const;
+
+        /**
+         * Deserialze a type object.
+         */        
+        static TypeDefPtr deserialize(Deserializer &deser,
+                                      const char *name = 0
+                                      );
 };
 
 } // namespace model

@@ -1,0 +1,63 @@
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._png {
+    @filename "opt/_png.cc"
+    @crack_internal
+    
+    @inject '#include <png.h>\n'
+    
+    class png_structp;
+    
+    # PNG version is "1.2.42"
+    
+    class png_struct;
+    
+    png_struct png_create_read_struct(byteptr user_png_ver,
+                                      voidptr error_ptr,
+                                      voidptr error_fn, 
+                                      voidptr warn_fn
+                                      );
+    
+    class png_info;
+    png_info png_create_info_struct(png_struct png_ptr);
+    
+    void png_set_read_fn(png_struct png_ptr, voidptr io_ptr,
+                         voidptr read_data_fn
+                         );
+
+    void png_read_png(png_struct png_ptr, png_info info_ptr, int transforms,
+                      voidptr params
+                      );
+
+    
+    uint32 png_get_IHDR(png_struct png_ptr, png_info info_ptr, 
+                        array[uint32] width,
+                        array[uint32] height,
+                        array[int] bit_depth,
+                        array[int] color_type,
+                        array[int] interlace_method,
+                        array[int] compression_method,
+                        array[int] filter_method
+                        );
+
+    const uint PNG_COLOR_TYPE_GRAY,
+               PNG_COLOR_TYPE_PALETTE,
+               PNG_COLOR_TYPE_RGB,
+               PNG_COLOR_TYPE_RGB_ALPHA,
+               PNG_COLOR_TYPE_GRAY_ALPHA,
+               PNG_COLOR_TYPE_RGBA,
+               PNG_COLOR_TYPE_GA;
+
+    array[byteptr] png_get_rows(png_struct png_ptr, png_info info_ptr);
+
+    void png_destroy_read_struct(png_struct png_ptr,
+                                 array[png_info] info_ptr_ptr,
+                                 array[png_info] end_info_ptr_ptr
+                                 );
+    
+    voidptr png_get_io_ptr(png_struct png_ptr);
+}
+
+    
+    

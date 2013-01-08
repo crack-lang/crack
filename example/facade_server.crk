@@ -1,0 +1,33 @@
+## Example server implemented using crack.net.facade
+
+import crack.io cerr;
+import crack.functor Functor1;
+import crack.net.facade mainloop, IP4Server, ConnectionState;
+
+@import crack.ann implements;
+
+class ClientHandler : Object @implements Functor1[void, ConnectionState] {
+    oper init() {}
+
+    void oper call(ConnectionState state) {
+        cerr `in callback\n`;
+        if (state.inbuf) {
+            cerr `extending outbuf $(state.inbuf.size) -> $(state.outbuf)\n`;
+            state.outbuf.extend(state.inbuf);
+            cerr `setting inbufProcessed\n`;
+            state.inbufProcessed = state.inbuf.size;
+        }
+        cerr `leaving callback\n`;
+    }
+
+    @static ClientHandler makeConnectionHandler(ConnectionState state) {
+        cerr `got a connection\n`;
+        state.outbuf.extend('Welcome to the facade server demo!\n');
+        return ClientHandler();
+    }
+}
+
+server := IP4Server[ClientHandler](9123);
+server.start();
+cerr `ready to rock\n`;
+mainloop();

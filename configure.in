@@ -75,4 +75,7 @@ AM_CONDITIONAL(HAVE_SSL, [test "x$got_ssl" = xyes])
 AM_PATH_FLUIDSYNTH
 AM_CONDITIONAL(HAVE_FLUIDSYNTH, [test "x$got_fluidsynth" = xyes])
 
+AM_PATH_PNG
+AM_CONDITIONAL(HAVE_PNG, [test "x$got_png" = xyes])
+
 AC_OUTPUT
