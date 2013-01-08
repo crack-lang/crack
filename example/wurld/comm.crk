@@ -6,12 +6,12 @@
 #
 
 import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
 import crack.exp.g3d Vector;
 import crack.functor Functor1;
 import crack.io cerr, AppendBufferWriter, Reader, StringWriter;
 import crack.lang AppendBuffer, Buffer, WriteBuffer;
-import crack.net Poller, PollEvent, PollEventCallback, Socket, AF_INET,
-    SOCK_STREAM, POLLOUT, POLLIN, POLLERR;
+import crack.net Address;
 import crack.exp.net.facade ConnectionState;
 import crack.serial BufferDeserializer, SerialWriter;
 
@@ -19,55 +19,89 @@ import crack.serial BufferDeserializer, SerialWriter;
 
 const uint
     METHOD_SET_VIEW = 1,
-    METHOD_ADD_CUBE = 2;
+    METHOD_ADD_CUBE = 2,
+    METHOD_REPORT_POSITION = 3;
 
 @interface WurldInst {
     @abstract void setView(Vector pos, float yaw, float pitch);
     @abstract void addCube(Vector pos);
+
+    ## Reports the position and orientation of a client.
+    ## 'id' should be zero when a client is reporting its position to a
+    ## server, when this is called on a client the id will be the id of
+    ## another client from the perspective of the server.
+    @abstract void reportPosition(uint id, Vector pos, Vector orientation);
 }
 
 ## Communications proxy for a remote WurldInst object.  Calling these methods
 ## results in a message being sent asynchronously to the remote instance.
 class Proxy : Object @implements WurldInst {
     SerialWriter ser;
+    uint id;
 
-    oper init(AppendBuffer buf) {
+    oper init(AppendBuffer buf, uint id) : id = id {
         ser = SerialWriter(AppendBufferWriter(buf));
+    }
+
+    void __writeVector(Vector vec) {
+        ser.write(float32(vec[0]));
+        ser.write(float32(vec[1]));
+        ser.write(float32(vec[2]));
     }
 
     void setView(Vector pos, float yaw, float pitch) {
         ser.write(METHOD_SET_VIEW);
-        ser.write(float32(pos[0]));
-        ser.write(float32(pos[1]));
-        ser.write(float32(pos[2]));
+        __writeVector(pos);
         ser.write(float32(yaw));
         ser.write(float32(pitch));
     }
 
     void addCube(Vector pos) {
         ser.write(METHOD_ADD_CUBE);
-        ser.write(float32(pos[0]));
-        ser.write(float32(pos[1]));
-        ser.write(float32(pos[2]));
+        __writeVector(pos);
+    }
+
+    void reportPosition(uint id, Vector pos, Vector orientation) {
+        ser.write(METHOD_REPORT_POSITION);
+        ser.write(id);
+        __writeVector(pos);
+        __writeVector(orientation);
     }
 }
 
 ## Global variables.
 WurldInst inst;
-Array[Proxy] proxies = {};
+Proxy firstProxy;
+HashMap[Address, Proxy] proxies = {};
+uint nextIdentifier = 1;
 
 class CommManager : Object @implements Functor1[void, ConnectionState] {
     AppendBuffer outbuf;
     BufferDeserializer deser;
+    uint clientId;
 
-    oper init(ConnectionState state) :
+    oper init(ConnectionState state, uint clientId) :
         outbuf = state.outbuf,
-        deser(state.inbuf) {
+        deser(state.inbuf),
+        clientId = clientId {
     }
 
     @static CommManager makeConnectionHandler(ConnectionState state) {
-        proxies.append(Proxy(state.outbuf));
-        return CommManager(state);
+        id := nextIdentifier++;
+        proxies[state.remoteAddress] = p := Proxy(state.outbuf, id);
+        if (!firstProxy)
+            firstProxy = p;
+        return CommManager(state, id);
+    }
+
+    @final Vector __readVector() {
+        v := Vector();
+        for (int i = 0; i < 3; ++i) {
+            if (!deser.readFloat32().success)
+                return null;
+            v[i] = deser.lastFloat32;
+        }
+        return v;
     }
 
     void oper call(ConnectionState state) {
@@ -84,10 +118,7 @@ class CommManager : Object @implements Functor1[void, ConnectionState] {
             if (cmd == METHOD_SET_VIEW) {
                 if (deser.getAvailable() < 20)
                     return;
-                Vector pos = {deser.readFloat32().lastFloat32,
-                              deser.readFloat32().lastFloat32,
-                              deser.readFloat32().lastFloat32
-                              };
+                pos := __readVector();
                 float yaw = deser.readFloat32().lastFloat32;
                 float pitch = deser.readFloat32().lastFloat32;
                 if (inst)
@@ -97,12 +128,24 @@ class CommManager : Object @implements Functor1[void, ConnectionState] {
             } else if (cmd == METHOD_ADD_CUBE) {
                 if (deser.getAvailable() < 12)
                     return;
-                Vector pos = {deser.readFloat32().lastFloat32,
-                              deser.readFloat32().lastFloat32,
-                              deser.readFloat32().lastFloat32
-                              };
+                pos := __readVector();
                 if (inst)
                     inst.addCube(pos);
+                state.inbufProcessed = deser.pos;
+            } else if (cmd == METHOD_REPORT_POSITION) {
+                if (deser.getAvailable() < 25)
+                    return;
+                uint id = deser.readUInt().lastUInt;
+                pos := __readVector();
+                orientation := __readVector();
+
+                # if the remote address provided a zero identifier, use the
+                # identifier associated with the remote connection
+                if (!id)
+                    id = clientId;
+
+                if (inst)
+                    inst.reportPosition(id, pos, orientation);
                 state.inbufProcessed = deser.pos;
             } else {
                 cerr `Got illegal comand $cmd from remote endpoint.  Disconnecting.\n`;

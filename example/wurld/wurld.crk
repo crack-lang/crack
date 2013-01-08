@@ -44,6 +44,7 @@ import crack.strutil split;
 import crack.sys argv, exit;
 import crack.time TimeDelta;
 import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
 @import crack.ann assert, define, implements;
 import crack.math cos, sin;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
@@ -55,9 +56,9 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
 import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Light, Graphics, 
     KeyboardEvent, KeyboardHandler, Material, MouseButtonEvent, 
     MouseButtonHandler, MouseMotionEvent, MouseMotionHandler, Prim, Quad, 
-    Renderable, RotMatrix, TextureMaterial, Vector, RenderFrameEvent, 
+    Renderable, RotMatrix, TextureMaterial, Tri, Vector, RenderFrameEvent, 
     RenderFrameHandler;
-import comm commInst = inst, proxies, CommManager, Proxy, WurldInst;
+import comm firstProxy, commInst = inst, proxies, CommManager, Proxy, WurldInst;
     
 import crack.ext._gl GL_LIGHT0, GL_LIGHT1;
 
@@ -82,6 +83,78 @@ const uint OBJ_CUBE = 1, OBJ_LIGHT = 2, OBJ_QUAD = 3;
 # The material array - lets us store materials by their index.
 Array[Material] materials;
 
+_agentBotTri := Tri(Vector(0, 0, 0.25), Vector(-0.5, 0, -0.25), 
+                    Vector(0.5, 0, -0.25)
+                    );
+_agentBotNormal := _agentBotTri.normal();
+
+_agentPortTri := Tri(Vector(0, 0, 0.25),
+                     Vector(0, 0.5, -0.25),
+                     Vector(-0.5, 0, -0.25)
+                     );
+_agentPortNormal := _agentPortTri.normal();
+_agentStarboardTri := Tri(Vector(0, 0, 0.25),
+                          Vector(0.5, 0, -0.25),
+                          Vector(0, 0.5, -0.25)
+                          );
+_agentStarboardNormal := _agentStarboardTri.normal();
+
+## An agent represents the position of another player.
+class Agent : Prim {
+    Vector pos, orientation;
+
+    RotMatrix rot = {};
+    Vector __rotated = {};
+    
+    @final Vector r(Vector org) {
+        rot.rotate(org, __rotated);
+        return __rotated;
+    }
+    
+    oper init(int id, Vector pos, Vector orientation) :
+        Prim(materials[id % materials.count()]),
+        pos = pos,
+        orientation = orientation {
+    }
+
+    @final void drawFace(Vector n, Tri tri, float c1s, float c1t, float c2s, float c2t) {
+        normal(n);
+        vertex(r(tri.coord0), 0.5, 0);
+        vertex(r(tri.coord1), 1, 0.5);
+        vertex(r(tri.coord2), 0, 0.5);
+    }
+
+    void render() {
+        material.makeCurrent();
+        Graphics.loadIdentity();
+        
+        # rotate and move
+#        RotMatrix rot = {};
+        rot.fromDirection(orientation);
+        Graphics.translate(pos);
+
+# I'd prefer to use the OpenGL matrix for this, but I can't figure out what 
+# permutation to use to get it to rotate the coordinates correctly - when I 
+# just do Graphics.rotate() to multiply the model matrix, the rotation is the 
+# opposite of what I expect (and my grasp of 3D math is apparently quite rusty).
+# So for now I'm just going to handle the multiply myself.
+#        Graphics.rotate(rot);
+        
+        Tri.begin();
+        
+        # bottom face
+        drawFace(_agentBotNormal, _agentBotTri, 1, 0.5, 0, 0.5);
+        
+        # port face
+        drawFace(_agentPortNormal, _agentPortTri, 1, 0, 1, 0.5);
+        
+        # starboard face
+        drawFace(_agentStarboardNormal, _agentStarboardTri, 0, 0, 0, 1);
+
+        Tri.end();
+    }
+}        
+
 ## Front, back and side faces are oriented so the material top is on the top 
 ## of the cube.  Top and bottom faces have the top of the material oriented 
 ## towards the front.
@@ -98,6 +171,7 @@ class Cube : WurldObj {
     void render() {
         material.makeCurrent();
 
+        Graphics.loadIdentity();
         Quad.begin();
         
         # front face, counter-clockwise from top right
@@ -152,7 +226,6 @@ class Cube : WurldObj {
     }
     
     @static Cube load(SerialReader src, Material material) {
-        cout `loading cube\n`;
         size := src.readUInt();
         @assert(size == 12);
         return Cube(material, readVector(src));
@@ -186,6 +259,7 @@ class WurldLight : WurldObj {
     }
     
     void render() {
+        Graphics.loadIdentity();
         __rep.render();
     }
 }
@@ -216,7 +290,6 @@ class WurldQuad : WurldObj {
     }
     
     @static WurldQuad load(SerialReader src) {
-        cout `loading quad\n`;
         @assert(src.readUInt() >= 21);
         return WurldQuad(src.readUInt(), readVector(src), readVector(src), 
                          readVector(src),
@@ -226,6 +299,7 @@ class WurldQuad : WurldObj {
     }
 
     void render() {
+        Graphics.loadIdentity();
         __rep.render();
     }
 }
@@ -268,6 +342,7 @@ if (opts.getBool('help')) {
 alias WurldObjArray = Array[WurldObj];
 
 WurldObjArray objects = {};
+HashMap[uint, Agent] agents = {};
 
 App app = {640, 480};
 app.initialize();
@@ -289,6 +364,7 @@ orange := TextureMaterial(loadPNGMaterial(openRd('data/AlphaSquare.png')));
 materials = Array[Material]![sky, plasma, stucco, orange];
 const int MAT_SKY = 0, MAT_PLASMA = 1, MAT_STUCCO = 2, MAT_ORANGE = 3;
 
+## Save all of the objects in the world to the wurld.dat file.
 void save() {
     out := SerialWriter(RealPath('wurld.dat').writer());
     out.write(objects.count());
@@ -329,7 +405,6 @@ float addAngle(float angle, float delta) {
     return angle;
 }
 
-cout `warping mouse\n`;
 SDL_WarpMouse(320, 200);
 terminate := false;
 Poller poller = {};
@@ -354,10 +429,9 @@ Cube makeTargetCube() {
 }
 
 class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler, 
-                                   MouseButtonHandler,
-                                   RenderFrameHandler,
-                                   WurldInst
-                                   {
+                                       MouseButtonHandler,
+                                       RenderFrameHandler,
+                                       WurldInst {
 
     bool viewChanged;
     bool client;
@@ -375,14 +449,13 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             if (slave)
                 slave = null;
             else {
-                if (proxies)
-                    slave = proxies[0];
+                if (firstProxy)
+                    slave = firstProxy;
                 else
                     cout `No slave!\n`;
             }
         } else if (sym == b'w') {
             forward = pressed;
-            cout `set forward to $forward\n`;
         } else if (sym == b's') {
             backward = pressed;
         } else if (sym == b'a') {
@@ -430,7 +503,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         if (client) {
             # client mode - tell the server to add the target cube, the server 
             # will tell us to add it when it has processed the request.
-            proxies[0].addCube(targetCube.pos);
+            firstProxy.addCube(targetCube.pos);
         } else {
             # standalone mode, add the target cube.
             targetCube.material = stucco;
@@ -452,14 +525,33 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
     }
     
     void addCube(Vector pos) {
-        cout `addCube($pos) called\n`;
         objects.append(Cube(stucco, pos));
         
         # if this is the server, tell all of the clients that we have a new 
         # cube.
         if (server) {
             for (proxy :in proxies)
-                proxy.addCube(pos);
+                proxy.val.addCube(pos);
+        }
+    }
+    
+    void reportPosition(uint id, Vector pos, Vector orientation) {
+        # get or create an agent object
+        agent := agents.get(id);
+        if (!agent) {
+            agents[id] = Agent(id, pos, orientation);
+        } else {
+            agent.pos = pos;
+            agent.orientation = orientation;
+        }
+        
+        # if we're a server, tell all of the other clients about the new 
+        # reported position.
+        if (server) {
+            for (item :in proxies) {
+                if (item.val.id != id)
+                    item.val.reportPosition(id, pos, orientation);
+            }
         }
     }
 
@@ -471,6 +563,9 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
 
         for (r :in objects)
             r.render();
+        
+        for (r :in agents)
+            r.val.render();
 
         if (targetCube)
             targetCube.render();
@@ -479,7 +574,6 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
     void onRenderFrame(RenderFrameEvent evt) {
         incr := velocity * (float(evt.deltaUSecs) / 1e+6);
         if (forward) {
-            cout `going forward by $(evt.deltaUSecs) / 1M * $velocity\n`;
             Vector fwd = {0, 0, -1 * incr}, dir = {};
             camera.rotMatrix.rotate(fwd, dir);
             camera.pos += dir;
@@ -520,6 +614,10 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         if (viewChanged && slave) {
             slave.setView(camera.pos, yaw, pitch);
             viewChanged = false;
+        } else if (viewChanged && client) {
+            Vector fwd = {0, 0, -1}, dir = {};
+            camera.rotMatrix.rotate(fwd, dir);
+            firstProxy.reportPosition(0, camera.pos, dir);
         }
     }
     
