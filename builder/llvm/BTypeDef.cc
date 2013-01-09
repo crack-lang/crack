@@ -186,6 +186,78 @@ void BTypeDef::addDependent(BTypeDef *type, Context *context) {
     incompleteChildren.push_back(pair<BTypeDefPtr, ContextPtr>(type, context));
 }
 
+void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
+    LLVMBuilder *builder = LLVMBuilderPtr::cast(&context.builder);
+    Module *module = builder->module;
+    ArrayType *offsetsArrayType = ArrayType::get(builder->intzLLVM, 0);
+    Constant *offsetsArrayInit =
+        ConstantArray::get(offsetsArrayType, ArrayRef<Constant *>());
+    string offsetsVarName = getFullName() +  ":offsets";
+    GlobalVariable *offsetsVar = 
+        module->getGlobalVariable(offsetsVarName);
+    if (offsetsVar)
+        offsetsVar->setInitializer(offsetsArrayInit);
+    else
+        new GlobalVariable(*builder->module,
+                           offsetsArrayType,
+                           true, // is constant
+                           GlobalValue::ExternalLinkage,
+                           offsetsArrayInit,
+                           offsetsVarName
+                           );
+}
+
+void BTypeDef::createBaseOffsets(Context &context) const {
+    // generate the offsets array (containing offsets to base classes)
+    PointerType *pointerType = cast<PointerType>(rep);
+    vector<Constant *> offsetsVal(parents.size());
+    Type *int32Type = Type::getInt32Ty(getGlobalContext());
+    Constant *zero = ConstantInt::get(int32Type, 0);
+    LLVMBuilderPtr builder = LLVMBuilderPtr::cast(&context.builder);
+    Type *intzType = builder->intzLLVM;
+    for (int i = 0; i < parents.size(); ++i) {
+        // get the pointer to the inner "Class" object of "Class[BaseName]"
+        BTypeDefPtr base = BTypeDefPtr::arcast(parents[i]);
+
+        // calculate the offset from the beginning of the new classes 
+        // instance space to that of the base.
+        Constant *index0n[] = {
+            zero,
+            ConstantInt::get(int32Type, i)
+        };
+        offsetsVal[i] =
+            ConstantExpr::getPtrToInt(
+                ConstantExpr::getGetElementPtr(
+                    Constant::getNullValue(pointerType),
+                    ArrayRef<Constant *>(index0n, 2)
+                ),
+                intzType
+            );
+    }
+    GlobalVariable *offsetsVar;
+    ArrayType *offsetsArrayType = 
+        ArrayType::get(intzType, parents.size());
+    if (this == context.construct->classType.get())
+        // .builtin.Class - we have to create the global variable.
+        offsetsVar = 
+            new GlobalVariable(*builder->module,
+                               offsetsArrayType,
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               NULL, // initializer, filled in later.
+                               getFullName() +  ":offsets"
+                               );
+    else
+        offsetsVar =
+            builder->module->getGlobalVariable(getFullName() + ":offsets");
+    SPUG_CHECK(offsetsVar, 
+               "Offsets variable not found for type " << getFullName()
+               );
+    Constant *offsetsArrayInit = 
+        ConstantArray::get(offsetsArrayType, offsetsVal);
+    offsetsVar->setInitializer(offsetsArrayInit);
+}
+
 void BTypeDef::fixIncompletes(Context &context) {
     // construct the vtable if necessary
     if (hasVTable) {
@@ -199,7 +271,9 @@ void BTypeDef::fixIncompletes(Context &context) {
         );
         vtableBuilder.emit(this);
     }
-    
+
+    createBaseOffsets(context);
+        
     // fix-up all of the placeholder instructions
     for (vector<PlaceholderInstruction *>::iterator iter = 
             placeholders.begin();

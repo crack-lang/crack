@@ -62,6 +62,7 @@ TypeDef *ArrayTypeDef::getSpecialization(Context &context,
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
         createClassImpl(context, tempSpec.get());
+        tempSpec->createEmptyOffsetsInitializer(context);
     } else {
         LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
         b.deferMetaClass.push_back(tempSpec);

@@ -164,6 +164,7 @@ class LLVMBuilder : public Builder {
         llvm::PointerType *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
         llvm::Value *lastValue;
+        llvm::Type *intzLLVM;
         llvm::BasicBlock *funcBlock;
         llvm::Function *exceptionPersonalityFunc;
 

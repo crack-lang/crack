@@ -219,6 +219,7 @@ namespace {
         string temp("    byteptr name;\n"
                     "    uint numBases;\n"
                     "    array[Class] bases;\n"
+                    "    array[intz] offsets;\n"
                     "    bool isSubclass(Class other) {\n"
                     "        if (this is other)\n"
                     "            return (1==1);\n"
@@ -229,6 +230,17 @@ namespace {
                     "            i = i + uint(1);\n"
                     "        }\n"
                     "        return (1==0);\n"
+                    "    }\n"
+                    "    intz getInstOffset(Class other) {\n"
+                    "        if (this is other)\n"
+                    "            return 0;\n"
+                    "        uint i;\n"
+                    "        for (int i = 0; i < numBases; ++i) {\n"
+                    "            off := bases[i].getInstOffset(other);\n"
+                    "            if (off >= 0)\n"
+                    "                return offsets[i] + off;\n"
+                    "        }\n"
+                    "        return -1;\n"
                     "    }\n"
                     "}\n"
                     );
@@ -262,13 +274,19 @@ namespace {
         builder.builder.CreateRetVoid();
     }
 
-    void fixMeta(Context &context, TypeDef *type) {
+    void fixMeta(Context &context, BTypeDef *type) {
+        SPUG_CHECK(type->parents.empty(),
+                   "Meta-class fixup can only be applied to types without "
+                    "a base class (trying to fixMeta on " <<
+                    type->getFullName() << ")"
+                   );
         BTypeDefPtr metaType;
         BGlobalVarDefImplPtr classImpl;
         type->type = metaType = createMetaClass(context, type->name);
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
         createClassImpl(context, BTypeDefPtr::acast(type));
+        type->createEmptyOffsetsInitializer(context);
     }
 
     void addExplicitTruncate(Context &context, BTypeDef *sourceType,
@@ -324,6 +342,10 @@ namespace {
         // if you remove this, for the love of god, change the return type so
         // we don't leak the pointer.
         context.addDef(btype.get());
+
+        // construct an empty offsets variable initializer.
+        btype->createEmptyOffsetsInitializer(context);
+
         return btype.get();
     }
 
@@ -345,6 +367,10 @@ namespace {
         // if you remove this, for the love of god, change the return type so
         // we don't leak the pointer.
         context.addDef(btype.get());
+
+        // construct an empty offsets variable initializer.
+        btype->createEmptyOffsetsInitializer(context);
+
         return btype.get();
     }
 
@@ -654,7 +680,8 @@ LLVMBuilder::LLVMBuilder() :
     module(0),
     builder(getGlobalContext()),
     func(0),
-    lastValue(0) {
+    lastValue(0),
+    intzLLVM(0) {
 
 }
 
@@ -2263,6 +2290,17 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         debugInfo->createBasicType(boolType, 8, dwarf::DW_ATE_boolean);
     }
 
+    // we don't create the intz type until later, but we have to cheat and
+    // get a sneak preview because this type is needed to create the offsets
+    // tables.
+    bool ptrIs32Bit = sizeof(void *) == 4;
+    if (ptrIs32Bit) {
+        intzLLVM = Type::getInt32Ty(lctx);
+    } else {
+        assert(sizeof(void *) == 8);
+        intzLLVM = Type::getInt64Ty(lctx);
+    }
+
     BTypeDef *byteType = createIntPrimType(context, Type::getInt8Ty(lctx),
                                            "byte"
                                            );
@@ -2347,7 +2385,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // PDNTs
     BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType;
-    bool intIs32Bit, ptrIs32Bit, floatIs32Bit;
+    bool intIs32Bit, floatIs32Bit;
     if (sizeof(int) == 4) {
         intIs32Bit = true;
         intType = createIntPrimType(context, Type::getInt32Ty(lctx), "int");
@@ -2373,26 +2411,17 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     deferMetaClass.push_back(intType);
     deferMetaClass.push_back(uintType);
 
-    if (sizeof(void *) == 4) {
-        ptrIs32Bit = true;
-        intzType = createIntPrimType(context, Type::getInt32Ty(lctx), "intz");
-        uintzType = createIntPrimType(context, Type::getInt32Ty(lctx), "uintz");
-        if (debugInfo) {
-            debugInfo->createBasicType(intzType, 32, dwarf::DW_ATE_signed);
-            debugInfo->createBasicType(uintzType, 32, dwarf::DW_ATE_unsigned);
-        }
-    } else {
-        assert(sizeof(void *) == 8);
-
-        ptrIs32Bit = false;
-        intzType = createIntPrimType(context, Type::getInt64Ty(lctx), "intz");
-        uintzType =
-            createIntPrimType(context, Type::getInt64Ty(lctx), "uintz");
-        if (debugInfo) {
-            debugInfo->createBasicType(intzType, 64, dwarf::DW_ATE_signed);
-            debugInfo->createBasicType(uintzType, 64, dwarf::DW_ATE_unsigned);
-        }
+    intzType = createIntPrimType(context, intzLLVM, "intz");
+    uintzType = createIntPrimType(context, intzLLVM, "uintz");
+    if (debugInfo) {
+        debugInfo->createBasicType(intzType, ptrIs32Bit ? 32 : 64,
+                                   dwarf::DW_ATE_signed
+                                   );
+        debugInfo->createBasicType(uintzType, ptrIs32Bit ? 32 : 64,
+                                   dwarf::DW_ATE_unsigned
+                                   );
     }
+
     gd->intzType = intzType;
     gd->uintzType = uintzType;
     gd->intzSize = ptrIs32Bit ? 32 : 64;
@@ -2920,6 +2949,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         new VoidPtrOpDef(context.construct->voidptrType.get()),
         overloadDef.get()
     );
+    context.addDef(overloadDef.get());
+    overloadDef->createEmptyOffsetsInitializer(context);
 
     // create an empty structure type and its pointer for VTableBase
     // Actual type is {}** (another layer of pointer indirection) because
@@ -2957,6 +2988,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // finally, mark the class as complete
     vtableBaseType->complete = true;
+    vtableBaseType->fixIncompletes(context);
 
     // pointer equality check (to allow checking for None)
     context.addDef(new IsOpDef(voidptrType, boolType));

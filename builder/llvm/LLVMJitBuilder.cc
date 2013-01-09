@@ -226,6 +226,7 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
     result->options = options;
+    result->intzLLVM = intzLLVM;
     return result;
 }
 

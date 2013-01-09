@@ -3,11 +3,11 @@ metaclass instances are accessible
 %%ARGS%%
 %%FILE%%
 import test.preutil streq;
-if ( !streq(typeof(int).name, '.builtin.int:meta') )
+if ( !streq(typeof(int).name, 'int:meta') )
     puts('FAILED typeof int');
-if ( !streq(typeof(array[int]).name, '.builtin.array:meta') )
+if ( !streq(typeof(array[int]).name, 'array:meta') )
     puts('FAILED typeof array');
-if ( !streq(typeof(function[void, int]).name, ".builtin.function:meta") )
+if ( !streq(typeof(function[void, int]).name, "function:meta") )
     puts('FAILED typeof function');
 
 puts('ok');

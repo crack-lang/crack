@@ -18,6 +18,7 @@
 #include <llvm/GlobalValue.h>
 #include <llvm/GlobalVariable.h>
 #include <spug/StringFmt.h>
+#include <spug/check.h>
 
 using namespace llvm;
 using namespace model;
@@ -124,6 +125,31 @@ void createClassImpl(Context &context, BTypeDef *type) {
     LLVMContext &lctx = getGlobalContext();
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
 
+    // in situations where we haven't defined the class body yet, create a 
+    // fake class containing the parents so we can compute the base class 
+    // offsets.
+    PointerType *pointerType = 
+        type->rep ? dyn_cast<PointerType>(type->rep) : 0;
+    StructType *instType = 
+        pointerType ? dyn_cast<StructType>(pointerType->getElementType()) : 0;
+    if (!instType || instType->isOpaque()) {
+        instType = StructType::create(lctx);
+        vector<Type *> fields(type->parents.size());
+        for (int i = 0; i < type->parents.size(); ++i) {
+            PointerType *basePtrType = 
+                cast<PointerType>(BTypeDefPtr::rcast(type->parents[i])->rep);
+            fields[i] = basePtrType->getElementType();
+        }
+        instType->setBody(fields);
+        pointerType = instType->getPointerTo();
+    }
+
+    Type *intzType = BTypeDefPtr::rcast(context.construct->intzType)->rep,
+    
+         // GEP offsets have to be int32.  int64 offsets are considered to be
+         // "invalid indeces" by validIndex().
+         *int32Type = Type::getInt32Ty(lctx);
+
     // get the LLVM class structure type from out of the meta class rep.
     BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     PointerType *classPtrType = cast<PointerType>(classType->rep);
@@ -131,16 +157,19 @@ void createClassImpl(Context &context, BTypeDef *type) {
         cast<StructType>(classPtrType->getElementType());
 
     // create a global variable holding the class object.
-    vector<Constant *> classStructVals(3);
+    vector<Constant *> classStructVals(4);
 
-    Constant *zero = ConstantInt::get(Type::getInt32Ty(lctx), 0);
+    Constant *zero = ConstantInt::get(int32Type, 0);
     Constant *index00[] = { zero, zero };
 
-    // build the unique canonical name we need to ensure unique symbols
-    // normally type->getFullName() would do this, but at this stage
-    // the type itself doesn't have an owner yet, so we build it from
-    // context
-    string canonicalName(earlyCanonicalize(context, type->name));
+    // build the unique canonical name, we need to ensure unique symbols.
+    // if the type has an owner, type->getFullName() will do this, but at 
+    // this stage the type itself usually doesn't have an owner yet, so we 
+    // build it from context.
+    string canonicalName(type->getOwner() ?
+                            type->getFullName() : 
+                            earlyCanonicalize(context, type->name)
+                         );
 
     // name
     Constant *nameInit = ConstantDataArray::getString(lctx, type->name, true);
@@ -191,9 +220,28 @@ void createClassImpl(Context &context, BTypeDef *type) {
                            baseArrayInit,
                            canonicalName +  ":bases"
                            );
-    classStructVals[2] = 
+    classStructVals[2] =
         ConstantExpr::getGetElementPtr(basesGVar, index00, 2);
 
+    // see if the offsets variable already exists (it can in the case of 
+    // .builtin.Class)
+    GlobalVariable *offsetsGVar =
+        llvmBuilder.module->getGlobalVariable(canonicalName +  ":offsets");
+
+    // The offsets initializer gets created in BTypeDef::fixIncompletes() 
+    // after the base class sizes must be known.
+    if (!offsetsGVar)
+        offsetsGVar =
+            new GlobalVariable(*llvmBuilder.module,
+                               ArrayType::get(intzType, type->parents.size()),
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               NULL, // initializer, filled in later.
+                               canonicalName +  ":offsets"
+                               );
+    classStructVals[3] =
+        ConstantExpr::getGetElementPtr(offsetsGVar, index00, 2);
+    
     // build the instance of Class
     Constant *classStruct =
         ConstantStruct::get(classStructType, classStructVals);
@@ -247,7 +295,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 }
 
 // Create a new meta-class.
-// context: enclosing context.
+// context: enclosing context (this should be a class context).
 // name: the original non-canonical class name.
 BTypeDefPtr createMetaClass(Context &context, const string &name) {
     LLVMBuilder &llvmBuilder =
@@ -261,7 +309,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     string metaTypeName = SPUG_FSTR(canonicalName << ":meta");
     BTypeDefPtr metaType =
         new BTypeDef(context.construct->classType.get(),
-                     metaTypeName,
+                     name + ":meta",
                      0,
                      true,
                      0
@@ -286,14 +334,11 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
 
-    // make the owner the builtin module if it is available, if it is not we 
-    // are presumably registering primitives, so just use the module namespace.
-    if (context.construct->builtinMod)
-        context.construct->builtinMod->addDef(metaType.get());
-    else
-        context.getDefContext()->addDef(metaType.get());
+    // make the owner the first definition context enclosing the class's 
+    // context.
+    context.parent->getDefContext()->addDef(metaType.get());
     createClassImpl(context, metaType.get());
-        
+    metaType->createBaseOffsets(context);
 
     return metaType;
 }

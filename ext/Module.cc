@@ -142,6 +142,7 @@ class VTableType : public Type {
                 );
             TypeDefPtr td =
                 ctx->builder.emitBeginClass(*clsCtx, proxyName, bases, 0);
+            ctx->ns->addDef(td.get());
             td->aliasBaseMetaTypes();
 
             // wrap all of the constructors
@@ -164,7 +165,6 @@ class VTableType : public Type {
             // about discarding the reference here because Type::finish() 
             // should have assigned this to a variable)
             typeDef = td.get();
-            ctx->ns->addDef(typeDef);
         }        
 };
 

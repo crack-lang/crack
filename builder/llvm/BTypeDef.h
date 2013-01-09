@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BTypeDef_h_
 #define _builder_llvm_BTypeDef_h_
@@ -112,6 +112,18 @@ public:
      * the dependents during the completion of the receiver.
      */
     void addDependent(BTypeDef *type, model::Context *context);
+
+    /**
+     * Generate the base class offsets array global variable used for
+     * offsetting during type casts.
+     */
+    void createBaseOffsets(model::Context &context) const;
+
+    /**
+     * Generate an empty offsets initializer array (useful for primitive
+     * classes where createBaseOffsets() won't work).
+     */
+    void createEmptyOffsetsInitializer(model::Context &context);
 
     /**
      * Fix all incomplete instructions and incomplete children and set the
