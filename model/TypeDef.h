@@ -341,7 +341,9 @@ class TypeDef : public VarDef, public Namespace {
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
 
         /**
          * Deserialze a type object.

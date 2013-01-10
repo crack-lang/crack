@@ -105,10 +105,10 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
-         * Returns true if the definition should be serialized when the module
+         * Returns true if the definition should be serialized when the owner
          * is being serialized.
          */
-        virtual bool isSerializable(const ModuleDef *module) const;
+        virtual bool isSerializable(const Namespace *ns) const;
         
         /**
          * Add all of the modules that this 
@@ -136,7 +136,9 @@ class VarDef : public virtual spug::RCBase {
          * kind of definiton from the context, as when we serialize a variable 
          * type.
          */
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
 
         /**
          * Deserialize an alias.

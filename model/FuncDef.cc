@@ -214,21 +214,22 @@ void FuncDef::addDependenciesTo(const ModuleDef *mod,
         (*iter)->type->addDependenciesTo(mod, deps);
 }
 
-bool FuncDef::isSerializable(const ModuleDef *module) const {
-    return VarDef::isSerializable(module) && 
-           !(flags & FuncDef::builtin) && 
-           getModule() == module;
+bool FuncDef::isSerializable(const Namespace *ns) const {
+    return VarDef::isSerializable(ns) && 
+           !(flags & FuncDef::builtin);
 }
 
-void FuncDef::serialize(Serializer &serializer, bool writeKind) const {
-    assert(!writeKind);
-    returnType->serialize(serializer, false);
+void FuncDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
+    assert(!writeKind && owner == ns);
+    returnType->serialize(serializer, false, 0);
     
     serializer.write(args.size(), "#args");
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          )
-        (*iter)->serialize(serializer, false);
+        (*iter)->serialize(serializer, false, 0);
 }
 
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {

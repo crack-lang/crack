@@ -937,7 +937,9 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
-void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
+void TypeDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
     if (writeKind)
         serializer.write(Serializer::typeId, "kind");
     if (serializer.writeObject(this, "type")) {
@@ -958,7 +960,7 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
                  i != parents.end();
                  ++i
                  )
-                (*i)->serialize(serializer, false);
+                (*i)->serialize(serializer, false, 0);
             
             Namespace::serializeDefs(serializer);
         }

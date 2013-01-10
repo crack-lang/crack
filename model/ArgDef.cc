@@ -17,10 +17,12 @@
 using namespace model;
 using namespace std;
 
-void ArgDef::serialize(Serializer &serializer, bool writeKind) const {
+void ArgDef::serialize(Serializer &serializer, bool writeKind,
+                       const Namespace *ns
+                       ) const {
     SPUG_CHECK(!writeKind, "?? writing 'kind' for arg variable " << name);
     serializer.write(name, "name");
-    type->serialize(serializer, false);
+    type->serialize(serializer, false, 0);
 }
 
 

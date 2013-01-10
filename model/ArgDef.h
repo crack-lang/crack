@@ -23,7 +23,9 @@ class ArgDef : public VarDef {
         ArgDef(TypeDef *type, const std::string &name) :
             VarDef(type, name) {
         }
-        void serialize(Serializer &serializer, bool writeKind) const;
+        void serialize(Serializer &serializer, bool writeKind,
+                       const Namespace *ns
+                       ) const;
         static ArgDefPtr deserialize(Deserializer &deser);
 };
 

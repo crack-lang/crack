@@ -92,8 +92,8 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
-bool VarDef::isSerializable(const ModuleDef *module) const {
-    return name[0] != ':' && getModule() == module;
+bool VarDef::isSerializable(const Namespace *ns) const {
+    return name[0] != ':' && owner == ns;
 }
 
 void VarDef::addDependenciesTo(const ModuleDef *mod,
@@ -154,12 +154,14 @@ VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
                             );
 }
 
-void VarDef::serialize(Serializer &serializer, bool writeKind) const {
+void VarDef::serialize(Serializer &serializer, bool writeKind,
+                       const Namespace *ns
+                       ) const {
     if (writeKind)
         serializer.write(Serializer::variableId, "kind");
     serializer.write(name, "name");
     serializer.write(getInstSlot() + 1, "instSlot");
-    type->serialize(serializer, false);
+    type->serialize(serializer, false, ns);
 }
 
 VarDefPtr VarDef::deserialize(Deserializer &deser) {

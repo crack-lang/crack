@@ -190,7 +190,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (i->second->isSerializable(serializer.module))
+        if (i->second->isSerializable(this))
             ++count;
     }
     
@@ -200,12 +200,12 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (!i->second->isSerializable(serializer.module))
+        if (!i->second->isSerializable(this))
             continue;
-        else if (i->second->getModule() != serializer.module)
+        else if (i->second->getOwner() != this)
             i->second->serializeAlias(serializer, i->first);
         else
-            i->second->serialize(serializer, true);
+            i->second->serialize(serializer, true, this);
     }
 }
 

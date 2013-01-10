@@ -103,7 +103,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
-        virtual bool isSerializable(const ModuleDef *module) const;
+        virtual bool isSerializable(const Namespace *ns) const;
         
         /**
          * Returns true if the function is an override of a virtual method
@@ -152,7 +152,9 @@ class FuncDef : public VarDef {
         virtual void addDependenciesTo(const ModuleDef *mod, 
                                        ModuleDefMap &deps
                                        ) const;
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
         static FuncDefPtr deserialize(Deserializer &deser, 
                                       const std::string &funcName
                                       );
