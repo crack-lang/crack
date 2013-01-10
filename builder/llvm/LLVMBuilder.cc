@@ -2933,9 +2933,15 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     finishClassType(context, classType);
     createClassImpl(context, classType);
 
-    // back fill the meta-class for the types defined so far.
+    // back fill the meta-class for the types defined so far.  We create a
+    // bogus context for them because functions called by fixMeta() expect to
+    // run on a class context.
+    BTypeDefPtr bogusType = new BTypeDef(metaType.get(), "BogusType", 0);
+    ContextPtr classCtx = context.createSubContext(Context::instance,
+                                                   bogusType.get()
+                                                   );
     for (int i = 0; i < deferMetaClass.size(); ++i)
-        fixMeta(context, deferMetaClass[i].get());
+        fixMeta(*classCtx, deferMetaClass[i].get());
     deferMetaClass.clear();
 
     // create OverloadDef's type
