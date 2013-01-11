@@ -27,7 +27,6 @@ using namespace crack::util;
 
 bool serializerTestUInt() {
     bool success = true;
-    using namespace model;
 
     ostringstream dst;
     Serializer s(dst);
@@ -55,6 +54,23 @@ bool serializerTestUInt() {
         success = false;
     }
     return success;
+}
+
+bool serializerTestLargeStrings() {
+    ostringstream dst;
+    Serializer s(dst);
+    string testString = "large string - greater than 16 bytes";
+    s.write(testString, "long_string");
+
+    string data = dst.str();
+    istringstream src(data);
+    Deserializer d(src);
+    if (d.readString(16, "long_string") != testString) {
+        cerr << "reading large string back failed, got " << testString << endl;
+        return false;
+    } else {
+        return true;
+    }
 }
 
 struct DataSet {
@@ -244,6 +260,7 @@ struct TestCase {
 
 TestCase testCases[] = {
     {"serializerTestUInt", serializerTestUInt},
+    {"serializerTestLargeStrings", serializerTestLargeStrings},
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
     {"moduleReload", moduleReload},
