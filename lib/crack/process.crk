@@ -367,6 +367,21 @@ class Process {
             signalProcess(_pid, sig);
     }
 
+    void closeStdIn() {
+        if (_pd.stdin == -1)
+            throw InvalidStateError('Process was not created with '
+                                     'CRK_PIPE_STDIN'
+                                    );
+        if (isRunning()) {
+          close(_pd.stdin);
+        }
+    }
+
+    void sendSignal(int sig) {
+        if (_returnCode & CRK_PROC_STILL_RUNNING)
+            signalProcess(_pid, sig);
+    }
+
     void terminate() {
         // XXX this needs to be a runtime call, as on Windows it will do
         // something different

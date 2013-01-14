@@ -252,14 +252,27 @@ class CookieMaker[M] {
 class CurlEasy {
     CURL _handle;
     sList _headers = null;
-    OrderedHashMap[Buffer, Buffer] _cookies;
+    int _lastResult = 0;
+    OrderedHashMap[String, String] _cookies;
 
     oper init() : _handle=easy_init() { }
+    oper init(String url) : _handle=easy_init() {
+      easy_setopt_ptr(_handle, CURLOPT_URL, url.buffer);
+    }
 
     CURL getHandle() { return _handle; }
 
     int perform() {
-        return easy_perform(_handle);
+        _lastResult = easy_perform(_handle);
+        return _lastResult;
+    }
+
+    CString strError() {
+      return CString(easy_strerror(_lastResult), false);
+    }
+
+    CString strError(int result) {
+      return CString(easy_strerror(result), false);
     }
 
     int pause(int bitmask) {
@@ -282,35 +295,45 @@ class CurlEasy {
         return easy_setopt_long(_handle, optName, int64(value));
     }
 
-    int addCookie(Buffer key, Buffer value) {
+    int addCookie(String key, String value) {
         _cookies[key] = value;
         return _cookies.count();
     }
 
     int saveCookies() {
-        return CookieMaker[OrderedHashMap[Buffer, Buffer]].set(_handle, _cookies);
+        return CookieMaker[OrderedHashMap[String, String]].set(_handle, _cookies);
     }
 
-    int setCookies(OrderedHashMap[Buffer, Buffer] map) {
+    int setCookies(OrderedHashMap[String, String] map) {
         _cookies = map;
         return saveCookies();
     }
 
-    int setCookies(HashMap[Buffer, Buffer] map) {
+    int setCookies(HashMap[String, String] map) {
         for (e :in map)
             _cookies[e.key] = e.val;
         return saveCookies();
     }
 
-    void appendHeader(String headerName, String headerValue) {
+    void appendHeader(Buffer headerName, Buffer headerValue) {
         headerString := FStr() `$headerName: $headerValue`;
         if (_headers is null)
             _headers = sList(headerString);
         else _headers.append(headerString);
     }
 
-    int setHeader(String headerName, String headerValue) {
+    int setHeader(Buffer headerName, Buffer headerValue) {
         appendHeader(headerName, headerValue);
+        return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
+    }
+
+    int setHeaders(HashMap[String, String] map) {
+        for (e :in map) appendHeader(e.key, e.val);
+        return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
+    }
+
+    int setHeaders(OrderedHashMap[String, String] map) {
+        for (e :in map) appendHeader(e.key, e.val);
         return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
     }
 
