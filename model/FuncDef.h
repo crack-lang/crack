@@ -28,6 +28,9 @@ SPUG_RCPTR(FuncDef);
 
 class FuncDef : public VarDef {
     public:
+        // When changing flags, be mindful of the fact that these values are 
+        // persisted - changing flag values invalidates all meta-data in the 
+        // cache.
         enum Flags {
             noFlags =0,  // so we can specify this
             method = 1,  // function is a method (has a receiver)

@@ -231,7 +231,7 @@ void Namespace::deserializeDefs(Deserializer &deser) {
 //                addDef(Generic::deserialize(deser));
                 break;
             case Serializer::overloadId:
-                addDef(OverloadDef::deserialize(deser).get());
+                addDef(OverloadDef::deserialize(deser, this).get());
                 break;
             case Serializer::typeId:
                 TypeDef::deserialize(deser).get();

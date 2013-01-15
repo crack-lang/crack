@@ -139,6 +139,7 @@ So given this, our meta-data format is:
 
     FuncDef {
         ref[Type] returnType
+        uint flags;
         array[VarDef] args
     }
 

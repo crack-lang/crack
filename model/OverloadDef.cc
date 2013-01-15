@@ -323,11 +323,16 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
     }
 }
 
-OverloadDefPtr OverloadDef::deserialize(Deserializer &deser) {
+OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
+                                        Namespace *owner
+                                        ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld = new OverloadDef(name);
     int size = deser.readUInt("#overloads");
-    for (int i = 0; i < size; ++i)
-        ovld->addFunc(FuncDef::deserialize(deser, name).get());
+    for (int i = 0; i < size; ++i) {
+        FuncDefPtr func = FuncDef::deserialize(deser, name);
+        func->setOwner(owner);
+        ovld->addFunc(func.get());
+    }
     return ovld;
 }

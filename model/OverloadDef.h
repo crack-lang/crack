@@ -181,7 +181,9 @@ class OverloadDef : public VarDef {
                                const Namespace *ns
                                ) const;
         
-        static OverloadDefPtr deserialize(Deserializer &deser);
+        static OverloadDefPtr deserialize(Deserializer &deser,
+                                          Namespace *owner
+                                          );
 };
 
 } // namespace model

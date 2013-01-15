@@ -224,6 +224,7 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
                         ) const {
     assert(!writeKind && owner == ns);
     returnType->serialize(serializer, false, 0);
+    serializer.write(static_cast<unsigned>(flags), "flags");
     
     serializer.write(args.size(), "#args");
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
@@ -234,6 +235,7 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
 
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     TypeDefPtr returnType = TypeDef::deserialize(deser);
+    Flags flags = static_cast<Flags>(deser.readUInt("flags"));
     
     int argCount = deser.readUInt("#args");
     ArgVec args;
@@ -247,6 +249,7 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     );
     
     result->returnType = returnType;
+    result->flags = flags;
 
     return result;
 }
