@@ -60,6 +60,7 @@ string Deserializer::readString(size_t expectedMaxSize, const char *name) {
     if (tmp != buffer) {
         string result(tmp, size);
         delete tmp;
+        return result;
     } else {
         return string(tmp, size);
     }
