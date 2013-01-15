@@ -477,26 +477,38 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         ensureCacheMap();
 
         // try to resolve unresolved globals from the cache
-        for (Module::const_global_iterator iter = module->global_begin();
+        for (Module::global_iterator iter = module->global_begin();
              iter != module->global_end();
              ++iter
              ) {
             if (iter->isDeclaration()) {
 
                 // now find the defining module
+                string xname = iter->getName();
                 CacheMapType::const_iterator globalDefIter =
                     cacheMap->find(iter->getName());
                 if (globalDefIter != cacheMap->end()) {
                     void *realAddr =
                         execEng->getPointerToGlobal(globalDefIter->second);
-                    assert(realAddr && "unable to resolve global");
+                    SPUG_CHECK(realAddr,
+                               "unable to resolve global: " <<
+                               globalDefIter->first
+                               );
                     execEng->addGlobalMapping(iter, realAddr);
+                } else {
+                    cout << "couldn't get " << xname << " from cacheMap" <<
+                    endl;
                 }
+            } else {
+                // not a declaration - register it in the cache map
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
             }
         }
 
         // now try to resolve functions
-        for (Module::const_iterator iter = module->begin();
+        for (Module::iterator iter = module->begin();
              iter != module->end();
              ++iter
              ) {
@@ -514,6 +526,10 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                                );
                     execEng->addGlobalMapping(iter, realAddr);
                 }
+            } else {
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
             }
         }
 
