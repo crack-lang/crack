@@ -240,9 +240,13 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     for (int i = 0; i < argCount; ++i)
         args.push_back(ArgDef::deserialize(deser));
 
-    return deser.context->builder.materializeFunc(
+    FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
         name,
         args
     );
+    
+    result->returnType = returnType;
+
+    return result;
 }
