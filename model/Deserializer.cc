@@ -12,6 +12,7 @@
 #include <string.h>
 #include <iostream>
 #include <iomanip>
+#include "spug/check.h"
 #include "spug/RCBase.h"
 #include "Serializer.h"
 #include "DeserializationError.h"
@@ -88,4 +89,16 @@ Deserializer::ReadObjectResult Deserializer::readObject(
         assert(iter != objMap.end() && "Unable to resolve serialized object");
         return ReadObjectResult(iter->second, false, 0);
     }
+}
+
+double Deserializer::readDouble(const char *name) {
+    SPUG_CHECK(sizeof(double) == 8,
+               "double != 8 chars on this platform, size is: " <<
+                sizeof(double)
+               );
+    double val;
+    src.read(reinterpret_cast<char *>(&val), sizeof(double));
+    if (Serializer::trace)
+        cerr << "reading double " << name << ": " << val << endl;
+    return val;
 }

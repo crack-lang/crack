@@ -26,6 +26,12 @@ class ConstVarDef : public VarDef {
         }
         
         virtual bool isConstant() { return true; }
+
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
+        
+        static ConstVarDefPtr deserialize(Deserializer &deser);
 };
 
 } // namespace model

@@ -107,6 +107,12 @@ class Deserializer {
         ReadObjectResult readObject(const ObjectReader &reader,
                                     const char *name
                                     );
+
+        /**
+         * Read an ISO-8859 double from the stream.  These are presumed to be
+         * a fixed width of 8 bytes.
+         */
+        double readDouble(const char *name);
 };
 
 }

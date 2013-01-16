@@ -91,6 +91,7 @@ So given this, our meta-data format is:
             overloadId = 4,
             aliasId = 5,
             typeAliasId = 6,
+            constVar = 7,
         }
         uint kind;
 
@@ -99,6 +100,7 @@ So given this, our meta-data format is:
             case variableId: VarDef
             case typeId: ref[Type]
             case overloadId: OverloadDef
+            case constVar: ConstVarDef
         }
     }
 
@@ -142,5 +144,20 @@ So given this, our meta-data format is:
         uint flags;
         array[VarDef] args
     }
+
+    ConstVarDef {
+        blob name
+        ref[Type] type
+        uint kind
+        switch (kind) {
+            case constIntReqUnsigned: uint
+            case constInt: uint
+            case constFloat: 8 bytes
+            case constNull: empty
+            case constAgg: empty
+        }
+    }
+
+
 
 }}

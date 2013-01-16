@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <iomanip>
+#include "spug/check.h"
 
 using namespace std;
 using namespace model;
@@ -60,4 +61,14 @@ bool Serializer::writeObject(const void *object, const char *name) {
         write(iter->second << 1, "objectId");
         return false;
     }
+}
+
+void Serializer::writeDouble(double val, const char *name) {
+    SPUG_CHECK(sizeof(double) == 8,
+               "double != 8 chars on this platform, size is: " <<
+                sizeof(double)
+               );
+    if (trace)
+        cerr << "write double " << name << ": " << val << endl;
+    dst.write(reinterpret_cast<const char *>(&val), sizeof(double));
 }

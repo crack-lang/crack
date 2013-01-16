@@ -37,7 +37,8 @@ class Serializer {
             typeId = 2,
             genericId = 3,
             overloadId = 4,
-            aliasId = 5
+            aliasId = 5,
+            constVarId = 6
         };
 
         static const int
@@ -64,6 +65,12 @@ class Serializer {
          * indicating that the caller should serialize the state of the object.
          */
         bool writeObject(const void *object, const char *name);
+
+        /**
+         * Write a double-precision IEEE float.  These are expected to be 8
+         * bytes.
+         */
+        void writeDouble(double val, const char *name);
 };
 
 }

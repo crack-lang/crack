@@ -10,6 +10,7 @@
 #include "Namespace.h"
 
 #include "spug/check.h"
+#include "ConstVarDef.h"
 #include "Context.h"
 #include "Deserializer.h"
 #include "Expr.h"
@@ -235,6 +236,9 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 break;
             case Serializer::typeId:
                 TypeDef::deserialize(deser).get();
+                break;
+            case Serializer::constVarId:
+                addDef(ConstVarDef::deserialize(deser).get());
                 break;
             default:
                 SPUG_CHECK(false, "Bad definition type id " << kind);
