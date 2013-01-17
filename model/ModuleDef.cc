@@ -172,6 +172,13 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         deser.context->builder.materializeModule(*deser.context, canonicalName,
                                                  0 // owner
                                                  );
+
+    // storing the module in the construct cache - this is actually also done
+    // later within construct, but we need the module to be present while
+    // we're constructing it so we can resolve types by name when building
+    // them.
+    deser.context->construct->moduleCache[canonicalName] = mod;
+
     deser.context->ns = mod.get();
     mod->deserializeDefs(deser);
     return mod;
