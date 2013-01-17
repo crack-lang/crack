@@ -374,6 +374,7 @@ class Process {
                                     );
         if (isRunning()) {
           close(_pd.stdin);
+          _pd.stdin = -1;
         }
     }
 
