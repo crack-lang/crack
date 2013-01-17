@@ -2898,6 +2898,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                             "array",
                                             0
                                             );
+    gd->arrayType = arrayType;
     context.addDef(arrayType.get());
     deferMetaClass.push_back(arrayType);
 

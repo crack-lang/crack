@@ -278,6 +278,7 @@ class Construct : public spug::RCBase, public Options {
                    staticStringType,
                    overloadType,
                    crackContext,
+                   arrayType,
                    functionType;
 
         // Size of these PDNTs in bits.
