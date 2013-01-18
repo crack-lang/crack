@@ -937,6 +937,13 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
+bool TypeDef::isSerializable(const Namespace *ns) const {
+    if (meta)
+        return false;
+    else
+        return VarDef::isSerializable(ns);
+}
+
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
@@ -954,6 +961,7 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
+            serializer.writeObject(getOwner(), "owner");
             
             serializer.write(parents.size(), "#bases");
             for (TypeVec::const_iterator i = parents.begin();
@@ -1062,21 +1070,32 @@ namespace {
             } else {
                 string name = deser.readString(16, "name");
                 
+                // the owner isn't necessarily a type - it should either be a 
+                // type or the module, but the module should always already be 
+                // registered in the deserializer.
+                // XXX This may not always be the case, do something to verify.
+                Deserializer::ReadObjectResult result = 
+                    deser.readObject(TypeDefReader(), "owner");
+                NamespacePtr owner = NamespacePtr::rcast(result.object);
+                
                 // bases
                 int count = deser.readUInt("#bases");
                 TypeDef::TypeVec bases(count);
                 for (int i = 0; i < count; ++i)
                     bases[i] = TypeDef::deserialize(deser, "bases[i]");
 
-                // instantiate the type
-                type = deser.context->builder.materializeType(*deser.context,
+                // create a fake context for the owner and instantiate the 
+                // type
+                Context::Scope scope =
+                    ModuleDefPtr::rcast(owner) ? Context::module :
+                                                 Context::instance;
+                ContextPtr ownerContext =
+                    deser.context->createSubContext(scope, owner.get());
+                type = deser.context->builder.materializeType(*ownerContext,
                                                               name
                                                               );
                 type->parents = bases;
-                // XXX yarks.  this assumes that the parent context of the 
-                // first definition is always the context of the class.  Is 
-                // that really safe?
-                deser.context->addDef(type.get());
+                owner->addDef(type.get());
                 
                 // pass a flag back to indicate that we just deserialized a 
                 // definition.

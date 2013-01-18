@@ -12,6 +12,7 @@
 #include <iomanip>
 #include "spug/check.h"
 
+using namespace spug;
 using namespace std;
 using namespace model;
 
@@ -44,7 +45,7 @@ void Serializer::write(size_t length, const void *data, const char *name) {
     dst.write(reinterpret_cast<const char *>(data), length);
 }
 
-bool Serializer::writeObject(const void *object, const char *name) {
+bool Serializer::writeObject(const RCBase *object, const char *name) {
     ObjMap::iterator iter = objMap.find(object);
     if (iter == objMap.end()) {
 
@@ -60,6 +61,17 @@ bool Serializer::writeObject(const void *object, const char *name) {
             cerr << "writing existing object " << name << endl;
         write(iter->second << 1, "objectId");
         return false;
+    }
+}
+
+int Serializer::registerObject(const RCBase *object) {
+    ObjMap::iterator iter = objMap.find(object);
+    if (iter == objMap.end()) {
+        int id = lastId++;
+        objMap[object] = id;
+        return id;
+    } else {
+        return iter->second;
     }
 }
 

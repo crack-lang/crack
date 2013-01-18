@@ -109,6 +109,11 @@ class Deserializer {
                                     );
 
         /**
+         * Register an object under the specified id without having read it.
+         */
+        void registerObject(int id, spug::RCBase *object);
+
+        /**
          * Read an ISO-8859 double from the stream.  These are presumed to be
          * a fixed width of 8 bytes.
          */

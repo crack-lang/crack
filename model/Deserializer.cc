@@ -91,6 +91,13 @@ Deserializer::ReadObjectResult Deserializer::readObject(
     }
 }
 
+void Deserializer::registerObject(int id, spug::RCBase *object) {
+    SPUG_CHECK(objMap.find(id) == objMap.end(),
+               "The object id " << id << " is already registered."
+               );
+    objMap[id] = object;
+}
+
 double Deserializer::readDouble(const char *name) {
     SPUG_CHECK(sizeof(double) == 8,
                "double != 8 chars on this platform, size is: " <<

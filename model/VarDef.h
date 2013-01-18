@@ -84,7 +84,7 @@ class VarDef : public virtual spug::RCBase {
             fullName.clear(); // must recache since owner changed
         }
 
-        Namespace *getOwner(void) { return owner; }
+        Namespace *getOwner() const { return owner; }
         
         /**
          * Return true if the variable is unassignable.

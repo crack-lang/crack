@@ -130,6 +130,7 @@ So given this, our meta-data format is:
 
     TypeDef {
         blob name
+        ref[Type] owner
         array[ref[Type]] bases
         array[Def] defs
     }

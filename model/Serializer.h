@@ -10,6 +10,7 @@
 
 #include <map>
 #include <string>
+#include "spug/RCBase.h"
 
 namespace model {
 
@@ -23,7 +24,7 @@ class Serializer {
         // pointer.  This is part of the mechanism that allows us to serialize
         // an object that is used in multiple locations only the first time it
         // is used.
-        typedef std::map<const void *, int> ObjMap;
+        typedef std::map<const spug::RCBase *, int> ObjMap;
         ObjMap objMap;
         int lastId;
 
@@ -64,7 +65,15 @@ class Serializer {
          * identifier with a definition flag set to true and return true,
          * indicating that the caller should serialize the state of the object.
          */
-        bool writeObject(const void *object, const char *name);
+        bool writeObject(const spug::RCBase *object, const char *name);
+
+        /**
+         * Register an object and get its id without trying to serialize it.
+         * This lets us register implicit objects like the current module.
+         * Returns the object id.  If the object is already registered, just
+         * returns the existing id.
+         */
+        int registerObject(const spug::RCBase *object);
 
         /**
          * Write a double-precision IEEE float.  These are expected to be 8

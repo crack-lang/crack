@@ -106,6 +106,11 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
 #define CRACK_METADATA_V1 2271218416
 
 void ModuleDef::serialize(Serializer &serializer) const {
+    int id = serializer.registerObject(this);
+    SPUG_CHECK(id == 0,
+               "Module id for serialized module " << getFullName() <<
+                " is not 0: " << id
+               );
     serializer.module = this;
     serializer.write(CRACK_METADATA_V1, "magic");
 
@@ -178,6 +183,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     // we're constructing it so we can resolve types by name when building
     // them.
     deser.context->construct->moduleCache[canonicalName] = mod;
+
+    // register the module as id 0.
+    deser.registerObject(0, mod.get());
 
     deser.context->ns = mod.get();
     mod->deserializeDefs(deser);
