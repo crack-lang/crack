@@ -149,3 +149,19 @@ if (PKG_CONFIG_FOUND)
 
     endif (CAIRO_FOUND)
 endif (PKG_CONFIG_FOUND)
+
+find_package(PNG)
+macro_log_feature(PNG_FOUND "png" "Bindings for libpng" "http://www.libpng.org")
+if (PNG_FOUND)
+    add_library(png SHARED _png.cc)
+    set_target_properties(png
+                        PROPERTIES
+                        OUTPUT_NAME _png
+                        PREFIX ""
+                        )
+    target_link_libraries( png
+                          -lpng
+                        )
+    install(TARGETS png DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+
+endif (PNG_FOUND)
