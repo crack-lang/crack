@@ -18,6 +18,7 @@ import crack.runtime memmove, mmap, munmap, Stat, fopen, PROT_READ,
 import crack.ascii escape;
 import crack.sys strerror;
 import crack.io.readers PageBufferString, PageBufferReader, PageBuffer;
+alias IniMap = OrderedHashMap[String, OrderedHashMap[String, String]];
 
 class IniError {
     String msg;
@@ -34,12 +35,26 @@ class IniError {
     }
 }
 
+class IniMap : OrderedHashMap[String, OrderedHashMap[String, String]] {
+    oper init() { }
+
+    void formatTo(Formatter fmt) {
+        for (section :in this) {
+            fmt `[$(section.key)]\n`;
+            for (vitem :in section.val)
+                fmt `$(vitem.key)=$(escape(vitem.val, 32, 255))\n`
+        }
+
+    }
+
+    
+}
+
 class IniParser {
 
     uint maxErr = 1;
     Array[IniError] _errors;
-    alias MapMap = OrderedHashMap[String, OrderedHashMap[String, String]];
-    MapMap _resultMap;
+    IniMap _resultMap;
     OrderedHashMap[String, String] _sectionMap;
 
     %%{
@@ -214,7 +229,7 @@ class IniParser {
         return String(b.buffer + uintz(start), end - start, false);
     }
 
-    MapMap parse(Buffer inputString, uint p0, uint pe0) {
+    IniMap parse(Buffer inputString, uint p0, uint pe0) {
 
         AppendBuffer appendBuf = {128}; // String to hold the value
         _errors = Array[IniError]();      // reset _errors
@@ -239,15 +254,15 @@ class IniParser {
         return _resultMap;
     }
 
-    MapMap parse(Buffer inputString) {
+    IniMap parse(Buffer inputString) {
 
-        _resultMap = OrderedHashMap[String, OrderedHashMap[String, String]]();
+        _resultMap = IniMap();
         OrderedHashMap[String, String] _sectionMap = null;
 
         return parse(inputString, 0, inputString.size);
     }
 
-    MapMap parseFile(String fname) {
+    IniMap parseFile(String fname) {
         Stat statInfo = {};
         n := CString(fname);
         statErrors := stat(n.buffer, statInfo);
@@ -281,12 +296,18 @@ class IniParser {
         _errors =  null;
     }
 
-    MapMap results() {
+    IniMap results() {
         return _resultMap;
     }
 
     Array[IniError] errors() {
         return _errors;
+    }
+
+    bool addSection(IniMap ini, String sectionName) {
+        if (ini.get(sectionName, null)) return false;
+        ini[sectionName] = OrderedHashMap[String, String]();
+        return true;
     }
 
     void formatTo(Formatter fmt) {
