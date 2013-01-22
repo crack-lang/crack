@@ -1,5 +1,5 @@
 import crack.io cout, FStr;
-import crack.lang CString, Buffer, AppendBuffer;
+import crack.lang CString, Buffer, AppendBuffer, Exception;
 import crack.cont.hashmap HashMap, OrderedHashMap;
 
 import crack.ext._curl
@@ -254,6 +254,7 @@ class CurlEasy {
     sList _headers = null;
     int _lastResult = 0;
     OrderedHashMap[String, String] _cookies;
+    CURLinfo _info = {0};
 
     oper init() : _handle=easy_init() { }
     oper init(String url) : _handle=easy_init() {
@@ -293,6 +294,38 @@ class CurlEasy {
     
     int setOpt(int optName, int value) {
         return easy_setopt_long(_handle, optName, int64(value));
+    }
+
+    int64 getInfoLong(int infoName) {
+        _info.info = infoName;
+        result := easy_info_get_long(_handle, _info);
+        if (result != CURLE_OK)
+            throw Exception(CString(easy_strerror(result), false));
+        return _info.resultLong;
+    }
+    
+    float64 getInfoDouble(int infoName) {
+        _info.info = infoName;
+        result := easy_info_get_double(_handle, _info);
+        if (result != CURLE_OK)
+            throw Exception(CString(easy_strerror(result), false));
+        return _info.resultDouble;
+    }
+
+    CString getInfoString(int infoName) {
+        _info.info = infoName;
+        result := easy_info_get_ptr(_handle, _info);
+        if (result != CURLE_OK)
+            throw Exception(CString(easy_strerror(result), false));
+        return CString(byteptr(_info.resultPtr), false);
+    }
+
+    slist getInfoSList(int infoName) {
+        _info.info = infoName;
+        result := easy_info_get_slist(_handle, _info);
+        if (result != CURLE_OK)
+            throw Exception(CString(easy_strerror(result), false));
+        return slist_cast(_info.resultPtr);
     }
 
     int addCookie(String key, String value) {
