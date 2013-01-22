@@ -7,7 +7,7 @@
 
 import crack.io cout, StringWriter, StringReader;
 import crack.lang Buffer;
-import crack.serial BufferDeserializer, SerialWriter, SerialReader;
+import crack.serial BufferDeserializer, SerialWriter, SerialReader, BUFSIZE;
 
 if (true) {
     StringWriter sw = {};
@@ -119,6 +119,40 @@ if (true) {
         cout `FAILED reading float64\n`;
     if (deser.readUInt() != 0)
         cout `FAILED reading terminating uint\n`;
+}
+
+# read an array of floats large enough to trigger a buffer reload
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    
+    w.write(1);
+    for (int i = 0; i < BUFSIZE; ++i)
+        w.write(float32(i));
+    
+    SerialReader deser = {StringReader(sw.string())};
+    if (deser.readUInt() != 1)
+        cout `FAILED (big array of floats) reading first byte\n`;
+    for (int i = 0; i < BUFSIZE; ++i)
+        if (int(deser.readFloat32()) != i)
+            cout `FAILED (big array of floats) reading value $i\n`;
+}
+
+# try an array of float64s
+if (true) {
+    StringWriter sw = {};
+    SerialWriter w = {sw};
+    
+    w.write(1);
+    for (int i = 0; i < BUFSIZE; ++i)
+        w.write(float64(i));
+    
+    SerialReader deser = {StringReader(sw.string())};
+    if (deser.readUInt() != 1)
+        cout `FAILED (big array of float64s) reading first byte\n`;
+    for (int i = 0; i < BUFSIZE; ++i)
+        if (int(deser.readFloat64()) != i)
+            cout `FAILED (big array of float64s) reading value $i\n`;
 }
 
 cout `ok\n`;

@@ -210,7 +210,10 @@ class SerialReader {
         if (buf.size - pos < 4) {
             buf.compact(pos);
             pos = 0;
-            __src.read(buf);
+            buf.size += __src.read(WriteBuffer(buf.buffer + buf.size, 
+                                               buf.cap - buf.size
+                                               )
+                                   );
             if (buf.size < 4)
                 underflow();
         }
@@ -225,7 +228,10 @@ class SerialReader {
         if (buf.size - pos < 8) {
             buf.compact(pos);
             pos = 0;
-            __src.read(buf);
+            buf.size += __src.read(WriteBuffer(buf.buffer + buf.size, 
+                                               buf.cap - buf.size
+                                               )
+                                   );
             if (buf.size < 8)
                 underflow();
         }
