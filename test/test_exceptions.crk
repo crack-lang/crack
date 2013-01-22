@@ -260,9 +260,6 @@ if (1) {
         getLocation(addr, info);
         
         # store the last character of the function name in our array
-        # (this will break at some point because we're counting on a two digit 
-        # numeric uniquifier at the end of the number, hence the "- 3".  
-        # Revisit this when we have proper canonical names)
         funcs[cur++] = info[0][strlen(info[0]) - 1];
         funcs[cur] = 0;
         free(info);
