@@ -352,20 +352,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     externals.clear();
 
     // build the debug tables
-    Module::FunctionListType &funcList = module->getFunctionList();
-    for (Module::FunctionListType::iterator funcIter = funcList.begin();
-         funcIter != funcList.end();
-         ++funcIter
-         ) {
-        string name = funcIter->getName();
-        if (!funcIter->isDeclaration())
-            crack::debug::registerDebugInfo(
-                execEng->getPointerToGlobal(funcIter),
-                name,
-                "",   // file name
-                0     // line number
-            );
-    }
+    buildDebugTables();
 
     doRunOrDump(context);
     if (context.construct->cacheMode)
@@ -455,6 +442,24 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 }
 
+void LLVMJitBuilder::buildDebugTables() {
+    // register debug info for the module
+    for (Module::iterator iter = module->begin();
+         iter != module->end();
+         ++iter
+         ) {
+        if (!iter->isDeclaration()) {
+            string name = iter->getName();
+            crack::debug::registerDebugInfo(
+                execEng->getPointerToGlobal(iter),
+                name,
+                "",   // file name
+                0     // line number
+            );
+        }
+    }
+}
+
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Context &context,
     const string &canonicalName,
@@ -532,6 +537,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                 );
             }
         }
+
+        buildDebugTables();
 
         setupCleanup(bmod.get());
 
