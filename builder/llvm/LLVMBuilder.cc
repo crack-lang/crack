@@ -2167,6 +2167,7 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
                );
     // XXX add flags.
     BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
+    result->args = args;
     result->setRep(func);
     return result;
 }
