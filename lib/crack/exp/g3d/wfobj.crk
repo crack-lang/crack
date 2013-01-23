@@ -1,0 +1,134 @@
+# Copyright 2013 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Wavefront OBJ file format reader.
+
+import crack.ascii parseInt, split;
+import crack.cont.array Array;
+import crack.exp.g3d Coord, Face, MFObj, Tri, Vector, Vertex, Prim;
+import crack.io cout, Reader;
+import crack.logger error;
+import crack.math atof;
+import crack.io.readers LineReader;
+
+## Reader for WaveFront OBJ files.  You probably don't want to use this class,
+## it's easier just to use readWFObj().
+class WFReader {
+    Array[Vector] __verts = {};
+    Array[Coord] __coords = {};
+    Array[Face] __faces = {};
+    Array[Vector] __normals = {};
+
+    @static void __readVector(Array[Vector] vecs, String line) {
+        fields := split(line);
+        if (fields.count() < 4) {
+            error `Not enough fields in vertex line: $line\n`;
+            return;
+        }
+
+        vecs.append(Vector(atof(fields[1]), atof(fields[2]),
+                           atof(fields[3])
+                           )
+                    );
+    }
+
+    void __readVertex(String line) {
+        __readVector(__verts, line);
+    }
+
+    void __readNormal(String line) {
+        __readVector(__normals, line);
+    }
+
+    void __readMaterialCoord(String line) {
+        fields := split(line);
+        if (fields.count() < 3) {
+            error `Not enough fields in vt line: $line\n`;
+            return;
+        }
+
+        __coords.append(Coord(atof(fields[1]), atof(fields[2])));
+    }
+
+    void __readFace(String line) {
+        Array[Vector] vertices = {8};
+        Array[Coord] coords = {8};
+        Array[Vector] normals = {8};
+
+        fields := split(line);
+        if (fields.count() < 4)
+            error `Not enough fields in face line: $line\n`;
+        for (field :in fields.subarray(1)) {
+            # since we end with a newline, we get an empty last field.
+            if (!field) break;
+            parts := split(field, '/');
+            numParts := parts.count();
+
+            vertices.append(__verts[parseInt(parts[0]) - 1]);
+            if (parts.count() >= 2)
+                coords.append(__coords[parseInt(parts[1]) - 1]);
+
+            if (parts.count() >= 3)
+                normals.append(__normals[parseInt(parts[2]) - 1]);
+        }
+
+        # sanity check
+        if (vertices.count() < 3) {
+            error `Face has less than three vertices\n`;
+            return;
+        }
+        if (coords && coords.count() != vertices.count()) {
+            error `Face has a different vertex/texture coord count\n`;
+            return;
+        } else if (!coords) {
+            error `Face has no texture coordinates\n`;
+            return;
+        }
+        if (normals && normals.count() != vertices.count()) {
+            error `Face has a different vertex/normal count\n`;
+            return;
+        }
+
+        if (!normals) {
+            # create missing face normals from the first triangle and attach
+            # it to all vertices.
+            normal := Tri.normal(vertices[0], vertices[1], vertices[2]);
+            cout I`normal of $(vertices[0]), $(vertices[1]), $(vertices[2]) \
+                   is $normal\n`;
+            for (int i = 0; i < vertices.count(); ++i)
+                normals.append(normal);
+        }
+
+        # create a vertex array.
+        face := Face();
+        for (int i = 0; i < vertices.count(); ++i)
+            face.append(Vertex(vertices[i], coords[i], normals[i]));
+
+        __faces.append(face);
+    }
+
+    ## Reads the WaveFront OBJ file from src, storing state in the class.
+    MFObj read(Reader src) {
+        LineReader lr = {src};
+        for (line :in lr) {
+            if (line.substr(0, 2) == 'v ')
+                __readVertex(line);
+            else if (line.substr(0, 3) == 'vt ')
+                __readMaterialCoord(line);
+            else if (line.substr(0, 3) == 'vn ')
+                __readNormal(line);
+            else if (line.substr(0, 2) == 'f ')
+                __readFace(line);
+        }
+        obj := MFObj(null, __faces);
+        return obj;
+    }
+}
+
+## Read a WaveFront OBJ file from the reader.
+MFObj readWFObj(Reader src) {
+    return WFReader().read(src);
+}

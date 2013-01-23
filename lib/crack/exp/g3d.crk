@@ -1,13 +1,14 @@
 ## 3D Graphics and Gaming Library
 ## Copyright 2010 Google Inc.
 
+import crack.cont.array Array;
 import crack.lang cmp, die, free, malloc, Exception, WriteBuffer;
 import crack.runtime open, close, O_RDONLY;
 import crack.io cout, cerr, FDReader, Formatter, FStr, Reader, Writer;
 import crack.time TimeDelta;
 import crack.net Poller;
 import crack.runtime TimeVal, floor;
-@import crack.ann define, interface, implements;
+@import crack.ann define, interface, implements, struct;
 import crack.cont.list List;
 import crack.math cos, sin, sqrt;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
@@ -32,11 +33,11 @@ import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor,
     GL_BLEND, GL_COLOR_BUFFER_BIT, GL_CONSTANT_ATTENUATION, GL_DEPTH_BUFFER_BIT, 
     GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_FRONT_AND_BACK, GL_LEQUAL, 
     GL_LIGHTING, GL_LIGHT0, GL_LINEAR, GL_LINEAR_ATTENUATION, GL_MODELVIEW, 
-    GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POSITION, GL_PROJECTION, 
-    GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES, GL_ONE_MINUS_SRC_ALPHA, 
-    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, 
-    GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB, GL_RGBA, GL_RGB8, GL_RGBA8, 
-    GL_SMOOTH, GL_UNSIGNED_BYTE;
+    GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POLYGON, GL_POSITION, 
+    GL_PROJECTION, GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES, 
+    GL_ONE_MINUS_SRC_ALPHA, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+    GL_TEXTURE_MAG_FILTER, GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB, 
+    GL_RGBA, GL_RGB8, GL_RGBA8, GL_SMOOTH, GL_UNSIGNED_BYTE;
 import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows, 
     png_set_read_fn, png_struct, png_create_read_struct, 
     png_create_info_struct, png_read_png, PNG_COLOR_TYPE_RGB,
@@ -187,6 +188,12 @@ class Vector {
     bool isTrue() {
         return !(isZero(raw[0]) && isZero(raw[1]) && isZero(raw[2]));
     }
+}
+
+## A two-dimensional coordinate.
+class Coord {
+    float x, y;
+    oper init(float x, float y) : x = x, y = y {}
 }
 
 class RotMatrix {
@@ -543,6 +550,11 @@ class Prim : Renderable {
         glVertex3fv(pos.raw);
     }
     
+    @final void vertex(Vector pos, Coord texturePos) {
+        material.pin(texturePos.x, texturePos.y);
+        glVertex3f(float32(pos[0]), float32(pos[1]), float32(pos[2]));
+    }
+    
     @final void normal(float x, float y, float z) {
         glNormal3f(float32(x), float32(y), float32(z));
     }
@@ -553,6 +565,50 @@ class Prim : Renderable {
 
     @final void normal(array[float32] norm) {
         glNormal3fv(norm);
+    }
+}
+
+## Vertex aggregates a 3D coordinate vector, a 2D texture coordinate and a 
+## normal, which is everything we need to describe a vertex.
+@struct Vertex {
+    Vector pos;
+    Coord textureCoord;
+    Vector normal;
+}
+
+alias Face = Array[Vertex];
+
+## A multi-faceted object consisting of multiple polygon faces with per-vertex 
+## normals and texture coordinates.
+class MFObj : Prim {
+    
+    Array[Face] faces = {};
+    
+    oper init(Material material, Array[Face] faces) : 
+        Prim(material),
+        faces = faces {
+    }
+    
+    @final void __renderFace(Face face) {
+        if (face.count() == 3)
+            glBegin(GL_TRIANGLES);
+        else if (face.count() == 4)
+            glBegin(GL_QUADS);
+        else
+            glBegin(GL_POLYGON);
+        
+        for (vert :in face) {
+            normal(vert.normal);
+            vertex(vert.pos, vert.textureCoord);
+        }
+        
+        glEnd();
+    }
+    
+    void render() {
+        material.makeCurrent();
+        for (face :in faces)
+            __renderFace(face);
     }
 }
 

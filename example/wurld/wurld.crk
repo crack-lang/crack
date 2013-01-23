@@ -44,7 +44,7 @@ import crack.strutil split;
 import crack.sys argv, exit;
 import crack.time TimeDelta;
 import crack.cont.array Array;
-import crack.cont.hashmap HashMap;
+import crack.cont.hashmap HashMap, OrderedHashMap;
 @import crack.ann assert, define, implements;
 import crack.math cos, sin;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
@@ -53,11 +53,12 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_KEYDOWN, 
     SDL_KEYUP,
     SDL_MOUSEBUTTONDOWN, SDL_MOUSEMOTION, SDL_OPENGL, SDL_RESIZABLE;
-import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Light, Graphics, 
-    KeyboardEvent, KeyboardHandler, Material, MouseButtonEvent, 
-    MouseButtonHandler, MouseMotionEvent, MouseMotionHandler, Prim, Quad, 
-    Renderable, RotMatrix, TextureMaterial, Tri, Vector, RenderFrameEvent, 
-    RenderFrameHandler;
+import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Coord, Light, 
+    MFObj, Face, Graphics, KeyboardEvent, KeyboardHandler, Material, 
+    MouseButtonEvent, MouseButtonHandler, MouseMotionEvent, 
+    MouseMotionHandler, Prim, Quad, Renderable, RotMatrix, TextureMaterial, 
+    Tri, Vector, Vertex, RenderFrameEvent, RenderFrameHandler;
+import crack.exp.g3d.wfobj readWFObj;
 import comm firstProxy, commInst = inst, proxies, CommManager, Proxy, WurldInst;
     
 import crack.ext._gl GL_LIGHT0, GL_LIGHT1;
@@ -78,7 +79,7 @@ Vector readVector(SerialReader src) {
     return Vector(src.readFloat32(), src.readFloat32(), src.readFloat32());
 }
 
-const uint OBJ_CUBE = 1, OBJ_LIGHT = 2, OBJ_QUAD = 3;
+const uint OBJ_CUBE = 1, OBJ_LIGHT = 2, OBJ_QUAD = 3, OBJ_MFOBJ = 4;
 
 # The material array - lets us store materials by their index.
 Array[Material] materials;
@@ -304,6 +305,125 @@ class WurldQuad : WurldObj {
     }
 }
 
+class WurldMFObj : WurldObj {
+    uint materialId;
+    MFObj __rep;
+    
+    oper init(uint materialId, MFObj rep) : 
+        WurldObj(null),
+        materialId = materialId,
+        __rep = rep {
+        __rep.material = materials[materialId];
+    }
+    
+    @static WurldMFObj load(String name, uint materialId) {
+        return WurldMFObj(materialId, 
+                          readWFObj(RealPath(name).reader())
+                          );
+    }
+    
+    void render() {
+        Graphics.loadIdentity();
+        __rep.render();
+    }
+    
+    void store(SerialWriter out) {
+        # build unique sets of vectors, coords and normals.  We're assuming 
+        # that the objects comprising these entities are normalized, so for 
+        # example if two vertex positions have the same value, they are 
+        # references to the same object.
+        class ObjMap[T] : OrderedHashMap[T, uint] {
+            @final void add(T obj) {
+                if (!hasKey(obj))
+                    this[obj] = count();
+            }
+        }
+        ObjMap[Vector] positions = {}, normals = {};
+        ObjMap[Coord] coords = {};
+        
+        for (face :in __rep.faces) {
+            for (vert :in face) {
+                positions.add(vert.pos);
+                coords.add(vert.textureCoord);
+                normals.add(vert.normal);
+            }
+        }
+
+
+        # store the type and material id
+        out.write(OBJ_MFOBJ);
+        out.write(materialId);
+        
+        # serialize all of them
+        out.write(positions.count());
+        for (p :in positions)
+            writeVector(out, p.key);
+        
+        out.write(normals.count());
+        for (n :in normals)
+            writeVector(out, n.key);
+        
+        out.write(coords.count());
+        for (item :in coords) {
+            out.write(float32(item.key.x));
+            out.write(float32(item.key.y));
+        }
+        
+        # serialize all of the faces
+        out.write(__rep.faces.count());
+        for (face :in __rep.faces) {
+            out.write(face.count());
+            for (vert :in face) {
+                out.write(positions[vert.pos]);
+                out.write(coords[vert.textureCoord]);
+                out.write(normals[vert.normal]);
+            }
+        }
+    }
+    
+    @static WurldMFObj load(SerialReader src) {
+        Array[Vector] positions = {}, normals = {};
+        Array[Coord] coords = {};
+        
+        # read the material id
+        materialId := src.readUInt();
+        
+        # read the positions
+        count := src.readUInt();
+        for (int i = 0; i < count; ++i)
+            positions.append(readVector(src));
+
+        # read normals
+        count = src.readUInt();
+        for (int i = 0; i < count; ++i)
+            normals.append(readVector(src));
+        
+        # read coords
+        count = src.readUInt();
+        for (int i = 0; i < count; ++i)
+            coords.append(Coord(src.readFloat32(), src.readFloat32()));
+        
+        # read the faces
+        Array[Face] faces = {};
+        count = src.readUInt();
+        for (int i = 0; i < count; ++i) {
+            vertCount := src.readUInt();
+            Face face = {};
+            for (int j = 0; j < vertCount; ++j)
+                face.append(Vertex(positions[src.readUInt()],
+                                   coords[src.readUInt()],
+                                   normals[src.readUInt()]
+                                   )
+                            );
+            faces.append(face);
+        }
+        
+        # construct the MFObj
+        rep := MFObj(null, faces);
+        return WurldMFObj(materialId, rep);
+    }
+}
+
 # parse command line options.
 opts := CmdOptions![
     Option('port', 'p', 
@@ -385,6 +505,8 @@ void load(String name) {
             objects.append(WurldLight.load(deser));
         else if (objType == OBJ_QUAD)
             objects.append(WurldQuad.load(deser));
+        else if (objType == OBJ_MFOBJ)
+            objects.append(WurldMFObj.load(deser));
         else {
             cout `Unknown object type $objType\n`;
             
