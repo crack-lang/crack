@@ -43,6 +43,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         void setupCleanup(BModuleDef *moduleDef);
 
         void cacheModule(model::Context &context, model::ModuleDef *moduleDef);
+        
+        void buildDebugTables();
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
