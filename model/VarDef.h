@@ -109,13 +109,18 @@ class VarDef : public virtual spug::RCBase {
          * is being serialized.
          */
         virtual bool isSerializable(const Namespace *ns) const;
+
+        /** Keeps track of a set of externally managed VarDefs. */
+        typedef std::set<const VarDef *> Set;
         
         /**
-         * Add all of the modules that this 
+         * Add all of the modules that this definition (and all types it 
+         * introduces) to the dependencies of the module.
+         * @param added the set of TypeDef's that have already been added.
+         *              We only have to keep track of types, these are the 
+         *              only things that can be cyclic.
          */
-        virtual void addDependenciesTo(const ModuleDef *mod,
-                                       ModuleDefMap &deps
-                                       ) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
 
         /**
          * Serialize an external definition. "Extern"

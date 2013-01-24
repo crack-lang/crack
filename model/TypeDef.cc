@@ -944,6 +944,22 @@ bool TypeDef::isSerializable(const Namespace *ns) const {
         return VarDef::isSerializable(ns);
 }
 
+void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
+    // if we've already dealt with this type, quit.
+    if (!added.insert(this).second)
+        return;
+
+    mod->addDependency(VarDef::getModule());
+
+    // compute dependencies from all non-private symbols
+    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end(); 
+         ++iter
+         ) {
+        if (iter->first.compare(0, 2, "__"))
+            iter->second->addDependenciesTo(mod, added);
+    }
+}
+
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {

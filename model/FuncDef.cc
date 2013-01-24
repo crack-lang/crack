@@ -204,14 +204,13 @@ void FuncDef::display(ostream &out, const string &prefix) const {
     display(out, args);
 }
 
-void FuncDef::addDependenciesTo(const ModuleDef *mod, 
-                                ModuleDefMap &deps
-                                ) const {
-    returnType->addDependenciesTo(mod, deps);
+void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
+    mod->addDependency(getModule());
+    returnType->addDependenciesTo(mod, added);
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          )
-        (*iter)->type->addDependenciesTo(mod, deps);
+        (*iter)->type->addDependenciesTo(mod, added);
 }
 
 bool FuncDef::isSerializable(const Namespace *ns) const {

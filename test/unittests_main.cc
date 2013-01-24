@@ -119,15 +119,15 @@ bool moduleTestDeps() {
     DataSet ds;
     ds.addTestModules();
     bool success = true;
-    ModuleDefMap deps;
-    ds.t1->addDependenciesTo(ds.mod.get(), deps);
+    VarDef::Set added;
+    ds.t1->addDependenciesTo(ds.mod.get(), added);
 
-    if (deps.find("dep1") == deps.end()) {
+    if (ds.mod->dependencies.hasKey("dep1")) {
         cerr << "dep1 not in module's deps" << endl;
         success = false;
     }
 
-    if (deps.find("dep0") != deps.end()) {
+    if (ds.mod->dependencies.hasKey("dep0")) {
         cerr << "indirect dependency is in module's deps" << endl;
         success = false;
     }
@@ -140,7 +140,8 @@ bool moduleSerialization() {
     ostringstream out;
     Serializer ser(out);
     ds.mod->serialize(ser);
-    ds.dep1->serialize(ser);
+    Serializer ser2(out);
+    ds.dep1->serialize(ser2);
     return true;
 }
 

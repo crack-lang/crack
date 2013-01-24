@@ -167,9 +167,7 @@ class OverloadDef : public VarDef {
         void dump(std::ostream &out, const std::string &prefix = "") const;
         void display(std::ostream &out, const std::string &prefix = "") const;
         
-        virtual void addDependenciesTo(const ModuleDef *mod, 
-                                       ModuleDefMap &deps
-                                       ) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         
         /**
          * Returns true if the overload includes any non-builtin functions 

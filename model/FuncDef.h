@@ -152,9 +152,7 @@ class FuncDef : public VarDef {
         static void dump(std::ostream &out, const ArgVec &args);
         static void display(std::ostream &out, const ArgVec &args);
 
-        virtual void addDependenciesTo(const ModuleDef *mod, 
-                                       ModuleDefMap &deps
-                                       ) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

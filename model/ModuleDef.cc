@@ -13,7 +13,6 @@
 #include "util/SourceDigest.h"
 #include "Context.h"
 #include "Deserializer.h"
-#include "ModuleDefMap.h"
 #include "Serializer.h"
 
 using namespace std;
@@ -47,6 +46,13 @@ bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
         return true;
 
     return matchesSource(fullSourcePath);
+}
+
+void ModuleDef::addDependency(ModuleDef *other) {
+    if (other != this &&
+        dependencies.find(other->getNamespaceName()) == dependencies.end()
+        )
+        dependencies[other->getNamespaceName()] = other;
 }
 
 void ModuleDef::close(Context &context) {
@@ -116,25 +122,10 @@ void ModuleDef::serialize(Serializer &serializer) const {
 
     // XXX we need to write the source hash.
 
-    // calculate the dependencies
-    ModuleDefMap deps;
-    for (VarDefMap::const_iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         )
-        iter->second->addDependenciesTo(this, deps);
-
-    // make sure we have the imports (we can import a module without
-    // incorporating any of its defs)
-    for (vector<ModuleDefPtr>::const_iterator iter = imports.begin();
-         iter != imports.end();
-         ++iter
-         )
-        deps[(*iter)->getFullName()] = *iter;
-
     // write the dependencies
-    serializer.write(deps.size(), "#deps");
-    for (ModuleDefMap::const_iterator iter = deps.begin(); iter != deps.end();
+    serializer.write(dependencies.size(), "#deps");
+    for (ModuleDefMap::const_iterator iter = dependencies.begin();
+         iter != dependencies.end();
          ++iter
          ) {
         serializer.write(iter->first, "canonicalName");

@@ -274,14 +274,12 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
     }
 }
 
-void OverloadDef::addDependenciesTo(const ModuleDef *mod, 
-                                    ModuleDefMap &deps
-                                    ) const {
+void OverloadDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        (*iter)->addDependenciesTo(mod, deps);
+        (*iter)->addDependenciesTo(mod, added);
     }
 }
 

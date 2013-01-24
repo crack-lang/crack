@@ -96,19 +96,14 @@ bool VarDef::isSerializable(const Namespace *ns) const {
     return name[0] != ':' && owner == ns;
 }
 
-void VarDef::addDependenciesTo(const ModuleDef *mod,
-                               ModuleDefMap &deps
-                               ) const {
+void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 
     ModuleDefPtr depMod = getModule();
-    if (depMod != mod &&
-        deps.find(depMod->getNamespaceName()) == deps.end()
-        )
-        deps[depMod->getNamespaceName()] = depMod;
+    mod->addDependency(depMod.get());
 
     // add the dependencies of the type
     if (type.get() != this)
-        type->addDependenciesTo(mod, deps);
+        type->addDependenciesTo(mod, added);
 }
 
 void VarDef::serializeExtern(Serializer &serializer) const {

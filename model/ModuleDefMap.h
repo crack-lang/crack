@@ -8,6 +8,9 @@
 #ifndef _model_ModuleDefMap_h_
 #define _model_ModuleDefMap_h_
 
+#include <map>
+#include "spug/RCPtr.h"
+
 namespace model {
 
 SPUG_RCPTR(ModuleDef);
