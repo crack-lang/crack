@@ -2173,7 +2173,6 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
 }
 
 void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
-    assert(false);
     string errors;
     string path = getCacheFilePath(options.get(),
                                    *context.construct,
@@ -2184,10 +2183,19 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
     if (errors.size())
         throw spug::Exception(errors);
 
+    // encode main function location in bitcode metadata
+    Module *mod = BModuleDefPtr::cast(module)->rep;
+    vector<Value *> dList;
+    NamedMDNode *node;
+
+    node = mod->getOrInsertNamedMetadata("crack_entry_func");
+    dList.push_back(func);
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
+
     // fos needs to destruct before we can "keep()"
     {
         formatted_raw_ostream fos(out.os());
-        WriteBitcodeToFile(BModuleDefPtr::cast(module)->rep, fos);
+        WriteBitcodeToFile(mod, fos);
     }
 
     out.keep();

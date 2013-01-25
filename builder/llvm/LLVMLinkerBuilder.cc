@@ -397,11 +397,6 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
     builder.CreateCall(registerFunc, args);
 
-    if (context.construct->cacheMode) {
-        Cacher c(context, options.get(), BModuleDefPtr::acast(moduleDef));
-        c.saveToCache();
-    }
-
     if (debugInfo)
         delete debugInfo;
 }

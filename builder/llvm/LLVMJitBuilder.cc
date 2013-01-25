@@ -273,26 +273,6 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     return bModDef;
 }
 
-void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
-
-    assert(BModuleDefPtr::cast(mod)->rep == module);
-
-    // encode main function location in bitcode metadata
-    vector<Value *> dList;
-    NamedMDNode *node;
-
-    node = module->getOrInsertNamedMetadata("crack_entry_func");
-    dList.push_back(func);
-    node->addOperand(MDNode::get(getGlobalContext(), dList));
-
-    Cacher c(context,
-             context.construct->rootBuilder->options.get(),
-             BModuleDefPtr::cast(mod)
-             );
-    c.saveToCache();
-
-}
-
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
@@ -355,8 +335,6 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     buildDebugTables();
 
     doRunOrDump(context);
-    if (context.construct->cacheMode)
-        cacheModule(context, moduleDef);
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
