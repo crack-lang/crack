@@ -978,15 +978,20 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
             serializer.writeObject(getOwner(), "owner");
-            
-            serializer.write(parents.size(), "#bases");
-            for (TypeVec::const_iterator i = parents.begin();
-                 i != parents.end();
-                 ++i
-                 )
-                (*i)->serialize(serializer, false, 0);
-            
-            Namespace::serializeDefs(serializer);
+
+            serializer.write(generic ? 1 : 0, "isGeneric");
+            if (generic) {
+                genericInfo->serialize(serializer);
+            } else {
+                serializer.write(parents.size(), "#bases");
+                for (TypeVec::const_iterator i = parents.begin();
+                    i != parents.end();
+                    ++i
+                    )
+                    (*i)->serialize(serializer, false, 0);
+                
+                Namespace::serializeDefs(serializer);
+            }
         }
     }
 }
@@ -1093,29 +1098,44 @@ namespace {
                 Deserializer::ReadObjectResult result = 
                     deser.readObject(TypeDefReader(), "owner");
                 NamespacePtr owner = NamespacePtr::rcast(result.object);
-                
-                // bases
-                int count = deser.readUInt("#bases");
-                TypeDef::TypeVec bases(count);
-                for (int i = 0; i < count; ++i)
-                    bases[i] = TypeDef::deserialize(deser, "bases[i]");
 
-                // create a fake context for the owner and instantiate the 
-                // type
-                Context::Scope scope =
-                    ModuleDefPtr::rcast(owner) ? Context::module :
-                                                 Context::instance;
-                ContextPtr ownerContext =
-                    deser.context->createSubContext(scope, owner.get());
-                type = deser.context->builder.materializeType(*ownerContext,
-                                                              name
-                                                              );
-                type->parents = bases;
-                owner->addDef(type.get());
                 
-                // pass a flag back to indicate that we just deserialized a 
-                // definition.
-                deser.userData = 1;
+                // is this a generic?
+                unsigned isGeneric = deser.readUInt("isGeneric");
+                if (isGeneric) {
+                    type = new TypeDef(
+                        deser.context->construct->classType.get(),
+                        name,
+                        true
+                    );
+                    type->genericInfo = Generic::deserialize(deser);
+                    type->generic = new TypeDef::SpecializationCache();
+                } else {
+                    // bases
+                    int count = deser.readUInt("#bases");
+                    TypeDef::TypeVec bases(count);
+                    for (int i = 0; i < count; ++i)
+                        bases[i] = TypeDef::deserialize(deser, "bases[i]");
+
+                    // create a fake context for the owner and instantiate the 
+                    // type
+                    Context::Scope scope =
+                        ModuleDefPtr::rcast(owner) ? Context::module :
+                                                    Context::instance;
+                    ContextPtr ownerContext =
+                        deser.context->createSubContext(scope, owner.get());
+                    type = 
+                        deser.context->builder.materializeType(*ownerContext,
+                                                               name
+                                                               );
+                    type->parents = bases;
+
+                    // pass a flag back to indicate that we just deserialized 
+                    // a definition.
+                    deser.userData = 1;
+                }
+
+                owner->addDef(type.get());                
             }
             
             return type;
@@ -1128,7 +1148,7 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
         deser.readObject(TypeDefReader(), name ? name : "type");
     TypeDefPtr result = TypeDefPtr::rcast(readObj.object);
 
-    // if we're in a non-alias definition
+    // if we're in a definition that has a nested defs list.
     if (readObj.userData) {
         // 'defs' - fill in the body.
         ContextPtr classContext =

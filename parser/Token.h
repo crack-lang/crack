@@ -23,6 +23,12 @@ class Token {
    public:
 
       // the token types
+      // Note: The values of these enum members are important because these 
+      // values are persisted in cache meta-data.  If you need to add new 
+      // ones, add them to the end, but before popErrCtx which is not 
+      // persisted.  You must not remove or change the order of any of the 
+      // existing ones except when the meta-data format is being changed 
+      // anyway.
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, aliasKw, 
                      breakKw, caseKw, catchKw, classKw, constKw, continueKw, 
                      dollar, enumKw, forKw, elseKw, ifKw, importKw, inKw, 

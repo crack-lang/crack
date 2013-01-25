@@ -131,8 +131,14 @@ So given this, our meta-data format is:
     TypeDef {
         blob name
         ref[Type] owner
-        array[ref[Type]] bases
-        array[Def] defs
+        uint generic
+        if (generic) {
+            array[blob] parms
+            array[Token] tokens
+        } else {
+            array[ref[Type]] bases
+            array[Def] defs
+        }
     }
 
     OverloadDef {
@@ -159,6 +165,24 @@ So given this, our meta-data format is:
         }
     }
 
+    Location {
+        blob sourceName
+        uint lineNum
+    }
+
+    Token {
+        uint tokenType
+
+        // see parser/Token.h for the values of these
+        if (tokenType in (Token::integer, Token::string, Token::floatLit,
+                          Token::octalLit, Token::hexLit, Token::binLit)
+            ) {
+
+            blob tokenData
+        }
+
+        ref[Location] loc
+    }
 
 
 }}
