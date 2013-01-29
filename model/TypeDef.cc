@@ -782,7 +782,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                     ) {
     assert(genericInfo);
     
-    // check the cache
+    // check the type's specialization cache
     TypeDef *result = findSpecialization(types);
     if (result) {
         // record a dependency on the owner's module and return the result.
@@ -886,7 +886,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
 
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
-    
+
+        module->cacheable = true;    
         module->close(*modContext);
         modContext->popErrorContext();
 
@@ -907,7 +908,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     (*generic)[types] = result;
 
     // record a dependency on the owner's module
-    context.recordDependency(result->getOwner()->getModule().get());
+    context.ns->getModule()->addDependency(module.get());
     
     return result;
 }

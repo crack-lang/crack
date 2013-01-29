@@ -58,6 +58,9 @@ class ModuleDef : public VarDef, public Namespace {
 
         // path to original source code on disk
         std::string sourcePath;
+        
+        // true if the module should be persisted in the cache when closed.
+        bool cacheable;
 
         ModuleDef(const std::string &name, Namespace *parent);
 

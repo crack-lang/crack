@@ -402,11 +402,8 @@ void Construct::parseModule(Context &context,
         stats->incParsed();
     }
     parser.parse();
+    module->cacheable = true;
     module->close(context);
-    
-    // if we're caching, store the module.
-    if (context.construct->cacheMode)
-        context.cacheModule(module);
 }
 
 ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,

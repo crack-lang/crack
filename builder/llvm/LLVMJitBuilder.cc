@@ -335,6 +335,11 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     buildDebugTables();
 
     doRunOrDump(context);
+
+    // and if we're caching, store it in the persistent cache.
+    if (moduleDef->cacheable && context.construct->cacheMode)
+        context.cacheModule(moduleDef);
+
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
