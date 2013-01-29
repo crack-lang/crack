@@ -155,8 +155,8 @@ class Date : Object, InternalDate {
    }
 
    void formatTo(Formatter out) {
-        out `$(tm_year + 1900)-$(tm_mon)-$(tm_mday) $(tm_hour):$(tm_min):$(tm_sec)`;
-        if (tm_isdst) out ` DST`;
+        out.write(strftime("%F %T"));
+        if (tm_isdst) out.write(" DST");
    }
 }
 

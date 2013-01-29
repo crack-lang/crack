@@ -110,7 +110,7 @@ class InetAddress : Address {
 
 ## Address of a UNIX domain socket.
 class UnixAddress : Address {
-    oper init(String name) : Address(SockAddrUn(name.buffer, name.size)) {
+    oper init(Buffer name) : Address(SockAddrUn(name.buffer, name.size)) {
     }
 
     Address create() {
