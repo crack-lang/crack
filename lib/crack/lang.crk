@@ -420,7 +420,7 @@ class WriteBuffer : Buffer {
         move(0, pos, size - pos);
         size = size - pos;
     }
-};
+}
 
 ## A managed buffer.  Deletes the bytebuf when it goes out of scope.
 class ManagedBuffer : WriteBuffer {

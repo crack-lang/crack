@@ -11,13 +11,14 @@ import crack.ascii escape, strip;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.exp.file File;
+import crack.functor Functor2;
 import crack.io cout, cerr, StandardFormatter, StringWriter;
 import crack.lang Formatter, Writer;
 import crack.runtime usecs;
 import crack.strutil split, StringArray;
 import crack.sys argv, env;
 import crack.time Date;
-@import crack.ann define;
+@import crack.ann define, implements;
 
 defaultTimeFormat := "%Y-%m-%dT%H:%M:%S";
 
@@ -110,7 +111,7 @@ class LevelField : MessageField {
     }
 }
 
-class Logger {
+class Logger : Object @implements Functor2[void, uint, String] {
     LoggerOptions options;
     Array[MessageField] _fields;
     HashMap[String, MessageField] _availableFields;
@@ -207,6 +208,10 @@ class Logger {
         }
     }
 
+    void oper call(uint lv, String msg) {
+      log(lv, msg);
+    }
+
     @define _namedLogger(levelName, levelValue) {
         void levelName(String msg){
           log(levelValue, msg);
@@ -225,6 +230,10 @@ class Logger {
 
     void setFormatter(Formatter fmt){
         options.fmt = fmt;
+    }
+
+    Formatter getFormatter(){
+        return options.fmt;
     }
 
     void setFile(String fname){
@@ -278,6 +287,10 @@ class LogFormatter : StandardFormatter {
             _logger = Logger(StandardFormatter(w), level)
     {
         rep = _writer;
+    }
+
+    Logger logger() {
+      return _logger;
     }
 
     void enter() {
