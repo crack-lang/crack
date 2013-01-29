@@ -2148,7 +2148,18 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
 
 //    cerr << "XXX can't materialize vtable base count yet" << endl;
     BTypeDefPtr metaType = createMetaClass(context, name);
-    return createTypeDef(context, name, metaType.get(), llvmType, 0);
+    BTypeDefPtr result =
+        createTypeDef(context, name, metaType.get(), llvmType, 0);
+
+    // get the class body instance global variable.
+    result->classInst = module->getGlobalVariable(fullName + ":body");
+    SPUG_CHECK(result->classInst,
+               "Unable to load class instance " << fullName <<
+                ":body from module " << module->getModuleIdentifier()
+               );
+    result->complete = true;
+
+    return result;
 }
 
 
