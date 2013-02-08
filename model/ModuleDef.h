@@ -15,6 +15,10 @@
 #include "Namespace.h"
 #include "VarDef.h"
 
+namespace builder {
+    class Builder;
+}
+
 namespace crack { namespace util {
 class SourceDigest;
 }}
@@ -143,6 +147,13 @@ class ModuleDef : public VarDef, public Namespace {
         static ModuleDefPtr deserialize(Deserializer &deserializer,
                                         const std::string &canonicalName
                                         );
+
+        /**
+         * Run the module main function.  This should generally only be called 
+         * on the top-level script, all imported modules will have their main 
+         * function called from that.
+         */
+        virtual void runMain(builder::Builder &builder) = 0;
 };
 
 } // namespace model

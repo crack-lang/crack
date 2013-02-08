@@ -101,7 +101,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
             // from the script.
             options->optionMap["out"] = name + ".bin";
     }
-    construct->runScript(src, name);
+    return construct->runScript(src, name);
 }
 
 void Crack::callModuleDestructors() {

@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_LLVMLinkerBuilder_h_
 #define _builder_LLVMLinkerBuilder_h_
@@ -29,7 +29,6 @@ class LLVMLinkerBuilder : public LLVMBuilder {
 
         llvm::Linker *linker;
         ModuleListType *moduleList;
-        llvm::BasicBlock *mainInsert;
         std::vector<std::string> sharedLibs;
 
         ModuleListType *addModule(BModuleDef *mp);
@@ -39,29 +38,20 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef
                                         );
+        virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
+                                                      const std::string &name,
+                                                      model::ModuleDef *owner
+                                                      );
         virtual void fixClassInstRep(BTypeDef *type);
 
     public:
-        LLVMLinkerBuilder(void) : linker(0),
-                                  moduleList(0),
-                                  mainInsert(0),
-                                  sharedLibs() { }
+        LLVMLinkerBuilder(void) : linker(0), moduleList(0), sharedLibs() {}
 
         virtual void *getFuncAddr(llvm::Function *func);
 
         virtual void finishBuild(model::Context &context);
 
         virtual BuilderPtr createChildBuilder();
-
-        virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name,
-                                                 const std::string &path,
-                                                 model::ModuleDef *owner
-                                                 );
-
-        virtual void initializeImport(model::ModuleDef*,
-                                      const model::ImportedDefVec &symbols,
-                                      bool annotation);
 
         virtual void *loadSharedLibrary(const std::string &name);
 
@@ -77,7 +67,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
             model::ModuleDef *owner
         );
 
-        virtual llvm::ExecutionEngine *getExecEng() const;
+        virtual llvm::ExecutionEngine *getExecEng();
 };
 
 } } // namespace

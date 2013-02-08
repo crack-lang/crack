@@ -4,14 +4,14 @@ order of import and cleanup
 
 %%FILE%%
 puts("in toplevel");
-     import test.testmod;
-     puts("still in toplevel");
-     import test.testmod_nbs2;
+import test.testmod;
+puts("still in toplevel");
+import test.testmod_nbs2;
 %%EXPECT%%
-testmod
-testmod_nbs2
 in toplevel
+testmod
 still in toplevel
+testmod_nbs2
 cleanup testmod_nbs2
 cleanup testmod
 %%STDIN%%

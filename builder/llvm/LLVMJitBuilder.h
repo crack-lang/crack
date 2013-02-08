@@ -53,6 +53,10 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef
                                         );
+        virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
+                                                      const std::string &name,
+                                                      model::ModuleDef *owner
+                                                      );
         virtual void fixClassInstRep(BTypeDef *type);
         virtual BModuleDef *instantiateModule(model::Context &context,
                                               const std::string &name,
@@ -71,12 +75,6 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual BuilderPtr createChildBuilder();
 
-        virtual model::ModuleDefPtr createModule(model::Context &context,
-                                                 const std::string &name,
-                                                 const std::string &path,
-                                                 model::ModuleDef *module
-                                                 );
-
         void innerCloseModule(model::Context &context, 
                               model::ModuleDef *module
                               );
@@ -92,11 +90,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                 delete cacheMap;
         }
 
-        virtual void initializeImport(model::ModuleDef* m,
-                                      const model::ImportedDefVec &symbols,
-                                      bool annotation) {
-            initializeImportCommon(m, symbols);
-        }        
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef
                                  );
@@ -107,7 +100,7 @@ class LLVMJitBuilder : public LLVMBuilder {
             model::ModuleDef *owner
         );
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
-        virtual llvm::ExecutionEngine *getExecEng() const;
+        virtual llvm::ExecutionEngine *getExecEng();
 };
 
 } } // namespace

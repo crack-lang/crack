@@ -64,7 +64,9 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
 }
 
-ExecutionEngine *LLVMJitBuilder::getExecEng() const {
+ExecutionEngine *LLVMJitBuilder::getExecEng() {
+    if (!execEng && rootBuilder)
+        execEng = LLVMJitBuilderPtr::arcast(rootBuilder)->getExecEng();
     return execEng;
 }
 
@@ -76,7 +78,7 @@ void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
 }
 
 void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
-    Function *delFunc = module->getFunction(":cleanup");
+    Function *delFunc = module->getFunction(moduleDef->name + ":cleanup");
     if (delFunc) {
         void *addr = execEng->getPointerToFunction(delFunc);
         SPUG_CHECK(addr, "Unable to resolve cleanup function");
@@ -187,7 +189,7 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
         void *realAddr = execEng->getPointerToFunction(real);
         SPUG_CHECK(realAddr,
                    "no address for function " << string(real->getName()));
-        execEng->addGlobalMapping(pointer, realAddr);
+        execEng->updateGlobalMapping(pointer, realAddr);
     } else {
         // push this on the list of externals - we used to assign a global mapping
         // for these right here, but that only works if we're guaranteed that an
@@ -200,12 +202,12 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           void* real) {
-    execEng->addGlobalMapping(pointer, real);
+    execEng->updateGlobalMapping(pointer, real);
 }
 
 void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
                                          GlobalValue* real) {
-    execEng->addGlobalMapping(pointer, execEng->getPointerToGlobal(real));
+    execEng->updateGlobalMapping(pointer, execEng->getPointerToGlobal(real));
 }
 
 void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
@@ -230,78 +232,19 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
     return result;
 }
 
-ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
-                                          const string &name,
-                                          const string &path,
-                                          ModuleDef *owner
-                                          ) {
-
-    assert(!module);
-    LLVMContext &lctx = getGlobalContext();
-    createLLVMModule(name);
-
-    if (options->debugMode)
-        debugInfo = new DebugInfo(module,
-                                  name,
-                                  path,
-                                  context.builder.options.get()
-                                  );
-
-    // create a context data object
-    BBuilderContextData::get(&context);
-
-    string mainFuncName = name + ":main";
-    llvm::Constant *c =
-        module->getOrInsertFunction(mainFuncName, Type::getVoidTy(lctx),
-                                    NULL
-                                    );
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-    createFuncStartBlocks(mainFuncName);
-
-    createModuleCommon(context);
-
+ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
+                                               const string &name,
+                                               ModuleDef *owner
+                                               ) {
     bindJitModule(module);
+    return new BJitModuleDef(name, context.ns.get(), module,
+                             BJitModuleDefPtr::cast(owner)
+                             );
 
-    bModDef =
-        new BJitModuleDef(name, context.ns.get(), module,
-                          owner ? BJitModuleDefPtr::acast(owner) : 0
-                          );
-
-    bModDef->sourcePath = getSourcePath(path);
-
-    return bModDef;
 }
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
-    // if there was a top-level throw, we could already have a terminator.
-    // Generate a return instruction if not.
-    if (!builder.GetInsertBlock()->getTerminator())
-        builder.CreateRetVoid();
-
-    // emit the cleanup function
-
-    // since the cleanups have to be emitted against the module context, clear
-    // the unwind blocks so we generate them for the del function.
-    clearCachedCleanups(context);
-
-    Function *mainFunc = func;
-    LLVMContext &lctx = getGlobalContext();
-    llvm::Constant *c =
-        module->getOrInsertFunction(":cleanup", Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-
-    // create a new exStruct variable for this context
-    createFuncStartBlocks(":cleanup");
-    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
-
-    closeAllCleanupsStatic(context);
-    builder.CreateRetVoid();
-
-    // restore the main function
-    func = mainFunc;
-
+    finishModule(context, moduleDef);
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
@@ -327,7 +270,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
                    "no address for function " <<
                     string(externals[i].second->getName())
                    );
-        execEng->addGlobalMapping(externals[i].first, realAddr);
+        execEng->updateGlobalMapping(externals[i].first, realAddr);
     }
     externals.clear();
 
@@ -350,10 +293,6 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     if (options->dumpMode)
         dump();
-
-    if (!options->dumpMode || !context.construct->compileTimeConstruct)
-        run();
-
 }
 
 void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
@@ -482,7 +421,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                                "unable to resolve global: " <<
                                globalDefIter->first
                                );
-                    execEng->addGlobalMapping(iter, realAddr);
+                    execEng->updateGlobalMapping(iter, realAddr);
                 } else {
                     cout << "couldn't get " << xname << " from cacheMap" <<
                     endl;
@@ -512,7 +451,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                                "Unable to resolve function " <<
                                 string(f->getName())
                                );
-                    execEng->addGlobalMapping(iter, realAddr);
+                    execEng->updateGlobalMapping(iter, realAddr);
                 }
             } else {
                 cacheMap->insert(

@@ -429,9 +429,6 @@ ModuleDefPtr Construct::initExtensionModule(const string &canonicalName,
     modDef->close(*context);
     builderStack.pop();
 
-    if (initFunc)
-        initFunc();
-
     return modDef;
 }
 
@@ -467,7 +464,8 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
     void *handle = rootBuilder->loadSharedLibrary(path);
 
     // construct the full init function name
-    // XXX should do real name mangling. also see LLVMLinkerBuilder::initializeImport
+    // XXX should do real name mangling. also see 
+    // LLVMLinkerBuilder::initializeImport
     std::string initFuncName;
     for (StringVecIter iter = moduleNameBegin;
          iter != moduleNameEnd;
@@ -711,6 +709,7 @@ bool Construct::loadBootstrapModules() {
         if (v)
             rootContext->ns->addUnsafeAlias("print", v.get());
         
+        crackLang = mod;
         return rootContext->construct->objectType && 
                rootContext->construct->stringType;
     } catch (const spug::Exception &ex) {
@@ -723,7 +722,6 @@ bool Construct::loadBootstrapModules() {
         else if (!uncaughtExceptionFunc())
             cerr << "Unknown exception caught." << endl;
     }
-        
     
     return true;
 }
@@ -807,6 +805,11 @@ int Construct::runScript(istream &src, const string &name) {
 
     try {
         if (!cached) {
+            // insert an implicit import of crack.lang
+            if (crackLang) {
+                ImportedDefVec symbols;
+                context->builder.initializeImport(crackLang.get(), symbols);
+            }
             parseModule(*context, modDef.get(), name, src);
             loadedModules.push_back(modDef);
         } else {
@@ -821,12 +824,28 @@ int Construct::runScript(istream &src, const string &name) {
                 endl;
         else if (!uncaughtExceptionFunc())
             cerr << "Unknown exception caught." << endl;
+        return 1;
     }
 
     builderStack.pop();
     rootBuilder->finishBuild(*context);
     if (rootBuilder->options->statsMode)
         stats->setState(ConstructStats::end);
+
+    if (!rootBuilder->options->dumpMode &&
+        !context->construct->compileTimeConstruct
+        ) {
+        try {
+            modDef->runMain(context->builder);
+        } catch (...) {
+            if (!uncaughtExceptionFunc)
+                cerr << "Uncaught exception, no uncaught exception handler!" <<
+                    endl;
+            else if (!uncaughtExceptionFunc())
+                cerr << "Unknown exception caught." << endl;
+            return 1;
+        }
+    }
     return 0;
 }
 

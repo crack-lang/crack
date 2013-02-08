@@ -538,8 +538,8 @@ class Builder : public spug::RCBase {
          * module, i.e. to emit a call to run its top level code
          */
         virtual void initializeImport(model::ModuleDef*,
-                                      const model::ImportedDefVec &symbols,
-                                      bool annotation) = 0;
+                                      const model::ImportedDefVec &symbols
+                                      ) = 0;
 
         /**
          * Provides the builder with access to the program's argument list.

@@ -184,72 +184,11 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
     return result;
 }
 
-ModuleDefPtr LLVMLinkerBuilder::createModule(Context &context,
-                                             const string &name,
-                                             const string &path,
-                                             ModuleDef *owner
-                                             ) {
-
-    assert(!module);
-    LLVMContext &lctx = getGlobalContext();
-    createLLVMModule(name);
-
-    if (options->debugMode)
-        debugInfo = new DebugInfo(module,
-                                  name,
-                                  path,
-                                  context.builder.options.get()
-                                  );
-
-    BBuilderContextData::get(&context);
-
-    string funcName = name + ":main";
-    llvm::Constant *c =
-        module->getOrInsertFunction(funcName, Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-
-    createFuncStartBlocks(funcName);
-
-    // insert point is now at the begining of the :main function for
-    // this module. this will run the top level code for the module
-    // however, we consult a module level global to ensure that we only
-    // run the top level code once, since this module may be imported from
-    // more than one place
-    GlobalVariable *moduleInit =
-            new GlobalVariable(*module,
-                               Type::getInt1Ty(lctx),
-                               false, // constant
-                               GlobalValue::InternalLinkage,
-                               Constant::getIntegerValue(
-                                       Type::getInt1Ty(lctx),APInt(1,0,false)),
-                               name+":initialized"
-                               );
-
-    // emit code that checks the global and returns immediately if it
-    // has been set to 1
-    BasicBlock *alreadyInitBlock = BasicBlock::Create(lctx, "alreadyInit", func);
-    assert(!mainInsert);
-    mainInsert = BasicBlock::Create(lctx, "topLevel", func);
-    Value* currentInitVal = builder.CreateLoad(moduleInit);
-    builder.CreateCondBr(currentInitVal, alreadyInitBlock, mainInsert);
-
-    // already init, return
-    builder.SetInsertPoint(alreadyInitBlock);
-    builder.CreateRetVoid();
-
-    // branch to the actual first block of the function
-    builder.SetInsertPoint(mainInsert);
-    BasicBlock *temp = BasicBlock::Create(lctx, "moduleBody", func);
-    builder.CreateBr(temp);
-    builder.SetInsertPoint(temp);
-
-    createModuleCommon(context);
-
-    bModDef =  new BModuleDef(name, context.ns.get(), module);
-    bModDef->sourcePath = getSourcePath(path);
-
-    return bModDef;
+ModuleDefPtr LLVMLinkerBuilder::innerCreateModule(Context &context,
+                                                  const string &name,
+                                                  ModuleDef *owner
+                                                  ) {
+    return new BModuleDef(name, context.ns.get(), module);
 }
 
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
@@ -260,76 +199,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     // add the module to the list
     addModule(BModuleDefPtr::cast(moduleDef));
 
-    // get the "initialized" flag
-    GlobalVariable *moduleInit = module->getNamedGlobal(moduleDef->name +
-                                                         ":initialized"
-                                                        );
-
-    // if there was a top-level throw, we could already have a terminator.
-    // Generate the code to set the init flag and a return instruction if not.
-    if (!builder.GetInsertBlock()->getTerminator()) {
-
-        if (moduleDef->fromExtension) {
-            // if this is an extension, we create a runtime initialize call
-            // this allows the extension to initialize, but also ensures the
-            // extension will be linked since ld requires at least one call into it
-            // XXX real mangle? see Construct::loadSharedLib
-            string name = moduleDef->getFullName();
-            for (int i=0; i < name.size(); ++i) {
-                if (name[i] == '.')
-                    name[i] = '_';
-            }
-            Constant *initFunc =
-                module->getOrInsertFunction(name + "_rinit",
-                                            Type::getVoidTy(getGlobalContext()),
-                                            NULL
-                                            );
-            Function *f = llvm::cast<llvm::Function>(initFunc);
-            builder.CreateCall(f);
-        }
-
-        // at the end of the code for the module, set the "initialized" flag.
-        builder.CreateStore(Constant::getIntegerValue(
-                                Type::getInt1Ty(lctx),APInt(1,1,false)
-                             ),
-                            moduleInit
-                            );
-
-        builder.CreateRetVoid();
-    }
-
-    // since the cleanups have to be emitted against the module context, clear
-    // the unwind blocks so we generate them for the del function.
-    clearCachedCleanups(context);
-
-    // emit the cleanup function for this module
-    // we will emit calls to these (for all modules) during run() in the finalir
-    string cleanupFuncName = moduleDef->name + ":cleanup";
-    llvm::Constant *c =
-        module->getOrInsertFunction(cleanupFuncName,
-                                    Type::getVoidTy(lctx), NULL);
-    Function *initFunc = func;
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-
-    // create a new exStruct variable for this context in the standard start
-    // block.
-    createFuncStartBlocks(cleanupFuncName);
-    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
-
-    // if the initialization flag is not set, branch to return
-    BasicBlock *cleanupBlock = BasicBlock::Create(lctx, ":cleanup", func),
-               *retBlock = BasicBlock::Create(lctx, "done", func);
-    Value *initVal = builder.CreateLoad(moduleInit);
-    builder.CreateCondBr(initVal, cleanupBlock, retBlock);
-
-    builder.SetInsertPoint(cleanupBlock);
-
-    closeAllCleanupsStatic(context);
-    builder.CreateBr(retBlock);
-
-    builder.SetInsertPoint(retBlock);
-    builder.CreateRetVoid();
+    finishModule(context, moduleDef);
 
     // emit a table of address/function for the module
     vector<Constant *> funcVals;
@@ -393,7 +263,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
                        );
     vector<Value *> args(1);
     args[0] = ConstantExpr::getGetElementPtr(funcTable, index00, 2);
-    BasicBlock &entryBlock = initFunc->getEntryBlock();
+    BasicBlock &entryBlock = func->getEntryBlock();
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
     builder.CreateCall(registerFunc, args);
 
@@ -408,39 +278,6 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
         sharedLibs.push_back(name);
         LLVMBuilder::loadSharedLibrary(name);
     }
-}
-
-void LLVMLinkerBuilder::initializeImport(model::ModuleDef* m,
-                                         const ImportedDefVec &symbols,
-                                         bool annotation) {
-
-    assert(!annotation && "annotation given to linker builder");
-
-    initializeImportCommon(m, symbols);
-
-    // we add a call into our module's :main function
-    // to run the top level function of the imported module
-    // each :main is only run once, however, so that a module imported
-    // from two different modules will have its top level code only
-    // run once. this is handled in the :main function itself.
-    BasicBlock *orig = builder.GetInsertBlock();
-    assert(mainInsert && "no main insert block");
-
-    // if the last instruction is terminal, we need to insert before it
-    // TODO: reuse createFuncStartBlock for this
-    BasicBlock::iterator i = mainInsert->end();
-    if (i != mainInsert->begin() && !(--i)->isTerminator())
-        // otherwise insert after it.
-        ++i;
-    IRBuilder<> b(mainInsert, i);
-
-    Constant *fc =
-        module->getOrInsertFunction(m->name+":main",
-                                    Type::getVoidTy(getGlobalContext()),
-                                    NULL
-                                    );
-    Function *f = llvm::cast<llvm::Function>(fc);
-    b.CreateCall(f);
 }
 
 void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
@@ -464,6 +301,6 @@ model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(
     return c.maybeLoadFromCache(canonicalName);
 }
 
-ExecutionEngine *LLVMLinkerBuilder::getExecEng() const {
+ExecutionEngine *LLVMLinkerBuilder::getExecEng() {
     return 0;
 }

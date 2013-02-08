@@ -152,6 +152,9 @@ class Construct : public spug::RCBase, public Options {
         // A global mapping of definitions stored by their canonical names.  
         // Use of the registry is optional.  It currently facilitates caching.
         VarDefMap registry;
+        
+        // pointer to the crackLang module, if we're bootstrapped
+        ModuleDefPtr crackLang;
 
     public: // XXX should be private
         // if non-null, this is the alternate construct used for annotations.  

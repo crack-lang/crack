@@ -382,7 +382,7 @@ class Parser {
        * Parse an import statement.  'ns' is the namespace in which to alias
        * imported symbols.
        */
-      void parseImportStmt(model::Namespace *ns);
+      model::ModuleDefPtr parseImportStmt(model::Namespace *ns);
 
       /**
        * Parse a function definition after an "oper" keyword.

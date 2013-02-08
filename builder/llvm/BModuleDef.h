@@ -69,6 +69,8 @@ public:
     virtual bool matchesSource(const std::string &source) {
         return digest == crack::util::SourceDigest::fromFile(source);
     }
+
+    virtual void runMain(Builder &builder);
 };
 
 } // end namespace builder::vmll

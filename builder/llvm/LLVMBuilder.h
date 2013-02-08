@@ -14,6 +14,7 @@
 #include "builder/Builder.h"
 #include "BTypeDef.h"
 #include "BBuilderContextData.h"
+#include "BModuleDef.h"
 
 namespace llvm {
     class Module;
@@ -30,7 +31,6 @@ namespace mvll {
 SPUG_RCPTR(BHeapVarDefImpl);
 class DebugInfo;
 class FuncBuilder;
-class BModuleDef;
 SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
@@ -66,6 +66,12 @@ class LLVMBuilder : public Builder {
          * 'module' instance variable to the new module.
          */
         void createLLVMModule(const std::string &name);
+
+        /**
+         * Finish generating the top-level module functions (:main and 
+         * :cleanup)
+         */
+        void finishModule(model::Context &context, model::ModuleDef *modDef);
 
         void initializeMethodInfo(model::Context &context, 
                                   model::FuncDef::Flags flags,
@@ -107,14 +113,6 @@ class LLVMBuilder : public Builder {
         void createModuleCommon(model::Context &context);
 
         /**
-         * common module initialization that happens in all builders
-         * during initializeImport
-         */
-        void initializeImportCommon(model::ModuleDef* m,
-                                    const model::ImportedDefVec &symbols
-                                    );
-
-        /**
           * get a realpath source path for the module
           */
         std::string getSourcePath(const std::string &path);
@@ -140,6 +138,17 @@ class LLVMBuilder : public Builder {
 
         /** Creates the "start blocks" for the current function. */
         void createFuncStartBlocks(const std::string &name);
+        
+        /** Emit the beginning of the module :main function. */
+        void beginModuleMain(const std::string &name);
+
+        /**
+         * Delegates actual creation of the module object to derived classes.
+         */
+        virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
+                                                      const std::string &name,
+                                                      model::ModuleDef *owner
+                                                      ) = 0;
 
         /** 
          * Create a following block and cleanup block for an Invoke 
@@ -158,7 +167,7 @@ class LLVMBuilder : public Builder {
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
         // seems to be cutting down on the amount of code necessary to do this.
-        BModuleDef *bModDef;
+        BModuleDefPtr builtinMod;
         llvm::Module *module;
         llvm::Function *func;
         llvm::PointerType *llvmVoidPtrType;
@@ -253,7 +262,7 @@ class LLVMBuilder : public Builder {
         }
 
         /** Return the execution engine if there is one, null if not. */        
-        virtual llvm::ExecutionEngine *getExecEng() const = 0;
+        virtual llvm::ExecutionEngine *getExecEng() = 0;
 
         LLVMBuilder();
 
@@ -443,6 +452,12 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
+        model::ModuleDefPtr createModule(model::Context &context, 
+                                         const std::string &name,
+                                         const std::string &path,
+                                         model::ModuleDef *owner
+                                         );
+
         virtual model::VarDefPtr materializeVar(
             model::Context &context,
             const std::string &name,
@@ -502,6 +517,10 @@ class LLVMBuilder : public Builder {
         virtual void registerImportedDef(model::Context &context,
                                          model::VarDef *varDef
                                          );
+        void initializeImport(model::ModuleDef* m,
+                              const model::ImportedDefVec &symbols
+                              );
+
 
         // used by Cacher for maintaining a global (cross module)
         // cache map of vardefs. this is not part of the base Builder

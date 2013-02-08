@@ -416,6 +416,85 @@ void LLVMBuilder::createLLVMModule(const string &name) {
     exceptionPersonalityFunc = cast<Function>(ep);
 }
 
+void LLVMBuilder::finishModule(Context &context, ModuleDef *moduleDef) {
+    LLVMContext &lctx = getGlobalContext();
+
+    // get the "initialized" flag
+    GlobalVariable *moduleInit = module->getNamedGlobal(moduleDef->name +
+                                                         ":initialized"
+                                                        );
+
+    // if there was a top-level throw, we could already have a terminator.
+    // Generate the code to set the init flag and a return instruction if not.
+    if (!builder.GetInsertBlock()->getTerminator()) {
+
+        if (moduleDef->fromExtension) {
+            // if this is an extension, we create a runtime initialize call
+            // this allows the extension to initialize, but also ensures the
+            // extension will be linked since ld requires at least one call into it
+            // XXX real mangle? see Construct::loadSharedLib
+            string name = moduleDef->getFullName();
+            for (int i=0; i < name.size(); ++i) {
+                if (name[i] == '.')
+                    name[i] = '_';
+            }
+            Constant *initFunc =
+                module->getOrInsertFunction(name + "_rinit",
+                                            Type::getVoidTy(getGlobalContext()),
+                                            NULL
+                                            );
+            Function *f = llvm::cast<llvm::Function>(initFunc);
+            builder.CreateCall(f);
+        }
+
+        // at the end of the code for the module, set the "initialized" flag.
+        builder.CreateStore(Constant::getIntegerValue(
+                                Type::getInt1Ty(lctx),APInt(1,1,false)
+                             ),
+                            moduleInit
+                            );
+
+        builder.CreateRetVoid();
+    }
+
+    // since the cleanups have to be emitted against the module context, clear
+    // the unwind blocks so we generate them for the del function.
+    clearCachedCleanups(context);
+
+    // emit the cleanup function for this module
+    // we will emit calls to these (for all modules) during run() in the finalir
+    string cleanupFuncName = moduleDef->name + ":cleanup";
+    llvm::Constant *c =
+        module->getOrInsertFunction(cleanupFuncName,
+                                    Type::getVoidTy(lctx), NULL);
+    Function *initFunc = func;
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+
+    // create a new exStruct variable for this context in the standard start
+    // block.
+    createFuncStartBlocks(cleanupFuncName);
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+
+    // if the initialization flag is not set, branch to return
+    BasicBlock *cleanupBlock = BasicBlock::Create(lctx, ":cleanup", func),
+               *retBlock = BasicBlock::Create(lctx, "done", func);
+    Value *initVal = builder.CreateLoad(moduleInit);
+    builder.CreateCondBr(initVal, cleanupBlock, retBlock);
+
+    builder.SetInsertPoint(cleanupBlock);
+
+    closeAllCleanupsStatic(context);
+    builder.CreateBr(retBlock);
+
+    builder.SetInsertPoint(retBlock);
+    builder.CreateRetVoid();
+
+    // restore the main function.
+    func = initFunc;
+}
+
+
 void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
                                        FuncDef *existing,
                                        BTypeDef *&classType,
@@ -676,7 +755,6 @@ void LLVMBuilder::emitExceptionCleanup(Context &context) {
 
 LLVMBuilder::LLVMBuilder() :
     debugInfo(0),
-    bModDef(0),
     module(0),
     builder(getGlobalContext()),
     func(0),
@@ -1121,6 +1199,82 @@ void LLVMBuilder::createFuncStartBlocks(const std::string &name) {
                                                 );
     builder.CreateBr(firstBlock);
     builder.SetInsertPoint(firstBlock);
+}
+
+void LLVMBuilder::beginModuleMain(const string &moduleFullName) {
+    LLVMContext &lctx = getGlobalContext();
+
+    // start out like any other function.
+    createFuncStartBlocks(moduleFullName + ":init");
+
+    // insert point is now at the begining of the :main function for
+    // this module. this will run the top level code for the module
+    // however, we consult a module level global to ensure that we only
+    // run the top level code once, since this module may be imported from
+    // more than one place
+    GlobalVariable *moduleInit =
+        new GlobalVariable(*module,
+                           Type::getInt1Ty(lctx),
+                           false, // constant
+                           GlobalValue::InternalLinkage,
+                           Constant::getIntegerValue(
+                               Type::getInt1Ty(lctx),APInt(1,0,false)
+                           ),
+                           moduleFullName + ":initialized"
+                           );
+
+    // emit code that checks the global and returns immediately if it
+    // has been set to 1
+    BasicBlock *alreadyInitBlock = BasicBlock::Create(lctx, "alreadyInit", func);
+    BasicBlock *mainInsert = BasicBlock::Create(lctx, "topLevel", func);
+    Value* currentInitVal = builder.CreateLoad(moduleInit);
+    builder.CreateCondBr(currentInitVal, alreadyInitBlock, mainInsert);
+
+    // already init, return
+    builder.SetInsertPoint(alreadyInitBlock);
+    builder.CreateRetVoid();
+
+    // branch to the actual first block of the function
+    builder.SetInsertPoint(mainInsert);
+    BasicBlock *temp = BasicBlock::Create(lctx, "moduleBody", func);
+    builder.CreateBr(temp);
+    builder.SetInsertPoint(temp);
+}
+
+ModuleDefPtr LLVMBuilder::createModule(Context &context,
+                                       const string &name,
+                                       const string &path,
+                                       ModuleDef *owner
+                                       ) {
+
+    assert(!module);
+    LLVMContext &lctx = getGlobalContext();
+    createLLVMModule(name);
+
+    if (options->debugMode)
+        debugInfo = new DebugInfo(module,
+                                  name,
+                                  path,
+                                  context.builder.options.get()
+                                  );
+
+    // create a context data object
+    BBuilderContextData::get(&context);
+
+    llvm::Constant *c =
+        module->getOrInsertFunction(name + ":main", Type::getVoidTy(lctx),
+                                    NULL
+                                    );
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+
+    beginModuleMain(name);
+    createModuleCommon(context);
+
+    builtinMod = innerCreateModule(context, name, owner);
+    builtinMod->sourcePath = getSourcePath(path);
+
+    return builtinMod;
 }
 
 void LLVMBuilder::getInvokeBlocks(Context &context,
@@ -2221,12 +2375,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.construct->stats->setState(ConstructStats::builtin);
 
     createLLVMModule(".builtin");
-    BModuleDefPtr bMod = instantiateModule(context, ".builtin", module);
-    bModDef = bMod.get();
+    builtinMod = instantiateModule(context, ".builtin", module);
 
     // tie the builtin module to the global namespace (context's namespace
     // must be a global namespace)
-    GlobalNamespacePtr::arcast(context.ns)->builtin = bMod.get();
+    GlobalNamespacePtr::arcast(context.ns)->builtin = builtinMod.get();
 
     if (options->debugMode)
         debugInfo = new DebugInfo(module,
@@ -2236,7 +2389,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                   );
 
     if (options->statsMode)
-        context.construct->stats->setModule(bModDef);
+        context.construct->stats->setModule(builtinMod.get());
 
     Construct *gd = context.construct;
     LLVMContext &lctx = getGlobalContext();
@@ -3028,8 +3181,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     addArrayMethods(context, byteptrType, byteType);
 
     // bind the module to the execution engine
-    engineBindModule(bMod.get());
-    engineFinishModule(context, bMod.get());
+    engineBindModule(builtinMod.get());
+    engineFinishModule(context, builtinMod.get());
 
     if (options->statsMode) {
         context.construct->stats->setState(ConstructStats::start);
@@ -3039,7 +3192,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     if (debugInfo)
         delete debugInfo;
 
-    return bMod;
+    return builtinMod;
 
 }
 
@@ -3057,16 +3210,26 @@ std::string LLVMBuilder::getSourcePath(const std::string &path) {
 
 }
 
-void LLVMBuilder::initializeImportCommon(model::ModuleDef* m,
-                                         const ImportedDefVec &symbols) {
+void LLVMBuilder::initializeImport(model::ModuleDef* m,
+                                   const ImportedDefVec &symbols
+                                   ) {
 
     BModuleDef *importedMod = dynamic_cast<BModuleDef*>(m);
 
-    assert(bModDef && "no bModDef before initializeImportCommon");
+    assert(builtinMod && "no builtinMod before initializeImportCommon");
     assert(importedMod && "importedMod was not a BModuleDef");
     assert(importedMod->getFullName().find('[') == -1);
-    bModDef->importList[importedMod] = symbols;
+    builtinMod->importList[importedMod] = symbols;
 
+    string importedMainName = m->name + ":main";
+    Constant *fc =
+        module->getOrInsertFunction(importedMainName,
+                                    Type::getVoidTy(getGlobalContext()),
+                                    NULL
+                                    );
+    Function *f = llvm::cast<llvm::Function>(fc);
+    addGlobalFuncMapping(f, importedMod->rep->getFunction(importedMainName));
+    builder.CreateCall(f);
 }
 
 void LLVMBuilder::createModuleCommon(Context &context) {
@@ -3207,8 +3370,8 @@ void LLVMBuilder::importSharedLibrary(const string &name,
 
         // save for caching (when called from parser). when called from Cacher,
         // we don't save (and don't need to since we're already cached)
-        if (bModDef)
-            bModDef->shlibImportList[name] = symbols;
+        if (builtinMod)
+            builtinMod->shlibImportList[name] = symbols;
 
         // store a stub for the symbol
         ns->addDef(new StubDef(context.construct->voidType.get(),

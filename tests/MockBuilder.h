@@ -445,8 +445,8 @@ class MockBuilder : public builder::Builder {
         }
 
         virtual void initializeImport(model::ModuleDef*,
-                                      const model::ImportedDefVec &symbols,
-                                      bool annotation) {
+                                      const model::ImportedDefVec &symbols
+                                      ) {
         }
 
         virtual void setArgv(int argc, char **argv) {}

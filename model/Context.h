@@ -18,7 +18,7 @@
 #include "parser/Location.h"
 
 namespace builder {
-    class Builder;
+    SPUG_RCPTR(Builder);
 }
 
 namespace parser {
@@ -165,7 +165,7 @@ class Context : public spug::RCBase {
                                     sameCNS ? compileNS.get() : 0
                                     );
         }
-        
+
         /**
          * Returns the depth-first closest enclosing class context, null if 
          * there is none.  (class contexts are contexts with scope = instance)

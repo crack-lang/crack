@@ -304,9 +304,12 @@ void Parser::parseAnnotation() {
       Token tok = toker.getToken();
       context->setLocation(tok.getLocation());
    
-      // if we get an import keyword, parse the import statement.   
+      // if we get an import keyword, parse the import statement and run the 
+      // "main" of the imported module.  
       if (tok.isImport()) {
-         parseImportStmt(parentContext->compileNS.get());
+         builder::Builder &builder = 
+            *context->getCompileTimeConstruct()->rootBuilder;
+         parseImportStmt(parentContext->compileNS.get())->runMain(builder);
          return;
       }
       
@@ -2672,7 +2675,7 @@ void Parser::parseReturnStmt() {
 
 // import module-and-defs ;
 //       ^               ^
-void Parser::parseImportStmt(Namespace *ns) {
+ModuleDefPtr Parser::parseImportStmt(Namespace *ns) {
    ModuleDefPtr mod;
    string canonicalName;
    builder::Builder &builder = context->construct->getCurBuilder();
@@ -2758,11 +2761,7 @@ void Parser::parseImportStmt(Namespace *ns) {
       }
    } else {
       BSTATS_GO(s1)
-      builder.initializeImport(mod.get(),
-                               syms,
-                               // HACK check for annotation?
-                               ns == context->compileNS.get()
-                               );
+      builder.initializeImport(mod.get(), syms);
       BSTATS_END
       // alias all of the names in the new module
       int st = 0;
@@ -2823,6 +2822,8 @@ void Parser::parseImportStmt(Namespace *ns) {
       if (curModule)
          curModule->addDependency(mod.get());
    }
+   
+   return mod;
 }
 
 // try { ... } catch (...) { ... }
