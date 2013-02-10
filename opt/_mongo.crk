@@ -1,0 +1,365 @@
+// Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Crack bindings for libmongo-client
+// See http://algernon.github.com/libmongo-client/
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._curl {
+    @filename 'opt/_mongo.cc'
+    @dumpsymbols 'opt/_mongo.txt'
+    @inject '#include <mongo-client/mongo.h>\n'
+    @inject 'typedef void * voidptr;\n'
+    @inject 'typedef char * byteptr;\n'
+    @inject 'typedef int Undef;\n'
+
+    // Opaque classes
+    @crack_internal
+
+    @cname Undef
+    class mongo_connection;
+
+    @cname Undef
+    class mongo_sync_connection;
+
+    @cname Undef
+    class mongo_sync_cursor;
+
+    @cname Undef
+    class mongo_sync_pool;
+
+    @cname Undef
+    class mongo_sync_pool_connection;
+
+    @cname Undef
+    class mongo_packet;
+
+    @cname Undef
+    class bson;
+
+    // Constants
+    const int
+        BSON_BINARY_SUBTYPE_GENERIC,        // The Generic subtype, the default.
+        BSON_BINARY_SUBTYPE_FUNCTION,       // Binary representation of a function.
+        BSON_BINARY_SUBTYPE_BINARY,         // Obsolete, do not use.
+        BSON_BINARY_SUBTYPE_UUID,           // Binary representation of an UUID.
+        BSON_BINARY_SUBTYPE_MD5,            // Binary representation of an MD5 sum.
+        BSON_BINARY_SUBTYPE_USER_DEFINED,
+        BSON_TYPE_NONE,                     // Only used for errors.
+        BSON_TYPE_DOUBLE,                   // 8byte double
+        BSON_TYPE_STRING,                   // 4byte length + NULL terminated string
+        BSON_TYPE_DOCUMENT,                 // 4byte length + NULL terminated document
+        BSON_TYPE_ARRAY,                    // 4byte length + NULL terminated document
+        BSON_TYPE_BINARY,                   // 4byte length + 1byte subtype + data
+        BSON_TYPE_OID,                      // 12byte ObjectID
+        BSON_TYPE_BOOLEAN,                  // 1byte boolean value
+        BSON_TYPE_UTC_DATETIME,             // 8byte timestamp; milliseconds since Unix epoch
+        BSON_TYPE_NULL,                     // NULL value, No following data.
+        BSON_TYPE_REGEXP,                   // Two NULL terminated C strings, the regex itself, and the options.
+        BSON_TYPE_JS_CODE,                  // 4byte length + NULL terminated string
+        BSON_TYPE_SYMBOL,                   // 4byte length + NULL terminated string
+        BSON_TYPE_JS_CODE_W_SCOPE,          // 4byte length, followed by a string and a document
+        BSON_TYPE_INT32,                    // 4byte integer
+        BSON_TYPE_TIMESTAMP,                // 4bytes increment + 4bytes timestamp
+        BSON_TYPE_INT64;                    // 8byte integer
+
+    // Name of bson type
+    byteptr bson_type_as_string (int type);
+
+    // Create a new BSON object.
+    bson bson_new();
+
+    // Create a new BSON object, preallocating a given amount of space.
+    bson bson_new_sized (int32 size);
+
+    // Create a BSON object from existing data.
+    bson bson_new_from_data (byteptr data, int32 size);
+
+    // Build a BSON object in one go, with full control. TODO bind
+    // bson bson_build_full (bson_type type, byteptr name, bool free_after,...);
+
+    // Build a BSON object in one go. TODO bind
+    // bson bson_build (bson_type type, byteptr name,...);
+
+    // Finish a BSON object.
+    bool bson_finish (bson b);
+
+    // Reset a BSON object.
+    bool bson_reset (bson b);
+
+    // Free the memory associated with a BSON object.
+    void bson_free (bson b);
+
+    // Return the size of a finished BSON object.
+    int32 bson_size (bson b);
+
+    // Return the raw bytestream form of the BSON object.
+    byteptr bson_data (bson b);
+
+    // Validate a BSON key.
+    bool bson_validate_key (byteptr key, bool forbid_dots, bool no_dollar);
+
+    // Append API --------------------------------------------------------------
+
+    // Append a string to a BSON object.
+    bool bson_append_string (bson b, byteptr name, byteptr val, int32 length);
+
+    // Append a double to a BSON object.
+    bool bson_append_double (bson b, byteptr name, float64 d);
+
+    // Append a BSON document to a BSON object.
+    bool bson_append_document (bson b, byteptr name, bson doc);
+
+    // Append a BSON array to a BSON object.
+    bool bson_append_array (bson b, byteptr name, bson array);
+
+    // Append a BSON binary blob to a BSON object.
+    bool bson_append_binary (bson b, byteptr name, int subtype,
+                             byteptr data, int32 size);
+
+    // Append an ObjectID to a BSON object.
+    bool bson_append_oid (bson b, byteptr name, byteptr oid);
+
+    // Append a boolean to a BSON object.
+    bool bson_append_boolean (bson b, byteptr name, bool value);
+
+    // Append an UTC datetime to a BSON object.
+    bool bson_append_utc_datetime (bson b, byteptr name, int64 ts);
+
+    // Append a NULL value to a BSON object.
+    bool bson_append_null (bson b, byteptr name);
+
+    // Append a regexp object to a BSON object.
+    bool bson_append_regex (bson b, byteptr name, byteptr regexp,
+                            byteptr options);
+
+    // Append Javascript code to a BSON object.
+    bool bson_append_javascript (bson b, byteptr name, byteptr js, int32 len);
+
+    // Append a symbol to a BSON object.
+    bool bson_append_symbol (bson b, byteptr name, byteptr symbol, int32 len);
+
+    // Append Javascript code (with scope) to a BSON object.
+    bool bson_append_javascript_w_scope (bson b, byteptr name, byteptr js,
+                                         int32 len, bson scope);
+
+    // Append a 32-bit integer to a BSON object.
+    bool bson_append_int32 (bson b, byteptr name, int32 i);
+
+    // Append a timestamp to a BSON object.
+    bool bson_append_timestamp (bson b, byteptr name, int64 ts);
+
+    // Append a 64-bit integer to a BSON object.
+    bool bson_append_int64 (bson b, byteptr name, int64 i);
+
+    const int
+        MONGO_COLLECTION_DEFAULTS,          // Default options.
+        MONGO_COLLECTION_CAPPED,            // The collection is capped.
+        MONGO_COLLECTION_CAPPED_MAX,        // The collection is capped by element number aswell.
+        MONGO_COLLECTION_AUTO_INDEX_ID,     // The collection's _id should be autoindexed.
+        MONGO_COLLECTION_SIZED;             // The collection needs to be pre-allocated.
+
+    const int
+        MONGO_INDEX_UNIQUE,                 // Create a unique index.
+        MONGO_INDEX_DROP_DUPS,              // Drop duplicate entries when creating the indexes.
+        MONGO_INDEX_BACKGROUND,             // Create indexes in the background.
+        MONGO_INDEX_SPARSE;                 // Sparse index
+
+    // Sync API ----------------------------------------------------------------
+
+    // Synchronously connect to a MongoDB server.
+    mongo_sync_connection mongo_sync_connect (byteptr address, int port,
+                                              bool slaveok);
+
+    // Add a seed to an existing MongoDB connection.
+    bool mongo_sync_conn_seed_add (mongo_sync_connection conn, byteptr host,
+                                  int port);
+
+    // Attempt to connect to another member of a replica set.
+    mongo_sync_connection mongo_sync_reconnect (mongo_sync_connection conn,
+                                                bool force_master);
+
+    // Close and free a synchronous MongoDB connection.
+    void mongo_sync_disconnect (mongo_sync_connection conn);
+
+    // Retrieve the state of the SLAVE_OK flag from a sync connection.
+    bool mongo_sync_conn_get_slaveok (mongo_sync_connection conn);
+
+    // Set the SLAVE_OK flag on a sync connection.
+    bool mongo_sync_conn_set_slaveok (mongo_sync_connection conn, bool slaveok)
+
+    // Retrieve the state of the safe mode flag from a sync connection.
+    bool mongo_sync_conn_get_safe_mode (mongo_sync_connection conn);
+
+    // Set the safe mode flag on a sync connection.
+    bool mongo_sync_conn_set_safe_mode (mongo_sync_connection conn,
+                                        bool safe_mode);
+
+    // Get the state of the auto-reconnect flag from a sync connection.
+    bool mongo_sync_conn_get_auto_reconnect (mongo_sync_connection conn);
+
+    // Set the state of the auto-reconnect flag on a sync connection.
+    bool mongo_sync_conn_set_auto_reconnect (mongo_sync_connection conn,
+                                             bool auto_reconnect);
+
+    // Get the maximum size of a bulk insert package.
+    int32  mongo_sync_conn_get_max_insert_size (mongo_sync_connection conn);
+
+    // Set the maximum size of a bulk insert package.
+    bool mongo_sync_conn_set_max_insert_size (mongo_sync_connection conn,
+                                              int32 max_size);
+
+    // Send an update command to MongoDB.
+    bool mongo_sync_cmd_update (mongo_sync_connection conn, byteptr ns,
+                                int32 flags, bson selector, bson update);
+
+    // Send an insert command to MongoDB. TODO bind
+    // bool mongo_sync_cmd_insert (mongo_sync_connection conn, byteptr ns,...);
+
+    // Send an insert command to MongoDB.
+    bool mongo_sync_cmd_insert_n (mongo_sync_connection conn, byteptr ns,
+                                  int32 n, bson docs);
+
+    // Send a query command to MongoDB.
+    mongo_packet mongo_sync_cmd_query (mongo_sync_connection conn, byteptr ns,
+                                       int32 flags, int32 skip, int32 ret,
+                                       bson query, bson sel);
+
+    // Send a get more command to MongoDB.
+    mongo_packet mongo_sync_cmd_get_more (mongo_sync_connection conn, byteptr ns,
+                                          int32 ret, int64 cursor_id);
+
+    // Send a delete command to MongoDB.
+    bool mongo_sync_cmd_delete (mongo_sync_connection conn, byteptr ns,
+                                int32 flags, bson sel);
+
+    // Send a kill_cursors command to MongoDB. TODO bind
+    // bool mongo_sync_cmd_kill_cursors (mongo_sync_connection conn, int32 n,...);
+
+    // Send a custom command to MongoDB.
+    mongo_packet mongo_sync_cmd_custom (mongo_sync_connection conn, byteptr db,
+                                        bson command);
+
+    // Send a count() command to MongoDB.
+    float64  mongo_sync_cmd_count (mongo_sync_connection conn, byteptr db,
+                                   byteptr coll, bson query);
+
+    // Create a new MongoDB collection. TODO bind
+    // bool mongo_sync_cmd_create (mongo_sync_connection conn, byteptr db,
+    //                            byteptr coll, int flags,...);
+
+    // Check whether a collection exists in MongoDB.
+    bson  mongo_sync_cmd_exists (mongo_sync_connection conn, byteptr db,
+                                 byteptr coll);
+
+    // Send a drop() command to MongoDB.
+    bool mongo_sync_cmd_drop (mongo_sync_connection conn, byteptr db,
+                              byteptr coll);
+
+    // Get the last error from MongoDB. TODO wrap
+    //  bool mongo_sync_cmd_get_last_error (mongo_sync_connection conn, byteptr db,
+    //                                      array[byteptr] error);
+
+    // Reset the last error variable in MongoDB.
+    bool mongo_sync_cmd_reset_error (mongo_sync_connection conn, byteptr db);
+
+    // Check whether the current node is the master.
+    bool mongo_sync_cmd_is_master (mongo_sync_connection conn);
+
+    // Send a PING command to MongoDB.
+    bool mongo_sync_cmd_ping (mongo_sync_connection conn);
+
+    // Add a user to MongoDB.
+    bool mongo_sync_cmd_user_add (mongo_sync_connection conn, byteptr db,
+                                  byteptr user, byteptr pw);
+
+    // Remove a user from MongoDB.
+    bool mongo_sync_cmd_user_remove (mongo_sync_connection conn, byteptr db,
+                                     byteptr user);
+
+    // Authenticate a user with MongoDB.
+    bool mongo_sync_cmd_authenticate (mongo_sync_connection conn, byteptr db,
+                                      byteptr user, byteptr pw);
+
+    // Create an index.
+    bool mongo_sync_cmd_index_create (mongo_sync_connection conn, byteptr ns,
+                                      bson key, int options);
+
+    // Drop an index.
+    bool mongo_sync_cmd_index_drop (mongo_sync_connection conn, byteptr ns,
+                                    bson key);
+
+    // Drop all indexes from a namespace.
+    bool mongo_sync_cmd_index_drop_all (mongo_sync_connection conn, byteptr ns);
+
+    // Cursor API --------------------------------------------------------------
+    // Create an empty packet. 
+    mongo_packet mongo_wire_packet_new ();
+
+    // Free up a mongo packet. 
+    void mongo_wire_packet_free (mongo_packet p);
+
+    // Create a new MongoDB Cursor.
+    mongo_sync_cursor mongo_sync_cursor_new (mongo_sync_connection conn,
+                                             byteptr ns, mongo_packet packet);
+    // Iterate a MongoDB cursor.
+    bool mongo_sync_cursor_next (mongo_sync_cursor cursor);
+
+    // Retrieve the BSON document at the cursor's position.
+    bson mongo_sync_cursor_get_data (mongo_sync_cursor cursor);
+
+    // Free a MongoDB cursor.
+    void mongo_sync_cursor_free (mongo_sync_cursor cursor);
+
+    // Sync pool API -----------------------------------------------------------
+    // Create a new synchronous connection pool.
+    mongo_sync_pool mongo_sync_pool_new (byteptr host, int port, int nmasters,
+                                         int nslaves);
+
+    // Close and free a synchronous connection pool.
+    void mongo_sync_pool_free (mongo_sync_pool pool);
+
+    // Pick a connection from a synchronous connection pool.
+    mongo_sync_pool_connection mongo_sync_pool_pick (mongo_sync_pool pool,
+                                                     bool want_master);
+
+    // Return a connection to the synchronous connection pool.
+    bool mongo_sync_pool_return (mongo_sync_pool pool,
+                                 mongo_sync_pool_connection conn);
+        
+    // Utils -------------------------------------------------------------------
+
+    // Intitialize the static ObjectID components.
+    void mongo_util_oid_init (int32 machine_id);
+
+    // Generate a new ObjectID.
+    byteptr mongo_util_oid_new (int32 seq);
+
+    // Generate a new ObjectID, with a predefined timestamp
+    byteptr mongo_util_oid_new_with_time (int32 time, int32 seq);
+
+    // Convert an ObjectID to its string representation.
+    byteptr mongo_util_oid_as_string (byteptr oid);
+
+    // Parse a HOST:IP pair. TODO wrap
+    // bool  mongo_util_parse_addr (byteptr addr, gchar **host, int *port)
+
+    // Connections -------------------------------------------------------------
+
+    // Connect to a MongoDB server.
+    mongo_connection mongo_connect (byteptr address, int port);
+
+    // Disconnect from a MongoDB server.
+    void mongo_disconnect (mongo_connection conn);
+
+    // Get the last requestID from a connection object.
+    int32   mongo_connection_get_requestid (mongo_connection conn);
+
+    // Set timeout
+    bool    mongo_connection_set_timeout (mongo_connection conn, int timeout);
+
+}

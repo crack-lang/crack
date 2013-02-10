@@ -56,6 +56,24 @@ if (CURL_FOUND)
     install(TARGETS curl DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif(CURL_FOUND)
 
+macro_optional_find_package(Mongo)
+macro_log_feature(MONGO_FOUND "mongo" "Bindings for libmongo-client" "http://algernon.github.com/libmongo-client/")
+
+if (MONGO_FOUND)
+    include_directories(${GLIB_CONFIG_DIR} ${GLIB_INCLUDE_DIR} ${MONGO_INCLUDE_DIR})
+    add_library(mongo SHARED _mongo.cc)
+    set_target_properties(mongo
+                      PROPERTIES
+                      OUTPUT_NAME _mongo
+                      PREFIX ""
+                      )
+
+    target_link_libraries(curl
+                          ${MONGO_LIBRARY}
+                         )
+    install(TARGETS mongo DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+endif(MONGO_FOUND)
+
 
 
 macro_optional_find_package(SDL)
