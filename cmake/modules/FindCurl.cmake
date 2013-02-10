@@ -1,9 +1,9 @@
-# - Try to find the Samba LDB library
+# - Try to find the CURL library
 # Once done this will define
 #
-#  LDB_FOUND - system has the LDB library
-#  LDB_INCLUDE_DIR - the LDB include directory
-#  LDB_LIBRARIES - The libraries needed to use LDB
+#  CURL_FOUND - system has the CURL library
+#  CURL_INCLUDE_DIR - the CURL include directory
+#  CURL_LIBRARIES - The libraries needed to use CURL
 
 # Copyright (c) 2006, Alexander Neundorf, <neundorf@kde.org>
 # Copyright (c) 2012, Conrad Steenberg, <conrad.steenberg@gmail.com>
@@ -35,7 +35,7 @@ if (CURL_FOUND)
     find_library(CURL_LIBRARY NAMES curl HINTS ${PC_CURL_LIBDIR} ${PC_CURL_LIBRARY_DIRS})
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(LDB DEFAULT_MSG CURL_INCLUDE_DIR CURL_LIBRARY)
+    find_package_handle_standard_args(CURL DEFAULT_MSG CURL_INCLUDE_DIR CURL_LIBRARY)
 
     set(CURL_LIBRARIES ${CURL_LIBRARY} )
 
