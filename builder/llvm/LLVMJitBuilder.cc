@@ -274,8 +274,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     }
     externals.clear();
 
-    // build the debug tables
-    buildDebugTables();
+    // register the globals.
+    registerGlobals();
 
     doRunOrDump(context);
 
@@ -364,7 +364,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 }
 
-void LLVMJitBuilder::buildDebugTables() {
+void LLVMJitBuilder::registerGlobals() {
     // register debug info for the module
     for (Module::iterator iter = module->begin();
          iter != module->end();
@@ -378,7 +378,25 @@ void LLVMJitBuilder::buildDebugTables() {
                 "",   // file name
                 0     // line number
             );
+
+            // also add the function to the cache.
+            if (cacheMap)
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
         }
+    }
+
+    // register global variables with the cache while we're at it.
+    if (cacheMap) {
+        for (Module::global_iterator iter = module->global_begin();
+            iter != module->global_end();
+            ++iter
+            )
+            if (!iter->isDeclaration())
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
     }
 }
 
@@ -426,11 +444,6 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                     cout << "couldn't get " << xname << " from cacheMap" <<
                     endl;
                 }
-            } else {
-                // not a declaration - register it in the cache map
-                cacheMap->insert(
-                    CacheMapType::value_type(iter->getName(), iter)
-                );
             }
         }
 
@@ -453,14 +466,10 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                                );
                     execEng->updateGlobalMapping(iter, realAddr);
                 }
-            } else {
-                cacheMap->insert(
-                    CacheMapType::value_type(iter->getName(), iter)
-                );
             }
         }
 
-        buildDebugTables();
+        registerGlobals();
 
         setupCleanup(bmod.get());
 

@@ -42,7 +42,11 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void setupCleanup(BModuleDef *moduleDef);
 
-        void buildDebugTables();
+        /**
+         * Builds debug tables and registers all global symbols with the cache 
+         * map.
+         */
+        void registerGlobals();
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
