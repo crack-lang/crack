@@ -309,7 +309,7 @@ void Parser::parseAnnotation() {
       if (tok.isImport()) {
          builder::Builder &builder = 
             *context->getCompileTimeConstruct()->rootBuilder;
-         parseImportStmt(parentContext->compileNS.get())->runMain(builder);
+         parseImportStmt(parentContext->compileNS.get(), true)->runMain(builder);
          return;
       }
       
@@ -356,7 +356,7 @@ ContextPtr Parser::parseStatement(bool defsAllowed) {
       return context->getToplevel()->getParent();
    } else if (tok.isImport()) {
       runCallbacks(controlStmt);
-      parseImportStmt(context->ns.get());
+      parseImportStmt(context->ns.get(), false);
       return 0;
    } else if (tok.isClass()) {
       if (!defsAllowed)
@@ -2675,7 +2675,7 @@ void Parser::parseReturnStmt() {
 
 // import module-and-defs ;
 //       ^               ^
-ModuleDefPtr Parser::parseImportStmt(Namespace *ns) {
+ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
    ModuleDefPtr mod;
    string canonicalName;
    builder::Builder &builder = context->construct->getCurBuilder();
@@ -2761,7 +2761,8 @@ ModuleDefPtr Parser::parseImportStmt(Namespace *ns) {
       }
    } else {
       BSTATS_GO(s1)
-      builder.initializeImport(mod.get(), syms);
+      if (!annotation)
+         builder.initializeImport(mod.get(), syms);
       BSTATS_END
       // alias all of the names in the new module
       int st = 0;
