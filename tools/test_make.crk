@@ -11,7 +11,7 @@ import crack.sys argv, exit;
 import crack.io cout, FStr;
 import crack.exp.dir Directory;
 import crack.fs RealPath;
-import crack.cmdline CmdOptions, Option, CMD_BOOL;
+import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
 import crack.regex escape, Regex;
 
 int parseInt(String rep) {
@@ -39,6 +39,12 @@ opts := CmdOptions![
            'false',
            CMD_BOOL
            ),
+    Option('testdir', 'd',
+           'Specifies the directory the test should be created in (overrides '
+            '-n)',
+           '',
+           CMD_STR
+           ),
     Option('help', 'h', 'Show usage.', 'false', CMD_BOOL)
 ];
 
@@ -57,10 +63,12 @@ if (opts.getBool('help')) {
 }
 
 noBS := opts.getBool('nobootstrap');
+testDir := opts.getString('testdir');
 testMnemonic := parsedArgs[1];
 
-String testDir = noBS ? 'screen/tests/basic/0_pre_bs' :
-                        'screen/tests/basic/1_post_bs';
+if (!testDir)
+    testDir = noBS ? 'screen/tests/basic/0_pre_bs' :
+                     'screen/tests/basic/1_post_bs';
 
 # find the highest file number
 fileRx := Regex(escape(testDir) + r'/(\d+)_.*');
