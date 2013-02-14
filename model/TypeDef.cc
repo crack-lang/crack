@@ -1112,12 +1112,6 @@ namespace {
                     type->genericInfo = Generic::deserialize(deser);
                     type->generic = new TypeDef::SpecializationCache();
                 } else {
-                    // bases
-                    int count = deser.readUInt("#bases");
-                    TypeDef::TypeVec bases(count);
-                    for (int i = 0; i < count; ++i)
-                        bases[i] = TypeDef::deserialize(deser, "bases[i]");
-
                     // create a fake context for the owner and instantiate the 
                     // type
                     Context::Scope scope =
@@ -1129,8 +1123,6 @@ namespace {
                         deser.context->builder.materializeType(*ownerContext,
                                                                name
                                                                );
-                    type->parents = bases;
-
                     // pass a flag back to indicate that we just deserialized 
                     // a definition.
                     deser.userData = 1;
@@ -1149,8 +1141,17 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
         deser.readObject(TypeDefReader(), name ? name : "type");
     TypeDefPtr result = TypeDefPtr::rcast(readObj.object);
 
-    // if we're in a definition that has a nested defs list.
+    // if we're in a definition, read the base classes and defs.
     if (readObj.userData) {
+        // bases
+        int count = deser.readUInt("#bases");
+        TypeDef::TypeVec bases(count);
+        for (int i = 0; i < count; ++i)
+            bases[i] = TypeDef::deserialize(deser, "bases[i]");
+
+        result->parents = bases;
+
+
         // 'defs' - fill in the body.
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,

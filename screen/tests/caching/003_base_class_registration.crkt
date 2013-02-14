@@ -1,0 +1,13 @@
+%%TEST%%
+base class registration during deserialization
+%%ARGS%%
+%%FILE%%
+class ClassA;
+class ClassX {
+    ClassA g() { return null; }
+}
+class ClassA : ClassX {}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
