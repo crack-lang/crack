@@ -1,0 +1,18 @@
+%%TEST%%
+aliased variables in classes
+%%ARGS%%
+%%FILE%%
+int _a = 100;
+
+class Foo {
+    alias a = _a;
+
+    void f() { printint(a); }
+}
+Foo().f();
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
+

@@ -1,0 +1,14 @@
+%%TEST%%
+annotation (_poormac) imports
+%%ARGS%%
+%%FILE%%
+@import crack._poormac define;
+
+@define foo 1
+    puts($1)
+$$
+
+@foo 'ok'
+%%EXPECT%%
+ok
+%%STDIN%%
