@@ -9,12 +9,12 @@ typedef int Undef;
 #include "ext/Func.h"
 
 extern "C"
-void crack_ext__curl_rinit() {
+void crack_ext__mongo_rinit() {
     return;
 }
 
 extern "C"
-void crack_ext__curl_cinit(crack::ext::Module *mod) {
+void crack_ext__mongo_cinit(crack::ext::Module *mod) {
     crack::ext::Func *f;
     crack::ext::Type *type_Class = mod->getClassType();
     crack::ext::Type *type_void = mod->getVoidType();

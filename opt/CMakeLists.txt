@@ -68,8 +68,8 @@ if (MONGO_FOUND)
                       PREFIX ""
                       )
 
-    target_link_libraries(curl
-                          ${MONGO_LIBRARY}
+    target_link_libraries(mongo
+                          ${MONGO_LIBRARIES}
                          )
     install(TARGETS mongo DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif(MONGO_FOUND)
