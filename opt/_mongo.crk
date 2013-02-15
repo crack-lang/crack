@@ -9,7 +9,7 @@
 
 @import crack.extgen generateExtension;
 
-@generateExtension crack.ext._curl {
+@generateExtension crack.ext._mongo {
     @filename 'opt/_mongo.cc'
     @dumpsymbols 'opt/_mongo.txt'
     @inject '#include <mongo-client/mongo.h>\n'
