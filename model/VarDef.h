@@ -10,6 +10,7 @@
 #define _model_VarDef_h_
 
 #include <set>
+#include <vector>
 #include "model/ResultExpr.h"
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
@@ -35,6 +36,17 @@ class VarDef : public virtual spug::RCBase {
     protected:
         Namespace *owner;
         mutable std::string fullName; // a cache, built in getFullName
+
+        // Does all the work of serializing an extern, derived classes can 
+        // override to pass in a set of types local to the module that must  
+        // be available (localDeps).  It's safe to set localDeps to null.
+        void serializeExternCommon(Serializer &serializer, 
+                                   const std::vector<TypeDefPtr> *localDeps
+                                   ) const;
+
+        void serializeExternRef(Serializer &serializer, 
+                                const std::vector<TypeDefPtr> *localDeps
+                                ) const;
 
     public:
         TypeDefPtr type;
@@ -125,7 +137,7 @@ class VarDef : public virtual spug::RCBase {
         /**
          * Serialize an external definition. "Extern"
          */
-        void serializeExtern(Serializer &serializer) const;
+        virtual void serializeExtern(Serializer &serializer) const;
 
         /**
          * Serialize the definition as an alias. "AliasDef"
@@ -146,7 +158,12 @@ class VarDef : public virtual spug::RCBase {
                                ) const;
 
         /**
-         * Deserialize an alias.
+         * Deserialize the body of an alias.
+         */
+        static VarDefPtr deserializeAliasBody(Deserializer &deser);
+        
+        /**
+         * Deserialize an alias reference.
          */
         static VarDefPtr deserializeAlias(Deserializer &serializer);
         

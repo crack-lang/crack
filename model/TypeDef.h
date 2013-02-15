@@ -44,6 +44,7 @@ class TypeDef : public VarDef, public Namespace {
         TypeDef *findSpecialization(TypeVecObj *types);
         std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
+        TypeVec getLocalDeps(const ModuleDef *module) const;
 
     public:
 
@@ -343,6 +344,7 @@ class TypeDef : public VarDef, public Namespace {
 
         virtual bool isSerializable(const Namespace *ns) const;
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
+        virtual void serializeExtern(Serializer &serializer) const;
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

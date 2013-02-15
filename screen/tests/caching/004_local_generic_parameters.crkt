@@ -1,0 +1,12 @@
+%%TEST%%
+generic instantations parameterized by local types
+%%ARGS%%
+%%FILE%%
+class B {}
+class A {
+    array[B] data;
+}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

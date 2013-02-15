@@ -106,11 +106,34 @@ void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
         type->addDependenciesTo(mod, added);
 }
 
-void VarDef::serializeExtern(Serializer &serializer) const {
-    if (serializer.writeObject(this, "ext")) {
-        serializer.write(getModule()->getFullName(), "module");
-        serializer.write(name, "name");
+void VarDef::serializeExternCommon(Serializer &serializer,
+                                   const TypeDef::TypeVec *localDeps
+                                   ) const {
+    serializer.write(getModule()->getFullName(), "module");
+    serializer.write(name, "name");
+
+    if (localDeps) {
+        // write the list we've accumulated.
+        serializer.write(localDeps->size(), "#localDeps");
+        for (TypeDef::TypeVec::const_iterator iter = localDeps->begin();
+            iter != localDeps->end();
+            ++iter
+            )
+            (*iter)->serialize(serializer, false, 0);
+    } else {
+        serializer.write(0, "#localDeps");
     }
+}
+
+void VarDef::serializeExternRef(Serializer &serializer,
+                                const TypeDef::TypeVec *localDeps
+                                ) const {
+    if (serializer.writeObject(this, "ext"))
+        serializeExternCommon(serializer, localDeps);
+}
+
+void VarDef::serializeExtern(Serializer &serializer) const {
+    serializeExternCommon(serializer, 0);
 }
 
 void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
@@ -119,25 +142,35 @@ void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
     serializeExtern(serializer);
 }
 
+VarDefPtr VarDef::deserializeAliasBody(Deserializer &deser) {
+    string moduleName = deser.readString(Serializer::modNameSize,
+                                         "module"
+                                         );
+    string name = deser.readString(Serializer::varNameSize, "name");
+
+    // deserialize the local dependencies
+    int depCount = deser.readUInt("#localDeps");
+    for (int i = 0; i < depCount; ++i)
+        TypeDef::deserialize(deser);
+
+    ModuleDefPtr mod = deser.context->construct->getModule(moduleName);
+    SPUG_CHECK(mod,
+               "Deserializing " << moduleName << "." << name <<
+                ": module could not be resolved."
+               );
+    VarDefPtr var = mod->lookUp(name);
+    SPUG_CHECK(mod,
+               "Deserializing " << moduleName << "." << name <<
+                ": name not defined in module."
+               );
+
+    return var;
+}
+
 namespace {
     struct AliasReader : public Deserializer::ObjectReader {
         virtual spug::RCBasePtr read(Deserializer &deser) const {
-            string moduleName = deser.readString(Serializer::modNameSize,
-                                                 "module"
-                                                 );
-            string name = deser.readString(Serializer::varNameSize, "name");
-
-            ModuleDefPtr mod = deser.context->construct->getModule(moduleName);
-            SPUG_CHECK(mod,
-                       "Deserializing " << moduleName << "." << name <<
-                        ": module could not be resolved."
-                       );
-            VarDefPtr var = mod->lookUp(name);
-            SPUG_CHECK(mod,
-                       "Deserializing " << moduleName << "." << name <<
-                        ": name not defined in module."
-                       );
-            return var;
+            return VarDef::deserializeAliasBody(deser);
         }
     };
 }

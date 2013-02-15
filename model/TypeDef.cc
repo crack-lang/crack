@@ -961,6 +961,27 @@ void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     }
 }
 
+TypeDef::TypeVec TypeDef::getLocalDeps(const ModuleDef *module) const {
+    // if this is a generic, see if it parameterizes any types in the local 
+    // module.
+    TypeVec localTypes;
+    if (genericParms.size()) {
+        for (TypeVec::const_iterator iter = genericParms.begin();
+            iter != genericParms.end();
+            ++iter
+            ) {
+            if ((*iter)->getModule() == module)
+                localTypes.push_back(*iter);
+        }
+    }
+    return localTypes;
+}
+
+void TypeDef::serializeExtern(Serializer &serializer) const {
+    TypeVec localDeps = getLocalDeps(serializer.module);
+    VarDef::serializeExternRef(serializer, &localDeps);
+}
+
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
@@ -973,8 +994,8 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
             
             // write an "Extern" (but not a reference, we're already in a 
             // reference to the object we'd be externing)
-            serializer.write(module->getFullName(), "module");
-            serializer.write(name, "name");
+            TypeVec localTypes = getLocalDeps(serializer.module);
+            serializeExternCommon(serializer, &localTypes);
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
@@ -1027,8 +1048,7 @@ namespace {
             }
         }
         
-        ModuleDefPtr module = 
-            context.construct->getModule(moduleName);
+        ModuleDefPtr module = context.construct->getModule(moduleName);
         SPUG_CHECK(module, 
                    "Unable to find module " << moduleName << 
                     " which contains referenced type " << typeName
@@ -1085,10 +1105,7 @@ namespace {
             int alias = deser.readUInt("isAlias");
             TypeDefPtr type;
             if (alias) {
-                string moduleName = deser.readString(64, "module");
-                string typeName = deser.readString(16, "name");
-                
-                type = resolveType(*deser.context, moduleName, typeName);
+                type = TypeDefPtr::rcast(VarDef::deserializeAliasBody(deser));
             } else {
                 string name = deser.readString(16, "name");
                 

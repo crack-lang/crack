@@ -112,6 +112,12 @@ So given this, our meta-data format is:
     Extern {
         blob module
         blob name   # the name in the module
+
+        # if the aliased object has dependencies on types in the local module
+        # (which can happen with generics constructed from a local type),
+        # we keep a list of them to ensure that they are available at the time
+        # the alias is reconstituted.
+        array[ref[Type]] localDeps
     }
 
     VarDef {
