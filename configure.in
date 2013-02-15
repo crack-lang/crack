@@ -78,4 +78,10 @@ AM_CONDITIONAL(HAVE_FLUIDSYNTH, [test "x$got_fluidsynth" = xyes])
 AM_PATH_PNG
 AM_CONDITIONAL(HAVE_PNG, [test "x$got_png" = xyes])
 
+LIBCURL_CHECK_CONFIG
+AM_CONDITIONAL(HAVE_LIBCURL, [test "x$got_curl" = xyes])
+
+AM_PATH_MONGO_CLIENT
+AM_CONDITIONAL(HAVE_MONGO_CLIENT, [test "x$got_mongoclient" = xyes])
+
 AC_OUTPUT

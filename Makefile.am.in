@@ -44,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs _ssl _png
+             _cairosdl _xs _ssl _png _curl
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -87,6 +87,7 @@ extlib_LTLIBRARIES += _cairo.la
 _cairo_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@
 _cairo_la_CPPFLAGS = @CAIRO_CPPFLAGS@
 _cairo_la_SOURCES = opt/_cairo.cc
+
 if HAVE_SDL
 extlib_LTLIBRARIES += _cairosdl.la
 _cairosdl_la_LDFLAGS = -avoid-version -module @CAIRO_LIBS@ @SDL_LIBS@
@@ -128,6 +129,14 @@ extlib_LTLIBRARIES += _png.la
 _png_la_LDFLAGS = -avoid-version -module @PNG_LIBS@
 _png_la_SOURCES = opt/_png.cc
 endif
+
+if HAVE_LIBCURL
+extlib_LTLIBRARIES += _curl.la
+_curl_la_LDFLAGS = -avoid-version -module @LIBCURL_LIBS@
+_curl_la_CPPFLAGS = @LIBCURL_CPPFLAGS@
+_curl_la_SOURCES = opt/_curl.cc
+endif
+
 
 noinst_HEADERS = \
     builder/Builder.h \
