@@ -12,6 +12,8 @@
 @generateExtension crack.ext._mongo {
     @filename 'opt/_mongo.cc'
     @dumpsymbols 'opt/_mongo.txt'
+    @inject '#include <inttypes.h>\n'
+    @inject '#include <float.h>\n'
     @inject '#include <mongo-client/mongo.h>\n'
     @inject 'typedef void * voidptr;\n'
     @inject 'typedef char * byteptr;\n'
@@ -40,6 +42,9 @@
 
     @cname Undef
     class bson;
+
+    @cname Undef
+    class bson_cursor;
 
     // Constants
     const int
@@ -106,56 +111,216 @@
     // Append API --------------------------------------------------------------
 
     // Append a string to a BSON object.
-    bool bson_append_string (bson b, byteptr name, byteptr val, int32 length);
+    bool bson_append_string(bson b, byteptr name, byteptr val, int32 length);
 
     // Append a double to a BSON object.
-    bool bson_append_double (bson b, byteptr name, float64 d);
+    bool bson_append_double(bson b, byteptr name, float64 d);
 
     // Append a BSON document to a BSON object.
-    bool bson_append_document (bson b, byteptr name, bson doc);
+    bool bson_append_document(bson b, byteptr name, bson doc);
 
     // Append a BSON array to a BSON object.
-    bool bson_append_array (bson b, byteptr name, bson array);
+    bool bson_append_array(bson b, byteptr name, bson arr);
 
     // Append a BSON binary blob to a BSON object.
-    bool bson_append_binary (bson b, byteptr name, int subtype,
+    bool bson_append_binary(bson b, byteptr name, int subtype,
                              byteptr data, int32 size);
 
     // Append an ObjectID to a BSON object.
-    bool bson_append_oid (bson b, byteptr name, byteptr oid);
+    bool bson_append_oid(bson b, byteptr name, byteptr oid);
 
     // Append a boolean to a BSON object.
-    bool bson_append_boolean (bson b, byteptr name, bool value);
+    bool bson_append_boolean(bson b, byteptr name, bool value);
 
     // Append an UTC datetime to a BSON object.
-    bool bson_append_utc_datetime (bson b, byteptr name, int64 ts);
+    bool bson_append_utc_datetime(bson b, byteptr name, int64 ts);
 
     // Append a NULL value to a BSON object.
-    bool bson_append_null (bson b, byteptr name);
+    bool bson_append_null(bson b, byteptr name);
 
     // Append a regexp object to a BSON object.
-    bool bson_append_regex (bson b, byteptr name, byteptr regexp,
+    bool bson_append_regex(bson b, byteptr name, byteptr regexp,
                             byteptr options);
 
     // Append Javascript code to a BSON object.
-    bool bson_append_javascript (bson b, byteptr name, byteptr js, int32 len);
+    bool bson_append_javascript(bson b, byteptr name, byteptr js, int32 len);
 
     // Append a symbol to a BSON object.
-    bool bson_append_symbol (bson b, byteptr name, byteptr symbol, int32 len);
+    bool bson_append_symbol(bson b, byteptr name, byteptr symbol, int32 len);
 
-    // Append Javascript code (with scope) to a BSON object.
-    bool bson_append_javascript_w_scope (bson b, byteptr name, byteptr js,
+    // Append Javascript code(with scope) to a BSON object.
+    bool bson_append_javascript_w_scope(bson b, byteptr name, byteptr js,
                                          int32 len, bson scope);
 
     // Append a 32-bit integer to a BSON object.
-    bool bson_append_int32 (bson b, byteptr name, int32 i);
+    bool bson_append_int32(bson b, byteptr name, int32 i);
 
     // Append a timestamp to a BSON object.
-    bool bson_append_timestamp (bson b, byteptr name, int64 ts);
+    bool bson_append_timestamp(bson b, byteptr name, int64 ts);
 
     // Append a 64-bit integer to a BSON object.
-    bool bson_append_int64 (bson b, byteptr name, int64 i);
+    bool bson_append_int64(bson b, byteptr name, int64 i);
 
+    // BSON retrieval functions ------------------------------------------------
+    // Create a new cursor.
+    bson_cursor bson_cursor_new(bson b);
+
+    // Create a new cursor positioned at a given key.
+    bson_cursor bson_find(bson b, byteptr name);
+
+    // Delete a cursor, and free up all resources used by it.
+    void bson_cursor_free(bson_cursor c);
+
+    // Position the cursor to the next key.
+    bool bson_cursor_next(bson_cursor c);
+
+    // Move the cursor to a given key, past the current one.
+    bool bson_cursor_find_next(bson_cursor c, byteptr name);
+
+    // Move the cursor to a given key.
+    bool bson_cursor_find(bson_cursor c, byteptr name);
+
+    // Determine the type of the current element.
+    int bson_cursor_type(bson_cursor c);
+
+    // Retrieve the type of the current element, as string.
+    byteptr bson_cursor_type_as_string(bson_cursor c);
+
+    // Determine the name of the current elements key.
+    byteptr bson_cursor_key(bson_cursor c);
+    
+    // Get the value stored at the cursor, as string.
+    @inject '
+    byteptr bson_cursor_get_string_crk(bson_cursor *c) {
+        const gchar *dest;
+        if (bson_cursor_get_string(c, &dest)) return (byteptr)dest;
+        return NULL;
+    }\n'
+
+    @cname bson_cursor_get_string_crk
+    byteptr bson_cursor_get_string(bson_cursor c);
+
+    @inject 'double bson_cursor_get_double_crk(bson_cursor *c) {
+        double result;
+        if(bson_cursor_get_double(c, &result)) return result;
+        return 0;
+    }\n'
+
+    // Get the value stored at the cursor, as a double.
+    @cname bson_cursor_get_double_crk
+    float64 bson_cursor_get_double(bson_cursor c);
+
+    // Get the value stored at the cursor, as a BSON document.
+    @inject 'bson* bson_cursor_get_document_crk(bson_cursor *c) {
+        bson *dest;
+        if (bson_cursor_get_document(c, &dest)) return dest;
+        return NULL;
+    }\n'
+
+    @cname bson_cursor_get_document_crk
+    bson bson_cursor_get_document(bson_cursor c);
+
+    // Get the value stored at the cursor, as a BSON array.
+    @inject 'bson *bson_cursor_get_array_crk(bson_cursor *c) {
+        bson *arr;
+        if (bson_cursor_get_array(c, &arr)) return arr;
+        return NULL;
+    }\n'
+
+    @cname bson_cursor_get_array_crk
+    bson bson_cursor_get_array(bson_cursor c);
+
+    // Get the value stored at the cursor, as binary data. TODO bind
+    // bool bson_cursor_get_binary(bson_cursor c, bson_binary_subtype *subtype,
+    // const guint8 **data, gint32 *size)
+
+    // Get the value stored at the cursor, as an ObjectID.
+    @inject 'byteptr bson_cursor_get_oid_crk(bson_cursor *c) {
+        const guint8 *oid;
+        if (bson_cursor_get_oid(c, &oid)) return (byteptr)oid;
+        return NULL;
+     }\n'
+
+    @cname bson_cursor_get_oid_crk
+    bool bson_cursor_get_oid(bson_cursor c);
+
+    // Get the value stored at the cursor, as a boolean.
+    @inject 'gboolean bson_cursor_get_boolean_crk(bson_cursor *c) {
+        gboolean dest;
+        if (bson_cursor_get_boolean(c, &dest)) return (bool)dest;
+        return false;
+    }\n'
+
+    @cname bson_cursor_get_boolean_crk
+    bool bson_cursor_get_boolean(bson_cursor c);
+
+    // Get the value stored at the cursor, as an UTC datetime.
+    @inject 'gint64 bson_cursor_get_utc_datetime_crk(bson_cursor* c){
+        gint64 dest;
+        if (bson_cursor_get_utc_datetime(c, &dest)) return dest;
+        return 0;
+    }\n'
+
+    @cname bson_cursor_get_utc_datetime_crk
+    int64 bson_cursor_get_utc_datetime(bson_cursor c);
+
+    // Get the value stored at the cursor, as a regexp. TODO bind
+    // bool bson_cursor_get_regex(bson_cursor c, const gchar **regex,
+    // const gchar **options)
+
+    // Get the value stored at the cursor, as javascript code.
+    @inject 'byteptr bson_cursor_get_javascript_crk(bson_cursor *c){
+        const gchar *dest;
+        if (bson_cursor_get_javascript(c, &dest)) return (byteptr)dest;
+    }\n'
+
+    @cname bson_cursor_get_javascript_crk
+    byteptr bson_cursor_get_javascript(bson_cursor c);
+
+    // Get the value stored at the cursor, as a symbol.
+    @inject 'byteptr bson_cursor_get_symbol_crk(bson_cursor* c){
+        const gchar *dest;
+        if (bson_cursor_get_symbol(c, &dest)) return (byteptr)dest;
+    }\n'
+
+    @cname bson_cursor_get_symbol_crk
+    byteptr bson_cursor_get_symbol(bson_cursor c);
+
+    // Get the value stored at the cursor, as javascript code w/ scope.
+    // bool bson_cursor_get_javascript_w_scope(bson_cursor c, const gchar **js,
+    //                                         bson **scope)
+
+    // Get the value stored at the cursor, as a 32-bit integer.
+    @inject 'gint32 bson_cursor_get_int32_crk(bson_cursor *c){
+        gint32 dest;
+        if (bson_cursor_get_int32(c, &dest)) return dest;
+        return 0;
+     }\n'
+
+    @cname bson_cursor_get_int32_crk
+    int32 bson_cursor_get_int32(bson_cursor c);
+
+    // Get the value stored at the cursor, as a timestamp.
+    @inject 'gint64 bson_cursor_get_timestamp_crk(bson_cursor *c){
+        gint64 dest;
+        if (bson_cursor_get_timestamp(c, &dest)) return dest;
+        return 0;
+     }\n'
+
+    @cname bson_cursor_get_timestamp_crk
+    int32 bson_cursor_get_timestamp(bson_cursor c);
+
+    // Get the value stored at the cursor, as a 64-bit integer.     
+    @inject 'gint64 bson_cursor_get_int64_crk(bson_cursor* c){
+        gint64 dest;
+        if (bson_cursor_get_int64(c, &dest)) return dest;
+        return 0;
+     }\n'
+
+    @cname bson_cursor_get_int64_crk
+    int64 bson_cursor_get_int64(bson_cursor c);
+
+    // Collection cnstants -----------------------------------------------------
     const int
         MONGO_COLLECTION_DEFAULTS,          // Default options.
         MONGO_COLLECTION_CAPPED,            // The collection is capped.
@@ -172,194 +337,194 @@
     // Sync API ----------------------------------------------------------------
 
     // Synchronously connect to a MongoDB server.
-    mongo_sync_connection mongo_sync_connect (byteptr address, int port,
+    mongo_sync_connection mongo_sync_connect(byteptr address, int port,
                                               bool slaveok);
 
     // Add a seed to an existing MongoDB connection.
-    bool mongo_sync_conn_seed_add (mongo_sync_connection conn, byteptr host,
+    bool mongo_sync_conn_seed_add(mongo_sync_connection conn, byteptr host,
                                   int port);
 
     // Attempt to connect to another member of a replica set.
-    mongo_sync_connection mongo_sync_reconnect (mongo_sync_connection conn,
+    mongo_sync_connection mongo_sync_reconnect(mongo_sync_connection conn,
                                                 bool force_master);
 
     // Close and free a synchronous MongoDB connection.
-    void mongo_sync_disconnect (mongo_sync_connection conn);
+    void mongo_sync_disconnect(mongo_sync_connection conn);
 
     // Retrieve the state of the SLAVE_OK flag from a sync connection.
-    bool mongo_sync_conn_get_slaveok (mongo_sync_connection conn);
+    bool mongo_sync_conn_get_slaveok(mongo_sync_connection conn);
 
     // Set the SLAVE_OK flag on a sync connection.
-    bool mongo_sync_conn_set_slaveok (mongo_sync_connection conn, bool slaveok)
+    bool mongo_sync_conn_set_slaveok(mongo_sync_connection conn, bool slaveok)
 
     // Retrieve the state of the safe mode flag from a sync connection.
-    bool mongo_sync_conn_get_safe_mode (mongo_sync_connection conn);
+    bool mongo_sync_conn_get_safe_mode(mongo_sync_connection conn);
 
     // Set the safe mode flag on a sync connection.
-    bool mongo_sync_conn_set_safe_mode (mongo_sync_connection conn,
+    bool mongo_sync_conn_set_safe_mode(mongo_sync_connection conn,
                                         bool safe_mode);
 
     // Get the state of the auto-reconnect flag from a sync connection.
-    bool mongo_sync_conn_get_auto_reconnect (mongo_sync_connection conn);
+    bool mongo_sync_conn_get_auto_reconnect(mongo_sync_connection conn);
 
     // Set the state of the auto-reconnect flag on a sync connection.
-    bool mongo_sync_conn_set_auto_reconnect (mongo_sync_connection conn,
+    bool mongo_sync_conn_set_auto_reconnect(mongo_sync_connection conn,
                                              bool auto_reconnect);
 
     // Get the maximum size of a bulk insert package.
-    int32  mongo_sync_conn_get_max_insert_size (mongo_sync_connection conn);
+    int32  mongo_sync_conn_get_max_insert_size(mongo_sync_connection conn);
 
     // Set the maximum size of a bulk insert package.
-    bool mongo_sync_conn_set_max_insert_size (mongo_sync_connection conn,
+    bool mongo_sync_conn_set_max_insert_size(mongo_sync_connection conn,
                                               int32 max_size);
 
     // Send an update command to MongoDB.
-    bool mongo_sync_cmd_update (mongo_sync_connection conn, byteptr ns,
+    bool mongo_sync_cmd_update(mongo_sync_connection conn, byteptr ns,
                                 int32 flags, bson selector, bson update);
 
     // Send an insert command to MongoDB. TODO bind
-    // bool mongo_sync_cmd_insert (mongo_sync_connection conn, byteptr ns,...);
+    // bool mongo_sync_cmd_insert(mongo_sync_connection conn, byteptr ns,...);
 
     // Send an insert command to MongoDB.
-    bool mongo_sync_cmd_insert_n (mongo_sync_connection conn, byteptr ns,
+    bool mongo_sync_cmd_insert_n(mongo_sync_connection conn, byteptr ns,
                                   int32 n, bson docs);
 
     // Send a query command to MongoDB.
-    mongo_packet mongo_sync_cmd_query (mongo_sync_connection conn, byteptr ns,
+    mongo_packet mongo_sync_cmd_query(mongo_sync_connection conn, byteptr ns,
                                        int32 flags, int32 skip, int32 ret,
                                        bson query, bson sel);
 
     // Send a get more command to MongoDB.
-    mongo_packet mongo_sync_cmd_get_more (mongo_sync_connection conn, byteptr ns,
+    mongo_packet mongo_sync_cmd_get_more(mongo_sync_connection conn, byteptr ns,
                                           int32 ret, int64 cursor_id);
 
     // Send a delete command to MongoDB.
-    bool mongo_sync_cmd_delete (mongo_sync_connection conn, byteptr ns,
+    bool mongo_sync_cmd_delete(mongo_sync_connection conn, byteptr ns,
                                 int32 flags, bson sel);
 
     // Send a kill_cursors command to MongoDB. TODO bind
-    // bool mongo_sync_cmd_kill_cursors (mongo_sync_connection conn, int32 n,...);
+    // bool mongo_sync_cmd_kill_cursors(mongo_sync_connection conn, int32 n,...);
 
     // Send a custom command to MongoDB.
-    mongo_packet mongo_sync_cmd_custom (mongo_sync_connection conn, byteptr db,
+    mongo_packet mongo_sync_cmd_custom(mongo_sync_connection conn, byteptr db,
                                         bson command);
 
     // Send a count() command to MongoDB.
-    float64  mongo_sync_cmd_count (mongo_sync_connection conn, byteptr db,
+    float64  mongo_sync_cmd_count(mongo_sync_connection conn, byteptr db,
                                    byteptr coll, bson query);
 
     // Create a new MongoDB collection. TODO bind
-    // bool mongo_sync_cmd_create (mongo_sync_connection conn, byteptr db,
+    // bool mongo_sync_cmd_create(mongo_sync_connection conn, byteptr db,
     //                            byteptr coll, int flags,...);
 
     // Check whether a collection exists in MongoDB.
-    bson  mongo_sync_cmd_exists (mongo_sync_connection conn, byteptr db,
+    bson  mongo_sync_cmd_exists(mongo_sync_connection conn, byteptr db,
                                  byteptr coll);
 
     // Send a drop() command to MongoDB.
-    bool mongo_sync_cmd_drop (mongo_sync_connection conn, byteptr db,
+    bool mongo_sync_cmd_drop(mongo_sync_connection conn, byteptr db,
                               byteptr coll);
 
     // Get the last error from MongoDB. TODO wrap
-    //  bool mongo_sync_cmd_get_last_error (mongo_sync_connection conn, byteptr db,
+    //  bool mongo_sync_cmd_get_last_error(mongo_sync_connection conn, byteptr db,
     //                                      array[byteptr] error);
 
     // Reset the last error variable in MongoDB.
-    bool mongo_sync_cmd_reset_error (mongo_sync_connection conn, byteptr db);
+    bool mongo_sync_cmd_reset_error(mongo_sync_connection conn, byteptr db);
 
     // Check whether the current node is the master.
-    bool mongo_sync_cmd_is_master (mongo_sync_connection conn);
+    bool mongo_sync_cmd_is_master(mongo_sync_connection conn);
 
     // Send a PING command to MongoDB.
-    bool mongo_sync_cmd_ping (mongo_sync_connection conn);
+    bool mongo_sync_cmd_ping(mongo_sync_connection conn);
 
     // Add a user to MongoDB.
-    bool mongo_sync_cmd_user_add (mongo_sync_connection conn, byteptr db,
+    bool mongo_sync_cmd_user_add(mongo_sync_connection conn, byteptr db,
                                   byteptr user, byteptr pw);
 
     // Remove a user from MongoDB.
-    bool mongo_sync_cmd_user_remove (mongo_sync_connection conn, byteptr db,
+    bool mongo_sync_cmd_user_remove(mongo_sync_connection conn, byteptr db,
                                      byteptr user);
 
     // Authenticate a user with MongoDB.
-    bool mongo_sync_cmd_authenticate (mongo_sync_connection conn, byteptr db,
+    bool mongo_sync_cmd_authenticate(mongo_sync_connection conn, byteptr db,
                                       byteptr user, byteptr pw);
 
     // Create an index.
-    bool mongo_sync_cmd_index_create (mongo_sync_connection conn, byteptr ns,
+    bool mongo_sync_cmd_index_create(mongo_sync_connection conn, byteptr ns,
                                       bson key, int options);
 
     // Drop an index.
-    bool mongo_sync_cmd_index_drop (mongo_sync_connection conn, byteptr ns,
+    bool mongo_sync_cmd_index_drop(mongo_sync_connection conn, byteptr ns,
                                     bson key);
 
     // Drop all indexes from a namespace.
-    bool mongo_sync_cmd_index_drop_all (mongo_sync_connection conn, byteptr ns);
+    bool mongo_sync_cmd_index_drop_all(mongo_sync_connection conn, byteptr ns);
 
     // Cursor API --------------------------------------------------------------
     // Create an empty packet. 
-    mongo_packet mongo_wire_packet_new ();
+    mongo_packet mongo_wire_packet_new();
 
     // Free up a mongo packet. 
-    void mongo_wire_packet_free (mongo_packet p);
+    void mongo_wire_packet_free(mongo_packet p);
 
     // Create a new MongoDB Cursor.
-    mongo_sync_cursor mongo_sync_cursor_new (mongo_sync_connection conn,
+    mongo_sync_cursor mongo_sync_cursor_new(mongo_sync_connection conn,
                                              byteptr ns, mongo_packet packet);
     // Iterate a MongoDB cursor.
-    bool mongo_sync_cursor_next (mongo_sync_cursor cursor);
+    bool mongo_sync_cursor_next(mongo_sync_cursor cursor);
 
     // Retrieve the BSON document at the cursor's position.
-    bson mongo_sync_cursor_get_data (mongo_sync_cursor cursor);
+    bson mongo_sync_cursor_get_data(mongo_sync_cursor cursor);
 
     // Free a MongoDB cursor.
-    void mongo_sync_cursor_free (mongo_sync_cursor cursor);
+    void mongo_sync_cursor_free(mongo_sync_cursor cursor);
 
     // Sync pool API -----------------------------------------------------------
     // Create a new synchronous connection pool.
-    mongo_sync_pool mongo_sync_pool_new (byteptr host, int port, int nmasters,
+    mongo_sync_pool mongo_sync_pool_new(byteptr host, int port, int nmasters,
                                          int nslaves);
 
     // Close and free a synchronous connection pool.
-    void mongo_sync_pool_free (mongo_sync_pool pool);
+    void mongo_sync_pool_free(mongo_sync_pool pool);
 
     // Pick a connection from a synchronous connection pool.
-    mongo_sync_pool_connection mongo_sync_pool_pick (mongo_sync_pool pool,
+    mongo_sync_pool_connection mongo_sync_pool_pick(mongo_sync_pool pool,
                                                      bool want_master);
 
     // Return a connection to the synchronous connection pool.
-    bool mongo_sync_pool_return (mongo_sync_pool pool,
+    bool mongo_sync_pool_return(mongo_sync_pool pool,
                                  mongo_sync_pool_connection conn);
         
     // Utils -------------------------------------------------------------------
 
     // Intitialize the static ObjectID components.
-    void mongo_util_oid_init (int32 machine_id);
+    void mongo_util_oid_init(int32 machine_id);
 
     // Generate a new ObjectID.
-    byteptr mongo_util_oid_new (int32 seq);
+    byteptr mongo_util_oid_new(int32 seq);
 
     // Generate a new ObjectID, with a predefined timestamp
-    byteptr mongo_util_oid_new_with_time (int32 time, int32 seq);
+    byteptr mongo_util_oid_new_with_time(int32 time, int32 seq);
 
     // Convert an ObjectID to its string representation.
-    byteptr mongo_util_oid_as_string (byteptr oid);
+    byteptr mongo_util_oid_as_string(byteptr oid);
 
     // Parse a HOST:IP pair. TODO wrap
-    // bool  mongo_util_parse_addr (byteptr addr, gchar **host, int *port)
+    // bool  mongo_util_parse_addr(byteptr addr, gchar **host, int *port)
 
     // Connections -------------------------------------------------------------
 
     // Connect to a MongoDB server.
-    mongo_connection mongo_connect (byteptr address, int port);
+    mongo_connection mongo_connect(byteptr address, int port);
 
     // Disconnect from a MongoDB server.
-    void mongo_disconnect (mongo_connection conn);
+    void mongo_disconnect(mongo_connection conn);
 
     // Get the last requestID from a connection object.
-    int32   mongo_connection_get_requestid (mongo_connection conn);
+    int32   mongo_connection_get_requestid(mongo_connection conn);
 
     // Set timeout
-    bool    mongo_connection_set_timeout (mongo_connection conn, int timeout);
+    bool    mongo_connection_set_timeout(mongo_connection conn, int timeout);
 
 }

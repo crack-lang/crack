@@ -1,7 +1,68 @@
+#include <inttypes.h>
+#include <float.h>
 #include <mongo-client/mongo.h>
 typedef void * voidptr;
 typedef char * byteptr;
 typedef int Undef;
+
+    byteptr bson_cursor_get_string_crk(bson_cursor *c) {
+        const gchar *dest;
+        if (bson_cursor_get_string(c, &dest)) return (byteptr)dest;
+        return NULL;
+    }
+double bson_cursor_get_double_crk(bson_cursor *c) {
+        double result;
+        if(bson_cursor_get_double(c, &result)) return result;
+        return 0;
+    }
+bson* bson_cursor_get_document_crk(bson_cursor *c) {
+        bson *dest;
+        if (bson_cursor_get_document(c, &dest)) return dest;
+        return NULL;
+    }
+bson *bson_cursor_get_array_crk(bson_cursor *c) {
+        bson *arr;
+        if (bson_cursor_get_array(c, &arr)) return arr;
+        return NULL;
+    }
+byteptr bson_cursor_get_oid_crk(bson_cursor *c) {
+        const guint8 *oid;
+        if (bson_cursor_get_oid(c, &oid)) return (byteptr)oid;
+        return NULL;
+     }
+gboolean bson_cursor_get_boolean_crk(bson_cursor *c) {
+        gboolean dest;
+        if (bson_cursor_get_boolean(c, &dest)) return (bool)dest;
+        return false;
+    }
+gint64 bson_cursor_get_utc_datetime_crk(bson_cursor* c){
+        gint64 dest;
+        if (bson_cursor_get_utc_datetime(c, &dest)) return dest;
+        return 0;
+    }
+byteptr bson_cursor_get_javascript_crk(bson_cursor *c){
+        const gchar *dest;
+        if (bson_cursor_get_javascript(c, &dest)) return (byteptr)dest;
+    }
+byteptr bson_cursor_get_symbol_crk(bson_cursor* c){
+        const gchar *dest;
+        if (bson_cursor_get_symbol(c, &dest)) return (byteptr)dest;
+    }
+gint32 bson_cursor_get_int32_crk(bson_cursor *c){
+        gint32 dest;
+        if (bson_cursor_get_int32(c, &dest)) return dest;
+        return 0;
+     }
+gint64 bson_cursor_get_timestamp_crk(bson_cursor *c){
+        gint64 dest;
+        if (bson_cursor_get_timestamp(c, &dest)) return dest;
+        return 0;
+     }
+gint64 bson_cursor_get_int64_crk(bson_cursor* c){
+        gint64 dest;
+        if (bson_cursor_get_int64(c, &dest)) return dest;
+        return 0;
+     }
 
 
 #include "ext/Module.h"
@@ -62,6 +123,10 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
 
     crack::ext::Type *type_bson = mod->addType("bson", sizeof(Undef));
     type_bson->finish();
+
+
+    crack::ext::Type *type_bson_cursor = mod->addType("bson_cursor", sizeof(Undef));
+    type_bson_cursor->finish();
 
     f = mod->addFunc(type_byteptr, "bson_type_as_string",
                      (void *)bson_type_as_string
@@ -142,7 +207,7 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_bson, "b");
        f->addArg(type_byteptr, "name");
-       f->addArg(type_bson, "array");
+       f->addArg(type_bson, "arr");
 
     f = mod->addFunc(type_bool, "bson_append_binary",
                      (void *)bson_append_binary
@@ -233,6 +298,114 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
        f->addArg(type_bson, "b");
        f->addArg(type_byteptr, "name");
        f->addArg(type_int64, "i");
+
+    f = mod->addFunc(type_bson_cursor, "bson_cursor_new",
+                     (void *)bson_cursor_new
+                     );
+       f->addArg(type_bson, "b");
+
+    f = mod->addFunc(type_bson_cursor, "bson_find",
+                     (void *)bson_find
+                     );
+       f->addArg(type_bson, "b");
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_void, "bson_cursor_free",
+                     (void *)bson_cursor_free
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bool, "bson_cursor_next",
+                     (void *)bson_cursor_next
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bool, "bson_cursor_find_next",
+                     (void *)bson_cursor_find_next
+                     );
+       f->addArg(type_bson_cursor, "c");
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_bool, "bson_cursor_find",
+                     (void *)bson_cursor_find
+                     );
+       f->addArg(type_bson_cursor, "c");
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_int, "bson_cursor_type",
+                     (void *)bson_cursor_type
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_byteptr, "bson_cursor_type_as_string",
+                     (void *)bson_cursor_type_as_string
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_byteptr, "bson_cursor_key",
+                     (void *)bson_cursor_key
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_byteptr, "bson_cursor_get_string",
+                     (void *)bson_cursor_get_string_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_float64, "bson_cursor_get_double",
+                     (void *)bson_cursor_get_double_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bson, "bson_cursor_get_document",
+                     (void *)bson_cursor_get_document_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bson, "bson_cursor_get_array",
+                     (void *)bson_cursor_get_array_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bool, "bson_cursor_get_oid",
+                     (void *)bson_cursor_get_oid_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bool, "bson_cursor_get_boolean",
+                     (void *)bson_cursor_get_boolean_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_int64, "bson_cursor_get_utc_datetime",
+                     (void *)bson_cursor_get_utc_datetime_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_byteptr, "bson_cursor_get_javascript",
+                     (void *)bson_cursor_get_javascript_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_byteptr, "bson_cursor_get_symbol",
+                     (void *)bson_cursor_get_symbol_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_int32, "bson_cursor_get_int32",
+                     (void *)bson_cursor_get_int32_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_int32, "bson_cursor_get_timestamp",
+                     (void *)bson_cursor_get_timestamp_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_int64, "bson_cursor_get_int64",
+                     (void *)bson_cursor_get_int64_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
 
     f = mod->addFunc(type_mongo_sync_connection, "mongo_sync_connect",
                      (void *)mongo_sync_connect
