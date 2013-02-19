@@ -1,0 +1,15 @@
+%%TEST%%
+reference deserialization nesting
+%%ARGS%%
+%%FILE%%
+# tests a subtle ordering problem where a nested serialized type (C) makes an
+# enclosing reference (array[C]) look like a full serialization.
+class A {}
+class C {}
+class B {
+    array[C] arr;
+}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
