@@ -367,7 +367,7 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_bson_cursor, "c");
 
-    f = mod->addFunc(type_bool, "bson_cursor_get_oid",
+    f = mod->addFunc(type_byteptr, "bson_cursor_get_oid",
                      (void *)bson_cursor_get_oid_crk
                      );
        f->addArg(type_bson_cursor, "c");
@@ -397,7 +397,7 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_bson_cursor, "c");
 
-    f = mod->addFunc(type_int32, "bson_cursor_get_timestamp",
+    f = mod->addFunc(type_int64, "bson_cursor_get_timestamp",
                      (void *)bson_cursor_get_timestamp_crk
                      );
        f->addArg(type_bson_cursor, "c");

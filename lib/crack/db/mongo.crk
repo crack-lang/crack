@@ -26,7 +26,6 @@ import crack.ext._mongo
     bson, bson_cursor, mongo_connection, mongo_packet, mongo_sync_connection, 
     mongo_sync_cursor, mongo_sync_pool, mongo_sync_pool_connection,
 
-
     // Function names
     bson_type_as_string,
     bson_new,
@@ -133,52 +132,55 @@ import crack.ext._mongo
     mongo_connection_get_requestid,
     mongo_connection_set_timeout;
 
+class BSON;
+
 class BSON {
-    bson __rep;
+    bson _b;
 
     // Create a new BSON object.
-    oper init() : __rep = bson_new() {}
+    oper init() : _b = bson_new() {}
 
     // Copy constructor
-    oper init(bson b) : __rep = b {
+    oper init(bson b) : _b = b {
         
     }
 
     // Create a new BSON object, preallocating a given amount of space.
-    oper init(int32 size) : __rep = bson_new_sized(size) {}
+    oper init(int32 size) : _b = bson_new_sized(size) {}
 
     // Create a BSON object from existing data.
     
-    oper init(byteptr data, int32 size) : __rep = bson_new_from_data(data, size) {
+    oper init(byteptr data, int32 size) :
+              _b = bson_new_from_data(data, size) {
     }
     
     // Finish a BSON object.
     bool finish() {
-        return bson_finish(__rep);
+        return bson_finish(_b);
     }
 
     // Reset a BSON object.
     bool reset() {
-        return bson_reset(__rep);
+        return bson_reset(_b);
     }
-
+    
     // Free the memory associated with a BSON object.
     oper del() {
-        bson_free(__rep)
+        if (!(_b is null)) bson_free(_b);
     }
 
     // Return the size of a finished BSON object.
     int32 size() {
-        return bson_size(__rep);
+        return bson_size(_b);
     }
 
     // Return the raw bytestream form of the BSON object.
     Buffer data() {
-        return Buffer(bson_data(__rep), uint(bson_size(__rep)));
+        return Buffer(bson_data(_b), uint(bson_size(_b)));
     }
 
-    bson getRepl() {
-        return __rep;
+    bson bson() {
+        return _b;
     }
 
     // Validate a BSON key.
@@ -191,95 +193,206 @@ class BSON {
 
     // Append a string to a BSON object.
     @final bool appendString(CString name, Buffer val) {
-        return bson_append_string(__rep, name.buffer, val.buffer,
+        return bson_append_string(_b, name.buffer, val.buffer,
                                   int32(val.size));
     }
 
     // Append a BSON document to a BSON object.
     @final bool appendDocument(CString name, BSON doc) {
-        return bson_append_document(__rep, name.buffer, doc.getRepl());
+        return bson_append_document(_b, name.buffer, doc.bson());
     }
 
     // Append a BSON array to a BSON object.
     @final bool appendArray(CString name, BSON arr) {
-        return bson_append_array(__rep, name.buffer, arr.getRepl());
+        return bson_append_array(_b, name.buffer, arr.bson());
     }
 
     // Append a BSON binary blob to a BSON object.
     @final bool appendBinary(CString name, int subtype, Buffer data) {
-        return bson_append_binary(__rep, name.buffer, subtype, data.buffer,
+        return bson_append_binary(_b, name.buffer, subtype, data.buffer,
                                   int32(data.size));
     }
 
     // Append an ObjectID to a BSON object.
     @final bool appendOID(CString name, Buffer oid) {
         if (oid.size != 12) return false;
-        return bson_append_oid(__rep, name.buffer, oid.buffer);
+        return bson_append_oid(_b, name.buffer, oid.buffer);
     }
 
     // Append a boolean to a BSON object.
     bool appendBool(CString name, bool value) {
-        return bson_append_boolean(__rep, name.buffer, value);
+        return bson_append_boolean(_b, name.buffer, value);
     }
 
     // Append an UTC datetime to a BSON object.
     bool appendUTCDateTime(CString name, int64 ts) {
-        return bson_append_utc_datetime(__rep, name.buffer, ts);
+        return bson_append_utc_datetime(_b, name.buffer, ts);
     }
 
     // Append an UTC datetime to a BSON object.
     bool appendUTCDateTime(CString name, Time ts) {
-        return bson_append_utc_datetime(__rep, name.buffer,
+        return bson_append_utc_datetime(_b, name.buffer,
                 int64(ts.secs)*1000+int64(ts.nsecs)/1000000);
     }
 
     // Append a NULL value to a BSON object.
     bool appendNull(CString name) {
-        return bson_append_null(__rep, name.buffer);
+        return bson_append_null(_b, name.buffer);
     }
 
     // Append a regexp object to a BSON object.
     bool appendRegex(CString name, CString regexp, CString options) {
-        return bson_append_regex(__rep, name.buffer, regexp.buffer,
+        return bson_append_regex(_b, name.buffer, regexp.buffer,
                                  options.buffer);
     }
 
     // Append Javascript code to a BSON object.
     bool appendJavascript(CString name, Buffer js) {
-        return bson_append_javascript(__rep, name.buffer, js.buffer,
+        return bson_append_javascript(_b, name.buffer, js.buffer,
                                       int32(js.size));
     }
 
     // Append a symbol to a BSON object.
     bool appendSymbol(CString name, Buffer symbol) {
-        return bson_append_symbol(__rep, name.buffer, symbol.buffer,
+        return bson_append_symbol(_b, name.buffer, symbol.buffer,
                                   int32(symbol.size));
     }
 
     // Append Javascript code(with scope) to a BSON object.
     bool appendJavascriptScope(CString name, Buffer js, BSON scope) {
-        return bson_append_javascript_w_scope(__rep, name.buffer, js.buffer,
-                                              int32(js.size), scope.getRepl());
+        return bson_append_javascript_w_scope(_b, name.buffer, js.buffer,
+                                              int32(js.size), scope.bson());
     }
 
     // Append a double to a BSON object.
     bool appendFloat64(CString name, float64 d) {
-        return bson_append_double(__rep, name.buffer, d);
+        return bson_append_double(_b, name.buffer, d);
     }
 
     // Append a 32-bit integer to a BSON object.
     bool appendInt32(CString name, int32 i) {
-        return bson_append_int32(__rep, name.buffer, i);
+        return bson_append_int32(_b, name.buffer, i);
     }
 
     // Append a timestamp to a BSON object.
     bool appendTimeStamp(CString name, int64 ts) {
-        return bson_append_timestamp(__rep, name.buffer, ts);
+        return bson_append_timestamp(_b, name.buffer, ts);
     }
 
     // Append a 64-bit integer to a BSON object.
     bool appendInt64(CString name, int64 i) {
-        return bson_append_int64(__rep, name.buffer, i);
+        return bson_append_int64(_b, name.buffer, i);
     }
 }
 
+class BSONCursor {
+    bson_cursor _c;
+    bson _b;
+
+    // Create  cursor positioned at the beginning of the document
+    oper init(BSON b) : _b = b.bson(),
+                        _c = bson_cursor_new(b.bson()) {
+    }
+
+    // Create a new cursor positioned at a given key.
+    oper init(BSON b, CString name) : _b = b.bson(), 
+        _c = bson_find(_b, name.buffer) {
+    }
+
+    // Delete a cursor, and free up all resources used by it.
+    oper del() {
+        bson_cursor_free(_c);
+    }
+
+    // Position the cursor to the next key.
+    bool next() {
+        return bson_cursor_next(_c);
+    }
+
+    // Move the cursor to a given key, past the current one.
+    bool findNext(CString name) {
+        return bson_cursor_find_next(_c, name.buffer);
+    }
+
+    // Move the cursor to a given key.
+    bool find(CString name) {
+        return bson_cursor_find(_c, name.buffer);
+    }
+
+    // Determine the type of the current element.
+    int type() {
+        return bson_cursor_type(_c);
+    }
+
+    // Retrieve the type of the current element, as string.
+    CString typeString(){
+        return CString(bson_cursor_type_as_string(_c), false);
+    }
+
+    // Determine the name of the current elements key.
+    CString key() {
+        return CString(bson_cursor_key(_c), false);
+    }
+    
+    // Get the value stored at the cursor, as string.
+    CString getString() {
+        return CString(bson_cursor_get_string(_c), false);
+    }
+
+    // Get the value stored at the cursor, as a double.
+    float64 getFloat64() {
+        return bson_cursor_get_double(_c);
+    }
+
+    // Get the value stored at the cursor, as a BSON document.
+    BSON getDocument() {
+        return BSON(bson_cursor_get_document(_c));
+    }
+
+    // Get the value stored at the cursor, as a BSON array.
+    BSON getArray() {
+        return BSON(bson_cursor_get_array(_c));
+    }
+
+    // Get the value stored at the cursor, as an ObjectID.
+    CString getOID() {
+        return CString(bson_cursor_get_oid(_c), false);
+    }
+
+    // Get the value stored at the cursor, as a boolean.
+    bool getBool() {
+        return bson_cursor_get_boolean(_c);
+    }
+
+    // Get the value stored at the cursor, as an UTC datetime.
+    Time getUTCDateTime(){
+        millisecs := bson_cursor_get_utc_datetime(_c);
+        s := millisecs/1000;
+        return Time(int32(s), int32((millisecs - s*1000)*1000000));
+    }
+
+    // Get the value stored at the cursor, as javascript code.
+    CString getJavascript() {
+         return CString(bson_cursor_get_javascript(_c),false);
+    }
+
+    // Get the value stored at the cursor, as a symbol.
+    CString getSymbol(){
+        return CString(bson_cursor_get_symbol(_c), false);
+    }
+
+    // Get the value stored at the cursor, as a 32-bit integer.
+    int32 getInt32() {
+        return bson_cursor_get_int32(_c);
+    }
+
+    // Get the value stored at the cursor, as a timestamp.
+    int64 getTimeStamp() {
+        return bson_cursor_get_timestamp(_c);
+    }
+
+    // Get the value stored at the cursor, as a 64-bit integer.     
+    int64 getInt64() {
+        return bson_cursor_get_int64(_c);
+    }
+}
