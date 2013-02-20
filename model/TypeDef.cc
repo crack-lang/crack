@@ -1005,6 +1005,10 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
             if (generic) {
                 genericInfo->serialize(serializer);
             } else {
+                int flags = (pointer ? 1 : 0) |
+                            (hasVTable ? 2 : 0) |
+                            (abstract ? 4 : 0);
+                serializer.write(flags, "flags");
                 serializer.write(parents.size(), "#bases");
                 for (TypeVec::const_iterator i = parents.begin();
                     i != parents.end();
@@ -1161,6 +1165,12 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
 
     // if we're in a definition, read the base classes and defs.
     if (readObj.userData) {
+        // flags
+        int flags = deser.readUInt("flags");
+        result->pointer = (flags & 1) ? true : false;
+        result->hasVTable = (flags & 2) ? true : false;
+        result->abstract = (flags & 4) ? true : false;
+
         // bases
         int count = deser.readUInt("#bases");
         TypeDef::TypeVec bases(count);

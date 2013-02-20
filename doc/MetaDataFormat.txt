@@ -142,6 +142,11 @@ So given this, our meta-data format is:
             array[blob] parms
             array[Token] tokens
         } else {
+            // type flags are:
+            // 1 - pointer
+            // 2 - hasVTable
+            // 4 - abstract
+            uint flags
             array[ref[Type]] bases
             array[Def] defs
         }
