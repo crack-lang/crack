@@ -1106,6 +1106,7 @@ namespace {
             TypeDefPtr type;
             if (alias) {
                 type = TypeDefPtr::rcast(VarDef::deserializeAliasBody(deser));
+                deser.userData = 0;
             } else {
                 string name = deser.readString(16, "name");
                 

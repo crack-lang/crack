@@ -595,7 +595,7 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
         // before parsing the module from scratch, check the persistent cache 
         // for it.
         bool cached = false;
-        if (rootContext->construct->cacheMode && !modPath.isDir)
+        if (rootContext->construct->cacheMode)
             modDef = context->materializeModule(canonicalName);
         if (modDef && modDef->matchesSource(sourceLibPath)) {
             cached = true;
