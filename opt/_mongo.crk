@@ -383,7 +383,14 @@
                                 int32 flags, bson selector, bson update);
 
     // Send an insert command to MongoDB. TODO bind
-    // bool mongo_sync_cmd_insert(mongo_sync_connection conn, byteptr ns,...);
+    @inject 'bool mongo_sync_cmd_insert_crk(mongo_sync_connection *conn,
+                                            byteptr ns, bson *doc) {
+       return mongo_sync_cmd_insert(conn, (const gchar *) ns, doc, NULL);
+        
+    }\n'
+
+    @cname mongo_sync_cmd_insert_crk
+    bool mongo_sync_cmd_insert(mongo_sync_connection conn, byteptr ns, bson doc);
 
     // Send an insert command to MongoDB.
     bool mongo_sync_cmd_insert_n(mongo_sync_connection conn, byteptr ns,

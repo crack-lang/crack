@@ -93,6 +93,7 @@ import crack.ext._mongo
     mongo_sync_conn_set_max_insert_size,
     mongo_sync_cmd_update,
 
+    mongo_sync_cmd_insert,
     mongo_sync_cmd_insert_n,
     mongo_sync_cmd_query,
     mongo_sync_cmd_get_more,
@@ -132,6 +133,7 @@ import crack.ext._mongo
     mongo_connection_get_requestid,
     mongo_connection_set_timeout;
 
+int MONGO_CONN_LOCAL = -1;
 class BSON;
 
 class BSON {
@@ -394,5 +396,185 @@ class BSONCursor {
     // Get the value stored at the cursor, as a 64-bit integer.     
     int64 getInt64() {
         return bson_cursor_get_int64(_c);
+    }
+}
+
+class MongoSync;
+
+class MongoSync {
+
+    mongo_sync_connection _m;
+
+    // Synchronously connect to a MongoDB server.
+    oper init(CString address, int port, bool slaveOK) :
+            _m = mongo_sync_connect(address.buffer, port, slaveOK) {
+    }
+
+    mongo_sync_connection mongo() {
+        return _m;
+    }
+
+    oper init (mongo_sync_connection m) : _m = m {}
+
+    // Add a seed to an existing MongoDB connection.
+    bool addSeed(CString host, int port) {
+        return mongo_sync_conn_seed_add(_m, host.buffer, port);
+    }
+
+    // Attempt to connect to another member of a replica set.
+    MongoSync reconnect(bool forceMaster) {
+        return MongoSync(mongo_sync_reconnect(_m, forceMaster));
+    }
+
+    // Close and free a synchronous MongoDB connection.
+    oper del(){
+        if (!(_m is null)) mongo_sync_disconnect(_m);
+        _m = null;
+    }
+
+    // Retrieve the state of the SLAVE_OK flag from a sync connection.
+    bool getSlaveOK() {
+        return  mongo_sync_conn_get_slaveok(_m);
+    }
+
+    // Set the SLAVE_OK flag on a sync connection.
+    bool setSlaveOK(bool slaveOK) {
+        return mongo_sync_conn_set_slaveok(_m, slaveOK);
+    }
+
+    // Retrieve the state of the safe mode flag from a sync connection.
+    bool getSafeMode() {
+        return mongo_sync_conn_get_safe_mode(_m);
+    }
+
+    // Set the safe mode flag on a sync connection.
+    bool setSafeMode(bool safeMode) {
+        return mongo_sync_conn_set_safe_mode(_m, safeMode);
+    }
+
+    // Get the state of the auto-reconnect flag from a sync connection.
+    bool getAutoReconnect() {
+        return mongo_sync_conn_get_auto_reconnect(_m);
+    }
+
+    // Set the state of the auto-reconnect flag on a sync connection.
+    bool setAutoReconnect(bool autoReconnect) {
+        return mongo_sync_conn_set_auto_reconnect(_m, autoReconnect);
+    }
+
+    // Get the maximum size of a bulk insert package.
+    int32 getMaxInsertSize() {
+        return mongo_sync_conn_get_max_insert_size(_m);
+    }
+
+    // Set the maximum size of a bulk insert package.
+    bool setMaxInsertSize(int32 maxSize) {
+        return mongo_sync_conn_set_max_insert_size(_m, maxSize);
+    }
+
+    // Command methods
+    // Send an update command to MongoDB.
+    bool update(CString ns, int32 flags, BSON selector, BSON update) {
+        return mongo_sync_cmd_update(_m, ns.buffer, flags,
+                                     selector.bson(), update.bson());
+    }
+
+    // Send an insert command to MongoDB. TODO bind
+    bool insert(CString ns, BSON doc) {
+        return mongo_sync_cmd_insert(_m, ns.buffer, doc.bson());
+    }
+
+    // Send an insert command to MongoDB.
+    bool insertN(CString ns, int32 n, BSON docs) {
+        return mongo_sync_cmd_insert_n(_m, ns.buffer, n, docs.bson());
+    }
+
+    // Send a query command to MongoDB. TODO add
+    // mongo_packet mongo_sync_cmd_query(mongo_sync_connection conn, byteptr ns,
+    //                                   int32 flags, int32 skip, int32 ret,
+    //                                   bson query, bson sel);
+
+    // Send a get more command to MongoDB. TODO add
+    // mongo_packet mongo_sync_cmd_get_more(mongo_sync_connection conn, byteptr ns,
+    //                                       int32 ret, int64 cursor_id);
+
+    // Send a delete command to MongoDB.
+    bool delete(CString ns, int32 flags, BSON sel) {
+        return mongo_sync_cmd_delete(_m, ns.buffer, flags, sel.bson());
+    }
+
+    // Send a kill_cursors command to MongoDB. TODO bind
+    // bool mongo_sync_cmd_kill_cursors(mongo_sync_connection conn, int32 n,...);
+
+    // Send a custom command to MongoDB. TODO add
+    // mongo_packet mongo_sync_cmd_custom(mongo_sync_connection conn, byteptr db,
+    //                                    bson command);
+
+    // Send a count() command to MongoDB.
+    float64 count(CString db, CString coll, BSON query) {
+        return mongo_sync_cmd_count(_m, db.buffer, coll.buffer, query.bson());
+    }
+
+    // Create a new MongoDB collection. TODO bind
+    // bool mongo_sync_cmd_create(mongo_sync_connection conn, byteptr db,
+    //                            byteptr coll, int flags,...);
+
+    // Check whether a collection exists in MongoDB.
+    BSON exists(CString db, CString coll) {
+        return BSON(mongo_sync_cmd_exists(_m, db.buffer, coll.buffer));
+    }
+
+    // Send a drop() command to MongoDB.
+    bool drop(CString db, CString coll) {
+        return mongo_sync_cmd_drop(_m, db.buffer, coll.buffer);
+    }
+
+    // Get the last error from MongoDB. TODO wrap
+    //  bool mongo_sync_cmd_get_last_error(mongo_sync_connection conn, byteptr db,
+    //                                      array[byteptr] error);
+
+    // Reset the last error variable in MongoDB.
+    bool resetError(CString db) {
+        return mongo_sync_cmd_reset_error(_m, db.buffer);
+    }
+
+    // Check whether the current node is the master.
+    bool isMaster() {
+        return mongo_sync_cmd_is_master(_m);
+    }
+
+    // Send a PING command to MongoDB.
+    bool ping() {
+        return mongo_sync_cmd_ping(_m);
+    }
+
+    // Add a user to MongoDB.
+    bool addUser(CString db, CString user, CString pw) {
+        return mongo_sync_cmd_user_add(_m, db.buffer, user.buffer, pw.buffer);
+    }
+
+    // Remove a user from MongoDB.
+    bool removeUser(CString db, CString user) {
+        return mongo_sync_cmd_user_remove(_m, db.buffer, user.buffer);
+    }
+
+    // Authenticate a user with MongoDB.
+    bool authUser(CString db, CString user, CString pw) {
+        return mongo_sync_cmd_authenticate(_m, db.buffer, user.buffer, pw.buffer);
+    }
+
+    // Create an index.
+    bool createIndex(CString ns, BSON key, int options) {
+        return mongo_sync_cmd_index_create(_m, ns.buffer, key.bson(), options);
+    }
+
+    // Drop an index.
+    bool dropIndex(CString ns, BSON key) {
+        return mongo_sync_cmd_index_drop(_m, ns.buffer, key.bson());
+    }
+
+    // Drop all indexes from a namespace.
+    bool dropIndexAll(CString ns) {
+        return mongo_sync_cmd_index_drop_all(_m, ns.buffer);
     }
 }
