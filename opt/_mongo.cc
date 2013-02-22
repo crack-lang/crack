@@ -63,6 +63,11 @@ gint64 bson_cursor_get_int64_crk(bson_cursor* c){
         if (bson_cursor_get_int64(c, &dest)) return dest;
         return 0;
      }
+bool mongo_sync_cmd_insert_crk(mongo_sync_connection *conn,
+                                            byteptr ns, bson *doc) {
+       return mongo_sync_cmd_insert(conn, (const gchar *) ns, doc, NULL);
+        
+    }
 
 
 #include "ext/Module.h"
@@ -367,7 +372,7 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_bson_cursor, "c");
 
-    f = mod->addFunc(type_bool, "bson_cursor_get_oid",
+    f = mod->addFunc(type_byteptr, "bson_cursor_get_oid",
                      (void *)bson_cursor_get_oid_crk
                      );
        f->addArg(type_bson_cursor, "c");
@@ -397,7 +402,7 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_bson_cursor, "c");
 
-    f = mod->addFunc(type_int32, "bson_cursor_get_timestamp",
+    f = mod->addFunc(type_int64, "bson_cursor_get_timestamp",
                      (void *)bson_cursor_get_timestamp_crk
                      );
        f->addArg(type_bson_cursor, "c");
@@ -484,6 +489,13 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
        f->addArg(type_int32, "flags");
        f->addArg(type_bson, "selector");
        f->addArg(type_bson, "update");
+
+    f = mod->addFunc(type_bool, "mongo_sync_cmd_insert",
+                     (void *)mongo_sync_cmd_insert_crk
+                     );
+       f->addArg(type_mongo_sync_connection, "conn");
+       f->addArg(type_byteptr, "ns");
+       f->addArg(type_bson, "doc");
 
     f = mod->addFunc(type_bool, "mongo_sync_cmd_insert_n",
                      (void *)mongo_sync_cmd_insert_n

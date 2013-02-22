@@ -242,7 +242,7 @@
      }\n'
 
     @cname bson_cursor_get_oid_crk
-    bool bson_cursor_get_oid(bson_cursor c);
+    byteptr bson_cursor_get_oid(bson_cursor c);
 
     // Get the value stored at the cursor, as a boolean.
     @inject 'gboolean bson_cursor_get_boolean_crk(bson_cursor *c) {
@@ -308,7 +308,7 @@
      }\n'
 
     @cname bson_cursor_get_timestamp_crk
-    int32 bson_cursor_get_timestamp(bson_cursor c);
+    int64 bson_cursor_get_timestamp(bson_cursor c);
 
     // Get the value stored at the cursor, as a 64-bit integer.     
     @inject 'gint64 bson_cursor_get_int64_crk(bson_cursor* c){
@@ -383,7 +383,14 @@
                                 int32 flags, bson selector, bson update);
 
     // Send an insert command to MongoDB. TODO bind
-    // bool mongo_sync_cmd_insert(mongo_sync_connection conn, byteptr ns,...);
+    @inject 'bool mongo_sync_cmd_insert_crk(mongo_sync_connection *conn,
+                                            byteptr ns, bson *doc) {
+       return mongo_sync_cmd_insert(conn, (const gchar *) ns, doc, NULL);
+        
+    }\n'
+
+    @cname mongo_sync_cmd_insert_crk
+    bool mongo_sync_cmd_insert(mongo_sync_connection conn, byteptr ns, bson doc);
 
     // Send an insert command to MongoDB.
     bool mongo_sync_cmd_insert_n(mongo_sync_connection conn, byteptr ns,
