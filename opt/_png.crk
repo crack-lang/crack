@@ -6,11 +6,13 @@
     @crack_internal
     
     @inject '#include <png.h>\n'
+    @inject 'typedef int Undef;\n';
     
     class png_structp;
     
     # PNG version is "1.2.42"
-    
+
+    @cname Undef    
     class png_struct;
     
     png_struct png_create_read_struct(byteptr user_png_ver,

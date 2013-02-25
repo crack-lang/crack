@@ -1,4 +1,5 @@
 #include <png.h>
+typedef int Undef;
 
 
 #include "ext/Module.h"
@@ -37,7 +38,7 @@ void crack_ext__png_cinit(crack::ext::Module *mod) {
     type_png_structp->finish();
 
 
-    crack::ext::Type *type_png_struct = mod->addType("png_struct", sizeof(png_struct));
+    crack::ext::Type *type_png_struct = mod->addType("png_struct", sizeof(Undef));
     type_png_struct->finish();
 
 
