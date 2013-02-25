@@ -21,6 +21,7 @@
                                       voidptr warn_fn
                                       );
     
+    @cname Undef
     class png_info;
     png_info png_create_info_struct(png_struct png_ptr);
     

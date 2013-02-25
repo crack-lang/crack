@@ -42,7 +42,7 @@ void crack_ext__png_cinit(crack::ext::Module *mod) {
     type_png_struct->finish();
 
 
-    crack::ext::Type *type_png_info = mod->addType("png_info", sizeof(png_info));
+    crack::ext::Type *type_png_info = mod->addType("png_info", sizeof(Undef));
     type_png_info->finish();
 
 
