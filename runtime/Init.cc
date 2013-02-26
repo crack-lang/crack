@@ -531,6 +531,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     timeValType->finish();
     // end TimeVal
 
+    // sleep
+    f = mod->addFunc(intType, "sleep", (void *)sleep, "sleep");
+    f->addArg(uintType, "seconds"); 
+
     // begin Pipe
     Type *pipeType = mod->addType("PipeAddr", sizeof(crack::runtime::PipeAddr));
     pipeType->addInstVar(int32Type, "flags", 
