@@ -172,7 +172,8 @@ class RCPtr {
             return obj != other.get();
         }
 
-        int operator !=(const void *ptr) const {
+        template <class U>
+        int operator !=(const U *ptr) const {
             return obj != ptr;
         }
 
@@ -180,7 +181,8 @@ class RCPtr {
             Allows us to compare the pointer value to any kind of pointer.
             Basically, this exists to permit comparison to NULL.
          */
-        int operator ==(const void *ptr) const {
+        template <class U>
+        int operator ==(const U *ptr) const {
             return (void*)obj == ptr;
         }
 
