@@ -55,7 +55,7 @@ bool TypeDef::isAbstract(FuncDef *func) {
         assert(overloads);
         FuncDefPtr nearest = overloads->getSigMatch(func->args);
         if (nearest->flags & FuncDef::abstract ||
-            func->getReceiverType() != nearest->getReceiverType()
+            func->receiverType != nearest->receiverType
             )
             return true;
     }
@@ -438,7 +438,7 @@ void TypeDef::createCast(Context &outer, bool throws) {
 //  XXX this was trace code that mysteriously seg-faults: since I think there 
 //  might be some memory corruption happening, I'm leaving this until I can 
 //  investigate.
-//    string s = f->getReceiverType()->name;
+//    string s = f->receiverType->name;
 //    std::cerr << "Got oper class for " << s << endl;
     FuncCallPtr call = funcCtx->builder.createFuncCall(f.get());
     call->receiver = valRef;

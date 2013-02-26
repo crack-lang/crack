@@ -169,23 +169,11 @@ namespace {
                           ) {
         // find the path to the overriden's class
         BTypeDef *overridenClass = BTypeDefPtr::acast(overriden->getOwner());
-        classType->getPathToAncestor(
-            *overridenClass,
-            funcBuilder.funcDef->pathToFirstDeclaration
-        );
-
-        // augment it with the path from the overriden to its first
-        // declaration.
-        funcBuilder.funcDef->pathToFirstDeclaration.insert(
-            funcBuilder.funcDef->pathToFirstDeclaration.end(),
-            overriden->pathToFirstDeclaration.begin(),
-            overriden->pathToFirstDeclaration.end()
-        );
 
         // the type of the receiver is that of its first declaration
-        BTypeDef *receiverClass =
-            BTypeDefPtr::acast(overriden->getReceiverType());
-        funcBuilder.setReceiverType(receiverClass);
+        funcBuilder.setReceiverType(
+            BTypeDefPtr::arcast(overriden->receiverType)
+        );
 
         funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
         return overriden->vtableSlot;
@@ -687,7 +675,7 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
     args->push_back(funcDef->returnType);
 
     // if there is a receiver, push that
-    TypeDefPtr rcvrType = funcDef->getReceiverType();
+    TypeDefPtr rcvrType = funcDef->receiverType;
     if (rcvrType)
         args->push_back(rcvrType.get());
 
@@ -782,7 +770,7 @@ ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
     if (funcCall->receiver) {
         assert(funcDef && "funcPtr instead of funcDef");
         funcCall->receiver->emit(context)->handleTransient(context);
-        narrow(funcCall->receiver->type.get(), funcDef->getReceiverType());
+        narrow(funcCall->receiver->type.get(), funcDef->receiverType.get());
         receiver = lastValue;
         valueArgs.push_back(receiver);
     } else {
@@ -1672,11 +1660,12 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         BArgVarDefImpl *thisImpl = BArgVarDefImplPtr::arcast(thisVar->impl);
         Value *inst = thisImpl->rep;
         Context *classCtx = context.getClassContext().get();
+        BTypeDefPtr receiverType = funcDef->receiverType;
         Value *thisRep =
             IncompleteSpecialize::emitSpecialize(context,
                                                  classType,
                                                  inst,
-                                                 funcDef->pathToFirstDeclaration
+                                                 receiverType.get()
                                                  );
         // lookup the "this" variable, and replace its rep
 //        VarDefPtr thisVar = context.ns->lookUp("this");

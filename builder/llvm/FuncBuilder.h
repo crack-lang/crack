@@ -66,6 +66,7 @@ public:
     void setArgs(const std::vector<model::ArgDefPtr> &args);
 
     void setReceiverType(BTypeDef *type) {
+        funcDef->receiverType = type;
         receiverType = type;
     }
 

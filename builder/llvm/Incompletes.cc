@@ -27,22 +27,6 @@ using namespace builder::mvll;
 // XXX defined in LLVMBuilder.cc
 extern Type * llvmIntType;
 
-namespace {
-    // utility
-    Value *narrowToAncestor(IRBuilder<> &builder,
-                            Value *receiver,
-                            const TypeDef::AncestorPath &path
-                            ) {
-        for (TypeDef::AncestorPath::const_iterator iter = path.begin();
-             iter != path.end();
-             ++iter
-             )
-            receiver = builder.CreateStructGEP(receiver, iter->index);
-
-        return receiver;
-    }
-} // namespace
-
 // IncompleteInstVarRef
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarRef, Value);
 
@@ -444,7 +428,7 @@ Value *IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
                                             BasicBlock *unwindDest
                                             ) {
     BTypeDef *receiverType =
-            BTypeDefPtr::acast(funcDef->getReceiverType());
+            BTypeDefPtr::arcast(funcDef->receiverType);
     assert(receiver->getType() == receiverType->rep);
 
     // get the underlying vtable
@@ -609,20 +593,22 @@ Value *IncompleteVirtualFunc::emitCall(Context &context,
 
 // IncompleteSpecialize
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteSpecialize, Value);
-void * IncompleteSpecialize::operator new(size_t s) {
+void *IncompleteSpecialize::operator new(size_t s) {
     return User::operator new(s, 1);
 }
 
-Instruction * IncompleteSpecialize::clone_impl() const {
+Instruction *IncompleteSpecialize::clone_impl() const {
     return new IncompleteSpecialize(getType(), value,
-                                    ancestorPath
+                                    curType,
+                                    ancestorType
                                     );
 }
 
 IncompleteSpecialize::IncompleteSpecialize(
     Type *type,
     Value *value,
-    const TypeDef::AncestorPath &ancestorPath,
+    BTypeDef *curType,
+    BTypeDef *ancestorType,
     Instruction *insertBefore
 ) :
     PlaceholderInstruction(
@@ -632,7 +618,8 @@ IncompleteSpecialize::IncompleteSpecialize(
         OperandTraits<IncompleteSpecialize>::operands(this)
     ),
     value(value),
-    ancestorPath(ancestorPath) {
+    curType(curType),
+    ancestorType(ancestorType) {
 
     Op<0>() = value;
 }
@@ -640,7 +627,8 @@ IncompleteSpecialize::IncompleteSpecialize(
 IncompleteSpecialize::IncompleteSpecialize(
     Type *type,
     Value *value,
-    const TypeDef::AncestorPath &ancestorPath,
+    BTypeDef *curType,
+    BTypeDef *ancestorType,
     BasicBlock *parent
 ) :
     PlaceholderInstruction(
@@ -650,7 +638,8 @@ IncompleteSpecialize::IncompleteSpecialize(
         OperandTraits<IncompleteSpecialize>::operands(this)
     ),
     value(value),
-    ancestorPath(ancestorPath) {
+    curType(curType),
+    ancestorType(ancestorType) {
 
     Op<0>() = value;
 }
@@ -659,16 +648,18 @@ Value *IncompleteSpecialize::emitSpecializeInner(
     IRBuilder<> &builder,
     Type *type,
     Value *value,
-    const TypeDef::AncestorPath &ancestorPath
+    BTypeDef *curType,
+    BTypeDef *ancestorType
 ) {
     // XXX won't work for virtual base classes
 
     // create a constant offset from the start of the derived
     // class to the start of the base class
-    Value *offset = narrowToAncestor(builder,
-                                     Constant::getNullValue(type),
-                                     ancestorPath
-                                     );
+    Value *offset = IncompleteNarrower::emitGEP(builder,
+                                                curType,
+                                                ancestorType,
+                                                Constant::getNullValue(type)
+                                                );
 
     // convert to an integer and subtract from the pointer to the
     // base class.
@@ -684,7 +675,8 @@ void IncompleteSpecialize::insertInstructions(IRBuilder<> &builder) {
     replaceAllUsesWith(emitSpecializeInner(builder,
                                            getType(),
                                            value,
-                                           ancestorPath
+                                           curType,
+                                           ancestorType
                                            )
                        );
 }
@@ -696,19 +688,21 @@ Value *IncompleteSpecialize::emitSpecialize(
     Context &context,
     BTypeDef *type,
     Value *value,
-    const TypeDef::AncestorPath &ancestorPath
+    BTypeDef *ancestorType
 ) {
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
 
     if (type->complete) {
         return emitSpecializeInner(llvmBuilder.builder, type->rep,
                                    value,
-                                   ancestorPath
+                                   type,
+                                   ancestorType
                                    );
     } else {
         PlaceholderInstruction *placeholder =
             new IncompleteSpecialize(type->rep, value,
-                                     ancestorPath,
+                                     type,
+                                     ancestorType,
                                      llvmBuilder.builder.GetInsertBlock()
                                      );
         type->addPlaceholder(placeholder);

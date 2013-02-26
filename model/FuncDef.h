@@ -59,9 +59,9 @@ class FuncDef : public VarDef {
         TypeDefPtr returnType;
         NamespacePtr ns;
 
-        // for a virtual function, this is the path to the base class 
-        // where the vtable is defined
-        TypeDef::AncestorPath pathToFirstDeclaration;
+        // For a method, this is the type of the receiver.  Null for a 
+        // non-method.
+        TypeDefPtr receiverType;
 
         // for a virtual function, this is the vtable slot position.
         unsigned vtableSlot;
@@ -114,14 +114,6 @@ class FuncDef : public VarDef {
          */
         bool isVirtualOverride() const;
 
-        /**
-         * Returns the "receiver type."  For a non-virtual function, this 
-         * is simply the type that the function was declared in.  For a 
-         * virtual function, it is the type of the base class in which the 
-         * function was first declared.
-         */
-        TypeDef *getReceiverType() const;
-        
         /**
          * Returns the "this" type of the function.  This is always either 
          * the receiver type or a specialization of it.

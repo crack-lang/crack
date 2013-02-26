@@ -1,17 +1,16 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_Incompletes_h_
 #define _builder_llvm_Incompletes_h_
 
 #include "PlaceholderInstruction.h"
 #include "model/Context.h"
-#include "model/TypeDef.h"
 #include <vector>
 
 // for reasons I don't understand, we have to specialize the OperandTraits
@@ -361,7 +360,7 @@ s */
 class IncompleteSpecialize : public PlaceholderInstruction {
 private:
     Value *value;
-    model::TypeDef::AncestorPath ancestorPath;
+    BTypeDef *curType, *ancestorType;
 
 public:
     // allocate space for 1 operand
@@ -375,22 +374,25 @@ public:
      */
     IncompleteSpecialize(llvm::Type *type,
                          llvm::Value *value,
-                         const model::TypeDef::AncestorPath &ancestorPath,
+                         BTypeDef *curType,
+                         BTypeDef *ancestorType,
                          llvm::Instruction *insertBefore = 0
                          );
 
     IncompleteSpecialize(llvm::Type *type,
                          llvm::Value *value,
-                         const model::TypeDef::AncestorPath &ancestorPath,
+                         BTypeDef *curType,
+                         BTypeDef *ancestorType,
                          llvm::BasicBlock *parent
                          );
 
     static Value *emitSpecializeInner(
-            llvm::IRBuilder<> &builder,
-            llvm::Type *type,
-            llvm::Value *value,
-            const model::TypeDef::AncestorPath &ancestorPath
-            );
+        llvm::IRBuilder<> &builder,
+        llvm::Type *type,
+        llvm::Value *value,
+        BTypeDef *curType,
+        BTypeDef *ancestorType
+    );
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
 
@@ -398,11 +400,11 @@ public:
     // target class is defined, emits a placeholder instruction if it
     // is not.
     static Value *emitSpecialize(
-            model::Context &context,
-            BTypeDef *type,
-            llvm::Value *value,
-            const model::TypeDef::AncestorPath &ancestorPath
-            );
+        model::Context &context,
+        BTypeDef *type,
+        llvm::Value *value,
+        BTypeDef *ancestorType
+    );
 
     CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

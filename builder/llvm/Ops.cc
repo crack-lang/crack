@@ -55,7 +55,7 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         TypeDef *ltype, *funcLType;                                         \
         if (receiver) {                                                     \
             ltype = receiver->type.get();                                   \
-            funcLType = func->getReceiverType();                            \
+            funcLType = func->receiverType.get();                           \
             receiver->emit(context)->handleTransient(context);              \
         } else {                                                            \
             ltype = args[arg]->type.get();                                  \

@@ -138,16 +138,7 @@ string FuncDef::getDisplayName() const {
 }
 
 bool FuncDef::isVirtualOverride() const {
-    return flags & virtualized && pathToFirstDeclaration.size();
-}
-
-TypeDef *FuncDef::getReceiverType() const {
-    TypeDef *result;
-    if (pathToFirstDeclaration.size())
-        result = pathToFirstDeclaration.back().ancestor.get();
-    else
-        result = TypeDefPtr::cast(owner);
-    return result;
+    return flags & virtualized && receiverType != owner;
 }
 
 TypeDef *FuncDef::getThisType() const {

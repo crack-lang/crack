@@ -93,17 +93,9 @@ void VTableBuilder::addToAll(BFuncDef *func) {
 // add a new function entry to the appropriate VTable
 void VTableBuilder::add(BFuncDef *func) {
 
-    // find the ancestor whose vtable this function needs to go
-    // into
-    BTypeDef *ancestor;
-    TypeDef::AncestorPath &path = func->pathToFirstDeclaration;
-    if (path.size())
-        ancestor = BTypeDefPtr::arcast(path.back().ancestor);
-    else
-        ancestor = BTypeDefPtr::acast(func->getOwner());
-    
-    // now find the ancestor of "ancestor" with the first vtable
-    ancestor = ancestor->findFirstVTable(vtableBaseType);
+    // find the ancestor of "ancestor" with the first vtable
+    BTypeDefPtr curType = func->receiverType;
+    BTypeDef *ancestor = curType->findFirstVTable(vtableBaseType);
 
     // if the function comes from VTableBase, we have to insert
     // the function into _all_ of the vtables - this is because
