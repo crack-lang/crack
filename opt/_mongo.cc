@@ -30,7 +30,7 @@ byteptr bson_cursor_get_oid_crk(bson_cursor *c) {
         if (bson_cursor_get_oid(c, &oid)) return (byteptr)oid;
         return NULL;
      }
-gboolean bson_cursor_get_boolean_crk(bson_cursor *c) {
+bool bson_cursor_get_boolean_crk(bson_cursor *c) {
         gboolean dest;
         if (bson_cursor_get_boolean(c, &dest)) return (bool)dest;
         return false;

@@ -245,7 +245,7 @@
     byteptr bson_cursor_get_oid(bson_cursor c);
 
     // Get the value stored at the cursor, as a boolean.
-    @inject 'gboolean bson_cursor_get_boolean_crk(bson_cursor *c) {
+    @inject 'bool bson_cursor_get_boolean_crk(bson_cursor *c) {
         gboolean dest;
         if (bson_cursor_get_boolean(c, &dest)) return (bool)dest;
         return false;

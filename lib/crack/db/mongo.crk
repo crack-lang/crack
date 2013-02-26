@@ -6,7 +6,8 @@
 //
 // Higher level classes from mongo client binding
 
-import crack.lang Buffer, CString;
+import crack.lang Buffer, CString, InvalidStateError, AssertionError;
+import crack.io Formatter;
 import crack.time Time;
 import crack.ext._mongo
     BSON_BINARY_SUBTYPE_GENERIC, BSON_BINARY_SUBTYPE_FUNCTION,
@@ -23,7 +24,7 @@ import crack.ext._mongo
     MONGO_INDEX_BACKGROUND, MONGO_INDEX_SPARSE,
 
     // Types
-    bson, bson_cursor, mongo_connection, mongo_packet, mongo_sync_connection, 
+    bson, bson_cursor, mongo_connection, mongo_packet, mongo_sync_connection,
     mongo_sync_cursor, mongo_sync_pool, mongo_sync_pool_connection,
 
     // Function names
@@ -134,28 +135,45 @@ import crack.ext._mongo
     mongo_connection_set_timeout;
 
 int MONGO_CONN_LOCAL = -1;
-class BSON;
 
 class BSON {
     bson _b;
+    int _type;
+    Buffer _buf; // If we were passed a buffer, we need a reference to keep it
+                 // from being freed
 
     // Create a new BSON object.
-    oper init() : _b = bson_new() {}
+    oper init() : _b = bson_new(), _type = BSON_TYPE_DOCUMENT {
+    }
 
-    // Copy constructor
-    oper init(bson b) : _b = b {
-        
+    // Wrapper constructor
+    oper init(bson b) : _b = b, _type = BSON_TYPE_DOCUMENT {
+    }
+
+    // Create a new BSON object.
+    oper init(int t) : _b = bson_new(), _type = t {
+    }
+
+    // Wrapper constructor
+    oper init(bson b, int t) : _b = b, _type = t {
     }
 
     // Create a new BSON object, preallocating a given amount of space.
-    oper init(int32 size) : _b = bson_new_sized(size) {}
+    oper init(int32 size) : _b = bson_new_sized(size),
+                            _type = BSON_TYPE_DOCUMENT {
+    }
 
     // Create a BSON object from existing data.
-    
-    oper init(byteptr data, int32 size) :
-              _b = bson_new_from_data(data, size) {
+    oper init(byteptr data, int32 size) : _b = bson_new_from_data(data, size),
+                                          _type = BSON_TYPE_DOCUMENT {
     }
-    
+
+    oper init(Buffer b) : _b = bson_new_from_data(b.buffer, int32(b.size)),
+                          _type = BSON_TYPE_DOCUMENT,
+                          _buf = b {
+    }
+                             
+
     // Finish a BSON object.
     bool finish() {
         return bson_finish(_b);
@@ -165,7 +183,11 @@ class BSON {
     bool reset() {
         return bson_reset(_b);
     }
-    
+
+    int type() {
+        return _type;
+    }
+
     // Free the memory associated with a BSON object.
     oper del() {
         if (!(_b is null)) bson_free(_b);
@@ -181,7 +203,7 @@ class BSON {
         return Buffer(bson_data(_b), uint(bson_size(_b)));
     }
 
-    bson bson() {
+    bson get_bson() { // using underscore to avoid confusion
         return _b;
     }
 
@@ -201,12 +223,12 @@ class BSON {
 
     // Append a BSON document to a BSON object.
     @final bool appendDocument(CString name, BSON doc) {
-        return bson_append_document(_b, name.buffer, doc.bson());
+        return bson_append_document(_b, name.buffer, doc.get_bson());
     }
 
     // Append a BSON array to a BSON object.
     @final bool appendArray(CString name, BSON arr) {
-        return bson_append_array(_b, name.buffer, arr.bson());
+        return bson_append_array(_b, name.buffer, arr.get_bson());
     }
 
     // Append a BSON binary blob to a BSON object.
@@ -263,7 +285,7 @@ class BSON {
     // Append Javascript code(with scope) to a BSON object.
     bool appendJavascriptScope(CString name, Buffer js, BSON scope) {
         return bson_append_javascript_w_scope(_b, name.buffer, js.buffer,
-                                              int32(js.size), scope.bson());
+                                              int32(js.size), scope.get_bson());
     }
 
     // Append a double to a BSON object.
@@ -285,226 +307,291 @@ class BSON {
     bool appendInt64(CString name, int64 i) {
         return bson_append_int64(_b, name.buffer, i);
     }
+
+    // This class should not really be used directly
+    class BSONCursor {
+        bson_cursor _c;
+        bson _ib;
+        BSON _B;
+
+        // Create  cursor positioned at the beginning of the document
+        oper init(BSON B) : _B = B {
+            _ib = B.get_bson();
+            _c = bson_cursor_new(_ib);
+        }
+
+        // Create a new cursor positioned at a given key.
+        oper init(BSON B, CString name) : _B = B {
+            _ib = B.get_bson();
+            _c = bson_find(_ib, name.buffer);
+        }
+
+        // Delete a cursor, and free up all resources used by it.
+        oper del() {
+            bson_cursor_free(_c);
+        }
+
+        // Position the cursor to the next key.
+        bool next() {
+            return bson_cursor_next(_c);
+        }
+
+        // Move the cursor to a given key, past the current one.
+        bool findNext(CString name) {
+            return bson_cursor_find_next(_c, name.buffer);
+        }
+
+        // Move the cursor to a given key.
+        bool find(CString name) {
+            return bson_cursor_find(_c, name.buffer);
+        }
+
+        // Determine the type of the current element.
+        int tpe() {
+            return bson_cursor_type(_c);
+        }
+
+        // Retrieve the type of the current element, as string.
+        CString typeString(){
+            return CString(bson_cursor_type_as_string(_c), false);
+        }
+
+        // Determine the name of the current elements key.
+        CString key() {
+            return CString(bson_cursor_key(_c), false);
+        }
+
+        // Get the value stored at the cursor, as string.
+        CString getString() {
+            return CString(bson_cursor_get_string(_c), false);
+        }
+
+        // Get the value stored at the cursor, as a double.
+        float64 getFloat64() {
+            return bson_cursor_get_double(_c);
+        }
+
+        // Get the value stored at the cursor, as a BSON document.
+        BSON getDocument() {
+            return BSON(bson_cursor_get_document(_c), BSON_TYPE_DOCUMENT);
+        }
+
+        // Get the value stored at the cursor, as a BSON array.
+        BSON getArray() {
+            return BSON(bson_cursor_get_array(_c), BSON_TYPE_DOCUMENT);
+        }
+
+        // Get the value stored at the cursor, as an ObjectID.
+        CString getOID() {
+            return CString(bson_cursor_get_oid(_c), false);
+        }
+
+        // Get the value stored at the cursor, as a boolean.
+        bool getBool() {
+            return bson_cursor_get_boolean(_c);
+        }
+
+        // Get the value stored at the cursor, as an UTC datetime.
+        Time getUTCDateTime(){
+            millisecs := bson_cursor_get_utc_datetime(_c);
+            s := millisecs/1000;
+            return Time(int32(s), int32((millisecs - s*1000)*1000000));
+        }
+
+        // Get the value stored at the cursor, as javascript code.
+        CString getJavascript() {
+             return CString(bson_cursor_get_javascript(_c),false);
+        }
+
+        // Get the value stored at the cursor, as a symbol.
+        CString getSymbol(){
+            return CString(bson_cursor_get_symbol(_c), false);
+        }
+
+        // Get the value stored at the cursor, as a 32-bit integer.
+        int32 getInt32() {
+            return bson_cursor_get_int32(_c);
+        }
+
+        // Get the value stored at the cursor, as a timestamp.
+        int64 getTimeStamp() {
+            return bson_cursor_get_timestamp(_c);
+        }
+
+        // Get the value stored at the cursor, as a 64-bit integer.
+        int64 getInt64() {
+            return bson_cursor_get_int64(_c);
+        }
+    }
+
+   void formatTo(Formatter fmt) {
+        if (_type == BSON_TYPE_ARRAY) fmt.write("[");
+        else fmt.write("{");
+        
+        c := bson_cursor_new(_b);
+        first := true;
+
+        while (bson_cursor_next(c)) {
+            if (!first) fmt.write(", ");
+            else first = false;
+
+            fmt `$(CString(bson_cursor_key(c), false)): `;
+            t := bson_cursor_type(c);
+
+            if (t == BSON_TYPE_NONE) fmt.write("NONE");
+            else if (t == BSON_TYPE_DOUBLE) fmt `$(bson_cursor_get_double(c))`;
+            else if (t == BSON_TYPE_STRING) fmt `"$(CString(bson_cursor_get_string(c), false))"`;
+            else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c)))`;
+            else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c)))`;
+            else if (t == BSON_TYPE_BINARY) fmt.write("<binary>");
+            else if (t == BSON_TYPE_OID) fmt.write(CString(bson_cursor_get_oid(c), false));
+            else if (t == BSON_TYPE_BOOLEAN) fmt.write(bson_cursor_get_boolean(c) ? "true" : "false");
+            else if (t == BSON_TYPE_UTC_DATETIME) fmt `$(bson_cursor_get_utc_datetime(c))`;
+            else if (t == BSON_TYPE_NULL) fmt.write("null");
+            else if (t == BSON_TYPE_JS_CODE) fmt `<code>$(CString(bson_cursor_get_javascript(c), false))</code>`;
+            else if (t == BSON_TYPE_SYMBOL) fmt.write(CString(bson_cursor_get_symbol(c), false));
+            else if (t == BSON_TYPE_INT32) fmt `$(bson_cursor_get_int32(c))`;
+            else if (t == BSON_TYPE_TIMESTAMP) fmt `$(bson_cursor_get_timestamp(c))`;
+            else if (t == BSON_TYPE_INT64) fmt `$(bson_cursor_get_int64(c))`;
+            else fmt `<$(CString(bson_cursor_type_as_string(c), false))>`;
+        }
+
+        fmt.write("}");
+    }
+
+    BSONCursor cursor() {
+        return BSONCursor(this);
+    }
+
 }
-
-class BSONCursor {
-    bson_cursor _c;
-    bson _b;
-
-    // Create  cursor positioned at the beginning of the document
-    oper init(BSON b) : _b = b.bson(),
-                        _c = bson_cursor_new(b.bson()) {
-    }
-
-    // Create a new cursor positioned at a given key.
-    oper init(BSON b, CString name) : _b = b.bson(), 
-        _c = bson_find(_b, name.buffer) {
-    }
-
-    // Delete a cursor, and free up all resources used by it.
-    oper del() {
-        bson_cursor_free(_c);
-    }
-
-    // Position the cursor to the next key.
-    bool next() {
-        return bson_cursor_next(_c);
-    }
-
-    // Move the cursor to a given key, past the current one.
-    bool findNext(CString name) {
-        return bson_cursor_find_next(_c, name.buffer);
-    }
-
-    // Move the cursor to a given key.
-    bool find(CString name) {
-        return bson_cursor_find(_c, name.buffer);
-    }
-
-    // Determine the type of the current element.
-    int type() {
-        return bson_cursor_type(_c);
-    }
-
-    // Retrieve the type of the current element, as string.
-    CString typeString(){
-        return CString(bson_cursor_type_as_string(_c), false);
-    }
-
-    // Determine the name of the current elements key.
-    CString key() {
-        return CString(bson_cursor_key(_c), false);
-    }
-    
-    // Get the value stored at the cursor, as string.
-    CString getString() {
-        return CString(bson_cursor_get_string(_c), false);
-    }
-
-    // Get the value stored at the cursor, as a double.
-    float64 getFloat64() {
-        return bson_cursor_get_double(_c);
-    }
-
-    // Get the value stored at the cursor, as a BSON document.
-    BSON getDocument() {
-        return BSON(bson_cursor_get_document(_c));
-    }
-
-    // Get the value stored at the cursor, as a BSON array.
-    BSON getArray() {
-        return BSON(bson_cursor_get_array(_c));
-    }
-
-    // Get the value stored at the cursor, as an ObjectID.
-    CString getOID() {
-        return CString(bson_cursor_get_oid(_c), false);
-    }
-
-    // Get the value stored at the cursor, as a boolean.
-    bool getBool() {
-        return bson_cursor_get_boolean(_c);
-    }
-
-    // Get the value stored at the cursor, as an UTC datetime.
-    Time getUTCDateTime(){
-        millisecs := bson_cursor_get_utc_datetime(_c);
-        s := millisecs/1000;
-        return Time(int32(s), int32((millisecs - s*1000)*1000000));
-    }
-
-    // Get the value stored at the cursor, as javascript code.
-    CString getJavascript() {
-         return CString(bson_cursor_get_javascript(_c),false);
-    }
-
-    // Get the value stored at the cursor, as a symbol.
-    CString getSymbol(){
-        return CString(bson_cursor_get_symbol(_c), false);
-    }
-
-    // Get the value stored at the cursor, as a 32-bit integer.
-    int32 getInt32() {
-        return bson_cursor_get_int32(_c);
-    }
-
-    // Get the value stored at the cursor, as a timestamp.
-    int64 getTimeStamp() {
-        return bson_cursor_get_timestamp(_c);
-    }
-
-    // Get the value stored at the cursor, as a 64-bit integer.     
-    int64 getInt64() {
-        return bson_cursor_get_int64(_c);
-    }
-}
-
-class MongoSync;
 
 class MongoSync {
-
     mongo_sync_connection _m;
+    bool _owner = true;
+    
+    void _checkConnected() {
+        if (_m is null) throw InvalidStateError("Not connected");
+    }
 
     // Synchronously connect to a MongoDB server.
     oper init(CString address, int port, bool slaveOK) :
             _m = mongo_sync_connect(address.buffer, port, slaveOK) {
     }
 
-    mongo_sync_connection mongo() {
+    mongo_sync_connection get_mongo() {
         return _m;
     }
 
-    oper init (mongo_sync_connection m) : _m = m {}
+    oper init (mongo_sync_connection m) : _m = m {
+        _owner = false;
+    }
+
+    oper init (mongo_sync_connection m, bool takeOwnership) : _m = m {
+        _owner = takeOwnership ;
+    }
+
+    bool connect(CString address, int port, bool slaveOK) {
+        if (!(_m is null))
+            throw InvalidStateError("Already connected");
+        _m = mongo_sync_connect(address.buffer, port, slaveOK);
+        return !(_m is null);
+    }
 
     // Add a seed to an existing MongoDB connection.
     bool addSeed(CString host, int port) {
+        _checkConnected();
         return mongo_sync_conn_seed_add(_m, host.buffer, port);
     }
 
     // Attempt to connect to another member of a replica set.
     MongoSync reconnect(bool forceMaster) {
+        _checkConnected();
         return MongoSync(mongo_sync_reconnect(_m, forceMaster));
     }
 
     // Close and free a synchronous MongoDB connection.
-    oper del(){
+    void disconnect() {
         if (!(_m is null)) mongo_sync_disconnect(_m);
         _m = null;
     }
 
+    oper del(){
+        if (_owner) disconnect();
+    }
+
     // Retrieve the state of the SLAVE_OK flag from a sync connection.
     bool getSlaveOK() {
+        _checkConnected();
         return  mongo_sync_conn_get_slaveok(_m);
     }
 
     // Set the SLAVE_OK flag on a sync connection.
     bool setSlaveOK(bool slaveOK) {
+        _checkConnected();
         return mongo_sync_conn_set_slaveok(_m, slaveOK);
     }
 
     // Retrieve the state of the safe mode flag from a sync connection.
     bool getSafeMode() {
+        _checkConnected();
         return mongo_sync_conn_get_safe_mode(_m);
     }
 
     // Set the safe mode flag on a sync connection.
     bool setSafeMode(bool safeMode) {
+        _checkConnected();
         return mongo_sync_conn_set_safe_mode(_m, safeMode);
     }
 
     // Get the state of the auto-reconnect flag from a sync connection.
     bool getAutoReconnect() {
+        _checkConnected();
         return mongo_sync_conn_get_auto_reconnect(_m);
     }
 
     // Set the state of the auto-reconnect flag on a sync connection.
     bool setAutoReconnect(bool autoReconnect) {
+        _checkConnected();
         return mongo_sync_conn_set_auto_reconnect(_m, autoReconnect);
     }
 
     // Get the maximum size of a bulk insert package.
     int32 getMaxInsertSize() {
+        _checkConnected();
         return mongo_sync_conn_get_max_insert_size(_m);
     }
 
     // Set the maximum size of a bulk insert package.
     bool setMaxInsertSize(int32 maxSize) {
+        _checkConnected();
         return mongo_sync_conn_set_max_insert_size(_m, maxSize);
     }
 
     // Command methods
     // Send an update command to MongoDB.
     bool update(CString ns, int32 flags, BSON selector, BSON update) {
+        _checkConnected();
         return mongo_sync_cmd_update(_m, ns.buffer, flags,
-                                     selector.bson(), update.bson());
+                                     selector.get_bson(), update.get_bson());
     }
 
-    // Send an insert command to MongoDB. TODO bind
+    // Send an insert command to MongoDB.
     bool insert(CString ns, BSON doc) {
-        return mongo_sync_cmd_insert(_m, ns.buffer, doc.bson());
+        _checkConnected();
+        return mongo_sync_cmd_insert(_m, ns.buffer, doc.get_bson());
     }
 
     // Send an insert command to MongoDB.
     bool insertN(CString ns, int32 n, BSON docs) {
-        return mongo_sync_cmd_insert_n(_m, ns.buffer, n, docs.bson());
+        _checkConnected();
+        return mongo_sync_cmd_insert_n(_m, ns.buffer, n, docs.get_bson());
     }
-
-    // Send a query command to MongoDB. TODO add
-    // mongo_packet mongo_sync_cmd_query(mongo_sync_connection conn, byteptr ns,
-    //                                   int32 flags, int32 skip, int32 ret,
-    //                                   bson query, bson sel);
-
-    // Send a get more command to MongoDB. TODO add
-    // mongo_packet mongo_sync_cmd_get_more(mongo_sync_connection conn, byteptr ns,
-    //                                       int32 ret, int64 cursor_id);
 
     // Send a delete command to MongoDB.
     bool delete(CString ns, int32 flags, BSON sel) {
-        return mongo_sync_cmd_delete(_m, ns.buffer, flags, sel.bson());
+        _checkConnected();
+        return mongo_sync_cmd_delete(_m, ns.buffer, flags, sel.get_bson());
     }
-
-    // Send a kill_cursors command to MongoDB. TODO bind
-    // bool mongo_sync_cmd_kill_cursors(mongo_sync_connection conn, int32 n,...);
 
     // Send a custom command to MongoDB. TODO add
     // mongo_packet mongo_sync_cmd_custom(mongo_sync_connection conn, byteptr db,
@@ -512,7 +599,8 @@ class MongoSync {
 
     // Send a count() command to MongoDB.
     float64 count(CString db, CString coll, BSON query) {
-        return mongo_sync_cmd_count(_m, db.buffer, coll.buffer, query.bson());
+        _checkConnected();
+        return mongo_sync_cmd_count(_m, db.buffer, coll.buffer, query.get_bson());
     }
 
     // Create a new MongoDB collection. TODO bind
@@ -521,11 +609,13 @@ class MongoSync {
 
     // Check whether a collection exists in MongoDB.
     BSON exists(CString db, CString coll) {
+        _checkConnected();
         return BSON(mongo_sync_cmd_exists(_m, db.buffer, coll.buffer));
     }
 
     // Send a drop() command to MongoDB.
     bool drop(CString db, CString coll) {
+        _checkConnected();
         return mongo_sync_cmd_drop(_m, db.buffer, coll.buffer);
     }
 
@@ -535,46 +625,99 @@ class MongoSync {
 
     // Reset the last error variable in MongoDB.
     bool resetError(CString db) {
+        _checkConnected();
         return mongo_sync_cmd_reset_error(_m, db.buffer);
     }
 
     // Check whether the current node is the master.
     bool isMaster() {
+        _checkConnected();
         return mongo_sync_cmd_is_master(_m);
     }
 
     // Send a PING command to MongoDB.
     bool ping() {
+        _checkConnected();
         return mongo_sync_cmd_ping(_m);
     }
 
     // Add a user to MongoDB.
     bool addUser(CString db, CString user, CString pw) {
+        _checkConnected();
         return mongo_sync_cmd_user_add(_m, db.buffer, user.buffer, pw.buffer);
     }
 
     // Remove a user from MongoDB.
     bool removeUser(CString db, CString user) {
+        _checkConnected();
         return mongo_sync_cmd_user_remove(_m, db.buffer, user.buffer);
     }
 
     // Authenticate a user with MongoDB.
     bool authUser(CString db, CString user, CString pw) {
+        _checkConnected();
         return mongo_sync_cmd_authenticate(_m, db.buffer, user.buffer, pw.buffer);
     }
 
     // Create an index.
     bool createIndex(CString ns, BSON key, int options) {
-        return mongo_sync_cmd_index_create(_m, ns.buffer, key.bson(), options);
+        _checkConnected();
+        return mongo_sync_cmd_index_create(_m, ns.buffer, key.get_bson(), options);
     }
 
     // Drop an index.
     bool dropIndex(CString ns, BSON key) {
-        return mongo_sync_cmd_index_drop(_m, ns.buffer, key.bson());
+        _checkConnected();
+        return mongo_sync_cmd_index_drop(_m, ns.buffer, key.get_bson());
     }
 
     // Drop all indexes from a namespace.
     bool dropIndexAll(CString ns) {
+        _checkConnected();
         return mongo_sync_cmd_index_drop_all(_m, ns.buffer);
+    }
+
+    class MongoSyncCursor {
+        mongo_sync_cursor _c;
+        mongo_packet _p;
+        MongoSync _M;
+
+        oper init(MongoSync M, CString ns, mongo_packet p) :
+             _p = p, _M = M {
+            _c = mongo_sync_cursor_new (_M.get_mongo(), ns.buffer, p);
+            if (_c is null)
+                throw AssertionError("Unable to create cursor");
+        }
+
+        bool next() {
+            return mongo_sync_cursor_next(_c);
+        }
+
+        BSON data() {
+            return BSON(mongo_sync_cursor_get_data(_c));
+        }
+
+        oper del() {
+            if (!(_c is null))
+                mongo_sync_cursor_free (_c);
+            if (!(_p is null))
+                mongo_wire_packet_free (_p);
+        }
+    }
+
+    // Send a query command to MongoDB
+    @final
+    MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
+                          BSON query, BSON sel) {
+        p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret,
+                                   query.get_bson(), sel.get_bson());
+        return MongoSyncCursor(this, ns, p);
+    }
+
+    // Send a get more command to MongoDB
+    @final
+    MongoSyncCursor more(CString ns, int32 ret, int64 cursor_id) {
+        p := mongo_sync_cmd_get_more(_m, ns.buffer, ret, cursor_id);
+        return MongoSyncCursor(this, ns, p);
     }
 }
