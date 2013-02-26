@@ -78,24 +78,24 @@ Deserializer::ReadObjectResult Deserializer::readObject(
             cerr << "reading new object " << name << " id = " << id << endl;
         userData = 0;
         spug::RCBasePtr obj = reader.read(*this);
-        objMap[id >> 1] = obj;
+        (*objMap)[id >> 1] = obj;
         return ReadObjectResult(obj, true, userData);
     } else {
         // the object should already exist
         if (Serializer::trace)
             cerr << "reading existing object " << name <<  " id = " << id <<
                 endl;
-        ObjMap::iterator iter = objMap.find(id >> 1);
-        assert(iter != objMap.end() && "Unable to resolve serialized object");
+        ObjMap::iterator iter = objMap->find(id >> 1);
+        assert(iter != objMap->end() && "Unable to resolve serialized object");
         return ReadObjectResult(iter->second, false, 0);
     }
 }
 
 void Deserializer::registerObject(int id, spug::RCBase *object) {
-    SPUG_CHECK(objMap.find(id) == objMap.end(),
+    SPUG_CHECK(objMap->find(id) == objMap->end(),
                "The object id " << id << " is already registered."
                );
-    objMap[id] = object;
+    (*objMap)[id] = object;
 }
 
 double Deserializer::readDouble(const char *name) {

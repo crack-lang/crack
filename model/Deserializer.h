@@ -11,6 +11,7 @@
 #include <string>
 #include <map>
 
+#include "spug/RCBase.h"
 #include "spug/RCPtr.h"
 
 namespace spug {
@@ -26,8 +27,12 @@ class Deserializer {
         std::istream &src;
 
         // the deserializer's object map
-        typedef std::map<int, spug::RCBasePtr> ObjMap;
-        ObjMap objMap;
+        struct ObjMap : public std::map<int, spug::RCBasePtr>,
+                        public spug::RCBase {
+            ObjMap() {}
+        };
+        SPUG_RCPTR(ObjMap);
+        ObjMapPtr objMap;
 
     public:
 
@@ -45,13 +50,26 @@ class Deserializer {
         // Allows an object reader to pass back information to the
         // higher-level calling code for use after the object is deserialized.
         // This is copied into the ReadObjectResult structure returned by
-        // readObject().
+        // readObject().  This doesn't get communicated across child
+        // deserializers.
         int userData;
 
-        Deserializer(std::istream &src) : src(src) {}
+        Deserializer(std::istream &src) :
+            src(src),
+            objMap(new ObjMap()),
+            context(0) {
+        }
+
         Deserializer(std::istream &src, Context *context) :
             src(src),
+            objMap(new ObjMap()),
             context(context) {
+        }
+
+        Deserializer(Deserializer &parent, std::istream &src) :
+            src(src),
+            objMap(parent.objMap),
+            context(parent.context) {
         }
 
         unsigned int readUInt(const char *name);
