@@ -46,14 +46,14 @@ void Serializer::write(size_t length, const void *data, const char *name) {
 }
 
 bool Serializer::writeObject(const RCBase *object, const char *name) {
-    ObjMap::iterator iter = objMap.find(object);
-    if (iter == objMap.end()) {
+    ObjMap::iterator iter = objMap->find(object);
+    if (iter == objMap->end()) {
 
         // new object
         if (trace)
             cerr << "writing new object " << name << endl;
-        int id = lastId++;
-        objMap[object] = id;
+        int id = objMap->lastId++;
+        (*objMap)[object] = id;
         write(id << 1 | 1, "objectId");
         return true;
     } else {
@@ -65,10 +65,10 @@ bool Serializer::writeObject(const RCBase *object, const char *name) {
 }
 
 int Serializer::registerObject(const RCBase *object) {
-    ObjMap::iterator iter = objMap.find(object);
-    if (iter == objMap.end()) {
-        int id = lastId++;
-        objMap[object] = id;
+    ObjMap::iterator iter = objMap->find(object);
+    if (iter == objMap->end()) {
+        int id = objMap->lastId++;
+        (*objMap)[object] = id;
         return id;
     } else {
         return iter->second;

@@ -11,6 +11,7 @@
 #include <map>
 #include <string>
 #include "spug/RCBase.h"
+#include "spug/RCPtr.h"
 
 namespace model {
 
@@ -24,9 +25,13 @@ class Serializer {
         // pointer.  This is part of the mechanism that allows us to serialize
         // an object that is used in multiple locations only the first time it
         // is used.
-        typedef std::map<const spug::RCBase *, int> ObjMap;
-        ObjMap objMap;
-        int lastId;
+        struct ObjMap : public std::map<const spug::RCBase *, int>,
+                        public spug::RCBase {
+            int lastId;
+            ObjMap() : lastId(0) {}
+        };
+        SPUG_RCPTR(ObjMap);
+        ObjMapPtr objMap;
 
     public:
         // trace serialization/deesrialization to cerr.
@@ -46,7 +51,18 @@ class Serializer {
             modNameSize = 64,
             varNameSize = 16;
 
-        Serializer(std::ostream &dst) : dst(dst), lastId(0), module(0) {}
+        Serializer(std::ostream &dst) :
+            dst(dst),
+            module(0),
+            objMap(new ObjMap()) {
+        }
+
+        /** Constructs a nested serializer. */
+        Serializer(Serializer &parent, std::ostream &dst) :
+            dst(dst),
+            module(parent.module),
+            objMap(parent.objMap) {
+        }
 
         /** Serialize an integer. */
         void write(unsigned int val, const char *name);
