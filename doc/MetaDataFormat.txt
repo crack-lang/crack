@@ -31,13 +31,34 @@ array[type] is a uint "count" followed by count instances of "type"
 ref[type] is a way to define and reference objects that exist more than once
 in the serialized data, including objects that are self-referential.  It is
 stored as a uint object identifier followed by an instance of type if this is
-the first occurrence of the instance.  The identifier has a low-bit of 1 in
-this case, a low bit of zero if it is merely a reference to an existing
-instance.  For example, if we had some object represented by <data>, the first
-time we serialized it we might serialze it as "07 <data>", the second time
-simply as "06".  In this example, the object id is actually 3, we shift by one
-and set the low-bit to 1 when it is initially defined.  (I don't think the
-"first definition" bit was strictly necessary).
+the first occurrence (the "definition") of the instance.  The identifier has
+a low-bit of 1 in this case, a low bit of zero if it is merely a reference to
+an existing instance.  For example, if we had some object represented by
+<data>, the first time we serialized it we might serialze it as "07 <data>",
+the second time simply as "06".  In this example, the object id is actually
+3, we shift by one and set the low-bit to 1 when it is initially defined.  (I
+don't think the "first definition" bit was strictly necessary).
+
+For structures with "optional" fields, we use a modified form of Google protobuf conventions.
+Optional fields are serialized as a blob at the end of the structure.  If the
+structure has optional fields, but none are present for a particular instance,
+this blob gets serialized as a single zero value byte.  For every optional
+field that is present, we start with a uint describing the field and its type
+and then its data (see the protobuf documentation for details on how this
+works).  In these cases, we describe these fields as:
+
+    optional type name = tag
+
+So, for example:
+
+    optional blob someName = 1
+
+We override wire type 3 (the deprecated "begin group" type) for reference
+types.  Since the size of these types can not be known without knowledge of
+the field, we have to impose an order on optional data fields to preserve
+backwards compatibility.  A reader should the optional area until it
+encounters a field tag that it doesn't recognize, then ignore the remainder of
+the area.
 
 So given this, our meta-data format is:
 
@@ -161,6 +182,7 @@ So given this, our meta-data format is:
         ref[Type] returnType
         uint flags;
         array[VarDef] args
+        optional ref[Type] receiverType = 1
     }
 
     ConstVarDef {

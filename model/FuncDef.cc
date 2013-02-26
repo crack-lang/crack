@@ -10,6 +10,7 @@
 
 #include <sstream>
 #include "builder/Builder.h"
+#include "spug/check.h"
 #include "Deserializer.h"
 #include "Context.h"
 #include "ArgDef.h"
@@ -221,6 +222,18 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
          ++iter
          )
         (*iter)->serialize(serializer, false, 0);
+    
+    if (flags & method) {
+        ostringstream temp;
+        Serializer sub(serializer, temp);
+        // field id = 1 (<< 3) | type = 3 (reference)
+        sub.write(11, "receiverType.header");
+        receiverType->serialize(sub, false, 0);
+
+        serializer.write(temp.str(), "optional");
+    } else {
+        serializer.write(0, "optional");
+    }
 }
 
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
@@ -232,6 +245,17 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     for (int i = 0; i < argCount; ++i)
         args.push_back(ArgDef::deserialize(deser));
 
+    // read the optional data, the only field we're interested in is the 
+    // receiverType
+    string optionalDataString = deser.readString(256, "optional");
+    istringstream optionalData(optionalDataString);
+    Deserializer sub(deser, optionalData);
+    TypeDefPtr receiverType;
+    if (optionalDataString.size() && 
+        sub.readUInt("receiverType.header") == 11) {
+        receiverType = TypeDef::deserialize(sub);
+    }
+
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
         name,
@@ -240,6 +264,7 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     
     result->returnType = returnType;
     result->flags = flags;
+    result->receiverType = receiverType;
 
     return result;
 }
