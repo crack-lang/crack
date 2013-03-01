@@ -1179,7 +1179,6 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
 
         result->parents = bases;
 
-
         // 'defs' - fill in the body.
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,
@@ -1188,6 +1187,8 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
                                             );
         ContextStackFrame<Deserializer> cstack(deser, classContext.get());
         result->deserializeDefs(deser);
+        
+        result->complete = true;
     }
 
     return result;

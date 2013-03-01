@@ -70,6 +70,8 @@ public:
         return digest == crack::util::SourceDigest::fromFile(source);
     }
 
+    virtual void onDeserialized(model::Context &context);
+
     virtual void runMain(Builder &builder);
 };
 

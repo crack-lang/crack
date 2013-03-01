@@ -176,3 +176,32 @@ void VTableBuilder::emit(BTypeDef *type) {
     assert(type->firstVTableType);
 }
 
+void VTableBuilder::materialize(BTypeDef *type) {
+    for (VTableMap::iterator iter = vtables.begin();
+         iter != vtables.end();
+         ++iter
+         ) {
+
+        Constant *gvar = module->getGlobalVariable(iter->second->name);
+        SPUG_CHECK(gvar, 
+                   "No global variable defined for vtable " << 
+                    iter->second->name
+                   );
+        type->vtables[iter->first] = gvar;
+
+        // store the first VTable pointer (a pointer-to-pointer to the
+        // struct type, actually, because that is what we need to cast our
+        // VTableBase instances to)
+        if (iter->second == firstVTable) {
+            type->firstVTableType = PointerType::getUnqual(gvar->getType());
+            PointerType *pt = cast<PointerType>(gvar->getType());
+            StructType *st = cast<StructType>(pt->getElementType());
+            
+            // next vtable slot is the size of the table -1 (for the trailing 
+            // null entry)
+            type->nextVTableSlot = st->getNumElements() - 1;
+        }
+    }
+
+    assert(type->firstVTableType);
+}

@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_VTableBuilder_h_
 #define _builder_llvm_VTableBuilder_h_
@@ -92,6 +92,12 @@ public:
 
     // emit all of the VTable globals
     void emit(BTypeDef *type);
+
+    /**
+     * Materialize the vtable structures in the type by extracting them from
+     * the module.
+     */
+    void materialize(BTypeDef *type);
 
 };
 

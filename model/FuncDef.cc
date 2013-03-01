@@ -229,6 +229,12 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
         // field id = 1 (<< 3) | type = 3 (reference)
         sub.write(11, "receiverType.header");
         receiverType->serialize(sub, false, 0);
+        
+        if (flags & virtualized) {
+            // field id = 2 (<< 3) | type = 0 (varint)
+            sub.write(16, "vtableSlot.header");
+            sub.write(vtableSlot, "vtableSlot");
+        }
 
         serializer.write(temp.str(), "optional");
     } else {
@@ -248,12 +254,27 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     // read the optional data, the only field we're interested in is the 
     // receiverType
     string optionalDataString = deser.readString(256, "optional");
-    istringstream optionalData(optionalDataString);
-    Deserializer sub(deser, optionalData);
     TypeDefPtr receiverType;
-    if (optionalDataString.size() && 
-        sub.readUInt("receiverType.header") == 11) {
-        receiverType = TypeDef::deserialize(sub);
+    int vtableSlot = 0;
+    if (optionalDataString.size()) {
+        istringstream optionalData(optionalDataString);
+        Deserializer sub(deser, optionalData);
+        bool eof;
+        int header;
+        while ((header = sub.readUInt("optional.header", &eof)) || !eof) {
+            switch (header) {
+                case 11:
+                    receiverType = TypeDef::deserialize(sub);
+                    break;
+                case 16:
+                    vtableSlot = sub.readUInt("vtableSlot");
+                    break;
+                    
+                default:
+                    // this is just a field we don't know about.
+                    break;
+            }
+        }
     }
 
     FuncDefPtr result = deser.context->builder.materializeFunc(
@@ -265,6 +286,7 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     result->returnType = returnType;
     result->flags = flags;
     result->receiverType = receiverType;
+    result->vtableSlot = vtableSlot;
 
     return result;
 }

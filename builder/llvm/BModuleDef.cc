@@ -39,6 +39,9 @@ void BModuleDef::recordDependency(ModuleDef *other) {
     orderedForCache.push_back(def.get());
 }
 
+void BModuleDef::onDeserialized(Context &context) {
+    onNamespaceDeserialized(context);
+}
 
 void BModuleDef::runMain(Builder &builder) {
     llvm::ExecutionEngine *execEng =

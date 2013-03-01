@@ -185,6 +185,12 @@ class Namespace : public virtual spug::RCBase {
          * namespace.
          */
         void deserializeDefs(Deserializer &deser);
+        
+        /**
+         * Helper function for closing off module serialization.  Calls 
+         * "onDeserialized()" for all defs in the namespace.
+         */
+        void onNamespaceDeserialized(Context &context);
 };
 
 } // namespace model

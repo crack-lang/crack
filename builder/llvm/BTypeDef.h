@@ -131,6 +131,9 @@ public:
      */
     void fixIncompletes(model::Context &context);
 
+    // See VarDef.
+    virtual void onDeserialized(model::Context &context);
+
 };
 
 } // end namespace builder::vmll

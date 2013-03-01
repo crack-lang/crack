@@ -183,6 +183,7 @@ So given this, our meta-data format is:
         uint flags;
         array[VarDef] args
         optional ref[Type] receiverType = 1
+        optional uint vtableSlot = 2
     }
 
     ConstVarDef {

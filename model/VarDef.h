@@ -172,6 +172,13 @@ class VarDef : public virtual spug::RCBase {
          */
         static VarDefPtr deserialize(Deserializer &deser);
         
+        /**
+         * Called on a module definition when a module is completely 
+         * deserialized.  The module may choose to call this recursively on 
+         * all definitions that it contains.
+         */
+        virtual void onDeserialized(Context &context) {}
+        
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

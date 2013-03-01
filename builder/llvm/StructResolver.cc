@@ -17,6 +17,7 @@
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/DerivedTypes.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/User.h>
 #include <llvm/Constants.h>
 
@@ -92,6 +93,17 @@ void StructResolver::run(StructMapType *m) {
 
 }
 
+namespace {
+    template <typename T>
+    string llvmStr(const T &obj) {
+        string temp;
+        raw_string_ostream out(temp);
+        obj.print(out);
+//        out << obj;
+        return out.str();
+    }
+}
+
 Type *StructResolver::maybeGetMappedType(Type *t) {
 
     if (typeMap->find(t) != typeMap->end()) {
@@ -107,6 +119,36 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         SR_DEBUG t->dump();
         SR_DEBUG cout << "\n";
         return t;
+    }
+
+    if (isa<FunctionType>(t)) {
+        FunctionType *funcType = dyn_cast<FunctionType>(t);
+        SR_DEBUG cout << "\t\t## func type: " << llvmStr(*funcType) << endl;
+        bool remap = false;
+        Type *retType = maybeGetMappedType(funcType->getReturnType());
+        if (retType != funcType->getReturnType())
+            remap = true;
+        
+        vector<Type *> argTypes;
+        argTypes.reserve(funcType->getNumParams());
+        for (FunctionType::param_iterator pi = funcType->param_begin();
+             pi != funcType->param_end();
+             ++pi
+             ) {
+            Type *argType = maybeGetMappedType(*pi);
+            argTypes.push_back(argType);
+            remap = remap || argType != *pi;
+        }
+        
+        if (remap) {
+            SR_DEBUG cout << "\t\treplacing func type: " << 
+                llvmStr(*funcType) << endl;
+            Type *m = FunctionType::get(retType, argTypes, 
+                                        funcType->isVarArg()
+                                        );
+            (*typeMap)[t] = m;
+            return maybeGetMappedType(t);
+        }
     }
 
     // short cut if not composite

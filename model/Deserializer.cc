@@ -20,12 +20,17 @@
 using namespace std;
 using namespace model;
 
-unsigned int Deserializer::readUInt(const char *name) {
+unsigned int Deserializer::readUInt(const char *name, bool *eof) {
     uint8_t b = 0x80;
     unsigned val = 0, offset = 0;
     while (b & 0x80) {
         if (src.eof())
-            throw DeserializationError("EOF deserializing meta-data");
+            if (eof) {
+                *eof = true;
+                return 0;
+            } else {
+                throw DeserializationError("EOF deserializing meta-data");
+            }
         b = src.get();
 
         // see if we've got the last byte
@@ -35,6 +40,9 @@ unsigned int Deserializer::readUInt(const char *name) {
 
     if (Serializer::trace)
         cerr << "read uint " << name << ": " << val << endl;
+
+    if (eof)
+        *eof = false;
     return val;
 }
 

@@ -140,16 +140,16 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
     for (TypeVec::iterator parent = parents.begin();
          parent != parents.end();
          ++parent
-         )
+         ) {
         if (parent->get() == vtableBaseType) {
             return this;
         } else if ((*parent)->hasVTable) {
             BTypeDef *par = BTypeDefPtr::arcast(*parent);
             return par->findFirstVTable(vtableBaseType);
         }
+    }
 
-    cerr << "class is " << name << endl;
-    assert(false && "Failed to find first vtable");
+    SPUG_CHECK(false, "Failed to find first vtable for " << getFullName());
 }
 
 GlobalVariable *BTypeDef::getClassInstRep(Module *module,
@@ -292,4 +292,19 @@ void BTypeDef::fixIncompletes(Context &context) {
     incompleteChildren.clear();
     
     complete = true;
+}
+
+void BTypeDef::onDeserialized(Context &context) {
+    // reconstruct the VTable references for the type.
+    if (hasVTable) {
+        LLVMBuilder *builder = LLVMBuilderPtr::cast(&context.builder);
+        BTypeDef *vtableBaseType = 
+            BTypeDefPtr::arcast(context.construct->vtableBaseType);
+        VTableBuilder vtb(builder, vtableBaseType);
+        createAllVTables(vtb, ".vtable." + getFullName());
+        vtb.materialize(this);
+    }
+
+    // now fix up all of our contents.    
+    onNamespaceDeserialized(context);
 }

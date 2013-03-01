@@ -245,3 +245,11 @@ void Namespace::deserializeDefs(Deserializer &deser) {
         }
     }
 }
+
+void Namespace::onNamespaceDeserialized(Context &context) {
+    for (VarDefMap::iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         )
+        iter->second->onDeserialized(context);
+}

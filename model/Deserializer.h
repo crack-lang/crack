@@ -72,7 +72,13 @@ class Deserializer {
             context(parent.context) {
         }
 
-        unsigned int readUInt(const char *name);
+        /**
+         * Read a protobuf-style Varint from the stream. If the end-of-stream
+         * is encountered and 'eof' is not null, returns 0 and *eof will be
+         * set to true.  If it is null and an end-of-stream is encountered,
+         * throws a DeserializationError.
+         */
+        unsigned int readUInt(const char *name, bool *eof = 0);
 
         /**
          * Read a sized blob (block of binary data) from the stream.

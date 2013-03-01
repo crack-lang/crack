@@ -181,6 +181,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     deser.context->ns = mod.get();
     mod->deserializeDefs(deser);
+    mod->onDeserialized(*deser.context);
     return mod;
 }
-
