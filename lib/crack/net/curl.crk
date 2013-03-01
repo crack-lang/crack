@@ -269,11 +269,11 @@ class CurlEasy {
     }
 
     CString strError() {
-      return CString(easy_strerror(_lastResult), false);
+        return CString(easy_strerror(_lastResult), false);
     }
 
     CString strError(int result) {
-      return CString(easy_strerror(result), false);
+        return CString(easy_strerror(result), false);
     }
 
     int pause(int bitmask) {

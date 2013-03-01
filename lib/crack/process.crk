@@ -373,8 +373,8 @@ class Process {
                                      'CRK_PIPE_STDIN'
                                     );
         if (isRunning()) {
-          close(_pd.stdin);
-          _pd.stdin = -1;
+            close(_pd.stdin);
+            _pd.stdin = -1;
         }
     }
 
