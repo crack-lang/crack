@@ -109,6 +109,13 @@ class FuncDef : public VarDef {
         virtual bool isSerializable(const Namespace *ns) const;
         
         /**
+         * The unique name of the function is its full name and its argument 
+         * types.  'ns' can be provided in cases where the function has not 
+         * yet been added to a namespace.
+         */
+        std::string getUniqueId(Namespace *ns = 0) const;
+        
+        /**
          * Returns true if the function is an override of a virtual method
          * in an ancestor class.
          */

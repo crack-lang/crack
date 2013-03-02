@@ -61,14 +61,16 @@ void FuncBuilder::finish(bool storeDef) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
+    ContextPtr defCtx = context.getParent()->getDefContext();
     Function *func = Function::Create(llvmFuncType,
                                       linkage,
-                                      funcDef->getFullName(),
+                                      funcDef->getUniqueId(defCtx->ns.get()),
                                       builder.module
                                       );
     func->setCallingConv(llvm::CallingConv::C);
     if (!funcDef->symbolName.empty())
         func->setName(funcDef->symbolName);
+    string fname = func->getName();
 
     // back-fill builder data and set arg names
     Function::arg_iterator llvmArg = func->arg_begin();

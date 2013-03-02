@@ -138,6 +138,28 @@ string FuncDef::getDisplayName() const {
     return out.str();
 }
 
+string FuncDef::getUniqueId(Namespace *ns) const {
+    ostringstream out;
+    SPUG_CHECK(owner || ns, 
+               "getUniqueId() called without a namespace or owner for "
+                "function " << name
+               );
+    if (!ns) ns = owner;
+    out << ns->getNamespaceName() << "." << name << "(";
+    bool first = true;
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
+         ++iter
+         ) {
+        if (first)
+            first = false;
+        else
+            out << ",";
+        out << (*iter)->type->getFullName();
+    }
+    out << ")";
+    return out.str();
+}
+
 bool FuncDef::isVirtualOverride() const {
     return flags & virtualized && receiverType != owner;
 }

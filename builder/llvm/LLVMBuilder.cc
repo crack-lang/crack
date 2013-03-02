@@ -1650,6 +1650,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     }
 
     func = funcDef->getRep(*this);
+    string fffname = func->getName();
 
     createFuncStartBlocks(name);
 
@@ -1687,6 +1688,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
                               FuncDef *funcDef) {
+    string fffname = BFuncDefPtr::cast(funcDef)->getRep(*this)->getName();
     // in certain conditions, (multiple terminating branches) we can end up
     // with an empty block.  If so, remove.
     BasicBlock *block = builder.GetInsertBlock();
@@ -1787,6 +1789,7 @@ namespace {
                          new LocalNamespace(objClass, objClass->name),
                          context.compileNS.get()
                          );
+        localCtx.incref();
         localCtx.addDef(new ArgDef(objClass, "this"));
 
         BTypeDef *classType =
@@ -1804,7 +1807,7 @@ namespace {
         funcBuilder.setSymbolName(
             SPUG_FSTR(context.parent->ns->getNamespaceName() << '.' <<
                       objClass->name <<
-                      ".oper class"
+                      ".oper class()"
                       )
         );
 
@@ -2309,19 +2312,15 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
 FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
                                         const ArgVec &args
                                         ) {
+    BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
+    result->args = args;
 
-    ostringstream tmp;
-    tmp << context.ns->getNamespaceName() << "." << name;
-    const string &fullName = tmp.str();
-    // XXX arg types need to be part of a function signature
+    string fullName = result->getUniqueId(context.ns.get());
     Function *func = module->getFunction(fullName);
     SPUG_CHECK(func,
                "Function " << fullName << " not found in module " <<
                 module->getModuleIdentifier()
                );
-    // XXX add flags.
-    BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
-    result->args = args;
     result->setRep(func);
     return result;
 }

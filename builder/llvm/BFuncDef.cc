@@ -21,7 +21,7 @@ void BFuncDef::setOwner(model::Namespace *o) {
     fullName.clear();    
     // if an overridden symbolName isn't set, we use the canonical name
     if (symbolName.empty())
-        rep->setName(getFullName());
+        rep->setName(getUniqueId());
 }
 
 llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
