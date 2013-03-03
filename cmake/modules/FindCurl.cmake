@@ -28,16 +28,20 @@ if (NOT WIN32)
 endif (NOT WIN32)
 
 if (CURL_FOUND)
-    find_path(CURL_INCLUDE_DIR curl.h 
-              HINTS ${PC_CURL_INCLUDEDIR} ${PC_CURL_INCLUDE_DIRS} 
-              PATH_SUFFIXES curl)
+    find_path(CURL_INCLUDE_DIR curl.h HINTS ${PC_CURL_INCLUDEDIR}
+                               ${PC_CURL_INCLUDE_DIRS} PATH_SUFFIXES curl
+             )
 
-    find_library(CURL_LIBRARY NAMES curl HINTS ${PC_CURL_LIBDIR} ${PC_CURL_LIBRARY_DIRS})
+    find_library(CURL_LIBRARY NAMES curl HINTS ${PC_CURL_LIBDIR}
+                             ${PC_CURL_LIBRARY_DIRS}
+                )
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(CURL DEFAULT_MSG CURL_INCLUDE_DIR CURL_LIBRARY)
+    find_package_handle_standard_args(CURL DEFAULT_MSG CURL_INCLUDE_DIR
+                                           CURL_LIBRARY
+                                     )
 
-    set(CURL_LIBRARIES ${CURL_LIBRARY} )
+    set(CURL_LIBRARIES ${CURL_LIBRARY})
 
     mark_as_advanced(CURL_INCLUDE_DIR CURL_LIBRARIES CURL_LIBRARY)
 endif (CURL_FOUND)

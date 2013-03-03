@@ -31,19 +31,27 @@ if (MONGO_FOUND)
     find_path(GLIB_INCLUDE_DIR glib.h
               HINTS ${MONGO_INCLUDE_DIRS} 
               PATH_SUFFIXES glib-2.0)
+
     find_path(GLIB_CONFIG_DIR glibconfig.h
               HINTS ${MONGO_INCLUDE_DIRS} 
               PATH_SUFFIXES glib-2.0)
+
     find_path(MONGO_INCLUDE_DIR mongo.h
               HINTS ${MONGO_INCLUDE_DIRS} 
               PATH_SUFFIXES mongo-client)
 
-    find_library(MONGO_LIBRARY NAMES mongo-client HINTS ${PC_MONGO_LIBDIR} ${PC_MONGO_LIBRARY_DIRS})
+    find_library(MONGO_LIBRARY NAMES mongo-client HINTS ${PC_MONGO_LIBDIR}
+                               ${PC_MONGO_LIBRARY_DIRS}
+                )
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(MONGO DEFAULT_MSG MONGO_INCLUDE_DIR MONGO_LIBRARY)
+    find_package_handle_standard_args(MONGO DEFAULT_MSG MONGO_INCLUDE_DIR
+                                            MONGO_LIBRARY
+                                     )
 
-    set(MONGO_LIBRARIES ${MONGO_LIBRARY} )
+    set(MONGO_LIBRARIES ${MONGO_LIBRARY})
 
-    mark_as_advanced(MONGO_INCLUDE_DIR MONGO_LIBRARIES MONGO_LIBRARY GLIB_INCLUDE_DIR)
+    mark_as_advanced(MONGO_INCLUDE_DIR MONGO_LIBRARIES MONGO_LIBRARY
+                                       GLIB_INCLUDE_DIR
+                    )
 endif (MONGO_FOUND)
