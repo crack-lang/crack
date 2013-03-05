@@ -102,10 +102,10 @@ if (1) {
         cout `FAILED stack traces: no initial string\n`;
     
     # strip off the filename, get the last dotted segment of the name
-    if (split(tb[1], b'.')[-1] != 'g')
+    if (split(tb[1], b'.')[-1] != 'g()')
         cout `FAILED stack traces: first function not g: $(tb[1]) \n`;
     
-    if (split(tb[2], b'.')[-1] != 'f')
+    if (split(tb[2], b'.')[-1] != 'f()')
         cout `FAILED stack traces: first function not f: $(tb[2])\n`;
     
     if (tb[3] != 'Exception: this is a test')

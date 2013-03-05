@@ -259,8 +259,9 @@ if (1) {
         info := array[byteptr](3);
         getLocation(addr, info);
         
-        # store the last character of the function name in our array
-        funcs[cur++] = info[0][strlen(info[0]) - 1];
+        # store the 3rd from last character of the function name in our array
+        # (we store names as, e.g., 'f()', so this gets us the function name)
+        funcs[cur++] = info[0][strlen(info[0]) - 3];
         funcs[cur] = 0;
         free(info);
     }
