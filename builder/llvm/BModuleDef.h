@@ -37,9 +37,6 @@ public:
     void (*cleanup)();
     llvm::Module *rep;
 
-    // source text hash code, used for caching
-    crack::util::SourceDigest digest;
-
     // list of modules imported by this one, along with its imported symbols
     typedef std::map<BModuleDef*, model::ImportedDefVec > ImportListType;
     ImportListType importList;
@@ -54,7 +51,6 @@ public:
             ModuleDef(canonicalName, parent),
             cleanup(0),
             rep(rep0),
-            digest(),
             importList()
     {
     }
@@ -65,10 +61,6 @@ public:
     }
 
     void recordDependency(ModuleDef *other);
-
-    virtual bool matchesSource(const std::string &source) {
-        return digest == crack::util::SourceDigest::fromFile(source);
-    }
 
     virtual void onDeserialized(model::Context &context);
 

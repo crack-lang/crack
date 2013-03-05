@@ -142,6 +142,8 @@ StatState::~StatState() {
         context->construct->stats->setModule(oldModule.get());
 }
 
+bool Construct::traceCaching = false;
+
 Construct::ModulePath Construct::searchPath(
     const Construct::StringVec &path,
     Construct::StringVecIter moduleNameBegin,
@@ -206,6 +208,14 @@ Construct::ModulePath Construct::searchPath(
     }
     
     return ModulePath(empty, empty, empty, false, false);
+}
+
+Construct::ModulePath Construct::searchSourcePath(const string &path) const {
+    
+    if (path[0] == '/')
+        return ModulePath("", path, path, isFile(path), isDir(path));
+    
+    return searchPath(sourceLibPath, path, rootBuilder->options->verbosity);
 }
 
 bool Construct::isFile(const std::string &name) {
@@ -402,6 +412,8 @@ void Construct::parseModule(Context &context,
         stats->incParsed();
     }
     parser.parse();
+    if (rootContext->construct->cacheMode)
+        module->digest = SourceDigest::fromFile(path);
     module->cacheable = true;
     module->close(context);
 }
@@ -597,31 +609,29 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
         bool cached = false;
         if (rootContext->construct->cacheMode)
             modDef = context->materializeModule(canonicalName);
-        if (modDef && modDef->matchesSource(sourceLibPath)) {
+        if (modDef) {
+            if (traceCaching) 
+                cerr << "Reusing cached module " << canonicalName << endl;
             cached = true;
             if (rootBuilder->options->statsMode)
                 stats->incCached();
         } else {
-            
-            // if we got a stale module from the cache, use the relative 
-            // source path of that module (avoiding complications from cached 
-            // ephemeral modules).  Otherwise, just look it up in the library 
-            // path.
-            if (modDef)
-                modPath = searchPath(sourceLibPath, modDef->sourcePath,
-                                     rootBuilder->options->verbosity
-                                     );
-            else
-                modPath = searchPath(sourceLibPath, moduleNameBegin, 
-                                     moduleNameEnd, ".crk", 
-                                     rootBuilder->options->verbosity
-                                     );
+            modPath = searchPath(sourceLibPath, moduleNameBegin, 
+                                 moduleNameEnd, ".crk", 
+                                 rootBuilder->options->verbosity
+                                 );
             if (!modPath.found)
                 return 0;
+
+            if (traceCaching)
+                cerr << canonicalName << 
+                    " out-of-date ornot in the cache.  Building from: " << 
+                    modPath.path << endl;
+                        
             modDef = context->createModule(canonicalName, modPath.path);
+            modDef->sourcePath = modPath.relPath;
         }
 
-        modDef->sourcePath = modPath.relPath;
         moduleCache[canonicalName] = modDef;
 
         if (!cached) {
@@ -633,8 +643,6 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                 // directory
                 modDef->close(*context);
             }
-        } else {
-            // XXX hook to run/finish cached module
         }
 
         builderStack.pop();
@@ -795,6 +803,8 @@ int Construct::runScript(istream &src, const string &name) {
         modDef = context->materializeModule(canName);
     }
     if (modDef) {
+        if (traceCaching)
+            cerr << "Reusing cached script " << name << endl;
         cached = true;
         loadedModules.push_back(modDef);
         if (rootBuilder->options->statsMode)

@@ -13,6 +13,7 @@
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"
+#include "model/Construct.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/Serializer.h"
@@ -107,8 +108,9 @@ void usage(int retval) {
         << endl;
     cout << "                                 Modules supporting tracing:"
         << endl;
-    cout << "                                   Serializer"
+    cout << "                                   Caching, Serializer, "
         << endl;
+    cout << "                                   StructResolver" << endl;
     exit(retval);
 }
 
@@ -249,6 +251,8 @@ int main(int argc, char **argv) {
                     model::Serializer::trace = true;
                 } else if (!strcmp("StructResolver", optarg)) {
                     builder::mvll::StructResolver::trace = true;
+                } else if (!strcmp("Caching", optarg)) {
+                    model::Construct::traceCaching = true;
                 } else {
                     cerr << "Unknown trace module (-t): " << optarg << endl;
                     exit(1);

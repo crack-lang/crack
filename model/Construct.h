@@ -63,6 +63,7 @@ public:
         curState(start),
         parsedCount(0),
         cachedCount(0) {
+
         gettimeofday(&lastTime, NULL);
         for (int i = start; i <= end; i++)
             timing[i] = 0.0;
@@ -185,6 +186,9 @@ class Construct : public spug::RCBase, public Options {
         // if we keep statistics, they reside here
         ConstructStatsPtr stats;
 
+        // Trace caching decisions.
+        static bool traceCaching;
+
         /**
          * Search the specified path for a file with the name 
          * "moduleName.extension", if this does not exist, may also return the 
@@ -214,6 +218,12 @@ class Construct : public spug::RCBase, public Options {
                                      const std::string &relPath,
                                      int verbosity = 0
                                      );
+
+        /**
+         * Search the module source path for the specified file.  If the file 
+         * is an absolute path, checks for an absolute path of that name.
+         */
+        ModulePath searchSourcePath(const std::string &path) const;
 
         /**
          * Returns true if 'name' is a valid file.

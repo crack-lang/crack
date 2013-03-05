@@ -11,6 +11,7 @@
 
 #include <set>
 #include <vector>
+#include "util/SourceDigest.h"
 #include "ModuleDefMap.h"
 #include "Namespace.h"
 #include "VarDef.h"
@@ -63,6 +64,9 @@ class ModuleDef : public VarDef, public Namespace {
         // path to original source code on disk
         std::string sourcePath;
         
+        // MD5 digest of the source file the module was built from
+        crack::util::SourceDigest digest;
+        
         // true if the module should be persisted in the cache when closed.
         bool cacheable;
 
@@ -95,17 +99,6 @@ class ModuleDef : public VarDef, public Namespace {
          * Derived classes should override if it's important.
          */
         virtual void recordDependency(ModuleDef *other) {}
-
-        /**        
-         * Returns true if the module matches the source file found along the 
-         * given path.
-         */
-        bool matchesSource(const StringVec &libSearchPath);
-        
-        /**
-         * Returns true if the module matches the specific source file.
-         */
-        virtual bool matchesSource(const std::string &sourcePath) = 0;
 
         /**
          * Add the other module to this module's dependencies.

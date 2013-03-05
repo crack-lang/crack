@@ -17,7 +17,6 @@ struct MockModuleDef : public model::ModuleDef {
     }
 
     virtual void callDestructor() {}
-    virtual bool matchesSource(const std::string &path) { return false; }
     virtual void runMain(builder::Builder &builder) { }
 };
 

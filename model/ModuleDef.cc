@@ -32,23 +32,6 @@ bool ModuleDef::hasInstSlot() {
     return false;
 }
 
-bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
-    int i;
-    string fullSourcePath;
-    for (i = 0; i < libSearchPath.size(); ++i) {
-        fullSourcePath = libSearchPath[i] + "/" + sourcePath;
-        if (Construct::isFile(fullSourcePath))
-            break;
-    }
-
-    // if we didn't find the source file, assume the module is up-to-date
-    // (this will allow us to submit applications as a set of cache files).
-    if (i == libSearchPath.size())
-        return true;
-
-    return matchesSource(fullSourcePath);
-}
-
 void ModuleDef::addDependency(ModuleDef *other) {
     if (other != this &&
         dependencies.find(other->getNamespaceName()) == dependencies.end()
@@ -121,7 +104,9 @@ void ModuleDef::serialize(Serializer &serializer) const {
     serializer.module = this;
     serializer.write(CRACK_METADATA_V1, "magic");
 
-    // XXX we need to write the source hash.
+    // write source path and source digest
+    serializer.write(sourcePath, "sourcePath");
+    serializer.write(digest.asHex(), "sourceDigest");
 
     // write the dependencies
     serializer.write(dependencies.size(), "#deps");
@@ -143,7 +128,27 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
         return false;
 
-    //deser.readBlob()  // XXX read the source hash.
+    string sourcePath = deser.readString(Serializer::modNameSize, "sourcePath");
+    SourceDigest sourceDigest =
+        SourceDigest::fromHex(deser.readString(Serializer::modNameSize,
+                                               "sourceDigest"
+                                               )
+                              );
+
+    // check the digest against that of the actual source file (if the source
+    // file can be found)
+    Construct::ModulePath modPath =
+        deser.context->construct->searchSourcePath(sourcePath);
+    if (modPath.found) {
+        SourceDigest fileDigest = SourceDigest::fromFile(modPath.path);
+        if (fileDigest != sourceDigest) {
+            if (Construct::traceCaching)
+                cerr << "digests don't match for " << sourcePath <<
+                    " got " << sourceDigest.asHex() << " current = " <<
+                    fileDigest.asHex() << endl;
+            return false;
+        }
+    }
 
     // read and load the dependencies
     int count = deser.readUInt("#deps");
