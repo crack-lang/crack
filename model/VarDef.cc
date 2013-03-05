@@ -142,6 +142,85 @@ void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
     serializeExtern(serializer);
 }
 
+namespace {
+
+    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
+                                               string typeName,
+                                               int parmStart
+                                               );
+
+    VarDefPtr resolveName(Context &context, const string &moduleName,
+                           const string &symbolName
+                           ) {
+        // do a special check for array and function generics
+        if (moduleName == ".builtin") {
+            TypeDefPtr specialType;
+            int parmStart;
+            if (!symbolName.compare(0, 6, "array[")) {
+                specialType = context.construct->arrayType;
+                parmStart = 6;
+            } else if (!symbolName.compare(0, 9, "function[")) {
+                specialType = context.construct->functionType;
+                parmStart = 9;
+            }
+
+            if (specialType) {
+                return specialType->getSpecialization(
+                    context,
+                    parseTypeParameters(context, symbolName, parmStart).get()
+                );
+            }
+        }
+
+        ModuleDefPtr module = context.construct->getModule(moduleName);
+        SPUG_CHECK(module,
+                   "Unable to find module " << moduleName <<
+                    " which contains referenced symbol " << symbolName
+                   );
+        VarDefPtr var = module->lookUp(symbolName);
+        SPUG_CHECK(var,
+                   "Unable to find symbol " << moduleName << "." <<
+                    symbolName
+                   );
+        return var;
+    }
+
+    TypeDefPtr resolveType(Context &context, string fullTypeName) {
+        // find the end of the module name
+        int lastPeriod = -1;
+        for (int i = 0; i < fullTypeName.size() && fullTypeName[i] != '[';
+             ++i
+             ) {
+            if (fullTypeName[i] == '.')
+                lastPeriod = i;
+        }
+
+        SPUG_CHECK(lastPeriod > 0,
+                   "no module name found in type name: " << fullTypeName
+                   );
+        return resolveName(context, fullTypeName.substr(0, lastPeriod),
+                           fullTypeName.substr(lastPeriod + 1)
+                           );
+    }
+
+    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
+                                               string name,
+                                               int parmStart
+                                               ) {
+        TypeDef::TypeVecObjPtr parms = new TypeDef::TypeVecObj;
+        int i = parmStart;
+        while (name[i] != ']') {
+            int start = i;
+            for (; name[i] != ']' && name[i] != ','; ++i);
+            parms->push_back(resolveType(context, name.substr(start, i - start)));
+            if (name[i] == ',')
+                ++i;
+        }
+        return parms;
+    }
+
+} // anon namespace
+
 VarDefPtr VarDef::deserializeAliasBody(Deserializer &deser) {
     string moduleName = deser.readString(Serializer::modNameSize,
                                          "module"
@@ -153,18 +232,7 @@ VarDefPtr VarDef::deserializeAliasBody(Deserializer &deser) {
     for (int i = 0; i < depCount; ++i)
         TypeDef::deserialize(deser);
 
-    ModuleDefPtr mod = deser.context->construct->getModule(moduleName);
-    SPUG_CHECK(mod,
-               "Deserializing " << moduleName << "." << name <<
-                ": module could not be resolved."
-               );
-    VarDefPtr var = mod->lookUp(name);
-    SPUG_CHECK(mod,
-               "Deserializing " << moduleName << "." << name <<
-                ": name not defined in module."
-               );
-
-    return var;
+    return resolveName(*deser.context, moduleName, name);
 }
 
 namespace {

@@ -1023,93 +1023,12 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
 }
 
 namespace {
-
-    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
-                                               string typeName, 
-                                               int parmStart
-                                               );
-
-    TypeDefPtr resolveType(Context &context, const string &moduleName,
-                           const string &typeName
-                           ) {
-        // do a special check for array and function generics
-        if (moduleName == ".builtin") {
-            TypeDefPtr specialType;
-            int parmStart;
-            if (!typeName.compare(0, 6, "array[")) {
-                specialType = context.construct->arrayType;
-                parmStart = 6;
-            } else if (!typeName.compare(0, 9, "function[")) {
-                specialType = context.construct->functionType;
-                parmStart = 9;
-            }
-            
-            if (specialType) {
-                return specialType->getSpecialization(
-                    context,
-                    parseTypeParameters(context, typeName, parmStart).get()
-                );
-            }
-        }
-        
-        ModuleDefPtr module = context.construct->getModule(moduleName);
-        SPUG_CHECK(module, 
-                   "Unable to find module " << moduleName << 
-                    " which contains referenced type " << typeName
-                   );
-        VarDefPtr typeVar = module->lookUp(typeName);
-        SPUG_CHECK(typeVar, 
-                   "Unable to find type " << moduleName << "." <<
-                    typeName
-                   );
-        TypeDefPtr type = TypeDefPtr::rcast(typeVar);
-        SPUG_CHECK(type,
-                   "Name " << moduleName << "." << typeName << 
-                    " is not a type: " << *typeVar
-                   );
-        return type;
-    }
-    
-    TypeDefPtr resolveType(Context &context, string fullTypeName) {
-        // find the end of the module name
-        int lastPeriod = -1;
-        for (int i = 0; i < fullTypeName.size() && fullTypeName[i] != '[';
-             ++i
-             ) {
-            if (fullTypeName[i] == '.')
-                lastPeriod = i;
-        }
-        
-        SPUG_CHECK(lastPeriod > 0, 
-                   "no module name found in type name: " << fullTypeName
-                   );
-        return resolveType(context, fullTypeName.substr(0, lastPeriod),
-                           fullTypeName.substr(lastPeriod + 1)
-                           );
-    }
-
-    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
-                                               string name, 
-                                               int parmStart
-                                               ) {
-        TypeDef::TypeVecObjPtr parms = new TypeDef::TypeVecObj;
-        int i = parmStart;
-        while (name[i] != ']') {
-            int start = i;
-            for (; name[i] != ']' && name[i] != ','; ++i);
-            parms->push_back(resolveType(context, name.substr(start, i - start)));
-            if (name[i] == ',')
-                ++i;
-        }
-        return parms;
-    }
-
     struct TypeDefReader : public Deserializer::ObjectReader {
         virtual spug::RCBasePtr read(Deserializer &deser) const {
             int alias = deser.readUInt("isAlias");
             TypeDefPtr type;
             if (alias) {
-                type = TypeDefPtr::rcast(VarDef::deserializeAliasBody(deser));
+                type = TypeDefPtr::arcast(VarDef::deserializeAliasBody(deser));
                 deser.userData = 0;
             } else {
                 string name = deser.readString(16, "name");
@@ -1120,7 +1039,7 @@ namespace {
                 // XXX This may not always be the case, do something to verify.
                 Deserializer::ReadObjectResult result = 
                     deser.readObject(TypeDefReader(), "owner");
-                NamespacePtr owner = NamespacePtr::rcast(result.object);
+                NamespacePtr owner = NamespacePtr::arcast(result.object);
 
                 
                 // is this a generic?
@@ -1138,7 +1057,7 @@ namespace {
                     // type
                     Context::Scope scope =
                         ModuleDefPtr::rcast(owner) ? Context::module :
-                                                    Context::instance;
+                                                     Context::instance;
                     ContextPtr ownerContext =
                         deser.context->createSubContext(scope, owner.get());
                     type = 
@@ -1161,7 +1080,7 @@ namespace {
 TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
     Deserializer::ReadObjectResult readObj = 
         deser.readObject(TypeDefReader(), name ? name : "type");
-    TypeDefPtr result = TypeDefPtr::rcast(readObj.object);
+    TypeDefPtr result = TypeDefPtr::arcast(readObj.object);
 
     // if we're in a definition, read the base classes and defs.
     if (readObj.userData) {
