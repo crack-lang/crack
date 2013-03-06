@@ -405,6 +405,11 @@ void Construct::parseModule(Context &context,
                             const std::string &path,
                             istream &src
                             ) {
+    // first calculate the source digest (we'll need to assign that to any 
+    // ephemeral modules that we produce)
+    if (rootContext->construct->cacheMode)
+        module->digest = SourceDigest::fromFile(path);
+
     Toker toker(src, path.c_str());
     Parser parser(toker, &context);
     StatState sState(&context, ConstructStats::parser, module);
@@ -412,8 +417,6 @@ void Construct::parseModule(Context &context,
         stats->incParsed();
     }
     parser.parse();
-    if (rootContext->construct->cacheMode)
-        module->digest = SourceDigest::fromFile(path);
     module->cacheable = true;
     module->close(context);
 }

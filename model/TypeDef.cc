@@ -886,6 +886,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
 
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
+        module->digest = owner->digest;
 
         module->cacheable = true;    
         module->close(*modContext);
