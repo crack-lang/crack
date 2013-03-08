@@ -172,13 +172,11 @@ bool moduleReload() {
 
     istringstream src1(dep0Data.str());
     Deserializer deser1(src1, &context);
-    ModuleDef::readHeaderAndVerify(deser1);
     ModuleDefPtr dep0 = ModuleDef::deserialize(deser1, "dep0");
     construct.registerModule(dep0.get());
 
     istringstream src2(dep1Data.str());
     Deserializer deser2(src2, &context);
-    ModuleDef::readHeaderAndVerify(deser2);
     ModuleDefPtr dep1 = ModuleDef::deserialize(deser2, "dep1");
     construct.registerModule(dep1.get());
 
@@ -231,7 +229,6 @@ bool reloadOfSelfReferrentTypes() {
 
     istringstream src(data.str());
     Deserializer deser(src, &context);
-    ModuleDef::readHeaderAndVerify(deser);
     ModuleDefPtr dep0 = ModuleDef::deserialize(deser, "dep0");
 
     myType = dep0->lookUp("MyType");

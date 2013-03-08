@@ -128,12 +128,6 @@ class ModuleDef : public VarDef, public Namespace {
         void serialize(Serializer &serializer);
         
         /**
-         * Read the module header from the serializer, return true if the 
-         * cache data appears to be up-to-date.
-         */
-        static bool readHeaderAndVerify(Deserializer &serializer);
-
-        /**
          * Deserialize the remainder of the module meta-data.
          */        
         static ModuleDefPtr deserialize(Deserializer &deserializer,

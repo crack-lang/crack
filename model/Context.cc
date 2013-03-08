@@ -284,16 +284,9 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName,
     
     ifstream src(metaDataPath.c_str());
     Deserializer deser(src, this);
-    
-    // read the meta-data header, verify that it's up-to-date before we go any 
-    // further.
-    if (!ModuleDef::readHeaderAndVerify(deser))
-        return 0;
-    
+
+    // try to read the module
     ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);
-    
-//    ModuleDefPtr result =
-//        builder.materializeModule(*this, canonicalName, owner);
     if (result)
         ns = result;
     return result;

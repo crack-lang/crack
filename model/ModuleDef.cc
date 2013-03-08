@@ -124,9 +124,11 @@ void ModuleDef::serialize(Serializer &serializer) {
     metaDigest = serializer.hasher.getDigest();
 }
 
-bool ModuleDef::readHeaderAndVerify(Deserializer &deser) {
+ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
+                                    const string &canonicalName
+                                    ) {
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
-        return false;
+        return 0;
 
     string sourcePath = deser.readString(Serializer::modNameSize, "sourcePath");
     SourceDigest recordedSourceDigest =
@@ -146,7 +148,7 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser) {
                 cerr << "digests don't match for " << sourcePath <<
                     " got " << recordedSourceDigest.asHex() << " current = " <<
                     fileDigest.asHex() << endl;
-            return false;
+            return 0;
         }
     }
 
@@ -166,17 +168,14 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser) {
             if (Construct::traceCaching)
                 cerr << "meta digest doesn't match for dependency " <<
                     mod->getFullName() << ", need to rebuild " <<
-                    modPath.path << endl;
-            return false;
+                    canonicalName << endl;
+            return 0;
         }
     }
 
-    return true;
-}
+    // The cached meta-data is up-to-date.
 
-ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
-                                    const string &canonicalName
-                                    ) {
+    // deserialize the actual code through the builder.
     ModuleDefPtr mod =
         deser.context->builder.materializeModule(*deser.context, canonicalName,
                                                  0 // owner
