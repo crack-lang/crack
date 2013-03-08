@@ -12,6 +12,7 @@
 #include <string>
 #include "spug/RCBase.h"
 #include "spug/RCPtr.h"
+#include "util/Hasher.h"
 
 namespace model {
 
@@ -51,17 +52,25 @@ class Serializer {
             modNameSize = 64,
             varNameSize = 16;
 
+        // Digest of all bytes read while 'digestEnabled' is true.
+        crack::util::Hasher hasher;
+
+        // if true, every byte we write gets added to the digest.
+        bool digestEnabled;
+
         Serializer(std::ostream &dst) :
             dst(dst),
             module(0),
-            objMap(new ObjMap()) {
+            objMap(new ObjMap()),
+            digestEnabled(false) {
         }
 
         /** Constructs a nested serializer. */
         Serializer(Serializer &parent, std::ostream &dst) :
             dst(dst),
             module(parent.module),
-            objMap(parent.objMap) {
+            objMap(parent.objMap),
+            digestEnabled(false) {
         }
 
         /** Serialize an integer. */

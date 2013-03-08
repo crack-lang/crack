@@ -285,9 +285,9 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName,
     ifstream src(metaDataPath.c_str());
     Deserializer deser(src, this);
     
-    // XXX not sure what I'm going to do about source digests just yet.
-    SourceDigest *digest = 0;
-    if (!ModuleDef::readHeaderAndVerify(deser, *digest))
+    // read the meta-data header, verify that it's up-to-date before we go any 
+    // further.
+    if (!ModuleDef::readHeaderAndVerify(deser))
         return 0;
     
     ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);

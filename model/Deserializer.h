@@ -13,6 +13,7 @@
 
 #include "spug/RCBase.h"
 #include "spug/RCPtr.h"
+#include "util/Hasher.h"
 
 namespace spug {
     SPUG_RCPTR(RCBase);
@@ -54,22 +55,31 @@ class Deserializer {
         // deserializers.
         int userData;
 
+        // Hash of all of the data read while digestEnabled is true.
+        crack::util::Hasher hasher;
+
+        // If true, new data read is added to the digest.
+        bool digestEnabled;
+
         Deserializer(std::istream &src) :
             src(src),
             objMap(new ObjMap()),
-            context(0) {
+            context(0),
+            digestEnabled(false) {
         }
 
         Deserializer(std::istream &src, Context *context) :
             src(src),
             objMap(new ObjMap()),
-            context(context) {
+            context(context),
+            digestEnabled(false) {
         }
 
         Deserializer(Deserializer &parent, std::istream &src) :
             src(src),
             objMap(parent.objMap),
-            context(parent.context) {
+            context(parent.context),
+            digestEnabled(false) {
         }
 
         /**

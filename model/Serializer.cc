@@ -15,6 +15,7 @@
 using namespace spug;
 using namespace std;
 using namespace model;
+using crack::util::Hasher;
 
 bool Serializer::trace = false;
 
@@ -25,6 +26,8 @@ void Serializer::write(unsigned int val, const char *name) {
     // special case 0
     if (!val) {
         dst << static_cast<char>(val);
+        if (digestEnabled)
+            hasher.add(0);
         return;
     }
 
@@ -34,6 +37,8 @@ void Serializer::write(unsigned int val, const char *name) {
         if (val)
             b |= 0x80;
         dst << b;
+        if (digestEnabled)
+            hasher.add(b);
     }
 }
 
@@ -43,6 +48,8 @@ void Serializer::write(size_t length, const void *data, const char *name) {
         cerr << "write blob " << name << ": " << setw(length) <<
             static_cast<const char *>(data) << endl;
     dst.write(reinterpret_cast<const char *>(data), length);
+    if (digestEnabled)
+        hasher.add(data, length);
 }
 
 bool Serializer::writeObject(const RCBase *object, const char *name) {
@@ -83,4 +90,6 @@ void Serializer::writeDouble(double val, const char *name) {
     if (trace)
         cerr << "write double " << name << ": " << val << endl;
     dst.write(reinterpret_cast<const char *>(&val), sizeof(double));
+    if (digestEnabled)
+        hasher.add(&val, sizeof(double));
 }

@@ -139,7 +139,8 @@ MDNode *Cacher::writeEphemeralImport(BModuleDef *mod) {
     dList.push_back(MDString::get(getGlobalContext(), mod->getFullName()));
     
     // operand 3: digest
-    dList.push_back(MDString::get(getGlobalContext(), mod->digest.asHex()));
+    dList.push_back(MDString::get(getGlobalContext(), 
+                                  mod->sourceDigest.asHex()));
 
     return MDNode::get(getGlobalContext(), dList);
 }
@@ -148,7 +149,7 @@ void Cacher::writeMetadata() {
 
     // encode metadata into the bitcode
     addNamedStringNode("crack_md_version", Cacher::MD_VERSION);
-    addNamedStringNode("crack_origin_digest", modDef->digest.asHex());
+    addNamedStringNode("crack_origin_digest", modDef->sourceDigest.asHex());
     addNamedStringNode("crack_origin_path", modDef->sourcePath);
 
     vector<Value *> dList;
@@ -167,7 +168,7 @@ void Cacher::writeMetadata() {
                                       (*iIter).first->getFullName()));
         // op 2: digest
         dList.push_back(MDString::get(getGlobalContext(),
-                                      (*iIter).first->digest.asHex()));
+                                      (*iIter).first->sourceDigest.asHex()));
 
         // op 3..n: symbols to be imported (aliased)
         for (ImportedDefVec::const_iterator sIter = (*iIter).second.begin();
@@ -560,7 +561,7 @@ bool Cacher::readImports() {
         // load this module. if the digest doesn't match, we miss.
         // note module may come from cache or parser, we won't know
         m = context->construct->getModule(cname->getString().str());
-        if (!m || m->digest != iDigest)
+        if (!m || m->sourceDigest != iDigest)
             return false;
 
         // op 3..n: imported (namespace aliased) symbols from m
@@ -906,7 +907,8 @@ void Cacher::readEphemeralImport(MDNode *mnode) {
         << endl;
     BModuleDefPtr mod = 
         context->construct->getModule(canName->getString().str());
-    SPUG_CHECK(mod->digest == SourceDigest::fromHex(digest->getString().str()),
+    SPUG_CHECK(mod->sourceDigest == 
+                SourceDigest::fromHex(digest->getString().str()),
                "XXX Module digestfrom import doesn't match");
 }
 
@@ -1098,13 +1100,13 @@ bool Cacher::readMetadata() {
         return false;
 
     modDef->sourcePath = getNamedStringNode("crack_origin_path");
-    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
+    modDef->sourceDigest = SourceDigest::fromFile(modDef->sourcePath);
 
     // compare the digest stored in the bitcode against the current
     // digest of the source file on disk. if they don't match, we miss
     snode = getNamedStringNode("crack_origin_digest");
     SourceDigest bcDigest = SourceDigest::fromHex(snode);
-    if (bcDigest != modDef->digest)
+    if (bcDigest != modDef->sourceDigest)
         return false;
     
     // import list
@@ -1317,7 +1319,7 @@ void Cacher::saveToCache() {
         << " to file: " << cacheFile << endl;
 
     // digest the source file
-    modDef->digest = SourceDigest::fromFile(modDef->sourcePath);
+    modDef->sourceDigest = SourceDigest::fromFile(modDef->sourcePath);
 
     writeMetadata();
     writeBitcode(cacheFile);

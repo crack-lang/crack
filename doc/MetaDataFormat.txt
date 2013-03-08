@@ -92,7 +92,7 @@ So given this, our meta-data format is:
     # interface.
     Dependency {
         blob canonicalName
-        uint hashVal
+        blob metaDigest
     }
 
     Definitions {

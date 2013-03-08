@@ -64,8 +64,9 @@ class ModuleDef : public VarDef, public Namespace {
         // path to original source code on disk
         std::string sourcePath;
         
-        // MD5 digest of the source file the module was built from
-        crack::util::SourceDigest digest;
+        // MD5 digests of the source file the module was built from and the 
+        // meta-data.
+        crack::util::SourceDigest sourceDigest, metaDigest;
         
         // true if the module should be persisted in the cache when closed.
         bool cacheable;
@@ -124,15 +125,13 @@ class ModuleDef : public VarDef, public Namespace {
         /**
          * Write the module meta-data to the serializer.
          */
-        void serialize(Serializer &serializer) const;
+        void serialize(Serializer &serializer);
         
         /**
          * Read the module header from the serializer, return true if the 
          * cache data appears to be up-to-date.
          */
-        static bool readHeaderAndVerify(Deserializer &serializer,
-                                        const crack::util::SourceDigest &digest
-                                        );
+        static bool readHeaderAndVerify(Deserializer &serializer);
 
         /**
          * Deserialize the remainder of the module meta-data.

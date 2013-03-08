@@ -9,15 +9,20 @@
 #ifndef _builder_llvm_SourceDigest_h_
 #define _builder_llvm_SourceDigest_h_
 
+#include <stdint.h>
 #include <string>
 #include "md5.h"
 
 namespace crack { namespace util {
 
+class Hasher;
+
 /**
  * Class for creating MD5 digests.
  */
 class SourceDigest {
+
+    friend class Hasher;
 
     // MD5
     typedef md5_byte_t digest_byte_t;

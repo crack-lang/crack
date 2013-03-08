@@ -408,7 +408,7 @@ void Construct::parseModule(Context &context,
     // first calculate the source digest (we'll need to assign that to any 
     // ephemeral modules that we produce)
     if (rootContext->construct->cacheMode)
-        module->digest = SourceDigest::fromFile(path);
+        module->sourceDigest = SourceDigest::fromFile(path);
 
     Toker toker(src, path.c_str());
     Parser parser(toker, &context);
@@ -628,7 +628,7 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
 
             if (traceCaching)
                 cerr << canonicalName << 
-                    " out-of-date ornot in the cache.  Building from: " << 
+                    " out-of-date or not in the cache.  Building from: " << 
                     modPath.path << endl;
                         
             modDef = context->createModule(canonicalName, modPath.path);

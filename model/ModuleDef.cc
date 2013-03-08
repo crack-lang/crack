@@ -95,7 +95,7 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
 
 #define CRACK_METADATA_V1 2271218416
 
-void ModuleDef::serialize(Serializer &serializer) const {
+void ModuleDef::serialize(Serializer &serializer) {
     int id = serializer.registerObject(this);
     SPUG_CHECK(id == 0,
                "Module id for serialized module " << getFullName() <<
@@ -106,7 +106,7 @@ void ModuleDef::serialize(Serializer &serializer) const {
 
     // write source path and source digest
     serializer.write(sourcePath, "sourcePath");
-    serializer.write(digest.asHex(), "sourceDigest");
+    serializer.write(sourceDigest.asHex(), "sourceDigest");
 
     // write the dependencies
     serializer.write(dependencies.size(), "#deps");
@@ -115,21 +115,21 @@ void ModuleDef::serialize(Serializer &serializer) const {
          ++iter
          ) {
         serializer.write(iter->first, "canonicalName");
-        serializer.write(iter->second->getDefHash(), "hashVal");
+        serializer.write(iter->second->metaDigest.asHex(), "metaDigest");
     }
 
     // write all of the symbols
+    serializer.digestEnabled = true;
     Namespace::serializeDefs(serializer);
+    metaDigest = serializer.hasher.getDigest();
 }
 
-bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
-                                    const SourceDigest &digest
-                                    ) {
+bool ModuleDef::readHeaderAndVerify(Deserializer &deser) {
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
         return false;
 
     string sourcePath = deser.readString(Serializer::modNameSize, "sourcePath");
-    SourceDigest sourceDigest =
+    SourceDigest recordedSourceDigest =
         SourceDigest::fromHex(deser.readString(Serializer::modNameSize,
                                                "sourceDigest"
                                                )
@@ -141,10 +141,10 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
         deser.context->construct->searchSourcePath(sourcePath);
     if (modPath.found) {
         SourceDigest fileDigest = SourceDigest::fromFile(modPath.path);
-        if (fileDigest != sourceDigest) {
+        if (fileDigest != recordedSourceDigest) {
             if (Construct::traceCaching)
                 cerr << "digests don't match for " << sourcePath <<
-                    " got " << sourceDigest.asHex() << " current = " <<
+                    " got " << recordedSourceDigest.asHex() << " current = " <<
                     fileDigest.asHex() << endl;
             return false;
         }
@@ -160,8 +160,15 @@ bool ModuleDef::readHeaderAndVerify(Deserializer &deser,
 
         // if the dependency has a different definition hash from what we were
         // built against, we have to recompile.
-        if (mod->getDefHash() != deser.readUInt("hashVal"))
+        if (mod->metaDigest !=
+             SourceDigest::fromHex(deser.readString(64, "metaDigest"))
+            ) {
+            if (Construct::traceCaching)
+                cerr << "meta digest doesn't match for dependency " <<
+                    mod->getFullName() << ", need to rebuild " <<
+                    modPath.path << endl;
             return false;
+        }
     }
 
     return true;
@@ -185,7 +192,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     deser.registerObject(0, mod.get());
 
     deser.context->ns = mod.get();
+    deser.digestEnabled = true;
     mod->deserializeDefs(deser);
+    mod->metaDigest = deser.hasher.getDigest();
     mod->onDeserialized(*deser.context);
     return mod;
 }

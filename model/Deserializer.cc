@@ -19,19 +19,23 @@
 
 using namespace std;
 using namespace model;
+using crack::util::Hasher;
 
 unsigned int Deserializer::readUInt(const char *name, bool *eof) {
     uint8_t b = 0x80;
     unsigned val = 0, offset = 0;
     while (b & 0x80) {
-        if (src.eof())
+        if (src.eof()) {
             if (eof) {
                 *eof = true;
                 return 0;
             } else {
                 throw DeserializationError("EOF deserializing meta-data");
             }
+        }
         b = src.get();
+        if (digestEnabled)
+            hasher.add(b);
 
         // see if we've got the last byte
         val = val | ((b & 0x7f) << offset);
@@ -58,6 +62,8 @@ char *Deserializer::readBlob(size_t &size, char *buffer, const char *name) {
         throw DeserializationError("EOF deserializing meta-data");
     if (Serializer::trace)
         cerr << "read blob " << name << ": " << setw(size) << buffer << endl;
+    if (digestEnabled)
+        hasher.add(buffer, size);
     return buffer;
 }
 
@@ -113,7 +119,11 @@ double Deserializer::readDouble(const char *name) {
                );
     double val;
     src.read(reinterpret_cast<char *>(&val), sizeof(double));
+    if (src.fail())
+        throw DeserializationError("EOF deserializing meta-data");
     if (Serializer::trace)
         cerr << "reading double " << name << ": " << val << endl;
+    if (digestEnabled)
+        hasher.add(&val, sizeof(double));
     return val;
 }
