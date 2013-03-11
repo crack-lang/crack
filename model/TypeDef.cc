@@ -939,11 +939,11 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
-bool TypeDef::isSerializable(const Namespace *ns) const {
+bool TypeDef::isSerializable(const Namespace *ns, const string &name) const {
     if (meta)
         return false;
     else
-        return VarDef::isSerializable(ns);
+        return VarDef::isSerializable(ns, name);
 }
 
 void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {

@@ -342,7 +342,9 @@ class TypeDef : public VarDef, public Namespace {
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
-        virtual bool isSerializable(const Namespace *ns) const;
+        virtual bool isSerializable(const Namespace *ns, 
+                                    const std::string &name
+                                    ) const;
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         virtual void serializeExtern(Serializer &serializer) const;
         virtual void serialize(Serializer &serializer, bool writeKind,

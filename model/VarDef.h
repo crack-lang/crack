@@ -120,7 +120,9 @@ class VarDef : public virtual spug::RCBase {
          * Returns true if the definition should be serialized when the owner
          * is being serialized.
          */
-        virtual bool isSerializable(const Namespace *ns) const;
+        virtual bool isSerializable(const Namespace *ns, 
+                                    const std::string &name
+                                    ) const;
 
         /** Keeps track of a set of externally managed VarDefs. */
         typedef std::set<const VarDef *> Set;

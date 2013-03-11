@@ -191,7 +191,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (i->second->isSerializable(this))
+        if (i->second->isSerializable(this, i->first))
             ++count;
     }
     
@@ -201,7 +201,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (!i->second->isSerializable(this))
+        if (!i->second->isSerializable(this, i->first))
             continue;
         else if (i->second->getOwner() != this)
             i->second->serializeAlias(serializer, i->first);
@@ -223,6 +223,12 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 string alias = 
                     deser.readString(Serializer::varNameSize, "alias");
                 addAlias(alias, VarDef::deserializeAlias(deser).get());
+                
+                // if we are in module scope, this alias has to be a 
+                // second-order import.
+                ModuleDef *mod = ModuleDefPtr::cast(this);
+                if (mod)
+                    mod->exports[alias] = true;
                 break;
             }
             case Serializer::genericId:
@@ -250,6 +256,8 @@ void Namespace::onNamespaceDeserialized(Context &context) {
     for (VarDefMap::iterator iter = defs.begin();
          iter != defs.end();
          ++iter
-         )
-        iter->second->onDeserialized(context);
+         ) {
+        if (iter->second->getOwner() == this)
+            iter->second->onDeserialized(context);
+    }
 }

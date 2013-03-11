@@ -206,11 +206,17 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
-bool OverloadDef::isSerializable(const Namespace *ns) const {
-    if (!VarDef::isSerializable(ns))
+bool OverloadDef::isSerializable(const Namespace *ns, 
+                                 const string &name
+                                 ) const {
+    if (!VarDef::isSerializable(ns, name))
         return false;
-    else
+    else {
+        // we're relying on the assumption that overloads cannot be aliases, 
+        // otherwise hasSerializableFuncs() needs to get passed "name"
+        assert(name == this->name);
         return hasSerializableFuncs(ns);
+    }
 }
 
 bool OverloadDef::isSingleFunction() const {
@@ -288,7 +294,7 @@ bool OverloadDef::hasSerializableFuncs(const Namespace *ns) const {
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(ns))
+        if ((*iter)->isSerializable(ns, name))
             return true;
     }
 }
@@ -304,7 +310,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
          iter != funcs.end();
          ++iter
          )
-        if ((*iter)->isSerializable(ns))
+        if ((*iter)->isSerializable(ns, name))
             ++size;
 
     if (writeKind)
@@ -316,7 +322,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(ns))
+        if ((*iter)->isSerializable(ns, name))
             (*iter)->serialize(serializer, false, ns);
     }
 }

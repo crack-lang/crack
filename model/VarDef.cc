@@ -92,8 +92,15 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
-bool VarDef::isSerializable(const Namespace *ns) const {
-    return name[0] != ':' && owner == ns;
+namespace {
+    bool isExported(const Namespace *ns, const string &name) {
+        const ModuleDef *modDef = dynamic_cast<const ModuleDef *>(ns);
+        return modDef && (modDef->exports.find(name) != modDef->exports.end());
+    }
+}
+
+bool VarDef::isSerializable(const Namespace *ns, const string &name) const {
+    return name[0] != ':' && (owner == ns || isExported(ns, name));
 }
 
 void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {

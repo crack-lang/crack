@@ -149,7 +149,9 @@ class OverloadDef : public VarDef {
         
         bool hasInstSlot();
         bool isStatic() const;
-        virtual bool isSerializable(const Namespace *ns) const;
+        virtual bool isSerializable(const Namespace *ns, 
+                                    const std::string &name
+                                    ) const;
         
         /**
          * Returns true if the overload consists of only one function.
