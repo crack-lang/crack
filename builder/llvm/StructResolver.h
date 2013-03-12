@@ -10,9 +10,11 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace llvm {
     class Module;
+    class StructType;
     class Type;
     class User;
     class Value;
@@ -33,7 +35,8 @@ protected:
     llvm::Module *module;
     StructMapType *typeMap;
     StructMapType reverseMap;
-    std::map<llvm::Value*, bool> visited;
+    std::map<llvm::Value *, bool> visited;
+    std::map<llvm::Type *, int> visitedStructs;
 
     llvm::Type *maybeGetMappedType(llvm::Type *t);
     void mapValue(llvm::Value &val);
@@ -43,7 +46,9 @@ protected:
     void mapGlobals();
     void mapFunctions();
     void mapMetadata();
-
+    bool buildElementVec(llvm::StructType *type,
+                         std::vector<llvm::Type *> &elems
+                         );
 
 public:
     StructResolver(llvm::Module *mod0): module(mod0), typeMap(0) { }

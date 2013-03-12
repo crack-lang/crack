@@ -104,6 +104,29 @@ namespace {
     }
 }
 
+bool StructResolver::buildElementVec(StructType *type, vector<Type *> &elems) {
+    // element iterate on types
+    bool modified = false;
+    for (StructType::element_iterator e = type->element_begin();
+         e != type->element_end();
+         ++e
+         ) {
+
+        // accumulate the types. if we find one we have to map, we'll use
+        // the accumlated types to create a new structure with the mapped
+        // type. if it doesn't contain one, we discard it
+        Type *p = maybeGetMappedType(*e);
+        if (p != *e) {
+            modified = true;
+            elems.push_back(p);
+        } else {
+            elems.push_back(*e);
+        }
+    }
+    
+    return modified;
+}
+
 Type *StructResolver::maybeGetMappedType(Type *t) {
 
     if (typeMap->find(t) != typeMap->end()) {
@@ -116,6 +139,11 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         return (*typeMap)[t];
     } else if (reverseMap.find(t) != reverseMap.end()) {
         SR_DEBUG cout << "\t\t## --- PREMAPPED --- ##\n";
+        SR_DEBUG t->dump();
+        SR_DEBUG cout << "\n";
+        return t;
+    } else if (visitedStructs.find(t) != visitedStructs.end()) {
+        SR_DEBUG cout << "\t\t## -- VISITED STRUCT --- ##\n";
         SR_DEBUG t->dump();
         SR_DEBUG cout << "\n";
         return t;
@@ -181,54 +209,43 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         }
     }
     else if (isa<StructType>(t)) {
-        StructType *a = dyn_cast<StructType>(t);
+        StructType *origType = dyn_cast<StructType>(t);
+        visitedStructs[t] = 0;
         SR_DEBUG cout << "\t\t## struct\n";
-        if (a->hasName()) {
-            SR_DEBUG cout << "\t\t## has name: " << a->getName().str() << "\n";
+        if (origType->hasName()) {
+            SR_DEBUG cout << "\t\t## has name: " << 
+                origType->getName().str() << "\n";
         }
-        // element iterate on types
-        vector<Type*> sVec;
-        Type *p;
-        bool modified = false;
-        for (StructType::element_iterator e = a->element_begin();
-             e != a->element_end();
-             ++e) {
 
-            //cout << "\t\t\t---> type: [[[[[\n";
-            //(*e)->dump();
-            //cout << "]]]]]\n";
-
-            // accumulate the types. if we find one we have to map, we'll use
-            // the accumlated types to create a new structure with the mapped
-            // type. if it doesn't contain one, we discard it
-            p = maybeGetMappedType(*e);
-            if (p != *e) {
-                modified = true;
-                sVec.push_back(p);
-            }
-            else {
-                sVec.push_back(*e);
-            }
-        }
+        // build the element vector.
+        vector<Type *> elems;
+        bool modified = buildElementVec(origType, elems);
+        
+        int cycleCount = visitedStructs[t];
+        visitedStructs.erase(t);
         if (modified) {
-            StructType *m;
-            StructType *origS = cast<StructType>(t);
+            StructType *newType = StructType::create(getGlobalContext());
+            (*typeMap)[t] = newType;
+            
+            // if the type contains any cycles, add a placeholder for it and 
+            // recalculate the member types.
+            if (visitedStructs[t])
+                buildElementVec(origType, elems);
+
             SR_DEBUG cout << "\t\t## replacing struct " << 
-                (origS->hasName() ? origS->getName().str() : 
+                (origType->hasName() ? origType->getName().str() : 
                  string("<noname>")
                  )
                 << endl;
-            if (origS->isLiteral()) {
-                m = StructType::get(getGlobalContext(), sVec);
-            }
-            else {
+
+            newType->setBody(elems);
+            if (!origType->isLiteral()) {
                 // take over the name
-                string origName = origS->getName().str();
-                origS->setName("");
-                m = StructType::create(sVec, origName);
+                string origName = origType->getName().str();
+                origType->setName("");
+                newType->setName(origName);
             }
-            (*typeMap)[t] = m;
-            //return m;
+
             return maybeGetMappedType(t);
         }
     }

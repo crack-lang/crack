@@ -1,0 +1,11 @@
+%%TEST%%
+cyclic struct definitions
+%%ARGS%%
+%%FILE%%
+class Node {
+     Node next;
+}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
