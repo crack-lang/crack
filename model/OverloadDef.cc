@@ -212,10 +212,7 @@ bool OverloadDef::isSerializable(const Namespace *ns,
     if (!VarDef::isSerializable(ns, name))
         return false;
     else {
-        // we're relying on the assumption that overloads cannot be aliases, 
-        // otherwise hasSerializableFuncs() needs to get passed "name"
-        assert(name == this->name);
-        return hasSerializableFuncs(ns);
+        return hasSerializableFuncs(ns, name);
     }
 }
 
@@ -289,7 +286,9 @@ void OverloadDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     }
 }
 
-bool OverloadDef::hasSerializableFuncs(const Namespace *ns) const {
+bool OverloadDef::hasSerializableFuncs(const Namespace *ns, 
+                                       const string &name
+                                       ) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter

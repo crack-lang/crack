@@ -15,6 +15,7 @@
 #include "Context.h"
 #include "ArgDef.h"
 #include "Expr.h"
+#include "OverloadDef.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -231,18 +232,29 @@ bool FuncDef::isSerializable(const Namespace *ns, const string &name) const {
     return VarDef::isSerializable(ns, name) && !(flags & FuncDef::builtin);
 }
 
-void FuncDef::serialize(Serializer &serializer, bool writeKind,
-                        const Namespace *ns
-                        ) const {
-    assert(!writeKind && owner == ns);
-    returnType->serialize(serializer, false, 0);
-    serializer.write(static_cast<unsigned>(flags), "flags");
-    
+void FuncDef::serializeArgs(Serializer &serializer) const {
     serializer.write(args.size(), "#args");
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          )
         (*iter)->serialize(serializer, false, 0);
+}
+
+void FuncDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
+    bool alias = owner != ns;
+    serializer.write(alias ? 1 : 0, "isAlias");
+    if (alias) {
+        serializeExtern(serializer);
+        serializeArgs(serializer);
+        return;
+    }
+    
+    returnType->serialize(serializer, false, 0);
+    serializer.write(static_cast<unsigned>(flags), "flags");
+    
+    serializeArgs(serializer);
     
     if (flags & method) {
         ostringstream temp;
@@ -263,14 +275,24 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
     }
 }
 
-FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
-    TypeDefPtr returnType = TypeDef::deserialize(deser);
-    Flags flags = static_cast<Flags>(deser.readUInt("flags"));
-    
+FuncDef::ArgVec FuncDef::deserializeArgs(Deserializer &deser) {
     int argCount = deser.readUInt("#args");
     ArgVec args;
     for (int i = 0; i < argCount; ++i)
         args.push_back(ArgDef::deserialize(deser));
+    return args;
+}
+
+FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
+    bool alias = deser.readUInt("isAlias");
+    if (alias) {
+        OverloadDefPtr ovld = deserializeAliasBody(deser);
+        return ovld->getSigMatch(deserializeArgs(deser), true);
+    }
+    TypeDefPtr returnType = TypeDef::deserialize(deser);
+    Flags flags = static_cast<Flags>(deser.readUInt("flags"));
+
+    ArgVec args = deserializeArgs(deser);    
 
     // read the optional data, the only field we're interested in is the 
     // receiverType

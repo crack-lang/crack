@@ -154,6 +154,9 @@ class FuncDef : public VarDef {
         static void display(std::ostream &out, const ArgVec &args);
 
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
+        
+        void serializeArgs(Serializer &serializer) const;
+        static ArgVec deserializeArgs(Deserializer &deser);        
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

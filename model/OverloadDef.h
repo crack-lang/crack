@@ -175,7 +175,9 @@ class OverloadDef : public VarDef {
          * Returns true if the overload includes any non-builtin functions 
          * (this is useful for determining if it needs to be serialized).
          */
-        bool hasSerializableFuncs(const Namespace *ns) const;
+        bool hasSerializableFuncs(const Namespace *ns, 
+                                  const std::string &name
+                                  ) const;
 
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns

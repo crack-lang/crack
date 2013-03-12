@@ -181,6 +181,19 @@ So given this, our meta-data format is:
         array[FuncDef] overloads
     }
 
+    FuncEntry {
+        uint isAlias
+        switch (isAlias) {
+            case true: FuncAlias
+            case false: FuncDef
+        }
+    }
+
+    FuncAlias {
+        Extern ext
+        array[VarDef] args
+    }
+
     FuncDef {
         ref[Type] returnType
         uint flags;
