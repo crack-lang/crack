@@ -127,6 +127,8 @@ void ModuleDef::serialize(Serializer &serializer) {
 ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                     const string &canonicalName
                                     ) {
+    if (Serializer::trace)
+        cerr << ">>>> Deserializing module " << canonicalName << endl;
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
         return 0;
 
@@ -162,13 +164,15 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
         // if the dependency has a different definition hash from what we were
         // built against, we have to recompile.
-        if (mod->metaDigest !=
-             SourceDigest::fromHex(deser.readString(64, "metaDigest"))
-            ) {
+        SourceDigest moduleDigest =
+            SourceDigest::fromHex(deser.readString(64, "metaDigest"));
+        if (mod->metaDigest != moduleDigest) {
             if (Construct::traceCaching)
                 cerr << "meta digest doesn't match for dependency " <<
                     mod->getFullName() << ", need to rebuild " <<
-                    canonicalName << endl;
+                    canonicalName << "(depending on " <<
+                    moduleDigest.asHex() <<
+                    " current = " << mod->metaDigest.asHex() << ")" << endl;
             return 0;
         }
     }
@@ -195,5 +199,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->deserializeDefs(deser);
     mod->metaDigest = deser.hasher.getDigest();
     mod->onDeserialized(*deser.context);
+    if (Serializer::trace)
+        cerr << ">>>> Finished deserializing module " << canonicalName << endl;
     return mod;
 }
