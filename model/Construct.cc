@@ -799,24 +799,25 @@ int Construct::runScript(istream &src, const string &name) {
     bool cached = false;
     if (rootContext->construct->cacheMode)
         crack::util::initCacheDirectory(rootBuilder->options.get(), *this);
-    // we check cacheMode again after init,
-    // because it might have been disabled if
-    // we couldn't find an appropriate cache directory
-    if (rootContext->construct->cacheMode) {
-        modDef = context->materializeModule(canName);
-    }
-    if (modDef) {
-        if (traceCaching)
-            cerr << "Reusing cached script " << name << endl;
-        cached = true;
-        loadedModules.push_back(modDef);
-        if (rootBuilder->options->statsMode)
-            stats->incCached();
-    }
-    else
-        modDef = context->createModule(canName, name);
-
     try {
+
+        // we check cacheMode again after init,
+        // because it might have been disabled if
+        // we couldn't find an appropriate cache directory
+        if (rootContext->construct->cacheMode)
+            modDef = context->materializeModule(canName);
+
+        if (modDef) {
+            if (traceCaching)
+                cerr << "Reusing cached script " << name << endl;
+            cached = true;
+            loadedModules.push_back(modDef);
+            if (rootBuilder->options->statsMode)
+                stats->incCached();
+        } else {
+            modDef = context->createModule(canName, name);
+        }
+
         if (!cached) {
             // insert an implicit import of crack.lang
             if (crackLang) {
