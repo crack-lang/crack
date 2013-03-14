@@ -146,13 +146,13 @@ void VarDef::serializeExtern(Serializer &serializer) const {
 void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
     serializer.write(Serializer::aliasId, "kind");
     serializer.write(alias, "alias");
-    serializeExtern(serializer);
+    serializeExternRef(serializer, 0);
 }
 
 namespace {
 
     TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
-                                               string typeName,
+                                               const string &typeName,
                                                int parmStart
                                                );
 
@@ -210,16 +210,29 @@ namespace {
                            );
     }
 
+    int getParmEnd(const string &name, int i) {
+        for (; name[i] != ']' && name[i] != ','; ++i) {
+            if (name[i] == '[') {
+                while (name[i] != ']')
+                    i = getParmEnd(name, i + 1);
+            }
+        }
+        return i;
+    }
+
     TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
-                                               string name,
+                                               const string &name,
                                                int parmStart
                                                ) {
         TypeDef::TypeVecObjPtr parms = new TypeDef::TypeVecObj;
         int i = parmStart;
         while (name[i] != ']') {
             int start = i;
-            for (; name[i] != ']' && name[i] != ','; ++i);
-            parms->push_back(resolveType(context, name.substr(start, i - start)));
+            i = getParmEnd(name, start);
+            cout << "pusing type " << name.substr(start, i - start) << endl;
+            parms->push_back(resolveType(context,
+                                         name.substr(start, i - start))
+                                         );
             if (name[i] == ',')
                 ++i;
         }

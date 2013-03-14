@@ -13,6 +13,8 @@ import crack.runtime abort, c_strerror, errno, free, getLocation, strcpy,
     EXCEPTION_RELEASE_FUNC, EXCEPTION_UNCAUGHT_FUNC, printuint64;
 @import crack._poormac define;
 
+@export_symbols free;
+
 const bool true = (1 == 1), false = (1 == 0);
 
 class Object;
