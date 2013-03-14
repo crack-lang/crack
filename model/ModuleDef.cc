@@ -161,11 +161,15 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
             deser.context->construct->getModule(
                 deser.readString(64, "canonicalName")
             );
+        SourceDigest moduleDigest =
+            SourceDigest::fromHex(deser.readString(64, "metaDigest"));
+
+        // if the dependency isn't finished, don't do a depdendency check.
+        if (!mod || !mod->finished)
+            continue;
 
         // if the dependency has a different definition hash from what we were
         // built against, we have to recompile.
-        SourceDigest moduleDigest =
-            SourceDigest::fromHex(deser.readString(64, "metaDigest"));
         if (mod->metaDigest != moduleDigest) {
             if (Construct::traceCaching)
                 cerr << "meta digest doesn't match for dependency " <<
