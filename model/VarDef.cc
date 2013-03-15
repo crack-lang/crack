@@ -229,7 +229,6 @@ namespace {
         while (name[i] != ']') {
             int start = i;
             i = getParmEnd(name, start);
-            cout << "pusing type " << name.substr(start, i - start) << endl;
             parms->push_back(resolveType(context,
                                          name.substr(start, i - start))
                                          );
