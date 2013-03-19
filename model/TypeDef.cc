@@ -905,6 +905,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // specializations cache
     result = TypeDefPtr::rcast(module->lookUp(name));
     result->genericParms = *types;
+    result->templateType = this;
     assert(result);
     (*generic)[types] = result;
 
@@ -962,25 +963,8 @@ void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     }
 }
 
-TypeDef::TypeVec TypeDef::getLocalDeps(const ModuleDef *module) const {
-    // if this is a generic, see if it parameterizes any types in the local 
-    // module.
-    TypeVec localTypes;
-    if (genericParms.size()) {
-        for (TypeVec::const_iterator iter = genericParms.begin();
-            iter != genericParms.end();
-            ++iter
-            ) {
-            if ((*iter)->getModule() == module)
-                localTypes.push_back(*iter);
-        }
-    }
-    return localTypes;
-}
-
 void TypeDef::serializeExtern(Serializer &serializer) const {
-    TypeVec localDeps = getLocalDeps(serializer.module);
-    VarDef::serializeExternRef(serializer, &localDeps);
+    VarDef::serializeExternRef(serializer, &genericParms);
 }
 
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
@@ -995,8 +979,15 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
             
             // write an "Extern" (but not a reference, we're already in a 
             // reference to the object we'd be externing)
-            TypeVec localTypes = getLocalDeps(serializer.module);
-            serializeExternCommon(serializer, &localTypes);
+            if (templateType) {
+                
+                // If this is a generic instantiation, write the base type 
+                // with our parameters.
+                templateType->serializeExternCommon(serializer, 
+                                                    &genericParms);
+            } else {
+                serializeExternCommon(serializer, 0);
+            }
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
@@ -1011,11 +1002,32 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
                             (abstract ? 4 : 0);
                 serializer.write(flags, "flags");
                 serializer.write(parents.size(), "#bases");
+                    
                 for (TypeVec::const_iterator i = parents.begin();
                     i != parents.end();
                     ++i
                     )
                     (*i)->serialize(serializer, false, 0);
+
+                // serialize the optional fields for generic instantiations.
+                if (templateType) {
+                    ostringstream temp;
+                    Serializer sub(serializer, temp);
+                    // field id = 1 (<< 3) | type = 3 (reference)
+                    sub.write(11, "templateType.header");
+                    templateType->serialize(sub, false, 0);
+                    for (TypeVec::const_iterator iter = genericParms.begin();
+                         iter != genericParms.end();
+                         ++iter
+                         ) {
+                        // field id = 2 (<< 3) | type = 3 (reference)
+                        sub.write(19, "genericParms[i].header");
+                        (*iter)->serialize(sub, false, 0);
+                    }
+                    serializer.write(temp.str(), "optional");
+                } else {
+                    serializer.write(0, "optional");
+                }
                 
                 Namespace::serializeDefs(serializer);
             }
@@ -1098,6 +1110,30 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
             bases[i] = TypeDef::deserialize(deser, "bases[i]");
 
         result->parents = bases;
+        
+        // check for optional fields
+        string optionalDataString = deser.readString(256, "optional");
+        if (optionalDataString.size()) {
+            istringstream optionalData(optionalDataString);
+            Deserializer sub(deser, optionalData);
+            bool eof;
+            int header;
+            while ((header = sub.readUInt("optional.header", &eof)) || !eof) {
+                switch (header) {
+                    case 11:
+                        result->templateType = TypeDef::deserialize(sub).get();
+                        break;
+                    case 19:
+                        result->genericParms.push_back(
+                            TypeDef::deserialize(sub)
+                        );
+                        break;
+                    default:
+                        // unknown field.
+                        break;
+                }
+            }
+        }
 
         // 'defs' - fill in the body.
         ContextPtr classContext =

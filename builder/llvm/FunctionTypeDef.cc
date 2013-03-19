@@ -78,6 +78,9 @@ TypeDef * FunctionTypeDef::getSpecialization(Context &context,
     tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
+    tempSpec->genericParms = *types;
+    tempSpec->templateType = this;
+
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {

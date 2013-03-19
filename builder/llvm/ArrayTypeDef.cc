@@ -69,6 +69,7 @@ TypeDef *ArrayTypeDef::getSpecialization(Context &context,
     }
 
     tempSpec->genericParms = *types;
+    tempSpec->templateType = this;
 
     // add all of the methods and finish up.
     addArrayMethods(context, tempSpec.get(), parmType);

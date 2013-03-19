@@ -37,11 +37,11 @@ class VarDef : public virtual spug::RCBase {
         Namespace *owner;
         mutable std::string fullName; // a cache, built in getFullName
 
-        // Does all the work of serializing an extern, derived classes can 
-        // override to pass in a set of types local to the module that must  
-        // be available (localDeps).  It's safe to set localDeps to null.
+        // Does all the work of serializing an extern.  parameterized types 
+        // should pass their parameters in through 'params', other defs may 
+        // set this to null.
         void serializeExternCommon(Serializer &serializer, 
-                                   const std::vector<TypeDefPtr> *localDeps
+                                   const std::vector<TypeDefPtr> *params
                                    ) const;
 
         void serializeExternRef(Serializer &serializer, 

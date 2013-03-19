@@ -40,7 +40,7 @@ the second time simply as "06".  In this example, the object id is actually
 don't think the "first definition" bit was strictly necessary).
 
 For structures with "optional" fields, we use a modified form of Google protobuf conventions.
-Optional fields are serialized as a blob at the end of the structure.  If the
+Optional fields are serialized as a blob somewhere in the structure.  If the
 structure has optional fields, but none are present for a particular instance,
 this blob gets serialized as a single zero value byte.  For every optional
 field that is present, we start with a uint describing the field and its type
@@ -56,9 +56,9 @@ So, for example:
 We override wire type 3 (the deprecated "begin group" type) for reference
 types.  Since the size of these types can not be known without knowledge of
 the field, we have to impose an order on optional data fields to preserve
-backwards compatibility.  A reader should the optional area until it
-encounters a field tag that it doesn't recognize, then ignore the remainder of
-the area.
+backwards compatibility.  A reader may read the optional area until it
+encounters a field tag for a reference type that it doesn't recognize, then
+ignore the remainder of the area, so reference types must come last.
 
 So given this, our meta-data format is:
 
@@ -135,7 +135,14 @@ So given this, our meta-data format is:
 
     Extern {
         blob module
-        blob name   # the name in the module
+
+        # The name in the module.  If this is a type name, it is always a
+        # simple type name - specialized types are described by parameterizing
+        # them with typeParams.
+        blob name
+
+        # Parameters of a specialized type.
+        array[ref[Type]] typeParams
 
         # if the aliased object has dependencies on types in the local module
         # (which can happen with generics constructed from a local type),
@@ -172,6 +179,8 @@ So given this, our meta-data format is:
             // 4 - abstract
             uint flags
             array[ref[Type]] bases
+            optional ref[Type] templateType = 1
+            repeated ref[Type] genericParms = 2
             array[Def] defs
         }
     }

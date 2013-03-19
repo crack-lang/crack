@@ -44,7 +44,6 @@ class TypeDef : public VarDef, public Namespace {
         TypeDef *findSpecialization(TypeVecObj *types);
         std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
-        TypeVec getLocalDeps(const ModuleDef *module) const;
 
     public:
 
@@ -99,6 +98,7 @@ class TypeDef : public VarDef, public Namespace {
         
         // defined for a generic instantiation
         TypeVec genericParms;
+        TypeDef *templateType;
         
         // the number of bytes of padding required by the type after the 
         // instance variables (this exists so we can define extension types, 
@@ -154,6 +154,7 @@ class TypeDef : public VarDef, public Namespace {
             Namespace(name),
             genericInfo(0),
             generic(0),
+            templateType(0),
             padding(0),
             pointer(pointer),
             hasVTable(false),
