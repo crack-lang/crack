@@ -20,6 +20,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/User.h>
 #include <llvm/Constants.h>
+#include <llvm/Analysis/FindUsedTypes.h>
 
 using namespace llvm;
 using namespace std;
@@ -44,17 +45,24 @@ StructResolver::StructListType StructResolver::getDisjointStructs() {
 
     string sName;
     StructListType result;
-    vector<StructType*> usedTypes;
+    SetVector<Type*> usedTypes;
 
-    module->findUsedStructTypes(usedTypes);
+    FindUsedTypes findTypes;
+    findTypes.runOnModule(*module);
+    usedTypes = findTypes.getTypes();
 
     // NOTE this gets a list by struct name only: no isomorphism checks
 
     for (int i=0; i < usedTypes.size(); ++i) {
-        // does it have a name?
-        if (!usedTypes[i]->hasName())
+        if (!usedTypes[i]->isStructTy())
             continue;
-        sName = usedTypes[i]->getName().str();
+
+        StructType *structTy = static_cast<StructType*>(usedTypes[i]);
+
+        // does it have a name?
+        if (!structTy->hasName())
+            continue;
+        sName = structTy->getName().str();
         // does it have a numeric suffix?
         int pos = sName.rfind(".");
         if (pos != string::npos && sName.size() > pos) {
@@ -68,7 +76,7 @@ StructResolver::StructListType StructResolver::getDisjointStructs() {
                     break;
             }
             if (isNumeric)
-                result[sName] = usedTypes[i];
+                result[sName] = structTy;
         }
     }
 

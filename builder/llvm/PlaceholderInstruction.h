@@ -9,7 +9,7 @@
 #define _builder_llvm_PlaceholderInstruction_h_
 
 #include <llvm/Instruction.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 
 namespace builder { namespace mvll {
 

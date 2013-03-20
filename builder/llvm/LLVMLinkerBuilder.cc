@@ -226,9 +226,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
                                    GlobalValue::InternalLinkage,
                                    funcName,
                                    moduleDef->name +
-                                   ":debug_func_name",
-                                   0,
-                                   false
+                                   ":debug_func_name"
                                    );
             Constant *namePtr =
                 ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
@@ -245,9 +243,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
         ConstantArray::get(bytePtrArrType,
                             funcVals
                             ),
-        moduleDef->name + ":debug_func_table",
-        0,
-        false
+        moduleDef->name + ":debug_func_table"
     );
 
     // call the function to populate debug info.

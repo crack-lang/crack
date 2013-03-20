@@ -22,7 +22,7 @@
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
-#include <llvm/Target/TargetData.h>
+// #include <llvm/Target/TargetData.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Analysis/Verifier.h>
@@ -100,7 +100,7 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
 
         // Set up the optimizer pipeline.  Start with registering info about how
         // the target lays out data structures.
-        passMan.add(new llvm::TargetData(*execEng->getTargetData()));
+        passMan.add(new DataLayout(*execEng->getDataLayout()));
         // Promote allocas to registers.
         passMan.add(createPromoteMemoryToRegisterPass());
         // Do simple "peephole" optimizations and bit-twiddling optzns.
