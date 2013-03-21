@@ -10,6 +10,7 @@
 
 import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, Formatter;
 import crack.io cout, Writer, FStr, StandardFormatter;
+import crack.algorithm QuickSort;
 
 # we use poormac here because the standard macro mechanism depends on this 
 # module.
@@ -305,6 +306,26 @@ class Array[Elem] {
         } else {
             return null;
         }
+    }
+
+    void sort() {
+        QuickSort[Array].sort(this);
+    }
+
+    void sort(function[int, Elem, Elem] cmp) {
+        QuickSort[Array].sort(this, cmp);
+    }
+
+    Array sorted() {
+        Array newArray = this.clone();
+        QuickSort[Array].sort(newArray);
+        return newArray;
+    }
+
+    Array sorted(function[int, Elem, Elem] cmp) {
+        Array newArray = this.clone();
+        QuickSort[Array].sort(newArray, cmp);
+        return newArray;
     }
 
     bool contains(Elem e) {
