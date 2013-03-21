@@ -23,6 +23,7 @@ SPUG_RCPTR(Expr);
 class Namespace;
 class ModuleDef;
 class ModuleDefMap;
+SPUG_RCPTR(OverloadDef);
 class Serializer;
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
@@ -160,9 +161,14 @@ class VarDef : public virtual spug::RCBase {
                                ) const;
 
         /**
-         * Deserialize the body of an alias.
+         * Deserialize the body of an alias, producing a TypeDef, OverloadDef 
+         * or VarDef accordingly.
          */
-        static VarDefPtr deserializeAliasBody(Deserializer &deser);
+        /** @{ */
+        static TypeDefPtr deserializeTypeAliasBody(Deserializer &deser);
+        static OverloadDefPtr deserializeOverloadAliasBody(Deserializer &deser);
+        static VarDefPtr deserializeVarAliasBody(Deserializer &deser);
+        /** @} */
         
         /**
          * Deserialize an alias reference.

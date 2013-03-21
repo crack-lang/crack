@@ -16,6 +16,8 @@
 #include "Context.h"
 #include "Expr.h"
 #include "ModuleDefMap.h"
+#include "ModuleStub.h"
+#include "OverloadDef.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "TypeDef.h"
@@ -151,19 +153,47 @@ void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
 
 namespace {
 
+    enum SymbolKind {
+        K_TYPE,
+        K_OVLD,
+        K_VAR
+    };
+
     TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
                                                const string &typeName,
                                                int parmStart
                                                );
 
     VarDefPtr resolveName(Context &context, const string &moduleName,
-                           const string &symbolName
+                           const string &symbolName,
+                           SymbolKind kind
                            ) {
         ModuleDefPtr module = context.construct->getModule(moduleName);
         SPUG_CHECK(module,
                    "Unable to find module " << moduleName <<
                     " which contains referenced symbol " << symbolName
                    );
+
+        // if this is an unfinished module, it should be a placeholder.  Use
+        // it to create a stub for the symbol.
+        if (!module->finished) {
+            ModuleStubPtr stub = ModuleStubPtr::rcast(module);
+            SPUG_CHECK(stub,
+                       "Referenced module " << module->getFullName() <<
+                        " is not finished, but isn't a stub."
+                       )
+            switch (kind) {
+                case K_TYPE:
+                    return stub->getTypeStub(symbolName);
+                case K_OVLD:
+                    return stub->getOverloadStub(symbolName);
+                case K_VAR:
+                    return stub->getVarStub(symbolName);
+                default:
+                    SPUG_CHECK(false, "Unknoan symbol kind: " << kind);
+            }
+        }
+
         VarDefPtr var = module->lookUp(symbolName);
         SPUG_CHECK(var,
                    "Unable to find symbol " << moduleName << "." <<
@@ -172,34 +202,47 @@ namespace {
         return var;
     }
 
+    VarDefPtr deserializeAliasBody(Deserializer &deser, SymbolKind kind) {
+        string moduleName = deser.readString(Serializer::modNameSize,
+                                            "module"
+                                            );
+        string name = deser.readString(Serializer::varNameSize, "name");
+
+        // deserialize type parameters.
+        int paramCount = deser.readUInt("#typeParams");
+        TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
+        paramTypes->reserve(paramCount);
+        for (int i = 0; i < paramCount; ++i)
+            paramTypes->push_back(TypeDef::deserialize(deser));
+
+        VarDefPtr varDef = resolveName(*deser.context, moduleName, name, kind);
+        if (paramCount) {
+            TypeDefPtr typeDef = varDef;
+            return typeDef->getSpecialization(*deser.context, paramTypes.get());
+        } else {
+            return varDef;
+        }
+    }
+
+
 } // anon namespace
 
-VarDefPtr VarDef::deserializeAliasBody(Deserializer &deser) {
-    string moduleName = deser.readString(Serializer::modNameSize,
-                                         "module"
-                                         );
-    string name = deser.readString(Serializer::varNameSize, "name");
+TypeDefPtr VarDef::deserializeTypeAliasBody(Deserializer &deser) {
+    return deserializeAliasBody(deser, K_TYPE);
+}
 
-    // deserialize type parameters.
-    int paramCount = deser.readUInt("#typeParams");
-    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
-    paramTypes->reserve(paramCount);
-    for (int i = 0; i < paramCount; ++i)
-        paramTypes->push_back(TypeDef::deserialize(deser));
+OverloadDefPtr VarDef::deserializeOverloadAliasBody(Deserializer &deser) {
+    return deserializeAliasBody(deser, K_OVLD);
+}
 
-    VarDefPtr varDef = resolveName(*deser.context, moduleName, name);
-    if (paramCount) {
-        TypeDefPtr typeDef = varDef;
-        return typeDef->getSpecialization(*deser.context, paramTypes.get());
-    } else {
-        return varDef;
-    }
+VarDefPtr VarDef::deserializeVarAliasBody(Deserializer &deser) {
+    return deserializeAliasBody(deser, K_VAR);
 }
 
 namespace {
     struct AliasReader : public Deserializer::ObjectReader {
         virtual spug::RCBasePtr read(Deserializer &deser) const {
-            return VarDef::deserializeAliasBody(deser);
+            return VarDef::deserializeVarAliasBody(deser);
         }
     };
 }

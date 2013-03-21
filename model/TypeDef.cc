@@ -1041,7 +1041,7 @@ namespace {
             int alias = deser.readUInt("isAlias");
             TypeDefPtr type;
             if (alias) {
-                type = TypeDefPtr::arcast(VarDef::deserializeAliasBody(deser));
+                type = VarDef::deserializeTypeAliasBody(deser);
                 deser.userData = 0;
             } else {
                 string name = deser.readString(16, "name");

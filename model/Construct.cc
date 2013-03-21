@@ -322,6 +322,10 @@ ContextPtr Construct::createRootContext() {
     rootContext->ns = builtinGlobalNS->builtin;
     moduleCache[".builtin"] = builtinMod;
     
+    // since there's no "close()" on this, we need to explicitly mark it as 
+    // finished.
+    builtinMod->finished = true;
+    
     return rootContext;
 }
 

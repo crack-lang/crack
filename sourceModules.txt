@@ -10,6 +10,7 @@ model/ConstVarDef.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
 model/GlobalNamespace.cc
+model/ModuleStub.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
