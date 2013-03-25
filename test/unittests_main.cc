@@ -84,12 +84,14 @@ struct DataSet {
         builtins->addDef(metaType.get());
         voidType = new TypeDef(metaType.get(), "void");
         builtins->addDef(voidType.get());
+        builtins->finished = true;
     }
 
     void addTestModules() {
         dep0 = new MockModuleDef("dep0", 0);
         t0 = new TypeDef(metaType.get(), "t0");
         dep0->addDef(t0.get());
+        dep0->finished = true;
 
         dep1 = new MockModuleDef("dep1", 0);
         t1 = new TypeDef(metaType.get(), "t1");
@@ -107,10 +109,12 @@ struct DataSet {
         ovld->addFunc(f.get());
         f->setOwner(dep1.get());
         dep1->addDef(ovld.get());
+        dep1->finished = true;
 
         mod = new MockModuleDef("outer", 0);
         mod->addAlias(t1.get());
         mod->addAlias(ovld.get());
+        mod->finished = true;
     }
 };
 
@@ -121,7 +125,7 @@ bool moduleTestDeps() {
     VarDef::Set added;
     ds.t1->addDependenciesTo(ds.mod.get(), added);
 
-    if (ds.mod->dependencies.hasKey("dep1")) {
+    if (!ds.mod->dependencies.hasKey("dep1")) {
         cerr << "dep1 not in module's deps" << endl;
         success = false;
     }
@@ -173,11 +177,13 @@ bool moduleReload() {
     istringstream src1(dep0Data.str());
     Deserializer deser1(src1, &context);
     ModuleDefPtr dep0 = ModuleDef::deserialize(deser1, "dep0");
+    dep0->finished = true;
     construct.registerModule(dep0.get());
 
     istringstream src2(dep1Data.str());
     Deserializer deser2(src2, &context);
     ModuleDefPtr dep1 = ModuleDef::deserialize(deser2, "dep1");
+    dep1->finished = true;
     construct.registerModule(dep1.get());
 
     TypeDefPtr t = ds.mod->lookUp("t1");
