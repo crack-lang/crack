@@ -1149,3 +1149,47 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
 
     return result;
 }
+
+VarDefPtr TypeDef::replaceAllStubs(Context &context) {
+    if (stubFree)
+        return this;
+    stubFree = true;
+    VarDefPtr replacement = replaceStub(context);
+    if (replacement)
+        return replacement;
+    
+    // fix all bases
+    for (TypeVec::iterator iter = parents.begin(); iter != parents.end(); 
+         ++iter
+         )
+        *iter = (*iter)->replaceAllStubs(context);
+    
+    // if this is a generic specialization, fix all parameters
+    if (genericParms.size()) {
+        for (TypeVec::iterator iter = genericParms.begin(); 
+             iter != genericParms.end();
+             ++iter
+             )
+            *iter = (*iter)->replaceAllStubs(context);
+    }
+    
+    // if this is a generic instantiation, fix all specializations.
+    if (generic) {
+        for (SpecializationCache::iterator iter = generic->begin();
+             iter != generic->end();
+             ++iter
+             )
+            iter->second = iter->second->replaceAllStubs(context);
+    }
+
+    if (templateType)
+        templateType =
+            TypeDefPtr::rcast(templateType->replaceAllStubs(context));
+
+    // We don't need to worry about meta, metas only have dependencies on 
+    // other metas, and the meta itself should never be stubbed since it is 
+    // created at the same time as the class.
+    
+    for (VarDefMap::iterator iter = defs.begin(); iter != defs.end(); ++iter)
+        iter->second = iter->second->replaceAllStubs(context);
+}

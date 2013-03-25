@@ -157,9 +157,10 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     // store a module placeholder so that if we end up cycling back to this
     // module, we don't recurse.
+    ModuleStubPtr stub = new ModuleStub(canonicalName);
     pair<Construct::ModuleMap::iterator, bool> existing =
         deser.context->construct->moduleCache.insert(
-            make_pair(canonicalName, new ModuleStub(canonicalName))
+            make_pair(canonicalName, stub)
         );
 
     // read and load the dependencies
@@ -215,7 +216,26 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->deserializeDefs(deser);
     mod->metaDigest = deser.hasher.getDigest();
     mod->onDeserialized(*deser.context);
+
+    // fix up all of the modules with a cyclic dependency on this one
+    stub->replace(*deser.context);
+
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;
     return mod;
+}
+
+VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
+    if (stubFree)
+        return this;
+    stubFree = true;
+    VarDefPtr replacement = replaceStub(context);
+    if (replacement)
+        return replacement;
+
+    for (VarDefMap::iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         )
+        iter->second = iter->second->replaceAllStubs(context);
 }

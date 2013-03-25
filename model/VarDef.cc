@@ -29,7 +29,8 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
     type(type),
     name(name),
     owner(0),
-    constant(false) {
+    constant(false),
+    stubFree(false) {
 }
 
 VarDef::~VarDef() {}
@@ -178,6 +179,9 @@ namespace {
         // it to create a stub for the symbol.
         if (!module->finished) {
             ModuleStubPtr stub = ModuleStubPtr::rcast(module);
+            stub->dependents.insert(
+                ModuleDefPtr::arcast(context.getModuleContext()->ns)
+            );
             SPUG_CHECK(stub,
                        "Referenced module " << module->getFullName() <<
                         " is not finished, but isn't a stub."
@@ -272,4 +276,17 @@ VarDefPtr VarDef::deserialize(Deserializer &deser) {
                                                  type.get(),
                                                  instSlot
                                                  );
+}
+
+VarDefPtr VarDef::replaceAllStubs(Context &context) {
+    if (stubFree)
+        return this;
+    stubFree = true;
+    VarDefPtr replacement = replaceStub(context);
+    if (replacement)
+        return replacement;
+
+    if (type)
+        type = type->replaceAllStubs(context);
+    return this;
 }

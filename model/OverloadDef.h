@@ -186,6 +186,8 @@ class OverloadDef : public VarDef {
         static OverloadDefPtr deserialize(Deserializer &deser,
                                           Namespace *owner
                                           );
+
+        virtual VarDefPtr replaceAllStubs(Context &context);
 };
 
 } // namespace model

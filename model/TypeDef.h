@@ -358,6 +358,8 @@ class TypeDef : public VarDef, public Namespace {
         static TypeDefPtr deserialize(Deserializer &deser,
                                       const char *name = 0
                                       );
+
+        virtual VarDefPtr replaceAllStubs(Context &context);
 };
 
 } // namespace model

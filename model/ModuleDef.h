@@ -134,6 +134,8 @@ class ModuleDef : public VarDef, public Namespace {
                                         const std::string &canonicalName
                                         );
 
+        virtual VarDefPtr replaceAllStubs(Context &context);
+
         /**
          * Run the module main function.  This should generally only be called 
          * on the top-level script, all imported modules will have their main 

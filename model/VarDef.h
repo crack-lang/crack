@@ -50,10 +50,15 @@ class VarDef : public virtual spug::RCBase {
                                 ) const;
 
     public:
+        
         TypeDefPtr type;
         std::string name;
         VarDefImplPtr impl;
         bool constant;
+        
+        // this flag is true if we've run replaceAllStubs() on this object and 
+        // it is guaranteed to not reference any stubs.
+        bool stubFree;
 
         VarDef(TypeDef *type, const std::string &name);
         virtual ~VarDef();
@@ -187,6 +192,18 @@ class VarDef : public virtual spug::RCBase {
          */
         virtual void onDeserialized(Context &context) {}
         
+        /**
+         * Replace a stub object created during deserialization with the 
+         * actual definition.  Returns the replacement if there is one, null 
+         * if not.
+         */
+        virtual VarDefPtr replaceStub(Context &context) { return this; }
+        
+        /**
+         * Recursively replace all stubs referenced by the definition.  
+         * Returns the replaceStub() or this var (not null like replaceStub()).
+         */
+        virtual VarDefPtr replaceAllStubs(Context &context);
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

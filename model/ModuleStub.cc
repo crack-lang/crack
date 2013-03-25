@@ -17,9 +17,39 @@ namespace {
     class TypeStub : public TypeDef {
         public:
             ModuleStub *module;
-            TypeStub(ModuleStub *module, const string &name) :
+            TypeVecObjPtr params;
+            TypeStub(ModuleStub *module, const string &name,
+                     TypeVecObj *params
+                     ) :
                 TypeDef(0, name),
-                module(module) {
+                module(module),
+                params(params) {
+            }
+
+            VarDefPtr replaceStub(Context &context) {
+                TypeDefPtr replacement = module->replacement->lookUp(name);
+                if (params)
+                    return replacement->getSpecialization(context,
+                                                          params.get()
+                                                          );
+                else
+                    return replacement;
+            }
+
+            TypeDef *getSpecialization(Context &context,
+                                       TypeVecObj *params
+                                       ) {
+                TypeVecObjKey key(params);
+                if (!generic) {
+                    generic = new SpecializationCache();
+                } else {
+                    SpecializationCache::iterator i = generic->find(key);
+                    if (i != generic->end())
+                        return i->second.get();
+                }
+                TypeDef *result;
+                (*generic)[key] = result = new TypeStub(module, name, params);
+                return result;
             }
     };
 
@@ -30,6 +60,10 @@ namespace {
                 OverloadDef(name),
                 module(module) {
             }
+
+            VarDefPtr replaceStub(Context &context) {
+                return module->replacement->lookUp(name);
+            }
     };
 
     class VarStub : public VarDef {
@@ -39,12 +73,16 @@ namespace {
                 VarDef(0, name),
                 module(module) {
             }
+
+            VarDefPtr replaceStub(Context &context) {
+                return module->replacement->lookUp(name);
+            }
     };
 
 } // anon namespace
 
 TypeDefPtr ModuleStub::getTypeStub(const string &name) {
-    return new TypeStub(this, name);
+    return new TypeStub(this, name, 0);
 }
 
 OverloadDefPtr ModuleStub::getOverloadStub(const string &name) {
@@ -53,4 +91,12 @@ OverloadDefPtr ModuleStub::getOverloadStub(const string &name) {
 
 VarDefPtr ModuleStub::getVarStub(const string &name) {
     return new VarStub(this, name);
+}
+
+void ModuleStub::replace(Context &context) {
+    for (std::set<ModuleDef *>::iterator iter = dependents.begin();
+         iter != dependents.end();
+         ++iter
+         )
+        (*iter)->replaceAllStubs(context);
 }
