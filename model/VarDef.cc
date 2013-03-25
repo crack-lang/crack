@@ -179,13 +179,13 @@ namespace {
         // it to create a stub for the symbol.
         if (!module->finished) {
             ModuleStubPtr stub = ModuleStubPtr::rcast(module);
-            stub->dependents.insert(
-                ModuleDefPtr::arcast(context.getModuleContext()->ns)
-            );
             SPUG_CHECK(stub,
                        "Referenced module " << module->getFullName() <<
                         " is not finished, but isn't a stub."
                        )
+            stub->dependents.insert(
+                ModuleDefPtr::arcast(context.getModuleContext()->ns)
+            );
             switch (kind) {
                 case K_TYPE:
                     return stub->getTypeStub(symbolName);
