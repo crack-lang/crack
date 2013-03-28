@@ -23,14 +23,40 @@ SPUG_RCPTR(LLVMJitBuilder);
 
 class LLVMJitBuilder : public LLVMBuilder {
     private:
+        
+        class Resolver {
+            private:
+                // the cache map tracks symbols that we've already resolved.
+                typedef std::map<std::string, llvm::GlobalValue *> CacheMap;
+                CacheMap cacheMap;
+        
+                // the fixup map stores the modules that need a given symbol.
+                typedef std::vector<llvm::GlobalValue *> GlobalValueVec;
+                typedef std::map<std::string, GlobalValueVec> FixupMap;
+                FixupMap fixupMap;
+            
+            public:
+                void registerGlobal(llvm::ExecutionEngine *execEng,
+                                    llvm::GlobalValue *globalVal
+                                    );
+                
+                // Resolves the symbol if it's in the cache, otherwise adds a 
+                // fix-up for it.  Returns true if it was able to resolve the 
+                // symbol, false if not.
+                bool resolve(llvm::ExecutionEngine *execEng,
+                             llvm::GlobalValue *globalVal
+                             );
+        };
+
+                
+        
         llvm::ExecutionEngine *execEng;
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
         
         std::vector< std::pair<llvm::Function *, llvm::Function *> > externals;
-
-        typedef std::map<std::string, llvm::GlobalValue *> CacheMapType;
-        CacheMapType *cacheMap;
+        
+        Resolver *resolver;
 
         virtual void run();
 
@@ -38,7 +64,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void doRunOrDump(model::Context &context);
 
-        void ensureCacheMap();
+        void ensureResolver();
 
         void setupCleanup(BModuleDef *moduleDef);
 
@@ -72,7 +98,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                          llvm::GlobalValue *externalDef
                                          );
 
-        LLVMJitBuilder(void) : execEng(0), cacheMap(0) { }
+        LLVMJitBuilder(void) : execEng(0), resolver(0) { }
 
         virtual void *getFuncAddr(llvm::Function *func);
 
@@ -90,8 +116,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual bool isExec() { return true; }
 
         virtual void finishBuild(model::Context &context) {
-            if (cacheMap)
-                delete cacheMap;
+            if (resolver)
+                delete resolver;
         }
 
         virtual void registerDef(model::Context &context,

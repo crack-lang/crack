@@ -40,6 +40,57 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
+void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
+                                              GlobalValue *globalVal
+                                              ) {
+    const string &name = globalVal->getName().str();
+    pair<CacheMap::iterator, bool> result =
+        cacheMap.insert(CacheMap::value_type(name, globalVal));
+    if (!result.second)
+        // it was already in the cache
+        return;
+
+    // back-fill any fixups that were registered.
+    FixupMap::iterator i = fixupMap.find(name);
+    if (i != fixupMap.end()) {
+        void *realAddr = execEng->getPointerToGlobal(globalVal);
+        SPUG_CHECK(realAddr,
+                   "no address for global " <<
+                    string(globalVal->getName())
+                   );
+
+        for (GlobalValueVec::iterator j = i->second.begin();
+             j != i->second.end();
+             ++j
+             )
+            execEng->updateGlobalMapping(*j, realAddr);
+
+        fixupMap.erase(i);
+    }
+}
+
+bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
+                                       GlobalValue *globalVal
+                                       ) {
+    const string &name = globalVal->getName().str();
+    CacheMap::iterator i = cacheMap.find(name);
+    if (i == cacheMap.end()) {
+
+        // we don't have it in the cache yet, add it to the fixups
+        fixupMap[name].push_back(globalVal);
+        return false;
+    } else {
+        void *realAddr = execEng->getPointerToGlobal(i->second);
+        SPUG_CHECK(realAddr,
+                   "no address for global " <<
+                    string(globalVal->getName())
+                   );
+
+        execEng->updateGlobalMapping(globalVal, realAddr);
+        return true;
+    }
+}
+
 ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
     ModuleDefPtr mod = LLVMBuilder::registerPrimFuncs(context);
@@ -49,15 +100,13 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
     BModuleDefPtr bMod = BModuleDefPtr::rcast(mod);
 
     // if we're caching, register .builtin definitions in the cache
-    ensureCacheMap();
+    ensureResolver();
     for (Module::iterator iter = module->begin();
          iter != module->end();
          ++iter
          ) {
-        if (!iter->isDeclaration()) {
-            cacheMap->insert(CacheMapType::value_type(iter->getName().str(),
-                                                      iter));
-        }
+        if (!iter->isDeclaration())
+            resolver->registerGlobal(execEng, iter);
     }
 
     return bMod;
@@ -121,19 +170,14 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
     // if we have a cacher, make sure that all globals are registered there.
     if (context.construct->cacheMode) {
         // make sure we have a cache map
-        ensureCacheMap();
+        ensureResolver();
 
         Module *module = moduleDef->rep;
         for (Module::global_iterator iter = module->global_begin();
              iter != module->global_end();
              ++iter
-             ) {
-            if (cacheMap->find(iter->getName()) == cacheMap->end())
-                cacheMap->insert(CacheMapType::value_type(iter->getName(),
-                                                          iter
-                                                          )
-                                 );
-        }
+             )
+            resolver->registerGlobal(execEng, iter);
     }
 
     // mark the module as finished
@@ -309,19 +353,19 @@ void LLVMJitBuilder::dump() {
     passMan.run(*module);
 }
 
-void LLVMJitBuilder::ensureCacheMap() {
-    // make sure cacheMap is initialized
+void LLVMJitBuilder::ensureResolver() {
+    // make sure resolver is initialized
     // a single copy of the map exists in the rootBuilder
-    if (!cacheMap) {
+    if (!resolver) {
         if (rootBuilder) {
             LLVMJitBuilder *rb = LLVMJitBuilderPtr::cast(rootBuilder.get());
-            if (rb->cacheMap)
-                cacheMap = rb->cacheMap;
+            if (rb->resolver)
+                resolver = rb->resolver;
             else
-                cacheMap = rb->cacheMap = new CacheMapType();
+                resolver = rb->resolver = new Resolver();
         } else {
             // this is the root builder
-            cacheMap = new CacheMapType();
+            resolver = new Resolver();
         }
     }
 }
@@ -333,34 +377,32 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     if (!context.construct->cacheMode)
         return;
 
-    ensureCacheMap();
+    ensureResolver();
 
     // get rep from either a BFuncDef or varDef->impl global, then use that as
-    // value to cacheMap
+    // value to the resolver
     BGlobalVarDefImpl *bgbl;
     BFuncDef *fd;
     LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-    if (varDef->impl && (bgbl = BGlobalVarDefImplPtr::rcast(varDef->impl))) {
+    GlobalValue *rep;
+    if (varDef->impl && (bgbl = BGlobalVarDefImplPtr::rcast(varDef->impl)))
         // global
-        cacheMap->insert(
-            CacheMapType::value_type(
-                varDef->getFullName(),
-                dyn_cast<GlobalValue>(bgbl->getRep(builder))
-            )
-        );
-    } else if (fd = BFuncDefPtr::cast(varDef)) {
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
+    else if (fd = BFuncDefPtr::cast(varDef))
         // funcdef
-        cacheMap->insert(
-            CacheMapType::value_type(varDef->getFullName(),
-                                     fd->getRep(builder)
-                                     )
-        );
-    } else {
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
+    else
         //assert(0 && "registerDef: unknown varDef type");
         // this happens in a call from parser (not cacher) on e.g. classes,
         // which we don't care about here
         return;
-    }
+
+    resolver->registerGlobal(execEng, rep);
+    SPUG_CHECK(varDef->getFullName() == rep->getName().str(),
+               "global def " << varDef->getFullName() <<
+                " doees not have the same name as its rep: " <<
+                rep->getName().str()
+               );
 
 }
 
@@ -380,23 +422,19 @@ void LLVMJitBuilder::registerGlobals() {
             );
 
             // also add the function to the cache.
-            if (cacheMap)
-                cacheMap->insert(
-                    CacheMapType::value_type(iter->getName(), iter)
-                );
+            if (resolver)
+                resolver->registerGlobal(execEng, iter);
         }
     }
 
     // register global variables with the cache while we're at it.
-    if (cacheMap) {
+    if (resolver) {
         for (Module::global_iterator iter = module->global_begin();
             iter != module->global_end();
             ++iter
             )
             if (!iter->isDeclaration())
-                cacheMap->insert(
-                    CacheMapType::value_type(iter->getName(), iter)
-                );
+                resolver->registerGlobal(execEng, iter);
     }
 }
 
@@ -419,31 +457,17 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         func = c.getEntryFunction();
 
         engineBindModule(bmod.get());
-        ensureCacheMap();
+        ensureResolver();
 
         // try to resolve unresolved globals from the cache
+        bool hasUnresolvedExternals = false;
         for (Module::global_iterator iter = module->global_begin();
              iter != module->global_end();
              ++iter
              ) {
             if (iter->isDeclaration()) {
-
-                // now find the defining module
-                string xname = iter->getName();
-                CacheMapType::const_iterator globalDefIter =
-                    cacheMap->find(iter->getName());
-                if (globalDefIter != cacheMap->end()) {
-                    void *realAddr =
-                        execEng->getPointerToGlobal(globalDefIter->second);
-                    SPUG_CHECK(realAddr,
-                               "unable to resolve global: " <<
-                               globalDefIter->first
-                               );
-                    execEng->updateGlobalMapping(iter, realAddr);
-                } else {
-                    cout << "couldn't get " << xname << " from cacheMap" <<
-                    endl;
-                }
+                if (!resolver->resolve(execEng, iter))
+                    hasUnresolvedExternals = true;
             }
         }
 
@@ -453,23 +477,13 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
              ++iter
              ) {
             if (iter->isDeclaration() &&
-                !iter->isMaterializable()) {
-                // now find the defining module
-                CacheMapType::const_iterator globalDefIter =
-                    cacheMap->find(iter->getName());
-                if (globalDefIter != cacheMap->end()) {
-                    Function *f = dyn_cast<Function>(globalDefIter->second);
-                    void *realAddr = execEng->getPointerToFunction(f);
-                    SPUG_CHECK(realAddr,
-                               "Unable to resolve function " <<
-                                string(f->getName())
-                               );
-                    execEng->updateGlobalMapping(iter, realAddr);
-                }
-            }
+                !iter->isMaterializable())
+                if (!resolver->resolve(execEng, iter))
+                    hasUnresolvedExternals = true;
         }
 
-        registerGlobals();
+//        if (!hasUnresolvedExternals)
+            registerGlobals();
 
         setupCleanup(bmod.get());
 
