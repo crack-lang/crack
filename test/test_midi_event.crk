@@ -1,0 +1,56 @@
+# Copyright 2012 Google Inc.
+
+import crack.cont.array Array;
+import crack.io cerr, StringReader, StringWriter;
+import crack.ascii hex;
+import crack.midi.event NoteOn, NoteOff, ProgramChange, PitchWheel,
+    ControlChange, SysEx, MidiReader, MidiWriter, Track;
+@import crack.ann assert;
+
+if (1) {
+    StringWriter writer = {};
+    MidiWriter mw = {writer};
+    NoteOn(0, 15, 5, 10).writeTo(mw);
+    mw.flush();
+    @assert(writer.string() == '\x9F\x05\x0A')
+}
+
+if (1) {
+    Array[int] vals = [0, 1, 0x80, 0x3f, 0x123456];
+    for (val :in vals) {
+        StringWriter writer = {};
+        MidiWriter mw = {writer};
+        mw.encodeVarLen(val);
+        mw.flush();
+        StringReader reader = {writer.string()};
+        MidiReader mr = {reader};
+        @assert(mr.readVarLen() == val);
+    }
+}
+
+if (1) {
+    StringWriter writer = {};
+    MidiWriter mw = {writer};
+    Track track = {'track'};
+    track.add(NoteOn(0, 15, 5, 10));
+    track.add(NoteOff(1, 15, 5, 0));
+    track.add(NoteOn(5, 10, 7, 0x7f));  # add on a different channel
+    track.writeTo(mw);
+    mw.flush();
+    data := writer.string();
+    @assert(data ==
+             '\x00\x9f\x05\x0a\x01\x05\x00\x04\x9a\x07\x7f\x00\xFF\x2F\x00');
+
+    StringReader reader = {data};
+    MidiReader mr = {reader};
+    track = mr.readTrack('foo');
+    if (1) { @assert((e := NoteOn.cast(track[0])) && e.channel == 15 &&
+                      e.note == 5 && e.velocity == 10); }
+    if (1) { @assert((e := NoteOff.cast(track[1])) && e.channel == 15 &&
+                      e.note == 5 && e.velocity == 0); }
+    if (1) { @assert((e := NoteOn.cast(track[2])) && e.channel == 10 &&
+                      e.note == 7 && e.velocity == 0x7F); }
+}
+
+cerr `ok\n`;
+

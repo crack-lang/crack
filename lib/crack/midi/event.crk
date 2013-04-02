@@ -64,17 +64,24 @@ class MidiWriter {
     }
     
     @final void encodeVarLen(uint val) {
-        if (!val)
+        if (!val) {
             write(0);
-
-        while (val) {
-            if (val > 0x7f) {
-                write(byte(val & 0x7f | 0x80));
-            } else {
-                write(byte(val));
-            }
-            val >>= 7;
+            return;
         }
+
+        # find the high 7 bits
+        uint x = val;
+        uint shifts;
+        while (x) {
+            x >>= 7;
+            ++shifts;
+        }
+
+        while (--shifts)
+            write(byte( (val >> (7 * shifts)) & 0x7f | 0x80 ));
+        
+        # write the last byte
+        write(byte(val & 0x7f));
     }
     
     oper del() {
@@ -402,6 +409,10 @@ class EndTrack : Event {
     Event clone() {
         return EndTrack(time);
     }
+    
+    void formatTo(Formatter f) {
+        f `EndEvent`;
+    }
 }
 
 # XXX Still need the following classes:
@@ -562,6 +573,11 @@ class Track {
         out.write(0xff);
         out.write(0x2f);
         out.write(0);
+    }
+    
+    void formatTo(Formatter out) {
+        for (event :in this)
+            out `$(event.time): $event\n`;
     }
 
 /*   
