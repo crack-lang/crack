@@ -753,7 +753,8 @@ LLVMBuilder::LLVMBuilder() :
     func(0),
     lastValue(0),
     intzLLVM(0),
-    exceptionPersonalityFunc(0) {
+    exceptionPersonalityFunc(0),
+    unwindResumeFunc(0) {
 }
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
@@ -1298,18 +1299,17 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
     }
 }
 
-Function *LLVMBuilder::getUnwindResumeFunc(Module *mod) {
-    SPUG_CHECK(!mod || mod == module,
-               "getUnwindResume called from a different module.");
-    if (!mod) mod = module;
-    LLVMContext &lctx = getGlobalContext();
-    Constant *c = mod->getOrInsertFunction("_Unwind_Resume",
-                                           Type::getVoidTy(lctx),
-                                           Type::getInt8PtrTy(lctx),
-                                           NULL
-                                           );
-    Function *f = cast<Function>(c);
-    return f;
+Function *LLVMBuilder::getUnwindResumeFunc() {
+    if (!unwindResumeFunc) {
+        LLVMContext &lctx = getGlobalContext();
+        Constant *c = module->getOrInsertFunction("_Unwind_Resume",
+                                                  Type::getVoidTy(lctx),
+                                                  Type::getInt8PtrTy(lctx),
+                                                  NULL
+                                                  );
+        unwindResumeFunc = cast<Function>(c);
+    }
+    return unwindResumeFunc;
 }
 
 BModuleDef *LLVMBuilder::instantiateModule(Context &context,

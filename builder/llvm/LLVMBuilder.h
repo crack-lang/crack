@@ -38,7 +38,7 @@ class LLVMBuilder : public Builder {
     private:
         typedef std::map<std::string, llvm::StructType *> TypeMap;
         static TypeMap llvmTypes;
-        llvm::Function *exceptionPersonalityFunc;
+        llvm::Function *exceptionPersonalityFunc, *unwindResumeFunc;
 
     protected:
 
@@ -210,11 +210,8 @@ class LLVMBuilder : public Builder {
         // been defined.
         std::vector<BTypeDefPtr> deferMetaClass;
 
-        /**
-         * Gets the _Unwind_Resume function for 'mod', or the current module 
-         * if 'mod' is null.
-         */
-        llvm::Function *getUnwindResumeFunc(llvm::Module *mod = 0);
+        /** Gets the _Unwind_Resume function. */
+        llvm::Function *getUnwindResumeFunc();
         
         /**
          * Instantiates the BModuleDef subclass appropriate for the builder.
