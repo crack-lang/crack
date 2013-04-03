@@ -54,13 +54,7 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
         // To deal with this, we create an explicit call to _Unwind_Resume.  
         // The only problem here is that we have to call llvm.eh.exception to 
         // obtain the exception object, even though we might already have one.
-        LLVMContext &lctx = getGlobalContext();
-        Constant *c = mod->getOrInsertFunction("_Unwind_Resume", 
-                                               Type::getVoidTy(lctx),
-                                               Type::getInt8PtrTy(lctx),
-                                               NULL
-                                               );
-        f = cast<Function>(c);
+        f = LLVMBuilderPtr::cast(&context->builder)->getUnwindResumeFunc();
         b.CreateCall(f, exObj);
         b.CreateUnreachable();
     }

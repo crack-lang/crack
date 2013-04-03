@@ -24,6 +24,8 @@ namespace {
                 TypeDef(0, name),
                 module(module),
                 params(params) {
+
+                owner = module;
             }
 
             VarDefPtr replaceStub(Context &context) {

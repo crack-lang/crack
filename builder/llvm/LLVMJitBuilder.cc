@@ -73,13 +73,10 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
                                        GlobalValue *globalVal
                                        ) {
     const string &name = globalVal->getName().str();
-    CacheMap::iterator i = cacheMap.find(name);
-    if (i == cacheMap.end()) {
 
-        // we don't have it in the cache yet, add it to the fixups
-        fixupMap[name].push_back(globalVal);
-        return false;
-    } else {
+    // first check the cache map for it.
+    CacheMap::iterator i = cacheMap.find(name);
+    if (i != cacheMap.end()) {
         void *realAddr = execEng->getPointerToGlobal(i->second);
         SPUG_CHECK(realAddr,
                    "no address for global " <<
@@ -88,6 +85,83 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
 
         execEng->updateGlobalMapping(globalVal, realAddr);
         return true;
+    }
+
+    // see if it's deferred
+    CacheMap::iterator di = deferred.find(name);
+    if (di != deferred.end()) {
+        // Replace the global with the deferred symbol.  This lets LLVM take
+        // care of resolving it for us.  This isn't really kosher, as it adds
+        // a global to a module that doesn't own it, but it seems to work.
+        globalVal->replaceAllUsesWith(di->second);
+
+        // the module is part of a depencency cycle - don't start collecting
+        // addresses in it yet.
+//        cerr << "uninstantiated " << globalVal->getName().str() << endl;
+        return false;
+    }
+
+    // the symbol hasn't been discovered yet, add it to the fixups
+//    cerr << "undiscovered " << globalVal->getName().str() << endl;
+    fixupMap[name].push_back(globalVal);
+    return false;
+}
+
+void LLVMJitBuilder::Resolver::deferGlobal(GlobalValue *globalVal) {
+    if (!globalVal->isDeclaration()) {
+        const string &name = globalVal->getName().str();
+        SPUG_CHECK(deferred.insert(make_pair(name, globalVal)).second,
+                   globalVal->getName().str() << " already deferred!"
+                   );
+
+        // if the symbol exists in the fixup map, replace it in all of the
+        // modules that depend on it and remove it from the fixup map.
+        FixupMap::iterator i = fixupMap.find(name);
+        if (i != fixupMap.end()) {
+            for (GlobalValueVec::iterator j = i->second.begin();
+                 j != i->second.end();
+                 ++j
+                 )
+                (*j)->replaceAllUsesWith(globalVal);
+            fixupMap.erase(i);
+        }
+    }
+}
+
+void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
+    for (Module::iterator i = module->begin(); i != module->end(); ++i) {
+//        cerr << "deferring func " << i->getName().str() << endl;
+        deferGlobal(i);
+    }
+
+    for (Module::global_iterator i = module->global_begin();
+         i != module->global_end();
+         ++i
+         ) {
+//        cerr << "deferring gvar " << i->getName().str() << endl;
+        deferGlobal(i);
+    }
+
+    // if we've emptied the fixup map, everything is now in place and we can
+    // resolve all of the symbols.
+    if (fixupMap.empty()) {
+        for (CacheMap::iterator i = deferred.begin(); i != deferred.end();
+             ++i
+             ) {
+            const string &name = i->second->getName();
+            void *ptr = execEng->getPointerToGlobal(i->second);
+//            cerr << "deferred " << name << "@" << ptr << endl;
+            if (dyn_cast<Function>(i->second))
+                crack::debug::registerDebugInfo(ptr, name,
+                                                "",   // file name
+                                                0     // line number
+                                                );
+
+            // also add the function to the cache.
+            cacheMap.insert(make_pair(name, i->second));
+        }
+
+        deferred.clear();
     }
 }
 
@@ -184,6 +258,16 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
+void LLVMJitBuilder::registerHiddenFunc(model::Context &context,
+                                        BFuncDef *func
+                                        ) {
+    if (context.construct->cacheMode) {
+        ensureResolver();
+        // we don't currently register debug info for these.
+        resolver->registerGlobal(execEng, func->getRep(*this));
+    }
+}
+
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
     type->getClassInstRep(module, execEng);
 }
@@ -265,6 +349,33 @@ void LLVMJitBuilder::run() {
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     SPUG_CHECK(fptr, "no address for function " << string(func->getName()));
     fptr();
+}
+
+FuncDefPtr LLVMJitBuilder::createExternFunc(
+    model::Context &context,
+    model::FuncDef::Flags flags,
+    const std::string &name,
+    model::TypeDef *returnType,
+    model::TypeDef *receiverType,
+    const std::vector<model::ArgDefPtr> &args,
+    void *cfunc,
+    const char *symbolName
+) {
+    FuncDefPtr result =
+        LLVMBuilder::createExternFunc(context, flags, name, returnType,
+                                      receiverType,
+                                      args,
+                                      cfunc,
+                                      symbolName
+                                      );
+    if (context.construct->cacheMode) {
+        ensureResolver();
+        crack::debug::registerDebugInfo(cfunc, name, "", 0);
+        resolver->registerGlobal(execEng,
+                                 BFuncDefPtr::rcast(result)->getRep(*this)
+                                 );
+    }
+    return result;
 }
 
 BuilderPtr LLVMJitBuilder::createChildBuilder() {
@@ -414,8 +525,10 @@ void LLVMJitBuilder::registerGlobals() {
          ) {
         if (!iter->isDeclaration()) {
             string name = iter->getName();
+            void *ptr = execEng->getPointerToGlobal(iter);
+//            cerr << "global " << name << "@" << ptr << endl;
             crack::debug::registerDebugInfo(
-                execEng->getPointerToGlobal(iter),
+                ptr,
                 name,
                 "",   // file name
                 0     // line number
@@ -459,6 +572,14 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         engineBindModule(bmod.get());
         ensureResolver();
 
+        // register "__CrackExceptionPersonality" and "_Unwind_Resume"
+        if (context.construct->cacheMode) {
+
+            LLVMContext &lctx = getGlobalContext();
+            resolver->registerGlobal(execEng, getExceptionPersonalityFunc());
+            resolver->registerGlobal(execEng, getUnwindResumeFunc());
+        }
+
         // try to resolve unresolved globals from the cache
         bool hasUnresolvedExternals = false;
         for (Module::global_iterator iter = module->global_begin();
@@ -476,13 +597,14 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
              iter != module->end();
              ++iter
              ) {
-            if (iter->isDeclaration() &&
-                !iter->isMaterializable())
+            if (iter->isDeclaration() && !iter->isMaterializable())
                 if (!resolver->resolve(execEng, iter))
                     hasUnresolvedExternals = true;
         }
 
-//        if (!hasUnresolvedExternals)
+        if (hasUnresolvedExternals)
+            resolver->defer(execEng, module);
+        else
             registerGlobals();
 
         setupCleanup(bmod.get());

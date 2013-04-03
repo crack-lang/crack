@@ -30,10 +30,19 @@ class LLVMJitBuilder : public LLVMBuilder {
                 typedef std::map<std::string, llvm::GlobalValue *> CacheMap;
                 CacheMap cacheMap;
         
-                // the fixup map stores the modules that need a given symbol.
+                // the fixup map stores unresolved externals.  When the fixup 
+                // map is empty and the deferred map isn't, we regster all of 
+                // the symbols in the deferred map.
                 typedef std::vector<llvm::GlobalValue *> GlobalValueVec;
                 typedef std::map<std::string, GlobalValueVec> FixupMap;
                 FixupMap fixupMap;
+                
+                // the deferred globals - these are globals defined in 
+                // modules that ended up with unresolved externals.
+                CacheMap deferred;
+
+                // add the global to 'deferred' and resolve it in fixups.                
+                void deferGlobal(llvm::GlobalValue *globalVal);
             
             public:
                 void registerGlobal(llvm::ExecutionEngine *execEng,
@@ -46,6 +55,13 @@ class LLVMJitBuilder : public LLVMBuilder {
                 bool resolve(llvm::ExecutionEngine *execEng,
                              llvm::GlobalValue *globalVal
                              );
+
+                // Defer all of the globals from 'module'.  If we end up 
+                // getting rid of everything in the fixup map, register all of
+                // the addresses in the cache map and debug info.
+                void defer(llvm::ExecutionEngine *execEng, 
+                           llvm::Module *module
+                           );
         };
 
                 
@@ -83,6 +99,9 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef
                                         );
+        virtual void registerHiddenFunc(model::Context &context,
+                                        BFuncDef *func
+                                        );
         virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
                                                       const std::string &name,
                                                       model::ModuleDef *owner
@@ -102,6 +121,17 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void *getFuncAddr(llvm::Function *func);
 
+
+        virtual model::FuncDefPtr
+            createExternFunc(model::Context &context,
+                             model::FuncDef::Flags flags,
+                             const std::string &name,
+                             model::TypeDef *returnType,
+                             model::TypeDef *receiverType,
+                             const std::vector<model::ArgDefPtr> &args,
+                             void *cfunc,
+                             const char *symbolName=0
+                             );
 
         virtual BuilderPtr createChildBuilder();
 
