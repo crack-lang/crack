@@ -369,15 +369,15 @@ class MockBuilder : public builder::Builder {
 
         virtual model::FuncDefPtr materializeFunc(
             model::Context &context,
+            model::FuncDef::Flags flags,
             const std::string &name,
+            model::TypeDef *returnType,
             const model::ArgVec &args
         ) {
             model::FuncDefPtr result =
-                new MockFuncDef(static_cast<model::FuncDef::Flags>(0),
-                                name,
-                                args.size()
-                                );
+                new MockFuncDef(flags, name, args.size());
             result->args = args;
+            result->returnType = returnType;
             return result;
         }
 

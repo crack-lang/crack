@@ -322,12 +322,12 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
 
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
+        flags,
         name,
+        returnType.get(),
         args
     );
     
-    result->returnType = returnType;
-    result->flags = flags;
     result->receiverType = receiverType;
     result->vtableSlot = vtableSlot;
 

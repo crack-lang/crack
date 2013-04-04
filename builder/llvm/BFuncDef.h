@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010,2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BFuncDef_h_
 #define _builder_llvm_BFuncDef_h_
@@ -28,7 +28,7 @@ class BFuncDef : public model::FuncDef {
 private:
     // this holds the function object for the last module to request
     // it.
-    llvm::Function *rep;
+    llvm::Constant *rep;
 
 public:
     // low level symbol name as used by llvm::Function *rep
@@ -61,12 +61,18 @@ public:
     /**
      * Returns the module-specific Function object for the function.
      */
-    llvm::Function *getRep(LLVMBuilder &builder);
+    llvm::Constant *getRep(LLVMBuilder &builder);
+
+    /**
+     * Returns getRep() cast to a Function.  Aborts if the rep isn't a
+     * Function object, which can only happen for an abstract method.
+     */
+    llvm::Function *getFuncRep(LLVMBuilder &builder);
 
     /**
      * Set the low-level function.
      */
-    void setRep(llvm::Function *newRep) {
+    void setRep(llvm::Constant *newRep) {
         SPUG_CHECK(!rep,
                    "Representation for function " << name <<
                     " already defined."

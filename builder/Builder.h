@@ -460,7 +460,9 @@ class Builder : public spug::RCBase {
          */
         virtual model::FuncDefPtr materializeFunc(
             model::Context &context,
+            model::FuncDef::Flags flags,
             const std::string &name,
+            model::TypeDef *returnType,
             const model::ArgVec &args
         ) = 0;
         

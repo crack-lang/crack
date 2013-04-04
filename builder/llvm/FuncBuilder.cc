@@ -61,46 +61,60 @@ void FuncBuilder::finish(bool storeDef) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
-    ContextPtr defCtx = context.getParent()->getDefContext();
-    Function *func = Function::Create(llvmFuncType,
-                                      linkage,
-                                      funcDef->getUniqueId(defCtx->ns.get()),
-                                      builder.module
-                                      );
-    func->setCallingConv(llvm::CallingConv::C);
-    if (!funcDef->symbolName.empty())
-        func->setName(funcDef->symbolName);
-    string fname = func->getName();
+    if (!(funcDef->flags & FuncDef::abstract)) {
+        ContextPtr defCtx = context.getParent()->getDefContext();
+        Function *func = Function::Create(llvmFuncType,
+                                          linkage,
+                                          funcDef->getUniqueId(defCtx->ns.get()),
+                                          builder.module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        if (!funcDef->symbolName.empty())
+            func->setName(funcDef->symbolName);
+        string fname = func->getName();
 
-    // back-fill builder data and set arg names
-    Function::arg_iterator llvmArg = func->arg_begin();
-    vector<ArgDefPtr>::const_iterator crackArg =
-            funcDef->args.begin();
-    if (receiverType) {
-        llvmArg->setName("this");
+        // back-fill builder data and set arg names
+        Function::arg_iterator llvmArg = func->arg_begin();
+        vector<ArgDefPtr>::const_iterator crackArg =
+                funcDef->args.begin();
+        if (receiverType) {
+            llvmArg->setName("this");
 
-        // add the implementation to the "this" var
-        if (!(funcDef->flags & FuncDef::abstract)) {
+            // add the implementation to the "this" var
             receiver = context.ns->lookUp("this");
             assert(receiver &&
-                "missing 'this' variable in the context of a "
-                "function with a receiver"
-                );
+                   "missing 'this' variable in the context of a "
+                   "function with a receiver"
+                   );
             funcDef->thisArg = receiver;
             receiver->impl = new BArgVarDefImpl(llvmArg);
+            ++llvmArg;
         }
-        ++llvmArg;
-    }
-    for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
-        llvmArg->setName((*crackArg)->name);
+        for (; llvmArg != func->arg_end(); ++llvmArg, ++crackArg) {
+            llvmArg->setName((*crackArg)->name);
 
-        // need the address of the value here because it is going
-        // to be used in a "load" context.
-        (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
-    }
+            // need the address of the value here because it is going
+            // to be used in a "load" context.
+            (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
+        }
 
-    // store the LLVM function in the table for the module
-    builder.setModFunc(funcDef.get(), func);
+        // store the LLVM function in the table for the module
+        builder.setModFunc(funcDef.get(), func);
+
+        // create an implementation object to return the function
+        // pointer
+        funcDef->impl = new BConstDefImpl(funcDef.get(), func);
+
+        funcDef->setRep(func);
+    } else {
+        // Create a null constant of the type of the function
+        Constant *rep = Constant::getNullValue(llvmFuncType->getPointerTo());
+        SPUG_CHECK(rep,
+                   "Unable to create null value for type of " <<
+                    *funcDef
+                   );
+        funcDef->setRep(rep);
+    }
 
     // get or create the type registered for the function
     BTypeDefPtr crkFuncType = builder.getFuncType(context, funcDef.get(),
@@ -108,11 +122,6 @@ void FuncBuilder::finish(bool storeDef) {
                                                   );
     funcDef->type = crkFuncType;
 
-    // create an implementation object to return the function
-    // pointer
-    funcDef->impl = new BConstDefImpl(funcDef.get(), func);
-
-    funcDef->setRep(func);
     if (storeDef)
         context.addDef(funcDef.get());
 }

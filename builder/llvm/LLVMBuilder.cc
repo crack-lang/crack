@@ -1668,7 +1668,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         realArgs = &existing->args;
     }
 
-    func = funcDef->getRep(*this);
+    func = funcDef->getFuncRep(*this);
     string fffname = func->getName();
 
     createFuncStartBlocks(name);
@@ -1811,7 +1811,7 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
 
     f.setArgs(args);
     f.finish(false);
-    primFuncs[f.funcDef->getRep(*this)] = cfunc;
+    primFuncs[f.funcDef->getFuncRep(*this)] = cfunc;
     return f.funcDef;
 }
 
@@ -1865,10 +1865,11 @@ namespace {
         context.addDef(funcBuilder.funcDef.get(), objClass);
 
         LLVMBuilder &lb = dynamic_cast<LLVMBuilder &>(context.builder);
-        BasicBlock *block = BasicBlock::Create(getGlobalContext(),
-                                               "oper class",
-                                               funcBuilder.funcDef->getRep(lb)
-                                               );
+        BasicBlock *block = BasicBlock::Create(
+            getGlobalContext(),
+            "oper class",
+            funcBuilder.funcDef->getFuncRep(lb)
+        );
 
         // body of the function: load the class instance global variable
         IRBuilder<> builder(block);
@@ -2345,19 +2346,41 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
 }
 
 
-FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
+FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
+                                        const string &name,
+                                        TypeDef *returnType,
                                         const ArgVec &args
                                         ) {
-    BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
+    BFuncDefPtr result = new BFuncDef(flags, name, args.size());
     result->args = args;
+    result->returnType = returnType;
 
-    string fullName = result->getUniqueId(context.ns.get());
-    Function *func = module->getFunction(fullName);
-    SPUG_CHECK(func,
-               "Function " << fullName << " not found in module " <<
-                module->getModuleIdentifier()
-               );
-    result->setRep(func);
+    if (!(flags & FuncDef::abstract)) {
+        string fullName = result->getUniqueId(context.ns.get());
+        Function *func = module->getFunction(fullName);
+        SPUG_CHECK(func,
+                "Function " << fullName << " not found in module " <<
+                    module->getModuleIdentifier()
+                );
+        result->setRep(func);
+    } else {
+        // Create a null constant.  First we have to construct a type.
+        vector<Type *> argTypes;
+        argTypes.reserve(args.size());
+        for (ArgVec::const_iterator iter = args.begin();
+             iter != args.end();
+             ++iter
+             )
+            argTypes.push_back(BTypeDefPtr::arcast((*iter)->type)->rep);
+
+        Type *funcType =
+            FunctionType::get(BTypeDefPtr::acast(returnType)->rep,
+                              argTypes,
+                              false
+                              );
+
+        result->setRep(Constant::getNullValue(funcType->getPointerTo()));
+    }
     return result;
 }
 
@@ -3285,7 +3308,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.setSymbolName("calloc");
         f.finish();
         registerHiddenFunc(context, f.funcDef.get());
-        callocFunc = f.funcDef->getRep(*this);
+        callocFunc = f.funcDef->getFuncRep(*this);
     }
 
     // create "array[byteptr] __getArgv()"

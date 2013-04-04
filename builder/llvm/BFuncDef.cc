@@ -15,6 +15,7 @@
 #include <llvm/Function.h>
 
 using namespace builder::mvll;
+using namespace llvm;
 
 void BFuncDef::setOwner(model::Namespace *o) {
     owner = o;
@@ -24,20 +25,30 @@ void BFuncDef::setOwner(model::Namespace *o) {
         rep->setName(getUniqueId());
 }
 
-llvm::Function * BFuncDef::getRep(LLVMBuilder &builder) {
+Constant *BFuncDef::getRep(LLVMBuilder &builder) {
     
     // load the function for the correct module, but not for abstract methods 
     // (that would result in an "extern" method for an abstract method, which 
     // is an unresolved external)
-    if (!(flags & FuncDef::abstract) && rep->getParent() != builder.module)
-        return builder.getModFunc(this, rep);
+    Function *funcRep = dyn_cast<Function>(rep);
+    if (funcRep && funcRep->getParent() != builder.module)
+        return builder.getModFunc(this, funcRep);
     else
         return rep;
+}
+
+Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
+    Function *result = dyn_cast<Function>(getRep(builder));
+    SPUG_CHECK(result, 
+               "Attempted to call BFuncDef::getFuncRep() on function " <<
+                getDisplayName() << " which is not a function."
+               );
+    return result;
 }
 
 
 // only used for annotation functions
 void *BFuncDef::getFuncAddr(Builder &builder) {
     LLVMBuilder &b = dynamic_cast<LLVMBuilder&>(builder);
-    return b.getFuncAddr(getRep(b));
+    return b.getFuncAddr(getFuncRep(b));
 }

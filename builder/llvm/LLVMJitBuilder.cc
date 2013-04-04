@@ -294,7 +294,7 @@ void LLVMJitBuilder::registerHiddenFunc(model::Context &context,
     if (context.construct->cacheMode) {
         ensureResolver();
         // we don't currently register debug info for these.
-        resolver->registerGlobal(execEng, func->getRep(*this));
+        resolver->registerGlobal(execEng, func->getFuncRep(*this));
     }
 }
 
@@ -406,7 +406,7 @@ FuncDefPtr LLVMJitBuilder::createExternFunc(
         ensureResolver();
         crack::debug::registerDebugInfo(cfunc, name, "", 0);
         resolver->registerGlobal(execEng,
-                                 BFuncDefPtr::rcast(result)->getRep(*this)
+                                 BFuncDefPtr::rcast(result)->getFuncRep(*this)
                                  );
     }
     return result;
