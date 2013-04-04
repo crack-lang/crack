@@ -259,6 +259,12 @@ class LLVMBuilder : public Builder {
                                 unsigned int nextVTableSlot
                                 );
 
+        /**
+         * Checks for unresolved externals in the root builder and aborts if 
+         * they are discovered.
+         */
+        virtual void checkForUnresolvedExternals() {}
+        
         virtual void *getFuncAddr(llvm::Function *func) = 0;
 
         /** Creates an expresion to cleanup the current exception. */

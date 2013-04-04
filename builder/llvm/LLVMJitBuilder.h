@@ -40,6 +40,8 @@ class LLVMJitBuilder : public LLVMBuilder {
                 // the deferred globals - these are globals defined in 
                 // modules that ended up with unresolved externals.
                 CacheMap deferred;
+                
+                static bool trace;
 
                 // add the global to 'deferred' and resolve it in fixups.                
                 void deferGlobal(llvm::GlobalValue *globalVal);
@@ -62,6 +64,9 @@ class LLVMJitBuilder : public LLVMBuilder {
                 void defer(llvm::ExecutionEngine *execEng, 
                            llvm::Module *module
                            );
+                
+                /** See LLVMBuilder. */
+                void checkForUnresolvedExternals();
         };
 
                 
@@ -118,7 +123,9 @@ class LLVMJitBuilder : public LLVMBuilder {
                                          );
 
         LLVMJitBuilder(void) : execEng(0), resolver(0) { }
+        ~LLVMJitBuilder();
 
+        virtual void checkForUnresolvedExternals();
         virtual void *getFuncAddr(llvm::Function *func);
 
 
@@ -145,10 +152,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual bool isExec() { return true; }
 
-        virtual void finishBuild(model::Context &context) {
-            if (resolver)
-                delete resolver;
-        }
+        virtual void finishBuild(model::Context &context) {}
 
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef

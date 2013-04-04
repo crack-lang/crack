@@ -40,6 +40,8 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
+bool LLVMJitBuilder::Resolver::trace = true;
+
 void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
                                               GlobalValue *globalVal
                                               ) {
@@ -97,12 +99,14 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
 
         // the module is part of a depencency cycle - don't start collecting
         // addresses in it yet.
-//        cerr << "uninstantiated " << globalVal->getName().str() << endl;
+        if (trace)
+            cerr << "uninstantiated " << globalVal->getName().str() << endl;
         return false;
     }
 
     // the symbol hasn't been discovered yet, add it to the fixups
-//    cerr << "undiscovered " << globalVal->getName().str() << endl;
+    if (trace)
+        cerr << "undiscovered " << globalVal->getName().str() << endl;
     fixupMap[name].push_back(globalVal);
     return false;
 }
@@ -111,13 +115,15 @@ void LLVMJitBuilder::Resolver::deferGlobal(GlobalValue *globalVal) {
     if (!globalVal->isDeclaration()) {
         const string &name = globalVal->getName().str();
         SPUG_CHECK(deferred.insert(make_pair(name, globalVal)).second,
-                   globalVal->getName().str() << " already deferred!"
+                   name << " already deferred!"
                    );
 
         // if the symbol exists in the fixup map, replace it in all of the
         // modules that depend on it and remove it from the fixup map.
         FixupMap::iterator i = fixupMap.find(name);
         if (i != fixupMap.end()) {
+            if (trace)
+                cerr << "fixing up " << name << endl;
             for (GlobalValueVec::iterator j = i->second.begin();
                  j != i->second.end();
                  ++j
@@ -130,7 +136,8 @@ void LLVMJitBuilder::Resolver::deferGlobal(GlobalValue *globalVal) {
 
 void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
     for (Module::iterator i = module->begin(); i != module->end(); ++i) {
-//        cerr << "deferring func " << i->getName().str() << endl;
+        if (trace)
+            cerr << "deferring func " << i->getName().str() << endl;
         deferGlobal(i);
     }
 
@@ -138,7 +145,8 @@ void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
          i != module->global_end();
          ++i
          ) {
-//        cerr << "deferring gvar " << i->getName().str() << endl;
+        if (trace)
+            cerr << "deferring gvar " << i->getName().str() << endl;
         deferGlobal(i);
     }
 
@@ -150,7 +158,8 @@ void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
              ) {
             const string &name = i->second->getName();
             void *ptr = execEng->getPointerToGlobal(i->second);
-//            cerr << "deferred " << name << "@" << ptr << endl;
+            if (trace)
+                cerr << "resolving deferred " << name << "@" << ptr << endl;
             if (dyn_cast<Function>(i->second))
                 crack::debug::registerDebugInfo(ptr, name,
                                                 "",   // file name
@@ -162,6 +171,27 @@ void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
         }
 
         deferred.clear();
+    }
+}
+
+LLVMJitBuilder::~LLVMJitBuilder() {
+    // clean up the resolver if this is the root builder.
+    if (resolver && !rootBuilder)
+        delete resolver;
+}
+
+void LLVMJitBuilder::Resolver::checkForUnresolvedExternals() {
+    if (fixupMap.size()) {
+        cerr << "Unresolved externals:" << endl;
+        for (FixupMap::iterator iter = fixupMap.begin();
+             iter != fixupMap.end();
+             ++iter
+             )
+            cerr << "  " << iter->first << endl;
+        SPUG_CHECK(false,
+                   "Crack discovered unresolved externals.  This is "
+                    "a bug in the executor.  Please report it!"
+                   );
     }
 }
 
@@ -336,6 +366,10 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
 void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
                                          GlobalValue* real) {
     execEng->updateGlobalMapping(pointer, execEng->getPointerToGlobal(real));
+}
+
+void LLVMJitBuilder::checkForUnresolvedExternals() {
+    if (resolver) resolver->checkForUnresolvedExternals();
 }
 
 void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
