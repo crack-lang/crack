@@ -130,28 +130,28 @@ bool StructResolver::buildElementVec(StructType *type, vector<Type *> &elems) {
 Type *StructResolver::maybeGetMappedType(Type *t) {
 
     if (typeMap->find(t) != typeMap->end()) {
-        SR_DEBUG cout << "\t\t## --- MAPPING --- ##\n";
-        SR_DEBUG cout << "was:\n";
+        SR_DEBUG cerr << "\t\t## --- MAPPING --- ##\n";
+        SR_DEBUG cerr << "was:\n";
         SR_DEBUG t->dump();
-        SR_DEBUG cout << "\nnow:\n";
+        SR_DEBUG cerr << "\nnow:\n";
         SR_DEBUG (*typeMap)[t]->dump();
-        SR_DEBUG cout << "\n";
+        SR_DEBUG cerr << "\n";
         return (*typeMap)[t];
     } else if (reverseMap.find(t) != reverseMap.end()) {
-        SR_DEBUG cout << "\t\t## --- PREMAPPED --- ##\n";
+        SR_DEBUG cerr << "\t\t## --- PREMAPPED --- ##\n";
         SR_DEBUG t->dump();
-        SR_DEBUG cout << "\n";
+        SR_DEBUG cerr << "\n";
         return t;
     } else if (visitedStructs.find(t) != visitedStructs.end()) {
-        SR_DEBUG cout << "\t\t## -- VISITED STRUCT --- ##\n";
+        SR_DEBUG cerr << "\t\t## -- VISITED STRUCT --- ##\n";
         SR_DEBUG t->dump();
-        SR_DEBUG cout << "\n";
+        SR_DEBUG cerr << "\n";
         return t;
     }
 
     if (isa<FunctionType>(t)) {
         FunctionType *funcType = dyn_cast<FunctionType>(t);
-        SR_DEBUG cout << "\t\t## func type: " << llvmStr(*funcType) << endl;
+        SR_DEBUG cerr << "\t\t## func type: " << llvmStr(*funcType) << endl;
         bool remap = false;
         Type *retType = maybeGetMappedType(funcType->getReturnType());
         if (retType != funcType->getReturnType())
@@ -169,7 +169,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         }
         
         if (remap) {
-            SR_DEBUG cout << "\t\treplacing func type: " << 
+            SR_DEBUG cerr << "\t\treplacing func type: " << 
                 llvmStr(*funcType) << endl;
             Type *m = FunctionType::get(retType, argTypes, 
                                         funcType->isVarArg()
@@ -185,7 +185,8 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
 
     if (isa<PointerType>(t)) {
         PointerType *a = dyn_cast<PointerType>(t);
-        SR_DEBUG cout << "\t\t## pointer, points to type: " << tName(a->getElementType()->getTypeID()) << "\n";
+        SR_DEBUG cerr << "\t\t## pointer, points to type: " << 
+                         tName(a->getElementType()->getTypeID()) << "\n";
         Type *p = maybeGetMappedType(a->getElementType());
         // p will be the end of a pointer chain
         if (p != a->getElementType()) {
@@ -198,7 +199,8 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
     }
     else if (isa<ArrayType>(t)) {
         ArrayType *a = dyn_cast<ArrayType>(t);
-        SR_DEBUG cout << "\t\t## array of type: " << tName(a->getElementType()->getTypeID()) << "\n";
+        SR_DEBUG cerr << "\t\t## array of type: " << 
+            tName(a->getElementType()->getTypeID()) << "\n";
         Type *p = maybeGetMappedType(a->getElementType());
         if (p != a->getElementType()) {
             // it's one we are mapping, so map and recurse back up
@@ -211,9 +213,9 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
     else if (isa<StructType>(t)) {
         StructType *origType = dyn_cast<StructType>(t);
         visitedStructs[t] = 0;
-        SR_DEBUG cout << "\t\t## struct\n";
+        SR_DEBUG cerr << "\t\t## struct\n";
         if (origType->hasName()) {
-            SR_DEBUG cout << "\t\t## has name: " << 
+            SR_DEBUG cerr << "\t\t## has name: " << 
                 origType->getName().str() << "\n";
         }
 
@@ -232,7 +234,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
             if (visitedStructs[t])
                 buildElementVec(origType, elems);
 
-            SR_DEBUG cout << "\t\t## replacing struct " << 
+            SR_DEBUG cerr << "\t\t## replacing struct " << 
                 (origType->hasName() ? origType->getName().str() : 
                  string("<noname>")
                  )
@@ -260,15 +262,15 @@ void StructResolver::mapValue(Value &val) {
     // we only care about compsite types
     /*
     if (!isa<CompositeType>(val.getType())) {
-        cout << "\t@@ skipping non composite type\n";
+        cerr << "\t@@ skipping non composite type\n";
         return;
     }*/
 
-    SR_DEBUG cout << "@@ mapValue ["<<&val<<"], before\n";
+    SR_DEBUG cerr << "@@ mapValue ["<<&val<<"], before\n";
     SR_DEBUG val.dump();
 
     if (visited.find(&val) != visited.end()) {
-        SR_DEBUG cout << "\t@@ already seen\n";
+        SR_DEBUG cerr << "\t@@ already seen\n";
         return;
     }
 
@@ -281,10 +283,15 @@ void StructResolver::mapValue(Value &val) {
     if (t != val.getType()) {
         val.mutateType(t);
     }
+    
+    if (isa<Function>(val)) {
+        SR_DEBUG cerr << "\t@@ function type\n";
+        SR_DEBUG val.dump();
+    }
 
     visited[&val] = true;
 
-    SR_DEBUG cout << "@@ mapValue ["<<&val<<"], after\n";
+    SR_DEBUG cerr << "@@ mapValue ["<<&val<<"], after\n";
     SR_DEBUG val.dump();
 
 }
@@ -292,15 +299,15 @@ void StructResolver::mapValue(Value &val) {
 // User is a Value and may have a list of Value operands
 void StructResolver::mapUser(User &val) {
 
-    SR_DEBUG cout << "#mapUser, before\n";
+    SR_DEBUG cerr << "#mapUser, before\n";
     //val.dump();
 
     if (visited.find(&val) != visited.end()) {
-        SR_DEBUG cout << "\t@@ already seen\n";
+        SR_DEBUG cerr << "\t@@ already seen\n";
         return;
     }
 
-    SR_DEBUG cout << "#value itself:\n";
+    SR_DEBUG cerr << "#value itself:\n";
     mapValue(val);
 
     if (val.getNumOperands()) {
@@ -312,9 +319,9 @@ void StructResolver::mapUser(User &val) {
             Value *op = *o;
             if (isa<CompositeType>(op->getType())) {
                 /*if ((*o)->hasName())
-                    cout << "#op named: " << (*o)->getValueName()->getKey().str() << "\n";
+                    cerr << "#op named: " << (*o)->getValueName()->getKey().str() << "\n";
                 else
-                    cout << "#op #" << opNum++ << "\n";*/
+                    cerr << "#op #" << opNum++ << "\n";*/
                 if (isa<User>(op))
                     mapUser(cast<User>(*op));
                 else
@@ -323,7 +330,7 @@ void StructResolver::mapUser(User &val) {
         }
     }
 
-    SR_DEBUG cout << "#mapUser, after\n";
+    SR_DEBUG cerr << "#mapUser, after\n";
     //val.dump();
 
 }
@@ -333,7 +340,8 @@ void StructResolver::mapGlobals() {
     for (Module::global_iterator i = module->global_begin();
          i != module->global_end();
          ++i) {
-        SR_DEBUG cout << "---------------------------------------] looking at global: " << i->getName().str() << "----------------------------------\n";
+        SR_DEBUG cerr << "-----] looking at global: " << i->getName().str() << 
+            endl;
         mapUser(*i);
     }
     //module->dump();
@@ -355,7 +363,7 @@ void StructResolver::mapFunction(Function &fun) {
                                          ftArgs,
                                          fun.isVarArg());
     if (ft != fun.getFunctionType()) {
-        SR_DEBUG cout << "mapping function type\n";
+        SR_DEBUG cerr << "mapping function type\n";
         fun.mutateType(PointerType::getUnqual(ft));
     }
 
@@ -366,7 +374,8 @@ void StructResolver::mapFunctions() {
     for (Module::iterator i = module->begin();
          i != module->end();
          ++i) {
-        SR_DEBUG cout << "---------------------------------------] looking at function: " << i->getName().str() << "----------------------------------\n";
+        SR_DEBUG cerr << "-----] looking at function: " << 
+            i->getName().str() << endl;
         Function &f = (*i);
         SR_DEBUG f.dump();
         // mutate FunctionType if necessary
@@ -393,7 +402,8 @@ void StructResolver::mapMetadata() {
     for (Module::named_metadata_iterator i = module->named_metadata_begin();
          i != module->named_metadata_end();
          ++i) {
-        SR_DEBUG cout << "---------------------------------------] looking at metadata: " << i->getName().str() << "----------------------------------\n";
+        SR_DEBUG cerr << "-----] looking at metadata: " << 
+            i->getName().str() << endl;
         NamedMDNode &m = (*i);
         // MD nodes in named node
         for (int o = 0;
