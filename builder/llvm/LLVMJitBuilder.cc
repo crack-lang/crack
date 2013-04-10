@@ -40,7 +40,7 @@ using namespace model;
 using namespace builder;
 using namespace builder::mvll;
 
-bool LLVMJitBuilder::Resolver::trace = true;
+bool LLVMJitBuilder::Resolver::trace = false;
 
 void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
                                               GlobalValue *globalVal

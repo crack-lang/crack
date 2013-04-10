@@ -1153,6 +1153,7 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
 VarDefPtr TypeDef::replaceAllStubs(Context &context) {
     if (stubFree)
         return this;
+
     stubFree = true;
     VarDefPtr replacement = replaceStub(context);
     if (replacement)
@@ -1192,4 +1193,22 @@ VarDefPtr TypeDef::replaceAllStubs(Context &context) {
     
     for (VarDefMap::iterator iter = defs.begin(); iter != defs.end(); ++iter)
         iter->second = iter->second->replaceAllStubs(context);
+    
+    return this;
+}
+
+TypeDefPtr TypeDef::getStubAncestor() {
+    if (isStub())
+        return this;
+    
+    for (TypeVec::const_iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         ) {
+        TypeDefPtr result = (*iter)->getStubAncestor();
+        if (result)
+            return result;
+    }
+
+    return 0;
 }

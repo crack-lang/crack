@@ -7,6 +7,8 @@
 
 #include "ModuleStub.h"
 
+#include "spug/check.h"
+#include "Context.h"
 #include "OverloadDef.h"
 
 using namespace std;
@@ -28,6 +30,8 @@ namespace {
                 owner = module;
             }
 
+            virtual bool isStub() const { return true; }
+
             VarDefPtr replaceStub(Context &context) {
                 TypeDefPtr replacement = module->replacement->lookUp(name);
                 if (params)
@@ -41,16 +45,26 @@ namespace {
             TypeDef *getSpecialization(Context &context,
                                        TypeVecObj *params
                                        ) {
-                TypeVecObjKey key(params);
-                if (!generic) {
+                // make sure we have a specialization cache
+                if (!generic)
                     generic = new SpecializationCache();
-                } else {
-                    SpecializationCache::iterator i = generic->find(key);
-                    if (i != generic->end())
-                        return i->second.get();
+
+                TypeDef *result = findSpecialization(params);
+                if (!result) {
+                    // For a generic instantiation, we should always either be
+                    // able to load it from the cache or reconstruct it from
+                    // its source file.
+                    string moduleName = getSpecializedName(params, true);
+                    ModuleDefPtr mod = context.construct->getModule(moduleName);
+                    SPUG_CHECK(mod,
+                               "Unable to load generic instantiation "
+                                "module " << moduleName
+                               );
+                    result = TypeDefPtr::rcast(mod->lookUp(name));
+                    result->genericParms = *params;
+                    result->templateType = this;
+                    (*generic)[params] = result;
                 }
-                TypeDef *result;
-                (*generic)[key] = result = new TypeStub(module, name, params);
                 return result;
             }
     };
@@ -61,6 +75,10 @@ namespace {
             OverloadStub(ModuleStub *module, const string &name) :
                 OverloadDef(name),
                 module(module) {
+            }
+
+            bool isStub() const {
+                return true;
             }
 
             VarDefPtr replaceStub(Context &context) {
@@ -76,12 +94,24 @@ namespace {
                 module(module) {
             }
 
+            bool isStub() const {
+                return true;
+            }
+
             VarDefPtr replaceStub(Context &context) {
                 return module->replacement->lookUp(name);
             }
     };
 
 } // anon namespace
+
+ModuleStub::~ModuleStub() {
+    for (CallbackVec::iterator iter = callbacks.begin();
+         iter != callbacks.end();
+         ++iter
+         )
+        delete *iter;
+}
 
 TypeDefPtr ModuleStub::getTypeStub(const string &name) {
     return new TypeStub(this, name, 0);
@@ -101,4 +131,14 @@ void ModuleStub::replace(Context &context) {
          ++iter
          )
         (*iter)->replaceAllStubs(context);
+
+    for (CallbackVec::iterator iter = callbacks.begin();
+         iter != callbacks.end();
+         ++iter
+         )
+        (*iter)->run();
+}
+
+void ModuleStub::registerCallback(ModuleStub::Callback *callback) {
+    callbacks.push_back(callback);
 }

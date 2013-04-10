@@ -193,6 +193,11 @@ class VarDef : public virtual spug::RCBase {
         virtual void onDeserialized(Context &context) {}
         
         /**
+         * Returns true if the definition is a stub.
+         */
+        virtual bool isStub() const { return false; }
+        
+        /**
          * Replace a stub object created during deserialization with the 
          * actual definition.  Returns the replacement if there is one, null 
          * if not.

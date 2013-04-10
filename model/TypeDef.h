@@ -360,6 +360,11 @@ class TypeDef : public VarDef, public Namespace {
                                       );
 
         virtual VarDefPtr replaceAllStubs(Context &context);
+        
+        /**
+         * If any of the ancestors is a stub, returns the first one discovered.
+         */
+        TypeDefPtr getStubAncestor();
 };
 
 } // namespace model
