@@ -1158,68 +1158,8 @@ void Cacher::resolveStructs(llvm::Module *module) {
     // system. this solves issues when using separate bitcode modules
     // without using the llvm linker
     StructResolver resolver(module);
-
-    // first we get the list we have to resolve
-    // then we lookup the canonical version of each one to create
-    // the map
-    StructResolver::StructMapType typeMap;
-    StructResolver::StructListType dSet = resolver.getDisjointStructs();
-    for (StructResolver::StructListType::iterator i = dSet.begin();
-         i != dSet.end(); ++i) {
-        int pos = i->first.rfind(".");
-        string canonical = i->first.substr(0, pos);        
-
-// XXX I don't think we need this hack anymore since we're not dealing with 
-// the Crack type system.
-#if 0
-        // XXX big hack. meta's are created implicitly by class defs, so their
-        // corresponding class defs have to come first in this list else the
-        // metas won't exist in resolveType. defer them?
-        if (canonical.find("meta") != string::npos) {
-            //cout << "XXXXXXXXX skipping meta: " << canonical << "\n";
-            continue;
-        }
-#endif
-        
-        // see if we've encountered the type before, if not just map it to 
-        // itself.
-        StructType *type = LLVMBuilder::getLLVMType(canonical);
-        if (!type) {
-            typeMap[i->second] = i->second;
-            continue;
-        }
-            
-        // we want to map the struct (the ContainedType), not the pointer to it
-        PointerType *a = type->getPointerTo();
-        assert(a && "expected a PointerType");
-
-// XXX again, since we're not going through the crack layer contortions, this 
-// type should just be the VTableBase type.
-#if 0
-        // most classes are single indirection pointers-to-struct, but we have
-        // to special case VTableBase which is **
-        if (canonical == ".builtin.VTableBase") {
-            a = cast<PointerType>(a->getElementType());
-        }
-#endif
-
-        StructType *left = dyn_cast<StructType>(i->second);
-        assert(left);
-        StructType *right = dyn_cast<StructType>(a->getElementType());
-        assert(right);
-        assert(left != right);
-        //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
-        typeMap[i->second] = a->getElementType();
-    }
-
-    // finally, we resolve using our map. this replaces all instances of
-    // the conflicting type from this module, with the original one actually
-    // in our type system
-    if (!typeMap.empty())
-        resolver.run(&typeMap);
-    else
-        cout << "resolveStructs: typemap was empty\n";
-
+    resolver.buildTypeMap();
+    resolver.run();
 }
 
 Cacher::Cacher(model::Context &c, builder::BuilderOptions *o, 

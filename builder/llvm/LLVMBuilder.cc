@@ -2327,7 +2327,6 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
                "Type " << fullName << " not found in module " <<
                 module->getModuleIdentifier()
                );
-    putLLVMType(fullName, cast<StructType>(llvmType));
 
 //    cerr << "XXX can't materialize vtable base count yet" << endl;
     BTypeDefPtr metaType = createMetaClass(context, name);

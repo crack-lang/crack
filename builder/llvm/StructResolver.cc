@@ -21,6 +21,10 @@
 #include <llvm/User.h>
 #include <llvm/Constants.h>
 
+#include "spug/check.h"
+#include "spug/StringFmt.h"
+#include "LLVMBuilder.h"
+
 using namespace llvm;
 using namespace std;
 using namespace builder::mvll;
@@ -40,9 +44,9 @@ namespace {
             return "-Other-";
     }
 }
-StructResolver::StructListType StructResolver::getDisjointStructs() {
 
-    string sName;
+StructResolver::StructListType StructResolver::buildTypeMap() {
+
     StructListType result;
     vector<StructType*> usedTypes;
 
@@ -50,47 +54,90 @@ StructResolver::StructListType StructResolver::getDisjointStructs() {
 
     // NOTE this gets a list by struct name only: no isomorphism checks
 
-    for (int i=0; i < usedTypes.size(); ++i) {
+    for (vector<StructType *>::iterator i = usedTypes.begin(); 
+         i != usedTypes.end(); ++i
+         ) {
+
         // does it have a name?
-        if (!usedTypes[i]->hasName())
+        if (!(*i)->hasName())
             continue;
-        sName = usedTypes[i]->getName().str();
-        // does it have a numeric suffix?
-        int pos = sName.rfind(".");
-        if (pos != string::npos && sName.size() > pos) {
-            string suffix = sName.substr(pos+1);
-            bool isNumeric = false;
+        string name = (*i)->getName().str();
+
+        // does it have a numeric suffix? (i.e. is it a duplicate type name?)
+        int pos = name.rfind(".");
+        bool isDuplicate = false;
+        if (pos != string::npos && name.size() > pos) {
+            string suffix = name.substr(pos + 1);
             for (string::const_iterator si = suffix.begin();
                  si != suffix.end();
                  ++si) {
-                isNumeric = isdigit(*si);
-                if (!isNumeric)
+                isDuplicate = isdigit(*si);
+                if (!isDuplicate)
                     break;
             }
-            if (isNumeric)
-                result[sName] = usedTypes[i];
         }
+        
+        if (!isDuplicate)
+            continue;
+        
+        string canonicalName = name.substr(0, pos);
+
+        // The numeric suffix is only applied when we discover a new type with 
+        // the same name.  Therefore, the fact that there is a numeric suffix 
+        // implies that we should have already loaded the type.
+        StructType *type = LLVMBuilder::getLLVMType(canonicalName);
+        SPUG_CHECK(type, 
+                   "Duplicate name discovered for unregistered type " <<
+                    canonicalName
+                   );
+
+        // we want to map the struct (the ContainedType), not the pointer to it
+        PointerType *a = type->getPointerTo();
+        assert(a && "expected a PointerType");
+
+        StructType *left = dyn_cast<StructType>(*i);
+        assert(left);
+        StructType *right = dyn_cast<StructType>(a->getElementType());
+        assert(right);
+        assert(left != right);
+        //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
+        typeMap[left] = right;
     }
 
     return result;
 
 }
 
-void StructResolver::run(StructMapType *m) {
+void StructResolver::run() {
 
-    if (m->empty())
+    if (typeMap.empty())
         return;
 
     module->MaterializeAll();
 
-    typeMap = m;
-    for (StructMapType::iterator iter = m->begin(); iter != m->end(); ++iter)
+    for (StructMapType::iterator iter = typeMap.begin(); 
+         iter != typeMap.end(); 
+         ++iter
+         )
         reverseMap[iter->second] = iter->first;
     mapGlobals();
     mapFunctions();
     mapMetadata();
+    
+    // all of the types should now be righteous.  Register any unknown types 
+    // with LLVM.
+    vector<StructType *> usedTypes;
+    module->findUsedStructTypes(usedTypes);
+    for (vector<StructType *>::iterator iter = usedTypes.begin();
+         iter != usedTypes.end();
+         ++iter
+         ) {
+        if ((*iter)->hasName() && 
+            !LLVMBuilder::getLLVMType((*iter)->getName().str())
+            )
+            LLVMBuilder::putLLVMType((*iter)->getName().str(), *iter);
+    }
     SR_DEBUG module->dump();
-
 }
 
 namespace {
@@ -129,14 +176,14 @@ bool StructResolver::buildElementVec(StructType *type, vector<Type *> &elems) {
 
 Type *StructResolver::maybeGetMappedType(Type *t) {
 
-    if (typeMap->find(t) != typeMap->end()) {
-        SR_DEBUG cerr << "\t\t## --- MAPPING --- ##\n";
+    if (typeMap.find(t) != typeMap.end()) {
+        SR_DEBUG cerr << "\t\t## --- FOUND EXISTING MAPPING --- ##\n";
         SR_DEBUG cerr << "was:\n";
         SR_DEBUG t->dump();
         SR_DEBUG cerr << "\nnow:\n";
-        SR_DEBUG (*typeMap)[t]->dump();
+        SR_DEBUG typeMap[t]->dump();
         SR_DEBUG cerr << "\n";
-        return (*typeMap)[t];
+        return typeMap[t];
     } else if (reverseMap.find(t) != reverseMap.end()) {
         SR_DEBUG cerr << "\t\t## --- PREMAPPED --- ##\n";
         SR_DEBUG t->dump();
@@ -174,7 +221,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
             Type *m = FunctionType::get(retType, argTypes, 
                                         funcType->isVarArg()
                                         );
-            (*typeMap)[t] = m;
+            typeMap[t] = m;
             return maybeGetMappedType(t);
         }
     }
@@ -192,7 +239,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         if (p != a->getElementType()) {
             // it's one we are mapping, so map and recurse back up
             Type *m = PointerType::get(p, a->getAddressSpace());
-            (*typeMap)[t] = m;
+            typeMap[t] = m;
             //return m;
             return maybeGetMappedType(t);
         }
@@ -205,7 +252,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         if (p != a->getElementType()) {
             // it's one we are mapping, so map and recurse back up
             Type *m = ArrayType::get(p, a->getNumElements());
-            (*typeMap)[t] = m;
+            typeMap[t] = m;
             //return m;
             return maybeGetMappedType(t);
         }
@@ -227,7 +274,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         visitedStructs.erase(t);
         if (modified) {
             StructType *newType = StructType::create(getGlobalContext());
-            (*typeMap)[t] = newType;
+            typeMap[t] = newType;
             
             // if the type contains any cycles, add a placeholder for it and 
             // recalculate the member types.
@@ -244,7 +291,7 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
             if (!origType->isLiteral()) {
                 // take over the name
                 string origName = origType->getName().str();
-                origType->setName("");
+                origType->setName(SPUG_FSTR(origName << "." << origType));
                 newType->setName(origName);
             }
 
@@ -271,11 +318,6 @@ void StructResolver::mapValue(Value &val) {
 
     if (visited.find(&val) != visited.end()) {
         SR_DEBUG cerr << "\t@@ already seen\n";
-        return;
-    }
-
-    if (isa<Function>(val)) {
-        SR_DEBUG cout << "\t@@ skipping function\n";
         return;
     }
 

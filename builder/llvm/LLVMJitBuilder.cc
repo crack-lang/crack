@@ -71,6 +71,18 @@ void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
     }
 }
 
+namespace {
+    void checkReplacementType(GlobalValue *val, GlobalValue *replacement) {
+        if (val->getType() != replacement->getType()) {
+            cerr << "Replacing " << val->getName().str() <<
+                " of type:" << endl;
+            val->getType()->dump();
+            cerr << "\nWith value of type:" << endl;
+            replacement->getType()->dump();
+        }
+    }
+}
+
 bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
                                        GlobalValue *globalVal
                                        ) {
@@ -95,6 +107,7 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
         // Replace the global with the deferred symbol.  This lets LLVM take
         // care of resolving it for us.  This isn't really kosher, as it adds
         // a global to a module that doesn't own it, but it seems to work.
+        checkReplacementType(globalVal, di->second);
         globalVal->replaceAllUsesWith(di->second);
 
         // the module is part of a depencency cycle - don't start collecting
@@ -127,8 +140,10 @@ void LLVMJitBuilder::Resolver::deferGlobal(GlobalValue *globalVal) {
             for (GlobalValueVec::iterator j = i->second.begin();
                  j != i->second.end();
                  ++j
-                 )
+                 ) {
+                checkReplacementType(*j, globalVal);
                 (*j)->replaceAllUsesWith(globalVal);
+            }
             fixupMap.erase(i);
         }
     }
