@@ -18,7 +18,7 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
-class BModuleDef;
+SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(LLVMJitBuilder);
 
 class LLVMJitBuilder : public LLVMBuilder {
@@ -30,30 +30,83 @@ class LLVMJitBuilder : public LLVMBuilder {
                 typedef std::map<std::string, llvm::GlobalValue *> CacheMap;
                 CacheMap cacheMap;
         
-                // the fixup map stores unresolved externals.  When the fixup 
-                // map is empty and the deferred map isn't, we regster all of 
-                // the symbols in the deferred map.
-                typedef std::vector<llvm::GlobalValue *> GlobalValueVec;
-                typedef std::map<std::string, GlobalValueVec> FixupMap;
+                // the fixup map maps unresolved externals to the modules that 
+                // they are unresolved in.  When an entry in the fixup map is 
+                // resolved, the cycle groups for all of the modules are 
+                // coalesced.
+                typedef std::set<llvm::Module *> ModuleSet;
+                typedef std::map<std::string, ModuleSet> FixupMap;
                 FixupMap fixupMap;
                 
-                // the deferred globals - these are globals defined in 
-                // modules that ended up with unresolved externals.
-                CacheMap deferred;
+                // The unresolved map is the inverse of the fixup map - it 
+                // maps modules to their unresolved externals.  When the 
+                // unresolved map for a module is empty we check to see if the 
+                // unresolved maps for all of the modules in its group are 
+                // empty.  If they are, we run the linker on the set.
+                typedef std::set<std::string> SymbolSet;
+                typedef std::map<llvm::Module *, SymbolSet> UnresolvedMap;
+                UnresolvedMap unresolvedMap;
+
+                // the cycle group map keeps track of which modules are in a 
+                // cycle together.  Every module in the same cycle group is 
+                // mapped to the module set containing all modules in the 
+                // group.
+                typedef std::map<llvm::Module *, ModuleSet *> CycleMap;
+                CycleMap cycleMap;
                 
+                // The source map keeps track of the ModuleDef object that a
+                // deferred low-level module is associated with so that we can 
+                // fix its reference when we run it through the linker.
+                typedef std::map<llvm::Module *, BModuleDefPtr> SourceMap;
+                SourceMap sourceMap;
+                
+                // The deferred set keeps track of symbols that have been 
+                // resolved in modules that have unresolved externals and the 
+                // modules that they are defined in.
+                typedef std::map<std::string, llvm::Module *> 
+                    DeferredMap;
+                DeferredMap deferred;
+
                 static bool trace;
 
-                // add the global to 'deferred' and resolve it in fixups.                
-                void deferGlobal(llvm::GlobalValue *globalVal);
+                // add the global to 'deferred' and resolve it in fixups.
+                // Returns true if the introduction of the global clears all 
+                // unresolved externals for all of the modules it is 
+                // unresolved in.  In this case, the caller should check for 
+                // resolution of all modules participating in this cycle.
+                bool deferGlobal(LLVMJitBuilder *builder, 
+                                 llvm::GlobalValue *globalVal
+                                 );
+                
+                // Merge all of the cycle groups that the two modules are in 
+                // into a single cycle group referenced by both.
+                void mergeCycleGroups(llvm::Module *a, llvm::Module *b);
+                
+                // This gets called on a module when we've discovered that all
+                // the symbols in the module have been resolved in the course 
+                // of resolving fixups.
+                void linkCyclicGroup(LLVMJitBuilder *builder, 
+                                     llvm::Module *module
+                                     );
+
+                // Resolve the fixups for a specific global value.  Returns
+                // true if there are no remaining unresolved external in 
+                // the modules that it is resolved in and the calling code 
+                // should do a resolution check on all of the modules in the 
+                // cycle.
+                bool resolveFixups(LLVMJitBuilder *builder,
+                                   llvm::GlobalValue *globalVal,
+                                   const std::string &name
+                                   );
             
             public:
-                void registerGlobal(llvm::ExecutionEngine *execEng,
+                void registerGlobal(LLVMJitBuilder *builder,
                                     llvm::GlobalValue *globalVal
                                     );
                 
                 // Resolves the symbol if it's in the cache, otherwise adds a 
-                // fix-up for it.  Returns true if it was able to resolve the 
-                // symbol, false if not.
+                // fix-up for it.  Returns true if ths symbol can be resolved, 
+                // false if it is currently unresolvable.
                 bool resolve(llvm::ExecutionEngine *execEng,
                              llvm::GlobalValue *globalVal
                              );
@@ -61,12 +114,15 @@ class LLVMJitBuilder : public LLVMBuilder {
                 // Defer all of the globals from 'module'.  If we end up 
                 // getting rid of everything in the fixup map, register all of
                 // the addresses in the cache map and debug info.
-                void defer(llvm::ExecutionEngine *execEng, 
-                           llvm::Module *module
+                void defer(LLVMJitBuilder *builder, 
+                           BModuleDef *modDef
                            );
                 
                 /** See LLVMBuilder. */
                 void checkForUnresolvedExternals();
+                
+                /** Returns true if the module has unresolved externals. */
+                bool isUnresolved(llvm::Module *module);
         };
 
                 
@@ -157,6 +213,10 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef
                                  );
+
+        virtual model::TypeDefPtr materializeType(model::Context &context, 
+                                                  const std::string &name
+                                                  );
 
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,

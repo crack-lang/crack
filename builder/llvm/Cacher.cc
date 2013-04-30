@@ -1157,9 +1157,6 @@ void Cacher::resolveStructs(llvm::Module *module) {
     // resolve duplicate structs to those already existing in our type
     // system. this solves issues when using separate bitcode modules
     // without using the llvm linker
-    StructResolver resolver(module);
-    resolver.buildTypeMap();
-    resolver.run();
 }
 
 Cacher::Cacher(model::Context &c, builder::BuilderOptions *o, 

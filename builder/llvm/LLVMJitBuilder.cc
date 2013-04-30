@@ -7,8 +7,10 @@
 //
 
 #include "LLVMJitBuilder.h"
+
 #include "BJitModuleDef.h"
 #include "DebugInfo.h"
+#include "StructResolver.h"
 #include "BTypeDef.h"
 #include "model/Context.h"
 #include "FuncBuilder.h"
@@ -20,6 +22,7 @@
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
+#include <llvm/Linker.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
 #include <llvm/Target/TargetData.h>
@@ -42,7 +45,186 @@ using namespace builder::mvll;
 
 bool LLVMJitBuilder::Resolver::trace = false;
 
-void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
+void LLVMJitBuilder::Resolver::mergeCycleGroups(Module *a, Module *b) {
+    if (trace)
+        cerr << "merging cycle groups for " <<
+            a->getModuleIdentifier() << " and " << b->getModuleIdentifier() <<
+            endl;
+    ModuleSet *&aSet = cycleMap[a];
+    ModuleSet *&bSet = cycleMap[b];
+
+    // if both sets are empty, create a new set containing both modules.
+    if (!aSet && !bSet) {
+        aSet = bSet = new ModuleSet();
+        aSet->insert(a);
+        aSet->insert(b);
+        return;
+    }
+
+    // if the sets are non-empty but equal, they're already in the same set.
+    if (aSet == bSet)
+        return;
+
+    // if either set is empty, just use the non-empty one.
+    if (!aSet) {
+        aSet = bSet;
+        bSet->insert(a);
+        return;
+    }
+    if (!bSet) {
+        bSet = aSet;
+        aSet->insert(b);
+        return;
+    }
+
+    // We have two separate sets, merge them into one.
+    for (ModuleSet::iterator i = bSet->begin();
+         i != bSet->end();
+         ++i
+         )
+        aSet->insert(*i);
+    delete bSet;
+    bSet = aSet;
+}
+
+void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
+                                               Module *module
+                                               ) {
+    if (trace)
+        cerr << "Checking module group for " <<
+            module->getModuleIdentifier() << endl;;
+    ModuleSet *group = cycleMap[module];
+    if (!group)
+        return;
+    for (ModuleSet::iterator i = group->begin(); i != group->end();
+         ++i
+         ) {
+        if (!unresolvedMap[*i].empty()) {
+            if (trace)
+                cerr << "  Module " <<
+                    (*i)->getModuleIdentifier() <<
+                    " still has unresolved symbols.";
+            return;
+        }
+    }
+
+    // link the modules.
+    Linker linker("crack", "cyclic-module", getGlobalContext(), 0);
+    if (trace)
+        cerr << "Linking cyclic module group: " << endl;
+    for (ModuleSet::iterator i = group->begin(); i != group->end();
+         ++i
+         ) {
+        if (trace)
+            cerr << "  " << (*i)->getModuleIdentifier() << endl;;
+        string errMsg;
+        linker.LinkInModule(*i, &errMsg);
+        if (errMsg.size())
+            cerr << "Error linking " << (*i)->getModuleIdentifier() <<
+                ": " << errMsg << endl;
+        unresolvedMap.erase(*i);
+        cycleMap.erase(*i);
+    }
+
+    // Map all unresolved externals in the composite module.
+
+    // Global vars.
+    builder->module = linker.releaseModule();
+    for (Module::global_iterator iter = builder->module->global_begin();
+        iter != builder->module->global_end();
+        ++iter
+        ) {
+        if (iter->isDeclaration())
+            SPUG_CHECK(resolve(builder->execEng, iter),
+                       "global var " << iter->getName().str() <<
+                        " remains unresolved."
+                       );
+        deferred.erase(iter->getName().str());
+    }
+
+    // Functions.
+    for (Module::iterator iter = builder->module->begin();
+        iter != builder->module->end();
+        ++iter
+        ) {
+        if (iter->isDeclaration() && !iter->isMaterializable())
+            SPUG_CHECK(resolve(builder->execEng, iter),
+                       "function " << iter->getName().str() <<
+                        "remains unresolved."
+                       );
+        deferred.erase(iter->getName().str());
+    }
+
+    // replace the current modules with the new module, do global
+    // registration.
+    builder->registerGlobals();
+
+    // Back-patch the new module into the rep of all of the ModuleDef
+    // objects that reference it.
+    for (ModuleSet::iterator i = group->begin(); i != group->end();
+         ++i
+         ) {
+        SourceMap::iterator j = sourceMap.find(*i);
+        SPUG_CHECK(j != sourceMap.end(),
+                   "No source map entry found for module " <<
+                    (*i)->getModuleIdentifier()
+                   );
+        j->second->rep = builder->module;
+        sourceMap.erase(j);
+    }
+
+    delete group;
+}
+
+bool LLVMJitBuilder::Resolver::resolveFixups(LLVMJitBuilder *builder,
+                                             GlobalValue *globalVal,
+                                             const string &name
+                                             ) {
+    Module *ownerMod = globalVal->getParent();
+
+    // if there are fixups, go through them and coalesce the cycle groups
+    FixupMap::iterator i = fixupMap.find(name);
+    if (i != fixupMap.end()) {
+
+        // This will remain true if this is the last unresolved symbol for all
+        // of the modules that it is unresolved in, in which case we want to
+        // check to see if it's time to link them at the end.
+        bool checkForResolution = true;
+
+        // XXX what this doesn't take into account is the modules that have
+        // dependencies on symbols that are merely deferred.  Deferrred
+        // symbols are part of the same cycle group.
+        for (ModuleSet::iterator j = i->second.begin();
+             j != i->second.end();
+             ++j
+             ) {
+            mergeCycleGroups(ownerMod, *j);
+
+            // remove the variable from the module's fixup map
+            UnresolvedMap::iterator ur = unresolvedMap.find(*j);
+            SPUG_CHECK(ur != unresolvedMap.end(),
+                       "Module " << (*j)->getModuleIdentifier() <<
+                           " is listed in fixups for " << name <<
+                           " but isn't listed in the unresolved map."
+                       );
+
+            SPUG_CHECK(ur->second.erase(name) == 1,
+                       "Module " << (*j)->getModuleIdentifier() <<
+                            " is listed in fixups for " << name <<
+                            " but doesn't have an entry for it in its "
+                            "unresolved list."
+                       );
+            if (!ur->second.empty())
+                checkForResolution = false;
+        }
+        fixupMap.erase(i);
+        return checkForResolution;
+    } else {
+        return false;
+    }
+}
+
+void LLVMJitBuilder::Resolver::registerGlobal(LLVMJitBuilder *builder,
                                               GlobalValue *globalVal
                                               ) {
     const string &name = globalVal->getName().str();
@@ -51,24 +233,10 @@ void LLVMJitBuilder::Resolver::registerGlobal(ExecutionEngine *execEng,
     if (!result.second)
         // it was already in the cache
         return;
-
-    // back-fill any fixups that were registered.
-    FixupMap::iterator i = fixupMap.find(name);
-    if (i != fixupMap.end()) {
-        void *realAddr = execEng->getPointerToGlobal(globalVal);
-        SPUG_CHECK(realAddr,
-                   "no address for global " <<
-                    string(globalVal->getName())
-                   );
-
-        for (GlobalValueVec::iterator j = i->second.begin();
-             j != i->second.end();
-             ++j
-             )
-            execEng->updateGlobalMapping(*j, realAddr);
-
-        fixupMap.erase(i);
-    }
+    SPUG_CHECK(fixupMap.find(name) == fixupMap.end(),
+               "Registering global " << globalVal->getName().str() <<
+                " which is in fixup map!"
+               );
 }
 
 namespace {
@@ -101,92 +269,59 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
         return true;
     }
 
-    // see if it's deferred
-    CacheMap::iterator di = deferred.find(name);
+    // see if the symbol is merely deferred.
+    DeferredMap::iterator di = deferred.find(name);
     if (di != deferred.end()) {
-        // Replace the global with the deferred symbol.  This lets LLVM take
-        // care of resolving it for us.  This isn't really kosher, as it adds
-        // a global to a module that doesn't own it, but it seems to work.
-        checkReplacementType(globalVal, di->second);
-        globalVal->replaceAllUsesWith(di->second);
-
-        // the module is part of a depencency cycle - don't start collecting
-        // addresses in it yet.
-        if (trace)
-            cerr << "uninstantiated " << globalVal->getName().str() << endl;
+        // make sure that the modules are in the same cycle group.
+        mergeCycleGroups(globalVal->getParent(), di->second);
         return false;
     }
 
-    // the symbol hasn't been discovered yet, add it to the fixups
+    // the symbol hasn't been discovered yet, add its owner to the fixups.
     if (trace)
         cerr << "undiscovered " << globalVal->getName().str() << endl;
-    fixupMap[name].push_back(globalVal);
+    Module *module = globalVal->getParent();
+    fixupMap[name].insert(module);
+    unresolvedMap[module].insert(name);
     return false;
 }
 
-void LLVMJitBuilder::Resolver::deferGlobal(GlobalValue *globalVal) {
-    if (!globalVal->isDeclaration()) {
+bool LLVMJitBuilder::Resolver::deferGlobal(LLVMJitBuilder *builder,
+                                           GlobalValue *globalVal
+                                           ) {
+    bool triggerCheck = false;
+    if (!globalVal->isDeclaration() || globalVal->isMaterializable()) {
         const string &name = globalVal->getName().str();
-        SPUG_CHECK(deferred.insert(make_pair(name, globalVal)).second,
-                   name << " already deferred!"
-                   );
-
-        // if the symbol exists in the fixup map, replace it in all of the
-        // modules that depend on it and remove it from the fixup map.
-        FixupMap::iterator i = fixupMap.find(name);
-        if (i != fixupMap.end()) {
-            if (trace)
-                cerr << "fixing up " << name << endl;
-            for (GlobalValueVec::iterator j = i->second.begin();
-                 j != i->second.end();
-                 ++j
-                 ) {
-                checkReplacementType(*j, globalVal);
-                (*j)->replaceAllUsesWith(globalVal);
-            }
-            fixupMap.erase(i);
-        }
+        if (trace) cerr << "deferring symbol " << name << endl;
+        triggerCheck = resolveFixups(builder, globalVal, name);
+        deferred.insert(make_pair(name, globalVal->getParent()));
     }
+    return triggerCheck;
 }
 
-void LLVMJitBuilder::Resolver::defer(ExecutionEngine *execEng, Module *module) {
+void LLVMJitBuilder::Resolver::defer(LLVMJitBuilder *builder,
+                                     BModuleDef *modDef
+                                     ) {
+    Module *module = modDef->rep;
+    sourceMap.insert(make_pair(module, modDef));
+    bool triggerCheck = false;
     for (Module::iterator i = module->begin(); i != module->end(); ++i) {
-        if (trace)
-            cerr << "deferring func " << i->getName().str() << endl;
-        deferGlobal(i);
+        if (deferGlobal(builder, i))
+            triggerCheck = true;
     }
 
     for (Module::global_iterator i = module->global_begin();
          i != module->global_end();
          ++i
          ) {
-        if (trace)
-            cerr << "deferring gvar " << i->getName().str() << endl;
-        deferGlobal(i);
+        if (deferGlobal(builder, i))
+            triggerCheck = true;
     }
 
-    // if we've emptied the fixup map, everything is now in place and we can
-    // resolve all of the symbols.
-    if (fixupMap.empty()) {
-        for (CacheMap::iterator i = deferred.begin(); i != deferred.end();
-             ++i
-             ) {
-            const string &name = i->second->getName();
-            void *ptr = execEng->getPointerToGlobal(i->second);
-            if (trace)
-                cerr << "resolving deferred " << name << "@" << ptr << endl;
-            if (dyn_cast<Function>(i->second))
-                crack::debug::registerDebugInfo(ptr, name,
-                                                "",   // file name
-                                                0     // line number
-                                                );
-
-            // also add the function to the cache.
-            cacheMap.insert(make_pair(name, i->second));
-        }
-
-        deferred.clear();
-    }
+    // if a check was triggered, see if all of the modules in the group have
+    // everything resolved.
+    if (triggerCheck)
+        linkCyclicGroup(builder, module);
 }
 
 LLVMJitBuilder::~LLVMJitBuilder() {
@@ -210,6 +345,10 @@ void LLVMJitBuilder::Resolver::checkForUnresolvedExternals() {
     }
 }
 
+bool LLVMJitBuilder::Resolver::isUnresolved(Module *module) {
+    return sourceMap.find(module) != sourceMap.end();
+}
+
 ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
     ModuleDefPtr mod = LLVMBuilder::registerPrimFuncs(context);
@@ -225,7 +364,7 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
          ++iter
          ) {
         if (!iter->isDeclaration())
-            resolver->registerGlobal(execEng, iter);
+            resolver->registerGlobal(this, iter);
     }
 
     return bMod;
@@ -296,7 +435,7 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
              iter != module->global_end();
              ++iter
              )
-            resolver->registerGlobal(execEng, iter);
+            resolver->registerGlobal(this, iter);
     }
 
     // mark the module as finished
@@ -309,7 +448,7 @@ void LLVMJitBuilder::registerHiddenFunc(model::Context &context,
     if (context.construct->cacheMode) {
         ensureResolver();
         // we don't currently register debug info for these.
-        resolver->registerGlobal(execEng, func->getFuncRep(*this));
+        resolver->registerGlobal(this, func->getFuncRep(*this));
     }
 }
 
@@ -420,7 +559,7 @@ FuncDefPtr LLVMJitBuilder::createExternFunc(
     if (context.construct->cacheMode) {
         ensureResolver();
         crack::debug::registerDebugInfo(cfunc, name, "", 0);
-        resolver->registerGlobal(execEng,
+        resolver->registerGlobal(this,
                                  BFuncDefPtr::rcast(result)->getFuncRep(*this)
                                  );
     }
@@ -557,7 +696,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
         // which we don't care about here
         return;
 
-    resolver->registerGlobal(execEng, rep);
+    resolver->registerGlobal(this, rep);
     SPUG_CHECK(varDef->getFullName() == rep->getName().str(),
                "global def " << varDef->getFullName() <<
                 " doees not have the same name as its rep: " <<
@@ -572,7 +711,7 @@ void LLVMJitBuilder::registerGlobals() {
          iter != module->end();
          ++iter
          ) {
-        if (!iter->isDeclaration()) {
+        if (!iter->isDeclaration() || iter->isMaterializable()) {
             string name = iter->getName();
             void *ptr = execEng->getPointerToGlobal(iter);
 //            cerr << "global " << name << "@" << ptr << endl;
@@ -585,7 +724,7 @@ void LLVMJitBuilder::registerGlobals() {
 
             // also add the function to the cache.
             if (resolver)
-                resolver->registerGlobal(execEng, iter);
+                resolver->registerGlobal(this, iter);
         }
     }
 
@@ -596,7 +735,26 @@ void LLVMJitBuilder::registerGlobals() {
             ++iter
             )
             if (!iter->isDeclaration())
-                resolver->registerGlobal(execEng, iter);
+                resolver->registerGlobal(this, iter);
+    }
+
+    StructResolver resolver(module);
+    resolver.buildTypeMap();
+    resolver.run();
+}
+
+TypeDefPtr LLVMJitBuilder::materializeType(Context &context,
+                                           const string &name
+                                           ) {
+    if (resolver->isUnresolved(module)) {
+        BTypeDefPtr type = new BTypeDef(0 /*metaType*/, name,
+                                        0 /*llvmType*/,
+                                        true, /*is pointer type*/
+                                        0 /*nextVTableSlot*/
+                                        );
+        return type;
+    } else {
+        return LLVMBuilder::materializeType(context, name);
     }
 }
 
@@ -625,8 +783,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         if (context.construct->cacheMode) {
 
             LLVMContext &lctx = getGlobalContext();
-            resolver->registerGlobal(execEng, getExceptionPersonalityFunc());
-            resolver->registerGlobal(execEng, getUnwindResumeFunc());
+            resolver->registerGlobal(this, getExceptionPersonalityFunc());
+            resolver->registerGlobal(this, getUnwindResumeFunc());
         }
 
         // try to resolve unresolved globals from the cache
@@ -652,7 +810,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         }
 
         if (hasUnresolvedExternals)
-            resolver->defer(execEng, module);
+            resolver->defer(this, bmod.get());
         else
             registerGlobals();
 

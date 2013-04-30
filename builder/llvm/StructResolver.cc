@@ -1,4 +1,5 @@
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
+// Copyright 2013 Google Inc.
 // 
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -86,10 +87,20 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
         // the same name.  Therefore, the fact that there is a numeric suffix 
         // implies that we should have already loaded the type.
         StructType *type = LLVMBuilder::getLLVMType(canonicalName);
-        SPUG_CHECK(type, 
-                   "Duplicate name discovered for unregistered type " <<
-                    canonicalName
-                   );
+        
+        // since we're now deferring type resolution until after the linker, 
+        // we can get into a situation where multiple modules load the type 
+        // before it is registered.  Most likely this will cause problems with 
+        // collapsing isomorphic types, too.
+        if (!type) {
+            SR_DEBUG cerr << "Unregistered duplicate type found for " <<
+                canonicalName << endl;
+            StructType *curType = dyn_cast<StructType>(*i);
+            typeMap[curType] = curType;
+            LLVMBuilder::putLLVMType(canonicalName, curType);
+            curType->setName(canonicalName);
+            continue;
+        }
 
         // we want to map the struct (the ContainedType), not the pointer to it
         PointerType *a = type->getPointerTo();
@@ -109,6 +120,8 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
 }
 
 void StructResolver::run() {
+    SR_DEBUG cerr << ">>>> Running struct resolutiopn on " << 
+        module->getModuleIdentifier() << endl;
 
     if (typeMap.empty())
         return;
