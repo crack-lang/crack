@@ -44,6 +44,11 @@ using namespace builder;
 using namespace builder::mvll;
 
 bool LLVMJitBuilder::Resolver::trace = false;
+spug::Tracer LLVMJitBuilder::Resolver::tracer(
+    "SymbolResolver",
+    LLVMJitBuilder::Resolver::trace,
+    "Resolution of unresolved symbols in cyclic modules in the LLVM jit."
+);
 
 void LLVMJitBuilder::Resolver::mergeCycleGroups(Module *a, Module *b) {
     if (trace)

@@ -24,6 +24,7 @@
 
 #include "spug/check.h"
 #include "spug/StringFmt.h"
+#include "spug/Tracer.h"
 #include "LLVMBuilder.h"
 
 using namespace llvm;
@@ -34,6 +35,11 @@ using namespace builder::mvll;
 bool StructResolver::trace = false;
 
 namespace {
+
+    spug::Tracer tracer("StructResolver", StructResolver::trace,
+                        "LLVM module struct type normalization."
+                        );
+
     const char *tName(int t) {
         if (t == 11)
             return "Structure";

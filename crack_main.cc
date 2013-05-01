@@ -10,6 +10,7 @@
 #include <fstream>
 #include <getopt.h>
 #include <libgen.h>
+#include "spug/Tracer.h"
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"
@@ -27,6 +28,7 @@
 #include "config.h"
 
 using namespace std;
+using spug::Tracer;
 
 typedef enum {
     jitBuilder,
@@ -67,50 +69,44 @@ void usage(int retval) {
     version();
     cout << "Usage:" << endl;
     cout << "  " << prog << " [options] <source file>" << endl;
-    cout << " -B <name>  --builder            Main builder to use (llvm-jit or"
+    cout << " -B <name>  --builder\n    Main builder to use (llvm-jit or"
             " llvm-native)" << endl;
-    cout << " -b <opts>  --builder-opts       Builder options in the form "
+    cout << " -b <opts>  --builder-opts\n    Builder options in the form "
             "foo=bar,baz=bip" << endl;
-    cout << " -d         --dump               Dump IR to stdout instead of "
-            "running or compiling" << endl;
-    cout << " --double-builder                Run multiple internal builders, "
-            "even in JIT mode." << endl;
-    cout << " -G         --no-default-paths   Do not include default module"
+    cout << " -d --dump\n    Dump IR to stdout instead of running or "
+            "compiling" << endl;
+    cout << " --double-builder\n    Run multiple internal builders, even in "
+            "JIT mode." << endl;
+    cout << " -G --no-default-paths\n    Do not include default module"
             " search paths" << endl;
 
-    /*
-    cout << " -C         --no-cache           Do not cache or use cached modules"
-            << endl;
-    */
-    cout << " -C                              Turn on module caching (unfinished, not fully working)" << endl;
+    cout << " -C\n    Turn on module caching (unfinished, not fully working)" << endl;
 
-    cout << " -g         --debug              Generate DWARF debug information"
-            << endl;
-    cout << " -O <N>     --optimize N         Use optimization level N (default"
-            " 2)" << endl;
-    cout << " -l <path>  --lib                Add directory to module search "
-            "path" << endl;
-    cout << " -m         --migration-warnings Include migration warnings"
-        << endl;
-    cout << " -n         --no-bootstrap       Do not load bootstrapping modules"
-            << endl;
-    cout << " -v         --verbose            Verbose output, use more than once"
-            " for greater effect" << endl;
-    cout << " -q         --quiet              No extra output, implies"
-            " verbose level 0" << endl;
-    cout << "            --version            Emit the version number and exit"
-        << endl;
-    cout << "            --stats              Emit statistics about compile "
-            "time operations." << endl;
-    cout << "            --dump-func-table    Dump the debug function table."
-        << endl;
-    cout << " -t <module> --trace <module>    Turn tracing on for the module."
-        << endl;
-    cout << "                                 Modules supporting tracing:"
-        << endl;
-    cout << "                                   Caching, Serializer, "
-        << endl;
-    cout << "                                   StructResolver" << endl;
+    cout << " -g --debug\n    Generate DWARF debug information" << endl;
+    cout << " -O <N> --optimize\n    Use optimization level N (default 2)" << 
+        endl;
+    cout << " -l <path> --lib\n    Add directory to module search path" << endl;
+    cout << " -m --migration-warnings\n    Include migration warnings" << endl;
+    cout << " -n --no-bootstrap\n    Do not load bootstrapping modules" << 
+        endl;
+    cout << " -v --verbose\n    Verbose output, use more than once for "
+            "greater effect" << endl;
+    cout << " -q --quiet\n    No extra output, implies verbose level 0" << endl;
+    cout << " --version\n    Emit the version number and exit" << endl;
+    cout << " --stats\n    Emit statistics about compile time operations." << 
+        endl;
+    cout << " --dump-func-table\n    Dump the debug function table." << endl;
+    cout << " -t <module> --trace <module>\n    Turn tracing on for the "
+            "module." << endl;
+    cout << "    Modules supporting tracing:" << endl;
+    map<string, string> traceModules = Tracer::getTracers();
+    for (map<string, string>::iterator i = traceModules.begin();
+         i != traceModules.end();
+         ++i
+         ) {
+        cout << "        " << i->first << endl;
+        cout << "          " << i->second << endl;
+    }
     exit(retval);
 }
 
@@ -247,16 +243,8 @@ int main(int argc, char **argv) {
                 doDumpFuncTable = true;
                 break;
             case 't':
-                if (!strcmp("Serializer", optarg)) {
-                    model::Serializer::trace = true;
-                } else if (!strcmp("StructResolver", optarg)) {
-                    builder::mvll::StructResolver::trace = true;
-                } else if (!strcmp("Caching", optarg)) {
-                    model::Construct::traceCaching = true;
-                } else {
-                    cerr << "Unknown trace module (-t): " << optarg << endl;
+                if (!Tracer::parse(optarg))
                     exit(1);
-                }
                 break;
         }
     }

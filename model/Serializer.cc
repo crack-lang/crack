@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include "spug/check.h"
+#include "spug/Tracer.h"
 
 using namespace spug;
 using namespace std;
@@ -18,6 +19,11 @@ using namespace model;
 using crack::util::Hasher;
 
 bool Serializer::trace = false;
+namespace {
+    spug::Tracer tracer("Serializer", Serializer::trace,
+                        "Meta-data serialization and deserialization."
+                        );
+}
 
 void Serializer::write(unsigned int val, const char *name) {
     if (trace)

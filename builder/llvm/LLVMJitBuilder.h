@@ -11,6 +11,8 @@
 
 #include "LLVMBuilder.h"
 
+#include "spug/Tracer.h"
+
 namespace llvm {
     class ExecutionEngine;
 }
@@ -68,6 +70,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                 DeferredMap deferred;
 
                 static bool trace;
+                static spug::Tracer tracer;
 
                 // add the global to 'deferred' and resolve it in fixups.
                 // Returns true if the introduction of the global clears all 
@@ -125,8 +128,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                 bool isUnresolved(llvm::Module *module);
         };
 
-                
-        
         llvm::ExecutionEngine *execEng;
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);

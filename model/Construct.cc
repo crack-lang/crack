@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <algorithm>
+#include "spug/Tracer.h"
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -143,6 +144,11 @@ StatState::~StatState() {
 }
 
 bool Construct::traceCaching = false;
+namespace {
+    spug::Tracer tracer("Caching", Construct::traceCaching,
+                        "Persistent caching descisions."
+                        );
+}
 
 Construct::ModulePath Construct::searchPath(
     const Construct::StringVec &path,
