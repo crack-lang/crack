@@ -128,6 +128,12 @@ class OverloadDef : public VarDef {
          */
         void addParent(OverloadDef *paren);
         
+        /**
+         * Go through the ancestors of 'ns', collect all other instances of 
+         * the overload and use them to construct this overload's parent list.
+         */
+        void collectAncestors(Namespace *ns);
+        
         /** Returns true if 'parent' is a parent of the overload. */
         bool hasParent(OverloadDef *parent);
         
@@ -186,6 +192,8 @@ class OverloadDef : public VarDef {
         static OverloadDefPtr deserialize(Deserializer &deser,
                                           Namespace *owner
                                           );
+
+        virtual VarDefPtr replaceAllStubs(Context &context);
 };
 
 } // namespace model

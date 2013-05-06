@@ -8,8 +8,10 @@
 #include "Generic.h"
 
 #include <string.h>
+#include "CompositeNamespace.h"
 #include "Serializer.h"
 #include "Deserializer.h"
+#include "TypeDef.h"
 #include "parser/Toker.h"
 
 using namespace std;
@@ -22,6 +24,24 @@ GenericParm *Generic::getParm(const std::string &name) {
             return parms[i].get();
 
     return 0;
+}
+
+NamespacePtr Generic::getInstanceModuleOwner(bool generic) {
+    // if our enclosing module is another generic instantiation, we want to
+    // use its module (we don't want to be mod.A[int].A.B[int], we want to
+    // be owned by mod.A[int].B[int]).
+    NamespacePtr tempNS = ns;
+    if (CompositeNamespacePtr composite =
+        CompositeNamespacePtr::rcast(tempNS)) {
+        tempNS = composite->getParent(0);
+    }
+
+    TypeDefPtr enclosingClass;
+    if ((enclosingClass = TypeDefPtr::rcast(tempNS)) && generic) {
+        return enclosingClass->getOwner();
+    } else {
+        return ns;
+    }
 }
 
 void Generic::replay(parser::Toker &toker) {

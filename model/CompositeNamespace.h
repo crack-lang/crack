@@ -1,9 +1,9 @@
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_CompositeNamespace_h_
 #define _model_CompositeNamespace_h_
@@ -28,6 +28,7 @@ class CompositeNamespace : public Namespace {
     public:
         CompositeNamespace(Namespace *parent0, Namespace *parent1);
         virtual ModuleDefPtr getModule();
+        virtual bool isHiddenScope();
         virtual NamespacePtr getParent(unsigned index);
         virtual void addDef(VarDef *def);
         virtual void removeDef(VarDef *def);

@@ -184,6 +184,28 @@ void OverloadDef::addParent(OverloadDef *parent) {
     parents.push_back(parent);
 }
 
+void OverloadDef::collectAncestors(Namespace *ns) {
+    NamespacePtr parent;
+    for (unsigned i = 0; parent = ns->getParent(i++);) {
+        VarDefPtr var = parent->lookUp(name, false);
+        OverloadDefPtr parentOvld;
+        if (!var) {
+            // the parent does not have this overload.  Check the next level.
+            collectAncestors(parent.get());
+        } else {
+            parentOvld = OverloadDefPtr::rcast(var);
+            // if there is a variable of this name but it is not an overload, 
+            // we have a situation where there is a non-overload definition in 
+            // an ancestor namespace that will block resolution of the 
+            // overloads in all derived namespaces.  This is a bad thing, 
+            // but not something we want to deal with here.
+
+            if (parentOvld)
+                addParent(parentOvld.get());
+        }
+    }
+}
+
 bool OverloadDef::hasParent(OverloadDef *parent) {
     for (ParentVec::iterator iter = parents.begin(); iter != parents.end();
          ++iter
@@ -331,6 +353,8 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
                                         ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld = new OverloadDef(name);
+    ovld->type = deser.context->construct->overloadType;
+    ovld->collectAncestors(owner);
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
         FuncDefPtr func = FuncDef::deserialize(deser, name);
@@ -338,4 +362,18 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
         ovld->addFunc(func.get());
     }
     return ovld;
+}
+
+VarDefPtr OverloadDef::replaceAllStubs(Context &context) {
+    if (stubFree)
+        return this;
+    VarDefPtr replacement = replaceStub(context);
+    if (replacement)
+        return replacement;
+
+    for (FuncList::iterator iter = funcs.begin(); iter != funcs.end();
+         ++iter
+         )
+        *iter = (*iter)->replaceAllStubs(context);
+    return this;
 }

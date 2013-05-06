@@ -28,6 +28,7 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+class BFuncDef;
 SPUG_RCPTR(BHeapVarDefImpl);
 class DebugInfo;
 class FuncBuilder;
@@ -37,6 +38,7 @@ class LLVMBuilder : public Builder {
     private:
         typedef std::map<std::string, llvm::StructType *> TypeMap;
         static TypeMap llvmTypes;
+        llvm::Function *exceptionPersonalityFunc, *unwindResumeFunc;
 
     protected:
 
@@ -104,6 +106,15 @@ class LLVMBuilder : public Builder {
                                         BModuleDef *moduleDef
                                         ) {
         }
+        
+        /**
+         * Lets the derived class know about hidden primitive functions 
+         * registered by LLVM in the interpreter.
+         */
+        virtual void registerHiddenFunc(model::Context &context,
+                                        BFuncDef *func
+                                        ) {
+        }
 
         /**
          * common module initialization that happens in all builders
@@ -122,6 +133,12 @@ class LLVMBuilder : public Builder {
          * cleanup chain if necessary.
          */
         llvm::BasicBlock *getUnwindBlock(model::Context &context);
+
+        /**
+         * Returns the exception personality function for the current builder 
+         * (and hence, the current module).
+         */        
+        llvm::Function *getExceptionPersonalityFunc();
         
         /**
          * Clears all cached cleanup blocks associated with the context (this 
@@ -175,7 +192,6 @@ class LLVMBuilder : public Builder {
         llvm::Value *lastValue;
         llvm::Type *intzLLVM;
         llvm::BasicBlock *funcBlock;
-        llvm::Function *exceptionPersonalityFunc;
 
         // keeps track of the Function object for the FuncDef in the builder's
         // module.
@@ -194,6 +210,9 @@ class LLVMBuilder : public Builder {
         // been defined.
         std::vector<BTypeDefPtr> deferMetaClass;
 
+        /** Gets the _Unwind_Resume function. */
+        llvm::Function *getUnwindResumeFunc();
+        
         /**
          * Instantiates the BModuleDef subclass appropriate for the builder.
          */
@@ -240,6 +259,12 @@ class LLVMBuilder : public Builder {
                                 unsigned int nextVTableSlot
                                 );
 
+        /**
+         * Checks for unresolved externals in the root builder and aborts if 
+         * they are discovered.
+         */
+        virtual void checkForUnresolvedExternals() {}
+        
         virtual void *getFuncAddr(llvm::Function *func) = 0;
 
         /** Creates an expresion to cleanup the current exception. */
@@ -396,6 +421,17 @@ class LLVMBuilder : public Builder {
         virtual void emitEndFunc(model::Context &context,
                                  model::FuncDef *funcDef);
 
+        model::FuncDefPtr createExternFuncCommon(
+            model::Context &context,
+            model::FuncDef::Flags flags,
+            const std::string &name,
+            model::TypeDef *returnType,
+            model::TypeDef *receiverType,
+            const std::vector<model::ArgDefPtr> &args,
+            void *cfunc,
+            const char *symbolName
+        );
+
         virtual model::FuncDefPtr
             createExternFunc(model::Context &context,
                              model::FuncDef::Flags flags,
@@ -405,7 +441,6 @@ class LLVMBuilder : public Builder {
                              const std::vector<model::ArgDefPtr> &args,
                              void *cfunc,
                              const char *symbolName=0
-
                              );
 
         virtual model::TypeDefPtr
@@ -478,7 +513,9 @@ class LLVMBuilder : public Builder {
 
         virtual model::FuncDefPtr materializeFunc(
             model::Context &context,
+            model::FuncDef::Flags flags,
             const std::string &name,
+            model::TypeDef *returnType,
             const model::ArgVec &args
         );
 

@@ -387,21 +387,6 @@ void LLVMBuilder::emitFunctionCleanups(Context &context) {
 void LLVMBuilder::createLLVMModule(const string &name) {
     LLVMContext &lctx = getGlobalContext();
     module = new llvm::Module(name, lctx);
-
-    // our exception personality function
-    vector<Type *> args(5);;
-    args[0] = Type::getInt32Ty(lctx);
-    args[1] = args[0];
-    args[2] = Type::getInt64Ty(lctx);
-    args[3] = Type::getInt8Ty(lctx)->getPointerTo();
-    args[4] = args[3];
-    FunctionType *epType = FunctionType::get(Type::getVoidTy(lctx), args,
-                                             false
-                                             );
-
-    Constant *ep =
-        module->getOrInsertFunction("__CrackExceptionPersonality", epType);
-    exceptionPersonalityFunc = cast<Function>(ep);
 }
 
 void LLVMBuilder::finishModule(Context &context, ModuleDef *moduleDef) {
@@ -550,6 +535,26 @@ BasicBlock *LLVMBuilder::getUnwindBlock(Context &context) {
         BCleanupFramePtr::rcast(context.cleanupFrame);
 
     return firstCleanupFrame->getLandingPad(cleanups, cdata.get());
+}
+
+Function *LLVMBuilder::getExceptionPersonalityFunc() {
+    if (!exceptionPersonalityFunc) {
+        LLVMContext &lctx = getGlobalContext();
+        vector<Type *> args(5);;
+        args[0] = Type::getInt32Ty(lctx);
+        args[1] = args[0];
+        args[2] = Type::getInt64Ty(lctx);
+        args[3] = Type::getInt8Ty(lctx)->getPointerTo();
+        args[4] = args[3];
+        FunctionType *epType = FunctionType::get(Type::getVoidTy(lctx), args,
+                                                false
+                                                );
+
+        Constant *ep =
+            module->getOrInsertFunction("__CrackExceptionPersonality", epType);
+        exceptionPersonalityFunc = cast<Function>(ep);
+    }
+    return exceptionPersonalityFunc;
 }
 
 void LLVMBuilder::clearCachedCleanups(Context &context) {
@@ -747,8 +752,9 @@ LLVMBuilder::LLVMBuilder() :
     builder(getGlobalContext()),
     func(0),
     lastValue(0),
-    intzLLVM(0) {
-
+    intzLLVM(0),
+    exceptionPersonalityFunc(0),
+    unwindResumeFunc(0) {
 }
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
@@ -1293,6 +1299,19 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
     }
 }
 
+Function *LLVMBuilder::getUnwindResumeFunc() {
+    if (!unwindResumeFunc) {
+        LLVMContext &lctx = getGlobalContext();
+        Constant *c = module->getOrInsertFunction("_Unwind_Resume",
+                                                  Type::getVoidTy(lctx),
+                                                  Type::getInt8PtrTy(lctx),
+                                                  NULL
+                                                  );
+        unwindResumeFunc = cast<Function>(c);
+    }
+    return unwindResumeFunc;
+}
+
 BModuleDef *LLVMBuilder::instantiateModule(Context &context,
                                            const string &name,
                                            Module *module
@@ -1329,7 +1348,7 @@ BasicBlock *LLVMBuilder::createLandingPad(
     Type *i8PtrType = b.getInt8PtrTy();
 
     // get the personality func
-    Value *personality = exceptionPersonalityFunc;
+    Value *personality = getExceptionPersonalityFunc();
 
     // create a catch selector or a cleanup selector
     Value *exStruct;
@@ -1649,7 +1668,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
         realArgs = &existing->args;
     }
 
-    func = funcDef->getRep(*this);
+    func = funcDef->getFuncRep(*this);
     string fffname = func->getName();
 
     createFuncStartBlocks(name);
@@ -1712,6 +1731,23 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
                                          void *cfunc,
                                          const char *symbolName
                                          ) {
+    return createExternFuncCommon(context, flags, name, returnType,
+                                  receiverType,
+                                  args,
+                                  cfunc,
+                                  symbolName
+                                  );
+}
+
+FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
+                                               FuncDef::Flags flags,
+                                               const string &name,
+                                               TypeDef *returnType,
+                                               TypeDef *receiverType,
+                                               const vector<ArgDefPtr> &args,
+                                               void *cfunc,
+                                               const char *symbolName
+                                               ) {
 
     // XXX only needed for linker?
     // if a symbol name wasn't given, we look it up from the dynamic library
@@ -1775,7 +1811,7 @@ FuncDefPtr LLVMBuilder::createExternFunc(Context &context,
 
     f.setArgs(args);
     f.finish(false);
-    primFuncs[f.funcDef->getRep(*this)] = cfunc;
+    primFuncs[f.funcDef->getFuncRep(*this)] = cfunc;
     return f.funcDef;
 }
 
@@ -1829,10 +1865,11 @@ namespace {
         context.addDef(funcBuilder.funcDef.get(), objClass);
 
         LLVMBuilder &lb = dynamic_cast<LLVMBuilder &>(context.builder);
-        BasicBlock *block = BasicBlock::Create(getGlobalContext(),
-                                               "oper class",
-                                               funcBuilder.funcDef->getRep(lb)
-                                               );
+        BasicBlock *block = BasicBlock::Create(
+            getGlobalContext(),
+            "oper class",
+            funcBuilder.funcDef->getFuncRep(lb)
+        );
 
         // body of the function: load the class instance global variable
         IRBuilder<> builder(block);
@@ -2290,7 +2327,6 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
                "Type " << fullName << " not found in module " <<
                 module->getModuleIdentifier()
                );
-    putLLVMType(fullName, cast<StructType>(llvmType));
 
 //    cerr << "XXX can't materialize vtable base count yet" << endl;
     BTypeDefPtr metaType = createMetaClass(context, name);
@@ -2309,19 +2345,41 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
 }
 
 
-FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
+FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
+                                        const string &name,
+                                        TypeDef *returnType,
                                         const ArgVec &args
                                         ) {
-    BFuncDefPtr result = new BFuncDef(FuncDef::noFlags, name, args.size());
+    BFuncDefPtr result = new BFuncDef(flags, name, args.size());
     result->args = args;
+    result->returnType = returnType;
 
-    string fullName = result->getUniqueId(context.ns.get());
-    Function *func = module->getFunction(fullName);
-    SPUG_CHECK(func,
-               "Function " << fullName << " not found in module " <<
-                module->getModuleIdentifier()
-               );
-    result->setRep(func);
+    if (!(flags & FuncDef::abstract)) {
+        string fullName = result->getUniqueId(context.ns.get());
+        Function *func = module->getFunction(fullName);
+        SPUG_CHECK(func,
+                "Function " << fullName << " not found in module " <<
+                    module->getModuleIdentifier()
+                );
+        result->setRep(func);
+    } else {
+        // Create a null constant.  First we have to construct a type.
+        vector<Type *> argTypes;
+        argTypes.reserve(args.size());
+        for (ArgVec::const_iterator iter = args.begin();
+             iter != args.end();
+             ++iter
+             )
+            argTypes.push_back(BTypeDefPtr::arcast((*iter)->type)->rep);
+
+        Type *funcType =
+            FunctionType::get(BTypeDefPtr::acast(returnType)->rep,
+                              argTypes,
+                              false
+                              );
+
+        result->setRep(Constant::getNullValue(funcType->getPointerTo()));
+    }
     return result;
 }
 
@@ -3234,7 +3292,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     //BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
     //BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
     BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
-    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->int32Type);
+    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->voidType);
     //BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
     BTypeDef *byteptrType =
         BTypeDefPtr::arcast(context.construct->byteptrType);
@@ -3248,7 +3306,8 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("size", intType);
         f.setSymbolName("calloc");
         f.finish();
-        callocFunc = f.funcDef->getRep(*this);
+        registerHiddenFunc(context, f.funcDef.get());
+        callocFunc = f.funcDef->getFuncRep(*this);
     }
 
     // create "array[byteptr] __getArgv()"
@@ -3266,6 +3325,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__getArgv");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "int __getArgc()"
@@ -3273,6 +3333,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
         f.setSymbolName("__getArgc");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackThrow(VTableBase)"
@@ -3281,6 +3342,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exception", vtableBaseType);
         f.setSymbolName("__CrackThrow");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackGetException(voidptr)"
@@ -3292,6 +3354,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", byteptrType);
         f.setSymbolName("__CrackGetException");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackBadCast(Class a, Class b)"
@@ -3304,6 +3367,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("newType", classType);
         f.setSymbolName("__CrackBadCast");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackCleanupException(voidptr exceptionObject)"
@@ -3315,6 +3379,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", voidptrType);
         f.setSymbolName("__CrackCleanupException");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackExceptionFrame()"
@@ -3325,6 +3390,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
+        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create the exception structure for the module main function

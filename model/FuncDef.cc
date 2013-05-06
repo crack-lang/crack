@@ -286,7 +286,7 @@ FuncDef::ArgVec FuncDef::deserializeArgs(Deserializer &deser) {
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     bool alias = deser.readUInt("isAlias");
     if (alias) {
-        OverloadDefPtr ovld = deserializeAliasBody(deser);
+        OverloadDefPtr ovld = deserializeOverloadAliasBody(deser);
         return ovld->getSigMatch(deserializeArgs(deser), true);
     }
     TypeDefPtr returnType = TypeDef::deserialize(deser);
@@ -322,12 +322,12 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
 
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
+        flags,
         name,
+        returnType.get(),
         args
     );
     
-    result->returnType = returnType;
-    result->flags = flags;
     result->receiverType = receiverType;
     result->vtableSlot = vtableSlot;
 

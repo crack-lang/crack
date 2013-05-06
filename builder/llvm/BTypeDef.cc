@@ -13,6 +13,7 @@
 #include <llvm/GlobalVariable.h>
 #include <llvm/Module.h>
 #include "model/Context.h"
+#include "model/ModuleStub.h"
 #include "model/OverloadDef.h"
 #include "PlaceholderInstruction.h"
 #include "VTableBuilder.h"
@@ -294,15 +295,64 @@ void BTypeDef::fixIncompletes(Context &context) {
     complete = true;
 }
 
+namespace {
+    struct DeserializedCallback : ModuleStub::Callback {
+        LLVMBuilderPtr builder;
+        BTypeDefPtr vtableBaseType, type;
+
+        DeserializedCallback(LLVMBuilder *builder, BTypeDef *vtableBaseType,
+                             BTypeDef *type
+                             ) :
+            builder(builder),
+            vtableBaseType(vtableBaseType),
+            type(type) {
+        }
+        
+        static void buildVTableOrDefer(LLVMBuilder *builder, 
+                                       BTypeDef *vtableBaseType,
+                                       BTypeDef *type
+                                       ) {
+            // if there are stub ancestors, we need to defer processing until 
+            // the module is materialized - otherwise we can't create vtables.
+            if (TypeDefPtr stubAncestor = type->getStubAncestor()) {
+                ModuleStubPtr moduleStub =
+                    ModuleStubPtr::rcast(stubAncestor->getModule());
+                SPUG_CHECK(moduleStub->getFullName() != 
+                            type->getModule()->getFullName(),
+                           "Attempting to replace the stub for ancestor " <<
+                            stubAncestor->getDisplayName() << " of type " <<
+                            type->getDisplayName() << 
+                            " when both are from module: " <<
+                            moduleStub->getFullName()
+                           );
+                moduleStub->registerCallback(
+                    new DeserializedCallback(builder, vtableBaseType, type)
+                );
+            } else {
+                VTableBuilder vtb(builder, vtableBaseType);
+                type->createAllVTables(vtb, ".vtable." + type->getFullName());
+                vtb.materialize(type);
+            }
+        }
+
+        virtual void run() {
+            buildVTableOrDefer(builder.get(), vtableBaseType.get(), type.get());
+        }
+    };
+}        
+
 void BTypeDef::onDeserialized(Context &context) {
+    
     // reconstruct the VTable references for the type.
     if (hasVTable) {
+        DeserializedCallback::buildVTableOrDefer(
+            LLVMBuilderPtr::cast(&context.builder),
+            BTypeDefPtr::arcast(context.construct->vtableBaseType),
+            this
+        );
         LLVMBuilder *builder = LLVMBuilderPtr::cast(&context.builder);
         BTypeDef *vtableBaseType = 
             BTypeDefPtr::arcast(context.construct->vtableBaseType);
-        VTableBuilder vtb(builder, vtableBaseType);
-        createAllVTables(vtb, ".vtable." + getFullName());
-        vtb.materialize(this);
     }
 
     // now fix up all of our contents.    

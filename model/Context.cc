@@ -104,32 +104,6 @@ void Context::warnOnHide(const string &name) {
             " hides another definition in an enclosing context." << endl;
 }
 
-namespace {
-    void collectAncestorOverloads(OverloadDef *overload,
-                                  Namespace *srcNs
-                                  ) {
-        NamespacePtr parent;
-        for (unsigned i = 0; parent = srcNs->getParent(i++);) {
-            VarDefPtr var = parent->lookUp(overload->name, false);
-            OverloadDefPtr parentOvld;
-            if (!var) {
-                // the parent does not have this overload.  Check the next level.
-                collectAncestorOverloads(overload, parent.get());
-            } else {
-                parentOvld = OverloadDefPtr::rcast(var);
-                // if there is a variable of this name but it is not an overload, 
-                // we have a situation where there is a non-overload definition in 
-                // an ancestor namespace that will block resolution of the 
-                // overloads in all derived namespaces.  This is a bad thing, 
-                // but not something we want to deal with here.
-
-                if (parentOvld)
-                    overload->addParent(parentOvld.get());
-            }
-        }
-    }
-}
-
 OverloadDefPtr Context::replicateOverload(const std::string &varName,
                                           Namespace *srcNs
                                           ) {
@@ -137,7 +111,7 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
     overload->type = construct->overloadType;
     
     // merge in the overloads from the parents
-    collectAncestorOverloads(overload.get(), srcNs);
+    overload->collectAncestors(srcNs);
     srcNs->addDef(overload.get());
     return overload;
 }
@@ -162,6 +136,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     toplevel(false),
     emittingCleanups(false),
     terminal(false),
+    generic(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
     nextClassFlags(TypeDef::noFlags),
@@ -183,6 +158,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     toplevel(false),
     emittingCleanups(false),
     terminal(false),
+    generic(false),
     returnType(TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
     vtableOffset(0),
@@ -585,12 +561,17 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
     ConstVarDefPtr constDef;
     if (constDef = ConstVarDefPtr::cast(varDef))
         return constDef->expr;
-    
+
     // verify that the variable is reachable
     
+    // functions and types don't have reachability issues
+    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef)) {
+        return builder.createVarRef(varDef);
+    
     // if the variable is in a module context, it is accessible
-    if (ModuleDefPtr::cast(varDef->getOwner()) ||
-        GlobalNamespacePtr::cast(varDef->getOwner())) {
+    } else if (ModuleDefPtr::cast(varDef->getOwner()) ||
+               GlobalNamespacePtr::cast(varDef->getOwner())
+               ) {
         return builder.createVarRef(varDef);
     
     // if it's in an instance context, verify that this is either the composite

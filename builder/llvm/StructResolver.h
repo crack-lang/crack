@@ -33,7 +33,7 @@ public:
 
 protected:
     llvm::Module *module;
-    StructMapType *typeMap;
+    StructMapType typeMap;
     StructMapType reverseMap;
     std::map<llvm::Value *, bool> visited;
     std::map<llvm::Type *, int> visitedStructs;
@@ -51,14 +51,14 @@ protected:
                          );
 
 public:
-    StructResolver(llvm::Module *mod0): module(mod0), typeMap(0) { }
+    StructResolver(llvm::Module *mod0): module(mod0) {}
 
-    // return the list of structs which conflict (by name only) with existing
-    // definitions in the current llvm context. these are recognized by
-    // their numeric suffix, e.g. foo.0, bar.1, etc.
-    StructListType getDisjointStructs();
+    // Build the type map for the module - this is the mapping from the
+    // duplicated struct types (with numeric suffixes in their names) to
+    // the actual types.
+    StructListType buildTypeMap();
 
-    void run(StructMapType *m);
+    void run();
 
 };
 

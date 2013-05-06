@@ -108,6 +108,7 @@ class ModuleDef : public VarDef, public Namespace {
 
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();
+        virtual bool isHiddenScope();
         
         /**
          * Parse a canonical module name, return it as a vector of name 
@@ -133,6 +134,8 @@ class ModuleDef : public VarDef, public Namespace {
         static ModuleDefPtr deserialize(Deserializer &deserializer,
                                         const std::string &canonicalName
                                         );
+
+        virtual VarDefPtr replaceAllStubs(Context &context);
 
         /**
          * Run the module main function.  This should generally only be called 

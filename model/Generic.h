@@ -49,6 +49,13 @@ class Generic {
         /** Get the named parameter.   Returns null if it is not defined. */
         GenericParm *getParm(const std::string &name);
         
+        /** 
+         * Returns the owner namespace for ephemeral modules that instantiate 
+         * the generic.
+         * @param generic set to true if we are in a generic context.
+         */
+        NamespacePtr getInstanceModuleOwner(bool generic);
+        
         /** Replay the body into the tokenizer. */
         void replay(parser::Toker &toker);
 

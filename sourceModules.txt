@@ -10,6 +10,7 @@ model/ConstVarDef.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
 model/GlobalNamespace.cc
+model/ModuleStub.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
@@ -42,6 +43,7 @@ parser/Toker.cc
 parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
+spug/Tracer.cc
 builder/llvm/ArrayTypeDef.cc
 builder/llvm/BModuleDef.cc
 builder/llvm/BBuilderContextData.cc

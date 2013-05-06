@@ -44,7 +44,7 @@ class TypeDef : public VarDef, public Namespace {
         TypeDef *findSpecialization(TypeVecObj *types);
         std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
-        TypeVec getLocalDeps(const ModuleDef *module) const;
+        TypeDef *extractInstantiation(ModuleDef *module, TypeVecObj *types);
 
     public:
 
@@ -99,6 +99,7 @@ class TypeDef : public VarDef, public Namespace {
         
         // defined for a generic instantiation
         TypeVec genericParms;
+        TypeDef *templateType;
         
         // the number of bytes of padding required by the type after the 
         // instance variables (this exists so we can define extension types, 
@@ -154,6 +155,7 @@ class TypeDef : public VarDef, public Namespace {
             Namespace(name),
             genericInfo(0),
             generic(0),
+            templateType(0),
             padding(0),
             pointer(pointer),
             hasVTable(false),
@@ -169,6 +171,8 @@ class TypeDef : public VarDef, public Namespace {
 
         /** required implementation of Namespace::getModule() */
         virtual ModuleDefPtr getModule();
+        
+        virtual bool isHiddenScope();
 
         /** required implementation of Namespace::getParent() */
         virtual NamespacePtr getParent(unsigned i);
@@ -357,6 +361,13 @@ class TypeDef : public VarDef, public Namespace {
         static TypeDefPtr deserialize(Deserializer &deser,
                                       const char *name = 0
                                       );
+
+        virtual VarDefPtr replaceAllStubs(Context &context);
+        
+        /**
+         * If any of the ancestors is a stub, returns the first one discovered.
+         */
+        TypeDefPtr getStubAncestor();
 };
 
 } // namespace model

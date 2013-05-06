@@ -100,8 +100,24 @@ void TypeDef::storeDef(VarDef *def) {
         ordered.push_back(def);
 }
 
+TypeDef *TypeDef::extractInstantiation(ModuleDef *module, TypeVecObj *types) {
+    TypeDefPtr result = TypeDefPtr::rcast(module->lookUp(name));
+    SPUG_CHECK(result, 
+               "Instantiated generic " << module->getNamespaceName() <<
+                " not defined in its module."
+               );
+    result->genericParms = *types;
+    result->templateType = this;
+    (*generic)[types] = result;
+    return result.get();
+}
+
 ModuleDefPtr TypeDef::getModule() {
     return owner->getModule();
+}
+
+bool TypeDef::isHiddenScope() {
+    return owner->isHiddenScope();
 }
 
 NamespacePtr TypeDef::getParent(unsigned i) {
@@ -777,6 +793,63 @@ string TypeDef::getSpecializedName(TypeVecObj *types, bool fullName) {
     return tmp.str();
 }
 
+void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
+                        TypeDef::TypeVecObj *types
+                        ) {
+    // alias all global symbols in the original module and original compile 
+    // namespace.
+    localCtx.ns->aliasAll(type->genericInfo->ns.get());
+    localCtx.compileNS->aliasAll(type->genericInfo->compileNS.get());
+
+    // alias the template arguments to their parameter names
+    for (int i = 0; i < types->size(); ++i)
+        localCtx.ns->addAlias(type->genericInfo->parms[i]->name, 
+                              (*types)[i].get()
+                              );
+    
+    istringstream fakeInput;
+    Toker toker(fakeInput, "ignored-name");
+    type->genericInfo->replay(toker);
+    toker.putBack(Token(Token::ident, type->name, Location()));
+    toker.putBack(Token(Token::classKw, "class", Location()));
+    if (type->abstract)
+        localCtx.nextClassFlags =
+            static_cast<TypeDef::Flags>(model::TypeDef::explicitFlags |
+                                        model::TypeDef::abstractClass
+                                        );
+
+    Location instantiationLoc = context.getLocation();
+    if (instantiationLoc)
+        localCtx.pushErrorContext(SPUG_FSTR("in generic instantiation "
+                                            "at " << instantiationLoc
+                                            )
+                                  );
+    else
+        // XXX I think we should never get here now that we're 
+        // materializing generic modules.
+        localCtx.pushErrorContext(SPUG_FSTR("In generic instantiation "
+                                            "from compiled module "
+                                            "(this  should never "
+                                            "happen!)"
+                                            )
+                                  );
+    Parser parser(toker, &localCtx);
+    parser.parse();
+    localCtx.popErrorContext();
+}
+
+namespace {
+    class DummyModuleDef : public ModuleDef {
+        public:
+            DummyModuleDef(const string &name, Namespace *ns) :
+                ModuleDef(name, ns) {
+            }
+            virtual void callDestructor() {}
+            virtual void runMain(builder::Builder &builder) {}
+            virtual bool isHiddenScope() { return true; }
+    };
+}
+
 TypeDef *TypeDef::getSpecialization(Context &context, 
                                     TypeDef::TypeVecObj *types
                                     ) {
@@ -814,6 +887,37 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                     )
                         );
         
+        // if any of the parameters of the generic or the generic itself are 
+        // in a hidden scope, we don't want to create an ephemeral module for 
+        // it.
+        bool hidden = false;
+        if (isHidden()) {
+            hidden = true;
+        } else {
+            for (int i = 0; i < types->size(); ++i) {
+                if ((*types)[i]->isHidden()) {
+                    hidden = true;
+                    break;
+                }
+            }
+        }
+        if (hidden) {
+            ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
+                                                       context.ns.get()
+                                                       );
+            // create a dummy module in the current context.
+            dummyMod->setOwner(
+                genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
+            );
+            ContextPtr instantiationContext = 
+                context.createSubContext(Context::module, dummyMod.get());
+            instantiationContext->toplevel = true;
+            instantiationContext->generic = true;
+            instantiateGeneric(this, context, *instantiationContext, types);
+
+            return extractInstantiation(dummyMod.get(), types);
+        }
+        
         // create an ephemeral module for the new class
         Context *rootContext = context.construct->rootContext.get();
         NamespacePtr compileNS =
@@ -829,6 +933,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                             )
                         );
         modContext->toplevel = true;
+        modContext->generic = true;
         
         // create the new module with the current module as the owner.  Use 
         // the newTypeName instead of moduleName, the name will be 
@@ -842,55 +947,21 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         // here so that we can accept protected variables from the original 
         // module's context
         ModuleDefPtr owner = genericInfo->ns->getRealModule();
-        module->setOwner(owner.get());
+        module->setOwner(
+            genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
+        );
         
-        // alias all global symbols in the original module and original compile 
-        // namespace.
-        modContext->ns->aliasAll(genericInfo->ns.get());
-        modContext->compileNS->aliasAll(genericInfo->compileNS.get());
+        instantiateGeneric(this, context, *modContext, types);
         
-        // alias the template arguments to their parameter names
-        for (int i = 0; i < types->size(); ++i)
-            modContext->ns->addAlias(genericInfo->parms[i]->name, 
-                                     (*types)[i].get()
-                                     );
+        // after we're done parsing, change the owner to the actual owner so 
+        // that names are generated correctly.
         
-        istringstream fakeInput;
-        Toker toker(fakeInput, moduleName.c_str());
-        genericInfo->replay(toker);
-        toker.putBack(Token(Token::ident, name, Location()));
-        toker.putBack(Token(Token::classKw, "class", Location()));
-        if (abstract)
-            modContext->nextClassFlags =
-                static_cast<Flags>(model::TypeDef::explicitFlags |
-                                   model::TypeDef::abstractClass
-                                   );
-    
-        Location instantiationLoc = context.getLocation();
-        if (instantiationLoc)
-            modContext->pushErrorContext(SPUG_FSTR("in generic instantiation "
-                                                   "at " << instantiationLoc
-                                                   )
-                                         );
-        else
-            // XXX I think we should never get here now that we're 
-            // materializing generic modules.
-            modContext->pushErrorContext(SPUG_FSTR("In generic instantiation "
-                                                   "from compiled module "
-                                                   "(this  should never "
-                                                   "happen!)"
-                                                   )
-                                         );
-        Parser parser(toker, modContext.get());
-        parser.parse();
-
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
         module->sourceDigest = owner->sourceDigest;
 
         module->cacheable = true;    
         module->close(*modContext);
-        modContext->popErrorContext();
 
         // store the module in the in-memory cache
         context.construct->registerModule(module.get());
@@ -903,10 +974,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // 
     // extract the type out of the newly created module and store it in the 
     // specializations cache
-    result = TypeDefPtr::rcast(module->lookUp(name));
-    result->genericParms = *types;
-    assert(result);
-    (*generic)[types] = result;
+    result = extractInstantiation(module.get(), types);
 
     // record a dependency on the owner's module
     context.ns->getModule()->addDependency(module.get());
@@ -962,25 +1030,8 @@ void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     }
 }
 
-TypeDef::TypeVec TypeDef::getLocalDeps(const ModuleDef *module) const {
-    // if this is a generic, see if it parameterizes any types in the local 
-    // module.
-    TypeVec localTypes;
-    if (genericParms.size()) {
-        for (TypeVec::const_iterator iter = genericParms.begin();
-            iter != genericParms.end();
-            ++iter
-            ) {
-            if ((*iter)->getModule() == module)
-                localTypes.push_back(*iter);
-        }
-    }
-    return localTypes;
-}
-
 void TypeDef::serializeExtern(Serializer &serializer) const {
-    TypeVec localDeps = getLocalDeps(serializer.module);
-    VarDef::serializeExternRef(serializer, &localDeps);
+    VarDef::serializeExternRef(serializer, &genericParms);
 }
 
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
@@ -995,8 +1046,15 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
             
             // write an "Extern" (but not a reference, we're already in a 
             // reference to the object we'd be externing)
-            TypeVec localTypes = getLocalDeps(serializer.module);
-            serializeExternCommon(serializer, &localTypes);
+            if (templateType) {
+                
+                // If this is a generic instantiation, write the base type 
+                // with our parameters.
+                templateType->serializeExternCommon(serializer, 
+                                                    &genericParms);
+            } else {
+                serializeExternCommon(serializer, 0);
+            }
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
@@ -1011,11 +1069,32 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
                             (abstract ? 4 : 0);
                 serializer.write(flags, "flags");
                 serializer.write(parents.size(), "#bases");
+                    
                 for (TypeVec::const_iterator i = parents.begin();
                     i != parents.end();
                     ++i
                     )
                     (*i)->serialize(serializer, false, 0);
+
+                // serialize the optional fields for generic instantiations.
+                if (templateType) {
+                    ostringstream temp;
+                    Serializer sub(serializer, temp);
+                    // field id = 1 (<< 3) | type = 3 (reference)
+                    sub.write(11, "templateType.header");
+                    templateType->serialize(sub, false, 0);
+                    for (TypeVec::const_iterator iter = genericParms.begin();
+                         iter != genericParms.end();
+                         ++iter
+                         ) {
+                        // field id = 2 (<< 3) | type = 3 (reference)
+                        sub.write(19, "genericParms[i].header");
+                        (*iter)->serialize(sub, false, 0);
+                    }
+                    serializer.write(temp.str(), "optional");
+                } else {
+                    serializer.write(0, "optional");
+                }
                 
                 Namespace::serializeDefs(serializer);
             }
@@ -1029,7 +1108,7 @@ namespace {
             int alias = deser.readUInt("isAlias");
             TypeDefPtr type;
             if (alias) {
-                type = TypeDefPtr::arcast(VarDef::deserializeAliasBody(deser));
+                type = VarDef::deserializeTypeAliasBody(deser);
                 deser.userData = 0;
             } else {
                 string name = deser.readString(16, "name");
@@ -1098,6 +1177,30 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
             bases[i] = TypeDef::deserialize(deser, "bases[i]");
 
         result->parents = bases;
+        
+        // check for optional fields
+        string optionalDataString = deser.readString(256, "optional");
+        if (optionalDataString.size()) {
+            istringstream optionalData(optionalDataString);
+            Deserializer sub(deser, optionalData);
+            bool eof;
+            int header;
+            while ((header = sub.readUInt("optional.header", &eof)) || !eof) {
+                switch (header) {
+                    case 11:
+                        result->templateType = TypeDef::deserialize(sub).get();
+                        break;
+                    case 19:
+                        result->genericParms.push_back(
+                            TypeDef::deserialize(sub)
+                        );
+                        break;
+                    default:
+                        // unknown field.
+                        break;
+                }
+            }
+        }
 
         // 'defs' - fill in the body.
         ContextPtr classContext =
@@ -1112,4 +1215,67 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
     }
 
     return result;
+}
+
+VarDefPtr TypeDef::replaceAllStubs(Context &context) {
+    if (stubFree)
+        return this;
+
+    stubFree = true;
+    VarDefPtr replacement = replaceStub(context);
+    if (replacement)
+        return replacement;
+    
+    // fix all bases
+    for (TypeVec::iterator iter = parents.begin(); iter != parents.end(); 
+         ++iter
+         )
+        *iter = (*iter)->replaceAllStubs(context);
+    
+    // if this is a generic specialization, fix all parameters
+    if (genericParms.size()) {
+        for (TypeVec::iterator iter = genericParms.begin(); 
+             iter != genericParms.end();
+             ++iter
+             )
+            *iter = (*iter)->replaceAllStubs(context);
+    }
+    
+    // if this is a generic instantiation, fix all specializations.
+    if (generic) {
+        for (SpecializationCache::iterator iter = generic->begin();
+             iter != generic->end();
+             ++iter
+             )
+            iter->second = iter->second->replaceAllStubs(context);
+    }
+
+    if (templateType)
+        templateType =
+            TypeDefPtr::rcast(templateType->replaceAllStubs(context));
+
+    // We don't need to worry about meta, metas only have dependencies on 
+    // other metas, and the meta itself should never be stubbed since it is 
+    // created at the same time as the class.
+    
+    for (VarDefMap::iterator iter = defs.begin(); iter != defs.end(); ++iter)
+        iter->second = iter->second->replaceAllStubs(context);
+    
+    return this;
+}
+
+TypeDefPtr TypeDef::getStubAncestor() {
+    if (isStub())
+        return this;
+    
+    for (TypeVec::const_iterator iter = parents.begin();
+         iter != parents.end();
+         ++iter
+         ) {
+        TypeDefPtr result = (*iter)->getStubAncestor();
+        if (result)
+            return result;
+    }
+
+    return 0;
 }

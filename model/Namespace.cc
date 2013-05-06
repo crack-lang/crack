@@ -48,10 +48,19 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     return 0;
 }
 
+bool Namespace::isHiddenScope() {
+    // all scopes are hidden by default.
+    return true;
+}
+
 ModuleDefPtr Namespace::getRealModule() {
     ModuleDefPtr mod = getModule();
-    ModuleDefPtr owner = ModuleDefPtr::cast(mod->getOwner());
-    return owner ? owner : mod;
+    if (mod) {
+        NamespacePtr owner = mod->getOwner();
+        if (owner)
+            return owner->getRealModule();
+    }
+    return mod;
 }
 
 bool Namespace::hasAliasFor(VarDef *def) const {
