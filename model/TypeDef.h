@@ -170,6 +170,8 @@ class TypeDef : public VarDef, public Namespace {
 
         /** required implementation of Namespace::getModule() */
         virtual ModuleDefPtr getModule();
+        
+        virtual bool isHiddenScope();
 
         /** required implementation of Namespace::getParent() */
         virtual NamespacePtr getParent(unsigned i);

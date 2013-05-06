@@ -108,6 +108,12 @@ class VarDef : public virtual spug::RCBase {
          * Return true if the variable is unassignable.
          */
         virtual bool isConstant();
+        
+        /**
+         * Returns true if the variable can not be made visible to other 
+         * modules.
+         */
+        bool isHidden() const;
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;

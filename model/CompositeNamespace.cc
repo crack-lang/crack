@@ -18,14 +18,19 @@ using namespace model;
 CompositeNamespace::CompositeNamespace(Namespace *parent0, 
                                        Namespace *parent1
                                        ) :
-        Namespace(parent0->getNamespaceName()),
-        parents(2) {
+    Namespace(parent0->getNamespaceName()),
+    parents(2) {
+
     parents[0] = parent0;
     parents[1] = parent1;
 }
 
 ModuleDefPtr CompositeNamespace::getModule() {
     return parents[0]->getModule();
+}
+
+bool CompositeNamespace::isHiddenScope() {
+    return parents[0]->isHiddenScope();
 }
 
 NamespacePtr CompositeNamespace::getParent(unsigned index) {

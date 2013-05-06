@@ -136,6 +136,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     toplevel(false),
     emittingCleanups(false),
     terminal(false),
+    generic(false),
     returnType(parentContext ? parentContext->returnType : TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
     nextClassFlags(TypeDef::noFlags),
@@ -157,6 +158,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     toplevel(false),
     emittingCleanups(false),
     terminal(false),
+    generic(false),
     returnType(TypeDefPtr(0)),
     nextFuncFlags(FuncDef::noFlags),
     vtableOffset(0),
@@ -559,12 +561,17 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
     ConstVarDefPtr constDef;
     if (constDef = ConstVarDefPtr::cast(varDef))
         return constDef->expr;
-    
+
     // verify that the variable is reachable
     
+    // functions and types don't have reachability issues
+    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef)) {
+        return builder.createVarRef(varDef);
+    
     // if the variable is in a module context, it is accessible
-    if (ModuleDefPtr::cast(varDef->getOwner()) ||
-        GlobalNamespacePtr::cast(varDef->getOwner())) {
+    } else if (ModuleDefPtr::cast(varDef->getOwner()) ||
+               GlobalNamespacePtr::cast(varDef->getOwner())
+               ) {
         return builder.createVarRef(varDef);
     
     // if it's in an instance context, verify that this is either the composite

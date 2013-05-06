@@ -108,6 +108,7 @@ class ModuleDef : public VarDef, public Namespace {
 
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();
+        virtual bool isHiddenScope();
         
         /**
          * Parse a canonical module name, return it as a vector of name 

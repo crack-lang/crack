@@ -104,6 +104,10 @@ ModuleDefPtr TypeDef::getModule() {
     return owner->getModule();
 }
 
+bool TypeDef::isHiddenScope() {
+    return owner->isHiddenScope();
+}
+
 NamespacePtr TypeDef::getParent(unsigned i) {
     if (i < parents.size())
         return parents[i];
@@ -777,6 +781,63 @@ string TypeDef::getSpecializedName(TypeVecObj *types, bool fullName) {
     return tmp.str();
 }
 
+void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
+                        TypeDef::TypeVecObj *types
+                        ) {
+    // alias all global symbols in the original module and original compile 
+    // namespace.
+    localCtx.ns->aliasAll(type->genericInfo->ns.get());
+    localCtx.compileNS->aliasAll(type->genericInfo->compileNS.get());
+
+    // alias the template arguments to their parameter names
+    for (int i = 0; i < types->size(); ++i)
+        localCtx.ns->addAlias(type->genericInfo->parms[i]->name, 
+                              (*types)[i].get()
+                              );
+    
+    istringstream fakeInput;
+    Toker toker(fakeInput, "ignored-name");
+    type->genericInfo->replay(toker);
+    toker.putBack(Token(Token::ident, type->name, Location()));
+    toker.putBack(Token(Token::classKw, "class", Location()));
+    if (type->abstract)
+        localCtx.nextClassFlags =
+            static_cast<TypeDef::Flags>(model::TypeDef::explicitFlags |
+                                        model::TypeDef::abstractClass
+                                        );
+
+    Location instantiationLoc = context.getLocation();
+    if (instantiationLoc)
+        localCtx.pushErrorContext(SPUG_FSTR("in generic instantiation "
+                                            "at " << instantiationLoc
+                                            )
+                                  );
+    else
+        // XXX I think we should never get here now that we're 
+        // materializing generic modules.
+        localCtx.pushErrorContext(SPUG_FSTR("In generic instantiation "
+                                            "from compiled module "
+                                            "(this  should never "
+                                            "happen!)"
+                                            )
+                                  );
+    Parser parser(toker, &localCtx);
+    parser.parse();
+    localCtx.popErrorContext();
+}
+
+namespace {
+    class DummyModuleDef : public ModuleDef {
+        public:
+            DummyModuleDef(const string &name, Namespace *ns) :
+                ModuleDef(name, ns) {
+            }
+            virtual void callDestructor() {}
+            virtual void runMain(builder::Builder &builder) {}
+            virtual bool isHiddenScope() { return true; }
+    };
+}
+
 TypeDef *TypeDef::getSpecialization(Context &context, 
                                     TypeDef::TypeVecObj *types
                                     ) {
@@ -814,6 +875,42 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                     )
                         );
         
+        // if any of the parameters of the generic or the generic itself are 
+        // in a hidden scope, we don't want to create an ephemeral module for 
+        // it.
+        bool hidden = false;
+        if (isHidden()) {
+            hidden = true;
+        } else {
+            for (int i = 0; i < types->size(); ++i) {
+                if ((*types)[i]->isHidden()) {
+                    hidden = true;
+                    break;
+                }
+            }
+        }
+        if (hidden) {
+            ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
+                                                       context.ns.get()
+                                                       );
+            // XXX refactor getting ownership
+            dummyMod->setOwner(
+                genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
+            );
+            ContextPtr instantiationContext = 
+                context.createSubContext(Context::module, dummyMod.get());
+            instantiationContext->toplevel = true;
+            instantiationContext->generic = true;
+            instantiateGeneric(this, context, *instantiationContext, types);
+            // XXX REFACTOR.
+            result = TypeDefPtr::rcast(instantiationContext->lookUp(name));
+            assert(result);
+            result->genericParms = *types;
+            result->templateType = this;
+            (*generic)[types] = result;
+            return result;
+        }
+        
         // create an ephemeral module for the new class
         Context *rootContext = context.construct->rootContext.get();
         NamespacePtr compileNS =
@@ -829,6 +926,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                             )
                         );
         modContext->toplevel = true;
+        modContext->generic = true;
         
         // create the new module with the current module as the owner.  Use 
         // the newTypeName instead of moduleName, the name will be 
@@ -842,55 +940,21 @@ TypeDef *TypeDef::getSpecialization(Context &context,
         // here so that we can accept protected variables from the original 
         // module's context
         ModuleDefPtr owner = genericInfo->ns->getRealModule();
-        module->setOwner(owner.get());
+        module->setOwner(
+            genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
+        );
         
-        // alias all global symbols in the original module and original compile 
-        // namespace.
-        modContext->ns->aliasAll(genericInfo->ns.get());
-        modContext->compileNS->aliasAll(genericInfo->compileNS.get());
+        instantiateGeneric(this, context, *modContext, types);
         
-        // alias the template arguments to their parameter names
-        for (int i = 0; i < types->size(); ++i)
-            modContext->ns->addAlias(genericInfo->parms[i]->name, 
-                                     (*types)[i].get()
-                                     );
+        // after we're done parsing, change the owner to the actual owner so 
+        // that names are generated correctly.
         
-        istringstream fakeInput;
-        Toker toker(fakeInput, moduleName.c_str());
-        genericInfo->replay(toker);
-        toker.putBack(Token(Token::ident, name, Location()));
-        toker.putBack(Token(Token::classKw, "class", Location()));
-        if (abstract)
-            modContext->nextClassFlags =
-                static_cast<Flags>(model::TypeDef::explicitFlags |
-                                   model::TypeDef::abstractClass
-                                   );
-    
-        Location instantiationLoc = context.getLocation();
-        if (instantiationLoc)
-            modContext->pushErrorContext(SPUG_FSTR("in generic instantiation "
-                                                   "at " << instantiationLoc
-                                                   )
-                                         );
-        else
-            // XXX I think we should never get here now that we're 
-            // materializing generic modules.
-            modContext->pushErrorContext(SPUG_FSTR("In generic instantiation "
-                                                   "from compiled module "
-                                                   "(this  should never "
-                                                   "happen!)"
-                                                   )
-                                         );
-        Parser parser(toker, modContext.get());
-        parser.parse();
-
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
         module->sourceDigest = owner->sourceDigest;
 
         module->cacheable = true;    
         module->close(*modContext);
-        modContext->popErrorContext();
 
         // store the module in the in-memory cache
         context.construct->registerModule(module.get());

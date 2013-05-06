@@ -17,3 +17,12 @@ ModuleDefPtr GlobalNamespace::getModule() {
     else
         return LocalNamespace::getModule();
 }
+
+// Override the check to deal with stuff in the .builtin namespace, which is
+// not hidden.
+bool GlobalNamespace::isHiddenScope() {
+    if (builtin)
+        return false;
+    else
+        return LocalNamespace::isHiddenScope();
+}

@@ -114,6 +114,9 @@ class Context : public spug::RCBase {
         
         // if true, a terminal statement has been emitted in the context.
         bool terminal;
+
+        // set to true for the module context of a generic.        
+        bool generic;
         
         // this is the return type for a function context, and the class type 
         // for a class context.
@@ -194,6 +197,11 @@ class Context : public spug::RCBase {
          */
         ContextPtr getParent() {
             return parent;
+        }
+        
+        /** Returns true if this a generic context (directly or indirecly). */
+        bool isGeneric() {
+            return getModuleContext()->generic;
         }
 
         /**

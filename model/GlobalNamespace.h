@@ -28,6 +28,7 @@ class GlobalNamespace : public LocalNamespace {
         }
 
         virtual ModuleDefPtr getModule();
+        virtual bool isHiddenScope();
 };
 
 } // namespace model

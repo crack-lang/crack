@@ -82,6 +82,12 @@ class Namespace : public virtual spug::RCBase {
          * Returns the module that the namespace is part of.
          */
         virtual ModuleDefPtr getModule() = 0;
+        
+        /**
+         * Returns true if symbols in the namespace cannot be accessed by 
+         * other modules.
+         */
+        virtual bool isHiddenScope();
 
         /**
          * Returns the "real module" that the namespace is part of.  If the 

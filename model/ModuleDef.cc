@@ -53,6 +53,10 @@ ModuleDefPtr ModuleDef::getModule() {
     return this;
 }
 
+bool ModuleDef::isHiddenScope() {
+    return false;
+}
+
 ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
     StringVec result;
 

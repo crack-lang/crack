@@ -83,6 +83,10 @@ bool VarDef::isConstant() {
     return constant;
 }
 
+bool VarDef::isHidden() const {
+    return owner->isHiddenScope();
+}
+
 void VarDef::dump(ostream &out, const string &prefix) const {
     out << prefix << (type ? type->getFullName() : string("<null>")) << " " << name << endl;
 }
