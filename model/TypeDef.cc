@@ -100,6 +100,18 @@ void TypeDef::storeDef(VarDef *def) {
         ordered.push_back(def);
 }
 
+TypeDef *TypeDef::extractInstantiation(ModuleDef *module, TypeVecObj *types) {
+    TypeDefPtr result = TypeDefPtr::rcast(module->lookUp(name));
+    SPUG_CHECK(result, 
+               "Instantiated generic " << module->getNamespaceName() <<
+                " not defined in its module."
+               );
+    result->genericParms = *types;
+    result->templateType = this;
+    (*generic)[types] = result;
+    return result.get();
+}
+
 ModuleDefPtr TypeDef::getModule() {
     return owner->getModule();
 }
@@ -893,7 +905,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
             ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
                                                        context.ns.get()
                                                        );
-            // XXX refactor getting ownership
+            // create a dummy module in the current context.
             dummyMod->setOwner(
                 genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
             );
@@ -902,13 +914,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
             instantiationContext->toplevel = true;
             instantiationContext->generic = true;
             instantiateGeneric(this, context, *instantiationContext, types);
-            // XXX REFACTOR.
-            result = TypeDefPtr::rcast(instantiationContext->lookUp(name));
-            assert(result);
-            result->genericParms = *types;
-            result->templateType = this;
-            (*generic)[types] = result;
-            return result;
+
+            return extractInstantiation(dummyMod.get(), types);
         }
         
         // create an ephemeral module for the new class
@@ -967,11 +974,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     // 
     // extract the type out of the newly created module and store it in the 
     // specializations cache
-    result = TypeDefPtr::rcast(module->lookUp(name));
-    result->genericParms = *types;
-    result->templateType = this;
-    assert(result);
-    (*generic)[types] = result;
+    result = extractInstantiation(module.get(), types);
 
     // record a dependency on the owner's module
     context.ns->getModule()->addDependency(module.get());

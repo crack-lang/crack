@@ -44,6 +44,7 @@ class TypeDef : public VarDef, public Namespace {
         TypeDef *findSpecialization(TypeVecObj *types);
         std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
+        TypeDef *extractInstantiation(ModuleDef *module, TypeVecObj *types);
 
     public:
 
