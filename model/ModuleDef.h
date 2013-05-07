@@ -136,6 +136,13 @@ class ModuleDef : public VarDef, public Namespace {
                                         );
 
         virtual VarDefPtr replaceAllStubs(Context &context);
+        
+        /**
+         * Looks up a type in the module for purposes of generic 
+         * instantiation.  Unlike lookUp(), this does the right thing for stub 
+         * modules.
+         */
+        virtual TypeDefPtr getType(const std::string &name);
 
         /**
          * Run the module main function.  This should generally only be called 

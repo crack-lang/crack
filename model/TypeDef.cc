@@ -101,7 +101,7 @@ void TypeDef::storeDef(VarDef *def) {
 }
 
 TypeDef *TypeDef::extractInstantiation(ModuleDef *module, TypeVecObj *types) {
-    TypeDefPtr result = TypeDefPtr::rcast(module->lookUp(name));
+    TypeDefPtr result = module->getType(name);
     SPUG_CHECK(result, 
                "Instantiated generic " << module->getNamespaceName() <<
                 " not defined in its module."

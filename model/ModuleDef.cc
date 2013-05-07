@@ -243,3 +243,7 @@ VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
          )
         iter->second = iter->second->replaceAllStubs(context);
 }
+
+TypeDefPtr ModuleDef::getType(const string &name) {
+    return lookUp(name);
+}

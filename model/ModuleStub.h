@@ -59,6 +59,8 @@ class ModuleStub : public ModuleDef {
          */
         void replace(Context &context);
 
+        virtual TypeDefPtr getType(const std::string &name);
+
         /**
          * Registers the callback to be called after the stub is replaced.
          * Ownership of the callback is transferred to the ModuleStub.

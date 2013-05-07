@@ -139,6 +139,10 @@ void ModuleStub::replace(Context &context) {
         (*iter)->run();
 }
 
+TypeDefPtr ModuleStub::getType(const string &name) {
+    return getTypeStub(name);
+}
+
 void ModuleStub::registerCallback(ModuleStub::Callback *callback) {
     callbacks.push_back(callback);
 }
