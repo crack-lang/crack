@@ -152,10 +152,20 @@ void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
         iter != builder->module->end();
         ++iter
         ) {
-        if (iter->isDeclaration() && !iter->isMaterializable())
+        // LLVM seams to occassionally create duplicate definitions of some
+        // external definitions with the standard numeric suffix as a
+        // disambiguator. Ignore these.  They're not used and can't be
+        // resolved.
+        string name = iter->getName().str();
+        if (isdigit(name.substr(name.size() - 1)[0]))
+            continue;
+
+        if (iter->isDeclaration() && !iter->isMaterializable() &&
+            !iter->isIntrinsic()
+            )
             SPUG_CHECK(resolve(builder->execEng, iter),
                        "function " << iter->getName().str() <<
-                        "remains unresolved."
+                        " remains unresolved."
                        );
         deferred.erase(iter->getName().str());
     }
@@ -311,7 +321,7 @@ void LLVMJitBuilder::Resolver::defer(LLVMJitBuilder *builder,
     sourceMap.insert(make_pair(module, modDef));
     bool triggerCheck = false;
     for (Module::iterator i = module->begin(); i != module->end(); ++i) {
-        if (deferGlobal(builder, i))
+        if (!i->isIntrinsic() && deferGlobal(builder, i))
             triggerCheck = true;
     }
 
@@ -716,7 +726,9 @@ void LLVMJitBuilder::registerGlobals() {
          iter != module->end();
          ++iter
          ) {
-        if (!iter->isDeclaration() || iter->isMaterializable()) {
+        if ((!iter->isDeclaration() || iter->isMaterializable()) &&
+            !iter->isIntrinsic()
+            ) {
             string name = iter->getName();
             void *ptr = execEng->getPointerToGlobal(iter);
 //            cerr << "global " << name << "@" << ptr << endl;
@@ -809,7 +821,9 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
              iter != module->end();
              ++iter
              ) {
-            if (iter->isDeclaration() && !iter->isMaterializable())
+            if (iter->isDeclaration() && !iter->isMaterializable() &&
+                !iter->isIntrinsic()
+                )
                 if (!resolver->resolve(execEng, iter))
                     hasUnresolvedExternals = true;
         }
