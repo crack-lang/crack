@@ -201,9 +201,10 @@ if (PNG_FOUND)
                           PROPERTIES
                           OUTPUT_NAME _png
                           PREFIX ""
+                          LINK_FLAGS ${LLVM_LDFLAGS}
                          )
     target_link_libraries( png
-                          -lpng
+                           libcrack ${PNG_LIBRARY} 
                          )
     install(TARGETS png DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 
