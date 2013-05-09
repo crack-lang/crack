@@ -844,9 +844,7 @@ ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
                                                   GlobalValue::InternalLinkage,
                                                   llvmVal,
                                                  "str:"+
-                                                  module->getModuleIdentifier(),
-                                                  0,
-                                                  false);
+                                                  module->getModuleIdentifier());
 
         Value *zero = ConstantInt::get(Type::getInt32Ty(llvmContext), 0);
         Value *args[] = { zero, zero };

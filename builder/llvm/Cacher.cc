@@ -24,7 +24,7 @@
 #include <vector>
 
 #include <llvm/Module.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/FormattedStream.h>

@@ -26,8 +26,6 @@
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/LinkAllPasses.h>
-#include <llvm/Target/TargetData.h>
-#include <llvm/Target/TargetMachine.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/DerivedTypes.h>
@@ -36,7 +34,7 @@
 #include <llvm/Support/Program.h>
 #include <llvm/Support/PathV1.h>
 #include <llvm/Support/Host.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -394,13 +392,13 @@ void optimizeLink(llvm::Module *module, bool verify) {
     PassManager Passes;
 
     // Add an appropriate TargetData instance for this module...
-    TargetData *TD = 0;
+    DataLayout *DL = 0;
     const std::string &ModuleDataLayout = module->getDataLayout();
     if (!ModuleDataLayout.empty())
-        TD = new TargetData(ModuleDataLayout);
+        DL = new DataLayout(ModuleDataLayout);
 
-    if (TD)
-        Passes.add(TD);
+    if (DL)
+        Passes.add(DL);
 
 //    createStandardLTOPasses(&Passes, /*Internalize=*/ false,
 //                                     /*RunInliner=*/ false, // XXX breaks exceptions
@@ -494,19 +492,19 @@ void optimizeUnit(llvm::Module *module, int optimizeLevel) {
     PassManager Passes;
 
     // Add an appropriate TargetData instance for this module...
-    TargetData *TD = 0;
+    DataLayout *DL = 0;
     const std::string &ModuleDataLayout = module->getDataLayout();
     if (!ModuleDataLayout.empty())
-        TD = new TargetData(ModuleDataLayout);
+        DL = new DataLayout(ModuleDataLayout);
 
-    if (TD)
-        Passes.add(TD);
+    if (DL)
+        Passes.add(DL);
 
     // function pass manager
     OwningPtr<PassManager> FPasses;
     FPasses.reset(new PassManager());
-    if (TD)
-        FPasses->add(new TargetData(*TD));
+    if (DL)
+        FPasses->add(new DataLayout(*DL));
 
     if (optimizeLevel > 0) {
         FPasses->add(createCFGSimplificationPass());
@@ -681,10 +679,10 @@ void nativeCompile(llvm::Module *module,
     PassManager PM;
 
     // Add the target data from the target machine or the module.
-    if (const TargetData *TD = Target.getTargetData())
-        PM.add(new TargetData(*TD));
+    if (const DataLayout *DL = Target.getDataLayout())
+        PM.add(new DataLayout(*DL));
     else
-        PM.add(new TargetData(module));
+        PM.add(new DataLayout(module));
 
     // Override default to generate verbose assembly.
     Target.setAsmVerbosityDefault(true);

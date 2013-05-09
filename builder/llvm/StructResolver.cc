@@ -21,6 +21,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/User.h>
 #include <llvm/Constants.h>
+#include <llvm/Analysis/FindUsedTypes.h>
 
 #include "spug/check.h"
 #include "spug/StringFmt.h"
@@ -55,20 +56,27 @@ namespace {
 StructResolver::StructListType StructResolver::buildTypeMap() {
 
     StructListType result;
-    vector<StructType*> usedTypes;
+    SetVector<Type *> usedTypes;
 
-    module->findUsedStructTypes(usedTypes);
+    FindUsedTypes findTypes;
+    findTypes.runOnModule(*module);
+    usedTypes = findTypes.getTypes();
 
     // NOTE this gets a list by struct name only: no isomorphism checks
 
-    for (vector<StructType *>::iterator i = usedTypes.begin(); 
+    for (SetVector<Type *>::iterator i = usedTypes.begin(); 
          i != usedTypes.end(); ++i
          ) {
+        if (!(*i)->isStructTy())
+            continue;
+
+        StructType *structTy = static_cast<StructType*>(*i);
 
         // does it have a name?
-        if (!(*i)->hasName())
+        if (!structTy->hasName())
             continue;
-        string name = (*i)->getName().str();
+
+        string name = structTy->getName().str();
 
         // does it have a numeric suffix? (i.e. is it a duplicate type name?)
         int pos = name.rfind(".");
@@ -102,9 +110,9 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
             SR_DEBUG cerr << "Unregistered duplicate type found for " <<
                 canonicalName << endl;
             StructType *curType = dyn_cast<StructType>(*i);
-            typeMap[curType] = curType;
+            typeMap[structTy] = structTy;
             LLVMBuilder::putLLVMType(canonicalName, curType);
-            curType->setName(canonicalName);
+            structTy->setName(canonicalName);
             continue;
         }
 
@@ -112,7 +120,7 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
         PointerType *a = type->getPointerTo();
         assert(a && "expected a PointerType");
 
-        StructType *left = dyn_cast<StructType>(*i);
+        StructType *left = structTy;
         assert(left);
         StructType *right = dyn_cast<StructType>(a->getElementType());
         assert(right);
@@ -145,16 +153,21 @@ void StructResolver::run() {
     
     // all of the types should now be righteous.  Register any unknown types 
     // with LLVM.
-    vector<StructType *> usedTypes;
-    module->findUsedStructTypes(usedTypes);
-    for (vector<StructType *>::iterator iter = usedTypes.begin();
+    FindUsedTypes typeFinder;
+    typeFinder.runOnModule(*module);
+    SetVector<Type *> usedTypes = typeFinder.getTypes();
+    for (SetVector<Type *>::iterator iter = usedTypes.begin();
          iter != usedTypes.end();
          ++iter
          ) {
-        if ((*iter)->hasName() && 
-            !LLVMBuilder::getLLVMType((*iter)->getName().str())
+        if (!(*iter)->isStructTy())
+            continue;
+        StructType *structType = cast<StructType>(*iter);
+
+        if (structType->hasName() && 
+            !LLVMBuilder::getLLVMType(structType->getName().str())
             )
-            LLVMBuilder::putLLVMType((*iter)->getName().str(), *iter);
+            LLVMBuilder::putLLVMType(structType->getName().str(), structType);
     }
     SR_DEBUG module->dump();
 }

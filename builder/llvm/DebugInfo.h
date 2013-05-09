@@ -14,8 +14,8 @@
 #include "parser/Location.h"
 #include "BTypeDef.h"
 #include <string>
-#include <llvm/Analysis/DebugInfo.h>
-#include <llvm/Analysis/DIBuilder.h>
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
 
 namespace llvm {
     class Module;

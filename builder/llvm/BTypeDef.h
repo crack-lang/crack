@@ -11,7 +11,7 @@
 
 #include "model/TypeDef.h"
 #include <llvm/Type.h>
-#include <llvm/Analysis/DebugInfo.h>
+#include <llvm/DebugInfo.h>
 #include "model/Context.h"
 
 #include <map>

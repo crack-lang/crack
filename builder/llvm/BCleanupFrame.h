@@ -13,7 +13,7 @@
 #include "model/Expr.h"
 #include "model/Context.h"
 #include <spug/RCPtr.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 #include <list>
 #include "BBuilderContextData.h"
 

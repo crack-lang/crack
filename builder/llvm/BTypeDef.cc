@@ -160,7 +160,7 @@ GlobalVariable *BTypeDef::getClassInstRep(Module *module,
         return classInst;
     } else {
         GlobalVariable *gvar = 
-            cast<GlobalVariable>(
+            cast_or_null<GlobalVariable>(
                 module->getGlobalVariable(classInst->getName())
             );
         if (!gvar) {
