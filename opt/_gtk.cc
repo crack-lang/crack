@@ -22,8 +22,10 @@ void crack_ext__gtk_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
     crack::ext::Type *type_byte = mod->getByteType();
+    crack::ext::Type *type_int16 = mod->getInt16Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
+    crack::ext::Type *type_uint16 = mod->getUint16Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();

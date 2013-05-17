@@ -108,55 +108,99 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(snd_seq_event_t, tag));
         type_snd_seq_event_t->addInstVar(type_byte, "queue",
                                 CRACK_OFFSET(snd_seq_event_t, queue));
-        f = type_snd_seq_event_t->addConstructor("init",
-                        (void *)snd_seq_event_alloc
-                );
 
-        f = type_snd_seq_event_t->addMethod(type_void, "setSource",
-                        (void *)snd_seq_event_setSource
-                );
-            f->addArg(type_int, "port");
 
-        f = type_snd_seq_event_t->addMethod(type_void, "setSubs",
-                        (void *)snd_seq_event_setSubs
-                );
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setSource",
+        (void *)snd_seq_event_setSource
+    );
+    f->addArg(type_int, 
+              "port"
+              );
 
-        f = type_snd_seq_event_t->addMethod(type_void, "setDirect",
-                        (void *)snd_seq_event_setDirect
-                );
 
-        f = type_snd_seq_event_t->addMethod(type_void, "setNoteOn",
-                        (void *)snd_seq_event_setNoteOn
-                );
-            f->addArg(type_int, "channel");
-            f->addArg(type_int, "note");
-            f->addArg(type_int, "velocity");
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setSubs",
+        (void *)snd_seq_event_setSubs
+    );
 
-        f = type_snd_seq_event_t->addMethod(type_void, "setNoteOff",
-                        (void *)snd_seq_event_setNoteOff
-                );
-            f->addArg(type_int, "channel");
-            f->addArg(type_int, "note");
-            f->addArg(type_int, "velocity");
 
-        f = type_snd_seq_event_t->addMethod(type_void, "scheduleTick",
-                        (void *)snd_seq_event_scheduleTick
-                );
-            f->addArg(type_int, "queue");
-            f->addArg(type_int, "relative");
-            f->addArg(type_int, "time");
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setDirect",
+        (void *)snd_seq_event_setDirect
+    );
 
-        f = type_snd_seq_event_t->addMethod(type_snd_seq_ev_note_t, "getNote",
-                        (void *)snd_seq_event_getNote
-                );
 
-        f = type_snd_seq_event_t->addMethod(type_snd_seq_ev_ctrl_t, "getControl",
-                        (void *)snd_seq_event_getControl
-                );
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setNoteOn",
+        (void *)snd_seq_event_setNoteOn
+    );
+    f->addArg(type_int, 
+              "channel"
+              );
+    f->addArg(type_int, 
+              "note"
+              );
+    f->addArg(type_int, 
+              "velocity"
+              );
 
-        f = type_snd_seq_event_t->addMethod(type_snd_seq_ev_ext_t, "getExt",
-                        (void *)snd_seq_event_getExt
-                );
+
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setNoteOff",
+        (void *)snd_seq_event_setNoteOff
+    );
+    f->addArg(type_int, 
+              "channel"
+              );
+    f->addArg(type_int, 
+              "note"
+              );
+    f->addArg(type_int, 
+              "velocity"
+              );
+
+
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "scheduleTick",
+        (void *)snd_seq_event_scheduleTick
+    );
+    f->addArg(type_int, 
+              "queue"
+              );
+    f->addArg(type_int, 
+              "relative"
+              );
+    f->addArg(type_int, 
+              "time"
+              );
+
+
+    f = type_snd_seq_event_t->addMethod(
+        type_snd_seq_ev_note_t, 
+        "getNote",
+        (void *)snd_seq_event_getNote
+    );
+
+
+    f = type_snd_seq_event_t->addMethod(
+        type_snd_seq_ev_ctrl_t, 
+        "getControl",
+        (void *)snd_seq_event_getControl
+    );
+
+
+    f = type_snd_seq_event_t->addMethod(
+        type_snd_seq_ev_ext_t, 
+        "getExt",
+        (void *)snd_seq_event_getExt
+    );
 
     type_snd_seq_event_t->finish();
 

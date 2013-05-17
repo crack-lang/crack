@@ -111,7 +111,9 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
         f = type_CURLinfo->addConstructor("init",
                             (void *)easy_info_new
                         );
-            f->addArg(type_int, "info");
+    f->addArg(type_int, 
+              "info"
+              );
 
     type_CURLinfo->finish();
 
@@ -126,12 +128,19 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
         f = type_slist->addConstructor("init",
                             (void *)curl_slist_new
                         );
-            f->addArg(type_byteptr, "buffer");
+    f->addArg(type_byteptr, 
+              "buffer"
+              );
 
-        f = type_slist->addMethod(type_slist, "append",
-                        (void *)curl_slist_append
-                );
-            f->addArg(type_byteptr, "buffer");
+
+    f = type_slist->addMethod(
+        type_slist, 
+        "append",
+        (void *)curl_slist_append
+    );
+    f->addArg(type_byteptr, 
+              "buffer"
+              );
 
     type_slist->finish();
 

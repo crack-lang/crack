@@ -308,13 +308,20 @@ class TypeImpl : Type {
                         out `        f = $typeVar->addConstructor("init",
                             (void *)$(method.cname)
                         );\n`;
+                } else {
+                    out I`
+                        f = $typeVar->addMethod(
+                            $(method.retType.emit()), 
+                            "$(method.name)",
+                            (void *)$(method.cname)
+                        );
+                    `;
                 }
-                else
-                    out `        f = $typeVar->addMethod($(method.retType.emit()), "$(method.name)",
-                        (void *)$(method.cname)
-                );\n`;
                 for (arg :in method.args)
-                    out `            f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
+                    out I`    f->addArg($(arg.type.emit()), 
+                                       "$(arg.name)"
+                                       );
+                         `;
                 out `\n`;
 
             }
@@ -657,57 +664,6 @@ $(generic.getParamCount()) parameters.`;
         return type;
     }
 
-
-    Func _parseFuncDef(CrackContext ctx, bool isClassDef) {
-        Type retType = null;
-        String name = null;
-        Token tok;
-
-        tok = ctx.getToken();
-        isOper:= tok.isOper();
-        if (!isOper) {
-            ctx.putBack(tok);
-            retType = _parseType(ctx);
-        }
-        else if (!isClassDef)
-            error(ctx, tok) `Operator not expected in this context`;
-
-        tok = ctx.getToken();
-
-        if (!tok.isIdent())
-            error(ctx, tok) `Identifier expected`;
-
-        name = String(tok.getText());
-
-        f := Func(retType, name, lastCName ? lastCName : name, isOper);
-        lastCName = null;
-
-        if (!(tok = ctx.getToken()).isLParen())
-            error(ctx, tok) `Left paren expected, got $(tok.getText())`;
-
-        tok = ctx.getToken();
-        while (!tok.isRParen()) {
-            # parse the argument type
-            ctx.putBack(tok);
-            argType := _parseType(ctx);
-
-            # get the arg variable
-            tok = ctx.getToken();
-            if (!tok.isIdent())
-                error(ctx, tok) `argument name expected`;
-
-            f.addArg(Arg(argType, String(tok.getText())));
-
-            tok = ctx.getToken();
-            if (tok.isComma())
-                tok = ctx.getToken();
-            else if (!tok.isRParen())
-                error(ctx, tok) `Comma or right paren expected`;
-        }
-
-        return f;
-    }
-
     String _parseString(CrackContext ctx) {
         tok := ctx.getToken();
         if (!tok.isString())
@@ -739,12 +695,16 @@ $(generic.getParamCount()) parameters.`;
 
     }
     
-    StringArray _parseArgList(CrackContext ctx){
-        StringArray args = {};
+    void _parseLParen(CrackContext ctx) {
         tok := ctx.getToken();
         if (!tok.isLParen())
-             error(ctx, tok) `Opening ( expected`;
-        tok = ctx.getToken();
+            error(ctx, tok) `Left paren expected, got $tok.`;
+    }
+
+    StringArray _parseArgList(CrackContext ctx){
+        StringArray args = {};
+        _parseLParen(ctx);
+        tok := ctx.getToken();
         for (uint i = 0; !tok.isRParen(); i++) {
             if (i>0) {
                 if (!tok.isComma())
@@ -839,10 +799,95 @@ $(generic.getParamCount()) parameters.`;
         }
     }
 
+    ## Parse the argument list of a function and return the new function.
+    ## type func ( ... )
+    ##            ^     ^
+    Func _parseFuncTail(CrackContext ctx, Type retType, Token ident,
+                        bool isOper
+                        ) {
+        name := String(ident.getText());
+
+        f := Func(retType, name, lastCName ? lastCName : name, isOper);
+        lastCName = null;
+
+        tok := ctx.getToken();
+        while (!tok.isRParen()) {
+            # parse the argument type
+            ctx.putBack(tok);
+            argType := _parseType(ctx);
+
+            # get the arg variable
+            tok = ctx.getToken();
+            if (!tok.isIdent())
+                error(ctx, tok) `argument name expected`;
+
+            f.addArg(Arg(argType, String(tok.getText())));
+
+            tok = ctx.getToken();
+            if (tok.isComma())
+                tok = ctx.getToken();
+            else if (!tok.isRParen())
+                error(ctx, tok) `Comma or right paren expected`;
+        }
+
+        return f;
+    }
+
+    ## Parse an arbitrary definition and add it to the class.
+    ## type: enclosing class
+    void _parseDef(CrackContext ctx, TypeImpl type) {
+        
+        # Check for an "oper" def, which may not be preceeded by a return type.
+        tok := ctx.getToken();
+        if (tok.isOper()) {
+            # TODO: Fix this very incomplete implementation of 'oper' parsing.
+            ident := ctx.getToken();
+            if (!ident.isIdent())
+                error(ctx, ident) `Identifier expected after oper, got $ident`;
+            _parseLParen(ctx);
+            type.addMethod(_parseFuncTail(ctx, type, ident, true));
+            return;
+        } else {
+            ctx.putBack(tok);
+        }
+        
+        # return or object type.
+        retType := _parseType(ctx);
+        
+        ident := ctx.getToken();
+        if (!ident.isIdent())
+            error(ctx, ident) `Identifier expected in definition, got $ident`;
+        
+        tok = ctx.getToken();
+        if (tok.isLParen()) {
+            # it's a function.  parse the rest of it
+            type.addMethod(_parseFuncTail(ctx, retType, ident, false));
+        } else {
+            # it's a variable definition.
+            ctx.putBack(tok);
+            type.addMember(Arg(retType, String(ident.getText())));
+            tok = ctx.getToken();
+
+            while (tok.isComma()){
+                tok = ctx.getToken();
+                if (!tok.isIdent())
+                    error(ctx, tok) `argument name expected`;
+
+                type.addMember(Arg(retType, String(tok.getText())));
+                tok = ctx.getToken();
+                if (!tok.isSemi() && !tok.isComma())
+                    error(ctx, tok) `Semicolon or comma expected`;
+            }
+            
+            # put back the semicolon.
+            ctx.putBack(tok);
+        }
+    }
+
     void _parseClassDef(CrackContext ctx) {
         # get the type name.
         tok := ctx.getToken();
-        TypeImpl ctype;
+        TypeImpl classType;
 
         if (!tok.isIdent())
             error(ctx, tok) `Identifier expected after "class" keyword.`;
@@ -856,8 +901,10 @@ $(generic.getParamCount()) parameters.`;
             if (types.get(className))
                numDecl = 2;
 
-            ctype = TypeImpl(className, lastCName ? lastCName : className, numDecl);
-            types[className] = ctype;
+            classType = TypeImpl(className, lastCName ? lastCName : className, 
+                                 numDecl
+                                 );
+            types[className] = classType;
             lastCName = null;
         } else {
             error(ctx, tok) `Semicolon or class definition expected after \
@@ -867,7 +914,7 @@ class declaration`;
 
         if (tok.isLCurly()){
             tok = ctx.getToken();
-            Type argType = null;
+            Type type;
             while (!tok.isRCurly()) {
                 
                 // check for an annotation
@@ -876,45 +923,9 @@ class declaration`;
                     tok = ctx.getToken();
                     continue;
                 } else {
-                    isOper := tok.isOper();
-
-                    # parse the argument type
-                    if (!isOper){
-                        ctx.putBack(tok);
-                        argType = _parseType(ctx);
-                    }
-
-                    # get the arg variable or method name
-                    tok2 := ctx.getToken();
-                    if (!tok2.isIdent())
-                        error(ctx, tok2) `method name expected`;
-
-                    tok3 := ctx.getToken();
-                    if (tok3.isLParen()){
-                        ctx.putBack(tok3); // (
-                        ctx.putBack(tok2); // method name
-                        ctx.putBack(tok);  // return type
-                        Func f = _parseFuncDef(ctx, isOper);
-                        if (f.isOper) f.retType = ctype;
-                        ctype.addMethod(f);
-                        tok = ctx.getToken();
-                    }
-                    else{
-                        ctx.putBack(tok3);
-                        ctype.addMember(Arg(argType, String(tok2.getText())));
-                        tok = ctx.getToken();
-
-                        while (tok.isComma()){
-                            tok = ctx.getToken();
-                            if (!tok.isIdent())
-                                error(ctx, tok) `argument name expected`;
-
-                            ctype.addMember(Arg(argType, String(tok.getText())));
-                            tok = ctx.getToken();
-                            if (!tok.isSemi() && !tok.isComma())
-                                error(ctx, tok) `Semicolon or comma expected`;
-                        }
-                    }
+                    ctx.putBack(tok);
+                    _parseDef(ctx, classType);
+                    tok = ctx.getToken();
                 }
 
                if (tok.isSemi())
@@ -1024,8 +1035,12 @@ definition.`;
             else if (tok.isConst()) {
                 _parseConst(ctx);
             } else if (tok.isIdent()) {
+                # Looks like a function defintion.
                 ctx.putBack(tok);
-                funcs.append(_parseFuncDef(ctx, false));
+                retType := _parseType(ctx);
+                ident := ctx.getToken();
+                _parseLParen(ctx);
+                funcs.append(_parseFuncTail(ctx, retType, ident, false));
             } else if (tok.isRCurly()){
                if (ifdefLevel > 0) _closeIfdef();
                else break;

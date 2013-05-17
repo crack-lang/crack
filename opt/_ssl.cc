@@ -61,31 +61,58 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_BIO = mod->addType("BIO", sizeof(BIO));
-        f = type_BIO->addMethod(type_int, "read",
-                        (void *)BIO_read
-                );
-            f->addArg(type_byteptr, "buffer");
-            f->addArg(type_int, "len");
 
-        f = type_BIO->addMethod(type_int, "write",
-                        (void *)BIO_write
-                );
-            f->addArg(type_byteptr, "buffer");
-            f->addArg(type_int, "len");
+    f = type_BIO->addMethod(
+        type_int, 
+        "read",
+        (void *)BIO_read
+    );
+    f->addArg(type_byteptr, 
+              "buffer"
+              );
+    f->addArg(type_int, 
+              "len"
+              );
 
-        f = type_BIO->addMethod(type_void, "free",
-                        (void *)BIO_free
-                );
-            f->addArg(type_BIO, "bio");
 
-        f = type_BIO->addMethod(type_int, "ctrlPending",
-                        (void *)BIO_ctrl_pending
-                );
+    f = type_BIO->addMethod(
+        type_int, 
+        "write",
+        (void *)BIO_write
+    );
+    f->addArg(type_byteptr, 
+              "buffer"
+              );
+    f->addArg(type_int, 
+              "len"
+              );
 
-        f = type_BIO->addMethod(type_void, "setBlocking",
-                        (void *)my_BIO_set_blocking
-                );
-            f->addArg(type_bool, "blocking");
+
+    f = type_BIO->addMethod(
+        type_void, 
+        "free",
+        (void *)BIO_free
+    );
+    f->addArg(type_BIO, 
+              "bio"
+              );
+
+
+    f = type_BIO->addMethod(
+        type_int, 
+        "ctrlPending",
+        (void *)BIO_ctrl_pending
+    );
+
+
+    f = type_BIO->addMethod(
+        type_void, 
+        "setBlocking",
+        (void *)my_BIO_set_blocking
+    );
+    f->addArg(type_bool, 
+              "blocking"
+              );
 
     type_BIO->finish();
 
@@ -95,68 +122,133 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(SSL_CTX));
-        f = type_SSL_CTX->addMethod(type_void, "free",
-                        (void *)SSL_CTX_free
-                );
 
-        f = type_SSL_CTX->addMethod(type_int, "useCertificateFile",
-                        (void *)SSL_CTX_use_certificate_file
-                );
-            f->addArg(type_byteptr, "filename");
-            f->addArg(type_int, "type");
+    f = type_SSL_CTX->addMethod(
+        type_void, 
+        "free",
+        (void *)SSL_CTX_free
+    );
 
-        f = type_SSL_CTX->addMethod(type_int, "usePrivateKeyFile",
-                        (void *)SSL_CTX_use_PrivateKey_file
-                );
-            f->addArg(type_byteptr, "file");
-            f->addArg(type_int, "type");
+
+    f = type_SSL_CTX->addMethod(
+        type_int, 
+        "useCertificateFile",
+        (void *)SSL_CTX_use_certificate_file
+    );
+    f->addArg(type_byteptr, 
+              "filename"
+              );
+    f->addArg(type_int, 
+              "type"
+              );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_int, 
+        "usePrivateKeyFile",
+        (void *)SSL_CTX_use_PrivateKey_file
+    );
+    f->addArg(type_byteptr, 
+              "file"
+              );
+    f->addArg(type_int, 
+              "type"
+              );
 
     type_SSL_CTX->finish();
 
 
     crack::ext::Type *type_SSL = mod->addType("SSL", sizeof(SSL));
-        f = type_SSL->addMethod(type_void, "free",
-                        (void *)SSL_free
-                );
 
-        f = type_SSL->addMethod(type_void, "setBIO",
-                        (void *)SSL_set_bio
-                );
-            f->addArg(type_BIO, "rbio");
-            f->addArg(type_BIO, "wbio");
+    f = type_SSL->addMethod(
+        type_void, 
+        "free",
+        (void *)SSL_free
+    );
 
-        f = type_SSL->addMethod(type_void, "setAcceptState",
-                        (void *)SSL_set_accept_state
-                );
 
-        f = type_SSL->addMethod(type_int, "accept",
-                        (void *)SSL_accept
-                );
+    f = type_SSL->addMethod(
+        type_void, 
+        "setBIO",
+        (void *)SSL_set_bio
+    );
+    f->addArg(type_BIO, 
+              "rbio"
+              );
+    f->addArg(type_BIO, 
+              "wbio"
+              );
 
-        f = type_SSL->addMethod(type_int, "connect",
-                        (void *)SSL_connect
-                );
 
-        f = type_SSL->addMethod(type_int, "shutdown",
-                        (void *)SSL_shutdown
-                );
+    f = type_SSL->addMethod(
+        type_void, 
+        "setAcceptState",
+        (void *)SSL_set_accept_state
+    );
 
-        f = type_SSL->addMethod(type_int, "write",
-                        (void *)SSL_write
-                );
-            f->addArg(type_byteptr, "buf");
-            f->addArg(type_int, "size");
 
-        f = type_SSL->addMethod(type_int, "read",
-                        (void *)SSL_read
-                );
-            f->addArg(type_byteptr, "buf");
-            f->addArg(type_int, "cap");
+    f = type_SSL->addMethod(
+        type_void, 
+        "setConnectState",
+        (void *)SSL_set_connect_state
+    );
 
-        f = type_SSL->addMethod(type_int, "getError",
-                        (void *)SSL_get_error
-                );
-            f->addArg(type_int, "ret");
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "accept",
+        (void *)SSL_accept
+    );
+
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "connect",
+        (void *)SSL_connect
+    );
+
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "shutdown",
+        (void *)SSL_shutdown
+    );
+
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "write",
+        (void *)SSL_write
+    );
+    f->addArg(type_byteptr, 
+              "buf"
+              );
+    f->addArg(type_int, 
+              "size"
+              );
+
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "read",
+        (void *)SSL_read
+    );
+    f->addArg(type_byteptr, 
+              "buf"
+              );
+    f->addArg(type_int, 
+              "cap"
+              );
+
+
+    f = type_SSL->addMethod(
+        type_int, 
+        "getError",
+        (void *)SSL_get_error
+    );
+    f->addArg(type_int, 
+              "ret"
+              );
 
     type_SSL->finish();
 

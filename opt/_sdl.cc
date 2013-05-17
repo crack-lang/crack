@@ -75,12 +75,20 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
         type_SDL_Rect->addInstVar(type_uint16, "h",
                                 CRACK_OFFSET(SDL_Rect, h));
         f = type_SDL_Rect->addConstructor("init",
-                        (void *)crk_SDL_Rect_init
-                );
-            f->addArg(type_int16, "x");
-            f->addArg(type_int16, "y");
-            f->addArg(type_uint16, "w");
-            f->addArg(type_uint16, "h");
+                            (void *)crk_SDL_Rect_init
+                        );
+    f->addArg(type_int16, 
+              "x"
+              );
+    f->addArg(type_int16, 
+              "y"
+              );
+    f->addArg(type_uint16, 
+              "w"
+              );
+    f->addArg(type_uint16, 
+              "h"
+              );
 
     type_SDL_Rect->finish();
 
