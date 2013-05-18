@@ -18,7 +18,7 @@ if (LLVM_INCLUDE_DIR)
 else (LLVM_INCLUDE_DIR)
 
   find_program(LLVM_CONFIG_EXECUTABLE
-      NAMES llvm-config-${LLVM_MIN_VERSION_TEXT} llvm-config
+      NAMES llvm-config-${LLVM_MIN_VERSION_TEXT} llvm-config llvm-config-${LLVM_MIN_VERSION_TEXT}
       PATHS /opt/local/bin
       HINTS "$ENV{LLVM_DIR}/bin"
   )
@@ -55,8 +55,7 @@ else (LLVM_INCLUDE_DIR)
       
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --cppflags  OUTPUT_VARIABLE LLVM_COMPILE_FLAGS )
   # strip this from llvm's version, we should add this ourselves in production mode to main CFLAGS
-  STRING(REPLACE "-DNDEBUG" "" LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS})
-  MESSAGE(STATUS "LLVM CPP flags: " ${LLVM_COMPILE_FLAGS})
+  STRING(REPLACE "-DNDEBUG" "-frtti" LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS})
 
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --ldflags   OUTPUT_VARIABLE LLVM_LDFLAGS )
 
