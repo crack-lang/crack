@@ -23,7 +23,7 @@
 ^missing$
 ^.*~$
 ^build/.*$
-^doc/Manual.html$
+^doc/.*\.html$
 ^test/testext\.(so|la)$
 ^test/\.libs/.*$
 ^test/\.dirstamp$
@@ -36,3 +36,8 @@ stamp-h[12]$
 ^lib/testext.so$
 ^screen/output/
 ^cache_tests
+^unittests
+^m4/lib.*
+^m4/lt.*
+^tools/test_make
+^test/screen.bin
