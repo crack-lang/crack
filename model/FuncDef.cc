@@ -15,7 +15,9 @@
 #include "Context.h"
 #include "ArgDef.h"
 #include "Expr.h"
+#include "NestedDeserializer.h"
 #include "OverloadDef.h"
+#include "ProtoBuf.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -259,13 +261,11 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
     if (flags & method) {
         ostringstream temp;
         Serializer sub(serializer, temp);
-        // field id = 1 (<< 3) | type = 3 (reference)
-        sub.write(11, "receiverType.header");
+        sub.write(CRACK_PB_KEY(1, ref), "receiverType.header");
         receiverType->serialize(sub, false, 0);
         
         if (flags & virtualized) {
-            // field id = 2 (<< 3) | type = 0 (varint)
-            sub.write(16, "vtableSlot.header");
+            sub.write(CRACK_PB_KEY(2, varInt), "vtableSlot.header");
             sub.write(vtableSlot, "vtableSlot");
         }
 
@@ -296,29 +296,16 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
 
     // read the optional data, the only field we're interested in is the 
     // receiverType
-    string optionalDataString = deser.readString(256, "optional");
     TypeDefPtr receiverType;
     int vtableSlot = 0;
-    if (optionalDataString.size()) {
-        istringstream optionalData(optionalDataString);
-        Deserializer sub(deser, optionalData);
-        bool eof;
-        int header;
-        while ((header = sub.readUInt("optional.header", &eof)) || !eof) {
-            switch (header) {
-                case 11:
-                    receiverType = TypeDef::deserialize(sub);
-                    break;
-                case 16:
-                    vtableSlot = sub.readUInt("vtableSlot");
-                    break;
-                    
-                default:
-                    // this is just a field we don't know about.
-                    break;
-            }
-        }
-    }
+    CRACK_PB_BEGIN(deser, 256, optional)
+        CRACK_PB_FIELD(1, ref)
+            receiverType = TypeDef::deserialize(optionalDeser);
+            break;
+        CRACK_PB_FIELD(2, varInt)
+            vtableSlot = optionalDeser.readUInt("vtableSlot");
+            break;
+    CRACK_PB_END
 
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,

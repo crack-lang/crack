@@ -28,7 +28,9 @@
 #include "InstVarDef.h"
 #include "OverloadDef.h"
 #include "ModuleDef.h"
+#include "NestedDeserializer.h"
 #include "NullConst.h"
+#include "ProtoBuf.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "VarDef.h"
@@ -1080,15 +1082,16 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
                 if (templateType) {
                     ostringstream temp;
                     Serializer sub(serializer, temp);
-                    // field id = 1 (<< 3) | type = 3 (reference)
-                    sub.write(11, "templateType.header");
+                    sub.write(CRACK_PB_KEY(1, ref), "templateType.header");
                     templateType->serialize(sub, false, 0);
                     for (TypeVec::const_iterator iter = genericParms.begin();
                          iter != genericParms.end();
                          ++iter
                          ) {
                         // field id = 2 (<< 3) | type = 3 (reference)
-                        sub.write(19, "genericParms[i].header");
+                        sub.write(CRACK_PB_KEY(2, ref), 
+                                  "genericParms[i].header"
+                                  );
                         (*iter)->serialize(sub, false, 0);
                     }
                     serializer.write(temp.str(), "optional");
@@ -1179,28 +1182,17 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
         result->parents = bases;
         
         // check for optional fields
-        string optionalDataString = deser.readString(256, "optional");
-        if (optionalDataString.size()) {
-            istringstream optionalData(optionalDataString);
-            Deserializer sub(deser, optionalData);
-            bool eof;
-            int header;
-            while ((header = sub.readUInt("optional.header", &eof)) || !eof) {
-                switch (header) {
-                    case 11:
-                        result->templateType = TypeDef::deserialize(sub).get();
-                        break;
-                    case 19:
-                        result->genericParms.push_back(
-                            TypeDef::deserialize(sub)
-                        );
-                        break;
-                    default:
-                        // unknown field.
-                        break;
-                }
-            }
-        }
+        CRACK_PB_BEGIN(deser, 256, optional);
+            CRACK_PB_FIELD(1, ref)
+                result->templateType =
+                    TypeDef::deserialize(optionalDeser).get();
+                break;
+            CRACK_PB_FIELD(2, ref)
+                result->genericParms.push_back(
+                    TypeDef::deserialize(optionalDeser)
+                );
+                break;
+        CRACK_PB_END
 
         // 'defs' - fill in the body.
         ContextPtr classContext =
