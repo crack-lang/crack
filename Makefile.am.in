@@ -44,7 +44,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs _ssl _png _curl
+             _cairosdl _xs _ssl _png _curl _jack
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -137,6 +137,12 @@ _curl_la_CPPFLAGS = @LIBCURL_CPPFLAGS@
 _curl_la_SOURCES = opt/_curl.cc
 endif
 
+if HAVE_JACK
+extlib_LTLIBRARIES += _jack.la
+_jack_la_LDFLAGS = -avoid-version -module @JACK_LIBS@
+_jack_la_CPPFLAGS = @JACK_CPPFLAGS@
+_jack_la_SOURCES = opt/_jack.cc
+endif
 
 noinst_HEADERS = \
     builder/Builder.h \

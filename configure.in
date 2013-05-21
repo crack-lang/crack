@@ -84,4 +84,7 @@ AM_CONDITIONAL(HAVE_LIBCURL, [test "x$got_curl" = xyes])
 AM_PATH_MONGO_CLIENT
 AM_CONDITIONAL(HAVE_MONGO_CLIENT, [test "x$got_mongoclient" = xyes])
 
+AM_PATH_JACK
+AM_CONDITIONAL(HAVE_JACK, [test "x$got_jack" = xyes])
+
 AC_OUTPUT

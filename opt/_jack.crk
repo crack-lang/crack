@@ -1,0 +1,79 @@
+// Copyright 2013 Google Inc.
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._jack {
+    @filename 'opt/_jack.cc'
+    @crack_internal
+    @inject '#include <jack/jack.h>\n'
+    @inject 'typedef jack_client_t JackClient;\n'
+    @inject 'struct _jack_client { int x; };\n'
+    @inject I'const char *Jack_getDefaultAudioType() {
+                  return JACK_DEFAULT_AUDIO_TYPE;
+              }
+
+              typedef jack_port_t JackPort;
+              struct _jack_port { int x; };
+              ';
+
+    # options
+    const int JACK_NULL_OPTION = 'JackNullOption',
+              JACK_NO_START_SERVER = 'JackNoStartServer',
+              JACK_USE_EXACT_NAME = 'JackUseExactName',
+              JACK_SERVER_NAME = 'JackServerName',
+              JACK_LOAD_NAME = 'JackLoadName',
+              JACK_LOAD_INIT = 'JackLoadInit',
+              JACK_SESSION_ID = 'JackSessionID';
+
+    const int JACK_PORT_IS_INPUT = 'JackPortIsInput',
+              JACK_PORT_IS_OUTPUT = 'JackPortIsOutput',
+              JACK_PORT_IS_PHYSICAL = 'JackPortIsPhysical',
+              JACK_PORT_CAN_MONITOR = 'JackPortCanMonitor',
+              JACK_PORT_IS_TERMINAL = 'JackPortIsTerminal';
+
+
+    byteptr Jack_getDefaultAudioType();
+
+    class JackPort {
+        @cname jack_port_get_buffer
+        array[float] getBuffer(uint32 frames);
+
+        @cname jack_port_name
+        byteptr getName();
+    }
+
+    class JackClient {
+        @cname jack_set_process_callback
+        int setProcessCallback(function[int, uint32, voidptr] callback,
+                               voidptr arg
+                               );
+
+        @cname jack_port_register
+        JackPort portRegister(byteptr port_name, byteptr port_type,
+                              uint flags,
+                              uint buffer_size
+                              );
+
+        @cname jack_port_by_name
+        JackPort portByName(byteptr name);
+
+        @cname jack_get_sample_rate
+        uint32 getSampleRate();
+
+        @cname jack_connect
+        int connect(byteptr port1, byteptr port2);
+
+        @cname jack_activate
+        int activate();
+    }
+
+    @cname jack_client_open
+    JackClient JackClient_open(byteptr name, int options,
+                               array[int] status
+                               );
+}
+
+
+
+
+
