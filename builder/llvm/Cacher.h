@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_Cacher_h_
 #define _builder_llvm_Cacher_h_
@@ -93,7 +93,6 @@ protected:
     bool readImports();
     void readDefs();
 
-    void writeMetadata();
     bool readMetadata();
 
 public:
@@ -102,6 +101,7 @@ public:
            BModuleDef *m = NULL
            );
 
+    void writeMetadata();
     llvm::Function *getEntryFunction();
 
     void getExterns(std::vector<std::string> &symList);

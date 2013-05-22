@@ -19,6 +19,7 @@
 #include "BModuleDef.h"
 #include "BResultExpr.h"
 #include "BTypeDef.h"
+#include "Cacher.h"
 #include "Consts.h"
 #include "ExceptionCleanupExpr.h"
 #include "FuncBuilder.h"
@@ -2397,9 +2398,8 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
     vector<Value *> dList;
     NamedMDNode *node;
 
-    node = mod->getOrInsertNamedMetadata("crack_entry_func");
-    dList.push_back(func);
-    node->addOperand(MDNode::get(getGlobalContext(), dList));
+    Cacher cacher(context, options.get(), BModuleDefPtr::cast(module));
+    cacher.writeMetadata();
 
     // fos needs to destruct before we can "keep()"
     {
@@ -3419,6 +3419,7 @@ void LLVMBuilder::importSharedLibrary(const string &name,
         void *sym = dlsym(handle, iter->source.c_str());
         if (!sym)
             throw spug::Exception(dlerror());
+        recordShlibSym(iter->source);
 
         // save for caching (when called from parser). when called from Cacher,
         // we don't save (and don't need to since we're already cached)

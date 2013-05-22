@@ -134,6 +134,16 @@ class LLVMJitBuilder : public LLVMBuilder {
         
         std::vector< std::pair<llvm::Function *, llvm::Function *> > externals;
         
+        // symbols that were imported from a shared library (we don't want to 
+        // try to resolve these).
+        std::set<std::string> shlibSyms;
+        std::set<std::string> &getShlibSyms() {
+            if (rootBuilder)
+                return LLVMJitBuilderPtr::rcast(rootBuilder)->shlibSyms;
+            else
+                return shlibSyms;
+        }
+        
         Resolver *resolver;
 
         virtual void run();
@@ -156,6 +166,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                           llvm::Function*);
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           void*);
+        virtual void recordShlibSym(const std::string &name);
 
         virtual void engineBindModule(BModuleDef *moduleDef);
         virtual void engineFinishModule(model::Context &context,

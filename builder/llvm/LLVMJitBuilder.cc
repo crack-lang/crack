@@ -161,7 +161,10 @@ void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
             continue;
 
         if (iter->isDeclaration() && !iter->isMaterializable() &&
-            !iter->isIntrinsic()
+            !iter->isIntrinsic() &&
+            (builder->getShlibSyms().find(iter->getName().str()) ==
+             builder->getShlibSyms().end()
+             )
             )
             SPUG_CHECK(resolve(builder->execEng, iter),
                        "function " << iter->getName().str() <<
@@ -537,6 +540,10 @@ void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
     execEng->updateGlobalMapping(pointer, execEng->getPointerToGlobal(real));
 }
 
+void LLVMJitBuilder::recordShlibSym(const string &name) {
+    getShlibSyms().insert(name);
+}
+
 void LLVMJitBuilder::checkForUnresolvedExternals() {
     if (resolver) resolver->checkForUnresolvedExternals();
 }
@@ -822,7 +829,9 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
              ++iter
              ) {
             if (iter->isDeclaration() && !iter->isMaterializable() &&
-                !iter->isIntrinsic()
+                !iter->isIntrinsic() &&
+                (getShlibSyms().find(iter->getName().str()) ==
+                 getShlibSyms().end())
                 )
                 if (!resolver->resolve(execEng, iter))
                     hasUnresolvedExternals = true;

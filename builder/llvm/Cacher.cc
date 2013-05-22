@@ -146,41 +146,9 @@ MDNode *Cacher::writeEphemeralImport(BModuleDef *mod) {
 }
 
 void Cacher::writeMetadata() {
-
-    // encode metadata into the bitcode
-    addNamedStringNode("crack_md_version", Cacher::MD_VERSION);
-    addNamedStringNode("crack_origin_digest", modDef->sourceDigest.asHex());
-    addNamedStringNode("crack_origin_path", modDef->sourcePath);
-
     vector<Value *> dList;
     NamedMDNode *node;
     Module *module = modDef->rep;
-
-    // crack_imports: operand list points to import nodes
-    node = module->getOrInsertNamedMetadata("crack_imports");
-    for (BModuleDef::ImportListType::const_iterator iIter =
-            modDef->importList.begin();
-         iIter != modDef->importList.end();
-         ++iIter
-         ) {
-        // op 1: canonical name
-        dList.push_back(MDString::get(getGlobalContext(),
-                                      (*iIter).first->getFullName()));
-        // op 2: digest
-        dList.push_back(MDString::get(getGlobalContext(),
-                                      (*iIter).first->sourceDigest.asHex()));
-
-        // op 3..n: symbols to be imported (aliased)
-        for (ImportedDefVec::const_iterator sIter = (*iIter).second.begin();
-             sIter != (*iIter).second.end();
-             ++sIter) {
-            dList.push_back(MDString::get(getGlobalContext(), sIter->local));
-            dList.push_back(MDString::get(getGlobalContext(), sIter->source));
-        }
-
-        node->addOperand(MDNode::get(getGlobalContext(), dList));
-        dList.clear();
-    }
 
     // crack_shlib_imports: operand list points to shared lib import nodes
     node = module->getOrInsertNamedMetadata("crack_shlib_imports");
@@ -206,60 +174,10 @@ void Cacher::writeMetadata() {
         dList.clear();
     }
 
-    // crack_externs: these we need to resolve upon load. in the JIT, that means
-    // global mappings. we need to resolve functions and globals
-    node = module->getOrInsertNamedMetadata("crack_externs");
-    // functions
-    for (LLVMBuilder::ModFuncMap::const_iterator i = 
-            builder->moduleFuncs.begin();
-         i != builder->moduleFuncs.end();
-         ++i) {
-
-        // only include it if it's a decl, and not abstract
-        if (!i->second->isDeclaration() ||
-            i->first->flags & FuncDef::abstract)
-            continue;
-
-        Namespace *owningNS = i->first->getOwner();
-        assert(owningNS && "no owner");
-
-        // skips anything in builtin namespace
-        if (owningNS->getNamespaceName().substr(0,8) == ".builtin") {
-            continue;
-        }
-
-        // and it's defined in another module
-        // but skip externals from extensions, since these are found by
-        // the jit through symbol searching the process
-        ModuleDefPtr owningModule = owningNS->getModule();
-        if ((owningModule && owningModule->fromExtension) ||
-            (owningNS == modDef->getParent(0).get())) {
-            continue;
-        }
-
-        dList.push_back(MDString::get(getGlobalContext(), i->second->getName()));
-    }
-
-    // globals
-    for (LLVMBuilder::ModVarMap::const_iterator i = builder->moduleVars.begin();
-         i != builder->moduleVars.end();
-         ++i) {
-        if (!i->second->isDeclaration())
-            continue;
-        dList.push_back(MDString::get(getGlobalContext(), i->second->getName()));
-    }
-    if (dList.size()) {
-        node->addOperand(MDNode::get(getGlobalContext(), dList));
-        dList.clear();
-    }
-
-    // crack_defs: the symbols defined in this module that we need to rebuild
-    // at compile time in order to use this cached module to compile fresh code
-    // from
-    writeNamespace(modDef.get());
-
-    //module->dump();
-
+    node = module->getOrInsertNamedMetadata("crack_entry_func");
+    dList.clear();
+    dList.push_back(LLVMBuilderPtr::cast(&parentContext.builder)->func);
+    node->addOperand(MDNode::get(getGlobalContext(), dList));
 }
 
 void Cacher::writeNamespace(Namespace *ns) {
@@ -536,52 +454,9 @@ MDNode *Cacher::writeVarDef(VarDef *sym, TypeDef *owner) {
 bool Cacher::readImports() {
 
     MDNode *mnode;
-    MDString *cname, *digest, *localStr, *sourceStr;
-    SourceDigest iDigest;
-    BModuleDefPtr m;
-    VarDefPtr symVal;
-    NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_imports");
+    MDString *cname, *localStr, *sourceStr;
 
-    assert(imports && "missing crack_imports node");
-
-    for (int i = 0; i < imports->getNumOperands(); ++i) {
-
-        mnode = imports->getOperand(i);
-        
-        // op 1: canonical name
-        cname = dyn_cast<MDString>(mnode->getOperand(0));
-        assert(cname && "malformed import node: canonical name");
-
-        // op 2: source digest
-        digest = dyn_cast<MDString>(mnode->getOperand(1));
-        assert(digest && "malformed import node: digest");
-
-        iDigest = SourceDigest::fromHex(digest->getString().str());
-
-        // load this module. if the digest doesn't match, we miss.
-        // note module may come from cache or parser, we won't know
-        m = context->construct->getModule(cname->getString().str());
-        if (!m || m->sourceDigest != iDigest)
-            return false;
-
-        // op 3..n: imported (namespace aliased) symbols from m
-        assert(mnode->getNumOperands() % 2 == 0);
-        for (unsigned si = 2; si < mnode->getNumOperands();) {
-            localStr = dyn_cast<MDString>(mnode->getOperand(si++));
-            sourceStr = dyn_cast<MDString>(mnode->getOperand(si++));
-            assert(localStr && "malformed import node: missing local name");
-            assert(sourceStr && "malformed import node: missing source name");
-            symVal = m->lookUp(sourceStr->getString().str());
-            // if we failed to lookup the symbol, then something is wrong
-            // with our digest mechanism
-            assert(symVal.get() && "import: inconsistent state");
-            modDef->addAlias(localStr->getString().str(), symVal.get());
-        }
-
-
-    }
-
-    imports = modDef->rep->getNamedMetadata("crack_shlib_imports");
+    NamedMDNode *imports = modDef->rep->getNamedMetadata("crack_shlib_imports");
     assert(imports && "missing crack_shlib_imports node");
 
     ImportedDefVec symList;
@@ -1211,6 +1086,7 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
     // if we get here, we've loaded bitcode successfully
     modDef = builder->instantiateModule(*context, canonicalName, module);
     builder->module = module;
+    readImports();
 
     // after reading our metadata and defining types, we
     // resolve all disjoint structs from our bitcode to those

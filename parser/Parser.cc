@@ -1875,7 +1875,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
       if (existingDef && (stub = StubDefPtr::rcast(existingDef))) {
          BSTATS_GO(s1)
          funcDef =
-            context->builder.createExternFunc(*context, FuncDef::noFlags,
+            context->builder.createExternFunc(*context, FuncDef::shlib,
                                               name,
                                               returnType,
                                               0,

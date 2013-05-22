@@ -41,7 +41,8 @@ class FuncDef : public VarDef {
             abstract = 32,  // This is an abstract (pure virtual function)
             builtin = 64,   // Not a real function.  Defined by the executor,
                             // calls expand to a sequence of instructions.
-            explicitFlags = 256  // these flags were set by an annotation
+            shlib = 128,    // Function loaded directly from a shared library.
+            explicitFlags = 32768 // these flags were set by an annotation
         } flags;
         
         // flag to tell us what to do about function arguments during matching.

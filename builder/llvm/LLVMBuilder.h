@@ -93,6 +93,11 @@ class LLVMBuilder : public Builder {
                                           void*) { }
 
         /**
+         * Lets the JIT builder keep track of shared library symbols.
+         */
+        virtual void recordShlibSym(const std::string &name) {}
+
+        /**
          * possibly bind the module to an execution engine
          * called in base llvmbuilder only from registerPrimFuncs
          */
