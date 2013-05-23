@@ -62,7 +62,7 @@ void CompositeNamespace::addUnsafeAlias(const std::string &name, VarDef *def) {
     assert(false && "composite namespace mutation addUnsafeAlias(n,d) called");
 }
 
-void CompositeNamespace::replaceDef(VarDef *def) {
+OverloadDefPtr CompositeNamespace::replaceDef(VarDef *def) {
     assert(false && "composite namespace mutation replaceDef called");
 }
 

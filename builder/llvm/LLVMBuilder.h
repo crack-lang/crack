@@ -36,9 +36,27 @@ SPUG_RCPTR(LLVMBuilder);
 
 class LLVMBuilder : public Builder {
     private:
+        struct SharedLibDef : public model::ModuleDef {
+            void *handle;
+            SharedLibDef(const std::string &name, void *handle) : 
+                ModuleDef(name, 0),
+                handle(handle) {
+            }
+            virtual void callDestructor() {}
+            virtual void runMain(Builder &builder) {}
+        };
+        SPUG_RCPTR(SharedLibDef);
         typedef std::map<std::string, llvm::StructType *> TypeMap;
         static TypeMap llvmTypes;
         llvm::Function *exceptionPersonalityFunc, *unwindResumeFunc;
+        typedef std::map<std::string, SharedLibDefPtr> SharedLibMap;
+        SharedLibMap sharedLibs;
+        SharedLibMap &getSharedLibs() {
+            if (rootBuilder)
+                return rootBuilder->sharedLibs;
+            else
+                return rootBuilder->sharedLibs;
+        }
 
     protected:
 

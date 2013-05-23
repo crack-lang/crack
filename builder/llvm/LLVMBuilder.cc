@@ -3406,11 +3406,26 @@ void *LLVMBuilder::loadSharedLibrary(const std::string &name) {
 }
 
 void LLVMBuilder::importSharedLibrary(const string &name,
-                                    const ImportedDefVec &symbols,
-                                    Context &context,
-                                    Namespace *ns
-                                    ) {
-    void *handle = loadSharedLibrary(name);
+                                      const ImportedDefVec &symbols,
+                                      Context &context,
+                                      Namespace *ns
+                                      ) {
+    // see if we've loaded this shared library before.
+    SharedLibDefPtr shlibMod;
+    void *handle;
+    {
+        SharedLibMap &libs = getSharedLibs();
+        SharedLibMap::iterator i = libs.find(name);
+        if (i != libs.end()) {
+            shlibMod = i->second;
+            handle = shlibMod->handle;
+        } else {
+            handle = loadSharedLibrary(name);
+            shlibMod = new SharedLibDef(name, handle);
+            libs.insert(make_pair(name, shlibMod));
+        }
+    }
+
     for (ImportedDefVec::const_iterator iter = symbols.begin();
          iter != symbols.end();
          ++iter
@@ -3427,13 +3442,14 @@ void LLVMBuilder::importSharedLibrary(const string &name,
             builtinMod->shlibImportList[name] = symbols;
 
         // store a stub for the symbol
-        ns->addDef(new StubDef(context.construct->voidType.get(),
-                               iter->local,
-                               sym
-                               )
-                   );
+        StubDefPtr stub = new StubDef(context.construct->voidType.get(),
+                                      iter->local,
+                                      sym
+                                      );
+        shlibMod->addDef(stub.get());
+        if (ns)
+            ns->addAlias(stub.get());
     }
-
 }
 
 void LLVMBuilder::registerImportedDef(Context &context, VarDef *varDef) {

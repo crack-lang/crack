@@ -482,7 +482,8 @@ bool Cacher::readImports() {
         }
 
         builder->importSharedLibrary(cname->getString().str(), symList, 
-                                     *context, modDef.get()
+                                     *context,
+                                     0
                                      );
 
     }

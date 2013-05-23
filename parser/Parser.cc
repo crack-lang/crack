@@ -1884,9 +1884,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               name.c_str()
                                               );
          BSTATS_END
-         stub->getOwner()->removeDef(stub);
+         OverloadDefPtr ovld = stub->getOwner()->replaceDef(funcDef.get());
          cstack.restore();
-         addFuncDef(funcDef.get());
+         // XXX this isn't quite right.  We really need to replace the stub in 
+         // the context into which it was imported, which we're not tracking.
+         context->getDefContext()->ns->addAlias(ovld.get());
       } else if (override) {
          // forward declarations of overrides don't make any sense.
          TypeDef *base = TypeDefPtr::acast(override->getOwner());

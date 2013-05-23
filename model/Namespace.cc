@@ -16,6 +16,7 @@
 #include "Expr.h"
 #include "OverloadDef.h"
 #include "Serializer.h"
+#include "StubDef.h"
 #include "VarDef.h"
 
 using namespace std;
@@ -160,14 +161,33 @@ void Namespace::aliasAll(Namespace *other) {
     }
 }
 
-void Namespace::replaceDef(VarDef *def) {
-    assert(!def->getOwner());
-    assert(!def->hasInstSlot() && 
-           "Attempted to replace an instance variable, this doesn't work "
-           "because it won't change the 'ordered' vector."
-           );
+OverloadDefPtr Namespace::replaceDef(VarDef *def) {
+    SPUG_CHECK(!def->getOwner(), 
+               "Namespace::replaceDef() called on " << def->getFullName() << 
+               ", which already has an owner."
+               );
+    StubDefPtr existing = defs[def->name];
+    SPUG_CHECK(StubDefPtr::rcast(existing),
+               "Namespace::replaceDef() called on " << def->getFullName() <<
+               ", which is not a stub (the code currently assumes a stub)"
+               );
+            
+    OverloadDefPtr ovld;
+    if (!(ovld = OverloadDefPtr::cast(def))) {
+        FuncDefPtr func = FuncDefPtr::cast(def);
+        SPUG_CHECK(func, 
+                   "Replacing " << def->getFullName() << 
+                   " with a non function."
+                   );
+        ovld = new OverloadDef(def->name);
+        ovld->collectAncestors(this);
+        ovld->addFunc(func.get());
+        func->setOwner(this);
+        def = ovld.get();
+    }
     def->setOwner(this);
     defs[def->name] = def;
+    return ovld;
 }
 
 void Namespace::dump(ostream &out, const string &prefix) {

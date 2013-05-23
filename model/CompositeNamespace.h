@@ -14,6 +14,7 @@
 namespace model {
 
 SPUG_RCPTR(CompositeNamespace);
+SPUG_RCPTR(OverloadDef);
 
 /**
  * A virtual namespace that delegates to several other namespaces.
@@ -35,7 +36,7 @@ class CompositeNamespace : public Namespace {
         virtual void addAlias(VarDef *def);
         virtual OverloadDefPtr addAlias(const std::string &name, VarDef *def);
         virtual void addUnsafeAlias(const std::string &name, VarDef *def);
-        virtual void replaceDef(VarDef *def);
+        virtual OverloadDefPtr replaceDef(VarDef *def);
 };
 
 } // namespace model

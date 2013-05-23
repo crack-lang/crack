@@ -146,7 +146,7 @@ class Namespace : public virtual spug::RCBase {
          * This is only used to replace a StubDef with an external function 
          * definition.
          */
-        virtual void replaceDef(VarDef *def);
+        virtual OverloadDefPtr replaceDef(VarDef *def);
 
         void dump(std::ostream &out, const std::string &prefix);
         void dump();
