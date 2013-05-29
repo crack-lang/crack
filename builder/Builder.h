@@ -517,8 +517,10 @@ class Builder : public spug::RCBase {
         virtual void *loadSharedLibrary(const std::string &name) = 0;
 
         /**
-         * Load the named shared library, store the addresses for the symbols
-         * as StubDef's in 'context'.
+         * Load the named shared library and create stub definitions for the 
+         * specified symbols.
+         * If 'ns' is not null, add an alias for each of the symbols in the 
+         * namespace.
          */
         virtual void importSharedLibrary(const std::string &name,
                                          const model::ImportedDefVec &symbols,

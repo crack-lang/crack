@@ -141,14 +141,16 @@ So given this, our meta-data format is:
         # them with typeParams.
         blob name
 
-        # Parameters of a specialized type.
-        array[ref[Type]] typeParams
+        # If the aliased object is a function loaded from a shared library,
+        # this field will be present containing the function definition so we
+        # can fully reconstitute it.
+        optional FuncDef shlibFuncDef = 1
 
         # if the aliased object has dependencies on types in the local module
         # (which can happen with generics constructed from a local type),
         # we keep a list of them to ensure that they are available at the time
         # the alias is reconstituted.
-        array[ref[Type]] localDeps
+        repeated ref[Type] localDeps = 2
     }
 
     VarDef {
@@ -242,6 +244,4 @@ So given this, our meta-data format is:
 
         ref[Location] loc
     }
-
-
 }}

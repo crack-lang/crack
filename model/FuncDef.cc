@@ -25,6 +25,24 @@
 using namespace model;
 using namespace std;
 
+void FuncDef::Spec::deserialize(Deserializer &deser) {
+    returnType = TypeDef::deserialize(deser);
+    flags = static_cast<Flags>(deser.readUInt("flags"));
+
+    args = deserializeArgs(deser);
+
+    // read the optional data, the only field we're interested in is the 
+    // receiverType
+    CRACK_PB_BEGIN(deser, 256, optional)
+        CRACK_PB_FIELD(1, ref)
+            receiverType = TypeDef::deserialize(optionalDeser);
+            break;
+        CRACK_PB_FIELD(2, varInt)
+            vtableSlot = optionalDeser.readUInt("vtableSlot");
+            break;
+    CRACK_PB_END    
+}
+
 FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
     // function types are assigned after the fact.
     VarDef(0, name),
@@ -242,17 +260,7 @@ void FuncDef::serializeArgs(Serializer &serializer) const {
         (*iter)->serialize(serializer, false, 0);
 }
 
-void FuncDef::serialize(Serializer &serializer, bool writeKind,
-                        const Namespace *ns
-                        ) const {
-    bool alias = owner != ns;
-    serializer.write(alias ? 1 : 0, "isAlias");
-    if (alias) {
-        serializeExtern(serializer);
-        serializeArgs(serializer);
-        return;
-    }
-    
+void FuncDef::serializeCommon(Serializer &serializer) const {
     returnType->serialize(serializer, false, 0);
     serializer.write(static_cast<unsigned>(flags), "flags");
     
@@ -275,6 +283,20 @@ void FuncDef::serialize(Serializer &serializer, bool writeKind,
     }
 }
 
+void FuncDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
+    bool alias = owner != ns;
+    serializer.write(alias ? 1 : 0, "isAlias");
+    if (alias) {
+        serializeExtern(serializer);
+        serializeArgs(serializer);
+        return;
+    }
+
+    serializeCommon(serializer);    
+}
+
 FuncDef::ArgVec FuncDef::deserializeArgs(Deserializer &deser) {
     int argCount = deser.readUInt("#args");
     ArgVec args;
@@ -289,34 +311,19 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
         OverloadDefPtr ovld = deserializeOverloadAliasBody(deser);
         return ovld->getSigMatch(deserializeArgs(deser), true);
     }
-    TypeDefPtr returnType = TypeDef::deserialize(deser);
-    Flags flags = static_cast<Flags>(deser.readUInt("flags"));
-
-    ArgVec args = deserializeArgs(deser);    
-
-    // read the optional data, the only field we're interested in is the 
-    // receiverType
-    TypeDefPtr receiverType;
-    int vtableSlot = 0;
-    CRACK_PB_BEGIN(deser, 256, optional)
-        CRACK_PB_FIELD(1, ref)
-            receiverType = TypeDef::deserialize(optionalDeser);
-            break;
-        CRACK_PB_FIELD(2, varInt)
-            vtableSlot = optionalDeser.readUInt("vtableSlot");
-            break;
-    CRACK_PB_END
-
+    Spec spec;
+    spec.deserialize(deser);
+    
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
-        flags,
+        spec.flags,
         name,
-        returnType.get(),
-        args
+        spec.returnType.get(),
+        spec.args
     );
     
-    result->receiverType = receiverType;
-    result->vtableSlot = vtableSlot;
+    result->receiverType = spec.receiverType;
+    result->vtableSlot = spec.vtableSlot;
 
     return result;
 }

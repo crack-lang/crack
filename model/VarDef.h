@@ -42,7 +42,7 @@ class VarDef : public virtual spug::RCBase {
         // should pass their parameters in through 'params', other defs may 
         // set this to null.
         void serializeExternCommon(Serializer &serializer, 
-                                   const std::vector<TypeDefPtr> *params
+                                   const std::vector<TypeDefPtr> *localDeps
                                    ) const;
 
         void serializeExternRef(Serializer &serializer, 

@@ -8,18 +8,24 @@
 
 #include "VarDef.h"
 
+#include <sstream>
+
 #include "builder/Builder.h"
 #include "spug/check.h"
 #include "AssignExpr.h"
 #include "Deserializer.h"
+#include "GlobalNamespace.h"
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "Expr.h"
 #include "ModuleDefMap.h"
 #include "ModuleStub.h"
+#include "NestedDeserializer.h"
 #include "OverloadDef.h"
+#include "ProtoBuf.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
+#include "StubDef.h"
 #include "TypeDef.h"
 
 using namespace std;
@@ -121,21 +127,44 @@ void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 }
 
 void VarDef::serializeExternCommon(Serializer &serializer,
-                                   const TypeDef::TypeVec *typeParams
+                                   const TypeDef::TypeVec *localDeps
                                    ) const {
     serializer.write(getModule()->getFullName(), "module");
     serializer.write(name, "name");
 
-    if (typeParams) {
-        // write the list we've accumulated.
-        serializer.write(typeParams->size(), "#typeParams");
-        for (TypeDef::TypeVec::const_iterator iter = typeParams->begin();
-            iter != typeParams->end();
-            ++iter
-            )
-            (*iter)->serialize(serializer, false, 0);
+    // is this a shared library function?
+    const FuncDef *funcDef = dynamic_cast<const FuncDef *>(this);
+    if (funcDef && !(funcDef->flags & FuncDef::shlib))
+        // if it's not a shared library function, clear it so we don't a field
+        // for it.
+        funcDef = 0;
+
+    if (localDeps || funcDef) {
+        ostringstream tmp;
+        Serializer sub(serializer, tmp);
+
+        if (funcDef) {
+            ostringstream funcDefData;
+            Serializer funcDefSerializer(funcDefData);
+            funcDef->serializeCommon(funcDefSerializer);
+            sub.write(CRACK_PB_KEY(1, string), "shlibFuncDef.header");
+            sub.write(funcDefData.str(), "shlibFuncDef.body");
+        }
+
+        // write the local deps list.
+        if (localDeps) {
+            for (TypeDef::TypeVec::const_iterator iter = localDeps->begin();
+                iter != localDeps->end();
+                ++iter
+                ) {
+                sub.write(CRACK_PB_KEY(2, ref), "localDeps.header");
+                (*iter)->serialize(sub, false, 0);
+            }
+        }
+
+        serializer.write(tmp.str(), "optional");
     } else {
-        serializer.write(0, "#typeParams");
+        serializer.write(0, "optional");
     }
 }
 
@@ -216,15 +245,74 @@ namespace {
                                             );
         string name = deser.readString(Serializer::varNameSize, "name");
 
-        // deserialize type parameters.
-        int paramCount = deser.readUInt("#typeParams");
-        TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
-        paramTypes->reserve(paramCount);
-        for (int i = 0; i < paramCount; ++i)
-            paramTypes->push_back(TypeDef::deserialize(deser));
+        FuncDef::Spec spec;
+        bool sharedLibSym = false;
+        TypeDef::TypeVecObjPtr paramTypes;
+        CRACK_PB_BEGIN(deser, 256, optional)
+            CRACK_PB_FIELD(1, string) {
+                NestedDeserializer funcDefDeser(optionalDeser, 32,
+                                                "shlibFuncDef"
+                                                );
+                spec.deserialize(funcDefDeser);
+                sharedLibSym = true;
+                break;
+            }
+            CRACK_PB_FIELD(2, ref)
+                if (!paramTypes)
+                    paramTypes = new TypeDef::TypeVecObj();
+                paramTypes->push_back(TypeDef::deserialize(optionalDeser));
+                break;
+        CRACK_PB_END
 
-        VarDefPtr varDef = resolveName(*deser.context, moduleName, name, kind);
-        if (paramCount) {
+        SPUG_CHECK(!sharedLibSym || kind == K_OVLD,
+                   "Symbol " << moduleName << "." << name <<
+                    " is a shared library symbol but we were expecting "
+                    "an object of kind = " << kind
+                   );
+
+        VarDefPtr varDef;
+
+        if (sharedLibSym) {
+            ImportedDefVec symbols;
+            symbols.push_back(ImportedDef(name, name));
+
+            // XXX: this is horrible.  This is importing the shared library
+            // symbol into a fake namespace and then extracting it from the
+            // namespace.  We should probably add a special hook into the
+            // builder to do this instead.
+            GlobalNamespace ns(0, "");
+            deser.context->builder.importSharedLibrary(moduleName,
+                                                       symbols,
+                                                       *deser.context,
+                                                       &ns
+                                                       );
+            FuncDefPtr funcDef;
+            varDef = ns.lookUp(name);
+            StubDefPtr stub = StubDefPtr::rcast(varDef);
+            if (!stub) {
+                OverloadDefPtr ovld = OverloadDefPtr::rcast(varDef);
+                funcDef = ovld->getSigMatch(spec.args);
+                SPUG_CHECK(funcDef,
+                           "non-matching shared library function " <<
+                            moduleName << "." << name
+                           );
+                return ovld;
+            }
+
+            funcDef = deser.context->builder.createExternFunc(
+                *deser.context, spec.flags, name,
+                spec.returnType.get(),
+                spec.receiverType.get(),
+                spec.args,
+                stub->address,
+                0  // symbol name, need to persist.
+            );
+
+            return stub->getOwner()->replaceDef(funcDef.get());
+        }
+
+        varDef = resolveName(*deser.context, moduleName, name, kind);
+        if (paramTypes) {
             TypeDefPtr typeDef = varDef;
             return typeDef->getSpecialization(*deser.context, paramTypes.get());
         } else {

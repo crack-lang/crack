@@ -54,6 +54,22 @@ class FuncDef : public VarDef {
             convert = 3         // convert all arguments
         };
         
+        // The persistable information in a function.  This allows us to 
+        // share the common function deserialization code with shared library 
+        // imports.
+        struct Spec {
+            TypeDefPtr returnType;
+            Flags flags;
+            ArgVec args;
+            TypeDefPtr receiverType;
+            unsigned vtableSlot;
+            
+            Spec() : flags(noFlags), vtableSlot(0) {}
+            
+            void deserialize(Deserializer &deser);
+        };
+            
+        
         typedef std::vector<ArgDefPtr> ArgVec;
         ArgVec args;
         ArgDefPtr thisArg;
@@ -157,7 +173,8 @@ class FuncDef : public VarDef {
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         
         void serializeArgs(Serializer &serializer) const;
-        static ArgVec deserializeArgs(Deserializer &deser);        
+        static ArgVec deserializeArgs(Deserializer &deser);
+        void serializeCommon(Serializer &serializer) const;
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

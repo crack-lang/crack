@@ -1,0 +1,11 @@
+## Test module for second order shlib imports.
+## Copyright 2013 Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+
+import "lib/testext.so" cecho;
+
+@export_symbols cecho;
