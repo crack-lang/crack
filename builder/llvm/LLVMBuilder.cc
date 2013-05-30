@@ -1264,10 +1264,10 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     beginModuleMain(name);
     createModuleCommon(context);
 
-    builtinMod = innerCreateModule(context, name, owner);
-    builtinMod->sourcePath = getSourcePath(path);
+    moduleDef = innerCreateModule(context, name, owner);
+    moduleDef->sourcePath = getSourcePath(path);
 
-    return builtinMod;
+    return moduleDef;
 }
 
 void LLVMBuilder::getInvokeBlocks(Context &context,
@@ -2419,7 +2419,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         context.construct->stats->setState(ConstructStats::builtin);
 
     createLLVMModule(".builtin");
-    builtinMod = instantiateModule(context, ".builtin", module);
+    BModuleDefPtr builtinMod = instantiateModule(context, ".builtin", module);
 
     // tie the builtin module to the global namespace (context's namespace
     // must be a global namespace)
@@ -3260,10 +3260,8 @@ void LLVMBuilder::initializeImport(model::ModuleDef* m,
 
     BModuleDef *importedMod = dynamic_cast<BModuleDef*>(m);
 
-    assert(builtinMod && "no builtinMod before initializeImportCommon");
     assert(importedMod && "importedMod was not a BModuleDef");
     assert(importedMod->getFullName().find('[') == -1);
-    builtinMod->importList[importedMod] = symbols;
 
     string importedMainName = m->name + ":main";
     Constant *fc =
@@ -3438,8 +3436,8 @@ void LLVMBuilder::importSharedLibrary(const string &name,
 
         // save for caching (when called from parser). when called from Cacher,
         // we don't save (and don't need to since we're already cached)
-        if (builtinMod)
-            builtinMod->shlibImportList[name] = symbols;
+        if (moduleDef)
+            moduleDef->shlibImportList[name] = symbols;
 
         // store a stub for the symbol
         StubDefPtr stub = new StubDef(context.construct->voidType.get(),

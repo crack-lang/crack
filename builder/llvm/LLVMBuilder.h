@@ -201,7 +201,7 @@ class LLVMBuilder : public Builder {
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
         // seems to be cutting down on the amount of code necessary to do this.
-        BModuleDefPtr builtinMod;
+        BModuleDefPtr moduleDef;
         llvm::Module *module;
         llvm::Function *func;
         llvm::PointerType *llvmVoidPtrType;
