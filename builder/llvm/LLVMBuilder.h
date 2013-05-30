@@ -52,10 +52,7 @@ class LLVMBuilder : public Builder {
         typedef std::map<std::string, SharedLibDefPtr> SharedLibMap;
         SharedLibMap sharedLibs;
         SharedLibMap &getSharedLibs() {
-            if (rootBuilder)
-                return rootBuilder->sharedLibs;
-            else
-                return rootBuilder->sharedLibs;
+            return getRoot().sharedLibs;
         }
 
     protected:
@@ -74,10 +71,7 @@ class LLVMBuilder : public Builder {
         LLVMBuilderPtr rootBuilder;
         
         BTypeDef *getExStructType() {
-            if (rootBuilder)
-                return rootBuilder->exStructType.get();
-            else
-                return exStructType.get();
+            return getRoot().exStructType.get();
         }
 
         /**
@@ -215,6 +209,18 @@ class LLVMBuilder : public Builder {
         llvm::Value *lastValue;
         llvm::Type *intzLLVM;
         llvm::BasicBlock *funcBlock;
+        
+        /** 
+         * Returns the root builder or the current builder if it is the root. 
+         */
+        LLVMBuilder &getRoot() {
+            return rootBuilder ? *rootBuilder : *this;
+        }
+
+        const LLVMBuilder &getRoot() const {
+            return rootBuilder ? *rootBuilder : *this;
+        }
+        
 
         // keeps track of the Function object for the FuncDef in the builder's
         // module.
