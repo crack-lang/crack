@@ -2680,7 +2680,7 @@ void Parser::parseReturnStmt() {
 ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
    ModuleDefPtr mod;
    string canonicalName;
-   builder::Builder &builder = context->construct->getCurBuilder();
+   builder::Builder &builder = context->builder;
 
    Token tok = getToken();
    if (tok.isIdent()) {
