@@ -13,11 +13,13 @@
 #include <set>
 #include <vector>
 
+// we need to include this because of TypeDef::TypeVecObj
+#include "TypeDef.h"
+
 namespace model {
 
 class Context;
 SPUG_RCPTR(OverloadDef);
-SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(ModuleStub);
 
 class ModuleStub : public ModuleDef {
@@ -31,12 +33,14 @@ class ModuleStub : public ModuleDef {
         CallbackVec callbacks;
 
         ModuleDefPtr replacement;
+        bool replacedAll;
 
         // modules that depend on the stub and need to be fixed.
         std::set<ModuleDef *> dependents;
 
         ModuleStub(const std::string &name) :
-            ModuleDef(name, 0) {
+            ModuleDef(name, 0),
+            replacedAll(false) {
         }
 
         ~ModuleStub();
@@ -66,6 +70,19 @@ class ModuleStub : public ModuleDef {
          * Ownership of the callback is transferred to the ModuleStub.
          */
         void registerCallback(Callback *callback);
+
+        /**
+         * Returns a stubbed type for a generic with stubbed parameters.
+         * @param dependent The module that depends on the new stub.
+         * @param stub The first stubbed parameter.
+         * @param generic the original generic type.
+         * @param types the generic's type parameters.
+         */
+        static TypeDefPtr createGenericStub(ModuleDef *dependent,
+                                            TypeDef *stub,
+                                            TypeDef *generic,
+                                            TypeDef::TypeVecObj *types
+                                            );
 };
 
 } // namespace model

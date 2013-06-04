@@ -42,7 +42,6 @@ class TypeDef : public VarDef, public Namespace {
 
     protected:
         TypeDef *findSpecialization(TypeVecObj *types);
-        std::string getSpecializedName(TypeVecObj *types, bool fullName);
         virtual void storeDef(VarDef *def);
         TypeDef *extractInstantiation(ModuleDef *module, TypeVecObj *types);
 
@@ -168,6 +167,12 @@ class TypeDef : public VarDef, public Namespace {
         }
         
         ~TypeDef() { if (generic) delete generic; }
+
+        /** 
+         * Returns the specialized name for the type.
+         * This is only exposed for the stub types in ModuleStub.
+         */
+        std::string getSpecializedName(TypeVecObj *types, bool fullName);
 
         /** required implementation of Namespace::getModule() */
         virtual ModuleDefPtr getModule();
@@ -319,6 +324,14 @@ class TypeDef : public VarDef, public Namespace {
          * if necessary.
          */
         virtual TypeDef *getSpecialization(Context &context, TypeVecObj *types);
+
+        /**
+         * A flavor of getSpecialization() that is safe to use when some of 
+         * the param types may be stubs.
+         */
+        TypeDefPtr getSpecializationStubSafe(Context &context, 
+                                             TypeVecObj *types
+                                             );
 
         /**
          * Set namespace owner, and set our namespace name.

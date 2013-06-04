@@ -1,0 +1,15 @@
+%%TEST%%
+generics with stub parameters
+%%ARGS%%
+%%FILE%%
+class A {}
+
+class G[T] {
+     array[A] a;
+}
+
+G[int] inst;
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

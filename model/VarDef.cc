@@ -314,7 +314,11 @@ namespace {
         varDef = resolveName(*deser.context, moduleName, name, kind);
         if (paramTypes) {
             TypeDefPtr typeDef = varDef;
-            return typeDef->getSpecialization(*deser.context, paramTypes.get());
+            // Get the specialization, taking into account the possibility
+            // that some of the type parameters might be stubs.
+            return typeDef->getSpecializationStubSafe(*deser.context,
+                                                      paramTypes.get()
+                                                      );
         } else {
             return varDef;
         }

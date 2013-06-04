@@ -16,21 +16,39 @@ using namespace model;
 
 namespace {
 
+    // Base class for type stubs.
     class TypeStub : public TypeDef {
         public:
-            ModuleStub *module;
+
+            // the is the module that needs to be resolved for the type stub
+            // to get resolved.  In the case of a PrimaryTypeStub, it is also
+            // the stub module that owns the type.
+            ModuleStubPtr module;
+
+            // The type parameters.  We need these for both subclasses.
             TypeVecObjPtr params;
+
             TypeStub(ModuleStub *module, const string &name,
                      TypeVecObj *params
                      ) :
                 TypeDef(0, name),
                 module(module),
                 params(params) {
-
-                owner = module;
             }
 
             virtual bool isStub() const { return true; }
+    };
+
+    // A type stub in which the primary type itself is stubbed.
+    class PrimaryTypeStub : public TypeStub {
+        public:
+            PrimaryTypeStub(ModuleStub *module, const string &name,
+                            TypeVecObj *params
+                            ) :
+                TypeStub(module, name, params) {
+
+                owner = module;
+            }
 
             VarDefPtr replaceStub(Context &context) {
                 TypeDefPtr replacement = module->replacement->lookUp(name);
@@ -69,9 +87,63 @@ namespace {
             }
     };
 
+    // Stub for a generic type that is not itself a stub but has stub arguments.
+    class GenericTypeStub : public TypeStub {
+        public:
+
+            // the actual underlying generic type.
+            TypeDefPtr realType;
+
+            static string makeName(TypeDef *type, TypeVecObj *params) {
+                string base = type->getSpecializedName(params, true);
+                string typeFullName = type->getFullName();
+                if (typeFullName != ".builtin.array" &&
+                    typeFullName != ".builtin.function"
+                    )
+                    base += "." + type->name;
+                return base;
+            }
+
+            GenericTypeStub(ModuleStub *module, TypeDef *realType,
+                            TypeVecObj *params
+                            ) :
+                TypeStub(module, makeName(realType, params), params),
+                realType(realType) {
+            }
+
+            virtual bool isStub() const { return true; }
+
+            VarDefPtr replaceStub(Context &context) {
+
+                // replace all of the stub params, keep track of whether any of
+                // them were not replaced.
+                bool stillAStub = false;
+                for (TypeVecObj::iterator i = params->begin();
+                     i != params->end();
+                     ++i
+                     ) {
+                    *i = (*i)->replaceStub(context);
+                    if ((*i)->isStub())
+                        stillAStub = true;
+                }
+
+                if (stillAStub)
+                    return this;
+                else
+                    return realType->getSpecialization(context, params.get());
+            }
+
+            TypeDef *getSpecialization(Context &context, TypeVecObj *params) {
+                SPUG_CHECK(false,
+                        "getSpecialization() called on GenericTypeStub " <<
+                            name
+                        );
+            }
+    };
+
     class OverloadStub : public OverloadDef {
         public:
-            ModuleStub *module;
+            ModuleStubPtr module;
             OverloadStub(ModuleStub *module, const string &name) :
                 OverloadDef(name),
                 module(module) {
@@ -88,7 +160,7 @@ namespace {
 
     class VarStub : public VarDef {
         public:
-            ModuleStub *module;
+            ModuleStubPtr module;
             VarStub(ModuleStub *module, const string &name) :
                 VarDef(0, name),
                 module(module) {
@@ -114,7 +186,7 @@ ModuleStub::~ModuleStub() {
 }
 
 TypeDefPtr ModuleStub::getTypeStub(const string &name) {
-    return new TypeStub(this, name, 0);
+    return new PrimaryTypeStub(this, name, 0);
 }
 
 OverloadDefPtr ModuleStub::getOverloadStub(const string &name) {
@@ -137,6 +209,7 @@ void ModuleStub::replace(Context &context) {
          ++iter
          )
         (*iter)->run();
+    replacedAll = true;
 }
 
 TypeDefPtr ModuleStub::getType(const string &name) {
@@ -145,4 +218,18 @@ TypeDefPtr ModuleStub::getType(const string &name) {
 
 void ModuleStub::registerCallback(ModuleStub::Callback *callback) {
     callbacks.push_back(callback);
+}
+
+TypeDefPtr ModuleStub::createGenericStub(ModuleDef *dependent,
+                                         TypeDef *stub,
+                                         TypeDef *generic,
+                                         TypeDef::TypeVecObj *types
+                                         ) {
+    ModuleStubPtr stubMod = dynamic_cast<TypeStub *>(stub)->module;
+    SPUG_CHECK(!stubMod->replacedAll,
+               "Module " << stubMod->name <<
+                " should have already replaced all stubs."
+               );
+    stubMod->dependents.insert(dependent);
+    return new GenericTypeStub(stubMod.get(), generic, types);
 }

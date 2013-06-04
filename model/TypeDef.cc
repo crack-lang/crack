@@ -28,6 +28,7 @@
 #include "InstVarDef.h"
 #include "OverloadDef.h"
 #include "ModuleDef.h"
+#include "ModuleStub.h"
 #include "NestedDeserializer.h"
 #include "NullConst.h"
 #include "ProtoBuf.h"
@@ -982,6 +983,22 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     context.ns->getModule()->addDependency(module.get());
     
     return result;
+}
+
+TypeDefPtr TypeDef::getSpecializationStubSafe(Context &context, 
+                                              TypeDef::TypeVecObj *types
+                                              ) {
+    for (TypeVecObj::iterator iter = types->begin(); iter != types->end();
+        ++iter
+        )
+        if ((*iter)->isStub())
+            return ModuleStub::createGenericStub(context.ns->getModule().get(),
+                                                 iter->get(),
+                                                 this,
+                                                 types
+                                                 );
+    
+    return getSpecialization(context, types);
 }
 
 bool TypeDef::isConstant() {
