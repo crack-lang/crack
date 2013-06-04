@@ -7,5 +7,6 @@
 ##
 
 import "lib/testext.so" cecho;
+byteptr cecho(byteptr data);
 
 @export_symbols cecho;

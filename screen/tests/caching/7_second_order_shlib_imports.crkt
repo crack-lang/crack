@@ -2,7 +2,7 @@
 Second order shlib imports
 %%ARGS%%
 %%FILE%%
-import testmod cecho;
+import test.testmod_shlib cecho;
 puts(cecho('ok'));
 %%EXPECT%%
 ok
