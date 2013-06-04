@@ -6,9 +6,13 @@
 //
 // Higher level classes from mongo client binding
 
-import crack.lang Buffer, CString, InvalidStateError, AssertionError;
-import crack.io Formatter;
+import crack.lang Buffer, CString, InvalidStateError, AssertionError,
+                  StaticString, ManagedBuffer, InvalidArgumentError;
+import crack.io Formatter, cout, FStr;
 import crack.time Time;
+import crack.runtime memcpy;
+import crack.ascii hex, escape;
+import crack.db.mongo_support Oid;
 import crack.ext._mongo
     BSON_BINARY_SUBTYPE_GENERIC, BSON_BINARY_SUBTYPE_FUNCTION,
     BSON_BINARY_SUBTYPE_BINARY, BSON_BINARY_SUBTYPE_UUID,
@@ -136,6 +140,20 @@ import crack.ext._mongo
 
 int MONGO_CONN_LOCAL = -1;
 
+class BSONOid : Oid {
+    oper init() : Oid() { }
+    oper init(Buffer newdata) : Oid(newdata) { }
+
+    oper init(bson_cursor c) : Oid() {
+        size = 12;
+        if (bson_cursor_type(c) == BSON_TYPE_OID)
+            memcpy(buffer, bson_cursor_get_oid(c), 12);
+        else
+            throw InvalidArgumentError(
+                FStr() `Constructing Oid object from BSON type $(StaticString(bson_cursor_type_as_string(c)))`);
+    }
+}
+
 class BSON {
     bson _b;
     int _type;
@@ -239,6 +257,12 @@ class BSON {
 
     // Append an ObjectID to a BSON object.
     @final bool appendOID(CString name, Buffer oid) {
+        if (oid.size != 12) return false;
+        return bson_append_oid(_b, name.buffer, oid.buffer);
+    }
+
+    // Append an ObjectID to a BSON object.
+    @final bool appendOID(CString name, Oid oid) {
         if (oid.size != 12) return false;
         return bson_append_oid(_b, name.buffer, oid.buffer);
     }
@@ -444,7 +468,7 @@ class BSON {
             else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c)))`;
             else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c)))`;
             else if (t == BSON_TYPE_BINARY) fmt.write("<binary>");
-            else if (t == BSON_TYPE_OID) fmt.write(CString(bson_cursor_get_oid(c), false));
+            else if (t == BSON_TYPE_OID) BSONOid(c).format(fmt);
             else if (t == BSON_TYPE_BOOLEAN) fmt.write(bson_cursor_get_boolean(c) ? "true" : "false");
             else if (t == BSON_TYPE_UTC_DATETIME) fmt `$(bson_cursor_get_utc_datetime(c))`;
             else if (t == BSON_TYPE_NULL) fmt.write("null");
@@ -456,7 +480,8 @@ class BSON {
             else fmt `<$(CString(bson_cursor_type_as_string(c), false))>`;
         }
 
-        fmt.write("}");
+        if (_type == BSON_TYPE_ARRAY) fmt.write("]");
+        else fmt.write("}");
     }
 
     BSONCursor cursor() {
@@ -700,8 +725,6 @@ class MongoSync {
         oper del() {
             if (!(_c is null))
                 mongo_sync_cursor_free (_c);
-            if (!(_p is null))
-                mongo_wire_packet_free (_p);
         }
     }
 
@@ -709,8 +732,9 @@ class MongoSync {
     @final
     MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
                           BSON query, BSON sel) {
-        p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret,
-                                   query.get_bson(), sel.get_bson());
+        bson bquery = query is null ? bson_new() : query.get_bson();
+        bson bsel = sel is null ? bson_new() : sel.get_bson();
+        p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret, bquery, bsel);
         return MongoSyncCursor(this, ns, p);
     }
 
