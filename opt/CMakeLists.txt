@@ -209,3 +209,21 @@ if (PNG_FOUND)
     install(TARGETS png DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 
 endif (PNG_FOUND)
+
+# libPNG
+find_package(NETCDF)
+macro_log_feature(NETCDF_FOUND "netcdf" "Bindings for NetCDF 4.x" "http://www.unidata.ucar.edu/software/netcdf/")
+if (NETCDF_FOUND)
+    add_library(netcdf SHARED _netcdf.cc)
+    set_target_properties(netcdf
+                          PROPERTIES
+                          OUTPUT_NAME _netcdf
+                          PREFIX ""
+                          LINK_FLAGS ${LLVM_LDFLAGS}
+                         )
+    target_link_libraries( netcdf
+                           libcrack ${NETCDF_LIBRARY} 
+                         )
+    install(TARGETS netcdf DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+
+endif (NETCDF_FOUND)

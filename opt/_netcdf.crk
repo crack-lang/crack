@@ -1,0 +1,294 @@
+// Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Crack bindings for NetCDF4
+// See http://www.unidata.ucar.edu/software/netcdf/
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._netcdf {
+    @filename 'opt/_netcdf.cc'
+    @dumpsymbols 'opt/_netcdf.txt'
+    @inject '#include <stdlib.h>\n'
+    @inject '#include <inttypes.h>\n'
+    @inject '#include <float.h>\n'
+    @inject '#include <netcdf.h>\n'
+    @inject 'typedef void * voidptr;\n'
+    @inject 'typedef char * byteptr;\n'
+    @inject 'typedef int Undef;\n'
+
+    // Opaque classes
+    @crack_internal
+
+    const int
+        NC_NAT,
+        NC_BYTE,
+        NC_CHAR,
+        NC_SHORT,
+        NC_INT,
+        NC_LONG,
+        NC_FLOAT,
+        NC_DOUBLE,
+        NC_UBYTE,
+        NC_USHORT,
+        NC_UINT,
+        NC_INT64,
+        NC_UINT64,
+        NC_STRING,
+        NC_MAX_ATOMIC_TYPE,
+
+        NC_VLEN,
+        NC_OPAQUE,
+        NC_ENUM,
+        NC_COMPOUND,
+
+        NC_FIRSTUSERTYPEID,
+        NC_FILL,
+        NC_NOFILL,
+
+        NC_NOWRITE,
+        NC_WRITE,
+
+        NC_CLOBBER,
+        NC_NOCLOBBER,
+        NC_64BIT_OFFSET,
+        NC_NETCDF4,
+        NC_CLASSIC_MODEL,
+
+        NC_SHARE,
+        NC_MPIIO,
+        NC_MPIPOSIX,
+        NC_PNETCDF,
+        NC_LOCK,
+
+        NC_FORMAT_CLASSIC,
+        NC_FORMAT_64BIT,
+        NC_FORMAT_NETCDF4,
+        NC_FORMAT_NETCDF4_CLASSIC,
+        NC_SIZEHINT_DEFAULT,
+        NC_UNLIMITED,
+        NC_GLOBAL,
+
+        NC_MAX_DIMS,
+        NC_MAX_ATTRS,
+        NC_MAX_VARS,
+        NC_MAX_NAME,
+        NC_MAX_VAR_DIMS,
+
+        NC_ENDIAN_NATIVE,
+        NC_ENDIAN_LITTLE,
+        NC_ENDIAN_BIG,
+
+        NC_CHUNKED,
+        NC_CONTIGUOUS,
+        NC_NOCHECKSUM,
+        NC_FLETCHER32,
+
+        NC_NOSHUFFLE,
+        NC_SHUFFLE,
+
+        NC_NOERR,
+        NC2_ERR,
+        NC_EBADID,
+        NC_ENFILE,
+        NC_EEXIST,
+        NC_EINVAL,
+        NC_EPERM,
+        NC_ENOTINDEFINE,
+        NC_EINDEFINE,
+        NC_EINVALCOORDS,
+        NC_EMAXDIMS,
+        NC_ENAMEINUSE,
+        NC_ENOTATT,
+        NC_EMAXATTS,
+        NC_EBADTYPE,
+        NC_EBADDIM,
+        NC_EUNLIMPOS,
+        NC_EMAXVARS,
+        NC_ENOTVAR,
+        NC_EGLOBAL,
+        NC_ENOTNC,
+        NC_ESTS,
+        NC_EMAXNAME,
+        NC_EUNLIMIT,
+        NC_ENORECVARS,
+        NC_ECHAR,
+        NC_EEDGE,
+        NC_ESTRIDE,
+        NC_EBADNAME,
+        NC_ERANGE,
+        NC_ENOMEM,
+
+        NC_EVARSIZE,
+        NC_EDIMSIZE,
+        NC_ETRUNC,
+
+        NC_EAXISTYPE,
+
+        NC_EDAP,
+        NC_ECURL,
+        NC_EIO,
+        NC_ENODATA,
+        NC_EDAPSVC,
+        NC_EDAS,
+        NC_EDDS,
+        NC_EDATADDS,
+        NC_EDAPURL,
+        NC_EDAPCONSTRAINT,
+        NC_ETRANSLATION,
+
+        NC4_FIRST_ERROR,
+        NC_EHDFERR,
+        NC_ECANTREAD,
+        NC_ECANTWRITE,
+        NC_ECANTCREATE,
+        NC_EFILEMETA,
+        NC_EDIMMETA,
+        NC_EATTMETA,
+        NC_EVARMETA,
+        NC_ENOCOMPOUND,
+        NC_EATTEXISTS,
+        NC_ENOTNC4,
+        NC_ESTRICTNC3,
+        NC_ENOTNC3,
+        NC_ENOPAR,
+        NC_EPARINIT,
+        NC_EBADGRPID,
+        NC_EBADTYPID,
+        NC_ETYPDEFINED,
+        NC_EBADFIELD,
+        NC_EBADCLASS,
+        NC_EMAPTYPE,
+        NC_ELATEFILL,
+        NC_ELATEDEF,
+        NC_EDIMSCALE,
+        NC_ENOGRP,
+        NC_ESTORAGE,
+        NC_EBADCHUNK,
+        NC_ENOTBUILT,
+        NC4_LAST_ERROR;
+
+
+    byteptr nc_inq_libvers();
+
+    @inject ' static int crk_ncerr;
+              static int crk_ncstatus;
+            '
+    @inject 'int nc_create_crk(byteptr path, int cmode) {
+        int ncidp = 0;
+        crk_ncstatus  = nc_create(path, cmode, &ncidp);
+        if (!crk_ncstatus) return ncidp;
+        else return -1;
+    }\n'
+
+    @inject 'int nc_open_crk(const char *path, int cmode) {
+        int ncidp = 0;
+        crk_ncstatus  = nc_open(path, cmode, &ncidp);
+        if (!crk_ncstatus) return ncidp;
+        else return -1;
+    }\n'
+
+    @inject 'byteptr nc_inq_path_crk(int ncid) {
+        size_t path_len;
+        byteptr path;
+        crk_ncstatus = nc_inq_path(ncid, &path_len, NULL);
+        path = (byteptr)malloc(path_len+1);
+        if (!path) return NULL;
+        crk_ncstatus = nc_inq_path(ncid, &path_len, path);
+        path[path_len] =0;
+        return path;
+    }\n'
+
+
+    @inject 'int nc_inq_nvars_crk(int ncid) {
+        int nvars;
+        crk_ncstatus = nc_inq_nvars(ncid, &nvars);
+        if (!crk_ncstatus) return nvars;
+        else return -1;
+    }\n'
+    
+
+
+    // File handling
+    @cname nc_create_crk
+    int nc_create(byteptr path, int cmode);
+    @cname nc_open_crk
+    int nc_open(byteptr path, int cmode);
+    int nc_var_par_access(int ncid, int varid, int par_access);
+    @cname nc_inq_path_crk
+    int nc_inq_path(int ncid, byteptr buffer, uint32 maxlen);
+    int nc_redef (int ncid);
+    int nc_enddef (int ncid);
+    int nc_sync (int ncid);
+    int nc_abort (int ncid);
+    int nc_close (int ncid);
+
+    @cname nc_inq_nvars_crk
+    int nc_inq_nvars(int ncid);
+
+    // Define dimensions
+     @inject 'int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
+        int idp = 0;
+        crk_ncstatus  = nc_def_dim(ncid, name, len, &idp);
+        if (!crk_ncstatus) return idp;
+        else return -1;
+    }\n'
+
+    @cname nc_def_dim_crk
+    int nc_def_dim(int ncid, byteptr name, uint64 len);
+
+    @inject 'int nc_def_var_crk(int ncid, byteptr name, int xtype,
+                     int ndims, int *dimidsp) {
+        int varidp = 0;
+        crk_ncstatus = nc_def_var(ncid, name, xtype, ndims, dimidsp, &varidp);
+        if (!crk_ncstatus) return varidp;
+        else return -1;
+    }\n'
+
+    // Define and store variables
+    @cname nc_def_var_crk
+    int nc_def_var(int ncid, byteptr name, int xtype,
+                     int ndims, array[int] dimidsp);
+    int nc_put_var_double (int ncid, int varid, array[float64] op);
+    int nc_put_var_int (int ncid, int varid, array[int] op);
+
+    int nc_get_var_double (int ncid, int varid, array[float64] op);
+    int nc_get_var_int (int ncid, int varid, array[int] op);
+
+    // Array handling
+    int nc_put_var(int ncid, int varid, voidptr op);
+    int nc_get_var(int ncid, int varid, voidptr op);
+
+    int nc_put_vara_double (int ncid, int varid, array[uint64] startp,
+                            array[uint64] countp, array[float64] op);
+    int nc_get_vara_double (int ncid, int varid, array[uint64] startp,
+                            array[uint64] countp, array[float64] op);
+
+
+    int nc_put_vara_int (int ncid, int varid, array[uint64] startp,
+                            array[uint64] countp, array[int] op);
+    int nc_get_vara_int (int ncid, int varid, array[uint64] startp,
+                            array[uint64] countp, array[int] op);
+    // Data attributes
+    @inject 'int nc_inq_varid_crk(int ncid, byteptr name) {
+        int varid;
+        crk_ncstatus = nc_inq_varid(ncid, name, &varid);
+        if (!crk_ncstatus) return varid;
+        else return -1;
+    }\n'
+
+    @cname nc_inq_varid_crk
+    int nc_inq_varid(int ncid, byteptr name);
+    
+    // Error handling
+    byteptr nc_strerror(int status);
+    @inject 'int nc_get_status() {
+        return crk_ncstatus;
+    }'
+
+    int nc_get_status();
+    
+}

@@ -1,0 +1,116 @@
+// Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.io cout, cerr;
+import crack.lang CString;
+import crack.cont.array Array;
+import crack.cont.numericarray NumericVector;
+import crack.runtime exit;
+import crack.ext._netcdf
+    // Constants
+    NC_NAT, NC_BYTE, NC_CHAR, NC_SHORT, NC_INT, NC_LONG, NC_FLOAT, NC_DOUBLE,
+    NC_UBYTE, NC_USHORT, NC_UINT, NC_INT64, NC_UINT64, NC_STRING,
+    NC_MAX_ATOMIC_TYPE, NC_VLEN, NC_OPAQUE, NC_ENUM, NC_COMPOUND,
+    NC_FIRSTUSERTYPEID, NC_FILL, NC_NOFILL, NC_NOWRITE, NC_WRITE, NC_CLOBBER,
+    NC_NOCLOBBER, NC_64BIT_OFFSET, NC_NETCDF4, NC_CLASSIC_MODEL, NC_SHARE,
+    NC_MPIIO, NC_MPIPOSIX, NC_PNETCDF, NC_LOCK, NC_FORMAT_CLASSIC,
+    NC_FORMAT_64BIT, NC_FORMAT_NETCDF4, NC_FORMAT_NETCDF4_CLASSIC,
+    NC_SIZEHINT_DEFAULT, NC_UNLIMITED, NC_GLOBAL, NC_MAX_DIMS, NC_MAX_ATTRS,
+    NC_MAX_VARS, NC_MAX_NAME, NC_MAX_VAR_DIMS, NC_ENDIAN_NATIVE,
+    NC_ENDIAN_LITTLE, NC_ENDIAN_BIG, NC_CHUNKED, NC_CONTIGUOUS, NC_NOCHECKSUM,
+    NC_FLETCHER32, NC_NOSHUFFLE, NC_SHUFFLE, NC_NOERR, NC2_ERR, NC_EBADID,
+    NC_ENFILE, NC_EEXIST, NC_EINVAL, NC_EPERM, NC_ENOTINDEFINE, NC_EINDEFINE,
+    NC_EINVALCOORDS, NC_EMAXDIMS, NC_ENAMEINUSE, NC_ENOTATT, NC_EMAXATTS,
+    NC_EBADTYPE, NC_EBADDIM, NC_EUNLIMPOS, NC_EMAXVARS, NC_ENOTVAR,
+    NC_EGLOBAL, NC_ENOTNC, NC_ESTS, NC_EMAXNAME, NC_EUNLIMIT, NC_ENORECVARS,
+    NC_ECHAR, NC_EEDGE, NC_ESTRIDE, NC_EBADNAME, NC_ERANGE, NC_ENOMEM,
+    NC_EVARSIZE, NC_EDIMSIZE, NC_ETRUNC, NC_EAXISTYPE, NC_EDAP, NC_ECURL,
+    NC_EIO, NC_ENODATA, NC_EDAPSVC, NC_EDAS, NC_EDDS, NC_EDATADDS, NC_EDAPURL,
+    NC_EDAPCONSTRAINT, NC_ETRANSLATION, NC4_FIRST_ERROR, NC_EHDFERR,
+    NC_ECANTREAD, NC_ECANTWRITE, NC_ECANTCREATE, NC_EFILEMETA, NC_EDIMMETA,
+    NC_EATTMETA, NC_EVARMETA, NC_ENOCOMPOUND, NC_EATTEXISTS, NC_ENOTNC4,
+    NC_ESTRICTNC3, NC_ENOTNC3, NC_ENOPAR, NC_EPARINIT, NC_EBADGRPID,
+    NC_EBADTYPID, NC_ETYPDEFINED, NC_EBADFIELD, NC_EBADCLASS, NC_EMAPTYPE,
+    NC_ELATEFILL, NC_ELATEDEF, NC_EDIMSCALE, NC_ENOGRP, NC_ESTORAGE,
+    NC_EBADCHUNK, NC_ENOTBUILT, NC4_LAST_ERROR,
+
+    // Function names
+    nc_inq_libvers, nc_strerror, nc_create, nc_open, nc_var_par_access,
+    nc_inq_path, nc_redef, nc_enddef, nc_sync, nc_abort,  nc_close,
+    nc_def_dim, nc_def_var, nc_put_var, nc_get_var, nc_get_vara_double,
+    nc_put_vara_double, nc_put_vara_int, nc_get_vara_int, nc_put_var_double,
+    nc_put_var_int, nc_get_var_double, nc_get_var_int, nc_get_status,
+    nc_inq_nvars, nc_inq_varid;
+
+// Define some data to save
+int sqr(int x) { return x*x; }
+
+x := NumericVector[int].range(10);
+y := x.mapped(sqr);
+
+
+
+ncFile := nc_create("test.nc".buffer, NC_FORMAT_NETCDF4);
+ncStatus := nc_get_status();
+if (ncStatus != 0) {
+    cout `ncFile = $ncFile, status = $(nc_get_status()), $(CString(nc_strerror(ncStatus), false))\n`;
+    cerr `Exiting...\n`;
+    exit (1);
+}
+
+dims := Array[int]![nc_def_dim(ncFile, "len".buffer, x.count())];
+xvar := nc_def_var(ncFile, "x".buffer, NC_INT, 1, dims.data());
+yvar := nc_def_var(ncFile, "y".buffer, NC_INT, 1, dims.data());
+
+if (xvar == -1 || yvar == -1) {
+    cerr `Could not define X variable: $(CString(nc_strerror(ncStatus), false))\n`;
+}
+
+nc_enddef(ncFile);
+
+nc_put_var_int(ncFile, xvar, x.data());
+nc_put_var_int(ncFile, yvar, y.data());
+
+ncStatus = nc_close(ncFile);
+
+if (ncStatus != 0) {
+    cerr `Could not close file: $(CString(nc_strerror(ncStatus), false))\n`;
+    exit(2);
+}
+
+// Now read back the data
+
+ncFile = nc_open("test.nc".buffer, NC_NOWRITE);
+numVars := nc_inq_nvars(ncFile);
+if (numVars != 2) {
+    cerr `Found $numVars variables in file instead of 2\n`;
+    exit(3);
+}
+xvar = nc_inq_varid(ncFile, "x".buffer);
+yvar = nc_inq_varid(ncFile, "y".buffer);
+
+xtest := NumericVector[int].empty(10);
+ytest := NumericVector[int].empty(10);
+
+if (nc_get_var_int(ncFile, xvar, xtest.data()) != 0 ||
+    nc_get_var_int(ncFile, yvar, ytest.data()) != 0) {
+    cerr ` Failed to read x or y arrays from file\n`;
+    exit(4);
+}
+
+if (xtest != x || ytest != y) {
+    cerr `File data does not match:\n`;
+    cerr `x: $x vs $xtest\n`;
+    cerr `y: $x vs $ytest\n`;
+    exit(5);
+}
+
+ncStatus = nc_close(ncFile);
+if (ncStatus == 0)
+    cout `ok\n`;
+else
+    cerr `Could not close file: $(CString(nc_strerror(ncStatus), false))\n`;
+
