@@ -112,6 +112,11 @@ namespace {
     }
 }
 
+bool VarDef::isImportableFrom(ModuleDef *module) const {
+    return owner->getRealModule().get() == module ||
+           module->exports.find(name) != module->exports.end();
+}
+
 bool VarDef::isSerializable(const Namespace *ns, const string &name) const {
     return name[0] != ':' && (owner == ns || isExported(ns, name));
 }

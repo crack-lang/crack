@@ -2799,15 +2799,11 @@ ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
          // make sure the symbol either belongs to the module or was 
          // explicitly exported by the module (no implicit second-order 
          // imports).
-         if (symVal->getOwner() != mod.get() &&
-             mod->exports.find(iter->source) == mod->exports.end()
-             )
+         if (!symVal->isImportableFrom(mod.get()))
             error(symToks[st], SPUG_FSTR("Name " << iter->source <<
                                   " does not belong to module " <<
                                   canonicalName << ".  Second-order imports " 
-                                  "are not allowed.  Import it from " <<
-                                  symVal->getOwner()->getNamespaceName() <<
-                                  " instead."
+                                  "are not allowed."
                                  )
                   );
          BSTATS_GO(s1)

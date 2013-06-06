@@ -13,8 +13,7 @@ import crack.runtime close, runChildProcess, waitProcess, signalProcess,
 import crack.io FDReader, FDWriter, FileHandle, Reader, StringFormatter, FStr;
 import crack.lang Buffer, ManagedBuffer, AppendBuffer, InvalidStateError;
 import crack.strutil StringArray, split;
-import crack.net Poller, PollEvent, PollEventCallback, POLLIN, POLLOUT, 
-    POLLERR, POLLHUP;
+import crack.net Poller, PollEvent, POLLIN, POLLOUT, POLLERR, POLLHUP;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.functor Functor2;

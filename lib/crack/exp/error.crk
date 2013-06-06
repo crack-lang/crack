@@ -19,7 +19,7 @@
 #       catcher.reset();  # reset the catcher if you want to reuse it.
 #   }
 
-import crack.lang abort;
+import crack.runtime abort;
 import crack.io cerr, StandardFormatter, StringWriter, Writer;
 
 class ErrorHandler {

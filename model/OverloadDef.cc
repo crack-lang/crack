@@ -228,6 +228,21 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
+bool OverloadDef::isImportableFrom(ModuleDef *module) const {
+    if (module->exports.find(name) != module->exports.end())
+        return true;
+    
+    // the overload is importable if any of its functions are importable.
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        if ((*iter)->getOwner() == module)
+            return true;
+
+    return false;
+}
+
 bool OverloadDef::isSerializable(const Namespace *ns, 
                                  const string &name
                                  ) const {

@@ -151,11 +151,11 @@ float atof(CString s){
 // export all symbols that we want to expose from the runtime.
 @export_symbols sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                 acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs, exp, 
-                exp2, ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
-                erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint, 
-                round, trunc, fpclassify, isfinite, isinf, isnan, isnormal, 
-                sign, fmod, remainder, copysign, nextafter, fdim, pow, 
-                testexcept, clearexcept, errno, setErrno, HUGE_VAL, INFINITY, 
-                NAN, FP_INFINITE, FP_NAN, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, 
-                FP_ILOGB0, FP_ILOGBNAN, ALL_EXCEPT, INVALID, DIVBYZERO, 
-                OVERFLOW, UNDERFLOW, ERANGE, EINVAL;
+                exp2, expm1, ilogb, log, log10, log1p, log2, cbrt, abs, 
+                hypot,  sqrt, erf, erfc, lgamma, tgamma, ceil, floor, 
+                nearbyint, rint, round, trunc, fpclassify, isfinite, isinf, 
+                isnan, isnormal, sign, fmod, remainder, copysign, nextafter, 
+                fdim, pow, testexcept, clearexcept, errno, setErrno, 
+                HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN, FP_NORMAL, 
+                FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN, ALL_EXCEPT, 
+                INVALID, DIVBYZERO, OVERFLOW, UNDERFLOW, ERANGE, EINVAL;
