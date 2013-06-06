@@ -60,9 +60,9 @@ namespace {
                     return replacement;
             }
 
-            TypeDef *getSpecialization(Context &context,
-                                       TypeVecObj *params
-                                       ) {
+            TypeDefPtr getSpecialization(Context &context,
+                                         TypeVecObj *params
+                                         ) {
                 // make sure we have a specialization cache
                 if (!generic)
                     generic = new SpecializationCache();
@@ -133,7 +133,7 @@ namespace {
                     return realType->getSpecialization(context, params.get());
             }
 
-            TypeDef *getSpecialization(Context &context, TypeVecObj *params) {
+            TypeDefPtr getSpecialization(Context &context, TypeVecObj *params) {
                 SPUG_CHECK(false,
                         "getSpecialization() called on GenericTypeStub " <<
                             name

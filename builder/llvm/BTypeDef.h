@@ -134,6 +134,18 @@ public:
     // See VarDef.
     virtual void onDeserialized(model::Context &context);
 
+protected:
+
+    /**
+     * Utility method for use by array and function types.  If any of the
+     * params in 'types' are stubs, returns a generic stub for the type.
+     * Otherwise returns null.
+     */
+    model::TypeDefPtr getSpecializationStubSafe(
+        model::Context &context,
+        model::TypeDef::TypeVecObj *types
+    );
+
 };
 
 } // end namespace builder::vmll

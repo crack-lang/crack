@@ -358,3 +358,19 @@ void BTypeDef::onDeserialized(Context &context) {
     // now fix up all of our contents.    
     onNamespaceDeserialized(context);
 }
+
+TypeDefPtr BTypeDef::getSpecializationStubSafe(Context &context, 
+                                               TypeDef::TypeVecObj *types
+                                               ) {
+    for (TypeVecObj::iterator iter = types->begin(); iter != types->end();
+        ++iter
+        )
+        if ((*iter)->isStub())
+            return ModuleStub::createGenericStub(context.ns->getModule().get(),
+                                                iter->get(),
+                                                this,
+                                                types
+                                                );
+    
+    return 0;
+}

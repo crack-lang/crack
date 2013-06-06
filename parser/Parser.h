@@ -283,10 +283,10 @@ class Parser {
        * @param tok the left bracket token of the generic specifier.
        * @param generic defined when doing this within a generic definition.
        */
-      model::TypeDef *parseSpecializer(const Token &tok,
-                                       model::TypeDef *typeDef,
-                                       model::Generic *generic = 0
-                                       );
+      model::TypeDefPtr parseSpecializer(const Token &tok,
+                                         model::TypeDef *typeDef,
+                                         model::Generic *generic = 0
+                                         );
 
 
       model::ExprPtr parseConstructor(const Token &tok, model::TypeDef *type,
@@ -344,7 +344,7 @@ class Parser {
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
-      bool parseDef(model::TypeDef *&type);
+      bool parseDef(model::TypeDefPtr &type);
 
       /** Parse a constant definition. */
       void parseConstDef();

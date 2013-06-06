@@ -323,13 +323,7 @@ class TypeDef : public VarDef, public Namespace {
          * Returns a new specialization for the specified types, creating it 
          * if necessary.
          */
-        virtual TypeDef *getSpecialization(Context &context, TypeVecObj *types);
-
-        /**
-         * A flavor of getSpecialization() that is safe to use when some of 
-         * the param types may be stubs.
-         */
-        TypeDefPtr getSpecializationStubSafe(Context &context, 
+        virtual TypeDefPtr getSpecialization(Context &context, 
                                              TypeVecObj *types
                                              );
 

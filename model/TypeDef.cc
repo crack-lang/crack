@@ -853,9 +853,9 @@ namespace {
     };
 }
 
-TypeDef *TypeDef::getSpecialization(Context &context, 
-                                    TypeDef::TypeVecObj *types
-                                    ) {
+TypeDefPtr TypeDef::getSpecialization(Context &context, 
+                                      TypeDef::TypeVecObj *types
+                                      ) {
     assert(genericInfo);
     
     // check the type's specialization cache
@@ -983,22 +983,6 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     context.ns->getModule()->addDependency(module.get());
     
     return result;
-}
-
-TypeDefPtr TypeDef::getSpecializationStubSafe(Context &context, 
-                                              TypeDef::TypeVecObj *types
-                                              ) {
-    for (TypeVecObj::iterator iter = types->begin(); iter != types->end();
-        ++iter
-        )
-        if ((*iter)->isStub())
-            return ModuleStub::createGenericStub(context.ns->getModule().get(),
-                                                 iter->get(),
-                                                 this,
-                                                 types
-                                                 );
-    
-    return getSpecialization(context, types);
 }
 
 bool TypeDef::isConstant() {

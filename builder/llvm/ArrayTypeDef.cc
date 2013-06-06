@@ -28,13 +28,18 @@ ArrayTypeDef::ArrayTypeDef(TypeDef *metaType, const std::string &name,
 
 // specializations of array types actually create a new type
 // object.
-TypeDef *ArrayTypeDef::getSpecialization(Context &context,
-                                         TypeVecObj *types
-                                         ) {
+TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
+                                           TypeVecObj *types
+                                           ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);
     if (spec)
         return spec;
+
+    // Do special magic if any of the parameters are stubs.
+    TypeDefPtr stub = getSpecializationStubSafe(context, types);
+    if (stub)
+        return stub.get();
 
     // create it.
 

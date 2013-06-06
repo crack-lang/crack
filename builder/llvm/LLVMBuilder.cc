@@ -694,7 +694,7 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
     }
 
     BTypeDefPtr specFuncType =
-        BTypeDefPtr::acast(function->getSpecialization(context, args.get()));
+        BTypeDefPtr::arcast(function->getSpecialization(context, args.get()));
 
     specFuncType->defaultInitializer = new NullConst(specFuncType.get());
 

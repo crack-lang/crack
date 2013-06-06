@@ -241,8 +241,8 @@ void Parser::parseClause(bool defsAllowed) {
 
    // if we got a type, try to parse a definition.
    if (primaryType) {
-      TypeDef *typeDef = primaryType.get();
-      context->checkAccessible(typeDef);
+      TypeDefPtr typeDef = primaryType;
+      context->checkAccessible(typeDef.get());
       identLoc = tok.getLocation();
       if (parseDef(typeDef)) {
          if (!defsAllowed)
@@ -271,7 +271,7 @@ void Parser::parseClause(bool defsAllowed) {
 
             // try treating the class as a primary.
             toker.putBack(tok2);
-            expr = context->createVarRef(typeDef);
+            expr = context->createVarRef(typeDef.get());
             expr = parseSecondary(expr.get());
          }
       }
@@ -1069,16 +1069,16 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          TypeDef *generic = convertTypeRef(expr.get());
          // XXX try setting expr to generic
          if (generic) {
-            TypeDef *type = parseSpecializer(tok, generic);
+            TypeDefPtr type = parseSpecializer(tok, generic);
             
             // check for a constructor
             tok = getToken();
             if (tok.isLParen()) {
-               expr = parseConstructor(tok, type, Token::rparen);
+               expr = parseConstructor(tok, type.get(), Token::rparen);
                tok = getToken();
             } else {
                // otherwise just create a reference to the type.
-               expr = context->createVarRef(type);
+               expr = context->createVarRef(type.get());
             }
             continue;
          }
@@ -1448,9 +1448,9 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
 
 // type [ subtype, ... ]
 //       ^              ^
-TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
-                                  Generic *generic
-                                  ) {
+TypeDefPtr Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
+                                    Generic *generic
+                                    ) {
    if (typeDef && !typeDef->generic)
       error(lbrack, 
             SPUG_FSTR("You cannot specialize non-generic type " <<
@@ -1474,8 +1474,9 @@ TypeDef *Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
 
    // XXX needs to verify the numbers and types of specializers
    if (typeDef && !generic)
-      typeDef = typeDef->getSpecialization(*context, types.get());
-   return typeDef;
+      return typeDef->getSpecialization(*context, types.get());
+   else
+      return typeDef;
 }
 
 // Class( arg, arg )
@@ -1542,7 +1543,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    // save the ident source location for subsequent parse errors
    identLoc = tok.getLocation();
 
-   TypeDef *typeDef = typeofType.get();
+   TypeDefPtr typeDef = typeofType;
    if (!typeDef && (!generic || !generic->getParm(tok.getData()))) {
       VarDefPtr def = context->ns->lookUp(tok.getData());
       typeDef = TypeDefPtr::rcast(def);
@@ -1557,7 +1558,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    tok = getToken();
    if (tok.isLBracket()) {
       if (generic) generic->addToken(tok);
-      typeDef = parseSpecializer(tok, typeDef, generic);
+      typeDef = parseSpecializer(tok, typeDef.get(), generic);
    } else {
       toker.putBack(tok);
    }
@@ -2174,12 +2175,12 @@ void Parser::parseAlias() {
 //     ^                         ^
 // type function() { }
 //     ^              ^
-bool Parser::parseDef(TypeDef *&type) {
+bool Parser::parseDef(TypeDefPtr &type) {
    Token tok2 = getToken();
    
    // if we get a '[', parse the specializer and get a generic type.
    if (tok2.isLBracket()) {
-      type = parseSpecializer(tok2, type);
+      type = parseSpecializer(tok2, type.get());
       tok2 = getToken();
    } else if(type->generic) {
       error(identLoc, SPUG_FSTR("Generic type " << type->name <<
@@ -2208,7 +2209,7 @@ bool Parser::parseDef(TypeDef *&type) {
             
             // Emit a variable definition and store it in the context (in a 
             // cleanup frame so transient initializers get destroyed here)
-            context->emitVarDef(type, tok2, 0);
+            context->emitVarDef(type.get(), tok2, 0);
             
             if (tok3.isSemi())
                return true;
@@ -2223,8 +2224,8 @@ bool Parser::parseDef(TypeDef *&type) {
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
             
-            initializer = parseInitializer(type, varName);
-            context->emitVarDef(type, tok2, initializer.get());
+            initializer = parseInitializer(type.get(), varName);
+            context->emitVarDef(type.get(), tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 
             // another definition for the type.
@@ -2242,7 +2243,7 @@ bool Parser::parseDef(TypeDef *&type) {
             }
          } else if (tok3.isLParen()) {
             // function definition
-            parseFuncDef(type, tok2, tok2.getData(), normal, -1);
+            parseFuncDef(type.get(), tok2, tok2.getData(), normal, -1);
             return true;
          } else {
             unexpected(tok3,
@@ -2252,7 +2253,7 @@ bool Parser::parseDef(TypeDef *&type) {
          }
       } else if (tok2.isOper()) {
          // deal with an operator
-         parsePostOper(type);
+         parsePostOper(type.get());
          return true;
       }
 
@@ -3480,7 +3481,7 @@ void Parser::parseClassBody() {
       toker.putBack(tok);
       state = st_notBase;
       TypeDefPtr type = parseTypeSpec();
-      TypeDef *tempType = type.get();
+      TypeDefPtr tempType = type;
       parseDef(tempType);
    }
    

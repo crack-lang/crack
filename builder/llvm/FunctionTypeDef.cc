@@ -35,13 +35,18 @@ FunctionTypeDef::FunctionTypeDef(TypeDef *metaType, const std::string &name,
 
 // specializations of function types actually create a new type
 // object, like array
-TypeDef * FunctionTypeDef::getSpecialization(Context &context,
-                                             TypeVecObj *types
-                                             ) {
+TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
+                                              TypeVecObj *types
+                                              ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);
     if (spec)
         return spec;
+
+    // Do special magic if any of the parameters are stubs.
+    TypeDefPtr stub = getSpecializationStubSafe(context, types);
+    if (stub)
+        return stub;
 
     // need at least one, the return type
     assert(types->size() >= 1);
