@@ -221,6 +221,14 @@ class NumericVector[Elem] : Array[Elem] {
     @VectorOperEqual(*)
     @VectorOperEqual(/)
 
+    NumericVector copy() {
+        size := count();
+        newVec := NumericVector.empty(size);
+        for (uint i = 0; i < size; i++)
+            newVec[i] = this[i];
+        return newVec;
+    }
+
 }
 
 
