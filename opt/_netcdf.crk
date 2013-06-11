@@ -202,16 +202,6 @@
         return path;
     }\n'
 
-
-    @inject 'int nc_inq_nvars_crk(int ncid) {
-        int nvars;
-        crk_ncstatus = nc_inq_nvars(ncid, &nvars);
-        if (!crk_ncstatus) return nvars;
-        else return -1;
-    }\n'
-    
-
-
     // File handling
     @cname nc_create_crk
     int nc_create(byteptr path, int cmode);
@@ -219,15 +209,12 @@
     int nc_open(byteptr path, int cmode);
     int nc_var_par_access(int ncid, int varid, int par_access);
     @cname nc_inq_path_crk
-    int nc_inq_path(int ncid, byteptr buffer, uint32 maxlen);
+    byteptr nc_inq_path(int ncid);
     int nc_redef (int ncid);
     int nc_enddef (int ncid);
     int nc_sync (int ncid);
     int nc_abort (int ncid);
     int nc_close (int ncid);
-
-    @cname nc_inq_nvars_crk
-    int nc_inq_nvars(int ncid);
 
     // Define dimensions
      @inject 'int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
@@ -271,7 +258,92 @@
     int nc_put_vara_int (int ncid, int varid, array[uint64] startp,
                             array[uint64] countp, array[int] op);
     int nc_get_vara_int (int ncid, int varid, array[uint64] startp,
-                            array[uint64] countp, array[int] op);
+                            array[uint64] countp, array[int] op);    
+    // Error handling
+    byteptr nc_strerror(int status);
+    @inject 'int nc_get_status() {
+        return crk_ncstatus;
+    }'
+
+    int nc_get_status();
+
+    // Query functions
+
+    // Find number of dimensions
+    @inject 'int nc_inq_ndims_crk(int ncid) {
+        int ndims;
+        crk_ncstatus = nc_inq_ndims(ncid, &ndims);
+        if (!crk_ncstatus) return ndims;
+        else return -1;
+    }\n'
+        
+    @cname nc_inq_ndims_crk
+    int nc_inq_ndims(int ncid);
+
+    // Find all dimids for a location.
+    @inject 'int *nc_inq_dimids_crk(int ncid, int ndims) {
+        int nndims;
+        int *dimids = (int *)malloc(ndims*sizeof(int));
+        crk_ncstatus = nc_inq_dimids(ncid, &nndims, dimids, 0);
+        if (crk_ncstatus != 0) {
+            free(dimids);
+            return NULL;
+        }
+        else return dimids;
+    }\n'
+
+    @cname nc_inq_dimids_crk
+    array[int] nc_inq_dimids(int ncid, int ndims);
+
+    // Dimension name
+    @inject 'byteptr nc_inq_dimname_crk(int ncid, int dimid) {
+        byteptr name = (byteptr)malloc(NC_MAX_NAME);
+        crk_ncstatus = nc_inq_dimname(ncid, dimid, name);
+        if (!crk_ncstatus) return name;
+        free(name);
+        return NULL;
+    }\n'
+
+    @cname nc_inq_dimname_crk
+    byteptr nc_inq_dimname(int ncid, int dimid);
+
+    // Dimension length
+    @inject 'uint64_t nc_inq_dimlen_crk(int ncid, int dimid) {
+        size_t len = 0;
+        crk_ncstatus = nc_inq_dimlen(ncid, dimid, &len);
+        if (!crk_ncstatus) return (int64_t)len;
+        return 0;
+    }\n'
+
+    @cname nc_inq_dimlen_crk
+    uint64 nc_inq_dimlen(int ncid, int dimid);
+
+    int nc_rename_dim(int ncid, int dimid, byteptr name);
+
+
+    // Find number of variables
+    @inject 'int nc_inq_nvars_crk(int ncid) {
+        int nvars;
+        crk_ncstatus = nc_inq_nvars(ncid, &nvars);
+        if (!crk_ncstatus) return nvars;
+        else return -1;
+    }\n'
+
+    @cname nc_inq_nvars_crk
+    int nc_inq_nvars(int ncid);
+
+    // Get a list of ids for all the variables in a group.
+    @inject 'int *nc_inq_varids_crk(int ncid, int nvars) {
+        int nnvars;
+        int *varids = (int *)malloc(nvars * sizeof(int));
+        crk_ncstatus = nc_inq_varids(ncid, &nnvars, varids);
+        if (!crk_ncstatus) return varids;
+        else return varids;
+    }\n'
+
+    @cname nc_inq_varids_crk
+    array[int] nc_inq_varids(int ncid, int nvars);
+
     // Data attributes
     @inject 'int nc_inq_varid_crk(int ncid, byteptr name) {
         int varid;
@@ -282,13 +354,50 @@
 
     @cname nc_inq_varid_crk
     int nc_inq_varid(int ncid, byteptr name);
-    
-    // Error handling
-    byteptr nc_strerror(int status);
-    @inject 'int nc_get_status() {
-        return crk_ncstatus;
-    }'
 
-    int nc_get_status();
-    
+    // Variable name
+    @inject 'byteptr nc_inq_varname_crk(int ncid, int varid) {
+        byteptr name = (byteptr)malloc(NC_MAX_NAME);
+        crk_ncstatus = nc_inq_varname(ncid, varid, name);
+        if (!crk_ncstatus) return name;
+        free(name);
+        return NULL;
+    }\n'
+
+    @cname nc_inq_varname_crk
+    byteptr nc_inq_varname(int ncid, int varid);
+
+    @inject 'int nc_inq_varndims_crk(int ncid, int varid) {
+        int ndims;
+        crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
+        if (!crk_ncstatus) return ndims;
+        else return -1;
+    }\n'
+
+    @cname nc_inq_varndims_crk
+    int nc_inq_varndims(int ncid, int varid);
+
+    @inject 'int *nc_inq_vardimid_crk(int ncid, int varid) {
+        int ndims;
+        int *dimids;
+        crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
+        if (crk_ncstatus !=0) return NULL;
+        dimids = (int *)malloc(ndims * sizeof(int));
+        crk_ncstatus = nc_inq_vardimid(ncid, varid, dimids);
+        if (crk_ncstatus !=0) return NULL;
+        return dimids;
+    }\n'
+
+    @cname nc_inq_vardimid_crk
+    array[int] nc_inq_vardimid(int ncid, int varid);
+
+    @inject 'int nc_inq_vartype_crk(int ncid, int varid) {
+        int tpe = 0;
+        crk_ncstatus = nc_inq_vartype(ncid, varid, &tpe);
+        if (!crk_ncstatus) return tpe;
+        return 0;
+    }\n'
+
+    @cname nc_inq_vartype_crk
+    int nc_inq_vartype(int ncid, int varid);
 }

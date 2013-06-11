@@ -29,12 +29,6 @@ byteptr nc_inq_path_crk(int ncid) {
         path[path_len] =0;
         return path;
     }
-int nc_inq_nvars_crk(int ncid) {
-        int nvars;
-        crk_ncstatus = nc_inq_nvars(ncid, &nvars);
-        if (!crk_ncstatus) return nvars;
-        else return -1;
-    }
 int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
         int idp = 0;
         crk_ncstatus  = nc_def_dim(ncid, name, len, &idp);
@@ -48,15 +42,86 @@ int nc_def_var_crk(int ncid, byteptr name, int xtype,
         if (!crk_ncstatus) return varidp;
         else return -1;
     }
+int nc_get_status() {
+        return crk_ncstatus;
+    }int nc_inq_ndims_crk(int ncid) {
+        int ndims;
+        crk_ncstatus = nc_inq_ndims(ncid, &ndims);
+        if (!crk_ncstatus) return ndims;
+        else return -1;
+    }
+int *nc_inq_dimids_crk(int ncid, int ndims) {
+        int nndims;
+        int *dimids = (int *)malloc(ndims*sizeof(int));
+        crk_ncstatus = nc_inq_dimids(ncid, &nndims, dimids, 0);
+        if (crk_ncstatus != 0) {
+            free(dimids);
+            return NULL;
+        }
+        else return dimids;
+    }
+byteptr nc_inq_dimname_crk(int ncid, int dimid) {
+        byteptr name = (byteptr)malloc(NC_MAX_NAME);
+        crk_ncstatus = nc_inq_dimname(ncid, dimid, name);
+        if (!crk_ncstatus) return name;
+        free(name);
+        return NULL;
+    }
+uint64_t nc_inq_dimlen_crk(int ncid, int dimid) {
+        size_t len = 0;
+        crk_ncstatus = nc_inq_dimlen(ncid, dimid, &len);
+        if (!crk_ncstatus) return (int64_t)len;
+        return 0;
+    }
+int nc_inq_nvars_crk(int ncid) {
+        int nvars;
+        crk_ncstatus = nc_inq_nvars(ncid, &nvars);
+        if (!crk_ncstatus) return nvars;
+        else return -1;
+    }
+int *nc_inq_varids_crk(int ncid, int nvars) {
+        int nnvars;
+        int *varids = (int *)malloc(nvars * sizeof(int));
+        crk_ncstatus = nc_inq_varids(ncid, &nnvars, varids);
+        if (!crk_ncstatus) return varids;
+        else return varids;
+    }
 int nc_inq_varid_crk(int ncid, byteptr name) {
         int varid;
         crk_ncstatus = nc_inq_varid(ncid, name, &varid);
         if (!crk_ncstatus) return varid;
         else return -1;
     }
-int nc_get_status() {
-        return crk_ncstatus;
+byteptr nc_inq_varname_crk(int ncid, int varid) {
+        byteptr name = (byteptr)malloc(NC_MAX_NAME);
+        crk_ncstatus = nc_inq_varname(ncid, varid, name);
+        if (!crk_ncstatus) return name;
+        free(name);
+        return NULL;
     }
+int nc_inq_varndims_crk(int ncid, int varid) {
+        int ndims;
+        crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
+        if (!crk_ncstatus) return ndims;
+        else return -1;
+    }
+int *nc_inq_vardimid_crk(int ncid, int varid) {
+        int ndims;
+        int *dimids;
+        crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
+        if (crk_ncstatus !=0) return NULL;
+        dimids = (int *)malloc(ndims * sizeof(int));
+        crk_ncstatus = nc_inq_vardimid(ncid, varid, dimids);
+        if (crk_ncstatus !=0) return NULL;
+        return dimids;
+    }
+int nc_inq_vartype_crk(int ncid, int varid) {
+        int tpe = 0;
+        crk_ncstatus = nc_inq_vartype(ncid, varid, &tpe);
+        if (!crk_ncstatus) return tpe;
+        return 0;
+    }
+
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -135,12 +200,10 @@ void crack_ext__netcdf_cinit(crack::ext::Module *mod) {
        f->addArg(type_int, "varid");
        f->addArg(type_int, "par_access");
 
-    f = mod->addFunc(type_int, "nc_inq_path",
+    f = mod->addFunc(type_byteptr, "nc_inq_path",
                      (void *)nc_inq_path_crk
                      );
        f->addArg(type_int, "ncid");
-       f->addArg(type_byteptr, "buffer");
-       f->addArg(type_uint32, "maxlen");
 
     f = mod->addFunc(type_int, "nc_redef",
                      (void *)nc_redef
@@ -164,11 +227,6 @@ void crack_ext__netcdf_cinit(crack::ext::Module *mod) {
 
     f = mod->addFunc(type_int, "nc_close",
                      (void *)nc_close
-                     );
-       f->addArg(type_int, "ncid");
-
-    f = mod->addFunc(type_int, "nc_inq_nvars",
-                     (void *)nc_inq_nvars_crk
                      );
        f->addArg(type_int, "ncid");
 
@@ -266,12 +324,6 @@ void crack_ext__netcdf_cinit(crack::ext::Module *mod) {
        f->addArg(array_puint64_q, "countp");
        f->addArg(array_pint_q, "op");
 
-    f = mod->addFunc(type_int, "nc_inq_varid",
-                     (void *)nc_inq_varid_crk
-                     );
-       f->addArg(type_int, "ncid");
-       f->addArg(type_byteptr, "name");
-
     f = mod->addFunc(type_byteptr, "nc_strerror",
                      (void *)nc_strerror
                      );
@@ -280,6 +332,77 @@ void crack_ext__netcdf_cinit(crack::ext::Module *mod) {
     f = mod->addFunc(type_int, "nc_get_status",
                      (void *)nc_get_status
                      );
+
+    f = mod->addFunc(type_int, "nc_inq_ndims",
+                     (void *)nc_inq_ndims_crk
+                     );
+       f->addArg(type_int, "ncid");
+
+    f = mod->addFunc(array_pint_q, "nc_inq_dimids",
+                     (void *)nc_inq_dimids_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "ndims");
+
+    f = mod->addFunc(type_byteptr, "nc_inq_dimname",
+                     (void *)nc_inq_dimname_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "dimid");
+
+    f = mod->addFunc(type_uint64, "nc_inq_dimlen",
+                     (void *)nc_inq_dimlen_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "dimid");
+
+    f = mod->addFunc(type_int, "nc_rename_dim",
+                     (void *)nc_rename_dim
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "dimid");
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_int, "nc_inq_nvars",
+                     (void *)nc_inq_nvars_crk
+                     );
+       f->addArg(type_int, "ncid");
+
+    f = mod->addFunc(array_pint_q, "nc_inq_varids",
+                     (void *)nc_inq_varids_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "nvars");
+
+    f = mod->addFunc(type_int, "nc_inq_varid",
+                     (void *)nc_inq_varid_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_byteptr, "name");
+
+    f = mod->addFunc(type_byteptr, "nc_inq_varname",
+                     (void *)nc_inq_varname_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "varid");
+
+    f = mod->addFunc(type_int, "nc_inq_varndims",
+                     (void *)nc_inq_varndims_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "varid");
+
+    f = mod->addFunc(array_pint_q, "nc_inq_vardimid",
+                     (void *)nc_inq_vardimid_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "varid");
+
+    f = mod->addFunc(type_int, "nc_inq_vartype",
+                     (void *)nc_inq_vartype_crk
+                     );
+       f->addArg(type_int, "ncid");
+       f->addArg(type_int, "varid");
 
 
     mod->addConstant(type_int, "NC_NAT",

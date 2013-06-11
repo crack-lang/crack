@@ -73,8 +73,7 @@ if (verbose){
     cout `v = $v\n`;
     cout `r = $r\n`;
 }
-
-original := r.copy(r);
+original := r.copy();
 
 printCmp(original, r, "Copied array not equal to original");
 
@@ -109,7 +108,7 @@ printCmp(r6, r, "Vector multiplication failed");
 r /= r.fill(r.count(), 2);
 
 // Append another array
-r.append(r3);
+r.extend(r3);
 NumericVector[int] r8 = [0, 2, 5, 9, 14, 20, 27, 35, 44, 54, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 printCmp(r8, r, "Vector append failed");
 
