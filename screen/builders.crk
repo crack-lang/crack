@@ -8,13 +8,13 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
-import crack.ascii split;
 import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.net Poller;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN, 
     CRK_PIPE_STDOUT, CRK_PIPE_STDERR;
+import crack.strutil split;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AppendBuffer, AssertionError, Buffer, SubString;
