@@ -68,18 +68,27 @@ class LLVMJitBuilder : public LLVMBuilder {
                 typedef std::map<std::string, llvm::Module *> 
                     DeferredMap;
                 DeferredMap deferred;
+                
+                // Keeps track of the deferred types for each unresolved 
+                // module.
+                typedef std::vector<BTypeDefPtr> TypeVec;
+                typedef std::map<llvm::Module *, TypeVec> TypeMap;
+                TypeMap deferredTypes;
 
                 static bool trace;
                 static spug::Tracer tracer;
 
-                // add the global to 'deferred' and resolve it in fixups.
+                // Define the global in the resolver.  This resolves the 
+                // global in fixups, and if 'defer' is true, adds it to 
+                // 'deferred'.
                 // Returns true if the introduction of the global clears all 
                 // unresolved externals for all of the modules it is 
                 // unresolved in.  In this case, the caller should check for 
                 // resolution of all modules participating in this cycle.
-                bool deferGlobal(LLVMJitBuilder *builder, 
-                                 llvm::GlobalValue *globalVal
-                                 );
+                bool defineGlobal(LLVMJitBuilder *builder, 
+                                  llvm::GlobalValue *globalVal,
+                                  bool defer
+                                  );
                 
                 // Merge all of the cycle groups that the two modules are in 
                 // into a single cycle group referenced by both.
@@ -114,18 +123,34 @@ class LLVMJitBuilder : public LLVMBuilder {
                              llvm::GlobalValue *globalVal
                              );
 
-                // Defer all of the globals from 'module'.  If we end up 
+                // Define all of the globals from 'module'.  If we end up 
                 // getting rid of everything in the fixup map, register all of
                 // the addresses in the cache map and debug info.
-                void defer(LLVMJitBuilder *builder, 
-                           BModuleDef *modDef
-                           );
+                // If 'defer' is true, we also add all of the globals to
+                // 'deferred' and mark the module as having unresolved 
+                // externals.
+                void defineAll(LLVMJitBuilder *builder, 
+                               BModuleDef *modDef,
+                               bool defer
+                               );
                 
                 /** See LLVMBuilder. */
                 void checkForUnresolvedExternals();
                 
                 /** Returns true if the module has unresolved externals. */
                 bool isUnresolved(llvm::Module *module);
+                
+                /** 
+                 * Stores the type with the deferred types for the module.  
+                 * Its underlying type will be reconstituted when the module 
+                 * is completed.
+                 */
+                void deferType(llvm::Module *module, BTypeDef *type);
+                
+                /**
+                 * Returns true if the resolver is tracking active cycles.
+                 */
+                bool hasActiveCycles() const;
         };
 
         llvm::ExecutionEngine *execEng;

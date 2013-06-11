@@ -177,6 +177,38 @@ void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
     // registration.
     builder->registerGlobals();
 
+    // Fix the deferred types.
+    for (ModuleSet::iterator i = group->begin(); i != group->end(); ++i) {
+        TypeMap::iterator typesForModuleIter = deferredTypes.find(*i);
+        if (typesForModuleIter == deferredTypes.end())
+            continue;
+
+        TypeVec &typesForModule = typesForModuleIter->second;
+        for (TypeVec::iterator typeIter = typesForModule.begin();
+             typeIter != typesForModule.end();
+             ++typeIter
+             ) {
+            SPUG_CHECK((*typeIter)->getOwner(),
+                       "Type " << (*typeIter)->name <<
+                        " remains unowned at deferred type resolution."
+                       );
+            Type *type =
+                builder->module->getTypeByName((*typeIter)->getFullName());
+            SPUG_CHECK(type,
+                       "Type " << (*typeIter)->getFullName() <<
+                        "could not be resolved after cyclic module "
+                        "integration."
+                       );
+            (*typeIter)->rep = type;
+            if (trace)
+                cerr << "Resolved deferred type " <<
+                    (*typeIter)->getFullName() << endl;
+        }
+
+        // Remove the module from deferred tupes, we're done with it.
+        deferredTypes.erase(typesForModuleIter);
+    }
+
     // Back-patch the new module into the rep of all of the ModuleDef
     // objects that reference it.
     for (ModuleSet::iterator i = group->begin(); i != group->end();
@@ -246,15 +278,8 @@ void LLVMJitBuilder::Resolver::registerGlobal(LLVMJitBuilder *builder,
                                               GlobalValue *globalVal
                                               ) {
     const string &name = globalVal->getName().str();
-    pair<CacheMap::iterator, bool> result =
-        cacheMap.insert(CacheMap::value_type(name, globalVal));
-    if (!result.second)
-        // it was already in the cache
-        return;
-    SPUG_CHECK(fixupMap.find(name) == fixupMap.end(),
-               "Registering global " << globalVal->getName().str() <<
-                " which is in fixup map!"
-               );
+    cacheMap.insert(CacheMap::value_type(name, globalVal));
+    // XXX bring back our check?
 }
 
 namespace {
@@ -304,27 +329,41 @@ bool LLVMJitBuilder::Resolver::resolve(ExecutionEngine *execEng,
     return false;
 }
 
-bool LLVMJitBuilder::Resolver::deferGlobal(LLVMJitBuilder *builder,
-                                           GlobalValue *globalVal
-                                           ) {
+bool LLVMJitBuilder::Resolver::defineGlobal(LLVMJitBuilder *builder,
+                                            GlobalValue *globalVal,
+                                            bool defer
+                                            ) {
     bool triggerCheck = false;
     if (!globalVal->isDeclaration() || globalVal->isMaterializable()) {
         const string &name = globalVal->getName().str();
-        if (trace) cerr << "deferring symbol " << name << endl;
         triggerCheck = resolveFixups(builder, globalVal, name);
-        deferred.insert(make_pair(name, globalVal->getParent()));
+        if (defer) {
+            if (trace) cerr << "deferring symbol " << name << endl;
+            deferred.insert(make_pair(name, globalVal->getParent()));
+        }
     }
     return triggerCheck;
 }
 
-void LLVMJitBuilder::Resolver::defer(LLVMJitBuilder *builder,
-                                     BModuleDef *modDef
-                                     ) {
+void LLVMJitBuilder::Resolver::defineAll(LLVMJitBuilder *builder,
+                                         BModuleDef *modDef,
+                                         bool defer
+                                         ) {
     Module *module = modDef->rep;
+
+    // We _always_ insert into the source map, even if we're deferring,
+    // because even if this module has no unresolved externals it's going to
+    // get caught up in the cycle so we'll need to fix its rep after linking.
     sourceMap.insert(make_pair(module, modDef));
+
+    // If we're deferring, add the module to the unresolved map so
+    // isUnresolved() shows it as having unresolved externals.
+    if (defer)
+        unresolvedMap[module];
+
     bool triggerCheck = false;
     for (Module::iterator i = module->begin(); i != module->end(); ++i) {
-        if (!i->isIntrinsic() && deferGlobal(builder, i))
+        if (!i->isIntrinsic() && defineGlobal(builder, i, defer))
             triggerCheck = true;
     }
 
@@ -332,7 +371,7 @@ void LLVMJitBuilder::Resolver::defer(LLVMJitBuilder *builder,
          i != module->global_end();
          ++i
          ) {
-        if (deferGlobal(builder, i))
+        if (defineGlobal(builder, i, defer))
             triggerCheck = true;
     }
 
@@ -364,7 +403,18 @@ void LLVMJitBuilder::Resolver::checkForUnresolvedExternals() {
 }
 
 bool LLVMJitBuilder::Resolver::isUnresolved(Module *module) {
-    return sourceMap.find(module) != sourceMap.end();
+    return unresolvedMap.find(module) != unresolvedMap.end();
+}
+
+void LLVMJitBuilder::Resolver::deferType(Module *module, BTypeDef *type) {
+    if (trace)
+        cerr << "Deferring type " << module->getModuleIdentifier() <<
+            "." << type->name << endl;;
+    deferredTypes[module].push_back(type);
+}
+
+bool LLVMJitBuilder::Resolver::hasActiveCycles() const {
+    return fixupMap.size();
 }
 
 ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
@@ -776,6 +826,7 @@ TypeDefPtr LLVMJitBuilder::materializeType(Context &context,
                                         true, /*is pointer type*/
                                         0 /*nextVTableSlot*/
                                         );
+        resolver->deferType(module, type.get());
         return type;
     } else {
         return LLVMBuilder::materializeType(context, name);
@@ -837,10 +888,16 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                     hasUnresolvedExternals = true;
         }
 
-        if (hasUnresolvedExternals)
-            resolver->defer(this, bmod.get());
-        else
+        if (hasUnresolvedExternals) {
+            resolver->defineAll(this, bmod.get(), true);
+        } else {
+            // If we there are modules in cycle resolution, define all of our
+            // globals with the resolver (but don't mark them as deferred).
+            if (resolver->hasActiveCycles())
+                resolver->defineAll(this, bmod.get(), false);
+
             registerGlobals();
+        }
 
         setupCleanup(bmod.get());
 
