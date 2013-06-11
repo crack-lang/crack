@@ -8,8 +8,8 @@
 # Code for dealing with time.
 
 import crack.ascii fract10;
-import crack.runtime InternalDate, strftime, strlen;
-import crack.lang AssertionError, ManagedBuffer, Formatter;
+import crack.runtime InternalDate, strftime, strlen, strptime;
+import crack.lang AssertionError, ManagedBuffer, Formatter, CString;
 import crack.io FStr, cout;
 import crack.runtime TimeVal;
 import crack.cont.array Array;
@@ -114,7 +114,7 @@ class Date : Object, InternalDate {
         setLocalSeconds(secs);
     }
 
-    oper init(InternalDate d){
+    oper init(InternalDate d) {
         if (!(d is null)){
             tm_sec = d.tm_sec;
             tm_min = d.tm_min;
@@ -131,26 +131,35 @@ class Date : Object, InternalDate {
     }
 
     @static Date now() {
-        Date d = {};
+        d := Date();
         d.setLocalNow();
         return d;
     }
 
-    String getDefaultString(){
+    @static
+    Date strptime(CString s, CString format) {
+        d := Date();
+        result := strptime(s.buffer, format.buffer, d); // TODO handle errors
+        if (result is null) return null;
+        return d;
+   }
+
+
+    String getDefaultString() {
         ManagedBuffer result = {100};
         _toBufferRaw(result.buffer);
         result.size = strlen(result.buffer);
         return String(result, true);
     }
 
-   String strftime(String format, uint buflen){
+   String strftime(String format, uint buflen) {
         String result = {buflen, 0};
         strftime(result.buffer, buflen, format.buffer, this); // TODO handle errors
         len:=strlen(result.buffer);
         return result.substr(0,len);
    }
 
-   String strftime(String format){
+   String strftime(String format) {
         return strftime(format, 100); // Comments in the Linux man page recommends 100 byte buffer
    }
 

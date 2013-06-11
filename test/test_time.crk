@@ -6,7 +6,8 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 // Test time.h binding in runtime
-import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen;
+import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen,
+                     strptime;
 import crack.lang ManagedBuffer;
 import crack.cmdline CmdOptions;
 import crack.io cout, FStr;
@@ -114,5 +115,25 @@ if (Time(100, 123) - Time(99, 999999999) != TimeDelta(0, 124))
 
 localDate := Date.now();
 localTime := Time.now();
+
+// Test strptime
+buf := strptime("20130610T100001".buffer, "%Y%m%dT%H%M%S".buffer, mytime);
+if (verbose) printDate(mytime);
+secs = mytime.getSeconds();
+if (verbose)
+    cout `secs = $secs\n`;
+
+if (secs != 1370887201)
+    cout `strptime failed, got $secs seconds instead of 1370887201\n`;
+
+// Test higher level strptime in Date class
+Mytime = Date.strptime("20130610T100001", "%Y%m%dT%H%M%S");
+secs = Mytime.getSeconds();
+if (verbose)
+    cout `secs = $secs\n`;
+
+if (secs != 1370887201)
+    cout `Date.strptime failed, got $secs seconds instead of 1370887201\n`;
+
 
 cout `ok\n`;

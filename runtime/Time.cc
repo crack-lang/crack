@@ -223,6 +223,13 @@ void crack_runtime_time_cinit(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "format");
        f->addArg(type_InternalDate, "d");
 
+    f = mod->addFunc(type_byteptr, "strptime",
+                     (void *)strptime
+                     );
+       f->addArg(type_byteptr, "s");
+       f->addArg(type_byteptr, "format");
+       f->addArg(type_InternalDate, "d");
+
     f = mod->addFunc(array_pbyteptr_q, "get_environ",
                      (void *)get_environ
                      );
