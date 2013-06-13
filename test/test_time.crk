@@ -12,7 +12,7 @@ import crack.lang ManagedBuffer;
 import crack.cmdline CmdOptions;
 import crack.io cout, FStr;
 import crack.time Date, Time, TimeDelta;
-import crack.sys argv;
+import crack.sys argv, env;
 
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
@@ -117,14 +117,18 @@ localDate := Date.now();
 localTime := Time.now();
 
 // Test strptime
+env["TZ"]="PDT";
 buf := strptime("20130610T100001".buffer, "%Y%m%dT%H%M%S".buffer, mytime);
+if (verbose)
+    cout `secs = $secs\n`;
+
 if (verbose) printDate(mytime);
 secs = mytime.getSeconds();
 if (verbose)
     cout `secs = $secs\n`;
 
-if (secs != 1370887201)
-    cout `strptime failed, got $secs seconds instead of 1370887201\n`;
+if (secs != 1370858401)
+    cout `strptime failed, got $secs seconds instead of 1370858401\n`;
 
 // Test higher level strptime in Date class
 Mytime = Date.strptime("20130610T100001", "%Y%m%dT%H%M%S");
@@ -132,8 +136,21 @@ secs = Mytime.getSeconds();
 if (verbose)
     cout `secs = $secs\n`;
 
-if (secs != 1370887201)
-    cout `Date.strptime failed, got $secs seconds instead of 1370887201\n`;
+if (secs != 1370858401)
+    cout `Date.strptime failed, got $secs seconds instead of 1370858401\n`;
+
+// Test time zone spec
+env["TZ"]="PDT";
+Mytime = Date.strptime("20130610T100001", "%Y%m%dT%H%M%S");
+if (verbose)
+    cout `strptime Date = $Mytime\n`;
+
+secs = Mytime.getSeconds();
+if (verbose)
+    cout `secs = $secs\n`;
+
+if (secs != 1370858401)
+    cout `Date.strptime failed, got $secs seconds instead of 1370858401\n`;
 
 
 cout `ok\n`;

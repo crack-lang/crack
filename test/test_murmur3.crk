@@ -9,6 +9,7 @@
 
 import crack.ascii hex, radix;
 import crack.hash.murmur3 Murmur3_32;
+import crack.random uuid;
 import crack.io cout;
 import crack.cont.array Array;
 
@@ -31,9 +32,12 @@ for (uint32 i=0; i < int32Vals.count(); i++) {
         success = false;
 }
 
-
-if (hex(h.digest()) == "47fa8b24" && success)
-    cout.write("ok\n");
-else
+if (hex(h.digest()) != "47fa8b24" || !success)
     cout.write("FAILED getting digest value\n");
 
+
+myUUID := uuid(12);
+if (myUUID.size != 12 || hex(myUUID) == "000000000000000000000000")
+    cout `Failed to generate meaningful UUID\n`;
+else
+    cout `ok\n`;

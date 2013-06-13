@@ -9,7 +9,8 @@
 
 import crack.ascii fract10;
 import crack.runtime InternalDate, strftime, strlen, strptime;
-import crack.lang AssertionError, ManagedBuffer, Formatter, CString;
+import crack.lang AssertionError, ManagedBuffer, Formatter, CString,
+                  InvalidArgumentError;
 import crack.io FStr, cout;
 import crack.runtime TimeVal;
 import crack.cont.array Array;
@@ -140,7 +141,8 @@ class Date : Object, InternalDate {
     Date strptime(CString s, CString format) {
         d := Date();
         result := strptime(s.buffer, format.buffer, d); // TODO handle errors
-        if (result is null) return null;
+        if (result is null)
+            throw InvalidArgumentError("Could not parse time string using supplied format");
         return d;
    }
 
