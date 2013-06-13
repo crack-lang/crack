@@ -8,9 +8,10 @@
 
 import crack.lang Buffer, CString, InvalidStateError, AssertionError,
                   StaticString, ManagedBuffer, InvalidArgumentError;
-import crack.io Formatter, cout, FStr;
+import crack.io Formatter, cout, FStr, cerr;
 import crack.time Time;
-import crack.runtime memcpy;
+import crack.runtime memcpy, errno;
+import crack.sys strerror;
 import crack.ascii hex, escape;
 import crack.db.mongo_support Oid;
 import crack.ext._mongo
@@ -706,21 +707,37 @@ class MongoSync {
         mongo_sync_cursor _c;
         mongo_packet _p;
         MongoSync _M;
+        bool _hasnext;
 
         oper init(MongoSync M, CString ns, mongo_packet p) :
              _p = p, _M = M {
             _c = mongo_sync_cursor_new (_M.get_mongo(), ns.buffer, p);
             if (_c is null)
                 throw AssertionError("Unable to create cursor");
+            _hasnext = mongo_sync_cursor_next(_c);
         }
 
         bool next() {
-            return mongo_sync_cursor_next(_c);
+            _hasnext = mongo_sync_cursor_next(_c);
+            return _hasnext;
         }
 
         BSON data() {
             return BSON(mongo_sync_cursor_get_data(_c));
         }
+
+        MongoSyncCursor iter() {
+            return this;
+        }
+
+        MongoSyncCursor elem() {
+            return this;
+        }
+
+        bool isTrue() {
+            return _hasnext;
+        }
+
 
         oper del() {
             if (!(_c is null))
@@ -733,8 +750,13 @@ class MongoSync {
     MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
                           BSON query, BSON sel) {
         bson bquery = query is null ? bson_new() : query.get_bson();
-        bson bsel = sel is null ? bson_new() : sel.get_bson();
+        bson bsel = null;
+        if (!(sel is null)) bsel =  sel.get_bson();
+
         p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret, bquery, bsel);
+        if (query is null) bson_free(bquery);
+        if (p is null) 
+            return null;
         return MongoSyncCursor(this, ns, p);
     }
 
