@@ -2,6 +2,7 @@ import crack.lang ManagedBuffer, Buffer, InvalidArgumentError;
 import crack.io Formatter;
 import crack.runtime memcpy;
 import crack.ascii hex;
+import crack.random uuid;
 
 class Oid : ManagedBuffer {
 
@@ -20,6 +21,10 @@ class Oid : ManagedBuffer {
             throw InvalidArgumentError("BSON oid objects must have size 12");
         size = 12;
         memcpy(buffer, newdata.buffer, newdata.size);
+    }
+
+    @static Oid new() {
+        return Oid(uuid(12));
     }
 
     bool isZero() {

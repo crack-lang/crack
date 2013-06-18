@@ -13,6 +13,11 @@ import crack.time Time;
 import crack.runtime memcpy, errno;
 import crack.sys strerror;
 import crack.ascii hex, escape;
+import crack.enc.json JsonParser, UnexpectedToken, ParseException,
+    JsonFormatter, JsonStringFormatter, JsonObject, JsonArray, JsonInt,
+    JsonFloat, JsonBool, JsonString;
+@import crack.ann define;
+
 import crack.db.mongo_support Oid;
 import crack.ext._mongo
     BSON_BINARY_SUBTYPE_GENERIC, BSON_BINARY_SUBTYPE_FUNCTION,
@@ -155,6 +160,76 @@ class BSONOid : Oid {
     }
 }
 
+uint _fromJsonObject(bson b, JsonObject jdo);
+uint _fromJsonArray(bson b, JsonArray jdo);
+
+uint _fromJsonObject(bson b, JsonObject jdo) {
+    uint cnt = 0;
+    for (it :in jdo) {
+        jo := it.val;
+        key := CString(it.key);
+        if (jo.isa(JsonObject)) {
+            newb := bson_new();
+            _fromJsonObject(newb, JsonObject.cast(jo));
+            bson_finish(newb);
+            bson_append_document(b, key.buffer, newb);
+        } else if (jo.isa(JsonBool))
+            bson_append_boolean(b, key.buffer,
+                JsonBool.cast(jo).value);
+        else if (jo.isa(JsonFloat))
+            bson_append_double(b, key.buffer,
+                JsonFloat.cast(jo).value);
+        else if (jo.isa(JsonInt))
+            bson_append_int64(b, key.buffer,
+                int64(JsonInt.cast(jo).value));
+        else if (jo.isa(JsonString))
+            bson_append_string(b, key.buffer,
+                JsonString.cast(jo).buffer, int32(JsonString.cast(jo).size));
+        else if (jo.isa(JsonArray)) {
+            newb := bson_new();
+            _fromJsonArray(newb, JsonArray.cast(jo));
+            bson_finish(newb);
+            bson_append_array(b, key.buffer, newb);
+        }
+        cnt++;
+    }
+    return cnt;
+}
+
+uint _fromJsonArray(bson b, JsonArray jdo) {
+    sfmt := FStr();
+    uint cnt = 0;
+    for (jo :in jdo) {
+        key := CString(sfmt `$cnt`);
+        if (jo.isa(JsonObject)) {
+            newb := bson_new();
+            _fromJsonObject(newb, JsonObject.cast(jo));
+            bson_finish(newb);
+            bson_append_document(b, key.buffer, newb);
+        } else if (jo.isa(JsonBool))
+            bson_append_boolean(b, key.buffer,
+                JsonBool.cast(jo).value);
+        else if (jo.isa(JsonFloat))
+            bson_append_double(b, key.buffer,
+                JsonFloat.cast(jo).value);
+        else if (jo.isa(JsonInt))
+            bson_append_int64(b, key.buffer,
+                int64(JsonInt.cast(jo).value));
+        else if (jo.isa(JsonString))
+            bson_append_string(b, key.buffer,
+                JsonString.cast(jo).buffer, int32(JsonString.cast(jo).size));
+        else if (jo.isa(JsonArray)) {
+            newb := bson_new();
+            _fromJsonArray(newb, JsonArray.cast(jo));
+            bson_finish(newb);
+            bson_append_array(b, key.buffer, newb);
+        }
+        cnt++;
+    }
+    return cnt;
+}
+
+
 class BSON {
     bson _b;
     int _type;
@@ -230,6 +305,22 @@ class BSON {
     @static
     bool validateKey(CString key, bool forbid_dots, bool no_dollar) {
         return bson_validate_key(key.buffer, forbid_dots, no_dollar);
+    }
+
+    @static BSON fromJSON(Buffer json) {
+        parser := JsonParser();
+        presult := parser.parse(json);
+
+        if (presult.result is null)
+            throw ParseException("failed to parse json document", 1, 1);
+
+        jdo := JsonObject.cast(presult.result); // an OrderedHasmap[String, Object]
+        bdo := BSON();
+
+        _fromJsonObject(bdo.get_bson(), jdo);
+        bdo.finish();
+        return bdo;
+        
     }
 
     // Append API --------------------------------------------------------------
@@ -466,8 +557,8 @@ class BSON {
             if (t == BSON_TYPE_NONE) fmt.write("NONE");
             else if (t == BSON_TYPE_DOUBLE) fmt `$(bson_cursor_get_double(c))`;
             else if (t == BSON_TYPE_STRING) fmt `"$(CString(bson_cursor_get_string(c), false))"`;
-            else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c)))`;
             else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c)))`;
+            else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c)))`;
             else if (t == BSON_TYPE_BINARY) fmt.write("<binary>");
             else if (t == BSON_TYPE_OID) BSONOid(c).format(fmt);
             else if (t == BSON_TYPE_BOOLEAN) fmt.write(bson_cursor_get_boolean(c) ? "true" : "false");
@@ -758,6 +849,14 @@ class MongoSync {
         if (p is null) 
             return null;
         return MongoSyncCursor(this, ns, p);
+    }
+
+    @final MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
+                          String squery, String sel) {
+        BSON bquery = null, bsel = null;
+        if (squery) bquery = BSON.fromJSON(squery);
+        if (sel) bsel = BSON.fromJSON(sel);
+        return query(ns, flags, skip, ret, bquery, bsel);
     }
 
     // Send a get more command to MongoDB
