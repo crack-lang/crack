@@ -242,6 +242,11 @@ class BSON {
 
     // Wrapper constructor
     oper init(bson b) : _b = b, _type = BSON_TYPE_DOCUMENT {
+        c := bson_cursor_new(b);
+        if (!(c is null)) {
+            _type = bson_cursor_type(c);
+            bson_cursor_free(c);
+        }
     }
 
     // Create a new BSON object.
@@ -494,7 +499,7 @@ class BSON {
 
         // Get the value stored at the cursor, as a BSON array.
         BSON getArray() {
-            return BSON(bson_cursor_get_array(_c), BSON_TYPE_DOCUMENT);
+            return BSON(bson_cursor_get_array(_c), BSON_TYPE_ARRAY);
         }
 
         // Get the value stored at the cursor, as an ObjectID.
@@ -551,16 +556,17 @@ class BSON {
             if (!first) fmt.write(", ");
             else first = false;
 
-            fmt `$(CString(bson_cursor_key(c), false)): `;
+            if (_type != BSON_TYPE_ARRAY)
+                fmt `"$(CString(bson_cursor_key(c), false))": `;
             t := bson_cursor_type(c);
 
             if (t == BSON_TYPE_NONE) fmt.write("NONE");
             else if (t == BSON_TYPE_DOUBLE) fmt `$(bson_cursor_get_double(c))`;
             else if (t == BSON_TYPE_STRING) fmt `"$(CString(bson_cursor_get_string(c), false))"`;
-            else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c)))`;
-            else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c)))`;
+            else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c), t))`;
+            else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c), t))`;
             else if (t == BSON_TYPE_BINARY) fmt.write("<binary>");
-            else if (t == BSON_TYPE_OID) BSONOid(c).format(fmt);
+            else if (t == BSON_TYPE_OID) fmt `"$(escape(BSONOid(c)))"`;
             else if (t == BSON_TYPE_BOOLEAN) fmt.write(bson_cursor_get_boolean(c) ? "true" : "false");
             else if (t == BSON_TYPE_UTC_DATETIME) fmt `$(bson_cursor_get_utc_datetime(c))`;
             else if (t == BSON_TYPE_NULL) fmt.write("null");
@@ -689,13 +695,30 @@ class MongoSync {
     bool update(CString ns, int32 flags, BSON selector, BSON update) {
         _checkConnected();
         return mongo_sync_cmd_update(_m, ns.buffer, flags,
-                                     selector.get_bson(), update.get_bson());
+                                     selector.get_bson(), update.get_bson()
+                                    );
+    }
+
+    // Send an update command to MongoDB.
+    bool update(CString ns, int32 flags, String selector, String update) {
+        _checkConnected();
+        return mongo_sync_cmd_update(_m, ns.buffer, flags,
+                                     BSON.fromJSON(selector).get_bson(),
+                                     BSON.fromJSON(update).get_bson()
+                                    );
     }
 
     // Send an insert command to MongoDB.
     bool insert(CString ns, BSON doc) {
         _checkConnected();
         return mongo_sync_cmd_insert(_m, ns.buffer, doc.get_bson());
+    }
+
+    // Send an insert command to MongoDB from a JSON document.
+    bool insert(CString ns, String doc) {
+        _checkConnected();
+        return mongo_sync_cmd_insert(_m, ns.buffer,
+                                     BSON.fromJSON(doc).get_bson());
     }
 
     // Send an insert command to MongoDB.
@@ -710,14 +733,29 @@ class MongoSync {
         return mongo_sync_cmd_delete(_m, ns.buffer, flags, sel.get_bson());
     }
 
+    // Send a delete command to MongoDB.
+    bool delete(CString ns, int32 flags, String sel) {
+        _checkConnected();
+        return mongo_sync_cmd_delete(_m, ns.buffer, flags,
+                                     BSON.fromJSON(sel).get_bson());
+    }
+
     // Send a custom command to MongoDB. TODO add
     // mongo_packet mongo_sync_cmd_custom(mongo_sync_connection conn, byteptr db,
     //                                    bson command);
 
     // Send a count() command to MongoDB.
-    float64 count(CString db, CString coll, BSON query) {
+    uint count(CString db, CString coll, BSON query) {
         _checkConnected();
-        return mongo_sync_cmd_count(_m, db.buffer, coll.buffer, query.get_bson());
+        return uint(mongo_sync_cmd_count(_m, db.buffer,
+                                    coll.buffer, query.get_bson()));
+    }
+
+    // Send a count() command to MongoDB.
+    uint count(CString db, CString coll, String query) {
+        _checkConnected();
+        return uint(mongo_sync_cmd_count(_m, db.buffer, coll.buffer,
+                                    BSON.fromJSON(query).get_bson()));
     }
 
     // Create a new MongoDB collection. TODO bind
@@ -802,6 +840,10 @@ class MongoSync {
 
         oper init(MongoSync M, CString ns, mongo_packet p) :
              _p = p, _M = M {
+            if (_p is null) {
+                _hasnext = false;
+                return;
+            }
             _c = mongo_sync_cursor_new (_M.get_mongo(), ns.buffer, p);
             if (_c is null)
                 throw AssertionError("Unable to create cursor");
@@ -809,11 +851,13 @@ class MongoSync {
         }
 
         bool next() {
+            if (_p is null) return false;
             _hasnext = mongo_sync_cursor_next(_c);
             return _hasnext;
         }
 
         BSON data() {
+            if (_p is null) return null;
             return BSON(mongo_sync_cursor_get_data(_c));
         }
 
@@ -846,8 +890,6 @@ class MongoSync {
 
         p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret, bquery, bsel);
         if (query is null) bson_free(bquery);
-        if (p is null) 
-            return null;
         return MongoSyncCursor(this, ns, p);
     }
 
