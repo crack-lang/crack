@@ -208,6 +208,11 @@ void createClassImpl(Context &context, BTypeDef *type) {
         else
             basesVal[i] =
                 ConstantExpr::getGetElementPtr(baseClassPtr, index00, 2);
+        
+        SPUG_CHECK(basesVal[i]->getType() == classType->rep,
+                   "Base " << i << " of class " << type->getFullName() <<
+                    " has an LLVM type that is not that of Class"
+                   );
     }
     ArrayType *baseArrayType =
         ArrayType::get(classType->rep, type->parents.size());
