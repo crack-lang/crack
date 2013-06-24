@@ -167,6 +167,7 @@ noinst_HEADERS = \
     builder/llvm/LLVMJitBuilder.h \
     builder/llvm/LLVMLinkerBuilder.h \
     builder/llvm/LLVMValueExpr.h \
+    builder/llvm/ModuleMerger.h \
     builder/llvm/Incompletes.h \
     builder/llvm/LLVMBuilder.h \
     builder/llvm/Native.h \
