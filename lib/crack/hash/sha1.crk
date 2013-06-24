@@ -210,7 +210,7 @@ class SHA1 : Hash {
         update(buf);
     }
 
-    // Return raw digest as a buffer of 4 bytes
+    // Return raw digest as a buffer of 20 bytes
     Buffer digest() {
         return hash;
     }
