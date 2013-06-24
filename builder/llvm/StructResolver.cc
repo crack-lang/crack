@@ -97,6 +97,9 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
         
         string canonicalName = name.substr(0, pos);
 
+        SR_DEBUG cerr << "Mapping type " << structTy->getName().str() << 
+            " to " << canonicalName << endl;
+
         // The numeric suffix is only applied when we discover a new type with 
         // the same name.  Therefore, the fact that there is a numeric suffix 
         // implies that we should have already loaded the type.
@@ -109,22 +112,27 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
         if (!type) {
             SR_DEBUG cerr << "Unregistered duplicate type found for " <<
                 canonicalName << endl;
-            StructType *curType = dyn_cast<StructType>(*i);
             typeMap[structTy] = structTy;
-            LLVMBuilder::putLLVMType(canonicalName, curType);
+            LLVMBuilder::putLLVMType(canonicalName, structTy);
             structTy->setName(canonicalName);
             continue;
+        } else if (type->getName() != canonicalName) {
+            // This was to help me debug something.
+            SR_DEBUG cerr << "restoring missing name for original type " <<
+                canonicalName << endl;
+            type->setName(canonicalName);
+            if (type == structTy)
+                continue;
         }
-
-        // we want to map the struct (the ContainedType), not the pointer to it
-        PointerType *a = type->getPointerTo();
-        assert(a && "expected a PointerType");
 
         StructType *left = structTy;
         assert(left);
-        StructType *right = dyn_cast<StructType>(a->getElementType());
-        assert(right);
-        assert(left != right);
+        StructType *right = type;
+        if (typeMap.find(left) != typeMap.end())
+            cerr << "XXX entry for " << canonicalName << " already found." << 
+                endl;
+        SPUG_CHECK(left != right, 
+                   "Mapping type " << canonicalName << " to itself");
         //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
         typeMap[left] = right;
     }
