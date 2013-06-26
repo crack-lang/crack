@@ -167,8 +167,10 @@ class Socket : FileHandle @implements Reader, Writer {
     oper init(int fd) : FileHandle(fd) {}
 
     void close() {
-        close(fd);
-        fd = -1;
+        if (fd != -1) {
+          close(fd);
+          fd = -1;
+        }
     }
         
     oper del() {

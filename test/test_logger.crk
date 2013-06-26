@@ -58,6 +58,9 @@ lf `Log to /dev/null`;
 lf.setFile(File("/dev/null","w"));
 lf `Log to /dev/null again`;
 
+lf.setFile(File("/dev/null","a"));
+lf `Log to /dev/null again in append mode`;
+
 lf.setWriter(File("/dev/null","w"));
 lf `Log to /dev/null as a writer`;
 

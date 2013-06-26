@@ -312,16 +312,16 @@ class LogFormatter : StandardFormatter {
         _logger.setNamedFields(fieldSpec);
     }
 
-    void setLoggerLevel(uint newLevel){
-        _logger.setLevel(newLevel);
-    }
-
     void setLogger(Logger newLogger){
         _logger = newLogger;
     }
 
     void setLevel(uint newLevel){
         _level = newLevel;
+    }
+
+    void setLoggerLevel(uint newLevel){
+        _logger.setLevel(newLevel);
     }
 
     void setFormatter(Formatter fmt){
