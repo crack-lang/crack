@@ -9,8 +9,8 @@
 
 import crack.runtime basename, chdir, closedir, errno, fileExists, free,
     fileRemove, getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat,
-    stat, Dir, DirEntry, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, PATH_MAX,
-    S_IFDIR, S_IFLNK;
+    stat, Dir, DirEntry, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND,
+    PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang Buffer, CString, Exception, InvalidArgumentError,
@@ -215,8 +215,19 @@ class RealPath : Path {
         return OwningFDReader(fd);
     }
 
+    alias makeReader = reader;
+
     Writer writer() {
         fd := open(__path.buffer, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        if (fd == -1)
+            throw SystemError(FStr() `opening $__path`);
+        return OwningFDWriter(fd);
+    }
+
+    alias makeWriter = writer;
+
+    Writer makeAppender() {
+        fd := open(__path.buffer, O_APPEND | O_WRONLY, 0777);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
         return OwningFDWriter(fd);

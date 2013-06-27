@@ -5,7 +5,7 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
-
+import crack.lang ManagedBuffer;
 import crack.io cout;
 import crack.strutil StringArray;
 import crack.fs cwd, makePath, sysfs, Path, RealPath;
@@ -18,6 +18,32 @@ if (!RealPath('writer.out').exists())
 
 if (tempFile.makeFullReader().readAll() != 'this is a test')
     cout `FAILED full reader readAll()\n`;
+tempFile.delete();
+if (tempFile.exists())
+    cout `FAILED file delete\n`;
+
+// Repeat using different methods
+tempFile = RealPath('writer.out');
+tempFile.makeWriter().write('this is a test');
+
+if (!RealPath('writer.out').exists())
+    cout `FAILED exists check for written file\n`;
+
+readBuf := ManagedBuffer(100);
+rdr := tempFile.makeReader();
+rdr.read(readBuf);
+if (readBuf != 'this is a test')
+    cout `FAILED reader read()\n`;
+
+// Append to file
+tempFile.makeAppender().write(', and so is this');
+readBuf = ManagedBuffer(100);
+rdr = tempFile.makeReader();
+rdr.read(readBuf);
+if (readBuf != 'this is a test, and so is this')
+    cout `FAILED appended reader read()\n`;
+
+
 tempFile.delete();
 if (tempFile.exists())
     cout `FAILED file delete\n`;

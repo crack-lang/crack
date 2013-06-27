@@ -24,8 +24,10 @@ class FileHandle : Object {
 
     ## Close the file descriptor.
     void close() {
-        close(fd);
-        fd = -1;
+        if (fd != -1) {
+          close(fd);
+          fd = -1;
+        }
     }
 
     ## Set the file handle's non blocking status

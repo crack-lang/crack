@@ -9,7 +9,8 @@
 // 
 
 import crack.io cout, FStr, StandardFormatter, Writer, FDReader, FDWriter;
-import crack.lang die, Buffer, Exception, FreeBase, SubString, CString, WriteBuffer, Formatter;
+import crack.lang die, Buffer, Exception, FreeBase, SubString, CString,
+                  WriteBuffer, Formatter;
 import crack.io.readers LineReader;
 import crack.sys strerror;
 
@@ -80,6 +81,7 @@ class Openable: VTableBase {
 
 byte F_READ  = b'r';
 byte F_WRITE = b'w';
+byte F_APPEND = b'a';
 
 class File : FileInfo,
              Openable
@@ -172,10 +174,11 @@ class File : FileInfo,
         // parse file mode
         if (_mode.size != 1 ||
             ((_mode[0] != F_READ) &&
-             (_mode[0] != F_WRITE)))
+             (_mode[0] != F_WRITE) &&
+             (_mode[0] != F_APPEND)))
             throw Exception(
                 FStr() `$name: invalid file mode "$_mode", must be one of \
-"r" or "w"`
+"r", "w" or "a"`
             );
 
         if (_mode[0] == F_READ)
