@@ -128,9 +128,6 @@ StructResolver::StructListType StructResolver::buildTypeMap() {
         StructType *left = structTy;
         assert(left);
         StructType *right = type;
-        if (typeMap.find(left) != typeMap.end())
-            cerr << "XXX entry for " << canonicalName << " already found." << 
-                endl;
         SPUG_CHECK(left != right, 
                    "Mapping type " << canonicalName << " to itself");
         //cout << "struct map [" << left->getName().str() << "] to [" << right->getName().str() << "]\n";
@@ -313,8 +310,19 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
         int cycleCount = visitedStructs[t];
         visitedStructs.erase(t);
         if (modified) {
+            // check to see if we have mapped the type while mapping the 
+            // elements.
+            StructMapType::iterator nestedMapping = typeMap.find(t);
+            if (nestedMapping != typeMap.end()) {
+                SR_DEBUG cerr << "\t\t## reusing mapping for " <<
+                    (origType->hasName() ? origType->getName().str() : "") <<
+                    endl;
+                return nestedMapping->second;
+            }
+        
             StructType *newType = StructType::create(getGlobalContext());
             typeMap[t] = newType;
+            reverseMap[newType] = t;
             
             // if the type contains any cycles, add a placeholder for it and 
             // recalculate the member types.
@@ -333,9 +341,10 @@ Type *StructResolver::maybeGetMappedType(Type *t) {
                 string origName = origType->getName().str();
                 origType->setName(SPUG_FSTR(origName << "." << origType));
                 newType->setName(origName);
+                LLVMBuilder::putLLVMType(origName, newType);
             }
 
-            return maybeGetMappedType(t);
+            return newType;
         }
     }
 
