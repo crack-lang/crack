@@ -21,19 +21,26 @@ using namespace builder::mvll;
 using namespace llvm;
 using namespace std;
 
+bool ModuleMerger::trace = false;
+spug::Tracer ModuleMerger::tracer(
+    "ModuleMerger",
+    ModuleMerger::trace,
+    "Merging of cyclic modules into a single module."
+);
+
 bool ModuleMerger::defined(GlobalValue *gval) {
-    if (gval->hasName() && !gval->hasLocalLinkage()) {
-        GlobalValue *targetGVal = target->getNamedValue(gval->getName());
+    GlobalValue *targetGVal = 0;
+    if (gval->hasName() && !gval->hasLocalLinkage())
+        targetGVal = target->getNamedValue(gval->getName());
 
-        // if it's already defined in the target, make sure it's in the value
-        // map, too, then fall through to returning "true".
-        if (targetGVal)
-            valueMap[gval] = targetGVal;
-        else
-            return false;
+    // if it's already defined in the target, make sure it's in the value
+    // map, too, then fall through to returning "true".
+    if (targetGVal) {
+        valueMap[gval] = targetGVal;
+        return true;
+    } else {
+        return false;
     }
-
-    return true;
 }
 
 void ModuleMerger::copyGlobalAttrs(GlobalValue *dst, GlobalValue *src) {
@@ -44,6 +51,10 @@ void ModuleMerger::copyGlobalAttrs(GlobalValue *dst, GlobalValue *src) {
 void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar) {
     if (defined(gvar))
         return;
+
+    if (trace)
+        cerr << "Adding global definition for " << gvar->getName().str() <<
+            " @" << gvar << endl;
 
     GlobalVariable *newGVar =
         new GlobalVariable(*target, gvar->getType()->getElementType(),
@@ -64,8 +75,9 @@ void ModuleMerger::addFunctionDeclaration(Function *func) {
     if (defined(func))
         return;
 
-    cerr << "adding function declaration for " << func->getName().str() <<
-        " @" << func << endl;
+    if (trace)
+        cerr << "adding function declaration for " << func->getName().str() <<
+            " @" << func << endl;
     Function *newFunc = Function::Create(func->getFunctionType(),
                                          func->getLinkage(),
                                          func->getName(),
@@ -76,21 +88,38 @@ void ModuleMerger::addFunctionDeclaration(Function *func) {
 }
 
 void ModuleMerger::addInitializer(GlobalVariable *gvar) {
-    if (defined(gvar))
-        return;
-
     GlobalVariable *dest = cast<GlobalVariable>(valueMap[gvar]);
-    dest->setInitializer(MapValue(gvar->getInitializer(), valueMap,
+    Constant *mapped = MapValue(gvar->getInitializer(), valueMap,
                                   RF_None
-                                  )
-                         );
+                                  );
+    if (trace) {
+        cerr << "Adding global initializer for " << gvar->getName().str() <<
+            " @" << gvar << endl;
+        cerr << "XXX var is:" << endl;
+        dest->dump();
+        cerr << "XXX type is:" << endl;
+        dest->getType()->dump();
+        PointerType *pt = dyn_cast<PointerType>(dest->getType());
+        while (pt) {
+            Type *et = pt->getElementType();
+            cerr << "\n  XXX elem is:" << endl;
+            et->dump();
+            pt = dyn_cast<PointerType>(et);
+        }
+        cerr << "\nXXX initializer is:" << endl;
+        mapped->dump();
+    }
+
+
+    dest->setInitializer(mapped );
 }
 
 void ModuleMerger::addFunctionBody(Function *func) {
     string errorMsg;
 
-    cerr << "adding function body for " << func->getName().str() <<
-        " @" << func << endl;
+    if (trace)
+        cerr << "adding function body for " << func->getName().str() <<
+            " @" << func << endl;
 
     if (func->isDeclaration()) {
         if (!func->isMaterializable())
@@ -106,7 +135,7 @@ void ModuleMerger::addFunctionBody(Function *func) {
     for (Function::arg_iterator arg = func->arg_begin(),
           destArg = dest->arg_begin();
          arg != func->arg_end();
-         ++arg
+         ++arg, ++destArg
          ) {
         destArg->setName(arg->getName());
         valueMap[arg] = destArg;
@@ -122,7 +151,9 @@ ModuleMerger::ModuleMerger(const string &name) {
 }
 
 void ModuleMerger::merge(Module *module) {
-    cerr << ">>> running merge on " << module->getModuleIdentifier() << endl;
+    if (trace)
+        cerr << ">>> running merge on " << module->getModuleIdentifier() <<
+            endl;
     for (Module::global_iterator i = module->global_begin();
          i != module->global_end();
          ++i
@@ -144,5 +175,7 @@ void ModuleMerger::merge(Module *module) {
     // copy the function bodies.
     for (Module::iterator i = module->begin(); i != module->end(); ++i)
         addFunctionBody(i);
-    cerr << ">>> done with merge on " << module->getModuleIdentifier() << endl;
+    if (trace)
+        cerr << ">>> done with merge on " << module->getModuleIdentifier() <<
+            endl;
 }

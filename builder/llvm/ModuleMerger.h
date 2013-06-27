@@ -13,6 +13,8 @@
 
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
+#include "spug/Tracer.h"
+
 namespace llvm {
     class Function;
     class GlobalValue;
@@ -38,6 +40,9 @@ class ModuleMerger {
         // 'target'.
         llvm::ValueToValueMapTy valueMap;
 
+        // Tracing support.
+        static spug::Tracer tracer;
+
         // Returns true if the global is already defined in 'target'.
         bool defined(llvm::GlobalValue *gval);
 
@@ -52,11 +57,17 @@ class ModuleMerger {
         void addFunctionBody(llvm::Function *func);
 
     public:
+        static bool trace;
+
         // name: the target module name.
         ModuleMerger(const std::string &name);
 
         // Merge 'module' into the target.
         void merge(llvm::Module *module);
+
+        // Returns the target module (that we've merged all of the other
+        // modules into).
+        llvm::Module *getTarget() const { return target; }
 };
 
 }} // namespace builder::mvll
