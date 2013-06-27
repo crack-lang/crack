@@ -19,10 +19,10 @@
 #include "debug/DebugTools.h"
 #include "Cacher.h"
 #include "spug/check.h"
+#include "ModuleMerger.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
-#include <llvm/Linker.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
 // #include <llvm/Target/TargetData.h>
@@ -113,20 +113,20 @@ void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
         }
     }
 
-    // link the modules.
-    Linker linker("crack", "cyclic-module", getGlobalContext(), 0);
+    // merge the modules.
     if (trace)
         cerr << "Linking cyclic module group: " << endl;
+    ModuleMerger merger("cylic-module");
     for (ModuleSet::iterator i = group->begin(); i != group->end();
          ++i
          ) {
         if (trace)
             cerr << "  " << (*i)->getModuleIdentifier() << endl;;
-        string errMsg;
-        linker.LinkInModule(*i, &errMsg);
-        if (errMsg.size())
-            cerr << "Error linking " << (*i)->getModuleIdentifier() <<
-                ": " << errMsg << endl;
+//        string errMsg;
+        merger.merge(*i);
+//        if (errMsg.size())
+//            cerr << "Error linking " << (*i)->getModuleIdentifier() <<
+//                ": " << errMsg << endl;
         unresolvedMap.erase(*i);
         cycleMap.erase(*i);
     }
@@ -134,7 +134,9 @@ void LLVMJitBuilder::Resolver::linkCyclicGroup(LLVMJitBuilder *builder,
     // Map all unresolved externals in the composite module.
 
     // Global vars.
-    builder->module = linker.releaseModule();
+    builder->module = merger.getTarget();
+    if (ModuleMerger::trace)
+        builder->module->dump();
     for (Module::global_iterator iter = builder->module->global_begin();
         iter != builder->module->global_end();
         ++iter
@@ -811,10 +813,6 @@ void LLVMJitBuilder::registerGlobals() {
             if (!iter->isDeclaration())
                 resolver->registerGlobal(this, iter);
     }
-
-    StructResolver resolver(module);
-    resolver.buildTypeMap();
-    resolver.run();
 }
 
 TypeDefPtr LLVMJitBuilder::materializeType(Context &context,
@@ -847,6 +845,14 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         // we materialized a module from bitcode cache
         // find the main function
         module = bmod->rep;
+
+        // convert all of the known types in the module to their existing
+        // instances
+        {
+            StructResolver structResolver(module);
+            structResolver.buildTypeMap();
+            structResolver.run();
+        }
 
         // entry function
         func = c.getEntryFunction();
