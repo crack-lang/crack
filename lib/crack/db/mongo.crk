@@ -566,7 +566,7 @@ class BSON {
             else if (t == BSON_TYPE_ARRAY) fmt `$(BSON(bson_cursor_get_array(c), t))`;
             else if (t == BSON_TYPE_DOCUMENT) fmt `$(BSON(bson_cursor_get_document(c), t))`;
             else if (t == BSON_TYPE_BINARY) fmt.write("<binary>");
-            else if (t == BSON_TYPE_OID) fmt `"$(escape(BSONOid(c)))"`;
+            else if (t == BSON_TYPE_OID) fmt `"$(hex(BSONOid(c)))"`;
             else if (t == BSON_TYPE_BOOLEAN) fmt.write(bson_cursor_get_boolean(c) ? "true" : "false");
             else if (t == BSON_TYPE_UTC_DATETIME) fmt `$(bson_cursor_get_utc_datetime(c))`;
             else if (t == BSON_TYPE_NULL) fmt.write("null");
@@ -844,10 +844,10 @@ class MongoSync {
                 _hasnext = false;
                 return;
             }
-            _c = mongo_sync_cursor_new (_M.get_mongo(), ns.buffer, p);
+            _c = mongo_sync_cursor_new(_M.get_mongo(), ns.buffer, p);
             if (_c is null)
                 throw AssertionError("Unable to create cursor");
-            _hasnext = mongo_sync_cursor_next(_c);
+            _hasnext = true;
         }
 
         bool next() {
