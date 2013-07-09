@@ -25,15 +25,20 @@ using namespace compiler;
 using namespace model;
 
 namespace {
-    // Implements parser callback to wrap raw functions.
     struct Callback : parser::ParserCallback {
         parser::Parser::Event event;
+        
+        Callback(parser::Parser::Event event) : event(event) {}
+    };
+
+    // Implements parser callback to wrap raw functions.
+    struct FunctionCallback : public Callback {
         CrackContext::AnnotationFunc func;
 
-        Callback(parser::Parser::Event event,
+        FunctionCallback(parser::Parser::Event event,
                  CrackContext::AnnotationFunc func
                  ) :
-            event(event),
+            Callback(event),
             func(func) {
         }
 
@@ -42,6 +47,27 @@ namespace {
                          ) {
             CrackContext ctx(parser, toker, context);
             func(&ctx);
+        }
+    };
+
+    // Implements parser callback to wrap functor callbacks.
+    // This only exists because the parser namespace is private, otherwise we 
+    // could just derive out callbacks from the parser's.
+    struct FunctorCallback : public Callback {
+        CrackContext::AnnotationFunctor *functor;
+
+        FunctorCallback(parser::Parser::Event event,
+                        CrackContext::AnnotationFunctor *functor
+                        ) :
+            Callback(event),
+            functor(functor) {
+        }
+
+        virtual void run(parser::Parser *parser, parser::Toker *toker, 
+                         model::Context *context
+                         ) {
+            CrackContext ctx(parser, toker, context);
+            functor->run(&ctx);
         }
     };
 }
@@ -160,9 +186,19 @@ void CrackContext::popErrorContext() {
 parser::ParserCallback *CrackContext::addCallback(
     int event,
     CrackContext::AnnotationFunc func
-    ) {
+) {
     parser::Parser::Event evt = static_cast<parser::Parser::Event>(event);
-    Callback *callback = new Callback(evt, func);
+    FunctionCallback *callback = new FunctionCallback(evt, func);
+    parser->addCallback(evt, callback);
+    return callback;
+}
+
+parser::ParserCallback *CrackContext::addCallback(
+    int event,
+    CrackContext::AnnotationFunctor *functor
+) {
+    parser::Parser::Event evt = static_cast<parser::Parser::Event>(event);
+    FunctorCallback *callback = new FunctorCallback(evt, functor);
     parser->addCallback(evt, callback);
     return callback;
 }
@@ -281,7 +317,7 @@ parser::ParserCallback *CrackContext::_addCallback(
     CrackContext::AnnotationFunc func
 ) {
     parser::Parser::Event evt = static_cast<parser::Parser::Event>(event);
-    Callback *callback = new Callback(evt, func);
+    FunctionCallback *callback = new FunctionCallback(evt, func);
     inst->parser->addCallback(evt, callback);
     return callback;
 }

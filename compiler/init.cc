@@ -23,19 +23,45 @@ using namespace crack::ext;
 
 namespace compiler {
 
-vector<parser::ParserCallback *> callbacks;
+struct CallbackManager {
+    vector<parser::ParserCallback *> callbacks;
+    const char *errorText;
 
-void cleanUpCallbacks(CrackContext *ctx) {
-    for (int i = 0; i < callbacks.size(); ++i)
-        ctx->removeCallback(callbacks[i]);
-    callbacks.clear();
-}
+    CallbackManager(const char *errorText) : errorText(errorText) {}
 
-void unexpectedElement(CrackContext *ctx) {
-    ctx->error("Function expected after annotation");
-    ctx->setNextFuncFlags(model::FuncDef::noFlags);
-    ctx->setNextClassFlags(model::TypeDef::noFlags);
-}
+    void cleanUpCallbacks(CrackContext *ctx) {
+        assert(callbacks.size() > 0);
+        for (int i = 0; i < callbacks.size(); ++i)
+            ctx->removeCallback(callbacks[i]);
+        callbacks.clear();
+    }
+
+    void unexpectedElement(CrackContext *ctx) {
+        ctx->error(errorText);
+        cleanUpCallbacks(ctx);
+        ctx->setNextFuncFlags(model::FuncDef::noFlags);
+        ctx->setNextClassFlags(model::TypeDef::noFlags);
+        delete this;
+    }
+
+    void cleanUpAfterClass(CrackContext *ctx) {
+        cleanUpCallbacks(ctx);
+        ctx->setNextFuncFlags(model::FuncDef::noFlags);
+        delete this;
+    }
+
+    void cleanUpAfterFunc(CrackContext *ctx) {
+        cleanUpCallbacks(ctx);
+        ctx->setNextClassFlags(model::TypeDef::noFlags);
+        delete this;
+    }
+
+    void add(parser::ParserCallback *cb) {
+        callbacks.push_back(cb);
+    }
+};
+
+typedef CrackContext::AnnotationFuncWrapper<CallbackManager> CallbackBatch;
 
 void funcAnnCheck(CrackContext *ctx, const char *name) {
     parser::Parser::State parseState =
@@ -51,22 +77,36 @@ void funcAnnCheck(CrackContext *ctx, const char *name) {
                              ).c_str()
                    );
 
-    callbacks.push_back(ctx->addCallback(parser::Parser::funcDef,
-                                         cleanUpCallbacks
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::classDef,
-                                         unexpectedElement
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::exprBegin,
-                                         unexpectedElement
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::controlStmt,
-                                         unexpectedElement
-                                         )
-                        );
+    CallbackManager *cbm =
+        new CallbackManager("Function expected after annotation");
+    cbm->add(ctx->addCallback(parser::Parser::funcDef,
+                              new CallbackBatch(
+                                  &CallbackManager::cleanUpAfterFunc,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::classDef,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::exprBegin,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::controlStmt,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
 }
 
 void staticAnn(CrackContext *ctx) {
@@ -79,16 +119,6 @@ void finalAnn(CrackContext *ctx) {
     ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
                           model::FuncDef::method
                           );
-}
-
-void cleanUpAfterClass(CrackContext *ctx) {
-    cleanUpCallbacks(ctx);
-    ctx->setNextFuncFlags(model::FuncDef::noFlags);
-}
-
-void cleanUpAfterFunc(CrackContext *ctx) {
-    cleanUpCallbacks(ctx);
-    ctx->setNextClassFlags(model::TypeDef::noFlags);
 }
 
 void abstractAnn(CrackContext *ctx) {
@@ -104,22 +134,42 @@ void abstractAnn(CrackContext *ctx) {
                     "a function or class definition)"
                    );
 
-    callbacks.push_back(ctx->addCallback(parser::Parser::funcDef,
-                                         cleanUpAfterFunc
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::classDef,
-                                         cleanUpAfterClass
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::exprBegin,
-                                         unexpectedElement
-                                         )
-                        );
-    callbacks.push_back(ctx->addCallback(parser::Parser::controlStmt,
-                                         unexpectedElement
-                                         )
-                        );
+    CallbackManager *cbm =
+        new CallbackManager("Function or class expected after @abstract "
+                             "annotation"
+                            );
+    cbm->add(
+        ctx->addCallback(parser::Parser::funcDef,
+                         new CallbackBatch(
+                             &CallbackManager::cleanUpAfterFunc,
+                             cbm
+                          )
+                         )
+    );
+    cbm->add(
+        ctx->addCallback(parser::Parser::classDef,
+                         new CallbackBatch(
+                             &CallbackManager::cleanUpAfterClass,
+                            cbm
+                          )
+                         )
+    );
+    cbm->add(
+        ctx->addCallback(parser::Parser::exprBegin,
+                         new CallbackBatch(
+                             &CallbackManager::unexpectedElement,
+                             cbm
+                          )
+                         )
+    );
+    cbm->add(
+        ctx->addCallback(parser::Parser::controlStmt,
+                         new CallbackBatch(
+                             &CallbackManager::unexpectedElement,
+                             cbm
+                          )
+                         )
+    );
 
     ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
                           model::FuncDef::method |

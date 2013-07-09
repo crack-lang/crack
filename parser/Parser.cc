@@ -3601,11 +3601,12 @@ void Parser::addCallback(Parser::Event event, ParserCallback *callback) {
 bool Parser::removeCallback(Parser::Event event, ParserCallback *callback) {
    assert(event < eventSentinel);
    CallbackVec &cbs = callbacks[event];
-   for (CallbackVec::iterator iter = cbs.begin(); iter != cbs.end(); ++iter)
+   for (CallbackVec::iterator iter = cbs.begin(); iter != cbs.end(); ++iter) {
       if (*iter == callback) {
          cbs.erase(iter);
          return true;
       }
+   }
    
    // callback was not found
    return false;
@@ -3613,9 +3614,14 @@ bool Parser::removeCallback(Parser::Event event, ParserCallback *callback) {
 
 bool Parser::runCallbacks(Event event) {
    assert(event < eventSentinel);
-   CallbackVec &cbs = callbacks[event];
+   
+   // make a copy of the callback vector so we can safely delete from within a 
+   // callback.
+   CallbackVec cbs = callbacks[event];
+
    bool gotCallbacks = cbs.size();
    for (int i = 0; i < cbs.size(); ++i)
       cbs[i]->run(this, &toker, context.get());
+
    return gotCallbacks;
 }

@@ -38,6 +38,30 @@ class CrackContext {
     friend void compiler::init(crack::ext::Module *mod);
     public:
         typedef void (*AnnotationFunc)(CrackContext *);
+        
+        struct AnnotationFunctor {
+            virtual void run(CrackContext *context) = 0;
+        };
+        
+        // Utility class, that allows us to do this:
+        //    ctx->addCallback(new AnnotationFuncWrapper(&someFunction, obj))
+        // someFunction should have the prototype:
+        //      void someFunction(T *, CrackContext *);
+        template <typename T>
+        struct AnnotationFuncWrapper : public AnnotationFunctor {
+            typedef void (T::*Func)(CrackContext *);
+            Func func;
+            T *obj;
+            
+            AnnotationFuncWrapper(Func func, T *obj) :
+                func(func),
+                obj(obj) {
+            }
+            
+            virtual void run(CrackContext *context) {
+                (obj->*func)(context);
+            }
+        };
 
     private:
         parser::Parser *parser;
@@ -182,6 +206,14 @@ class CrackContext {
          * Adds a callback for the specified event.  Returns the callback id.
          */
         parser::ParserCallback *addCallback(int event, AnnotationFunc func);
+        
+        /**
+         * Add a callback functor.  Returns a ParserCallback object that can 
+         * be used with removeCallback().
+         */
+        parser::ParserCallback *addCallback(int event, 
+                                            AnnotationFunctor *functor
+                                            );
         
         /**
          * Remove the specified callback.  "id" is the value returned from 
