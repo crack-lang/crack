@@ -1,0 +1,18 @@
+%%TEST%%
+nested annotations
+%%ARGS%%
+%%FILE%%
+@abstract class A[T] {
+    @abstract void f();
+}
+
+class B[T] {
+    @static A[T] g() { return null; }
+}
+
+B[int] b;
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
