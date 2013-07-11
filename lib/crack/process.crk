@@ -41,7 +41,7 @@ const int
 class Process;
 FDWriter _makeWriter(Process proc, int fd);
 
-@abstract @interface ProcessHandler {
+@interface ProcessHandler {
     @abstract void onOutData(Buffer data);
     @abstract void onOutLine(Buffer data);
     @abstract void onErrData(Buffer data);
