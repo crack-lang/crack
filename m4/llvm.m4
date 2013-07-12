@@ -16,7 +16,7 @@ AC_DEFUN([AM_PATH_LLVM],
     LLVM_CXXFLAGS=`llvm-config --cxxflags`
     LLVM_CPPFLAGS=`llvm-config --cppflags`
     LLVM_LDFLAGS=`llvm-config --ldflags`
-    LLVM_LIBS=`llvm-config --libs core jit native instrumentation bitwriter ipo linker`
+    LLVM_LIBS=`llvm-config --libs core jit native instrumentation bitreader bitwriter ipo linker`
     AC_SUBST(LLVM_CXXFLAGS)
     AC_SUBST(LLVM_CPPFLAGS)
     AC_SUBST(LLVM_LDFLAGS)

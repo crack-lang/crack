@@ -16,7 +16,6 @@
 #include <sstream>
 
 #include <spug/StringFmt.h>
-#include <llvm/DerivedTypes.h>
 
 using namespace llvm;
 using namespace model;

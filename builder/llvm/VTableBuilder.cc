@@ -12,9 +12,9 @@
 #include "BFuncDef.h"
 #include "model/Context.h"
 
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/GlobalVariable.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <vector>
 
 

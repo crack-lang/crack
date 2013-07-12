@@ -9,12 +9,12 @@
 
 #include <iostream>
 
-#include <llvm/DerivedTypes.h>
-#include <llvm/Function.h>
-#include <llvm/GlobalValue.h>
-#include <llvm/Instructions.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 using namespace builder::mvll;

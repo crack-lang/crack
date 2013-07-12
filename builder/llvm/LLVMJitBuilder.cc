@@ -21,7 +21,7 @@
 #include "spug/check.h"
 #include "ModuleMerger.h"
 
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
@@ -32,9 +32,9 @@
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
-#include <llvm/Module.h>
-#include <llvm/IntrinsicInst.h>
-#include <llvm/Intrinsics.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/Support/Debug.h>
 
 using namespace std;

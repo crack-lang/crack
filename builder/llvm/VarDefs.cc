@@ -14,8 +14,8 @@
 #include "spug/check.h"
 #include "model/AssignExpr.h"
 
-#include <llvm/GlobalVariable.h>
-#include <llvm/Function.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Function.h>
 
 using namespace llvm;
 using namespace model;

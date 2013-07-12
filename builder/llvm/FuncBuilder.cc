@@ -13,7 +13,7 @@
 #include "VarDefs.h"
 #include "model/ResultExpr.h"
 
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 
 using namespace llvm;
 using namespace model;

@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include <llvm/Function.h>
+#include <llvm/IR/Function.h>
 
 using namespace builder::mvll;
 using namespace llvm;

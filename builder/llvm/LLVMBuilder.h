@@ -10,7 +10,7 @@
 #define _builder_LLVMBuilder_h_
 
 #include <map>
-#include <llvm/IRBuilder.h>
+#include <llvm/IR/IRBuilder.h>
 #include "builder/Builder.h"
 #include "BTypeDef.h"
 #include "BBuilderContextData.h"

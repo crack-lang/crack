@@ -10,7 +10,6 @@
 #define _builder_llvm_BTypeDef_h_
 
 #include "model/TypeDef.h"
-#include <llvm/Type.h>
 #include <llvm/DebugInfo.h>
 #include "model/Context.h"
 

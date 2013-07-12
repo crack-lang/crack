@@ -23,14 +23,14 @@
 #include <sstream>
 #include <vector>
 
-#include <llvm/Module.h>
-#include <llvm/IRBuilder.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/system_error.h>
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 
 #include "model/EphemeralImportDef.h"
 #include "builder/BuilderOptions.h"

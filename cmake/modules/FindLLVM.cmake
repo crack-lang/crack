@@ -63,7 +63,7 @@ else (LLVM_INCLUDE_DIR)
   STRING(REPLACE "-ldl" "" LLVM_LDFLAGS ${LLVM_LDFLAGS})
   MESSAGE(STATUS "LLVM LD flags: " ${LLVM_LDFLAGS})
   
-  exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core jit native bitwriter instrumentation ipo linker OUTPUT_VARIABLE LLVM_LIBS )
+  exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core jit native bitreader bitwriter instrumentation ipo linker OUTPUT_VARIABLE LLVM_LIBS )
   MESSAGE(STATUS "LLVM libs: " ${LLVM_LIBS})
 
   if(LLVM_INCLUDE_DIR)

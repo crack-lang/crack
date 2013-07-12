@@ -18,7 +18,7 @@
 
 #include <vector>
 #include <string>
-#include <llvm/Function.h>
+#include <llvm/IR/Function.h>
 
 namespace model {
     class TypeDef;
