@@ -136,10 +136,13 @@ So given this, our meta-data format is:
     Extern {
         blob module
 
-        # The name in the module.  If this is a type name, it is always a
-        # simple type name - specialized types are described by parameterizing
-        # them with typeParams.
-        blob name
+        # The name in the module.  This is repeated to allow dereferencing
+        # nested names, for example, in 'class A { class B {} }' we would store
+        # "A.B" as "name = 'A', name = 'B'".
+        # If the name references a type, it is always a simple type -
+        # specialized generic types are described by parameterizing them with
+        # typeParams.
+        repeated blob name = 3
 
         # If the aliased object is a function loaded from a shared library,
         # this field will be present containing the function definition so we

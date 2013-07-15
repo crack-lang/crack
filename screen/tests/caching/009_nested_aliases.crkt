@@ -1,0 +1,17 @@
+%%TEST%%
+nested aliases
+%%ARGS%%
+%%FILE%%
+class X[T] {
+    void f(T val) {}
+}
+
+class A {
+    class B {}
+    X[B] b;
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

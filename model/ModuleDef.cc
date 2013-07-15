@@ -45,8 +45,16 @@ void ModuleDef::close(Context &context) {
     context.builder.closeModule(context, this);
 }
 
+VarDef *ModuleDef::asVarDef() {
+    return this;
+}
+
 NamespacePtr ModuleDef::getParent(unsigned index) {
     return index ? NamespacePtr(0) : parent;
+}
+
+NamespacePtr ModuleDef::getNamespaceOwner() {
+    return owner;
 }
 
 ModuleDefPtr ModuleDef::getModule() {

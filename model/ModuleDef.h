@@ -106,7 +106,9 @@ class ModuleDef : public VarDef, public Namespace {
          */
         void addDependency(ModuleDef *other);
 
+        virtual VarDef *asVarDef();
         virtual NamespacePtr getParent(unsigned index);
+        virtual NamespacePtr getNamespaceOwner();
         virtual ModuleDefPtr getModule();
         virtual bool isHiddenScope();
         
