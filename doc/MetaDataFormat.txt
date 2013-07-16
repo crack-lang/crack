@@ -71,6 +71,10 @@ So given this, our meta-data format is:
 
         # the module meta-data.
         Definitions defs
+
+        # symbols imported from other modules that can be imported from this
+        # module (second-order imports)
+        array[blob] exports
     }
 
     Header {
