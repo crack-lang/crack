@@ -45,8 +45,16 @@ void ModuleDef::close(Context &context) {
     context.builder.closeModule(context, this);
 }
 
+VarDef *ModuleDef::asVarDef() {
+    return this;
+}
+
 NamespacePtr ModuleDef::getParent(unsigned index) {
     return index ? NamespacePtr(0) : parent;
+}
+
+NamespacePtr ModuleDef::getNamespaceOwner() {
+    return owner;
 }
 
 ModuleDefPtr ModuleDef::getModule() {
@@ -126,6 +134,16 @@ void ModuleDef::serialize(Serializer &serializer) {
     // write all of the symbols
     serializer.digestEnabled = true;
     Namespace::serializeDefs(serializer);
+
+    // write all of the exports
+    serializer.write(exports.size(), "#exports");
+    for (std::map<std::string, bool>::iterator iter = exports.begin();
+         iter != exports.end();
+         ++iter
+         )
+        serializer.write(iter->first, "exports");
+
+    // sign the metadata
     metaDigest = serializer.hasher.getDigest();
 }
 
@@ -218,6 +236,13 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     deser.context->ns = mod.get();
     deser.digestEnabled = true;
     mod->deserializeDefs(deser);
+
+    // deserialize exports
+    int exportsCount = deser.readUInt("#exports");
+    for (int i = 0; i < exportsCount; ++i)
+        mod->exports[deser.readString(Serializer::varNameSize, "exports")] =
+            true;
+
     mod->metaDigest = deser.hasher.getDigest();
     mod->onDeserialized(*deser.context);
 

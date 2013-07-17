@@ -1668,7 +1668,6 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     }
 
     func = funcDef->getFuncRep(*this);
-    string fffname = func->getName();
 
     createFuncStartBlocks(name);
 
@@ -1706,7 +1705,6 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
 
 void LLVMBuilder::emitEndFunc(model::Context &context,
                               FuncDef *funcDef) {
-    string fffname = BFuncDefPtr::cast(funcDef)->getRep(*this)->getName();
     // in certain conditions, (multiple terminating branches) we can end up
     // with an empty block.  If so, remove.
     BasicBlock *block = builder.GetInsertBlock();

@@ -17,6 +17,7 @@
 #include "GlobalNamespace.h"
 #include "VarDefImpl.h"
 #include "Context.h"
+#include "CompositeNamespace.h"
 #include "Expr.h"
 #include "ModuleDefMap.h"
 #include "ModuleStub.h"
@@ -134,8 +135,30 @@ void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 void VarDef::serializeExternCommon(Serializer &serializer,
                                    const TypeDef::TypeVec *localDeps
                                    ) const {
-    serializer.write(getModule()->getFullName(), "module");
-    serializer.write(name, "name");
+    ModuleDefPtr module = getModule();
+    serializer.write(module->getFullName(), "module");
+
+    // calcuate the module relative name.
+    list<string> moduleRelativeName;
+    moduleRelativeName.push_front(name);
+    NamespacePtr cur = getOwner();
+    while (cur != module.get()) {
+        // special-case the builtin module, which currently doesn't have an
+        // ownership chain to its module.
+        if (GlobalNamespace *gns = GlobalNamespacePtr::rcast(cur))
+            if (gns->builtin)
+                break;
+
+        // Convert to a VarDef, push the name segment.
+        VarDef *def = cur->asVarDef();
+        SPUG_CHECK(def,
+                   "namespace " << cur->getNamespaceName() <<
+                    " is not a VarDef."
+                   );
+        moduleRelativeName.push_front(def->name);
+
+        cur = cur->getNamespaceOwner();
+    }
 
     // is this a shared library function?
     const FuncDef *funcDef = dynamic_cast<const FuncDef *>(this);
@@ -144,33 +167,38 @@ void VarDef::serializeExternCommon(Serializer &serializer,
         // for it.
         funcDef = 0;
 
-    if (localDeps || funcDef) {
-        ostringstream tmp;
-        Serializer sub(serializer, tmp);
+    ostringstream tmp;
+    Serializer sub(serializer, tmp);
 
-        if (funcDef) {
-            ostringstream funcDefData;
-            Serializer funcDefSerializer(funcDefData);
-            funcDef->serializeCommon(funcDefSerializer);
-            sub.write(CRACK_PB_KEY(1, string), "shlibFuncDef.header");
-            sub.write(funcDefData.str(), "shlibFuncDef.body");
-        }
-
-        // write the local deps list.
-        if (localDeps) {
-            for (TypeDef::TypeVec::const_iterator iter = localDeps->begin();
-                iter != localDeps->end();
-                ++iter
-                ) {
-                sub.write(CRACK_PB_KEY(2, ref), "localDeps.header");
-                (*iter)->serialize(sub, false, 0);
-            }
-        }
-
-        serializer.write(tmp.str(), "optional");
-    } else {
-        serializer.write(0, "optional");
+    // write the full name.
+    for (list<string>::iterator i = moduleRelativeName.begin();
+         i != moduleRelativeName.end();
+         ++i
+         ) {
+        sub.write(CRACK_PB_KEY(3, string), "name.header");
+        sub.write(*i, "name");
     }
+
+    if (funcDef) {
+        ostringstream funcDefData;
+        Serializer funcDefSerializer(funcDefData);
+        funcDef->serializeCommon(funcDefSerializer);
+        sub.write(CRACK_PB_KEY(1, string), "shlibFuncDef.header");
+        sub.write(funcDefData.str(), "shlibFuncDef.body");
+    }
+
+    // write the local deps list.
+    if (localDeps) {
+        for (TypeDef::TypeVec::const_iterator iter = localDeps->begin();
+            iter != localDeps->end();
+            ++iter
+            ) {
+            sub.write(CRACK_PB_KEY(2, ref), "localDeps.header");
+            (*iter)->serialize(sub, false, 0);
+        }
+    }
+
+    serializer.write(tmp.str(), "optional");
 }
 
 void VarDef::serializeExternRef(Serializer &serializer,
@@ -198,62 +226,131 @@ namespace {
         K_VAR
     };
 
-    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
-                                               const string &typeName,
-                                               int parmStart
-                                               );
+    VarDefPtr resolveActualPath(Context &context, ModuleDef *module,
+                                list<string>::iterator curName,
+                                list<string>::iterator endName
+                                ) {
+        list<string>::iterator next = curName;
+        ++next;
+        NamespacePtr ns = module;
+        for (; next != endName; ++curName, ++next) {
+            ns = ns->lookUp(*curName);
+            SPUG_CHECK(ns,
+                       "Path element " << *curName << " in module " <<
+                        module << " should be a namespace."
+                       );
+        }
+        return ns->lookUp(*curName);
+    }
 
-    VarDefPtr resolveName(Context &context, const string &moduleName,
-                           const string &symbolName,
-                           SymbolKind kind
-                           ) {
+    // Resolve path for stub modules.
+    VarDefPtr resolveStubPath(Context &context, ModuleStub *module,
+                              list<string>::iterator curName,
+                              list<string>::iterator endName,
+                              SymbolKind kind
+                              ) {
+        module->dependents.insert(
+            ModuleDefPtr::arcast(context.getModuleContext()->ns)
+        );
+
+        list<string>::iterator next = curName;
+        ++next;
+        NamespaceStubPtr ns = module;
+        for (; next != endName; ++curName, ++next)
+            ns = ns->getTypeNSStub(*curName);
+
+        switch (kind) {
+            case K_TYPE:
+                return ns->getTypeStub(*curName);
+            case K_OVLD:
+                return ns->getOverloadStub(*curName);
+            case K_VAR:
+                return ns->getVarStub(*curName);
+            default:
+                SPUG_CHECK(false, "Unknoan symbol kind: " << kind);
+        }
+    }
+
+    template<typename T>
+    struct IterPair {
+        typedef T iterator;
+        T beginVal, endVal;
+        T begin() const { return beginVal; }
+        T end() const { return endVal; }
+        IterPair(const T &beginVal, const T &endVal) :
+            beginVal(beginVal),
+            endVal(endVal) {
+        }
+
+        template <typename Container>
+        IterPair(Container &container) :
+            beginVal(container.begin()),
+            endVal(container.end()) {
+        }
+    };
+
+    template <typename T>
+    ostream &operator <<(ostream &out, const IterPair<T> &val) {
+        T i = val.begin();
+        out << *i;
+        ++i;
+        for (; i != val.end(); ++i)
+            out << "." << *i;
+        return out;
+    }
+
+    template <typename T>
+    IterPair<T> makeIterPair(const T &begin, const T &end) {
+        return IterPair<T>(begin, end);
+    }
+
+    template <typename T>
+    IterPair<typename T::iterator> makeIterPair(T &container) {
+        return IterPair<typename T::iterator>(container.begin(),
+                                              container.end()
+                                              );
+    }
+
+    VarDefPtr resolvePath(Context &context, const string &moduleName,
+                          list<string>::iterator curName,
+                          list<string>::iterator endName,
+                          SymbolKind kind
+                          ) {
         ModuleDefPtr module = context.construct->getModule(moduleName);
         SPUG_CHECK(module,
                    "Unable to find module " << moduleName <<
-                    " which contains referenced symbol " << symbolName
+                    " which contains referenced symbol " <<
+                    makeIterPair(curName, endName)
                    );
 
-        // if this is an unfinished module, it should be a placeholder.  Use
-        // it to create a stub for the symbol.
-        if (!module->finished) {
+        if (module->finished) {
+            return resolveActualPath(context, module.get(), curName, endName);
+        } else {
             ModuleStubPtr stub = ModuleStubPtr::rcast(module);
             SPUG_CHECK(stub,
                        "Referenced module " << module->getFullName() <<
                         " is not finished, but isn't a stub."
-                       )
-            stub->dependents.insert(
-                ModuleDefPtr::arcast(context.getModuleContext()->ns)
-            );
-            switch (kind) {
-                case K_TYPE:
-                    return stub->getTypeStub(symbolName);
-                case K_OVLD:
-                    return stub->getOverloadStub(symbolName);
-                case K_VAR:
-                    return stub->getVarStub(symbolName);
-                default:
-                    SPUG_CHECK(false, "Unknoan symbol kind: " << kind);
-            }
+                       );
+            return resolveStubPath(context, stub.get(), curName, endName, kind);
         }
-
-        VarDefPtr var = module->lookUp(symbolName);
-        SPUG_CHECK(var,
-                   "Unable to find symbol " << moduleName << "." <<
-                    symbolName
-                   );
-        return var;
     }
 
     VarDefPtr deserializeAliasBody(Deserializer &deser, SymbolKind kind) {
         string moduleName = deser.readString(Serializer::modNameSize,
                                             "module"
                                             );
-        string name = deser.readString(Serializer::varNameSize, "name");
 
+        list<string> moduleRelativePath;
         FuncDef::Spec spec;
         bool sharedLibSym = false;
         TypeDef::TypeVecObjPtr paramTypes;
         CRACK_PB_BEGIN(deser, 256, optional)
+            CRACK_PB_FIELD(3, string) {
+                string name =
+                    optionalDeser.readString(Serializer::varNameSize, "name");
+                moduleRelativePath.push_back(name);
+                break;
+            }
             CRACK_PB_FIELD(1, string) {
                 NestedDeserializer funcDefDeser(optionalDeser, 32,
                                                 "shlibFuncDef"
@@ -270,7 +367,8 @@ namespace {
         CRACK_PB_END
 
         SPUG_CHECK(!sharedLibSym || kind == K_OVLD,
-                   "Symbol " << moduleName << "." << name <<
+                   "Symbol " << moduleName << "." <<
+                   makeIterPair(moduleRelativePath) <<
                     " is a shared library symbol but we were expecting "
                     "an object of kind = " << kind
                    );
@@ -279,6 +377,11 @@ namespace {
 
         if (sharedLibSym) {
             ImportedDefVec symbols;
+            SPUG_CHECK(moduleRelativePath.size() == 1,
+                       "Got a multi-level path for a shared library import: "
+                        << makeIterPair(moduleRelativePath)
+                       );
+            string name = moduleRelativePath.front();
             symbols.push_back(ImportedDef(name, name));
 
             // XXX: this is horrible.  This is importing the shared library
@@ -316,7 +419,10 @@ namespace {
             return stub->getOwner()->replaceDef(funcDef.get());
         }
 
-        varDef = resolveName(*deser.context, moduleName, name, kind);
+        varDef = resolvePath(*deser.context, moduleName,
+                             moduleRelativePath.begin(),
+                             moduleRelativePath.end(),
+                             kind);
         if (paramTypes) {
             TypeDefPtr typeDef = varDef;
             return typeDef->getSpecialization(*deser.context, paramTypes.get());

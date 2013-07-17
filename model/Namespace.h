@@ -69,12 +69,27 @@ class Namespace : public virtual spug::RCBase {
          * Returns the fully qualified name of the namespace
          */
         const std::string &getNamespaceName() const { return canonicalName; }
+        
+        void setNamespaceName(const std::string &name) {
+            canonicalName = name;
+        }
+        
+        /**
+         * Converts the Namespace to a VarDef, if it is one.  Otherwise, 
+         * returns null.
+         */
+        virtual VarDef *asVarDef();
 
         /** 
          * Returns the parent at the index, null if it is greater than 
          * the number of parents.
          */
         virtual NamespacePtr getParent(unsigned index) = 0;
+        
+        /**
+         * Returns the owner of the namespace.
+         */
+        virtual NamespacePtr getNamespaceOwner();
 
         VarDefPtr lookUp(const std::string &varName, bool recurse = true);
         

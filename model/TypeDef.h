@@ -179,8 +179,12 @@ class TypeDef : public VarDef, public Namespace {
         
         virtual bool isHiddenScope();
 
+        virtual VarDef *asVarDef();
+
         /** required implementation of Namespace::getParent() */
         virtual NamespacePtr getParent(unsigned i);
+
+        virtual NamespacePtr getNamespaceOwner();
         
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 

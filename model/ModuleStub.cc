@@ -9,6 +9,7 @@
 
 #include "spug/check.h"
 #include "Context.h"
+#include "NamespaceStub.h"
 #include "OverloadDef.h"
 
 using namespace std;
@@ -16,42 +17,96 @@ using namespace model;
 
 namespace {
 
+    class OverloadStub : public OverloadDef {
+        public:
+            NamespaceStubPtr ns;
+            OverloadStub(NamespaceStub *ns, const string &name) :
+                OverloadDef(name),
+                ns(ns) {
+            }
+
+            bool isStub() const {
+                return true;
+            }
+
+            VarDefPtr replaceStub(Context &context) {
+                return ns->replacement->lookUp(name);
+            }
+    };
+
+    class VarStub : public VarDef {
+        public:
+            NamespaceStubPtr ns;
+            VarStub(NamespaceStub *ns, const string &name) :
+                VarDef(0, name),
+                ns(ns) {
+            }
+
+            bool isStub() const {
+                return true;
+            }
+
+            VarDefPtr replaceStub(Context &context) {
+                return ns->replacement->lookUp(name);
+            }
+    };
+
     // Base class for type stubs.
-    class TypeStub : public TypeDef {
+    class TypeStub : public TypeDef, public NamespaceStub {
         public:
 
-            // the is the module that needs to be resolved for the type stub
+            // the is the namespace that needs to be resolved for the type stub
             // to get resolved.  In the case of a PrimaryTypeStub, it is also
-            // the stub module that owns the type.
-            ModuleStubPtr module;
+            // the stub namespace that owns the type.
+            NamespaceStubPtr ns;
 
             // The type parameters.  We need these for both subclasses.
             TypeVecObjPtr params;
 
-            TypeStub(ModuleStub *module, const string &name,
+            TypeStub(NamespaceStub *module, const string &name,
                      TypeVecObj *params
                      ) :
                 TypeDef(0, name),
-                module(module),
+                ns(module),
                 params(params) {
             }
 
             virtual bool isStub() const { return true; }
+
+            virtual TypeDefPtr getTypeStub(const std::string &name);
+
+            virtual OverloadDefPtr getOverloadStub(const std::string &name) {
+                return new OverloadStub(this, name);
+            }
+
+            virtual VarDefPtr getVarStub(const std::string &name) {
+                return new VarStub(this, name);
+            }
+
+            virtual NamespaceStubPtr getTypeNSStub(const std::string &name);
+
+            virtual Namespace *getRealNamespace() {
+                return this;
+            }
+
+            virtual ModuleDefPtr getModule() {
+                return ns->getModule();
+            }
     };
 
     // A type stub in which the primary type itself is stubbed.
     class PrimaryTypeStub : public TypeStub {
         public:
-            PrimaryTypeStub(ModuleStub *module, const string &name,
+            PrimaryTypeStub(NamespaceStub *ns, const string &name,
                             TypeVecObj *params
                             ) :
-                TypeStub(module, name, params) {
+                TypeStub(ns, name, params) {
 
-                owner = module;
+                setOwner(ns->getRealNamespace());
             }
 
             VarDefPtr replaceStub(Context &context) {
-                TypeDefPtr replacement = module->replacement->lookUp(name);
+                TypeDefPtr replacement = ns->replacement->lookUp(name);
                 if (params)
                     return replacement->getSpecialization(context,
                                                           params.get()
@@ -87,6 +142,14 @@ namespace {
             }
     };
 
+    TypeDefPtr TypeStub::getTypeStub(const std::string &name) {
+        return new PrimaryTypeStub(this, name, 0);
+    }
+
+    NamespaceStubPtr TypeStub::getTypeNSStub(const std::string &name) {
+        return new PrimaryTypeStub(ns.get(), name, 0);
+    }
+
     // Stub for a generic type that is not itself a stub but has stub arguments.
     class GenericTypeStub : public TypeStub {
         public:
@@ -104,10 +167,10 @@ namespace {
                 return base;
             }
 
-            GenericTypeStub(ModuleStub *module, TypeDef *realType,
+            GenericTypeStub(NamespaceStub *ns, TypeDef *realType,
                             TypeVecObj *params
                             ) :
-                TypeStub(module, makeName(realType, params), params),
+                TypeStub(ns, makeName(realType, params), params),
                 realType(realType) {
             }
 
@@ -139,39 +202,12 @@ namespace {
                             name
                         );
             }
-    };
 
-    class OverloadStub : public OverloadDef {
-        public:
-            ModuleStubPtr module;
-            OverloadStub(ModuleStub *module, const string &name) :
-                OverloadDef(name),
-                module(module) {
-            }
-
-            bool isStub() const {
-                return true;
-            }
-
-            VarDefPtr replaceStub(Context &context) {
-                return module->replacement->lookUp(name);
-            }
-    };
-
-    class VarStub : public VarDef {
-        public:
-            ModuleStubPtr module;
-            VarStub(ModuleStub *module, const string &name) :
-                VarDef(0, name),
-                module(module) {
-            }
-
-            bool isStub() const {
-                return true;
-            }
-
-            VarDefPtr replaceStub(Context &context) {
-                return module->replacement->lookUp(name);
+            virtual ModuleDefPtr getModule() {
+                SPUG_CHECK(false,
+                           "getModule() called on GenericTypeStub " <<
+                            name
+                           );
             }
     };
 
@@ -195,6 +231,18 @@ OverloadDefPtr ModuleStub::getOverloadStub(const string &name) {
 
 VarDefPtr ModuleStub::getVarStub(const string &name) {
     return new VarStub(this, name);
+}
+
+NamespaceStubPtr ModuleStub::getTypeNSStub(const std::string &name) {
+    return new PrimaryTypeStub(this, name, 0);
+}
+
+Namespace *ModuleStub::getRealNamespace() {
+    return this;
+}
+
+ModuleDefPtr ModuleStub::getModule() {
+    return this;
 }
 
 void ModuleStub::replace(Context &context) {
@@ -225,7 +273,7 @@ TypeDefPtr ModuleStub::createGenericStub(ModuleDef *dependent,
                                          TypeDef *generic,
                                          TypeDef::TypeVecObj *types
                                          ) {
-    ModuleStubPtr stubMod = dynamic_cast<TypeStub *>(stub)->module;
+    ModuleStubPtr stubMod = dynamic_cast<TypeStub *>(stub)->ns->getModule();
     SPUG_CHECK(!stubMod->replacedAll,
                "Module " << stubMod->name <<
                 " should have already replaced all stubs."

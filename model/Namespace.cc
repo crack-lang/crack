@@ -30,6 +30,15 @@ void Namespace::storeDef(VarDef *def) {
     orderedForCache.push_back(def);
 }
 
+VarDef *Namespace::asVarDef() {
+    // By default, namespaces are not VarDefs.
+    return 0;
+}
+
+NamespacePtr Namespace::getNamespaceOwner() {
+    return getParent(0);
+}
+
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {

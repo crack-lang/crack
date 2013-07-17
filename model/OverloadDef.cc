@@ -373,7 +373,8 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
         FuncDefPtr func = FuncDef::deserialize(deser, name);
-        func->setOwner(owner);
+        if (!func->getOwner())
+            func->setOwner(owner);
         ovld->addFunc(func.get());
     }
     return ovld;

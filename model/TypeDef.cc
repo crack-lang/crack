@@ -123,11 +123,19 @@ bool TypeDef::isHiddenScope() {
     return owner->isHiddenScope();
 }
 
+VarDef *TypeDef::asVarDef() {
+    return this;
+}
+
 NamespacePtr TypeDef::getParent(unsigned i) {
     if (i < parents.size())
         return parents[i];
     else
         return 0;
+}
+
+NamespacePtr TypeDef::getNamespaceOwner() {
+    return getOwner();
 }
 
 bool TypeDef::hasInstSlot() {
@@ -939,8 +947,9 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         modContext->generic = true;
         
         // create the new module with the current module as the owner.  Use 
-        // the newTypeName instead of moduleName, the name will be 
-        // canonicalized by its owner.    
+        // the newTypeName instead of moduleName, since this is how we should 
+        // have done it for modules in the first place and we're going to 
+        // override the canonical name later anyway.
         ModuleDef *currentModule = 
             ModuleDefPtr::rcast(context.getModuleContext()->ns);
         module = modContext->createModule(newTypeName, "", currentModule);
@@ -953,6 +962,12 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         module->setOwner(
             genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
         );
+
+        // Fix up the canonical name of the module.  The previous setOwner() 
+        // sets the canonical as if the module were directly owned by the 
+        // parent module, but that may not be the case if the generic is 
+        // defined in a nested context (e.g. in a class).
+        module->setNamespaceName(moduleName);
         
         instantiateGeneric(this, context, *modContext, types);
         
