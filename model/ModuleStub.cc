@@ -245,7 +245,8 @@ ModuleDefPtr ModuleStub::getModule() {
     return this;
 }
 
-void ModuleStub::replace(Context &context) {
+void ModuleStub::replace(Context &context, ModuleDef *replacement) {
+    this->replacement = replacement;
     for (std::set<ModuleDef *>::iterator iter = dependents.begin();
          iter != dependents.end();
          ++iter
@@ -256,7 +257,7 @@ void ModuleStub::replace(Context &context) {
          iter != callbacks.end();
          ++iter
          )
-        (*iter)->run();
+        (*iter)->run(context);
     replacedAll = true;
 }
 

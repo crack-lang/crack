@@ -859,6 +859,29 @@ namespace {
             virtual void runMain(builder::Builder &builder) {}
             virtual bool isHiddenScope() { return true; }
     };
+    
+    // Callback to replace a stubbed instantiation in the instantiation cache 
+    // when its module is replaced.
+    struct FixStubbedInstantiation : public ModuleStub::Callback {
+        TypeDef::TypeVecObjPtr parms;
+        TypeDefPtr generic, instantiation;
+        FixStubbedInstantiation(TypeDef *generic, TypeDef *instantiation,
+                                TypeDef::TypeVecObj *parms
+                                ) :
+            parms(parms),
+            generic(generic),
+            instantiation(instantiation) {
+        }
+        
+        virtual void run(Context &context) {
+            TypeDef::SpecializationCache::iterator entry = 
+                generic->generic->find(parms.get());
+            
+            // make sure it hasn't already been replaced
+            if (entry->second == instantiation)
+                entry->second = instantiation->replaceStub(context);
+        }
+    };
 }
 
 TypeDefPtr TypeDef::getSpecialization(Context &context, 
@@ -993,6 +1016,10 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // extract the type out of the newly created module and store it in the 
     // specializations cache
     result = extractInstantiation(module.get(), types);
+    if (result->isStub())
+        ModuleStubPtr::rcast(module)->registerCallback(
+            new FixStubbedInstantiation(this, result, types)
+        );
 
     // record a dependency on the owner's module
     context.ns->getModule()->addDependency(module.get());

@@ -27,7 +27,7 @@ class ModuleStub : public ModuleDef, public NamespaceStub {
     public:
 
         struct Callback {
-            virtual void run() = 0;
+            virtual void run(Context &context) = 0;
         };
 
         typedef std::vector<Callback *> CallbackVec;
@@ -57,9 +57,9 @@ class ModuleStub : public ModuleDef, public NamespaceStub {
         virtual ModuleDefPtr getModule();
 
         /**
-         * Replace this stub in all modules in 'dependents'.
+         * Replace this stub in all modules in 'dependents' with 'module'.
          */
-        void replace(Context &context);
+        void replace(Context &context, ModuleDef *replacement);
 
         virtual TypeDefPtr getType(const std::string &name);
 

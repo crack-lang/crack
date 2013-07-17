@@ -335,7 +335,7 @@ namespace {
             }
         }
 
-        virtual void run() {
+        virtual void run(Context &context) {
             buildVTableOrDefer(builder.get(), vtableBaseType.get(), type.get());
         }
     };
