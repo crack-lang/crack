@@ -47,6 +47,9 @@ bool _isNull(Object obj) {
 /// properties
 class NumericVector[Elem] : Array[Elem] {
 
+    oper init (): Array[Elem](){
+    }
+
     oper init (uint initCapacity): Array[Elem](initCapacity){
     }
 
