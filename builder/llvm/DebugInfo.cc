@@ -9,7 +9,7 @@
 #include "config.h"
 #include "builder/BuilderOptions.h"
 
-#include <llvm/Module.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/Dwarf.h>
 
 using namespace llvm;

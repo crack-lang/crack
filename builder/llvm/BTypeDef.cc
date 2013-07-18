@@ -10,8 +10,8 @@
 #include "BTypeDef.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/GlobalVariable.h>
-#include <llvm/Module.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
 #include "model/Context.h"
 #include "model/ModuleStub.h"
 #include "model/OverloadDef.h"

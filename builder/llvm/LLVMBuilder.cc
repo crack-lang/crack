@@ -42,15 +42,15 @@
 #include <errno.h>
 
 #include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/PassManager.h>
-#include <llvm/CallingConv.h>
+#include <llvm/IR/CallingConv.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Dwarf.h>
-#include <llvm/Intrinsics.h>
+#include <llvm/IR/Intrinsics.h>
 
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>

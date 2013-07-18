@@ -17,10 +17,10 @@
 #include "Native.h"
 #include "Cacher.h"
 
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/LinkAllPasses.h>
-#include <llvm/Module.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Linker.h>
 #include <llvm/Analysis/Verifier.h>
 
@@ -105,13 +105,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     }
 
     // now link all moduloes
-    linker = new Linker("crack",
-                        "main-module",
-                        getGlobalContext(),
-                        (options->verbosity > 2) ?
-                        Linker::Verbose :
-                        0
-                        );
+    linker = new Linker(new Module("main-module", getGlobalContext()));
     assert(linker && "unable to create Linker");
 
     string errMsg;
@@ -122,7 +116,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
         if (options->verbosity > 2)
             std::cerr << "linking " << (*i)->rep->getModuleIdentifier() <<
                     std::endl;
-        linker->LinkInModule((*i)->rep, &errMsg);
+        linker->linkInModule((*i)->rep, &errMsg);
         if (errMsg.length()) {
             std::cerr << "error linking " << (*i)->rep->getModuleIdentifier() <<
                     " [" + errMsg + "]\n";

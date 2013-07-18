@@ -13,7 +13,7 @@
 #include "model/BuilderContextData.h"
 #include "model/Context.h"
 #include <spug/RCPtr.h>
-#include <llvm/IRBuilder.h>
+#include <llvm/IR/IRBuilder.h>
 
 namespace llvm {
     class Function;

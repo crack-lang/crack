@@ -8,7 +8,7 @@
 
 #include "Consts.h"
 #include "BTypeDef.h"
-#include <llvm/Constants.h>
+#include <llvm/IR/Constants.h>
 
 using namespace llvm;
 using namespace model;

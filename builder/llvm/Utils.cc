@@ -13,10 +13,10 @@
 #include "LLVMBuilder.h"
 #include "BCleanupFrame.h"
 
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/GlobalValue.h>
-#include <llvm/GlobalVariable.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <spug/StringFmt.h>
 #include <spug/check.h>
 

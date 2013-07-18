@@ -10,7 +10,7 @@
 #define _builder_llvm_BFuncPtr_h_
 
 #include "model/FuncDef.h"
-#include "llvm/Value.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
     class Function;

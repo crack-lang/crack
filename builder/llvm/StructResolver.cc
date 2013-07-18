@@ -15,12 +15,12 @@
 #include <iostream>
 
 #include <llvm/ADT/StringMap.h>
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/DerivedTypes.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/User.h>
-#include <llvm/Constants.h>
+#include <llvm/IR/User.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/Analysis/FindUsedTypes.h>
 
 #include "spug/check.h"

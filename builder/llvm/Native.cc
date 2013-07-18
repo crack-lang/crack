@@ -19,8 +19,8 @@
 #include "Native.h"
 #include "builder/BuilderOptions.h"
 
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/PassManager.h>
 #include <llvm/Pass.h>
 #include <llvm/ADT/Triple.h>
@@ -28,13 +28,13 @@
 #include <llvm/LinkAllPasses.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/Linker.h>
 #include <llvm/Support/Program.h>
 #include <llvm/Support/PathV1.h>
 #include <llvm/Support/Host.h>
-#include <llvm/IRBuilder.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -57,6 +57,8 @@ extern char **environ;
 
 namespace builder { namespace mvll {
 
+typedef std::vector<std::pair<std::string,bool> > ItemList;
+
 static void PrintCommand(const std::vector<const char*> &args) {
   std::vector<const char*>::const_iterator I = args.begin(), E = args.end();
   for (; I != E; ++I)
@@ -73,7 +75,7 @@ static void PrintCommand(const std::vector<const char*> &args) {
 static int GenerateNative(const std::string &OutputFilename,
                           const std::string &InputFilename,
                           const vector<std::string> &LibPaths,
-                          const Linker::ItemList &LinkItems,
+                          const ItemList &LinkItems,
                           const sys::Path &gcc, char ** const envp,
                           std::string& ErrMsg,
                           bool is64Bit,
@@ -749,7 +751,7 @@ void nativeCompile(llvm::Module *module,
         LibPaths.push_back(elp);
     }
 
-    Linker::ItemList NativeLinkItems;
+    ItemList NativeLinkItems;
 
     for (vector<string>::const_iterator i = sharedLibs.begin();
          i != sharedLibs.end();

@@ -8,8 +8,8 @@
 #ifndef _builder_llvm_PlaceholderInstruction_h_
 #define _builder_llvm_PlaceholderInstruction_h_
 
-#include <llvm/Instruction.h>
-#include <llvm/IRBuilder.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/IRBuilder.h>
 
 namespace builder { namespace mvll {
 

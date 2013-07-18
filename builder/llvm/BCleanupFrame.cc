@@ -7,9 +7,9 @@
 
 #include "BCleanupFrame.h"
 
-#include <llvm/Intrinsics.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include "model/ResultExpr.h"
 #include "model/VarDef.h"
 #include "BBuilderContextData.h"

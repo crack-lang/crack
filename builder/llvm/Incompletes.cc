@@ -8,7 +8,7 @@
 
 #include "Incompletes.h"
 
-#include <llvm/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 #include "BTypeDef.h"
 #include "BFuncDef.h"
 #include "LLVMBuilder.h"
@@ -16,8 +16,8 @@
 
 #include <map>
 
-#include "llvm/GlobalValue.h"  // XXX for getting a module
-#include "llvm/Module.h"  // XXX for getting a module
+#include "llvm/IR/GlobalValue.h"  // XXX for getting a module
+#include "llvm/IR/Module.h"  // XXX for getting a module
 
 using namespace llvm;
 using namespace model;
