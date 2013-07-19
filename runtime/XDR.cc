@@ -5,6 +5,10 @@
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
 //  file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifdef __APPLE__
+#include <rpc/types.h>
+#include <stdint.h>
+#endif
 #include <rpc/xdr.h>
 
 #define INT_SIZE sizeof(int)
@@ -56,9 +60,13 @@
     scalar_op(int, int, int)
     scalar_op(unsigned int, u_int, uint)
     scalar_op(int32_t, int32_t, int32)
+#ifndef __APPLE__
     scalar_op(uint32_t, uint32_t, uint32)
+#endif
     scalar_op(int64_t, int64_t, int64)
+#ifndef __APPLE__
     scalar_op(uint64_t, uint64_t, uint64)
+#endif
     scalar_op(float, float, float32)
     scalar_op(double, double, float64)
 
@@ -104,9 +112,13 @@
     array_op(int, int, int)
     array_op(unsigned int, u_int, uint)
     array_op(int32_t, int32_t, int32)
+#ifndef __APPLE__
     array_op(uint32_t, uint32_t, uint32)
+#endif
     array_op(int64_t, int64_t, int64)
+#ifndef __APPLE__
     array_op(uint64_t, uint64_t, uint64)
+#endif
     array_op(float, float, float32)
     array_op(double, double, float64)
     array_op(bool_t, bool, bool)
@@ -269,6 +281,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_xdr, "xdrs");
 
+#ifndef __APPLE__
     f = mod->addFunc(type_bool, "xdr_encode_uint32",
                      (void *)crk_xdr_encode_uint32
                      );
@@ -279,6 +292,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
                      (void *)crk_xdr_decode_uint32
                      );
        f->addArg(type_xdr, "xdrs");
+#endif
 
     f = mod->addFunc(type_bool, "xdr_encode_int64",
                      (void *)crk_xdr_encode_int64
@@ -291,6 +305,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_xdr, "xdrs");
 
+#ifndef __APPLE__
     f = mod->addFunc(type_bool, "xdr_encode_uint64",
                      (void *)crk_xdr_encode_uint64
                      );
@@ -301,6 +316,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
                      (void *)crk_xdr_decode_uint64
                      );
        f->addArg(type_xdr, "xdrs");
+#endif
 
     f = mod->addFunc(type_bool, "xdr_encode_float32",
                      (void *)crk_xdr_encode_float32
@@ -394,6 +410,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
        f->addArg(array_pint32_q, "buf");
        f->addArg(type_uint, "max");
 
+#ifndef __APPLE__
     f = mod->addFunc(type_bool, "xdr_encode_array_uint32",
                      (void *)crk_xdr_encode_array_uint32
                      );
@@ -408,6 +425,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
        f->addArg(type_xdr, "xdrs");
        f->addArg(array_puint32_q, "buf");
        f->addArg(type_uint, "max");
+#endif
 
     f = mod->addFunc(type_bool, "xdr_encode_array_int64",
                      (void *)crk_xdr_encode_array_int64
@@ -424,6 +442,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
        f->addArg(array_pint64_q, "buf");
        f->addArg(type_uint, "max");
 
+#ifndef __APPLE__
     f = mod->addFunc(type_bool, "xdr_encode_array_uint64",
                      (void *)crk_xdr_encode_array_uint64
                      );
@@ -438,6 +457,7 @@ void crack_runtime_xdr_cinit(crack::ext::Module *mod) {
        f->addArg(type_xdr, "xdrs");
        f->addArg(array_puint64_q, "buf");
        f->addArg(type_uint, "max");
+#endif
 
     f = mod->addFunc(type_bool, "xdr_encode_array_float32",
                      (void *)crk_xdr_encode_array_float32
