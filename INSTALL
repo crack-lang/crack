@@ -13,14 +13,12 @@ Autoconf Install Instructions
 Unpack Crack so you can apply the JITEmitter patch:
 $ tar -xvzf crack-0.7.tar.gz
 
-Build LLVM 3.1:
+Build LLVM 3.3:
 
-$ tar -xvzf llvm-3.1.tgz
+$ tar -xvzf llvm-3.3.tgz
 $ cd llvm-3.1.src
-$ (cd lib/ExecutionEngine/JIT; \
-   patch <../../../../../crack-0.7/extras/JITEmitter.patch)
 $ ./configure
-$ make
+$ make REQUIRES_RTTI=1
 $ make install
 
 (Add the options "--disable-optimized --enable-debug-runtime" if you want to 
