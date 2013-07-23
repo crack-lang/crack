@@ -574,16 +574,8 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLE_REMOTE_ACCESS_DENIED)
                      );
 
-    mod->addConstant(type_int, "CURLE_FTP_ACCEPT_FAILED",
-                     static_cast<int>(CURLE_FTP_ACCEPT_FAILED)
-                     );
-
     mod->addConstant(type_int, "CURLE_FTP_WEIRD_PASS_REPLY",
                      static_cast<int>(CURLE_FTP_WEIRD_PASS_REPLY)
-                     );
-
-    mod->addConstant(type_int, "CURLE_FTP_ACCEPT_TIMEOUT",
-                     static_cast<int>(CURLE_FTP_ACCEPT_TIMEOUT)
                      );
 
     mod->addConstant(type_int, "CURLE_FTP_WEIRD_PASV_REPLY",
@@ -1898,34 +1890,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                      static_cast<int>(CURLOPT_GSSAPI_DELEGATION)
                      );
 
-    mod->addConstant(type_int, "CURLOPT_DNS_SERVERS",
-                     static_cast<int>(CURLOPT_DNS_SERVERS)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_ACCEPTTIMEOUT_MS",
-                     static_cast<int>(CURLOPT_ACCEPTTIMEOUT_MS)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_TCP_KEEPALIVE",
-                     static_cast<int>(CURLOPT_TCP_KEEPALIVE)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_TCP_KEEPIDLE",
-                     static_cast<int>(CURLOPT_TCP_KEEPIDLE)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_TCP_KEEPINTVL",
-                     static_cast<int>(CURLOPT_TCP_KEEPINTVL)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_SSL_OPTIONS",
-                     static_cast<int>(CURLOPT_SSL_OPTIONS)
-                     );
-
-    mod->addConstant(type_int, "CURLOPT_MAIL_AUTH",
-                     static_cast<int>(CURLOPT_MAIL_AUTH)
-                     );
-
     mod->addConstant(type_int, "CURL_IPRESOLVE_WHATEVER",
                      static_cast<int>(CURL_IPRESOLVE_WHATEVER)
                      );
@@ -2064,10 +2028,6 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "CURL_REDIR_POST_302",
                      static_cast<int>(CURL_REDIR_POST_302)
-                     );
-
-    mod->addConstant(type_int, "CURL_REDIR_POST_303",
-                     static_cast<int>(CURL_REDIR_POST_303)
                      );
 
     mod->addConstant(type_int, "CURL_REDIR_POST_ALL",
