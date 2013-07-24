@@ -206,7 +206,6 @@ class Buffer : Object {
 
     ## Override Object.cmp() to do buffer comparison.
     int cmp(Object other) {
-
         # deal with the simple case
         if (this is other)
             return 0;
