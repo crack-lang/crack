@@ -567,25 +567,24 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
-    // TODO: Try to remove the first check.  If the module is finished, all
-    // of the symbols should have global mappings so we should really only
-    // care about whether the module has the mapping or of it doesn't.
-    // if the module containing the original function has been finished, just
-    // add the global mapping.
+    // In the case of a finished module, we must be able to jit it and get the
+    // address.  We force jitting of all functions and globals in
+    // registerGlobals(), which is called when the module is closed, so we
+    // wouldn't have to do it here except for the .builtins module, which
+    // cannot be jitted until after the runtime module is loaded because it
+    // depends on the exception personality function in crack.runtime.
     if (real->getParent()->getNamedMetadata("crack_finished")) {
         void *realAddr = execEng->getPointerToFunction(real);
         SPUG_CHECK(realAddr,
                    "no address for function " << string(real->getName()));
         execEng->updateGlobalMapping(pointer, realAddr);
+
+    // if the module isn't finished, get the pointer if it's available.  If
+    // it's not available, then it should be because we are in a cyclic
+    // group, and the function will get resolved when the entire group is
+    // merged.
     } else if (void *addr = execEng->getPointerToGlobalIfAvailable(real)) {
         execEng->updateGlobalMapping(pointer, addr);
-    } else {
-        // push this on the list of externals - we used to assign a global
-        // mapping for these right here, but that only works if we're
-        // guaranteed that an imported module is closed before any of its
-        // functions are used by the importer, and that is no longer the case
-        // after generics and ephemeral modules.
-        externals.insert(make_pair(real->getName(), real));
     }
 }
 
@@ -596,15 +595,13 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
 
 void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
                                          GlobalValue* real) {
-    // TODO: see above, shouldn't need this first check.
+    // See comments in addGlobalFuncMapping().
     if (real->getParent()->getNamedMetadata("crack_finished"))
         execEng->updateGlobalMapping(pointer,
                                      execEng->getPointerToGlobal(real)
                                      );
     else if (void *addr = execEng->getPointerToGlobalIfAvailable(real))
         execEng->updateGlobalMapping(pointer, addr);
-    else
-        externals.insert(make_pair(real->getName(), real));
 }
 
 void LLVMJitBuilder::recordShlibSym(const string &name) {
@@ -675,8 +672,7 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
 
 }
 
-void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef,
-                                      ExternalMap &externalMap) {
+void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     finishModule(context, moduleDef);
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)
@@ -692,13 +688,6 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef,
              ++iter)
             addGlobalFuncMapping(iter->first, iter->second);
     }
-
-    // transfer all of the externals to the map passed in
-    for (ExternalMap::iterator i = externals.begin(); i != externals.end();
-         ++i
-         )
-        externalMap.insert(*i);
-    externalMap.clear();
 
     if (debugInfo)
         delete debugInfo;
@@ -779,10 +768,7 @@ namespace {
     }
 }
 
-void LLVMJitBuilder::mergeAndRegister(
-    const vector<BJitModuleDefPtr> &modules,
-    const ExternalMap &externals
-) {
+void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
     if (modules.size() != 1) {
         ModuleMerger merger("cyclic-modules", execEng);
         for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
@@ -806,45 +792,6 @@ void LLVMJitBuilder::mergeAndRegister(
         // ModuleMerge doesn't copy meta-data, so we have to add the
         // "finished" marker back to the new module.
         moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
-    }
-
-    // TODO: see if we ever end up resolving externals - I don't think we
-    // should.
-    // resolve all external functions
-    for (Module::iterator i = module->begin(); i != module->end(); ++i) {
-        if (i->isDeclaration() && !i->isMaterializable()) {
-
-            // get the actual definition of the function, then get its address.
-            ExternalMap::const_iterator ext = externals.find(i->getName());
-            if (ext == externals.end())
-                // C functions provided by the executor can be undefined, the
-                // JIT will try dlsym'ing unresolved symbols.
-                continue;
-            void *realAddr = execEng->getPointerToGlobal(ext->second);
-            SPUG_CHECK(realAddr,
-                       "no address for function " << string(i->getName()));
-            execEng->updateGlobalMapping(i, realAddr);
-        }
-    }
-
-    // resolve all external globals
-    for (Module::global_iterator i = module->global_begin();
-         i != module->global_end();
-         ++i
-         ) {
-        if (!i->hasInitializer()) {
-            ExternalMap::const_iterator ext = externals.find(i->getName());
-            if (ext == externals.end())
-                continue;
-            SPUG_CHECK(ext != externals.end(),
-                       "Unresolved global var " << i->getName().str() <<
-                        " is undefined."
-                       );
-            void *realAddr = execEng->getPointerToGlobal(ext->second);
-            SPUG_CHECK(realAddr,
-                       "no address for global var " << string(i->getName()));
-            execEng->updateGlobalMapping(i, realAddr);
-        }
     }
 
     registerGlobals();
@@ -928,7 +875,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 }
 
 void LLVMJitBuilder::registerGlobals() {
-    // register debug info for the module
+    // register debug info for the module functions
     for (Module::iterator iter = module->begin();
          iter != module->end();
          ++iter
@@ -952,14 +899,19 @@ void LLVMJitBuilder::registerGlobals() {
         }
     }
 
-    // register global variables with the cache while we're at it.
-    if (resolver) {
-        for (Module::global_iterator iter = module->global_begin();
-             iter != module->global_end();
-             ++iter
-             )
-            if (!iter->isDeclaration())
+    // ... and global variables
+    for (Module::global_iterator iter = module->global_begin();
+         iter != module->global_end();
+         ++iter
+         ) {
+        // force the global pointer into existence, this is just so we can
+        // rely on the fact that this pointer exists once registerGlobals()
+        // has been called.
+        execEng->getPointerToGlobal(iter);
+        if (!iter->isDeclaration()) {
+            if (resolver)
                 resolver->registerGlobal(this, iter);
+        }
     }
 }
 

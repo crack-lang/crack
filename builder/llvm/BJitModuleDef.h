@@ -46,12 +46,8 @@ class BJitModuleDef : public BModuleDef {
                     builder(builder) {
                 }
                 
-                void close(ModuleVec &modules, 
-                           LLVMJitBuilder::ExternalMap &externs
-                           ) {
-                    moduleDef->recursiveClose(modules, *context, builder.get(),
-                                              externs
-                                              );
+                void close(ModuleVec &modules) {
+                    moduleDef->recursiveClose(modules, *context, builder.get());
                 }
         };
         
@@ -72,15 +68,14 @@ class BJitModuleDef : public BModuleDef {
         // Recursively close all of the modules and flatten the tree into 
         // 'modules'.
         void recursiveClose(ModuleVec &modules, model::Context &context, 
-                            LLVMJitBuilder *builder,
-                            LLVMJitBuilder::ExternalMap &externs
+                            LLVMJitBuilder *builder
                             ) {
             // closing for real - close all of my sub-modules
             for (int i = 0; i < subModules.size(); ++i)
-                subModules[i]->close(modules, externs);
+                subModules[i]->close(modules);
             
             // and do the real close
-            builder->innerCloseModule(context, this, externs);
+            builder->innerCloseModule(context, this);
             modules.push_back(this);
         }
         
@@ -91,9 +86,8 @@ class BJitModuleDef : public BModuleDef {
                 owner->subModules.push_back(closer);
             } else {
                 ModuleVec modules;
-                LLVMJitBuilder::ExternalMap externs;
-                recursiveClose(modules, context, builder, externs);
-                builder->mergeAndRegister(modules, externs);
+                recursiveClose(modules, context, builder);
+                builder->mergeAndRegister(modules);
             }
         }
 };

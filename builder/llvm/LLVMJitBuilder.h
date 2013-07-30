@@ -25,11 +25,6 @@ SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(LLVMJitBuilder);
 
 class LLVMJitBuilder : public LLVMBuilder {
-    public:
-        // Stores a map of the real funtions for unresolved externals in the 
-        // current module.
-        typedef std::map<std::string, llvm::GlobalValue *> ExternalMap;
-        
     private:
         
         class Resolver {
@@ -163,8 +158,6 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
 
-        ExternalMap externals;
-        
         // symbols that were imported from a shared library (we don't want to 
         // try to resolve these).
         std::set<std::string> shlibSyms;
@@ -200,6 +193,12 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void recordShlibSym(const std::string &name);
 
         virtual void engineBindModule(BModuleDef *moduleDef);
+
+        // Contains most of the meat of engineFinishModule.
+        void innerFinishModule(model::Context &context,
+                               BModuleDef *moduleDef
+                               );
+
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef
                                         );
@@ -242,16 +241,13 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual BuilderPtr createChildBuilder();
 
         void innerCloseModule(model::Context &context, 
-                              model::ModuleDef *module,
-                              ExternalMap &externalMap
+                              model::ModuleDef *module
                               );
         
         // Merge all of the modules in the list into one and register all of 
         // the globals in it.  This lets us deal with cyclics, which have to 
         // be jitted as a single module.
-        void mergeAndRegister(const std::vector<BJitModuleDefPtr> &modules,
-                              const ExternalMap &externals
-                              );
+        void mergeAndRegister(const std::vector<BJitModuleDefPtr> &modules);
 
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
