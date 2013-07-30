@@ -73,10 +73,6 @@ public:
      * Set the low-level function.
      */
     void setRep(llvm::Constant *newRep) {
-        SPUG_CHECK(!rep,
-                   "Representation for function " << name <<
-                    " already defined."
-                   );
         rep = newRep;
     }
 

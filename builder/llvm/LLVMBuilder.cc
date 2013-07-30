@@ -601,7 +601,7 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
         // been defined yet.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(funcRep->getFunctionType(),
-                                          Function::ExternalWeakLinkage,
+                                          Function::ExternalLinkage,
                                           funcRep->getName(),
                                           module
                                           );
@@ -3252,16 +3252,16 @@ std::string LLVMBuilder::getSourcePath(const std::string &path) {
 
 }
 
-void LLVMBuilder::initializeImport(model::ModuleDef* m,
+void LLVMBuilder::initializeImport(model::ModuleDef *imported,
                                    const ImportedDefVec &symbols
                                    ) {
 
-    BModuleDef *importedMod = dynamic_cast<BModuleDef*>(m);
+    BModuleDef *importedMod = dynamic_cast<BModuleDef*>(imported);
 
     assert(importedMod && "importedMod was not a BModuleDef");
     assert(importedMod->getFullName().find('[') == -1);
 
-    string importedMainName = m->name + ":main";
+    string importedMainName = imported->name + ":main";
     Constant *fc =
         module->getOrInsertFunction(importedMainName,
                                     Type::getVoidTy(getGlobalContext()),

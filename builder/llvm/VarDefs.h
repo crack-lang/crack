@@ -92,7 +92,10 @@ public:
     BGlobalVarDefImpl(llvm::GlobalVariable *rep) : rep(rep) {}
 
     virtual llvm::Value *getRep(LLVMBuilder &builder);
-
+    
+    void setRep(llvm::GlobalVariable *newRep) {
+        rep = newRep;
+    }
 };
 
 // these are actually only used for function implementations.

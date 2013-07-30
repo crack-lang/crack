@@ -20,10 +20,16 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
+SPUG_RCPTR(BJitModuleDef);
 SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(LLVMJitBuilder);
 
 class LLVMJitBuilder : public LLVMBuilder {
+    public:
+        // Stores a map of the real funtions for unresolved externals in the 
+        // current module.
+        typedef std::map<std::string, llvm::GlobalValue *> ExternalMap;
+        
     private:
         
         class Resolver {
@@ -156,8 +162,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         llvm::ExecutionEngine *execEng;
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
-        
-        std::vector< std::pair<llvm::Function *, llvm::Function *> > externals;
+
+        ExternalMap externals;
         
         // symbols that were imported from a shared library (we don't want to 
         // try to resolve these).
@@ -236,7 +242,15 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual BuilderPtr createChildBuilder();
 
         void innerCloseModule(model::Context &context, 
-                              model::ModuleDef *module
+                              model::ModuleDef *module,
+                              ExternalMap &externalMap
+                              );
+        
+        // Merge all of the modules in the list into one and register all of 
+        // the globals in it.  This lets us deal with cyclics, which have to 
+        // be jitted as a single module.
+        void mergeAndRegister(const std::vector<BJitModuleDefPtr> &modules,
+                              const ExternalMap &externals
                               );
 
         virtual void closeModule(model::Context &context,
