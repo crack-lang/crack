@@ -62,6 +62,38 @@ String hex(Buffer buf) {
 }
 
 
+## Returns a binary buffer from a hex string representation. The reverse of
+## the hex() function
+## bin('68656c6c6f') -> 'hello'
+
+@define _h2b(bt) {
+  (bt >= b'0' && bt <= b'9' ? (bt - b'0') :
+   (bt >= b'a' && bt <= b'f' ? (bt - b'a' + byte(10)) :
+   (bt >= b'A' && bt <= b'F' ? (bt - b'A' + byte(10)) : 0 )))
+}
+
+ManagedBuffer bin(Buffer hx) {
+  bool even = hx.size % 2 == 0 ? true : false;
+  data := ManagedBuffer(hx.size/2 + hx.size % 2);
+  data.size = data.cap;
+  outbuf := data.buffer;
+  inbuf := hx.buffer;
+  byte bt1 = 0;
+
+  for (uint i=0; i < hx.size; i++) {
+    if (even) {
+      bt1 += @_h2b(inbuf[i]) << 4;
+      even = false;
+    } else {
+      bt1 += @_h2b(inbuf[i]);
+      outbuf[i/2] = bt1;
+      bt1 = 0;
+      even = true;
+    }
+  }
+  return data;
+}
+
 ## Returns a string representation of fraction n / 10^denomExp suitable for
 ## use after the decimal point in a formatted floating point number.  For
 ## example, where n = 120 and denomExp = 4 (120 / 10,000), this  would
@@ -227,6 +259,13 @@ bool isSpace(String text) {
 ## Returns true if the byte is a digit.
 bool isDigit(byte b) {
     return b >= b'0' && b <= b'9';
+}
+
+## Returns true if the byte is a digit.
+bool isHexDigit(byte b) {
+    return b >= b'0' && b <= b'9' ||
+           b >= b'A' && b <= b'Z' ||
+           b >= b'a' && b <= b'z';
 }
 
 ## Strip trailing and leading whitespace off a string.

@@ -7,7 +7,7 @@
 // 
 // 12/26/2012
 
-import crack.ascii hex;
+import crack.ascii hex, bin;
 import crack.io cout, FStr;
 import crack.runtime exit;
 import crack.enc.base64 encode, decode;
@@ -48,6 +48,14 @@ if (decoded_s != s || decoded_lipsum != lipsum) {
     cout `Base64 decoding failed\n`;
     exit(1);
 }
+
+h := hex("hello");
+b := bin(h);
+if (b != "hello") {
+  cout `Error creating binary from hex notation: $h -> $b, must be 'hello'\n`;
+  exit(1);
+}
+
 
 cout.write("ok\n");
 
