@@ -17,6 +17,7 @@ import crack.io cout, cerr, cin, Formatter, FStr, StandardFormatter,
 import crack.cont.array Array;
 import crack.cont.hashmap OrderedHashMap, HashMap;
 import crack.ascii escape;
+import crack.strutil StringArray;
 import crack.math fpclassify, FP_INFINITE, FP_NAN, FP_NORMAL, FP_ZERO;
 @import crack.ann define;
 
@@ -81,6 +82,17 @@ class JsonFormatter : StandardFormatter {
             this `null`;
         else if (obj.isa(String)) {
             formatString(String.cast(obj));
+        }
+        else if (obj.isa(StringArray)) {
+            bool first = true;
+            SA := StringArray.cast(obj);
+            write("[");
+            for (s :in SA) {
+              if (first) first = false;
+              else write(", ");
+              formatString(s);
+            }
+            write("]");
         } else {
             obj.formatTo(this);
         }
@@ -170,6 +182,9 @@ class JsonBool {
 class JsonString : String {
     oper init(ManagedBuffer buffer, bool takeOwnership) :
         String(buffer, takeOwnership) {
+    }
+
+    oper init(Buffer buffer) : String(buffer) {
     }
 
     void formatTo(Formatter out) {
