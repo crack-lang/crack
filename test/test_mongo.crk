@@ -6,9 +6,10 @@
 
 // Test mongo db methods
 
-import crack.ascii hex;
+import crack.ascii hex, bin;
 import crack.cont.array Array;
 import crack.db.mongo BSON, MONGO_CONN_LOCAL, MongoSync;
+import crack.db.mongo_support Oid;
 import crack.io cout, cerr, FStr;
 import crack.random uuid;
 import crack.runtime errno, exit;
@@ -22,12 +23,22 @@ if (Bs != '{"A": 10, "B": "S"}') {
     exit(1);
 }
 
+// Test Oid
+oid := Oid.new();
+hx := hex(oid);
+newoid := Oid(bin(hx));
+hx2 := hex(newoid);
+
+if (hx != hx2) {
+  cout `$hx != $hx2 creating new Oid\n`;
+  exit(1);
+}
 // Test an array
 B = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4]}');
 Bs = sfmt `$B`;
 if (Bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4]}') {
     cout `Could not convert JSON to BSON!\n`;
-#~     exit(1);
+    exit(1);
 }
 
 // Test a nested JSON document
@@ -35,7 +46,7 @@ B = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.
 Bs = sfmt `$B`;
 if (Bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.500000}}') {
     cout `Could not convert JSON to BSON!\n`;
-#~     exit(1);
+    exit(1);
 }
 
 
