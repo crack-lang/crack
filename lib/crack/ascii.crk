@@ -67,31 +67,34 @@ String hex(Buffer buf) {
 ## bin('68656c6c6f') -> 'hello'
 
 @define _h2b(bt) {
-  (bt >= b'0' && bt <= b'9' ? (bt - b'0') :
-   (bt >= b'a' && bt <= b'f' ? (bt - b'a' + byte(10)) :
-   (bt >= b'A' && bt <= b'F' ? (bt - b'A' + byte(10)) : 0 )))
+    (bt >= b'0' && bt <= b'9' ? (bt - b'0') :
+    (bt >= b'a' && bt <= b'f' ? (bt - b'a' + byte(10)) :
+    (bt >= b'A' && bt <= b'F' ? (bt - b'A' + byte(10)) : 0 )))
 }
 
 ManagedBuffer bin(Buffer hx) {
-  bool even = hx.size % 2 == 0 ? true : false;
-  data := ManagedBuffer(hx.size/2 + hx.size % 2);
-  data.size = data.cap;
-  outbuf := data.buffer;
-  inbuf := hx.buffer;
-  byte bt1 = 0;
+    ManagedBuffer data = null;
+    if (hx is null) return data;
 
-  for (uint i=0; i < hx.size; i++) {
-    if (even) {
-      bt1 += @_h2b(inbuf[i]) << 4;
-      even = false;
-    } else {
-      bt1 += @_h2b(inbuf[i]);
-      outbuf[i/2] = bt1;
-      bt1 = 0;
-      even = true;
+    bool even = hx.size % 2 == 0 ? true : false;
+    data = ManagedBuffer(hx.size/2 + hx.size % 2);
+    data.size = data.cap;
+    outbuf := data.buffer;
+    inbuf := hx.buffer;
+    byte bt1 = 0;
+
+    for (uint i=0; i < hx.size; i++) {
+        if (even) {
+            bt1 += @_h2b(inbuf[i]) << 4;
+        even = false;
+        } else {
+            bt1 += @_h2b(inbuf[i]);
+            outbuf[i/2] = bt1;
+            bt1 = 0;
+            even = true;
+        }
     }
-  }
-  return data;
+    return data;
 }
 
 ## Returns a string representation of fraction n / 10^denomExp suitable for
