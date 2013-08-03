@@ -973,9 +973,10 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // the newTypeName instead of moduleName, since this is how we should 
         // have done it for modules in the first place and we're going to 
         // override the canonical name later anyway.
-        ModuleDef *currentModule = 
-            ModuleDefPtr::rcast(context.getModuleContext()->ns);
-        module = modContext->createModule(newTypeName, "", currentModule);
+        ModuleDefPtr currentModule = context.ns->getModule();
+        if (!currentModule)
+            cout << "no current module for " << newTypeName << endl;
+        module = modContext->createModule(newTypeName, "", currentModule.get());
         
         // XXX this is confusing: there's a "owner" that's part of some kinds of 
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 

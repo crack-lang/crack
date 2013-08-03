@@ -25,6 +25,7 @@ SPUG_RCPTR(BJitModuleDef);
 class BJitModuleDef : public BModuleDef {
 
     public:
+        typedef std::vector<BJitModuleDefPtr> ModuleVec;
         
         // Closer stores all of the infromation necessary to close a 
         // sub-module.
@@ -45,8 +46,8 @@ class BJitModuleDef : public BModuleDef {
                     builder(builder) {
                 }
                 
-                void close() {
-                    moduleDef->recursiveClose(*context, builder.get());
+                void close(ModuleVec &modules) {
+                    moduleDef->recursiveClose(modules, *context, builder.get());
                 }
         };
         
@@ -64,13 +65,18 @@ class BJitModuleDef : public BModuleDef {
             owner(owner) {
         }
 
-        void recursiveClose(model::Context &context, LLVMJitBuilder *builder) {
+        // Recursively close all of the modules and flatten the tree into 
+        // 'modules'.
+        void recursiveClose(ModuleVec &modules, model::Context &context, 
+                            LLVMJitBuilder *builder
+                            ) {
             // closing for real - close all of my sub-modules
             for (int i = 0; i < subModules.size(); ++i)
-                subModules[i]->close();
+                subModules[i]->close(modules);
             
             // and do the real close
             builder->innerCloseModule(context, this);
+            modules.push_back(this);
         }
         
         void closeOrDefer(model::Context &context, LLVMJitBuilder *builder) {
@@ -79,7 +85,9 @@ class BJitModuleDef : public BModuleDef {
                 CloserPtr closer = new Closer(&context, this, builder);
                 owner->subModules.push_back(closer);
             } else {
-                recursiveClose(context, builder);
+                ModuleVec modules;
+                recursiveClose(modules, context, builder);
+                builder->mergeAndRegister(modules);
             }
         }
 };

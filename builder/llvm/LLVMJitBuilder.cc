@@ -8,6 +8,7 @@
 
 #include "LLVMJitBuilder.h"
 
+#include "model/OverloadDef.h"
 #include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"
@@ -20,6 +21,7 @@
 #include "Cacher.h"
 #include "spug/check.h"
 #include "ModuleMerger.h"
+#include "Ops.h"
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -565,20 +567,24 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
-    // if the module containing the original function has been finished, just
-    // add the global mapping.
+    // In the case of a finished module, we must be able to jit it and get the
+    // address.  We force jitting of all functions and globals in
+    // registerGlobals(), which is called when the module is closed, so we
+    // wouldn't have to do it here except for the .builtins module, which
+    // cannot be jitted until after the runtime module is loaded because it
+    // depends on the exception personality function in crack.runtime.
     if (real->getParent()->getNamedMetadata("crack_finished")) {
         void *realAddr = execEng->getPointerToFunction(real);
         SPUG_CHECK(realAddr,
                    "no address for function " << string(real->getName()));
         execEng->updateGlobalMapping(pointer, realAddr);
-    } else {
-        // push this on the list of externals - we used to assign a global mapping
-        // for these right here, but that only works if we're guaranteed that an
-        // imported module is closed before any of its functions are used by the
-        // importer, and that is no longer the case after generics and ephemeral
-        // modules.
-        externals.push_back(pair<Function *, Function *>(pointer, real));
+
+    // if the module isn't finished, get the pointer if it's available.  If
+    // it's not available, then it should be because we are in a cyclic
+    // group, and the function will get resolved when the entire group is
+    // merged.
+    } else if (void *addr = execEng->getPointerToGlobalIfAvailable(real)) {
+        execEng->updateGlobalMapping(pointer, addr);
     }
 }
 
@@ -589,7 +595,13 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
 
 void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
                                          GlobalValue* real) {
-    execEng->updateGlobalMapping(pointer, execEng->getPointerToGlobal(real));
+    // See comments in addGlobalFuncMapping().
+    if (real->getParent()->getNamedMetadata("crack_finished"))
+        execEng->updateGlobalMapping(pointer,
+                                     execEng->getPointerToGlobal(real)
+                                     );
+    else if (void *addr = execEng->getPointerToGlobalIfAvailable(real))
+        execEng->updateGlobalMapping(pointer, addr);
 }
 
 void LLVMJitBuilder::recordShlibSym(const string &name) {
@@ -680,26 +692,109 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     if (debugInfo)
         delete debugInfo;
 
-    // resolve all externals
-    for (int i = 0; i < externals.size(); ++i) {
-        void *realAddr = execEng->getPointerToFunction(externals[i].second);
-        SPUG_CHECK(realAddr,
-                   "no address for function " <<
-                    string(externals[i].second->getName())
-                   );
-        execEng->updateGlobalMapping(externals[i].first, realAddr);
-    }
-    externals.clear();
-
-    // register the globals.
-    registerGlobals();
-
     doRunOrDump(context);
 
     // and if we're caching, store it in the persistent cache.
     if (moduleDef->cacheable && context.construct->cacheMode)
         context.cacheModule(moduleDef);
 
+}
+
+namespace {
+
+    // Fix the reps for all functions in the overload to reference the correct
+    // reps in the new module.
+    void fixOverloadReps(OverloadDef *ovld, Module *module) {
+        for (OverloadDef::FuncList::iterator i = ovld->beginTopFuncs();
+             i != ovld->endTopFuncs();
+             ++i
+             ) {
+            BFuncDef *func = BFuncDefPtr::rcast(*i);
+
+            // ignore aliases, abstract methods and operations (ops don't
+            // have a rep). There is also at least one operation that is not
+            // a BFuncDef, so ignore that too.
+            if (!func || func->getOwner() != ovld->getOwner() ||
+                func->flags & FuncDef::abstract ||
+                OpDefPtr::cast(func)
+                )
+                continue;
+
+            Function *rep = module->getFunction((*i)->getUniqueId(0));
+            SPUG_CHECK(rep,
+                       "No rep found for function " << (*i)->getFullName()
+                       );
+            func->setRep(rep);
+        }
+    }
+
+    // Recursively fix all global variable and function reps in the given
+    // namespace to reference the correct reps in the new module.
+    // We do this as a fixup after merging a batch of cyclics.
+    void fixNamespaceReps(Namespace *ns, Module *module) {
+        for (Namespace::VarDefMap::iterator def = ns->beginDefs();
+             def != ns->endDefs();
+             ++def
+             ) {
+            // ignore aliases.
+            if (def->second->getOwner() != ns)
+                continue;
+
+            // Global variables and types.
+            if (BGlobalVarDefImpl *imp =
+                 BGlobalVarDefImplPtr::rcast(def->second->impl)
+                ) {
+                imp->setRep(
+                    module->getGlobalVariable(def->second->getFullName())
+                );
+
+                // Types also have a global variable impl, but we need to also
+                // treat them like namespaces.
+                if (BTypeDef *type = BTypeDefPtr::rcast(def->second))
+                    fixNamespaceReps(type, module);
+
+            // Overloads.
+            } else if (OverloadDef *ovld =
+                        OverloadDefPtr::rcast(def->second)
+                       ) {
+                fixOverloadReps(ovld, module);
+
+            // Misc. namespaces (some day we will have these).
+            } else if (Namespace *nested = NamespacePtr::rcast(def->second)) {
+                fixNamespaceReps(nested, module);
+            }
+        }
+
+    }
+}
+
+void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
+    if (modules.size() != 1) {
+        ModuleMerger merger("cyclic-modules", execEng);
+        for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
+             i != modules.end();
+             ++i
+             )
+            merger.merge((*i)->rep);
+
+        module = merger.getTarget();
+
+        // replace the rep of the original source modules and all of their
+        // contents with the those of the new, mega-module
+        for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
+             i != modules.end();
+             ++i
+             ) {
+            fixNamespaceReps(i->get(), module);
+            (*i)->rep = module;
+        }
+
+        // ModuleMerge doesn't copy meta-data, so we have to add the
+        // "finished" marker back to the new module.
+        moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
+    }
+
+    registerGlobals();
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -780,7 +875,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 }
 
 void LLVMJitBuilder::registerGlobals() {
-    // register debug info for the module
+    // register debug info for the module functions
     for (Module::iterator iter = module->begin();
          iter != module->end();
          ++iter
@@ -804,14 +899,19 @@ void LLVMJitBuilder::registerGlobals() {
         }
     }
 
-    // register global variables with the cache while we're at it.
-    if (resolver) {
-        for (Module::global_iterator iter = module->global_begin();
-            iter != module->global_end();
-            ++iter
-            )
-            if (!iter->isDeclaration())
+    // ... and global variables
+    for (Module::global_iterator iter = module->global_begin();
+         iter != module->global_end();
+         ++iter
+         ) {
+        // force the global pointer into existence, this is just so we can
+        // rely on the fact that this pointer exists once registerGlobals()
+        // has been called.
+        execEng->getPointerToGlobal(iter);
+        if (!iter->isDeclaration()) {
+            if (resolver)
                 resolver->registerGlobal(this, iter);
+        }
     }
 }
 

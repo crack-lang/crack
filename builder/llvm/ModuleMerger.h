@@ -16,6 +16,7 @@
 #include "spug/Tracer.h"
 
 namespace llvm {
+    class ExecutionEngine;
     class Function;
     class GlobalValue;
     class GlobalVariable;
@@ -40,6 +41,9 @@ class ModuleMerger {
         // 'target'.
         llvm::ValueToValueMapTy valueMap;
 
+        // optional execution engine
+        llvm::ExecutionEngine *execEng;
+
         // Tracing support.
         static spug::Tracer tracer;
 
@@ -60,7 +64,9 @@ class ModuleMerger {
         static bool trace;
 
         // name: the target module name.
-        ModuleMerger(const std::string &name);
+        ModuleMerger(const std::string &name,
+                     llvm::ExecutionEngine *execEng = 0
+                     );
 
         // Merge 'module' into the target.
         void merge(llvm::Module *module);

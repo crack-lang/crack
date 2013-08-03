@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalValue.h>
@@ -46,6 +47,14 @@ bool ModuleMerger::defined(GlobalValue *gval) {
 void ModuleMerger::copyGlobalAttrs(GlobalValue *dst, GlobalValue *src) {
     dst->copyAttributesFrom(src);
     dst->setAlignment(src->getAlignment());
+
+    // copy the address if possible
+    void *ptr;
+    if (execEng && (ptr = execEng->getPointerToGlobalIfAvailable(src))) {
+        if (trace)
+            cerr << "copying pointer for " << src->getName().str() << endl;
+        execEng->updateGlobalMapping(dst, ptr);
+    }
 }
 
 void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar) {
@@ -145,7 +154,9 @@ void ModuleMerger::addFunctionBody(Function *func) {
     CloneFunctionInto(dest, func, valueMap, false, returns, "");
 }
 
-ModuleMerger::ModuleMerger(const string &name) {
+ModuleMerger::ModuleMerger(const string &name, ExecutionEngine *execEng) :
+    execEng(execEng) {
+
     LLVMContext &lctx = getGlobalContext();
     target = new llvm::Module(name, lctx);
 }
