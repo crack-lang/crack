@@ -29,10 +29,10 @@ class Oid : ManagedBuffer {
         return Oid(uuid(12));
     }
 
-    bool isZero() {
+    bool isTrue() {
         for (uint i = 0; i < 12; i++)
-            if (buffer[i] != 0) return false;
-        return true;
+            if (buffer[i] != 0) return true;
+        return false;
     }
 
     void format(Formatter fmt) {

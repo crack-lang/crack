@@ -69,11 +69,11 @@ doc.appendInt32("the_first_answer", 42);
 doc.appendBool("yes?", false);
 doc.appendInt32("n", 1);
 docid := uuid(12);
-doc.appendOID("_id", docid);
+doc.appendOid("_id", docid);
 doc.finish();
 
 selector := BSON();
-selector.appendOID("_id", docid);
+selector.appendOid("_id", docid);
 selector.finish();
 
 doc2 := BSON();
@@ -94,7 +94,7 @@ if (!C.update(ns, 0, selector, doc2)) {
 }
 
 query := BSON();
-query.appendOID("_id", docid);
+query.appendOid("_id", docid);
 query.finish();
 
 cursor := C.query(ns, 0, 0, 10, query, null);

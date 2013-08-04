@@ -353,13 +353,13 @@ class BSON {
     }
 
     // Append an ObjectID to a BSON object.
-    @final bool appendOID(CString name, Buffer oid) {
+    @final bool appendOid(CString name, Buffer oid) {
         if (oid.size != 12) return false;
         return bson_append_oid(_b, name.buffer, oid.buffer);
     }
 
     // Append an ObjectID to a BSON object.
-    @final bool appendOID(CString name, Oid oid) {
+    @final bool appendOid(CString name, Oid oid) {
         if (oid.size != 12) return false;
         return bson_append_oid(_b, name.buffer, oid.buffer);
     }
