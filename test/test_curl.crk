@@ -1,6 +1,6 @@
-// Test LDB encode/decode
+// Test libCURL binding
 // Copyright 2012 Google Inc.
-// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+// Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -172,7 +172,6 @@ CURLPAUSE_SEND, CURLPAUSE_SEND_CONT, CURLPAUSE_ALL, CURLPAUSE_CONT,
 CURL, CURLinfo, 
 slist,
 
-
 // Function names
 curl_version,
 easy_init,
@@ -193,7 +192,7 @@ easy_strerror,
 easy_pause,
 slist_cast,
 slist_free_all;
-import crack.net.curl UrlEncode, UrlDecode;
+import crack.net.curl UrlEncode, UrlDecode, FormData;
 
 errStr := FStr();
 
@@ -316,4 +315,23 @@ for (int i=0; i< DOUBLE_TEST_NAMES.count(); i++) {
 
 // Clean up
 easy_cleanup(curl);
+
+// Test form data creation/parsing
+
+form := FormData();
+form["test"] = "simple";
+form["messy"] = args; // see above
+encoded := "test=simple&messy=A%20broken%20%28%2A%26%2A%5E%26%2A%20string";
+
+if (form.encoded() != encoded) {
+    cout `Error encoding form data\n`;
+    exit(1);
+}
+
+form2 := FormData(encoded);
+if (form2["test"] != "simple" || form2["messy"] != args) {
+    cout `Error decoding form data:\n$form2\n`;
+    exit(1);
+}
+
 cout `ok\n`;

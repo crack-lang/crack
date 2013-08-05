@@ -1,6 +1,7 @@
-import crack.io cout, FStr;
+import crack.io cout, FStr, StringFormatter;
 import crack.lang CString, Buffer, AppendBuffer, Exception, InvalidArgumentError;
 import crack.cont.hashmap HashMap, OrderedHashMap;
+import crack.strutil split;
 import crack.runtime strlen;
 
 import crack.ext._curl
@@ -383,37 +384,88 @@ class CurlEasy {
 }
 
 class UrlEncode : String {
-  oper init(String plain) {
-    buffer = curl_escape(plain.buffer, plain.size);
-    if (!(buffer is null))
-      size = strlen(buffer);
-    else
-      throw InvalidArgumentError("Unable to URLencode string");
-  }
-
-  oper del() {
-    if (!(buffer is null)) {
-      curl_free(buffer);
-      buffer = null;
+    oper init(String plain) {
+        buffer = curl_escape(plain.buffer, plain.size);
+        if (!(buffer is null))
+            size = strlen(buffer);
+        else
+            throw InvalidArgumentError("Unable to URLencode string");
     }
-  }
+
+    oper del() {
+        if (!(buffer is null)) {
+            curl_free(buffer);
+            buffer = null;
+        }
+    }
 }
 
 class UrlDecode : String {
-  oper init(String plain) {
-    buffer = curl_unescape(plain.buffer, plain.size);
-    if (!(buffer is null))
-      size = strlen(buffer);
-    else
-      throw InvalidArgumentError("Unable to decode URLencoded string");
+    oper init(String plain) {
+        buffer = curl_unescape(plain.buffer, plain.size);
+        if (!(buffer is null))
+            size = strlen(buffer);
+        else
+            throw InvalidArgumentError("Unable to decode URLencoded string");
   }
 
-  oper del() {
-    if (!(buffer is null)) {
-      curl_free(buffer);
-      buffer = null;
+    oper del() {
+        if (!(buffer is null)) {
+            curl_free(buffer);
+            buffer = null;
+        }
     }
-  }
+}
+
+class FormData : OrderedHashMap[String, String] {
+    String _raw;
+    bool _current;
+
+    oper init() :
+        OrderedHashMap[String, String](),
+        _current = true,
+        _raw = ""
+    { }
+
+    uint _parse() {
+        items := split(_raw, "&");
+        for (item :in items) {
+            pair := split(item, "=");
+            if (pair.count() == 2) {
+                set(pair[0], UrlDecode(pair[1]));
+            }
+        }
+        return count();
+    }
+
+    oper init(String forminput) : OrderedHashMap[String, String]() {
+        _raw = forminput;
+        _parse();
+        _current = true;
+    }
+
+    String oper []=(String key, String val) {
+        _current = false;
+        return set(key, UrlDecode(val));
+    }
+
+    String encoded() {
+        if (!_current) {
+            fmt := StringFormatter();
+            bool first = true;
+            for (item :in this) {
+                if (!first) fmt.format("&");
+                else first = false;
+                fmt.format(item.key);
+                fmt.format("=");
+                fmt.format(UrlEncode(item.val));
+                _raw = fmt.string();
+            }
+            _current = true;
+        }
+        return _raw;
+    }
+
 }
 
 @export_symbols HTTPPOST_FILENAME, HTTPPOST_READFILE, HTTPPOST_PTRNAME,
