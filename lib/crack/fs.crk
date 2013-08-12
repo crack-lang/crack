@@ -7,14 +7,14 @@
 ##
 ## Crack Virtual Filesystem (it's not very virtual yet)
 
-import crack.runtime basename, chdir, closedir, errno, fileExists, free,
-    fileRemove, getcwd, getDirEntry, mkdir, open, opendir, readdir, Stat,
-    stat, Dir, DirEntry, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND,
-    PATH_MAX, S_IFDIR, S_IFLNK;
+import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
+    free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open, opendir,
+    readdir, stat, strcpy, strlen, Dir, DirEntry, Stat, O_CREAT, O_TRUNC,
+    O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
-import crack.lang Buffer, CString, Exception, InvalidArgumentError,
-    InvalidStateError, ManagedBuffer, Formatter;
+import crack.lang AssertionError, Buffer, CString, Exception,
+    InvalidArgumentError, InvalidStateError, ManagedBuffer, Formatter;
 import crack.lang SystemError;
 import crack.io.readers FullReader;
 @import crack.ann define;
@@ -99,6 +99,25 @@ class Path;
     ## Returns an interator over the children of the path.  (Children may not
     ## be assumed to be in any particular order)
     @abstract PathIter children();
+
+    ## returns the parent path.  For a root directory, returns null.
+    @abstract Path parent();
+
+    ## Make the directory if it doesn't exist, and also make all parent
+    ## directories if they don't exist.
+    void makeDirs() {
+        if (!exists()) {
+            parent().makeDirs();
+            makeDir();
+        }
+    }
+
+    ## Delete the entire tree rooted at 'path'.
+    void deleteTree() {
+        for (child :in children())
+            child.deleteTree();
+        delete();
+    }
 }
 
 class RealPathIter : PathIter {
@@ -163,13 +182,13 @@ class RealPathIter : PathIter {
 
 }
 
-## A real filesystem path.
+## A real filesystem path.  Don't create one of these directly, use makePath()
+## instead.
 class RealPath : Path {
 
     CString __path;
 
     oper init(CString realPath) : __path = realPath {}
-    oper init(String realPath) : __path = CString(realPath) {}
 
     void formatTo(Formatter fmt) {
         fmt.format(__path);
@@ -180,7 +199,7 @@ class RealPath : Path {
             throw InvalidArgumentError(
                 'Parent directory access not supported'
             );
-        return RealPath(__path + '/' + child);
+        return RealPath(CString(__path + '/' + child));
     }
 
     Path _createNode(String path) {
@@ -234,7 +253,8 @@ class RealPath : Path {
     }
 
     void makeDir() {
-        mkdir(__path.buffer, 0o777);
+        if (mkdir(__path.buffer, 0o777))
+            throw SystemError(FStr() `making directory $__path`);
     }
 
     void delete() {
@@ -256,6 +276,18 @@ class RealPath : Path {
         return result;
     }
 
+    Path parent() {
+        if (__path == '/') {
+            return null;
+        } else {
+            # allocate a temporary buffer, dirnmae modifies the contents.
+            tempBuf := malloc(__path.size + 1);
+            strcpy(tempBuf, __path.buffer);
+            result := RealPath(CString(dirname(tempBuf), false));
+            free(tempBuf);
+            return result;
+        }
+    }
 }
 
 ## This is a wrapper class that allows us to define the current directory
@@ -309,6 +341,7 @@ class _CWD : Path {
     String getFullName() { return __path.getFullName(); }
     uint64 getSize() { return __path.getSize(); }
     PathIter children() { return __path.children(); }
+    Path parent() { return __path.parent(); }
 }
 
 ## Contains a path object for the root of the real filesystem.
@@ -320,7 +353,77 @@ const _CWD cwd = {};
 ## See makePath(String)
 Path makePath(CString path) { return RealPath(path); }
 
+## Given an absolute or relative directory in 'path', returns the normalized
+## form of that directory.  Normalization expands all '.' and '..' sequences,
+## and also removes all double slashes.  It appends relative directories to
+## the current working directory.
+##
+## This function makes no attempt to verify that the paths referenced are
+## valid.  Its normalization is purely lexical.
+CString normalize(Buffer path) {
+    ManagedBuffer buf = {PATH_MAX + 1};
+
+    if (path && path[0] != b'/') {
+        if (getcwd(buf.buffer, buf.cap) is null)
+            throw SystemError('unable to getcwd');
+
+        buf.size = strlen(buf.buffer);
+        buf.buffer[buf.size++] = b'/';
+    } else if (path) {
+        buf.buffer[buf.size++] = b'/';
+    }
+
+    # set to true for the start of a path segment
+    bool beginning = true;
+
+    for (uint index = 0; index < path.size; ++index) {
+
+        if (beginning) {
+            # If we got a '..', back up the current buffer until we get to the
+            # last slash.
+            if (index + 1 < path.size &&
+                path[index] == b'.' && path[index + 1] == b'.' &&
+                (index + 2 >= path.size || path[index + 2] == b'/')
+                ) {
+
+                if (buf.size < 2)
+                    throw InvalidArgumentError(
+                        FStr() `Path $path refernces a value below the roor`
+                    );
+                while (buf.size && buf[--buf.size - 1] != b'/');
+                if (!buf.size)
+                    throw AssertionError(
+                        FStr() I`Ran out of path while backing up! org path = \
+                                 $path`
+                    );
+
+            } else if (path[index] == b'.' &&
+                       (index + 1 >= path.size || path[index + 1] == b'/')
+                       ) {
+                # ignore a single dot.
+
+            # Anything else: copy to the new buffer.
+            } else if (path[index] != b'/') {
+                beginning = false;
+                buf.buffer[buf.size++] = path[index];
+            }
+        } else {
+            buf.buffer[buf.size++] = path[index];
+            if (path[index] == b'/')
+                beginning = true;
+        }
+    }
+
+    # don't end with a slash
+    if (beginning)
+        buf.size--;
+
+    buf.buffer[buf.size] = 0;
+
+    return CString(buf, true);
+}
+
 ## Create a Path object for the specified string path.
 ## If 'path' is not an absolute path, the Path object returned will correspond
 ## to a filename relative to the current working directory.
-Path makePath(String path) { return RealPath(path); }
+Path makePath(Buffer path) { return RealPath(normalize(path)); }
