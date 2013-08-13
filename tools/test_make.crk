@@ -10,7 +10,7 @@
 import crack.sys argv, exit;
 import crack.io cout, FStr;
 import crack.exp.dir Directory;
-import crack.fs RealPath;
+import crack.fs makePath;
 import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
 import crack.regex escape, Regex;
 
@@ -81,7 +81,7 @@ for (file :in Directory(testDir).files()) {
 }
 
 templateFile := FStr() `$(testDir)/$(maxId + 1)_$testMnemonic.crkt`;
-out := RealPath(templateFile).writer();
+out := makePath(templateFile).writer();
 out.write('%%TEST%%
 %%ARGS%%
 %%FILE%%

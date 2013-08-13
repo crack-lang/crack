@@ -1,14 +1,14 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
-import crack.lang ManagedBuffer;
+import crack.lang InvalidArgumentError, ManagedBuffer;
 import crack.io cout;
 import crack.strutil StringArray;
-import crack.fs cwd, makePath, sysfs, Path, RealPath;
+import crack.fs cwd, makePath, normalize, sysfs, Path, RealPath;
 
 tempFile := RealPath('writer.out');
 tempFile.writer().write('this is a test');
@@ -90,5 +90,38 @@ if (tempDir.exists())
 
 if ((sysfs/'a/b/c').getFullName() != '/a/b/c')
     cout `FAILED sysfs object.\n`;
+
+if (normalize('/foo//bar') != '/foo/bar')
+    cout `FAILED normalize( /foo//bar )\n`;
+
+if (normalize('foo//bar') != (cwd/'foo/bar').getFullName())
+    cout `FAILED normalize( foo/bar )\n`;
+
+if (normalize('/foo/bar/../baz') != '/foo/baz')
+    cout `FAILED normalize( /foo/bar/../baz )\n`;
+
+if (normalize('/foo/bar/./baz') != '/foo/bar/baz')
+    cout `FAILED normalize( /foo/bar/baz\n`;
+
+try {
+    normalize('/foo/../../bar');
+    cout `FAILED normalize( /foo/../..bar )\n`;
+} catch (InvalidArgumentError ex) {
+}
+
+temp2 := RealPath('tempdir1/temp2');
+temp2.makeDirs();
+
+if (!temp2.exists())
+    cout `FAILED makeDirs( tempdir1/temp2 )\n`;
+
+temp2.makeDirs();  // do it again so to verify it's idempotent.
+
+if (temp2.exists()) {
+    temp1 := RealPath('tempdir1');
+    temp1.deleteTree();
+    if (temp1.exists())
+        cout `FAILED deleteTree()\n`;
+}
 
 cout `ok\n`;

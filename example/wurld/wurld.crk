@@ -32,7 +32,7 @@
 
 import crack.ascii parseInt;
 import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_INT, CMD_STR;
-import crack.fs RealPath;
+import crack.fs makePath;
 import crack.lang die, free, AppendBuffer;
 import crack.io cerr, cout, AppendBufferWriter, Writer;
 import crack.math PI;
@@ -318,7 +318,7 @@ class WurldMFObj : WurldObj {
     
     @static WurldMFObj load(String name, uint materialId) {
         return WurldMFObj(materialId, 
-                          readWFObj(RealPath(name).reader())
+                          readWFObj(makePath(name).reader())
                           );
     }
     
@@ -486,7 +486,7 @@ const int MAT_SKY = 0, MAT_PLASMA = 1, MAT_STUCCO = 2, MAT_ORANGE = 3;
 
 ## Save all of the objects in the world to the wurld.dat file.
 void save() {
-    out := SerialWriter(RealPath('wurld.dat').writer());
+    out := SerialWriter(makePath('wurld.dat').writer());
     out.write(objects.count());
     for (obj :in objects)
         obj.store(out);
@@ -494,7 +494,7 @@ void save() {
 
 ## Loads the wurld from the specified filename.
 void load(String name) {
-    deser := SerialReader(RealPath(name).reader());
+    deser := SerialReader(makePath(name).reader());
     objectCount := deser.readUInt();
     objects = WurldObjArray(objectCount);
     for (int i = 0; i < objectCount; ++i) {
