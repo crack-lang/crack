@@ -50,7 +50,7 @@ class MessageField {
     oper init(LoggerOptions options): options = options {
     }
 
-    void format(uint level, String msg){
+    void format(uint level, String msg) {
         options.fmt.format(msg);
     }
 }
@@ -62,7 +62,7 @@ class TimeField : MessageField {
     oper init(LoggerOptions options): MessageField(options), d() {
     }
 
-    void format(uint level, String msg){
+    void format(uint level, String msg) {
         d.setLocalSeconds(int64(usecs()/1000000));
         options.fmt.format(d.strftime(options.timeFormat));
     }
@@ -75,7 +75,7 @@ class EscapeField : MessageField {
     oper init(LoggerOptions options): MessageField(options) {
     }
 
-    void format(uint level, String msg){
+    void format(uint level, String msg) {
         options.fmt.format(escape(msg));
     }
 }
@@ -88,7 +88,7 @@ class ProgField : MessageField {
         progname = argv[0];
     }
 
-    void format(uint level, String msg){
+    void format(uint level, String msg) {
         options.fmt.format(progname);
     }
 }
@@ -101,7 +101,7 @@ class LevelField : MessageField {
         progname = argv[0];
     }
 
-    void format(uint level, String msg){
+    void format(uint level, String msg) {
         options.fmt.write("[");
         if (level < levelNames.count())
             options.fmt.write(levelNames[level]);
@@ -116,7 +116,7 @@ class Logger : Object @implements Functor2[void, uint, String] {
     Array[MessageField] _fields;
     HashMap[String, MessageField] _availableFields;
 
-    void initNamedFields(){
+    void initNamedFields() {
         _availableFields["msg"] = MessageField(options);
         _availableFields["datetime"] = TimeField(options);
         _availableFields["escapemsg"] = EscapeField(options);
@@ -124,36 +124,36 @@ class Logger : Object @implements Functor2[void, uint, String] {
         _availableFields["severity"] = LevelField(options);
     }
 
-    void _setDefaultOptions(){
+    void _setDefaultOptions() {
         options.timeFormat = defaultTimeFormat;
         options.sep = " ";
         options.eol = "\n";
         options.seq = 0;
     }
 
-    void setNamedFields(Array[String] fieldNames){
+    void setNamedFields(Array[String] fieldNames) {
         _fields.clear();
         for (name :in fieldNames)
             _fields.append(_availableFields[name]);
     }
 
-    void setNamedFields(String fieldSpec){
+    void setNamedFields(String fieldSpec) {
         _fields.clear();
         fieldNames := split(fieldSpec, " ");
-        for (name :in fieldNames){
+        for (name :in fieldNames) {
             if (name.size > 0)
                 _fields.append(_availableFields[name]);
         }
     }
 
-    StringArray getNamedFields(){
+    StringArray getNamedFields() {
         StringArray fieldNames = {};
         for (item :in _availableFields)
             fieldNames.append(item.key);
         return fieldNames;
     }
 
-    void setNamedField(String name, MessageField field){
+    void setNamedField(String name, MessageField field) {
         _availableFields[name] = field;
     }
     
@@ -185,17 +185,17 @@ class Logger : Object @implements Functor2[void, uint, String] {
         _setDefaultOptions();
         initNamedFields();
         fieldNames := split(fieldSpec, " ");
-        for (name :in fieldNames){
+        for (name :in fieldNames) {
             if (name.size > 0)
                 _fields.append(_availableFields[name]);
         }
     }
 
-    void setDateTimeFormat(String newTimeFormat){
+    void setDateTimeFormat(String newTimeFormat) {
         options.timeFormat = newTimeFormat;
     }
 
-    void log(uint lv, String msg){
+    void log(uint lv, String msg) {
         if (lv <= options.level) {
             options.seq++;
             bool first = true;
@@ -213,7 +213,7 @@ class Logger : Object @implements Functor2[void, uint, String] {
     }
 
     @define _namedLogger(levelName, levelValue) {
-        void levelName(String msg){
+        void levelName(String msg) {
           log(levelValue, msg);
         }
     }
@@ -224,27 +224,31 @@ class Logger : Object @implements Functor2[void, uint, String] {
     @_namedLogger(info, INFO)
     @_namedLogger(debug, DEBUG)
 
-    void setLevel(uint newLevel){
+    void setLevel(uint newLevel) {
         options.level = newLevel;
     }
 
-    void setFormatter(Formatter fmt){
+    void getLevel() {
+        return options.level;
+    }
+
+    void setFormatter(Formatter fmt) {
         options.fmt = fmt;
     }
 
-    Formatter getFormatter(){
+    Formatter getFormatter() {
         return options.fmt;
     }
 
-    void setFile(String fname){
+    void setFile(String fname) {
         options.fmt = StandardFormatter(File(fname, "w"));
     }
 
-    void setWriter(Writer w){
+    void setWriter(Writer w) {
         options.fmt = StandardFormatter(w);
     }
 
-    void setFile(File file){
+    void setFile(File file) {
         options.fmt = StandardFormatter(file);
     }
 
@@ -304,62 +308,62 @@ class LogFormatter : StandardFormatter {
         rep = null;
     }
 
-    void setNamedFields(Array[String] fieldNames){
+    void setNamedFields(Array[String] fieldNames) {
         _logger.setNamedFields(fieldNames);
     }
 
-    void setNamedFields(String fieldSpec){
+    void setNamedFields(String fieldSpec) {
         _logger.setNamedFields(fieldSpec);
     }
 
-    void setLogger(Logger newLogger){
+    void setLogger(Logger newLogger) {
         _logger = newLogger;
     }
 
-    void setLevel(uint newLevel){
+    void setLevel(uint newLevel) {
         _level = newLevel;
     }
 
-    void setLoggerLevel(uint newLevel){
+    void setLoggerLevel(uint newLevel) {
         _logger.setLevel(newLevel);
     }
 
-    void setFormatter(Formatter fmt){
+    void setFormatter(Formatter fmt) {
         _logger.setFormatter(fmt);
     }
 
-    void setFile(String fname){
+    void setFile(String fname) {
         _logger.setFile(fname);
     }
 
-    void setFile(File file){
+    void setFile(File file) {
         _logger.setFile(file);;
     }
 
-    void setWriter(Writer w){
+    void setWriter(Writer w) {
         _logger.setWriter(w);;
     }
 
 }
 
 cerrLogger := Logger(cerr, ERROR);
-void setLogLevel(uint newLevel){
+void setLogLevel(uint newLevel) {
     cerrLogger.setLevel(newLevel);
 }
 
-void setLogFormatter(Formatter fmt){
+void setLogFormatter(Formatter fmt) {
     cerrLogger.setFormatter(fmt);
 }
 
-void setLogFile(String fname){
+void setLogFile(String fname) {
     cerrLogger.setFile(fname);
 }
 
-void setLogFile(File file){
+void setLogFile(File file) {
     cerrLogger.setFile(file)
 }
 
-void setLogWriter(Writer w){
+void setLogWriter(Writer w) {
     cerrLogger.setWriter(w)
 }
 
