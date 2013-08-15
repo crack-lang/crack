@@ -1,0 +1,26 @@
+%%TEST%%
+Test script example
+%%ARGS%%
+%%FILE%%
+import systest test;
+import crack.io cout;
+
+test.mod('foo', I"
+    puts('in module'.buffer);
+    ");
+test.main(I"
+    import foo;
+    puts('test'.buffer);
+    ");
+test.run();
+
+test.rmCacheFiles('foo');
+test.run();
+%%EXPECT%%
+out: in module
+out: test
+terminated: success
+out: in module
+out: test
+terminated: success
+%%STDIN%%

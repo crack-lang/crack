@@ -1,0 +1,6 @@
+%%OPTS%%
+-qGl %SOURCEDIR%:%SOURCEDIR%/lib:%SOURCEDIR%/.libs:%BUILDDIR%/lib
+%%ARGS%%
+--crack_bin=%CRACKBIN% --root=%SOURCEDIR%
+--testtmp=%BUILDDIR%/testout/%UNIQ%
+

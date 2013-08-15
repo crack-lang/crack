@@ -1,0 +1,155 @@
+
+import crack.cmdline CmdOptions, Option, CMD_STR;
+import crack.compiler CrackContext, Token;
+import crack.cont.array Array;
+import crack.cont.treemap TreeMap;
+import crack.fs cwd, Path, makePath;
+import crack.io FStr, cout, cerr;
+import crack.lang Buffer, FreeBase, Exception;
+import crack.regex Regex;
+import crack.strutil split, StringArray;
+import crack.sys argv;
+import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
+    CRK_PIPE_STDERR, CRK_PROC_EXITED;
+
+CmdOptions opts = [
+    Option('crack_bin', '', 'The full path to the crack binary.', '', CMD_STR),
+    Option('root', '', 'Root directory of the crack source tree.', '',
+           CMD_STR
+           ),
+    Option('testtmp', '',
+           'A writable temporary directory, used to store generated scripts.',
+           '',
+           CMD_STR
+           ),
+    Option('run_flags', '',
+           'Flags to be added to the script.  Multiple flags may be '
+           'identified, separated by spaces.',
+           '',
+           CMD_STR
+           ),
+];
+opts.parse(argv);
+
+class MyProcHandler : ProcessHandlerImpl {
+    void onOutLine(Buffer buf) {
+        cout `out: $buf`;
+    }
+
+    void onErrLine(Buffer buf) {
+        cout `err: $buf`;
+    }
+
+    void onTerminate(int resultCode) {
+        if (resultCode == CRK_PROC_EXITED)
+            cout `terminated: success\n`;
+        else
+            cout `terminated, rc = $resultCode\n`;
+    }
+}
+
+class Test {
+    Path
+        ## Root of source tree.
+        root,
+
+        ## Path to crack binary
+        crackBin,
+
+        ## Temporary directory that the test can use for output.  Must not
+        ## exist prior to launching the test.
+        testtmp,
+
+        ## The cache directory.
+        cacheDir;
+
+    ## Flags to be passed to the crack executor when running.
+    StringArray runFlags;
+
+    # True if temp dir was created.
+    bool __testtmpCreated;
+
+    ## If true, run the script in pre-bootstrap (-n) mode.
+    bool preBootstrap;
+
+    oper init(Path root, Path crackBin, Path testtmp, StringArray runFlags) :
+        root = root,
+        crackBin = crackBin,
+        testtmp = testtmp,
+        runFlags = runFlags {
+    }
+
+    oper del() {
+        if (__testtmpCreated)
+            testtmp.deleteTree();
+    }
+
+    ## Does all non-trivial initialization.  Must be called before a test
+    ## instance is constructed.
+    void initialize() {
+        if (testtmp.exists())
+            throw Exception(FStr() I`\
+                Temporary directory $testtmp already exists!
+                Delete it before retrying.`
+            );
+        testtmp.makeDirs();
+        __testtmpCreated = true;
+
+        # create the cache directory
+        cacheDir = testtmp/'cache';
+        cacheDir.makeDirs();
+    }
+
+    ## Run the specified script
+    void runScript(String script) {
+        StringArray cmd = [
+            crackBin.getFullName(), '-l', (root/'lib').getFullName(),
+            '-b', 'cachePath=' + cacheDir.getFullName(), '-C'
+        ];
+        if (preBootstrap)
+            cmd.append('-n');
+        cmd.extend(runFlags);
+        cmd.append(script);
+        Process(cmd, CRK_PIPE_STDOUT | CRK_PIPE_STDERR).run(MyProcHandler());
+    }
+
+    ## Writes the main script to main.crk.
+    void main(String scriptContents) {
+        (testtmp/'main.crk').writeAll(String.cast(scriptContents));
+    }
+
+    ## Writes a module file.
+    ## The module name should be specified without an extension (and currently,
+    ## must not be hierarchical)
+    void mod(String name, String contents) {
+        (testtmp/(name + '.crk')).writeAll(contents);
+    }
+
+    ## Run the main program.
+    void run() {
+        cwd.set(testtmp);
+        runScript((testtmp/'main.crk').getFullName());
+    }
+
+    ## Remove all cache files matching the specified pattern.  A "match" is
+    ## defined according to the semantics of Regex.match(), so if you want to
+    ## match a whole filename you need to end it with a '$'.
+    void rmCacheFiles(String pattern) {
+        pat := Regex(pattern);
+        for (child :in cacheDir.children()) {
+            if (pat.match(child.getName()))
+                child.delete();
+        }
+    }
+}
+
+_runFlagsStr := opts.getString('run_flags');
+
+## The global test object.
+test := Test(
+    makePath(opts.getString('root')),
+    makePath(opts.getString('crack_bin')),
+    makePath(opts.getString('testtmp')),
+    _runFlagsStr ? split(_runFlagsStr) : StringArray![]
+);
+test.initialize();

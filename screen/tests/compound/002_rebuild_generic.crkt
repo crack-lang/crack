@@ -1,0 +1,25 @@
+%%TEST%%
+rebuild a generic but not its owner
+%%ARGS%%
+%%FILE%%
+import systest test;
+
+test.main(I"
+    void f() {}
+    class G[T] {
+        void g() { f(); }
+    }
+
+    G[int] g;
+    puts('ok');
+    ");
+test.preBootstrap = true;
+test.run();
+test.rmCacheFiles(r'\.main.*G\[\.builtin\.int\]');
+test.run()
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%
