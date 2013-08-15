@@ -461,6 +461,9 @@ Token Toker::readToken() {
             // integer or byte coded as a string
             case st_strint:
                 if (ch == '"' || ch == '\'') {
+                    // store a slash to disambiguate this from a hex value 
+                    // with a leading 'b'.
+                    buf << '/';
                     state = st_string;
                     t1 = Token::integer;
                     terminator = ch;

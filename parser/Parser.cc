@@ -1251,25 +1251,25 @@ namespace {
       
       // if the constant starts with an 'i' or 'b', this is a string whose 
       // bytes comprise the integer value.
-      if (val[0] == 'b') {
-         if (val.size() != 2)
+      if (val[0] == 'b' && val[1] == '/') {
+         if (val.size() != 3)
             context.error("Byte constants from strings must be exactly one "
                            "byte long."
                           );
          TypeDef *byteType = context.construct->byteType.get();
 
          StatState sState(&context, ConstructStats::builder);
-         ExprPtr r = context.builder.createIntConst(context, val[1], byteType);
+         ExprPtr r = context.builder.createIntConst(context, val[2], byteType);
          return r;
-      } else if (val[0] == 'i') {
-         if (val.size() < 2 || val.size() > 9)
+      } else if (val[0] == 'i' && val[1] == '/') {
+         if (val.size() < 3 || val.size() > 10)
             context.error("Integer constants from strings must be between one "
                            "and 8 bytes long"
                           );
 
          // construct an integer from the bytes in the string
          int64_t n = 0;
-         for (int i = 1; i < val.size(); ++i)
+         for (int i = 2; i < val.size(); ++i)
             n = n << 8 | val[i];
 
          StatState sState(&context, ConstructStats::builder);

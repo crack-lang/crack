@@ -78,6 +78,11 @@ if ( (-0xffffffffffffffff      != -18446744073709551615) ||
    )
    puts("fail");
 
+# 0xb... numbers were problematic because they activated the hack we use to 
+# propagate byte constants.
+if (0xb != 11)
+    puts('failed to parse 0xb correctly');
+
 // unsigned
 // 32 max
 uint32 ui1 = 0xffffffff;
