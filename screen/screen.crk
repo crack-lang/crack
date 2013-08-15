@@ -9,8 +9,10 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
+import crack.ascii radix;
 import crack.lang Formatter;
 import crack.net Poller;
+import crack.fs makePath, Path;
 import crack.io cout, cerr, StandardFormatter, Writer, StringWriter, StringFormatter, FStr;
 import crack.sys argv, exit;
 import crack.exp.dir Directory;
@@ -24,82 +26,29 @@ import crack.cont.priorityqueue PriorityQueue;
 import crack.strutil StringArray, split;
 
 import stats testSuiteStats;
-import testdata TestData, DirConfig;
+import testdata Template, TestData, VarMap;
 import builders BuilderTestHarness, CrackBuilderDef, builderDefList, Result;
 import config config, T_INIT, T_RUNNING, T_FINISHED;
 @import crack.ann implements;
 import crack.functor Functor2;
-
-# variable pattern
-Regex varPat = {r'%([A-Z]+)%'};
-
-class VarMap : HashMap[String, String] 
-               @implements Functor2[void, Match, Writer] {
-    void oper call(Match match, Writer writer) {
-        var := match.group(1);
-        writer.write(get(var, ''));
-    }
-}
 
 # demand-load macros from config.
 VarMap _macros;
 VarMap getMacros() {
     if (!_macros) {
         _macros = VarMap();
-        _macros['SOURCEDIR'] = config.sourceDir.nameWithTrailing();
-        _macros['BUILDDIR'] = config.buildDir.nameWithTrailing();
-        _macros['OUTDIR'] = config.outDir.nameWithTrailing();
+        _macros['SOURCEDIR'] = config.sourceDir.getFullName() + '/';
+        _macros['BUILDDIR'] = config.buildDir.getFullName() + '/';
+        _macros['OUTDIR'] = config.outDir.getFullName() + '/';
         _macros['SCRIPTNAME'] = 'script name not defined!';
         _macros['CRACKBIN'] = config.crackBin;
         
-        # this gets filled in from the dir config
+        # these get filled in from the dir config
         _macros['OPTS'] = '';
+        _macros['ARGS'] = ''
     }
     
     return _macros;
-}
-
-class Template {
-
-     @static
-     HashMap[String, String] load(String fileName) {
-
-        HashMap[String, String] sections = {};
-
-        f := File(fileName, "r");
-        if (!f.isValid()) {
-            cout `file: $(fileName) could not be opened!\n`;
-            return null;
-        }
-
-        // parse out sections
-        String lineBuf, curSection;
-        StringWriter dataBuf = {};
-        headerPat := Regex('^%%(\\w+)%%$');
-        while (lineBuf = f.nextLine()) {
-            // look for section change
-            m := headerPat.search(lineBuf);
-            if (m) {
-                if (curSection)
-                    sections[curSection] = 
-                        varPat.subst(dataBuf.string(), getMacros(), -1);
-                curSection = m.group(1);
-                //cerr `debug: switching to group $curSection\n`;
-                dataBuf = StringWriter();
-            }
-            else {
-                // add line to current section
-                dataBuf.write(lineBuf);
-            }
-        }
-        if (curSection)
-            sections[curSection] =
-                varPat.subst(dataBuf.string(), getMacros(), -1);
-
-        return sections;
-
-    }
-
 }
 
 // represent single test template
@@ -128,11 +77,10 @@ class Test {
     // note this is not strictly the same as sorting them by name, because of the
     // properties of the heap structure.
     int cmp(Object other) {
-        if (other.isa(Test)) {
-            return -(_data.fInfo.name.cmp(Test.unsafeCast(other)._data.fInfo.name));
-        }
-        else {
-            return 0;
+        if (o := Test.cast(other, null)) {
+            return -(_data.fInfo.getName().cmp(o._data.fInfo.getName()));
+        } else {
+            return Object.cmp(other);
         }
     }
 
@@ -236,7 +184,7 @@ class Test {
                 }
 
                 if (!pass) {
-                    testSuiteStats.failList.append(_data.fInfo.name);
+                    testSuiteStats.failList.append(_data.fInfo.getName());
                     if (config.stopOnFail) {
                         // XXX close procs nicely?
                         exit(0);
@@ -251,19 +199,18 @@ class Test {
 
     }
 
-    oper init(FileInfo info, DirConfig dc) {
-        _data.fInfo = info;
-        _data.dirConfig = dc;
-        scriptName = config.outDir.nameWithTrailing() +
-                     _data.fInfo.basename(true) + ".crk";
+    oper init(Path testFile, Template dc) {
+        _data.fInfo = testFile;
+        stem := _data.fInfo.getName().slice(0, -5);  // remove '.crkt'
+        scriptName = (config.outDir/(stem + ".crk")).getFullName();
         getMacros()['SCRIPTNAME'] = scriptName;
-        _data.sections = Template.load(info.name);
-        if (_data.sections is null) {
-            _isSkipped = "unabled to open file";
-            _status = T_FINISHED;
-            return;
-        }
+        getMacros()['UNIQ'] = radix(scriptName.makeHashVal(), 16);
+        _data.sections = dc.merge(Template.load(testFile));
+        _data.sections.expandAll(getMacros());
+        
+        # make sure we've got everything we need
         checkTemplate();
+
         // setup test harnesses for this test, based on the builders
         // that have been selected
         for (b :in config.builders) {
@@ -298,38 +245,33 @@ class TestSuite {
         exit(1);
     }
     
-    DirConfig getDirConfig(Directory dir) {
+    Template getDirConfig(Path dir) {
 
         // directory based config
-        DirConfig dc;
-        dcFile := FileInfo(dir.nameWithTrailing() + "options");
+        dcFile := dir/"options";
         if (dcFile.exists()) {
-            sec := Template.load(dcFile.name);
-            if (sec.hasKey("OPTS")) {
-                dc = DirConfig();
-                getMacros()['OPTS'] = dc.options = sec["OPTS"].rtrim();
-            }
+            sec := Template.load(dcFile);
+            macros := getMacros();
+            if (sec.hasKey("OPTS"))
+                macros['OPTS'] = macros.expand(sec["OPTS"].rtrim());
+            if (sec.hasKey('ARGS'))
+                macros['ARGS'] = macros.expand(sec['ARGS'].rtrim());
+            return sec;
+        } else {
+            # return an empty template
+            return Template();
         }
-
-        return dc;
-
     }
 
-    void scanForTests(Directory dir) {
+    void scanForTests(Path dir) {
     
-        if (!dir.isValid()) {
-            cerr `skipping invalid directory: $dir\n`;
-            return;
-        }
-        
         cout `importing tests from $dir ... `;
-
         dc := getDirConfig(dir);
 
         // gather test files
         cnt := 0;
-        for (curFile :in dir.files()) {
-            if (curFile.matches("*.crkt")) {
+        for (curFile :in dir.children()) {
+            if (!curFile.isDir() && curFile.getName().substr(-5) == ".crkt") {
                 cnt++;
                 _testList.push(Test(curFile, dc));
             }
@@ -337,9 +279,10 @@ class TestSuite {
 
         cout `found $cnt\n`;
         
-        // recurse to directories
-        for (nextDir :in dir.dirs()) {
-            scanForTests(nextDir);
+        // recurse through children
+        for (child :in dir.children()) {
+            if (child.isDir())
+                scanForTests(child);
         }
 
     }
@@ -446,10 +389,10 @@ class TestSuite {
             usage();
         }
         
-        config.rootDir = Directory(_options.getString("testdir"), false);
-        config.outDir = Directory(_options.getString("outdir"), false);
-        config.sourceDir = Directory(_options.getString("sourcedir"), false);
-        config.buildDir = Directory(_options.getString("builddir"), false);
+        config.rootDir = makePath(_options.getString("testdir"));
+        config.outDir = makePath(_options.getString("outdir"));
+        config.sourceDir = makePath(_options.getString("sourcedir"));
+        config.buildDir = makePath(_options.getString("builddir"));
 
         config.libPath = _options.getString("libpath");
         config.verbose = _options.getBool("verbose");
@@ -476,16 +419,16 @@ class TestSuite {
         }
 
         testFile := _options.getString("testfile");
-        if (testFile != "" && config.rootDir.isValid()) {
+        if (testFile != "") {
             // if specific file, clear directory
             config.rootDir = null;
             _singleTest = true;
-            fi := FileInfo(testFile);
+            fi := makePath(testFile);
             if (!fi.exists()) {
                 cerr `$testFile does not exist\n`;
                 exit(1);
             }
-            test := Test(fi, getDirConfig(Directory(fi.dirname())));
+            test := Test(fi, getDirConfig(fi.parent()));
             _testList.push(test);
             config.showDiff = true;
             config.jobs = 1;
@@ -522,7 +465,7 @@ class TestSuite {
         if (config.rootDir)
             scanForTests(config.rootDir);
 
-        if (!config.outDir.isValid()) {
+        if (!config.outDir.isDir()) {
             cerr `invalid output directory: $(config.outDir)\n`;
             return;
         }

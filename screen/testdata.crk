@@ -1,24 +1,104 @@
 // Shared test data
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
-import crack.exp.file File, FileInfo;
+import crack.fs Path;
+import crack.functor Functor2;
+import crack.io FStr, StringWriter, Writer;
 import crack.cont.hashmap HashMap;
+import crack.regex Match, Regex;
+@import crack.ann implements;
 
-class DirConfig {
-    String options = {};
+# variable pattern
+Regex varPat = {r'%([A-Z]+)%'};
+
+## A map for storing macro variables.
+## Implements Functor so we can use it in Regex.subst().
+class VarMap : HashMap[String, String]
+               @implements Functor2[void, Match, Writer] {
+    void oper call(Match match, Writer writer) {
+        var := match.group(1);
+        writer.write(get(var, ''));
+    }
+
+    ## Expand variables in 'val'.
+    @static String expand(String val) {
+        return varPat.subst(val, this, -1);
+    }
+}
+
+class Template : HashMap[String, String] {
+
+    oper init() {}
+
+    @static
+    Template load(Path templateFile) {
+
+        Template sections = {};
+
+        // parse out sections
+        String lineBuf, curSection;
+        StringWriter dataBuf = {};
+        headerPat := Regex('^%%(\\w+)%%$');
+        for (lineBuf in templateFile.makeFullReader()) {
+            // look for section change
+            m := headerPat.search(lineBuf);
+            if (m) {
+                if (curSection)
+                    sections[curSection] = dataBuf.string();
+                curSection = m.group(1);
+                //cerr `debug: switching to group $curSection\n`;
+                dataBuf = StringWriter();
+            } else {
+                // add line to current section
+                dataBuf.write(lineBuf);
+            }
+       }
+       if (curSection)
+           sections[curSection] = dataBuf.string();
+
+       return sections;
+    }
+
+    ## Expand all variable patterns in all sections using 'vars'.
+    void expandAll(VarMap vars) {
+        for (item :in this)
+            item.val = vars.expand(item.val);
+    }
+
+    ## Return a new template that is the current template merged with 'other'.
+    ## When templates are merged, any values that they have in common are
+    ## concatenated with the value from 'other' last.
+    Template merge(Template other) {
+        Template new = {};
+
+        # merge all of the sections from the directory config file
+        for (section :in this) {
+            if (otherVal := other.get(section.key))
+                new[section.key] = FStr() `$(section.val) $otherVal`;
+            else
+                new[section.key] = section.val;
+        }
+
+        # get the sections in 'other' that we don't have
+        for (section :in other) {
+            if (!hasKey(section.key))
+                new[section.key] = section.val;
+        }
+
+        return new;
+    }
 }
 
 class TestData {
     // template file info
-    FileInfo fInfo;
+    Path fInfo;
     // script file name
     String scriptName;
     String desc = "Unknown";
-    HashMap[String, String] sections = {};
-    DirConfig dirConfig;
+    Template sections = {};
 }

@@ -219,8 +219,7 @@ class BuilderTestHarness {
     void run(Poller poller) {
 
         if (_bDef.separateBinary()) {
-            _testBinary = config.outDir.nameWithTrailing()+
-                           _data.fInfo.basename(true);
+            _testBinary = (config.outDir/_data.fInfo.getName()).getFullName();
         }
 
         StringWriter opts = {};
@@ -228,11 +227,6 @@ class BuilderTestHarness {
         // options for crack
         if (_data.sections.hasKey("OPTS"))
             opts.write(_data.sections["OPTS"].rtrim());
-
-        if (_data.dirConfig) {
-            opts.write(" ");
-            opts.write(_data.dirConfig.options);
-        }
 
         opts.write(_bDef.getCrackOptions(this));
         if (config.libPath) {
@@ -247,9 +241,8 @@ class BuilderTestHarness {
 
         if (_data.sections.hasKey("ARGS") && !_bDef.separateBinary()) {
             args := _data.sections["ARGS"].rtrim();
-            if (!args.isEmpty()) {
+            if (!args.isEmpty())
                 cmd = cmd + " " + args;
-            }
         }
 
         if (config.verbose) {
