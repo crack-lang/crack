@@ -26,7 +26,7 @@ class VarMap : HashMap[String, String]
     }
 
     ## Expand variables in 'val'.
-    @static String expand(String val) {
+    String expand(String val) {
         return varPat.subst(val, this, -1);
     }
 }
