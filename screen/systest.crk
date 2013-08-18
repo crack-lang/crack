@@ -69,6 +69,9 @@ class Test {
     # True if temp dir was created.
     bool __testtmpCreated;
 
+    # Modules to trace (adds them to the "-t" flag).
+    StringArray __trace = {};
+
     ## If true, run the script in pre-bootstrap (-n) mode.
     bool preBootstrap;
 
@@ -100,14 +103,26 @@ class Test {
         cacheDir.makeDirs();
     }
 
+    ## Adds a module to the set of those to trace.
+    void addTrace(String mod) {
+        __trace.append(mod);
+    }
+
     ## Run the specified script
     void runScript(String script) {
         StringArray cmd = [
             crackBin.getFullName(), '-l', (root/'lib').getFullName(),
             '-b', 'cachePath=' + cacheDir.getFullName(), '-C'
         ];
+
+        # Add the appropriate flags.
         if (preBootstrap)
             cmd.append('-n');
+        if (__trace) {
+            cmd.append('-t');
+            cmd.append(__trace.join(','));
+        }
+
         cmd.extend(runFlags);
         cmd.append(script);
         Process(cmd, CRK_PIPE_STDOUT | CRK_PIPE_STDERR).run(MyProcHandler());

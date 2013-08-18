@@ -1,0 +1,33 @@
+%%TEST%%
+rebuild cached modules when changed
+%%ARGS%%
+%%FILE%%
+# This test only rebuilds 'mod', the main script doesn't get rebuilt because
+# none of mod's interfaces change.
+import systest test;
+test.preBootstrap = true;
+test.addTrace('Caching');
+test.mod('mod', "puts('foo'); void f() {}");
+test.main("import mod;");
+test.run();
+test.mod('mod', "puts('bar'); void f() {}");
+test.run();
+
+# Now we change an interface, this should trigger a rebuild.
+test.mod('mod', "puts('baz'); void f(int i) {}");
+test.run();
+%%REXPECT%%
+err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+out: foo
+terminated: success
+err: digests don't match for mod.crk got .* current = .*
+err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+err: Reusing cached script .*/main.crk
+out: bar
+terminated: success
+err: digests don't match for mod.crk got .* current = .*
+err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+err: meta digest doesn't match for dependency mod, need to rebuild \.main\..*main_2ecrk\(depending on .* current = .*\)
+out: baz
+terminated: success
+%%STDIN%%
