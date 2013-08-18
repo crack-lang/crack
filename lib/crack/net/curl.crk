@@ -371,6 +371,10 @@ class CurlEasy {
         return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
     }
 
+    void clearHeaders() {
+        _headers = null;
+    }
+
     int saveHeaders() {
         if (!(_headers is null))
             return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);

@@ -217,7 +217,7 @@
     int nc_close (int ncid);
 
     // Define dimensions
-     @inject 'int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
+    @inject 'int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
         int idp = 0;
         crk_ncstatus  = nc_def_dim(ncid, name, len, &idp);
         if (!crk_ncstatus) return idp;
@@ -228,17 +228,19 @@
     int nc_def_dim(int ncid, byteptr name, uint64 len);
 
     @inject 'int nc_def_var_crk(int ncid, byteptr name, int xtype,
-                     int ndims, int *dimidsp) {
+                                int ndims, int *dimidsp) {
         int varidp = 0;
         crk_ncstatus = nc_def_var(ncid, name, xtype, ndims, dimidsp, &varidp);
-        if (!crk_ncstatus) return varidp;
-        else return -1;
+        if (!crk_ncstatus)
+            return varidp;
+        else
+            return -1;
     }\n'
 
     // Define and store variables
     @cname nc_def_var_crk
     int nc_def_var(int ncid, byteptr name, int xtype,
-                     int ndims, array[int] dimidsp);
+                   int ndims, array[int] dimidsp);
     int nc_put_var_double (int ncid, int varid, array[float64] op);
     int nc_put_var_int (int ncid, int varid, array[int] op);
 
@@ -256,9 +258,9 @@
 
 
     int nc_put_vara_int (int ncid, int varid, array[uint64] startp,
-                            array[uint64] countp, array[int] op);
+                         array[uint64] countp, array[int] op);
     int nc_get_vara_int (int ncid, int varid, array[uint64] startp,
-                            array[uint64] countp, array[int] op);    
+                         array[uint64] countp, array[int] op);    
     // Error handling
     byteptr nc_strerror(int status);
     @inject 'int nc_get_status() {
@@ -273,8 +275,10 @@
     @inject 'int nc_inq_ndims_crk(int ncid) {
         int ndims;
         crk_ncstatus = nc_inq_ndims(ncid, &ndims);
-        if (!crk_ncstatus) return ndims;
-        else return -1;
+        if (!crk_ncstatus)
+            return ndims;
+        else
+            return -1;
     }\n'
         
     @cname nc_inq_ndims_crk
@@ -289,7 +293,9 @@
             free(dimids);
             return NULL;
         }
-        else return dimids;
+        else {
+            return dimids;
+        }
     }\n'
 
     @cname nc_inq_dimids_crk
@@ -325,8 +331,10 @@
     @inject 'int nc_inq_nvars_crk(int ncid) {
         int nvars;
         crk_ncstatus = nc_inq_nvars(ncid, &nvars);
-        if (!crk_ncstatus) return nvars;
-        else return -1;
+        if (!crk_ncstatus)
+            return nvars;
+        else
+            return -1;
     }\n'
 
     @cname nc_inq_nvars_crk
@@ -337,8 +345,10 @@
         int nnvars;
         int *varids = (int *)malloc(nvars * sizeof(int));
         crk_ncstatus = nc_inq_varids(ncid, &nnvars, varids);
-        if (!crk_ncstatus) return varids;
-        else return varids;
+        if (!crk_ncstatus)
+            return varids;
+        else
+            return varids;
     }\n'
 
     @cname nc_inq_varids_crk
@@ -381,10 +391,12 @@
         int ndims;
         int *dimids;
         crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
-        if (crk_ncstatus !=0) return NULL;
+        if (crk_ncstatus != 0)
+            return NULL;
         dimids = (int *)malloc(ndims * sizeof(int));
         crk_ncstatus = nc_inq_vardimid(ncid, varid, dimids);
-        if (crk_ncstatus !=0) return NULL;
+        if (crk_ncstatus != 0)
+            return NULL;
         return dimids;
     }\n'
 

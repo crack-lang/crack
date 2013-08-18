@@ -7,7 +7,7 @@
 // Higher level classes from mongo client binding
 
 import crack.lang Buffer, CString, InvalidStateError, AssertionError,
-                  StaticString, ManagedBuffer, InvalidArgumentError;
+    StaticString, ManagedBuffer, InvalidArgumentError;
 import crack.io Formatter, cout, FStr, cerr;
 import crack.time Time;
 import crack.runtime memcpy, errno;
@@ -156,7 +156,9 @@ class BSONOid : Oid {
             memcpy(buffer, bson_cursor_get_oid(c), 12);
         else
             throw InvalidArgumentError(
-                FStr() `Constructing Oid object from BSON type $(StaticString(bson_cursor_type_as_string(c)))`);
+                FStr() I`Constructing Oid object from BSON type \
+                         $(StaticString(bson_cursor_type_as_string(c)))`
+            );
     }
 }
 
@@ -578,8 +580,10 @@ class BSON {
             else fmt `<$(CString(bson_cursor_type_as_string(c), false))>`;
         }
 
-        if (_type == BSON_TYPE_ARRAY) fmt.write("]");
-        else fmt.write("}");
+        if (_type == BSON_TYPE_ARRAY)
+            fmt.write("]");
+        else
+            fmt.write("}");
     }
 
     BSONCursor cursor() {
