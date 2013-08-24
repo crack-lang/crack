@@ -9,6 +9,7 @@
 AC_DEFUN([AM_PATH_JACK], [dnl
     AC_MSG_CHECKING(for JACK)
     JACK_LIBS=-ljack
+    JACK_CPPFLAGS=
     ac_save_LIBS="$LIBS"
     LIBS="$LIBS $JACK_LIBS"
     AC_TRY_RUN([
@@ -23,6 +24,7 @@ AC_DEFUN([AM_PATH_JACK], [dnl
         got_jack=yes
         AC_MSG_RESULT(yes)
         AC_SUBST(JACK_LIBS)
+        AC_SUBST(JACK_CPPFLAGS)
     ], [
         AC_MSG_RESULT(no)
     ])
