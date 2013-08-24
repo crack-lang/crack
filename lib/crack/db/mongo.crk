@@ -6,37 +6,20 @@
 //
 // Higher level classes from mongo client binding
 
-import crack.lang Buffer, CString, InvalidStateError, AssertionError,
-    StaticString, ManagedBuffer, InvalidArgumentError;
-import crack.io Formatter, cout, FStr, cerr;
-import crack.time Time;
-import crack.runtime memcpy, errno;
+import crack.ascii escape, hex;
+import crack.enc.json JsonArray, JsonBool, JsonFloat, JsonFormatter, JsonInt,
+    JsonObject, JsonParser, JsonString, JsonStringFormatter, ParseException,
+    UnexpectedToken;
+import crack.io cout, cerr, Formatter, FStr;
+import crack.lang AssertionError, Buffer, CString, InvalidArgumentError,
+    InvalidStateError, ManagedBuffer, StaticString;
+import crack.runtime errno, memcpy;
 import crack.sys strerror;
-import crack.ascii hex, escape;
-import crack.enc.json JsonParser, UnexpectedToken, ParseException,
-    JsonFormatter, JsonStringFormatter, JsonObject, JsonArray, JsonInt,
-    JsonFloat, JsonBool, JsonString;
+import crack.time Time;
 @import crack.ann define;
 
 import crack.db.mongo_support Oid;
 import crack.ext._mongo
-    BSON_BINARY_SUBTYPE_GENERIC, BSON_BINARY_SUBTYPE_FUNCTION,
-    BSON_BINARY_SUBTYPE_BINARY, BSON_BINARY_SUBTYPE_UUID,
-    BSON_BINARY_SUBTYPE_MD5, BSON_BINARY_SUBTYPE_USER_DEFINED, BSON_TYPE_NONE,
-    BSON_TYPE_DOUBLE, BSON_TYPE_STRING, BSON_TYPE_DOCUMENT, BSON_TYPE_ARRAY,
-    BSON_TYPE_BINARY, BSON_TYPE_OID, BSON_TYPE_BOOLEAN,
-    BSON_TYPE_UTC_DATETIME, BSON_TYPE_NULL, BSON_TYPE_REGEXP,
-    BSON_TYPE_JS_CODE, BSON_TYPE_SYMBOL, BSON_TYPE_JS_CODE_W_SCOPE,
-    BSON_TYPE_INT32, BSON_TYPE_TIMESTAMP, BSON_TYPE_INT64,
-    MONGO_COLLECTION_DEFAULTS, MONGO_COLLECTION_CAPPED,
-    MONGO_COLLECTION_CAPPED_MAX, MONGO_COLLECTION_AUTO_INDEX_ID,
-    MONGO_COLLECTION_SIZED, MONGO_INDEX_UNIQUE, MONGO_INDEX_DROP_DUPS,
-    MONGO_INDEX_BACKGROUND, MONGO_INDEX_SPARSE,
-
-    // Types
-    bson, bson_cursor, mongo_connection, mongo_packet, mongo_sync_connection,
-    mongo_sync_cursor, mongo_sync_pool, mongo_sync_pool_connection,
-
     // Function names
     bson_type_as_string,
     bson_new,
@@ -142,7 +125,26 @@ import crack.ext._mongo
     mongo_connect,
     mongo_disconnect,
     mongo_connection_get_requestid,
-    mongo_connection_set_timeout;
+    mongo_connection_set_timeout,
+
+    // Types
+    bson, bson_cursor, mongo_connection, mongo_packet, mongo_sync_connection,
+    mongo_sync_cursor, mongo_sync_pool, mongo_sync_pool_connection,
+
+    // Constants
+    BSON_BINARY_SUBTYPE_GENERIC, BSON_BINARY_SUBTYPE_FUNCTION,
+    BSON_BINARY_SUBTYPE_BINARY, BSON_BINARY_SUBTYPE_UUID,
+    BSON_BINARY_SUBTYPE_MD5, BSON_BINARY_SUBTYPE_USER_DEFINED, BSON_TYPE_NONE,
+    BSON_TYPE_DOUBLE, BSON_TYPE_STRING, BSON_TYPE_DOCUMENT, BSON_TYPE_ARRAY,
+    BSON_TYPE_BINARY, BSON_TYPE_OID, BSON_TYPE_BOOLEAN,
+    BSON_TYPE_UTC_DATETIME, BSON_TYPE_NULL, BSON_TYPE_REGEXP,
+    BSON_TYPE_JS_CODE, BSON_TYPE_SYMBOL, BSON_TYPE_JS_CODE_W_SCOPE,
+    BSON_TYPE_INT32, BSON_TYPE_TIMESTAMP, BSON_TYPE_INT64,
+    MONGO_COLLECTION_DEFAULTS, MONGO_COLLECTION_CAPPED,
+    MONGO_COLLECTION_CAPPED_MAX, MONGO_COLLECTION_AUTO_INDEX_ID,
+    MONGO_COLLECTION_SIZED, MONGO_INDEX_UNIQUE, MONGO_INDEX_DROP_DUPS,
+    MONGO_INDEX_BACKGROUND, MONGO_INDEX_SPARSE;
+
 
 int MONGO_CONN_LOCAL = -1;
 
@@ -162,73 +164,65 @@ class BSONOid : Oid {
     }
 }
 
-uint _fromJsonObject(bson b, JsonObject jdo);
-uint _fromJsonArray(bson b, JsonArray jdo);
+bson _fromJsonObject(JsonObject jdo);
+bson _fromJsonArray(JsonArray jdo);
 
-uint _fromJsonObject(bson b, JsonObject jdo) {
+bson _fromJsonObject(JsonObject jdo) {
+    b := bson_new();
     uint cnt = 0;
+
     for (it :in jdo) {
         jo := it.val;
         key := CString(it.key);
-        if (jo.isa(JsonObject)) {
-            newb := bson_new();
-            _fromJsonObject(newb, JsonObject.cast(jo));
+        if (j := JsonObject.cast(jo, null)) {
+            newb := _fromJsonObject(j);
             bson_finish(newb);
             bson_append_document(b, key.buffer, newb);
-        } else if (jo.isa(JsonBool))
-            bson_append_boolean(b, key.buffer,
-                JsonBool.cast(jo).value);
-        else if (jo.isa(JsonFloat))
-            bson_append_double(b, key.buffer,
-                JsonFloat.cast(jo).value);
-        else if (jo.isa(JsonInt))
-            bson_append_int64(b, key.buffer,
-                int64(JsonInt.cast(jo).value));
-        else if (jo.isa(JsonString))
-            bson_append_string(b, key.buffer,
-                JsonString.cast(jo).buffer, int32(JsonString.cast(jo).size));
-        else if (jo.isa(JsonArray)) {
-            newb := bson_new();
-            _fromJsonArray(newb, JsonArray.cast(jo));
+        } else if (j := JsonBool.cast(jo, null)) {
+            bson_append_boolean(b, key.buffer, j.value);
+        } else if (j := JsonFloat.cast(jo, null)) {
+            bson_append_double(b, key.buffer, j.value);
+        } else if (j := JsonInt.cast(jo, null)) {
+            bson_append_int64(b, key.buffer, int64(j.value));
+        } else if (j := JsonString.cast(jo, null)) {
+            bson_append_string(b, key.buffer, j.buffer, int32(j.size));
+        } else if (j := JsonArray.cast(jo, null)) {
+            newb := _fromJsonArray(j);
             bson_finish(newb);
             bson_append_array(b, key.buffer, newb);
         }
         cnt++;
     }
-    return cnt;
+    return b;
 }
 
-uint _fromJsonArray(bson b, JsonArray jdo) {
+bson _fromJsonArray(JsonArray jdo) {
+    b := bson_new();
     sfmt := FStr();
     uint cnt = 0;
+
     for (jo :in jdo) {
         key := CString(sfmt `$cnt`);
-        if (jo.isa(JsonObject)) {
-            newb := bson_new();
-            _fromJsonObject(newb, JsonObject.cast(jo));
+        if (j := JsonObject.cast(jo, null)) {
+            newb := _fromJsonObject(j);
             bson_finish(newb);
             bson_append_document(b, key.buffer, newb);
-        } else if (jo.isa(JsonBool))
-            bson_append_boolean(b, key.buffer,
-                JsonBool.cast(jo).value);
-        else if (jo.isa(JsonFloat))
-            bson_append_double(b, key.buffer,
-                JsonFloat.cast(jo).value);
-        else if (jo.isa(JsonInt))
-            bson_append_int64(b, key.buffer,
-                int64(JsonInt.cast(jo).value));
-        else if (jo.isa(JsonString))
-            bson_append_string(b, key.buffer,
-                JsonString.cast(jo).buffer, int32(JsonString.cast(jo).size));
-        else if (jo.isa(JsonArray)) {
-            newb := bson_new();
-            _fromJsonArray(newb, JsonArray.cast(jo));
+        } else if (j := JsonBool.cast(jo, null)) {
+            bson_append_boolean(b, key.buffer, j.value);
+        } else if (j := JsonFloat.cast(jo, null)) {
+            bson_append_double(b, key.buffer, j.value);
+        } else if (j := JsonInt.cast(jo, null)) {
+            bson_append_int64(b, key.buffer, int64(j.value));
+        } else if (j := JsonString.cast(jo, null)) {
+            bson_append_string(b, key.buffer, j.buffer, int32(j.size));
+        } else if (j := JsonArray.cast(jo, null)) {
+            newb := _fromJsonArray(j);
             bson_finish(newb);
             bson_append_array(b, key.buffer, newb);
         }
         cnt++;
     }
-    return cnt;
+    return b;
 }
 
 
@@ -322,9 +316,7 @@ class BSON {
             throw ParseException("failed to parse json document", 1, 1);
 
         jdo := JsonObject.cast(presult.result); // an OrderedHasmap[String, Object]
-        bdo := BSON();
-
-        _fromJsonObject(bdo.get_bson(), jdo);
+        bdo := BSON(_fromJsonObject(jdo));
         bdo.finish();
         return bdo;
         
@@ -840,24 +832,24 @@ class MongoSync {
         mongo_sync_cursor _c;
         mongo_packet _p;
         MongoSync _M;
-        bool _hasnext;
+        bool _hasNext;
 
         oper init(MongoSync M, CString ns, mongo_packet p) :
              _p = p, _M = M {
             if (_p is null) {
-                _hasnext = false;
+                _hasNext = false;
                 return;
             }
             _c = mongo_sync_cursor_new(_M.get_mongo(), ns.buffer, p);
             if (_c is null)
                 throw AssertionError("Unable to create cursor");
-            _hasnext = true;
+            _hasNext = true;
         }
 
         bool next() {
             if (_p is null) return false;
-            _hasnext = mongo_sync_cursor_next(_c);
-            return _hasnext;
+            _hasNext = mongo_sync_cursor_next(_c);
+            return _hasNext;
         }
 
         BSON data() {
@@ -869,12 +861,12 @@ class MongoSync {
             return this;
         }
 
-        MongoSyncCursor elem() {
-            return this;
+        BSON elem() {
+            return data();
         }
 
         bool isTrue() {
-            return _hasnext;
+            return _hasNext;
         }
 
 
@@ -884,12 +876,40 @@ class MongoSync {
         }
     }
 
-    // Send a query command to MongoDB
+    /// Send a query command to MongoDB
+    /// ns     database namespace in the form db.collection
+    /// flags
+    ///     MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR    
+    ///         Set the TailableCursor flag on the query.
+    ///
+    ///      MONGO_WIRE_FLAG_QUERY_SLAVE_OK  
+    ///         Allow queries made against a replica slave.
+    ///   
+    ///      MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT     
+    ///         Disable cursor timeout.
+    ///
+    ///      MONGO_WIRE_FLAG_QUERY_AWAIT_DATA    
+    ///         Block if at the end of the data block, awaiting data.
+    ///         Use only with MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR!
+    ///
+    ///      MONGO_WIRE_FLAG_QUERY_EXHAUST   
+    ///         Stream the data down full blast in multiple packages.
+    ///         When set, the client is not allowed not to read all the data,
+    ///         unless it closes connection.
+    ///
+    ///      MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS   
+    ///         Allow partial results in a sharded environment.
+    ///         In case one or more required shards are down, with this flag set,
+    ///         partial results will be returned instead of failing. 
+    /// skip   number of results to skip
+    /// ret    number of documents to return
+    /// query  the bson-formatted query
+    /// sel    bson-formatted selector
     @final
     MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
                           BSON query, BSON sel) {
         bson bquery = query is null ? bson_new() : query.get_bson();
-        bson bsel = null;
+        bson bsel;
         if (!(sel is null)) bsel =  sel.get_bson();
 
         p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret, bquery, bsel);
@@ -897,9 +917,10 @@ class MongoSync {
         return MongoSyncCursor(this, ns, p);
     }
 
-    @final MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
+    @final
+    MongoSyncCursor query(CString ns, int32 flags, int32 skip, int32 ret,
                           String squery, String sel) {
-        BSON bquery = null, bsel = null;
+        BSON bquery, bsel;
         if (squery) bquery = BSON.fromJSON(squery);
         if (sel) bsel = BSON.fromJSON(sel);
         return query(ns, flags, skip, ret, bquery, bsel);

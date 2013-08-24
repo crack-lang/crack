@@ -6,13 +6,13 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 // Test time.h binding in runtime
-import crack.runtime InternalDate, ctime, strftime, asctime, epoch, strlen,
-                     strptime;
-import crack.lang ManagedBuffer;
 import crack.cmdline CmdOptions;
 import crack.io cout, FStr;
-import crack.time Date, Time, TimeDelta;
+import crack.lang ManagedBuffer;
+import crack.runtime ctime, strftime, asctime, epoch, strlen, strptime,
+    InternalDate;
 import crack.sys argv, env;
+import crack.time Date, Time, TimeDelta;
 
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
@@ -97,11 +97,11 @@ secs = Mytime.getSeconds();
 
 if (verbose) cout `LocalSeconds = $secs\n`;
 
-dateString2 = Mytime.strftime("%A %B %d %Y");
+dateString2 = Mytime.formatTime("%A %B %d %Y");
 len = dateString2.size;
 
 if (dateString2 != 'Thursday January 01 1970')
-   cout `Date.strftime format mismatch, got '$dateString2', len = $len\n`;
+   cout `Date.formatTime format mismatch, got '$dateString2', len = $len\n`;
 
 if (FStr() `$(TimeDelta(15, 123000000))` != '15.123')
    cout `TimeDelta formatting failed\n`;
@@ -131,26 +131,26 @@ if (secs != 1370858401)
     cout `strptime failed, got $secs seconds instead of 1370858401\n`;
 
 // Test higher level strptime in Date class
-Mytime = Date.strptime("20130610T100001", "%Y%m%dT%H%M%S");
+Mytime = Date.parseTime("20130610T100001", "%Y%m%dT%H%M%S");
 secs = Mytime.getSeconds();
 if (verbose)
     cout `secs = $secs\n`;
 
 if (secs != 1370858401)
-    cout `Date.strptime failed, got $secs seconds instead of 1370858401\n`;
+    cout `Date.parseTime failed, got $secs seconds instead of 1370858401\n`;
 
 // Test time zone spec
 env["TZ"]="PDT";
-Mytime = Date.strptime("20130610T100001", "%Y%m%dT%H%M%S");
+Mytime = Date.parseTime("20130610T100001", "%Y%m%dT%H%M%S");
 if (verbose)
-    cout `strptime Date = $Mytime\n`;
+    cout `parseTime Date = $Mytime\n`;
 
 secs = Mytime.getSeconds();
 if (verbose)
     cout `secs = $secs\n`;
 
 if (secs != 1370858401)
-    cout `Date.strptime failed, got $secs seconds instead of 1370858401\n`;
+    cout `Date.parseTime failed, got $secs seconds instead of 1370858401\n`;
 
 
 cout `ok\n`;

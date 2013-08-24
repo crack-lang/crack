@@ -82,14 +82,9 @@ const float E =            2.7182818284590452354,   // e
 @_min(float64)
 
 // Augment the atoi(char*) imported from _math
-@define _atoi(Tpe){
-   int atoi(Tpe s){
-     return atoi(CString(s.buffer, s.size, false).buffer);
-   }
+int atoi(String s){
+ return atoi(CString(s).buffer);
 }
-
-@_atoi(StaticString)
-@_atoi(String)
 
 // CString is already NULL terminated
 int atoi(CString s){
@@ -97,33 +92,24 @@ int atoi(CString s){
 }
 
 // Augment the strtoi(char*) imported from _math
-@define _strtoi(Tpe){
-   int strtoi(Tpe s){
-     int result = strtoi(CString(s.buffer, s.size, false).buffer);
-     int err = errno();
-     if (!err) return result;
-     else if (err == ERANGE)
-      throw InvalidArgumentError(FStr() `Value '$s' out of range in converting string to integer`);
-     else if (err == EINVAL)
-      throw BadCastError(FStr() `Invalid input '$s' in converting string to integer`);
-     else 
-      throw Exception(FStr() `Unknown error in strtoi($(s)), errno = $err`);
-   }
-}
+int strtoi(String s){
+    int result = strtoi(CString(s).buffer);
+    int err = errno();
 
-@_strtoi(StaticString)
-@_strtoi(String)
+    if (!err) return result;
+    else if (err == ERANGE)
+        throw InvalidArgumentError(FStr() `Value '$s' out of range in converting string to integer`);
+    else if (err == EINVAL)
+        throw BadCastError(FStr() `Invalid input '$s' in converting string to integer`);
+    else 
+        throw Exception(FStr() `Unknown error in strtoi($(s)), errno = $err`);
+}
 
 
 // Augment the atof(char*) imported from _math
-@define _atof(Tpe){
-   float atof(Tpe s){
-     return atof(CString(s.buffer, s.size, false).buffer);
-   }
+float atof(String s){
+    return atof(CString(s).buffer);
 }
-
-@_atof(StaticString)
-@_atof(String)
 
 // CString is already NULL terminated
 float atof(CString s){
@@ -131,22 +117,22 @@ float atof(CString s){
 }
 
 // Augment the strtof(char*) imported from _math
-@define _strtof(Tpe, ext, Ftpe){
-   Ftpe strto$$ext(Tpe s){
-     Ftpe result = strtof(CString(s.buffer, s.size, false).buffer);
-     int err = errno();
-     if (!err) return result;
-     else if (err == ERANGE)
-      throw InvalidArgumentError(FStr() `Value '$s' out of range converting string to float`);
-     else if (err == EINVAL)
-      throw BadCastError(FStr() `Invalid input '$s' in converting string to float`);
-     else 
-      throw Exception(FStr() `Unknown error in strtof($(s)), errno = $err`);
-   }
+@define _strtof(String, ext, FloatType){
+    FloatType strto$$ext(String s){
+        FloatType result = strtof(CString(s).buffer);
+        int err = errno();
+
+        if (!err)
+            return result;
+        else if (err == ERANGE)
+            throw InvalidArgumentError(FStr() `Value '$s' out of range converting string to float`);
+        else if (err == EINVAL)
+            throw BadCastError(FStr() `Invalid input '$s' in converting string to float`);
+        else 
+            throw Exception(FStr() `Unknown error in strtof($(s)), errno = $err`);
+    }
 }
 
-@_strtof(StaticString, f, float)
-@_strtof(StaticString, d, float64)
 @_strtof(String, f, float)
 @_strtof(String, d, float64)
 

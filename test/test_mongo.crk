@@ -16,9 +16,9 @@ import crack.runtime errno, exit;
 import crack.sys strerror;
 
 sfmt := FStr();
-B := BSON.fromJSON('{"A": 10, "B": "S"}');
-Bs := sfmt `$B`;
-if (Bs != '{"A": 10, "B": "S"}') {
+b := BSON.fromJSON('{"A": 10, "B": "S"}');
+bs := sfmt `$b`;
+if (bs != '{"A": 10, "B": "S"}') {
     cout `Could not convert JSON to BSON!\n`;
     exit(1);
 }
@@ -34,17 +34,17 @@ if (hx != hx2) {
   exit(1);
 }
 // Test an array
-B = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4]}');
-Bs = sfmt `$B`;
-if (Bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4]}') {
+b = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4]}');
+bs = sfmt `$b`;
+if (bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4]}') {
     cout `Could not convert JSON to BSON!\n`;
     exit(1);
 }
 
 // Test a nested JSON document
-B = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.5}}');
-Bs = sfmt `$B`;
-if (Bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.500000}}') {
+b = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.5}}');
+bs = sfmt `$b`;
+if (bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.500000}}') {
     cout `Could not convert JSON to BSON!\n`;
     exit(1);
 }
@@ -108,7 +108,7 @@ for (r :in cursor) j++;
 if (j != 1)
     cout `found $j results instead of 1, might mean uuid was not unique\n`;
 cursor = C.query(ns, 0, 0, 10, '{"the_final_answer": 42}', null);
-j=0;
+j = 0;
 
 for (r :in cursor) j++;
 if (j == 0) {

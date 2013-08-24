@@ -13,9 +13,9 @@ import crack.lang ManagedBuffer, AppendBuffer, Buffer, InvalidArgumentError;
 import crack.cont.array Array;
 @export_symbols random, srandom, setstate, initstate;
 
-// Return a byffer with the length specified that has a very high probablility
-// of being unique due to it's use of a high-resolution time values combined
-// with system random numbers.
+/// Return a byffer with the length specified that has a very high probablility
+/// of being unique due to it's use of a high-resolution time values combined
+/// with system random numbers.
 Buffer uuid(uint numbytes) {
     buf := ManagedBuffer(16);
     buf.size = 16;
