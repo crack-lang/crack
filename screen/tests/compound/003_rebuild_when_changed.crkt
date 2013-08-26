@@ -20,12 +20,16 @@ test.run();
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
 out: foo
 terminated: success
-err: digests don't match for mod.crk got .* current = .*
+err: digests don't match for mod.crk got .*
+err:   current = .*
+err:   module: mod
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
 err: Reusing cached script .*/main.crk
 out: bar
 terminated: success
-err: digests don't match for mod.crk got .* current = .*
+err: digests don't match for mod.crk got .*
+err:   current = .*
+err:   module: mod
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
 err: meta digest doesn't match for dependency mod, need to rebuild \.main\..*main_2ecrk\(depending on .* current = .*\)
 out: baz

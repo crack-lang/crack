@@ -171,8 +171,10 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         if (fileDigest != recordedSourceDigest) {
             if (Construct::traceCaching)
                 cerr << "digests don't match for " << sourcePath <<
-                    " got " << recordedSourceDigest.asHex() << " current = " <<
-                    fileDigest.asHex() << endl;
+                    " got " << recordedSourceDigest.asHex() <<
+                    "\n  current = " <<
+                    fileDigest.asHex() << "\n  module: " <<
+                    canonicalName << endl;
             return 0;
         }
     }
