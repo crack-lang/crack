@@ -1,0 +1,44 @@
+%%TEST%%
+close modules owned by a deserialized module
+%%ARGS%%
+%%FILE%%
+# This verifies that modules that are owned by a serialized module get closed
+# (and serialized) when during the owning modules serialization.
+# This was a bug that manifested as an out-of date generic instantiation
+# module not being persisted.
+import systest test;
+test.preBootstrap = true;
+test.addTrace('Caching');
+test.mod('mod', "class A[T] {}");
+test.main("import mod A; A[int] a; puts('ok');");
+test.run();
+
+test.mod('mod', "class A[T] {} # change source checksum to force recompile");
+test.run();
+
+# run a second time to make sure everything is cool.
+test.run();
+%%REXPECT%%
+err: mod out-of-date or not in the cache.  Building from: ./mod\.crk
+out: ok
+terminated: success
+err: digests don't match for mod.crk got .*
+err:   current = .*
+err:   module: mod
+err: mod out-of-date or not in the cache.  Building from: ./mod.crk
+err: digests don't match for mod.crk got .*
+err:   current = .*
+err:   module: mod.A\[.builtin.int\]
+err: digests don't match for mod.crk got .*
+err:   current = .*
+err:   module: mod.A\[.builtin.int\]
+err: Reusing cached script .*/main.crk
+out: ok
+terminated: success
+err: Reusing cached module mod
+err: Reusing cached module mod.A\[.builtin.int\]
+err: Reusing cached script .*/main.crk
+out: ok
+terminated: success
+
+%%STDIN%%

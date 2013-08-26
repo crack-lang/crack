@@ -90,6 +90,38 @@ class BJitModuleDef : public BModuleDef {
                 builder->mergeAndRegister(modules);
             }
         }
+        
+        /** 
+         * Does a recursive close on the owned modules but not on this one.  
+         * This is to allow us to close dependencies on a module that is 
+         * itself cached and doesn't require a close.
+         */
+        void closeOwned(LLVMJitBuilder *builder) {
+            // don't do anything if we don't have any sub-modules.
+            if (!subModules.size())
+                return;
+
+            ModuleVec modules;
+            
+            // close the subs
+            for (int i = 0; i < subModules.size(); ++i)
+                subModules[i]->close(modules);
+            
+            // add this module and then merge the set
+            modules.push_back(this);
+            builder->mergeAndRegister(modules);
+        }
+        
+        // Override onDeserialized so we can close owned modules imported 
+        // from a serialized module.
+        virtual void onDeserialized(model::Context &context) {
+            BModuleDef::onDeserialized(context);
+            LLVMJitBuilder *builder = 
+                &dynamic_cast<builder::mvll::LLVMJitBuilder &>(
+                    context.builder
+                );
+            closeOwned(builder);
+        }
 };
 
 }} // end namespace builder::vmll

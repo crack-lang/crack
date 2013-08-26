@@ -938,7 +938,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 ) {
 
     Cacher c(context, options.get());
-    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
+    BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
 
     if (bmod) {
 
@@ -1011,6 +1011,6 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 
     }
 
+    moduleDef = bmod;
     return bmod;
-
 }
