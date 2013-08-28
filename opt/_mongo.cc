@@ -1,9 +1,11 @@
 #include <inttypes.h>
 #include <float.h>
+#include <stdlib.h>
 #include <mongo-client/mongo.h>
 typedef void * voidptr;
 typedef char * byteptr;
 typedef int Undef;
+typedef struct { byteptr data; gint32 size; gint32 tpe;} bufStruct;
 
     byteptr bson_cursor_get_string_crk(bson_cursor *c) {
         const gchar *dest;
@@ -24,6 +26,20 @@ bson *bson_cursor_get_array_crk(bson_cursor *c) {
         bson *arr;
         if (bson_cursor_get_array(c, &arr)) return arr;
         return NULL;
+    }
+bufStruct* bson_cursor_get_binary_crk(bson_cursor *c) {
+      bufStruct *b = (bufStruct *)calloc(1, sizeof(bufStruct));
+      bool success;
+      bson_binary_subtype tpe;
+      success = bson_cursor_get_binary(c, &tpe, (const guint8**)&(b->data),
+                                       &(b->size));
+      if (!success) {
+        free(b);
+        b = NULL;
+      } else {
+        b->tpe = gint32(tpe);
+      }
+      return b;
     }
 byteptr bson_cursor_get_oid_crk(bson_cursor *c) {
         const guint8 *oid;
@@ -132,6 +148,16 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
 
     crack::ext::Type *type_bson_cursor = mod->addType("bson_cursor", sizeof(Undef));
     type_bson_cursor->finish();
+
+
+    crack::ext::Type *type_bufStruct = mod->addType("bufStruct", sizeof(bufStruct));
+        type_bufStruct->addInstVar(type_byteptr, "data",
+                                CRACK_OFFSET(bufStruct, data));
+        type_bufStruct->addInstVar(type_int32, "size",
+                                CRACK_OFFSET(bufStruct, size));
+        type_bufStruct->addInstVar(type_int32, "tpe",
+                                CRACK_OFFSET(bufStruct, tpe));
+    type_bufStruct->finish();
 
     f = mod->addFunc(type_byteptr, "bson_type_as_string",
                      (void *)bson_type_as_string
@@ -369,6 +395,11 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
 
     f = mod->addFunc(type_bson, "bson_cursor_get_array",
                      (void *)bson_cursor_get_array_crk
+                     );
+       f->addArg(type_bson_cursor, "c");
+
+    f = mod->addFunc(type_bufStruct, "bson_cursor_get_binary",
+                     (void *)bson_cursor_get_binary_crk
                      );
        f->addArg(type_bson_cursor, "c");
 
@@ -847,5 +878,37 @@ void crack_ext__mongo_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "MONGO_INDEX_SPARSE",
                      static_cast<int>(MONGO_INDEX_SPARSE)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_SLAVE_OK",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_SLAVE_OK)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_AWAIT_DATA",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_AWAIT_DATA)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_EXHAUST",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_EXHAUST)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS",
+                     static_cast<int>(MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_UPDATE_UPSERT",
+                     static_cast<int>(MONGO_WIRE_FLAG_UPDATE_UPSERT)
+                     );
+
+    mod->addConstant(type_int, "MONGO_WIRE_FLAG_UPDATE_MULTI",
+                     static_cast<int>(MONGO_WIRE_FLAG_UPDATE_MULTI)
                      );
 }

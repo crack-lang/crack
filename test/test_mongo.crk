@@ -8,7 +8,8 @@
 
 import crack.ascii hex, bin;
 import crack.cont.array Array;
-import crack.db.mongo BSON, MONGO_CONN_LOCAL, MongoSync;
+import crack.db.mongo MongoSync, BSON, MONGO_CONN_LOCAL,
+    BSON_BINARY_SUBTYPE_GENERIC;
 import crack.db.mongo_support Oid;
 import crack.io cout, cerr, FStr;
 import crack.random uuid;
@@ -19,8 +20,8 @@ sfmt := FStr();
 b := BSON.fromJSON('{"A": 10, "B": "S"}');
 bs := sfmt `$b`;
 if (bs != '{"A": 10, "B": "S"}') {
-    cout `Could not convert JSON to BSON!\n`;
-    exit(1);
+    cout `Could not convert JSON to BSON!\n$bs\n`;
+    // exit(1);
 }
 
 // Test Oid
@@ -33,22 +34,22 @@ if (hx != hx2) {
   cout `$hx != $hx2 creating new Oid\n`;
   exit(1);
 }
+
 // Test an array
 b = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4]}');
 bs = sfmt `$b`;
 if (bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4]}') {
-    cout `Could not convert JSON to BSON!\n`;
-    exit(1);
+    cout `Could not convert JSON to BSON!\n$bs\n`;
+    //exit(1);
 }
 
 // Test a nested JSON document
 b = BSON.fromJSON('{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.5}}');
 bs = sfmt `$b`;
 if (bs != '{"A": 10, "B": "S", "C": [1, 2, 3, 4], "D": {"a": 1, "b": 10.500000}}') {
-    cout `Could not convert JSON to BSON!\n`;
-    exit(1);
+    cout `Could not convert JSON to BSON!\n$bs\n`;
+    //exit(1);
 }
-
 
 // Connect to localhost over TCP/IP
 C := MongoSync("localhost", 27017, true);
@@ -67,6 +68,7 @@ doc := BSON();
 doc.appendString("hello", "world");
 doc.appendInt32("the_first_answer", 42);
 doc.appendBool("yes?", false);
+doc.appendBinary("bin", BSON_BINARY_SUBTYPE_GENERIC, "binary data", );
 doc.appendInt32("n", 1);
 docid := uuid(12);
 doc.appendOid("_id", docid);
@@ -80,6 +82,7 @@ doc2 := BSON();
 doc2.appendString("hello", "world 2");
 doc2.appendInt32("the_final_answer", 42);
 doc2.appendBool("yes?", false);
+doc2.appendBinary("bin", BSON_BINARY_SUBTYPE_GENERIC, "binary data 2", );
 doc2.appendInt32("n", 2);
 doc2.finish();
 
@@ -102,9 +105,10 @@ if (cursor is null)  {
     cerr `Failed to query document, $(strerror()) ($(errno()))\n`;
     exit (1);
 }
-    
+
 uint j = 0;
-for (r :in cursor) j++;
+while (cursor.next()) j++;
+
 if (j != 1)
     cout `found $j results instead of 1, might mean uuid was not unique\n`;
 cursor = C.query(ns, 0, 0, 10, '{"the_final_answer": 42}', null);

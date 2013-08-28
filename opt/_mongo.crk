@@ -14,10 +14,12 @@
     @dumpsymbols 'opt/_mongo.txt'
     @inject '#include <inttypes.h>\n'
     @inject '#include <float.h>\n'
+    @inject '#include <stdlib.h>\n'
     @inject '#include <mongo-client/mongo.h>\n'
     @inject 'typedef void * voidptr;\n'
     @inject 'typedef char * byteptr;\n'
     @inject 'typedef int Undef;\n'
+    @inject 'typedef struct { byteptr data; gint32 size; gint32 tpe;} bufStruct;\n'
 
     // Opaque classes
     @crack_internal
@@ -45,6 +47,12 @@
 
     @cname Undef
     class bson_cursor;
+
+    class bufStruct {
+        byteptr data;
+        int32 size;
+        int32 tpe;
+    }
 
     // Constants
     const int
@@ -230,9 +238,24 @@
     @cname bson_cursor_get_array_crk
     bson bson_cursor_get_array(bson_cursor c);
 
-    // Get the value stored at the cursor, as binary data. TODO bind
-    // bool bson_cursor_get_binary(bson_cursor c, bson_binary_subtype *subtype,
-    // const guint8 **data, gint32 *size)
+    // Get the value stored at the cursor, as binary data
+    @inject 'bufStruct* bson_cursor_get_binary_crk(bson_cursor *c) {
+      bufStruct *b = (bufStruct *)calloc(1, sizeof(bufStruct));
+      bool success;
+      bson_binary_subtype tpe;
+      success = bson_cursor_get_binary(c, &tpe, (const guint8**)&(b->data),
+                                       &(b->size));
+      if (!success) {
+        free(b);
+        b = NULL;
+      } else {
+        b->tpe = gint32(tpe);
+      }
+      return b;
+    }\n'
+
+    @cname bson_cursor_get_binary_crk
+    bufStruct bson_cursor_get_binary(bson_cursor c);
 
     // Get the value stored at the cursor, as an ObjectID.
     @inject 'byteptr bson_cursor_get_oid_crk(bson_cursor *c) {
@@ -322,17 +345,25 @@
 
     // Collection cnstants -----------------------------------------------------
     const int
-        MONGO_COLLECTION_DEFAULTS,          // Default options.
+        MONGO_COLLECTION_DEFAULTS,           // Default options.
         MONGO_COLLECTION_CAPPED,            // The collection is capped.
         MONGO_COLLECTION_CAPPED_MAX,        // The collection is capped by element number aswell.
         MONGO_COLLECTION_AUTO_INDEX_ID,     // The collection's _id should be autoindexed.
-        MONGO_COLLECTION_SIZED;             // The collection needs to be pre-allocated.
+        MONGO_COLLECTION_SIZED,             // The collection needs to be pre-allocated.
 
-    const int
         MONGO_INDEX_UNIQUE,                 // Create a unique index.
         MONGO_INDEX_DROP_DUPS,              // Drop duplicate entries when creating the indexes.
         MONGO_INDEX_BACKGROUND,             // Create indexes in the background.
-        MONGO_INDEX_SPARSE;                 // Sparse index
+        MONGO_INDEX_SPARSE,                 // Sparse index
+
+        MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR,
+        MONGO_WIRE_FLAG_QUERY_SLAVE_OK,
+        MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT,
+        MONGO_WIRE_FLAG_QUERY_AWAIT_DATA,
+        MONGO_WIRE_FLAG_QUERY_EXHAUST,
+        MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS,
+        MONGO_WIRE_FLAG_UPDATE_UPSERT,
+        MONGO_WIRE_FLAG_UPDATE_MULTI;
 
     // Sync API ----------------------------------------------------------------
 
