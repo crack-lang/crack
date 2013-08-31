@@ -138,6 +138,26 @@ if (XS_FOUND)
     install(TARGETS xs DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 endif (XS_FOUND)
 
+# LMDB key/value store
+macro_optional_find_package(LMDB)
+macro_log_feature(LMDB_FOUND "lmdb" "Bindings for LMDB"
+                           "http://symas.com/mdb/"
+                  )
+
+if (LMDB_FOUND)
+    add_library(lmdb SHARED _lmdb.cc)
+    set_target_properties(lmdb
+                          PROPERTIES
+                          OUTPUT_NAME _lmdb
+                          PREFIX ""
+                         )
+    target_link_libraries(lmdb
+                          -llmdb
+                         )
+    install(TARGETS lmdb DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
+endif (LMDB_FOUND)
+
+
 # Packages that depend on pkg-config
 find_package(PkgConfig)
 

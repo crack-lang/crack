@@ -517,11 +517,11 @@ class BSON {
         }
 
         // Get the value stored at the cursor, as a boolean.
-        ManagedBuffer getBinary() {
+        Buffer getBinary() {
             Buffer crackBuf;
             bufStruct b = bson_cursor_get_binary(_c);
             if (!(b is null)) {
-                crackBuf = ManagedBuffer(b.data, b.size);
+                crackBuf = Buffer(b.data, b.size);
                 free(b); // Keep the data, not the container
             }
             return crackBuf;
