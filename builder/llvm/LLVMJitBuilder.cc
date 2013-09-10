@@ -9,6 +9,7 @@
 #include "LLVMJitBuilder.h"
 
 #include "model/OverloadDef.h"
+#include "model/StatState.h"
 #include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"

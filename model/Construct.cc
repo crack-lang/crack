@@ -25,6 +25,7 @@
 #include "Context.h"
 #include "GlobalNamespace.h"
 #include "ModuleDef.h"
+#include "StatState.h"
 #include "StrConst.h"
 #include "TypeDef.h"
 #include "compiler/init.h"
@@ -109,38 +110,6 @@ void ConstructStats::stopwatch() {
     }
 
     lastTime = t;
-}
-
-StatState::StatState(Context *c, ConstructStats::CompileState newState) :
-    context(c) {
-    if (!context->construct->rootBuilder->options->statsMode)
-        return;
-    oldState = context->construct->stats->getState();
-    context->construct->stats->setState(newState);
-}
-
-StatState::StatState(Context *c,
-                     ConstructStats::CompileState newState,
-                     model::ModuleDef *newModule) :
-    context(c) {
-    if (!context->construct->rootBuilder->options->statsMode)
-        return;
-    oldState = context->construct->stats->getState();
-    oldModule = context->construct->stats->getModule().get();
-    context->construct->stats->setState(newState);
-    context->construct->stats->setModule(newModule);
-}
-
-bool StatState::statsEnabled(void) {
-    return context->construct->rootBuilder->options->statsMode;
-}
-
-StatState::~StatState() {
-    if (!context->construct->rootBuilder->options->statsMode)
-        return;
-    context->construct->stats->setState(oldState);
-    if (oldModule)
-        context->construct->stats->setModule(oldModule.get());
 }
 
 bool Construct::traceCaching = false;

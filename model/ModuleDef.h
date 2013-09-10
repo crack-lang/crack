@@ -117,6 +117,12 @@ class ModuleDef : public VarDef, public Namespace {
          * components.
          */
         static StringVec parseCanonicalName(const std::string &name);
+        
+        /**
+         * Joins name components by periods (the opposite of 
+         * parseCanonicalName()).
+         */
+        static std::string joinName(const StringVec &parts);
 
         /**
          * Get the "definition hash."  This is the hash of all definitions 

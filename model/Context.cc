@@ -25,6 +25,7 @@
 #include "ConstSequenceExpr.h"
 #include "Deserializer.h"
 #include "FuncAnnotation.h"
+#include "StatState.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
 #include "GlobalNamespace.h"
@@ -46,8 +47,9 @@
 using namespace model;
 using namespace std;
 using namespace crack::util;
+using namespace parser;
 
-parser::Location Context::emptyLoc;
+Location Context::emptyLoc;
 
 Construct* Context::getCompileTimeConstruct() {
     if (construct->compileTimeConstruct.get())
@@ -56,7 +58,7 @@ Construct* Context::getCompileTimeConstruct() {
         return construct;
 }
 
-void Context::showSourceLoc(const parser::Location &loc, ostream &out) {
+void Context::showSourceLoc(const Location &loc, ostream &out) {
 
     // set some limits
     if (!loc.getName() || loc.getName()[0] == '\0' ||
@@ -538,6 +540,123 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
     return expr;
 }
 
+ModuleDefPtr Context::emitImport(Namespace *ns, 
+                                 const std::vector<string> &moduleName,
+                                 const ImportedDefVec &imports,
+                                 bool annotation,
+                                 bool recordImport,
+                                 bool rawSharedLib,
+                                 vector<Location> *symLocs
+                                 ) {
+    string canonicalName;
+    
+    // The raw shared library case is simple, deal with it up front.
+    if (rawSharedLib) {
+        try {
+            StatState s1(this, ConstructStats::builder);
+            builder.importSharedLibrary(moduleName[0], imports, *this, ns);
+            return 0;
+        } catch (const spug::Exception &ex) {
+            error(ex.getMessage());
+        }
+    }
+    
+    ModuleDefPtr mod = construct->getModule(moduleName.begin(), 
+                                            moduleName.end(),
+                                            canonicalName
+                                            );
+    if (!mod)
+        error(SPUG_FSTR("unable to find module " << canonicalName));
+    
+    // make sure the module is finished (no recursive imports)
+    else if (!mod->finished)
+        error(SPUG_FSTR("Attempting to import module " << canonicalName <<
+                         " recursively."
+                        )
+              );
+    
+    // add an implicit dependency to the current module (assuming we're 
+    // currently in a module, in an annotation we might not be).
+    if (ModuleDef *curMod = 
+          ModuleDefPtr::rcast(getModuleContext()->ns)
+        )
+        curMod->imports.push_back(mod);
+
+    {
+        StatState s1(this, ConstructStats::builder);
+        if (!annotation)
+            builder.initializeImport(mod.get(), imports);
+    }
+
+    // alias all of the names in the new module
+    int st = 0;
+    ModuleDefPtr curModule = ns->getModule();
+    for (ImportedDefVec::const_iterator iter = imports.begin();
+         iter != imports.end();
+         ++iter, ++st
+         ) {
+        // make sure that the symbol is not private
+        if (iter->source[0] == '_')
+            error(symLocs ? (*symLocs)[st] : loc,
+                  SPUG_FSTR("Can not import private symbol " << iter->source << 
+                             "."
+                            )
+                  );
+        
+        // make sure we don't already have it in the local context
+        if (ns->lookUp(iter->local, false))
+            error(symLocs ? (*symLocs)[st] : loc, SPUG_FSTR("imported name " << iter->local <<
+                                  " hides existing definition."
+                                 )
+                  );
+        VarDefPtr symVal = mod->lookUp(iter->source);
+        if (!symVal)
+            error(symLocs ? (*symLocs)[st] : loc, 
+                  SPUG_FSTR("name " << iter->source <<
+                             " is not defined in module " << 
+                             canonicalName
+                            )
+                  );
+        
+        // make sure the symbol either belongs to the module or was 
+        // explicitly exported by the module (no implicit second-order 
+        // imports).
+        if (!symVal->isImportableFrom(mod.get()))
+            error(symLocs ? (*symLocs)[st] : loc, 
+                  SPUG_FSTR("Name " << iter->source <<
+                             " does not belong to module " <<
+                             canonicalName << ".  Second-order imports " 
+                             "are not allowed."
+                            )
+                  );
+        
+        {
+            StatState s1(this, ConstructStats::builder);
+            builder.registerImportedDef(*this, symVal.get());
+        }
+        
+        ns->addAlias(iter->local, symVal.get());
+        if (curModule) {
+            VarDef::Set added;
+            symVal->addDependenciesTo(curModule.get(), added);
+        }
+    }
+    
+    // add a dependency on the module itself.  We have to check that 
+    // curModule is not null when we do this, it can be null in the case of 
+    // an annotation import.
+    if (curModule)
+        curModule->addDependency(mod.get());
+   
+    // If we're recording imports, track the import in the parent context.  
+    // (the current context is a temporary annotation context in this case 
+    // where we do this)
+    if (annotation && recordImport)
+        parent->compileNSImports.push_back(new Import(moduleName, imports));
+    
+    return mod;
+}
+
 bool Context::inSameFunc(Namespace *varNS) {
     if (scope != local)
         // this is not a function.
@@ -942,6 +1061,17 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     return 0;
 }
 
+void Context::collectCompileNSImports(vector<ImportPtr> &imports) const {
+    if (parent)
+        parent->collectCompileNSImports(imports);
+        
+    for (vector<ImportPtr>::const_iterator i = compileNSImports.begin();
+         i != compileNSImports.end();
+         ++i
+         )
+        imports.push_back(*i);
+}
+
 namespace {
     struct ContextStack {
         const list<string> &stack;
@@ -958,7 +1088,7 @@ namespace {
     }
 }
 
-void Context::error(const parser::Location &loc, const string &msg, 
+void Context::error(const Location &loc, const string &msg, 
                     bool throwException
                     ) {
     
@@ -985,7 +1115,7 @@ void Context::error(const parser::Location &loc, const string &msg,
     
 }
 
-void Context::warn(const parser::Location &loc, const string &msg) {
+void Context::warn(const Location &loc, const string &msg) {
     cerr << loc.getName() << ":" <<
             loc.getLineNumber() << ":" <<
             loc.getColNumber() << ": " << msg << endl;

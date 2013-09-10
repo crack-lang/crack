@@ -807,10 +807,10 @@ string TypeDef::getSpecializedName(TypeVecObj *types, bool fullName) {
 void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
                         TypeDef::TypeVecObj *types
                         ) {
-    // alias all global symbols in the original module and original compile 
-    // namespace.
+    // alias all global symbols in the original module.  For the compile 
+    // namespace, just reuse that of the generic.
     localCtx.ns->aliasAll(type->genericInfo->ns.get());
-    localCtx.compileNS->aliasAll(type->genericInfo->compileNS.get());
+    localCtx.compileNS = type->genericInfo->compileNS;
 
     // alias the template arguments to their parameter names
     for (int i = 0; i < types->size(); ++i)
@@ -1159,6 +1159,7 @@ namespace {
                 deser.userData = 0;
             } else {
                 string name = deser.readString(16, "name");
+                Context &context = *deser.context;
                 
                 // the owner isn't necessarily a type - it should either be a 
                 // type or the module, but the module should always already be 
@@ -1168,16 +1169,17 @@ namespace {
                     deser.readObject(TypeDefReader(), "owner");
                 NamespacePtr owner = NamespacePtr::arcast(result.object);
 
-                
                 // is this a generic?
                 unsigned isGeneric = deser.readUInt("isGeneric");
                 if (isGeneric) {
                     type = new TypeDef(
-                        deser.context->construct->classType.get(),
+                        context.construct->classType.get(),
                         name,
                         true
                     );
                     type->genericInfo = Generic::deserialize(deser);
+                    type->genericInfo->ns = owner;
+                    type->genericInfo->seedCompileNS(context);
                     type->generic = new TypeDef::SpecializationCache();
                 } else {
                     // create a fake context for the owner and instantiate the 
@@ -1186,11 +1188,9 @@ namespace {
                         ModuleDefPtr::rcast(owner) ? Context::module :
                                                      Context::instance;
                     ContextPtr ownerContext =
-                        deser.context->createSubContext(scope, owner.get());
+                        context.createSubContext(scope, owner.get());
                     type = 
-                        deser.context->builder.materializeType(*ownerContext,
-                                                               name
-                                                               );
+                        context.builder.materializeType(*ownerContext, name);
                     // pass a flag back to indicate that we just deserialized 
                     // a definition.
                     deser.userData = 1;

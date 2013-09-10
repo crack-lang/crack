@@ -8,6 +8,7 @@
 
 #include "ModuleDef.h"
 
+#include <sstream>
 #include "spug/check.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
@@ -15,6 +16,7 @@
 #include "Deserializer.h"
 #include "ModuleStub.h"
 #include "Serializer.h"
+#include "StatState.h"
 
 using namespace std;
 using namespace model;
@@ -104,6 +106,21 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
     // add the last segment
     result.push_back(name.substr(last, i - last));
     return result;
+}
+
+string ModuleDef::joinName(const ModuleDef::StringVec &parts) {
+    ostringstream result;
+
+    bool first;
+    for (StringVec::const_iterator i = parts.begin(); i < parts.end(); ++i) {
+        if (!first) {
+            result << '.';
+            first = true;
+        }
+        result << *i;
+    }
+
+    return result.str();
 }
 
 #define CRACK_METADATA_V1 2271218416

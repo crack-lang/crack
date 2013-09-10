@@ -20,6 +20,7 @@ namespace parser {
 namespace model {
 
 class Deserializer;
+SPUG_RCPTR(Import);
 class Serializer;
 
 SPUG_RCPTR(Namespace);
@@ -41,6 +42,9 @@ class Generic {
         // the original context Namespace and compile namespace
         NamespacePtr ns, compileNS;
         
+        // The list of compile namespace imports.
+        std::vector<ImportPtr> compileNSImports;
+        
         /** Add the token to the body. */
         void addToken(const parser::Token &tok) {
             body.push_back(tok);
@@ -55,6 +59,12 @@ class Generic {
          * @param generic set to true if we are in a generic context.
          */
         NamespacePtr getInstanceModuleOwner(bool generic);
+
+        /** 
+         * Create the compile namespace for the generic by replaying the 
+         * imports in compileNSImports.
+         */
+        void seedCompileNS(Context &context);
         
         /** Replay the body into the tokenizer. */
         void replay(parser::Toker &toker);

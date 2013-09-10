@@ -11,6 +11,7 @@ model/Deserializer.cc
 model/GetRegisterExpr.cc
 model/GlobalNamespace.cc
 model/ModuleStub.cc
+model/StatState.cc
 model/StrConst.cc
 model/AssignExpr.cc
 model/VarRef.cc
@@ -20,6 +21,8 @@ model/Expr.cc
 model/Generic.cc
 model/OverloadDef.cc
 model/ResultExpr.cc
+model/Import.cc
+model/ImportedDef.cc
 model/Initializers.cc
 model/AllocExpr.cc
 model/CompositeNamespace.cc

@@ -1,0 +1,43 @@
+%%TEST%%
+compile namespace in generics
+%%ARGS%%
+%%FILE%%
+# Verifies that we persist the compile namespace correctly in generics.
+import systest test;
+test.preBootstrap = true;
+test.mod('ann', I"
+    import crack.compiler CrackContext;
+
+    void a(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, 'void f() {}');
+    }
+
+    void b(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, 'void g() {}');
+    }
+    ");
+test.mod('mod', I"
+    @import ann a;
+    class A[T] {
+        @import ann b;
+        @b
+    }
+    ");
+test.main(I"
+    import mod A;
+    A[int] a;
+    puts('ok');
+    ");
+test.run();
+test.main(I"
+    import mod A;
+    A[float] a;
+    puts('ok');
+    ");
+test.run()
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%

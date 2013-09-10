@@ -28,6 +28,7 @@
 #include "model/GetRegisterExpr.h"
 #include "model/Expr.h"
 #include "model/ImportedDef.h"
+#include "model/Import.h"
 #include "model/Initializers.h"
 #include "model/IntConst.h"
 #include "model/MultiExpr.h"
@@ -36,6 +37,7 @@
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
 #include "model/SetRegisterExpr.h"
+#include "model/StatState.h"
 #include "model/StrConst.h"
 #include "model/StubDef.h"
 #include "model/TypeDef.h"
@@ -48,10 +50,6 @@
 #define __STDC_LIMIT_MACROS 1
 #include <stdint.h>
 
-using namespace std;
-using namespace parser;
-using namespace model;
-
 // po' man's profilin.
 // since this is intrusive, we can ifdef it out here conditionally
 #define BSTATS_GO(var) \
@@ -59,6 +57,9 @@ using namespace model;
 
 #define BSTATS_END
 
+using namespace std;
+using namespace parser;
+using namespace model;
 
 void Parser::addDef(VarDef *varDef) {
    FuncDef *func = FuncDefPtr::cast(varDef);
@@ -309,7 +310,10 @@ void Parser::parseAnnotation() {
       if (tok.isImport()) {
          builder::Builder &builder = 
             *context->getCompileTimeConstruct()->rootBuilder;
-         parseImportStmt(parentContext->compileNS.get(), true)->runMain(builder);
+         ModuleDefPtr mod =
+            parseImportStmt(parentContext->compileNS.get(), true);
+         if (mod)
+            mod->runMain(builder);
          return;
       }
       
@@ -2679,52 +2683,30 @@ void Parser::parseReturnStmt() {
 // import module-and-defs ;
 //       ^               ^
 ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
-   ModuleDefPtr mod;
-   string canonicalName;
+   vector<string> moduleName;
+   bool rawSharedLib;
    builder::Builder &builder = context->builder;
 
    Token tok = getToken();
    if (tok.isIdent()) {
       toker.putBack(tok);
-      vector<string> moduleName;
       parseModuleName(moduleName);
-            
-      mod = context->construct->getModule(moduleName.begin(), 
-                                          moduleName.end(),
-                                          canonicalName
-                                          );
-      if (!mod)
-         error(tok, SPUG_FSTR("unable to find module " << canonicalName));
-      
-      // make sure the module is finished (no recursive imports)
-      else if (!mod->finished)
-         error(tok,
-               SPUG_FSTR("Attempting to import module " << canonicalName <<
-                          " recursively."
-                         )
-               );
-      
-      // add an implicit dependency to the current module (assuming we're 
-      // currently in a module, in an annotation we might not be).
-      if (ModuleDef *curMod = 
-            ModuleDefPtr::rcast(context->getModuleContext()->ns)
-          )
-         curMod->imports.push_back(mod);
-
-   } else if (!tok.isString()) {
+      rawSharedLib = false;
+   } else if (tok.isString()) {
+      moduleName.push_back(tok.getData());
+      rawSharedLib = true;
+   } else {
       unexpected(tok, "expected string constant");
    }
    
-   string name = tok.getData();
-   
    // parse all following symbols
    vector<ImportedDef> syms;
-   vector<Token> symToks; // for parse error context
+   vector<Location> symLocs; // for parse error context
    while (true) {
       tok = getToken();
       if (tok.isIdent()) {                   
          syms.push_back(ImportedDef(tok.getData()));
-         symToks.push_back(tok);
+         symLocs.push_back(tok.getLocation());
          tok = getToken();
          
          // see if this is "local_name = source_name" notation
@@ -2738,7 +2720,7 @@ ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
                                      ).c_str()
                           );
             syms.back().source = tok.getData();
-            symToks.back() = tok;
+            symLocs.back() = tok.getLocation();
             tok = getToken();
          }
 
@@ -2753,77 +2735,11 @@ ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
          unexpected(tok, "expected identifier or semicolon");
       }
    }
-
-   if (!mod) {
-      try {
-         BSTATS_GO(s1)
-         builder.importSharedLibrary(name, syms, *context, ns);
-         BSTATS_END
-      } catch (const spug::Exception &ex) {
-         error(tok, ex.getMessage());
-      }
-   } else {
-      BSTATS_GO(s1)
-      if (!annotation)
-         builder.initializeImport(mod.get(), syms);
-      BSTATS_END
-      // alias all of the names in the new module
-      int st = 0;
-      ModuleDefPtr curModule = ns->getModule();
-      for (ImportedDefVec::iterator iter = syms.begin();
-           iter != syms.end();
-           ++iter, ++st
-           ) {
-         // make sure that the symbol is not private
-         if (iter->source[0] == '_')
-            error(symToks[st],
-                  SPUG_FSTR("Can not import private symbol " << iter->source << 
-                             "."
-                            )
-                  );
-         
-         // make sure we don't already have it in the local context
-         if (ns->lookUp(iter->local, false))
-            error(symToks[st], SPUG_FSTR("imported name " << iter->local <<
-                                  " hides existing definition."
-                                 )
-                  );
-         VarDefPtr symVal = mod->lookUp(iter->source);
-         if (!symVal)
-            error(symToks[st], SPUG_FSTR("name " << iter->source <<
-                                  " is not defined in module " << 
-                                  canonicalName
-                                 )
-                  );
-         
-         // make sure the symbol either belongs to the module or was 
-         // explicitly exported by the module (no implicit second-order 
-         // imports).
-         if (!symVal->isImportableFrom(mod.get()))
-            error(symToks[st], SPUG_FSTR("Name " << iter->source <<
-                                  " does not belong to module " <<
-                                  canonicalName << ".  Second-order imports " 
-                                  "are not allowed."
-                                 )
-                  );
-         BSTATS_GO(s1)
-         builder.registerImportedDef(*context, symVal.get());
-         BSTATS_END
-         ns->addAlias(iter->local, symVal.get());
-         if (curModule) {
-            VarDef::Set added;
-            symVal->addDependenciesTo(curModule.get(), added);
-         }
-      }
-      
-      // add a dependency on the module itself.  We have to check that 
-      // curModule is not null when we do this, it can be null in the case of 
-      // an annotation import.
-      if (curModule)
-         curModule->addDependency(mod.get());
-   }
    
-   return mod;
+   return context->emitImport(ns, moduleName, syms, annotation, true,
+                              rawSharedLib,
+                              &symLocs
+                              );
 }
 
 // try { ... } catch (...) { ... }
@@ -3257,7 +3173,8 @@ TypeDefPtr Parser::parseClassDef() {
       generic = new Generic();
       parseGenericParms(generic->parms);
       generic->ns = context->ns;
-      generic->compileNS = context->compileNS;
+      context->collectCompileNSImports(generic->compileNSImports);
+      generic->seedCompileNS(*context);
       tok = getToken();
       generic->addToken(tok);
    }
