@@ -174,11 +174,22 @@ So given this, our meta-data format is:
         }
     }
 
+    ImportDef {
+        blob sourceName
+        optional blob localName = 1
+    }
+
+    Import {
+        array[blob] moduleName
+        array[ImportDef] importedSym
+    }
+
     TypeDef {
         blob name
         ref[Type] owner
         uint generic
         if (generic) {
+            array[ref[Import]] importedAnnotations
             array[blob] parms
             array[Token] tokens
         } else {
@@ -242,8 +253,9 @@ So given this, our meta-data format is:
         uint tokenType
 
         // see parser/Token.h for the values of these
-        if (tokenType in (Token::integer, Token::string, Token::floatLit,
-                          Token::octalLit, Token::hexLit, Token::binLit)
+        if (tokenType in (Token::integer, Token::string, Token::ident,
+                          Token::floatLit, Token::octalLit, Token::hexLit,
+                          Token::binLit)
             ) {
 
             blob tokenData

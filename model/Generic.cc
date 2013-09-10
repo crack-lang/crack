@@ -9,8 +9,11 @@
 
 #include <string.h>
 #include "CompositeNamespace.h"
+#include "Context.h"
+#include "Import.h"
 #include "Serializer.h"
 #include "Deserializer.h"
+#include "GlobalNamespace.h"
 #include "TypeDef.h"
 #include "parser/Toker.h"
 
@@ -44,6 +47,28 @@ NamespacePtr Generic::getInstanceModuleOwner(bool generic) {
     }
 }
 
+void Generic::seedCompileNS(Context &context) {
+    compileNS = new GlobalNamespace(
+        context.construct->rootContext->compileNS.get(),
+        context.getModuleContext()->ns->getNamespaceName()
+    );
+
+    // create a subcontext for the compile-time construct
+    ContextPtr ctx = context.createSubContext(Context::module, 0, 0,
+                                              compileNS.get()
+                                              );
+    ctx->construct = context.getCompileTimeConstruct();
+    for (vector<ImportPtr>::iterator i = compileNSImports.begin();
+         i != compileNSImports.end();
+         ++i
+         )
+        ctx->emitImport(compileNS.get(), (*i)->moduleName, (*i)->syms,
+                        true,
+                        false, // do not record
+                        false // XXX raw shared lib.
+                        );
+}
+
 void Generic::replay(parser::Toker &toker) {
     // we have to put back the token list in reverse order.
     for (int i = body.size() - 1; i >= 0; --i)
@@ -57,6 +82,7 @@ void Generic::serializeToken(Serializer &out, const Token &tok) {
     switch (tok.getType()) {
         case Token::integer:
         case Token::string:
+        case Token::ident:
         case Token::floatLit:
         case Token::octalLit:
         case Token::hexLit:
@@ -90,6 +116,7 @@ Token Generic::deserializeToken(Deserializer &src) {
     switch (tokType) {
         case Token::integer:
         case Token::string:
+        case Token::ident:
         case Token::floatLit:
         case Token::octalLit:
         case Token::hexLit:
@@ -102,6 +129,15 @@ Token Generic::deserializeToken(Deserializer &src) {
 }
 
 void Generic::serialize(Serializer &out) const {
+    // serialize imports
+    out.write(compileNSImports.size(), "#importedAnnotations");
+    for (vector<ImportPtr>::const_iterator i = compileNSImports.begin();
+         i != compileNSImports.end();
+         ++i
+         )
+        if (out.writeObject(i->get(), "importedAnnotations"))
+            (*i)->serialize(out);
+
     // serialize the parameters
     out.write(parms.size(), "#parms");
     for (GenericParmVec::const_iterator iter = parms.begin();
@@ -118,8 +154,25 @@ void Generic::serialize(Serializer &out) const {
         serializeToken(out, *iter);
 }
 
+namespace {
+    struct ImportReader : public Deserializer::ObjectReader {
+        virtual spug::RCBasePtr read(Deserializer &deser) const {
+            return Import::deserialize(deser);
+        }
+    };
+}
+
 Generic *Generic::deserialize(Deserializer &src) {
     Generic *result = new Generic();
+
+    // deserialize imports
+    int impCount = src.readUInt("#importedAnnotations");
+    ImportReader impReader;
+    for (int i = 0; i < impCount; ++i)
+        result->compileNSImports.push_back(
+            src.readObject(impReader, "importedAnnotations").object
+        );
+
     int parmCount = src.readUInt("#parms");
     result->parms.reserve(parmCount);
     for (int i = 0; i < parmCount; ++i)

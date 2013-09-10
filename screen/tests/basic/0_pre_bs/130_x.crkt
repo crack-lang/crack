@@ -5,6 +5,6 @@ recursive imports give an error
 %%FILE%%
 import test.recursive_import;
 %%EXPECT%%
-ParseError: %SOURCEDIR%test/recursive_import.crk:8:8: Attempting to import module test.recursive_import recursively.
+ParseError: %SOURCEDIR%test/recursive_import.crk:8:29: Attempting to import module test.recursive_import recursively.
 %%STDIN%%
 

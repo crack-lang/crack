@@ -83,31 +83,6 @@ public:
 };
 
 /**
- * a sentinel class for keeping track of ConstructStats state
- * it will set a new state (and optionally module) on construction, and restore
- * both on destruction. if stats are disabled in options, it will ignore the
- * calls.
- */
-class StatState {
-    ContextPtr context;
-    ConstructStats::CompileState oldState;
-    model::ModuleDefPtr oldModule;
-public:
-
-    StatState(Context *c, ConstructStats::CompileState newState);
-
-    StatState(Context *c,
-              ConstructStats::CompileState newState,
-              model::ModuleDef *newModule
-              );
-
-    bool statsEnabled(void);
-
-    ~StatState();
-
-};
-
-/**
  * Construct is a bundle containing the builder and all of the modules created 
  * using the builder.  It serves as a module cache and a way of associated the 
  * cache with a Builder that can create new modules.

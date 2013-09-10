@@ -15,6 +15,8 @@
 #include <spug/RCPtr.h>
 #include "Construct.h"
 #include "FuncDef.h"
+#include "Import.h"
+#include "ImportedDef.h"
 #include "parser/Location.h"
 
 namespace builder {
@@ -54,6 +56,9 @@ class Context : public spug::RCBase {
         
         // the current source location.
         parser::Location loc;
+
+        // @import statements.                
+        std::vector<ImportPtr> compileNSImports;
         
         // initializer for an empty location object
         static parser::Location emptyLoc;
@@ -290,6 +295,37 @@ class Context : public spug::RCBase {
                                   const std::vector<ExprPtr> &elems
                                   );
 
+        /** 
+         * Emit an import statement.   Returns the imported module.
+         * 
+         * @param ns The namespace to populate
+         * @param moduleName This is normally the module name, split up into 
+         *     segments.  If 'rawSharedLib' is true, it contains the shared 
+         *     library path as a single string.
+         * @param imports The list of imported symbols.
+         * @param annotation If true, the import is called from within 
+         *     annotation context.
+         * @param recordImport If true, and 'annotation' is also true, record 
+         *     the import in the parent context (this has a very specific use 
+         *     case, it's for when we do an import statement in the context 
+         *     of an annotation, in which case the context is a temporary 
+         *     annotation context and the parent context needs to retain 
+         *     record of all compile namespace imports).
+         * @param rawSharedLib If true, this is the import of a raw shared 
+         *     library.
+         * @param symLocs If present, this is the locations of the symbols in 
+         *     the source file.  This will allow the function to produce 
+         *     better error messages.
+         */
+        ModuleDefPtr emitImport(Namespace *ns, 
+                                const std::vector<std::string> &moduleName,
+                                const ImportedDefVec &imports,
+                                bool annotation,
+                                bool recordImport,
+                                bool rawSharedLib,
+                                std::vector<parser::Location> *symLocs = 0
+                                );
+
         /**
          * Returns true if the namespace is in the same function as the 
          * context.
@@ -460,6 +496,13 @@ class Context : public spug::RCBase {
          * undefined.
          */
         AnnotationPtr lookUpAnnotation(const std::string &name);
+
+        /**
+         * Get the compile time imports of this context and all parent 
+         * contexts in the order in which they should be applied and add them 
+         * to 'imports'.
+         */        
+        void collectCompileNSImports(std::vector<ImportPtr> &imports) const;
 
         // error/warning handling
 
