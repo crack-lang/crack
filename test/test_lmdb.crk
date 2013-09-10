@@ -66,6 +66,8 @@ import crack.ext._lmdb
     MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
     MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
 
+import crack.db.lmdb SimpleLmdb;
+
 void exitError(String msg) {
     cerr `$msg\n`;
     exit(1);
@@ -75,7 +77,7 @@ void exitStrError() {
     exitError(CString(mdb_strerror(errno()), false));
 }
 
-
+// First test the wrapped functions directly
 // Setup
 MDB_env env = mdb_env_create();
 if (env is null) exitError(CString(mdb_strerror(errno()), false));
@@ -114,5 +116,23 @@ mdb_env_close(env);
 free(mkey);
 free(mvalue);
 free(mresult);
+
+// Now test wrapper module
+
+mdb := SimpleLmdb("./testlmdb", MDB_CREATE);
+mdb["key"] = "value";
+if (mdb["key"] != "value" ||
+    mdb.get("key") != "value" ||
+    mdb.get("key", null) != "value" ||
+    !(mdb.get("somekey", null) is null)
+   ) {
+       exitError("Key lookup failed");
+}
+
+mdb.delete("key");
+if (!(mdb.get("key", null) is null)) {
+    exitError("Key deletion failed");
+}
+
 
 cout `ok\n`;

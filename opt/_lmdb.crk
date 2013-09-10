@@ -129,7 +129,7 @@
     @cname mdb_strerror_crk
     byteptr mdb_strerror ();
 
-    int mdb_env_copy (MDB_env env, byteptr path);
+    int mdb_env_copy(MDB_env env, byteptr path);
     int mdb_env_copyfd(MDB_env env, int fd);
     int mdb_env_stat(MDB_env env, MDB_stat stat);
 
@@ -160,10 +160,10 @@
     MDB_txn mdb_txn_begin(MDB_env env, MDB_txn parent, uint flags);
 
     MDB_env mdb_txn_env(MDB_txn txn);
-    int mdb_txn_commit (MDB_txn txn);
-    void mdb_txn_abort (MDB_txn txn);
-    void mdb_txn_reset (MDB_txn txn);
-    int mdb_txn_renew (MDB_txn txn);
+    int mdb_txn_commit(MDB_txn txn);
+    void mdb_txn_abort(MDB_txn txn);
+    void mdb_txn_reset(MDB_txn txn);
+    int mdb_txn_renew(MDB_txn txn);
 
     @inject 'unsigned int mdb_dbi_open_crk(MDB_txn *txn, const char *name,
                                        unsigned int flags)
@@ -201,12 +201,14 @@
     int mdb_cursor_get(MDB_cursor cursor, MDB_val key, MDB_val data, int op);
     int mdb_cursor_put(MDB_cursor cursor, MDB_val key, MDB_val data, uint flags);
     int mdb_cursor_del(MDB_cursor cursor, uint flags);
+
     @inject 'uint64_t mdb_cursor_count_crk(MDB_cursor *cursor) {
                 size_t countp;
                 errno = mdb_cursor_count(cursor, &countp);
                 if (errno) return 0;
                 return countp;
             }\n';
+
     @cname mdb_cursor_count_crk
     uint64 mdb_cursor_count(MDB_cursor cursor);
 }

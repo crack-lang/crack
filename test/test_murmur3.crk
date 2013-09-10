@@ -23,8 +23,10 @@ h3 := Murmur3_32();
 h3.update("hello123");
 h4 := Murmur3_32("hello123");
 
-Array[uint32] int32Vals = [h.asUInt32(), h1.asUInt32(), h2.asUInt32(), h3.asUInt32(), h4.asUInt32()];
-Array[uint32] int32Expected = [613153351, 1897764613, 35436738, 2340879560, 2340879560];
+Array[uint32] int32Vals = [h.asUInt32(), h1.asUInt32(), h2.asUInt32(),
+                           h3.asUInt32(), h4.asUInt32()];
+Array[uint32] int32Expected = [613153351, 1897764613, 35436738, 2340879560,
+                               2340879560];
 
 bool success = true;
 for (uint32 i=0; i < int32Vals.count(); i++) {

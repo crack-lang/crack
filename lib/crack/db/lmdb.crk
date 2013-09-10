@@ -1,0 +1,287 @@
+// Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
+// Aug 31, 2013
+// A wrapper for the _lmdb extension module
+
+import crack.fs RealPath;
+import crack.io FStr;
+import crack.lang CString, Buffer, Exception, KeyError, InvalidArgumentError;
+import crack.runtime errno, free, EINVAL, EACCESS;
+import crack.sys exit;
+
+import crack.ext._lmdb 
+    // Types
+    MDB_cursor, MDB_env, MDB_stat, MDB_txn, MDB_val,
+
+    // Function names
+    mdb_val_new,
+    mdb_env_create,
+    mdb_env_close,
+    mdb_env_set_mapsize,
+    mdb_env_open,
+    mdb_strerror,
+    mdb_env_copy,
+    mdb_env_copyfd,
+    mdb_env_stat,
+    mdb_env_sync,
+    mdb_env_set_flags,
+
+    mdb_env_get_flags,
+    mdb_txn_begin,
+    mdb_txn_env,
+    mdb_txn_commit,
+    mdb_txn_abort,
+    mdb_txn_reset,
+    mdb_txn_renew,
+    mdb_dbi_open,
+    mdb_dbi_close,
+    mdb_drop,
+
+    mdb_get,
+    mdb_put,
+    mdb_del,
+    mdb_cursor_open,
+    mdb_cursor_close,
+    mdb_cursor_renew,
+    mdb_cursor_txn,
+    mdb_cursor_dbi,
+    mdb_cursor_get,
+    mdb_cursor_put,
+
+    mdb_cursor_del,
+    mdb_cursor_count,
+
+    // Constants
+    MDB_VERSION_MAJOR, MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP,
+    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
+    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
+    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
+    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
+    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+    MDB_CORRUPTED, MDB_PANIC, MDB_VERSION_MISMATCH, MDB_INVALID,
+    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
+    MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
+    MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
+
+sfmt := FStr();
+
+/// A simple persistent key/value database
+class SimpleLmdb {
+    CString _path; // Database path
+    int _flags;   // Flags db was opened with
+    int _rc;      // Return code
+    uint _dbi;    // db identifier
+    MDB_env _env; // db environment
+    MDB_txn _readTx, _writeTx, // read and write transactions
+            _tmpTxn;           // temporary transaction
+    MDB_val _mkey = mdb_val_new(), _mvalue = mdb_val_new(),
+        _mresult = mdb_val_new();
+
+    void _strException() {
+        throw Exception(CString(mdb_strerror(), false));
+    }
+
+    // Open a directory containing a single database
+    void _init(CString path, int flags, uint64 mapsize, int access) {
+        dir := RealPath(path);
+        if (!dir.exists())
+            dir.makeDir();
+        if (!dir.isDir())
+            throw InvalidArgumentError("Database path must be a directory");
+
+        if ((_env = mdb_env_create()) is null ||
+             mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
+             mdb_env_open(_env, path.buffer, flags, 0664) != MDB_SUCCESS ||
+             (_tmpTxn = mdb_txn_begin(_env, null, 0)) is null
+           ) {
+            _strException();
+        }
+        _dbi = mdb_dbi_open(_tmpTxn, null, 0);
+        if (mdb_txn_commit(_tmpTxn) != MDB_SUCCESS) _strException();
+    }
+
+    /// Create a persitent key/value database in the specified directory.
+
+    /// Possible flag values are:
+    
+    /// MDB_CREATE
+    ///     create DB if not already existing    
+    /// MDB_REVERSEKEY
+    ///     use reverse string keys
+    /// MDB_DUPSORT
+    ///     use sorted duplicates
+    /// MDB_INTEGERKEY
+    ///     numeric keys in native byte order. The keys must all be of the same
+    ///     size.
+    /// MDB_DUPFIXED
+    ///     with MDB_DUPSORT, sorted dup items have fixed size
+    /// MDB_INTEGERDUP
+    ///     with MDB_DUPSORT, dups are numeric in native byte order
+    /// MDB_REVERSEDUP
+    ///     with MDB_DUPSORT, use reverse string dups
+    oper init(String path, int flags) : _path=CString(path), _flags = flags {
+        _init(_path, flags, 10485760, 0644);
+    }
+
+    oper init(String path, int flags, uint64 mapsize, int access) :
+            _path=CString(path), _flags = flags
+    {
+        _init(_path, flags, mapsize, access);
+    }
+
+    /// Store a key/value pair
+    /// MDB_NODUPDATA
+    ///     enter the new key/data pair only if it does not already appear in
+    ///     the database. This flag may only be specified if the database was
+    ///     opened with MDB_DUPSORT. The function will return MDB_KEYEXIST if
+    ///     the key/data pair already appears in the database.
+    /// MDB_NOOVERWRITE
+    ///     enter the new key/data pair only if the key does not already appear
+    ///     in the database. The function will return MDB_KEYEXIST if the key
+    ///     already appears in the database, even if the database supports
+    ///     duplicates (MDB_DUPSORT). The data parameter will be set to point
+    ///     to the existing item.
+    /// MDB_RESERVE reserve space for data of the given size, but don't copy the
+    ///     given data. Instead, return a pointer to the reserved space, which
+    ///     the caller can fill in later - before the next update operation or
+    ///     the transaction ends. This saves an extra memcpy if the data is being
+    ///     generated later.
+    /// MDB_APPEND
+    ///     append the given key/data pair to the end of the database. No key
+    ///     comparisons are performed. This option allows fast bulk loading when
+    ///     keys are already known to be in the correct order. Loading unsorted
+    ///     keys with this flag will cause data corruption.
+    /// MDB_APPENDDUP
+    ///     as above, but for sorted dup data
+
+    int put(String key, String value, int flags) {
+        if ((_writeTx = mdb_txn_begin(_env, null, flags)) is null)
+            _strException();
+        _mkey.mv_data = key.buffer;
+        _mkey.mv_size = key.size;
+        _mvalue.mv_data = value.buffer;
+        _mvalue.mv_size = value.size;
+
+        _rc = mdb_put(_writeTx, _dbi, _mkey, _mvalue, 0);
+
+        if (_rc != MDB_SUCCESS) {
+            mdb_txn_abort(_writeTx);
+            _writeTx = null;
+            return _rc;
+        }
+
+        _rc = mdb_txn_commit(_writeTx);
+        _writeTx = null;
+        return _rc;
+    }
+
+    int put(String key, String value) {
+        return put(key, value, 0);
+        
+    }
+
+    String oper []=(String key, String value) {
+        if (put(key, value))
+            _strException();
+        return value;
+    }
+
+    void _initReadTransaction(int flags) {
+        if (_readTx is null) {
+            if ((_readTx = mdb_txn_begin(_env, null, flags)) is null)
+                _strException();
+
+        } else if (mdb_txn_renew(_readTx) != MDB_SUCCESS) {
+            _strException();
+        }
+    }
+
+    String get(String key, String default, int flags) {
+        _initReadTransaction(flags);
+        _mkey.mv_data = key.buffer;
+        _mkey.mv_size = key.size;
+
+        _rc = mdb_get(_readTx, _dbi, _mkey, _mresult);
+        if (_rc == MDB_NOTFOUND) {
+            mdb_txn_reset(_readTx);
+            return default;
+        } else if (_rc == MDB_SUCCESS) {
+            result := String(_mresult.mv_data, _mresult.mv_size, false);
+            mdb_txn_reset(_readTx);
+            return result;
+        }
+        else
+            _strException();
+        return default;
+    }
+
+    String get(String key) {
+        result := get(key, null, MDB_RDONLY);
+        if (result is null) {
+            throw KeyError(sfmt `Key $key not found`);
+        }
+        return result;
+    }
+
+    String get(String key, String default) {
+        return get(key, default, MDB_RDONLY);
+    }
+
+    String oper[](String key) {
+        return get(key);
+    }
+
+    void delete(String key) {
+        if ((_writeTx = mdb_txn_begin(_env, null, 0)) is null)
+            _strException();
+
+        _mkey.mv_data = key.buffer;
+        _mkey.mv_size = key.size;
+
+        if (rc := mdb_del(_writeTx, _dbi, _mkey, null)) {
+            mdb_txn_abort(_writeTx);
+            _writeTx = null;
+            if (rc == EINVAL) {
+                throw KeyError(sfmt `Key $key not found`);
+            } else {
+                _strException();
+            }
+        }
+        if (mdb_txn_commit(_writeTx) != MDB_SUCCESS) _strException();
+        _writeTx = null;
+    }
+
+    // close everything down in reverse order
+    oper del() {
+        if (!(_readTx is null)) {
+            mdb_txn_abort(_readTx);
+        }
+        if (!(_writeTx is null)) {
+            mdb_txn_abort(_writeTx);
+        }
+        if (_dbi > 0) {
+            mdb_dbi_close(_env, _dbi);
+        }
+        mdb_env_close(_env);
+
+        free(_mkey);
+        free(_mvalue);
+        free(_mresult);
+    }
+}
+
+@export_symbols
+    MDB_VERSION_MAJOR, MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP,
+    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
+    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
+    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
+    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
+    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+    MDB_CORRUPTED, MDB_PANIC, MDB_VERSION_MISMATCH, MDB_INVALID,
+    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
+    MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
+    MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
