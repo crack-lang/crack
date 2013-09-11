@@ -6,40 +6,41 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-import crack.hash.murmur3 Murmur3_32;
-import crack.time Time;
-import crack.runtime random, srandom, setstate, initstate;
-import crack.lang ManagedBuffer, AppendBuffer, Buffer, InvalidArgumentError;
 import crack.cont.array Array;
+import crack.hash.murmur3 Murmur3_32;
+import crack.io cout;
+import crack.lang ManagedBuffer, AppendBuffer, Buffer, InvalidArgumentError;
+import crack.runtime random, srandom, setstate, initstate;
+import crack.time Time;
 @export_symbols random, srandom, setstate, initstate;
 
 /// Return a byffer with the length specified that has a very high probablility
 /// of being unique due to it's use of a high-resolution time values combined
 /// with system random numbers.
-Buffer uuid(uint numbytes) {
+AppendBuffer uuid(uint numbytes) {
     buf := ManagedBuffer(16);
     buf.size = 16;
-    result := AppendBuffer(numbytes);
-    array[int32] ubuf = array[int32](buf.buffer);
+    pages := numbytes + numbytes%4;
+    result := AppendBuffer(pages);
+    result.size = numbytes;
+    pages /= 4;
 
-    uint i = 0, j = 0, k = 0;
     t := Time.now();
     h := Murmur3_32();
+    sourceInts := array[int32](buf.buffer);
+    hashInts := array[uint32](result.buffer);
 
     srandom(uint(t.nsecs));
-    while (result.size < numbytes) {
+    
+    for (uint i = 0; i < pages; i++) {
         t.setToNow(null);
-        Array[int32] tspec = [t.nsecs, t.secs]; // Start with time values
-        for (k = 0; k < 2; k++)
-            tspec.append(int32(random()));      // Add 2 random numbers
-
-        k = i;
-        for (j = 0; j < tspec.count(); j++)
-            ubuf[k/4 + j] = tspec[j];
+        sourceInts[0] = t.nsecs;
+        sourceInts[1] = t.secs;
+        sourceInts[2] = int32(random());
+        sourceInts[3] = int32(random());
 
         h.update(buf);
-        result.extend(h.digest(), numbytes - i >= 4 ? 4 : numbytes - i);
-        i = result.size;
+        hashInts[i] = h.asUInt32();
     }
     return result;
 }
