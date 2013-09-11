@@ -129,10 +129,38 @@ if (mdb["key"] != "value" ||
        exitError("Key lookup failed");
 }
 
+mdb["key2"] = "value2";
+
+uint count = 0;
+for (item :in mdb) {
+    count++;
+}
+
+if (count != 2) {
+    exitError("Wrong number of keys after add");
+}
+
 mdb.delete("key");
 if (!(mdb.get("key", null) is null)) {
     exitError("Key deletion failed");
 }
 
+count = 0;
+for (item :in mdb) {
+    count++;
+}
+
+if (count != 1) {
+    exitError("Wrong number of keys after adding");
+}
+
+mdb.clear();
+
+if (mdb.count() != 0) {
+    for (item :in mdb) {
+        cout `$(item.key): $(item.val)\n`;
+    }
+    exitError("Clear or count method failed");
+}
 
 cout `ok\n`;

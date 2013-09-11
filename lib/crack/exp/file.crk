@@ -10,14 +10,14 @@
 
 import crack.io cout, FStr, StandardFormatter, Writer, FDReader, FDWriter;
 import crack.lang die, Buffer, Exception, FreeBase, SubString, CString,
-                  WriteBuffer, Formatter;
+    WriteBuffer, Formatter;
 import crack.io.readers LineReader;
 import crack.sys strerror;
 
 @import crack.ann implements;
 
 import crack.runtime fopen, fclose, fileno, fnmatch, basename, dirname, CFile,
-                     is_file;
+    is_file;
 
 class FileInfo: Object {
 
@@ -177,8 +177,8 @@ class File : FileInfo,
              (_mode[0] != F_WRITE) &&
              (_mode[0] != F_APPEND)))
             throw Exception(
-                FStr() `$name: invalid file mode "$_mode", must be one of \
-"r", "w" or "a"`
+                FStr() I`$name: invalid file mode "$_mode", must be one of \
+                         "r", "w" or "a"`
             );
 
         if (_mode[0] == F_READ)

@@ -74,7 +74,26 @@
         MDB_BAD_RSLOT,
         MDB_BAD_TXN,
         MDB_LAST_ERRCODE,
-        MDB_BAD_VALSIZE;
+        MDB_BAD_VALSIZE,
+
+        MDB_FIRST,
+        MDB_FIRST_DUP,
+        MDB_GET_BOTH,
+        MDB_GET_BOTH_RANGE,
+        MDB_GET_CURRENT,
+        MDB_GET_MULTIPLE,
+        MDB_LAST,
+        MDB_LAST_DUP,
+        MDB_NEXT,
+        MDB_NEXT_DUP,
+        MDB_NEXT_MULTIPLE,
+        MDB_NEXT_NODUP,
+        MDB_PREV,
+        MDB_PREV_DUP,
+        MDB_PREV_NODUP,
+        MDB_SET,
+        MDB_SET_KEY,
+        MDB_SET_RANGE;
 
     @cname Undef
     class MDB_env;
@@ -84,13 +103,13 @@
 
     @cname Undef
     class MDB_txn;
-    
+
 
     class MDB_val {
         uint64 	mv_size;
         byteptr mv_data;
     }
-    
+
     class MDB_stat {
         uint    ms_psize;
         uint    ms_depth;
@@ -115,7 +134,7 @@
 
     @cname mdb_env_create_crk
     MDB_env mdb_env_create();
-    
+
     void mdb_env_close(MDB_env env);
     int mdb_env_set_mapsize(MDB_env env, uint64 size);
     int mdb_env_open(MDB_env env, byteptr path, uint flags, int mode);

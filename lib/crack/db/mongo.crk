@@ -713,7 +713,7 @@ class MongoSync {
         _checkConnected();
         return mongo_sync_cmd_update(_m, ns.buffer, flags,
                                      selector.get_bson(), update.get_bson()
-                                    );
+                                     );
     }
 
     // Send an update command to MongoDB.
@@ -722,7 +722,7 @@ class MongoSync {
         return mongo_sync_cmd_update(_m, ns.buffer, flags,
                                      BSON.fromJSON(selector).get_bson(),
                                      BSON.fromJSON(update).get_bson()
-                                    );
+                                     );
     }
 
     // Send an insert command to MongoDB.
@@ -765,14 +765,16 @@ class MongoSync {
     uint count(CString db, CString coll, BSON query) {
         _checkConnected();
         return uint(mongo_sync_cmd_count(_m, db.buffer,
-                                    coll.buffer, query.get_bson()));
+                    coll.buffer, query.get_bson())
+                    );
     }
 
     // Send a count() command to MongoDB.
     uint count(CString db, CString coll, String query) {
         _checkConnected();
         return uint(mongo_sync_cmd_count(_m, db.buffer, coll.buffer,
-                                    BSON.fromJSON(query).get_bson()));
+                    BSON.fromJSON(query).get_bson())
+                    );
     }
 
     // Create a new MongoDB collection. TODO bind
@@ -855,8 +857,7 @@ class MongoSync {
         MongoSync _M;
         bool _hasNext;
 
-        oper init(MongoSync M, CString ns, mongo_packet p) :
-             _p = p, _M = M {
+        oper init(MongoSync M, CString ns, mongo_packet p) : _p = p, _M = M {
             if (_p is null) {
                 _hasNext = false;
                 return;

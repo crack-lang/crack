@@ -9,7 +9,7 @@
 
 import crack.fs RealPath;
 import crack.io FStr;
-import crack.lang CString, Buffer, Exception, KeyError, InvalidArgumentError;
+import crack.lang CString, Buffer, Exception, InvalidArgumentError, KeyError;
 import crack.runtime errno, free, EINVAL, EACCESS;
 import crack.sys exit;
 
@@ -18,64 +18,69 @@ import crack.ext._lmdb
     MDB_cursor, MDB_env, MDB_stat, MDB_txn, MDB_val,
 
     // Function names
-    mdb_val_new,
-    mdb_env_create,
-    mdb_env_close,
-    mdb_env_set_mapsize,
-    mdb_env_open,
-    mdb_strerror,
-    mdb_env_copy,
-    mdb_env_copyfd,
-    mdb_env_stat,
-    mdb_env_sync,
-    mdb_env_set_flags,
-
-    mdb_env_get_flags,
-    mdb_txn_begin,
-    mdb_txn_env,
-    mdb_txn_commit,
-    mdb_txn_abort,
-    mdb_txn_reset,
-    mdb_txn_renew,
-    mdb_dbi_open,
-    mdb_dbi_close,
-    mdb_drop,
-
-    mdb_get,
-    mdb_put,
-    mdb_del,
-    mdb_cursor_open,
     mdb_cursor_close,
+    mdb_cursor_count,
+    mdb_cursor_dbi,
+    mdb_cursor_del,
+    mdb_cursor_get,
+    mdb_cursor_open,
+    mdb_cursor_put,
     mdb_cursor_renew,
     mdb_cursor_txn,
-    mdb_cursor_dbi,
-    mdb_cursor_get,
-    mdb_cursor_put,
+    mdb_dbi_close,
 
-    mdb_cursor_del,
-    mdb_cursor_count,
+    mdb_dbi_open,
+    mdb_del,
+    mdb_drop,
+    mdb_env_close,
+    mdb_env_copy,
+    mdb_env_copyfd,
+    mdb_env_create,
+    mdb_env_get_flags,
+    mdb_env_open,
+    mdb_env_set_flags,
+
+    mdb_env_set_mapsize,
+    mdb_env_stat,
+    mdb_env_sync,
+    mdb_get,
+    mdb_put,
+    mdb_strerror,
+    mdb_txn_abort,
+    mdb_txn_begin,
+    mdb_txn_commit,
+    mdb_txn_env,
+    mdb_txn_renew,
+
+    mdb_txn_reset,
+    mdb_val_new,
 
     // Constants
-    MDB_VERSION_MAJOR, MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP,
-    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
-    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
-    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
-    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
-    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+    MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE,
     MDB_CORRUPTED, MDB_PANIC, MDB_VERSION_MISMATCH, MDB_INVALID,
-    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
     MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
-    MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
+    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
+    MDB_FIRST, MDB_FIRST_DUP, MDB_GET_BOTH, MDB_GET_BOTH_RANGE,
+    MDB_GET_CURRENT, MDB_GET_MULTIPLE, MDB_LAST, MDB_LAST_DUP, MDB_NEXT,
+    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
+    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
+    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+    MDB_NEXT_DUP, MDB_NEXT_MULTIPLE, MDB_NEXT_NODUP, MDB_PREV, MDB_PREV_DUP,
+    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
+    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
+    MDB_PREV_NODUP, MDB_SET, MDB_SET_KEY, MDB_SET_RANGE, MDB_VERSION_MAJOR,
+    MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP;
+
 
 sfmt := FStr();
 
 /// A simple persistent key/value database
 class SimpleLmdb {
-    CString _path; // Database path
-    int _flags;   // Flags db was opened with
-    int _rc;      // Return code
-    uint _dbi;    // db identifier
-    MDB_env _env; // db environment
+    CString _path;             // Database path
+    int _flags;                // Flags db was opened with
+    int _rc;                   // Return code
+    uint _dbi;                 // db identifier
+    MDB_env _env;              // db environment
     MDB_txn _readTx, _writeTx, // read and write transactions
             _tmpTxn;           // temporary transaction
     MDB_val _mkey = mdb_val_new(), _mvalue = mdb_val_new(),
@@ -95,7 +100,7 @@ class SimpleLmdb {
 
         if ((_env = mdb_env_create()) is null ||
              mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
-             mdb_env_open(_env, path.buffer, flags, 0664) != MDB_SUCCESS ||
+             mdb_env_open(_env, path.buffer, flags, access) != MDB_SUCCESS ||
              (_tmpTxn = mdb_txn_begin(_env, null, 0)) is null
            ) {
             _strException();
@@ -105,9 +110,7 @@ class SimpleLmdb {
     }
 
     /// Create a persitent key/value database in the specified directory.
-
     /// Possible flag values are:
-    
     /// MDB_CREATE
     ///     create DB if not already existing    
     /// MDB_REVERSEKEY
@@ -123,6 +126,7 @@ class SimpleLmdb {
     ///     with MDB_DUPSORT, dups are numeric in native byte order
     /// MDB_REVERSEDUP
     ///     with MDB_DUPSORT, use reverse string dups
+
     oper init(String path, int flags) : _path=CString(path), _flags = flags {
         _init(_path, flags, 10485760, 0644);
     }
@@ -235,6 +239,110 @@ class SimpleLmdb {
         return get(key);
     }
 
+    class Item {
+        String key;
+        String val;
+        
+        oper init(String key, String val) : key = key, val = val { }
+    }
+    
+    class Iter {
+        MDB_cursor _cursor;
+        MDB_txn _txn;
+        uint _dbi;
+        MDB_val _ikey = mdb_val_new(), _ival = mdb_val_new();
+        int _status = -1, _flag = MDB_SET_RANGE;
+        String _key; // We need to keep a reference to the key
+
+        @final void next();
+        
+        oper init(MDB_env env, uint dbi, String key, int flag) :
+                  _dbi = dbi, _key = key
+        {
+            _txn = mdb_txn_begin(env, null, MDB_RDONLY);
+            if (_txn is null) {
+                throw Exception(CString(mdb_strerror(), false));
+            } else if ((_cursor = mdb_cursor_open(_txn, _dbi)) is null) {
+                throw InvalidArgumentError(I"Could not create cursor \
+                                             for iterator");
+            }
+            
+            if (key is null) {
+                _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_FIRST);
+            } else {
+                if (flag) {
+                    _flag = flag;
+                }
+                _ikey.mv_data = _key.buffer;
+                _ikey.mv_size = _key.size;
+                _status = mdb_cursor_get(_cursor, _ikey, _ival, _flag);
+            }
+        }
+
+        bool isTrue() { return _status == MDB_SUCCESS; }
+        
+        @final Item elem() {
+            if (_status == MDB_SUCCESS) {
+                return Item(String(_ikey.mv_data, _ikey.mv_size, false),
+                            String(_ival.mv_data, _ival.mv_size, false)
+                           );
+            } else {
+                return null;
+            }
+        }
+        
+        @final void next() {
+            _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_NEXT);
+        }
+        
+        bool isTrue() { return _status == MDB_SUCCESS; }
+
+        oper del() {
+            if (!(_cursor is null)) {
+                mdb_cursor_close(_cursor);
+            }
+
+            if (!(_txn is null)) {
+                mdb_txn_abort(_txn);
+            }
+            free(_ival);
+            free(_ikey);
+        }
+    }
+
+    Iter iter() {
+        return Iter(_env, _dbi, null, 0); // Position at start
+    }
+
+    Iter iter(String key) {
+        return Iter(_env, _dbi, key, 0); // Position >= specified key 
+    }
+
+    Iter iter(String key, int flag) {
+        return Iter(_env, _dbi, key, 0); // Position >= specified key 
+    }
+
+    /// Returns the number of elements in the database
+    /// Since all the elements are iterated over, this is an expensive operation
+    uint count() {
+        uint i = 0;
+        MDB_cursor _cursor;
+
+        if ((_tmpTxn = mdb_txn_begin(_env, null, MDB_RDONLY)) is null ||
+            (_cursor = mdb_cursor_open(_tmpTxn, _dbi)) is null)
+        {
+                _strException();
+        }
+
+        int _status = mdb_cursor_get(_cursor, _mkey, _mvalue, MDB_FIRST);
+        while (_status == MDB_SUCCESS) {
+            i++;
+            _status = mdb_cursor_get(_cursor, _mkey, _mvalue, MDB_NEXT);
+        }
+        return i;
+    }
+
+    /// Delete item at specified key
     void delete(String key) {
         if ((_writeTx = mdb_txn_begin(_env, null, 0)) is null)
             _strException();
@@ -253,6 +361,22 @@ class SimpleLmdb {
         }
         if (mdb_txn_commit(_writeTx) != MDB_SUCCESS) _strException();
         _writeTx = null;
+    }
+
+    /// Clear all data from the database
+    @final
+    void clear() {
+        if ((_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
+            mdb_drop(_tmpTxn, _dbi, 0) ||
+            mdb_txn_commit(_tmpTxn)    ||
+            (_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
+            (_dbi = mdb_dbi_open(_tmpTxn, null, 0)) == 0 ||
+            mdb_txn_commit(_tmpTxn)
+            )
+        {
+            _strException();
+        }
+        
     }
 
     // close everything down in reverse order
@@ -274,14 +398,19 @@ class SimpleLmdb {
     }
 }
 
-@export_symbols
-    MDB_VERSION_MAJOR, MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP,
-    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
-    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
-    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
-    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
-    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+@export_symbols MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE,
     MDB_CORRUPTED, MDB_PANIC, MDB_VERSION_MISMATCH, MDB_INVALID,
-    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
     MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
-    MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
+    MDB_DUPFIXED, MDB_INTEGERDUP, MDB_REVERSEDUP, MDB_CREATE, MDB_NOOVERWRITE,
+    MDB_FIRST, MDB_FIRST_DUP, MDB_GET_BOTH, MDB_GET_BOTH_RANGE,
+    MDB_GET_CURRENT, MDB_GET_MULTIPLE, MDB_LAST, MDB_LAST_DUP, MDB_NEXT,
+    MDB_MAPASYNC, MDB_NOTLS, MDB_REVERSEKEY, MDB_DUPSORT, MDB_INTEGERKEY,
+    MDB_MAP_FULL, MDB_DBS_FULL, MDB_READERS_FULL, MDB_TLS_FULL, MDB_TXN_FULL,
+    MDB_MULTIPLE, MDB_SUCCESS, MDB_KEYEXIST, MDB_NOTFOUND, MDB_PAGE_NOTFOUND,
+    MDB_NEXT_DUP, MDB_NEXT_MULTIPLE, MDB_NEXT_NODUP, MDB_PREV, MDB_PREV_DUP,
+    MDB_NODUPDATA, MDB_CURRENT, MDB_RESERVE, MDB_APPEND, MDB_APPENDDUP,
+    MDB_NOSUBDIR, MDB_NOSYNC, MDB_RDONLY, MDB_NOMETASYNC, MDB_WRITEMAP,
+    MDB_PREV_NODUP, MDB_SET, MDB_SET_KEY, MDB_SET_RANGE, MDB_VERSION_MAJOR,
+    MDB_VERSION_MINOR, MDB_VERSION_PATCH, MDB_FIXEDMAP;
+
+

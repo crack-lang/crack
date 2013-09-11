@@ -508,4 +508,76 @@ void crack_ext__lmdb_cinit(crack::ext::Module *mod) {
     mod->addConstant(type_int, "MDB_BAD_VALSIZE",
                      static_cast<int>(MDB_BAD_VALSIZE)
                      );
+
+    mod->addConstant(type_int, "MDB_FIRST",
+                     static_cast<int>(MDB_FIRST)
+                     );
+
+    mod->addConstant(type_int, "MDB_FIRST_DUP",
+                     static_cast<int>(MDB_FIRST_DUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_GET_BOTH",
+                     static_cast<int>(MDB_GET_BOTH)
+                     );
+
+    mod->addConstant(type_int, "MDB_GET_BOTH_RANGE",
+                     static_cast<int>(MDB_GET_BOTH_RANGE)
+                     );
+
+    mod->addConstant(type_int, "MDB_GET_CURRENT",
+                     static_cast<int>(MDB_GET_CURRENT)
+                     );
+
+    mod->addConstant(type_int, "MDB_GET_MULTIPLE",
+                     static_cast<int>(MDB_GET_MULTIPLE)
+                     );
+
+    mod->addConstant(type_int, "MDB_LAST",
+                     static_cast<int>(MDB_LAST)
+                     );
+
+    mod->addConstant(type_int, "MDB_LAST_DUP",
+                     static_cast<int>(MDB_LAST_DUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_NEXT",
+                     static_cast<int>(MDB_NEXT)
+                     );
+
+    mod->addConstant(type_int, "MDB_NEXT_DUP",
+                     static_cast<int>(MDB_NEXT_DUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_NEXT_MULTIPLE",
+                     static_cast<int>(MDB_NEXT_MULTIPLE)
+                     );
+
+    mod->addConstant(type_int, "MDB_NEXT_NODUP",
+                     static_cast<int>(MDB_NEXT_NODUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_PREV",
+                     static_cast<int>(MDB_PREV)
+                     );
+
+    mod->addConstant(type_int, "MDB_PREV_DUP",
+                     static_cast<int>(MDB_PREV_DUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_PREV_NODUP",
+                     static_cast<int>(MDB_PREV_NODUP)
+                     );
+
+    mod->addConstant(type_int, "MDB_SET",
+                     static_cast<int>(MDB_SET)
+                     );
+
+    mod->addConstant(type_int, "MDB_SET_KEY",
+                     static_cast<int>(MDB_SET_KEY)
+                     );
+
+    mod->addConstant(type_int, "MDB_SET_RANGE",
+                     static_cast<int>(MDB_SET_RANGE)
+                     );
 }

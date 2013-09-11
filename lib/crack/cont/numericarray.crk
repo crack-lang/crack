@@ -47,7 +47,7 @@ bool _isNull(Object obj) {
 /// properties
 class NumericVector[Elem] : Array[Elem] {
 
-    oper init (): Array[Elem](){
+    oper init () {
     }
 
     oper init (uint initCapacity): Array[Elem](initCapacity){
@@ -234,7 +234,6 @@ class NumericVector[Elem] : Array[Elem] {
 
 }
 
-
 /// A multidimensional array similar to numpy's ndarray
 /// For 1D arrays it is faster to use the above NumericVector class
 class NumericArray[Elem] {
@@ -263,7 +262,6 @@ class NumericArray[Elem] {
             T = this;
         }
     }
-
 
     @initFromArray(Array)
     @initFromArray(NumericVector)

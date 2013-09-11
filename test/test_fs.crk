@@ -5,10 +5,10 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-import crack.lang InvalidArgumentError, ManagedBuffer;
-import crack.io cout;
-import crack.strutil StringArray;
 import crack.fs cwd, makePath, normalize, sysfs, Path, RealPath;
+import crack.io cout;
+import crack.lang InvalidArgumentError, ManagedBuffer;
+import crack.strutil StringArray;
 
 tempFile := RealPath('writer.out');
 tempFile.writer().write('this is a test');
@@ -42,7 +42,6 @@ rdr = tempFile.makeReader();
 rdr.read(readBuf);
 if (readBuf != 'this is a test, and so is this')
     cout `FAILED appended reader read()\n`;
-
 
 tempFile.delete();
 if (tempFile.exists())
