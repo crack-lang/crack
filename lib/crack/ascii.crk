@@ -68,8 +68,10 @@ String hex(Buffer buf) {
 
 @define _h2b(bt) {
     (bt >= b'0' && bt <= b'9' ? (bt - b'0') :
-    (bt >= b'a' && bt <= b'f' ? (bt - b'a' + byte(10)) :
-    (bt >= b'A' && bt <= b'F' ? (bt - b'A' + byte(10)) : 0 )))
+     (bt >= b'a' && bt <= b'f' ? (bt - b'a' + byte(10)) :
+      (bt >= b'A' && bt <= b'F' ? (bt - b'A' + byte(10)) : 0 )
+      )
+     )
 }
 
 ManagedBuffer bin(Buffer hx) {
@@ -83,10 +85,10 @@ ManagedBuffer bin(Buffer hx) {
     inbuf := hx.buffer;
     byte bt1 = 0;
 
-    for (uint i=0; i < hx.size; i++) {
+    for (uint i = 0; i < hx.size; i++) {
         if (even) {
             bt1 += @_h2b(inbuf[i]) << 4;
-        even = false;
+            even = false;
         } else {
             bt1 += @_h2b(inbuf[i]);
             outbuf[i/2] = bt1;
