@@ -6,11 +6,14 @@
 // 
 
 // Test the _lmdb extension module
-
-import crack.io cerr, cout;
+import crack.ascii hex;
+import crack.io cerr, cout, FStr;
 import crack.lang CString, Buffer;
+import crack.random uuid;
+import crack.strutil StringArray;
 import crack.sys exit;
 import crack.runtime errno, free;
+
 
 import crack.ext._lmdb 
     // Types
@@ -66,7 +69,9 @@ import crack.ext._lmdb
     MDB_CURSOR_FULL, MDB_PAGE_FULL, MDB_MAP_RESIZED, MDB_INCOMPATIBLE,
     MDB_BAD_RSLOT, MDB_BAD_TXN, MDB_LAST_ERRCODE, MDB_BAD_VALSIZE;
 
-import crack.db.lmdb SimpleLmdb;
+import crack.db.lmdb SimpleLmdb, Lmdb;
+
+sfmt := FStr();
 
 void exitError(String msg) {
     cerr `$msg\n`;
@@ -117,9 +122,9 @@ free(mkey);
 free(mvalue);
 free(mresult);
 
-// Now test wrapper module
+// Test wrapper module
 
-mdb := SimpleLmdb("./testlmdb", MDB_CREATE);
+mdb := SimpleLmdb("./testlmdb", MDB_NOTLS, MDB_CREATE);
 mdb["key"] = "value";
 if (mdb["key"] != "value" ||
     mdb.get("key") != "value" ||
@@ -137,6 +142,10 @@ for (item :in mdb) {
 }
 
 if (count != 2) {
+    for (item :in mdb) {
+        cout `$(item.key): $(item.val)\n`;
+    }
+
     exitError("Wrong number of keys after add");
 }
 
@@ -145,22 +154,48 @@ if (!(mdb.get("key", null) is null)) {
     exitError("Key deletion failed");
 }
 
-count = 0;
-for (item :in mdb) {
-    count++;
+// Add a lot of items
+String hkey;
+for (count=0; count < 10; count++) {
+    hkey = hex(uuid(16));
+    mdb[hkey] = "value";
 }
 
-if (count != 1) {
-    exitError("Wrong number of keys after adding");
+// Iterate through values
+for (item :in mdb) {
+    hkey = item.key;
 }
 
 mdb.clear();
-
-if (mdb.count() != 0) {
+if (mdb.count()) {
     for (item :in mdb) {
         cout `$(item.key): $(item.val)\n`;
     }
-    exitError("Clear or count method failed");
+
+    exitError("Clearing the DB failed");
 }
+
+mdbContainer := Lmdb("./testlmdbcontainer", MDB_NOTLS, MDB_CREATE);
+
+for (uint i = 0; i < 5; i++) {
+    idb := mdbContainer[sfmt `db$i`];
+    for (uint j = 0; j < 5; j++) {
+        idb[sfmt `key$j`] = sfmt `val$j`;
+    }
+}
+
+expected :=
+"{db0: {key0: val0, key1: val1, key2: val2, key3: val3, key4: val4}, \
+db1: {key0: val0, key1: val1, key2: val2, key3: val3, key4: val4}, \
+db2: {key0: val0, key1: val1, key2: val2, key3: val3, key4: val4}, \
+db3: {key0: val0, key1: val1, key2: val2, key3: val3, key4: val4}, \
+db4: {key0: val0, key1: val1, key2: val2, key3: val3, key4: val4}}";
+content := sfmt `$mdbContainer`;
+
+if (content != expected) {
+    exitError(sfmt `Nested database content is incorrect, got\n$content\nexpected\n$expected`);
+}
+
+
 
 cout `ok\n`;

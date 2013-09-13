@@ -1,19 +1,20 @@
 // Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // Aug 31, 2013
 // A wrapper for the _lmdb extension module
 
+import crack.cont.hashmap HashMap;
 import crack.fs RealPath;
-import crack.io FStr;
+import crack.io cout, Formatter, FStr;
 import crack.lang CString, Buffer, Exception, InvalidArgumentError, KeyError;
-import crack.runtime errno, free, EINVAL, EACCESS;
+import crack.runtime errno, free, usecs, EINVAL, EACCESS;
 import crack.sys exit;
 
-import crack.ext._lmdb 
+import crack.ext._lmdb
     // Types
     MDB_cursor, MDB_env, MDB_stat, MDB_txn, MDB_val,
 
@@ -39,12 +40,14 @@ import crack.ext._lmdb
     mdb_env_get_flags,
     mdb_env_open,
     mdb_env_set_flags,
+    mdb_env_set_maxdbs,
 
     mdb_env_set_mapsize,
     mdb_env_stat,
     mdb_env_sync,
     mdb_get,
     mdb_put,
+    mdb_reader_check,
     mdb_strerror,
     mdb_txn_abort,
     mdb_txn_begin,
@@ -74,67 +77,183 @@ import crack.ext._lmdb
 
 sfmt := FStr();
 
-/// A simple persistent key/value database
-class SimpleLmdb {
-    CString _path;             // Database path
-    int _flags;                // Flags db was opened with
-    int _rc;                   // Return code
+void _strException() {
+    throw Exception(CString(mdb_strerror(), false));
+}
+
+void _strException(int errcode) {
+    throw Exception(CString(mdb_strerror(errcode), false));
+}
+
+
+/// A key/value pair
+class Item {
+    String key;
+    String val;
+
+    oper init(String key, String val) : key = key, val = val { }
+}
+
+/// Database iterator class
+/// Flags determine where the cursor is positioned:
+///    MDB_FIRST
+///        Position at first key/data item
+///    MDB_FIRST_DUP
+///        Position at first data item of current key. Only for MDB_DUPSORT
+///    MDB_GET_BOTH
+///        Position at key/data pair. Only for MDB_DUPSORT
+///    MDB_GET_BOTH_RANGE
+///        position at key, nearest data. Only for MDB_DUPSORT
+///    MDB_GET_CURRENT
+///        Return key/data at current cursor position
+///    MDB_GET_MULTIPLE
+///        Return all the duplicate data items at the current cursor position. Only for MDB_DUPFIXED
+///    MDB_LAST
+///        Position at last key/data item
+///    MDB_LAST_DUP
+///        Position at last data item of current key. Only for MDB_DUPSORT
+///    MDB_NEXT
+///        Position at next data item
+///    MDB_NEXT_DUP
+///        Position at next data item of current key. Only for MDB_DUPSORT
+///    MDB_NEXT_MULTIPLE
+///        Return all duplicate data items at the next cursor position. Only for MDB_DUPFIXED
+///    MDB_NEXT_NODUP
+///        Position at first data item of next key
+///    MDB_PREV
+///        Position at previous data item
+///    MDB_PREV_DUP
+///        Position at previous data item of current key. Only for MDB_DUPSORT
+///    MDB_PREV_NODUP
+///        Position at last data item of previous key
+///    MDB_SET
+///        Position at specified key
+///    MDB_SET_KEY
+///        Position at specified key, return key + data
+///    MDB_SET_RANGE
+///        Position at first key greater than or equal to specified key.
+
+class Iter {
+    MDB_cursor _cursor;
+    MDB_txn _txn;
+    uint _dbi;
+    MDB_val _ikey = mdb_val_new(), _ival = mdb_val_new();
+    int _status = -1, _flag = MDB_SET_RANGE;
+    String _key; // We need to keep a reference to the key
+
+    @final void next();
+
+    oper init(MDB_env env, uint dbi, String key, int flag) :
+              _dbi = dbi, _key = key
+    {
+        _txn = mdb_txn_begin(env, null, MDB_RDONLY);
+        if (_txn is null || (_cursor = mdb_cursor_open(_txn, _dbi)) is null)
+            _strException();
+
+        if (key is null) {
+            _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_FIRST);
+        } else {
+            if (flag) {
+                _flag = flag;
+            }
+            _ikey.mv_data = _key.buffer;
+            _ikey.mv_size = _key.size;
+            _status = mdb_cursor_get(_cursor, _ikey, _ival, _flag);
+        }
+    }
+
+    bool isTrue() { return _status == MDB_SUCCESS; }
+
+    @final Item elem() {
+        if (_status == MDB_SUCCESS) {
+            return Item(String(_ikey.mv_data, _ikey.mv_size, false),
+                        String(_ival.mv_data, _ival.mv_size, false)
+                       );
+        } else {
+            return null;
+        }
+    }
+
+    @final void next() {
+        _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_NEXT);
+    }
+
+    bool isTrue() { return _status == MDB_SUCCESS; }
+
+    oper del() {
+        if (!(_cursor is null)) {
+            mdb_cursor_close(_cursor);
+        }
+
+        if (!(_txn is null)) {
+            mdb_txn_abort(_txn);
+        }
+        free(_ival);
+        free(_ikey);
+    }
+}
+
+class InnerDB {
     uint _dbi;                 // db identifier
     MDB_env _env;              // db environment
+    int _rc;                   // Return code
     MDB_txn _readTx, _writeTx, // read and write transactions
             _tmpTxn;           // temporary transaction
     MDB_val _mkey = mdb_val_new(), _mvalue = mdb_val_new(),
         _mresult = mdb_val_new();
+    String _name;
 
-    void _strException() {
-        throw Exception(CString(mdb_strerror(), false));
-    }
+    /// Open a database in the given environment, flags can be one of:
+    /// MDB_REVERSEKEY
+    ///     Keys are strings to be compared in reverse order, from the end
+    ///     of the strings to the beginning. By default, Keys are treated as
+    ///     strings and compared from beginning to end.
+    /// MDB_DUPSORT
+    ///     Duplicate keys may be used in the database. (Or, from another
+    ///     perspective, keys may have multiple data items, stored in sorted
+    ///      order.) By default keys must be unique and may have only a single data item.
+    /// MDB_INTEGERKEY
+    ///     Keys are binary integers in native byte order. Setting this option
+    ///     requires all keys to be the same size, typically sizeof(int) or
+    ///     sizeof(size_t).
+    /// MDB_DUPFIXED
+    ///     This flag may only be used in combination with MDB_DUPSORT. This
+    ///     option tells the library that the data items for this database are
+    ///     all the same size, which allows further optimizations in storage
+    ///     and retrieval. When all data items are the same size, the
+    ///     MDB_GET_MULTIPLE and MDB_NEXT_MULTIPLE cursor operations may be
+    ///     used to retrieve multiple items at once.
+    /// MDB_INTEGERDUP
+    ///     This option specifies that duplicate data items are also integers,
+    ///     and should be sorted as such.
+    /// MDB_REVERSEDUP
+    ///     This option specifies that duplicate data items should be compared
+    ///      as strings in reverse order.
+    /// MDB_CREATE
+    ///     Create the named database if it doesn't exist. This option is not
+    ///     allowed in a read-only transaction or a read-only environment.
 
-    // Open a directory containing a single database
-    void _init(CString path, int flags, uint64 mapsize, int access) {
-        dir := RealPath(path);
-        if (!dir.exists())
-            dir.makeDir();
-        if (!dir.isDir())
-            throw InvalidArgumentError("Database path must be a directory");
-
-        if ((_env = mdb_env_create()) is null ||
-             mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
-             mdb_env_open(_env, path.buffer, flags, access) != MDB_SUCCESS ||
-             (_tmpTxn = mdb_txn_begin(_env, null, 0)) is null
-           ) {
+    void _init(MDB_env env, CString name, int flags) {
+        _env = env;
+        _name = name;
+        byteptr namebuf = name is null ? byteptr(null) : name.buffer;
+        if ((_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
+            (_dbi = mdb_dbi_open(_tmpTxn, namebuf, flags)) == 0 ||
+             mdb_txn_commit(_tmpTxn) != MDB_SUCCESS) {
             _strException();
         }
-        _dbi = mdb_dbi_open(_tmpTxn, null, 0);
-        if (mdb_txn_commit(_tmpTxn) != MDB_SUCCESS) _strException();
     }
 
-    /// Create a persitent key/value database in the specified directory.
-    /// Possible flag values are:
-    /// MDB_CREATE
-    ///     create DB if not already existing    
-    /// MDB_REVERSEKEY
-    ///     use reverse string keys
-    /// MDB_DUPSORT
-    ///     use sorted duplicates
-    /// MDB_INTEGERKEY
-    ///     numeric keys in native byte order. The keys must all be of the same
-    ///     size.
-    /// MDB_DUPFIXED
-    ///     with MDB_DUPSORT, sorted dup items have fixed size
-    /// MDB_INTEGERDUP
-    ///     with MDB_DUPSORT, dups are numeric in native byte order
-    /// MDB_REVERSEDUP
-    ///     with MDB_DUPSORT, use reverse string dups
-
-    oper init(String path, int flags) : _path=CString(path), _flags = flags {
-        _init(_path, flags, 10485760, 0644);
+    // Need a default constructor for derived classes
+    oper init() {
     }
 
-    oper init(String path, int flags, uint64 mapsize, int access) :
-            _path=CString(path), _flags = flags
-    {
-        _init(_path, flags, mapsize, access);
+    oper init(MDB_env env, CString name, int flags) {
+        _init(env, name, flags);
+    }
+
+    oper init(MDB_env env, CString name) {
+        _init(env, name, MDB_CREATE);
     }
 
     /// Store a key/value pair
@@ -178,19 +297,20 @@ class SimpleLmdb {
             return _rc;
         }
 
-        _rc = mdb_txn_commit(_writeTx);
+        mdb_txn_commit(_writeTx);
         _writeTx = null;
         return _rc;
     }
 
     int put(String key, String value) {
         return put(key, value, 0);
-        
+
     }
 
     String oper []=(String key, String value) {
-        if (put(key, value))
-            _strException();
+        if (_rc = put(key, value)) {
+            _strException(_rc);
+        }
         return value;
     }
 
@@ -224,7 +344,7 @@ class SimpleLmdb {
     }
 
     String get(String key) {
-        result := get(key, null, MDB_RDONLY);
+        result := get(key, null, MDB_RDONLY | MDB_NOTLS);
         if (result is null) {
             throw KeyError(sfmt `Key $key not found`);
         }
@@ -232,82 +352,11 @@ class SimpleLmdb {
     }
 
     String get(String key, String default) {
-        return get(key, default, MDB_RDONLY);
+        return get(key, default, MDB_RDONLY | MDB_NOTLS);
     }
 
     String oper[](String key) {
         return get(key);
-    }
-
-    class Item {
-        String key;
-        String val;
-        
-        oper init(String key, String val) : key = key, val = val { }
-    }
-    
-    class Iter {
-        MDB_cursor _cursor;
-        MDB_txn _txn;
-        uint _dbi;
-        MDB_val _ikey = mdb_val_new(), _ival = mdb_val_new();
-        int _status = -1, _flag = MDB_SET_RANGE;
-        String _key; // We need to keep a reference to the key
-
-        @final void next();
-        
-        oper init(MDB_env env, uint dbi, String key, int flag) :
-                  _dbi = dbi, _key = key
-        {
-            _txn = mdb_txn_begin(env, null, MDB_RDONLY);
-            if (_txn is null) {
-                throw Exception(CString(mdb_strerror(), false));
-            } else if ((_cursor = mdb_cursor_open(_txn, _dbi)) is null) {
-                throw InvalidArgumentError(I"Could not create cursor \
-                                             for iterator");
-            }
-            
-            if (key is null) {
-                _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_FIRST);
-            } else {
-                if (flag) {
-                    _flag = flag;
-                }
-                _ikey.mv_data = _key.buffer;
-                _ikey.mv_size = _key.size;
-                _status = mdb_cursor_get(_cursor, _ikey, _ival, _flag);
-            }
-        }
-
-        bool isTrue() { return _status == MDB_SUCCESS; }
-        
-        @final Item elem() {
-            if (_status == MDB_SUCCESS) {
-                return Item(String(_ikey.mv_data, _ikey.mv_size, false),
-                            String(_ival.mv_data, _ival.mv_size, false)
-                           );
-            } else {
-                return null;
-            }
-        }
-        
-        @final void next() {
-            _status = mdb_cursor_get(_cursor, _ikey, _ival, MDB_NEXT);
-        }
-        
-        bool isTrue() { return _status == MDB_SUCCESS; }
-
-        oper del() {
-            if (!(_cursor is null)) {
-                mdb_cursor_close(_cursor);
-            }
-
-            if (!(_txn is null)) {
-                mdb_txn_abort(_txn);
-            }
-            free(_ival);
-            free(_ikey);
-        }
     }
 
     Iter iter() {
@@ -315,11 +364,11 @@ class SimpleLmdb {
     }
 
     Iter iter(String key) {
-        return Iter(_env, _dbi, key, 0); // Position >= specified key 
+        return Iter(_env, _dbi, key, 0); // Position >= specified key
     }
 
     Iter iter(String key, int flag) {
-        return Iter(_env, _dbi, key, 0); // Position >= specified key 
+        return Iter(_env, _dbi, key, flag); // Position according to flag
     }
 
     /// Returns the number of elements in the database
@@ -368,33 +417,237 @@ class SimpleLmdb {
     void clear() {
         if ((_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
             mdb_drop(_tmpTxn, _dbi, 0) ||
-            mdb_txn_commit(_tmpTxn)    ||
-            (_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
-            (_dbi = mdb_dbi_open(_tmpTxn, null, 0)) == 0 ||
             mdb_txn_commit(_tmpTxn)
             )
         {
             _strException();
         }
-        
     }
 
-    // close everything down in reverse order
-    oper del() {
-        if (!(_readTx is null)) {
-            mdb_txn_abort(_readTx);
+    void formatTo(Formatter fmt) {
+        bool first = true;
+        fmt.write("{");
+
+        for (item :in this) {
+            if (!first)
+                fmt.write(", ");
+            else
+                first = false;
+            fmt `$(item.key): $(item.val)`;
         }
-        if (!(_writeTx is null)) {
-            mdb_txn_abort(_writeTx);
-        }
+
+        fmt.write("}");
+    }
+
+    void close() {
         if (_dbi > 0) {
             mdb_dbi_close(_env, _dbi);
+            _dbi = 0;
         }
-        mdb_env_close(_env);
+    }
+
+    oper del() {
+        close();
 
         free(_mkey);
         free(_mvalue);
         free(_mresult);
+    }
+}
+
+/// A simple persistent key/value database
+class SimpleLmdb : InnerDB {
+    CString _path;             // Database path
+    MDB_env _env;              // db environment
+
+    // Open a directory containing a single database
+    void _simpleInit(CString path, int envflags, int dbflags, uint64 mapsize,
+            int access)
+    {
+        dir := RealPath(path);
+        if (!dir.exists())
+            dir.makeDir();
+        if (!dir.isDir())
+            throw InvalidArgumentError("Database path must be a directory");
+
+        if ((_env = mdb_env_create()) is null ||
+             mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
+             mdb_env_open(_env, path.buffer, envflags, access) != MDB_SUCCESS) {
+            _strException();
+        }
+
+        _init(_env, null, dbflags); // default database
+    }
+
+    /// Open a database environment with the following optional flags:
+    /// MDB_FIXEDMAP use a fixed address for the mmap region. This flag must be
+    ///     specified when creating the environment, and is stored persistently in
+    ///     the environment. If successful, the memory map will always reside at the
+    ///     same virtual address and pointers used to reference data items in the
+    ///     database will be constant across multiple invocations. This option may
+    ///     not always work, depending on how the operating system has allocated
+    ///     memory to shared libraries and other uses. The feature is highly
+    ///     experimental.
+    /// MDB_NOSUBDIR By default, MDB creates its environment in a directory whose
+    ///     pathname is given in path, and creates its data and lock files under
+    ///     that directory. With this option, path is used as-is for the database
+    ///     main data file. The database lock file is the path with "-lock" appended.
+    /// MDB_RDONLY Open the environment in read-only mode. No write operations will
+    ///     be allowed. MDB will still modify the lock file - except on read-only
+    ///     filesystems, where MDB does not use locks.
+    /// MDB_WRITEMAP Use a writeable memory map unless MDB_RDONLY is set. This is
+    ///     faster and uses fewer mallocs, but loses protection from application
+    ///     bugs like wild pointer writes and other bad updates into the database.
+    ///     Incompatible with nested transactions.
+    /// MDB_NOMETASYNC Flush system buffers to disk only once per transaction, omit
+    ///     the metadata flush. Defer that until the system flushes files to disk,
+    ///     or next non-MDB_RDONLY commit or mdb_env_sync(). This optimization
+    ///     maintains database integrity, but a system crash may undo the last
+    ///     committed transaction. I.e. it preserves the ACI (atomicity, consistency,
+    ///     isolation) but not D (durability) database property. This flag may be
+    ///     changed at any time using mdb_env_set_flags().
+    /// MDB_NOSYNC Don't flush system buffers to disk when committing a transaction.
+    ///     This optimization means a system crash can corrupt the database or lose
+    ///     the last transactions if buffers are not yet flushed to disk. The risk
+    ///     is governed by how often the system flushes dirty buffers to disk and
+    ///     how often mdb_env_sync() is called. However, if the filesystem preserves
+    ///     write order and the MDB_WRITEMAP flag is not used, transactions exhibit
+    ///     ACI (atomicity, consistency, isolation) properties and only lose D
+    ///     (durability). I.e. database integrity is maintained, but a system crash
+    ///     may undo the final transactions. Note that (MDB_NOSYNC | MDB_WRITEMAP)
+    ///     leaves the system with no hint for when to write transactions to disk,
+    ///     unless mdb_env_sync() is called. (MDB_MAPASYNC | MDB_WRITEMAP) may be
+    ///     preferable. This flag may be changed at any time using mdb_env_set_flags().
+    /// MDB_MAPASYNC When using MDB_WRITEMAP, use asynchronous flushes to disk.
+    ///     As with MDB_NOSYNC, a system crash can then corrupt the database or lose
+    ///      the last transactions. Calling mdb_env_sync() ensures on-disk database
+    ///     integrity until next commit. This flag may be changed at any time using
+    ///     mdb_env_set_flags().
+    /// MDB_NOTLS Don't use Thread-Local Storage. Tie reader locktable slots to
+    ///     MDB_txn objects instead of to threads. I.e. mdb_txn_reset() keeps the
+    ///     slot reseved for the MDB_txn object. A thread may use parallel read-only
+    ///     transactions. A read-only transaction may span threads if the user
+    ///     synchronizes its use. Applications that multiplex many user threads
+    ///     over individual OS threads need this option. Such an application must
+    ///     also serialize the write transactions in an OS thread, since MDB's
+    ///     write locking is unaware of the user threads.
+    ///
+    /// For the dbflags parameter, see InnerDB
+
+
+    oper init(CString path, int envflags, int dbflags, uint64 mapsize, int access) :
+            InnerDB()
+    {
+        _simpleInit(path, envflags, dbflags, mapsize, access);
+    }
+
+    oper init(CString path, int envflags, int dbflags) :
+            InnerDB()
+    {
+        _simpleInit(path, envflags, dbflags, 10485760, 0644);
+    }
+
+    // close everything down in reverse order
+    oper del() {
+        close();
+        mdb_env_sync(_env, 1);
+        mdb_env_close(_env);
+    }
+}
+
+
+/// A collection of key/value databases in a single environment
+class Lmdb {
+    CString _path;             // Database path
+    int _dbFlags;              // Flags dbs are opened with
+    MDB_env _env;              // db environment
+    uint _maxdbs = 100;        // Max number of dbs in this environment
+    InnerDB _index;
+
+    HashMap[String, InnerDB] _dbs = {};
+
+    // Open a directory containing a collection of databases
+    void _init(CString path, int envflags, int dbflags, uint64 mapsize,
+               int access, uint maxdbs)
+    {
+        dir := RealPath(path);
+        if (!dir.exists())
+            dir.makeDir();
+        if (!dir.isDir())
+            throw InvalidArgumentError("Database path must be a directory");
+
+        if ((_env = mdb_env_create()) is null ||
+             mdb_env_set_mapsize(_env, mapsize) ||
+             mdb_env_set_maxdbs(_env, _maxdbs) ||
+             mdb_env_open(_env, path.buffer, envflags, access)) {
+            _strException();
+        }
+        _index = InnerDB(_env, "__index", dbflags);
+    }
+
+    oper init(String path, int envflags, int dbflags) :
+            _path=CString(path), _dbFlags = dbflags
+    {
+        _init(_path, envflags, dbflags, 10485760, 0644, _maxdbs);
+    }
+
+    oper init(String path, int envflags, int dbflags, uint64 mapsize, int access,
+            uint maxdbs) :
+            _path=CString(path), _maxdbs = maxdbs
+    {
+        _init(_path, envflags, dbflags, mapsize, access, _maxdbs);
+    }
+
+    InnerDB get(String name) {
+        InnerDB idb = _dbs.get(name, null);
+        if (idb is null) {
+            _dbs[name] = idb = InnerDB(_env, CString(name), _dbFlags);
+            _index[name] = sfmt `$(usecs())`;
+        }
+        return idb;
+    }
+
+    InnerDB oper [](String name) {
+        return get(name);
+    }
+
+    void formatTo(Formatter fmt) {
+        bool first = true;
+        fmt.write("{");
+        InnerDB idb;
+
+        for (dbitem :in _index) {
+            idb = _dbs.get(dbitem.key, null);
+            if (idb is null) {
+                idb = InnerDB(_env, CString(dbitem.key), _dbFlags);
+            }
+            if (!first) {
+                fmt.write(", ");
+            }
+            else {
+                first = false;
+            }
+            fmt `$(dbitem.key): $idb`;
+        }
+        fmt.write("}");
+    }
+
+    void close(String name) {
+        InnerDB idb = _dbs.get(name, null);
+        if (!(idb is null)) {
+            idb.close();
+            _dbs.delete(name);
+        }
+    }
+    
+    /// Close the database environment
+    oper del() {
+        for (dbitem :in _dbs) {
+            dbitem.val.close();
+        }
+        _index.close();
+        mdb_env_sync(_env, 1);
+        mdb_env_close(_env);
     }
 }
 
