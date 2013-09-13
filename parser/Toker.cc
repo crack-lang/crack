@@ -915,7 +915,7 @@ Token Toker::readToken() {
             case st_plus:
                 state = st_none;
                 if (ch == '+') {
-                    return Token(Token::decr, "++", getLocation());
+                    return Token(Token::incr, "++", getLocation());
                 } else if (ch == '=') {
                     return Token(Token::assignPlus, "+=", 
                                  getLocation()
