@@ -14,6 +14,7 @@
     @filename 'opt/_lmdb.cc'
     @dumpsymbols 'opt/_lmdb.txt'
     @inject '#include <stdlib.h>\n'
+    @inject '#include <stdio.h>\n'
     @inject '#include <errno.h>\n'
     @inject '#include <inttypes.h>\n'
     @inject '#include <lmdb.h>\n'
@@ -137,6 +138,7 @@
 
     void mdb_env_close(MDB_env env);
     int mdb_env_set_mapsize(MDB_env env, uint64 size);
+    int mdb_env_set_maxdbs(MDB_env env, uint size);
     int mdb_env_open(MDB_env env, byteptr path, uint flags, int mode);
 
     @inject 'byteptr mdb_strerror_crk() {
@@ -230,4 +232,14 @@
 
     @cname mdb_cursor_count_crk
     uint64 mdb_cursor_count(MDB_cursor cursor);
+
+    @inject 'int mdb_reader_check_crk(MDB_env *env) {
+                int num_cleared;
+                errno = mdb_reader_check(env, &num_cleared);
+                if (errno) return -1;
+                return num_cleared;
+            }\n';
+
+    @cname mdb_reader_check_crk
+    int mdb_reader_check(MDB_env env);
 }

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <lmdb.h>
@@ -51,6 +52,12 @@ uint64_t mdb_cursor_count_crk(MDB_cursor *cursor) {
                 errno = mdb_cursor_count(cursor, &countp);
                 if (errno) return 0;
                 return countp;
+            }
+int mdb_reader_check_crk(MDB_env *env) {
+                int num_cleared;
+                errno = mdb_reader_check(env, &num_cleared);
+                if (errno) return -1;
+                return num_cleared;
             }
 
 
@@ -139,6 +146,12 @@ void crack_ext__lmdb_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_MDB_env, "env");
        f->addArg(type_uint64, "size");
+
+    f = mod->addFunc(type_int, "mdb_env_set_maxdbs",
+                     (void *)mdb_env_set_maxdbs
+                     );
+       f->addArg(type_MDB_env, "env");
+       f->addArg(type_uint, "size");
 
     f = mod->addFunc(type_int, "mdb_env_open",
                      (void *)mdb_env_open
@@ -323,6 +336,11 @@ void crack_ext__lmdb_cinit(crack::ext::Module *mod) {
                      (void *)mdb_cursor_count_crk
                      );
        f->addArg(type_MDB_cursor, "cursor");
+
+    f = mod->addFunc(type_int, "mdb_reader_check",
+                     (void *)mdb_reader_check_crk
+                     );
+       f->addArg(type_MDB_env, "env");
 
 
     mod->addConstant(type_int, "MDB_VERSION_MAJOR",
