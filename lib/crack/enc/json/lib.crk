@@ -40,7 +40,7 @@ class ParseException : Exception {
 }
 
 // Define a formatter class to override string formatting
-class JsonFormatter : StandardFormatter {
+class JSONFormatter : StandardFormatter {
     oper init(Writer rep) : StandardFormatter(rep) {}
 
     void formatString(String data) {
@@ -82,8 +82,7 @@ class JsonFormatter : StandardFormatter {
             this `null`;
         else if (obj.isa(String)) {
             formatString(String.cast(obj));
-        }
-        else if (obj.isa(StringArray)) {
+        } else if (obj.isa(StringArray)) {
             bool first = true;
             SA := StringArray.cast(obj);
             write("[");
@@ -99,9 +98,9 @@ class JsonFormatter : StandardFormatter {
     }
 }
 
-class JsonStringFormatter : JsonFormatter {
+class JSONStringFormatter : JSONFormatter {
     StringWriter _writer;
-    oper init() : JsonFormatter (null) {
+    oper init() : JSONFormatter (null) {
         _writer = StringWriter();
         rep = _writer;
     }
@@ -115,7 +114,7 @@ class JsonStringFormatter : JsonFormatter {
     }
 }
 
-class JsonObject : OrderedHashMap[String, Object] {
+class JSONObject : OrderedHashMap[String, Object] {
     void formatTo(Formatter out) {
         out `{`;
         bool first = true;
@@ -131,7 +130,7 @@ class JsonObject : OrderedHashMap[String, Object] {
     }
 }
 
-class JsonArray : Array[Object] {
+class JSONArray : Array[Object] {
     void formatTo(Formatter out) {
         out `[`;
         bool first = true;
@@ -146,13 +145,13 @@ class JsonArray : Array[Object] {
     }
 }
 
-class JsonInt {
+class JSONInt {
     int value;
     oper init(int value): value = value {}
     @writeValue()
 }
 
-class JsonFloat {
+class JSONFloat {
     float value;
     oper init(float value): value = value {}
     void formatTo(Formatter fmt) {
@@ -173,19 +172,18 @@ class JsonFloat {
     }
 }
 
-class JsonBool {
+class JSONBool {
     bool value;
     oper init(bool value): value = value {}
     @writeValue()
 }
 
-class JsonString : String {
+class JSONString : String {
     oper init(ManagedBuffer buffer, bool takeOwnership) :
         String(buffer, takeOwnership) {
     }
 
-    oper init(Buffer buffer) : String(buffer) {
-    }
+    oper init(Buffer buffer) : String(buffer) {}
 
     void formatTo(Formatter out) {
         out `"$(escape(this, 32, 127))"`;

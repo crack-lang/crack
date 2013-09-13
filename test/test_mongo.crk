@@ -10,7 +10,7 @@ import crack.ascii hex, bin;
 import crack.cont.array Array;
 import crack.db.mongo MongoSync, BSON, MONGO_CONN_LOCAL,
     BSON_BINARY_SUBTYPE_GENERIC;
-import crack.db.mongo_support Oid;
+import crack.db.mongo_support OID;
 import crack.io cout, cerr, FStr;
 import crack.random uuid;
 import crack.runtime errno, exit;
@@ -24,15 +24,15 @@ if (bs != '{"A": 10, "B": "S"}') {
     // exit(1);
 }
 
-// Test Oid
-oid := Oid.new();
+// Test OID
+oid := OID.new();
 hx := hex(oid);
-newoid := Oid(bin(hx));
+newoid := OID(bin(hx));
 hx2 := hex(newoid);
 
 if (hx != hx2) {
-  cout `$hx != $hx2 creating new Oid\n`;
-  exit(1);
+    cout `$hx != $hx2 creating new OID\n`;
+    exit(1);
 }
 
 // Test an array
@@ -71,11 +71,11 @@ doc.appendBool("yes?", false);
 doc.appendBinary("bin", BSON_BINARY_SUBTYPE_GENERIC, "binary data", );
 doc.appendInt32("n", 1);
 docid := uuid(12);
-doc.appendOid("_id", docid);
+doc.appendOID("_id", docid);
 doc.finish();
 
 selector := BSON();
-selector.appendOid("_id", docid);
+selector.appendOID("_id", docid);
 selector.finish();
 
 doc2 := BSON();
@@ -97,7 +97,7 @@ if (!C.update(ns, 0, selector, doc2)) {
 }
 
 query := BSON();
-query.appendOid("_id", docid);
+query.appendOID("_id", docid);
 query.finish();
 
 cursor := C.query(ns, 0, 0, 10, query, null);

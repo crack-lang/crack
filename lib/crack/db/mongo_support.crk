@@ -4,7 +4,7 @@ import crack.runtime memcpy;
 import crack.ascii hex;
 import crack.random uuid;
 
-class Oid : ManagedBuffer {
+class OID : ManagedBuffer {
 
     void setZero() {
         for (uint i = 0; i < 12; i++)
@@ -20,13 +20,13 @@ class Oid : ManagedBuffer {
         size = 12;
         if (!(newdata is null)) {
             if (newdata.size != 12)
-                throw InvalidArgumentError("BSON Oid objects must have size 12");
+                throw InvalidArgumentError("BSON OID objects must have size 12");
             memcpy(buffer, newdata.buffer, newdata.size);
         }
     }
 
-    @static Oid new() {
-        return Oid(uuid(12));
+    @static OID new() {
+        return OID(uuid(12));
     }
 
     bool isTrue() {

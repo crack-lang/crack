@@ -192,7 +192,7 @@ easy_strerror,
 easy_pause,
 slist_cast,
 slist_free_all;
-import crack.net.curl UrlEncode, UrlDecode, FormData;
+import crack.net.curl URLEncode, URLDecode, FormData;
 
 errStr := FStr();
 
@@ -219,10 +219,10 @@ unescaped_args := CString(curl_unescape(escaped_args.buffer, escaped_args.size),
 if (unescaped_args != args)
     exitError(errStr `Problem url-escaping string:\n'$args' -> '$escaped_args' -> '$unescaped_args'\n`);
 
-Escaped := UrlEncode(args);
-Unescaped := UrlDecode(Escaped);
-if (args != Unescaped)
-    exitError(errStr `Problem with UrlEncode/Decode string:\n'$args' -> '$Escaped' -> '$Unescaped'\n`);
+escaped := URLEncode(args);
+unescaped := URLDecode(escaped);
+if (args != unescaped)
+    exitError(errStr `Problem with URLEncode/Decode string:\n'$args' -> '$escaped' -> '$unescaped'\n`);
 
 // Test linked list ------------------------------------------------------------
 

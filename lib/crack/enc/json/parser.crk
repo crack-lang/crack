@@ -24,14 +24,14 @@
 
 import crack.cont.array Array;
 import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer;
-import crack.enc.json.lib JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
-    JsonString, UnexpectedToken, ParseException;
+import crack.enc.json.lib JSONObject, JSONArray, JSONInt, JSONFloat, JSONBool, 
+    JSONString, UnexpectedToken, ParseException;
 import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
     FP_NORMAL, FP_ZERO, sign;
 import crack.io Formatter, FStr, cerr;
 @import crack.ann define;
 
-class JsonParser {
+class JSONParser {
 
   /* EOF char used to flush out that last token. This should be a whitespace
    * token. */
@@ -62,7 +62,7 @@ class JsonParser {
         oper init(Object result, uint p) : result = result, p = p {
         }
 
-        @define formatJsonValue(Type){
+        @define formatJSONValue(Type){
             if (result.isa(Type)) {
                 fmt.format(Type.cast(result));
             }
@@ -74,12 +74,12 @@ class JsonParser {
               return;
             }
 
-            @formatJsonValue(JsonInt)
-            else @formatJsonValue(JsonBool)
-            else @formatJsonValue(JsonFloat)
-            else @formatJsonValue(JsonObject)
-            else @formatJsonValue(JsonArray)
-            else @formatJsonValue(String)
+            @formatJSONValue(JSONInt)
+            else @formatJSONValue(JSONBool)
+            else @formatJSONValue(JSONFloat)
+            else @formatJSONValue(JSONObject)
+            else @formatJSONValue(JSONArray)
+            else @formatJSONValue(String)
             else fmt.format('UNKNOWN');
         }
     }
@@ -297,20 +297,20 @@ uint  JSON_value_en_main = 1;
     else  if (_tempval  == 1) { // FROM_STATE_ACTION_SWITCH
 # line 142 "opt/json.rl" # end of line directive
     
-            result = JsonBool(false);
+            result = JSONBool(false);
             // ACTION
     }
     else  if (_tempval  == 2) { // FROM_STATE_ACTION_SWITCH
 # line 146 "opt/json.rl" # end of line directive
     
-            result = JsonBool(true);
+            result = JSONBool(true);
             // ACTION
     }
     else  if (_tempval  == 3) { // FROM_STATE_ACTION_SWITCH
 # line 150 "opt/json.rl" # end of line directive
     
             if (allowNaN) {
-                result = JsonFloat(NAN);
+                result = JSONFloat(NAN);
             } else {
                 throw UnexpectedToken(data, p - 2, pe);
             }
@@ -320,7 +320,7 @@ uint  JSON_value_en_main = 1;
 # line 158 "opt/json.rl" # end of line directive
     
             if (allowNaN) {
-                result = JsonFloat(INFINITY)
+                result = JSONFloat(INFINITY)
             } else {
                 throw UnexpectedToken(data, p - 7, pe);
             }
@@ -331,7 +331,7 @@ uint  JSON_value_en_main = 1;
     
             if (pe > p + 9 && bufferString(p, p+9) == "-Infinity") {
                 if (allowNaN) {
-                    result = JsonFloat(-INFINITY);
+                    result = JSONFloat(-INFINITY);
                     p = ( p + 10) - 1; //EXEC
 
                     p = p - 1;
@@ -629,7 +629,7 @@ uint  JSON_integer_en_main = 1;
             return null;
         }
 
-        JsonInt number = { atoi(CString(data + uintz(memo), p - memo, false)) };
+        JSONInt number = { atoi(CString(data + uintz(memo), p - memo, false)) };
 
         return ParserResult(number, p + 1);
     }
@@ -834,7 +834,7 @@ uint  JSON_float_en_main = 1;
             return null;
         }
 
-        JsonFloat number = { strtof(CString(data + uintz(memo), p - memo, false)) };
+        JSONFloat number = { strtof(CString(data + uintz(memo), p - memo, false)) };
         return ParserResult(number, p + 1);
     }
 
@@ -1034,7 +1034,7 @@ uint  JSON_string_en_main = 1;
     
             if (p > memo)
                 append_buf.extend(data + uintz(memo), p - memo);
-            result = JsonString(append_buf, false);
+            result = JSONString(append_buf, false);
             p = ( p + 1) - 1; //EXEC
 
             // ACTION
@@ -1192,7 +1192,7 @@ uint  JSON_array_en_main = 1;
             throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
         }
 
-        JsonArray result = {};
+        JSONArray result = {};
         ParserResult res = null;
 
         uint cs = EVIL;
@@ -1467,7 +1467,7 @@ uint  JSON_object_en_main = 1;
             throw ParseException(FStr() `Nesting of $currentNesting is too deep`, line, col);
         }
 
-        JsonObject result = {};
+        JSONObject result = {};
 
         uint cs = EVIL;
 

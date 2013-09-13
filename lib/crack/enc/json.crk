@@ -6,12 +6,12 @@
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ##
 
-import crack.enc.json.parser JsonParser;
-import crack.enc.json.lib UnexpectedToken, ParseException, JsonFormatter,
-    JsonStringFormatter, JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool,
-    JsonString;
+import crack.enc.json.parser JSONParser;
+import crack.enc.json.lib UnexpectedToken, ParseException, JSONFormatter,
+    JSONStringFormatter, JSONObject, JSONArray, JSONInt, JSONFloat, JSONBool,
+    JSONString;
 
-@export_symbols JsonParser, UnexpectedToken, ParseException, JsonFormatter,
-    JsonStringFormatter, JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool,
-    JsonString;
+@export_symbols JSONParser, UnexpectedToken, ParseException, JSONFormatter,
+    JSONStringFormatter, JSONObject, JSONArray, JSONInt, JSONFloat, JSONBool,
+    JSONString;
 

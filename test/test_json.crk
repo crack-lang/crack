@@ -9,10 +9,10 @@ import crack.io cout, FStr, StringFormatter;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.enc.json JsonParser, JsonStringFormatter;
+import crack.enc.json JSONParser, JSONStringFormatter;
 import crack.math NAN, INFINITY, FP_NORMAL, FP_ZERO, FP_INFINITE, FP_NAN;
 
-JsonParser parser = {};
+JSONParser parser = {};
 
 StringArray testStrings = [r'"\/\n\r\b\t\\\"\017"', 'true', 'false', 'null',
                            '{"one":1}', '{"two":"two"}', '{"three":1.0}',
@@ -95,7 +95,7 @@ StringArray nativeExpected = ['[1, 2, 3, 4, 5, 6, 7]',
 
 StringArray encodeResults = {};
 
-JsonStringFormatter jfmt = {};
+JSONStringFormatter jfmt = {};
 jfmt.format(uints);
 encodeResults.append(jfmt.string());
 jfmt.format(ints);
@@ -117,7 +117,7 @@ h[1] = "two";
 h[2] = "three";
 
 // Check that formatter doesn't recurse
-JsonStringFormatter jfmt2 = {};
+JSONStringFormatter jfmt2 = {};
 jfmt2.format(h);
 
 cout `ok\n`;

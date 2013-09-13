@@ -7,8 +7,8 @@
 // Higher level classes from mongo client binding
 
 import crack.ascii escape, hex;
-import crack.enc.json JsonArray, JsonBool, JsonFloat, JsonFormatter, JsonInt,
-    JsonObject, JsonParser, JsonString, JsonStringFormatter, ParseException,
+import crack.enc.json JSONArray, JSONBool, JSONFloat, JSONFormatter, JSONInt,
+    JSONObject, JSONParser, JSONString, JSONStringFormatter, ParseException,
     UnexpectedToken;
 import crack.enc.base64 encode;
 import crack.io cout, cerr, Formatter, FStr;
@@ -19,7 +19,7 @@ import crack.sys strerror;
 import crack.time Time;
 @import crack.ann define;
 
-import crack.db.mongo_support Oid;
+import crack.db.mongo_support OID;
 import crack.ext._mongo
     // Function names
     bson_type_as_string,
@@ -155,46 +155,46 @@ import crack.ext._mongo
 
 int MONGO_CONN_LOCAL = -1;
 
-class BSONOid : Oid {
-    oper init() : Oid() { }
-    oper init(Buffer newdata) : Oid(newdata) { }
+class BSONOID : OID {
+    oper init() : OID() { }
+    oper init(Buffer newdata) : OID(newdata) { }
 
-    oper init(bson_cursor c) : Oid() {
+    oper init(bson_cursor c) : OID() {
         size = 12;
         if (bson_cursor_type(c) == BSON_TYPE_OID)
             memcpy(buffer, bson_cursor_get_oid(c), 12);
         else
             throw InvalidArgumentError(
-                FStr() I`Constructing Oid object from BSON type \
+                FStr() I`Constructing OID object from BSON type \
                          $(StaticString(bson_cursor_type_as_string(c)))`
             );
     }
 }
 
-bson _fromJsonObject(JsonObject jdo);
-bson _fromJsonArray(JsonArray jdo);
+bson _fromJSONObject(JSONObject jdo);
+bson _fromJSONArray(JSONArray jdo);
 
-bson _fromJsonObject(JsonObject jdo) {
+bson _fromJSONObject(JSONObject jdo) {
     b := bson_new();
     uint cnt = 0;
 
     for (it :in jdo) {
         jo := it.val;
         key := CString(it.key);
-        if (j := JsonObject.cast(jo, null)) {
-            newb := _fromJsonObject(j);
+        if (j := JSONObject.cast(jo, null)) {
+            newb := _fromJSONObject(j);
             bson_finish(newb);
             bson_append_document(b, key.buffer, newb);
-        } else if (j := JsonBool.cast(jo, null)) {
+        } else if (j := JSONBool.cast(jo, null)) {
             bson_append_boolean(b, key.buffer, j.value);
-        } else if (j := JsonFloat.cast(jo, null)) {
+        } else if (j := JSONFloat.cast(jo, null)) {
             bson_append_double(b, key.buffer, j.value);
-        } else if (j := JsonInt.cast(jo, null)) {
+        } else if (j := JSONInt.cast(jo, null)) {
             bson_append_int64(b, key.buffer, int64(j.value));
-        } else if (j := JsonString.cast(jo, null)) {
+        } else if (j := JSONString.cast(jo, null)) {
             bson_append_string(b, key.buffer, j.buffer, int32(j.size));
-        } else if (j := JsonArray.cast(jo, null)) {
-            newb := _fromJsonArray(j);
+        } else if (j := JSONArray.cast(jo, null)) {
+            newb := _fromJSONArray(j);
             bson_finish(newb);
             bson_append_array(b, key.buffer, newb);
         }
@@ -203,27 +203,27 @@ bson _fromJsonObject(JsonObject jdo) {
     return b;
 }
 
-bson _fromJsonArray(JsonArray jdo) {
+bson _fromJSONArray(JSONArray jdo) {
     b := bson_new();
     sfmt := FStr();
     uint cnt = 0;
 
     for (jo :in jdo) {
         key := CString(sfmt `$cnt`);
-        if (j := JsonObject.cast(jo, null)) {
-            newb := _fromJsonObject(j);
+        if (j := JSONObject.cast(jo, null)) {
+            newb := _fromJSONObject(j);
             bson_finish(newb);
             bson_append_document(b, key.buffer, newb);
-        } else if (j := JsonBool.cast(jo, null)) {
+        } else if (j := JSONBool.cast(jo, null)) {
             bson_append_boolean(b, key.buffer, j.value);
-        } else if (j := JsonFloat.cast(jo, null)) {
+        } else if (j := JSONFloat.cast(jo, null)) {
             bson_append_double(b, key.buffer, j.value);
-        } else if (j := JsonInt.cast(jo, null)) {
+        } else if (j := JSONInt.cast(jo, null)) {
             bson_append_int64(b, key.buffer, int64(j.value));
-        } else if (j := JsonString.cast(jo, null)) {
+        } else if (j := JSONString.cast(jo, null)) {
             bson_append_string(b, key.buffer, j.buffer, int32(j.size));
-        } else if (j := JsonArray.cast(jo, null)) {
-            newb := _fromJsonArray(j);
+        } else if (j := JSONArray.cast(jo, null)) {
+            newb := _fromJSONArray(j);
             bson_finish(newb);
             bson_append_array(b, key.buffer, newb);
         }
@@ -319,14 +319,14 @@ class BSON {
     }
 
     @static BSON fromJSON(Buffer json) {
-        parser := JsonParser();
+        parser := JSONParser();
         presult := parser.parse(json);
 
         if (presult.result is null)
             throw ParseException("failed to parse json document", 1, 1);
 
-        jdo := JsonObject.cast(presult.result); // an OrderedHasmap[String, Object]
-        bdo := BSON(_fromJsonObject(jdo));
+        jdo := JSONObject.cast(presult.result); // an OrderedHasmap[String, Object]
+        bdo := BSON(_fromJSONObject(jdo));
         bdo.finish();
         return bdo;
         
@@ -357,13 +357,13 @@ class BSON {
     }
 
     // Append an ObjectID to a BSON object.
-    @final bool appendOid(CString name, Buffer oid) {
+    @final bool appendOID(CString name, Buffer oid) {
         if (oid.size != 12) return false;
         return bson_append_oid(_b, name.buffer, oid.buffer);
     }
 
     // Append an ObjectID to a BSON object.
-    @final bool appendOid(CString name, Oid oid) {
+    @final bool appendOID(CString name, OID oid) {
         if (oid.size != 12) return false;
         return bson_append_oid(_b, name.buffer, oid.buffer);
     }
