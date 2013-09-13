@@ -29,7 +29,7 @@ namespace {
         char buf[MD5_SOURCE_PAGE_SIZE];
 
         // XXX do we want to skip whitespace and comments?
-        while (!src.eof()) {
+        while (!src.eof() && src.good()) {
             src.read(buf, MD5_SOURCE_PAGE_SIZE);
             hasher.add(buf, src.gcount());
         }
