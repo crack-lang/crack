@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <sstream>
 #include <string.h>
+
+#include "model/Generic.h"
 #include "model/GlobalNamespace.h"
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
@@ -15,11 +17,13 @@
 #include "model/ModuleDefMap.h"
 #include "model/OverloadDef.h"
 #include "model/TypeDef.h"
+#include "parser/Toker.h"
 
 #include "tests/MockBuilder.h"
 #include "tests/MockFuncDef.h"
 #include "tests/MockModuleDef.h"
 
+using namespace parser;
 using namespace std;
 using namespace model;
 using namespace crack::util;
@@ -256,6 +260,38 @@ bool reloadOfSelfReferrentTypes() {
     return success;
 }
 
+bool operatorSerialization() {
+    bool success = true;
+    string org = "@ & << | >> ^ $ = &= *= <<= |= >>= ^= -= %= += /= * ! "
+                 ": , -- := . == >= > ++ [ { <= ( < - != % + ? ] } ) ; "
+                 "/ ~ && ||";
+    istringstream src(org);
+    Toker toker(src, "source-name");
+
+    // serialize all of the tokens and build a list of them
+    vector<Token> tokens;
+    ostringstream serStr;
+    Serializer ser(serStr);
+    Token tok;
+    while ((tok = toker.getToken()).getType() != Token::end) {
+        Generic::serializeToken(ser, tok);
+        tokens.push_back(tok);
+    }
+
+    // deserialize them and verify that the strings are all correct
+    istringstream deserStr(serStr.str());
+    Deserializer deser(deserStr, 0);
+    for (int i = 0; i < tokens.size(); ++i) {
+        Token tok = Generic::deserializeToken(deser);
+        if (tok.getData() != tokens[i].getData()) {
+            cerr << "mismatch reading back " << tokens[i].getData() <<
+                " got " << tok.getData() << endl;
+            success = false;
+        }
+    }
+    return success;
+}
+
 struct TestCase {
     const char *text;
     bool (*f)();
@@ -268,6 +304,7 @@ TestCase testCases[] = {
     {"moduleSerialization", moduleSerialization},
     {"moduleReload", moduleReload},
     {"reloadOfSelfReferrentTypes", reloadOfSelfReferrentTypes},
+    {"operatorSerialization", operatorSerialization},
     {0, 0}
 };
 

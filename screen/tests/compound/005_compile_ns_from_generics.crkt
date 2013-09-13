@@ -3,6 +3,9 @@ compile namespace in generics
 %%ARGS%%
 %%FILE%%
 # Verifies that we persist the compile namespace correctly in generics.
+# We also use this to verify elements that were problematic in generic
+# serialization, since it forces a generic to be instantiated from its
+# serialized form.
 import systest test;
 test.preBootstrap = true;
 test.mod('ann', I"
@@ -21,6 +24,10 @@ test.mod('mod', I"
     class A[T] {
         @import ann b;
         @b
+
+        void x(int j) {
+            int i = j + 1;
+        }
     }
     ");
 test.main(I"
@@ -34,10 +41,18 @@ test.main(I"
     A[float] a;
     puts('ok');
     ");
-test.run()
+test.run();
+test.addTrace('Caching');
+test.run();
 %%EXPECT%%
 out: ok
 terminated: success
+out: ok
+terminated: success
+err: Reusing cached module ann
+err: Reusing cached module mod
+err: Reusing cached module mod.A[.builtin.float]
+err: Reusing cached script /home/mmuller/w/crack/testout/8326022b/main.crk
 out: ok
 terminated: success
 %%STDIN%%

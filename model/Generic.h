@@ -27,10 +27,6 @@ SPUG_RCPTR(Namespace);
 
 /** Stores information used to replay a generic. */
 class Generic {
-    private:
-        static void serializeToken(Serializer &out, const parser::Token &tok);
-        static parser::Token deserializeToken(Deserializer &src);
-
     public:
         // the generic parameters
         GenericParmVec parms;
@@ -73,6 +69,12 @@ class Generic {
         /** @{ */
         void serialize(Serializer &out) const;
         static Generic *deserialize(Deserializer &src);
+        /** @} */
+
+        /** Token serialization (public for testability) */
+        /** @{ */
+        static void serializeToken(Serializer &out, const parser::Token &tok);
+        static parser::Token deserializeToken(Deserializer &src);
         /** @} */
 };
 

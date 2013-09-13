@@ -110,6 +110,7 @@ namespace {
     };
 }
 
+#define TOKTXT(type, txt) case Token::type: tokText = txt; break;
 Token Generic::deserializeToken(Deserializer &src) {
     Token::Type tokType = static_cast<Token::Type>(src.readUInt("tokenType"));
     string tokText;
@@ -122,6 +123,54 @@ Token Generic::deserializeToken(Deserializer &src) {
         case Token::hexLit:
         case Token::binLit:
             tokText = src.readString(32, "tokenData");
+            break;
+        TOKTXT(ann, "@");
+        TOKTXT(bitAnd, "&");
+        TOKTXT(bitLSh, "<<");
+        TOKTXT(bitOr, "|");
+        TOKTXT(bitRSh, ">>");
+        TOKTXT(bitXor, "^");
+        TOKTXT(dollar, "$");
+        TOKTXT(assign, "=");
+        TOKTXT(assignAnd, "&=");
+        TOKTXT(assignAsterisk, "*=");
+        TOKTXT(assignLSh, "<<=");
+        TOKTXT(assignOr, "|=");
+        TOKTXT(assignRSh, ">>=");
+        TOKTXT(assignXor, "^=");
+        TOKTXT(assignMinus, "-=");
+        TOKTXT(assignPercent, "%=");
+        TOKTXT(assignPlus, "+=");
+        TOKTXT(assignSlash, "/=");
+        TOKTXT(asterisk, "*");
+        TOKTXT(bang, "!");
+        TOKTXT(colon, ":");
+        TOKTXT(comma, ",");
+        TOKTXT(decr, "--");
+        TOKTXT(define, ":=");
+        TOKTXT(dot, ".");
+        TOKTXT(eq, "==");
+        TOKTXT(ge, ">=");
+        TOKTXT(gt, ">");
+        TOKTXT(incr, "++");
+        TOKTXT(lbracket, "[");
+        TOKTXT(lcurly, "{");
+        TOKTXT(le, "<=");
+        TOKTXT(lparen, "(");
+        TOKTXT(lt, "<");
+        TOKTXT(minus, "-");
+        TOKTXT(ne, "!=");
+        TOKTXT(percent, "%");
+        TOKTXT(plus, "+");
+        TOKTXT(quest, "?");
+        TOKTXT(rbracket, "]");
+        TOKTXT(rcurly, "}");
+        TOKTXT(rparen, ")");
+        TOKTXT(semi, ";");
+        TOKTXT(slash, "/");
+        TOKTXT(tilde, "~");
+        TOKTXT(logicAnd, "&&");
+        TOKTXT(logicOr, "||");
     }
     Location loc =
         LocationImplPtr::rcast(src.readObject(LocReader(), "loc").object);
