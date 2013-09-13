@@ -263,6 +263,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
             true;
 
     mod->metaDigest = deser.hasher.getDigest();
+    mod->sourcePath = sourcePath;
+    mod->sourceDigest = recordedSourceDigest;
     mod->onDeserialized(*deser.context);
 
     // fix up all of the modules with a cyclic dependency on this one
