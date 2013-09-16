@@ -6,12 +6,13 @@
 #
 # Wavefront OBJ file format reader.
 
-import crack.ascii parseInt, split;
+import crack.ascii parseInt;
 import crack.cont.array Array;
 import crack.exp.g3d Coord, Face, MFObj, Tri, Vector, Vertex, Prim;
 import crack.io cout, Reader;
 import crack.logger error;
 import crack.math atof;
+import crack.strutil split;
 import crack.io.readers LineReader;
 
 ## Reader for WaveFront OBJ files.  You probably don't want to use this class,

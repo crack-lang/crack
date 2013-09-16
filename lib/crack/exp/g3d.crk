@@ -2,7 +2,8 @@
 ## Copyright 2010 Google Inc.
 
 import crack.cont.array Array;
-import crack.lang cmp, die, free, malloc, Exception, WriteBuffer;
+import crack.runtime free, malloc;
+import crack.lang cmp, die, Exception, WriteBuffer;
 import crack.runtime open, close, O_RDONLY;
 import crack.io cout, cerr, FDReader, Formatter, FStr, Reader, Writer;
 import crack.time TimeDelta;
@@ -576,7 +577,8 @@ class Prim : Renderable {
     Vector normal;
 }
 
-alias Face = Array[Vertex];
+#alias Face = Array[Vertex];
+class Face : Array[Vertex] {}
 
 ## A multi-faceted object consisting of multiple polygon faces with per-vertex 
 ## normals and texture coordinates.
