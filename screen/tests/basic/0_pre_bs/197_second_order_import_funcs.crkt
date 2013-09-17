@@ -1,0 +1,8 @@
+%%TEST%%
+second order import functions
+%%ARGS%%
+%%FILE%%
+import test.testmod6 publicFunc;
+%%EXPECT%%
+ParseError: %OUTDIR%197_second_order_import_funcs.crk:1:22: Name publicFunc does not belong to module test.testmod6.  Second-order imports are not allowed.
+%%STDIN%%
