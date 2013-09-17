@@ -750,9 +750,14 @@ namespace {
                 );
 
                 // Types also have a global variable impl, but we need to also
-                // treat them like namespaces.
-                if (BTypeDef *type = BTypeDefPtr::rcast(def->second))
+                // to fix their class instances and then treat them like
+                // namespaces.
+                if (BTypeDef *type = BTypeDefPtr::rcast(def->second)) {
+                    type->classInst = module->getGlobalVariable(
+                        type->classInst->getName()
+                    );
                     fixNamespaceReps(type, module);
+                }
 
             // Overloads.
             } else if (OverloadDef *ovld =

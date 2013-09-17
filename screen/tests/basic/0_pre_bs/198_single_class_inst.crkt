@@ -1,0 +1,21 @@
+%%TEST%%
+single class instance
+%%ARGS%%
+%%FILE%%
+# This test verifies that only one instance of the class :body variable
+# emerges during the merger of generic modules.
+import testmod A;
+#import cmdline C;
+
+class B : A {
+    void f() {}
+}
+
+A a = B();
+if (!a.class.isSubclass(A))
+    puts('failed');
+else
+    puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

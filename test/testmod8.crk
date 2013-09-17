@@ -1,0 +1,14 @@
+## used by the single_class_inst test.
+## Copyright 2013 Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+
+class A : VTableBase {
+    void f() {}
+}
+
+class G[T] {}
+G[A] test;
