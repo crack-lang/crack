@@ -1,0 +1,39 @@
+%%TEST%%
+single class instance (compound flavor)
+%%ARGS%%
+%%FILE%%
+# This is the compound variation on the single class instance test.  We have
+# this as a separate test because when we use caching, this comes in from a
+# different code path.
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', I"
+    class A : VTableBase {
+        void f() {}
+    }
+
+    class G[T] {}
+    G[A] test;
+    ");
+
+test.main(I"
+    import mod A;
+    class B : A {
+        void f() {}
+    }
+    A a = B();
+    if (!a.class.isSubclass(A))
+        puts('failed');
+    else
+        puts('ok');
+    ");
+test.run();
+test.rmCacheFiles('.*main_2ecrk');
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%

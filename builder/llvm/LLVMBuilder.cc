@@ -2331,6 +2331,12 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
         createTypeDef(context, name, metaType.get(), llvmType, 0);
 
     // get the class body instance global variable.
+    GlobalVariable *gvar = module->getGlobalVariable(fullName);
+    SPUG_CHECK(gvar,
+               "Unable to load global variable " << fullName <<
+                " from module " << module->getModuleIdentifier()
+               );
+    result->impl = new BGlobalVarDefImpl(gvar);
     result->classInst = module->getGlobalVariable(fullName + ":body");
     SPUG_CHECK(result->classInst,
                "Unable to load class instance " << fullName <<
