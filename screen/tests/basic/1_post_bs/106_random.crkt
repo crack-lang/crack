@@ -1,0 +1,10 @@
+%%TEST%%
+Random nuber generators
+%%ARGS%%
+
+%%FILE%%
+import test.test_random;
+%%EXPECT%%
+ok
+%%STDIN%%
+

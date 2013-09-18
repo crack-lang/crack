@@ -6,7 +6,7 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-import crack.cont.array Array;
+import crack.cont.numericarray NumericVector;
 import crack.hash.murmur3 Murmur3_32;
 import crack.io cout;
 import crack.lang ManagedBuffer, AppendBuffer, Buffer, InvalidArgumentError;
@@ -43,4 +43,62 @@ AppendBuffer uuid(uint numbytes) {
         hashInts[i] = h.asUInt32();
     }
     return result;
+}
+
+// Mersenne Twister random number generator from pseudocode at
+// http://en.wikipedia.org/wiki/Mersenne_twister
+// Create a length 624 array to store the state of the generator
+class MersenneTwister {
+    NumericVector[uint] _MT = NumericVector[uint].empty(624);
+    uint _index = 0;
+
+    // Initialize the generator from a seed
+    void _initialize_generator(uint seed) {
+        _index = 0;
+        _MT[0] = seed;
+        for (uint i = 1; i < 624; i++) {
+            _MT[i] = (1812433253 * (_MT[i - 1] ^ (_MT[i - 1] >> 30)) +i) & 0xffffffff;
+        }
+    }
+
+    oper init(uint seed) {
+        _initialize_generator(seed);
+    }
+
+    // Generate an array of 624 untempered numbers
+    void _generate_numbers() {
+        uint y;
+        for (uint i = 0; i < 624; i++) {
+            y = (_MT[i] & 0x80000000) + (_MT[(i+1) % 624] & 0x7fffffff);
+            _MT[i] = _MT[(i + 397)% 624] ^ (y >> 1);
+            if (y % 2) {              // y is odd
+                _MT[i] =  _MT[i] ^ 2567483615; // 0x9908b0df
+            }
+        }
+    }
+
+    // Extract a tempered pseudorandom number based on the index-th value,
+    // calling generate_numbers() every 624 numbers
+    uint get() {
+        if (_index == 0) {
+            _generate_numbers();
+        }
+
+        uint y = _MT[_index];
+        y = y ^ (y >> 11);
+        y = y ^ (y << 7) & 2636928640;
+        y = y ^ (y << 15) & 4022730752;
+        y = y ^ y >> 18;
+        _index = (_index + 1) % 624;
+        return y;
+    }
+
+    NumericVector[uint] get(uint len) {
+        A := NumericVector[uint].empty(len);
+        uint y;
+        for (uint i=0; i < len; i++) {
+            A[i] = get();
+        }
+        return A;
+    }
 }

@@ -120,8 +120,7 @@ class NumericVector[Elem] : Array[Elem] {
             this[i] = value;
     }
 
-    /// Convenience constructor to create a vector filled with the given
-    /// value
+    /// Convenience constructor to create an empy vector with the specified size
     @static
     NumericVector empty(uint maxInd){
         V := NumericVector(maxInd);
