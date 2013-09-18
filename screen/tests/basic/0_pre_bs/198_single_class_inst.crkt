@@ -4,8 +4,7 @@ single class instance
 %%FILE%%
 # This test verifies that only one instance of the class :body variable
 # emerges during the merger of generic modules.
-import testmod A;
-#import cmdline C;
+import test.testmod8 A;
 
 class B : A {
     void f() {}
