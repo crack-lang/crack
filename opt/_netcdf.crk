@@ -292,8 +292,7 @@
         if (crk_ncstatus != 0) {
             free(dimids);
             return NULL;
-        }
-        else {
+        } else {
             return dimids;
         }
     }\n'

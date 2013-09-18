@@ -1,8 +1,8 @@
+import crack.cont.hashmap HashMap, OrderedHashMap;
 import crack.io cout, FStr, StringFormatter;
 import crack.lang CString, Buffer, AppendBuffer, Exception, InvalidArgumentError;
-import crack.cont.hashmap HashMap, OrderedHashMap;
-import crack.strutil split;
 import crack.runtime strlen;
+import crack.strutil split;
 
 import crack.ext._curl
 HTTPPOST_FILENAME, HTTPPOST_READFILE, HTTPPOST_PTRNAME, HTTPPOST_PTRCONTENTS, 
@@ -401,28 +401,26 @@ String URLDecode(String plain) {
     return result;
 }
 
-class FormData : OrderedHashMap[String, String] {
+class FormData {
+    OrderedHashMap[String, String] _data = {};
     String _raw;
     bool _current;
 
-    oper init() :
-        OrderedHashMap[String, String](),
-        _current = true,
-        _raw = ""
-    { }
+    oper init() : _current = true, _raw = "" {
+    }
 
     uint _parse() {
         items := split(_raw, "&");
         for (item :in items) {
-            pair := split(item, "=");
+            pair := split(item, "=")items;
             if (pair.count() == 2) {
-                set(pair[0], URLDecode(pair[1]));
+                _data.set(pair[0], URLDecode(pair[1]));
             }
         }
-        return count();
+        return _data.count();
     }
 
-    oper init(String forminput) : OrderedHashMap[String, String]() {
+    oper init(String forminput) {
         _raw = forminput;
         _parse();
         _current = true;
@@ -430,21 +428,33 @@ class FormData : OrderedHashMap[String, String] {
 
     String oper []=(String key, String val) {
         _current = false;
-        return set(key, URLDecode(val));
+        return _data.set(key, URLDecode(val));
+    }
+
+    String get(String key) {
+        return _data.get(key);
+    }
+
+    String get(String key, String def) {
+        return _data.get(key, def);
+    }
+
+    String oper[](String key) {
+        return _data.get(key);
     }
 
     String encoded() {
         if (!_current) {
             fmt := StringFormatter();
             bool first = true;
-            for (item :in this) {
-                if (!first) fmt.format("&");
-                else first = false;
-                fmt.format(item.key);
-                fmt.format("=");
-                fmt.format(URLEncode(item.val));
-                _raw = fmt.string();
+            for (item :in _data) {
+                if (!first)
+                    fmt.format("&");
+                else
+                    first = false;
+                fmt `$(item.key)=$(URLEncode(item.val))`;
             }
+            _raw = fmt.string();
             _current = true;
         }
         return _raw;

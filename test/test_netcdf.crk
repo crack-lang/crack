@@ -102,7 +102,7 @@ ytest := NumericVector[int].empty(10);
 
 if (nc_get_var_int(ncid, xvar, xtest.data()) != 0 ||
     nc_get_var_int(ncid, yvar, ytest.data()) != 0
-   ) {
+    ) {
     cerr ` Failed to read x or y arrays from file\n`;
     exit(4);
 }

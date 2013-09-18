@@ -14,16 +14,17 @@
 // import functions and some constants known at compile time
 @import crack.ann define;
 import crack.lang CString, Exception, InvalidArgumentError, BadCastError;
-import crack.runtime sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
-                    acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs, exp, exp2,
-                    ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt,
-                    erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
-                    round, trunc, expm1, fpclassify, isfinite, isinf, isnan,
-                    isnormal, sign, fmod, remainder, copysign, nextafter,
-                    fdim, pow, testexcept, clearexcept, errno, setErrno, 
-                    HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
-                    FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
-                    ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
+
+import crack.runtime acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs,
+                    copysign, nextafter, fdim, pow, testexcept, clearexcept,
+                    errno, setErrno, exp, exp2, ilogb, log, log10, log1p,
+                    log2, cbrt, abs, hypot,  sqrt, erf, erfc, lgamma, tgamma,
+                    ceil, floor, isfinite, isinf, isnan, isnormal, sign,
+                    fmod, remainder, nearbyint, rint, round, trunc, expm1,
+                    fpclassify, sin, cos, tan, asin, acos, atan, sinh, cosh,
+                    tanh, asinh, FP_ILOGBNAN, ALL_EXCEPT, INVALID, DIVBYZERO,
+                    OVERFLOW, FP_NAN, FP_NORMAL, FP_SUBNORMAL, FP_ZERO,
+                    FP_ILOGB0, HUGE_VAL, INFINITY, NAN, FP_INFINITE,
                     UNDERFLOW, ERANGE, EINVAL;
 
 import crack.io FStr;
@@ -31,7 +32,7 @@ import crack.io FStr;
 /// Define common constants
 const float E =            2.7182818284590452354,   // e
             LOG2E =        1.4426950408889634074,   // base 2 log of e
-            LOG10E =       0.43429448190325182765,  // base log of e
+            LOG10E =       0.43429448190325182765,  // base 10 log of e
             LN2 =          0.69314718055994530942,  // base e log of 2
             LN10 =         2.30258509299404568402,  // base e log of 10
             LNPI =         1.14472988584940017414,  // ln(pi)
@@ -82,54 +83,59 @@ const float E =            2.7182818284590452354,   // e
 @_min(float64)
 
 // Augment the atoi(char*) imported from _math
-int atoi(String s){
+int atoi(String s) {
  return atoi(CString(s).buffer);
 }
 
 // CString is already NULL terminated
-int atoi(CString s){
+int atoi(CString s) {
   return atoi(s.buffer);
 }
 
 // Augment the strtoi(char*) imported from _math
-int strtoi(String s){
+int strtoi(String s) {
     int result = strtoi(CString(s).buffer);
     int err = errno();
 
     if (!err) return result;
     else if (err == ERANGE)
-        throw InvalidArgumentError(FStr() `Value '$s' out of range in converting string to integer`);
+        throw InvalidArgumentError(FStr() I`Value '$s' out of range in \
+                                            converting string to integer`);
     else if (err == EINVAL)
-        throw BadCastError(FStr() `Invalid input '$s' in converting string to integer`);
+        throw BadCastError(FStr() I`Invalid input '$s' in converting string to \
+                                    integer`);
     else 
         throw Exception(FStr() `Unknown error in strtoi($(s)), errno = $err`);
 }
 
 
 // Augment the atof(char*) imported from _math
-float atof(String s){
+float atof(String s) {
     return atof(CString(s).buffer);
 }
 
 // CString is already NULL terminated
-float atof(CString s){
+float atof(CString s) {
   return atof(s.buffer);
 }
 
 // Augment the strtof(char*) imported from _math
-@define _strtof(String, ext, FloatType){
-    FloatType strto$$ext(String s){
+@define _strtof(String, ext, FloatType) {
+    FloatType strto$$ext(String s) {
         FloatType result = strtof(CString(s).buffer);
         int err = errno();
 
         if (!err)
             return result;
         else if (err == ERANGE)
-            throw InvalidArgumentError(FStr() `Value '$s' out of range converting string to float`);
+            throw InvalidArgumentError(FStr() I`Value '$s' out of range \
+                                                converting string to float`);
         else if (err == EINVAL)
-            throw BadCastError(FStr() `Invalid input '$s' in converting string to float`);
+            throw BadCastError(FStr() I`Invalid input '$s' in converting \
+                                        string to float`);
         else 
-            throw Exception(FStr() `Unknown error in strtof($(s)), errno = $err`);
+            throw Exception(FStr() I`Unknown error in strtof($(s)), errno = \
+                                     $err`);
     }
 }
 
@@ -137,13 +143,14 @@ float atof(CString s){
 @_strtof(String, d, float64)
 
 // export all symbols that we want to expose from the runtime.
-@export_symbols sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
-                acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs, exp, 
-                exp2, expm1, ilogb, log, log10, log1p, log2, cbrt, abs, 
-                hypot,  sqrt, erf, erfc, lgamma, tgamma, ceil, floor, 
-                nearbyint, rint, round, trunc, fpclassify, isfinite, isinf, 
-                isnan, isnormal, sign, fmod, remainder, copysign, nextafter, 
-                fdim, pow, testexcept, clearexcept, errno, setErrno, 
-                HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN, FP_NORMAL, 
-                FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN, ALL_EXCEPT, 
-                INVALID, DIVBYZERO, OVERFLOW, UNDERFLOW, ERANGE, EINVAL;
+@export_symbols acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs,
+                copysign, nextafter, fdim, pow, testexcept, clearexcept,
+                errno, setErrno, exp, exp2, ilogb, log, log10, log1p,
+                log2, cbrt, abs, hypot,  sqrt, erf, erfc, lgamma, tgamma,
+                ceil, floor, isfinite, isinf, isnan, isnormal, sign,
+                fmod, remainder, nearbyint, rint, round, trunc, expm1,
+                fpclassify, sin, cos, tan, asin, acos, atan, sinh, cosh,
+                tanh, asinh, FP_ILOGBNAN, ALL_EXCEPT, INVALID, DIVBYZERO,
+                OVERFLOW, FP_NAN, FP_NORMAL, FP_SUBNORMAL, FP_ZERO,
+                FP_ILOGB0, HUGE_VAL, INFINITY, NAN, FP_INFINITE,
+                UNDERFLOW, ERANGE, EINVAL;
