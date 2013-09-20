@@ -351,10 +351,6 @@ class InnerDB {
         return result;
     }
 
-    String get(String key, String default) {
-        return get(key, default);
-    }
-
     String oper [](String key) {
         return get(key);
     }
@@ -599,6 +595,8 @@ class Lmdb {
     }
 
     InnerDB get(String name) {
+        if (name == "__index") // don't want index to reference itself
+            return _index;
         InnerDB idb = _dbs.get(name, null);
         if (idb is null) {
             _dbs[name] = idb = InnerDB(_env, CString(name), _dbFlags);
