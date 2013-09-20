@@ -8,7 +8,7 @@
 // A wrapper for the _lmdb extension module
 
 import crack.cont.hashmap HashMap;
-import crack.fs RealPath;
+import crack.fs makePath;
 import crack.io cout, Formatter, FStr;
 import crack.lang CString, Buffer, Exception, InvalidArgumentError, KeyError;
 import crack.runtime errno, free, usecs, EINVAL, EACCESS;
@@ -144,8 +144,8 @@ class Iter {
     @final void next();
 
     oper init(MDB_env env, uint dbi, String key, int flag) :
-              _dbi = dbi, _key = key
-    {
+            _dbi = dbi,
+            _key = key  {
         _txn = mdb_txn_begin(env, null, MDB_RDONLY);
         if (_txn is null || (_cursor = mdb_cursor_open(_txn, _dbi)) is null)
             _strException();
@@ -314,9 +314,9 @@ class InnerDB {
         return value;
     }
 
-    void _initReadTransaction(int flags) {
+    void _initReadTransaction() {
         if (_readTx is null) {
-            if ((_readTx = mdb_txn_begin(_env, null, flags)) is null)
+            if ((_readTx = mdb_txn_begin(_env, null, MDB_RDONLY)) is null)
                 _strException();
 
         } else if (mdb_txn_renew(_readTx) != MDB_SUCCESS) {
@@ -324,8 +324,8 @@ class InnerDB {
         }
     }
 
-    String get(String key, String default, int flags) {
-        _initReadTransaction(flags);
+    String get(String key, String default) {
+        _initReadTransaction();
         _mkey.mv_data = key.buffer;
         _mkey.mv_size = key.size;
 
@@ -344,7 +344,7 @@ class InnerDB {
     }
 
     String get(String key) {
-        result := get(key, null, MDB_RDONLY | MDB_NOTLS);
+        result := get(key, null);
         if (result is null) {
             throw KeyError(sfmt `Key $key not found`);
         }
@@ -352,10 +352,10 @@ class InnerDB {
     }
 
     String get(String key, String default) {
-        return get(key, default, MDB_RDONLY | MDB_NOTLS);
+        return get(key, default);
     }
 
-    String oper[](String key) {
+    String oper [](String key) {
         return get(key);
     }
 
@@ -456,7 +456,7 @@ class InnerDB {
 }
 
 /// A simple persistent key/value database
-class SimpleLmdb : InnerDB {
+class SimpleLMDB : InnerDB {
     CString _path;             // Database path
     MDB_env _env;              // db environment
 
@@ -464,15 +464,16 @@ class SimpleLmdb : InnerDB {
     void _simpleInit(CString path, int envflags, int dbflags, uint64 mapsize,
             int access)
     {
-        dir := RealPath(path);
+        dir := makePath(path);
         if (!dir.exists())
             dir.makeDir();
         if (!dir.isDir())
             throw InvalidArgumentError("Database path must be a directory");
 
         if ((_env = mdb_env_create()) is null ||
-             mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
-             mdb_env_open(_env, path.buffer, envflags, access) != MDB_SUCCESS) {
+            mdb_env_set_mapsize(_env, mapsize) != MDB_SUCCESS ||
+            mdb_env_open(_env, path.buffer, envflags, access) != MDB_SUCCESS
+            ) {
             _strException();
         }
 
@@ -535,15 +536,13 @@ class SimpleLmdb : InnerDB {
     /// For the dbflags parameter, see InnerDB
 
 
-    oper init(CString path, int envflags, int dbflags, uint64 mapsize, int access) :
-            InnerDB()
-    {
+    oper init(CString path, int envflags, int dbflags, uint64 mapsize,
+              int access
+              ) : InnerDB() {
         _simpleInit(path, envflags, dbflags, mapsize, access);
     }
 
-    oper init(CString path, int envflags, int dbflags) :
-            InnerDB()
-    {
+    oper init(CString path, int envflags, int dbflags) : InnerDB() {
         _simpleInit(path, envflags, dbflags, 10485760, 0644);
     }
 
@@ -570,7 +569,7 @@ class Lmdb {
     void _init(CString path, int envflags, int dbflags, uint64 mapsize,
                int access, uint maxdbs)
     {
-        dir := RealPath(path);
+        dir := makePath(path);
         if (!dir.exists())
             dir.makeDir();
         if (!dir.isDir())
@@ -586,15 +585,16 @@ class Lmdb {
     }
 
     oper init(String path, int envflags, int dbflags) :
-            _path=CString(path), _dbFlags = dbflags
-    {
+            _path(path),
+            _dbFlags = dbflags {
         _init(_path, envflags, dbflags, 10485760, 0644, _maxdbs);
     }
 
     oper init(String path, int envflags, int dbflags, uint64 mapsize, int access,
-            uint maxdbs) :
-            _path=CString(path), _maxdbs = maxdbs
-    {
+              uint maxdbs
+              ) :
+              _path=CString(path),
+              _maxdbs = maxdbs {
         _init(_path, envflags, dbflags, mapsize, access, _maxdbs);
     }
 

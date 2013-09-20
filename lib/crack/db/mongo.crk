@@ -517,11 +517,11 @@ class BSON {
         }
 
         // Get the value stored at the cursor, as a boolean.
-        Buffer getBinary() {
-            Buffer crackBuf;
+        String getBinary() {
+            String crackBuf;
             bufStruct b = bson_cursor_get_binary(_c);
             if (!(b is null)) {
-                crackBuf = Buffer(b.data, b.size);
+                crackBuf = String(b.data, b.size, true);
                 free(b); // Keep the data, not the container
             }
             return crackBuf;

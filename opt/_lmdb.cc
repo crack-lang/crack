@@ -7,58 +7,57 @@ typedef void * voidptr;
 typedef char * byteptr;
 typedef int Undef;
 MDB_val *mdb_val_new() {
-                return (MDB_val *)malloc(sizeof(MDB_val));
-             }
+   return (MDB_val *)malloc(sizeof(MDB_val));
+}
 MDB_env *mdb_env_create_crk() {
-                MDB_env *env;
-                errno = mdb_env_create(&env);
-                if (errno) return NULL;
-                return env;
-            }
+    MDB_env *env;
+    errno = mdb_env_create(&env);
+    if (errno) return NULL;
+    return env;
+}
 byteptr mdb_strerror_crk() {
-                return mdb_strerror(errno);
-            }
+    return mdb_strerror(errno);
+}
 unsigned int mdb_env_get_flags_crk(MDB_env *env) {
-                unsigned int flags;
-                errno = mdb_env_get_flags(env, &flags);
-                if (errno) return 0;
-                return flags;
-            }
+    unsigned int flags;
+    errno = mdb_env_get_flags(env, &flags);
+    if (errno) return 0;
+    return flags;
+}
 MDB_txn *mdb_txn_begin_crk(MDB_env *env, MDB_txn *parent,
-                                        unsigned int flags)
-            {
-                MDB_txn *txn;
-                errno = mdb_txn_begin(env, parent, flags, &txn);
-
-                if (errno) return NULL;
-                return txn;
-            }
+                            unsigned int flags)
+{
+    MDB_txn *txn;
+    errno = mdb_txn_begin(env, parent, flags, &txn);
+    if (errno) return NULL;
+    return txn;
+}
 unsigned int mdb_dbi_open_crk(MDB_txn *txn, const char *name,
-                                       unsigned int flags)
-                {
-                    unsigned int dbi;
-                    errno = mdb_dbi_open(txn, name, flags, &dbi);
-                    if (errno) return 0;
-                    return dbi;
-                }
+                           unsigned int flags)
+{
+    unsigned int dbi;
+    errno = mdb_dbi_open(txn, name, flags, &dbi);
+    if (errno) return 0;
+    return dbi;
+}
 MDB_cursor *mdb_cursor_open_crk(MDB_txn *txn, unsigned int dbi) {
-                MDB_cursor *cursor;
-                errno = mdb_cursor_open(txn, dbi, &cursor);
-                if (errno) return NULL;
-                return cursor;
-            }
+    MDB_cursor *cursor;
+    errno = mdb_cursor_open(txn, dbi, &cursor);
+    if (errno) return NULL;
+    return cursor;
+}
 uint64_t mdb_cursor_count_crk(MDB_cursor *cursor) {
-                size_t countp;
-                errno = mdb_cursor_count(cursor, &countp);
-                if (errno) return 0;
-                return countp;
-            }
+    size_t countp;
+    errno = mdb_cursor_count(cursor, &countp);
+    if (errno) return 0;
+    return countp;
+}
 int mdb_reader_check_crk(MDB_env *env) {
-                int num_cleared;
-                errno = mdb_reader_check(env, &num_cleared);
-                if (errno) return -1;
-                return num_cleared;
-            }
+    int num_cleared;
+    errno = mdb_reader_check(env, &num_cleared);
+    if (errno) return -1;
+    return num_cleared;
+}
 
 
 #include "ext/Module.h"

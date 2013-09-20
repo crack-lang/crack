@@ -85,10 +85,14 @@ void exitStrError() {
 // First test the wrapped functions directly
 // Setup
 MDB_env env = mdb_env_create();
-if (env is null) exitError(CString(mdb_strerror(errno()), false));
+if (env is null) exitError(mdb_strerror(errno(), false));
 if (mdb_env_set_mapsize(env, 10485760) != MDB_SUCCESS) exitStrError();
-if (mdb_env_open(env, "./testdb".buffer,
-        MDB_FIXEDMAP | MDB_CREATE, 0664) != MDB_SUCCESS) exitStrError();
+if (mdb_env_open(env, "./testdb".buffer, 
+                 MDB_FIXEDMAP | MDB_CREATE, 0664
+                 ) != MDB_SUCCESS
+    ) {
+    exitStrError();
+}
 MDB_txn txn = mdb_txn_begin(env, null, 0);
 if (txn is null) exitStrError();
 
@@ -124,14 +128,14 @@ free(mresult);
 
 // Test wrapper module
 
-mdb := SimpleLmdb("./testlmdb", MDB_NOTLS, MDB_CREATE);
+mdb := SimpleLMDB("./testlmdb", MDB_NOTLS, MDB_CREATE);
 mdb["key"] = "value";
 if (mdb["key"] != "value" ||
     mdb.get("key") != "value" ||
     mdb.get("key", null) != "value" ||
     !(mdb.get("somekey", null) is null)
-   ) {
-       exitError("Key lookup failed");
+    ) {
+    exitError("Key lookup failed");
 }
 
 mdb["key2"] = "value2";
@@ -145,7 +149,6 @@ if (count != 2) {
     for (item :in mdb) {
         cout `$(item.key): $(item.val)\n`;
     }
-
     exitError("Wrong number of keys after add");
 }
 
@@ -171,7 +174,6 @@ if (mdb.count()) {
     for (item :in mdb) {
         cout `$(item.key): $(item.val)\n`;
     }
-
     exitError("Clearing the DB failed");
 }
 

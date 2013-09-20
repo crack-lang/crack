@@ -412,7 +412,7 @@ class FormData {
     uint _parse() {
         items := split(_raw, "&");
         for (item :in items) {
-            pair := split(item, "=")items;
+            pair := split(item, "=");
             if (pair.count() == 2) {
                 _data.set(pair[0], URLDecode(pair[1]));
             }

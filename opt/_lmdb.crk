@@ -22,7 +22,6 @@
     @inject 'typedef char * byteptr;\n'
     @inject 'typedef int Undef;\n'
 
-    // Opaque classes
     @crack_internal
 
     const int
@@ -96,6 +95,7 @@
         MDB_SET_KEY,
         MDB_SET_RANGE;
 
+    // Opaque classes
     @cname Undef
     class MDB_env;
 
@@ -120,13 +120,13 @@
         uint64 	ms_entries;
     }
 
-    @inject 'MDB_val *mdb_val_new() {
+    @inject I'MDB_val *mdb_val_new() {
                 return (MDB_val *)malloc(sizeof(MDB_val));
              }\n';
 
     MDB_val mdb_val_new();
 
-    @inject 'MDB_env *mdb_env_create_crk() {
+    @inject I'MDB_env *mdb_env_create_crk() {
                 MDB_env *env;
                 errno = mdb_env_create(&env);
                 if (errno) return NULL;
@@ -141,7 +141,7 @@
     int mdb_env_set_maxdbs(MDB_env env, uint size);
     int mdb_env_open(MDB_env env, byteptr path, uint flags, int mode);
 
-    @inject 'byteptr mdb_strerror_crk() {
+    @inject I'byteptr mdb_strerror_crk() {
                 return mdb_strerror(errno);
             }\n';
 
@@ -157,7 +157,7 @@
     int mdb_env_sync(MDB_env env, int force);
     int mdb_env_set_flags(MDB_env env, uint flags, int onoff);
 
-    @inject 'unsigned int mdb_env_get_flags_crk(MDB_env *env) {
+    @inject I'unsigned int mdb_env_get_flags_crk(MDB_env *env) {
                 unsigned int flags;
                 errno = mdb_env_get_flags(env, &flags);
                 if (errno) return 0;
@@ -167,7 +167,7 @@
     @cname mdb_env_get_flags_crk
     uint mdb_env_get_flags(MDB_env env);
 
-    @inject 'MDB_txn *mdb_txn_begin_crk(MDB_env *env, MDB_txn *parent,
+    @inject I'MDB_txn *mdb_txn_begin_crk(MDB_env *env, MDB_txn *parent,
                                         unsigned int flags)
             {
                 MDB_txn *txn;
@@ -186,14 +186,14 @@
     void mdb_txn_reset(MDB_txn txn);
     int mdb_txn_renew(MDB_txn txn);
 
-    @inject 'unsigned int mdb_dbi_open_crk(MDB_txn *txn, const char *name,
+    @inject I'unsigned int mdb_dbi_open_crk(MDB_txn *txn, const char *name,
                                        unsigned int flags)
-                {
-                    unsigned int dbi;
-                    errno = mdb_dbi_open(txn, name, flags, &dbi);
-                    if (errno) return 0;
-                    return dbi;
-                }\n';
+            {
+                unsigned int dbi;
+                errno = mdb_dbi_open(txn, name, flags, &dbi);
+                if (errno) return 0;
+                return dbi;
+            }\n';
 
     @cname mdb_dbi_open_crk
     uint mdb_dbi_open(MDB_txn txn, byteptr name, uint flags);
@@ -204,7 +204,7 @@
     int mdb_put(MDB_txn txn, uint dbi, MDB_val key, MDB_val data, uint flags);
     int mdb_del(MDB_txn txn, uint dbi, MDB_val key, MDB_val data);
 
-    @inject 'MDB_cursor *mdb_cursor_open_crk(MDB_txn *txn, unsigned int dbi) {
+    @inject I'MDB_cursor *mdb_cursor_open_crk(MDB_txn *txn, unsigned int dbi) {
                 MDB_cursor *cursor;
                 errno = mdb_cursor_open(txn, dbi, &cursor);
                 if (errno) return NULL;
@@ -223,7 +223,7 @@
     int mdb_cursor_put(MDB_cursor cursor, MDB_val key, MDB_val data, uint flags);
     int mdb_cursor_del(MDB_cursor cursor, uint flags);
 
-    @inject 'uint64_t mdb_cursor_count_crk(MDB_cursor *cursor) {
+    @inject I'uint64_t mdb_cursor_count_crk(MDB_cursor *cursor) {
                 size_t countp;
                 errno = mdb_cursor_count(cursor, &countp);
                 if (errno) return 0;
@@ -233,7 +233,7 @@
     @cname mdb_cursor_count_crk
     uint64 mdb_cursor_count(MDB_cursor cursor);
 
-    @inject 'int mdb_reader_check_crk(MDB_env *env) {
+    @inject I'int mdb_reader_check_crk(MDB_env *env) {
                 int num_cleared;
                 errno = mdb_reader_check(env, &num_cleared);
                 if (errno) return -1;
