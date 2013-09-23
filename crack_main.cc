@@ -27,6 +27,10 @@
 #include "Crack.h"
 #include "config.h"
 
+#ifdef __APPLE__
+extern char *suboptarg; // getsubopt
+#endif
+
 using namespace std;
 using spug::Tracer;
 
@@ -176,6 +180,17 @@ int main(int argc, char **argv) {
                 while (*subopts != '\0') {
                     switch (getsubopt(&subopts, token, &value)) {
                         default:
+#ifdef __APPLE__
+                        // OSX getsubopt does the split on = for us.
+                        // it puts the key in extern suboptarg, and the
+                        // possible value in value
+                        if (value) {
+                            crack.options->optionMap[suboptarg] = value;
+                        }
+                        else {
+                            crack.options->optionMap[suboptarg] = "true";
+                        }
+#else
                         string v(value);
                         string::size_type pos;
                         if ((pos = v.find('=')) != string::npos) {
@@ -187,6 +202,7 @@ int main(int argc, char **argv) {
                             // as bool
                             crack.options->optionMap[v] = "true";
                         }
+#endif
                     }
                 }
                 break;
