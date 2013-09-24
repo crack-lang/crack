@@ -168,7 +168,7 @@ class Iter {
         if (_status == MDB_SUCCESS) {
             return Item(String(_ikey.mv_data, _ikey.mv_size, false),
                         String(_ival.mv_data, _ival.mv_size, false)
-                       );
+                        );
         } else {
             return null;
         }
@@ -422,18 +422,17 @@ class InnerDB {
     /// Since all the elements are iterated over, this is an expensive operation
     uint count() {
         uint i = 0;
-        MDB_cursor _cursor;
+        MDB_cursor ccursor;
 
         if ((_tmpTxn = mdb_txn_begin(_env, null, MDB_RDONLY)) is null ||
-            (_cursor = mdb_cursor_open(_tmpTxn, _dbi)) is null)
-        {
+            (ccursor = mdb_cursor_open(_tmpTxn, _dbi)) is null) {
                 _strException();
         }
 
-        int _status = mdb_cursor_get(_cursor, _mkey, _mvalue, MDB_FIRST);
+        int _status = mdb_cursor_get(ccursor, _mkey, _mvalue, MDB_FIRST);
         while (_status == MDB_SUCCESS) {
             i++;
-            _status = mdb_cursor_get(_cursor, _mkey, _mvalue, MDB_NEXT);
+            _status = mdb_cursor_get(ccursor, _mkey, _mvalue, MDB_NEXT);
         }
         return i;
     }
@@ -460,13 +459,11 @@ class InnerDB {
     }
 
     /// Clear all data from the database
-    @final
-    void clear() {
+    @final void clear() {
         if ((_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
             mdb_drop(_tmpTxn, _dbi, 0) ||
-            mdb_txn_commit(_tmpTxn)
-            )
-        {
+            mdb_txn_commit(_tmpTxn) 
+            ) {
             _strException();
         }
     }
