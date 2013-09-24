@@ -202,6 +202,7 @@ class InnerDB {
     MDB_val _mkey = mdb_val_new(), _mvalue = mdb_val_new(),
         _mresult = mdb_val_new();
     String _name;
+    bool reading = false, writing = false;
 
     /// Open a database in the given environment, flags can be one of:
     /// MDB_REVERSEKEY
@@ -256,6 +257,31 @@ class InnerDB {
         _init(env, name, MDB_CREATE);
     }
 
+    /// Start a write transaction. Returns false if already inside a transaction
+    bool beginWriteTransaction() {
+        if (!writing) {
+            if ((_writeTx = mdb_txn_begin(_env, null, 0)) is null) {
+                _strException();
+            }
+            writing = true;
+            return true;
+        }
+        return false;
+    }
+
+    /// Commits a write transaction if one was started using startWriteTransaction
+    bool endWriteTransaction() {
+        if (writing) {
+            if (!(_writeTx is null)) {
+                mdb_txn_commit(_writeTx);
+                _writeTx = null;
+            }
+            writing = false;
+            return true;
+        }
+        return false;
+    }
+
     /// Store a key/value pair
     /// MDB_NODUPDATA
     ///     enter the new key/data pair only if it does not already appear in
@@ -282,7 +308,7 @@ class InnerDB {
     ///     as above, but for sorted dup data
 
     int put(String key, String value, int flags) {
-        if ((_writeTx = mdb_txn_begin(_env, null, flags)) is null)
+        if (!writing && (_writeTx = mdb_txn_begin(_env, null, flags)) is null)
             _strException();
         _mkey.mv_data = key.buffer;
         _mkey.mv_size = key.size;
@@ -293,18 +319,20 @@ class InnerDB {
 
         if (_rc != MDB_SUCCESS) {
             mdb_txn_abort(_writeTx);
+            writing = false;
             _writeTx = null;
             return _rc;
         }
 
-        mdb_txn_commit(_writeTx);
-        _writeTx = null;
+        if (!writing) {
+            mdb_txn_commit(_writeTx);
+            _writeTx = null;
+        }
         return _rc;
     }
 
     int put(String key, String value) {
         return put(key, value, 0);
-
     }
 
     String oper []=(String key, String value) {
@@ -324,8 +352,29 @@ class InnerDB {
         }
     }
 
+    bool beginReadTransaction() {
+        if (!reading) {
+            _initReadTransaction();
+            reading = true;
+            return true;
+        }
+        return false;
+    }
+    
+    bool endReadTransaction() {
+        if (reading) {
+            mdb_txn_reset(_readTx);
+            reading = false;
+            return true;
+        }
+        return false;
+    }
+    
+
     String get(String key, String default) {
-        _initReadTransaction();
+        if (!reading) {
+            _initReadTransaction();
+        }
         _mkey.mv_data = key.buffer;
         _mkey.mv_size = key.size;
 
@@ -335,7 +384,9 @@ class InnerDB {
             return default;
         } else if (_rc == MDB_SUCCESS) {
             result := String(_mresult.mv_data, _mresult.mv_size, false);
-            mdb_txn_reset(_readTx);
+            if (!reading) {
+                mdb_txn_reset(_readTx);
+            }
             return result;
         }
         else
@@ -577,7 +628,7 @@ class Lmdb {
              mdb_env_open(_env, path.buffer, envflags, access)) {
             _strException();
         }
-        _index = InnerDB(_env, "__index", dbflags);
+        _index = InnerDB(_env, "__index", MDB_CREATE);
     }
 
     oper init(String path, int envflags, int dbflags) :
@@ -600,7 +651,7 @@ class Lmdb {
         InnerDB idb = _dbs.get(name, null);
         if (idb is null) {
             _dbs[name] = idb = InnerDB(_env, CString(name), _dbFlags);
-            _index[name] = sfmt `$(usecs())`;
+            _index.put(name, sfmt `$(usecs())`, MDB_NOOVERWRITE);
         }
         return idb;
     }

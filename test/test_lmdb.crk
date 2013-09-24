@@ -182,11 +182,26 @@ if (mdb.count()) {
 
 mdbContainer := Lmdb("./testlmdbcontainer", MDB_NOTLS, MDB_CREATE);
 
+// Write into DB container, with transactions
 for (uint i = 0; i < 5; i++) {
     idb := mdbContainer[sfmt `db$i`];
+
+    idb.beginWriteTransaction();
     for (uint j = 0; j < 5; j++) {
         idb[sfmt `key$j`] = sfmt `val$j`;
     }
+    idb.endWriteTransaction();
+}
+
+// Read from DB container with transactions
+for (uint i = 0; i < 5; i++) {
+    idb := mdbContainer[sfmt `db$i`];
+
+    idb.beginReadTransaction();
+    for (uint j = 0; j < 5; j++) {
+        val := idb[sfmt `key$j`]
+    }
+    idb.endReadTransaction();
 }
 
 expected :=
