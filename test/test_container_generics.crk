@@ -630,6 +630,10 @@ a = pq.pop();
 if (a != 50)
     cout `priority queue pop() fail\n`;
 
+pq.clear();
+if (pq.count() != 0)
+    cout `priority queue clear() fail\n`;
+
 PriorityQueue[int] pq2 = { };
 if (pq2.pop())
     cout `null pq pop fail\n`;

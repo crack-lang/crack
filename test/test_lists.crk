@@ -1,14 +1,14 @@
 // A few tests for lists and linked list appending and popping from the head
 // and tail
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/1/2012
 
-import crack.io cout;
+import crack.io cout, FStr;
 
 import crack.cont.list DList, List;
 import crack.cont.hashmap OrderedHashMap; // Also uses a list
@@ -35,6 +35,14 @@ if (nums.popHead() != 1) cout `List.popHead failed\n`;
 
 if (nums.popHead() != 2) cout `List.popHead failed\n`;
 if (nums.count()) cout `List popHead failed: $nums\n`;
+
+nums.clear();
+if (nums.count() != 0) cout `List.clear failed\n`;
+if (FStr() `$nums` != '[]') cout `List.clear failed formatting\n`;
+nums.append(1);
+if (FStr() `$nums` != '[1]')
+    cout `List.clear -> append failed formatting\n`;
+nums.clear();
 
 //------------------------------------------------------------------------------
 nums.append(1);
@@ -78,6 +86,15 @@ if (dnums.popHead() != 1) cout `DList.popHead failed\n`;
 
 if (dnums.popHead() != 2) cout `DList.popHead failed\n`;
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+dnums.clear();
+if (dnums.count() != 0) cout `DList.clear failed\n`;
+if (FStr() `$dnums` != '[]') cout `DList.clear failed formatting\n`;
+dnums.append(1);
+if (FStr() `$dnums` != '[1]')
+    cout `List.clear -> append failed formatting\n`;
+dnums.clear();
+
 
 //------------------------------------------------------------------------------
 

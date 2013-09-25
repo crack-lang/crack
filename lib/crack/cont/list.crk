@@ -248,6 +248,11 @@ class List[Elem] {
         _count--;
     }
 
+    ## Delete all items in the list.
+    void clear() {
+        head = tail = null;
+        _count = 0;
+    }
 
     Elem oper [](uint index) {
         if (index > _count)
@@ -381,6 +386,12 @@ class DList[Elem] {
         
         --_count;
         ix._node = node.next;
+    }
+    
+    ## Delete all elements from the list.
+    void clear() {
+        head = tail = null;
+        _count = 0;
     }
 
     Iter iter() {
