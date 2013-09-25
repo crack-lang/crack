@@ -594,6 +594,15 @@ class TreeMap[KeyT, ValT] {
         --__count;
     }
     
+    ## Delete all elements of the tree.
+    void clear() {
+        if (__root) {
+            __root._unhookParents();
+            __root = null;
+            __count = 0;
+        }
+    }
+    
     bool checkConstraints(Formatter report) {
         # empty trees always pass.
         if (!__root)

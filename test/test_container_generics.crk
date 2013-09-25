@@ -61,10 +61,23 @@ if (1) {
     
     t.delete('b');
     if (FStr() `$t` != '[a: 1, c: 3]')
-    cout `FAILED deleting root node\n`;
+        cout `FAILED deleting root node\n`;
 }
-  
 
+# TreeMap.clear()
+if (1) {
+    TreeMap[String, int] t = {};
+    t['a'] = 1;
+    t['b'] = 2;
+    
+    t.clear();
+    if (FStr() `$t` != '[]')
+        cout `FAILED clearing tree\n`;
+    
+    t['a'] = 10;
+    if (FStr() `$t` != '[a: 10]')
+        cout `FAILED adding new values to cleared tree.\n`;
+}
 
 QuickSort[Array[String]].sort(sa);
 
