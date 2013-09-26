@@ -3690,6 +3690,45 @@ Structs are very limited as of Crack 0.7.  In particular:
 -   Instance variables definitions must be strictly of the form "/type/ 
     /name/;"  (we couldn't have written "int x, y;" above).
 
+Annotations in Generics
+'''''''''''''''''''''''
+
+There are limitations on the ways that you can use annotations with generics.  
+Generics are implemented as a simple stream of language tokens that are 
+replayed by the compiler when the generic is instantiated.  Unfortunately, 
+annotations can affect parser state in ways that can not always be passed 
+through to the instantiation.  For this reason, there are limitations on the 
+kinds of mutations that can be passed in from the context of a generic to the 
+code within the generic.  The only thing that is preserved are the imports.
+
+So this code would not work:
+
+{{
+    @import crack.ann define;
+    @define func() { void f() {} }
+    
+    class A[T] {
+        @func()   # func does not exist!
+    }
+}}
+
+Likewise, registering parser callbacks, error contexts or new annotations will 
+not affect the instantiated generic code.  The only way to do so is to perform 
+all mutations within the scope of the generic.  So, for example, we could have 
+successfully written our last example like this:
+
+{{
+    @import crack.ann define;  # Imports are preserved.
+    
+    class A[T] {
+        @define func() { void f() {} }
+        @func()
+    }
+}}
+
+In this case, #define# is passed through (because it's an import) and #func# 
+will be defined within the generic at the time of its instantiation.
+
 Extensions
 ----------
 
