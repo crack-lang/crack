@@ -19,15 +19,15 @@
 #   mainly entails doing normal class derivation and implementing the
 #   'get<interface>Object()' method.
 
-import crack.runtime free;
-import crack.lang die, CString, IndexError, InvalidArgumentError,
-    AssertionError, Exception, Formatter;
-import crack.io cout, FStr, StringFormatter, StringWriter, StandardFormatter, 
-    Reader, Writer;
-import crack.compiler CrackContext, Token, Location, TOK_COMMA, TOK_STRING,
-    TOK_POPERRCTX, TOK_LPAREN, TOK_RPAREN, TOK_LCURLY, TOK_RCURLY;
+import crack.compiler CrackContext, Location, Token, TOK_COMMA, TOK_LCURLY,
+    TOK_LPAREN, TOK_POPERRCTX, TOK_RCURLY, TOK_RPAREN, TOK_STRING;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
+import crack.io cout, FStr, Reader, StandardFormatter, StringFormatter,
+    StringWriter, Writer;
+import crack.lang die, AssertionError, CString, Exception, Formatter,
+    IndexError, InvalidArgumentError;
+import crack.runtime free;
 import crack.serial SerialReader, SerialWriter;
 
 const NOT_FOUND := 0xFFFFFFFF;
