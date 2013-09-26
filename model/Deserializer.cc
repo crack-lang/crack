@@ -74,7 +74,7 @@ string Deserializer::readString(size_t expectedMaxSize, const char *name) {
     char *tmp = readBlob(size, buffer, name);
     if (tmp != buffer) {
         string result(tmp, size);
-        delete tmp;
+        delete [] tmp;
         return result;
     } else {
         return string(tmp, size);
