@@ -98,9 +98,7 @@ void ModuleMerger::addFunctionDeclaration(Function *func) {
 
 void ModuleMerger::addInitializer(GlobalVariable *gvar) {
     GlobalVariable *dest = cast<GlobalVariable>(valueMap[gvar]);
-    Constant *mapped = MapValue(gvar->getInitializer(), valueMap,
-                                  RF_None
-                                  );
+    Constant *mapped = MapValue(gvar->getInitializer(), valueMap, RF_None);
     if (trace) {
         cerr << "Adding global initializer for " << gvar->getName().str() <<
             " @" << gvar << endl;
@@ -119,8 +117,7 @@ void ModuleMerger::addInitializer(GlobalVariable *gvar) {
         mapped->dump();
     }
 
-
-    dest->setInitializer(mapped );
+    dest->setInitializer(mapped);
 }
 
 void ModuleMerger::addFunctionBody(Function *func) {
