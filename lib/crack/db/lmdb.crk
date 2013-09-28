@@ -308,14 +308,14 @@ class InnerDB {
     ///     as above, but for sorted dup data
 
     int put(String key, String value, int flags) {
-        if (!writing && (_writeTx = mdb_txn_begin(_env, null, flags)) is null)
+        if (!writing && (_writeTx = mdb_txn_begin(_env, null, 0)) is null)
             _strException();
         _mkey.mv_data = key.buffer;
         _mkey.mv_size = key.size;
         _mvalue.mv_data = value.buffer;
         _mvalue.mv_size = value.size;
 
-        _rc = mdb_put(_writeTx, _dbi, _mkey, _mvalue, 0);
+        _rc = mdb_put(_writeTx, _dbi, _mkey, _mvalue, flags);
 
         if (_rc != MDB_SUCCESS) {
             mdb_txn_abort(_writeTx);
