@@ -235,7 +235,7 @@ class NumericVector[Elem] : Array[Elem] {
 
 /// A multidimensional array similar to numpy's ndarray
 /// For 1D arrays it is faster to use the above NumericVector class
-class NumericArray[Elem] {
+class Matrix[Elem] {
     // underlying data
     Array[Elem] data;
     
@@ -245,7 +245,7 @@ class NumericArray[Elem] {
     Array[uintz] strides;
     Array[uintz] offsets;
     
-    NumericArray T; // Transpose
+    Matrix T; // Transpose
     
     @define initFromArray(ArrayType){
         oper init(ArrayType[Elem] A): dims=1 
@@ -343,7 +343,7 @@ class NumericArray[Elem] {
             newShape := Array[uint]![shape[1], shape[0]];
             newStrides := Array[uintz]![strides[1], strides[0]];
             newOffsets := Array[uintz]![offsets[1], offsets[1]];
-            T = NumericArray(data, newShape, newStrides, newOffsets);
+            T = Matrix(data, newShape, newStrides, newOffsets);
         }
     }
     
@@ -357,7 +357,7 @@ class NumericArray[Elem] {
         return newData;
     }
 
-    @static NumericArray I(uint dim) {
+    @static Matrix I(uint dim) {
         newData := Array[Elem](dim * dim);
 
         for (uint j = 0; j < dim; j++) {
@@ -369,7 +369,7 @@ class NumericArray[Elem] {
             }
         }
         
-        return NumericArray(newData, Array[uint]![dim, dim], 
+        return Matrix(newData, Array[uint]![dim, dim], 
                                      Array[uintz]![1, dim], 
                                      Array[uintz]![0, 0]);
     }
@@ -377,7 +377,7 @@ class NumericArray[Elem] {
 
     @define identityNumbered(dim) {
         @static
-        NumericArray I$$dim(){
+        Matrix I$$dim(){
             return I(dim);
         }
     }
@@ -396,9 +396,9 @@ class NumericArray[Elem] {
     }
     
     @static
-    NumericArray empty(Array[uint] d){
+    Matrix empty(Array[uint] d){
         if (d.count() == 0)
-            throw AssertionError(I"Attempt to create a NumericArray with 0 \
+            throw AssertionError(I"Attempt to create a Matrix with 0 \
                                    dimensions");
 
         uint cap = 1;
@@ -414,11 +414,11 @@ class NumericArray[Elem] {
         }
         
         newData := Array[Elem](cap);
-        return NumericArray(newData, newShape, newStrides, newOffsets);
+        return Matrix(newData, newShape, newStrides, newOffsets);
     }
 
     @static
-    NumericArray fill(Array[uint] d, Elem value){
+    Matrix fill(Array[uint] d, Elem value){
         A := empty(d);
         A.set(value);
         return A;
@@ -426,13 +426,13 @@ class NumericArray[Elem] {
 
     /// Convenience constructor to create a zeroed out 1D array
     @static
-    NumericArray zeros(uint maxInd){
+    Matrix zeros(uint maxInd){
         return fill(Array[uint]![maxInd], 0);
     }
 
     /// Convenience constructor to create a 1D array of ones
     @static
-    NumericArray ones(uint maxInd){
+    Matrix ones(uint maxInd){
         return fill(Array[uint]![maxInd], 1);
     }
 
@@ -486,10 +486,10 @@ class NumericArray[Elem] {
     int cmp(Object other) {
         if (this is other)
             return 0;
-        else if (!this.isa(NumericArray))
+        else if (!this.isa(Matrix))
             return Object.cmp(other);
 
-        peer := NumericArray.cast(other);
+        peer := Matrix.cast(other);
 
         if (dims != peer.dims)
             throw AssertionError(FStr() I`Comparing $(dims)D array with \
@@ -573,7 +573,7 @@ class NumericArray[Elem] {
     }
 
     /// Return a new array with an element appended
-    NumericArray appended(Elem e) {
+    Matrix appended(Elem e) {
         if (dims > 1)
             throw InvalidArgumentError(FStr() I`Cannot append an element to a \
                                                 ($dims)D array`
@@ -592,25 +592,25 @@ class NumericArray[Elem] {
         }
         newData.append(e);
 
-        return NumericArray(newData, Array[uint]![shape[0] + 1], 
+        return Matrix(newData, Array[uint]![shape[0] + 1], 
                             strides.clone(), 
                             offsets.clone()
                             );
     }
 
-    NumericArray promoted() {
+    Matrix promoted() {
         if (dims == 1) {
             newShape := Array[uint]![shape[0], 1];
             newStrides := Array[uintz]![strides[0], shape[0]];
             newOffsets := Array[uintz]![offsets[0], 0];
 
-            return NumericArray(data, newShape, newStrides, newOffsets);
+            return Matrix(data, newShape, newStrides, newOffsets);
         } else {
             throw AssertionError("promote only implemented for 1D arrays");
         }
     }
 
-    NumericArray flattened() {
+    Matrix flattened() {
         if (dims == 1) return this;
         
         if (dims == 2) {
@@ -623,7 +623,7 @@ class NumericArray[Elem] {
             newStrides := Array[uintz]![strides[0]];
             newOffsets := Array[uintz]![0];
 
-            return NumericArray(data, newShape, newStrides, newOffsets);
+            return Matrix(data, newShape, newStrides, newOffsets);
         } else {
             throw AssertionError(I"flatten only implemented for 1D and 2D \
                                    arrays");

@@ -1,4 +1,4 @@
-// Test NumericArray
+// Test Matrix
 // Copyright 2011 Google Inc.
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // 
@@ -8,7 +8,7 @@
 // 
 
 import crack.cont.array Array;
-import crack.cont.numericarray NumericVector, NumericArray;
+import crack.cont.numericarray NumericVector, Matrix;
 import crack.io cout;
 import crack.cmdline CmdOptions;
 import crack.sys argv;
@@ -17,7 +17,7 @@ import crack.sys argv;
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
 
-void printCmp(NumericArray[int] A, NumericArray[int] B, String msg){
+void printCmp(Matrix[int] A, Matrix[int] B, String msg){
     if (A != B){
         cout `$msg\n`;
         cout `A = $A\n`;
@@ -26,8 +26,8 @@ void printCmp(NumericArray[int] A, NumericArray[int] B, String msg){
 }
 
 A := Array[int]![1,2,3,4];
-NumericArray[int] NA = {A};
-printCmp(NA, NumericArray[int]![1,2,3,4], "Constructor using array failed");
+Matrix[int] NA = {A};
+printCmp(NA, Matrix[int]![1,2,3,4], "Constructor using array failed");
 
 
 NA2 := NA.promoted();
@@ -35,18 +35,18 @@ if (NA2.dims != 2)
     cout `Promoting 1D to 2D array failed\n`;
 
 NA2 = NA.appended(5);
-printCmp(NA2, NumericArray[int]![1, 2, 3, 4, 5], "Array append failed");
+printCmp(NA2, Matrix[int]![1, 2, 3, 4, 5], "Matrix append failed");
 
 NA2[4] = 10;
 NA2[1] = 8;
-printCmp(NA2, NumericArray[int]![1, 8, 3, 4, 10], "Array assign failed");
+printCmp(NA2, Matrix[int]![1, 8, 3, 4, 10], "Matrix assign failed");
 
 // 2D Array creation
 A3 := Array[Array[int]]![Array[int]![1,2], Array[int]![3,4]];
 A4 := Array[Array[int]]![Array[int]![1,3], Array[int]![2,4]];
 
-NumericArray[int] NA3 = {A3};
-NumericArray[int] NA4 = {A4};
+Matrix[int] NA3 = {A3};
+Matrix[int] NA4 = {A4};
 
 printCmp(NA3.T, NA4, "2D transpose failed");
 printCmp(NA3, NA3.T.T, "2D double transpose failed");
@@ -54,8 +54,8 @@ printCmp(NA3, NA4.T, "2D inverse transpose failed");
 
 // 2D identity matrices
 @define identityTest(dim){
-        I$$dim := NumericArray[int].I$$dim();
-        _I$$dim := NumericArray[int].I(dim);
+        I$$dim := Matrix[int].I$$dim();
+        _I$$dim := Matrix[int].I(dim);
         printCmp(I$$dim, _I$$dim, "dim$$x$$dim identity matrix failed");
 }
 
@@ -65,14 +65,14 @@ printCmp(NA3, NA4.T, "2D inverse transpose failed");
 
 // convenience constructors
 @define convenienceConstructors(prefix, method){
-    prefix$$1 := NumericArray.method(10);
+    prefix$$1 := Matrix.method(10);
 }
 
-Z1 := NumericArray[uint].zeros(10);
-O1 := NumericArray[uint].ones(10);
+Z1 := Matrix[uint].zeros(10);
+O1 := Matrix[uint].ones(10);
 
-N1 := NumericArray[uint].fill(Array[uint]![10], 20);
-N2 := NumericArray[uint].fill(Array[uint]![10, 10], 30);
-N3 := NumericArray[uint].fill(Array[uint]![10, 10, 10], 40);
+N1 := Matrix[uint].fill(Array[uint]![10], 20);
+N2 := Matrix[uint].fill(Array[uint]![10, 10], 30);
+N3 := Matrix[uint].fill(Array[uint]![10, 10, 10], 40);
 
 cout `ok\n`;
