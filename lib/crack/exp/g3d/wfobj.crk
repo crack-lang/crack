@@ -6,14 +6,14 @@
 #
 # Wavefront OBJ file format reader.
 
-import crack.ascii parseInt;
+import crack.ascii parseInt, wsplit;
 import crack.cont.array Array;
-import crack.exp.g3d Coord, Face, MFObj, Tri, Vector, Vertex, Prim;
+import crack.exp.g3d Coord, Face, MFObj, Prim, Tri, Vector, Vertex;
 import crack.io cout, Reader;
+import crack.io.readers LineReader;
 import crack.logger error;
 import crack.math atof;
 import crack.strutil split;
-import crack.io.readers LineReader;
 
 ## Reader for WaveFront OBJ files.  You probably don't want to use this class,
 ## it's easier just to use readWFObj().
@@ -24,7 +24,7 @@ class WFReader {
     Array[Vector] __normals = {};
 
     @static void __readVector(Array[Vector] vecs, String line) {
-        fields := split(line);
+        fields := wsplit(line);
         if (fields.count() < 4) {
             error `Not enough fields in vertex line: $line\n`;
             return;
@@ -45,7 +45,7 @@ class WFReader {
     }
 
     void __readMaterialCoord(String line) {
-        fields := split(line);
+        fields := wsplit(line);
         if (fields.count() < 3) {
             error `Not enough fields in vt line: $line\n`;
             return;
@@ -59,7 +59,7 @@ class WFReader {
         Array[Coord] coords = {8};
         Array[Vector] normals = {8};
 
-        fields := split(line);
+        fields := wsplit(line);
         if (fields.count() < 4)
             error `Not enough fields in face line: $line\n`;
         for (field :in fields.subarray(1)) {

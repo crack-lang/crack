@@ -8,13 +8,13 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
+import crack.ascii wsplit;
 import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.net Poller;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN, 
     CRK_PIPE_STDOUT, CRK_PIPE_STDERR;
-import crack.strutil split;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AppendBuffer, AssertionError, Buffer, SubString;
@@ -176,7 +176,7 @@ class BuilderTestHarness {
         _status = T_BINARY;
         processHandler.terminated = false;
         gotStdIn := _data.sections.hasKey("STDIN");
-        _proc = Process(split(cmd), 
+        _proc = Process(wsplit(cmd), 
                         CRK_PIPE_STDOUT | CRK_PIPE_STDERR | 
                          (gotStdIn ? CRK_PIPE_STDIN : 0)
                         );
@@ -254,7 +254,7 @@ class BuilderTestHarness {
 
         _status = T_CRACK;
         gotStdIn := !_bDef.separateBinary() && _data.sections.hasKey("STDIN");
-        _proc = Process(split(cmd), 
+        _proc = Process(wsplit(cmd), 
                         CRK_PIPE_STDOUT | CRK_PIPE_STDERR | 
                          (gotStdIn ? CRK_PIPE_STDIN : 0)
                         );

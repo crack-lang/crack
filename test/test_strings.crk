@@ -1,16 +1,16 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
+import crack.ascii toLower, toUpper, capitalize, wsplit;
 import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
 import crack.io cout, FStr;
 import crack.strutil split, StringArray, ljust, rjust, center, replace, remove;
-import crack.ascii toLower, toUpper, capitalize;
 import crack.cont.array Array;
 
 if ('test' >= 'test string')
@@ -144,17 +144,17 @@ if (1) {
 }
 
 if (1) {
-    if (split('') != StringArray![''])
+    if (wsplit('') != StringArray![''])
         cout `FAILED ws-splitting empty string\n`;
 
-    if (split('bogus') != StringArray!['bogus'])
+    if (wsplit('bogus') != StringArray!['bogus'])
         cout `FAILED ws-splitting single element string`;
 
-    if (split('  this\tis\r\na test ') != 
+    if (wsplit('  this\tis\r\na test ') !=
         StringArray!['', 'this', 'is', 'a', 'test', '']
         )
         cout `FAILED ws-splitting string with whitespace ends\n`;
-        
+
     if (split('amount|reason', b'|') != StringArray!['amount','reason'])
         cout `FAILED ws-splitting string with non-whitespace\n`;
 }
@@ -221,7 +221,7 @@ if (line3 != "elloello")
 line3 = toUpper(line2);
 if (line3 != "HELLOHELLO")
     cout `Failed to convert string to uppercase\n`;
-    
+
 line3 = toLower(line3);
 if (line3 != "hellohello")
     cout `Failed to convert string to lowercase\n`;

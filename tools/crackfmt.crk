@@ -7,12 +7,12 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-import crack.ascii strip;
+import crack.ascii strip, wsplit;
 import crack.cont.treemap TreeMap;
 import crack.io cin, cout, Formatter, FStr;
 import crack.io.readers LineReader;
 import crack.regex Regex;
-import crack.strutil split, StringArray;
+import crack.strutil StringArray;
 
 # This is currently just a hack.  It recognizes import statements, reorders
 # and reformats them.
@@ -114,13 +114,13 @@ importStatements := TreeMap[String, Import]();
 
 for (line :in LineReader(cin)) {
     if (lastImport) {
-        if (lastImport.addImports(split(strip(line))))
+        if (lastImport.addImports(wsplit(strip(line))))
             lastImport = null;
     } else if (m := importRx.match(line)) {
         moduleName := m.group(1);
         imports := m.group(2);
         importStatements[moduleName] = lastImport = Import(moduleName);
-        if (lastImport.addImports(split(strip(imports))))
+        if (lastImport.addImports(wsplit(strip(imports))))
             lastImport = null;
     } else if (strip(line) && importStatements) {
         # we got a non-import line, emit the imports.

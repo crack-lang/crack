@@ -8,8 +8,9 @@
 ## Module for manipulating ascii stirngs.
 
 import crack.io cout, FStr;
-import crack.lang InvalidArgumentError, ManagedBuffer, Buffer, AppendBuffer;
-import crack.strutil StringArray, split;
+import crack.lang AppendBuffer, Buffer, InvalidArgumentError, ManagedBuffer;
+import crack.strutil split, StringArray;
+
 @import crack.ann define;
  
 ## Returns the number converted to a string in the specified base - e.g. 
@@ -224,10 +225,16 @@ String toLower(String text){
     return _changeCase(text, b'A', b'Z', b'a', text.size);
 }
 
+## Split the string into an array of words delimited by a sequence of 
+## ascii whitespace characters.
+StringArray wsplit(String val) {
+    return split(val, ' \t\n\r');
+}
+
 ## Capitalize the initial character of numWords words in a string
 ## XXX this fails to preserve interspersed whitespace.
 String capitalize(String text, uint numWords){
-    StringArray words = split(text);
+    StringArray words = wsplit(text);
     byteptr wordBuf,wordBufCopy;
 
     for (uint i = 0; i < words.count() && i < numWords; i++){
@@ -302,22 +309,22 @@ String escape(Buffer data, byte min, byte max) {
         } else if (ch == b'"' || ch == b'\\') {
             buf.append(b'\\');
             buf.append(ch);
-        } else if (ch == b'\n'){
+        } else if (ch == b'\n') {
             buf.append(b'\\');
             buf.append(b'n');
-        } else if (ch == b'\t'){
+        } else if (ch == b'\t') {
             buf.append(b'\\');
             buf.append(b't');
         } else if (ch == 12) { // FF
             buf.append(b'\\');
             buf.append(b'f');
-        } else if (ch == b'\r'){
+        } else if (ch == b'\r') {
             buf.append(b'\\');
             buf.append(b'r');
-        } else if (ch == b'/'){
+        } else if (ch == b'/') {
             buf.append(b'\\');
             buf.append(b'/');
-        } else if (ch == 8){ // BS
+        } else if (ch == 8) { // BS
             buf.append(b'\\');
             buf.append(b'b');
         } else {

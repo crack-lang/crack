@@ -7,7 +7,7 @@
 // 
 // 2/23/2012
 
-import crack.ascii escape, strip;
+import crack.ascii escape, strip, wsplit;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.exp.file File;
@@ -15,7 +15,7 @@ import crack.functor Functor2;
 import crack.io cout, cerr, StandardFormatter, StringWriter;
 import crack.lang Formatter, Writer;
 import crack.runtime usecs;
-import crack.strutil split, StringArray;
+import crack.strutil StringArray;
 import crack.sys argv, env;
 import crack.time Date;
 @import crack.ann define, implements;
@@ -139,7 +139,7 @@ class Logger : Object @implements Functor2[void, uint, String] {
 
     void setNamedFields(String fieldSpec) {
         _fields.clear();
-        fieldNames := split(fieldSpec, " ");
+        fieldNames := wsplit(fieldSpec);
         for (name :in fieldNames) {
             if (name.size > 0)
                 _fields.append(_availableFields[name]);
@@ -184,7 +184,7 @@ class Logger : Object @implements Functor2[void, uint, String] {
         options.level = level;
         _setDefaultOptions();
         initNamedFields();
-        fieldNames := split(fieldSpec, " ");
+        fieldNames := wsplit(fieldSpec);
         for (name :in fieldNames) {
             if (name.size > 0)
                 _fields.append(_availableFields[name]);

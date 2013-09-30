@@ -10,9 +10,10 @@
 import crack.runtime close, runChildProcess, waitProcess, signalProcess,
     SIGKILL, SIGTERM, PipeDesc, free, closeProcess;
 
+import crack.ascii wsplit;
 import crack.io FDReader, FDWriter, FileHandle, Reader, StringFormatter, FStr;
 import crack.lang Buffer, ManagedBuffer, AppendBuffer, InvalidStateError;
-import crack.strutil StringArray, split;
+import crack.strutil StringArray;
 import crack.net Poller, PollEvent, POLLIN, POLLOUT, POLLERR, POLLHUP;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
@@ -171,7 +172,7 @@ class Process {
 
     ## splits on whitespace, quotes are NOT accounted for
     oper init(String cmd): _pd() {
-        args := split(cmd);
+        args := wsplit(cmd);
         array[byteptr] env = null;
         __init(args.makePrimArray(), env, CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
     }

@@ -64,6 +64,8 @@ if (1) {
 }
 
 if (1) {
+    # This is a little differeng from strutil.split(), adjacent delimiters 
+    # will result in empty strings in the returned array.
     StringArray split(String s, byte sep) {
         StringArray result = {};
         int pos;

@@ -7,6 +7,7 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
+import crack.ascii wsplit;
 import crack.lang die, cmp, free, Formatter; 
 import crack.strutil ljust;
 import crack.cont.array Array;
@@ -141,7 +142,7 @@ class CmdOptions {
    /// Create a new CmdOptions object filled in with keys/values/types from the 
    /// provided string
    oper init(String createOpts): options() {
-      newArgs := split(createOpts);
+      newArgs := wsplit(createOpts);
       parse(newArgs, true);
    }
    
@@ -171,7 +172,7 @@ class CmdOptions {
 
    // Convenience method to add options based on a specification string
    StringArray addFromString(String line){
-      new_argv := split(line);
+      new_argv := wsplit(line);
       return parse(new_argv, true);
    }
    

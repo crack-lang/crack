@@ -99,9 +99,10 @@ class StringArray : Array[String] {
         
 }
 
-## Split the string into an array of words delimited by one of the given array of 
-## characters
-StringArray split(String val, String ws) {
+## Split the string into an array of words delimited by one or more of the 
+## given array of bytes.  For example, split('foo-bar/.baz', '-./') would 
+## return ['foo', 'bar', 'baz'].
+StringArray split(String val, String delims) {
 
     # rule out the simple case
     if (val.size == 0)
@@ -114,7 +115,7 @@ StringArray split(String val, String ws) {
     uint count = 1;
     for (uint i = 0; i < val.size; ++i) {
         cur := val[i];
-        if (ws.lfind(cur) != -1) {
+        if (delims.lfind(cur) != -1) {
             inWord = !inWord;
             if (inWord)
                 ++count;
@@ -129,7 +130,7 @@ StringArray split(String val, String ws) {
     inWord = true;
     for (int i = 0; i < val.size; ++i) {
         cur := val[i];
-        gotSpace := ws.lfind(cur) != -1;
+        gotSpace := delims.lfind(cur) != -1;
         if (gotSpace && inWord) {
             word := val.slice(start, i);
             result.append(word);
@@ -150,17 +151,10 @@ StringArray split(String val, String ws) {
     return result;
 }
 
-## Split the string into an array of words delimited by a sequence of 
-## ascii whitespace characters.
-StringArray split(String val) {
-    return split(val, ' \t\n\r');
-}
-
-## Split the string into an array of words delimited by the given character
+## Split the string into an array of words delimited by the given byte.
 StringArray split(String val, byte c) {
     return split(val, String(byteptr(array[byte]![c]), 1, true));
 }
-
 
 ## Pads a string with the provided bytes so it has the given width
 String ljust(String text, uint width, byte c){

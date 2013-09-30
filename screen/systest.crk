@@ -1,4 +1,5 @@
 
+import crack.ascii wsplit;
 import crack.cmdline CmdOptions, Option, CMD_STR;
 import crack.compiler CrackContext, Token;
 import crack.cont.array Array;
@@ -7,7 +8,7 @@ import crack.fs cwd, Path, makePath;
 import crack.io FStr, cout, cerr;
 import crack.lang Buffer, FreeBase, Exception;
 import crack.regex Regex;
-import crack.strutil split, StringArray;
+import crack.strutil StringArray;
 import crack.sys argv;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
     CRK_PIPE_STDERR, CRK_PROC_EXITED;
@@ -165,6 +166,6 @@ test := Test(
     makePath(opts.getString('root')),
     makePath(opts.getString('crack_bin')),
     makePath(opts.getString('testtmp')),
-    _runFlagsStr ? split(_runFlagsStr) : StringArray![]
+    _runFlagsStr ? wsplit(_runFlagsStr) : StringArray![]
 );
 test.initialize();

@@ -7,13 +7,13 @@
 // 
 // Test CmdOptions
 
+import crack.ascii wsplit;
 import crack.io cout, FStr;
 import crack.cmdline CmdOptions, Option, CMD_STR, CMD_INT, CMD_FLOAT,
    CMD_BOOL;
 import crack.lang Exception;
 import crack.sys argv;
 import crack.cont.array Array;
-import crack.strutil split;
 
 String S = null;
 
@@ -77,11 +77,11 @@ try{
 catch (Exception ex){}
 
 options = CmdOptions();
-test_argv := split("--help=b/false --bool --int=i/1 --j=i/2 --s2=str2 -f "
-                   "f/1.0 --gloat2=f/2.0");
-test_argv2 := split("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello "
-                    "--enable-selection --disable-makefalse -- "
-                    "something");
+test_argv := wsplit("--help=b/false --bool --int=i/1 --j=i/2 --s2=str2 -f "
+                    "f/1.0 --gloat2=f/2.0");
+test_argv2 := wsplit("-k i/20 -bk 1 -o f/1.0 -o20.0 -t hello -thello "
+                     "--enable-selection --disable-makefalse -- "
+                     "something");
 
 // Parse command line array
 options.parse(test_argv, true);
