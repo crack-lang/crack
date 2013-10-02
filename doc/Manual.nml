@@ -5535,6 +5535,15 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
+From 0.7 to 0.8
+---------------
+
+-   Renamed #crack.cont.numericarray.NumericArray# to #Matrix#.
+-   Moved the single parameter overload of #strutil.split()# to #crack.ascii# 
+    and renamed it #wsplit()#.
+-   Changed the semantics of annotations in generics, see \X(Annotations in 
+    Generics) for details.
+
 From 0.6 to 0.7
 ---------------
 

@@ -15,17 +15,17 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 4:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackLang_la_LDFLAGS = -version-info 5:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
 libCrackDebugTools_la_SOURCES = debug/DebugTools.cc util/md5.c \
     util/SourceDigest.cc util/Hasher.cc
 libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackDebugTools_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
+libCrackDebugTools_la_LDFLAGS = -version-info 2:0:1 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackNativeRuntime_la_LDFLAGS = -version-info 3:0:1
+libCrackNativeRuntime_la_LDFLAGS = -version-info 4:0:0
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
@@ -164,19 +164,22 @@ noinst_HEADERS = \
     builder/llvm/ExceptionCleanupExpr.h \
     builder/llvm/FuncBuilder.h \
     builder/llvm/FunctionTypeDef.h \
+    builder/llvm/Incompletes.h \
+    builder/llvm/LLVMBuilder.h \
     builder/llvm/LLVMJitBuilder.h \
     builder/llvm/LLVMLinkerBuilder.h \
     builder/llvm/LLVMValueExpr.h \
     builder/llvm/ModuleMerger.h \
-    builder/llvm/Incompletes.h \
-    builder/llvm/LLVMBuilder.h \
     builder/llvm/Native.h \
     builder/llvm/Ops.h \
     builder/llvm/PlaceholderInstruction.h \
     builder/llvm/StructResolver.h \
-    builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
+    builder/llvm/VTableBuilder.h \
+    compiler/init.h \
+    config.h \
+    Crack.h \
     debug/DebugTools.h \
     ext/Stub.h \
     model/AllocExpr.h \
@@ -192,6 +195,7 @@ noinst_HEADERS = \
     model/ConstVarDef.h \
     model/Context.h \
     model/ContextStackFrame.h \
+    model/DeserializationError.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
@@ -203,20 +207,28 @@ noinst_HEADERS = \
     model/GenericParm.h \
     model/GetRegisterExpr.h \
     model/GlobalNamespace.h \
+    model/Import.h \
     model/ImportedDef.h \
     model/Initializers.h \
     model/InstVarDef.h \
     model/IntConst.h \
     model/LocalNamespace.h \
     model/ModuleDef.h \
+    model/ModuleDefMap.h \
+    model/ModuleStub.h \
     model/MultiExpr.h \
     model/Namespace.h \
+    model/NamespaceStub.h \
+    model/NestedDeserializer.h \
     model/NullConst.h \
+    model/Options.h \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \
+    model/ProtoBuf.h \
     model/ResultExpr.h \
     model/Serializer.h \
     model/SetRegisterExpr.h \
+    model/StatState.h \
     model/StrConst.h \
     model/StubDef.h \
     model/TernaryExpr.h \
@@ -225,6 +237,7 @@ noinst_HEADERS = \
     model/VarDef.h \
     model/VarDefImpl.h \
     model/VarRef.h \
+    opt/cairosdl.h \
     parser/Location.h \
     parser/ParseError.h \
     parser/Parser.h \
@@ -238,23 +251,20 @@ noinst_HEADERS = \
     runtime/Net.h \
     runtime/Process.h \
     runtime/Util.h \
+    spug/check.h \
     spug/Exception.h \
     spug/RCBase.h \
     spug/RCPtr.h \
     spug/StringFmt.h \
+    spug/Tracer.h \
     spug/TypeInfo.h \
-    spug/check.h \
     tests/MockBuilder.h \
     tests/MockFuncDef.h \
     tests/MockModuleDef.h \
     util/CacheFiles.h \
     util/Hasher.h \
     util/md5.h \
-    util/SourceDigest.h \
-    compiler/init.h \
-    opt/cairosdl.h \
-    config.h \
-    Crack.h
+    util/SourceDigest.h
 
 compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
 compilerinc_HEADERS = \

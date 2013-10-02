@@ -3,20 +3,20 @@ Installation
 ============
 
 Crack can be built using either autoconf or CMake.  In either case, you'll 
-need LLVM 3.1 built with RTTI support.  You'll need to build LLVM 3.1 from 
-source - the package requires a patch that we've included to fix a bug that 
-causes seg-faults when throwing an exception.
+need LLVM 3.3 built with RTTI support.  If your distro provides a release of 
+LLVM 3.3, you may be able to use it, but if you get errors about RTTI symbols 
+you'll need to build it from source.
 
 Autoconf Install Instructions
 -----------------------------
 
 Unpack Crack so you can apply the JITEmitter patch:
-$ tar -xvzf crack-0.7.tar.gz
+$ tar -xvzf crack-0.8.tar.gz
 
 Build LLVM 3.3:
 
 $ tar -xvzf llvm-3.3.tgz
-$ cd llvm-3.1.src
+$ cd llvm-3.3.src
 $ ./configure
 $ make REQUIRES_RTTI=1
 $ make install
@@ -27,7 +27,7 @@ cost).
 
 Build Crack:
 
-$ cd crack-0.7
+$ cd crack-0.8
 $ ./configure
 $ make
 $ make check  # optional
@@ -48,7 +48,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-0.7
+$ cd crack-0.8
 $ mkdir build; cd build
 $ cmake ..
 $ make

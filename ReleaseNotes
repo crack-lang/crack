@@ -1,3 +1,24 @@
+0.8
+    -   Lots of bug fixes and small features.
+    -   Lots of refactors and code cleanups.
+    -   Implemented most of the code for caching (which is still way too buggy 
+        for anything other than experimentation).
+    -   Added flag driven tracing facility.
+    -   Lots of new modules and extension modules:
+        -   OpenSSL
+        -   libpng
+        -   alsa, midi, jack, and fluidsynth
+        -   curl
+        -   SHA1 digests
+        -   base64 encoding
+        -   Mongo DB and LMDB
+        -   netCDF
+        -   Mersenne Twister PRNG.
+    -   enhanced the test framework to support composite tests.
+    -   added the Wurld OpenGL example program.
+    -   Ported to LLVM 3.3
+    -   Changed annotation-in-generic semantics.
+        
 0.7.1
     -   Fixed crack.process, respect the flags that are passed in defining 
         pipe configuration.
