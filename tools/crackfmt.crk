@@ -119,7 +119,10 @@ for (line :in LineReader(cin)) {
     } else if (m := importRx.match(line)) {
         moduleName := m.group(1);
         imports := m.group(2);
-        importStatements[moduleName] = lastImport = Import(moduleName);
+        if (im := importStatements.get(moduleName))
+            lastImport = im;
+        else
+            importStatements[moduleName] = lastImport = Import(moduleName);
         if (lastImport.addImports(wsplit(strip(imports))))
             lastImport = null;
     } else if (strip(line) && importStatements) {
