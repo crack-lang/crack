@@ -355,6 +355,20 @@ class Buffer : Object {
     
     ## Find the leftmost index of the substring 'sub'.
     int lfind(Buffer sub) { return lfind(sub, 0); }
+
+    ## Returns true if the buffer starts with 'prefix'.
+    @final bool startsWith(Buffer prefix) {
+        return size >= prefix.size && 
+               !memcmp(buffer, prefix.buffer, prefix.size);
+    }
+    
+    ## Returns true if the buffer ends with 'suffix'.
+    @final bool endsWith(Buffer suffix) {
+        return size >= suffix.size &&
+               !memcmp(buffer + (size - suffix.size), suffix.buffer, 
+                      suffix.size
+                      );
+    }
 }
 
 void _writeObject(Writer out) {
@@ -739,6 +753,15 @@ class String : Buffer {
 
     void formatTo(Formatter f) {
         f.write(this);
+    }
+
+    ## If the string begins with 'prefix', returns the remainder of the string 
+    ## after 'prefix'.
+    @final SubString getSuffix(String prefix) {
+        if (startsWith(prefix))
+            return slice(prefix.size);
+        else
+            return null;
     }
 };
 

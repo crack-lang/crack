@@ -7,11 +7,12 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-import crack.ascii toLower, toUpper, capitalize, wsplit;
-import crack.lang cmp, die, ManagedBuffer, SubString, CString, substr, slice;
-import crack.io cout, FStr;
-import crack.strutil split, StringArray, ljust, rjust, center, replace, remove;
+import crack.ascii capitalize, toLower, toUpper, wsplit;
 import crack.cont.array Array;
+import crack.io cout, FStr;
+import crack.lang cmp, die, slice, substr, Buffer, CString, ManagedBuffer,
+    SubString;
+import crack.strutil center, ljust, remove, replace, rjust, split, StringArray;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -225,6 +226,44 @@ if (line3 != "HELLOHELLO")
 line3 = toLower(line3);
 if (line3 != "hellohello")
     cout `Failed to convert string to lowercase\n`;
+
+#' startsWith, endsWith tests
+
+if (!'test'.startsWith('te'))
+    cout `Failed 'test'.startsWith('te')\n`;
+
+if (!'test'.startsWith('test'))
+    cout `Failed 'test'.startsWith('test')\n`;
+
+if ('test'.startsWith('test\0'))
+    cout `Failed 'test'.startsWith('test\\0')\n`;
+
+if ('test'.startsWith('foo'))
+    cout `Failed 'test'.startsWith('foo')\n`;
+
+if (!'test'.endsWith('st'))
+    cout `Failed 'test'.endsWith('st')\n`;
+
+if (!'test'.endsWith('test'))
+    cout `Failed 'test'.endsWith('test')\n`;
+
+if (1) {
+    Buffer b = {'xtest'.buffer + 1, 4};
+    if ('test'.endsWith('xtest'))
+        cout `Failed b.endsWith('xtest')\n`;
+}
+
+if ('test'.endsWith('foo'))
+    cout `Failed 'test'.endsWith('foo')\n`;
+
+if ('foo=bar'.getSuffix('foo=') != 'bar')
+    cout `Failed 'foo=bar'.getSuffix('foo=') != 'bar'\n`;
+
+if ('foo='.getSuffix('foo=') != '')
+    cout `Failed 'foo='.getSuffix('foo=') != ''\n`;
+
+if (!('foo='.getSuffix('bar=') is null))
+    cout `Failed !('foo='.getSuffix('bar=') is null)\n`;
 
 String words = "this is a heading";
 capWords := capitalize(words);
