@@ -8,548 +8,607 @@
 // 
 
 import crack.ascii wsplit;
-import crack.lang die, cmp, free, Formatter; 
-import crack.strutil ljust;
 import crack.cont.array Array;
-import crack.math strtoi, strtof;
-import crack.lang Exception, InvalidArgumentError, BadCastError, IndexError;
+import crack.io cerr, cout, FStr, StringFormatter, Writer;
+import crack.lang cmp, die, free, BadCastError, Exception, Formatter,
+    InvalidArgumentError, KeyError;
+import crack.math strtof, strtoi;
+import crack.strutil ljust, split, StringArray;
 import crack.sys argv;
-import crack.io cout, cerr, StringFormatter, FStr, Writer;
-import crack.strutil split, StringArray;
 
 StringArray typeNames = ["string", "int", "float", "bool"];
-uint CMD_STR = 0;
-uint CMD_INT = 1;
-uint CMD_FLOAT = 2;
-uint CMD_BOOL = 3;
-uint NOINDEX = 0xffffffff; // Completely arbitrary large number
+const uint
+    CMD_STR = 0,
+    CMD_INT = 1,
+    CMD_FLOAT = 2,
+    CMD_BOOL = 3,
+    NOINDEX = 0xffffffff; // Completely arbitrary large number
 
 /// A command line option.
 class Option {
-   String long;
-   String short;
-   String desc;
-   uint type;
-   uint pos = NOINDEX; // index in option array
-   String value;
+   
+    /// The long option name.
+    String long;
+   
+    /// The short option name (should be a single character).
+    String short;
+   
+    /// The Option description.
+    String desc;
+   
+    /// The option type (should be one of the CMD_* constants).
+    uint type;
+    uint pos = NOINDEX; // index in option array
+    String value;
 
-   oper init(uint type):
-      type(type),
-      value = "" {}
+    /// Constructs an option given only a type.  Other attributes should be 
+    /// filled in after the fact.
+    oper init(uint type) :
+        type(type),
+        value = "" {
+    }
 
-   /// long: the long option name
-   /// short: the (single character) short option name
-   /// desc: the option description (displayed by CmdOptions.writeUsage() and 
-   ///       friends)
-   /// value: the default value.
-   /// type: the option type (one of CMD_STR, CMD_INT, CMD_FLOAT, and CMD_BOOL)
-   oper init(String long, String short, String desc, String value, uint type):
-      long = long,
-      short = short,
-      desc = desc,
-      type = type,
-      value = value {}
+    /// long: the long option name
+    /// short: the (single character) short option name
+    /// desc: the option description (displayed by CmdOptions.writeUsage() and 
+    ///       friends)
+    /// value: the default value.
+    /// type: the option type (one of CMD_STR, CMD_INT, CMD_FLOAT, and CMD_BOOL)
+    oper init(String long, String short, String desc, String value, uint type):
+        long = long,
+        short = short,
+        desc = desc,
+        type = type,
+        value = value {
+    }
 
-   /// Constructs a string option with no description and an empty default 
-   /// value.
-   /// long: the long option name
-   /// short: the (single character) short option name   
-   oper init(String long, String short):
-      long = long,
-      short = short,
-      desc = "",
-      type = CMD_STR,
-      value = "" {}
+    /// Constructs a string option with no description and an empty default 
+    /// value.
+    /// long: the long option name
+    /// short: the (single character) short option name   
+    oper init(String long, String short):
+        long = long,
+        short = short,
+        desc = "",
+        type = CMD_STR,
+        value = "" {
+    }
 
-   // comparison, so we can sort the options
-   int cmp(Option other){
-      if (!other) return 0;
-      return long.cmp(other.long);
-   }
-
-   // Setters
-   void setInt(int value0){
-      value = FStr() `$value0`;
-   }
-
-   void setFloat(float value0){
-      value = FStr() `$value0`;
-   }
-
-   void setBool(bool value0){
-      value = FStr() `$value0`;
-   }
-
-   void setString(String value0){
-      value = value0;
-   }
-
-   void set(String value0){
-      if (type == CMD_BOOL){
-         if (value0 == 't' || value0 == 'true' || value0 == '1')
-            value = "1";
-         else 
-            if (value0 == 'f' || value0 == 'false' || value0 == '0')
-               value = "0";
+    /// comparison, so we can sort the options.  Note that this won't be used 
+    /// as Object.cmp().
+    int cmp(Option other) {
+        if (!other) return 0;
+        return long.cmp(other.long);
+    }
+ 
+    // Setters
+    void setInt(int value0) {
+        value = FStr() `$value0`;
+    }
+ 
+    void setFloat(float value0) {
+        value = FStr() `$value0`;
+    }
+ 
+    void setBool(bool value0) {
+        value = FStr() `$value0`;
+    }
+ 
+    void setString(String value0) {
+        value = value0;
+    }
+ 
+    /// Set the option value to the specified string.  Throws exceptions if 
+    /// the value can not be converted to the option type.
+    void set(String value0) {
+        if (type == CMD_BOOL) {
+            if (value0 == 't' || value0 == 'true' || value0 == '1')
+                value = "1";
+            else if (value0 == 'f' || value0 == 'false' || value0 == '0')
+                value = "0";
             else
-               throw BadCastError(FStr() `Invalid value '$(value0)' for boolean option`);
-         return;
-      } 
-      else if (type == CMD_INT)
-         strtoi(value0);
-      else if (type == CMD_FLOAT)
-         strtof(value0);
-      value = value0;
-   }
-   
-   String getRepr(){
-      if (value)
-         return FStr() `$(short)/$(long)/[$(typeNames[type])]=$(value)`;
-      else
-         return FStr() `$(short)/$(long)/[$(typeNames[type])]=(null)`;
-   }
-
-   void formatTo(Formatter fmt) {
-      fmt.format(getRepr());
-   }
+                throw BadCastError(FStr() I`Invalid value '$(value0)' for \
+                                            boolean option`);
+            return;
+        } else if (type == CMD_INT) {
+            strtoi(value0);
+        } else if (type == CMD_FLOAT) {
+            strtof(value0);
+        }
+        value = value0;
+    }
+    
+    /// Returns a string representation of the option.
+    String getRepr() {
+        if (value)
+            return FStr() `$(short)/$(long)/[$(typeNames[type])]=$(value)`;
+        else
+            return FStr() `$(short)/$(long)/[$(typeNames[type])]=(null)`;
+    }
+ 
+    void formatTo(Formatter fmt) {
+        fmt.format(getRepr());
+    }
 }
 
-// Parse info
+/// A datastructure to keep track of flags parsed from the command line.
 class ParseInfo {
-   String name;
-   String value;
-   bool nadv;
+    String name;
+    String value;
    
-   oper init (String name0, String value0): nadv=false {
-      if (name) name = name0;
-      if (value) name = value0;
-   }
+    // a signal to tell the parser not to advance
+    bool nadv;
+   
+    oper init (String name0, String value0) : name = name0, value = value0 {}
 }
 
-// Command line options tree
+/// Command line options tree
 class CmdOptions {
-   Array[Option] options; // Contains option objects
-   bool sorted = false;
-   StringArray typeNames = ["string", "int", "float", "bool"];
+    Array[Option] options = {}; // Contains option objects
+    bool sorted = false;
+    StringArray typeNames = ["string", "int", "float", "bool"];
+ 
+    // Forward declaration
+    StringArray parse(StringArray args, bool createUnknown);
+    
+    oper init() {}
+    
+    /// Create a new CmdOptions object filled in with keys/values/types from the 
+    /// provided string
+    oper init(String createOpts) {
+        newArgs := wsplit(createOpts);
+        parse(newArgs, true);
+    }
+ 
+    /// Add a new option to the set.
+    void add(Option newoption) {
+        options.append(newoption);
+        sorted = false;
+    }
+    
+    alias append = add;
 
-   oper init(): options()
-   {  }
+    /// Create a new option from the specification, add it to the set and 
+    /// return it.
+    Option add(String long, String short, String desc, String value, 
+               uint type
+               ) {
+        newoption := Option(long, short, desc, value, type);
+        add(newoption);
+        return newoption;
+    }
+ 
+    /// Convenience method to add options based on a specification string.
+    StringArray addFromString(String line) {
+        new_argv := wsplit(line);
+        return parse(new_argv, true);
+    }
+    
+    /// Find the index of the option with the specified long name. 
+    /// This just does a linear search for now.
+    uint findLongIndex(String optName) {
+        result := NOINDEX;
+        Option opt;
+ 
+        for (uint i=0; i<options.count(); i++) {
+            if (optName == options[i].long) return i;
+        }
+ 
+       return result;
+    }
+ 
+    /// Find the index of the option with the specified short name. 
+    /// This just does a linear search for now.
+    uint findShortIndex(byte optName) {
+        result := NOINDEX;
+ 
+        for (uint i = 0; i < options.count(); i++) {
+            if (!options[i].short.isEmpty() && optName == options[i].short[0])
+                return i;
+        }
+ 
+        return result;
+    }
+ 
+    /// Gets the option with the specified name, matching either the long or 
+    /// short name.
+    /// If no option is found, throws a KeyError if 'throwException' is true, 
+    /// otherwise returns null.
+    Option getOption(String optName, bool throwException) {
+        index := NOINDEX;
+        Option option = null;
+ 
+        if (optName.size==1)
+            index = findShortIndex(optName[0]);
+        else
+            index = findLongIndex(optName);
+        if (index != NOINDEX) {
+            return options[index];
+        } else if (throwException) {
+            throw KeyError(FStr() `Option '$optName' not found`);
+        }
+        return option;
+    }
+    
+    /// Returns the option with the specified name, matching either long or 
+    /// short name.  Throws an exception if not 
+    /// found.
+    Option getOption(String optName) {
+        return getOption(optName, true);
+    }
+ 
+    /// @alias getOption(String).
+    Option oper [](String optName) {
+        return getOption(optName, true);
+    }
+ 
+    // Getters 
+    
+    /// Gets the integer value of the specified option which must be an 
+    /// integer option.  Throws InvalidArgumentError if not.
+    /// 'optName' can be the short or long name.
+    int getInt(String optName) {
+        Option opt = getOption(optName);
+        if (opt.type != CMD_INT) 
+            throw InvalidArgumentError(
+                FStr() I`Attempting to fetch non-integer '$optName' option as \
+                         an integer`
+            );
+        return strtoi(opt.value);
+    }
+ 
+    /// Gets the floating point value of the specified option which must be an
+    /// floating point option.  Throws InvalidArgumentError if not.
+    /// 'optName' can be the short or long name.
+    float getFloat(String optName) {
+        Option opt = getOption(optName);
+        if (opt.type != CMD_FLOAT) 
+            throw InvalidArgumentError(
+                FStr() I`Attempting to fetch non-float option '$optName' as a \
+                         float`
+            );
+        if (!opt.value) return 0.0;
+        return strtof(opt.value);
+    }
+ 
+    /// Parses a boolean value from 'value'.  Returns true if the value is 
+    /// "1", "t" or "true", false in all other cases.
+    @static bool __stringAsBool(String value) {
+        return value == "1" || value == "t" || value == "true";
+    }
 
-   // Forward declaration
-   StringArray parse(StringArray args, bool createUnknown);
+    /// Gets the boolean value of the specified option which must be an
+    /// boolean option.  Throws InvalidArgumentError if not.
+    /// 'optName' can be the short or long name.
+    bool getBool(String optName) {
+        Option opt = getOption(optName);
+        if (opt.type != CMD_BOOL) throw InvalidArgumentError(
+            FStr() `Attempting to fetch non-bool option '$optName' as a bool`
+        );
+       
+        return __stringAsBool(opt.value);
+    }
+ 
+    /// Returns the string value of the option.
+    /// 'optName' can be the short or long name.
+    String getString(String optName) {
+       return getOption(optName).value;
+    }
 
-   
-   /// Create a new CmdOptions object filled in with keys/values/types from the 
-   /// provided string
-   oper init(String createOpts): options() {
-      newArgs := wsplit(createOpts);
-      parse(newArgs, true);
-   }
-   
-#~    void sort() {
-#~       if (!sorted) {
-#~          options = options.sort();
-#~          cout `CmdOptions.sort()\n`;
-#~       }
-#~       sorted = true;
-#~    }
-
-   void add(Option newoption){
-      options.append(newoption);
-      sorted = false;
-   }
-   
-   void append(Option newoption) {
-      options.append(newoption);
-      sorted = false;
-   }
-
-   Option add(String long, String short, String desc, String value, uint type){
-      newoption := Option(long, short, desc, value, type);
-      add(newoption);
-      return newoption;
-   }
-
-   // Convenience method to add options based on a specification string
-   StringArray addFromString(String line){
-      new_argv := wsplit(line);
-      return parse(new_argv, true);
-   }
-   
-   // Linear search for now
-   uint findLongIndex(String optName){
-      result := NOINDEX;
-      Option opt;
-
-      for (uint i=0; i<options.count(); i++){
-         if (optName == options[i].long) return i;
-      }
-
-      return result;
-   }
-
-   uint findShortIndex(byte optName){
-      result := NOINDEX;
-
-      for (uint i=0; i<options.count(); i++)
-         if (!options[i].short.isEmpty() && optName == options[i].short[0])
-            return i;
-
-      return result;
-   }
-
-   // Generalized get
-   Option getOption(String optName, bool throwException){
-      index := NOINDEX;
-      Option option = null;
-
-      if (optName.size==1)
-         index = findShortIndex(optName[0]);
-      else
-         index = findLongIndex(optName);
-      if (index != NOINDEX) return options[index];
-      else if (throwException) {
-         throw IndexError(FStr() `Option '$optName' not found`);
-      }
-      return option;
-   }
-   
-   Option getOption(String optName){
-      return getOption(optName, true);
-   }
-
-   Option getOption(String optName){
-      return getOption(optName, true);
-   }
-
-   Option oper [](String optName){
-      return getOption(optName, true);
-   }
-
-   Option oper [](String optName){
-      return getOption(optName, true);
-   }
-
-
-   // Getters 
-   int getInt(String optName){
-      Option opt = getOption(optName);
-      if (opt.type != CMD_INT) throw InvalidArgumentError(FStr() `Attempting to fetch non-integer '$optName' option as an integer`);
-      return strtoi(opt.value);
-   }
-
-   float getFloat(String optName){
-      Option opt = getOption(optName);
-      if (opt.type != CMD_FLOAT) throw InvalidArgumentError(FStr() `Attempting to fetch non-float option '$optName' as a float`);
-      if (!opt.value) return 0.0;
-      return strtof(opt.value);
-
-   }
-
-   bool stringAsBool(String value){
-      if (value == "1" || value == "t" || value == "true")
-         return true;
-      else 
-         return false;
-   }
-
-   bool getBool(String optName){
-      Option opt = getOption(optName);
-      if (opt.type != CMD_BOOL) throw InvalidArgumentError(FStr() 
-         `Attempting to fetch non-bool option '$optName' as a bool`);
-      
-      return stringAsBool(opt.value);
-   }
-
-   String getString(String optName){
-      return getOption(optName).value;
-   }
-
-   Array[ParseInfo] _getParseInfo(StringArray args, uint argi){
-      Array[ParseInfo] parseInfo = {4};
-      Option opt;
-      arg := args[argi];
-      len := arg.size;
-      ParseInfo result = null;
-      if (len == 1) return parseInfo;
-      prefix := arg.slice(0,2);
-
-      if (prefix[0] == b'-' && len > 1) {
-         if (len > 2 && prefix[1] == b'-'){ // long option found
-            result = ParseInfo(null, null);
-            eqi := arg.lfind(b'=', 3);
-            if (eqi > 2){ // Found a value after = sign
-               result.name = arg.slice(2, eqi);
-               result.value = arg.slice(eqi+1);
+    /// Returns an array of ParseInfo objects for the given string array.
+    Array[ParseInfo] _getParseInfo(StringArray args, uint argi) {
+        Array[ParseInfo] parseInfo = {4};
+        Option opt;
+        arg := args[argi];
+        len := arg.size;
+        ParseInfo result = null;
+        if (len == 1) return parseInfo;
+        prefix := arg.slice(0,2);
+ 
+        if (prefix[0] == b'-' && len > 1) {
+            if (len > 2 && prefix[1] == b'-'){ // long option found
+                result = ParseInfo(null, null);
+                eqi := arg.lfind(b'=', 3);
+                if (eqi > 2) { // Found a value after = sign
+                    result.name = arg.slice(2, eqi);
+                    result.value = arg.slice(eqi+1);
+                } else {
+                    if (!((argVal := arg.getSuffix('--enable-')) is null)) {
+                        result.name = argVal;
+                        result.value = "b/1";
+                    } else if (!( (argVal := arg.getSuffix("disable-")) is 
+                                  null
+                                 )
+                               ) {
+                        result.name = argVal;
+                        result.value = "b/0";
+                    } else {
+                        result.name = arg.slice(2);
+                    }
+                }
+  
+                result.nadv = true;
+                parseInfo.append(result);
+            } else {
+                // short option
+                bool hasValue;
+                for (int i = 1; i < len; i++) { // process multiple 
+                    shortname := arg.substr(i, 1);
+                    hasValue = false;
+                    opt = getOption(shortname, false);
+  
+                    if (i == 1 || opt) {
+                        result = ParseInfo(null, null);
+                        result.name = shortname;
+                        parseInfo.append(result);
+  
+                        if (opt && opt.type != CMD_BOOL && len > i+1) {
+                            // gobble up the rest of the option
+                            result.value = arg.slice(i + 1);
+                            hasValue = true;
+                            if (i == 1) 
+                                result.nadv = true;
+                            else
+                                result.nadv = false; // set the no advance flag
+                            i += int(result.value.size);
+                        } else if (opt && opt.type == CMD_BOOL) {
+                            result.nadv = true;
+                        }
+                    } else if (len > i) {
+                        // the case -aARG
+                        result.value = arg.slice(i);
+                        hasValue = true;
+                        result.nadv = true; // set the no advance flag
+                        i += int(result.value.size);
+                    }
+                    if (argi < args.count() - 1 && args[argi + 1] != '-' && 
+                        !hasValue
+                        )
+                        result.value = args[argi+1];
+                }
             }
-            else {
-               if (arg.size > 9 && arg.substr(2, 7) == "enable-"){
-                  result.name = arg.slice(9);
-                  result.value = "b/1";
-               }
-               else if (arg.size > 10 && arg.substr(2, 8) == "disable-"){
-                  result.name = arg.slice(10);
-                  result.value = "b/0";
-               }
-               else 
-                  result.name = arg.slice(2);
+        }
+        return parseInfo;
+    }
+ 
+    /// Create a new option from a name/value pair
+    /// name   : name of the option
+    /// value  : string value of the option
+    ///          for CMD_BOOL options a null means the option is getting set
+    ///          i.e. true
+ 
+    ///          The value can use a shorthand to define unknown options
+    ///          b/value: a boolean with the given value, e.g. b/0, b/true, b/false
+    ///                   the values 1, t, and true are all true and
+    ///                   0, f, and false are all false
+    ///          i/value: integer values
+    ///          f/value: float values
+    ///          s/value: string value, this is the default if no type specifier
+    ///                   is given
+    ///          Uppercase type specifiers are also acceptable (B, I, F, S).
+    Option _addNewOption(String name, String value) {
+        if (!name)
+            throw InvalidArgumentError(
+                FStr() `Error: trying to create new option with null name`
+            );
+ 
+        uint newType = 100;
+        int startInd = 0;
+        Option opt = null;
+ 
+        // Check for special typed syntax
+        if (!value || value.size == 0)
+            newType = CMD_BOOL;
+        else if (value.size > 2 && value[1] == b'/') {
+            if (value[0] == b'B' || value[0] == b'b') 
+                newType = CMD_BOOL;
+            else if (value[0] == b'I' || value[0] == b'i') 
+                newType = CMD_INT;
+            else if (value[0] == b'F' || value[0] == b'f') 
+                newType = CMD_FLOAT;
+            else if (value[0] == b'S' || value[0] == b's') 
+                newType = CMD_STR;
+            startInd = 2;
+        } else {
+            // Default is a simple string option
+            newType = CMD_STR;
+        }
+ 
+        if (newType < 100 && name.size > 0) {
+            try {
+                if (value)
+                    opt = Option(name, name.slice(0, 1), "", 
+                                 value.slice(startInd), 
+                                 newType
+                                 );
+                else if (newType == CMD_BOOL)
+                    opt = Option(name, name.slice(0, 1), "", "1", newType);
+                else 
+                    throw InvalidArgumentError(
+                        FStr() `While setting new option '$(name):'`
+                    );
+            } catch (Exception ex) {
+                String newMsg =
+                    FStr() `$(ex.text) invalid new option format '$(value)'`;
+                throw InvalidArgumentError(newMsg);
             }
-
-            result.nadv = true;
-            parseInfo.append(result);
-         }
-         else {                            // short option
-            bool hasValue;
-            for (int i=1; i < len; i++){  // process multiple 
-               shortname := arg.substr(i,1);
-               hasValue=false;
-               opt = getOption(shortname, false);
-
-               if (i==1 || opt){
-                  result = ParseInfo(null, null);
-                  result.name = shortname;
-                  parseInfo.append(result);
-
-                  if (opt && opt.type != CMD_BOOL && len > i+1) { // gobble up the rest of the option
-                     result.value = arg.slice(i+1);
-                     hasValue = true;
-                     if (i==1) result.nadv = true;
-                     else result.nadv = false; // set the no advance flag
-                     i+=int(result.value.size);
-                  }
-                  else if (opt && opt.type == CMD_BOOL){
-                     result.nadv = true;
-                  }
-               }
-               else if (len > i) { // the case -aARG
-                  result.value = arg.slice(i);
-                  hasValue = true;
-                  result.nadv = true; // set the no advance flag
-                  i+=int(result.value.size);
-               }
-               if (argi < args.count()-1 && args[argi+1] != '-' && !hasValue){
-                  result.value = args[argi+1];
-               }
+            add(opt);
+            return opt;
+        } else {
+            throw Exception(FStr() `Unrecoverable error in creating new option`);
+        }
+    }
+    
+    /// Parse options out of 'args'.
+    StringArray parse(StringArray args){
+        return parse(args, false);
+    }
+ 
+    /// Parse options out of 'args'.
+    /// If 'createUnknown' is true, allow unknown options and add them to the 
+    /// result.
+    StringArray parse(StringArray args, bool createUnknown){
+        StringArray unparsed={args.count()};
+        uint argi;
+        Option opt;
+        bool isnew = false, skipping = false;
+        String name, value;
+        Array[ParseInfo] parseValues;
+ 
+        for (argi = 0; argi < args.count(); argi++) {
+            opt = null;
+            name = null;
+            bool nadv = false;
+ 
+            //  Skip everything after a --
+            if (args[argi] == "--") {
+                skipping = true;
+                continue;
             }
-         }
-      }
-      return parseInfo;
-   }
-
-   /// Create a new option from a name/value pair
-   /// name   : name of the option
-   /// value  : string value of the option
-   ///          for CMD_BOOL options a null means the option is getting set
-   ///          i.e. true
-
-   ///          The value can use a shorthand to define unknown options
-   ///          b/value: a boolean with the given value, e.g. b/0, b/true, b/false
-   ///                   the values 1, t, and true are all true and
-   ///                   0, f, and false are all false
-   ///          i/value: integer values
-   ///          f/value: float values
-   ///          s/value: string value, this is the default if no type specifier
-   ///                   is given
-   ///          Uppercase type specifiers are also acceptable (B, I, F, S).
-   Option _addNewOption(String name, String value){
-      if (!name)
-         throw InvalidArgumentError(FStr() `Error: trying to create new option with null name`);
-
-      uint newType = 100;
-      int startInd = 0;
-      Option opt = null;
-
-      // Check for special typed syntax
-      if (!value || value.size==0) newType = CMD_BOOL;
-      else if (value.size > 2 && value[1] == b'/'){
-         if (value[0] == b'B' || value[0] == b'b') newType = CMD_BOOL;
-         else if (value[0] == b'I' || value[0] == b'i') newType = CMD_INT;
-         else if (value[0] == b'F' || value[0] == b'f') newType = CMD_FLOAT;
-         else if (value[0] == b'S' || value[0] == b's') newType = CMD_STR;
-         startInd = 2;
-      }
-      else // Default is a simple string option
-         newType = CMD_STR;
-
-      if (newType<100 && name.size>0){
-         try {
-            if (value)
-               opt = Option(name, name.slice(0, 1), "", 
-                            value.slice(startInd), 
-                            newType
+ 
+            if (skipping) {
+                unparsed.append(args[argi]);
+                continue;
+            }
+ 
+            // create array of parseInfo objects
+            parseValues = _getParseInfo(args, argi);
+ 
+            for (parseInfo :in parseValues) {
+                name = parseInfo.name;
+                value = parseInfo.value;
+                nadv = parseInfo.nadv;
+ 
+                isnew = false;
+                if (name) {
+                    // Look up 
+                    opt = getOption(name, !createUnknown);
+                    if (!opt)
+                        isnew = true;
+ 
+                    if (opt) {
+                        if (!value || opt.type == CMD_BOOL) {
+                            if (opt.type == CMD_BOOL) {
+                                // ignore value, we'll parse it next
+                                opt.setString("1");
+                                continue;
+                            }
+                            throw InvalidArgumentError(
+                                FStr() I`Option $(args[argi]) given without a \
+                                         value`
                             );
-            else if (newType == CMD_BOOL)
-               opt = Option(name, name.slice(0, 1), "", "1", newType);
-            else throw InvalidArgumentError(FStr() `While setting new option '$(name):'`);
-         } catch (Exception ex){
-            String newMsg = FStr() `$(ex.text) invalid new option format '$(value)'`;
-            throw InvalidArgumentError(newMsg);
-         }
-         add(opt);
-         return opt;
-      }
-      else throw Exception(FStr() `Unrecoverable error in creating new option`);
-   }
-   
-
-   StringArray parse(StringArray args){
-      return parse(args, false);
-   }
-
-   // Parse the array obtained from sys.argv
-   StringArray parse(StringArray args, bool createUnknown){
-      StringArray unparsed={args.count()};
-      uint argi;
-      Option opt;
-      bool isnew = false, skipping = false;
-      String name, value;
-      Array[ParseInfo] parseValues;
-
-      for (argi=0; argi < args.count(); argi++){
-         opt = null;
-         name = null;
-         bool nadv = false;
-
-         //  Skip everything after a --
-         if (args[argi] == "--") {
-            skipping = true;
-            continue;
-         }
-
-         if (skipping) {
-            unparsed.append(args[argi]);
-            continue;
-         }
-
-         // create array of parseInfo objects
-         parseValues = _getParseInfo(args, argi);
-
-         for (parseInfo :in parseValues){
-            name = parseInfo.name;
-            value = parseInfo.value;
-            nadv = parseInfo.nadv;
-
-            isnew = false;
-            if (name) {
-               // Look up 
-               opt = getOption(name, !createUnknown);
-               if (!opt)
-                  isnew = true;
-
-               if (opt){
-                  if (!value || opt.type == CMD_BOOL){
-                     if (opt.type == CMD_BOOL){ // ignore value, we'll parse it next
-                        opt.setString("1");
-                        continue;
-                     }
-                     throw InvalidArgumentError(FStr() `Option $(args[argi]) given without a value`);
-                  } else {
-                     if (isnew) opt = _addNewOption(name, value);
-                     else opt.setString(value);
-                  }
-               }
-               else if (isnew){
-                  _addNewOption(name, value); // Creates the option and sets the value
-               }
+                        } else {
+                            if (isnew) 
+                                opt = _addNewOption(name, value);
+                            else 
+                                opt.setString(value);
+                        }
+                    } else if (isnew) {
+                        // Creates the option and sets the value
+                        _addNewOption(name, value); 
+                    }
+                }
             }
-         }
-
-         if (!name) {
-            unparsed.append(args[argi]);
-         }
-         else if (value && !nadv) {
-            argi++; // Skip next value
-         }
-      }
-      return unparsed;
-   }
-
-   void dump(){
-      for (uint i = 0; i < options.count(); i++){
-         Option opt = options[i];
-         if (opt.value)
-            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = $(opt.value)\n`;
-         else
-            cout `$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = (null)\n`;
-      }
-   }
-
-   void formatTo(Formatter fmt) {
-      fmt `[`;
-      bool first = true;
-      for (elem :in options) {
-         if (!first)
-            fmt `, `;
-         else
-            first = false;
-         fmt.format(elem.getRepr());
-      }
-      fmt `]`;
-   }
-
-   /// Write a usage message to the writer.
-   /// intro: if non-null, this is an intro message written prior to the option 
-   /// text.
-   void writeUsage(Writer out, String intro) {
-      if (intro) { out.write(intro); out.write('\n'); }
-      uint i, maxSpecLen = 0;
-      StringArray lineSpecs = {}, lineTexts = {};
-      
-
-      for (i = 0; i < options.count(); i++){
-         Option opt = options[i];
-         String value = opt.value;
-         String lineStart = {};
-         if (!value)
-            value = "null";
-         if (opt.type != CMD_BOOL){
-            if (opt.short)
-               lineStart += FStr()` -$(opt.short) ARG`;
-            if (opt.long)
-               lineStart += FStr()` --$(opt.long)=ARG`;
-            lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
-                             FStr() `($(typeNames[opt.type]): $(value))\n`);
-         }
-         else {
-            if (opt.short)
-               lineStart += FStr()` -$(opt.short)`;
-            if (opt.long)
-               lineStart += FStr() ` --$(opt.long)`;
-            
-            lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
-                             FStr() `(bool: $(stringAsBool(value)))`);
-
-         }
-         lineSpecs.append(lineStart);
-         if (lineStart.size > maxSpecLen) maxSpecLen = lineStart.size;
-      }
-      
-      StringArray helpLines;
-      for (i = 0; i < options.count(); i++){
-         out.write(ljust(lineSpecs[i], maxSpecLen + 1));
-         helpLines = split(lineTexts[i], b'\n');
-         out.write(helpLines[0]+"\n");
-         for (uint j = 1; j < helpLines.count(); j++) {
-            if (helpLines[j].size > 0){
-               out.write(" "*(maxSpecLen + 2));
-               out.write(helpLines[j]+"\n");
+ 
+            if (!name) {
+                unparsed.append(args[argi]);
+            } else if (value && !nadv) {
+                argi++; // Skip next value
             }
-         }
-      }
-
-      if (i>0) out.write('\n');
-   }
-
-   // Generate a usage string
-   String createUsage(String intro){
-      StringFormatter fmt = {};
-      writeUsage(fmt, null);
-      return fmt.string();
-   }
-   
-   // Convenience method to print usage string to stdout
-   void printUsage(String intro){
-      usage := createUsage(intro);
-      cout `$(usage)`;
-   }
+        }
+        return unparsed;
+    }
+ 
+    /// Dump the options list to standard output.
+    void dump() {
+        for (uint i = 0; i < options.count(); i++) {
+            Option opt = options[i];
+            if (opt.value)
+                cout I`$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = \
+                       $(opt.value)\n`;
+            else
+                cout I`$(opt.short)/$(opt.long) [$(typeNames[opt.type])] = \
+                       (null)\n`;
+        }
+    }
+ 
+    void formatTo(Formatter fmt) {
+        fmt `[`;
+        bool first = true;
+        for (elem :in options) {
+            if (!first)
+                fmt `, `;
+            else
+                first = false;
+            fmt.format(elem.getRepr());
+        }
+        fmt `]`;
+    }
+ 
+    /// Write a usage message to the writer.
+    /// intro: if non-null, this is an intro message written prior to the option 
+    /// text.
+    void writeUsage(Writer out, String intro) {
+        if (intro) out.write(intro); out.write('\n');
+        uint i, maxSpecLen = 0;
+        StringArray lineSpecs = {}, lineTexts = {};
+ 
+        for (i = 0; i < options.count(); i++) {
+            Option opt = options[i];
+            String value = opt.value;
+            String lineStart = {};
+            if (!value)
+                value = "null";
+            if (opt.type != CMD_BOOL) {
+                if (opt.short)
+                    lineStart += FStr()` -$(opt.short) ARG`;
+                if (opt.long)
+                    lineStart += FStr()` --$(opt.long)=ARG`;
+                lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
+                                  FStr() `($(typeNames[opt.type]): $(value))\n`
+                                 );
+            } else {
+                if (opt.short)
+                    lineStart += FStr()` -$(opt.short)`;
+                if (opt.long)
+                    lineStart += FStr() ` --$(opt.long)`;
+             
+                lineTexts.append(opt.desc + (opt.desc.size > 0 ? "  ": "") + 
+                                  FStr() `(bool: $(__stringAsBool(value)))`
+                                 );
+ 
+            }
+            lineSpecs.append(lineStart);
+            if (lineStart.size > maxSpecLen)
+                maxSpecLen = lineStart.size;
+        }
+       
+        StringArray helpLines;
+        for (i = 0; i < options.count(); i++) {
+            out.write(ljust(lineSpecs[i], maxSpecLen + 1));
+            helpLines = split(lineTexts[i], b'\n');
+            out.write(helpLines[0]+"\n");
+            for (uint j = 1; j < helpLines.count(); j++) {
+                if (helpLines[j].size > 0) {
+                    out.write(" " * (maxSpecLen + 2));
+                    out.write(helpLines[j] + "\n");
+                }
+            }
+        }
+ 
+        if (i > 0) out.write('\n');
+    }
+ 
+    /// Generate a usage string.
+    String createUsage(String intro) {
+        StringFormatter fmt = {};
+        writeUsage(fmt, null);
+        return fmt.string();
+    }
+    
+    /// Convenience method to print usage string to stdout
+    void printUsage(String intro){
+        usage := createUsage(intro);
+        cout `$(usage)`;
+    }
 }
