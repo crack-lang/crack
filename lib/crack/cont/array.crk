@@ -8,9 +8,10 @@
 # 
 # Generic array implementation
 
-import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, Formatter;
-import crack.io cout, Writer, FStr, StandardFormatter;
 import crack.algorithm QuickSort;
+import crack.io cout, FStr, StandardFormatter, Writer;
+import crack.lang cmp, free, AssertionError, Formatter, IndexError,
+    InvalidArgumentError;
 
 # we use poormac here because the standard macro mechanism depends on this 
 # module.
@@ -19,9 +20,7 @@ import crack.algorithm QuickSort;
 void _bind(Object obj) { obj.oper bind(); }
 void _release(Object obj) { obj.oper release(); }
 bool _isObject(Object obj) { return true; }
-bool _isNull(Object obj) {
-    return (obj is null);
-}
+bool _isNull(Object obj) { return (obj is null); }
 
 @define _nobind 1
     void _bind($1 i) { }
@@ -48,27 +47,30 @@ $$
 @_nobind byteptr
 
 ## An Array is a sequence backed by a low-level array.  It supports the 
-## bracket operators and adding items at the end.
+## bracket operators, iteration, and insertion and append of new elements.
+##
+## Array supports negative indexes.  a[-1] is the last item in the array 'a'.
 class Array[Elem] {
 
     @define _setItem 1
         if ($1 >= __size)
             throw IndexError(FStr() I`Index out of range in Array.oper []= \
-                                    (index = $index, size = $__size)`);
+                                      (index = $index, size = $__size)`
+                             );
             
         tmp := __rep[$1];
         __rep[$1] = elem;
         _bind(elem);
         _release(tmp);
         return elem;
-    
     $$
     
     @define _getItem 1
         if ($1 >= __size) {
             uint _i = $1;
             throw IndexError(FStr() I`Index out of range in Array.oper [] \
-                                    (index = $_i, size = $__size)`);
+                                      (index = $_i, size = $__size)`
+                             );
         }
             
         return __rep[$1];
@@ -83,7 +85,8 @@ class Array[Elem] {
             # the unsigned case) if we want to report the index correctly.
             if (i >= __size)
                 throw IndexError(FStr() I`Index out of range in Array.oper \
-                                        []= (index = $index, size = $__size)`);
+                                          []= (index = $index, size = $__size)`
+                                 );
                                 
         } else {
             i = uint(index);
@@ -93,41 +96,40 @@ class Array[Elem] {
     array[Elem] __rep;
     uint __cap, __size;
 
-    @final
-    Elem oper []=(int index, Elem elem) {
+    ## Sets the element at the specified index.  There must already be an 
+    ## element at the index.
+    @final Elem oper []=(int index, Elem elem) {
         @_fixIntIndex        
         @_setItem i
     }
 
-    @final
-    Elem oper []=(uint index, Elem elem) { @_setItem index }
+    ## Sets the element at the specified index.  There must already be an 
+    ## element at the index.
+    @final Elem oper []=(uint index, Elem elem) { @_setItem index }
 
-    @final
-    uint count() { return __size; }
+    ## Returns the number of elements in the array.
+    @final uint count() { return __size; }
 
-    @static bool elemIsNull(Elem e) { return _isNull(e); }
-
-    @final
-    Elem oper [](int index) {
+    ## Returns the element at the specified index.
+    @final Elem oper [](int index) {
         @_fixIntIndex
         @_getItem i
     }
 
-    @final
-    Elem oper [](uint index) {
+    ## Returns the element at the specified index.
+    @final Elem oper [](uint index) {
         @_getItem index
     }
 
-    @final
-    Elem last() {
+    ## Returns the last element in the array.
+    @final Elem last() {
         if (!__size)
             throw IndexError('last() called on an empty array.');
         return __rep[__size - 1]; 
     }
     
-    ## convert negative indexes.
-    @final
-    int __adjust(int index) {
+    ## Converts a negative (end-relative) index to a positive one.
+    @final int __adjust(int index) {
         if (index < 0)
             index = __size + index;
         return index;
@@ -164,19 +166,22 @@ class Array[Elem] {
             return 0;
     }
 
+    ## The iterator class.
     class ArrayIter {
         Array __arr;
         uint __index;
         bool __first = true;
-    
+
         oper init(Array arr) : __arr = arr {}
 
+        ## Returns the element referenced by the iterator.
         Elem elem() {
             return __arr[__index];
         }
 
-        @final
-        bool next() {
+        ## Forwards the iterator to the next element, returns true if it is 
+        ## still valid, false if it has fallen off the end.
+        @final bool next() {
             cnt := __arr.count();
             if (__index < cnt) {
                 __index = __index + 1;
@@ -186,36 +191,34 @@ class Array[Elem] {
             }
         }
 
-        @final
-        bool nx() {
-            if (__first) {
-                __first = false;
-                return __index < __arr.count();
-            } else {
-                return next();
-            }
-        }
-        
+        ## Returns the index of the element currently referenced by the 
+        ## iterator.
         @final uint _getIndex() { return __index; }
-        
+
+        ## Returns true if the iterator is valid.
         bool isTrue() {
             return __index < __arr.count();
         }
     }
-    
+
+    ## Constructs an array given its initial capacity.    
     oper init(uint initCapacity) :
         __rep = array[Elem](initCapacity),
         __cap = initCapacity,
         __size = 0 {
     }
-    
+
+    ## Constructs an array with the default initial capacity (currently 16).    
     oper init() : 
         __rep = array[Elem](16), 
         __cap = 16,
         __size = 0 {
     }
 
-    oper init(array[Elem] rep, uint cap, uint size, bool takeOwnership):
+    ## Constructs and array from an existing low-level representation ('rep') 
+    ## of the specified size.  If 'takeOwnership' is true, takes ownership of 
+    ## the representation, otherwise makes a copy.
+    oper init(array[Elem] rep, uint cap, uint size, bool takeOwnership) :
         __rep = rep,
         __cap(cap),
         __size(size) {
@@ -231,7 +234,9 @@ class Array[Elem] {
         }
     }
 
-    array[Elem] data() {
+    ## Returns the underlying array representation. 
+    ## @unsafe
+    @final array[Elem] data() {
         return __rep;
     }
     
@@ -248,7 +253,7 @@ class Array[Elem] {
 
     ## Increase the capacity of the array (doesn't increase the size).  
     ## newCapacity must be greater than the existing capacity.
-    void grow(uint newCapacity) {
+    @final void grow(uint newCapacity) {
         uint newCap = newCapacity;
         if (newCap < __cap)
             throw InvalidArgumentError('Array.grow() - decreasing capacity');
@@ -264,6 +269,7 @@ class Array[Elem] {
         __cap = newCap;
     }
 
+    ## Returns a copy of the array.
     Array clone() {
         newRep := array[Elem](__cap);
         
@@ -274,8 +280,8 @@ class Array[Elem] {
         return Array(newRep, __cap, __size, true);
     }
 
-    @final
-    void append(Elem elem) {
+    ## Append the element to the array.
+    @final void append(Elem elem) {
         if (__size == __cap)
             grow(__cap * 2);
         __rep[__size++] = elem;
@@ -299,7 +305,8 @@ class Array[Elem] {
         __size += other.__size;
     }
 
-    Elem pop() {
+    ## Remove the last element from the array and return it.
+    @final Elem pop() {
         if (__size) {
             result := __rep[__size - 1];
             _release(__rep[--__size]);
@@ -309,35 +316,42 @@ class Array[Elem] {
         }
     }
 
-    void sort() {
+    ## Sort the array (using quicksort).
+    @final void sort() {
         QuickSort[Array].sort(this);
     }
 
-    void sort(function[int, Elem, Elem] cmp) {
+    ## Sort the array with the given comparison function.
+    @final void sort(function[int, Elem, Elem] cmp) {
         QuickSort[Array].sort(this, cmp);
     }
 
-    Array sorted() {
+    ## Returns a sorted copy of the array.
+    @final Array sorted() {
         Array newArray = this.clone();
         QuickSort[Array].sort(newArray);
         return newArray;
     }
 
-    Array sorted(function[int, Elem, Elem] cmp) {
+    ## Returns a copy of the array sorted with the given comparison function.
+    @final Array sorted(function[int, Elem, Elem] cmp) {
         Array newArray = this.clone();
         QuickSort[Array].sort(newArray, cmp);
         return newArray;
     }
 
-    bool contains(Elem e) {
-        for (uint i = 0; i < __size; i++){
+    ## Returns true if the array contains the specified element.
+    @final bool contains(Elem e) {
+        for (uint i = 0; i < __size; i++) {
             if (cmp(e, __rep[i]) == 0)
                 return true;
         }
         return false;
     }
 
-    void map(function[Elem, Elem] f){
+    ## Applies the function 'f' to every element of the array.
+    ## 'for i < this.count(), this[i] = f(this[i])'
+    @final void map(function[Elem, Elem] f) {
         Elem newElem;
         for (uint i = 0; i < __size; i++){
             newElem = f(__rep[i]);
@@ -346,7 +360,8 @@ class Array[Elem] {
         }
     }
 
-    Array mapped(function[Elem, Elem] f){
+    ## Returns a copy of the array with f applied to all elements (see map()).
+    @final Array mapped(function[Elem, Elem] f){
         newRep := array[Elem](__cap);
         Array newArray = Array(newRep, __cap, __size, true);
         Elem newElem;
@@ -369,19 +384,21 @@ class Array[Elem] {
         return val;
     }
 
+    ## Do a reduce on tha array.  'for elem in array, result = f(result, elem)'
     @final Elem reduce(function[Elem, Elem, Elem] f, Elem initialValue) {
         return __reduce(f, initialValue, 0);
     }
 
-    @final
-    Elem reduce(function[Elem, Elem, Elem] f){
+    ## Do a reduce on tha array.  'for elem in array, result = f(result, elem)'
+    ## Uses the first element as an initial value.
+    @final Elem reduce(function[Elem, Elem, Elem] f) {
         if (__size == 0) throw AssertionError(I"reduce of zero-length Array \
                                                 is undefined");
         return __reduce(f, __rep[0], 1);
     }
 
     ## Remove all elements from the array where f(elem) returns false.
-    void filter(function[bool, Elem] f) {
+    @final void filter(function[bool, Elem] f) {
         uint ns = 0;
         for (uint i = 0; i < __size; i++) {
             if (f(__rep[i]))
@@ -397,24 +414,29 @@ class Array[Elem] {
         __size = ns;
     }
 
-    Array filtered(function[bool, Elem] f) {
+    ## Returns a copy of the array with all elements where f(elem) returns 
+    ## false removed.
+    @final Array filtered(function[bool, Elem] f) {
         retval := Array();
         for (uint i = 0; i < __size; i++)
             if (f(__rep[i])) retval.append(__rep[i]);
         return retval;
     }
 
-    void _setSize(uint newSize){
+    ## Sets the new size of the array.
+    @final void _setSize(uint newSize) {
         if (newSize > __cap)
             throw IndexError('Index out of range in Array.setSize');
         __size = newSize;
     }
 
+    ## Returns an iterator over the array.
     @final ArrayIter iter() {
         return ArrayIter(this);
     }
 
-    uint capacity() {
+    ## returns the capacity of the array.
+    @final uint capacity() {
         return __cap;
     }
 
@@ -431,7 +453,7 @@ class Array[Elem] {
         fmt `]`;
     }
 
-    Array _subarray(uint pos, uint len) {
+    @final Array _subarray(uint pos, uint len) {
         if (pos > __size || pos + len > __size)
             throw IndexError(FStr() I`Sub-array index out of range \
                                       (pos = $pos, len = $len, size = $__size`
@@ -450,8 +472,9 @@ class Array[Elem] {
         return Array(newRep, newCap, len, true);
     }
 
-
-    Array subarray(int pos, uint len) {
+    
+    ## Returns a subset of the array of length 'len' beginning at 'pos'.
+    @final Array subarray(int pos, uint len) {
         # adjust a negative position
         if (pos < 0) {
             pos = int(__size) + pos;
@@ -466,11 +489,15 @@ class Array[Elem] {
         return _subarray(uint(pos), len);
     }
 
-    Array subarray(uint pos, uint len) {
+    ## Returns a subset of the array of length 'len' beginning at 'pos'.
+    @final Array subarray(uint pos, uint len) {
         return _subarray(pos, len);
     }
 
-    Array subarray(int pos) {
+    
+    ## Returns a subset of the array beginning at 'pos' and extending to the 
+    ## end of the array.
+    @final Array subarray(int pos) {
         # adjust a negative position
         if (pos < 0)
             pos = int(__size) + pos;
@@ -478,11 +505,15 @@ class Array[Elem] {
         return _subarray(uint(pos), __size - uint(pos));
     }
 
-    Array subarray(uint pos) {
+    ## Returns a subset of the array beginning at 'pos' and extending to the 
+    ## end of the array.
+    @final Array subarray(uint pos) {
         return _subarray(pos, __size - pos);
     }
 
-    Array slice(int start, int end) {
+    ## Returns a slice of the array beginning at the start index and ending at 
+    ## the element before the end index.
+    @final Array slice(int start, int end) {
         # adjust negative offsets
         if (start < 0) {
             start = int(__size) + start;
@@ -511,7 +542,9 @@ class Array[Elem] {
         return _subarray(uint(start), uint(end - start));
     }
 
-    Array slice(uint start, uint end) {
+    ## Returns a slice of the array beginning at the start index and ending at 
+    ## the element before the end index.
+    @final Array slice(uint start, uint end) {
         # bounds checking
         if (end < start)
             throw IndexError('Start of slice is after end.');
@@ -519,8 +552,9 @@ class Array[Elem] {
         return _subarray(start, end - start);
     }
 
-
-    Array slice(int start) {
+    ## Returns a slice of the array beginning at the start index and ending at 
+    ## the end of the array.
+    @final Array slice(int start) {
         # adjust negative offsets
         if (start < 0)
             start = int(__size) + start;
@@ -565,6 +599,7 @@ class Array[Elem] {
         --__size;
     }
 
+    ## Delete all elements in the array, setting the size to 0.
     @final void clear() {
         if (!__size) return;
         for (uintz i = 0; i < __size; ++i) {
@@ -575,7 +610,9 @@ class Array[Elem] {
         __size = 0;
     }
 
-    void insert(int index, Elem elem) {
+    ## Insert the element at the specified index (elements after the index are 
+    ## shifted up one slot).
+    @final void insert(int index, Elem elem) {
         index = __adjust(index);
         if (uint(index) > __size)
             throw IndexError('Index out of range in Array.insert()');
@@ -593,7 +630,8 @@ class Array[Elem] {
         ++__size;
     }
 
-    void insert(ArrayIter i, Elem elem) {
+    ## Insert the element at the position of the iterator.
+    @final void insert(ArrayIter i, Elem elem) {
         insert(i._getIndex(), elem);
     }
     
