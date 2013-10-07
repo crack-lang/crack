@@ -1,10 +1,3 @@
-// Copyright 2011 Google Inc.
-// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
-//   This Source Code Form is subject to the terms of the Mozilla Public
-//   License, v. 2.0. If a copy of the MPL was not distributed with this
-//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
@@ -22,6 +15,11 @@ typedef struct tm InternalDate;
 
 InternalDate *crk_create_date(){
    return (InternalDate *)calloc(1, sizeof(InternalDate));
+}
+
+int64_t crk_getSeconds(InternalDate *d) {
+   // have to wrap this to correctly convert from time_t to int64.
+   return mktime(d);
 }
 
 InternalDate *crk_localtime(InternalDate *d, int64_t t){
@@ -90,8 +88,10 @@ void crack_runtime_time_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_bool = mod->getBoolType();
     crack::ext::Type *type_byteptr = mod->getByteptrType();
     crack::ext::Type *type_byte = mod->getByteType();
+    crack::ext::Type *type_int16 = mod->getInt16Type();
     crack::ext::Type *type_int32 = mod->getInt32Type();
     crack::ext::Type *type_int64 = mod->getInt64Type();
+    crack::ext::Type *type_uint16 = mod->getUint16Type();
     crack::ext::Type *type_uint32 = mod->getUint32Type();
     crack::ext::Type *type_uint64 = mod->getUint64Type();
     crack::ext::Type *type_int = mod->getIntType();
@@ -126,39 +126,66 @@ void crack_runtime_time_cinit(crack::ext::Module *mod) {
         type_InternalDate->addInstVar(type_byteptr, "tm_zone",
                                 CRACK_OFFSET(InternalDate, tm_zone));
         f = type_InternalDate->addConstructor("init",
-                        (void *)crk_create_date
-                );
+                            (void *)crk_create_date
+                        );
 
-        f = type_InternalDate->addMethod(type_int64, "getSeconds",
-                        (void *)mktime
-                );
 
-        f = type_InternalDate->addMethod(type_void, "setLocalSeconds",
-                        (void *)crk_localtime
-                );
-            f->addArg(type_int64, "t");
+    f = type_InternalDate->addMethod(
+        type_int64, 
+        "getSeconds",
+        (void *)crk_getSeconds
+    );
 
-        f = type_InternalDate->addMethod(type_void, "setLocalNow",
-                        (void *)crk_localtime_now
-                );
 
-        f = type_InternalDate->addMethod(type_void, "setUTCSeconds",
-                        (void *)crk_gmtime
-                );
-            f->addArg(type_int64, "t");
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "setLocalSeconds",
+        (void *)crk_localtime
+    );
+    f->addArg(type_int64, 
+              "t"
+              );
 
-        f = type_InternalDate->addMethod(type_void, "setUTCNow",
-                        (void *)crk_gmtime_now
-                );
 
-        f = type_InternalDate->addMethod(type_void, "setEpoch",
-                        (void *)crk_epoch
-                );
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "setLocalNow",
+        (void *)crk_localtime_now
+    );
 
-        f = type_InternalDate->addMethod(type_void, "_toBufferRaw",
-                        (void *)asctime_r
-                );
-            f->addArg(type_byteptr, "buf");
+
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "setUTCSeconds",
+        (void *)crk_gmtime
+    );
+    f->addArg(type_int64, 
+              "t"
+              );
+
+
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "setUTCNow",
+        (void *)crk_gmtime_now
+    );
+
+
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "setEpoch",
+        (void *)crk_epoch
+    );
+
+
+    f = type_InternalDate->addMethod(
+        type_void, 
+        "_toBufferRaw",
+        (void *)asctime_r
+    );
+    f->addArg(type_byteptr, 
+              "buf"
+              );
 
     type_InternalDate->finish();
 

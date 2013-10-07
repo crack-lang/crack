@@ -20,10 +20,21 @@
    @inject '#include <stdio.h>\n'
 
    @inject '
+#ifdef __APPLE__
+#include "crt_externs.h" // _NSGetEnviron
+#else
+extern char **environ;
+#endif
+
 typedef struct tm InternalDate;
 
 InternalDate *crk_create_date(){
    return (InternalDate *)calloc(1, sizeof(InternalDate));
+}
+
+int64_t crk_getSeconds(InternalDate *d) {
+   // have to wrap this to correctly convert from time_t to int64.
+   return mktime(d);
 }
 
 InternalDate *crk_localtime(InternalDate *d, int64_t t){
@@ -77,7 +88,13 @@ char *crk_ctime_r(int64_t t, char * buf){
 
    @inject '
 char **get_environ(){
-   return environ;
+#ifdef __APPLE__
+    char ***envp_ = _NSGetEnviron();
+    char **envp = *envp_;
+#else
+    char **envp = ::environ;
+#endif
+   return envp;
 }
 '
 
@@ -91,7 +108,7 @@ char **get_environ(){
       @cname crk_create_date
       oper init();
 
-      @cname mktime
+      @cname crk_getSeconds
       int64 getSeconds();
 
       @cname crk_localtime
@@ -139,6 +156,7 @@ char **get_environ(){
    byteptr ctime(int64 seconds, byteptr buf);
 
    uintz strftime(byteptr s, uintz max, byteptr format, InternalDate d);
+   byteptr strptime(byteptr s, byteptr format, InternalDate d);
 
    array[byteptr] get_environ();
    int putenv(byteptr keyvalue);
