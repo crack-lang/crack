@@ -30,6 +30,26 @@ void Namespace::storeDef(VarDef *def) {
     orderedForCache.push_back(def);
 }
 
+void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs) {
+    for (VarDefMap::const_iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         ) {
+        TypeDef *def = TypeDefPtr::rcast(iter->second);
+        if (def) {
+            // Ignore aliases and stuff that's not serializable.
+            if (def->getOwner() == this && 
+                def->isSerializable(this, iter->first)
+                )
+                typeDefs.push_back(def);
+        } else {
+            SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
+                       "found a non-type namespace: " << iter->first
+                       );
+        }
+    }
+}
+
 VarDef *Namespace::asVarDef() {
     // By default, namespaces are not VarDefs.
     return 0;
@@ -221,6 +241,20 @@ void Namespace::dump() {
     dump(cerr, "");
 }
 
+void Namespace::serializeTypeDecls(Serializer &serializer) {
+    // We build a vector so we can determine the count up front.
+    vector<TypeDef *> typeDefs;
+    getTypeDefs(typeDefs);
+    
+    serializer.write(typeDefs.size(), "#decls");
+    for (vector<TypeDef *>::const_iterator iter = typeDefs.begin();
+         iter != typeDefs.end();
+         ++iter
+         ) {
+        (*iter)->serializeDecl(serializer);
+    }
+}
+
 void Namespace::serializeDefs(Serializer &serializer) const {
     
     // count the number of definitions to serialize
@@ -246,6 +280,15 @@ void Namespace::serializeDefs(Serializer &serializer) const {
         else
             i->second->serialize(serializer, true, this);
     }
+}
+
+int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
+    unsigned count = deser.readUInt("#decls");
+    for (int i = 0; i < count; ++i)
+        // This triggers the side-effect of populating the deserializer's 
+        // object registry with an instance of the type.
+        nextId = TypeDef::deserializeDecl(deser, nextId);
+    return nextId;
 }
 
 void Namespace::deserializeDefs(Deserializer &deser) {
@@ -279,7 +322,7 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 addDef(OverloadDef::deserialize(deser, this).get());
                 break;
             case Serializer::typeId:
-                TypeDef::deserialize(deser);
+                TypeDef::deserializeTypeDef(deser);
                 break;
             case Serializer::constVarId:
                 addDef(ConstVarDef::deserialize(deser).get());

@@ -150,6 +150,7 @@ void ModuleDef::serialize(Serializer &serializer) {
 
     // write all of the symbols
     serializer.digestEnabled = true;
+    Namespace::serializeTypeDecls(serializer);
     Namespace::serializeDefs(serializer);
 
     // write all of the exports
@@ -254,6 +255,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     deser.context->ns = mod.get();
     deser.digestEnabled = true;
+    mod->deserializeTypeDecls(deser, 1);
     mod->deserializeDefs(deser);
 
     // deserialize exports

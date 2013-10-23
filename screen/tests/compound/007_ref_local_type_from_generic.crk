@@ -1,0 +1,30 @@
+%%TEST%%
+referencing a local type from a generic in meta-data
+%%ARGS%%
+%%FILE%%
+# This verifies a bug fix: when referencing a local type from an aliased
+# generic, if the local type referenced the aliased generic we died because
+# the aliased generic's object id hadn't been registered with the serializer
+# and there was no way to register it with the serializer in advance of
+# parsing its parameter types.  So we restructured meta-data to always declare
+# types in advance.
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', "class A[T] {}");
+test.main(I"
+    import mod A;
+    class Y {
+        void f(A[Y] args) {}
+    }
+    puts('ok');
+    ");
+test.run();
+test.rmCacheFiles('.*');
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%

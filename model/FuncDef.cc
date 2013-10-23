@@ -26,7 +26,7 @@ using namespace model;
 using namespace std;
 
 void FuncDef::Spec::deserialize(Deserializer &deser) {
-    returnType = TypeDef::deserialize(deser);
+    returnType = TypeDef::deserializeRef(deser);
     flags = static_cast<Flags>(deser.readUInt("flags"));
 
     args = deserializeArgs(deser);
@@ -35,7 +35,7 @@ void FuncDef::Spec::deserialize(Deserializer &deser) {
     // receiverType
     CRACK_PB_BEGIN(deser, 256, optional)
         CRACK_PB_FIELD(1, ref)
-            receiverType = TypeDef::deserialize(optionalDeser);
+            receiverType = TypeDef::deserializeRef(optionalDeser);
             break;
         CRACK_PB_FIELD(2, varInt)
             vtableSlot = optionalDeser.readUInt("vtableSlot");

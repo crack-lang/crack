@@ -1080,16 +1080,78 @@ void TypeDef::serializeExtern(Serializer &serializer) const {
     VarDef::serializeExternRef(serializer, &genericParms);
 }
 
+void TypeDef::serializeDef(Serializer &serializer) const {
+    serializer.write(Serializer::typeId, "kind");
+    int objectId = serializer.getObjectId(this);
+    SPUG_CHECK(objectId != -1,
+               "Type " << getFullName() << " was not registered in the "
+                "declarations for this module."
+               );
+    serializer.write(objectId, "objectId");
+    // XXX isGeneric is already in the decl.
+    serializer.write(generic ? 1 : 0, "isGeneric");
+    if (generic) {
+        genericInfo->serialize(serializer);
+    } else {
+        int flags = (pointer ? 1 : 0) |
+                    (hasVTable ? 2 : 0) |
+                    (abstract ? 4 : 0);
+        serializer.write(flags, "flags");
+        serializer.write(parents.size(), "#bases");
+            
+        for (TypeVec::const_iterator i = parents.begin();
+             i != parents.end();
+             ++i
+             )
+            (*i)->serialize(serializer, false, 0);
+
+        // serialize the optional fields for generic instantiations.
+        if (templateType) {
+            ostringstream temp;
+            Serializer sub(serializer, temp);
+            sub.write(CRACK_PB_KEY(1, ref), "templateType.header");
+            templateType->serialize(sub, false, 0);
+            for (TypeVec::const_iterator iter = genericParms.begin();
+                 iter != genericParms.end();
+                 ++iter
+                 ) {
+                // field id = 2 (<< 3) | type = 3 (reference)
+                sub.write(CRACK_PB_KEY(2, ref), 
+                          "genericParms[i].header"
+                          );
+                (*iter)->serialize(sub, false, 0);
+            }
+            serializer.write(temp.str(), "optional");
+        } else {
+            serializer.write(0, "optional");
+        }
+        
+        Namespace::serializeDefs(serializer);
+    }
+}
+
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
-    if (writeKind)
-        serializer.write(Serializer::typeId, "kind");
+    if (writeKind) {
+        // We only write "kind" when serializing from a namespace.  This 
+        // should never happen for an alias.  
+        SPUG_CHECK(VarDef::getModule() == serializer.module,
+                   "Attempted to serialize an alias for " << getFullName() <<
+                    " from a namespace"
+                   );
+
+        // It should also never happen for a reference, and we don't want to 
+        // treat type references the same way so we just serialize the 
+        // definition.
+        serializeDef(serializer);
+        return;
+    }
+                
     if (serializer.writeObject(this, "type")) {
         ModuleDefPtr module = VarDef::getModule();
         if (module != serializer.module) {
-            serializer.write(1, "isAlias");
-            
+
             // write an "Extern" (but not a reference, we're already in a 
             // reference to the object we'd be externing)
             if (templateType) {
@@ -1097,160 +1159,123 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
                 // If this is a generic instantiation, write the base type 
                 // with our parameters.
                 templateType->serializeExternCommon(serializer, 
-                                                    &genericParms);
+                                                    &genericParms
+                                                    );
             } else {
                 serializeExternCommon(serializer, 0);
             }
         } else {
-            serializer.write(0, "isAlias");
-            serializer.write(name, "name");
-            serializer.writeObject(getOwner(), "owner");
-
-            serializer.write(generic ? 1 : 0, "isGeneric");
-            if (generic) {
-                genericInfo->serialize(serializer);
-            } else {
-                int flags = (pointer ? 1 : 0) |
-                            (hasVTable ? 2 : 0) |
-                            (abstract ? 4 : 0);
-                serializer.write(flags, "flags");
-                serializer.write(parents.size(), "#bases");
-                    
-                for (TypeVec::const_iterator i = parents.begin();
-                    i != parents.end();
-                    ++i
-                    )
-                    (*i)->serialize(serializer, false, 0);
-
-                // serialize the optional fields for generic instantiations.
-                if (templateType) {
-                    ostringstream temp;
-                    Serializer sub(serializer, temp);
-                    sub.write(CRACK_PB_KEY(1, ref), "templateType.header");
-                    templateType->serialize(sub, false, 0);
-                    for (TypeVec::const_iterator iter = genericParms.begin();
-                         iter != genericParms.end();
-                         ++iter
-                         ) {
-                        // field id = 2 (<< 3) | type = 3 (reference)
-                        sub.write(CRACK_PB_KEY(2, ref), 
-                                  "genericParms[i].header"
-                                  );
-                        (*iter)->serialize(sub, false, 0);
-                    }
-                    serializer.write(temp.str(), "optional");
-                } else {
-                    serializer.write(0, "optional");
-                }
-                
-                Namespace::serializeDefs(serializer);
-            }
+            // For local types, this function should always just produce an 
+            // object reference because local types are declared before defs.  
+            // If we got here, something's wrong.
+            SPUG_CHECK(false,
+                       "Serializing full type " << getFullName() << 
+                        " from a reference."
+                       );
         }
     }
+}
+
+int TypeDef::serializeDecl(Serializer &serializer) {
+    serializer.write(name, "name");
+    serializer.write(generic ? 1 : 0, "isGeneric");
+    int result = serializer.registerObject(this);
+    serializeTypeDecls(serializer);
+    return result;
 }
 
 namespace {
     struct TypeDefReader : public Deserializer::ObjectReader {
         virtual spug::RCBasePtr read(Deserializer &deser) const {
-            int alias = deser.readUInt("isAlias");
-            TypeDefPtr type;
-            if (alias) {
-                type = VarDef::deserializeTypeAliasBody(deser);
-                deser.userData = 0;
-            } else {
-                string name = deser.readString(16, "name");
-                Context &context = *deser.context;
-                
-                // the owner isn't necessarily a type - it should either be a 
-                // type or the module, but the module should always already be 
-                // registered in the deserializer.
-                // XXX This may not always be the case, do something to verify.
-                Deserializer::ReadObjectResult result = 
-                    deser.readObject(TypeDefReader(), "owner");
-                NamespacePtr owner = NamespacePtr::arcast(result.object);
-
-                // is this a generic?
-                unsigned isGeneric = deser.readUInt("isGeneric");
-                if (isGeneric) {
-                    type = new TypeDef(
-                        context.construct->classType.get(),
-                        name,
-                        true
-                    );
-                    type->genericInfo = Generic::deserialize(deser);
-                    type->genericInfo->ns = owner;
-                    type->genericInfo->seedCompileNS(context);
-                    type->generic = new TypeDef::SpecializationCache();
-                } else {
-                    // create a fake context for the owner and instantiate the 
-                    // type
-                    Context::Scope scope =
-                        ModuleDefPtr::rcast(owner) ? Context::module :
-                                                     Context::instance;
-                    ContextPtr ownerContext =
-                        context.createSubContext(scope, owner.get());
-                    type = 
-                        context.builder.materializeType(*ownerContext, name);
-                    // pass a flag back to indicate that we just deserialized 
-                    // a definition.
-                    deser.userData = 1;
-                }
-
-                owner->addDef(type.get());                
-            }
-            
-            return type;
+            return VarDef::deserializeTypeAliasBody(deser);
         }
     };
 } // anon namespace
 
-TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
-    Deserializer::ReadObjectResult readObj = 
+TypeDefPtr TypeDef::deserializeRef(Deserializer &deser, const char *name) {
+    Deserializer::ReadObjectResult readObj =
         deser.readObject(TypeDefReader(), name ? name : "type");
-    TypeDefPtr result = TypeDefPtr::arcast(readObj.object);
+    return TypeDefPtr::arcast(readObj.object);
+}
 
-    // if we're in a definition, read the base classes and defs.
-    if (readObj.userData) {
+TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
+    // Read the object id and retrieve the existing object.
+    int objectId = deser.readUInt("id");
+    TypeDefPtr type = deser.getObject(objectId);
+    SPUG_CHECK(type, "Type object " << objectId << " not registered.");
+    if (Serializer::trace)
+        cerr << "deserializing body of type " << type->getFullName() << endl;
+
+    // is this a generic?
+    unsigned isGeneric = deser.readUInt("isGeneric");
+    if (isGeneric) {
+        type->genericInfo = Generic::deserialize(deser);
+        type->genericInfo->ns = deser.context->ns.get();
+        type->genericInfo->seedCompileNS(*deser.context);
+        type->generic = new TypeDef::SpecializationCache();
+    } else {
         // flags
         int flags = deser.readUInt("flags");
-        result->pointer = (flags & 1) ? true : false;
-        result->hasVTable = (flags & 2) ? true : false;
-        result->abstract = (flags & 4) ? true : false;
-
+        type->pointer = (flags & 1) ? true : false;
+        type->hasVTable = (flags & 2) ? true : false;
+        type->abstract = (flags & 4) ? true : false;
+    
         // bases
         int count = deser.readUInt("#bases");
         TypeDef::TypeVec bases(count);
         for (int i = 0; i < count; ++i)
-            bases[i] = TypeDef::deserialize(deser, "bases[i]");
-
-        result->parents = bases;
+            bases[i] = TypeDef::deserializeRef(deser, "bases[i]");
+    
+        type->parents = bases;
         
         // check for optional fields
         CRACK_PB_BEGIN(deser, 256, optional);
             CRACK_PB_FIELD(1, ref)
-                result->templateType =
-                    TypeDef::deserialize(optionalDeser).get();
+                type->templateType = 
+                    deserializeRef(optionalDeser, "templateType").get();
                 break;
             CRACK_PB_FIELD(2, ref)
-                result->genericParms.push_back(
-                    TypeDef::deserialize(optionalDeser)
+                type->genericParms.push_back(
+                    deserializeRef(optionalDeser, "genericParms")
                 );
                 break;
         CRACK_PB_END
-
+    
         // 'defs' - fill in the body.
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,
-                                            result.get(),
-                                            &result->name
+                                            type.get(),
+                                            &type->name
                                             );
         ContextStackFrame<Deserializer> cstack(deser, classContext.get());
-        result->deserializeDefs(deser);
-        
-        result->complete = true;
+        type->deserializeDefs(deser);
     }
+    if (Serializer::trace)
+        cerr << "done deserializing type " << type->getFullName() << endl;
+    
+    type->complete = true;
+    return type;
+}
 
-    return result;
+int TypeDef::deserializeDecl(Deserializer &deser, int nextId) {
+    string name = deser.readString(Serializer::varNameSize, "name");
+    int isGeneric = deser.readUInt("isGeneric");
+    TypeDefPtr type;
+    if (isGeneric)
+        type =
+            new TypeDef(deser.context->construct->classType.get(), name, true);
+    else
+        type = deser.context->builder.materializeType(*deser.context, name);
+    deser.registerObject(nextId, type.get());
+    deser.context->ns->addDef(type.get());
+    
+    // do the nested declarations against the new context.
+    ContextPtr classContext = 
+        deser.context->createSubContext(Context::instance, type.get(),
+                                        &type->name
+                                        );
+    ContextStackFrame<Deserializer> frame(deser, classContext.get());
+    return deserializeTypeDecls(deser, nextId + 1);
 }
 
 VarDefPtr TypeDef::replaceAllStubs(Context &context) {

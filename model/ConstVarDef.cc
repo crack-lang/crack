@@ -53,7 +53,7 @@ void ConstVarDef::serialize(Serializer &serializer, bool writeKind,
 
 ConstVarDefPtr ConstVarDef::deserialize(Deserializer &deser) {
     string name = deser.readString(16, "name");
-    TypeDefPtr type = TypeDef::deserialize(deser, "type");
+    TypeDefPtr type = TypeDef::deserializeRef(deser, "type");
     int kind = deser.readUInt("kind");
     bool reqUnsigned = false;
     IntConstPtr intVal;

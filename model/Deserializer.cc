@@ -105,6 +105,14 @@ Deserializer::ReadObjectResult Deserializer::readObject(
     }
 }
 
+spug::RCBasePtr Deserializer::getObject(int id) const {
+    ObjMap::iterator iter = objMap->find(id);
+    if (iter == objMap->end())
+        return 0;
+    else
+        return iter->second;
+}
+
 void Deserializer::registerObject(int id, spug::RCBase *object) {
     SPUG_CHECK(objMap->find(id) == objMap->end(),
                "The object id " << id << " is already registered."

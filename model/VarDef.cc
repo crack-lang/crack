@@ -362,7 +362,7 @@ namespace {
             CRACK_PB_FIELD(2, ref)
                 if (!paramTypes)
                     paramTypes = new TypeDef::TypeVecObj();
-                paramTypes->push_back(TypeDef::deserialize(optionalDeser));
+                paramTypes->push_back(TypeDef::deserializeRef(optionalDeser));
                 break;
         CRACK_PB_END
 
@@ -474,7 +474,7 @@ void VarDef::serialize(Serializer &serializer, bool writeKind,
 VarDefPtr VarDef::deserialize(Deserializer &deser) {
     string name = deser.readString(16, "name");
     int instSlot = static_cast<int>(deser.readUInt("instSlot")) - 1;
-    TypeDefPtr type = TypeDef::deserialize(deser);
+    TypeDefPtr type = TypeDef::deserializeRef(deser);
     return deser.context->builder.materializeVar(*deser.context, name,
                                                  type.get(),
                                                  instSlot

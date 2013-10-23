@@ -69,6 +69,10 @@ So given this, our meta-data format is:
         # determine whether the use of the cache is acceptable for this module.
         Header header
 
+        # the type declarations.  These inherently get an object id based on
+        # their order, starting with 1 (0 is the object id for the model)
+        array[TypeDecl] decls
+
         # the module meta-data.
         Definitions defs
 
@@ -99,6 +103,12 @@ So given this, our meta-data format is:
         blob metaDigest
     }
 
+    TypeDecl {
+        blob name
+        uint isGeneric
+        array[TypeDecl] nested
+    }
+
     Definitions {
         array[Def] defs
     }
@@ -126,7 +136,7 @@ So given this, our meta-data format is:
         switch (kind) {
             case aliasId: AliasDef
             case variableId: VarDef
-            case typeId: ref[Type]
+            case typeId: TypeDef
             case overloadId: OverloadDef
             case constVar: ConstVarDef
         }
@@ -166,13 +176,11 @@ So given this, our meta-data format is:
         ref[Type] type
     }
 
-    Type {
-        uint isAlias;  # if non-zero, this is an alias
-        switch (isAlias) {
-            case true: Extern
-            case false: TypeDef
-        }
-    }
+    # ref[Type] is exceptional.  All of the types in a module should have
+    # been declared in MetaDataFile.decls, so in the case of a local type we
+    # should always have a reference to one of those objects, never a
+    # definition.  If we get an object definition, it must be an alias.
+    Type = Extern
 
     ImportDef {
         blob sourceName
@@ -185,8 +193,7 @@ So given this, our meta-data format is:
     }
 
     TypeDef {
-        blob name
-        ref[Type] owner
+        uint objectId
         uint generic
         if (generic) {
             array[ref[Import]] importedAnnotations
@@ -224,6 +231,7 @@ So given this, our meta-data format is:
     }
 
     FuncDef {
+        uint isAlias
         ref[Type] returnType
         uint flags;
         array[VarDef] args

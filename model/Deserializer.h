@@ -148,6 +148,11 @@ class Deserializer {
         void registerObject(int id, spug::RCBase *object);
 
         /**
+         * Returns a registered object, null if the object does not eist.
+         */
+        spug::RCBasePtr getObject(int id) const;
+
+        /**
          * Read an ISO-8859 double from the stream.  These are presumed to be
          * a fixed width of 8 bytes.
          */

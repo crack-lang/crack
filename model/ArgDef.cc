@@ -28,7 +28,7 @@ void ArgDef::serialize(Serializer &serializer, bool writeKind,
 
 ArgDefPtr ArgDef::deserialize(Deserializer &deser) {
     string name = deser.readString(16, "name");
-    TypeDefPtr type = TypeDef::deserialize(deser);
+    TypeDefPtr type = TypeDef::deserializeRef(deser);
     return deser.context->builder.materializeArg(*deser.context, name,
                                                  type.get()
                                                  );

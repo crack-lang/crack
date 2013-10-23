@@ -88,6 +88,14 @@ int Serializer::registerObject(const RCBase *object) {
     }
 }
 
+int Serializer::getObjectId(const RCBase *object) const {
+    ObjMap::iterator iter = objMap->find(object);
+    if (iter == objMap->end())
+        return -1;
+    else
+        return iter->second;
+}
+
 void Serializer::writeDouble(double val, const char *name) {
     SPUG_CHECK(sizeof(double) == 8,
                "double != 8 chars on this platform, size is: " <<

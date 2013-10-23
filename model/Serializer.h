@@ -101,6 +101,12 @@ class Serializer {
         int registerObject(const spug::RCBase *object);
 
         /**
+         * Returns the id for the previously registered object.
+         * Returns -1 if not defined.
+         */
+        int getObjectId(const spug::RCBase *object) const;
+
+        /**
          * Write a double-precision IEEE float.  These are expected to be 8
          * bytes.
          */

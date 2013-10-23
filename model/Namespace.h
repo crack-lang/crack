@@ -23,6 +23,7 @@ SPUG_RCPTR(FuncDef);
 SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(OverloadDef);
 class Serializer;
+class TypeDef;
 SPUG_RCPTR(VarDef);
 
 SPUG_RCPTR(Namespace);
@@ -56,6 +57,15 @@ class Namespace : public virtual spug::RCBase {
          * Stores a definition, promoting it to an overload if necessary.
          */
         virtual void storeDef(VarDef *def);
+
+        /**
+         * Collect all of the type definitions in the namespace into 
+         * 'typeDefs'.  Note that 'typeDefs' is an array of raw pointers, the 
+         * definitions must not be mutated while the vector is in existence, 
+         * otherwise the type defs could be garbage collected and the array 
+         * could be left with dangling pointers.
+         */
+        void getTypeDefs(std::vector<TypeDef*> &typeDefs);
 
     public:
         
@@ -197,6 +207,12 @@ class Namespace : public virtual spug::RCBase {
         /// @}
 
         /**
+         * Serialize all type declarations in the namespace (and nested 
+         * namespaces.
+         */
+        void serializeTypeDecls(Serializer &serializer);
+        
+        /**
          * Serialize all of the definitions in the namespace.
          */
         void serializeDefs(Serializer &serializer) const;
@@ -206,6 +222,12 @@ class Namespace : public virtual spug::RCBase {
          * namespace.
          */
         void deserializeDefs(Deserializer &deser);
+        
+        /**
+         * Deserialize type declarations, adding them to the object id table.
+         * Returns the next object id after deserialization.
+         */
+        static int deserializeTypeDecls(Deserializer &deser, int nextId);
         
         /**
          * Helper function for closing off module serialization.  Calls 

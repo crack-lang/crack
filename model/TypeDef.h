@@ -354,6 +354,11 @@ class TypeDef : public VarDef, public Namespace {
          */
         virtual void getDependents(std::vector<TypeDefPtr> &deps);
 
+        /**
+         * Serialize the type definition.
+         */
+        void serializeDef(Serializer &serializer) const;
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
@@ -366,12 +371,23 @@ class TypeDef : public VarDef, public Namespace {
                                const Namespace *ns
                                ) const;
 
-        /**
-         * Deserialze a type object.
-         */        
-        static TypeDefPtr deserialize(Deserializer &deser,
-                                      const char *name = 0
-                                      );
+        /** Serialize a type declaration. Returns the new object id. */
+        int serializeDecl(Serializer &serializer);
+
+        /** 
+         * Deserialize a type declaration.  Returns the next object id.
+         */
+        static int deserializeDecl(Deserializer &deser, int nextId);
+
+        /** Deserialize a reference to a type object. */
+        static TypeDefPtr deserializeRef(Deserializer &deser, 
+                                         const char *name = 0
+                                         );
+
+        /** Deserialize a type object. */
+        static TypeDefPtr deserializeTypeDef(Deserializer &deser,
+                                             const char *name = 0
+                                             );
 
         virtual VarDefPtr replaceAllStubs(Context &context);
         
