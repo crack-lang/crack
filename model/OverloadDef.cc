@@ -333,6 +333,7 @@ bool OverloadDef::hasSerializableFuncs(const Namespace *ns,
         if ((*iter)->isSerializable(ns, name))
             return true;
     }
+    return false;
 }
 
 void OverloadDef::serialize(Serializer &serializer, bool writeKind,
