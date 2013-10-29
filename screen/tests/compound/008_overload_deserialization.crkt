@@ -1,0 +1,43 @@
+%%TEST%%
+deserialization of method overloads.
+%%ARGS%%
+%%FILE%%
+# This verifies a bug-fix in overload serialization: order of type definition
+# is important for overload serialization because overload definitions
+# reference the definitions in their parent contexts, notably in their base
+# classes.
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', I"
+    # The base class is 'D' because that follows 'B' lexically, causing the
+    # definition to appear after its derived class in the lexical order (the
+    # fixed code should serialize all ancestor classes first).
+    @abstract class D : VTableBase {
+        @abstract void f();
+    }
+
+    @abstract class B : D {
+        # Define an alternate overload for f() to force the overload to be
+        # represented in B's context.
+        void f(int i) {}
+    }
+    ");
+
+test.main(I"
+    import mod B;
+    class C : B {
+        void f() {}
+    }
+    puts('ok');
+    ");
+
+test.run();
+test.rmCacheFiles(r'\.main\..*');
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%

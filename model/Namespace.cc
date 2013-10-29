@@ -255,31 +255,86 @@ void Namespace::serializeTypeDecls(Serializer &serializer) {
     }
 }
 
+namespace {
+    // Adds a type to an ordered vector, ensuring that the base class types 
+    // (if present in 'toSerialize') have been serialized first.
+    void addTypeToOrderedVec(vector<TypeDef *> &outputVec, 
+                             set<TypeDef *> &toSerialize,
+                             TypeDef *type
+                             ) {
+        // If we don't have to serialize the type, quit now.
+        if (toSerialize.find(type) == toSerialize.end())
+            return;
+
+        // Make sure the bases have been serialized.
+        for (int i = 0; i < type->parents.size(); ++i)
+            addTypeToOrderedVec(outputVec, toSerialize, type->parents[i].get());
+        
+        // serialize the type itself
+        outputVec.push_back(type);
+        toSerialize.erase(type);
+    }
+}
+
 void Namespace::serializeDefs(Serializer &serializer) const {
     
-    // count the number of definitions to serialize
+    // Count the number of definitions to serialize and separate out the 
+    // types, aliases and everything else.
     int count = 0;
+    set<TypeDef *> types;
+    vector<VarDef *> others;
+    typedef vector< pair<string, VarDefPtr> > AliasVec;
+    AliasVec aliases;
     for (VarDefMap::const_iterator i = defs.begin();
          i != defs.end();
          ++i
          ) {
-        if (i->second->isSerializable(this, i->first))
+        if (i->second->isSerializable(this, i->first)) {
             ++count;
+
+            // is it an alias?
+            if (i->second->getOwner() != this) {
+                aliases.push_back(*i);
+                continue;
+            }
+  
+            // is this a typedef?
+            TypeDef *def = TypeDefPtr::rcast(i->second);
+            if (def)
+                types.insert(def);
+            else
+                others.push_back(i->second.get());
+        }
     }
+
+    // Put the types in order.    
+    vector<TypeDef *> orderedTypes;
+    for (set<TypeDef *>::iterator i = types.begin(); i != types.end(); ++i)
+        addTypeToOrderedVec(orderedTypes, types, *i);
     
     // write the count and the definitions
     serializer.write(count, "#defs");
-    for (VarDefMap::const_iterator i = defs.begin();
-         i != defs.end();
+    
+    // first the aliases
+    for (AliasVec::iterator i = aliases.begin();
+         i != aliases.end();
          ++i
-         ) {
-        if (!i->second->isSerializable(this, i->first))
-            continue;
-        else if (i->second->getOwner() != this)
-            i->second->serializeAlias(serializer, i->first);
-        else
-            i->second->serialize(serializer, true, this);
-    }
+         )
+        i->second->serializeAlias(serializer, i->first);
+    
+    // then the types
+    for (vector<TypeDef *>::iterator i = orderedTypes.begin();
+         i != orderedTypes.end();
+         ++i
+         )
+        (*i)->serialize(serializer, true, this);
+
+    // ... then everything else    
+    for (vector<VarDef *>::iterator i = others.begin();
+         i != others.end();
+         ++i
+         )
+        (*i)->serialize(serializer, true, this);
 }
 
 int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
