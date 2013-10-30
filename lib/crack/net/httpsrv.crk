@@ -209,7 +209,7 @@ class HTTPServer {
         }
 
         @final void compressBuffer(uintz start) {
-            inbuf.move(0, start, inbuf.size - start);
+            inbuf.compact(start);
             pos = 0;
         }
 
