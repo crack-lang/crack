@@ -1,0 +1,15 @@
+%%TEST%%
+importing exported aliases for second-order imports
+%%ARGS%%
+%%FILE%%
+import test.testmod7 impVar, ImpA;
+byteptr data = 'data';
+impVar = ImpA(data);
+if (!(impVar.data is data))
+    puts('FAILED import sanity check.');
+puts('ok');
+%%EXPECT%%
+testmod
+ok
+cleanup testmod
+%%STDIN%%

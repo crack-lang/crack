@@ -129,9 +129,12 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
-         * Returns true if the VarDef can be imported from the module.
+         * Returns true if the VarDef can be imported from the module under 
+         * the given name.
          */
-        virtual bool isImportableFrom(ModuleDef *module) const;
+        virtual bool isImportableFrom(ModuleDef *module, 
+                                      const std::string &impName
+                                      ) const;
         
         /**
          * Returns true if the definition should be serialized when the owner

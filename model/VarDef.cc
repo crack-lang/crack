@@ -113,9 +113,9 @@ namespace {
     }
 }
 
-bool VarDef::isImportableFrom(ModuleDef *module) const {
+bool VarDef::isImportableFrom(ModuleDef *module, const string &impName) const {
     return owner->getRealModule().get() == module ||
-           module->exports.find(name) != module->exports.end();
+           module->exports.find(impName) != module->exports.end();
 }
 
 bool VarDef::isSerializable(const Namespace *ns, const string &name) const {
@@ -176,6 +176,7 @@ void VarDef::serializeExternCommon(Serializer &serializer,
     if (asType && asType->primitiveGenericSpec) {
         sub.write(CRACK_PB_KEY(3, string), "name.header");
         sub.write(name.substr(0, name.find('[')), "name");
+        localDeps = &asType->genericParms;
     } else {
         // write the full name.
         for (list<string>::iterator i = moduleRelativeName.begin();

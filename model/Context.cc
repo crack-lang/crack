@@ -621,7 +621,7 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
         // make sure the symbol either belongs to the module or was 
         // explicitly exported by the module (no implicit second-order 
         // imports).
-        if (!symVal->isImportableFrom(mod.get()))
+        if (!symVal->isImportableFrom(mod.get(), iter->source))
             error(symLocs ? (*symLocs)[st] : loc, 
                   SPUG_FSTR("Name " << iter->source <<
                              " does not belong to module " <<

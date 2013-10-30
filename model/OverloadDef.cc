@@ -228,8 +228,10 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
-bool OverloadDef::isImportableFrom(ModuleDef *module) const {
-    if (module->exports.find(name) != module->exports.end())
+bool OverloadDef::isImportableFrom(ModuleDef *module, 
+                                   const string &impName
+                                   ) const {
+    if (module->exports.find(impName) != module->exports.end())
         return true;
     
     // the overload is importable if any of its functions are importable.

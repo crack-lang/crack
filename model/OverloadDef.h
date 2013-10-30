@@ -155,7 +155,9 @@ class OverloadDef : public VarDef {
         
         bool hasInstSlot();
         bool isStatic() const;
-        virtual bool isImportableFrom(ModuleDef *module) const;
+        virtual bool isImportableFrom(ModuleDef *module,
+                                      const std::string &impName
+                                      ) const;
         virtual bool isSerializable(const Namespace *ns, 
                                     const std::string &name
                                     ) const;

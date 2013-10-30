@@ -1,0 +1,22 @@
+%%TEST%%
+deserialization of array instantiations
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', I"
+    alias aint = array[int];
+    @export_symbols aint;
+    ");
+test.main("import mod aint; a := aint![1, 2, 3]; puts('ok')");
+
+test.run();
+test.rmCacheFiles(r'\.main\..*');
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%
