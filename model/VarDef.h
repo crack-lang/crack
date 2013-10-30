@@ -161,9 +161,9 @@ class VarDef : public virtual spug::RCBase {
         /**
          * Serialize the definition as an alias. "AliasDef"
          */
-        void serializeAlias(Serializer &serializer, 
-                            const std::string &alias
-                            ) const;
+        virtual void serializeAlias(Serializer &serializer, 
+                                    const std::string &alias
+                                    ) const;
 
         /**
          * Serialize the variable definition.

@@ -45,7 +45,8 @@ class Serializer {
             genericId = 3,
             overloadId = 4,
             aliasId = 5,
-            constVarId = 6
+            typeAliasId = 6,
+            constVarId = 7
         };
 
         static const int

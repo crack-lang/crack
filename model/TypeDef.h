@@ -117,6 +117,10 @@ class TypeDef : public VarDef, public Namespace {
         // if true, the type has a vtable (and is derived from vtable_base)
         bool hasVTable;
         
+        // True for specializations of the primitive generic types (e.g. 
+        // array[int], function[void, float]...)
+        bool primitiveGenericSpec;
+                
         // if the type is a meta type, "meta" is the type that it is the 
         // meta-type of.
         TypeDef *meta;
@@ -129,7 +133,7 @@ class TypeDef : public VarDef, public Namespace {
         // true if the type has been forward declared but has not yet been
         // defined.
         bool forward;
-                
+        
         // if true, the initializers for the type have been emitted and it is 
         // now illegal to add instance variables.
         bool initializersEmitted;
@@ -158,6 +162,7 @@ class TypeDef : public VarDef, public Namespace {
             padding(0),
             pointer(pointer),
             hasVTable(false),
+            primitiveGenericSpec(false),
             meta(0),
             complete(false),
             forward(false),
@@ -367,6 +372,9 @@ class TypeDef : public VarDef, public Namespace {
                                     ) const;
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         virtual void serializeExtern(Serializer &serializer) const;
+        virtual void serializeAlias(Serializer &serializer,
+                                    const std::string &alias
+                                    ) const;
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

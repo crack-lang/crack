@@ -84,6 +84,7 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
 
     tempSpec->genericParms = *types;
     tempSpec->templateType = this;
+    tempSpec->primitiveGenericSpec = true;
 
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)

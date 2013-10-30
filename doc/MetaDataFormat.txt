@@ -130,7 +130,7 @@ So given this, our meta-data format is:
             overloadId = 4,
             aliasId = 5,
             typeAliasId = 6,
-            constVar = 7,
+            constVarId = 7
         }
         uint kind;
 

@@ -170,13 +170,21 @@ void VarDef::serializeExternCommon(Serializer &serializer,
     ostringstream tmp;
     Serializer sub(serializer, tmp);
 
-    // write the full name.
-    for (list<string>::iterator i = moduleRelativeName.begin();
-         i != moduleRelativeName.end();
-         ++i
-         ) {
+    // For primitive generic specializations, the "name" attribute currently
+    // contains the parameters, so we trim them.
+    const TypeDef *asType = dynamic_cast<const TypeDef *>(this);
+    if (asType && asType->primitiveGenericSpec) {
         sub.write(CRACK_PB_KEY(3, string), "name.header");
-        sub.write(*i, "name");
+        sub.write(name.substr(0, name.find('[')), "name");
+    } else {
+        // write the full name.
+        for (list<string>::iterator i = moduleRelativeName.begin();
+            i != moduleRelativeName.end();
+            ++i
+            ) {
+            sub.write(CRACK_PB_KEY(3, string), "name.header");
+            sub.write(*i, "name");
+        }
     }
 
     if (funcDef) {

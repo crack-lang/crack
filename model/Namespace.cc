@@ -355,10 +355,18 @@ void Namespace::deserializeDefs(Deserializer &deser) {
             case Serializer::variableId:
                 addDef(VarDef::deserialize(deser).get());
                 break;
+            case Serializer::typeAliasId:
             case Serializer::aliasId: {
                 string alias = 
                     deser.readString(Serializer::varNameSize, "alias");
-                addAlias(alias, VarDef::deserializeAlias(deser).get());
+                VarDefPtr varDef;
+                if (static_cast<Serializer::DefTypes>(kind) == 
+                    Serializer::typeAliasId
+                    )
+                    varDef = TypeDef::deserializeRef(deser);
+                else
+                    varDef = VarDef::deserializeAlias(deser);
+                addAlias(alias, varDef.get());
                 
                 // if we are in module scope, this alias has to be a 
                 // second-order import.

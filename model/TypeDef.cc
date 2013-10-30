@@ -1130,6 +1130,14 @@ void TypeDef::serializeDef(Serializer &serializer) const {
     }
 }
 
+void TypeDef::serializeAlias(Serializer &serializer, 
+                             const string &alias
+                             ) const {
+    serializer.write(Serializer::typeAliasId, "kind");
+    serializer.write(alias, "alias");
+    serializeExternRef(serializer, 0);
+}
+
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
