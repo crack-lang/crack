@@ -11,5 +11,7 @@ if (v != 789) puts('FAILED aliased global variable');
 if (AInt().val != 123) puts('FAILED aliased generic instantiation');
 puts('ok')
 %%EXPECT%%
+testmod
 ok
+cleanup testmod
 %%STDIN%%
