@@ -113,7 +113,7 @@ class Test {
     void runScript(String script) {
         StringArray cmd = [
             crackBin.getFullName(), '-l', (root/'lib').getFullName(),
-            '-b', 'cachePath=' + cacheDir.getFullName(), '-C'
+            '-b', 'cachePath=' + cacheDir.getFullName(), '-C', '-q'
         ];
 
         # Add the appropriate flags.
