@@ -1,0 +1,21 @@
+%%TEST%%
+unexported aliases don't get serialized
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', I"alias aint = int;");
+test.main("import mod aint;");
+
+test.run();
+test.rmCacheFiles(r'\.main\..*');
+test.run();
+
+%%REXPECT%%
+err: ParseError: %BUILDDIR%testout/%UNIQ%/main.crk:1:12: Name aint does not belong to module mod.  Second-order imports are not allowed.
+err:.
+terminated, rc = 2049
+err: ParseError: %BUILDDIR%testout/%UNIQ%/main.crk:1:12: name aint is not defined in module mod
+err:.
+terminated, rc = 2049
+%%STDIN%%
