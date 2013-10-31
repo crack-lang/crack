@@ -123,7 +123,7 @@ class Error : StringFormatter {
 
 ## Request handler interface.  This interface dispatches a handler to 
 ## interface methods corresponding to the HTTP GET, PUT and POST methods.
-@interface HTTPRequestHandler {
+@interface HTTPRequestHandler : Functor1[bool, HTTPRequest] {
     bool onGet(HTTPRequest req) {
         Error(req, 405) `GET Method not allowed for $(req.path)`;
         return true;
