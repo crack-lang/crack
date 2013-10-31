@@ -138,6 +138,12 @@ NamespacePtr TypeDef::getNamespaceOwner() {
     return getOwner();
 }
 
+void TypeDef::addDefToMeta(OverloadDef *def) {
+    // As long as this not not the "Class" class, add the overload to it.
+    if (type.get() != this)
+        type->addAlias(def);
+}
+
 bool TypeDef::hasInstSlot() {
     return false;
 }

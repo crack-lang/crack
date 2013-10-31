@@ -1,0 +1,36 @@
+%%TEST%%
+methods also added to meta-class
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+test.mod('mod', I"
+    class A : VTableBase {
+        void f() {
+            puts('in A.f()');
+        }
+    }
+    ");
+test.main(I"
+    import mod A;
+    class B : A {
+        void f() {
+            puts('in B.f()');
+            A.f();
+        }
+    }
+    B().f();
+    ");
+
+test.run();
+test.rmCacheFiles(r'\.main\..*');
+test.run();
+
+%%EXPECT%%
+out: in B.f()
+out: in A.f()
+terminated: success
+out: in B.f()
+out: in A.f()
+terminated: success
+%%STDIN%%

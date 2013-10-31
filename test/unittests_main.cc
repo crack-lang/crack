@@ -224,6 +224,7 @@ bool reloadOfSelfReferrentTypes() {
     builder.incref();
     builder.options = new builder::BuilderOptions();
     Construct construct(Options(), &builder);
+    construct.classType = new TypeDef(0, "Class");
     Context context(builder, Context::module, &construct,
                     0, // namespace, filled in by ModuleDef::deserialize()
                     new GlobalNamespace(0, "")

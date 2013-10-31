@@ -109,6 +109,8 @@ void Namespace::addDef(VarDef *def) {
     def->setOwner(this);
 }
 
+void Namespace::addDefToMeta(OverloadDef *def) {}
+
 void Namespace::removeDef(VarDef *def) {
     assert(!OverloadDefPtr::cast(def));
     VarDefMap::iterator iter = defs.find(def->name);
@@ -381,9 +383,13 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 SPUG_CHECK(false, "can't deserialize generics yet");
 //                addDef(Generic::deserialize(deser));
                 break;
-            case Serializer::overloadId:
-                addDef(OverloadDef::deserialize(deser, this).get());
+            case Serializer::overloadId: {
+                OverloadDefPtr ovld = 
+                    OverloadDef::deserialize(deser, this).get();
+                addDef(ovld.get());
+                addDefToMeta(ovld.get());
                 break;
+            }
             case Serializer::typeId:
                 TypeDef::deserializeTypeDef(deser);
                 break;

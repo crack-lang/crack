@@ -191,6 +191,8 @@ class TypeDef : public VarDef, public Namespace {
 
         virtual NamespacePtr getNamespaceOwner();
         
+        virtual void addDefToMeta(OverloadDef *def);
+        
         /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).

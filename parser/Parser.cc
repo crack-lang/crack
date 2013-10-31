@@ -76,6 +76,11 @@ void Parser::addDef(VarDef *varDef) {
    // if the definition context is a class context and the definition is a 
    // function and this isn't the "Class" class (which is its own meta-class), 
    // add it to the meta-class.
+   // TODO: This code is essentially duplicated in Namespace::addDefToMeta().  
+   // Ideally, addDefToMeta() should be called from Namespace::addDef() or 
+   // somwehere equally common and removed from here and the deserialization 
+   // code.  Or at least, this should be replaced with a call to 
+   // addDefToMeta().  But the original attempt to do that didn't work.
    TypeDef *type;
    if (defContext->scope == Context::instance && func) {
       type = TypeDefPtr::arcast(defContext->ns);
