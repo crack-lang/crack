@@ -901,45 +901,86 @@ void interface(CrackContext ctx) {
         ctx.putBack(tok);
     }
 
+    # for injecting the bind(), release() and get*Object() methods
+    StringFormatter f = {};
+
+    # check for base interfaces
+    NodeListImpl interfaces = {};
+    tok = ctx.getToken();
+    if (tok.isColon()) {
+        # copied from the @implements annotation below:
+        Array[String] ifaces = {4};
+        Token firstTok;
+        while (true) {
+
+            tok := ctx.getToken();
+
+            if (firstTok is null)
+                firstTok = tok;
+
+            if (tok.isLCurly()) {
+                ctx.putBack(tok);
+                break;
+
+            # store identifiers in an array so we can generate the get*Object()
+            # methods.
+            } else if (tok.isIdent()) {
+                ifaces.append(String(tok.getText()));
+            }
+            interfaces.pushHead(Tok(tok));
+        }
+
+        f `@abstract Object _iface_get$(nameTok.getText())Object();\n`;
+        for (iface :in ifaces)
+            f `    Object _iface_get$(iface)Object() { return _iface_get$(nameTok.getText())Object(); }\n`;
+        f `}\0`;
+
+    } else {
+        ctx.putBack(tok);
+
+        f `
+        @abstract Object _iface_get$(nameTok.getText())Object();
+        @final oper bind() {
+            if (!(this is null))
+                _iface_get$(nameTok.getText())Object().oper bind();
+        }
+        @final oper release() {
+            if (!(this is null))
+                _iface_get$(nameTok.getText())Object().oper release();
+        }
+        @final oper to Object() {
+            if (!(this is null))
+                return _iface_get$(nameTok.getText())Object();
+            else
+                return null;
+        }
+        @final oper to bool() {
+            return !(this is null) &&
+                _iface_get$(nameTok.getText())Object().isTrue();
+        }
+    }\0`;
+
+    }
+
     # read the body
     body := readBlock(ctx);
 
     # remove the closing bracket, store the location for error reporting
     loc := body.popHead().getLocation();
 
-    # inject the bind, release and get*Object() methods
-    StringFormatter f = {};
-    f `
-    @abstract Object _iface_get$(nameTok.getText())Object();
-    @final oper bind() {
-        if (!(this is null))
-            _iface_get$(nameTok.getText())Object().oper bind();
-    }
-    @final oper release() {
-        if (!(this is null))
-            _iface_get$(nameTok.getText())Object().oper release();
-    }
-    @final oper to Object() {
-        if (!(this is null))
-            return _iface_get$(nameTok.getText())Object();
-        else
-            return null;
-    }
-    @final oper to bool() {
-        return !(this is null) && 
-            _iface_get$(nameTok.getText())Object().isTrue();
-    }
-}\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 
     # expand the body and opening bracket
     body.expand(ctx, null);
 
+    # expand the base interface list
+    interfaces.expand(ctx, null);
+
     # inject the class definition
     loc = nameTok.getLocation();
     f = StringFormatter();
     f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
-            VTableBase\n\0`;
+        $(interfaces ? String() : "VTableBase")\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 }
 
