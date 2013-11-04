@@ -1,0 +1,268 @@
+## IRC library
+## Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
+##
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this
+## file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#
+
+import crack.net Socket, SOCK_STREAM, AF_INET, resolve, InetAddress, Poller,
+                 POLLIN, PollEvent, SOCK_NONBLOCK;
+import crack.time TimeDelta;
+import crack.io cout, cerr, FStr, StringWriter, StringReader;
+import crack.io.readers LineReader;
+import crack.regex Regex;
+import crack.strutil split, StringArray;
+import crack.cont.hashmap HashMap;
+import crack.lang Formatter;
+
+class User {
+
+    String nick, userName, realName;
+
+    oper init(String n): nick = n, userName(), realName() {
+        // strip leading @
+        if (nick.size && nick[0] == b'@')
+            nick = nick.substr(1);
+    }
+
+    oper init(String n, String un, String rn):
+        nick = n,
+        userName = un,
+        realName = rn
+    {
+    }
+
+    // from raw string like: GRiD!GRiD@hospoda.mozek.us
+    @static User createFromRaw(String raw) {
+        parts1 := split(raw, "@");
+        if (!parts1.count())
+            return null;
+        parts2 := split(parts1[0], "!");
+        if (!parts2.count())
+            return null;
+        return User(parts2[0], parts2[1], "");
+    }
+
+    void formatTo(Formatter fmt) {
+        fmt `User [$nick] [$userName] [$realName]\n`;
+    }
+
+}
+
+class Channel {
+
+    String name;
+    String topic;
+    String mode;
+
+    HashMap[String, User] userList;
+
+    oper init(String n): name = n, topic(), mode(), userList() { }
+
+    void addUser(User u) {
+        userList[u.nick] = u;
+    }
+
+    void removeUser(User u) {
+        userList.delete(u.nick);
+    }
+
+    void formatTo(Formatter fmt) {
+        fmt `Channel [$name] [$topic]\n$userList\n`;
+    }
+
+}
+
+class Client {
+
+    String _serverName;
+    uint _port;
+    InetAddress _addr;
+    Socket _sock;
+    Poller _poller;
+
+    bool _connected; // true if we receive RPL_WELCOME
+    bool _debug; // dump raw output
+
+    Regex _rx_parse;
+
+    User _me;
+    HashMap[String, Channel] _channelList;
+
+    oper init(String s, uint p, String n, String un, String rn):
+                         _me(n,un,rn),
+                         _channelList(),
+                         _debug = false,
+                         _serverName = s,
+                         _port = p,
+                         _connected = false {
+        // regex courtesy of:
+        // http://calebdelnay.com/blog/2010/11/parsing-the-irc-message-format-as-a-client
+        _rx_parse = Regex("^(:(?<prefix>\\S+) )?(?<command>\\S+)( (?!:)(?<params>.+?))?( :(?<trail>.+))?$");
+    }
+
+    void log(String msg) {
+        if (_debug)
+            cout `$msg\n`;
+    }
+
+    void _send(String data) {
+        log(FStr() `[WRITE]: $data`);
+        _sock.write(data);
+        _sock.write("\n");
+    }
+
+    void _onJoin(User user, Channel channel) { }
+
+    void _onPart(User user, Channel channel) { }
+
+    void __doJoin(String source, String channelName) {
+        user := User.createFromRaw(source);
+        if (user is null) {
+            log(FStr() `unable to parse raw source: $source`);
+            return;
+        }
+        Channel channel;
+        if (_channelList.contains(channelName)) {
+            channel = _channelList[channelName];
+        }
+        else {
+            channel = Channel(channelName);
+            _channelList[channelName] = channel;
+        }
+        channel.addUser(user);
+        if (user.nick != _me.nick)
+            _onJoin(user, channel);
+    }
+
+    void __doPart(String source, String channelName) {
+        user := User.createFromRaw(source);
+        if (user is null) {
+            log(FStr() `unable to parse raw source: $source`);
+            return;
+        }
+        if (!_channelList.contains(channelName)) {
+            log(FStr() `ASSERT: part from channel we don't have`);
+            return;
+        }
+        channel := _channelList[channelName];
+        channel.removeUser(user);
+        _onPart(user, channel);
+    }
+
+    void _onPrivMsg(String source, String target, String msg) { }
+
+    void _onConnect() { }
+
+    void _dispatch(String prefix, String command, StringArray params, String trail) {
+        log(FStr() `[READ ]: [$prefix] [$command] $params [$trail]`);
+        if (command == "001") {
+            // RPL_WELCOME: we are now connected
+            _connected = true;
+            _onConnect();
+        }
+        else if (command == "353") {
+            // NAMES reply (also happens on join)
+            //:irc.roadsend.com 353 crack| @ #crack-lang :crack| @GRiD
+            if (params.count() == 3 && _channelList.contains(params[2])) {
+                uList := split(trail);
+                for (uString :in uList) {
+                    if (_me.nick != uString)
+                        _channelList[params[2]].addUser(User(uString));
+                }
+                cout `channel now has: $(_channelList[params[2]])\n`;
+            }
+        }
+        else if (command == "PING") {
+            _send(FStr() `PONG :$trail`);
+        }
+        else if (command == "JOIN") {
+            if (params.count() > 0 &&
+                params[0].size > 0 &&
+                params[0][0] == b'#')
+                __doJoin(prefix, params[0]);
+            else
+                __doJoin(prefix, trail);
+        }
+        else if (command == "PART") {
+            if (params.count() > 0)
+                __doPart(prefix, params[0]);
+        }
+        else if (command == "PRIVMSG") {
+            if (params.count() > 0)
+                _onPrivMsg(prefix, params[0], trail);
+        }
+    }
+
+    // poll socket and process any incoming messages
+    // will not block
+    void processOnce(TimeDelta timeout) {
+        _poller.wait(timeout);
+        e := _poller.nx();
+        if (!(e is null) && e.revents & POLLIN) {
+            lr := LineReader(_sock);
+            String s;
+            while (s = lr.readLine()) {
+                //log(s);
+                m := _rx_parse.search(s.rtrim());
+                if (m)
+                    _dispatch(m.group("prefix"), m.group("command"),
+                              split(m.group("params")), m.group("trail"));
+                else
+                    log(FStr() `_process FAIL: [$s]`);
+            }
+        }
+    }
+
+    bool connect() {
+
+        log("connecting to "+_serverName);
+
+        alist := resolve(_serverName);
+        if (alist.count() == 0) {
+            log("unable to resolve");
+            return false;
+        }
+
+        for (adr :in alist) {
+            _addr := InetAddress(InetAddress.cast(adr), _port);
+            log(FStr() `trying $_addr`);
+            _sock = Socket(AF_INET, SOCK_STREAM, 0);
+            if (_sock.connect(_addr)) {
+                _sock.setNonBlocking(true);
+                _send(FStr() `NICK $(_me.nick)`);
+                _send(FStr() `USER $(_me.userName) host server $(_me.realName)`);
+                _poller = Poller();
+                _poller.add(_sock, POLLIN);
+                // process until we get RPL_WELCOME
+                // this forces a connection before any other commands
+                // are sent
+                // XXX need some sort of timeout here
+                while (!_connected)
+                    processOnce(TimeDelta(0,0));
+                return true;
+            }
+        }
+
+        log("unable to connect");
+        return false;
+    }
+
+    void join(String channel) {
+        _send(FStr() `JOIN $channel`);
+    }
+
+    void say(String channel, String msg) {
+        _send(FStr() `PRIVMSG $channel :$msg`);
+    }
+
+    bool isConnected() { return _connected; }
+
+    String getServerName() { return _serverName; }
+
+    HashMap[String, Channel] getChannelList() { return _channelList; }
+
+}
+
