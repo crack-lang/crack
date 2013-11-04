@@ -88,7 +88,7 @@ set_target_properties(libcrack
                       )
 
 target_link_libraries( libcrack
-                       ${LLVM_LIBS} dl libcrackdebug
+                       ${LLVM_LIBS} pthread dl libcrackdebug
                      )
 
 # libCrackNativeRuntime
