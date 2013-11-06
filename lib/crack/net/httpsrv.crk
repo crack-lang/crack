@@ -11,7 +11,7 @@
 ## 
 
 import crack.ascii strip;
-import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer, Formatter;
+import crack.lang AppendBuffer, Buffer, Exception, ManagedBuffer, WriteBuffer, Formatter;
 import crack.strutil StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
@@ -339,7 +339,13 @@ class HTTPServer {
         }
 
         @final bool readChunk() {
-            amtRead := sock.read(WriteBuffer(getInputBuf(), 0, 1024));
+            uint amtRead;
+            try {
+                amtRead = sock.read(WriteBuffer(getInputBuf(), 0, 1024));
+            } catch (Exception ex) {
+                info `WARN: failed to read from socket: $ex\n`;
+                return false;
+            }
             if (!amtRead) {
                 return false;
             } else {
