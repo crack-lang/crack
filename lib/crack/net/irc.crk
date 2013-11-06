@@ -8,7 +8,7 @@
 #
 
 import crack.net Socket, SOCK_STREAM, AF_INET, resolve, InetAddress, Poller,
-                 POLLIN, PollEvent, SOCK_NONBLOCK;
+                 POLLIN, PollEvent;
 import crack.time TimeDelta;
 import crack.io cout, cerr, FStr, StringWriter, StringReader;
 import crack.io.readers LineReader;
@@ -46,7 +46,7 @@ class User {
     }
 
     void formatTo(Formatter fmt) {
-        fmt `User [$nick] [$userName] [$realName]\n`;
+        fmt `User [$nick] [$userName] [$realName]`;
     }
 
 }
@@ -70,7 +70,7 @@ class Channel {
     }
 
     void formatTo(Formatter fmt) {
-        fmt `Channel [$name] [$topic]\n$userList\n`;
+        fmt `Channel [$name] [$topic]\n$userList`;
     }
 
 }
@@ -125,7 +125,7 @@ class Client {
             return;
         }
         Channel channel;
-        if (_channelList.contains(channelName)) {
+        if (_channelList.hasKey(channelName)) {
             channel = _channelList[channelName];
         }
         else {
@@ -143,7 +143,7 @@ class Client {
             log(FStr() `unable to parse raw source: $source`);
             return;
         }
-        if (!_channelList.contains(channelName)) {
+        if (!_channelList.hasKey(channelName)) {
             log(FStr() `ASSERT: part from channel we don't have`);
             return;
         }
@@ -166,8 +166,8 @@ class Client {
         else if (command == "353") {
             // NAMES reply (also happens on join)
             //:irc.roadsend.com 353 crack| @ #crack-lang :crack| @GRiD
-            if (params.count() == 3 && _channelList.contains(params[2])) {
-                uList := split(trail);
+            if (params.count() == 3 && _channelList.hasKey(params[2])) {
+                uList := split(trail, b' ');
                 for (uString :in uList) {
                     if (_me.nick != uString)
                         _channelList[params[2]].addUser(User(uString));
@@ -209,7 +209,7 @@ class Client {
                 m := _rx_parse.search(s.rtrim());
                 if (m)
                     _dispatch(m.group("prefix"), m.group("command"),
-                              split(m.group("params")), m.group("trail"));
+                              split(m.group("params"), b' '), m.group("trail"));
                 else
                     log(FStr() `_process FAIL: [$s]`);
             }
