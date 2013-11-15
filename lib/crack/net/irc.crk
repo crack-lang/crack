@@ -4,34 +4,33 @@
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this
 ## file, You can obtain one at http://mozilla.org/MPL/2.0/.
-#
-#
+##
 
-import crack.net Socket, SOCK_STREAM, AF_INET, resolve, InetAddress, Poller,
-                 POLLIN, PollEvent;
-import crack.time TimeDelta;
-import crack.io cout, cerr, FStr, StringWriter, StringReader;
+import crack.ascii wsplit;
+import crack.cont.hashmap HashMap;
+import crack.io cerr, cout, FStr, StringReader, StringWriter;
 import crack.io.readers LineReader;
+import crack.lang Formatter;
+import crack.net resolve, InetAddress, Poller, PollEvent, Socket, AF_INET,
+    POLLIN, SOCK_STREAM;
 import crack.regex Regex;
 import crack.strutil split, StringArray;
-import crack.cont.hashmap HashMap;
-import crack.lang Formatter;
+import crack.time TimeDelta;
 
 class User {
 
-    String nick, userName, realName;
+    String nick, userName = "", realName = "";
 
-    oper init(String n): nick = n, userName(), realName() {
+    oper init(String n) : nick = n {
         // strip leading @
         if (nick.size && nick[0] == b'@')
             nick = nick.substr(1);
     }
 
-    oper init(String n, String un, String rn):
+    oper init(String n, String un, String rn) :
         nick = n,
         userName = un,
-        realName = rn
-    {
+        realName = rn {
     }
 
     // from raw string like: GRiD!GRiD@hospoda.mozek.us
@@ -48,18 +47,17 @@ class User {
     void formatTo(Formatter fmt) {
         fmt `User [$nick] [$userName] [$realName]`;
     }
-
 }
 
 class Channel {
 
     String name;
-    String topic;
-    String mode;
+    String topic = "";
+    String mode = "";
 
-    HashMap[String, User] userList;
+    HashMap[String, User] userList = {};
 
-    oper init(String n): name = n, topic(), mode(), userList() { }
+    oper init(String n): name = n {}
 
     void addUser(User u) {
         userList[u.nick] = u;
@@ -72,7 +70,6 @@ class Channel {
     void formatTo(Formatter fmt) {
         fmt `Channel [$name] [$topic]\n$userList`;
     }
-
 }
 
 class Client {
@@ -84,51 +81,48 @@ class Client {
     Poller _poller;
 
     bool _connected; // true if we receive RPL_WELCOME
-    bool _debug; // dump raw output
+    Formatter _debug; // dump raw output
 
     Regex _rx_parse;
 
     User _me;
-    HashMap[String, Channel] _channelList;
+    HashMap[String, Channel] _channelList = {};
 
-    oper init(String s, uint p, String n, String un, String rn):
-                         _me(n,un,rn),
-                         _channelList(),
-                         _debug = false,
-                         _serverName = s,
-                         _port = p,
-                         _connected = false {
+    oper init(String serverName, uint port, String nick, String userName,
+              String realName
+              ) :
+        _me(nick, userName, realName),
+        _serverName = serverName,
+        _port = port,
         // regex courtesy of:
         // http://calebdelnay.com/blog/2010/11/parsing-the-irc-message-format-as-a-client
-        _rx_parse = Regex("^(:(?<prefix>\\S+) )?(?<command>\\S+)( (?!:)(?<params>.+?))?( :(?<trail>.+))?$");
-    }
-
-    void log(String msg) {
-        if (_debug)
-            cout `$msg\n`;
+        _rx_parse("^(:(?<prefix>\\S+) )?(?<command>\\S+)( (?!:)"
+                   "(?<params>.+?))?( :(?<trail>.+))?$"
+                  ) {
     }
 
     void _send(String data) {
-        log(FStr() `[WRITE]: $data`);
+        _debug `[WRITE]: $data`;
         _sock.write(data);
         _sock.write("\n");
     }
 
-    void _onJoin(User user, Channel channel) { }
+    /// Called when a new user joins a channel.  Derived classes / may
+    //implement, base class version does nothing.
+    void _onJoin(User user, Channel channel) {}
 
-    void _onPart(User user, Channel channel) { }
+    /// Called when a user leaves a channel.  Derived classes / may
+    //implement, base class version does nothing.
+    void _onPart(User user, Channel channel) {}
 
     void __doJoin(String source, String channelName) {
         user := User.createFromRaw(source);
         if (user is null) {
-            log(FStr() `unable to parse raw source: $source`);
+            _debug `unable to parse raw source: $source`;
             return;
         }
-        Channel channel;
-        if (_channelList.hasKey(channelName)) {
-            channel = _channelList[channelName];
-        }
-        else {
+        Channel channel = _channelList.get(channelName);
+        if (!channel) {
             channel = Channel(channelName);
             _channelList[channelName] = channel;
         }
@@ -140,64 +134,68 @@ class Client {
     void __doPart(String source, String channelName) {
         user := User.createFromRaw(source);
         if (user is null) {
-            log(FStr() `unable to parse raw source: $source`);
+            _debug `unable to parse raw source: $source`;
             return;
         }
-        if (!_channelList.hasKey(channelName)) {
-            log(FStr() `ASSERT: part from channel we don't have`);
+        Channel channel;
+        if (!(channel = _channelList.get(channelName))) {
+            _debug `ASSERT: part from channel we don't have`;
             return;
         }
-        channel := _channelList[channelName];
         channel.removeUser(user);
         _onPart(user, channel);
     }
 
-    void _onPrivMsg(String source, String target, String msg) { }
+    /// Called when a private message is received.  Derived classes may
+    /// override, base class version does nothing.
+    void _onPrivMsg(String source, String target, String msg) {}
 
-    void _onConnect() { }
+    /// Called when the connection is established (including the initial
+    /// handshake).  Derived classes may implement, base class version does
+    /// nothing.
+    void _onConnect() {}
 
-    void _dispatch(String prefix, String command, StringArray params, String trail) {
-        log(FStr() `[READ ]: [$prefix] [$command] $params [$trail]`);
+    void _dispatch(String prefix, String command, StringArray params,
+                   String trail
+                   ) {
+        _debug `[READ ]: [$prefix] [$command] $params [$trail]`;
         if (command == "001") {
             // RPL_WELCOME: we are now connected
             _connected = true;
             _onConnect();
-        }
-        else if (command == "353") {
+        } else if (command == "353") {
             // NAMES reply (also happens on join)
             //:irc.roadsend.com 353 crack| @ #crack-lang :crack| @GRiD
-            if (params.count() == 3 && _channelList.hasKey(params[2])) {
-                uList := split(trail, b' ');
+            if (params.count() == 3 &&
+                (channel := _channelList.get(params[2]))) {
+                uList := wsplit(trail);
                 for (uString :in uList) {
                     if (_me.nick != uString)
-                        _channelList[params[2]].addUser(User(uString));
+                        channel.addUser(User(uString));
                 }
-                cout `channel now has: $(_channelList[params[2]])\n`;
+                cout `channel now has: $(channel)\n`;
             }
-        }
-        else if (command == "PING") {
+        } else if (command == "PING") {
             _send(FStr() `PONG :$trail`);
-        }
-        else if (command == "JOIN") {
+        } else if (command == "JOIN") {
             if (params.count() > 0 &&
                 params[0].size > 0 &&
-                params[0][0] == b'#')
+                params[0][0] == b'#'
+                )
                 __doJoin(prefix, params[0]);
             else
                 __doJoin(prefix, trail);
-        }
-        else if (command == "PART") {
+        } else if (command == "PART") {
             if (params.count() > 0)
                 __doPart(prefix, params[0]);
-        }
-        else if (command == "PRIVMSG") {
+        } else if (command == "PRIVMSG") {
             if (params.count() > 0)
                 _onPrivMsg(prefix, params[0], trail);
         }
     }
 
-    // poll socket and process any incoming messages
-    // will not block
+    /// poll socket and process any incoming messages
+    /// will not block
     void processOnce(TimeDelta timeout) {
         _poller.wait(timeout);
         e := _poller.nx();
@@ -209,26 +207,29 @@ class Client {
                 m := _rx_parse.search(s.rtrim());
                 if (m)
                     _dispatch(m.group("prefix"), m.group("command"),
-                              split(m.group("params"), b' '), m.group("trail"));
+                              wsplit(m.group("params")),
+                              m.group("trail")
+                              );
                 else
-                    log(FStr() `_process FAIL: [$s]`);
+                    _debug `_process FAIL: [$s]`;
             }
         }
     }
 
+    /// Connect to the first server that answers and communicate until we are
+    /// connected.
     bool connect() {
-
-        log("connecting to "+_serverName);
+        _debug `connecting to $_serverName`;
 
         alist := resolve(_serverName);
         if (alist.count() == 0) {
-            log("unable to resolve");
+            _debug `unable to resolve`;
             return false;
         }
 
         for (adr :in alist) {
             _addr := InetAddress(InetAddress.cast(adr), _port);
-            log(FStr() `trying $_addr`);
+            _debug `trying $_addr`;
             _sock = Socket(AF_INET, SOCK_STREAM, 0);
             if (_sock.connect(_addr)) {
                 _sock.setNonBlocking(true);
@@ -246,23 +247,27 @@ class Client {
             }
         }
 
-        log("unable to connect");
+        _debug `unable to connect`;
         return false;
     }
 
+    /// Join the specified channel.
     void join(String channel) {
         _send(FStr() `JOIN $channel`);
     }
 
+    /// Send the message to the specified channel.  Also can be used to send a
+    /// private message to a specific user.
     void say(String channel, String msg) {
         _send(FStr() `PRIVMSG $channel :$msg`);
     }
 
+    /// Returns true if we're connected to the network (this implies a TCP
+    /// connection that has also gone through the initialization handshake).
     bool isConnected() { return _connected; }
 
     String getServerName() { return _serverName; }
 
     HashMap[String, Channel] getChannelList() { return _channelList; }
-
 }
 
