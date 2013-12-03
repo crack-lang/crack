@@ -387,14 +387,14 @@ class CurlEasy {
     }
 }
 
-String URLEncode(String plain) {
+String urlEncode(String plain) {
     temp := curl_escape(plain.buffer, plain.size);
     result := String(temp);
     curl_free(temp);
     return result;
 }
 
-String URLDecode(String plain) {
+String urlDecode(String plain) {
     temp := curl_unescape(plain.buffer, plain.size);
     result := String(temp);
     curl_free(temp);
@@ -406,15 +406,14 @@ class FormData {
     String _raw;
     bool _current;
 
-    oper init() : _current = true, _raw = "" {
-    }
+    oper init() : _current = true, _raw = "" { }
 
     uint _parse() {
         items := split(_raw, "&");
         for (item :in items) {
             pair := split(item, "=");
             if (pair.count() == 2) {
-                _data.set(pair[0], URLDecode(pair[1]));
+                _data.set(pair[0], urlDecode(pair[1]));
             }
         }
         return _data.count();
@@ -428,7 +427,7 @@ class FormData {
 
     String oper []=(String key, String val) {
         _current = false;
-        return _data.set(key, URLDecode(val));
+        return _data.set(key, urlDecode(val));
     }
 
     String get(String key) {
@@ -452,7 +451,7 @@ class FormData {
                     fmt.format("&");
                 else
                     first = false;
-                fmt `$(item.key)=$(URLEncode(item.val))`;
+                fmt `$(item.key)=$(urlEncode(item.val))`;
             }
             _raw = fmt.string();
             _current = true;

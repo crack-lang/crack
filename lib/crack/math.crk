@@ -16,16 +16,14 @@
 import crack.lang CString, Exception, InvalidArgumentError, BadCastError;
 
 import crack.runtime acosh, atanh, atoi, atof, strtoi, strtof, strtod, usecs,
-                    copysign, nextafter, fdim, pow, testexcept, clearexcept,
-                    errno, setErrno, exp, exp2, ilogb, log, log10, log1p,
-                    log2, cbrt, abs, hypot,  sqrt, erf, erfc, lgamma, tgamma,
-                    ceil, floor, isfinite, isinf, isnan, isnormal, sign,
-                    fmod, remainder, nearbyint, rint, round, trunc, expm1,
-                    fpclassify, sin, cos, tan, asin, acos, atan, sinh, cosh,
-                    tanh, asinh, FP_ILOGBNAN, ALL_EXCEPT, INVALID, DIVBYZERO,
-                    OVERFLOW, FP_NAN, FP_NORMAL, FP_SUBNORMAL, FP_ZERO,
-                    FP_ILOGB0, HUGE_VAL, INFINITY, NAN, FP_INFINITE,
-                    UNDERFLOW, ERANGE, EINVAL;
+    copysign, nextafter, fdim, pow, testexcept, clearexcept, errno, setErrno,
+    exp, exp2, ilogb, log, log10, log1p, log2, cbrt, abs, hypot,  sqrt, erf,
+    erfc, lgamma, tgamma, ceil, floor, isfinite, isinf, isnan, isnormal,
+    sign, fmod, remainder, nearbyint, rint, round, trunc, expm1, fpclassify,
+    sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, FP_ILOGBNAN,
+    ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW, FP_NAN, FP_NORMAL, FP_SUBNORMAL
+    , FP_ZERO, FP_ILOGB0, HUGE_VAL, INFINITY, NAN, FP_INFINITE, UNDERFLOW,
+    ERANGE, EINVAL;
 
 import crack.io FStr;
 

@@ -85,7 +85,9 @@ class NumericVector[Elem] : Array[Elem] {
     }
 
     @static
-    NumericVector linspace(Elem startVal, Elem endVal, uint num, bool includeLast){
+    NumericVector linspace(Elem startVal, Elem endVal, uint num,
+                           bool includeLast
+                           ) {
         Elem delta = 1;
         if (endVal > startVal){
             delta = endVal - startVal;
@@ -120,7 +122,7 @@ class NumericVector[Elem] : Array[Elem] {
             this[i] = value;
     }
 
-    /// Convenience constructor to create an empy vector with the specified size
+    /// Convenience constructor to create an empty vector with the specified size
     @static
     NumericVector empty(uint maxInd){
         V := NumericVector(maxInd);

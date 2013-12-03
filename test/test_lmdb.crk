@@ -136,7 +136,7 @@ mdb["key"] = "value";
 if (mdb["key"] != "value" ||
     mdb.get("key") != "value" ||
     mdb.get("key", null) != "value" ||
-     !(mdb.get("somekey", null) is null)
+    !(mdb.get("somekey", null) is null)
     ) {
     exitError("Key lookup failed");
 }

@@ -9,7 +9,7 @@
 import crack.cont.numericarray NumericVector;
 import crack.hash.murmur3 Murmur3_32;
 import crack.io cout;
-import crack.lang ManagedBuffer, AppendBuffer, Buffer, InvalidArgumentError;
+import crack.lang AppendBuffer, Buffer, InvalidArgumentError, ManagedBuffer;
 import crack.runtime random, srandom, setstate, initstate;
 import crack.time Time;
 @export_symbols random, srandom, setstate, initstate;
@@ -18,29 +18,32 @@ import crack.time Time;
 /// of being unique due to it's use of a high-resolution time values combined
 /// with system random numbers.
 AppendBuffer uuid(uint numbytes) {
-    buf := ManagedBuffer(16);
-    buf.size = 16;
-    pages := numbytes + numbytes%4;
+    pages := (numbytes + 3) / 4;
     result := AppendBuffer(pages);
     result.size = numbytes;
-    pages /= 4;
 
-    t := Time.now();
-    h := Murmur3_32();
-    sourceInts := array[int32](buf.buffer);
-    hashInts := array[uint32](result.buffer);
+    if (numbytes > 0) {
+        buf := ManagedBuffer(16);
+        buf.size = 16;
+        pages /= 4;
 
-    srandom(uint(t.nsecs));
-    
-    for (uint i = 0; i < pages; i++) {
-        t.setToNow(null);
-        sourceInts[0] = t.nsecs;
-        sourceInts[1] = t.secs;
-        sourceInts[2] = int32(random());
-        sourceInts[3] = int32(random());
+        t := Time.now();
+        h := Murmur3_32();
+        sourceInts := array[int32](buf.buffer);
+        hashInts := array[uint32](result.buffer);
 
-        h.update(buf);
-        hashInts[i] = h.asUInt32();
+        srandom(uint(t.nsecs));
+        
+        for (uint i = 0; i < pages; i++) {
+            t.setToNow(null);
+            sourceInts[0] = t.nsecs;
+            sourceInts[1] = t.secs;
+            sourceInts[2] = int32(random());
+            sourceInts[3] = int32(random());
+
+            h.update(buf);
+            hashInts[i] = h.asUInt32();
+        }
     }
     return result;
 }
@@ -49,30 +52,30 @@ AppendBuffer uuid(uint numbytes) {
 // http://en.wikipedia.org/wiki/Mersenne_twister
 // Create a length 624 array to store the state of the generator
 class MersenneTwister {
-    NumericVector[uint] _MT = NumericVector[uint].empty(624);
-    uint _index = 0;
+    NumericVector[uint] _mt = NumericVector[uint].empty(624);
+    uint _index;
 
     // Initialize the generator from a seed
-    void _initialize_generator(uint seed) {
-        _index = 0;
-        _MT[0] = seed;
+    void _initializeGenerator(uint seed) {
+        _mt[0] = seed;
         for (uint i = 1; i < 624; i++) {
-            _MT[i] = (1812433253 * (_MT[i - 1] ^ (_MT[i - 1] >> 30)) +i) & 0xffffffff;
+            _mt[i] = (1812433253 * (_mt[i - 1] ^ (_mt[i - 1] >> 30)) + i) &
+                     0xffffffff;
         }
     }
 
     oper init(uint seed) {
-        _initialize_generator(seed);
+        _initializeGenerator(seed);
     }
 
     // Generate an array of 624 untempered numbers
-    void _generate_numbers() {
+    void _generateNumbers() {
         uint y;
         for (uint i = 0; i < 624; i++) {
-            y = (_MT[i] & 0x80000000) + (_MT[(i+1) % 624] & 0x7fffffff);
-            _MT[i] = _MT[(i + 397)% 624] ^ (y >> 1);
+            y = (_mt[i] & 0x80000000) + (_mt[(i + 1) % 624] & 0x7fffffff);
+            _mt[i] = _mt[(i + 397) % 624] ^ (y >> 1);
             if (y % 2) {              // y is odd
-                _MT[i] =  _MT[i] ^ 2567483615; // 0x9908b0df
+                _mt[i] =  _mt[i] ^ 2567483615; // 0x9908b0df
             }
         }
     }
@@ -81,10 +84,10 @@ class MersenneTwister {
     // calling generate_numbers() every 624 numbers
     uint get() {
         if (_index == 0) {
-            _generate_numbers();
+            _generateNumbers();
         }
 
-        uint y = _MT[_index];
+        uint y = _mt[_index];
         y = y ^ (y >> 11);
         y = y ^ (y << 7) & 2636928640;
         y = y ^ (y << 15) & 4022730752;
