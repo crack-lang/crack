@@ -1,0 +1,650 @@
+# Copyright 2013 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+## Script to reformat complete output of serializer trace for a single
+## module(crack -t Serializer ...) to a format that is vaguely readable as a
+## debugging aid.
+##
+## This currently only works on the output created when a file is cached -- not
+## when the cache is read back.  It also hasn't been tested on anything but a
+## single module, so it's likely to be incomplete.  Fix it as necessary.
+##
+## This currently needs to stay in sync with doc/MetaDataFormat.txt (see TODO
+## below).
+
+import crack.ascii parseInt;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.io cin, cout, FStr, StandardFormatter, StringReader, Writer;
+import crack.io.readers LineReader;
+import crack.lang Buffer, Exception;
+import crack.regex Regex;
+
+fieldRx := Regex(r'\s*write (\S+) ([^:]+): (.*)\n');
+
+class State;
+
+@abstract class Field {
+    String name;
+    String type;
+
+    oper init(String name, String type) : name = name, type = type {}
+
+    void checkName(String name) {
+        if (this.name != name)
+            throw Exception(FStr() `Expecting name $(this.name), got $name`);
+    }
+
+    void checkType(String type) {
+        if (this.type != type)
+            throw Exception(FStr() `Expecting type $(this.type), got $type`);
+    }
+
+    @abstract void process(State state, String type, String name, String val);
+}
+
+class Struct : Array[Field] {
+    String name;
+    oper init(int count) : Array[Field](count) {}
+}
+
+class Indenter : StandardFormatter {
+    String __prefix = '';
+    bool __atBOL = true;
+
+    oper init(Writer rep) : StandardFormatter(rep) {}
+
+    void write(Buffer data) {
+        int pos;
+        while (pos != data.size) {
+            if (__atBOL) {
+                rep.write(__prefix);
+                __atBOL = false;
+            }
+
+            end := data.lfind('\n', pos);
+            if (end != -1) {
+                ++end;
+                rep.write(Buffer(data.buffer + pos, end - pos));
+                pos = end;
+                __atBOL = true;
+            } else {
+                rep.write(Buffer(data.buffer + pos, data.size - pos));
+                pos = data.size;
+            }
+        }
+    }
+
+    ## Indent or dedent by the specified number of levels.
+    void indent(int levels) {
+        if (levels < 0) {
+            __prefix = __prefix.slice(0, levels * 3);
+        } else {
+            for (i := 0; i < levels; ++i)
+                __prefix += '  |';
+        }
+    }
+}
+
+class State {
+    Indenter out;
+
+    class Frame {
+        Frame parent;
+        Field field;
+        int substate;
+        int max;
+        int lastSwitch;
+
+        oper init(Field field) : field = field {}
+        oper init(Frame parent, Field field) :
+            parent = parent,
+            field = field {
+        }
+    }
+
+    Frame __frame;
+
+    oper init(Writer out, Field field) :
+        out(out),
+        __frame(field) {
+    }
+
+    ## Should be unused, remove
+/*
+    @final void __next() {
+        if (++__frame.fieldIndex >= __frame.struc.count()) {
+            __frame = __frame.parent;
+        } else {
+            __frame.substate = 0;
+        }
+    }
+*/
+
+    @final void pop() {
+        __frame = __frame.parent;
+    }
+
+    @final int getSubstate() { return __frame.substate; }
+    @final void nextSubstate() { ++__frame.substate; }
+    @final void setMax(int max) { __frame.max = max; }
+    @final int getMax() { return __frame.max; }
+    @final void setSwitch(int val) { __frame.lastSwitch = val; }
+    @final int getSwitch() { return __frame.lastSwitch; }
+    @final void process(String type, String name, String val) {
+        if (__frame)
+            __frame.field.process(this, type, name, val);
+    }
+
+    @final void push(Field field) {
+        __frame = Frame(__frame, field);
+    }
+
+    void read(LineReader src) {
+        while (__frame) {
+            line := src.readLine();
+            if (!line)
+                # XXX verify that the current field is done.
+                break;
+            if (m := fieldRx.match(line)) {
+                type := m.group(1);
+                name := m.group(2);
+                val := m.group(3);
+
+                __frame.field.process(this, type, name, val);
+            }
+        }
+    }
+}
+
+class UIntField : Field {
+    oper init(String name) : Field(name, 'uint') {}
+
+    void process(State state, String type, String name, String val) {
+        checkName(name);
+        checkType(type);
+        state.out `$name: $val\n`;
+        state.pop();
+    }
+}
+
+class BlobField : Field {
+    oper init(String name) : Field(name, 'blob') {}
+
+    void process(State state, String type, String name, String val) {
+        checkName(name);
+        if (type == 'uint') {
+            if (state.getSubstate() != 0)
+                throw Exception(
+                    FStr() `Multiple lengths for blob field $name\n`
+                );
+            state.nextSubstate();
+            return;
+        }
+
+        state.out `$name: $(val.getRepr())\n`;
+        state.pop();
+    }
+}
+
+class StructField : Field {
+    Struct type;
+
+    oper init(String name, Struct type) :
+        Field(name, null),
+        type = type {
+    }
+
+    void process(State state, String type, String name, String val) {
+        if (state.getSubstate() == 0) {
+            state.nextSubstate();
+
+            state.out `struct $(this.type.name):\n`;
+            state.out.indent(1);
+
+            # process the first field.
+            state.push(this.type[0]);
+            state.process(type, name, val);
+        } else if (state.getSubstate() < this.type.count()) {
+            state.nextSubstate();
+            state.push(this.type[state.getSubstate() - 1]);
+            state.process(type, name, val);
+        } else {
+            state.out.indent(-1);
+            state.pop();
+            state.process(type, name, val);
+        }
+    }
+}
+
+class ArrayField : Field {
+    Field elemField;
+
+    oper init(String name, Field elemField) :
+        Field(name, null),
+        elemField = elemField {
+    }
+
+    oper init(String name, Struct elemType) :
+        Field(name, null),
+        elemField = StructField(elemType.name, elemType) {
+    }
+
+    void process(State state, String type, String name, String val) {
+        if (state.getSubstate() == 0) {
+            if (name != '#' + this.name)
+                throw Exception(
+                    FStr() I`Invalid array count name $name (expected \
+                             #$(this.name))`
+                );
+            state.setMax(count := parseInt(val));
+
+
+            if (!count) {
+                state.out `list $(this.name): <empty>\n`;
+                state.pop();
+                return;
+            }
+            state.out `list $(this.name):\n`;
+            state.out.indent(1);
+            state.nextSubstate();
+            state.push(elemField);
+            return;
+        }
+
+        if (state.getSubstate() < state.getMax()) {
+            state.nextSubstate();
+            state.push(elemField);
+
+            # process the first field.
+            state.process(type, name, val);
+        } else {
+            state.out.indent(-1);
+
+            state.pop();
+            state.process(type, name, val);
+        }
+    }
+}
+
+## A combination of a switch field and another field of type determined by the
+## switch.
+class SwitchField : Field {
+
+    Array[Field] types;
+
+    oper init(String switchName, Array[Field] types) :
+        Field(switchName, 'uint'),
+        types = types {
+    }
+
+    void process(State state, String type, String name, String val) {
+        substate := state.getSubstate();
+        if (substate == 0) {
+            checkName(name);
+            checkType(type);
+            state.nextSubstate();
+            state.out `$name: $val\n`;
+            state.setSwitch(parseInt(val));
+        } else if (substate == 1) {
+            state.nextSubstate();
+            state.push(types[state.getSwitch()]);
+            state.process(type, name, val);
+        } else if (substate == 2) {
+            state.pop();
+            state.process(type, name, val);
+        }
+    }
+}
+
+class RefField : Field {
+    StructField elemType;
+    oper init(String name, Struct elemType) :
+        Field('objectId', 'uint'),
+        elemType(elemType.name, elemType) {
+    }
+
+    ## When using this, you have to set elemType before it is used.
+    oper init(String name) : Field('objectId', 'uint') {}
+
+    void process(State state, String type, String name, String val) {
+        substate := state.getSubstate();
+        if (substate == 0) {
+            checkName(name);
+            checkType(type);
+            id := parseInt(val);
+            if (id & 1) {
+                state.out `def ($(id >> 1)) ->\n`;
+                state.out.indent(1);
+                state.nextSubstate();
+                state.push(elemType);
+            } else {
+                state.out `ref -> $(id >> 1)\n`;
+                state.pop();
+            }
+        } else {
+            state.out.indent(-1);
+            state.pop();
+            state.process(type, name, val);
+        }
+    }
+}
+
+const uint
+    TP_VARINT = 1,
+    TP_STR = 2,
+    TP_REF = 3;
+
+uint tag(uint tag, uint type) {
+    return tag << 3 | type;
+}
+
+class TaggedField : Field {
+    uint tag;
+    Field __field;
+
+    oper init(uint tag, Field field) :
+        Field(field.name, field.type),
+        tag = tag,
+        __field = field {
+    }
+
+    void process(State state, String type, String name, String val) {
+        __field.process(state, type, name, val);
+    }
+}
+
+class OptionalBlock : Field {
+    HashMap[uint, TaggedField] __fields = {};
+    oper init() : Field(null, null) {}
+
+    void append(TaggedField field) {
+        __fields[field.tag] = field;
+    }
+
+    void process(State state, String type, String name, String val) {
+        if (name == 'optional') {
+            # XXX this won't work for reads, where 'optional' precedes its
+            # contents.
+            if (type == 'blob')
+                state.pop();
+            return;
+        }
+
+        if (name.endsWith('.header')) {
+            tag := parseInt(val) >> 3;
+            field := __fields.get(tag, null);
+            if (!field)
+                throw Exception(FStr() `Unknown tag: $tag`);
+            state.push(field);
+        } else {
+            # not a header field, move on.
+            state.pop();
+            state.process(type, name, val);
+        }
+    }
+}
+
+# TODO: We should define an annotation that generates these structures so we
+# can merge these definitions and MetaDataFormat.txt into a single file that
+# both defines the format and documents it.
+
+dependency := Struct![
+    BlobField('canonicalName'),
+    BlobField('metaDigest'),
+];
+dependency.name = 'Dependency';
+
+header := Struct![
+    UIntField('magic'),
+    BlobField('sourcePath'),
+    BlobField('sourceDigest'),
+    ArrayField('deps', dependency),
+];
+header.name = 'Header';
+
+typeDecl := Struct![
+    BlobField('name'),
+    UIntField('isGeneric'),
+];
+typeDecl.append(ArrayField('decls', typeDecl));
+typeDecl.name = 'TypeDecl';
+
+typeRef := RefField('base');
+localDepsField := RefField('localDeps');
+defsField := StructField('defs', null);
+
+extern := Struct![
+    BlobField('module'),
+    OptionalBlock![
+        TaggedField(3, BlobField('name')),
+        TaggedField(1, StructField('shlibFuncDef', null)),
+        TaggedField(2, localDepsField),
+    ],
+];
+extern.name = 'Extern';
+externField := StructField('Extern', extern);
+typeRef.elemType = externField;
+localDepsField.elemType = externField;
+
+nonGenericType := Struct![
+    UIntField('flags'),
+    ArrayField('bases', typeRef),
+    OptionalBlock![
+        TaggedField(1, typeRef),
+        TaggedField(2, typeRef),
+    ],
+    defsField,
+];
+nonGenericType.name = 'NonGenericType';
+
+typeDef := Struct![
+    UIntField('objectId'),
+    SwitchField('isGeneric',
+        Array[Field]![
+            StructField('non_generic', nonGenericType),
+        ],
+    # xxx stuff that depends on generic.
+    ),
+];
+typeDef.name = 'TypeDef';
+
+varDef := Struct![
+    BlobField('name'),
+    UIntField('instSlot'),
+    RefField('type', extern),
+];
+varDef.name = 'VarDef';
+
+argDef := Struct![
+    BlobField('name'),
+    RefField('type', extern),
+];
+
+funcDefBody := Struct![
+    RefField('returnType', extern),
+    UIntField('flags'),
+    ArrayField('args', argDef),
+    OptionalBlock![
+        TaggedField(1, RefField('receiverType', extern)),
+        TaggedField(2, UIntField('vtableSlot')),
+    ],
+];
+funcDefBody.name = 'FuncDefBody';
+
+funcAlias := Struct![
+    externField,
+    ArrayField('args', argDef),
+];
+funcAlias.name = 'FuncAlias';
+
+funcDef := Struct![
+    SwitchField('isAlias',
+                Array[Field]![
+                    StructField('FuncDefBody', funcDefBody),
+                    StructField('FuncAlias', funcAlias),
+                ]
+    ),
+];
+funcDef.name = 'FuncDef';
+
+overloadDef := Struct![
+    BlobField('name'),
+    ArrayField('overloads', funcDef),
+];
+overloadDef.name = 'OverloadDef';
+
+def := Struct![
+    SwitchField(
+        'kind',
+        Array[Field]![
+            null,
+            StructField('VarDef', varDef),
+            StructField('TypeDef', typeDef),
+            null,  # generic
+            StructField('OverloadDef', overloadDef),
+        ]
+    ),
+
+];
+def.name = 'Def';
+
+definitions := Struct![
+    ArrayField('defs', def),
+    ArrayField('privateDefs', def),
+];
+definitions.name = 'Definitions';
+defsField.type = definitions;
+
+metaDataFile := Struct![
+    StructField('header', header),
+    ArrayField('decls', typeDecl),
+    StructField('defs', definitions),
+    ArrayField('exports', BlobField('exports')),
+];
+metaDataFile.name = 'MetaDataFile';
+
+# Test data.
+src := I'
+    write uint magic: 2271218416
+    write uint sourcePath: 42
+    write blob sourcePath: /home/mmuller/w/crack/test/test_typeof.crk
+    write uint sourceDigest: 32
+    write blob sourceDigest: a8ad538cbe5cd9f7f51bf6d3f9ab46bf
+    write uint #deps: 2
+    write uint canonicalName: 79
+    write blob canonicalName: .main._e62eea1c6b589a26204a95a0cb311b54_5ftest_5ftypeof_2ecrk.Foo[.builtin.int]
+    write uint metaDigest: 32
+    write blob metaDigest: 472795de040ccd750e3bd08af290a42f
+    write uint canonicalName: 79
+    write blob canonicalName: .main._e62eea1c6b589a26204a95a0cb311b54_5ftest_5ftypeof_2ecrk.Foo[.builtin.int]
+    write uint metaDigest: 32
+    write blob metaDigest: 472795de040ccd750e3bd08af290a42f
+    write uint #decls: 1
+    write uint name: 3
+    write blob name: Foo
+    write uint isGeneric: 0
+    write uint #decls: 1
+    write blob name: Bar
+    write uint isGeneric: 1
+    write uint #decls: 0
+    write uint #defs: 1
+
+        # class Foo
+        write uint kind: 2
+        write uint objectId: 1
+        write uint generic: 0
+        write uint flags: 3
+        write uint #bases: 0
+        write uint optional: 0
+        write uint #defs: 2
+
+            # class Foo.Bar
+            write uint kind: 2
+            write uint objectId: 2
+            write uint generic: 0
+            write uint flags: 3
+            write uint #bases: 1
+            write uint objectId: 2
+            write uint optional: 0
+            write uint #defs: 0
+            write uint #privateDefs: 0
+
+            # function void func(int x)
+            write uint kind: 4
+            write uint name: 4
+            write blob name: func
+            write uint #overloads: 1
+            write uint isAlias: 0
+            write uint objectId: 7
+                write uint module: 20
+                write blob module: .builtin
+                write uint name.header: 26
+                write uint name: 4
+                write blob name: void
+                write uint optional: 6
+                write blob optional: \x1a\x04void
+            write uint flags: 1
+            write uint #args: 1
+                write uint name: 1
+                write blob name: x
+                write uint instSlot: 0
+                write uint objectId: 9
+                    write uint module: 20
+                    write blob module: .builtin
+                    write uint name.header: 26
+                    write uint name: 3
+                    write blob name: int
+                    write uint optional: 5
+                    write blob optional: \x1a\x04int
+            optional: 0
+
+        write uint #privateDefs: 1
+
+            # private Foo myVar
+            write uint kind: 1
+            write uint name: 5
+            write blob name: myVar
+            write uint instSlot: 0
+            write uint objectId: 2
+
+    write uint #privateDefs: 1
+
+        # var myPrivate
+        write uint kind: 1
+        write uint name: 9
+        write blob name: myPrivate
+        write uint instSlot: 0
+        write uint objectId: 5
+            # Type alias.
+            write uint module: 61
+            write blob module: .main._e62eea1c6b589a26204a95a0cb311b54_5ftest_5ftypeof_2ecrk
+            # Optionals
+                write uint name.header: 26
+                write uint name: 3
+                write blob name: Foo
+
+    write uint #exports: 1
+    write uint exports: 5
+    write blob exports: myVar
+
+    write uint end_marker: 1
+    ';
+
+import crack.sys argv;
+
+metaFile := StructField('file', metaDataFile);
+state := State(cout, metaFile);
+
+if (argv.count() > 1 && argv[1] == '--test')
+    state.read(LineReader(StringReader(src)));
+else {
+    src := LineReader(cin);
+    state.read(src);
+    state = State(cout, metaFile);
+    state.read(src);
+}
+
