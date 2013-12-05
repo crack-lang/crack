@@ -1,0 +1,39 @@
+%%TEST%%
+Private definitions used by generics.
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+test.mod('mod1', I"
+    void f() {
+        puts('ok');
+    }
+    ");
+test.mod('mod2', I"
+    import mod1 f;
+
+    class A[T] {
+        void g() {
+            f();
+        }
+    }
+    ");
+test.main(I"
+    import mod2 A;
+    A[int] a = {};
+    a.g();
+    ");
+test.run();
+test.main(I"
+    import mod2 A;
+    A[float] a = {};
+    a.g();
+    ");
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%

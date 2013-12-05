@@ -248,8 +248,8 @@ void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
         (*iter)->type->addDependenciesTo(mod, added);
 }
 
-bool FuncDef::isSerializable(const Namespace *ns, const string &name) const {
-    return VarDef::isSerializable(ns, name) && !(flags & FuncDef::builtin);
+bool FuncDef::isSerializable() const {
+    return VarDef::isSerializable() && !(flags & FuncDef::builtin);
 }
 
 void FuncDef::serializeArgs(Serializer &serializer) const {

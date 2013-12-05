@@ -137,12 +137,23 @@ class VarDef : public virtual spug::RCBase {
                                       ) const;
         
         /**
-         * Returns true if the definition should be serialized when the owner
-         * is being serialized.
+         * Returns true if the variable is visible from other modules (can be 
+         * imported).
+         * @param ns The namespace the definition is in.
+         * @param name The name the definition is defined under (may not be 
+         *     the same as the definition's name, for an alias)
          */
-        virtual bool isSerializable(const Namespace *ns, 
-                                    const std::string &name
-                                    ) const;
+        bool isImportable(const Namespace *ns, const std::string &name) const;
+        
+        /**
+         * Returns true if the definition should be serialized (some kinds 
+         * of definitions are created automatically during deserialization and 
+         * should not be serialized).
+         * This returns true for variables that may not be importable.
+         * Callers should also check isImportable() if they want to serialize 
+         * the definition in an exported definition section.
+         */
+        virtual bool isSerializable() const;
 
         /** Keeps track of a set of externally managed VarDefs. */
         typedef std::set<const VarDef *> Set;

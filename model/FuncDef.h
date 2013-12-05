@@ -123,9 +123,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
-        virtual bool isSerializable(const Namespace *ns, 
-                                    const std::string &name
-                                    ) const;
+        virtual bool isSerializable() const;
         
         /**
          * The unique name of the function is its full name and its argument 

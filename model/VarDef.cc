@@ -118,8 +118,12 @@ bool VarDef::isImportableFrom(ModuleDef *module, const string &impName) const {
            module->exports.find(impName) != module->exports.end();
 }
 
-bool VarDef::isSerializable(const Namespace *ns, const string &name) const {
-    return name[0] != ':' && (owner == ns || isExported(ns, name));
+bool VarDef::isImportable(const Namespace *ns, const string &name) const {
+    return owner == ns || isExported(ns, name);
+}
+
+bool VarDef::isSerializable() const {
+    return name[0] != ':';
 }
 
 void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {

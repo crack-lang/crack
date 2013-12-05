@@ -33,8 +33,10 @@ class OverloadDef : public VarDef {
         typedef std::list<FuncDefPtr> FuncList;
         typedef std::vector<OverloadDefPtr> ParentVec;
 
-    private:
+    protected:
         FuncList funcs;
+    
+    private:
         ParentVec parents;
 
         /**
@@ -97,8 +99,9 @@ class OverloadDef : public VarDef {
          *        names of the arg list.  If false, only require that the 
          *        types match.
          */
-        FuncDef *getSigMatch(const ArgVec &args, 
-                             bool matchNames = false);
+        virtual FuncDef *getSigMatch(const ArgVec &args, 
+                                     bool matchNames = false
+                                     );
         
         /**
          * Returns the overload with no arguments.  If 'acceptAlias' is false, 
@@ -158,9 +161,7 @@ class OverloadDef : public VarDef {
         virtual bool isImportableFrom(ModuleDef *module,
                                       const std::string &impName
                                       ) const;
-        virtual bool isSerializable(const Namespace *ns, 
-                                    const std::string &name
-                                    ) const;
+        virtual bool isSerializable() const;
         
         /**
          * Returns true if the overload consists of only one function.
@@ -184,9 +185,7 @@ class OverloadDef : public VarDef {
          * Returns true if the overload includes any non-builtin functions 
          * (this is useful for determining if it needs to be serialized).
          */
-        bool hasSerializableFuncs(const Namespace *ns, 
-                                  const std::string &name
-                                  ) const;
+        bool hasSerializableFuncs() const;
 
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns

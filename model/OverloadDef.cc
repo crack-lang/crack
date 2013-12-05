@@ -245,13 +245,11 @@ bool OverloadDef::isImportableFrom(ModuleDef *module,
     return false;
 }
 
-bool OverloadDef::isSerializable(const Namespace *ns, 
-                                 const string &name
-                                 ) const {
-    if (!VarDef::isSerializable(ns, name))
+bool OverloadDef::isSerializable() const {
+    if (!VarDef::isSerializable())
         return false;
     else {
-        return hasSerializableFuncs(ns, name);
+        return hasSerializableFuncs();
     }
 }
 
@@ -325,14 +323,12 @@ void OverloadDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     }
 }
 
-bool OverloadDef::hasSerializableFuncs(const Namespace *ns, 
-                                       const string &name
-                                       ) const {
+bool OverloadDef::hasSerializableFuncs() const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(ns, name))
+        if ((*iter)->isSerializable())
             return true;
     }
     return false;
@@ -349,7 +345,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
          iter != funcs.end();
          ++iter
          )
-        if ((*iter)->isSerializable(ns, name))
+        if ((*iter)->isSerializable())
             ++size;
 
     if (writeKind)
@@ -361,7 +357,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(ns, name))
+        if ((*iter)->isSerializable())
             (*iter)->serialize(serializer, false, ns);
     }
 }

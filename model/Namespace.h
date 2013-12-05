@@ -67,13 +67,13 @@ class Namespace : public virtual spug::RCBase {
          */
         void getTypeDefs(std::vector<TypeDef*> &typeDefs);
 
+        void deserializeDefs(Deserializer &deser, const char *countName,
+                             bool publicDefs
+                             );
+
     public:
         
-        Namespace(const std::string &cName) :
-                canonicalName(cName)
-        {
-
-        }
+        Namespace(const std::string &cName) : canonicalName(cName) {}
         
         /**
          * Returns the fully qualified name of the namespace
@@ -113,6 +113,13 @@ class Namespace : public virtual spug::RCBase {
          * other modules.
          */
         virtual bool isHiddenScope();
+
+        /**
+         * Returns true if the container directly or indirectly contains 
+         * generics.  Note that this only considers the immediate namespace, 
+         * not parent namespaces.
+         */
+        virtual bool hasGenerics() const;
 
         /**
          * Returns the "real module" that the namespace is part of.  If the 
@@ -179,8 +186,8 @@ class Namespace : public virtual spug::RCBase {
          */
         virtual OverloadDefPtr replaceDef(VarDef *def);
 
-        void dump(std::ostream &out, const std::string &prefix);
-        void dump();
+        void dump(std::ostream &out, const std::string &prefix) const;
+        void dump() const;
         
         /** Funcs to iterate over the set of definitions. */
         /// @{
@@ -241,6 +248,11 @@ class Namespace : public virtual spug::RCBase {
          */
         void onNamespaceDeserialized(Context &context);
 };
+
+inline std::ostream &operator <<(std::ostream &out, const Namespace &ns) {
+    ns.dump(out, "");
+    return out;
+}
 
 } // namespace model
 

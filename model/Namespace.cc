@@ -10,6 +10,7 @@
 #include "Namespace.h"
 
 #include "spug/check.h"
+#include "spug/stlutil.h"
 #include "ConstVarDef.h"
 #include "Context.h"
 #include "Deserializer.h"
@@ -19,6 +20,7 @@
 #include "StubDef.h"
 #include "VarDef.h"
 
+using namespace spug;
 using namespace std;
 using namespace model;
 
@@ -38,14 +40,69 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs) {
         TypeDef *def = TypeDefPtr::rcast(iter->second);
         if (def) {
             // Ignore aliases and stuff that's not serializable.
-            if (def->getOwner() == this && 
-                def->isSerializable(this, iter->first)
-                )
+            if (def->getOwner() == this && def->isSerializable())
                 typeDefs.push_back(def);
         } else {
             SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
                        "found a non-type namespace: " << iter->first
                        );
+        }
+    }
+}
+
+void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
+                                bool publicDefs) {
+    // read all of the symbols
+    unsigned count = deser.readUInt(countName);
+    for (int i = 0; i < count; ++i) {
+        int kind = deser.readUInt("kind");
+        switch (static_cast<Serializer::DefTypes>(kind)) {
+            case Serializer::variableId:
+                addDef(VarDef::deserialize(deser).get());
+                break;
+            case Serializer::typeAliasId:
+            case Serializer::aliasId: {
+                string alias = 
+                    deser.readString(Serializer::varNameSize, "alias");
+                VarDefPtr varDef;
+                if (static_cast<Serializer::DefTypes>(kind) == 
+                    Serializer::typeAliasId
+                    )
+                    varDef = TypeDef::deserializeRef(deser);
+                else
+                    varDef = VarDef::deserializeAlias(deser);
+                addAlias(alias, varDef.get());
+                
+                // if we are doing public defs in module scope, this alias 
+                // has to be a second-order import.
+                if (publicDefs) {
+                    ModuleDef *mod = ModuleDefPtr::cast(this);
+                    if (mod)
+                        mod->exports[alias] = true;
+                }
+                break;
+            }
+            case Serializer::genericId:
+                // XXX don't think we need this, generics are probably stored 
+                // in a type.
+                SPUG_CHECK(false, "can't deserialize generics yet");
+//                addDef(Generic::deserialize(deser));
+                break;
+            case Serializer::overloadId: {
+                OverloadDefPtr ovld = 
+                    OverloadDef::deserialize(deser, this).get();
+                addDef(ovld.get());
+                addDefToMeta(ovld.get());
+                break;
+            }
+            case Serializer::typeId:
+                TypeDef::deserializeTypeDef(deser);
+                break;
+            case Serializer::constVarId:
+                addDef(ConstVarDef::deserialize(deser).get());
+                break;
+            default:
+                SPUG_CHECK(false, "Bad definition type id " << kind);
         }
     }
 }
@@ -81,6 +138,15 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
 bool Namespace::isHiddenScope() {
     // all scopes are hidden by default.
     return true;
+}
+
+bool Namespace::hasGenerics() const {
+    SPUG_FOR(VarDefMap, i, defs) {
+        Namespace *ns = NamespacePtr::rcast(i->second);
+        if (ns && ns->hasGenerics())
+            return true;
+    }
+    return false;
 }
 
 ModuleDefPtr Namespace::getRealModule() {
@@ -221,12 +287,12 @@ OverloadDefPtr Namespace::replaceDef(VarDef *def) {
     return ovld;
 }
 
-void Namespace::dump(ostream &out, const string &prefix) {
+void Namespace::dump(ostream &out, const string &prefix) const {
     out << canonicalName << " (0x" << this << ") {\n";
     string childPfx = prefix + "  ";
     unsigned i = 0;
     Namespace *parent;
-    while (parent = getParent(i++).get()) {
+    while (parent = const_cast<Namespace *>(this)->getParent(i++).get()) {
         out << childPfx << "parent namespace ";
         parent->dump(out, childPfx);
     }
@@ -239,7 +305,7 @@ void Namespace::dump(ostream &out, const string &prefix) {
     out << prefix << "}\n";
 }
 
-void Namespace::dump() {
+void Namespace::dump() const {
     dump(cerr, "");
 }
 
@@ -259,84 +325,110 @@ void Namespace::serializeTypeDecls(Serializer &serializer) {
 
 namespace {
     // Adds a type to an ordered vector, ensuring that the base class types 
-    // (if present in 'toSerialize') have been serialized first.
-    void addTypeToOrderedVec(vector<TypeDef *> &outputVec, 
-                             set<TypeDef *> &toSerialize,
+    // have been serialized first.
+    void addTypeToOrderedVec(const Namespace *ns,
+                             vector<TypeDef *> &outputVec, 
                              TypeDef *type
                              ) {
-        // If we don't have to serialize the type, quit now.
-        if (toSerialize.find(type) == toSerialize.end())
+        // ignore if we get to an unserializable type.
+        if (!type->isSerializable() || type->getOwner() != ns)
             return;
 
         // Make sure the bases have been serialized.
         for (int i = 0; i < type->parents.size(); ++i)
-            addTypeToOrderedVec(outputVec, toSerialize, type->parents[i].get());
+            addTypeToOrderedVec(ns, outputVec, type->parents[i].get());
         
         // serialize the type itself
         outputVec.push_back(type);
-        toSerialize.erase(type);
     }
 }
 
 void Namespace::serializeDefs(Serializer &serializer) const {
+
+    // If the namespace has generics, we need to serialize private definitions.
+    bool serializePrivates = hasGenerics();
     
     // Count the number of definitions to serialize and separate out the 
     // types, aliases and everything else.
     int count = 0;
-    set<TypeDef *> types;
-    vector<VarDef *> others;
-    typedef vector< pair<string, VarDefPtr> > AliasVec;
-    AliasVec aliases;
-    for (VarDefMap::const_iterator i = defs.begin();
-         i != defs.end();
-         ++i
-         ) {
-        if (i->second->isSerializable(this, i->first)) {
-            ++count;
-
+    set<TypeDef *> types, privateTypes;
+    vector<VarDef *> others, otherPrivates;
+    typedef vector< pair<string, VarDefPtr> > VarDefVec;
+    VarDefVec aliases, privateAliases;
+    SPUG_FOR(VarDefMap, i, defs) {
+        if (i->second->isSerializable()) {
+            
             // is it an alias?
             if (i->second->getOwner() != this) {
-                aliases.push_back(*i);
+                if (i->second->isImportable(this, i->first))
+                    aliases.push_back(*i);
+                else if (serializePrivates)
+                    privateAliases.push_back(*i);
                 continue;
             }
   
             // is this a typedef?
             TypeDef *def = TypeDefPtr::rcast(i->second);
-            if (def)
-                types.insert(def);
-            else
-                others.push_back(i->second.get());
+            if (def) {
+                if (def->isImportable(this, i->first))
+                    types.insert(def);
+                else if (serializePrivates)
+                    privateTypes.insert(def);
+            } else {
+                if (i->second->isImportable(this, i->first))
+                    others.push_back(i->second.get());
+                else if (serializePrivates)
+                    otherPrivates.push_back(i->second.get());
+            }
         }
     }
 
     // Put the types in order.    
     vector<TypeDef *> orderedTypes;
-    for (set<TypeDef *>::iterator i = types.begin(); i != types.end(); ++i)
-        addTypeToOrderedVec(orderedTypes, types, *i);
+    SPUG_FOR(set<TypeDef *>, i, types)
+        addTypeToOrderedVec(this, orderedTypes, *i);
     
+    // Add the private types, keep track of where they start.
+    int privateStart = orderedTypes.size();
+    SPUG_FOR(set<TypeDef *>, i, privateTypes)
+        addTypeToOrderedVec(this, orderedTypes, *i);
+        
     // write the count and the definitions
-    serializer.write(count, "#defs");
+    serializer.write(aliases.size() + privateStart + others.size(), "#defs");
     
     // first the aliases
-    for (AliasVec::iterator i = aliases.begin();
-         i != aliases.end();
-         ++i
-         )
+    SPUG_FOR(VarDefVec, i, aliases)
         i->second->serializeAlias(serializer, i->first);
     
     // then the types
-    for (vector<TypeDef *>::iterator i = orderedTypes.begin();
-         i != orderedTypes.end();
-         ++i
-         )
-        (*i)->serialize(serializer, true, this);
+    for (int i = 0; i < privateStart; ++i)
+        orderedTypes[i]->serialize(serializer, true, this);
 
     // ... then everything else    
-    for (vector<VarDef *>::iterator i = others.begin();
-         i != others.end();
-         ++i
-         )
+    SPUG_FOR(vector<VarDef *>, i, others)
         (*i)->serialize(serializer, true, this);
+    
+    // now do the privates
+    serializer.digestEnabled = false;
+    serializer.write(privateAliases.size() + 
+                      orderedTypes.size() - privateStart +
+                      otherPrivates.size(),
+                     "#privateDefs"
+                     );
+    
+    // aliases
+    SPUG_FOR(VarDefVec, i, privateAliases)
+        i->second->serializeAlias(serializer, i->first);
+    
+    // types
+    for (int i = privateStart; i < orderedTypes.size(); ++i)
+        orderedTypes[i]->serialize(serializer, true, this);
+    
+    // vars and functions
+    SPUG_FOR(vector<VarDef *>, i, otherPrivates)
+        (*i)->serialize(serializer, true, this);
+    
+    serializer.digestEnabled = true;
 }
 
 int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
@@ -349,57 +441,10 @@ int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
 }
 
 void Namespace::deserializeDefs(Deserializer &deser) {
-    // read all of the symbols
-    unsigned count = deser.readUInt("#defs");
-    for (int i = 0; i < count; ++i) {
-        int kind = deser.readUInt("kind");
-        switch (static_cast<Serializer::DefTypes>(kind)) {
-            case Serializer::variableId:
-                addDef(VarDef::deserialize(deser).get());
-                break;
-            case Serializer::typeAliasId:
-            case Serializer::aliasId: {
-                string alias = 
-                    deser.readString(Serializer::varNameSize, "alias");
-                VarDefPtr varDef;
-                if (static_cast<Serializer::DefTypes>(kind) == 
-                    Serializer::typeAliasId
-                    )
-                    varDef = TypeDef::deserializeRef(deser);
-                else
-                    varDef = VarDef::deserializeAlias(deser);
-                addAlias(alias, varDef.get());
-                
-                // if we are in module scope, this alias has to be a 
-                // second-order import.
-                ModuleDef *mod = ModuleDefPtr::cast(this);
-                if (mod)
-                    mod->exports[alias] = true;
-                break;
-            }
-            case Serializer::genericId:
-                // XXX don't think we need this, generics are probably stored 
-                // in a type.
-                SPUG_CHECK(false, "can't deserialize generics yet");
-//                addDef(Generic::deserialize(deser));
-                break;
-            case Serializer::overloadId: {
-                OverloadDefPtr ovld = 
-                    OverloadDef::deserialize(deser, this).get();
-                addDef(ovld.get());
-                addDefToMeta(ovld.get());
-                break;
-            }
-            case Serializer::typeId:
-                TypeDef::deserializeTypeDef(deser);
-                break;
-            case Serializer::constVarId:
-                addDef(ConstVarDef::deserialize(deser).get());
-                break;
-            default:
-                SPUG_CHECK(false, "Bad definition type id " << kind);
-        }
-    }
+    deserializeDefs(deser, "#defs", true);
+    deser.digestEnabled = false;
+    deserializeDefs(deser, "#privateDefs", false);
+    deser.digestEnabled = true;
 }
 
 void Namespace::onNamespaceDeserialized(Context &context) {

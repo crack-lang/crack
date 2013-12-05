@@ -190,6 +190,8 @@ class TypeDef : public VarDef, public Namespace {
         virtual NamespacePtr getParent(unsigned i);
 
         virtual NamespacePtr getNamespaceOwner();
+
+        virtual bool hasGenerics() const;
         
         virtual void addDefToMeta(OverloadDef *def);
         
@@ -369,9 +371,7 @@ class TypeDef : public VarDef, public Namespace {
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
 
-        virtual bool isSerializable(const Namespace *ns, 
-                                    const std::string &name
-                                    ) const;
+        virtual bool isSerializable() const;
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         virtual void serializeExtern(Serializer &serializer) const;
         virtual void serializeAlias(Serializer &serializer,

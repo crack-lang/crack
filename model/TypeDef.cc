@@ -138,6 +138,10 @@ NamespacePtr TypeDef::getNamespaceOwner() {
     return getOwner();
 }
 
+bool TypeDef::hasGenerics() const {
+    return genericInfo || Namespace::hasGenerics();
+}
+
 void TypeDef::addDefToMeta(OverloadDef *def) {
     // As long as this not not the "Class" class, add the overload to it.
     // We have to verify 'type' is non-null for generics.
@@ -1060,11 +1064,11 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
-bool TypeDef::isSerializable(const Namespace *ns, const string &name) const {
+bool TypeDef::isSerializable() const {
     if (meta)
         return false;
     else
-        return VarDef::isSerializable(ns, name);
+        return VarDef::isSerializable();
 }
 
 void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
