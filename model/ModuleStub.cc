@@ -8,14 +8,49 @@
 #include "ModuleStub.h"
 
 #include "spug/check.h"
+#include "spug/Exception.h"
+#include "spug/StringFmt.h"
 #include "Context.h"
 #include "NamespaceStub.h"
 #include "OverloadDef.h"
 
+using namespace spug;
 using namespace std;
 using namespace model;
 
 namespace {
+
+    class FuncDefStub : public FuncDef {
+        public:
+            NamespaceStubPtr ns;
+            ArgVec args;
+            FuncDefStub(NamespaceStub *ns, const string &name,
+                        const ArgVec &args
+                        ) :
+                FuncDef(noFlags, name, args.size()),
+                ns(ns),
+                args(args) {
+
+                setOwner(ns->getRealNamespace());
+            }
+
+            bool isStub() const {
+                return true;
+            }
+
+            VarDefPtr replaceStub(Context &context) {
+                OverloadDefPtr ovld = ns->replacement->lookUp(name);
+                return ovld->getSigMatch(args);
+            }
+
+            virtual void *getFuncAddr(builder::Builder &builder) {
+                throw Exception(SPUG_FSTR("getFuncAddr() called on stub "
+                                           "function " << getDisplayName()
+                                          )
+                                );
+                return 0;
+            }
+    };
 
     class OverloadStub : public OverloadDef {
         public:
@@ -23,6 +58,19 @@ namespace {
             OverloadStub(NamespaceStub *ns, const string &name) :
                 OverloadDef(name),
                 ns(ns) {
+                setOwner(ns->getRealNamespace());
+            }
+
+            virtual FuncDef *getSigMatch(const ArgVec &args,
+                                         bool matchNames
+                                         ) {
+                FuncDefPtr result =
+                    OverloadDef::getSigMatch(args, matchNames);
+                if (!result) {
+                    result = new FuncDefStub(ns.get(), name, args);
+                    funcs.push_back(result);
+                }
+                return result.get();
             }
 
             bool isStub() const {
@@ -40,6 +88,7 @@ namespace {
             VarStub(NamespaceStub *ns, const string &name) :
                 VarDef(0, name),
                 ns(ns) {
+                setOwner(ns->getRealNamespace());
             }
 
             bool isStub() const {
@@ -172,6 +221,8 @@ namespace {
                             ) :
                 TypeStub(ns, makeName(realType, params), params),
                 realType(realType) {
+
+                setOwner(ns->getRealNamespace());
             }
 
             virtual bool isStub() const { return true; }
