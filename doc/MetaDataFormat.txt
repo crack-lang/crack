@@ -106,12 +106,20 @@ So given this, our meta-data format is:
     TypeDecl {
         blob name
         uint isGeneric
-        array[TypeDecl] nested
+        array[TypeDecl] decls
     }
 
     Definitions {
+        # The public definitions.
         # Definitions must be in order: aliases, types, then everything else.
+        # Note that private base classes are part of the public interface
+        # (even though they can't be imported).
         array[Def] defs
+
+        # Private definitions need only be specified if the namespace contains
+        # a generic.
+        # These are not included when constructing or verifying the metaDigest.
+        array[Def] privateDefs
     }
 
     Def {
@@ -196,7 +204,7 @@ So given this, our meta-data format is:
 
     TypeDef {
         uint objectId
-        uint generic
+        uint isGeneric
         if (generic) {
             array[ref[Import]] importedAnnotations
             array[blob] parms
@@ -211,8 +219,7 @@ So given this, our meta-data format is:
             optional ref[Type] templateType = 1
             repeated ref[Type] genericParms = 2
 
-            // Definitions must be in order aliases, types and everything else.
-            array[Def] defs
+            Definitions defs
         }
     }
 
@@ -234,13 +241,24 @@ So given this, our meta-data format is:
         array[VarDef] args
     }
 
-    FuncDef {
-        uint isAlias
+    ArgDef {
+        blob name
+        ref[Type] type
+    }
+
+    FuncDefBody {
         ref[Type] returnType
         uint flags;
-        array[VarDef] args
+        array[ArgDef] args
         optional ref[Type] receiverType = 1
         optional uint vtableSlot = 2
+    }
+
+    FuncDef {
+        uint isAlias
+        switch (isAlias) {
+            case true: FuncAlias
+            case false: FuncDefBody
     }
 
     ConstVarDef {
