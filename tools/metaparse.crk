@@ -23,7 +23,7 @@ import crack.io.readers LineReader;
 import crack.lang Buffer, Exception;
 import crack.regex Regex;
 
-fieldRx := Regex(r'\s*write (\S+) ([^:]+): (.*)\n');
+const fieldRx := Regex(r'\s*write (\S+) ([^:]+): (.*)\n');
 
 class State;
 
@@ -288,7 +288,14 @@ class SwitchField : Field {
             checkType(type);
             state.nextSubstate();
             state.out `$name: $val\n`;
-            state.setSwitch(parseInt(val));
+
+            # If the switch index has a null field associated with it or it is
+            # out of bounds, nothing follows.
+            switchIndex := parseInt(val);
+            if (switchIndex >= types.count() || types[switchIndex] is null)
+                state.nextSubstate();
+            else
+                state.setSwitch(switchIndex);
         } else if (substate == 1) {
             state.nextSubstate();
             state.push(types[state.getSwitch()]);
@@ -441,13 +448,75 @@ nonGenericType := Struct![
 ];
 nonGenericType.name = 'NonGenericType';
 
+import_ := Struct![
+    BlobField('sourceName'),
+    OptionalBlock![
+        TaggedField(1, BlobField('localName')),
+    ],
+];
+import_.name = 'Import';
+
+location := Struct![
+    BlobField('sourceName'),
+    UIntField('lineNum'),
+];
+location.name = 'Location';
+
+token := Struct![
+    SwitchField('tokenType',
+        Array[Field]![
+            /* ann */ null, /* bitAnd */ null, /* bitLSh */ null,
+            /* bitOr */ null, /* bitRSh */ null, /* bitXor */ null,
+            /* aliasKw */ null, /* breakKw */ null, /* caseKw */ null,
+            /* catchKw */ null, /* classKw */ null, /* constKw */ null,
+            /* continueKw */ null, /* dollar */ null, /* enumKw */ null,
+            /* forKw */ null, /* elseKw */ null, /* ifKw */ null,
+            /* importKw */ null, /* inKw */ null, /* isKw */ null,
+            /* lambdaKw */ null, /* moduleKw */ null, /* nullKw */ null,
+            /* onKw */ null, /* operKw */ null, /* returnKw */ null,
+            /* switchKw */ null, /* throwKw */ null, /* tryKw */ null,
+            /* typeofKw */ null, /* whileKw */ null, /* assign */ null,
+            /* assignAnd */ null, /* assignAsterisk */ null,
+            /* assignLSh */ null, /* assignOr */ null, /* assignRSh */ null,
+            /* assignXor */ null, /* assignMinus */ null,
+            /* assignPercent */ null, /* assignPlus */ null,
+            /* assignSlash */ null, /* asterisk */ null, /* bang */ null,
+            /* colon */ null, /* comma */ null, /* decr */ null,
+            /* define */ null, /* dot */ null, /* end */ null,
+            /* eq */ null, /* ge */ null, /* gt */ null,
+            /* ident */ BlobField('tokenData'), /* incr */ null,
+            /* integer */ BlobField('tokenData'), /* lbracket */ null,
+            /* lcurly */ null, /* le */ null, /* lparen */ null,
+            /* lt */ null, /* minus */ null, /* ne */ null, /* percent */ null,
+            /* plus */ null, /* quest */ null, /* rbracket */ null,
+            /* rcurly */ null, /* rparen */ null, /* semi */ null,
+            /* slash */ null, /* string */ BlobField('tokenData'),
+            /* tilde */ null, /* istrBegin */ null, /* istrEnd */ null,
+            /* logicAnd */ null, /* logicOr */ null,
+            /* floatLit */ BlobField('tokenData'),
+            /* octalLit */ BlobField('tokenData'),
+            /* hexLit */ BlobField('tokenData'),
+            /* binLit */ BlobField('tokenData'),
+        ]
+    ),
+    RefField('location', location),
+];
+token.name = 'Token';
+
+genericType := Struct![
+    ArrayField('importedAnnotations', RefField('Import', import_)),
+    ArrayField('parms', BlobField('parms')),
+    ArrayField('tokens', token),
+];
+genericType.name = 'Generic';
+
 typeDef := Struct![
     UIntField('objectId'),
     SwitchField('isGeneric',
         Array[Field]![
             StructField('non_generic', nonGenericType),
+            StructField('generic', genericType),
         ],
-    # xxx stuff that depends on generic.
     ),
 ];
 typeDef.name = 'TypeDef';
