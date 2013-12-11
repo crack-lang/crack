@@ -1099,9 +1099,11 @@ void TypeDef::serializeDef(Serializer &serializer) const {
                 "declarations for this module."
                );
     serializer.write(objectId, "objectId");
+    
     // XXX isGeneric is already in the decl.
     serializer.write(generic ? 1 : 0, "isGeneric");
     if (generic) {
+        Serializer::StackFrame<Serializer> digestState(serializer, false);
         genericInfo->serialize(serializer);
     } else {
         int flags = (pointer ? 1 : 0) |
@@ -1228,6 +1230,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     // is this a generic?
     unsigned isGeneric = deser.readUInt("isGeneric");
     if (isGeneric) {
+        Serializer::StackFrame<Deserializer> digestState(deser, false);
         type->genericInfo = Generic::deserialize(deser);
         type->genericInfo->ns = deser.context->ns.get();
         type->genericInfo->seedCompileNS(*deser.context);

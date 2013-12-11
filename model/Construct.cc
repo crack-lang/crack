@@ -523,9 +523,11 @@ ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
     context->toplevel = true;
 
     ModuleDefPtr modDef = context->materializeModule(canonicalName);
-    if (modDef && rootBuilder->options->statsMode)
-        stats->incCached();
-    moduleCache[canonicalName] = modDef;
+    if (modDef) {
+        if (rootBuilder->options->statsMode)
+            stats->incCached();
+        moduleCache[canonicalName] = modDef;
+    }
     
     builderStack.pop();
     return modDef;
@@ -602,8 +604,12 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                                  moduleNameEnd, ".crk", 
                                  rootBuilder->options->verbosity
                                  );
-            if (!modPath.found)
+            if (!modPath.found) {
+                if (traceCaching)
+                    cerr << "Source for " << canonicalName << 
+                        " not found.  Not compiling it at this time." << endl;
                 return 0;
+            }
 
             if (traceCaching)
                 cerr << canonicalName << 

@@ -119,7 +119,16 @@ bool VarDef::isImportableFrom(ModuleDef *module, const string &impName) const {
 }
 
 bool VarDef::isImportable(const Namespace *ns, const string &name) const {
-    return owner == ns || isExported(ns, name);
+    // A symbol is importable if:
+    // 1) it is either defined in the namespace we are importing it from or
+    //    explicitly exported from the namespace we are importing it from
+    //    (the "second order import" rules) _and_
+    // 2) It is either non-private (no leading underscore) or type-scoped and
+    //    not class-private.
+    return (owner == ns || isExported(ns, name)) &&
+           (name[0] != '_' ||
+            (TypeDefPtr::cast(owner) && name.substr(0, 2) != "__")
+            );
 }
 
 bool VarDef::isSerializable() const {

@@ -409,7 +409,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
         (*i)->serialize(serializer, true, this);
     
     // now do the privates
-    serializer.digestEnabled = false;
+    Serializer::StackFrame<Serializer> digestState(serializer, false);
     serializer.write(privateAliases.size() + 
                       orderedTypes.size() - privateStart +
                       otherPrivates.size(),
@@ -427,8 +427,6 @@ void Namespace::serializeDefs(Serializer &serializer) const {
     // vars and functions
     SPUG_FOR(vector<VarDef *>, i, otherPrivates)
         (*i)->serialize(serializer, true, this);
-    
-    serializer.digestEnabled = true;
 }
 
 int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
@@ -442,9 +440,8 @@ int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
 
 void Namespace::deserializeDefs(Deserializer &deser) {
     deserializeDefs(deser, "#defs", true);
-    deser.digestEnabled = false;
+    Serializer::StackFrame<Deserializer> digestState(deser, false);
     deserializeDefs(deser, "#privateDefs", false);
-    deser.digestEnabled = true;
 }
 
 void Namespace::onNamespaceDeserialized(Context &context) {

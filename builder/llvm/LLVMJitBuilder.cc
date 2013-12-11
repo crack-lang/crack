@@ -284,7 +284,7 @@ void LLVMJitBuilder::Resolver::registerGlobal(LLVMJitBuilder *builder,
                                               ) {
     const string &name = globalVal->getName().str();
     cacheMap.insert(CacheMap::value_type(name, globalVal));
-    // XXX bring back our check?
+    resolveFixups(builder, globalVal, globalVal->getName().str());
 }
 
 namespace {

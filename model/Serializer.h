@@ -35,6 +35,33 @@ class Serializer {
         ObjMapPtr objMap;
 
     public:
+
+        // Sets the current value of the 'digestEnabled' flag while it in
+        // scope, restores it during destruction.
+        // This is a template so we can use it on both Serializer and
+        // Deserializer.
+        template <typename T>
+        struct StackFrame {
+            StackFrame(T &ser, bool digestEnabled) :
+                ser(ser),
+                oldVal(ser.digestEnabled) {
+
+                ser.digestEnabled = digestEnabled;
+                if (trace)
+                    std::cerr << "digest enabled: " << digestEnabled <<
+                        std::endl;
+            }
+
+            ~StackFrame() {
+                ser.digestEnabled = oldVal;
+                if (trace)
+                    std::cerr << "digest restored: " << oldVal << std::endl;
+            }
+
+            T &ser;
+            bool oldVal;
+        };
+
         // trace serialization/deesrialization to cerr.
         static bool trace;
 

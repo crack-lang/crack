@@ -139,11 +139,18 @@ class VarDef : public virtual spug::RCBase {
         /**
          * Returns true if the variable is visible from other modules (can be 
          * imported).
+         * 
+         * This is a more complete check than "isImportableFrom" because it 
+         * considers whether the variable is private as well as whether it is 
+         * a first-order or allowable second-order import.
+         * 
          * @param ns The namespace the definition is in.
          * @param name The name the definition is defined under (may not be 
          *     the same as the definition's name, for an alias)
          */
-        bool isImportable(const Namespace *ns, const std::string &name) const;
+        virtual bool isImportable(const Namespace *ns, 
+                                  const std::string &name
+                                  ) const;
         
         /**
          * Returns true if the definition should be serialized (some kinds 

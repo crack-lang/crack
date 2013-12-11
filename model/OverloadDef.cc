@@ -245,6 +245,20 @@ bool OverloadDef::isImportableFrom(ModuleDef *module,
     return false;
 }
 
+bool OverloadDef::isImportable(const Namespace *ns, 
+                               const std::string &name
+                               ) const {
+    // the overload is importable if any of its functions are importable.
+    for (FuncList::const_iterator iter = funcs.begin();
+         iter != funcs.end();
+         ++iter
+         )
+        if ((*iter)->isImportable(ns, name))
+            return true;
+
+    return false;
+}
+
 bool OverloadDef::isSerializable() const {
     if (!VarDef::isSerializable())
         return false;
