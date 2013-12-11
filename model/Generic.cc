@@ -193,7 +193,7 @@ void Generic::serialize(Serializer &out) const {
          iter != parms.end();
          ++iter
          )
-        out.write((*iter)->name, "parm");
+        out.write((*iter)->name, "parms");
 
     out.write(body.size(), "#tokens");
     for (TokenVec::const_iterator iter = body.begin();
