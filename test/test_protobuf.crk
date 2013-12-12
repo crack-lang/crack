@@ -1,0 +1,28 @@
+
+import crack.io cout, StringReader, StringWriter;
+import crack.protobuf Field, ProtoReader, ProtoWriter;
+
+@import crack.ann assert;
+
+if (true) {
+    StringWriter tmp = {};
+    ProtoWriter dst = {tmp};
+    dst.write(1, 100);
+    dst.write(2, 'test');
+    dst.write(2, 'more');
+    dst.write(Field(3, 2, 'field written'));
+
+    ProtoReader src = {StringReader(tmp.string())};
+    field := src.readField();
+    @assert(field.id == 1 && field.getUInt() == 100);
+    field = src.readField();
+    @assert(field.id == 2 && field.getString() == 'test');
+    field = src.readField();
+    @assert(field.id == 2 && field.getString() == 'more');
+    field = src.readField();
+    @assert(field.id == 3 && field.getString() == 'field written');
+    field = src.readField();
+    @assert(field is null);
+}
+
+cout `ok\n`;

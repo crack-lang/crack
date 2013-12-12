@@ -1,0 +1,114 @@
+## Tools for working with protocol buffers.
+
+import crack.io Reader, Writer;
+import crack.lang Exception;
+import crack.serial SerialReader, SerialWriter, END;
+
+## Thrown when we encounter a feature of the protocol that we haven't
+## implemented yet.
+class UnsupportedOperation : Exception {
+    oper init(String message) : Exception(message) {}
+}
+
+class Field {
+    uint id;
+    byte type;
+
+    uint __intData;
+    String __strData;
+
+    ## PRIVATE constructor.
+    oper init(uint id, byte type, String strData) :
+        id = id,
+        type = type,
+        __strData = strData {
+    }
+
+    ## PRIVATE constructor.
+    oper init(uint id, byte type, uint intData) :
+        id = id,
+        type = type,
+        __intData = intData {
+    }
+
+    bool isString() {
+        return type == 2;
+    }
+
+    ## Returns the string value of the field (null if it is not a string).
+    String getString() {
+        return __strData;
+    }
+
+    ## Returns the uint value of the field (0 if it is not a uint).
+    uint getUInt() {
+        return __intData;
+    }
+
+    bool isUInt() {
+        return type == 0;
+    }
+
+    @static Field readFrom(SerialReader src) {
+        header := src.readUInt(false);
+        if (header == END)
+            return null;
+
+        type := byte(header & 0x7);
+        id := header >> 3;
+        if (type == 0)
+            return Field(id, type, src.readUInt());
+        else if (type == 2)
+            return Field(id, type, src.readString());
+        else
+            throw Exception();
+    }
+
+    void write(SerialWriter dst) {
+        dst.write((id << 3) | type);
+        if (type == 0)
+            dst.write(__intData);
+        else if (type == 2)
+            dst.write(__strData);
+    }
+
+    @static void write(SerialWriter dst, uint id, String data) {
+        dst.write((id << 3) | 2);
+        dst.write(data);
+    }
+
+    @static void write(SerialWriter dst, uint id, uint value) {
+        dst.write(id << 3);
+        dst.write(value);
+    }
+}
+
+class ProtoWriter {
+    SerialWriter __dst;
+
+    oper init(SerialWriter dst) : __dst = dst {}
+    oper init(Writer dst) : __dst(dst) {}
+
+    @final void write(uint id, String data) {
+        Field.write(__dst, id, data);
+    }
+
+    @final void write(uint id, uint value) {
+        Field.write(__dst, id, value);
+    }
+
+    @final void write(Field field) {
+        field.write(__dst);
+    }
+}
+
+class ProtoReader {
+    SerialReader __src;
+
+    oper init(SerialReader src) : __src = src {}
+    oper init(Reader src) : __src(src) {}
+
+    Field readField() {
+        return Field.readFrom(__src);
+    }
+}

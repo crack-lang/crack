@@ -1,0 +1,8 @@
+%%TEST%%
+protobufs
+%%ARGS%%
+%%FILE%%
+import test.test_protobuf;
+%%EXPECT%%
+ok
+%%STDIN%%

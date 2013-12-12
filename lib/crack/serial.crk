@@ -12,7 +12,8 @@ import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer,
     WriteBuffer, Formatter;
 import crack.io cout, Reader, Writer, StandardFormatter;
 
-BUFSIZE := uint(1024);
+const BUFSIZE := uint(1024);
+const uint END = ~0;
 
 class BufferDeserializer : Buffer {
     
@@ -141,7 +142,9 @@ class SerialReader {
         throw Exception('Ran out of data.');
     }
 
-    uint readUInt() {
+    ## Returns the next integer, if we run out of data returns END or raises an 
+    ## exception if errorOnUnderflow is true.  
+    @final uint readUInt(bool errorOnUnderflow) {
         byte b = 0x80;
         uint val;
         uint offset;
@@ -149,8 +152,15 @@ class SerialReader {
             # make sure we've got data
             if (pos == buf.size) {
                 buf.size = BUFSIZE;
-                if (!__src.read(buf))
-                    underflow();
+                if (!__src.read(buf)) {
+                    
+                    # If we're erroring on underflow or we've already started 
+                    # reading a value, raise an exception.
+                    if (errorOnUnderflow || val)
+                        underflow();
+                    else
+                        return END;
+                }
                 pos = 0;
             }
 
@@ -162,9 +172,20 @@ class SerialReader {
 
         return val;
     }
+    
+    ## Reads a uint, raises an exception if we run out of data.
+    @final uint readUInt() { return readUInt(true); }
 
-    CString readString() {
+    ## If errorOnUnderflow is false, returns null if we run out of data 
+    ## during read.
+    @final CString readString(bool errorOnUnderflow) {
         size := readUInt();
+        if (size == END) {
+            if (errorOnUnderflow)
+                underflow();
+            else
+                return null;
+        }
         
         # see if we've got enough space in the buffer, if so just copy the
         # string.
@@ -200,6 +221,9 @@ class SerialReader {
         size = mbuf.cap - 1;
         return CString(mbuf.orphan(), size, true);
     }
+
+    ## Reads a string, throws an exception if there is not enough data.    
+    @final CString readString() { return readString(true); }
     
     # the floating point serialization routines rely on the in-memory 
     # representation of a float being IEEE.  I'm not sure if this is true on 
