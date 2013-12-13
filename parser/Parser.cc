@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <sstream>
 #include <stdexcept>
+#include <spug/check.h>
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "model/Annotation.h"
@@ -112,7 +113,9 @@ Token Parser::getToken() {
 
 unsigned Parser::getPrecedence(const string &op) {
    OpPrecMap::iterator iter = opPrecMap.find(op);
-   assert(iter != opPrecMap.end() && "got operator with no precedence");
+   SPUG_CHECK(iter != opPrecMap.end(), 
+              "got operator with no precedence: '" << op << "'"
+              );
    return iter->second;
 }
 
