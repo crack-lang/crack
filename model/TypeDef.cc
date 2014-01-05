@@ -851,7 +851,7 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
         // materializing generic modules.
         localCtx.pushErrorContext(SPUG_FSTR("In generic instantiation "
                                             "from compiled module "
-                                            "(this  should never "
+                                            "(this should never "
                                             "happen!)"
                                             )
                                   );

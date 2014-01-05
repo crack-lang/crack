@@ -171,6 +171,7 @@ Token Generic::deserializeToken(Deserializer &src) {
         TOKTXT(tilde, "~");
         TOKTXT(logicAnd, "&&");
         TOKTXT(logicOr, "||");
+        TOKTXT(isKw, "is");
     }
     Location loc =
         LocationImplPtr::rcast(src.readObject(LocReader(), "loc").object);
