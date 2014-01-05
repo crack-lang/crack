@@ -109,7 +109,10 @@ class Sequencer {
             ctrl := evt[0].getControl();
             result = PitchWheel(0, ctrl.channel, ctrl.value);
         } else if (evt[0].type == SND_SEQ_EVENT_CONTROLLER) {
-            result = ControlChange(0, 0, 0, 0);
+            ctrl := evt[0].getControl();
+            result = ControlChange(0, ctrl.channel, byte(ctrl.param), 
+                                   byte(ctrl.value)
+                                   );
         } else if (evt[0].type == SND_SEQ_EVENT_SYSEX) {
             result = SysEx(0, '');
         }

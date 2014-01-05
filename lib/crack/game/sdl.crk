@@ -34,7 +34,7 @@ import crack.runtime free;
 @import crack.ann define, interface, implements;
 
 alias Surface = SDL_Surface;
-@export_symbols Surface;
+@export_symbols Surface, SDL_Surface;
 
 // key symbols.
 const uint

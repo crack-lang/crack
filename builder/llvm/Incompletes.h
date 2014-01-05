@@ -21,6 +21,7 @@ namespace builder { namespace mvll {
     class BFuncDef;
 
     class IncompleteInstVarRef;
+    class IncompleteInstVarAddr;
     class IncompleteInstVarAssign;
     class IncompleteCatchSelector;
     class IncompleteNarrower;
@@ -34,6 +35,10 @@ namespace llvm {
     template<>
     struct OperandTraits<builder::mvll::IncompleteInstVarRef> :
         FixedNumOperandTraits<builder::mvll::IncompleteInstVarRef, 1> {
+    };
+    template<>
+    struct OperandTraits<builder::mvll::IncompleteInstVarAddr> :
+        FixedNumOperandTraits<builder::mvll::IncompleteInstVarAddr, 1> {
     };
     template<>
     struct OperandTraits<builder::mvll::IncompleteInstVarAssign> :
@@ -120,6 +125,37 @@ public:
 
     CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
+};
+
+/**
+ * An incomplete reference to an instance variable address.  This should
+ * really be merged with IncompleteInstVarRef
+ */
+class IncompleteInstVarAddr : public PlaceholderInstruction {
+private:
+    BFieldDefImplPtr fieldImpl;
+
+public:
+    // allocate space for 1 operand
+    void *operator new(size_t s);
+
+    IncompleteInstVarAddr(llvm::Type *type,
+                          llvm::Value *aggregate,
+                          BFieldDefImpl *fieldImpl,
+                          llvm::BasicBlock *parent
+                          );
+
+    IncompleteInstVarAddr(llvm::Type *type,
+                          llvm::Value *aggregate,
+                          BFieldDefImpl *fieldImpl,
+                          llvm::Instruction *insertBefore = 0
+                          );
+
+    virtual llvm::Instruction *clone_impl() const;
+
+    virtual void insertInstructions(llvm::IRBuilder<> &builder);
+
+    CRACK_DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 };
 
 class IncompleteInstVarAssign : public PlaceholderInstruction {

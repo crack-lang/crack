@@ -74,6 +74,53 @@ void IncompleteInstVarRef::insertInstructions(IRBuilder<> &builder) {
     replaceAllUsesWith(fieldImpl->emitFieldRef(builder, getType(), Op<0>()));
 }
 
+// IncompleteInstVarAddr
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAddr, Value);
+
+void * IncompleteInstVarAddr::operator new(size_t s) {
+    return User::operator new(s, 1);
+}
+
+IncompleteInstVarAddr::IncompleteInstVarAddr(Type *type,
+                                             Value *aggregate,
+                                             BFieldDefImpl *fieldImpl,
+                                             BasicBlock *parent
+                                             ) :
+    PlaceholderInstruction(
+            type->getPointerTo(),
+            parent,
+            OperandTraits<IncompleteInstVarAddr>::op_begin(this),
+            OperandTraits<IncompleteInstVarAddr>::operands(this)
+            ),
+    fieldImpl(fieldImpl) {
+
+    Op<0>() = aggregate;
+}
+
+IncompleteInstVarAddr::IncompleteInstVarAddr(Type *type,
+                                             Value *aggregate,
+                                             BFieldDefImpl *fieldImpl,
+                                             Instruction *insertBefore
+                                             ) :
+    PlaceholderInstruction(
+            type->getPointerTo(),
+            insertBefore,
+            OperandTraits<IncompleteInstVarAddr>::op_begin(this),
+            OperandTraits<IncompleteInstVarAddr>::operands(this)
+            ),
+    fieldImpl(fieldImpl) {
+
+    Op<0>() = aggregate;
+}
+
+Instruction * IncompleteInstVarAddr::clone_impl() const {
+    return new IncompleteInstVarAddr(getType(), Op<0>(), fieldImpl.get());
+}
+
+void IncompleteInstVarAddr::insertInstructions(IRBuilder<> &builder) {
+    replaceAllUsesWith(fieldImpl->emitFieldAddr(builder, getType(), Op<0>()));
+}
+
 // IncompleteInstVarAssign
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarAssign, Value);
 void *IncompleteInstVarAssign::operator new(size_t s) {

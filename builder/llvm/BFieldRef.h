@@ -14,6 +14,10 @@
 #include "model/Context.h"
 #include "model/ResultExpr.h"
 
+namespace llvm {
+    class Value;
+}
+
 namespace model {
     class VarDef;
 }
@@ -31,6 +35,8 @@ public:
     }
 
     model::ResultExprPtr emit(model::Context &context);
+
+    llvm::Value *emitAddr(model::Context &context) const;
 
 };
 

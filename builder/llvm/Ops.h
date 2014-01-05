@@ -453,8 +453,8 @@ BINOPD(ICmpUGT, ">");
 BINOPD(ICmpULT, "<");
 BINOPD(ICmpUGE, ">=");
 BINOPD(ICmpULE, "<=");
-BINOPD(ICmpEQR, "==");
-BINOPD(ICmpNER, "!=");
+BINOPD(ICmpEQR, "r==");
+BINOPD(ICmpNER, "r!=");
 BINOPD(ICmpSGTR, "r>");
 BINOPD(ICmpSLTR, "r<");
 BINOPD(ICmpSGER, "r>=");
@@ -488,6 +488,12 @@ BINOPD(FCmpOGTR, ">");
 BINOPD(FCmpOLTR, "<");
 BINOPD(FCmpOGER, ">=");
 BINOPD(FCmpOLER, "<=");
+
+// Atomic operations.
+BINOPD(AtomicAdd, "+=");
+BINOPD(AtomicSub, "-=");
+UNOP_DEF(AtomicLoad);
+UNOP_DEF(AtomicLoadTrunc);
 
 // Type Conversion Ops
 UNOP_DEF(SExt);

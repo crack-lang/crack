@@ -15,6 +15,7 @@
 #include "BTypeDef.h"
 #include "BFuncDef.h"
 #include "BFuncPtr.h"
+#include "VarDefs.h"
 #include "model/AllocExpr.h"
 #include "model/AssignExpr.h"
 #include "model/CleanupFrame.h"
@@ -915,4 +916,97 @@ ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
     assign->handleTransient(context);
     builder.lastValue = receiverVal;
     return receiverResult;
+}
+
+namespace {
+    // Returns the expression to get the address of a variable (for either
+    // fields, locals, or globals)
+    Value *getVarAddr(Context &context, LLVMBuilder &builder, Expr *var) {
+        // the receiver needs to be a variable
+        VarRef *ref = VarRefPtr::cast(var);
+        if (!ref)
+            context.error("Atomic += operators can only be used on variables.");
+
+        Value *varAddr;
+        BFieldRef *fieldRef;
+        if (fieldRef = BFieldRefPtr::cast(ref)) {
+            varAddr = fieldRef->emitAddr(context);
+        } else {
+            ref->def->impl->emitAddr(context, ref);
+            varAddr = builder.lastValue;
+        }
+
+        return varAddr;
+    }
+}
+
+/**
+ * Todo: implement atomic subtract and atomic load at minimum.  Also consider
+ * atomic pre-increment, pre-decrement.
+ */
+
+ResultExprPtr AtomicAddOpCall::emit(Context &context) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Value *varAddr = getVarAddr(context, builder, receiver.get());
+
+    // XXX don't we need to store lastValue before handleTransient()?  (we
+    // don't above)
+    args[0]->emit(context)->handleTransient(context);
+    Value *argVal = builder.lastValue;
+    builder.lastValue =
+        builder.builder.CreateAtomicRMW(AtomicRMWInst::Add, varAddr, argVal,
+                                        SequentiallyConsistent
+                                        );
+
+    // The atomicrmw operation returns the old value.  We don't want this, so
+    // we repeat the add to return the result, hopefully the optimizer will
+    // sort the whole thing out.
+    builder.lastValue = builder.builder.CreateAdd(builder.lastValue, argVal);
+    return new BResultExpr(this, builder.lastValue);
+}
+
+ResultExprPtr AtomicSubOpCall::emit(Context &context) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Value *varAddr = getVarAddr(context, builder, receiver.get());
+
+    // XXX don't we need to store lastValue before handleTransient()?  (we
+    // don't above)
+    args[0]->emit(context)->handleTransient(context);
+    Value *argVal = builder.lastValue;
+    builder.lastValue =
+        builder.builder.CreateAtomicRMW(AtomicRMWInst::Sub, varAddr, argVal,
+                                        SequentiallyConsistent
+                                        );
+
+    // The atomicrmw operation returns the old value.  We don't want this, so
+    // we repeat the add to return the result, hopefully the optimizer will
+    // sort the whole thing out.
+    builder.lastValue = builder.builder.CreateSub(builder.lastValue, argVal);
+    return new BResultExpr(this, builder.lastValue);
+}
+
+ResultExprPtr AtomicLoadOpCall::emit(Context &context) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Value *varAddr = getVarAddr(context, builder, receiver.get());
+
+    LoadInst *loadInst;
+    builder.lastValue = loadInst = builder.builder.CreateLoad(varAddr);
+    loadInst->setAtomic(SequentiallyConsistent);
+    loadInst->setAlignment(sizeof(void *));
+    return new BResultExpr(this, loadInst);
+}
+
+ResultExprPtr AtomicLoadTruncOpCall::emit(Context &context) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Value *varAddr = getVarAddr(context, builder, receiver.get());
+
+    LoadInst *loadInst;
+    builder.lastValue = loadInst = builder.builder.CreateLoad(varAddr);
+    loadInst->setAtomic(SequentiallyConsistent);
+    loadInst->setAlignment(sizeof(void *));
+    builder.lastValue = builder.builder.CreateTrunc(
+        loadInst,
+        BTypeDefPtr::arcast(func->returnType)->rep
+    );
+    return new BResultExpr(this, builder.lastValue);
 }

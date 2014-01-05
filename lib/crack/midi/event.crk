@@ -346,7 +346,7 @@ class ControlChange : ChannelEvent {
     }
 
     void formatTo(Formatter f) {
-        f `ch: #channel, control $controller changed to $value`;
+        f `ch: $channel, control $controller changed to $value`;
     }
 }
 

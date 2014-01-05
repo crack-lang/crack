@@ -33,6 +33,12 @@ class VarDefImpl : public spug::RCBase {
                                              AssignExpr *assign
                                              ) = 0;
 
+        /**
+         * Emit the address of the variable for variables where this is 
+         * possible.
+         */        
+        virtual void emitAddr(Context &context, VarRef *var) = 0;
+
         virtual bool hasInstSlot() const = 0;
         
         virtual int getInstSlot() const = 0;

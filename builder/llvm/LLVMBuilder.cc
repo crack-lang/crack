@@ -2605,7 +2605,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     // PDNTs
-    BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType;
+    BTypeDef *intType, *uintType, *floatType, *intzType, *uintzType,
+        *atomicType;
     bool intIs32Bit, floatIs32Bit;
     if (sizeof(int) == 4) {
         intIs32Bit = true;
@@ -2634,12 +2635,16 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     intzType = createIntPrimType(context, intzLLVM, "intz");
     uintzType = createIntPrimType(context, intzLLVM, "uintz");
+    atomicType = createIntPrimType(context, intzLLVM, "atomic_int");
     if (debugInfo) {
         debugInfo->createBasicType(intzType, ptrIs32Bit ? 32 : 64,
                                    dwarf::DW_ATE_signed
                                    );
         debugInfo->createBasicType(uintzType, ptrIs32Bit ? 32 : 64,
                                    dwarf::DW_ATE_unsigned
+                                   );
+        debugInfo->createBasicType(atomicType, ptrIs32Bit ? 32 : 64,
+                                   dwarf::DW_ATE_signed
                                    );
     }
 
@@ -2778,6 +2783,38 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     REVINTOPS(intType, U, L)
     FLOPS(floatType, floatType)
     REVFLOPS(floatType)
+
+    // atomic types
+    context.addDef(new AtomicAddOpDef(intType, 0, true), atomicType);
+    context.addDef(new AtomicSubOpDef(intType, 0, true), atomicType);
+    context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.intz"),
+                   atomicType
+                   );
+    if (ptrIs32Bit == intIs32Bit) {
+        context.addDef(new AtomicLoadOpDef(intType, "oper to .builtin.int"),
+                    atomicType
+                    );
+        context.addDef(new AtomicLoadOpDef(uintType, "oper to .builtin.uint"),
+                    atomicType
+                    );
+    } else if (!ptrIs32Bit && intIs32Bit) {
+        context.addDef(new AtomicLoadTruncOpDef(intType,
+                                                "oper to .builtin.int"
+                                                ),
+                       atomicType
+                       );
+        context.addDef(new AtomicLoadTruncOpDef(uintType,
+                                                "oper to .builtin.uint"
+                                                ),
+                       atomicType
+                       );
+    } else {
+        SPUG_CHECK(false,
+                   "This platform has 32-bit integers but 64 bit pointers, "
+                    "which the crack executor can't deal with.  We need to "
+                    "implement a ZExt atomic load operation to accomodate it."
+                   );
+    }
 
     // boolean logic
     context.addDef(new LogicAndOpDef(boolType, boolType));

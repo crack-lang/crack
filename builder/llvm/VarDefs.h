@@ -13,6 +13,7 @@
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
 #include "model/ResultExpr.h"
+#include "spug/check.h"
 #include "LLVMBuilder.h"
 
 namespace llvm {
@@ -44,6 +45,8 @@ public:
             emitAssignment(model::Context &context,
                            model::AssignExpr *assign);
 
+    virtual void emitAddr(model::Context &context, model::VarRef *var);
+
     model::VarDefImplPtr promote(LLVMBuilder &builder, model::ArgDef *arg);
     
     virtual bool hasInstSlot() const;
@@ -62,6 +65,8 @@ public:
     virtual model::ResultExprPtr
             emitAssignment(model::Context &context,
                            model::AssignExpr *assign);
+
+    virtual void emitAddr(model::Context &context, model::VarRef *var);
 
     virtual llvm::Value *getRep(LLVMBuilder &builder) = 0;
 
@@ -120,6 +125,8 @@ public:
         return 0;
     }
 
+    virtual void emitAddr(model::Context &context, model::VarRef *var);
+
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
 };
@@ -159,6 +166,13 @@ class BFieldDefImpl : public model::VarDefImpl {
                                           llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           ) = 0;
+
+        virtual void emitAddr(model::Context &context, model::VarRef *var);
+        
+        virtual llvm::Value *emitFieldAddr(llvm::IRBuilder<> &builder,
+                                           llvm::Type *fieldType,
+                                           llvm::Value *aggregate
+                                           ) = 0;
 };
 
 SPUG_RCPTR(BInstVarDefImpl);
@@ -179,6 +193,11 @@ class BInstVarDefImpl : public BFieldDefImpl {
                                           llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           );
+
+        virtual llvm::Value *emitFieldAddr(llvm::IRBuilder<> &builder,
+                                           llvm::Type *fieldType,
+                                           llvm::Value *aggregate
+                                           );
 
         virtual bool hasInstSlot() const;
         virtual int getInstSlot() const;
@@ -201,6 +220,11 @@ class BOffsetFieldDefImpl : public BFieldDefImpl {
                                           llvm::Type *fieldType,
                                           llvm::Value *aggregate
                                           );
+
+        virtual llvm::Value *emitFieldAddr(llvm::IRBuilder<> &builder,
+                                           llvm::Type *fieldType,
+                                           llvm::Value *aggregate
+                                           );
 
         virtual bool hasInstSlot() const;
         virtual int getInstSlot() const;

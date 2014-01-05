@@ -26,7 +26,7 @@ ExprPtr Expr::convert(Context &context, TypeDef *newType) {
     // see if we're already of the right type
     if (newType->matches(*type))
         return this;
-
+    
     // see if there's a converter
     FuncDefPtr converter = type->getConverter(context, *newType);
     if (converter) {

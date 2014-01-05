@@ -65,6 +65,9 @@
 
         @cname jack_activate
         int activate();
+
+        @cname jack_deactivate
+        int deactivate();
     }
 
     @cname jack_client_open

@@ -34,14 +34,14 @@ class FreeBase {};
 ## The Object base class.  Object provides the basic reference counting
 ## mechanism, and most user classes should be derived from it.
 class Object : VTableBase {
-    uint refCount;
+    atomic_int refCount;
 
     # have to declare these before "oper init" otherwise it won't generate a
     # bind in "oper new"
     oper bind();
     oper release();
 
-    oper init() : refCount = 0 {
+    oper init() {
     }
 
     # delete virtual function
@@ -52,15 +52,14 @@ class Object : VTableBase {
 
     oper bind() {
         if (!(this is null))
-            refCount = refCount + 1;
+            refCount += 1;
     }
 
     oper release() {
         if (this is null)
             return;
 
-        refCount = refCount - 1;
-        if (refCount == 0) {
+        if (!(refCount -= 1)) {
             this.oper del();
             free(this);
         }

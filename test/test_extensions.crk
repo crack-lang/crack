@@ -33,13 +33,17 @@ class MyAggType : Object, MyType {
 }
 
 agg := MyAggType();
-if (agg.refCount != 1)
+# TODO: remove the conversion once we can implement all integer operations for 
+# atomics.
+if (agg.refCount != int(1))
     cout `bad reference count in MyAggType\n`;
 if (agg.a != 0)
     cout `Instance variable "a" not initialized in MyAggType\n`;
 
 agg = MyAggType(100, null);
-if (agg.refCount != 1)
+# TODO: remove the conversion once we can implement all integer operations for 
+# atomics.
+if (agg.refCount != int(1))
     cout `bad reference count in MyAggType(100)\n`;
 if (agg.a != 100)
     cout `Instance variable "a" not initialized in MyAggType(100)\n`;

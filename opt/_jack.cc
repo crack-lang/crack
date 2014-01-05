@@ -151,6 +151,13 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
         (void *)jack_activate
     );
 
+
+    f = type_JackClient->addMethod(
+        type_int, 
+        "deactivate",
+        (void *)jack_deactivate
+    );
+
     type_JackClient->finish();
 
 
