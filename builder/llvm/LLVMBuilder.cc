@@ -2785,8 +2785,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     REVFLOPS(floatType)
 
     // atomic types
-    context.addDef(new AtomicAddOpDef(intType, 0, true), atomicType);
-    context.addDef(new AtomicSubOpDef(intType, 0, true), atomicType);
+    context.addDef(new AtomicAddOpDef(intzType, 0, true), atomicType);
+    context.addDef(new AtomicSubOpDef(intzType, 0, true), atomicType);
     context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.intz"),
                    atomicType
                    );
