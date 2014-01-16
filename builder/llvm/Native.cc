@@ -8,11 +8,11 @@
  * Copyright 2011-2012 Google Inc.
  * Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
  * Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
- * 
+ *
  *   This Source Code Form is subject to the terms of the Mozilla Public
  *   License, v. 2.0. If a copy of the MPL was not distributed with this
  *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  *
  */
 
@@ -458,7 +458,11 @@ void optimizeLink(llvm::Module *module, bool verify) {
     Passes.add(createFunctionAttrsPass()); // Add nocapture.
     Passes.add(createGlobalsModRefPass()); // IP alias analysis.
 
-    Passes.add(createLICMPass());      // Hoist loop invariants.
+// XXX The LICM pass appears to cause function calls to "oper bind" to be
+// removed after reference counts were converted to atomic_int.  I suspect
+// this may be a bug in the optimization pass, but tracking it down is a low
+// priority.
+//    Passes.add(createLICMPass());      // Hoist loop invariants.
     Passes.add(createGVNPass());       // Remove redundancies.
     Passes.add(createMemCpyOptPass()); // Remove dead memcpys.
 
