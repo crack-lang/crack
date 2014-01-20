@@ -481,9 +481,9 @@ sky := TextureMaterial(loadPNGMaterial(openRd('data/CloudySky.png')));
 plasma := TextureMaterial(loadPNGMaterial(openRd('data/PlasmaVomit.png')));
 stucco := TextureMaterial(loadPNGMaterial(openRd('data/stucco.png')));
 orange := TextureMaterial(loadPNGMaterial(openRd('data/AlphaSquare.png')));
-will2 := TextureMaterial(loadPNGMaterial(openRd('data/Will2-tex.png')));
 materials = Array[Material]![sky, plasma, stucco, orange];
 const int MAT_SKY = 0, MAT_PLASMA = 1, MAT_STUCCO = 2, MAT_ORANGE = 3;
+cout `created materials\n`;
 
 ## Save all of the objects in the world to the wurld.dat file.
 void save() {
@@ -629,7 +629,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             firstProxy.addCube(targetCube.pos);
         } else {
             # standalone mode, add the target cube.
-            targetCube.material = will2;
+            targetCube.material = stucco;
             objects.append(targetCube);
         }
 
