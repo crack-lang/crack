@@ -24,9 +24,6 @@ using namespace model;
 using namespace std;
 using namespace builder::mvll;
 
-// XXX defined in LLVMBuilder.cc
-extern Type * llvmIntType;
-
 // IncompleteInstVarRef
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IncompleteInstVarRef, Value);
 
@@ -647,7 +644,8 @@ void *IncompleteSpecialize::operator new(size_t s) {
 Instruction *IncompleteSpecialize::clone_impl() const {
     return new IncompleteSpecialize(getType(), value,
                                     curType,
-                                    ancestorType
+                                    ancestorType,
+                                    uintzType
                                     );
 }
 
@@ -656,6 +654,7 @@ IncompleteSpecialize::IncompleteSpecialize(
     Value *value,
     BTypeDef *curType,
     BTypeDef *ancestorType,
+    Type *uintzType,
     Instruction *insertBefore
 ) :
     PlaceholderInstruction(
@@ -666,7 +665,8 @@ IncompleteSpecialize::IncompleteSpecialize(
     ),
     value(value),
     curType(curType),
-    ancestorType(ancestorType) {
+    ancestorType(ancestorType),
+    uintzType(uintzType) {
 
     Op<0>() = value;
 }
@@ -676,6 +676,7 @@ IncompleteSpecialize::IncompleteSpecialize(
     Value *value,
     BTypeDef *curType,
     BTypeDef *ancestorType,
+    Type *uintzType,
     BasicBlock *parent
 ) :
     PlaceholderInstruction(
@@ -686,7 +687,8 @@ IncompleteSpecialize::IncompleteSpecialize(
     ),
     value(value),
     curType(curType),
-    ancestorType(ancestorType) {
+    ancestorType(ancestorType),
+    uintzType(uintzType) {
 
     Op<0>() = value;
 }
@@ -696,7 +698,8 @@ Value *IncompleteSpecialize::emitSpecializeInner(
     Type *type,
     Value *value,
     BTypeDef *curType,
-    BTypeDef *ancestorType
+    BTypeDef *ancestorType,
+    Type *uintzType
 ) {
     // XXX won't work for virtual base classes
 
@@ -710,9 +713,8 @@ Value *IncompleteSpecialize::emitSpecializeInner(
 
     // convert to an integer and subtract from the pointer to the
     // base class.
-    assert(llvmIntType && "integer type has not been initialized");
-    offset = builder.CreatePtrToInt(offset, llvmIntType);
-    value = builder.CreatePtrToInt(value, llvmIntType);
+    offset = builder.CreatePtrToInt(offset, uintzType);
+    value = builder.CreatePtrToInt(value, uintzType);
     Value *derived = builder.CreateSub(value, offset);
     Value *specialized = builder.CreateIntToPtr(derived, type);
     return specialized;
@@ -723,7 +725,8 @@ void IncompleteSpecialize::insertInstructions(IRBuilder<> &builder) {
                                            getType(),
                                            value,
                                            curType,
-                                           ancestorType
+                                           ancestorType,
+                                           uintzType
                                            )
                        );
 }
@@ -738,18 +741,21 @@ Value *IncompleteSpecialize::emitSpecialize(
     BTypeDef *ancestorType
 ) {
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Type *uintzType = BTypeDefPtr::arcast(context.construct->uintzType)->rep;
 
     if (type->complete) {
         return emitSpecializeInner(llvmBuilder.builder, type->rep,
                                    value,
                                    type,
-                                   ancestorType
+                                   ancestorType,
+                                   uintzType
                                    );
     } else {
         PlaceholderInstruction *placeholder =
             new IncompleteSpecialize(type->rep, value,
                                      type,
                                      ancestorType,
+                                     uintzType,
                                      llvmBuilder.builder.GetInsertBlock()
                                      );
         type->addPlaceholder(placeholder);
@@ -789,7 +795,7 @@ IncompleteSizeOf::IncompleteSizeOf(Type *type,
     type(type),
     intType(intType),
     PlaceholderInstruction(
-        IntegerType::get(type->getContext(), 32),
+        intType,
         parent,
         OperandTraits<IncompleteSizeOf>::op_begin(this),
         OperandTraits<IncompleteSizeOf>::operands(this)

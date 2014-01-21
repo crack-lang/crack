@@ -93,7 +93,7 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                              "oper new",
                                              1
                                              );
-    arrayAlloc->args[0] = new ArgDef(gd->uintType.get(), "size");
+    arrayAlloc->args[0] = new ArgDef(gd->uintzType.get(), "size");
     context.addDef(arrayAlloc.get(), arrayType);
 
     FuncDefPtr arrayFromVoidptr =

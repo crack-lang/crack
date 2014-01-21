@@ -77,9 +77,6 @@ using namespace crack::util;
 
 typedef model::FuncCall::ExprVec ExprVec;
 
-// XXX find a way to remove this? see Incompletes.cc
-Type *llvmIntType = 0;
-
 int LLVMBuilder::argc = 1;
 
 namespace {
@@ -889,8 +886,9 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
     // get around the temporary lack of automatic member initialization)
 
     // calculate the size of instances of the type
-    assert(llvmIntType && "integer type has not been initialized");
-    Value *size = IncompleteSizeOf::emitSizeOf(context, btype, llvmIntType);
+    BTypeDef *uintzType = BTypeDefPtr::arcast(context.construct->uintzType);
+    Value *size = IncompleteSizeOf::emitSizeOf(context, btype,
+                                               uintzType->rep);
 
     // if a count expression was supplied, emit it.  Otherwise, count is a
     // constant 1
@@ -899,7 +897,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
         countExpr->emit(context)->handleTransient(context);
         countVal = lastValue;
     } else {
-        countVal = ConstantInt::get(llvmIntType, 1);
+        countVal = ConstantInt::get(uintzType->rep, 1);
     }
 
     // construct a call to the "calloc" function
@@ -2629,7 +2627,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->intType = intType;
     gd->uintType = uintType;
     gd->intSize = intIs32Bit ? 32 : 64;
-    llvmIntType = intType->rep;
     deferMetaClass.push_back(intType);
     deferMetaClass.push_back(uintType);
 
@@ -3329,6 +3326,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     //BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
     //BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
     BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
+    BTypeDef *uintzType = BTypeDefPtr::arcast(context.construct->uintzType);
     BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->voidType);
     //BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
     BTypeDef *byteptrType =
@@ -3339,8 +3337,8 @@ void LLVMBuilder::createModuleCommon(Context &context) {
     // create "void *calloc(uint size)"
     {
         FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
-        f.addArg("size", intType);
-        f.addArg("size", intType);
+        f.addArg("size", uintzType);
+        f.addArg("size", uintzType);
         f.setSymbolName("calloc");
         f.finish();
         registerHiddenFunc(context, f.funcDef.get());
