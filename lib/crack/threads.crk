@@ -1,0 +1,138 @@
+# High-level threading library.
+#
+# Copyright 2014 Google Inc.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+import crack.cont.array Array;
+import crack.ext._pthread pthread_cond_init, pthread_cond_signal,
+    pthread_cond_t, pthread_cond_wait, pthread_create, pthread_join,
+    pthread_mutex_destroy, pthread_mutex_init, pthread_mutex_lock,
+    pthread_mutex_t, pthread_mutex_unlock, pthread_t;
+import crack.io cerr;
+import crack.lang Exception, SystemError;
+
+void _thread_main(voidptr thread);
+
+## The Thread class.  Classes should derive from it and implement the run()
+## method.
+## After creating an instance of the thread, you have to call start() to
+## actually start the thread.  Once a thread is started, you should wait for
+## its termination using the join() method.
+class Thread : Object, pthread_t {
+    oper init() {}
+
+    void run() {}
+
+    @final void start() {
+        if (rc := pthread_create(this, null, _thread_main, this))
+            throw SystemError('Error starting thread', rc);
+    }
+
+    @final void join() {
+        if (rc := pthread_join(this, null))
+            throw SystemError('Error joining thread', rc);
+    }
+}
+
+void _thread_main(voidptr thread) {
+    obj := Thread.unsafeCast(thread);
+    try {
+        obj.run();
+    } catch (Exception ex) {
+        ex.writeTo(cerr);
+    }
+}
+
+## A mutual-exclusion lock.  This is the most basic concurrency primitive.
+class Mutex : Object, pthread_mutex_t {
+    oper init() {
+        pthread_mutex_init(this, null);
+    }
+
+    oper del() {
+        pthread_mutex_destroy(this);
+    }
+
+    ## Lock the mutex, blocking until the lock is held.
+    @final void lock() {
+        if (rc := pthread_mutex_lock(this))
+            throw SystemError('Error locking mutex', rc);
+    }
+
+    ## Unlock a currently held mutex.
+    @final void unlock() {
+        if (rc := pthread_mutex_unlock(this))
+            throw SystemError('Error unlocking mutex', rc);
+    }
+}
+
+## Create an instance of a MutexLock in a context to lock the mutex for that
+## context.  Example:
+##
+##  void locking() {
+##      l := MutexLock(mutex);
+##      ... mutex remains locked for the function.
+##  }
+class MutexLock {
+    Mutex __mutex;
+    oper init(Mutex mutex) : __mutex = mutex {
+        __mutex.lock();
+    }
+
+    oper del() {
+        __mutex.unlock();
+    }
+}
+
+## Condition object.  Conditions let you safely wait for a state change.
+##
+## Condidtions have a Mutex protecting the state.  You must lock the mutex
+## prior to performing the wait().
+class Condition : Object, pthread_cond_t {
+    Mutex mutex;
+
+    oper init(Mutex mutex) : mutex = mutex {}
+
+    ## Create the condition with its own mutex.
+    oper init() : mutex() {}
+
+    ## Wait for the condition to be signal()ed.  The mutex must be locked
+    ## prior to this call, it will be atomically unlocked during the wait and
+    ## locked again when control is returned to the caller.
+    @final void wait() {
+        if (rc := pthread_cond_wait(this, mutex))
+            throw SystemError('Waiting on condition', rc);
+    }
+
+    ## Wake up one thread waiting on the condition.
+    @final void signal() {
+        if (rc := pthread_cond_signal(this))
+            throw SystemError('Triggering condition', rc);
+    }
+}
+
+## A thread-safe queue.
+class Queue[Elem] {
+    Array[Elem] __elems = {};
+    Condition __cond = {};
+    oper init() {}
+
+    Elem get() {
+        l := MutexLock(__cond.mutex);
+        while (!__elems.count())
+            __cond.wait();
+        p := __elems.pop();
+        return p;
+    }
+
+    ## Add a new element to the end of the queue.
+    void add(Elem elem) {
+        l := MutexLock(__cond.mutex);
+        __elems.append(elem);
+        __cond.signal();
+    }
+}

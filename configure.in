@@ -87,4 +87,7 @@ AM_CONDITIONAL(HAVE_MONGO_CLIENT, [test "x$got_mongoclient" = xyes])
 AM_PATH_JACK
 AM_CONDITIONAL(HAVE_JACK, [test "x$got_jack" = xyes])
 
+AM_PATH_PTHREAD
+AM_CONDITIONAL(HAVE_PTHREAD, [test "x$got_pthread" = xyes])
+
 AC_OUTPUT

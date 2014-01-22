@@ -1,0 +1,61 @@
+%%TEST%%
+threads
+%%ARGS%%
+%%FILE%%
+# Tests the threads module.
+import crack.io cout, StandardFormatter, Writer;
+import crack.lang Buffer, ManagedBuffer;
+import crack.threads Thread, Queue;
+
+Queue[Object] mainQueue = {};
+
+class MyThread : Thread {
+    Queue[Object] queue = {};
+
+    oper init() {}
+
+    void getMsg() {
+        m := queue.get();
+        cout `thread got $m\n`;
+    }
+
+    void run() {
+        cout `thread started\n`;
+        getMsg();
+        mainQueue.add('t1');
+        getMsg();
+        mainQueue.add('t2');
+        getMsg();
+        mainQueue.add('t3');
+    }
+}
+
+void getMsg() {
+    m := mainQueue.get();
+    cout `main got $m\n`;
+}
+
+cout `main started\n`;
+thread := MyThread();
+thread.start();
+thread.queue.add('m1');
+getMsg();
+thread.queue.add('m2');
+getMsg();
+thread.queue.add('m3');
+getMsg();
+thread.join();
+
+cout `joined\n`;
+
+%%EXPECT%%
+main started
+thread started
+thread got m1
+main got t1
+thread got m2
+main got t2
+thread got m3
+main got t3
+joined
+%%STDIN%%
