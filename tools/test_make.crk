@@ -8,8 +8,7 @@
 ## 
 
 import crack.sys argv, exit;
-import crack.io cout, FStr;
-import crack.exp.dir Directory;
+import crack.io cout, cerr, FStr;
 import crack.fs makePath;
 import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
 import crack.regex escape, Regex;
@@ -73,8 +72,14 @@ if (!testDir)
 # find the highest file number
 fileRx := Regex(escape(testDir) + r'/(\d+)_.*');
 int maxId;
-for (file :in Directory(testDir).files()) {
-    if ( (m := fileRx.search(file.name)) && 
+dirObj := makePath(testDir);
+if (!dirObj.isDir()) {
+    cerr `test directory $testDir doesn't exist or isn't a directory.`;
+    exit(1);
+}
+
+for (file :in dirObj.children()) {
+    if ( (m := fileRx.search(file.getName())) && 
          (curId := parseInt(m.group(1))) > maxId
         )
         maxId = curId;
@@ -90,4 +95,3 @@ out.write('%%TEST%%
 ');
 
 cout `wrote $templateFile\n`;
-     
