@@ -397,6 +397,7 @@ class IncompleteSpecialize : public PlaceholderInstruction {
 private:
     Value *value;
     BTypeDef *curType, *ancestorType;
+    llvm::Type *uintzType;
 
 public:
     // allocate space for 1 operand
@@ -412,6 +413,7 @@ public:
                          llvm::Value *value,
                          BTypeDef *curType,
                          BTypeDef *ancestorType,
+                         llvm::Type *uintzType,
                          llvm::Instruction *insertBefore = 0
                          );
 
@@ -419,6 +421,7 @@ public:
                          llvm::Value *value,
                          BTypeDef *curType,
                          BTypeDef *ancestorType,
+                         llvm::Type *uintzType,
                          llvm::BasicBlock *parent
                          );
 
@@ -427,7 +430,8 @@ public:
         llvm::Type *type,
         llvm::Value *value,
         BTypeDef *curType,
-        BTypeDef *ancestorType
+        BTypeDef *ancestorType,
+        llvm::Type *uintzType
     );
 
     virtual void insertInstructions(llvm::IRBuilder<> &builder);
