@@ -3927,16 +3927,28 @@ silly results like #float64(a) + 1# producing a result of type #int#.
 Threading
 ---------
 
-As it stands, Crack 0.8 is written with little regard for threads.  You can
-attempt to use the normal threading libraries, if you like, but you're likely
-to run into some problems.  In particular, you should be aware that the
-reference counting mechanism is not thread-safe, so memory management will
-most likely fail in really hard to debug ways if you share lots of objects
-between threads.
+Crack provides rudimentary support for multi-threading.  Writing thread-safe 
+programs is difficult in any sufficiently primitive language, and crack is no 
+exception.
 
-This will be remedied in a future version through the introduction of atomic
-operations, which will allow the reference counting mechanism to be
-implemented safely - with some cost to performance of threaded applications.
+Crack's reference counting mechanism is thread-safe, however it's bind and 
+release semantics are not: there is no guarantee of order of operations when 
+it comes to assigning reference counted variables, and without proper 
+synchronization it may still be possible to get into a situation where you are 
+referencing illegal memory.
+
+When sharing objects between threads, always be sure to do one of the 
+following:
+
+-   Fully transfer ownership of the object to the other thread.
+-   Fully protect the state of the object with a #Mutex#.
+-   Treat the object as immutable.
+
+Follow these rules diligently and you won't have any problems.  Keep in mind 
+that module-scoped globals are very easy to share accidentally.
+
+See \X(Threads) for information on the #crack.threads# module used to support 
+threading.
 
 Debugging
 ---------
@@ -4664,6 +4676,160 @@ functions on your system ("#open()#", for example).
 
 The #crack.io# module also provides the #Formatter# class.  See \X(The
 Formatter Interface) for details on how to use this.
+
+Threads
+-------
+
+The #crack.threads# module provides high-level thread functionality.  It 
+includes the #Thread#, #Mutex#, #MutexLock#, #Condition# and #Queue# classes.  
+
+To create a thread, derive from the #Thread# base class and implement the 
+#run()# method:
+
+{{
+    import crack.threads Thread;
+
+    class MyThread : Thread {
+        void run() {
+            # Note that cout, cin and cerr are threadsafe: their only state is 
+            # a file-descriptor.
+            cout `hello from the background!\n`;
+        }
+    }
+}}
+
+We can then start use #start()# and #join()# to start the thread running in 
+the background and wait for it to complete:
+
+{{
+    MyThread thread = {};
+    thread.start();
+    
+    # block until completion
+    thread.join();
+}}
+
+The simplest synchronization primitive is the #atomic\_int# type.  
+#atomic\_int# is an integer (an #intz#, actually, because it is the size of a 
+pointer) whose only operations are performed atomically.  Atomic operations 
+are visible to all threads and are not subject to reordering by the compiler.  
+They are used to implement the reference counting mechanism in #Object#, and 
+can also be used to implement other forms of thread-safe counters and control 
+mechanisms.  For example, here is a simple active thread counter:
+
+{{
+    atomic_int count;
+    
+    class MyThread : Thread {
+        void run() {
+            count += 1;
+            ... do thread actions ...
+            count -= 1;
+        }
+    }
+}}
+
+The only operations supported for #`atomic_int`# are:
+
+-   Augmented assignment for addition and subtraction: #count += 1#
+-   Implicit conversion to #int#, #uint#, #intz# and #uintz#.
+
+Mutexes
+'''''''
+
+Mutexes synchronize access to shared resources.  Only one thread can have a 
+mutex locked at any given time.  If a thread tries to lock a mutex that is 
+currently locked by another thread, it will block until the mutex becomes 
+available.
+
+The #Mutex# class provides the #lock()# and #unlock()# methods:
+
+{{
+    int value;
+    Mutex valueMutex = {};
+    
+    valueMutex.lock();
+    value = 100;
+    valueMutex.unlock();
+}}
+
+There is also a #MutexLock# class that manages locking and unlocking a mutex 
+for the context it is defined:
+
+{{
+    void f() {
+        # The mutex will be unlocked when this goes out of scope and is 
+        # deleted at the end of the function call.
+        lock := MutexLock(valueMutex);
+        value = 200;
+    }
+}}
+
+Note that #MutexLock# is rather expensive, as it involves a memory allocation 
+and free.  However, it also has the virtue of being exception safe.
+
+Conditions
+''''''''''
+
+Conditions allow you to send events between threads.  They must be used in 
+conjuntion with a #Mutex#.  The mutex protects a shared resource, the 
+notifies observers of changes in that resource:
+
+{{
+
+    # Create a condition associated with our value.
+    Condition cond = {valueMutex};
+    
+    # Change the value.
+    if (true) {
+        lock := MutexLock(valueMutex);
+        value += 1;
+        cond.signal();
+    }
+    
+    # Thread that waits on changes.
+    class Waiter : Thread {
+        void run() {
+            lock := MutexLock(valueMutex);
+            while (true) {
+                # The condition atomically releases the mutex while it's 
+                # waiting for an event.
+                cond.wait();
+                
+                cout `value changed, new value = $value\n`;
+            }
+        }
+}}
+
+Queues
+''''''
+
+#Queue# is the most sophisticated inter-thread communication mechanism 
+provided by #crack.threads#.  As its name implies, it is a thread-safe message 
+queue.  It is also a generic.
+
+Here's how we could use #Queue# to implement a worker pool:
+
+{{
+    Queue[Functor0[void]] actions = {};
+    class WorkerThread : Thread {
+        void run() {
+            func := actions.get();
+            func();
+        }
+    }
+    Array[WorkerThread] pool = {};
+    for (int i = 0; i < 10; ++i) {
+        thread := WorkerThread();
+        pool.append(thread);
+        thread.start();
+    }
+    
+    void doSomething() {
+        cout `blah`;
+    }
+    actions.add(Functor0[void](doSomething));
+}}
 
 Line Readers
 ------------
