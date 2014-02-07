@@ -15,7 +15,7 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 5:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 6:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 

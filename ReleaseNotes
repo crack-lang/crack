@@ -1,3 +1,9 @@
+
+0.9
+    -   Added support for threading.
+    -   Added the #crack.net.irc# module.
+    -   Added the #crackc.protobuf# module.
+    -   Many changes to caching.
 0.8
     -   Lots of bug fixes and small features.
     -   Lots of refactors and code cleanups.
