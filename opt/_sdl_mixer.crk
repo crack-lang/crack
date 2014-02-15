@@ -1,0 +1,61 @@
+// Copyright 2014 Google Inc.
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+# Crack SDL Mixer bindings.
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._sdl_mixer {
+    @filename 'opt/_sdl_mixer.cc'
+    @crack_internal
+    @inject '
+#include <SDL_mixer.h>
+
+struct Undef {};
+';
+
+    const uint16 AUDIO_S16;
+
+    class SDL_RWops;
+    SDL_RWops SDL_RWFromFile(byteptr filename, byteptr mode);
+
+    @cname Undef class Mix_Chunk;
+    Mix_Chunk Mix_LoadWAV_RW(SDL_RWops ops, int freeSrc);
+
+    ## Frees a chunk created by one of the other functions.
+    void Mix_FreeChunk(Mix_Chunk chunk);
+
+    ## channel: A channel number, -1 means allocate a new channel and return
+    ##      it.
+    ## loops: number of loops, -1 loops indefinitely.
+    ## ticks: number of milliseconds to play (-1 is forever)
+    ## Returns the channel number.
+    int Mix_PlayChannelTimed(int channel, Mix_Chunk chunk, int loops, int
+                             ticks
+                             );
+
+    ## Set position where the sound comes from.
+    ## angle: from 0-360
+    ## distance: 0-255, distance from the listener.
+    int Mix_SetPosition(int channel, int16 angle, byte distance);
+
+    # Halt playing the channel.
+    int Mix_HaltChannel(int channel);
+
+    ## Open the audio player.
+    int Mix_OpenAudio(int rate, uint16 format, int channels, int chunksize);
+
+    ## Register 'callback' to be called when the channel is finished.
+    void Mix_ChannelFinished(function[void, int] callback);
+
+/*
+    void wurldChannelCallback(int channel) {
+      WurldSDLAudio::getInstance()->handlePlayerStopped(channel);
+   }
+*/
+
+
+}
