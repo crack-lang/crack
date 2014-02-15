@@ -36,6 +36,44 @@ void crk_SDL_Rect_init(SDL_Rect *rect, int16_t x, int16_t y, uint16_t w, uint16_
     rect->w = w;
     rect->h = h;
 }
+
+SDL_JoyAxisEvent *SDL_Event_GetJoyAxisEvent(SDL_Event *evt) {
+    return &evt->jaxis;
+}
+
+uint8_t SDL_JoyAxisEvent_GetType(SDL_JoyAxisEvent *evt) {
+    return evt->type;
+}
+
+uint8_t SDL_JoyAxisEvent_GetWhich(SDL_JoyAxisEvent *evt) {
+    return evt->which;
+}
+
+uint8_t SDL_JoyAxisEvent_GetAxis(SDL_JoyAxisEvent *evt) {
+    return evt->axis;
+}
+
+int16_t SDL_JoyAxisEvent_GetValue(SDL_JoyAxisEvent *evt) {
+    return evt->value;
+}
+
+SDL_JoyButtonEvent *SDL_Event_GetJoyButtonEvent(SDL_Event *evt) {
+    return &evt->jbutton;
+}
+
+uint8_t SDL_JoyButtonEvent_GetType(SDL_JoyButtonEvent *evt) {
+    return evt->type;
+}
+
+uint8_t SDL_JoyButtonEvent_GetWhich(SDL_JoyButtonEvent *evt) {
+    return evt->which;
+}
+
+uint8_t SDL_JoyButtonEvent_GetState(SDL_JoyButtonEvent *evt) {
+    return evt->state;
+}
+
+struct Undef {};
 ';
     @crack_internal
 
@@ -105,6 +143,31 @@ void crk_SDL_Rect_init(SDL_Rect *rect, int16_t x, int16_t y, uint16_t w, uint16_
     SDL_ResizeEvent SDL_Event_GetResize(SDL_Event evt);
     int16 SDL_ResizeEvent_GetW(SDL_ResizeEvent evt);
     int16 SDL_ResizeEvent_GetH(SDL_ResizeEvent evt);
+    
+    class SDL_JoyAxisEvent {
+        byte type, which, axis;
+        int16 value;
+    }
+    
+    SDL_JoyAxisEvent SDL_Event_GetJoyAxisEvent(SDL_Event evt);
+    byte SDL_JoyAxisEvent_GetType(SDL_JoyAxisEvent evt);
+    byte SDL_JoyAxisEvent_GetWhich(SDL_JoyAxisEvent evt);
+    byte SDL_JoyAxisEvent_GetAxis(SDL_JoyAxisEvent evt);
+    int16 SDL_JoyAxisEvent_GetValue(SDL_JoyAxisEvent evt);
+    
+    class SDL_JoyButtonEvent {
+        byte type, which, button, state;
+    }
+    
+    SDL_JoyButtonEvent SDL_Event_GetJoyButtonEvent(SDL_Event evt);
+    byte SDL_JoyButtonEvent_GetType(SDL_JoyButtonEvent evt);
+    byte SDL_JoyButtonEvent_GetWhich(SDL_JoyButtonEvent evt);
+    byte SDL_JoyButtonEvent_GetState(SDL_JoyButtonEvent evt);
+
+    @cname Undef class SDL_Joystick;
+    SDL_Joystick SDL_JoystickOpen(int deviceIndex);
+    int SDL_JoystickOpened(int deviceIndex);
+    void SDL_JoystickClose(SDL_Joystick joystick);
     
     void SDL_WarpMouse(uint x, uint y);
 

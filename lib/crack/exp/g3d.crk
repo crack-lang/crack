@@ -15,13 +15,21 @@ import crack.math cos, sin, sqrt;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
     SDL_Event_GetKey,
     SDL_Event_GetMotion,
+    SDL_Event_GetJoyAxisEvent,
+    SDL_Event_GetJoyButtonEvent,
     SDL_KeyboardEvent_GetKeysym,
+    SDL_JoyAxisEvent,
+    SDL_JoyButtonEvent,
+    SDL_Joystick,
+    SDL_JoystickOpen,
+    SDL_JoystickClose,
     SDL_keysym_GetSym, 
     SDL_MouseMotionEvent_GetX,
     SDL_MouseMotionEvent_GetY,
-    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, SDL_Quit, SDL_SetVideoMode, 
-    SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, SDL_GL_BLUE_SIZE, 
-    SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_KEYDOWN, SDL_KEYUP, 
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
+    SDL_Quit, SDL_SetVideoMode, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, 
+    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_JOYAXISMOTION, 
+    SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_KEYDOWN, SDL_KEYUP, 
     SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL, 
     SDL_QUIT, SDL_RESIZABLE;
 import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor, 
@@ -810,6 +818,33 @@ class RenderFrameEvent {
     @abstract void onRenderFrame(RenderFrameEvent evt);
 }
 
+class JoyAxisEvent : Object, SDL_JoyAxisEvent {
+    oper init(SDL_JoyAxisEvent org) {
+        type = org.type;
+        which = org.which;
+        axis = org.axis;
+        value = org.value;
+    }
+}
+
+@interface JoyAxisHandler {
+    @abstract bool onJoyAxisMotion(JoyAxisEvent event);
+}
+
+class JoyButtonEvent : Object, SDL_JoyButtonEvent {
+    oper init(SDL_JoyButtonEvent org) {
+        type = org.type;
+        which = org.which;
+        button = org.button;
+        state = org.state;
+    }
+}
+
+@interface JoyButtonHandler {
+    @abstract bool onJoyButtonDown(JoyButtonEvent event);
+    @abstract bool onJoyButtonUp(JoyButtonEvent event);
+}
+
 ## A g3d application.  Takes care of initialization shutdown and provides the 
 ## application event loop.
 class App {
@@ -834,6 +869,11 @@ class App {
     
     ## The list of mouse button event handlers.
     List[MouseButtonHandler] mouseButtonHandlers = {};
+    
+    ## The list of handlers for joystick axis changes.
+    List[JoyAxisHandler] joyAxisHandlers = {};
+    
+    List[JoyButtonHandler] joyButtonHandlers = {};
 
     ## The render frame handler, this handler gets called every render frame.    
     RenderFrameHandler renderFrameHandler;
@@ -843,6 +883,9 @@ class App {
     
     # true until someone calls terminate()
     bool __active = true;
+    
+    # Array of joysticks, null until there is a joystick opened.
+    array[SDL_Joystick] __joysticks;
 
     oper init(int width, int height) : width = width, height = height {}
     oper init() {}
@@ -851,6 +894,15 @@ class App {
         SDL_Quit();
         free(__now);
         free(__lastEngineFrame);
+        
+        # Free the joystick array.
+        if (!(__joysticks is null)) {
+            for (int i = 0; i < 8; ++i) {
+                if (!(__joysticks[i] is null))
+                    SDL_JoystickClose(__joysticks[i]);
+            }
+            free(__joysticks);
+        }
     }
     
     ## Initialize the application (do all SDL and OpenGL initializations)
@@ -869,6 +921,21 @@ class App {
         cout `graphics initialize\n`;
         Graphics.initialize(width, height);
         cout `done\n`;
+    }
+    
+    ## Open a joystick, returns true if successful.  If the joystick is 
+    ## already opened, returns true.
+    ## Joystick devices can be 0-7, hopefully 8 joysticks should be enough for 
+    ## anyone.
+    bool openJoystick(uint deviceIndex) {
+        if (__joysticks is null)
+            __joysticks = array[SDL_Joystick](8);
+        if (deviceIndex > 7)
+            return false;
+        if (!(__joysticks[deviceIndex] is null))
+            return true;
+        __joysticks[deviceIndex] = js := SDL_JoystickOpen(deviceIndex);
+        return !(js is null);
     }
 
     int __getTimeDiff(TimeVal old, TimeVal new) {
@@ -936,7 +1003,31 @@ class App {
                 for (handler :in mouseButtonHandlers)
                     if (handler.onMouseButtonUp(MouseButtonEvent()))
                         break;
+            } else if (evtType == SDL_JOYAXISMOTION) {
+                cout `axis motion event $evtType\n`;
+                JoyAxisEvent event = {SDL_Event_GetJoyAxisEvent(evt)};
+                for (handler :in joyAxisHandlers) {
+                    if (handler.onJoyAxisMotion(event))
+                        break;
+                }
+            } else if (evtType == SDL_JOYBUTTONDOWN) {
+                cout `button down event $evtType\n`;
+                JoyButtonEvent event = {SDL_Event_GetJoyButtonEvent(evt)};
+                for (handler :in joyButtonHandlers) {
+                    if (handler.onJoyButtonDown(event))
+                        break;
+                }
+            } else if (evtType == SDL_JOYBUTTONUP) {
+                cout `button up event $evtType\n`;
+                JoyButtonEvent event = {SDL_Event_GetJoyButtonEvent(evt)};
+                for (handler :in joyButtonHandlers) {
+                    if (handler.onJoyButtonUp(event))
+                        break;
+                }
+            } else {
+                cout `unknown event $evtType\n`;
             }
+            
         }
         
         # get the current time
