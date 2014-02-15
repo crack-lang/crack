@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.8 of the Crack Programming Language.  We
+This is the Manual for version 0.9 of the Crack Programming Language.  We
 regard this version largely as an alpha 1.0 release - compatibility breakage
 between this and 1.0 should be very limited.  There are still some usability
 gaps in the system, mostly with respect to debugging and caching.  And as of
@@ -669,7 +669,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.8 supports four control structures: the "if\/else" statement,
+Crack 0.9 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -2164,7 +2164,7 @@ Interfaces
 ''''''''''
 
 As an interim solution to accommodate the lack of virtual base classes, Crack
-0.8 provides an /interface/ concept similar to that of Java.  In fact, the
+0.9 provides an /interface/ concept similar to that of Java.  In fact, the
 interface implementation makes it suitable for use as a limited form of
 virtual base class, but we'll mainly focus on the interface use case.
 
@@ -2250,7 +2250,7 @@ inherit from them without using #@implements# you will get an error like this:
       crack.lang.Object myfile.crk.Foo._iface_getFooObject()
 }}
 
-Versions of Crack after 0.8 will continue to provide some form
+Versions of Crack after 0.9 will continue to provide some form
 of the #@interface# and #@implements# annotations (hopefully a refined form)
 but will ultimately implement them in terms of virtual inheritance.
 
@@ -2993,7 +2993,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 0.8 - we will eventually be switching to an integer
+    integer value (as of 0.9 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -3683,7 +3683,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 0.8.  In particular:
+Structs are very limited as of Crack 0.9.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -3799,7 +3799,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.8`#)
+    something like #`/usr/local/include/crack-0.9`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -3927,21 +3927,33 @@ silly results like #float64(a) + 1# producing a result of type #int#.
 Threading
 ---------
 
-As it stands, Crack 0.8 is written with little regard for threads.  You can
-attempt to use the normal threading libraries, if you like, but you're likely
-to run into some problems.  In particular, you should be aware that the
-reference counting mechanism is not thread-safe, so memory management will
-most likely fail in really hard to debug ways if you share lots of objects
-between threads.
+Crack provides rudimentary support for multi-threading.  Writing thread-safe 
+programs is difficult in any sufficiently primitive language, and crack is no 
+exception.
 
-This will be remedied in a future version through the introduction of atomic
-operations, which will allow the reference counting mechanism to be
-implemented safely - with some cost to performance of threaded applications.
+Crack's reference counting mechanism is thread-safe, however it's bind and 
+release semantics are not: there is no guarantee of order of operations when 
+it comes to assigning reference counted variables, and without proper 
+synchronization it may still be possible to get into a situation where you are 
+referencing illegal memory.
+
+When sharing objects between threads, always be sure to do one of the 
+following:
+
+-   Fully transfer ownership of the object to the other thread.
+-   Fully protect the state of the object with a #Mutex#.
+-   Treat the object as immutable.
+
+Follow these rules diligently and you won't have any problems.  Keep in mind 
+that module-scoped globals are very easy to share accidentally.
+
+See \X(Threads) for information on the #crack.threads# module used to support 
+threading.
 
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.8.  If your program
+Crack has only minimal support for debugging in 0.9.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
 
@@ -4461,7 +4473,7 @@ the type must define the comparison operators.
 Legacy Error Handling
 ---------------------
 
-Crack 0.8 continues to provide an error handling module (#crack.exp.error#).
+Crack 0.9 continues to provide an error handling module (#crack.exp.error#).
 However, this interface is deprecated in favor of exceptions.  This
 documentation should be regarded as purely of historical interest.
 
@@ -4664,6 +4676,160 @@ functions on your system ("#open()#", for example).
 
 The #crack.io# module also provides the #Formatter# class.  See \X(The
 Formatter Interface) for details on how to use this.
+
+Threads
+-------
+
+The #crack.threads# module provides high-level thread functionality.  It 
+includes the #Thread#, #Mutex#, #MutexLock#, #Condition# and #Queue# classes.  
+
+To create a thread, derive from the #Thread# base class and implement the 
+#run()# method:
+
+{{
+    import crack.threads Thread;
+
+    class MyThread : Thread {
+        void run() {
+            # Note that cout, cin and cerr are threadsafe: their only state is 
+            # a file-descriptor.
+            cout `hello from the background!\n`;
+        }
+    }
+}}
+
+We can then start use #start()# and #join()# to start the thread running in 
+the background and wait for it to complete:
+
+{{
+    MyThread thread = {};
+    thread.start();
+    
+    # block until completion
+    thread.join();
+}}
+
+The simplest synchronization primitive is the #atomic\_int# type.  
+#atomic\_int# is an integer (an #intz#, actually, because it is the size of a 
+pointer) whose only operations are performed atomically.  Atomic operations 
+are visible to all threads and are not subject to reordering by the compiler.  
+They are used to implement the reference counting mechanism in #Object#, and 
+can also be used to implement other forms of thread-safe counters and control 
+mechanisms.  For example, here is a simple active thread counter:
+
+{{
+    atomic_int count;
+    
+    class MyThread : Thread {
+        void run() {
+            count += 1;
+            ... do thread actions ...
+            count -= 1;
+        }
+    }
+}}
+
+The only operations supported for #`atomic_int`# are:
+
+-   Augmented assignment for addition and subtraction: #count += 1#
+-   Implicit conversion to #int#, #uint#, #intz# and #uintz#.
+
+Mutexes
+'''''''
+
+Mutexes synchronize access to shared resources.  Only one thread can have a 
+mutex locked at any given time.  If a thread tries to lock a mutex that is 
+currently locked by another thread, it will block until the mutex becomes 
+available.
+
+The #Mutex# class provides the #lock()# and #unlock()# methods:
+
+{{
+    int value;
+    Mutex valueMutex = {};
+    
+    valueMutex.lock();
+    value = 100;
+    valueMutex.unlock();
+}}
+
+There is also a #MutexLock# class that manages locking and unlocking a mutex 
+for the context it is defined:
+
+{{
+    void f() {
+        # The mutex will be unlocked when this goes out of scope and is 
+        # deleted at the end of the function call.
+        lock := MutexLock(valueMutex);
+        value = 200;
+    }
+}}
+
+Note that #MutexLock# is rather expensive, as it involves a memory allocation 
+and free.  However, it also has the virtue of being exception safe.
+
+Conditions
+''''''''''
+
+Conditions allow you to send events between threads.  They must be used in 
+conjuntion with a #Mutex#.  The mutex protects a shared resource, the 
+notifies observers of changes in that resource:
+
+{{
+
+    # Create a condition associated with our value.
+    Condition cond = {valueMutex};
+    
+    # Change the value.
+    if (true) {
+        lock := MutexLock(valueMutex);
+        value += 1;
+        cond.signal();
+    }
+    
+    # Thread that waits on changes.
+    class Waiter : Thread {
+        void run() {
+            lock := MutexLock(valueMutex);
+            while (true) {
+                # The condition atomically releases the mutex while it's 
+                # waiting for an event.
+                cond.wait();
+                
+                cout `value changed, new value = $value\n`;
+            }
+        }
+}}
+
+Queues
+''''''
+
+#Queue# is the most sophisticated inter-thread communication mechanism 
+provided by #crack.threads#.  As its name implies, it is a thread-safe message 
+queue.  It is also a generic.
+
+Here's how we could use #Queue# to implement a worker pool:
+
+{{
+    Queue[Functor0[void]] actions = {};
+    class WorkerThread : Thread {
+        void run() {
+            func := actions.get();
+            func();
+        }
+    }
+    Array[WorkerThread] pool = {};
+    for (int i = 0; i < 10; ++i) {
+        thread := WorkerThread();
+        pool.append(thread);
+        thread.start();
+    }
+    
+    void doSomething() {
+        cout `blah`;
+    }
+    actions.add(Functor0[void](doSomething));
+}}
 
 Line Readers
 ------------
@@ -5535,6 +5701,16 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
+From 0.8 to 0.9
+---------------
+
+-   The #URLEncode# and #URLDecode# functions in #crack.net.curl# have been 
+    renamed to #urlEncode# and #urlDecode#.
+-   Changed the protected variable interface to MersenneTwister in 
+    #crack.random#.
+-   Cache file format has changed, if experimenting with the cache you'll need 
+    to purge your existing cache files from `~/.crack/cache`.
+
 From 0.7 to 0.8
 ---------------
 
@@ -5556,9 +5732,9 @@ From 0.6 to 0.7
 -   #StaticString# is now derived from #CString#.
 -   #crack.net.Pollable# has been removed and replaced with
     #crack.io.FileHandle#.
--   Removed #SOCK_NONBLOCK# and #SOCK_CLOEXEC# for compatibility reasons.
-    Use #fcntl(int fd, int flag)# with #O_NONBLOCK# instead.
-    #FD_CLOEXEC# could be used as a flag where it is supported. It is
+-   Removed #`SOCK_NONBLOCK`# and #`SOCK_CLOEXEC`# for compatibility reasons.
+    Use #fcntl(int fd, int flag)# with #`O_NONBLOCK`# instead.
+    #`FD_CLOEXEC`# could be used as a flag where it is supported. It is
     non-portable, however, and is not defined in the #runtime# module.
 -   Added precision postfix (32 and 64) math functions. Overloaded non-postfix
     versions are still there.
