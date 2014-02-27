@@ -28,6 +28,7 @@
 #include "Serializer.h"
 #include "StubDef.h"
 #include "TypeDef.h"
+#include "Visitor.h"
 
 using namespace std;
 using namespace model;
@@ -514,4 +515,8 @@ VarDefPtr VarDef::replaceAllStubs(Context &context) {
     if (type)
         type = type->replaceAllStubs(context);
     return this;
+}
+
+void VarDef::visit(Visitor *visitor) {
+    visitor->onVarDef(this);
 }

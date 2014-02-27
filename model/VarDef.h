@@ -27,6 +27,7 @@ SPUG_RCPTR(OverloadDef);
 class Serializer;
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
+class Visitor;
 
 SPUG_RCPTR(VarDef);
 
@@ -241,6 +242,11 @@ class VarDef : public virtual spug::RCBase {
          * Returns the replaceStub() or this var (not null like replaceStub()).
          */
         virtual VarDefPtr replaceAllStubs(Context &context);
+        
+        /**
+         * Apply the visitor to the VarDef.
+         */
+        virtual void visit(Visitor *visitor);
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

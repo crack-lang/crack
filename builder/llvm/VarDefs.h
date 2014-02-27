@@ -101,9 +101,12 @@ public:
     void setRep(llvm::GlobalVariable *newRep) {
         rep = newRep;
     }
+    
+    void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
 
 // these are actually only used for function implementations.
+SPUG_RCPTR(BConstDefImpl);
 class BConstDefImpl : public model::VarDefImpl {
 private:
     // we use a raw pointer here because a FuncDef owns its impl.
@@ -129,6 +132,8 @@ public:
 
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
+    
+    void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
 
 SPUG_RCPTR(BFieldDefImpl);

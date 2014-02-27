@@ -12,6 +12,7 @@
 #include "LLVMBuilder.h"
 
 #include "spug/Tracer.h"
+#include "ModuleMerger.h"
 
 namespace llvm {
     class ExecutionEngine;
@@ -27,6 +28,7 @@ SPUG_RCPTR(LLVMJitBuilder);
 class LLVMJitBuilder : public LLVMBuilder {
     private:
         
+#ifdef REMOVE
         class Resolver {
             private:
                 // the cache map tracks symbols that we've already resolved.
@@ -153,6 +155,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                  */
                 bool hasActiveCycles() const;
         };
+#endif // REMOVE
 
         llvm::ExecutionEngine *execEng;
 
@@ -168,7 +171,13 @@ class LLVMJitBuilder : public LLVMBuilder {
                 return shlibSyms;
         }
         
+        ModuleMerger *moduleMerger;
+        ModuleMerger *getModuleMerger();
+                
+
+#ifdef REMOVE
         Resolver *resolver;
+#endif
 
         virtual void run();
 
@@ -176,7 +185,9 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void doRunOrDump(model::Context &context);
 
+#ifdef REMOVE
         void ensureResolver();
+#endif
 
         void setupCleanup(BModuleDef *moduleDef);
 
@@ -198,6 +209,11 @@ class LLVMJitBuilder : public LLVMBuilder {
         void innerFinishModule(model::Context &context,
                                BModuleDef *moduleDef
                                );
+        
+        // Merge the module into the global main module, replace all of the 
+        // old pointers into the original module (including the builder's) and 
+        // delete it.
+        void mergeModule(model::ModuleDef *moduleDef);
 
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef
@@ -220,7 +236,10 @@ class LLVMJitBuilder : public LLVMBuilder {
                                          llvm::GlobalValue *externalDef
                                          );
 
-        LLVMJitBuilder(void) : execEng(0), resolver(0) { }
+        LLVMJitBuilder(void) : 
+            execEng(0), 
+            moduleMerger(0) {
+        }
         ~LLVMJitBuilder();
 
         virtual void checkForUnresolvedExternals();
@@ -261,9 +280,11 @@ class LLVMJitBuilder : public LLVMBuilder {
                                  model::VarDef *varDef
                                  );
 
+#ifdef REMOVE
         virtual model::TypeDefPtr materializeType(model::Context &context, 
                                                   const std::string &name
                                                   );
+#endif
 
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,

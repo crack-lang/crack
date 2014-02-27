@@ -76,6 +76,7 @@ public:
         rep = newRep;
     }
 
+    void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
     virtual void *getFuncAddr(Builder &builder);
 
 };

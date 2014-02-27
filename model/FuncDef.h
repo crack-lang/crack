@@ -179,6 +179,7 @@ class FuncDef : public VarDef {
         static FuncDefPtr deserialize(Deserializer &deser, 
                                       const std::string &funcName
                                       );
+        virtual void visit(Visitor *visitor);
 };
 
 inline FuncDef::Flags operator |(FuncDef::Flags a, FuncDef::Flags b) {

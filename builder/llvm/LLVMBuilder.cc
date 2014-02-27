@@ -592,19 +592,13 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
-        // not found, create a new one and map it to the existing function
-        // pointer.  We use 'ExternalWeakLinkage' for these because it
-        // prevents an abort if we lookup a pointer to a function that hasn't
-        // been defined yet.
+        // not found, create a new one.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(funcRep->getFunctionType(),
                                           Function::ExternalLinkage,
                                           funcRep->getName(),
                                           module
                                           );
-
-        // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalFuncMapping(func, funcRep);
 
         // low level symbol name
         if (!bfuncDef->symbolName.empty())
@@ -635,9 +629,6 @@ GlobalVariable *LLVMBuilder::getModVar(VarDefImpl *varDefImpl,
                                0, // initializer: null for externs
                                gvar->getName()
                                );
-
-        // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalVarMapping(global, gvar);
 
         moduleVars[varDefImpl] = global;
         return global;
@@ -3308,7 +3299,6 @@ void LLVMBuilder::initializeImport(model::ModuleDef *imported,
                                     NULL
                                     );
     Function *f = llvm::cast<llvm::Function>(fc);
-    addGlobalFuncMapping(f, importedMod->rep->getFunction(importedMainName));
     builder.CreateCall(f);
 }
 

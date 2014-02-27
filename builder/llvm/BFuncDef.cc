@@ -13,6 +13,7 @@
 #include <string>
 
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
 
 using namespace builder::mvll;
 using namespace llvm;
@@ -44,6 +45,12 @@ Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
                 getDisplayName() << " which is not a function."
                );
     return result;
+}
+
+void BFuncDef::fixModule(Module *oldMod, Module *newMod) {
+    Function *func = llvm::dyn_cast<Function>(rep);
+    if (func->getParent() == oldMod)
+        rep = newMod->getFunction(func->getName());
 }
 
 

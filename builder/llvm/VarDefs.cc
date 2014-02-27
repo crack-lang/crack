@@ -9,6 +9,7 @@
 #include "VarDefs.h"
 
 #include "BResultExpr.h"
+#include "BFuncDef.h"
 #include "BTypeDef.h"
 
 #include "spug/check.h"
@@ -17,6 +18,7 @@
 
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
 
 using namespace llvm;
 using namespace model;
@@ -95,10 +97,15 @@ bool BMemVarDefImpl::hasInstSlot() const { return false; }
 int BMemVarDefImpl::getInstSlot() const { return -1; }
 
 // BGlobalVarDefImpl
-Value * BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
+Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
     if (rep->getParent() != builder.module)
         rep = builder.getModVar(this, this->rep);
     return rep;
+}
+
+void BGlobalVarDefImpl::fixModule(Module *oldMod, Module *newMod) {
+    if (rep->getParent() == oldMod)
+        rep = newMod->getGlobalVariable(rep->getName());
 }
 
 // BConstDefImpl
@@ -120,6 +127,13 @@ void BConstDefImpl::emitAddr(Context &context, VarRef *var) {
 
 bool BConstDefImpl::hasInstSlot() const { return false; }
 int BConstDefImpl::getInstSlot() const { return -1; }
+
+void BConstDefImpl::fixModule(Module *oldMod, Module *newMod) {
+    if (rep->getParent() == oldMod) {
+        BFuncDefPtr::cast(func)->fixModule(oldMod, newMod);
+        rep = newMod->getFunction(rep->getName());
+    }
+}
 
 // BFieldDefImpl
 

@@ -10,6 +10,7 @@
 
 #include "model/OverloadDef.h"
 #include "model/StatState.h"
+#include "model/Visitor.h"
 #include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"
@@ -45,6 +46,8 @@ using namespace llvm;
 using namespace model;
 using namespace builder;
 using namespace builder::mvll;
+
+#ifdef REMOVE
 
 bool LLVMJitBuilder::Resolver::trace = false;
 spug::Tracer LLVMJitBuilder::Resolver::tracer(
@@ -386,12 +389,6 @@ void LLVMJitBuilder::Resolver::defineAll(LLVMJitBuilder *builder,
         linkCyclicGroup(builder, module);
 }
 
-LLVMJitBuilder::~LLVMJitBuilder() {
-    // clean up the resolver if this is the root builder.
-    if (resolver && !rootBuilder)
-        delete resolver;
-}
-
 void LLVMJitBuilder::Resolver::checkForUnresolvedExternals() {
     if (fixupMap.size()) {
         cerr << "Unresolved externals:" << endl;
@@ -422,6 +419,13 @@ bool LLVMJitBuilder::Resolver::hasActiveCycles() const {
     return fixupMap.size();
 }
 
+#endif // REMOVE
+
+LLVMJitBuilder::~LLVMJitBuilder() {
+    if (moduleMerger)
+        delete moduleMerger;
+}
+
 ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
     ModuleDefPtr mod = LLVMBuilder::registerPrimFuncs(context);
@@ -430,6 +434,7 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
 
     BModuleDefPtr bMod = BModuleDefPtr::rcast(mod);
 
+#ifdef REMOVE
     // if we're caching, register .builtin definitions in the cache
     ensureResolver();
     for (Module::iterator iter = module->begin();
@@ -441,7 +446,7 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
     }
 
     return bMod;
-
+#endif
 }
 
 ExecutionEngine *LLVMJitBuilder::getExecEng() {
@@ -458,7 +463,7 @@ void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
 }
 
 void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
-    Function *delFunc = module->getFunction(moduleDef->name + ":cleanup");
+    Function *delFunc = moduleDef->rep->getFunction(moduleDef->name + ":cleanup");
     if (delFunc) {
         void *addr = execEng->getPointerToFunction(delFunc);
         SPUG_CHECK(addr, "Unable to resolve cleanup function");
@@ -468,8 +473,7 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
 
 void LLVMJitBuilder::engineFinishModule(Context &context,
                                         BModuleDef *moduleDef) {
-
-    // note, this->module and moduleDef->rep should be ==
+   // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
     // run specific optimizations at different levels
@@ -480,7 +484,7 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
 
         // Set up the optimizer pipeline.  Start with registering info about how
         // the target lays out data structures.
-        passMan.add(new DataLayout(*execEng->getDataLayout()));
+        passMan.add(new DataLayout(*getExecEng()->getDataLayout()));
         // Promote allocas to registers.
         passMan.add(createPromoteMemoryToRegisterPass());
         // Do simple "peephole" optimizations and bit-twiddling optzns.
@@ -498,6 +502,7 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
 
     setupCleanup(moduleDef);
 
+#ifdef REMOVE
     // if we have a cacher, make sure that all globals are registered there.
     if (context.construct->cacheMode) {
         // make sure we have a cache map
@@ -510,19 +515,95 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
              )
             resolver->registerGlobal(this, iter);
     }
+#endif
 
     // mark the module as finished
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
+namespace {
+
+    class ModuleChangeVisitor : public Visitor {
+        private:
+            Module *oldMod, *newMod;
+
+        public:
+            ModuleChangeVisitor(Module *oldMod, Module *newMod) :
+                oldMod(oldMod),
+                newMod(newMod) {
+            }
+
+            virtual void onModuleDef(ModuleDef *module) {
+                BJitModuleDefPtr::cast(module)->rep = newMod;
+            }
+
+            virtual void onTypeDef(TypeDef *type) {
+                // We don't have to touch the 'rep' because types are global
+                // and it should already be correct.
+                BTypeDef *btype = BTypeDefPtr::cast(type);
+
+                // Ignore types that aren't in the old module.
+                if (btype->classInst->getParent() != oldMod)
+                    return;
+
+                btype->classInst =
+                    newMod->getGlobalVariable(btype->classInst->getName());
+
+                // We can discard the vtables at this point, they are no
+                // longer needed.
+                btype->vtables.clear();
+            }
+
+            virtual void onVarDef(VarDef *var) {
+                // We just reset the rep for two of the types that are
+                // sensitive to it: these reps get checked against the current
+                // module, but there's a small chance that the module object
+                // address could be reused.
+                VarDefImpl *impl = var->impl.get();
+                if (BGlobalVarDefImpl *glblImpl =
+                     BGlobalVarDefImplPtr::cast(impl)
+                    ) {
+                    glblImpl->fixModule(oldMod, newMod);
+                } else if (BConstDefImpl *cnstImpl =
+                          BConstDefImplPtr::cast(impl)
+                         ) {
+                    cnstImpl->fixModule(oldMod, newMod);
+                }
+            }
+
+            virtual void onOverloadDef(OverloadDef *ovld) {}
+            virtual void onFuncDef(FuncDef *func) {
+                BFuncDefPtr bfunc = BFuncDefPtr::cast(func);
+                if (bfunc)
+                    bfunc->fixModule(oldMod, newMod);
+            }
+
+    };
+}
+
+void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
+    ModuleMerger *merger = getModuleMerger();
+    merger->merge(module);
+
+    // Now we need to fix the global variables, functions and type meta-data
+    // references in everything...
+    ModuleChangeVisitor visitor(module, merger->getTarget());
+    moduleDef->visit(&visitor);
+
+    delete module;
+    module = 0;
+}
+
 void LLVMJitBuilder::registerHiddenFunc(model::Context &context,
                                         BFuncDef *func
                                         ) {
+#ifdef REMOVE
     if (context.construct->cacheMode) {
         ensureResolver();
         // we don't currently register debug info for these.
         resolver->registerGlobal(this, func->getFuncRep(*this));
     }
+#endif
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
@@ -564,6 +645,16 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
     }
 
     return execEng;
+}
+
+ModuleMerger *LLVMJitBuilder::getModuleMerger() {
+    if (rootBuilder) {
+        return LLVMJitBuilderPtr::rcast(rootBuilder)->getModuleMerger();
+    } else if (!moduleMerger) {
+        moduleMerger = new ModuleMerger("merged-modules", getExecEng());
+        bindJitModule(moduleMerger->getTarget());
+    }
+    return moduleMerger;
 }
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
@@ -610,7 +701,9 @@ void LLVMJitBuilder::recordShlibSym(const string &name) {
 }
 
 void LLVMJitBuilder::checkForUnresolvedExternals() {
+#ifdef REMOVE
     if (resolver) resolver->checkForUnresolvedExternals();
+#endif
 }
 
 void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
@@ -621,7 +714,12 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
 }
 
 void LLVMJitBuilder::run() {
-    int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
+    ExecutionEngine *execEng = getExecEng();
+    Module *mainMod = getModuleMerger()->getTarget();
+    execEng->addModule(mainMod);
+    int (*fptr)() = (int (*)())execEng->getPointerToFunction(
+         mainMod->getFunction(func->getName())
+    );
     SPUG_CHECK(fptr, "no address for function " << string(func->getName()));
     fptr();
 }
@@ -644,11 +742,13 @@ FuncDefPtr LLVMJitBuilder::createExternFunc(
                                       symbolName
                                       );
     if (context.construct->cacheMode) {
-        ensureResolver();
         crack::debug::registerDebugInfo(cfunc, name, "", 0);
+#ifdef REMOVE
+        ensureResolver();
         resolver->registerGlobal(this,
                                  BFuncDefPtr::rcast(result)->getFuncRep(*this)
                                  );
+#endif
     }
     return result;
 }
@@ -666,7 +766,6 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
                                                const string &name,
                                                ModuleDef *owner
                                                ) {
-    bindJitModule(module);
     return new BJitModuleDef(name, context.ns.get(), module,
                              BJitModuleDefPtr::cast(owner)
                              );
@@ -679,7 +778,8 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
 
-    // let jit or linker finish module before run/link
+    // Do the common stuff (common with the .builtin module, which doesn't get
+    // closed)
     engineFinishModule(context, BModuleDefPtr::cast(moduleDef));
 
     // store primitive functions from an extension
@@ -693,12 +793,21 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     if (debugInfo)
         delete debugInfo;
 
-    doRunOrDump(context);
+    // Dump if requested.
+    {
+        StatState sState(&context, ConstructStats::executor);
+        if (options->dumpMode)
+            dump();
+    }
 
     // and if we're caching, store it in the persistent cache.
     if (moduleDef->cacheable && context.construct->cacheMode)
         context.cacheModule(moduleDef);
 
+    // Now merge.
+    mergeModule(moduleDef);
+
+    setupCleanup(BModuleDefPtr::cast(moduleDef));
 }
 
 namespace {
@@ -800,7 +909,9 @@ void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
         moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
     }
 
+#ifdef REMOVE
     registerGlobals();
+#endif
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -827,6 +938,7 @@ void LLVMJitBuilder::dump() {
     passMan.run(*module);
 }
 
+#ifdef REMOVE
 void LLVMJitBuilder::ensureResolver() {
     // make sure resolver is initialized
     // a single copy of the map exists in the rootBuilder
@@ -843,6 +955,7 @@ void LLVMJitBuilder::ensureResolver() {
         }
     }
 }
+#endif
 
 void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
@@ -851,7 +964,9 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     if (!context.construct->cacheMode)
         return;
 
+#ifdef REMOVE
     ensureResolver();
+#endif
 
     // get rep from either a BFuncDef or varDef->impl global, then use that as
     // value to the resolver
@@ -871,7 +986,9 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
         // which we don't care about here
         return;
 
+#ifdef REMOVE
     resolver->registerGlobal(this, rep);
+#endif
     SPUG_CHECK(varDef->getFullName() == rep->getName().str(),
                "global def " << varDef->getFullName() <<
                 " doees not have the same name as its rep: " <<
@@ -899,9 +1016,11 @@ void LLVMJitBuilder::registerGlobals() {
                 0     // line number
             );
 
+#ifdef REMOVE
             // also add the function to the cache.
             if (resolver)
                 resolver->registerGlobal(this, iter);
+#endif
         }
     }
 
@@ -914,13 +1033,16 @@ void LLVMJitBuilder::registerGlobals() {
         // rely on the fact that this pointer exists once registerGlobals()
         // has been called.
         execEng->getPointerToGlobal(iter);
+#ifdef REMOVE
         if (!iter->isDeclaration()) {
             if (resolver)
                 resolver->registerGlobal(this, iter);
         }
+#endif
     }
 }
 
+#ifdef REMOVE
 TypeDefPtr LLVMJitBuilder::materializeType(Context &context,
                                            const string &name
                                            ) {
@@ -936,6 +1058,7 @@ TypeDefPtr LLVMJitBuilder::materializeType(Context &context,
         return LLVMBuilder::materializeType(context, name);
     }
 }
+#endif
 
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Context &context,
@@ -964,6 +1087,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         func = c.getEntryFunction();
 
         engineBindModule(bmod.get());
+#ifdef REMOVE
         ensureResolver();
 
         // register "__CrackExceptionPersonality" and "_Unwind_Resume"
@@ -1010,9 +1134,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 
             registerGlobals();
         }
-
-        setupCleanup(bmod.get());
-
+#endif // REMOVE
         doRunOrDump(context);
 
     }

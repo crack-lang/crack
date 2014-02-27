@@ -248,6 +248,7 @@ noinst_HEADERS = \
     model/VarDef.h \
     model/VarDefImpl.h \
     model/VarRef.h \
+    model/Visitor.h \
     opt/cairosdl.h \
     parser/Location.h \
     parser/ParseError.h \

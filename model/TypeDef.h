@@ -405,6 +405,8 @@ class TypeDef : public VarDef, public Namespace {
          * If any of the ancestors is a stub, returns the first one discovered.
          */
         TypeDefPtr getStubAncestor();
+
+        virtual void visit(Visitor *visitor);
 };
 
 } // namespace model
