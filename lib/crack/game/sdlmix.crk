@@ -28,16 +28,6 @@ class Wave {
     oper del() {
         Mix_FreeChunk(_chunk);
     }
-
-    @static Wave load(String filename) {
-        rw := SDL_RWFromFile(CString(filename).buffer, 'rb'.buffer);
-        if (rw is null)
-            throw FileError(FStr() `Unable to open $filename`);
-        chunk := Mix_LoadWAV_RW(rw, 1);
-        if (chunk is null)
-            throw FileError(FStr() `$filename is not a wave file`);
-        return Wave(chunk);
-    }
 }
 
 class Audio {
@@ -55,7 +45,20 @@ class Audio {
         return Mix_PlayChannelTimed(-1, wave._chunk, 0, -1);
     }
 
+    ## Load a .wav audio file.
+    Wave loadWave(String filename) {
+        rw := SDL_RWFromFile(CString(filename).buffer, 'rb'.buffer);
+        if (rw is null)
+            throw FileError(FStr() `Unable to open $filename`);
+        chunk := Mix_LoadWAV_RW(rw, 1);
+        if (chunk is null)
+            throw FileError(FStr() `$filename is not a wave file`);
+        return Wave(chunk);
+    }
+
     ## Set the position relative of the channel relative to the observer.
-    void setPosition(int channel, Vector pos) {
+    ## observerDir: The direction that the observer is facing.
+    ## soundPos: The position of the sound relative to the observer.
+    void setPosition(int channel, Vector observerDir, Vector soundPos) {
     }
 }
