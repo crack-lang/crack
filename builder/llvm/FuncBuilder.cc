@@ -9,6 +9,7 @@
 
 #include "FuncBuilder.h"
 
+#include "BExtFuncDef.h"
 #include "BFuncDef.h"
 #include "VarDefs.h"
 #include "model/ResultExpr.h"
@@ -21,18 +22,22 @@ using namespace std;
 using namespace builder::mvll;
 
 FuncBuilder::FuncBuilder(Context &context, FuncDef::Flags flags,
-                             BTypeDef *returnType,
-                             const string &name,
-                             size_t argCount,
-                             Function::LinkageTypes linkage
-                             ) :
+                         BTypeDef *returnType,
+                         const string &name,
+                         size_t argCount,
+                         Function::LinkageTypes linkage,
+                         void *addr
+                         ) :
     context(context),
     returnType(returnType),
-    funcDef(new BFuncDef(flags, name, argCount)),
+    funcDef(addr ? new BExtFuncDef(flags, name, argCount, addr) :
+                   new BFuncDef(flags, name, argCount)
+            ),
     linkage(linkage),
     argIndex(0) {
-        funcDef->returnType = returnType;
-        funcDef->ns = context.ns;
+
+    funcDef->returnType = returnType;
+    funcDef->ns = context.ns;
 }
 
 void FuncBuilder::finish(bool storeDef) {

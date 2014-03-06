@@ -1755,7 +1755,9 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
                                  );
     FuncBuilder f(*funcCtx, flags, BTypeDefPtr::cast(returnType),
                   name,
-                  args.size()
+                  args.size(),
+                  Function::ExternalLinkage,
+                  cfunc
                   );
 
     if (!symName.empty())
@@ -2414,9 +2416,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createLLVMModule(".builtin");
     BModuleDefPtr builtinMod = instantiateModule(context, ".builtin", module);
 
-    // tie the builtin module to the global namespace (context's namespace
-    // must be a global namespace)
-    GlobalNamespacePtr::arcast(context.ns)->builtin = builtinMod.get();
+    // Replace the context's namespace, it's going to become the builtin
+    // module.
+    context.ns = builtinMod;
 
     if (options->debugMode)
         debugInfo = new DebugInfo(module,
@@ -2641,6 +2643,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->intzSize = ptrIs32Bit ? 32 : 64;
     deferMetaClass.push_back(intzType);
     deferMetaClass.push_back(uintzType);
+    deferMetaClass.push_back(atomicType);
 
     if (sizeof(float) == 4) {
         floatIs32Bit = true;
@@ -3266,7 +3269,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         delete debugInfo;
 
     return builtinMod;
-
 }
 
 std::string LLVMBuilder::getSourcePath(const std::string &path) {

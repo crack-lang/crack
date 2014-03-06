@@ -471,8 +471,8 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     }
 }
 
-void LLVMJitBuilder::engineFinishModule(Context &context,
-                                        BModuleDef *moduleDef) {
+void LLVMJitBuilder::innerFinishModule(Context &context,
+                                       BModuleDef *moduleDef) {
    // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
@@ -521,6 +521,12 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
+void LLVMJitBuilder::engineFinishModule(Context &context,
+                                        BModuleDef *moduleDef) {
+    innerFinishModule(context, moduleDef);
+    mergeModule(moduleDef);
+}
+
 namespace {
 
     class ModuleChangeVisitor : public Visitor {
@@ -552,6 +558,10 @@ namespace {
                 // We can discard the vtables at this point, they are no
                 // longer needed.
                 btype->vtables.clear();
+
+                // Types also have all of the global variable implementation
+                // machinery, so we need to do onVarDef() on them, too.
+                onVarDef(type);
             }
 
             virtual void onVarDef(VarDef *var) {
@@ -780,7 +790,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 
     // Do the common stuff (common with the .builtin module, which doesn't get
     // closed)
-    engineFinishModule(context, BModuleDefPtr::cast(moduleDef));
+    innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {

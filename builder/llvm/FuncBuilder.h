@@ -46,12 +46,14 @@ public:
     // stored in the context.
     // If there is no receiver, it's safe to call this with the
     // context in which the definition should be stored.
+    // @param addr an external C function address if specified.
     FuncBuilder(model::Context &context, model::FuncDef::Flags flags,
                 BTypeDef *returnType,
                 const std::string &name,
                 size_t argCount,
                 llvm::Function::LinkageTypes linkage =
-                llvm::Function::ExternalLinkage
+                    llvm::Function::ExternalLinkage,
+                void *addr = 0
                 );
 
     void finish(bool storeDef = true);

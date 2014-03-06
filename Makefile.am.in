@@ -162,6 +162,7 @@ noinst_HEADERS = \
     builder/llvm/BBranchPoint.h \
     builder/llvm/BBuilderContextData.h \
     builder/llvm/BCleanupFrame.h \
+    builder/llvm/BExtFuncDef.h \
     builder/llvm/BFieldRef.h \
     builder/llvm/BFuncDef.h \
     builder/llvm/BFuncPtr.h \

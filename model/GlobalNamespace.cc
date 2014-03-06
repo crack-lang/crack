@@ -8,14 +8,12 @@
 #include "GlobalNamespace.h"
 
 #include "ModuleDef.h"
+#include "spug/check.h"
 
 using namespace model;
 
 ModuleDefPtr GlobalNamespace::getModule() {
-    if (builtin)
-        return builtin;
-    else
-        return LocalNamespace::getModule();
+    SPUG_CHECK(false, "Should never be calling GlobalNamespace::getModule()");
 }
 
 // Override the check to deal with stuff in the .builtin namespace, which is
