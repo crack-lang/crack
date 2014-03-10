@@ -191,11 +191,6 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         void setupCleanup(BModuleDef *moduleDef);
 
-        /**
-         * Builds debug tables and registers all global symbols with the cache 
-         * map.
-         */
-        void registerGlobals();
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,
                                           llvm::Function*);
@@ -279,6 +274,12 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef
                                  );
+
+        /**
+         * Builds debug tables and registers all global symbols with the cache 
+         * map.
+         */
+        void registerGlobals();
 
 #ifdef REMOVE
         virtual model::TypeDefPtr materializeType(model::Context &context, 

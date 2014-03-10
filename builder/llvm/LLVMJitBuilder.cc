@@ -1009,8 +1009,9 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 void LLVMJitBuilder::registerGlobals() {
     // register debug info for the module functions
-    for (Module::iterator iter = module->begin();
-         iter != module->end();
+    Module *merged = getModuleMerger()->getTarget();
+    for (Module::iterator iter = merged->begin();
+         iter != merged->end();
          ++iter
          ) {
         if ((!iter->isDeclaration() || iter->isMaterializable()) &&
@@ -1034,6 +1035,7 @@ void LLVMJitBuilder::registerGlobals() {
         }
     }
 
+#ifdef REMOVE
     // ... and global variables
     for (Module::global_iterator iter = module->global_begin();
          iter != module->global_end();
@@ -1043,13 +1045,12 @@ void LLVMJitBuilder::registerGlobals() {
         // rely on the fact that this pointer exists once registerGlobals()
         // has been called.
         execEng->getPointerToGlobal(iter);
-#ifdef REMOVE
         if (!iter->isDeclaration()) {
             if (resolver)
                 resolver->registerGlobal(this, iter);
         }
-#endif
     }
+#endif
 }
 
 #ifdef REMOVE

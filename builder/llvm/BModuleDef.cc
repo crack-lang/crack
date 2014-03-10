@@ -44,8 +44,9 @@ void BModuleDef::onDeserialized(Context &context) {
 }
 
 void BModuleDef::runMain(Builder &builder) {
-    LLVMBuilder *llvmBuilder = LLVMBuilderPtr::cast(&builder);
+    LLVMJitBuilder *llvmBuilder = LLVMJitBuilderPtr::cast(&builder);
     llvmBuilder->checkForUnresolvedExternals();
+    llvmBuilder->registerGlobals();
     llvm::ExecutionEngine *execEng = llvmBuilder->getExecEng();
     Function *func = rep->getFunction(name + ":main");
     SPUG_CHECK(func, "Function " << name << ":main" << " not defined.");
