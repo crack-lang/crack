@@ -500,9 +500,9 @@ void LLVMJitBuilder::innerFinishModule(Context &context,
 
     }
 
+#ifdef REMOVE
     setupCleanup(moduleDef);
 
-#ifdef REMOVE
     // if we have a cacher, make sure that all globals are registered there.
     if (context.construct->cacheMode) {
         // make sure we have a cache map
