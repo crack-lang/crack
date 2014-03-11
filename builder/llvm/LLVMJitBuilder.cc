@@ -22,6 +22,7 @@
 #include "debug/DebugTools.h"
 #include "Cacher.h"
 #include "spug/check.h"
+#include "spug/stlutil.h"
 #include "ModuleMerger.h"
 #include "Ops.h"
 
@@ -583,11 +584,15 @@ namespace {
                 }
             }
 
-            virtual void onOverloadDef(OverloadDef *ovld) {}
+            virtual void onOverloadDef(OverloadDef *ovld) {
+                onVarDef(ovld);
+            }
+
             virtual void onFuncDef(FuncDef *func) {
                 BFuncDefPtr bfunc = BFuncDefPtr::cast(func);
                 if (bfunc)
                     bfunc->fixModule(oldMod, newMod);
+                onVarDef(func);
             }
 
     };
@@ -601,6 +606,10 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
     // references in everything...
     ModuleChangeVisitor visitor(module, merger->getTarget());
     moduleDef->visit(&visitor);
+
+    // Do the orphaned var defs.
+    SPUG_FOR(vector<VarDefPtr>, i, orphanedDefs)
+        (*i)->visit(&visitor);
 
     delete module;
     module = 0;
@@ -723,6 +732,10 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
     SPUG_CHECK(addr,
                "Unable to resolve function " << string(func->getName()));
     return addr;
+}
+
+void LLVMJitBuilder::recordOrphanedDef(VarDef *def) {
+    orphanedDefs.push_back(def);
 }
 
 void LLVMJitBuilder::run() {

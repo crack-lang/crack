@@ -171,6 +171,9 @@ class LLVMJitBuilder : public LLVMBuilder {
                 return shlibSyms;
         }
         
+        // Definitions created in the module that are not part of its defs.
+        std::vector<model::VarDefPtr> orphanedDefs;
+        
         ModuleMerger *moduleMerger;
         ModuleMerger *getModuleMerger();
                 
@@ -239,7 +242,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void checkForUnresolvedExternals();
         virtual void *getFuncAddr(llvm::Function *func);
-
+        virtual void recordOrphanedDef(model::VarDef *def);
 
         virtual model::FuncDefPtr
             createExternFunc(model::Context &context,

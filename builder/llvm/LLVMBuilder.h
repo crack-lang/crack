@@ -296,6 +296,12 @@ class LLVMBuilder : public Builder {
         
         virtual void *getFuncAddr(llvm::Function *func) = 0;
 
+        /**
+         * Gives LLVMJitBuilder a chance to keep track of orphaned defs for 
+         * module merge.
+         */
+        virtual void recordOrphanedDef(model::VarDef *def) {}
+
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);
 
