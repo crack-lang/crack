@@ -547,17 +547,19 @@ namespace {
                 // We don't have to touch the 'rep' because types are global
                 // and it should already be correct.
                 BTypeDef *btype = BTypeDefPtr::cast(type);
+                if (btype) {
 
-                // Ignore types that aren't in the old module.
-                if (btype->classInst->getParent() != oldMod)
-                    return;
+                    // Ignore types that aren't in the old module.
+                    if (btype->classInst->getParent() != oldMod)
+                        return;
 
-                btype->classInst =
-                    newMod->getGlobalVariable(btype->classInst->getName());
+                    btype->classInst =
+                        newMod->getGlobalVariable(btype->classInst->getName());
 
-                // We can discard the vtables at this point, they are no
-                // longer needed.
-                btype->vtables.clear();
+                    // We can discard the vtables at this point, they are no
+                    // longer needed.
+                    btype->vtables.clear();
+                }
 
                 // Types also have all of the global variable implementation
                 // machinery, so we need to do onVarDef() on them, too.
