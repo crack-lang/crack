@@ -49,7 +49,7 @@ Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
 
 void BFuncDef::fixModule(Module *oldMod, Module *newMod) {
     Function *func = llvm::dyn_cast<Function>(rep);
-    if (func->getParent() == oldMod)
+    if (func && func->getParent() == oldMod)
         rep = newMod->getFunction(func->getName());
 }
 
