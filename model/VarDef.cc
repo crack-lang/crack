@@ -152,17 +152,11 @@ void VarDef::serializeExternCommon(Serializer &serializer,
     ModuleDefPtr module = getModule();
     serializer.write(module->getFullName(), "module");
 
-    // calcuate the module relative name.
+    // calculate the module relative name.
     list<string> moduleRelativeName;
     moduleRelativeName.push_front(name);
     NamespacePtr cur = getOwner();
     while (cur != module.get()) {
-        // special-case the builtin module, which currently doesn't have an
-        // ownership chain to its module.
-        if (GlobalNamespace *gns = GlobalNamespacePtr::rcast(cur))
-            if (gns->builtin)
-                break;
-
         // Convert to a VarDef, push the name segment.
         VarDef *def = cur->asVarDef();
         SPUG_CHECK(def,
