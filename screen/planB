@@ -96,6 +96,7 @@ function run_test {
     echo "$FILE_sec" > $outfile
     ARGS_sec=$(extract_section $file ARGS)
     EXPECT_sec=`extract_section $file EXPECT`
+    REXPECT_sec=`extract_section $file REXPECT`
     STDIN_sec=`extract_section $file STDIN`
     
     # XXX script args
@@ -112,13 +113,27 @@ function run_test {
         cmdline="$CRACKBIN $OPTS_sec $outfile $ARGS_sec" # xxx script args section
         #echo "running $cmdline"
         result="$(echo $STDIN_sec | $cmdline 2>&1)"
-        if [ "$result" = "$EXPECT_sec" ]; then
+        if [ -n "$REXPECT_sec" ]; then
+            if echo "$result" | grep "$REXPECT_sec" > /dev/null; then
+                ok=true
+            else
+                ok=false
+                expected=$REXPECT_sec
+            fi
+        elif [ "$result" = "$EXPECT_sec" ]; then
+            ok=true
+        else
+            ok=false
+            expected=$EXPECT_sec
+        fi
+            
+        if $ok; then
             echo ok
         else
             echo ""
             echo "FAILED $file"
             echo "$cmdline"
-            echo "Expected: $EXPECT_sec"
+            echo "Expected: $expected"
             echo "Got     : $result"
             diff <(echo "$EXPECT_sec") <(echo "$result")
             errors=$((errors + 1))
