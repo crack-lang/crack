@@ -3333,7 +3333,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("size", uintzType);
         f.setSymbolName("calloc");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
         callocFunc = f.funcDef->getFuncRep(*this);
     }
 
@@ -3352,7 +3351,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__getArgv");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "int __getArgc()"
@@ -3360,7 +3358,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
         f.setSymbolName("__getArgc");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackThrow(VTableBase)"
@@ -3369,7 +3366,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exception", vtableBaseType);
         f.setSymbolName("__CrackThrow");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackGetException(voidptr)"
@@ -3381,7 +3377,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", byteptrType);
         f.setSymbolName("__CrackGetException");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackBadCast(Class a, Class b)"
@@ -3394,7 +3389,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("newType", classType);
         f.setSymbolName("__CrackBadCast");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackCleanupException(voidptr exceptionObject)"
@@ -3406,7 +3400,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", voidptrType);
         f.setSymbolName("__CrackCleanupException");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackExceptionFrame()"
@@ -3417,7 +3410,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create the exception structure for the module main function
