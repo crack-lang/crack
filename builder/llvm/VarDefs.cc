@@ -99,8 +99,9 @@ int BMemVarDefImpl::getInstSlot() const { return -1; }
 // BGlobalVarDefImpl
 Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
     if (rep->getParent() != builder.module)
-        rep = builder.getModVar(this, this->rep);
-    return rep;
+        return builder.getModVar(this, this->rep);
+    else
+        return rep;
 }
 
 void BGlobalVarDefImpl::fixModule(Module *oldMod, Module *newMod) {
