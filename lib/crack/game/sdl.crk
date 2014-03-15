@@ -375,7 +375,7 @@ class App {
     
     int16 width = 640, height = 480;
 
-    oper init(int width, int height) : width = width, height = height {}
+    oper init(int16 width, int16 height) : width = width, height = height {}
     oper init() {}
     
     oper del() {
