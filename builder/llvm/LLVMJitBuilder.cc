@@ -122,6 +122,8 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
                                         BModuleDef *moduleDef) {
     innerFinishModule(context, moduleDef);
     mergeModule(moduleDef);
+    delete module;
+    module = 0;
 }
 
 namespace {
@@ -206,9 +208,6 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
     // Do the orphaned var defs.
     SPUG_FOR(vector<VarDefPtr>, i, orphanedDefs)
         (*i)->visit(&visitor);
-
-    delete module;
-    module = 0;
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
@@ -400,8 +399,10 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     if (moduleDef->cacheable && context.construct->cacheMode)
         context.cacheModule(moduleDef);
 
-    // Now merge.
+    // Now merge and remove the original module.
     mergeModule(moduleDef);
+    delete module;
+    module = 0;
 
     setupCleanup(BModuleDefPtr::cast(moduleDef));
 }
@@ -595,6 +596,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Cacher c(context, options.get());
     BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
 
+    moduleDef = bmod;
     if (bmod) {
 
         // we materialized a module from bitcode cache
@@ -603,11 +605,9 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 
         // convert all of the known types in the module to their existing
         // instances
-        {
-            StructResolver structResolver(module);
-            structResolver.buildTypeMap();
-            structResolver.run();
-        }
+        StructResolver structResolver(module);
+        structResolver.buildTypeMap();
+        structResolver.run();
 
         // entry function
         func = c.getEntryFunction();
@@ -615,8 +615,17 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         engineBindModule(bmod.get());
         doRunOrDump(context);
 
+        mergeModule(bmod.get());
+
+        // Restore the original types prior to destroying the orignal module
+        // so the module constant table (referenced during destruction) is
+        // accurate.
+        structResolver.restoreOriginalTypes();
+        delete module;
+
+        // In this case, we set the module to the merged module.
+        module = getModuleMerger()->getTarget();
     }
 
-    moduleDef = bmod;
     return bmod;
 }
