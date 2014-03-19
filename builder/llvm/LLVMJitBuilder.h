@@ -43,6 +43,10 @@ class LLVMJitBuilder : public LLVMBuilder {
         
         // Definitions created in the module that are not part of its defs.
         std::vector<model::VarDefPtr> orphanedDefs;
+
+        // List of modules that need to have their cleanups setup before we 
+        // run main.
+        std::vector<BModuleDefPtr> needsCleanup;
         
         ModuleMerger *moduleMerger;
         ModuleMerger *getModuleMerger();

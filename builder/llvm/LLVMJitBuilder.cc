@@ -208,6 +208,15 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
     // Do the orphaned var defs.
     SPUG_FOR(vector<VarDefPtr>, i, orphanedDefs)
         (*i)->visit(&visitor);
+
+    // Add the module to the list of modules where we need to import the
+    // cleanup.
+    if (rootBuilder)
+        LLVMJitBuilderPtr::rcast(rootBuilder)->needsCleanup.push_back(
+            BModuleDefPtr::cast(moduleDef)
+        );
+    else
+        needsCleanup.push_back(BModuleDefPtr::cast(moduleDef));
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
@@ -403,8 +412,6 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     mergeModule(moduleDef);
     delete module;
     module = 0;
-
-    setupCleanup(BModuleDefPtr::cast(moduleDef));
 }
 
 namespace {
@@ -584,6 +591,12 @@ void LLVMJitBuilder::registerGlobals() {
                 0     // line number
             );
         }
+    }
+
+    // While we're at it, do setupCleanup() on all of the modules on our list.
+    SPUG_FOR(std::vector<BModuleDefPtr>, i,
+             LLVMJitBuilderPtr::rcast(rootBuilder)->needsCleanup) {
+        setupCleanup(i->get());
     }
 }
 
