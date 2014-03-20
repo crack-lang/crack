@@ -594,10 +594,11 @@ void LLVMJitBuilder::registerGlobals() {
     }
 
     // While we're at it, do setupCleanup() on all of the modules on our list.
-    SPUG_FOR(std::vector<BModuleDefPtr>, i,
-             LLVMJitBuilderPtr::rcast(rootBuilder)->needsCleanup) {
+    LLVMJitBuilder *b = rootBuilder ? LLVMJitBuilderPtr::rcast(rootBuilder) :
+                                      this;
+    SPUG_FOR(std::vector<BModuleDefPtr>, i, b->needsCleanup)
         setupCleanup(i->get());
-    }
+    b->needsCleanup.clear();
 }
 
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
