@@ -820,6 +820,8 @@ class App {
     ## if true, run in a resizable window and trigger an event when resized.
     bool resizable;
     
+    int width = 640, height = 480;
+    
     ## The application only renders one thing - this is that thing.  Everytime 
     ## through the main loop, we call renderable.render().
     Renderable renderable;
@@ -842,7 +844,8 @@ class App {
     # true until someone calls terminate()
     bool __active = true;
 
-    oper init(int width, int height) {}
+    oper init(int width, int height) : width = width, height = height {}
+    oper init() {}
     
     oper del() {
         SDL_Quit();
@@ -861,10 +864,10 @@ class App {
         SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
         uint32 flags = (fullscreen ? SDL_FULLSCREEN : 0) |
                        (resizable ? SDL_RESIZABLE : 0);
-        SDL_SetVideoMode(640, 480, 24, flags | SDL_OPENGL);
+        SDL_SetVideoMode(width, height, 24, flags | SDL_OPENGL);
         
         cout `graphics initialize\n`;
-        Graphics.initialize(640, 480);
+        Graphics.initialize(width, height);
         cout `done\n`;
     }
 

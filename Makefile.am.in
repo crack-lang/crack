@@ -15,7 +15,7 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 5:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 6:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
@@ -40,10 +40,10 @@ runtime_la_LIBADD = libCrackDebugTools.la
 # this is really annoying, testext needs to be installed in order to generate 
 # a .so file.
 extlibdir = $(libdir)/crack-$(VERSION)/crack/ext
-extlib_LTLIBRARIES = test/testext.la
+extlib_LTLIBRARIES = testext.la
 
-test_testext_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
-test_testext_la_SOURCES = test/testext.cc
+testext_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
+testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
              _cairosdl _xs _ssl _png _curl _jack _pthread
@@ -268,6 +268,7 @@ noinst_HEADERS = \
     spug/Exception.h \
     spug/RCBase.h \
     spug/RCPtr.h \
+    spug/stlutil.h \
     spug/StringFmt.h \
     spug/Tracer.h \
     spug/TypeInfo.h \
@@ -298,7 +299,8 @@ extinc_HEADERS = \
 EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
     sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
     screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests extras/JITEmitter.patch
+    screen/testdata.crk screen/planB screen/tests extras/JITEmitter.patch \
+    opt/*.crk
     
 
 bin_PROGRAMS = crack
@@ -351,13 +353,14 @@ uninstall-local:
 
 clean-local:
 	rm -rf $(EXTENSIONS:%=lib/crack/ext/%.so) screen/output \
-	   test/screen.bin* lib/crack/runtime.so lib/testext.so \
-	   doc/Manual.html
+	   test/screen.bin* lib/crack/runtime.so \
+	   lib/testext.so test/.libs \
+	   test/testext.la doc/Manual.html
 
 testbed: runtime.la $(extlib_LTLIBRARIES)
 	$(MKDIR_P) lib/crack/ext
 	ln -f .libs/runtime.so lib/crack
-	ln -f test/.libs/testext.so lib
+	ln -f .libs/testext.so lib
 	for ext in $(EXTENSIONS); do \
 	  if [ -e .libs/$$ext.so ]; then \
 	    ln -f .libs/$$ext.so lib/crack/ext; \
