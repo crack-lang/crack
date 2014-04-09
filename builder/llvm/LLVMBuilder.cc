@@ -592,19 +592,13 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
     ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
     if (iter == moduleFuncs.end()) {
-        // not found, create a new one and map it to the existing function
-        // pointer.  We use 'ExternalWeakLinkage' for these because it
-        // prevents an abort if we lookup a pointer to a function that hasn't
-        // been defined yet.
+        // not found, create a new one.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         Function *func = Function::Create(funcRep->getFunctionType(),
                                           Function::ExternalLinkage,
                                           funcRep->getName(),
                                           module
                                           );
-
-        // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalFuncMapping(func, funcRep);
 
         // low level symbol name
         if (!bfuncDef->symbolName.empty())
@@ -635,9 +629,6 @@ GlobalVariable *LLVMBuilder::getModVar(VarDefImpl *varDefImpl,
                                0, // initializer: null for externs
                                gvar->getName()
                                );
-
-        // possibly do a global mapping (delegated to specific builder impl.)
-        addGlobalVarMapping(global, gvar);
 
         moduleVars[varDefImpl] = global;
         return global;
@@ -1764,7 +1755,9 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
                                  );
     FuncBuilder f(*funcCtx, flags, BTypeDefPtr::cast(returnType),
                   name,
-                  args.size()
+                  args.size(),
+                  Function::ExternalLinkage,
+                  cfunc
                   );
 
     if (!symName.empty())
@@ -2423,9 +2416,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     createLLVMModule(".builtin");
     BModuleDefPtr builtinMod = instantiateModule(context, ".builtin", module);
 
-    // tie the builtin module to the global namespace (context's namespace
-    // must be a global namespace)
-    GlobalNamespacePtr::arcast(context.ns)->builtin = builtinMod.get();
+    // Replace the context's namespace, it's going to become the builtin
+    // module.
+    context.ns = builtinMod;
 
     if (options->debugMode)
         debugInfo = new DebugInfo(module,
@@ -2650,6 +2643,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     gd->intzSize = ptrIs32Bit ? 32 : 64;
     deferMetaClass.push_back(intzType);
     deferMetaClass.push_back(uintzType);
+    deferMetaClass.push_back(atomicType);
 
     if (sizeof(float) == 4) {
         floatIs32Bit = true;
@@ -3275,7 +3269,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
         delete debugInfo;
 
     return builtinMod;
-
 }
 
 std::string LLVMBuilder::getSourcePath(const std::string &path) {
@@ -3308,7 +3301,6 @@ void LLVMBuilder::initializeImport(model::ModuleDef *imported,
                                     NULL
                                     );
     Function *f = llvm::cast<llvm::Function>(fc);
-    addGlobalFuncMapping(f, importedMod->rep->getFunction(importedMainName));
     builder.CreateCall(f);
 }
 
@@ -3341,7 +3333,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("size", uintzType);
         f.setSymbolName("calloc");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
         callocFunc = f.funcDef->getFuncRep(*this);
     }
 
@@ -3360,7 +3351,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__getArgv");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "int __getArgc()"
@@ -3368,7 +3358,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
         f.setSymbolName("__getArgc");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackThrow(VTableBase)"
@@ -3377,7 +3366,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exception", vtableBaseType);
         f.setSymbolName("__CrackThrow");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackGetException(voidptr)"
@@ -3389,7 +3377,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", byteptrType);
         f.setSymbolName("__CrackGetException");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackBadCast(Class a, Class b)"
@@ -3402,7 +3389,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("newType", classType);
         f.setSymbolName("__CrackBadCast");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackCleanupException(voidptr exceptionObject)"
@@ -3414,7 +3400,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.addArg("exceptionObject", voidptrType);
         f.setSymbolName("__CrackCleanupException");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create "__CrackExceptionFrame()"
@@ -3425,7 +3410,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
                       );
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
-        registerHiddenFunc(context, f.funcDef.get());
     }
 
     // create the exception structure for the module main function

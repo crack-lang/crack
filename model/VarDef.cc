@@ -28,6 +28,7 @@
 #include "Serializer.h"
 #include "StubDef.h"
 #include "TypeDef.h"
+#include "Visitor.h"
 
 using namespace std;
 using namespace model;
@@ -151,17 +152,11 @@ void VarDef::serializeExternCommon(Serializer &serializer,
     ModuleDefPtr module = getModule();
     serializer.write(module->getFullName(), "module");
 
-    // calcuate the module relative name.
+    // calculate the module relative name.
     list<string> moduleRelativeName;
     moduleRelativeName.push_front(name);
     NamespacePtr cur = getOwner();
     while (cur != module.get()) {
-        // special-case the builtin module, which currently doesn't have an
-        // ownership chain to its module.
-        if (GlobalNamespace *gns = GlobalNamespacePtr::rcast(cur))
-            if (gns->builtin)
-                break;
-
         // Convert to a VarDef, push the name segment.
         VarDef *def = cur->asVarDef();
         SPUG_CHECK(def,
@@ -514,4 +509,8 @@ VarDefPtr VarDef::replaceAllStubs(Context &context) {
     if (type)
         type = type->replaceAllStubs(context);
     return this;
+}
+
+void VarDef::visit(Visitor *visitor) {
+    visitor->onVarDef(this);
 }

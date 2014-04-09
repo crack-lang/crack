@@ -29,6 +29,7 @@ namespace builder {
 namespace mvll {
 
 SPUG_RCPTR(BModuleDef);
+SPUG_RCPTR(BStrConst);
 
 class BModuleDef : public model::ModuleDef {
 
@@ -36,6 +37,7 @@ public:
     // primitive cleanup function
     void (*cleanup)();
     llvm::Module *rep;
+    std::vector<BStrConstPtr> stringConstants;
 
     // list of modules imported by this one, along with its imported symbols
     typedef std::map<BModuleDef*, model::ImportedDefVec > ImportListType;
@@ -47,13 +49,9 @@ public:
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
                llvm::Module *rep0
-               ) :
-            ModuleDef(canonicalName, parent),
-            cleanup(0),
-            rep(rep0),
-            importList()
-    {
-    }
+               );
+
+    ~BModuleDef();
 
     void callDestructor() {
         if (cleanup)
@@ -63,6 +61,12 @@ public:
     void recordDependency(ModuleDef *other);
 
     virtual void onDeserialized(model::Context &context);
+
+    /**
+     * Clears the 'rep' and 'module' fields from all constants so there's no
+     * chance that they can coincidentally match another module.
+     */
+    void clearRepFromConstants();
 
     virtual void runMain(Builder &builder);
 };

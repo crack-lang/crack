@@ -9,7 +9,6 @@ model/ConstSequenceExpr.cc
 model/ConstVarDef.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
-model/GlobalNamespace.cc
 model/ModuleStub.cc
 model/StatState.cc
 model/StrConst.cc

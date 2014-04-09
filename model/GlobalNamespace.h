@@ -18,17 +18,9 @@ SPUG_RCPTR(GlobalNamespace);
 class GlobalNamespace : public LocalNamespace {
     public:
 
-        // the global namespace is the namespace for the ".builtin" module.
-        // It gets tied to the module during primitive initialization.
-        ModuleDef *builtin;
-
         GlobalNamespace(Namespace *parent, const std::string &cName) :
-            LocalNamespace(parent, cName),
-            builtin(0) {
+            LocalNamespace(parent, cName) {
         }
-
-        virtual ModuleDefPtr getModule();
-        virtual bool isHiddenScope();
 };
 
 } // namespace model

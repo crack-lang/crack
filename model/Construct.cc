@@ -294,7 +294,7 @@ ContextPtr Construct::createRootContext() {
     }
     
     // attach the builtin module to the root namespace
-    rootContext->ns = builtinGlobalNS->builtin;
+    rootContext->ns = builtinMod.get();
     moduleCache[".builtin"] = builtinMod;
     
     // since there's no "close()" on this, we need to explicitly mark it as 

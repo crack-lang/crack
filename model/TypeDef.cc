@@ -11,6 +11,7 @@
 #include <spug/check.h>
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
+#include <spug/stlutil.h>
 #include "builder/Builder.h"
 #include "parser/Parser.h"
 #include "parser/Toker.h"
@@ -37,6 +38,7 @@
 #include "VarDef.h"
 #include "VarDefImpl.h"
 #include "VarRef.h"
+#include "Visitor.h"
 
 using namespace builder;
 using namespace std;
@@ -1361,4 +1363,10 @@ TypeDefPtr TypeDef::getStubAncestor() {
     }
 
     return 0;
+}
+
+void TypeDef::visit(Visitor *visitor) {
+    SPUG_FOR(VarDefMap, iter, defs)
+        iter->second->visit(visitor);
+    visitor->onTypeDef(this);
 }

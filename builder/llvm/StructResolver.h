@@ -37,6 +37,8 @@ protected:
     StructMapType reverseMap;
     std::map<llvm::Value *, bool> visited;
     std::map<llvm::Type *, int> visitedStructs;
+    typedef std::map<llvm::Value *, llvm::Type *> ValueTypeMap;
+    ValueTypeMap originalTypes;
 
     llvm::Type *maybeGetMappedType(llvm::Type *t);
     void mapValue(llvm::Value &val);
@@ -60,6 +62,9 @@ public:
 
     void run();
 
+    // Restores the original types of constants.  This is necessary because
+    // LLVM looks up the constant based on its type during destruction.
+    void restoreOriginalTypes();
 };
 
 }} // namespace builder::mvll

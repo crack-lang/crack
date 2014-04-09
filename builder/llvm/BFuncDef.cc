@@ -13,6 +13,7 @@
 #include <string>
 
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
 
 using namespace builder::mvll;
 using namespace llvm;
@@ -38,12 +39,13 @@ Constant *BFuncDef::getRep(LLVMBuilder &builder) {
 }
 
 Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
-    Function *result = dyn_cast<Function>(getRep(builder));
-    SPUG_CHECK(result, 
-               "Attempted to call BFuncDef::getFuncRep() on function " <<
-                getDisplayName() << " which is not a function."
-               );
-    return result;
+    return dyn_cast<Function>(rep);
+}
+
+void BFuncDef::fixModule(Module *oldMod, Module *newMod) {
+    Function *func = llvm::dyn_cast<Function>(rep);
+    if (func && func->getParent() == oldMod)
+        rep = newMod->getFunction(func->getName());
 }
 
 

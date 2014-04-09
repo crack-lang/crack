@@ -125,15 +125,6 @@ class LLVMBuilder : public Builder {
         }
         
         /**
-         * Lets the derived class know about hidden primitive functions 
-         * registered by LLVM in the interpreter.
-         */
-        virtual void registerHiddenFunc(model::Context &context,
-                                        BFuncDef *func
-                                        ) {
-        }
-
-        /**
          * common module initialization that happens in all builders
          * during createModule. includes some functions that need to be
          * defined in each module.
@@ -288,13 +279,13 @@ class LLVMBuilder : public Builder {
                                 unsigned int nextVTableSlot
                                 );
 
-        /**
-         * Checks for unresolved externals in the root builder and aborts if 
-         * they are discovered.
-         */
-        virtual void checkForUnresolvedExternals() {}
-        
         virtual void *getFuncAddr(llvm::Function *func) = 0;
+
+        /**
+         * Gives LLVMJitBuilder a chance to keep track of orphaned defs for 
+         * module merge.
+         */
+        virtual void recordOrphanedDef(model::VarDef *def) {}
 
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);

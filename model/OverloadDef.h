@@ -199,6 +199,8 @@ class OverloadDef : public VarDef {
                                           );
 
         virtual VarDefPtr replaceAllStubs(Context &context);
+        
+        virtual void visit(Visitor *visitor);
 };
 
 } // namespace model

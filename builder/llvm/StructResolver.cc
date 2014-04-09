@@ -24,6 +24,7 @@
 #include <llvm/Analysis/FindUsedTypes.h>
 
 #include "spug/check.h"
+#include "spug/stlutil.h"
 #include "spug/StringFmt.h"
 #include "spug/Tracer.h"
 #include "LLVMBuilder.h"
@@ -175,6 +176,11 @@ void StructResolver::run() {
             LLVMBuilder::putLLVMType(structType->getName().str(), structType);
     }
     SR_DEBUG module->dump();
+}
+
+void StructResolver::restoreOriginalTypes() {
+    SPUG_FOR(ValueTypeMap, i, originalTypes)
+        i->first->mutateType(i->second);
 }
 
 namespace {
@@ -372,6 +378,8 @@ void StructResolver::mapValue(Value &val) {
 
     Type *t = maybeGetMappedType(val.getType());
     if (t != val.getType()) {
+        if (isa<Constant>(val) && !spug::contains(originalTypes, &val))
+            originalTypes[&val] = val.getType();
         val.mutateType(t);
     }
     

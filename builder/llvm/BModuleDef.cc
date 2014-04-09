@@ -11,6 +11,8 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
 #include "spug/check.h"
+#include "spug/stlutil.h"
+#include "Consts.h"
 #include "LLVMJitBuilder.h"
 
 #include "model/EphemeralImportDef.h"
@@ -19,6 +21,19 @@ using namespace std;
 using namespace model;
 using namespace builder::mvll;
 using namespace llvm;
+
+BModuleDef::BModuleDef(const std::string &canonicalName,
+                       model::Namespace *parent,
+                       llvm::Module *rep0
+                       ) :
+    ModuleDef(canonicalName, parent),
+    cleanup(0),
+    rep(rep0),
+    importList() {
+}
+
+// We define this here so we don't have to includ Consts.h from BModuleDef.h
+BModuleDef::~BModuleDef() {}
 
 void BModuleDef::recordDependency(ModuleDef *other) {
 
@@ -43,9 +58,16 @@ void BModuleDef::onDeserialized(Context &context) {
     onNamespaceDeserialized(context);
 }
 
+void BModuleDef::clearRepFromConstants() {
+    SPUG_FOR(vector<BStrConstPtr>, i, stringConstants) {
+        (*i)->module = 0;
+        (*i)->rep = 0;
+    }
+}
+
 void BModuleDef::runMain(Builder &builder) {
-    LLVMBuilder *llvmBuilder = LLVMBuilderPtr::cast(&builder);
-    llvmBuilder->checkForUnresolvedExternals();
+    LLVMJitBuilder *llvmBuilder = LLVMJitBuilderPtr::cast(&builder);
+    llvmBuilder->registerGlobals();
     llvm::ExecutionEngine *execEng = llvmBuilder->getExecEng();
     Function *func = rep->getFunction(name + ":main");
     SPUG_CHECK(func, "Function " << name << ":main" << " not defined.");

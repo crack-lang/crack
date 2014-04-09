@@ -44,15 +44,15 @@ test.main(I"
 test.run();
 test.addTrace('Caching');
 test.run();
-%%EXPECT%%
+%%REXPECT%%
 out: ok
 terminated: success
 out: ok
 terminated: success
 err: Reusing cached module ann
 err: Reusing cached module mod
-err: Reusing cached module mod.A[.builtin.float]
-err: Reusing cached script /home/mmuller/w/crack/testout/8326022b/main.crk
+err: Reusing cached module mod.A\[.builtin.float\]
+err: Reusing cached script .*/main.crk
 out: ok
 terminated: success
 %%STDIN%%
