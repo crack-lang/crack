@@ -378,7 +378,7 @@ void StructResolver::mapValue(Value &val) {
 
     Type *t = maybeGetMappedType(val.getType());
     if (t != val.getType()) {
-        if (isa<Constant>(val))
+        if (isa<Constant>(val) && !spug::contains(originalTypes, &val))
             originalTypes[&val] = val.getType();
         val.mutateType(t);
     }
