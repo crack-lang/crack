@@ -45,8 +45,8 @@ extlib_LTLIBRARIES = testext.la
 testext_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
 testext_la_SOURCES = test/testext.cc
 
-EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs _ssl _png _curl _jack _pthread
+EXTENSIONS = _cairo _gl _gtk _pcre _sdl _sdl_mixer _alsa_midi _sdlgfx \
+             _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -67,6 +67,13 @@ extlib_LTLIBRARIES += _sdl.la
 _sdl_la_LDFLAGS = -avoid-version -module @SDL_LIBS@ $(AM_LDFLAGS)
 _sdl_la_CXXFLAGS = @SDL_CFLAGS@
 _sdl_la_SOURCES = opt/_sdl.cc
+endif
+
+if HAVE_SDL_MIXER
+extlib_LTLIBRARIES += _sdl_mixer.la
+_sdl_mixer_la_LDFLAGS = -avoid-version -module @SDL_MIXER_LIBS@ $(AM_LDFLAGS)
+_sdl_mixer_la_CXXFLAGS = @SDL_MIXER_CPPFLAGS@
+_sdl_mixer_la_SOURCES = opt/_sdl_mixer.cc
 endif
 
 if HAVE_SDLGFX

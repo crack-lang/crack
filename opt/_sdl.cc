@@ -24,6 +24,44 @@ void crk_SDL_Rect_init(SDL_Rect *rect, int16_t x, int16_t y, uint16_t w, uint16_
     rect->h = h;
 }
 
+SDL_JoyAxisEvent *SDL_Event_GetJoyAxisEvent(SDL_Event *evt) {
+    return &evt->jaxis;
+}
+
+uint8_t SDL_JoyAxisEvent_GetType(SDL_JoyAxisEvent *evt) {
+    return evt->type;
+}
+
+uint8_t SDL_JoyAxisEvent_GetWhich(SDL_JoyAxisEvent *evt) {
+    return evt->which;
+}
+
+uint8_t SDL_JoyAxisEvent_GetAxis(SDL_JoyAxisEvent *evt) {
+    return evt->axis;
+}
+
+int16_t SDL_JoyAxisEvent_GetValue(SDL_JoyAxisEvent *evt) {
+    return evt->value;
+}
+
+SDL_JoyButtonEvent *SDL_Event_GetJoyButtonEvent(SDL_Event *evt) {
+    return &evt->jbutton;
+}
+
+uint8_t SDL_JoyButtonEvent_GetType(SDL_JoyButtonEvent *evt) {
+    return evt->type;
+}
+
+uint8_t SDL_JoyButtonEvent_GetWhich(SDL_JoyButtonEvent *evt) {
+    return evt->which;
+}
+
+uint8_t SDL_JoyButtonEvent_GetState(SDL_JoyButtonEvent *evt) {
+    return evt->state;
+}
+
+struct Undef {};
+
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -107,6 +145,34 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
     crack::ext::Type *type_SDL_ResizeEvent = mod->addType("SDL_ResizeEvent", sizeof(SDL_ResizeEvent));
     type_SDL_ResizeEvent->finish();
+
+
+    crack::ext::Type *type_SDL_JoyAxisEvent = mod->addType("SDL_JoyAxisEvent", sizeof(SDL_JoyAxisEvent));
+        type_SDL_JoyAxisEvent->addInstVar(type_byte, "type",
+                                CRACK_OFFSET(SDL_JoyAxisEvent, type));
+        type_SDL_JoyAxisEvent->addInstVar(type_byte, "which",
+                                CRACK_OFFSET(SDL_JoyAxisEvent, which));
+        type_SDL_JoyAxisEvent->addInstVar(type_byte, "axis",
+                                CRACK_OFFSET(SDL_JoyAxisEvent, axis));
+        type_SDL_JoyAxisEvent->addInstVar(type_int16, "value",
+                                CRACK_OFFSET(SDL_JoyAxisEvent, value));
+    type_SDL_JoyAxisEvent->finish();
+
+
+    crack::ext::Type *type_SDL_JoyButtonEvent = mod->addType("SDL_JoyButtonEvent", sizeof(SDL_JoyButtonEvent));
+        type_SDL_JoyButtonEvent->addInstVar(type_byte, "type",
+                                CRACK_OFFSET(SDL_JoyButtonEvent, type));
+        type_SDL_JoyButtonEvent->addInstVar(type_byte, "which",
+                                CRACK_OFFSET(SDL_JoyButtonEvent, which));
+        type_SDL_JoyButtonEvent->addInstVar(type_byte, "button",
+                                CRACK_OFFSET(SDL_JoyButtonEvent, button));
+        type_SDL_JoyButtonEvent->addInstVar(type_byte, "state",
+                                CRACK_OFFSET(SDL_JoyButtonEvent, state));
+    type_SDL_JoyButtonEvent->finish();
+
+
+    crack::ext::Type *type_SDL_Joystick = mod->addType("SDL_Joystick", sizeof(Undef));
+    type_SDL_Joystick->finish();
 
 
     crack::ext::Type *array = mod->getType("array");
@@ -229,6 +295,66 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
                      (void *)SDL_ResizeEvent_GetH
                      );
        f->addArg(type_SDL_ResizeEvent, "evt");
+
+    f = mod->addFunc(type_SDL_JoyAxisEvent, "SDL_Event_GetJoyAxisEvent",
+                     (void *)SDL_Event_GetJoyAxisEvent
+                     );
+       f->addArg(type_SDL_Event, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyAxisEvent_GetType",
+                     (void *)SDL_JoyAxisEvent_GetType
+                     );
+       f->addArg(type_SDL_JoyAxisEvent, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyAxisEvent_GetWhich",
+                     (void *)SDL_JoyAxisEvent_GetWhich
+                     );
+       f->addArg(type_SDL_JoyAxisEvent, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyAxisEvent_GetAxis",
+                     (void *)SDL_JoyAxisEvent_GetAxis
+                     );
+       f->addArg(type_SDL_JoyAxisEvent, "evt");
+
+    f = mod->addFunc(type_int16, "SDL_JoyAxisEvent_GetValue",
+                     (void *)SDL_JoyAxisEvent_GetValue
+                     );
+       f->addArg(type_SDL_JoyAxisEvent, "evt");
+
+    f = mod->addFunc(type_SDL_JoyButtonEvent, "SDL_Event_GetJoyButtonEvent",
+                     (void *)SDL_Event_GetJoyButtonEvent
+                     );
+       f->addArg(type_SDL_Event, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyButtonEvent_GetType",
+                     (void *)SDL_JoyButtonEvent_GetType
+                     );
+       f->addArg(type_SDL_JoyButtonEvent, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyButtonEvent_GetWhich",
+                     (void *)SDL_JoyButtonEvent_GetWhich
+                     );
+       f->addArg(type_SDL_JoyButtonEvent, "evt");
+
+    f = mod->addFunc(type_byte, "SDL_JoyButtonEvent_GetState",
+                     (void *)SDL_JoyButtonEvent_GetState
+                     );
+       f->addArg(type_SDL_JoyButtonEvent, "evt");
+
+    f = mod->addFunc(type_SDL_Joystick, "SDL_JoystickOpen",
+                     (void *)SDL_JoystickOpen
+                     );
+       f->addArg(type_int, "deviceIndex");
+
+    f = mod->addFunc(type_int, "SDL_JoystickOpened",
+                     (void *)SDL_JoystickOpened
+                     );
+       f->addArg(type_int, "deviceIndex");
+
+    f = mod->addFunc(type_void, "SDL_JoystickClose",
+                     (void *)SDL_JoystickClose
+                     );
+       f->addArg(type_SDL_Joystick, "joystick");
 
     f = mod->addFunc(type_void, "SDL_WarpMouse",
                      (void *)SDL_WarpMouse

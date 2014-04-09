@@ -1,0 +1,64 @@
+# Copyright 2014 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+import crack.ext._sdl_mixer Mix_Chunk, Mix_FreeChunk, Mix_LoadWAV_RW,
+    Mix_OpenAudio, Mix_PlayChannelTimed, SDL_RWFromFile, AUDIO_S16;
+import crack.exp.g3d Vector;
+import crack.io cout, FStr;
+import crack.lang CString, Exception;
+
+@export_symbols AUDIO_S16;
+
+class FileError : Exception {
+    oper init(String message) : Exception(message) {}
+}
+
+## A sound wave.
+class Wave {
+    Mix_Chunk _chunk;
+
+    oper init(Mix_Chunk chunk) : _chunk = chunk {
+        cout `chunk is $chunk\n`;
+    }
+
+    oper del() {
+        Mix_FreeChunk(_chunk);
+    }
+}
+
+class Audio {
+
+    oper init(int rate, uint16 format, int channels, int chunksize) {
+        Mix_OpenAudio(rate, format, channels, chunksize);
+    }
+
+    oper init() {
+        Mix_OpenAudio(44100, AUDIO_S16, 2, 4096);
+    }
+
+    ## Play the wave once, return the channel number.
+    int play(Wave wave) {
+        return Mix_PlayChannelTimed(-1, wave._chunk, 0, -1);
+    }
+
+    ## Load a .wav audio file.
+    Wave loadWave(String filename) {
+        rw := SDL_RWFromFile(CString(filename).buffer, 'rb'.buffer);
+        if (rw is null)
+            throw FileError(FStr() `Unable to open $filename`);
+        chunk := Mix_LoadWAV_RW(rw, 1);
+        if (chunk is null)
+            throw FileError(FStr() `$filename is not a wave file`);
+        return Wave(chunk);
+    }
+
+    ## Set the position relative of the channel relative to the observer.
+    ## observerDir: The direction that the observer is facing.
+    ## soundPos: The position of the sound relative to the observer.
+    void setPosition(int channel, Vector observerDir, Vector soundPos) {
+    }
+}
