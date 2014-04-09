@@ -122,6 +122,7 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
                                         BModuleDef *moduleDef) {
     innerFinishModule(context, moduleDef);
     mergeModule(moduleDef);
+    moduleDef->clearRepFromConstants();
     delete module;
     module = 0;
 }
@@ -411,6 +412,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // Now merge and remove the original module.
     mergeModule(moduleDef);
     delete module;
+    this->moduleDef->clearRepFromConstants();
     module = 0;
 }
 
@@ -631,11 +633,18 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 
         mergeModule(bmod.get());
 
-        // Restore the original types prior to destroying the orignal module
-        // so the module constant table (referenced during destruction) is
-        // accurate.
-        structResolver.restoreOriginalTypes();
-        delete module;
+        // This is where we would like to delete the source module.
+        // Unfortunately, this is problematic after type mutation because
+        // constants are cached in the module keyed off of their original
+        // type.  Restoring the original type didn't fix it in all cases, and
+        // I got tired of debugging it so we currently just leak the module.
+        // The original comment was:
+        //// Restore the original types prior to destroying the orignal module
+        //// so the module constant table (referenced during destruction) is
+        //// accurate.
+//        structResolver.restoreOriginalTypes();
+//        delete module;
+//        bmod->clearRepFromConstants();
 
         // In this case, we set the module to the merged module.
         module = getModuleMerger()->getTarget();
