@@ -143,62 +143,6 @@ namespace {
             }
     };
 
-    // A type stub in which the primary type itself is stubbed.
-    class PrimaryTypeStub : public TypeStub {
-        public:
-            PrimaryTypeStub(NamespaceStub *ns, const string &name,
-                            TypeVecObj *params
-                            ) :
-                TypeStub(ns, name, params) {
-
-                setOwner(ns->getRealNamespace());
-            }
-
-            VarDefPtr replaceStub(Context &context) {
-                TypeDefPtr replacement = ns->replacement->lookUp(name);
-                if (params)
-                    return replacement->getSpecialization(context,
-                                                          params.get()
-                                                          );
-                else
-                    return replacement;
-            }
-
-            TypeDefPtr getSpecialization(Context &context,
-                                         TypeVecObj *params
-                                         ) {
-                // make sure we have a specialization cache
-                if (!generic)
-                    generic = new SpecializationCache();
-
-                TypeDef *result = findSpecialization(params);
-                if (!result) {
-                    // For a generic instantiation, we should always either be
-                    // able to load it from the cache or reconstruct it from
-                    // its source file.
-                    string moduleName = getSpecializedName(params, true);
-                    ModuleDefPtr mod = context.construct->getModule(moduleName);
-                    SPUG_CHECK(mod,
-                               "Unable to load generic instantiation "
-                                "module " << moduleName
-                               );
-                    result = TypeDefPtr::rcast(mod->lookUp(name));
-                    result->genericParms = *params;
-                    result->templateType = this;
-                    (*generic)[params] = result;
-                }
-                return result;
-            }
-    };
-
-    TypeDefPtr TypeStub::getTypeStub(const std::string &name) {
-        return new PrimaryTypeStub(this, name, 0);
-    }
-
-    NamespaceStubPtr TypeStub::getTypeNSStub(const std::string &name) {
-        return new PrimaryTypeStub(ns.get(), name, 0);
-    }
-
     // Stub for a generic type that is not itself a stub but has stub arguments.
     class GenericTypeStub : public TypeStub {
         public:
@@ -228,6 +172,13 @@ namespace {
             virtual bool isStub() const { return true; }
 
             VarDefPtr replaceStub(Context &context) {
+                if (realType->isStub()) {
+                    TypeDefPtr replacement = realType->replaceStub(context);
+                    SPUG_CHECK(replacement,
+                               "Unable to replace " << realType->name
+                               );
+                    realType = replacement;
+                }
 
                 // replace all of the stub params, keep track of whether any of
                 // them were not replaced.
@@ -236,7 +187,9 @@ namespace {
                      i != params->end();
                      ++i
                      ) {
-                    *i = (*i)->replaceStub(context);
+                    TypeDefPtr replacement = (*i)->replaceStub(context);
+                    if (replacement)
+                        *i = replacement;
                     if ((*i)->isStub())
                         stillAStub = true;
                 }
@@ -245,6 +198,10 @@ namespace {
                     return this;
                 else
                     return realType->getSpecialization(context, params.get());
+            }
+
+            virtual VarDefPtr replaceAllStubs(Context &context) {
+                return TypeStub::replaceAllStubs(context);
             }
 
             TypeDefPtr getSpecialization(Context &context, TypeVecObj *params) {
@@ -261,6 +218,75 @@ namespace {
                            );
             }
     };
+
+    // A type stub in which the primary type itself is stubbed.
+    class PrimaryTypeStub : public TypeStub {
+        public:
+            PrimaryTypeStub(NamespaceStub *ns, const string &name,
+                            TypeVecObj *params
+                            ) :
+                TypeStub(ns, name, params) {
+
+                setOwner(ns->getRealNamespace());
+            }
+
+            VarDefPtr replaceStub(Context &context) {
+                if (!ns->replacement)
+                    return this;
+                TypeDefPtr replacement = ns->replacement->lookUp(name);
+                if (params)
+                    return replacement->getSpecialization(context,
+                                                          params.get()
+                                                          );
+                else
+                    return replacement;
+            }
+
+            TypeDefPtr getSpecialization(Context &context,
+                                         TypeVecObj *params
+                                         ) {
+                // make sure we have a specialization cache
+                if (!generic)
+                    generic = new SpecializationCache();
+
+                TypeDef *result = findSpecialization(params);
+                if (!result) {
+                    // For a generic instantiation, we should always either be
+                    // able to load it from the cache or reconstruct it from
+                    // its source file.
+                    // XXX Unless, of course, the generic is defined in the
+                    // stub module.
+                    //    We could create a stubbed generic.  That would mean
+                    //    creating another stub module, and then we'd have to
+                    //    go through and somehow fix the stub module by
+                    //    reinstantiating the generic after we're done with it.
+                    string moduleName = getSpecializedName(params, true);
+                    ModuleDefPtr mod = context.construct->getModule(moduleName);
+
+                    if (mod) {
+                        result = TypeDefPtr::rcast(mod->lookUp(name));
+                        result->genericParms = *params;
+                        result->templateType = this;
+                        (*generic)[params] = result;
+                    } else {
+                        (*generic)[params] = result = new GenericTypeStub(
+                            ns.get(),
+                            this,
+                            params
+                        );
+                    }
+                }
+                return result;
+            }
+    };
+
+    TypeDefPtr TypeStub::getTypeStub(const std::string &name) {
+        return new PrimaryTypeStub(this, name, 0);
+    }
+
+    NamespaceStubPtr TypeStub::getTypeNSStub(const std::string &name) {
+        return new PrimaryTypeStub(ns.get(), name, 0);
+    }
 
 } // anon namespace
 
@@ -309,6 +335,11 @@ void ModuleStub::replace(Context &context, ModuleDef *replacement) {
          ++iter
          )
         (*iter)->run(context);
+
+    // Do this for the module itself, as we can accumulate stubs for cyclic
+    // deps.
+    replacement->replaceStubsInDefs(context);
+
     replacedAll = true;
 }
 

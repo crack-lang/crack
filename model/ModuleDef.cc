@@ -278,6 +278,14 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     return mod;
 }
 
+void ModuleDef::replaceStubsInDefs(Context &context) {
+    for (VarDefMap::iterator iter = defs.begin();
+         iter != defs.end();
+         ++iter
+         )
+        iter->second = iter->second->replaceAllStubs(context);
+}
+
 VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
     if (stubFree)
         return this;
@@ -286,11 +294,8 @@ VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
     if (replacement)
         return replacement;
 
-    for (VarDefMap::iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         )
-        iter->second = iter->second->replaceAllStubs(context);
+    replaceStubsInDefs(context);
+    return 0;
 }
 
 TypeDefPtr ModuleDef::getType(const string &name) {

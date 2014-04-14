@@ -235,7 +235,7 @@ class VarDef : public virtual spug::RCBase {
          * actual definition.  Returns the replacement if there is one, null 
          * if not.
          */
-        virtual VarDefPtr replaceStub(Context &context) { return this; }
+        virtual VarDefPtr replaceStub(Context &context) { return 0; }
         
         /**
          * Recursively replace all stubs referenced by the definition.  

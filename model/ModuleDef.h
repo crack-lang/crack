@@ -143,6 +143,13 @@ class ModuleDef : public VarDef, public Namespace {
                                         const std::string &canonicalName
                                         );
 
+        /**
+         * Replace all stubs in the symbol table.  This can be used 
+         * independently to fix cyclically referenced stubs in a newly 
+         * materialized module.
+         */
+        void replaceStubsInDefs(Context &context);
+
         virtual VarDefPtr replaceAllStubs(Context &context);
         
         /**
