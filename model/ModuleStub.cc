@@ -362,5 +362,9 @@ TypeDefPtr ModuleStub::createGenericStub(ModuleDef *dependent,
                 " should have already replaced all stubs."
                );
     stubMod->dependents.insert(dependent);
-    return new GenericTypeStub(stubMod.get(), generic, types);
+
+    // We're currently creating a fake module with no name, which works for
+    // builtin generics, but might not work for normal generics if they get
+    // created through this path.
+    return new GenericTypeStub(new ModuleStub(""), generic, types);
 }
