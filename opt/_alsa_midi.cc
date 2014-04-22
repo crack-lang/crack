@@ -10,6 +10,13 @@ void snd_seq_event_setSubs(snd_seq_event_t *event) {
 void snd_seq_event_setDirect(snd_seq_event_t *event) {
     event->queue = SND_SEQ_QUEUE_DIRECT; }
 void snd_seq_event_setNoteOn(snd_seq_event_t *event,                             int channel,                             int note,                             int velocity) {    snd_seq_ev_set_noteon(event, channel, note, velocity); }void snd_seq_event_setNoteOff(snd_seq_event_t *event,                              int channel,                              int note,                              int velocity) {    snd_seq_ev_set_noteoff(event, channel, note, velocity); }void snd_seq_event_scheduleTick(snd_seq_event_t *event, int queue,                                 int relative,                                int time) {    snd_seq_ev_schedule_tick(event, queue, relative, time); }void SndSeqQueue_setTempo(snd_seq_t *seqp, int queueId,                           int tempo, int ppq) {    snd_seq_queue_tempo_t *t;    snd_seq_queue_tempo_alloca(&t);     snd_seq_queue_tempo_set_tempo(t, tempo);    snd_seq_queue_tempo_set_ppq(t, ppq);    snd_seq_set_queue_tempo(seqp, queueId, t); }void SndSeqQueue_start(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {    snd_seq_start_queue(seqp, queueId, event); }void SndSeqQueue_stop(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {    snd_seq_stop_queue(seqp, queueId, event); }
+    void snd_seq_event_setController(snd_seq_event_t *event,
+                                     int channel,
+                                     int cc,
+                                     int val
+                                     ) {
+        snd_seq_ev_set_controller(event, channel, cc, val);
+    }
     snd_seq_ev_note_t *snd_seq_event_getNote(snd_seq_event_t *event) {
         return &event->data.note;
     }
@@ -179,6 +186,22 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
               );
     f->addArg(type_int, 
               "time"
+              );
+
+
+    f = type_snd_seq_event_t->addMethod(
+        type_void, 
+        "setController",
+        (void *)snd_seq_event_setController
+    );
+    f->addArg(type_int, 
+              "channel"
+              );
+    f->addArg(type_int, 
+              "cc"
+              );
+    f->addArg(type_int, 
+              "val"
               );
 
 

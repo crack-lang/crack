@@ -21,8 +21,8 @@ import crack.ext._alsa_midi snd_seq_t, snd_seq_event_t,
     SND_SEQ_EVENT_PITCHBEND, SND_SEQ_EVENT_CONTROLLER, SND_SEQ_EVENT_SYSEX;
 import crack.net Poller;
 import crack.time TimeDelta;
-import crack.midi.event Event, NoteOn, NoteOff, ProgramChange, PitchWheel, 
-    SysEx, ControlChange, Track;
+import crack.midi.event ControlChange, Event, NoteOn, NoteOff, ProgramChange, 
+    PitchWheel, SysEx, Track;
 
 class _Event : Object, snd_seq_event_t {
     
@@ -35,6 +35,9 @@ class _Event : Object, snd_seq_event_t {
         } else if (eventType.isSubclass(NoteOff)) {
             e := NoteOff.cast(event);
             setNoteOff(e.channel, e.note, e.velocity);
+        } else if (eventType.isSubclass(ControlChange)) {
+            e := ControlChange.cast(event);
+            setController(e.channel, e.controller, e.value);
         } else {
             throw AssertionError(FStr() `Unknown midi event type: \
 $(eventType.name)\n`);

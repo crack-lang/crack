@@ -51,6 +51,13 @@
     @inject 'void SndSeqQueue_stop(snd_seq_t *seqp, int queueId, snd_seq_event_t *event) {';
     @inject '    snd_seq_stop_queue(seqp, queueId, event); }';
     @inject I'
+        void snd_seq_event_setController(snd_seq_event_t *event,
+                                         int channel,
+                                         int cc,
+                                         int val
+                                         ) {
+            snd_seq_ev_set_controller(event, channel, cc, val);
+        }
         snd_seq_ev_note_t *snd_seq_event_getNote(snd_seq_event_t *event) {
             return &event->data.note;
         }
@@ -198,6 +205,9 @@
         
         @cname snd_seq_event_scheduleTick
         void scheduleTick(int queue, int relative, int time);
+        
+        @cname snd_seq_event_setController
+        void setController(int channel, int cc, int val);
         
         @cname snd_seq_event_getNote
         snd_seq_ev_note_t getNote();
