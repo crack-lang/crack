@@ -176,17 +176,8 @@ class SerialReader {
     ## Reads a uint, raises an exception if we run out of data.
     @final uint readUInt() { return readUInt(true); }
 
-    ## If errorOnUnderflow is false, returns null if we run out of data 
-    ## during read.
-    @final CString readString(bool errorOnUnderflow) {
-        size := readUInt();
-        if (size == END) {
-            if (errorOnUnderflow)
-                underflow();
-            else
-                return null;
-        }
-        
+    ## Reads a string of size 'size' from the buffer.
+    @final CString readFixedString(uint size) {
         # see if we've got enough space in the buffer, if so just copy the
         # string.
         if (buf.size - pos >= size) {
@@ -222,25 +213,45 @@ class SerialReader {
         return CString(mbuf.orphan(), size, true);
     }
 
+    ## If errorOnUnderflow is false, returns null if we run out of data 
+    ## during read.
+    @final CString readString(bool errorOnUnderflow) {
+        size := readUInt();
+        if (size == END) {
+            if (errorOnUnderflow)
+                underflow();
+            else
+                return null;
+        }
+        
+        return readFixedString(size);
+    }
+
     ## Reads a string, throws an exception if there is not enough data.    
     @final CString readString() { return readString(true); }
     
-    # the floating point serialization routines rely on the in-memory 
-    # representation of a float being IEEE.  I'm not sure if this is true on 
-    # all systems.
     
-    float32 readFloat32() {
-        # make sure we have 4 bytes
-        if (buf.size - pos < 4) {
+    # Ensure that the buffer contains at least 'size' bytes of data.    
+    @final void ensureBufferSize(uint size) {
+        if (buf.size - pos < size) {
             buf.compact(pos);
             pos = 0;
             buf.size += __src.read(WriteBuffer(buf.buffer + buf.size, 
                                                buf.cap - buf.size
                                                )
                                    );
-            if (buf.size < 4)
+            if (buf.size < size)
                 underflow();
         }
+    }
+
+    # the floating point serialization routines rely on the in-memory 
+    # representation of a float being IEEE.  I'm not sure if this is true on 
+    # all systems.
+    
+    float32 readFloat32() {
+        # make sure we have 4 bytes
+        ensureBufferSize(4);
         
         result := array[float32](buf.buffer + pos)[0];
         pos += 4;
@@ -249,16 +260,7 @@ class SerialReader {
 
     float64 readFloat64() {
         # make sure we have 8 bytes
-        if (buf.size - pos < 8) {
-            buf.compact(pos);
-            pos = 0;
-            buf.size += __src.read(WriteBuffer(buf.buffer + buf.size, 
-                                               buf.cap - buf.size
-                                               )
-                                   );
-            if (buf.size < 8)
-                underflow();
-        }
+        ensureBufferSize(8);
         
         result := array[float64](buf.buffer + pos)[0];
         pos += 8;
