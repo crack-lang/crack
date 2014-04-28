@@ -203,6 +203,16 @@ class Vector {
 class Coord {
     float x, y;
     oper init(float x, float y) : x = x, y = y {}
+    
+    int cmp(Object other) {
+        if (o := Coord.cast(other)) {
+            d := cmp(x, o.x);
+            if (!d) d = cmp(y, o.y);
+            return d;
+        } else {
+            return Object.cmp(other);
+        }
+    }
 }
 
 class RotMatrix {
