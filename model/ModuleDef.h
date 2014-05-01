@@ -43,6 +43,12 @@ class ModuleDef : public VarDef, public Namespace {
         // the parent namespace.  This should be the root namespace where 
         // builtins are stored.
         NamespacePtr parent;
+        
+        // The master module, or null if the module is its own master.  See 
+        // getMaster() below for info on mastership.
+        // This isn't an RCPtr: masters should maintain ownership of all
+        // modules in the group.
+        ModuleDef *master;
 
         // this is true if the module has been completely parsed and the
         // close() method has been called.
@@ -92,6 +98,19 @@ class ModuleDef : public VarDef, public Namespace {
             owner = o;
             canonicalName = o->getNamespaceName()+"."+name;
             fullName.clear();
+        }
+        
+        /**
+         * Returns the module's master, returns the module itself if it is its 
+         * own master.
+         * 
+         * The "master" is the top-level module of a group of modules with 
+         * cyclic dependencies.  We track this relationship because it is much 
+         * easier to persist groups of modules with cyclic dependencies as if 
+         * they were a single module.
+         */
+        ModuleDefPtr getMaster() {
+            return master ? master : this;
         }
 
         /**

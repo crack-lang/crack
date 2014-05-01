@@ -937,17 +937,25 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // if any of the parameters of the generic or the generic itself are 
         // in a hidden scope, we don't want to create an ephemeral module for 
         // it.
-        bool hidden = false;
+        ModuleDefPtr currentModule = context.ns->getModule();
+        ModuleDefPtr currentMaster = currentModule->getMaster();
+        bool hidden = false, copersistent = false;
         if (isHidden()) {
-            hidden = true;
+            hidden = copersistent = true;
         } else {
             for (int i = 0; i < types->size(); ++i) {
                 if ((*types)[i]->isHidden()) {
-                    hidden = true;
+                    hidden = copersistent = true;
                     break;
+                } else if ((*types)[i]->getModule()->getMaster() == 
+                            currentMaster
+                           ) {
+                    copersistent = true;
                 }
             }
         }
+        copersistent = copersistent || 
+                       getModule()->getMaster() == currentMaster;
         if (hidden) {
             ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
                                                        context.ns.get()
@@ -986,10 +994,12 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // the newTypeName instead of moduleName, since this is how we should 
         // have done it for modules in the first place and we're going to 
         // override the canonical name later anyway.
-        ModuleDefPtr currentModule = context.ns->getModule();
         if (!currentModule)
             cout << "no current module for " << newTypeName << endl;
-        module = modContext->createModule(newTypeName, "", currentModule.get());
+        module = modContext->createModule(newTypeName, "", 
+                                          copersistent ? currentModule.get() : 
+                                                         0
+                                          );
         
         // XXX this is confusing: there's a "owner" that's part of some kinds of 
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 

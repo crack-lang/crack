@@ -27,6 +27,7 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
     Namespace(name),
     parent(parent),
+    master(0),
     finished(false),
     fromExtension(false),
     cacheable(false) {

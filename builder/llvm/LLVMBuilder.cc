@@ -841,6 +841,7 @@ ResultExprPtr LLVMBuilder::emitStrConst(Context &context, StrConst *val) {
                                               ArrayRef<Value *>(args, 2)
                                               );
         bval->module = module;
+        moduleDef->stringConstants.push_back(bval);
     }
     lastValue = bval->rep;
     return new BResultExpr(val, lastValue);
@@ -1255,6 +1256,7 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
 
     moduleDef = innerCreateModule(context, name, owner);
     moduleDef->sourcePath = getSourcePath(path);
+    moduleDef->master = owner ? owner->getMaster().get() : 0;
 
     return moduleDef;
 }
