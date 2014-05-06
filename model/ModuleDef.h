@@ -37,6 +37,17 @@ SPUG_RCPTR(ModuleDef);
  * The context of a module is the parent module.
  */
 class ModuleDef : public VarDef, public Namespace {
+    private:
+        // The master module, or null if the module is its own master.  See 
+        // getMaster() below for info on mastership.
+        // This isn't an RCPtr: masters should maintain ownership of all
+        // modules in the group.
+        ModuleDef *master;
+
+        // Slave modules.  These are all of the modules that we are the 
+        // "master" of (see getMaster()).
+        std::vector<ModuleDefPtr> slaves;
+        
     public:
         typedef std::vector<std::string> StringVec;
 
@@ -44,12 +55,6 @@ class ModuleDef : public VarDef, public Namespace {
         // builtins are stored.
         NamespacePtr parent;
         
-        // The master module, or null if the module is its own master.  See 
-        // getMaster() below for info on mastership.
-        // This isn't an RCPtr: masters should maintain ownership of all
-        // modules in the group.
-        ModuleDef *master;
-
         // this is true if the module has been completely parsed and the
         // close() method has been called.
         bool finished;
@@ -63,7 +68,7 @@ class ModuleDef : public VarDef, public Namespace {
         
         // explicit imports.
         std::vector<ModuleDefPtr> imports;
-        
+
         // Modules that we have a dependency on.
         ModuleDefMap dependencies;
 
@@ -78,6 +83,7 @@ class ModuleDef : public VarDef, public Namespace {
         bool cacheable;
 
         ModuleDef(const std::string &name, Namespace *parent);
+        ~ModuleDef();
 
         /**
          * Close the module, executing it.
@@ -124,6 +130,11 @@ class ModuleDef : public VarDef, public Namespace {
          * Add the other module to this module's dependencies.
          */
         void addDependency(ModuleDef *other);
+        
+        /**
+         * Adds the other module to this module's slaves.
+         */
+        void addSlave(ModuleDef *slave);
 
         virtual VarDef *asVarDef();
         virtual NamespacePtr getParent(unsigned index);

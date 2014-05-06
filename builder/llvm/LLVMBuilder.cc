@@ -1256,7 +1256,8 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
 
     moduleDef = innerCreateModule(context, name, owner);
     moduleDef->sourcePath = getSourcePath(path);
-    moduleDef->master = owner ? owner->getMaster().get() : 0;
+    if (owner)
+        owner->getMaster()->addSlave(moduleDef.get());
 
     return moduleDef;
 }

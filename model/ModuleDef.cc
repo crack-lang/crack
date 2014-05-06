@@ -10,6 +10,7 @@
 
 #include <sstream>
 #include "spug/check.h"
+#include "spug/stlutil.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
 #include "Context.h"
@@ -33,6 +34,14 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     cacheable(false) {
 }
 
+ModuleDef::~ModuleDef() {
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
+        SPUG_CHECK((*slave)->refcnt() == 1,
+                   "Slave module " << (*slave)->getNamespaceName() <<
+                    "would live on after deletion of its master."
+                   );
+}
+
 bool ModuleDef::hasInstSlot() {
     return false;
 }
@@ -42,6 +51,16 @@ void ModuleDef::addDependency(ModuleDef *other) {
         dependencies.find(other->getNamespaceName()) == dependencies.end()
         )
         dependencies[other->getNamespaceName()] = other;
+}
+
+void ModuleDef::addSlave(ModuleDef *slave) {
+    SPUG_CHECK(!slave->master,
+               "Module " << slave->getNamespaceName() <<
+               " is being added as a slave of " << getNamespaceName() <<
+               " but it already has a master: " <<
+               slave->master->getNamespaceName());
+    slaves.push_back(slave);
+    slave->master = this;
 }
 
 void ModuleDef::close(Context &context) {
