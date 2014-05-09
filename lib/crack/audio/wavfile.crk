@@ -1,0 +1,130 @@
+## Wave files.
+
+import crack.io FStr, Reader;
+import crack.io cerr;
+import crack.lang Exception, ManagedBuffer, WriteBuffer;
+import crack.runtime free, malloc;
+
+## Like a standard Buffer, but holds 16 bit samples instead of bytes.
+## Likewise, 'size' and 'cap' are in terms of samples.
+class WaveBuffer {
+    uintz size, cap;
+    array[int16] buffer;
+
+    ## Creates a new wave buffer large enough to hold 'cap' samples.  If you
+    ## have n channels, you'll need to specify n * number_of_samples to hold
+    ## them.
+    oper init(uintz cap) : cap = cap, buffer = array[int16](malloc(cap * 2)) {}
+
+    oper del() { free(buffer); }
+}
+
+## This defines the parameters of a wave file.
+class WaveDef {
+
+    int
+        ## Number of audio channels.
+        channels,
+
+        ## Sample in samples per sec.
+        rate,
+
+        ## Number of bits per sample.
+        bitsPerSample;
+
+    oper init(int channels, int rate, int bitsPerSample) :
+        channels = channels,
+        rate = rate,
+        bitsPerSample = bitsPerSample {
+    }
+
+    ## Reads a buffer full of samples.
+    uintz read(Reader src, WaveBuffer buf) {
+        if (bitsPerSample != 16)
+            throw Exception("crack.wavfile can't deal with samples size "
+                             "other than 16 bits."
+                            );
+        return src.read(WriteBuffer(byteptr(buf.buffer), buf.cap * 2)) / 2;
+    }
+}
+
+class FormatError : Exception {
+    oper init(String message) : Exception(message) {}
+}
+
+## Read a little-endian 32-bit value.
+uint32 _read32LE(byteptr p) {
+    return (uint32(p[3]) << 24) | (uint32(p[2]) << 16) |
+           (uint32(p[1]) << 8) | uint32(p[0]);
+}
+
+uint16 _read16LE(byteptr p) {
+    return (uint16(p[1]) << 8) | uint16(p[0]);
+}
+
+uint32 _read32BE(byteptr p) {
+    return (uint32(p[0]) << 24) | (uint32(p[1]) << 16) | (uint32(p[2]) << 8) |
+            uint32(p[3]);
+}
+
+uint16 _read16BE(byteptr p) {
+    return (uint16(p[0]) << 8) | uint16(p[1]);
+}
+
+## Reads the wave up to the beginning of the wave data.
+WaveDef readWave(Reader src) {
+    ManagedBuffer header = {44};
+    src.read(header);
+    if (header.size != 44)
+        throw FormatError('File is not even big enough to be a wave file.');
+
+    if ((x := _read32BE(header.buffer)) != i'RIFF') {
+        cerr `got $x\n`;
+        throw FormatError('Not a RIFF file');
+    }
+
+    # header + 4 is the entire chunk size which we ignore.
+
+    if (_read32BE(header.buffer + 8) != i'WAVE')
+        throw FormatError('Not a WAVE chunk');
+
+    if (_read32BE(header.buffer + 12) != i'fmt ')
+        throw FormatError('Not a "fmt" block');
+
+    size := _read32LE(header.buffer + 16);
+    if (size != 16)
+        throw FormatError(FStr() `Expected 16 byte format chunk, got $size`);
+
+    fmt := _read16LE(header.buffer + 20);
+    if (fmt != 1)
+        throw FormatError(FStr() `Chunk is not PCM format.`);
+
+    channels := _read16LE(header.buffer + 22);
+    rate := _read32LE(header.buffer + 24);
+    byteRate := _read32LE(header.buffer + 28);
+    blockAlign := _read16LE(header.buffer + 32);
+    bitsPerSample := _read16LE(header.buffer + 34);
+
+    if (byteRate != rate * channels * bitsPerSample / 8)
+        throw FormatError(FStr() I`Expected a byte rate of \
+                                   $(rate * channels * bitsPerSample / 8), \
+                                   got $byteRate`
+                          );
+    if (blockAlign != channels * bitsPerSample / 8)
+        throw FormatError(FStr() I`Expected a block alignment of \
+                                   $(channels * bitsPerSample / 8), \
+                                   got $blockAlign`
+                          );
+
+    return WaveDef(channels, rate, bitsPerSample);
+}
+
+/*
+import crack.fs makePath;
+import crack.io cout;
+import crack.sys argv;
+
+def := readWave(makePath(argv[1]).reader());
+cout I`channels = $(def.channels), rate = $(def.rate), bits/sample = \
+       $(def.bitsPerSample)\n`;
+*/
