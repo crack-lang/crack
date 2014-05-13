@@ -13,12 +13,14 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_Flip,
     SDL_KeyboardEvent_GetKeysym,
     SDL_keysym_GetSym, 
+    SDL_MouseButtonEvent,
     SDL_MouseMotionEvent_GetX,
     SDL_MouseMotionEvent_GetY,
     SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
     SDL_Quit, SDL_SetVideoMode,
     SDL_Rect,
     SDL_ResizeEvent,
+    SDL_Event_GetMouseButtonEvent,
     SDL_Event_GetResize,
     SDL_ResizeEvent_GetH,
     SDL_ResizeEvent_GetW,
@@ -301,7 +303,21 @@ class MouseMotionEvent {
 }
 
 ## Indicates a mouse button press or release.
-class MouseButtonEvent {}
+## byte type - SDL_MOUSEBUTTON{DOWN,UP}
+## byte which - mouse device index
+## byte button - button 
+## byte state - SDL_{PRESSED,RELEASED}
+## uint16 x, y;
+class MouseButtonEvent : Object, SDL_MouseButtonEvent {
+    oper init(SDL_MouseButtonEvent other) {
+        type = other.type;
+        which = other.which;
+        button = other.button;
+        state = other.state;
+        x = other.x;
+        y = other.y;
+    }
+}
 
 ## Interface for handlers to receive mouse button press events.
 @interface MouseButtonHandler {
@@ -350,7 +366,7 @@ class App {
     ## Set this before calling initialize().
     bool resizable;
     
-    # The list of keyboard event handler.
+    # The list of keyboard event handlers.
     Array[Holder[KeyboardHandler]] keyboardHandlers = {};
     
     ## underlying SDL surface (XXX make protected?)
@@ -399,6 +415,10 @@ class App {
     ## Add a new keyboard handler to the sequence.
     void addKeyboardHandler(KeyboardHandler handler) {
         keyboardHandlers.append(Holder[KeyboardHandler](handler));
+    }
+    
+    void addMouseButtonHandler(MouseButtonHandler handler) {
+        __mouseButtonHandlers.append(Holder[MouseButtonHandler](handler));
     }
 
     ## Add a new resize handler to the sequence.
@@ -458,12 +478,14 @@ class App {
                     if (handler.obj.onMouseMotion(mevt))
                         break;
             } else if (evtType == SDL_MOUSEBUTTONDOWN) {
+                event := MouseButtonEvent(SDL_Event_GetMouseButtonEvent(evt));
                 for (handler :in __mouseButtonHandlers)
-                    if (handler.obj.onMouseButtonDown(MouseButtonEvent()))
+                    if (handler.obj.onMouseButtonDown(event))
                         break;
             } else if (evtType == SDL_MOUSEBUTTONUP) {
+                event := MouseButtonEvent(SDL_Event_GetMouseButtonEvent(evt));
                 for (handler :in __mouseButtonHandlers)
-                    if (handler.obj.onMouseButtonUp(MouseButtonEvent()))
+                    if (handler.obj.onMouseButtonUp(event))
                         break;
             }
         }

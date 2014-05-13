@@ -73,6 +73,10 @@ uint8_t SDL_JoyButtonEvent_GetState(SDL_JoyButtonEvent *evt) {
     return evt->state;
 }
 
+SDL_MouseButtonEvent *SDL_Event_GetMouseButtonEvent(SDL_Event *evt) {
+    return &evt->button;
+}
+
 struct Undef {};
 ';
     @crack_internal
@@ -168,6 +172,13 @@ struct Undef {};
     SDL_Joystick SDL_JoystickOpen(int deviceIndex);
     int SDL_JoystickOpened(int deviceIndex);
     void SDL_JoystickClose(SDL_Joystick joystick);
+
+    class SDL_MouseButtonEvent {
+        byte type, which, button, state;
+        uint16 x, y;
+    }
+    
+    SDL_MouseButtonEvent SDL_Event_GetMouseButtonEvent(SDL_Event evt);
     
     void SDL_WarpMouse(uint x, uint y);
 
@@ -189,6 +200,8 @@ struct Undef {};
                  SDL_USEREVENT,
                  SDL_VIDEORESIZE,
                  SDL_NUMEVENTS;
+    
+    const uint32 SDL_PRESSED, SDL_RELEASED;
     
     int SDL_PollEvent(SDL_Event event);
     

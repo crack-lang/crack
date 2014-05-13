@@ -60,6 +60,10 @@ uint8_t SDL_JoyButtonEvent_GetState(SDL_JoyButtonEvent *evt) {
     return evt->state;
 }
 
+SDL_MouseButtonEvent *SDL_Event_GetMouseButtonEvent(SDL_Event *evt) {
+    return &evt->button;
+}
+
 struct Undef {};
 
 
@@ -173,6 +177,22 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
     crack::ext::Type *type_SDL_Joystick = mod->addType("SDL_Joystick", sizeof(Undef));
     type_SDL_Joystick->finish();
+
+
+    crack::ext::Type *type_SDL_MouseButtonEvent = mod->addType("SDL_MouseButtonEvent", sizeof(SDL_MouseButtonEvent));
+        type_SDL_MouseButtonEvent->addInstVar(type_byte, "type",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, type));
+        type_SDL_MouseButtonEvent->addInstVar(type_byte, "which",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, which));
+        type_SDL_MouseButtonEvent->addInstVar(type_byte, "button",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, button));
+        type_SDL_MouseButtonEvent->addInstVar(type_byte, "state",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, state));
+        type_SDL_MouseButtonEvent->addInstVar(type_uint16, "x",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, x));
+        type_SDL_MouseButtonEvent->addInstVar(type_uint16, "y",
+                                CRACK_OFFSET(SDL_MouseButtonEvent, y));
+    type_SDL_MouseButtonEvent->finish();
 
 
     crack::ext::Type *array = mod->getType("array");
@@ -356,6 +376,11 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_SDL_Joystick, "joystick");
 
+    f = mod->addFunc(type_SDL_MouseButtonEvent, "SDL_Event_GetMouseButtonEvent",
+                     (void *)SDL_Event_GetMouseButtonEvent
+                     );
+       f->addArg(type_SDL_Event, "evt");
+
     f = mod->addFunc(type_void, "SDL_WarpMouse",
                      (void *)SDL_WarpMouse
                      );
@@ -530,6 +555,14 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_uint32, "SDL_NUMEVENTS",
                      static_cast<int>(SDL_NUMEVENTS)
+                     );
+
+    mod->addConstant(type_uint32, "SDL_PRESSED",
+                     static_cast<int>(SDL_PRESSED)
+                     );
+
+    mod->addConstant(type_uint32, "SDL_RELEASED",
+                     static_cast<int>(SDL_RELEASED)
                      );
 
     mod->addConstant(type_uint32, "SDL_GL_RED_SIZE",
