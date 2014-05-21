@@ -379,13 +379,15 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     finishModule(context, moduleDef);
+    if (!moduleDef->isSlave()) { // slave modules aren't complete yet.
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
 
-    // Do the common stuff (common with the .builtin module, which doesn't get
-    // closed)
-    innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+        // Do the common stuff (common with the .builtin module, which doesn't get
+        // closed)
+        innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+    }
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
@@ -410,10 +412,12 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
         context.cacheModule(moduleDef);
 
     // Now merge and remove the original module.
-    mergeModule(moduleDef);
-    delete module;
-    this->moduleDef->clearRepFromConstants();
-    module = 0;
+    if (!moduleDef->isSlave()) {
+        mergeModule(moduleDef);
+        delete module;
+        this->moduleDef->clearRepFromConstants();
+        module = 0;
+    }
 }
 
 namespace {
@@ -608,6 +612,15 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     const string &canonicalName,
     ModuleDef *owner
 ) {
+    if (owner) {
+        BJitModuleDefPtr bmod = new BJitModuleDef(canonicalName,
+                                                  context.ns.get(),
+                                                  module,
+                                                  0
+                                                  );
+        owner->addSlave(bmod.get());
+        return bmod;
+    }
 
     Cacher c(context, options.get());
     BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);

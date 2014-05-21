@@ -528,7 +528,8 @@ class LLVMBuilder : public Builder {
 
         virtual model::TypeDefPtr materializeType(
             model::Context &context,
-            const std::string &name
+            const std::string &name,
+            const std::string &namespaceName
         );
 
         virtual model::FuncDefPtr materializeFunc(

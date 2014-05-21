@@ -922,6 +922,9 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // check the precompiled module cache
     ModuleDefPtr module = context.construct->getCachedModule(moduleName);
 
+    // track whether we create a copersistent module.
+    bool copersistent = false;
+
     if (!module) {
 
         // make sure we've got the right number of arguments
@@ -939,7 +942,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // it.
         ModuleDefPtr currentModule = context.ns->getModule();
         ModuleDefPtr currentMaster = currentModule->getMaster();
-        bool hidden = false, copersistent = false;
+        bool hidden = false;
         if (isHidden()) {
             hidden = copersistent = true;
         } else {
@@ -1046,7 +1049,8 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         );
 
     // record a dependency on the owner's module
-    context.ns->getModule()->addDependency(module.get());
+    if (!copersistent)
+        context.ns->getModule()->addDependency(module.get());
     
     return result;
 }
@@ -1209,12 +1213,28 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
     }
 }
 
-int TypeDef::serializeDecl(Serializer &serializer) {
-    serializer.write(name, "name");
-    serializer.write(generic ? 1 : 0, "isGeneric");
-    int result = serializer.registerObject(this);
-    serializeTypeDecls(serializer);
-    return result;
+void TypeDef::serializeDecl(Serializer &serializer) {
+    if (serializer.writeObject(this, "decl")) {
+        serializer.write(name, "name");
+        {
+            ostringstream temp;
+            Serializer sub(serializer, temp);
+            if (generic) {
+                sub.write(CRACK_PB_KEY(1, varInt), "isGeneric.header");
+                sub.write(1, "isGeneric");
+            }
+            
+            // If we're module-scoped to a slave module, record the owner.
+            ModuleDefPtr module = ModuleDefPtr::cast(getOwner());
+            if (module && module->isSlave()) {
+                sub.write(CRACK_PB_KEY(2, ref), "owner.header");
+                module->serializeSlaveRef(sub);
+            }
+            serializer.write(temp.str(), "optional");
+        }
+        int result = serializer.registerObject(this);
+        serializeTypeDecls(serializer);
+    }
 }
 
 namespace {
@@ -1291,25 +1311,58 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     return type;
 }
 
-int TypeDef::deserializeDecl(Deserializer &deser, int nextId) {
-    string name = deser.readString(Serializer::varNameSize, "name");
-    int isGeneric = deser.readUInt("isGeneric");
-    TypeDefPtr type;
-    if (isGeneric)
-        type =
-            new TypeDef(deser.context->construct->classType.get(), name, true);
-    else
-        type = deser.context->builder.materializeType(*deser.context, name);
-    deser.registerObject(nextId, type.get());
-    deser.context->ns->addDef(type.get());
-    
-    // do the nested declarations against the new context.
-    ContextPtr classContext = 
-        deser.context->createSubContext(Context::instance, type.get(),
-                                        &type->name
-                                        );
-    ContextStackFrame<Deserializer> frame(deser, classContext.get());
-    return deserializeTypeDecls(deser, nextId + 1);
+namespace {
+    struct TypeDeclReader : Deserializer::ObjectReader {
+        spug::RCBasePtr read(Deserializer &deser) const {
+            string name = deser.readString(Serializer::varNameSize, "name");
+            int isGeneric = false;
+            ModuleDefPtr owner = deser.context->ns;
+        
+            // Deserialize optional fields.
+            CRACK_PB_BEGIN(deser, 256, optional)
+                CRACK_PB_FIELD(1, varInt)
+                    isGeneric = optionalDeser.readUInt("isGeneric");
+                    break;
+                CRACK_PB_FIELD(2, ref) {
+                    ModuleDefPtr mod = deser.context->ns;
+                    owner = mod->deserializeSlaveRef( optionalDeser);
+                    break;
+                }
+            CRACK_PB_END
+        
+            TypeDefPtr type;
+            if (isGeneric)
+                type = new TypeDef(deser.context->construct->classType.get(), 
+                                   name, 
+                                   true
+                                   );
+            else
+                type = deser.context->builder.materializeType(
+                    *deser.context, 
+                    name,
+                    owner->getNamespaceName()
+                );
+            owner->addDef(type.get());
+            return type;
+        }
+    };
+}
+
+void TypeDef::deserializeDecl(Deserializer &deser) {
+    Deserializer::ReadObjectResult result =
+        deser.readObject(TypeDeclReader(), "decl");
+    if (result.definition) {
+        TypeDefPtr type = result.object;
+        NamespacePtr owner = type->getOwner();
+            
+        // do the nested declarations against the new context.
+        ContextPtr classContext = 
+            deser.context->createSubContext(Context::instance, type.get(),
+                                            &type->name
+                                            );
+        ContextStackFrame<Deserializer> frame(deser, classContext.get());
+        deserializeTypeDecls(deser);
+    }
 }
 
 VarDefPtr TypeDef::replaceAllStubs(Context &context) {

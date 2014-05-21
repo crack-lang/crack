@@ -9,6 +9,8 @@
 
 #include "Namespace.h"
 
+#include <sstream>
+
 #include "spug/check.h"
 #include "spug/stlutil.h"
 #include "ConstVarDef.h"
@@ -16,6 +18,7 @@
 #include "Deserializer.h"
 #include "Expr.h"
 #include "OverloadDef.h"
+#include "ProtoBuf.h"
 #include "Serializer.h"
 #include "StubDef.h"
 #include "VarDef.h"
@@ -32,15 +35,19 @@ void Namespace::storeDef(VarDef *def) {
     orderedForCache.push_back(def);
 }
 
-void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs) {
+void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs, 
+                            ModuleDef *master
+                            ) {
     for (VarDefMap::const_iterator iter = defs.begin();
          iter != defs.end();
          ++iter
          ) {
         TypeDef *def = TypeDefPtr::rcast(iter->second);
         if (def) {
-            // Ignore aliases and stuff that's not serializable.
-            if (def->getOwner() == this && def->isSerializable())
+            // Ignore types we don't own or are not serializable.
+            if (def->getModule()->getMaster() == master && 
+                def->isSerializable()
+                )
                 typeDefs.push_back(def);
         } else {
             SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
@@ -48,6 +55,7 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs) {
                        );
         }
     }
+    getNestedTypeDefs(typeDefs, master);
 }
 
 void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
@@ -312,7 +320,7 @@ void Namespace::dump() const {
 void Namespace::serializeTypeDecls(Serializer &serializer) {
     // We build a vector so we can determine the count up front.
     vector<TypeDef *> typeDefs;
-    getTypeDefs(typeDefs);
+    getTypeDefs(typeDefs, getModule().get());
     
     serializer.write(typeDefs.size(), "#decls");
     for (vector<TypeDef *>::const_iterator iter = typeDefs.begin();
@@ -429,13 +437,12 @@ void Namespace::serializeDefs(Serializer &serializer) const {
         (*i)->serialize(serializer, true, this);
 }
 
-int Namespace::deserializeTypeDecls(Deserializer &deser, int nextId) {
+void Namespace::deserializeTypeDecls(Deserializer &deser) {
     unsigned count = deser.readUInt("#decls");
     for (int i = 0; i < count; ++i)
         // This triggers the side-effect of populating the deserializer's 
         // object registry with an instance of the type.
-        nextId = TypeDef::deserializeDecl(deser, nextId);
-    return nextId;
+        TypeDef::deserializeDecl(deser);
 }
 
 void Namespace::deserializeDefs(Deserializer &deser) {

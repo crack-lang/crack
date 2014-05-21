@@ -382,12 +382,12 @@ class TypeDef : public VarDef, public Namespace {
                                ) const;
 
         /** Serialize a type declaration. Returns the new object id. */
-        int serializeDecl(Serializer &serializer);
+        void serializeDecl(Serializer &serializer);
 
         /** 
          * Deserialize a type declaration.  Returns the next object id.
          */
-        static int deserializeDecl(Deserializer &deser, int nextId);
+        static void deserializeDecl(Deserializer &deser);
 
         /** Deserialize a reference to a type object. */
         static TypeDefPtr deserializeRef(Deserializer &deser, 

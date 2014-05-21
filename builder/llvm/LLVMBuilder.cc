@@ -1232,7 +1232,10 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
 
     assert(!module);
     LLVMContext &lctx = getGlobalContext();
-    createLLVMModule(name);
+    if (!owner)
+        createLLVMModule(name);
+    else
+        module = BModuleDefPtr::cast(owner)->rep;
 
     if (options->debugMode)
         debugInfo = new DebugInfo(module,
@@ -1252,7 +1255,15 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     func->setCallingConv(llvm::CallingConv::C);
 
     beginModuleMain(name);
-    createModuleCommon(context);
+
+    // create the exception structure for the module main function
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+
+    // Create externs for all of the runtime functions.
+    if (!owner)
+        createModuleCommon(context);
+    else
+        callocFunc = module->getFunction("calloc");
 
     moduleDef = innerCreateModule(context, name, owner);
     moduleDef->sourcePath = getSourcePath(path);
@@ -2309,9 +2320,10 @@ ArgDefPtr LLVMBuilder::materializeArg(Context &context, const string &name,
     return new ArgDef(type, name);
 }
 
-TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name) {
+TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
+                                        const string &namespaceName) {
     ostringstream tmp;
-    tmp << context.ns->getNamespaceName() << "." << name;
+    tmp << namespaceName << "." << name;
     const string &fullName = tmp.str();
     Type *llvmType = module->getTypeByName(fullName);
     SPUG_CHECK(llvmType,
@@ -3414,10 +3426,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.setSymbolName("__CrackExceptionFrame");
         f.finish();
     }
-
-    // create the exception structure for the module main function
-    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
-
 }
 
 

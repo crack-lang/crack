@@ -47,7 +47,15 @@ class ModuleDef : public VarDef, public Namespace {
         // Slave modules.  These are all of the modules that we are the 
         // "master" of (see getMaster()).
         std::vector<ModuleDefPtr> slaves;
+    
+    protected:
         
+        // Overrides Namespace::getNestedTypeDefs() to add types for all slave 
+        // modules.
+        virtual void getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
+                                       ModuleDef *master
+                                       );
+    
     public:
         typedef std::vector<std::string> StringVec;
 
@@ -118,6 +126,11 @@ class ModuleDef : public VarDef, public Namespace {
         ModuleDefPtr getMaster() {
             return master ? master : this;
         }
+        
+        /**
+         * Returns true if the module is a slave.
+         */
+        bool isSlave() { return master; }
 
         /**
          * Record a dependency on another module.  See 
@@ -172,6 +185,16 @@ class ModuleDef : public VarDef, public Namespace {
         static ModuleDefPtr deserialize(Deserializer &deserializer,
                                         const std::string &canonicalName
                                         );
+
+        /**
+         * Serialize the module as a slave reference.
+         */        
+        void serializeSlaveRef(Serializer &serializer);
+        
+        /**
+         * Deserialize a slave reference.
+         */
+        ModuleDefPtr deserializeSlaveRef(Deserializer &deser);
 
         /**
          * Replace all stubs in the symbol table.  This can be used 
