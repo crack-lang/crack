@@ -590,51 +590,41 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
 }
 
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
-    ModFuncMap::iterator iter = moduleFuncs.find(funcDef);
-    if (iter == moduleFuncs.end()) {
+    Function *func = module->getFunction(funcRep->getName());
+    if (!func) {
         // not found, create a new one.
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
-        Function *func = Function::Create(funcRep->getFunctionType(),
-                                          Function::ExternalLinkage,
-                                          funcRep->getName(),
-                                          module
-                                          );
+        func = Function::Create(funcRep->getFunctionType(),
+                                Function::ExternalLinkage,
+                                funcRep->getName(),
+                                module
+                                );
 
         // low level symbol name
         if (!bfuncDef->symbolName.empty())
             func->setName(bfuncDef->symbolName);
-
-        // cache it in the map
-        moduleFuncs[bfuncDef] = func;
-        return func;
-    } else {
-        return iter->second;
     }
+    return func;
 }
 
 GlobalVariable *LLVMBuilder::getModVar(VarDefImpl *varDefImpl,
                                        GlobalVariable *gvar
                                        ) {
-    ModVarMap::iterator iter = moduleVars.find(varDefImpl);
-    if (iter == moduleVars.end()) {
+
+    GlobalVariable *global = module->getGlobalVariable(gvar->getName());
+    if (!global) {
         // extract the raw type
         Type *type = gvar->getType()->getElementType();
 
-        assert(!module->getGlobalVariable(gvar->getName()) &&
-               "global variable redefined"
-               );
-        GlobalVariable *global =
+        global =
             new GlobalVariable(*module, type, gvar->isConstant(),
-                               GlobalValue::ExternalLinkage,
-                               0, // initializer: null for externs
-                               gvar->getName()
-                               );
-
-        moduleVars[varDefImpl] = global;
-        return global;
-    } else {
-        return iter->second;
+                            GlobalValue::ExternalLinkage,
+                            0, // initializer: null for externs
+                            gvar->getName()
+                            );
     }
+
+    return global;
 }
 
 BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
@@ -1224,6 +1214,22 @@ void LLVMBuilder::beginModuleMain(const string &moduleFullName) {
     builder.SetInsertPoint(temp);
 }
 
+namespace {
+    /**
+    * Create aliases of the runtime function set (defined in
+    * createModuleCommon()) in the slave module.
+    */
+    void aliasRuntimeFuncsInSlave(ModuleDef *slave, ModuleDef *master) {
+        slave->addAlias(master->lookUp("__getArgv").get());
+        slave->addAlias(master->lookUp("__getArgc").get());
+        slave->addAlias(master->lookUp("__CrackThrow").get());
+        slave->addAlias(master->lookUp("__CrackGetException").get());
+        slave->addAlias(master->lookUp("__CrackBadCast").get());
+        slave->addAlias(master->lookUp("__CrackCleanupException").get());
+        slave->addAlias(master->lookUp("__CrackExceptionFrame").get());
+    }
+}
+
 ModuleDefPtr LLVMBuilder::createModule(Context &context,
                                        const string &name,
                                        const string &path,
@@ -1259,16 +1265,20 @@ ModuleDefPtr LLVMBuilder::createModule(Context &context,
     // create the exception structure for the module main function
     createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 
-    // Create externs for all of the runtime functions.
-    if (!owner)
-        createModuleCommon(context);
-    else
-        callocFunc = module->getFunction("calloc");
-
     moduleDef = innerCreateModule(context, name, owner);
     moduleDef->sourcePath = getSourcePath(path);
-    if (owner)
+
+    if (owner) {
+        // If the module is a slave, register it as such and create simple
+        // aliases for all of the runtime functions that we would normally
+        // have to create.
         owner->getMaster()->addSlave(moduleDef.get());
+        aliasRuntimeFuncsInSlave(moduleDef.get(), owner);
+        callocFunc = module->getFunction("calloc");
+    } else {
+        // Create externs for all of the runtime functions.
+        createModuleCommon(context);
+    }
 
     return moduleDef;
 }
@@ -2122,7 +2132,6 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                    module->getModuleIdentifier()+"."+name
                                    );
             varDefImpl = new BGlobalVarDefImpl(gvar);
-            moduleVars[varDefImpl.get()] = gvar;
             break;
         }
 
@@ -3427,7 +3436,6 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         f.finish();
     }
 }
-
 
 void *LLVMBuilder::loadSharedLibrary(const std::string &name) {
     // leak the handle so the library stays mapped for the life of the process.

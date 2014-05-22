@@ -494,6 +494,7 @@ namespace {
 }
 
 void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
+#if REMOVE
     if (modules.size() != 1) {
         ModuleMerger merger("cyclic-modules", execEng);
         for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
@@ -518,6 +519,7 @@ void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
         // "finished" marker back to the new module.
         moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
     }
+#endif
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {

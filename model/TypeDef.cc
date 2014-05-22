@@ -1316,7 +1316,7 @@ namespace {
         spug::RCBasePtr read(Deserializer &deser) const {
             string name = deser.readString(Serializer::varNameSize, "name");
             int isGeneric = false;
-            ModuleDefPtr owner = deser.context->ns;
+            NamespacePtr owner = deser.context->ns;
         
             // Deserialize optional fields.
             CRACK_PB_BEGIN(deser, 256, optional)
