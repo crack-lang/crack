@@ -2439,6 +2439,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     createLLVMModule(".builtin");
     BModuleDefPtr builtinMod = instantiateModule(context, ".builtin", module);
+    moduleDef = builtinMod;
 
     // Replace the context's namespace, it's going to become the builtin
     // module.
@@ -3292,6 +3293,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     if (debugInfo)
         delete debugInfo;
 
+    moduleDef = 0;
     return builtinMod;
 }
 

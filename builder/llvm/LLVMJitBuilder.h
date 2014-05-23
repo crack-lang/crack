@@ -41,9 +41,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                 return shlibSyms;
         }
         
-        // Definitions created in the module that are not part of its defs.
-        std::vector<model::VarDefPtr> orphanedDefs;
-
         // List of modules that need to have their cleanups setup before we 
         // run main.
         std::vector<BModuleDefPtr> needsCleanup;
@@ -58,6 +55,8 @@ class LLVMJitBuilder : public LLVMBuilder {
         void doRunOrDump(model::Context &context);
 
         void setupCleanup(BModuleDef *moduleDef);
+
+        void fixupAfterMerge(model::ModuleDef *moduleDef, llvm::Module *merged);
 
     protected:
         virtual void addGlobalFuncMapping(llvm::Function*,

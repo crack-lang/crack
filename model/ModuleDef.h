@@ -37,6 +37,9 @@ SPUG_RCPTR(ModuleDef);
  * The context of a module is the parent module.
  */
 class ModuleDef : public VarDef, public Namespace {
+    public:
+        typedef std::vector<ModuleDefPtr> Vec;
+
     private:
         // The master module, or null if the module is its own master.  See 
         // getMaster() below for info on mastership.
@@ -46,7 +49,7 @@ class ModuleDef : public VarDef, public Namespace {
 
         // Slave modules.  These are all of the modules that we are the 
         // "master" of (see getMaster()).
-        std::vector<ModuleDefPtr> slaves;
+        Vec slaves;
     
     protected:
         
@@ -75,7 +78,7 @@ class ModuleDef : public VarDef, public Namespace {
         std::map<std::string, bool> exports;
         
         // explicit imports.
-        std::vector<ModuleDefPtr> imports;
+        Vec imports;
 
         // Modules that we have a dependency on.
         ModuleDefMap dependencies;
@@ -131,6 +134,11 @@ class ModuleDef : public VarDef, public Namespace {
          * Returns true if the module is a slave.
          */
         bool isSlave() { return master; }
+        
+        /**
+         * Returns a vector of slave modules.
+         */
+        const Vec &getSlaves() const { return slaves; }
 
         /**
          * Record a dependency on another module.  See 
