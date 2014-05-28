@@ -592,17 +592,18 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
 Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
     Function *func = module->getFunction(funcRep->getName());
     if (!func) {
-        // not found, create a new one.
+        // Not found, create a new one.  Since we're setting the name from the
+        // name of the funcRep, and we know nothing of that name already
+        // exists in the module, we don't have to apply the symbol name from
+        // the funcDef to it, it should already have the symbol name.  (in
+        // practice, applying the symbol name was causing LLVM name mangling
+        // to occur in ways that broke things).
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
         func = Function::Create(funcRep->getFunctionType(),
                                 Function::ExternalLinkage,
                                 funcRep->getName(),
                                 module
                                 );
-
-        // low level symbol name
-        if (!bfuncDef->symbolName.empty())
-            func->setName(bfuncDef->symbolName);
     }
     return func;
 }
