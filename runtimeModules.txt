@@ -4,7 +4,7 @@ runtime/Exceptions.cc
 runtime/Net.cc
 runtime/Util.cc
 runtime/Init.cc
-runtime/Math.cc
+runtime/math.cc
 runtime/Process.cc
 runtime/Time.cc
 runtime/MD5.cc

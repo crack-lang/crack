@@ -212,17 +212,6 @@ class LLVMBuilder : public Builder {
             return rootBuilder ? *rootBuilder : *this;
         }
         
-
-        // keeps track of the Function object for the FuncDef in the builder's
-        // module.
-        typedef std::map<model::FuncDef *, llvm::Function *> ModFuncMap;
-        ModFuncMap moduleFuncs;
-
-        // keeps track of the GlobalVariable object for the VarDef in the
-        // builder's module.
-        typedef std::map<model::VarDefImpl *, llvm::GlobalVariable *> ModVarMap;
-        ModVarMap moduleVars;
-
         static int argc;
         static char **argv;
 
@@ -248,16 +237,8 @@ class LLVMBuilder : public Builder {
 
         void narrow(model::TypeDef *curType, model::TypeDef *ancestor);
 
-        void setModFunc(model::FuncDef *funcDef, llvm::Function *func) {
-            moduleFuncs[funcDef] = func;
-        }
-
         llvm::Function *getModFunc(model::FuncDef *funcDef,
                                    llvm::Function *funcRep);
-
-        void setModVar(model::VarDefImpl *varDef, llvm::GlobalVariable *var) {
-            moduleVars[varDef] = var;
-        }
 
         llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef,
                                         llvm::GlobalVariable *gvar
@@ -528,7 +509,8 @@ class LLVMBuilder : public Builder {
 
         virtual model::TypeDefPtr materializeType(
             model::Context &context,
-            const std::string &name
+            const std::string &name,
+            const std::string &namespaceName
         );
 
         virtual model::FuncDefPtr materializeFunc(

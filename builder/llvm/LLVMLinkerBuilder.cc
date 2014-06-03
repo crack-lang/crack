@@ -113,6 +113,8 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     for (ModuleListType::iterator i = moduleList->begin();
          i != moduleList->end();
          ++i) {
+        if ((*i)->isSlave())
+            continue;
         if (options->verbosity > 2)
             std::cerr << "linking " << (*i)->rep->getModuleIdentifier() <<
                     std::endl;

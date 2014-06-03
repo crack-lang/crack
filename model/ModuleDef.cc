@@ -10,6 +10,7 @@
 
 #include <sstream>
 #include "spug/check.h"
+#include "spug/stlutil.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
 #include "Context.h"
@@ -23,13 +24,33 @@ using namespace std;
 using namespace model;
 using namespace crack::util;
 
+void ModuleDef::getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
+                                  ModuleDef *master
+                                  ) {
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
+        (*slave)->getTypeDefs(typeDefs, master);
+}
+
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     VarDef(0, name),
     Namespace(name),
     parent(parent),
+    master(0),
     finished(false),
     fromExtension(false),
     cacheable(false) {
+}
+
+ModuleDef::~ModuleDef() {
+    // We're lazily assuming that the master won't be destroyed until all of
+    // his slaves are, and this currently seems to be the case.  If it ceases
+    // to be the case we need to take remedial steps to ensure that we don't
+    // try to serialize the slaves without their master.
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
+        SPUG_CHECK((*slave)->refcnt() == 1,
+                   "Slave module " << (*slave)->getNamespaceName() <<
+                    "would live on after deletion of its master."
+                   );
 }
 
 bool ModuleDef::hasInstSlot() {
@@ -41,6 +62,17 @@ void ModuleDef::addDependency(ModuleDef *other) {
         dependencies.find(other->getNamespaceName()) == dependencies.end()
         )
         dependencies[other->getNamespaceName()] = other;
+}
+
+void ModuleDef::addSlave(ModuleDef *slave) {
+    SPUG_CHECK(!slave->master,
+               "Module " << slave->getNamespaceName() <<
+               " is being added as a slave of " << getNamespaceName() <<
+               " but it already has a master: " <<
+               slave->master->getNamespaceName());
+    slaves.push_back(slave);
+    slave->master = this;
+    slave->cacheable = false;
 }
 
 void ModuleDef::close(Context &context) {
@@ -135,6 +167,15 @@ void ModuleDef::serialize(Serializer &serializer) {
     serializer.module = this;
     serializer.write(CRACK_METADATA_V1, "magic");
 
+    // If we are a slave, just serialize a reference to the master.
+    ModuleDefPtr master = getMaster();
+    if (master.get() != this) {
+        serializer.write(master->getFullName(), "master");
+        return;
+    } else {
+        serializer.write("", "master");
+    }
+
     // write source path and source digest
     serializer.write(sourcePath, "sourcePath");
     serializer.write(sourceDigest.asHex(), "sourceDigest");
@@ -145,6 +186,10 @@ void ModuleDef::serialize(Serializer &serializer) {
          iter != dependencies.end();
          ++iter
          ) {
+        SPUG_CHECK(iter->second->master != this,
+                   "module " << getFullName() << " has a dependency on "
+                   "slave module " << iter->first
+                   );
         serializer.write(iter->first, "canonicalName");
         serializer.write(iter->second->metaDigest.asHex(), "metaDigest");
     }
@@ -173,6 +218,23 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         cerr << ">>>> Deserializing module " << canonicalName << endl;
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
         return 0;
+
+    string master = deser.readString(Serializer::modNameSize, "master");
+    if (master.size()) {
+        // Make sure we have the master.   In theory, we cannot reference a
+        // slave without having referenced the master.
+        Construct &construct = *deser.context->construct;
+        construct.getModule(master);
+
+        // Now we should be able to load the slave, or it doesn't exist as a
+        // slave any more.
+        Construct::ModuleMap::iterator iter =
+            construct.moduleCache.find(canonicalName);
+        if (iter != construct.moduleCache.end())
+            return iter->second;
+        else
+            return 0;
+    }
 
     string sourcePath = deser.readString(Serializer::modNameSize, "sourcePath");
     SourceDigest recordedSourceDigest =
@@ -256,7 +318,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     deser.context->ns = mod.get();
     deser.digestEnabled = true;
-    mod->deserializeTypeDecls(deser, 1);
+    mod->deserializeTypeDecls(deser);
     mod->deserializeDefs(deser);
 
     // deserialize exports
@@ -276,6 +338,35 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;
     return mod;
+}
+
+void ModuleDef::serializeSlaveRef(Serializer &serializer) {
+    if (serializer.writeObject(this, "owner"))
+        serializer.write(canonicalName, "canonicalName");
+}
+
+namespace {
+    struct SlaveModuleReader : public Deserializer::ObjectReader {
+        ModuleDefPtr master;
+        SlaveModuleReader(ModuleDef *master) : master(master) {}
+        virtual spug::RCBasePtr read(Deserializer &deser) const {
+            string name = deser.readString(Serializer::modNameSize,
+                                           "canonicalName"
+                                           );
+            ModuleDefPtr mod = deser.context->builder.materializeModule(
+                *deser.context,
+                name,
+                master.get()
+            );
+            return mod;
+        }
+    };
+}
+
+ModuleDefPtr ModuleDef::deserializeSlaveRef(Deserializer &deser) {
+    Deserializer::ReadObjectResult readObj =
+        deser.readObject(SlaveModuleReader(this), "owner");
+    return ModuleDefPtr::arcast(readObj.object);
 }
 
 void ModuleDef::replaceStubsInDefs(Context &context) {

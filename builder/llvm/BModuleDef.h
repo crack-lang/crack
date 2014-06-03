@@ -34,6 +34,9 @@ SPUG_RCPTR(BStrConst);
 class BModuleDef : public model::ModuleDef {
 
 public:
+    // Definitions created in the module that are not part of its defs.
+    std::vector<model::VarDefPtr> orphanedDefs;
+
     // primitive cleanup function
     void (*cleanup)();
     llvm::Module *rep;

@@ -13,7 +13,7 @@ import crack.io FStr, cout;
 import crack.io Writer;
 import crack.lang AssertionError, CString, Formatter, InvalidArgumentError,
     ManagedBuffer;
-import crack.runtime InternalDate, strftime, strlen, strptime;
+import crack.runtime asctime, InternalDate, strftime, strlen, strptime;
 import crack.runtime TimeVal;
 
 const int32 BILLION = 1000000000;
@@ -152,7 +152,7 @@ class Date : Object, InternalDate {
 
     String getDefaultString() {
         ManagedBuffer result = {100};
-        _toBufferRaw(result.buffer);
+        asctime(this, result.buffer);
         result.size = strlen(result.buffer);
         return String(result, true);
     }

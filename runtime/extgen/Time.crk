@@ -125,10 +125,6 @@ char **get_environ(){
 
       @cname crk_epoch
       void setEpoch();
-
-      @cname asctime_r
-      void _toBufferRaw(byteptr buf);
-
    }
 
    @cname mktime

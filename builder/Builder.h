@@ -451,7 +451,8 @@ class Builder : public spug::RCBase {
          */        
         virtual model::TypeDefPtr materializeType(
             model::Context &context,
-            const std::string &name
+            const std::string &name,
+            const std::string &namespaceName
         ) = 0;
 
         /**

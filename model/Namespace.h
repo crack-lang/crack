@@ -64,8 +64,22 @@ class Namespace : public virtual spug::RCBase {
          * definitions must not be mutated while the vector is in existence, 
          * otherwise the type defs could be garbage collected and the array 
          * could be left with dangling pointers.
+         * @param master if provided this is the master module to serialize 
+         *     under.
          */
-        void getTypeDefs(std::vector<TypeDef*> &typeDefs);
+        void getTypeDefs(std::vector<TypeDef*> &typeDefs,
+                         ModuleDef *master
+                         );
+        
+        /**
+         * Add type definitions of nested child namespaces to 'typeDefs'.  By 
+         * default, does nothing.  Derived classes that can contain publically 
+         * visible types should override.
+         */
+        virtual void getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
+                                       ModuleDef *master
+                                       ) {
+        }
 
         void deserializeDefs(Deserializer &deser, const char *countName,
                              bool publicDefs
@@ -240,7 +254,7 @@ class Namespace : public virtual spug::RCBase {
          * Deserialize type declarations, adding them to the object id table.
          * Returns the next object id after deserialization.
          */
-        static int deserializeTypeDecls(Deserializer &deser, int nextId);
+        static void deserializeTypeDecls(Deserializer &deser);
         
         /**
          * Helper function for closing off module serialization.  Calls 

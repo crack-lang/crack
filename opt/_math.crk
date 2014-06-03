@@ -1,0 +1,291 @@
+// Copyright 2010-2014 Google Inc.
+// Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
+// 
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// 
+# Crack SDL bindings.
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.runtime._math {
+    @filename 'runtime/math.cc'
+    @inject '
+#include <fenv.h>
+#include <math.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/time.h>
+
+#define FUNC1(fname) \
+    double crk_##fname(double arg) { return fname(arg); }
+
+#define FUNC2(fname) \
+    double crk_##fname(double arg1, double arg2) { return fname(arg1, arg2); }
+
+FUNC1(sin)
+FUNC1(cos)
+FUNC1(tan)
+
+FUNC1(sinh)
+FUNC1(cosh)
+FUNC1(tanh)
+
+FUNC1(asin)
+FUNC1(acos)
+FUNC1(atan)
+
+FUNC1(asinh)
+FUNC1(acosh)
+FUNC1(atanh)
+
+FUNC1(exp)
+FUNC1(exp2)
+FUNC1(fabs)
+FUNC1(log)
+
+FUNC1(log10)
+FUNC1(log1p)
+FUNC1(log2)
+
+FUNC1(cbrt)
+FUNC1(sqrt)
+FUNC1(erf)
+FUNC1(erfc)
+
+FUNC1(lgamma)
+FUNC1(tgamma)
+
+FUNC1(ceil)
+FUNC1(ceilf)
+FUNC1(floor)
+FUNC1(floorf)
+FUNC1(nearbyint)
+FUNC1(nearbyintf)
+
+FUNC1(rint)
+FUNC1(rintf)
+FUNC1(round)
+FUNC1(trunc)
+FUNC1(expm1)
+
+FUNC2(fmod)
+FUNC2(remainder)
+FUNC2(copysign)
+FUNC2(nextafter)
+FUNC2(hypot)
+FUNC2(fdim)
+FUNC2(pow)
+
+int crk_fpclassify32(float x) {
+    return fpclassify(x);
+}
+
+int crk_fpclassify64(double x) {
+    return fpclassify(x);
+}
+
+int crk_isfinite32(float x) {
+    return isfinite(x);
+}
+
+int crk_isfinite64(double x) {
+    return isfinite(x);
+}
+
+int crk_isinf32(float x) {
+    return isinf(x);
+}
+
+int crk_isinf64(double x) {
+    return isinf(x);
+}
+
+int crk_isnan32(float x) {
+    return isnan(x);
+}
+
+int crk_isnan64(double x) {
+    return isnan(x);
+}
+
+int crk_isnormal32(float x) {
+    return isnormal(x);
+}
+
+int crk_isnormal64(double x) {
+    return isnormal(x);
+}
+
+int crk_signbit32(float x) {
+    return signbit(x);
+}
+
+int crk_signbit64(double x) {
+    return signbit(x);
+}
+
+int crk_get_errno() {
+    return errno;
+}
+
+void crk_set_errno(int value) {
+    errno = value;
+}
+
+float crk_strtof(char *s) {
+   errno = 0;
+   return (float)strtof(s, (char**)NULL);
+}
+
+float crk_strtod(char *s) {
+    errno = 0;
+    return (double)strtod(s, (char**)NULL);
+}
+
+int crk_strtoi(char *s) {
+    errno = 0;
+    return (int)strtol(s, (char**)NULL, 0);
+}
+
+int64_t crk_usecs(void) {
+    struct timeval crk_timeval;
+    gettimeofday(&crk_timeval, NULL);
+    return (int64_t)(crk_timeval.tv_sec*1000000 + crk_timeval.tv_usec); // Time in usecs
+}
+';
+    @crack_internal
+
+    const float64 HUGE_VAL,
+                  INFINITY,
+                  NAN;
+
+    const int 
+        ERANGE,
+        EINVAL,
+        ENOMEM,
+        FP_INFINITE,
+        FP_NAN,
+        FP_NORMAL,
+        FP_SUBNORMAL,
+        FP_ZERO,
+        FP_ILOGB0,
+        FP_ILOGBNAN,
+        ALL_EXCEPT = 'FE_ALL_EXCEPT',
+        INVALID = 'FE_INVALID',
+        DIVBYZERO = 'FE_DIVBYZERO',
+        OVERFLOW = 'FE_OVERFLOW',
+        UNDERFLOW = 'FE_UNDERFLOW';
+    
+    @cname crk_sin float64 sin(float64 angle);
+    @cname sinf float32 sin(float32 angle);
+    @cname crk_cos float64 cos(float64 angle);
+    @cname cosf float32 cos(float32 angle);
+    @cname crk_tan float64 tan(float64 angle);
+    @cname tanf float32 tan(float32 angle);
+    @cname crk_sinh float64 sinh(float64 angle);
+    @cname sinhf float32 sinh(float32 angle);
+    @cname crk_cosh float64 cosh(float64 angle);
+    @cname coshf float32 cosh(float32 angle);
+    @cname crk_tanh float64 tanh(float64 angle);
+    @cname tanhf float32 tanh(float32 angle);
+    @cname asin float64 asin(float64 angle);
+    @cname asinf float32 asin(float32 angle);
+    @cname acos float64 acos(float64 angle);
+    @cname acosf float32 acos(float32 angle);
+    @cname crk_atan float64 atan(float64 angle);
+    @cname atanf float32 atan(float32 angle);
+    @cname crk_asinh float64 asinh(float64 angle);
+    @cname asinhf float32 asinh(float32 angle);
+    @cname crk_acosh float64 acosh(float64 angle);
+    @cname acoshf float32 acosh(float32 angle);
+    @cname crk_atanh float64 atanh(float64 angle);
+    @cname atanhf float32 atanh(float32 angle);
+    @cname crk_exp float64 exp(float64 angle);
+    @cname expf float32 exp(float32 angle);
+    @cname crk_exp2 float64 exp2(float64 angle);
+    @cname exp2f float32 exp2(float32 angle);
+    @cname log float64 log(float64 angle);
+    @cname logf float32 log(float32 angle);
+    @cname crk_fabs float64 abs(float64 angle);
+    @cname fabsf float32 abs(float32 angle);
+    @cname crk_log10 float64 log10(float64 angle);
+    @cname log10f float32 log10(float32 angle);
+    @cname crk_log1p float64 log1p(float64 angle);
+    @cname log1pf float32 log1p(float32 angle);
+    @cname crk_log2 float64 log2(float64 angle);
+    @cname log2f float32 log2(float32 angle);
+    @cname crk_cbrt float64 cbrt(float64 angle);
+    @cname cbrtf float32 cbrt(float32 angle);
+    @cname crk_sqrt float64 sqrt(float64 angle);
+    @cname sqrtf float32 sqrt(float32 angle);
+    @cname crk_erf float64 erf(float64 angle);
+    @cname erff float32 erf(float32 angle);
+    @cname crk_erfc float64 erfc(float64 angle);
+    @cname erfcf float32 erfc(float32 angle);
+    @cname crk_lgamma float64 lgamma(float64 angle);
+    @cname lgammaf float32 lgamma(float32 angle);
+    @cname crk_tgamma float64 tgamma(float64 val);
+    @cname tgammaf float32 tgamma(float32 val);
+    @cname crk_ceil float64 ceil(float64 val);
+    @cname crk_ceilf float32 ceil(float32 val);
+    @cname crk_floor float64 floor(float64 val);
+    @cname crk_floorf float32 floor(float32 val);
+    @cname crk_nearbyint float64 nearbyint(float64 val);
+    @cname crk_nearbyintf float32 nearbyint(float32 val);
+    @cname crk_rint float64 rint(float64 val);
+    @cname crk_rintf float32 rint(float32 val);
+    @cname crk_round float64 round(float64 val);
+    @cname roundf float32 round(float32 val);
+    @cname crk_trunc float64 trunc(float64 val);
+    @cname truncf float32 trunc(float32 val);
+    @cname crk_expm1 float64 expm1(float64 val);
+    @cname expm1f float32 expm1(float32 val);
+    @cname ilogb int ilogb(float32 val);
+    @cname ilogbf int ilogb(float32 val);
+    
+    @cname crk_fpclassify32 int fpclassify(float32 val);
+    @cname crk_fpclassify64 int fpclassify(float64 val);
+    @cname crk_isfinite32 int isfinite(float32 val);
+    @cname crk_isfinite64 int isfinite(float64 val);
+    @cname crk_isinf32 int isinf(float32 val);
+    @cname crk_isinf64 int isinf(float64 val);
+    @cname crk_isnan32 int isnan(float32 val);
+    @cname crk_isnan64 int isnan(float64 val);
+    @cname crk_isnormal32 int isnormal(float32 val);
+    @cname crk_isnormal64 int isnormal(float64 val);
+    @cname crk_signbit32 int sign(float32 val);
+    @cname crk_signbit64 int sign(float64 val);
+    
+    @cname hypot float64 hypot(float64 x, float64 y);
+    @cname hypotf float32 hypot(float32 x, float32 y);
+
+    @cname crk_fmod float64 fmod(float64 val);
+    @cname fmodf float32 fmod(float32 val);
+    @cname crk_remainder float64 remainder(float64 val);
+    @cname remainderf float32 remainder(float32 val);
+    @cname crk_copysign float64 copysign(float64 val);
+    @cname copysignf float32 copysign(float32 val);
+    @cname crk_nextafter float64 nextafter(float64 val);
+    @cname nextafterf float32 nextafter(float32 val);
+    @cname crk_hypot float64 hypot(float64 val);
+    @cname hypotf float32 hypot(float32 val);
+    @cname crk_fdim float64 fdim(float64 val);
+    @cname fdimf float32 fdim(float32 val);
+    @cname crk_pow float64 pow(float64 val);
+    @cname powf float32 pow(float32 val);
+    
+    @cname crk_get_errno int errno();
+    @cname crk_set_errno void setErrno(int errno);
+    
+    @cname fetestexcept int testexcept(int errors);
+    @cname feclearexcept int clearexcept(int errors);
+    
+    int atoi(byteptr str);
+    float atof(byteptr str);
+    @cname crk_strtoi int strtoi(byteptr str);
+    @cname crk_strtof float32 strtof(byteptr str);
+    @cname crk_strtod float64 strtod(byteptr str);
+    @cname crk_usecs int64 usecs();
+}

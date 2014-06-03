@@ -71,7 +71,7 @@ So given this, our meta-data format is:
 
         # the type declarations.  These inherently get an object id based on
         # their order, starting with 1 (0 is the object id for the model)
-        array[TypeDecl] decls
+        array[ref[TypeDecl]] decls
 
         # the module meta-data.
         Definitions defs
@@ -85,15 +85,22 @@ So given this, our meta-data format is:
         # the hash of the string 'crack meta-data v1'
         uint magic = 2271218416
 
-        # the relative source path of the file.
-        blob sourcePath;
+        # If non-empty, this is the canonical name of the master module.  If
+        # there is a master module, no further information is present in the
+        # cache file for this module.
+        blob master
 
-        # source file MD5 signature
-        blob sourceSig
+        if (!master) {
+            # the relative source path of the file.
+            blob sourcePath;
 
-        # a list of the the modules that this module
-        # directly depends on (does not include .builtin)
-        array[Dependency] deps
+            # source file MD5 signature
+            blob sourceSig
+
+            # a list of the the modules that this module
+            # directly depends on (does not include .builtin)
+            array[Dependency] deps
+        }
     }
 
     # identifies a dependency module by its canonical name and the hash of its
@@ -103,10 +110,24 @@ So given this, our meta-data format is:
         blob metaDigest
     }
 
+    SlaveModule {
+        # The fully qualified canonical name of the module.
+        blob canonicalName
+    }
+
     TypeDecl {
         blob name
-        uint isGeneric
-        array[TypeDecl] decls
+
+        # True if the type is generic.
+        optional uint isGeneric = 1
+
+        # If present, this is the slave module that owns the type.
+        optional ref[SlaveModule] owner = 2
+
+        # These have to come after the optional block because we need to
+        # create a type before we can parse the decls nested within it and to
+        # do that we need to know its owner.
+        array[ref[TypeDecl]] decls
     }
 
     Definitions {
@@ -183,6 +204,9 @@ So given this, our meta-data format is:
         blob name
         uint instSlot  # the instance slot, 0 if there is none.
         ref[Type] type
+
+        # If present, the slave module that owns the variable.
+        optional ref[SlaveModule] owner
     }
 
     # ref[Type] is exceptional.  All of the types in a module should have
@@ -226,6 +250,9 @@ So given this, our meta-data format is:
     OverloadDef {
         blob name
         array[FuncDef] overloads
+
+        # If present, this is the slave module that owns the overload.
+        optional ref[SlaveModule] owner
     }
 
     FuncEntry {
@@ -272,6 +299,9 @@ So given this, our meta-data format is:
             case constNull: empty
             case constAgg: empty
         }
+
+        # If present, this is the slave module that owns the constant.
+        optional ref[SlaveModule] owner
     }
 
     Location {

@@ -30,7 +30,6 @@
 #include "Dir.h"
 #include "Util.h"
 #include "Net.h"
-#include "Math.h"
 #include "Exceptions.h"
 #include "Process.h"
 using namespace crack::ext;
@@ -48,9 +47,20 @@ extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
     return stat(path, buf);
 }
 
+// Forward declare the math module initializer.
+extern "C" void crack_runtime__math_cinit(Module *mod);
+
 extern "C"
 void crack_runtime_rinit(void) {
     return;
+}
+
+extern "C" int crk_creat(const char *pathname, mode_t mode) {
+    return creat(pathname, mode);
+}
+
+extern "C" int crk_open(const char *pathname, mode_t mode) {
+    return creat(pathname, mode);
 }
 
 extern "C" void crack_runtime_cinit(Module *mod) {
@@ -274,7 +284,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     // normal file open and close.
 
-    f = mod->addFunc(intType, "open", (void *)open);
+    f = mod->addFunc(intType, "open", (void *)crk_open);
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "mode");
 
@@ -283,7 +293,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(intType, "flags");
     f->addArg(intType, "mode");
 
-    f = mod->addFunc(intType, "creat", (void *)open);
+    f = mod->addFunc(intType, "creat", (void *)crk_creat);
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "mode");
 
@@ -763,7 +773,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "path");
     f->addArg(byteptrType, "mode");
     
-    f = mod->addFunc(intType, "fclose", (void *)fclose, "close");
+    f = mod->addFunc(intType, "fclose", (void *)fclose, "fclose");
     f->addArg(cFileType, "fp");
     
     f = mod->addFunc(intType, "fileno", (void *)fileno, "fileno");
@@ -820,7 +830,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "MAP_PRIVATE", MAP_PRIVATE);
 
     // Add math functions
-    crack::runtime::math_init(mod);
+    crack_runtime__math_cinit(mod);
     
     // Add time functions
     crack_runtime_time_cinit(mod);

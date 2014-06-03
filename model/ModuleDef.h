@@ -38,12 +38,34 @@ SPUG_RCPTR(ModuleDef);
  */
 class ModuleDef : public VarDef, public Namespace {
     public:
+        typedef std::vector<ModuleDefPtr> Vec;
+
+    private:
+        // The master module, or null if the module is its own master.  See 
+        // getMaster() below for info on mastership.
+        // This isn't an RCPtr: masters should maintain ownership of all
+        // modules in the group.
+        ModuleDef *master;
+
+        // Slave modules.  These are all of the modules that we are the 
+        // "master" of (see getMaster()).
+        Vec slaves;
+    
+    protected:
+        
+        // Overrides Namespace::getNestedTypeDefs() to add types for all slave 
+        // modules.
+        virtual void getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
+                                       ModuleDef *master
+                                       );
+    
+    public:
         typedef std::vector<std::string> StringVec;
 
         // the parent namespace.  This should be the root namespace where 
         // builtins are stored.
         NamespacePtr parent;
-
+        
         // this is true if the module has been completely parsed and the
         // close() method has been called.
         bool finished;
@@ -56,8 +78,8 @@ class ModuleDef : public VarDef, public Namespace {
         std::map<std::string, bool> exports;
         
         // explicit imports.
-        std::vector<ModuleDefPtr> imports;
-        
+        Vec imports;
+
         // Modules that we have a dependency on.
         ModuleDefMap dependencies;
 
@@ -72,6 +94,7 @@ class ModuleDef : public VarDef, public Namespace {
         bool cacheable;
 
         ModuleDef(const std::string &name, Namespace *parent);
+        ~ModuleDef();
 
         /**
          * Close the module, executing it.
@@ -93,6 +116,29 @@ class ModuleDef : public VarDef, public Namespace {
             canonicalName = o->getNamespaceName()+"."+name;
             fullName.clear();
         }
+        
+        /**
+         * Returns the module's master, returns the module itself if it is its 
+         * own master.
+         * 
+         * The "master" is the top-level module of a group of modules with 
+         * cyclic dependencies.  We track this relationship because it is much 
+         * easier to persist groups of modules with cyclic dependencies as if 
+         * they were a single module.
+         */
+        ModuleDefPtr getMaster() {
+            return master ? master : this;
+        }
+        
+        /**
+         * Returns true if the module is a slave.
+         */
+        bool isSlave() { return master; }
+        
+        /**
+         * Returns a vector of slave modules.
+         */
+        const Vec &getSlaves() const { return slaves; }
 
         /**
          * Record a dependency on another module.  See 
@@ -105,6 +151,11 @@ class ModuleDef : public VarDef, public Namespace {
          * Add the other module to this module's dependencies.
          */
         void addDependency(ModuleDef *other);
+        
+        /**
+         * Adds the other module to this module's slaves.
+         */
+        void addSlave(ModuleDef *slave);
 
         virtual VarDef *asVarDef();
         virtual NamespacePtr getParent(unsigned index);
@@ -142,6 +193,16 @@ class ModuleDef : public VarDef, public Namespace {
         static ModuleDefPtr deserialize(Deserializer &deserializer,
                                         const std::string &canonicalName
                                         );
+
+        /**
+         * Serialize the module as a slave reference.
+         */        
+        void serializeSlaveRef(Serializer &serializer);
+        
+        /**
+         * Deserialize a slave reference.
+         */
+        ModuleDefPtr deserializeSlaveRef(Deserializer &deser);
 
         /**
          * Replace all stubs in the symbol table.  This can be used 

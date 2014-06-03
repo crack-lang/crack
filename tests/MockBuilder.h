@@ -360,7 +360,8 @@ class MockBuilder : public builder::Builder {
 
         virtual model::TypeDefPtr materializeType(
             model::Context &context,
-            const std::string &name
+            const std::string &name,
+            const std::string &namespaceName
         ) {
             return new model::TypeDef(context.construct->classType.get(), name,
                                       true

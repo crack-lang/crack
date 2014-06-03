@@ -85,48 +85,6 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     }
 }
 
-void LLVMJitBuilder::innerFinishModule(Context &context,
-                                       BModuleDef *moduleDef) {
-   // note, this->module and moduleDef->rep should be ==
-
-    // XXX right now, only checking for > 0, later perhaps we can
-    // run specific optimizations at different levels
-    if (options->optimizeLevel) {
-
-        // optimize
-        llvm::PassManager passMan;
-
-        // Set up the optimizer pipeline.  Start with registering info about how
-        // the target lays out data structures.
-        passMan.add(new DataLayout(*getExecEng()->getDataLayout()));
-        // Promote allocas to registers.
-        passMan.add(createPromoteMemoryToRegisterPass());
-        // Do simple "peephole" optimizations and bit-twiddling optzns.
-        passMan.add(llvm::createInstructionCombiningPass());
-        // Reassociate expressions.
-        passMan.add(llvm::createReassociatePass());
-        // Eliminate Common SubExpressions.
-        passMan.add(llvm::createGVNPass());
-        // Simplify the control flow graph (deleting unreachable blocks, etc).
-        passMan.add(llvm::createCFGSimplificationPass());
-
-        passMan.run(*moduleDef->rep);
-
-    }
-
-    // mark the module as finished
-    moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
-}
-
-void LLVMJitBuilder::engineFinishModule(Context &context,
-                                        BModuleDef *moduleDef) {
-    innerFinishModule(context, moduleDef);
-    mergeModule(moduleDef);
-    moduleDef->clearRepFromConstants();
-    delete module;
-    module = 0;
-}
-
 namespace {
 
     class ModuleChangeVisitor : public Visitor {
@@ -197,18 +155,17 @@ namespace {
     };
 }
 
-void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
-    ModuleMerger *merger = getModuleMerger();
-    merger->merge(module);
-
+void LLVMJitBuilder::fixupAfterMerge(ModuleDef *moduleDef, Module *merged) {
     // Now we need to fix the global variables, functions and type meta-data
     // references in everything...
-    ModuleChangeVisitor visitor(module, merger->getTarget());
+    ModuleChangeVisitor visitor(module, merged);
     moduleDef->visit(&visitor);
 
     // Do the orphaned var defs.
-    SPUG_FOR(vector<VarDefPtr>, i, orphanedDefs)
+    BModuleDefPtr bmodDef = BModuleDefPtr::cast(moduleDef);
+    SPUG_FOR(vector<VarDefPtr>, i, bmodDef->orphanedDefs)
         (*i)->visit(&visitor);
+    bmodDef->orphanedDefs.clear();
 
     // Add the module to the list of modules where we need to import the
     // cleanup.
@@ -218,6 +175,56 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
         );
     else
         needsCleanup.push_back(BModuleDefPtr::cast(moduleDef));
+}
+
+void LLVMJitBuilder::innerFinishModule(Context &context,
+                                       BModuleDef *moduleDef) {
+   // note, this->module and moduleDef->rep should be ==
+
+    // XXX right now, only checking for > 0, later perhaps we can
+    // run specific optimizations at different levels
+    if (options->optimizeLevel) {
+
+        // optimize
+        llvm::PassManager passMan;
+
+        // Set up the optimizer pipeline.  Start with registering info about how
+        // the target lays out data structures.
+        passMan.add(new DataLayout(*getExecEng()->getDataLayout()));
+        // Promote allocas to registers.
+        passMan.add(createPromoteMemoryToRegisterPass());
+        // Do simple "peephole" optimizations and bit-twiddling optzns.
+        passMan.add(llvm::createInstructionCombiningPass());
+        // Reassociate expressions.
+        passMan.add(llvm::createReassociatePass());
+        // Eliminate Common SubExpressions.
+        passMan.add(llvm::createGVNPass());
+        // Simplify the control flow graph (deleting unreachable blocks, etc).
+        passMan.add(llvm::createCFGSimplificationPass());
+
+        passMan.run(*moduleDef->rep);
+
+    }
+
+    // mark the module as finished
+    moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
+}
+
+void LLVMJitBuilder::engineFinishModule(Context &context,
+                                        BModuleDef *moduleDef) {
+    innerFinishModule(context, moduleDef);
+    mergeModule(moduleDef);
+    moduleDef->clearRepFromConstants();
+    delete module;
+    module = 0;
+}
+
+void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
+    ModuleMerger *merger = getModuleMerger();
+    merger->merge(module);
+    fixupAfterMerge(moduleDef, merger->getTarget());
+    SPUG_FOR(vector<ModuleDefPtr>, i, moduleDef->getSlaves())
+        fixupAfterMerge(BModuleDefPtr::rcast(*i), merger->getTarget());
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
@@ -322,7 +329,7 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
 }
 
 void LLVMJitBuilder::recordOrphanedDef(VarDef *def) {
-    orphanedDefs.push_back(def);
+    moduleDef->orphanedDefs.push_back(def);
 }
 
 void LLVMJitBuilder::run() {
@@ -379,13 +386,15 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     finishModule(context, moduleDef);
+    if (!moduleDef->isSlave()) { // slave modules aren't complete yet.
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
 
-    // Do the common stuff (common with the .builtin module, which doesn't get
-    // closed)
-    innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+        // Do the common stuff (common with the .builtin module, which doesn't get
+        // closed)
+        innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+    }
 
     // store primitive functions from an extension
     if (moduleDef->fromExtension) {
@@ -410,10 +419,12 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
         context.cacheModule(moduleDef);
 
     // Now merge and remove the original module.
-    mergeModule(moduleDef);
-    delete module;
-    this->moduleDef->clearRepFromConstants();
-    module = 0;
+    if (!moduleDef->isSlave()) {
+        mergeModule(moduleDef);
+        delete module;
+        this->moduleDef->clearRepFromConstants();
+        module = 0;
+    }
 }
 
 namespace {
@@ -490,6 +501,7 @@ namespace {
 }
 
 void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
+#if REMOVE
     if (modules.size() != 1) {
         ModuleMerger merger("cyclic-modules", execEng);
         for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
@@ -514,6 +526,7 @@ void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
         // "finished" marker back to the new module.
         moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
     }
+#endif
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -608,6 +621,15 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     const string &canonicalName,
     ModuleDef *owner
 ) {
+    if (owner) {
+        BJitModuleDefPtr bmod = new BJitModuleDef(canonicalName,
+                                                  context.ns.get(),
+                                                  module,
+                                                  0
+                                                  );
+        owner->addSlave(bmod.get());
+        return bmod;
+    }
 
     Cacher c(context, options.get());
     BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);

@@ -103,9 +103,6 @@ void FuncBuilder::finish(bool storeDef) {
             (*crackArg)->impl = new BArgVarDefImpl(llvmArg);
         }
 
-        // store the LLVM function in the table for the module
-        builder.setModFunc(funcDef.get(), func);
-
         // create an implementation object to return the function
         // pointer
         funcDef->impl = new BConstDefImpl(funcDef.get(), func);
