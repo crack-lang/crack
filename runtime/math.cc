@@ -119,6 +119,11 @@ void crk_set_errno(int value) {
     errno = value;
 }
 
+float crk_strtof(char *s) {
+   errno = 0;
+   return (float)strtof(s, (char**)NULL);
+}
+
 float crk_strtod(char *s) {
     errno = 0;
     return (double)strtod(s, (char**)NULL);
@@ -673,13 +678,13 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_byteptr, "str");
 
-    f = mod->addFunc(type_float, "strtof",
-                     (void *)strtof
+    f = mod->addFunc(type_float32, "strtof",
+                     (void *)crk_strtof
                      );
        f->addArg(type_byteptr, "str");
 
     f = mod->addFunc(type_float64, "strtod",
-                     (void *)strtod
+                     (void *)crk_strtod
                      );
        f->addArg(type_byteptr, "str");
 

@@ -134,6 +134,11 @@ void crk_set_errno(int value) {
     errno = value;
 }
 
+float crk_strtof(char *s) {
+   errno = 0;
+   return (float)strtof(s, (char**)NULL);
+}
+
 float crk_strtod(char *s) {
     errno = 0;
     return (double)strtod(s, (char**)NULL);
@@ -280,7 +285,7 @@ int64_t crk_usecs(void) {
     int atoi(byteptr str);
     float atof(byteptr str);
     @cname crk_strtoi int strtoi(byteptr str);
-    float strtof(byteptr str);
-    float64 strtod(byteptr str);
+    @cname crk_strtof float32 strtof(byteptr str);
+    @cname crk_strtod float64 strtod(byteptr str);
     @cname crk_usecs int64 usecs();
 }
