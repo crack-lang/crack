@@ -267,7 +267,6 @@ noinst_HEADERS = \
     runtime/Dir.h \
     runtime/Exceptions.h \
     runtime/ItaniumExceptionABI.h \
-    runtime/Math.h \
     runtime/Net.h \
     runtime/Process.h \
     runtime/Util.h \

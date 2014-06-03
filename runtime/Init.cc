@@ -30,7 +30,6 @@
 #include "Dir.h"
 #include "Util.h"
 #include "Net.h"
-#include "Math.h"
 #include "Exceptions.h"
 #include "Process.h"
 using namespace crack::ext;
@@ -47,6 +46,9 @@ extern "C" void crack_runtime_xdr_cinit(crack::ext::Module *mod);
 extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
     return stat(path, buf);
 }
+
+// Forward declare the math module initializer.
+extern "C" void crack_runtime__math_cinit(Module *mod);
 
 extern "C"
 void crack_runtime_rinit(void) {
@@ -763,7 +765,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "path");
     f->addArg(byteptrType, "mode");
     
-    f = mod->addFunc(intType, "fclose", (void *)fclose, "close");
+    f = mod->addFunc(intType, "fclose", (void *)fclose, "fclose");
     f->addArg(cFileType, "fp");
     
     f = mod->addFunc(intType, "fileno", (void *)fileno, "fileno");
@@ -820,7 +822,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "MAP_PRIVATE", MAP_PRIVATE);
 
     // Add math functions
-    crack::runtime::math_init(mod);
+    crack_runtime__math_cinit(mod);
     
     // Add time functions
     crack_runtime_time_cinit(mod);
