@@ -55,6 +55,14 @@ void crack_runtime_rinit(void) {
     return;
 }
 
+extern "C" int crk_creat(const char *pathname, mode_t mode) {
+    return creat(pathname, mode);
+}
+
+extern "C" int crk_open(const char *pathname, mode_t mode) {
+    return creat(pathname, mode);
+}
+
 extern "C" void crack_runtime_cinit(Module *mod) {
     Type *byteptrType = mod->getByteptrType();
     Type *boolType = mod->getBoolType();
@@ -276,7 +284,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     // normal file open and close.
 
-    f = mod->addFunc(intType, "open", (void *)open);
+    f = mod->addFunc(intType, "open", (void *)crk_open);
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "mode");
 
@@ -285,7 +293,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(intType, "flags");
     f->addArg(intType, "mode");
 
-    f = mod->addFunc(intType, "creat", (void *)open);
+    f = mod->addFunc(intType, "creat", (void *)crk_creat);
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "mode");
 
