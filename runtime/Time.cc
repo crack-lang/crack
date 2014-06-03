@@ -177,16 +177,6 @@ void crack_runtime_time_cinit(crack::ext::Module *mod) {
         (void *)crk_epoch
     );
 
-
-    f = type_InternalDate->addMethod(
-        type_void, 
-        "_toBufferRaw",
-        (void *)asctime_r
-    );
-    f->addArg(type_byteptr, 
-              "buf"
-              );
-
     type_InternalDate->finish();
 
 
