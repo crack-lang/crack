@@ -332,9 +332,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->sourceDigest = recordedSourceDigest;
     mod->onDeserialized(*deser.context);
 
-    // fix up all of the modules with a cyclic dependency on this one
-    stub->replace(*deser.context, mod.get());
-
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;
     return mod;
